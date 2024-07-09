@@ -13,14 +13,14 @@ class RemoveExcessSpikesSorting(BaseSorting):
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The parent sorting.
-    recording: BaseRecording
+    recording : BaseRecording
         The recording to use to get the number of samples.
 
     Returns
     -------
-    sorting_without_excess_spikes: RemoveExcessSpikesSorting
+    sorting_without_excess_spikes : RemoveExcessSpikesSorting
         The sorting without any excess spikes.
     """
 
@@ -41,6 +41,7 @@ class RemoveExcessSpikesSorting(BaseSorting):
             )
 
         sorting.copy_metadata(self, only_main=False)
+        self._parent = sorting
         if sorting.has_recording():
             self.register_recording(sorting._recording)
 
@@ -61,7 +62,8 @@ class RemoveExcessSpikesSorting(BaseSorting):
         for segment_index in range(num_segments):
             spike_vector = parent_spike_vector[segments_bounds[segment_index] : segments_bounds[segment_index + 1]]
             end = np.searchsorted(spike_vector["sample_index"], self._num_samples[segment_index])
-            list_spike_vectors.append(spike_vector[:end])
+            start = np.searchsorted(spike_vector["sample_index"], 0, side="left")
+            list_spike_vectors.append(spike_vector[start:end])
 
         spike_vector = np.concatenate(list_spike_vectors)
         self._cached_spike_vector = spike_vector
@@ -78,8 +80,9 @@ class RemoveExcessSpikesSortingSegment(BaseSortingSegment):
     ) -> np.ndarray:
         spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=start_frame, end_frame=end_frame)
         max_spike = np.searchsorted(spike_train, self._num_samples, side="left")
+        min_spike = np.searchsorted(spike_train, 0, side="left")
 
-        return spike_train[:max_spike]
+        return spike_train[min_spike:max_spike]
 
 
 def remove_excess_spikes(sorting, recording):
@@ -89,17 +92,17 @@ def remove_excess_spikes(sorting, recording):
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The parent sorting.
-    recording: BaseRecording
+    recording : BaseRecording
         The recording to use to get the number of samples.
 
     Returns
     -------
-    sorting_without_excess_spikes: Sorting
+    sorting_without_excess_spikes : Sorting
         The sorting without any excess spikes.
     """
-    if has_exceeding_spikes(recording=recording, sorting=sorting):
+    if has_exceeding_spikes(sorting=sorting, recording=recording):
         return RemoveExcessSpikesSorting(sorting=sorting, recording=recording)
     else:
         return sorting

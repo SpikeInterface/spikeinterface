@@ -230,6 +230,8 @@ The :code:`detect_bad_channels()` can be used to detect bad channels with severa
 approach to detect bad channels with abnormally high power and the :code:`coherence+psd` method (introduced by [IBL_spikesorting]_),
 which detects bad channels looking at both coherence with other channels and PSD power in the high-frequency range.
 
+Note: The :code:`coherence+psd` method must be run on individual probes/shanks separately since it uses the coherence of the signal across the depth of the probe. See `Processing a Recording by Channel Group <https://spikeinterface.readthedocs.io/en/latest/how_to/process_by_channel_group.html?highlight=split_by>`_ for more information.
+
 The function returns both the :code:`bad_channel_ids` and :code:`channel_labels`, which can be :code:`good`, :code:`noise`, :code:`dead`,
 or :code:`out` (outside of the brain). Note that the :code:`dead` and :code:`out` are only available with the :code:`coherence+psd` method.
 

@@ -21,7 +21,7 @@ from ..core import SortingAnalyzer, get_noise_levels
 from ..core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
-    _get_dense_templates_array,
+    get_dense_templates_array,
 )
 
 
@@ -37,12 +37,13 @@ _default_params = dict()
 
 
 def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
-    """Compute the number of spike across segments.
+    """
+    Compute the number of spike across segments.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     unit_ids : list or None
         The list of unit ids to compute the number of spikes. If None, all units are used.
 
@@ -69,12 +70,13 @@ def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
 
 
 def compute_firing_rates(sorting_analyzer, unit_ids=None, **kwargs):
-    """Compute the firing rate across segments.
+    """
+    Compute the firing rate across segments.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     unit_ids : list or None
         The list of unit ids to compute the firing rate. If None, all units are used.
 
@@ -97,17 +99,18 @@ def compute_firing_rates(sorting_analyzer, unit_ids=None, **kwargs):
 
 
 def compute_presence_ratios(sorting_analyzer, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0, unit_ids=None, **kwargs):
-    """Calculate the presence ratio, the fraction of time the unit is firing above a certain threshold.
+    """
+    Calculate the presence ratio, the fraction of time the unit is firing above a certain threshold.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     bin_duration_s : float, default: 60
         The duration of each bin in seconds. If the duration is less than this value,
-        presence_ratio is set to NaN
-    mean_fr_ratio_thresh: float, default: 0
-        The unit is considered active in a bin if its firing rate during that bin
+        presence_ratio is set to NaN.
+    mean_fr_ratio_thresh : float, default: 0
+        The unit is considered active in a bin if its firing rate during that bin.
         is strictly above `mean_fr_ratio_thresh` times its mean firing rate throughout the recording.
     unit_ids : list or None
         The list of unit ids to compute the presence ratio. If None, all units are used.
@@ -182,18 +185,19 @@ def compute_snrs(
     peak_mode: str = "extremum",
     unit_ids=None,
 ):
-    """Compute signal to noise ratio.
+    """
+    Compute signal to noise ratio.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the template to compute best channels.
-    peak_mode: "extremum" | "at_index", default: "extremum"
+    peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
         How to compute the amplitude.
         Extremum takes the maxima/minima
-        At_index takes the value at t=sorting_analyzer.nbefore
+        At_index takes the value at t=sorting_analyzer.nbefore.
     unit_ids : list or None
         The list of unit ids to compute the SNR. If None, all units are used.
 
@@ -206,7 +210,7 @@ def compute_snrs(
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
     assert peak_sign in ("neg", "pos", "both")
-    assert peak_mode in ("extremum", "at_index")
+    assert peak_mode in ("extremum", "at_index", "peak_to_peak")
 
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
@@ -232,23 +236,24 @@ _default_params["snr"] = dict(peak_sign="neg", peak_mode="extremum")
 
 
 def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0, unit_ids=None):
-    """Calculate Inter-Spike Interval (ISI) violations.
+    """
+    Calculate Inter-Spike Interval (ISI) violations.
 
     It computes several metrics related to isi violations:
         * isi_violations_ratio: the relative firing rate of the hypothetical neurons that are
-                                generating the ISI violations. Described in [Hill]_. See Notes.
+                                generating the ISI violations. See Notes.
         * isi_violation_count: number of ISI violations
 
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
-        The SortingAnalyzer object
+        The SortingAnalyzer object.
     isi_threshold_ms : float, default: 1.5
         Threshold for classifying adjacent spikes as an ISI violation, in ms.
-        This is the biophysical refractory period
+        This is the biophysical refractory period.
     min_isi_ms : float, default: 0
         Minimum possible inter-spike interval, in ms.
-        This is the artificial refractory period enforced
+        This is the artificial refractory period enforced.
         by the data acquisition system or post-processing algorithms.
     unit_ids : list or None
         List of unit ids to compute the ISI violations. If None, all units are used.
@@ -256,22 +261,29 @@ def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0,
     Returns
     -------
     isi_violations_ratio : dict
-        The isi violation ratio described in [Hill]_.
+        The isi violation ratio.
     isi_violation_count : dict
         Number of violations.
 
     Notes
     -----
-    You can interpret an ISI violations ratio value of 0.5 as meaning that contaminating spikes are
-    occurring at roughly half the rate of "true" spikes for that unit.
-    In cases of highly contaminated units, the ISI violations ratio can sometimes be greater than 1.
+    The returned ISI violations ratio approximates the fraction of spikes in each
+    unit which are contaminted. The formulation assumes that the contaminating spikes
+    are statistically independent from the other spikes in that cluster. This
+    approximation can break down in reality, especially for highly contaminated units.
+    See the discussion in Section 4.1 of [Llobet]_ for more details.
+
+    This method counts the number of spikes whose isi is violated. If there are three
+    spikes within `isi_threshold_ms`, the first and second are violated. Hence there are two
+    spikes which have been violated.  This is is contrast to `compute_refrac_period_violations`,
+    which counts the number of violations.
 
     References
     ----------
-    Based on metrics described in [Hill]_
+    Based on metrics originally implemented in Ultra Mega Sort [UMS]_.
 
-    Originally written in Matlab by Nick Steinmetz (https://github.com/cortex-lab/sortingQuality)
-    and converted to Python by Daniel Denman.
+    This implementation is based on one of the original implementations written in Matlab by Nick Steinmetz
+    (https://github.com/cortex-lab/sortingQuality) and converted to Python by Daniel Denman.
     """
     res = namedtuple("isi_violation", ["isi_violations_ratio", "isi_violations_count"])
 
@@ -315,17 +327,17 @@ _default_params["isi_violation"] = dict(isi_threshold_ms=1.5, min_isi_ms=0)
 def compute_refrac_period_violations(
     sorting_analyzer, refractory_period_ms: float = 1.0, censored_period_ms: float = 0.0, unit_ids=None
 ):
-    """Calculates the number of refractory period violations.
+    """
+    Calculate the number of refractory period violations.
 
     This is similar (but slightly different) to the ISI violations.
-    The key difference being that the violations are not only computed on consecutive spikes.
 
     This is required for some formulas (e.g. the ones from Llobet & Wyngaard 2022).
 
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
-        The SortingAnalyzer object
+        The SortingAnalyzer object.
     refractory_period_ms : float, default: 1.0
         The period (in ms) where no 2 good spikes can occur.
     censored_period_ms : float, default: 0.0
@@ -345,10 +357,15 @@ def compute_refrac_period_violations(
     -----
     Requires "numba" package
 
+    This method counts the number of violations which occur during the refactory period.
+    For example, if there are three spikes within `refractory_period_ms`, the second and third spikes
+    violate the first spike and the third spike violates the second spike. Hence there
+    are three violations. This is in contrast to `compute_isi_violations`, which
+    computes the number of spikes which have been violated.
+
     References
     ----------
     Based on metrics described in [Llobet]_
-
     """
     res = namedtuple("rp_violations", ["rp_contamination", "rp_violations"])
 
@@ -383,11 +400,11 @@ def compute_refrac_period_violations(
     nb_violations = {}
     rp_contamination = {}
 
-    for i, unit_id in enumerate(sorting.unit_ids):
+    for unit_index, unit_id in enumerate(sorting.unit_ids):
         if unit_id not in unit_ids:
             continue
 
-        nb_violations[unit_id] = n_v = nb_rp_violations[i]
+        nb_violations[unit_id] = n_v = nb_rp_violations[unit_index]
         N = num_spikes[unit_id]
         if N == 0:
             rp_contamination[unit_id] = np.nan
@@ -411,34 +428,35 @@ def compute_sliding_rp_violations(
     contamination_values=None,
     unit_ids=None,
 ):
-    """Compute sliding refractory period violations, a metric developed by IBL which computes
+    """
+    Compute sliding refractory period violations, a metric developed by IBL which computes
     contamination by using a sliding refractory period.
     This metric computes the minimum contamination with at least 90% confidence.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     min_spikes : int, default: 0
         Contamination  is set to np.nan if the unit has less than this many
         spikes across all segments.
     bin_size_ms : float, default: 0.25
-        The size of binning for the autocorrelogram in ms
+        The size of binning for the autocorrelogram in ms.
     window_size_s : float, default: 1
-        Window in seconds to compute correlogram
+        Window in seconds to compute correlogram.
     exclude_ref_period_below_ms : float, default: 0.5
-        Refractory periods below this value are excluded
+        Refractory periods below this value are excluded.
     max_ref_period_ms : float, default: 10
-        Maximum refractory period to test in ms
+        Maximum refractory period to test in ms.
     contamination_values : 1d array or None, default: None
-        The contamination values to test, If None, it is set to np.arange(0.5, 35, 0.5)
+        The contamination values to test, If None, it is set to np.arange(0.5, 35, 0.5).
     unit_ids : list or None
         List of unit ids to compute the sliding RP violations. If None, all units are used.
 
     Returns
     -------
     contamination : dict of floats
-        The minimum contamination at 90% confidence
+        The minimum contamination at 90% confidence.
 
     References
     ----------
@@ -496,14 +514,60 @@ _default_params["sliding_rp_violation"] = dict(
 )
 
 
-def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_ids=None, **kwargs):
-    """Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
+def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
+    """
+    Compute synchrony counts, the number of simultaneous spikes with sizes `synchrony_sizes`.
+
+    Parameters
+    ----------
+    spikes : np.array
+        Structured numpy array with fields ("sample_index", "unit_index", "segment_index").
+    synchrony_sizes : numpy array
+        The synchrony sizes to compute. Should be pre-sorted.
+    all_unit_ids : list or None, default: None
+        List of unit ids to compute the synchrony metrics. Expecting all units.
+
+    Returns
+    -------
+    synchrony_counts : dict
+        The synchrony counts for the synchrony sizes.
+
+    References
+    ----------
+    Based on concepts described in [Gruen]_
+    This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
+    """
+
+    synchrony_counts = np.zeros((np.size(synchrony_sizes), len(all_unit_ids)), dtype=np.int64)
+
+    # compute the occurrence of each sample_index. Count >2 means there's synchrony
+    _, unique_spike_index, counts = np.unique(spikes["sample_index"], return_index=True, return_counts=True)
+
+    sync_indices = unique_spike_index[counts >= 2]
+    sync_counts = counts[counts >= 2]
+
+    for i, sync_index in enumerate(sync_indices):
+
+        num_of_syncs = sync_counts[i]
+        units_with_sync = [spikes[sync_index + a][1] for a in range(0, num_of_syncs)]
+
+        # Counts inclusively. E.g. if there are 3 simultaneous spikes, these are also added
+        # to the 2 simultaneous spike bins.
+        how_many_bins_to_add_to = np.size(synchrony_sizes[synchrony_sizes <= num_of_syncs])
+        synchrony_counts[:how_many_bins_to_add_to, units_with_sync] += 1
+
+    return synchrony_counts
+
+
+def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_ids=None):
+    """
+    Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
     "synchrony_size" spikes at the exact same sample index.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     synchrony_sizes : list or tuple, default: (2, 4, 8)
         The synchrony sizes to compute.
     unit_ids : list or None, default: None
@@ -521,61 +585,52 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
     """
     assert min(synchrony_sizes) > 1, "Synchrony sizes must be greater than 1"
-    spike_counts = sorting_analyzer.sorting.count_num_spikes_per_unit(outputs="dict")
+    # Sort the synchrony times so we can slice numpy arrays, instead of using dicts
+    synchrony_sizes_np = np.array(synchrony_sizes, dtype=np.int16)
+    synchrony_sizes_np.sort()
+
+    res = namedtuple("synchrony_metrics", [f"sync_spike_{size}" for size in synchrony_sizes_np])
+
     sorting = sorting_analyzer.sorting
-    spikes = sorting.to_spike_vector(concatenated=False)
 
-    if unit_ids is None:
-        unit_ids = sorting_analyzer.unit_ids
+    spike_counts = sorting.count_num_spikes_per_unit(outputs="dict")
 
-    # Pre-allocate synchrony counts
-    synchrony_counts = {}
-    for synchrony_size in synchrony_sizes:
-        synchrony_counts[synchrony_size] = np.zeros(len(sorting_analyzer.unit_ids), dtype=np.int64)
+    spikes = sorting.to_spike_vector()
+    all_unit_ids = sorting.unit_ids
+    synchrony_counts = get_synchrony_counts(spikes, synchrony_sizes_np, all_unit_ids)
 
-    all_unit_ids = list(sorting.unit_ids)
-    for segment_index in range(sorting.get_num_segments()):
-        spikes_in_segment = spikes[segment_index]
+    synchrony_metrics_dict = {}
+    for sync_idx, synchrony_size in enumerate(synchrony_sizes_np):
+        sync_id_metrics_dict = {}
+        for i, unit_id in enumerate(all_unit_ids):
+            if spike_counts[unit_id] != 0:
+                sync_id_metrics_dict[unit_id] = synchrony_counts[sync_idx][i] / spike_counts[unit_id]
+            else:
+                sync_id_metrics_dict[unit_id] = 0
+        synchrony_metrics_dict[f"sync_spike_{synchrony_size}"] = sync_id_metrics_dict
 
-        # we compute just by counting the occurrence of each sample_index
-        unique_spike_index, complexity = np.unique(spikes_in_segment["sample_index"], return_counts=True)
-
-        # add counts for this segment
-        for unit_id in unit_ids:
-            unit_index = all_unit_ids.index(unit_id)
-            spikes_per_unit = spikes_in_segment[spikes_in_segment["unit_index"] == unit_index]
-            # some segments/units might have no spikes
-            if len(spikes_per_unit) == 0:
-                continue
-            spike_complexity = complexity[np.isin(unique_spike_index, spikes_per_unit["sample_index"])]
-            for synchrony_size in synchrony_sizes:
-                synchrony_counts[synchrony_size][unit_index] += np.count_nonzero(spike_complexity >= synchrony_size)
-
-    # add counts for this segment
-    synchrony_metrics_dict = {
-        f"sync_spike_{synchrony_size}": {
-            unit_id: synchrony_counts[synchrony_size][all_unit_ids.index(unit_id)] / spike_counts[unit_id]
-            for unit_id in unit_ids
-        }
-        for synchrony_size in synchrony_sizes
-    }
-
-    # Convert dict to named tuple
-    synchrony_metrics_tuple = namedtuple("synchrony_metrics", synchrony_metrics_dict.keys())
-    synchrony_metrics = synchrony_metrics_tuple(**synchrony_metrics_dict)
-    return synchrony_metrics
+    if np.all(unit_ids == None) or (len(unit_ids) == len(all_unit_ids)):
+        return res(**synchrony_metrics_dict)
+    else:
+        reduced_synchrony_metrics_dict = {}
+        for key in synchrony_metrics_dict:
+            reduced_synchrony_metrics_dict[key] = {
+                unit_id: synchrony_metrics_dict[key][unit_id] for unit_id in unit_ids
+            }
+        return res(**reduced_synchrony_metrics_dict)
 
 
 _default_params["synchrony"] = dict(synchrony_sizes=(2, 4, 8))
 
 
 def compute_firing_ranges(sorting_analyzer, bin_size_s=5, percentiles=(5, 95), unit_ids=None, **kwargs):
-    """Calculate firing range, the range between the 5th and 95th percentiles of the firing rates distribution
+    """
+    Calculate firing range, the range between the 5th and 95th percentiles of the firing rates distribution
     computed in non-overlapping time bins.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
     bin_size_s : float, default: 5
         The size of the bin in seconds.
@@ -641,18 +696,21 @@ def compute_amplitude_cv_metrics(
     amplitude_extension="spike_amplitudes",
     unit_ids=None,
 ):
-    """Calculate coefficient of variation of spike amplitudes within defined temporal bins.
+    """
+    Calculate coefficient of variation of spike amplitudes within defined temporal bins.
     From the distribution of coefficient of variations, both the median and the "range" (the distance between the
     percentiles defined by `percentiles` parameter) are returned.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     average_num_spikes_per_bin : int, default: 50
         The average number of spikes per bin. This is used to estimate a temporal bin size using the firing rate
         of each unit. For example, if a unit has a firing rate of 10 Hz, amd the average number of spikes per bin is
         100, then the temporal bin size will be 100/10 Hz = 10 s.
+    percentiles : tuple, default: (5, 95)
+        The percentile values from which to calculate the range.
     min_num_bins : int, default: 10
         The minimum number of bins to compute the median and range. If the number of bins is less than this then
         the median and range are set to NaN.
@@ -776,12 +834,13 @@ def compute_amplitude_cutoffs(
     amplitudes_bins_min_ratio=5,
     unit_ids=None,
 ):
-    """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
+    """
+    Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the peaks.
     num_histogram_bins : int, default: 100
@@ -859,12 +918,13 @@ _default_params["amplitude_cutoff"] = dict(
 
 
 def compute_amplitude_medians(sorting_analyzer, peak_sign="neg", unit_ids=None):
-    """Compute median of the amplitude distributions (in absolute value).
+    """
+    Compute median of the amplitude distributions (in absolute value).
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the peaks.
     unit_ids : list or None
@@ -911,7 +971,8 @@ def compute_drift_metrics(
     return_positions=False,
     unit_ids=None,
 ):
-    """Compute drifts metrics using estimated spike locations.
+    """
+    Compute drifts metrics using estimated spike locations.
     Over the duration of the recording, the drift signal for each unit is calculated as the median
     position in an interval with respect to the overall median positions over the entire duration
     (reference position).
@@ -926,36 +987,36 @@ def compute_drift_metrics(
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     interval_s : int, default: 60
-        Interval length is seconds for computing spike depth
+        Interval length is seconds for computing spike depth.
     min_spikes_per_interval : int, default: 100
-        Minimum number of spikes for computing depth in an interval
+        Minimum number of spikes for computing depth in an interval.
     direction : "x" | "y" | "z", default: "y"
-        The direction along which drift metrics are estimated
+        The direction along which drift metrics are estimated.
     min_fraction_valid_intervals : float, default: 0.5
         The fraction of valid (not NaN) position estimates to estimate drifts.
         E.g., if 0.5 at least 50% of estimated positions in the intervals need to be valid,
-        otherwise drift metrics are set to None
+        otherwise drift metrics are set to None.
     min_num_bins : int, default: 2
         Minimum number of bins required to return a valid metric value. In case there are
         less bins, the metric values are set to NaN.
     return_positions : bool, default: False
-        If True, median positions are returned (for debugging)
+        If True, median positions are returned (for debugging).
     unit_ids : list or None, default: None
-        List of unit ids to compute the drift metrics. If None, all units are used
+        List of unit ids to compute the drift metrics. If None, all units are used.
 
     Returns
     -------
     drift_ptp : dict
-        The drift signal peak-to-peak in um
+        The drift signal peak-to-peak in um.
     drift_std : dict
-        The drift signal standard deviation in um
+        The drift signal standard deviation in um.
     drift_mad : dict
-        The drift signal median absolute deviation in um
+        The drift signal median absolute deviation in um.
     median_positions : np.array (optional)
-        The median positions of each unit over time (only returned if return_positions=True)
+        The median positions of each unit over time (only returned if return_positions=True).
 
     Notes
     -----
@@ -1036,10 +1097,10 @@ def compute_drift_metrics(
             spikes_in_bin = spikes_in_segment[i0:i1]
             spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
 
-            for unit_ind in np.arange(len(unit_ids)):
-                mask = spikes_in_bin["unit_index"] == unit_ind
+            for i, unit_id in enumerate(unit_ids):
+                mask = spikes_in_bin["unit_index"] == sorting.id_to_index(unit_id)
                 if np.sum(mask) >= min_spikes_per_interval:
-                    median_positions[unit_ind, bin_index] = np.median(spike_locations_in_bin[mask])
+                    median_positions[i, bin_index] = np.median(spike_locations_in_bin[mask])
         if median_position_segments is None:
             median_position_segments = median_positions
         else:
@@ -1078,26 +1139,27 @@ _default_params["drift"] = dict(interval_s=60, min_spikes_per_interval=100, dire
 
 ### LOW-LEVEL FUNCTIONS ###
 def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None, bin_n_spikes_thres=0):
-    """Calculate the presence ratio for a single unit
+    """
+    Calculate the presence ratio for a single unit.
 
     Parameters
     ----------
     spike_train : np.ndarray
-        Spike times for this unit, in samples
+        Spike times for this unit, in samples.
     total_length : int
-        Total length of the recording in samples
-    bin_edges : np.array
+        Total length of the recording in samples.
+    bin_edges : np.array, optional
         Pre-computed bin edges (mutually exclusive with num_bin_edges).
-    num_bin_edges : int, default: 101
+    num_bin_edges : int, optional
         The number of bins edges to use to compute the presence ratio.
         (mutually exclusive with bin_edges).
-    bin_n_spikes_thres: int, default: 0
-        Minimum number of spikes within a bin to consider the unit active
+    bin_n_spikes_thres : int, default: 0
+        Minimum number of spikes within a bin to consider the unit active.
 
     Returns
     -------
     presence_ratio : float
-        The presence ratio for one unit
+        The presence ratio for one unit.
 
     """
     assert bin_edges is not None or num_bin_edges is not None, "Use either bin_edges or num_bin_edges"
@@ -1113,19 +1175,20 @@ def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None
 
 
 def isi_violations(spike_trains, total_duration_s, isi_threshold_s=0.0015, min_isi_s=0):
-    """Calculate Inter-Spike Interval (ISI) violations.
+    """
+    Calculate Inter-Spike Interval (ISI) violations.
 
     See compute_isi_violations for additional documentation
 
     Parameters
     ----------
     spike_trains : list of np.ndarrays
-        The spike times for each recording segment for one unit, in seconds
+        The spike times for each recording segment for one unit, in seconds.
     total_duration_s : float
-        The total duration of the recording (in seconds)
+        The total duration of the recording (in seconds).
     isi_threshold_s : float, default: 0.0015
         Threshold for classifying adjacent spikes as an ISI violation, in seconds.
-        This is the biophysical refractory period
+        This is the biophysical refractory period.
     min_isi_s : float, default: 0
         Minimum possible inter-spike interval, in seconds.
         This is the artificial refractory period enforced
@@ -1134,12 +1197,12 @@ def isi_violations(spike_trains, total_duration_s, isi_threshold_s=0.0015, min_i
     Returns
     -------
     isi_violations_ratio : float
-        The isi violation ratio described in [1]
+        The isi violation ratio described in [1].
     isi_violations_rate : float
         Rate of contaminating spikes as a fraction of overall rate.
         Higher values indicate more contamination.
     isi_violation_count : int
-        Number of violations
+        Number of violations.
     """
 
     num_violations = 0
@@ -1167,8 +1230,8 @@ def isi_violations(spike_trains, total_duration_s, isi_threshold_s=0.0015, min_i
 
 
 def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_value=3, amplitudes_bins_min_ratio=5):
-    """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
-
+    """
+    Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
     See compute_amplitude_cutoffs for additional documentation
 
@@ -1176,8 +1239,6 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
     ----------
     amplitudes : ndarray_like
         The amplitudes (in uV) of the spikes for one unit.
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        The sign of the template to compute best channels.
     num_histogram_bins : int, default: 500
         The number of bins to use to compute the amplitude histogram.
     histogram_smoothing_value : int, default: 3
@@ -1241,21 +1302,21 @@ def slidingRP_violations(
     Parameters
     ----------
     spike_samples : ndarray_like or list (for multi-segment)
-        The spike times in samples
+        The spike times in samples.
     sample_rate : float
-        The acquisition sampling rate
+        The acquisition sampling rate.
     bin_size_ms : float
         The size (in ms) of binning for the autocorrelogram.
     window_size_s : float, default: 1
-        Window in seconds to compute correlogram
+        Window in seconds to compute correlogram.
     exclude_ref_period_below_ms : float, default: 0.5
         Refractory periods below this value are excluded
     max_ref_period_ms : float, default: 10
-        Maximum refractory period to test in ms
+        Maximum refractory period to test in ms.
     contamination_values : 1d array or None, default: None
-        The contamination values to test, if None it is set to np.arange(0.5, 35, 0.5) / 100
+        The contamination values to test, if None it is set to np.arange(0.5, 35, 0.5) / 100.
     return_conf_matrix : bool, default: False
-        If True, the confidence matrix (n_contaminations, n_ref_periods) is returned
+        If True, the confidence matrix (n_contaminations, n_ref_periods) is returned.
 
     Code adapted from:
     https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
@@ -1263,7 +1324,7 @@ def slidingRP_violations(
     Returns
     -------
     min_cont_with_90_confidence : dict of floats
-        The minimum contamination with confidence > 90%
+        The minimum contamination with confidence > 90%.
     """
     if contamination_values is None:
         contamination_values = np.arange(0.5, 35, 0.5) / 100  # vector of contamination values to test
@@ -1329,7 +1390,7 @@ def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, cont
 
 if HAVE_NUMBA:
 
-    @numba.jit((numba.int64[::1], numba.int32), nopython=True, nogil=True, cache=True)
+    @numba.jit(nopython=True, nogil=True, cache=False)
     def _compute_nb_violations_numba(spike_train, t_r):
         n_v = 0
         N = len(spike_train)
@@ -1349,10 +1410,9 @@ if HAVE_NUMBA:
         return n_v
 
     @numba.jit(
-        (numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
         nopython=True,
         nogil=True,
-        cache=True,
+        cache=False,
         parallel=True,
     )
     def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
@@ -1379,13 +1439,13 @@ def compute_sd_ratio(
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     censored_period_ms : float, default: 4.0
         The censored period in milliseconds. This is to remove any potential bursts that could affect the SD.
-    correct_for_drift: bool, default: True
+    correct_for_drift : bool, default: True
         If True, will subtract the amplitudes sequentiially to significantly reduce the impact of drift.
-    correct_for_template_itself: bool, default:  True
+    correct_for_template_itself : bool, default:  True
         If true, will take into account that the template itself impacts the standard deviation of the noise,
         and will make a rough estimation of what that impact is (and remove it).
     unit_ids : list or None, default: None
@@ -1428,13 +1488,13 @@ def compute_sd_ratio(
         return {unit_id: np.nan for unit_id in unit_ids}
 
     noise_levels = get_noise_levels(
-        sorting_analyzer.recording, return_scaled=amplitudes_ext.params["return_scaled"], method="std"
+        sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std"
     )
     best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
     n_spikes = sorting.count_num_spikes_per_unit()
 
     if correct_for_template_itself:
-        tamplates_array = _get_dense_templates_array(sorting_analyzer, return_scaled=True)
+        tamplates_array = get_dense_templates_array(sorting_analyzer, return_scaled=sorting_analyzer.return_scaled)
 
     spikes = sorting.to_spike_vector()
     sd_ratio = {}
@@ -1482,7 +1542,7 @@ def compute_sd_ratio(
                 # Computing the variance of a trace that is all 0 and n_spikes non-overlapping template.
                 # TODO: Take into account that templates for different segments might differ.
                 p = nsamples * n_spikes[unit_id] / sorting_analyzer.get_total_samples()
-                total_variance = p * np.mean(template**2) - p**2 * np.mean(template)
+                total_variance = p * np.mean(template**2) - p**2 * np.mean(template) ** 2
 
                 std_noise = np.sqrt(std_noise**2 - total_variance)
 

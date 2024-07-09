@@ -9,14 +9,6 @@ import numpy as np
 from tqdm.auto import tqdm
 from concurrent.futures import ProcessPoolExecutor
 
-try:
-    import scipy.stats
-    import scipy.spatial.distance
-    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-    from sklearn.neighbors import NearestNeighbors
-    from sklearn.decomposition import IncrementalPCA
-except:
-    pass
 
 import warnings
 
@@ -57,15 +49,22 @@ def get_quality_pca_metric_list():
     return deepcopy(_possible_pc_metric_names)
 
 
-def calculate_pc_metrics(
-    sorting_analyzer, metric_names=None, qm_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
+def compute_pc_metrics(
+    sorting_analyzer,
+    metric_names=None,
+    qm_params=None,
+    unit_ids=None,
+    seed=None,
+    n_jobs=1,
+    progress_bar=False,
 ):
-    """Calculate principal component derived metrics.
+    """
+    Calculate principal component derived metrics.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     metric_names : list of str, default: None
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
@@ -180,12 +179,35 @@ def calculate_pc_metrics(
     return pc_metrics
 
 
+def calculate_pc_metrics(
+    sorting_analyzer, metric_names=None, qm_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
+):
+    warnings.warn(
+        "The `calculate_pc_metrics` function is deprecated and will be removed in 0.103.0. Please use compute_pc_metrics instead",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
+
+    pc_metrics = compute_pc_metrics(
+        sorting_analyzer,
+        metric_names=metric_names,
+        qm_params=qm_params,
+        unit_ids=unit_ids,
+        seed=seed,
+        n_jobs=n_jobs,
+        progress_bar=progress_bar,
+    )
+
+    return pc_metrics
+
+
 #################################################################
 # Code from spikemetrics
 
 
 def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
-    """Calculates isolation distance and L-ratio (metrics computed from Mahalanobis distance)
+    """
+    Calculate isolation distance and L-ratio (metrics computed from Mahalanobis distance).
 
     Parameters
     ----------
@@ -207,6 +229,8 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
     ----------
     Based on metrics described in [Schmitzer-Torbert]_
     """
+    import scipy.stats
+    import scipy.spatial.distance
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
     pcs_for_other_units = all_pcs[all_labels != this_unit_id, :]
@@ -240,7 +264,8 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
 
 
 def lda_metrics(all_pcs, all_labels, this_unit_id):
-    """Calculates d-prime based on Linear Discriminant Analysis.
+    """
+    Calculate d-prime based on Linear Discriminant Analysis.
 
     Parameters
     ----------
@@ -260,6 +285,7 @@ def lda_metrics(all_pcs, all_labels, this_unit_id):
     ----------
     Based on metric described in [Hill]_
     """
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
     X = all_pcs
 
@@ -282,7 +308,7 @@ def lda_metrics(all_pcs, all_labels, this_unit_id):
 
 def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_neighbors):
     """
-    Calculates unit contamination based on NearestNeighbors search in PCA space.
+    Calculate unit contamination based on NearestNeighbors search in PCA space.
 
     Parameters
     ----------
@@ -317,6 +343,7 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
     ----------
     Based on metrics described in [Chung]_
     """
+    from sklearn.neighbors import NearestNeighbors
 
     total_spikes = all_pcs.shape[0]
     ratio = max_spikes / total_spikes
@@ -365,18 +392,19 @@ def nearest_neighbors_isolation(
     min_spatial_overlap: float = 0.5,
     seed=None,
 ):
-    """Calculates unit isolation based on NearestNeighbors search in PCA space.
+    """
+    Calculate unit isolation based on NearestNeighbors search in PCA space.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     this_unit_id : int | str
         The ID for the unit to calculate these metrics for.
-    n_spikes_all_units: dict, default: None
+    n_spikes_all_units : dict, default: None
         Dictionary of the form ``{<unit_id>: <n_spikes>}`` for the waveform extractor.
         Recomputed if None.
-    fr_all_units: dict, default: None
+    fr_all_units : dict, default: None
         Dictionary of the form ``{<unit_id>: <firing_rate>}`` for the waveform extractor.
         Recomputed if None.
     max_spikes : int, default: 1000
@@ -395,12 +423,12 @@ def nearest_neighbors_isolation(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: "neg" | "pos" | "both", default: "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The peak_sign used to compute sparsity and neighbor units. Used if sorting_analyzer
         is not sparse already.
     min_spatial_overlap : float, default: 100
         In case sorting_analyzer is sparse, other units are selected if they share at least
-        `min_spatial_overlap` times `n_target_unit_channels` with the target unit
+        `min_spatial_overlap` times `n_target_unit_channels` with the target unit.
     seed : int, default: None
         Seed for random subsampling of spikes.
 
@@ -410,7 +438,7 @@ def nearest_neighbors_isolation(
         The calculation nearest neighbor isolation metric for `this_unit_id`.
         If the unit has fewer than `min_spikes`, returns numpy.NaN instead.
     nn_unit_id : np.int16
-        Id of the "nearest neighbor" unit (unit with lowest isolation score from `this_unit_id`)
+        Id of the "nearest neighbor" unit (unit with lowest isolation score from `this_unit_id`).
 
     Notes
     -----
@@ -442,6 +470,8 @@ def nearest_neighbors_isolation(
     ----------
     Based on isolation metric described in [Chung]_
     """
+    from sklearn.decomposition import IncrementalPCA
+
     rng = np.random.default_rng(seed=seed)
 
     waveforms_ext = sorting_analyzer.get_extension("waveforms")
@@ -578,18 +608,19 @@ def nearest_neighbors_noise_overlap(
     peak_sign: str = "neg",
     seed=None,
 ):
-    """Calculates unit noise overlap based on NearestNeighbors search in PCA space.
+    """
+    Calculate unit noise overlap based on NearestNeighbors search in PCA space.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     this_unit_id : int | str
         The ID of the unit to calculate this metric on.
-    n_spikes_all_units: dict, default: None
+    n_spikes_all_units : dict, default: None
         Dictionary of the form ``{<unit_id>: <n_spikes>}`` for the waveform extractor.
         Recomputed if None.
-    fr_all_units: dict, default: None
+    fr_all_units : dict, default: None
         Dictionary of the form ``{<unit_id>: <firing_rate>}`` for the waveform extractor.
         Recomputed if None.
     max_spikes : int, default: 1000
@@ -606,7 +637,7 @@ def nearest_neighbors_noise_overlap(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: "neg" | "pos" | "both", default: "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The peak_sign used to compute sparsity and neighbor units. Used if sorting_analyzer
         is not sparse already.
     seed : int, default: 0
@@ -636,6 +667,8 @@ def nearest_neighbors_noise_overlap(
     ----------
     Based on noise overlap metric described in [Chung]_
     """
+    from sklearn.decomposition import IncrementalPCA
+
     rng = np.random.default_rng(seed=seed)
 
     waveforms_ext = sorting_analyzer.get_extension("waveforms")
@@ -668,7 +701,7 @@ def nearest_neighbors_noise_overlap(
         recording = sorting_analyzer.recording
         noise_cluster = get_random_data_chunks(
             recording,
-            return_scaled=waveforms_ext.params["return_scaled"],
+            return_scaled=sorting_analyzer.return_scaled,
             num_chunks_per_segment=max_spikes,
             chunk_size=nsamples,
             seed=seed,
@@ -740,7 +773,8 @@ def nearest_neighbors_noise_overlap(
 
 
 def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
-    """Calculates the simplified silhouette score for each cluster. The value ranges
+    """
+    Calculate the simplified silhouette score for each cluster. The value ranges
     from -1 (bad clustering) to 1 (good clustering). The simplified silhoutte score
     utilizes the centroids for distance calculations rather than pairwise calculations.
 
@@ -756,12 +790,13 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
     Returns
     -------
     unit_silhouette_score : float
-        Simplified Silhouette Score for this unit
+        Simplified Silhouette Score for this unit.
 
     References
     ----------
     Based on simplified silhouette score suggested by [Hruschka]_
     """
+    import scipy.spatial.distance
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
     centroid_for_this_unit = np.expand_dims(np.mean(pcs_for_this_unit, 0), 0)
@@ -789,7 +824,8 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
 
 
 def silhouette_score(all_pcs, all_labels, this_unit_id):
-    """Calculates the silhouette score which is a marker of cluster quality ranging from
+    """
+    Calculate the silhouette score which is a marker of cluster quality ranging from
     -1 (bad clustering) to 1 (good clustering). Distances are all calculated as pairwise
     comparisons of all data points.
 
@@ -805,12 +841,13 @@ def silhouette_score(all_pcs, all_labels, this_unit_id):
     Returns
     -------
     unit_silhouette_score : float
-        Silhouette Score for this unit
+        Silhouette Score for this unit.
 
     References
     ----------
     Based on [Rousseeuw]_
     """
+    import scipy.spatial.distance
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
     distances_for_this_unit = scipy.spatial.distance.cdist(pcs_for_this_unit, pcs_for_this_unit)
@@ -845,7 +882,7 @@ def _subtract_clip_component(clip1, component):
 
 def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
     """
-    Computes the isolation score used for nn_isolation and nn_noise_overlap
+    Compute the isolation score used for nn_isolation and nn_noise_overlap.
 
     Parameters
     ----------
@@ -870,6 +907,7 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
         (1) ranges from 0 to 1; and
         (2) is symmetric, i.e. Isolation(A, B) = Isolation(B, A)
     """
+    from sklearn.neighbors import NearestNeighbors
 
     # get lengths
     n_spikes_target = pcs_target_unit.shape[0]

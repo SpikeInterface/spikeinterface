@@ -23,6 +23,7 @@ from .core_tools import (
     make_paths_relative,
     make_paths_absolute,
     check_paths_relative,
+    retrieve_importing_provenance,
 )
 from .job_tools import _shared_job_kwargs_doc
 
@@ -40,7 +41,7 @@ class BaseExtractor:
     # This replaces the old key_properties
     # These are annotations/properties that always need to be
     # dumped (for instance locations, groups, is_fileterd, etc.)
-    _main_annotations = []
+    _main_annotations = ["name"]
     _main_properties = []
 
     # these properties are skipped by default in copy_metadata
@@ -78,9 +79,26 @@ class BaseExtractor:
         # preferred context for multiprocessing
         self._preferred_mp_context = None
 
+    @property
+    def name(self):
+        name = self._annotations.get("name", None)
+        return name if name is not None else self.__class__.__name__
+
+    @name.setter
+    def name(self, value):
+        if value is not None:
+            self.annotate(name=value)
+        else:
+            # we remove the annotation if it exists
+            _ = self._annotations.pop("name", None)
+
     def get_num_segments(self) -> int:
         # This is implemented in BaseRecording or BaseSorting
         raise NotImplementedError
+
+    def get_parent(self) -> Optional[BaseExtractor]:
+        """Returns parent object if it exists, otherwise None"""
+        return getattr(self, "_parent", None)
 
     def _check_segment_index(self, segment_index: Optional[int] = None) -> int:
         if segment_index is None:
@@ -123,8 +141,18 @@ class BaseExtractor:
                 indices = np.arange(len(self._main_ids))
         else:
             assert isinstance(ids, (list, np.ndarray, tuple)), "'ids' must be a list, np.ndarray or tuple"
+
+            non_existent_ids = [id for id in ids if id not in self._main_ids]
+            if non_existent_ids:
+                error_msg = (
+                    f"IDs {non_existent_ids} are not channel ids of the extractor. \n"
+                    f"Available ids are {self._main_ids} with dtype {self._main_ids.dtype}"
+                )
+                raise ValueError(error_msg)
+
             _main_ids = self._main_ids.tolist()
             indices = np.array([_main_ids.index(id) for id in ids], dtype=int)
+
             if prefer_slice:
                 if np.all(np.diff(indices) == 1):
                     indices = slice(indices[0], indices[-1] + 1)
@@ -427,22 +455,8 @@ class BaseExtractor:
 
             kwargs = new_kwargs
 
-        module_import_path = self.__class__.__module__
-        class_name_no_path = self.__class__.__name__
-        class_name = f"{module_import_path}.{class_name_no_path}"  # e.g. 'spikeinterface.core.generate.AClass'
-        module = class_name.split(".")[0]
-
-        imported_module = importlib.import_module(module)
-        module_version = getattr(imported_module, "__version__", "unknown")
-
-        dump_dict = {
-            "class": class_name,
-            "module": module,
-            "kwargs": kwargs,
-            "version": module_version,
-        }
-
-        dump_dict["version"] = module_version  # Can be spikeinterface, spikeforest, etc.
+        dump_dict = retrieve_importing_provenance(self.__class__)
+        dump_dict["kwargs"] = kwargs
 
         if include_annotations:
             dump_dict["annotations"] = self._annotations
@@ -559,7 +573,7 @@ class BaseExtractor:
                         return False
         return self._serializability[type]
 
-    def check_if_memory_serializable(self):
+    def check_if_memory_serializable(self) -> bool:
         """
         Check if the object is serializable to memory with pickle, including nested objects.
 
@@ -570,7 +584,7 @@ class BaseExtractor:
         """
         return self.check_serializability("memory")
 
-    def check_if_json_serializable(self):
+    def check_if_json_serializable(self) -> bool:
         """
         Check if the object is json serializable, including nested objects.
 
@@ -583,7 +597,7 @@ class BaseExtractor:
         # is this needed ??? I think no.
         return self.check_serializability("json")
 
-    def check_if_pickle_serializable(self):
+    def check_if_pickle_serializable(self) -> bool:
         # is this needed ??? I think no.
         return self.check_serializability("pickle")
 
@@ -855,43 +869,63 @@ class BaseExtractor:
         return cached
 
     # TODO rename to saveto_binary_folder
-    def save_to_folder(self, name=None, folder=None, overwrite=False, verbose=True, **save_kwargs):
+    def save_to_folder(
+        self,
+        name: str | None = None,
+        folder: str | Path | None = None,
+        overwrite: str = False,
+        verbose: bool = True,
+        **save_kwargs,
+    ):
         """
-        Save extractor to folder.
+        Save the extractor and its data to a folder.
 
-        The save consist of:
-          * extracting traces by calling get_trace() method in chunks
-          * saving data into file (memmap with BinaryRecordingExtractor)
-          * dumping to json/pickle the original extractor for provenance
-          * dumping to json/pickle the cached extractor (memmap with BinaryRecordingExtractor)
+        This method extracts trace data, saves it to a file (using a memory-mapped approach),
+        and stores both the original extractor's provenance
+        and the extractor's metadata in JSON format.
 
-        This replaces the use of the old CacheRecordingExtractor and CacheSortingExtractor.
+        The folder's final location and name can be specified in a couple of ways ways:
 
-        There are 2 option for the "folder" argument:
-          * explicit folder: `extractor.save(folder="/path-for-saving/")`
-          * explicit sub-folder, implicit base-folder : `extractor.save(name="extarctor_name")`
-          * generated: `extractor.save()`
+        1. Explicitly providing the full path:
+        ```
+        extractor.save_to_folder(folder="/path/to/save/")
+        ```
 
-        The second option saves to subfolder "extractor_name" in
-        "get_global_tmp_folder()". You can set the global tmp folder with:
-        "set_global_tmp_folder("path-to-global-folder")"
+        2. Providing a subfolder name, with the base folder being determined automatically:
+        ```
+        extractor.save_to_folder(name="my_extractor_data")
+        ```
+        In this case, the data is saved in a subfolder named "my_extractor_data"
+        within the global temporary folder (set using `set_global_tmp_folder`). If no
+        global temporary folder is set, one will be generated automatically.
 
-        The folder must not exist. If it exists, remove it before.
+        3. If neither `name` nor `folder` is provided, a random name will be generated
+        for the subfolder within the global temporary folder.
 
         Parameters
         ----------
-        name: None str or Path
-            Name of the subfolder in get_global_tmp_folder()
-            If "name" is given, "folder" must be None.
-        folder: None str or Path
-            Name of the folder.
-            If "folder" is given, "name" must be None.
-        overwrite: bool, default: False
-            If True, the folder is removed if it already exists
+        name : str or Path, optional
+            The name of the subfolder within the global temporary folder. If `folder`
+            is provided, this argument must be None.
+        folder : str or Path, optional
+            The full path of the folder where the data should be saved. If `name` is
+            provided, this argument must be None.
+        overwrite : bool, default: False
+            If True, an existing folder at the specified path will be deleted before saving.
+        verbose : bool, default: True
+            If True, print information about the cache folder being used.
+        **save_kwargs
+            Additional keyword arguments to be passed to the underlying save method.
 
         Returns
         -------
-        cached: saved copy of the extractor.
+        cached_extractor
+            A saved copy of the extractor in the specified format.
+
+        Raises
+        ------
+        AssertionError
+            If the folder already exists and `overwrite` is False.
         """
 
         if folder is None:
@@ -934,7 +968,6 @@ class BaseExtractor:
         self.copy_metadata(cached)
 
         # dump
-        # cached.dump(folder / f'cached.json', relative_to=folder, folder_metadata=folder)
         cached.dump(folder / f"si_folder.json", relative_to=folder)
 
         return cached
@@ -967,9 +1000,24 @@ class BaseExtractor:
             For cloud storage locations, this should not be None (in case of default values, use an empty dict)
         channel_chunk_size: int or None, default: None
             Channels per chunk (only for BaseRecording)
+        compressor: numcodecs.Codec or None, default: None
+            Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
+        filters: list[numcodecs.Codec] or None, default: None
+            Global filters for zarr (global)
+        compressor_by_dataset: dict or None, default: None
+            Optional compressor per dataset:
+                - traces
+                - times
+            If None, the global compressor is used
+        filters_by_dataset: dict or None, default: None
+            Optional filters per dataset:
+                - traces
+                - times
+            If None, the global filters are used
         verbose: bool, default: True
             If True, the output is verbose
-        **save_kwargs: Keyword arguments for saving to zarr
+        auto_cast_uint: bool, default: True
+            If True, unsigned integers are cast to signed integers to avoid issues with zarr (only for BaseRecording)
 
         Returns
         -------

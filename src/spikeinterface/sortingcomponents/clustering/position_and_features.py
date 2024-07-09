@@ -18,7 +18,7 @@ from spikeinterface.core import get_global_tmp_folder, get_noise_levels
 from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 from .clustering_tools import remove_duplicates, remove_duplicates_via_matching, remove_duplicates_via_dip
 from spikeinterface.core import NumpySorting
-from spikeinterface.core import estimate_templates_average, Templates
+from spikeinterface.core import estimate_templates_with_accumulator, Templates
 from spikeinterface.sortingcomponents.features_from_peaks import compute_features_from_peaks
 
 
@@ -42,7 +42,7 @@ class PositionAndFeaturesClustering:
         "ms_before": 1.5,
         "ms_after": 1.5,
         "cleaning_method": "dip",
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "verbose": True, "progress_bar": True},
+        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "progress_bar": True},
     }
 
     @classmethod
@@ -174,7 +174,7 @@ class PositionAndFeaturesClustering:
 
             nbefore = int(params["ms_before"] * fs / 1000.0)
             nafter = int(params["ms_after"] * fs / 1000.0)
-            templates_array = estimate_templates_average(
+            templates_array = estimate_templates_with_accumulator(
                 recording,
                 sorting.to_spike_vector(),
                 sorting.unit_ids,
@@ -184,7 +184,12 @@ class PositionAndFeaturesClustering:
                 **params["job_kwargs"],
             )
             templates = Templates(
-                templates_array=templates_array, sampling_frequency=fs, nbefore=nbefore, probe=recording.get_probe()
+                templates_array=templates_array,
+                sampling_frequency=fs,
+                nbefore=nbefore,
+                sparsity_mask=None,
+                probe=recording.get_probe(),
+                is_scaled=False,
             )
 
             labels, peak_labels = remove_duplicates_via_matching(

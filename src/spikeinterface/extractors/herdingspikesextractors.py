@@ -7,20 +7,13 @@ import numpy as np
 from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-try:
-    import h5py
-
-    HAVE_HS2SX = True
-except ImportError:
-    HAVE_HS2SX = False
-
 
 class HerdingspikesSortingExtractor(BaseSorting):
     """Load HerdingSpikes format data as a sorting extractor.
 
     Parameters
     ----------
-    folder_path : str or Path
+    file_path : str or Path
         Path to the ALF folder.
     load_unit_info : bool, default: True
         Whether to load the unit info from the file.
@@ -31,16 +24,13 @@ class HerdingspikesSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "HS2Sorting"
-    installed = HAVE_HS2SX  # check at class level if installed or not
-    mode = "file"
-    installation_mesg = (
-        "To use the HS2SortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
-    )
-    name = "herdingspikes"
+    installation_mesg = "To use the HS2SortingExtractor install h5py: \n\n pip install h5py\n\n"
 
     def __init__(self, file_path, load_unit_info=True):
-        assert self.installed, self.installation_mesg
+        try:
+            import h5py
+        except ImportError:
+            raise ImportError(self.installation_mesg)
 
         self._recording_file = file_path
         self._rf = h5py.File(self._recording_file, mode="r")

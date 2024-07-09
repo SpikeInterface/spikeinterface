@@ -33,7 +33,7 @@ class SimpleSorter(ComponentsBasedSorter):
         "apply_preprocessing": False,
         "waveforms": {"ms_before": 1.0, "ms_after": 1.5},
         "filtering": {"freq_min": 300, "freq_max": 8000.0},
-        "detection": {"peak_sign": "neg", "detect_threshold": 5.0, "exclude_sweep_ms": 0.4},
+        "detection": {"peak_sign": "neg", "detect_threshold": 5.0, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "features": {"n_components": 3},
         "clustering": {
             "method": "hdbscan",
@@ -46,6 +46,23 @@ class SimpleSorter(ComponentsBasedSorter):
         "job_kwargs": {"n_jobs": -1, "chunk_duration": "1s"},
     }
 
+    _params_description = {
+        "apply_preprocessing": "whether to apply the preprocessing steps, default: False",
+        "waveforms": "A dictonary containing waveforms params: 'ms_before' (peak of spike) default: 1.0, 'ms_after' (peak of spike) deafult: 1.5",
+        "filtering": "A dictionary containing bandpass filter conditions, 'freq_min' default: 300 and 'freq_max' default:8000.0",
+        "detection": (
+            "A dictionary for specifying the detection conditions of 'peak_sign' (pos or neg) default: 'neg', "
+            "'detect_threshold' (snr) default: 5.0, 'exclude_sweep_ms' default: 1.5, 'radius_um' default: 150.0"
+        ),
+        "features": "A dictionary for the PCA specifying the 'n_components, default: 3",
+        "clustering": (
+            "A dictionary for specifying the clustering parameters: 'method' (to cluster) default: 'hdbscan', "
+            "'min_cluster_size' (min number of spikes per cluster) default: 25, 'allow_single_cluster' default: True, "
+            " 'core_dist_n_jobs' (parallelization) default: -1, cluster_selection_method (for hdbscan) default: leaf"
+        ),
+        "job_kwargs": "Spikeinterface job_kwargs (see job_kwargs documentation) default 'n_jobs': -1, 'chunk_duration': '1s'",
+    }
+
     @classmethod
     def get_sorter_version(cls):
         return "1.0"
@@ -54,7 +71,7 @@ class SimpleSorter(ComponentsBasedSorter):
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         job_kwargs = params["job_kwargs"]
         job_kwargs = fix_job_kwargs(job_kwargs)
-        job_kwargs.update({"verbose": verbose, "progress_bar": verbose})
+        job_kwargs.update({"progress_bar": verbose})
 
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
@@ -95,9 +112,12 @@ class SimpleSorter(ComponentsBasedSorter):
 
         ms_before = params["waveforms"]["ms_before"]
         ms_after = params["waveforms"]["ms_after"]
+        nbefore = int(ms_before * sampling_frequency / 1000.0)
+        nafter = int(ms_after * sampling_frequency / 1000.0)
 
         # SVD for time compression
-        few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
+
+        few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=5000, margin=(nbefore, nafter))
         few_wfs = extract_waveform_at_max_channel(
             recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
         )

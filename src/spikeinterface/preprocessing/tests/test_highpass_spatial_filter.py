@@ -8,14 +8,7 @@ import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
 from spikeinterface.core import generate_recording
 import spikeinterface.widgets as sw
-
-try:
-    import spikeglx
-    import neurodsp.voltage as voltage
-
-    HAVE_IBL_NPIX = True
-except ImportError:
-    HAVE_IBL_NPIX = False
+import importlib.util
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
@@ -31,7 +24,10 @@ if DEBUG:
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not HAVE_IBL_NPIX or ON_GITHUB, reason="Only local. Requires ibl-neuropixel install")
+@pytest.mark.skipif(
+    importlib.util.find_spec("neurodsp") is not None or importlib.util.find_spec("spikeglx") or ON_GITHUB,
+    reason="Only local. Requires ibl-neuropixel install",
+)
 @pytest.mark.parametrize("lagc", [False, 1, 300])
 def test_highpass_spatial_filter_real_data(lagc):
     """
@@ -56,6 +52,9 @@ def test_highpass_spatial_filter_real_data(lagc):
     use DEBUG = true to visualise.
 
     """
+    import spikeglx
+    import neurodsp.voltage as voltage
+
     options = dict(lagc=lagc, ntr_pad=25, ntr_tap=50, butter_kwargs=None)
     print(options)
 
@@ -109,6 +108,34 @@ def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, 
             assert raw_traces.shape == si_filtered.shape
 
 
+@pytest.mark.parametrize("dtype", [np.int16, np.float32, np.float64])
+def test_dtype_stability(dtype):
+    """
+    Check that the dtype of the recording and
+    output data is as expected, as data is cast to float32
+    during filtering.
+    """
+    num_chan = 32
+    si_recording = generate_recording(num_channels=num_chan, durations=[2])
+    si_recording.set_property("gain_to_uV", np.ones(num_chan))
+    si_recording.set_property("offset_to_uV", np.ones(num_chan))
+    si_recording = spre.astype(si_recording, dtype)
+
+    assert si_recording.dtype == dtype
+
+    highpass_spatial_filter = spre.highpass_spatial_filter(si_recording, n_channel_pad=2)
+
+    assert highpass_spatial_filter.dtype == dtype
+
+    filtered_data_unscaled = highpass_spatial_filter.get_traces(return_scaled=False)
+
+    assert filtered_data_unscaled.dtype == dtype
+
+    filtered_data_scaled = highpass_spatial_filter.get_traces(return_scaled=True)
+
+    assert filtered_data_scaled.dtype == np.float32
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # Test Utils
 # ----------------------------------------------------------------------------------------------------------------------
@@ -118,6 +145,8 @@ def get_ibl_si_data():
     """
     Set fixture to session to ensure origional data is not changed.
     """
+    import spikeglx
+
     local_path = si.download_dataset(remote_path="spikeglx/Noise4Sam_g0")
     ibl_recording = spikeglx.Reader(
         local_path / "Noise4Sam_g0_imec0" / "Noise4Sam_g0_t0.imec0.ap.bin", ignore_warnings=True
@@ -125,7 +154,7 @@ def get_ibl_si_data():
     ibl_data = ibl_recording.read(slice(None), slice(None), sync=False)[:, :-1].T  # cut sync channel
 
     si_recording = se.read_spikeglx(local_path, stream_id="imec0.ap")
-    si_recording = spre.scale(si_recording, dtype="float32")
+    si_recording = spre.astype(si_recording, dtype="float32")
 
     return ibl_data, si_recording
 

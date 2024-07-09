@@ -6,6 +6,8 @@ from pathlib import Path
 from .curationsorting import CurationSorting
 
 
+# @alessio
+# TODO later : this should be reimplemented using the new curation format
 def apply_sortingview_curation(
     sorting, uri_or_json, exclude_labels=None, include_labels=None, skip_merge=False, verbose=False
 ):

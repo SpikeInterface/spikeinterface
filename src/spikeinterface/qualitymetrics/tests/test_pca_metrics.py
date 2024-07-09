@@ -1,21 +1,14 @@
 import pytest
-import shutil
 from pathlib import Path
 import numpy as np
-import pandas as pd
 from spikeinterface.core import (
-    NumpySorting,
-    synthetize_spike_train_bad_isi,
-    add_synchrony_to_sorting,
     generate_ground_truth_recording,
     create_sorting_analyzer,
 )
 
-# from spikeinterface.extractors.toy_example import toy_example
-from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
 
 from spikeinterface.qualitymetrics import (
-    calculate_pc_metrics,
+    compute_pc_metrics,
     nearest_neighbors_isolation,
     nearest_neighbors_noise_overlap,
 )
@@ -33,7 +26,7 @@ def _sorting_analyzer_simple():
         num_channels=6,
         num_units=10,
         generate_sorting_kwargs=dict(firing_rates=6.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_level=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
 
@@ -55,11 +48,13 @@ def sorting_analyzer_simple():
 
 
 def test_calculate_pc_metrics(sorting_analyzer_simple):
+    import pandas as pd
+
     sorting_analyzer = sorting_analyzer_simple
-    res1 = calculate_pc_metrics(sorting_analyzer, n_jobs=1, progress_bar=True)
+    res1 = compute_pc_metrics(sorting_analyzer, n_jobs=1, progress_bar=True)
     res1 = pd.DataFrame(res1)
 
-    res2 = calculate_pc_metrics(sorting_analyzer, n_jobs=2, progress_bar=True)
+    res2 = compute_pc_metrics(sorting_analyzer, n_jobs=2, progress_bar=True)
     res2 = pd.DataFrame(res2)
 
     for k in res1.columns:

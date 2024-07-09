@@ -14,7 +14,7 @@ from copy import deepcopy
 from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core import ChannelSparsity
 from ..core.template_tools import get_template_extremum_channel
-from ..core.template_tools import _get_dense_templates_array
+from ..core.template_tools import get_dense_templates_array
 
 # DEBUG = False
 
@@ -96,9 +96,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
     """
 
     extension_name = "template_metrics"
-    depend_on = [
-        "fast_templates|templates",
-    ]
+    depend_on = ["templates"]
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = False
@@ -152,7 +150,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
         return dict(metrics=new_metrics)
 
-    def _run(self):
+    def _run(self, verbose=False):
         import pandas as pd
         from scipy.signal import resample_poly
 
@@ -184,7 +182,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             )
             template_metrics = pd.DataFrame(index=multi_index, columns=metric_names)
 
-        all_templates = _get_dense_templates_array(self.sorting_analyzer, return_scaled=True)
+        all_templates = get_dense_templates_array(self.sorting_analyzer, return_scaled=True)
 
         channel_locations = self.sorting_analyzer.get_channel_locations()
 
@@ -412,7 +410,10 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
 
     After reaching it's maximum polarization, the neuron potential will
     recover. The repolarization slope is defined as the dV/dT of the action potential
-    between trough and baseline.
+    between trough and baseline. The returned slope is in units of (unit of template)
+    per second. By default traces are scaled to units of uV, controlled
+    by `sorting_analyzer.return_scaled`. In this case this function returns the slope
+    in uV/s.
 
     Parameters
     ----------
@@ -456,11 +457,10 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
     Return the recovery slope of input waveforms. After repolarization,
     the neuron hyperpolarizes until it peaks. The recovery slope is the
     slope of the action potential after the peak, returning to the baseline
-    in dV/dT. The slope is computed within a user-defined window after
-    the peak.
-
-    Takes a numpy array of waveforms and returns an array with
-    recovery slopes per waveform.
+    in dV/dT. The returned slope is in units of (unit of template)
+    per second. By default traces are scaled to units of uV, controlled
+    by `sorting_analyzer.return_scaled`. In this case this function returns the slope
+    in uV/s. The slope is computed within a user-defined window after the peak.
 
     Parameters
     ----------
@@ -621,7 +621,7 @@ def fit_velocity(peak_times, channel_dist):
 
 def get_velocity_above(template, channel_locations, sampling_frequency, **kwargs):
     """
-    Compute the velocity above the max channel of the template.
+    Compute the velocity above the max channel of the template in units um/s.
 
     Parameters
     ----------
@@ -699,7 +699,7 @@ def get_velocity_above(template, channel_locations, sampling_frequency, **kwargs
 
 def get_velocity_below(template, channel_locations, sampling_frequency, **kwargs):
     """
-    Compute the velocity below the max channel of the template.
+    Compute the velocity below the max channel of the template in units um/s.
 
     Parameters
     ----------
@@ -777,7 +777,7 @@ def get_velocity_below(template, channel_locations, sampling_frequency, **kwargs
 
 def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs):
     """
-    Compute the exponential decay of the template amplitude over distance.
+    Compute the exponential decay of the template amplitude over distance in units um/s.
 
     Parameters
     ----------
@@ -790,6 +790,11 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
     **kwargs: Required kwargs:
         - exp_peak_function: the function to use to compute the peak amplitude for the exp decay ("ptp" or "min")
         - min_r2_exp_decay: the minimum r2 to accept the exp decay fit
+
+    Returns
+    -------
+    exp_decay_value : float
+        The exponential decay of the template amplitude
     """
     from scipy.optimize import curve_fit
     from sklearn.metrics import r2_score
@@ -855,7 +860,7 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
 
 def get_spread(template, channel_locations, sampling_frequency, **kwargs):
     """
-    Compute the spread of the template amplitude over distance.
+    Compute the spread of the template amplitude over distance in units um/s.
 
     Parameters
     ----------
@@ -869,6 +874,11 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs):
         - depth_direction: the direction to compute velocity above and below ("x", "y", or "z")
         - spread_threshold: the threshold to compute the spread
         - column_range: the range in um in the x-direction to consider channels for velocity
+
+    Returns
+    -------
+    spread : float
+        Spread of the template amplitude
     """
     assert "depth_direction" in kwargs, "depth_direction must be given as kwarg"
     depth_direction = kwargs["depth_direction"]

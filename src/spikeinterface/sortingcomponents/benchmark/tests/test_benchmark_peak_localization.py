@@ -2,25 +2,20 @@ import pytest
 
 import shutil
 
-import spikeinterface.full as si
-import pandas as pd
-from pathlib import Path
-import matplotlib.pyplot as plt
-import numpy as np
 
-
-from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset, cache_folder
+from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_peak_localization import PeakLocalizationStudy
-
 from spikeinterface.sortingcomponents.benchmark.benchmark_peak_localization import UnitLocalizationStudy
 
 
 @pytest.mark.skip()
-def test_benchmark_peak_localization():
+def test_benchmark_peak_localization(create_cache_folder):
+    cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="100ms")
 
-    recording, gt_sorting = make_dataset()
+    # recording, gt_sorting = make_dataset()
+    recording, gt_sorting, gt_analyzer = make_dataset()
 
     # create study
     study_folder = cache_folder / "study_peak_localization"
@@ -32,10 +27,8 @@ def test_benchmark_peak_localization():
             "dataset": "toy",
             "init_kwargs": {"gt_positions": gt_sorting.get_property("gt_unit_locations")},
             "params": {
-                "ms_before": 2,
                 "method": method,
-                "method_kwargs": {},
-                "spike_retriver_kwargs": {"channel_from_template": False},
+                "method_kwargs": {"ms_before": 2},
             },
         }
 
@@ -57,17 +50,20 @@ def test_benchmark_peak_localization():
     study.plot_comparison_positions()
     study.plot_run_times()
 
+    import matplotlib.pyplot as plt
+
     plt.show()
 
 
 @pytest.mark.skip()
-def test_benchmark_unit_localization():
+def test_benchmark_unit_locations(create_cache_folder):
+    cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="100ms")
 
     recording, gt_sorting = make_dataset()
 
     # create study
-    study_folder = cache_folder / "study_unit_localization"
+    study_folder = cache_folder / "study_unit_locations"
     datasets = {"toy": (recording, gt_sorting)}
     cases = {}
     for method in ["center_of_mass", "grid_convolution", "monopolar_triangulation"]:
@@ -75,12 +71,7 @@ def test_benchmark_unit_localization():
             "label": f"{method} on toy",
             "dataset": "toy",
             "init_kwargs": {"gt_positions": gt_sorting.get_property("gt_unit_locations")},
-            "params": {
-                "ms_before": 2,
-                "method": method,
-                "method_kwargs": {},
-                "spike_retriver_kwargs": {"channel_from_template": False},
-            },
+            "params": {"method": method, "method_kwargs": {"ms_before": 2}},
         }
 
     if study_folder.exists():
@@ -99,11 +90,14 @@ def test_benchmark_unit_localization():
     # load study to check persistency
     study = UnitLocalizationStudy(study_folder)
     study.plot_comparison_positions()
+    study.plot_template_errors()
     study.plot_run_times()
+
+    import matplotlib.pyplot as plt
 
     plt.show()
 
 
 if __name__ == "__main__":
     # test_benchmark_peak_localization()
-    test_benchmark_unit_localization()
+    test_benchmark_unit_locations()
