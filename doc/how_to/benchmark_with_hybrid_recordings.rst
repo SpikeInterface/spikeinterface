@@ -9,7 +9,7 @@ with known spiking activity. The template (aka average waveforms) of the
 injected units can be from previous spike sorted data. In this example,
 we will be using an open database of templates that we have constructed
 from the International Brain Laboratory - Brain Wide Map (available on
-`DANDI <https://dandiarchive.org/dandiset/000409?search=IBL&page=2&sortOption=0&sortDir=-1&showDrafts=true&showEmpty=false&pos=9>`__).
+`DANDI <https://dandiarchive.org/dandiset/000409?search=IBL&page=2&sortOption=0&sortDir=-1&showDrafts=true&showEmpty=false&pos=9>`_).
 
 Importantly, recordings from long-shank probes, such as Neuropixels,
 usually experience drifts. Such drifts have to be taken into account in
