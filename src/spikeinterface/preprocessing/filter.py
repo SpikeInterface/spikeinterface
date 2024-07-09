@@ -332,7 +332,71 @@ filter = define_function_from_class(source_class=FilterRecording, name="filter")
 bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
 notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
 highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
-causal_filter = define_function_from_class(source_class=CausalFilter, name="causal_filter")
+
+def causal_filter(
+    recording,
+    direction="forward-backward",
+    band=[300.0, 6000.0],
+    btype="bandpass",
+    filter_order=5,
+    ftype="butter",
+    filter_mode="sos",
+    margin_ms=5.0,
+    add_reflect_padding=False,
+    coeff=None,
+    dtype=None,
+):
+    """
+    Generic causal filter built on top of the filter function.
+
+    Parameters
+    ----------
+    recording : Recording
+        The recording extractor to be re-referenced
+    direction : "forward" | "backward", default: "forward"
+        Direction of causal filter. The "backward" option flips the traces in time before applying the filter 
+        and then flips them back.
+    band : float or list, default: [300.0, 6000.0]
+        If float, cutoff frequency in Hz for "highpass" filter type
+        If list. band (low, high) in Hz for "bandpass" filter type
+    btype : "bandpass" | "highpass", default: "bandpass"
+        Type of the filter
+    margin_ms : float, default: 5.0
+        Margin in ms on border to avoid border effect
+    coeff : array | None, default: None
+        Filter coefficients in the filter_mode form.
+    dtype : dtype or None, default: None
+        The dtype of the returned traces. If None, the dtype of the parent recording is used
+    add_reflect_padding : Bool, default False
+        If True, uses a left and right margin during calculation.
+    filter_order : order
+        The order of the filter for `scipy.signal.iirfilter`
+    filter_mode :  "sos" | "ba", default: "sos"
+        Filter form of the filter coefficients for `scipy.signal.iirfilter`:
+        - second-order sections ("sos")
+        - numerator/denominator : ("ba")
+    ftype : str, default: "butter"
+        Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1".
+    
+    Returns
+    -------
+    filter_recording : FilterRecording
+        The causal-filtered recording extractor object
+    """
+    assert direction in ["forward", "backward"], "Direction can be either 'forward' or 'backward'"
+    return filter(
+        recording=recording,
+        direction=direction,
+        band=band
+        btype=btype,
+        filter_order=filter_order,
+        ftype=ftype,
+        filter_mode=filter_mode,
+        margin_ms=margin_ms,
+        add_reflect_padding=add_reflect_padding,
+        coeff=coeff,
+        dtype=dtype,
+    )   
 
 bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
 highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
