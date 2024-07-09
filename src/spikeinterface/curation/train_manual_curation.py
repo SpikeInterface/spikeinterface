@@ -278,12 +278,14 @@ class CurationModelTrainer:
         model, param_space = self.get_classifier_search_space(classifier.__class__.__name__)
         try:
             from skopt import BayesSearchCV
+
             model = BayesSearchCV(
                 model, param_space, cv=3, scoring="balanced_accuracy", n_iter=25, random_state=self.seed, n_jobs=-1
             )
         except:
             print("BayesSearchCV from scikit-optimize not available, using GridSearchCV")
             from sklearn.model_selection import HalvingGridSearchCV
+
             model = HalvingGridSearchCV(model, param_space, cv=3, scoring="balanced_accuracy", n_jobs=-1)
 
         model.fit(X_train_scaled, y_train)
