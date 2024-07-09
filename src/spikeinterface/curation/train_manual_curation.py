@@ -269,7 +269,6 @@ class CurationModelTrainer:
         )
 
     def _train_and_evaluate(self, imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, model_id):
-        from skopt import BayesSearchCV
         from sklearn.metrics import balanced_accuracy_score, precision_score, recall_score
 
         X_train_scaled, X_test_scaled, y_train, y_test, imputer, scaler = self.apply_scaling_imputation(
@@ -277,9 +276,16 @@ class CurationModelTrainer:
         )
         print(f"Running {classifier.__class__.__name__} with imputation {imputation_strategy} and scaling {scaler}")
         model, param_space = self.get_classifier_search_space(classifier.__class__.__name__)
-        model = BayesSearchCV(
-            model, param_space, cv=3, scoring="balanced_accuracy", n_iter=25, random_state=self.seed, n_jobs=-1
-        )
+        try:
+            from skopt import BayesSearchCV
+            model = BayesSearchCV(
+                model, param_space, cv=3, scoring="balanced_accuracy", n_iter=25, random_state=self.seed, n_jobs=-1
+            )
+        except:
+            print("BayesSearchCV from scikit-optimize not available, using GridSearchCV")
+            from sklearn.model_selection import HalvingGridSearchCV
+            model = HalvingGridSearchCV(model, param_space, cv=3, scoring="balanced_accuracy", n_jobs=-1)
+
         model.fit(X_train_scaled, y_train)
         y_pred = model.predict(X_test_scaled)
         balanced_acc = balanced_accuracy_score(y_test, y_pred)
