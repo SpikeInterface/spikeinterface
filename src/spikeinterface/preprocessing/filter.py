@@ -327,63 +327,6 @@ class NotchFilterRecording(BasePreprocessor):
         self._kwargs = dict(recording=recording, freq=freq, q=q, margin_ms=margin_ms, dtype=dtype.str)
 
 
-class CausalFilter(FilterRecording):
-    """
-    Performs causal filtering using:
-        * scipy.signal.lfilt or scipy.signal.sosfilt
-
-    Parameters
-    ----------
-    recording : Recording
-        The recording extractor to be re-referenced
-    band : float or list, default: [300.0, 6000.0]
-        If float, cutoff frequency in Hz for "highpass" filter type
-        If list. band (low, high) in Hz for "bandpass" filter type
-    margin_ms : float
-        Margin in ms on border to avoid border effect
-    dtype : dtype or None
-        The dtype of the returned traces. If None, the dtype of the parent recording is used
-    direction : "forward" | "backward", default: "forward"
-        when causal_mode = True, defines the direction of the filtering
-
-    Returns
-    -------
-    filter_recording : CausalFilterRecording
-        The causal-filtered recording extractor object
-
-    {}
-
-    """
-
-    name = "causal_filter"
-
-    def __init__(
-        self,
-        recording,
-        band=[300.0, 6000.0],
-        margin_ms=5.0,
-        dtype=None,
-        direction="forward",
-        **filter_kwargs,
-    ):
-        FilterRecording.__init__(
-            self,
-            recording,
-            band=band,
-            margin_ms=margin_ms,
-            dtype=dtype,
-            direction=direction,
-            **filter_kwargs,
-        )
-        dtype = fix_dtype(recording, dtype)
-        self._kwargs = dict(
-            recording=recording,
-            band=band,
-            margin_ms=margin_ms,
-            dtype=dtype.str,
-            direction=direction,
-        )
-        self._kwargs.update(filter_kwargs)
 
 
 # functions for API
