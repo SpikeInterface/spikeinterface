@@ -156,8 +156,6 @@ def _compute_row(row_index,
         
         for gcount, j in enumerate(overlapping_templates[row_index]):
             # symmetric values are handled later
-            if num_templates == other_num_templates and j < row_index:
-                continue
             src = src_template[:, mask[row_index, j]].reshape(1, -1)
             tgt = (tgt_templates[gcount][:, mask[row_index, j]]).reshape(1, -1)
 
@@ -266,7 +264,6 @@ def compute_similarity_with_templates_array(
             for res in iterator:
                 row_index, local_distances = res.result()
                 distances[:, row_index, :] = local_distances[:, 0, :]
-
     for count, shift in enumerate(range(-num_shifts, 1)):
         if shift != 0:
             distances[num_shifts_both_sides - count - 1] = distances[count].T
