@@ -41,13 +41,15 @@ class UnitSpatialDistributionsWidget(BaseWidget):
 
         if type(probe) is Probe:
             if sorting_analyzer.recording.has_probe():
-                # TODO: throw warning saying that sorting_analyzer has a probe and it will be overwritten
-                pass
+                warn(
+                    "There is a Probe attached to this recording, but the probe argument is not None: the attached Probe will be ignored."
+                )
         elif sorting_analyzer.recording.has_probe():
             probe = sorting_analyzer.get_probe()
         else:
-            # TODO: throw error or warning, no probe available
-            pass
+            raise ValueError(
+                "There is no Probe attached to this recording. Use set_probe(...) to attach one or pass it to the function via the probe argument."
+            )
 
         # xrange, yrange, _ = get_auto_lims(probe, margin=0)
         # if bins is None:
