@@ -387,7 +387,7 @@ def causal_filter(
     return filter(
         recording=recording,
         direction=direction,
-        band=band
+        band=band,
         btype=btype,
         filter_order=filter_order,
         ftype=ftype,
