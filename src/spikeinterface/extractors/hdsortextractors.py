@@ -25,9 +25,6 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         The loaded data.
     """
 
-    mode = "file"
-    name = "hdsort"
-
     def __init__(self, file_path, keep_good_only=True):
         MatlabHelper.__init__(self, file_path)
 

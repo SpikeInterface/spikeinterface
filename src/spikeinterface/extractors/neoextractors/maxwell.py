@@ -39,9 +39,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several blocks (experiments), specify the block index you want to load
     """
 
-    mode = "file"
     NeoRawIOClass = "MaxwellRawIO"
-    name = "maxwell"
 
     def __init__(
         self,
@@ -95,8 +93,6 @@ class MaxwellEventExtractor(BaseEvent):
     """
     Class for reading TTL events from Maxwell files.
     """
-
-    name = "maxwell"
 
     def __init__(self, file_path):
         import h5py

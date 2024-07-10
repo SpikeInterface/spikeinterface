@@ -27,9 +27,7 @@ class TdtRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several blocks (experiments), specify the block index you want to load
     """
 
-    mode = "folder"
     NeoRawIOClass = "TdtRawIO"
-    name = "tdt"
 
     def __init__(self, folder_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
