@@ -4,7 +4,7 @@ import numpy as np
 from spikeinterface.core import generate_recording
 from spikeinterface import NumpyRecording, set_global_tmp_folder
 
-from spikeinterface.preprocessing import filter, bandpass_filter, notch_filter
+from spikeinterface.preprocessing import filter, bandpass_filter, notch_filter, causal_filter
 
 
 def test_filter():
@@ -28,6 +28,8 @@ def test_filter():
     # other filtering types
     rec3 = filter(rec, band=500.0, btype="highpass", filter_mode="ba", filter_order=2)
     rec4 = notch_filter(rec, freq=3000, q=30, margin_ms=5.0)
+    rec5 = causal_filter(rec, direction = "forward")
+    rec6 = causal_filter(rec, direction = "backward")
 
     # filter from coefficients
     from scipy.signal import iirfilter
