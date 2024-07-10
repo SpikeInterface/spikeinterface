@@ -34,7 +34,17 @@ class UnitsAggregationSorting(BaseSorting):
             )
             unit_ids = list(renamed_unit_ids)
         else:
-            unit_ids = list(np.arange(num_all_units))
+            all_ids_are_same_type = np.unique([sort.get_unit_ids().dtype for sort in sorting_list]).size == 1
+            all_units_ids_are_unique = False
+            if all_ids_are_same_type:
+                combined_ids = np.concatenate([sort.get_unit_ids() for sort in sorting_list])
+                all_units_ids_are_unique = np.unique(combined_ids).size == num_all_units
+
+            if all_ids_are_same_type and all_units_ids_are_unique:
+                unit_ids = combined_ids
+            else:
+                default_unit_ids = [str(i) for i in range(num_all_units)]
+                unit_ids = default_unit_ids
 
         # unit map maps unit ids that are used to get spike trains
         u_id = 0
