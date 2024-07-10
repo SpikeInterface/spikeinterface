@@ -335,7 +335,7 @@ highpass_filter = define_function_from_class(source_class=HighpassFilterRecordin
 
 def causal_filter(
     recording,
-    direction="forward-backward",
+    direction="forward",
     band=[300.0, 6000.0],
     btype="bandpass",
     filter_order=5,
