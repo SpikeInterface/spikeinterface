@@ -362,7 +362,7 @@ examples is seen below:
 
 Note that any extension entered into the :code:`compute` function will be computed. Thus, even if an extension has already been computed
 it will be recomputed when :code:`compute` is called even if the parameters are the same.
-To check if an extansion has already been computed and reload it, you can simply do:
+To check if an extension has already been computed and reload it, you can simply do:
 
 .. code-block:: python
 
