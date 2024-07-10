@@ -7,8 +7,9 @@ from spikeinterface.core.sortinganalyzer import register_result_extension, Analy
 from ..core.template_tools import get_dense_templates_array
 from spikeinterface.core.job_tools import fix_job_kwargs
 from tqdm.auto import tqdm
-from concurrent.futures import ProcessPoolExecutor
-
+from multiprocessing import get_context
+from threadpoolctl import threadpool_limits
+from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
 class ComputeTemplateSimilarity(AnalyzerExtension):
     """Compute similarity between templates with several methods.
@@ -92,8 +93,42 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 register_result_extension(ComputeTemplateSimilarity)
 compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
+global _ctx
 
-def _compute_row(i,
+def split_worker_init(
+                templates_array,
+                other_templates_array,
+                num_shifts,
+                overlapping_templates,
+                mask,
+                method, 
+                max_threads_per_process):
+    global _ctx
+    _ctx = {}
+
+    _ctx["templates_array"] = templates_array
+    _ctx["other_templates_array"] = other_templates_array
+    _ctx["num_shifts"] = num_shifts
+    _ctx["overlapping_templates"] = overlapping_templates
+    _ctx["mask"] = mask
+    _ctx["method"] = method
+    _ctx["max_threads_per_process"] = max_threads_per_process
+
+
+def split_function_wrapper(row_index):
+    global _ctx
+    with threadpool_limits(limits=_ctx["max_threads_per_process"]):
+        distances = _compute_row(row_index,
+            _ctx["templates_array"],
+            _ctx["other_templates_array"],
+            _ctx["num_shifts"],
+            _ctx["overlapping_templates"],
+            _ctx["mask"],
+            _ctx["method"]
+        )
+    return distances
+
+def _compute_row(row_index,
                 templates_array,
                 other_templates_array,
                 num_shifts,
@@ -102,41 +137,42 @@ def _compute_row(i,
                 method):
 
     import sklearn.metrics.pairwise
+    templates_array = templates_array[row_index][np.newaxis, :, :]
     num_templates = templates_array.shape[0]
     num_samples = templates_array.shape[1]
-    num_channels = templates_array.shape[2]
     other_num_templates = other_templates_array.shape[0]
     num_shifts_both_sides = 2 * num_shifts + 1
-    shape = (num_shifts_both_sides, 1, other_num_templates)
+    shape = (num_shifts_both_sides, num_templates, other_num_templates)
     distances = np.ones(shape, dtype=np.float32)
 
     for count, shift in enumerate(range(-num_shifts, 1)):
         src_sliced_templates = templates_array[:, num_shifts : num_samples - num_shifts]
         tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
-        for i in range(num_templates):
-            src_template = src_sliced_templates[i]
-            tgt_templates = tgt_sliced_templates[overlapping_templates[i]]
-            for gcount, j in enumerate(overlapping_templates[i]):
-                # symmetric values are handled later
-                if num_templates == other_num_templates and j < i:
-                    continue
-                src = src_template[:, mask[i, j]].reshape(1, -1)
-                tgt = (tgt_templates[gcount][:, mask[i, j]]).reshape(1, -1)
+        
+        src_template = src_sliced_templates[0]
+        tgt_templates = tgt_sliced_templates[overlapping_templates[row_index]]
+        
+        for gcount, j in enumerate(overlapping_templates[row_index]):
+            # symmetric values are handled later
+            if num_templates == other_num_templates and j < row_index:
+                continue
+            src = src_template[:, mask[row_index, j]].reshape(1, -1)
+            tgt = (tgt_templates[gcount][:, mask[row_index, j]]).reshape(1, -1)
 
-                if method == "l1":
-                    norm_i = np.sum(np.abs(src))
-                    norm_j = np.sum(np.abs(tgt))
-                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l1")
-                    distances[count, i, j] /= norm_i + norm_j
-                elif method == "l2":
-                    norm_i = np.linalg.norm(src, ord=2)
-                    norm_j = np.linalg.norm(tgt, ord=2)
-                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l2")
-                    distances[count, i, j] /= norm_i + norm_j
-                else:
-                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="cosine")    
+            if method == "l1":
+                norm_i = np.sum(np.abs(src))
+                norm_j = np.sum(np.abs(tgt))
+                distances[count, 0, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l1")
+                distances[count, 0, j] /= norm_i + norm_j
+            elif method == "l2":
+                norm_i = np.linalg.norm(src, ord=2)
+                norm_j = np.linalg.norm(tgt, ord=2)
+                distances[count, 0, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l2")
+                distances[count, 0, j] /= norm_i + norm_j
+            else:
+                distances[count, 0, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="cosine")    
 
-    return distances
+    return row_index, distances
 
 def compute_similarity_with_templates_array(
     templates_array, 
@@ -195,49 +231,43 @@ def compute_similarity_with_templates_array(
     shape = (num_shifts_both_sides, num_templates, other_num_templates)
     distances = np.ones(shape, dtype=np.float32)
 
-    num_sources = len(templates_array)
-    items = []
-    for i in range(num_sources):
-        func_args = (
-                i,
-                templates_array,
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    n_jobs = job_kwargs["n_jobs"]
+    mp_context = job_kwargs.get("mp_context", None)
+    progress_bar = job_kwargs["progress_bar"]
+    max_threads_per_process = job_kwargs.get("max_threads_per_process", 1)
+
+    Executor = get_poolexecutor(n_jobs)
+
+    with Executor(
+            max_workers=n_jobs,
+            initializer=split_worker_init,
+            mp_context=get_context(method=mp_context),
+            initargs=(templates_array,
                 other_templates_array,
                 num_shifts,
                 overlapping_templates,
                 mask,
-                method
-            )
-        items.append(func_args)
+                method, 
+                max_threads_per_process),
+        ) as pool:
+            
+            jobs = []
+            for row_index in range(num_templates):
+                jobs.append(pool.submit(split_function_wrapper, row_index))
 
-    print(len(items), items)
-    job_kwargs = fix_job_kwargs(job_kwargs)
-    n_jobs = job_kwargs["n_jobs"]
-    progress_bar = job_kwargs["progress_bar"]
-    run_in_parallel = n_jobs > 1
-    
-    if not run_in_parallel:
-        units_loop = enumerate(range(num_sources))
-        if progress_bar:
-            units_loop = tqdm(units_loop, desc="calculate_similarities", total=num_sources)
-
-        for i, func in enumerate(items):
-            distances[i] = _compute_row(func)
-
-    else:
-        with ProcessPoolExecutor(n_jobs) as executor:
-            results = executor.map(_compute_row, items)
             if progress_bar:
-                results = tqdm(results, total=num_sources, desc="calculate_similarities")
+                iterator = tqdm(jobs, desc=f"compute similarity", total=num_templates)
+            else:
+                iterator = jobs
 
-            for i, func in enumerate(results):
-                distances[i] = func
+            for res in iterator:
+                row_index, local_distances = res.result()
+                distances[:, row_index, :] = local_distances[:, 0, :]
 
-    for i in range(num_sources):
-        distances[count] = distances[count] + distances[count].T
-
-    #for i in 
-    #if num_shifts != 0:
-    #    distances[num_shifts_both_sides - count - 1] = distances[count].T
+    for count, shift in enumerate(range(-num_shifts, 1)):
+        if shift != 0:
+            distances[num_shifts_both_sides - count - 1] = distances[count].T
 
     distances = np.min(distances, axis=0)
     similarity = 1 - distances
