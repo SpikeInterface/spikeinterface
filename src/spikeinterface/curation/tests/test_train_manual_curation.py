@@ -12,8 +12,16 @@ def trainer():
     output_folder = tempfile.mkdtemp()  # Create a temporary output folder
     imputation_strategies = ["median"]
     scaling_techniques = ["standard_scaler"]
+    classifiers = ["LogisticRegression"]
     metrics_list = ["metric1", "metric2", "metric3"]
-    return CurationModelTrainer(target_column, output_folder, imputation_strategies, scaling_techniques, metrics_list)
+    return CurationModelTrainer(
+        target_column=target_column,
+        output_folder=output_folder,
+        metrics_to_use=metrics_list,
+        imputation_strategies=imputation_strategies,
+        scaling_techniques=scaling_techniques,
+        classifiers=classifiers,
+    )
 
 
 def make_temp_training_csv():
@@ -74,14 +82,10 @@ def test_get_classifier_search_space(trainer):
 
 def test_evaluate_model_config(trainer):
 
-    imputation_strategies = ["median"]
-    scaling_techniques = ["standard_scaler"]
-    classifiers = ["LogisticRegression"]
-
     trainer.X = np.ones((10, 3))
     trainer.y = np.append(np.ones(5), np.zeros(5))
 
-    trainer.evaluate_model_config(imputation_strategies, scaling_techniques, classifiers)
+    trainer.evaluate_model_config()
     assert os.path.exists(trainer.output_folder)
     assert os.path.exists(os.path.join(trainer.output_folder, "best_model_label.pkl"))
     assert os.path.exists(os.path.join(trainer.output_folder, "model_label_accuracies.csv"))
@@ -94,10 +98,10 @@ def test_train_model():
     target_label = "label"
     metrics_list = ["metric1", "metric2", "metric3"]
     trainer = train_model(
-        metrics_path,
-        output_folder,
-        target_label,
-        metrics_list,
+        metrics_path=metrics_path,
+        output_folder=output_folder,
+        target_label=target_label,
+        metrics_list=metrics_list,
         imputation_strategies=["median"],
         scaling_techniques=["standard_scaler"],
         classifiers=["LogisticRegression"],

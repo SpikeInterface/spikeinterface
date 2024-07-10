@@ -177,7 +177,7 @@ class CurationModelTrainer:
                 )
             self.X = self.testing_metrics[0].reindex(columns=self.metrics_list)
             self.X = self.X.astype("float32")
-            self.X = self.X.applymap(lambda x: np.nan if np.isinf(x) else x)
+            self.X = self.X.map(lambda x: np.nan if np.isinf(x) else x)
             self.X.fillna(0, inplace=True)
         else:
             raise ValueError(f"Target column {self.target_column} not found in testing metrics file")
@@ -314,7 +314,7 @@ class CurationModelTrainer:
         param_space = param_space_mapping[classifier_name]
         return model, param_space
 
-    def evaluate_model_config(self, imputation_strategies, scaling_techniques, classifiers):
+    def evaluate_model_config(self):
         """
         Evaluates the model configurations with the given imputation strategies, scaling techniques, and classifiers.
 
@@ -346,9 +346,9 @@ class CurationModelTrainer:
         X_train, X_test, y_train, y_test = train_test_split(
             self.X, self.y, test_size=0.2, random_state=self.seed, stratify=self.y
         )
-        classifier_instances = [self.get_classifier_instance(clf) for clf in classifiers]
+        classifier_instances = [self.get_classifier_instance(clf) for clf in self.classifiers]
         self._evaluate(
-            imputation_strategies, scaling_techniques, classifier_instances, X_train, X_test, y_train, y_test
+            self.imputation_strategies, self.scaling_techniques, classifier_instances, X_train, X_test, y_train, y_test
         )
 
     def _evaluate(self, imputation_strategies, scaling_techniques, classifiers, X_train, X_test, y_train, y_test):
@@ -477,5 +477,5 @@ def train_model(
         seed=seed,
     )
     trainer.load_and_preprocess_full(metrics_path)
-    trainer.evaluate_model_config(imputation_strategies, scaling_techniques, classifiers)
+    trainer.evaluate_model_config()
     return trainer
