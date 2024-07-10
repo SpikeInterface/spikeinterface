@@ -72,6 +72,8 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         templates_array = get_dense_templates_array(
             self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
         )
+        num_samples = templates_array.shape[1]
+        assert num_shifts < num_samples//2, "max_lag_ms is too large"
         sparsity = self.sorting_analyzer.sparsity
         similarity = compute_similarity_with_templates_array(
             templates_array,
