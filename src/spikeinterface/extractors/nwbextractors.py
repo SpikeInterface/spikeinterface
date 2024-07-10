@@ -498,11 +498,11 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
     >>>
     >>> # get s3 path
     >>> dandiset_id, filepath = "101116", "sub-001/sub-001_ecephys.nwb"
-    >>> with DandiAPIClient("https://api-staging.dandiarchive.org/api") as client:
+    >>> with DandiAPIClient() as client:
     >>>     asset = client.get_dandiset(dandiset_id, "draft").get_asset_by_path(filepath)
     >>>     s3_url = asset.get_content_url(follow_redirects=1, strip_query=True)
     >>>
-    >>> rec = NwbRecordingExtractor(s3_url, stream_mode="fsspec", stream_cache_path="cache")
+    >>> rec = NwbRecordingExtractor(s3_url, stream_mode="remfile")
     """
 
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
