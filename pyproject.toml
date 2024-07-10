@@ -108,6 +108,7 @@ widgets = [
     "matplotlib",
     "ipympl",
     "ipywidgets",
+    "seaborn>=0.13.0",
     "sortingview>=0.12.0",
 ]
 
