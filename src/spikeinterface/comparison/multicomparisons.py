@@ -25,29 +25,29 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
 
     Parameters
     ----------
-    sorting_list: list
+    sorting_list : list
         List of sorting extractor objects to be compared
-    name_list: list, default: None
+    name_list : list, default: None
         List of spike sorter names. If not given, sorters are named as "sorter0", "sorter1", "sorter2", etc.
-    delta_time: float, default: 0.4
+    delta_time : float, default: 0.4
         Number of ms to consider coincident spikes
-    match_score: float, default: 0.5
+    match_score : float, default: 0.5
         Minimum agreement score to match units
-    chance_score: float, default: 0.1
+    chance_score : float, default: 0.1
         Minimum agreement score to for a possible match
-    n_jobs: int, default: -1
+    n_jobs : int, default: -1
        Number of cores to use in parallel. Uses all available if -1
-    spiketrain_mode: "union" | "intersection", default: "union"
+    spiketrain_mode : "union" | "intersection", default: "union"
         Mode to extract agreement spike trains:
-            - "union": spike trains are the union between the spike trains of the best matching two sorters
-            - "intersection": spike trains are the intersection between the spike trains of the
+            - "union" : spike trains are the union between the spike trains of the best matching two sorters
+            - "intersection" : spike trains are the intersection between the spike trains of the
                best matching two sorters
-    verbose: bool, default: False
+    verbose : bool, default: False
         if True, output is verbose
 
     Returns
     -------
-    multi_sorting_comparison: MultiSortingComparison
+    multi_sorting_comparison : MultiSortingComparison
         MultiSortingComparison object with the multiple sorter comparison
     """
 
@@ -162,15 +162,15 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
 
         Parameters
         ----------
-        minimum_agreement_count: int
+        minimum_agreement_count : int
             Minimum number of matches among sorters to include a unit.
-        minimum_agreement_count_only: bool
+        minimum_agreement_count_only : bool
             If True, only units with agreement == "minimum_matching" are included.
             If False, units with an agreement >= "minimum_matching" are included
 
         Returns
         -------
-        agreement_sorting: AgreementSortingExtractor
+        agreement_sorting : AgreementSortingExtractor
             The output AgreementSortingExtractor
         """
         assert minimum_agreement_count > 0, "'minimum_agreement_count' should be greater than 0"
@@ -309,20 +309,20 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
 
     Parameters
     ----------
-    waveform_list: list
+    waveform_list : list
         List of waveform extractor objects to be compared
-    name_list: list, default: None
+    name_list : list, default: None
         List of session names. If not given, sorters are named as "sess0", "sess1", "sess2", etc.
-    match_score: float, default: 0.8
+    match_score : float, default: 0.8
         Minimum agreement score to match units
-    chance_score: float, default: 0.3
+    chance_score : float, default: 0.3
         Minimum agreement score to for a possible match
-    verbose: bool, default: False
+    verbose : bool, default: False
         if True, output is verbose
 
     Returns
     -------
-    multi_template_comparison: MultiTemplateComparison
+    multi_template_comparison : MultiTemplateComparison
         MultiTemplateComparison object with the multiple template comparisons
     """
 
@@ -333,8 +333,9 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
         match_score=0.8,
         chance_score=0.3,
         verbose=False,
-        similarity_method="cosine_similarity",
-        sparsity_dict=None,
+        similarity_method="cosine",
+        support="union",
+        num_shifts=0,
         do_matching=True,
     ):
         if name_list is None:
@@ -347,7 +348,9 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
             chance_score=chance_score,
             verbose=verbose,
         )
-        MixinTemplateComparison.__init__(self, similarity_method=similarity_method, sparsity_dict=sparsity_dict)
+        MixinTemplateComparison.__init__(
+            self, similarity_method=similarity_method, support=support, num_shifts=num_shifts
+        )
 
         if do_matching:
             self._compute_all()

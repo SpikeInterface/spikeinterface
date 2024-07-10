@@ -112,28 +112,28 @@ class SymmetricSortingComparison(BasePairSorterComparison):
 
     Parameters
     ----------
-    sorting1: SortingExtractor
+    sorting1 : SortingExtractor
         The first sorting for the comparison
-    sorting2: SortingExtractor
+    sorting2 : SortingExtractor
         The second sorting for the comparison
-    sorting1_name: str, default: None
+    sorting1_name : str, default: None
         The name of sorter 1
-    sorting2_name: : str, default: None
+    sorting2_name : : str, default: None
         The name of sorter 2
-    delta_time: float, default: 0.4
+    delta_time : float, default: 0.4
         Number of ms to consider coincident spikes
-    match_score: float, default: 0.5
+    match_score : float, default: 0.5
         Minimum agreement score to match units
-    chance_score: float, default: 0.1
+    chance_score : float, default: 0.1
         Minimum agreement score to for a possible match
-    n_jobs: int, default: -1
+    n_jobs : int, default: -1
         Number of cores to use in parallel. Uses all available if -1
-    verbose: bool, default: False
+    verbose : bool, default: False
         If True, output is verbose
 
     Returns
     -------
-    sorting_comparison: SortingComparison
+    sorting_comparison : SortingComparison
         The SortingComparison object
     """
 
@@ -215,44 +215,44 @@ class GroundTruthComparison(BasePairSorterComparison):
 
     Parameters
     ----------
-    gt_sorting: SortingExtractor
+    gt_sorting : SortingExtractor
         The first sorting for the comparison
-    tested_sorting: SortingExtractor
+    tested_sorting : SortingExtractor
         The second sorting for the comparison
-    gt_name: str, default: None
+    gt_name : str, default: None
         The name of sorter 1
-    tested_name: : str, default: None
+    tested_name : : str, default: None
         The name of sorter 2
-    delta_time: float, default: 0.4
+    delta_time : float, default: 0.4
         Number of ms to consider coincident spikes
-    match_score: float, default: 0.5
+    match_score : float, default: 0.5
         Minimum agreement score to match units
-    chance_score: float, default: 0.1
+    chance_score : float, default: 0.1
         Minimum agreement score to for a possible match
-    redundant_score: float, default: 0.2
+    redundant_score : float, default: 0.2
         Agreement score above which units are redundant
-    overmerged_score: float, default: 0.2
+    overmerged_score : float, default: 0.2
         Agreement score above which units can be overmerged
-    well_detected_score: float, default: 0.8
+    well_detected_score : float, default: 0.8
         Agreement score above which units are well detected
-    exhaustive_gt: bool, default: False
+    exhaustive_gt : bool, default: False
         Tell if the ground true is "exhaustive" or not. In other world if the
         GT have all possible units. It allows more performance measurement.
         For instance, MEArec simulated dataset have exhaustive_gt=True
-    match_mode: "hungarian" | "best", default: "hungarian"
+    match_mode : "hungarian" | "best", default: "hungarian"
         The method to match units
-    n_jobs: int, default: -1
+    n_jobs : int, default: -1
         Number of cores to use in parallel. Uses all available if -1
-    compute_labels: bool, default: False
+    compute_labels : bool, default: False
         If True, labels are computed at instantiation
-    compute_misclassifications: bool, default: False
+    compute_misclassifications : bool, default: False
         If True, misclassifications are computed at instantiation
-    verbose: bool, default: False
+    verbose : bool, default: False
         If True, output is verbose
 
     Returns
     -------
-    sorting_comparison: SortingComparison
+    sorting_comparison : SortingComparison
         The SortingComparison object
     """
 
@@ -366,7 +366,7 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Returns
         -------
-        confusion_matrix: pandas.DataFrame
+        confusion_matrix : pandas.DataFrame
             The confusion matrix
         """
         if self._confusion_matrix is None:
@@ -392,14 +392,14 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Parameters
         ----------
-        method: "by_unit" | "pooled_with_average", default: "by_unit"
+        method : "by_unit" | "pooled_with_average", default: "by_unit"
             The method to compute performance
-        output: "pandas" | "dict", default: "pandas"
+        output : "pandas" | "dict", default: "pandas"
             The output format
 
         Returns
         -------
-        perf: pandas dataframe/series (or dict)
+        perf : pandas dataframe/series (or dict)
             dataframe/series (based on "output") with performance entries
         """
         import pandas as pd
@@ -478,7 +478,7 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Parameters
         ----------
-        well_detected_score: float, default: None
+        well_detected_score : float, default: None
             The agreement score above which tested units
             are counted as "well detected".
         """
@@ -514,7 +514,7 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Parameters
         ----------
-        redundant_score: float, default: None
+        redundant_score : float, default: None
             The agreement score below which tested units
             are counted as "false positive"" (and not "redundant").
         """
@@ -554,7 +554,7 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Parameters
         ----------
-        redundant_score=None: float, default: None
+        redundant_score=None : float, default: None
             The agreement score above which tested units
             are counted as "redundant" (and not "false positive" ).
         """
@@ -589,7 +589,7 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Parameters
         ----------
-        overmerged_score: float, default: None
+        overmerged_score : float, default: None
             Tested units with 2 or more agreement scores above "overmerged_score"
             are counted as "overmerged".
         """
@@ -697,24 +697,26 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
     Parameters
     ----------
     sorting_analyzer_1 : SortingAnalyzer
-        The first SortingAnalyzer to get templates to compare
+        The first SortingAnalyzer to get templates to compare.
     sorting_analyzer_2 : SortingAnalyzer
-        The second SortingAnalyzer to get templates to compare
+        The second SortingAnalyzer to get templates to compare.
     unit_ids1 : list, default: None
-        List of units from sorting_analyzer_1 to compare
+        List of units from sorting_analyzer_1 to compare.
     unit_ids2 : list, default: None
-        List of units from sorting_analyzer_2 to compare
-    similarity_method : str, default: "cosine_similarity"
-        Method for the similaroty matrix
-    sparsity_dict : dict, default: None
-        Dictionary for sparsity
+        List of units from sorting_analyzer_2 to compare.
+    similarity_method : "cosine" | "l1" | "l2", default: "cosine"
+        Method for the similarity matrix.
+    support : "dense" | "union" | "intersection", default: "union"
+        The support to compute the similarity matrix.
+    num_shifts : int, default: 0
+        Number of shifts to use to shift templates to maximize similarity.
     verbose : bool, default: False
-        If True, output is verbose
+        If True, output is verbose.
 
     Returns
     -------
     comparison : TemplateComparison
-        The output TemplateComparison object
+        The output TemplateComparison object.
     """
 
     def __init__(
@@ -727,8 +729,9 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         unit_ids2=None,
         match_score=0.7,
         chance_score=0.3,
-        similarity_method="cosine_similarity",
-        sparsity_dict=None,
+        similarity_method="cosine",
+        support="union",
+        num_shifts=0,
         verbose=False,
     ):
         if name1 is None:
@@ -745,7 +748,9 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
             chance_score=chance_score,
             verbose=verbose,
         )
-        MixinTemplateComparison.__init__(self, similarity_method=similarity_method, sparsity_dict=sparsity_dict)
+        MixinTemplateComparison.__init__(
+            self, similarity_method=similarity_method, support=support, num_shifts=num_shifts
+        )
 
         self.sorting_analyzer_1 = sorting_analyzer_1
         self.sorting_analyzer_2 = sorting_analyzer_2
@@ -754,10 +759,9 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
 
         # two options: all channels are shared or partial channels are shared
         if sorting_analyzer_1.recording.get_num_channels() != sorting_analyzer_2.recording.get_num_channels():
-            raise NotImplementedError
+            raise ValueError("The two recordings must have the same number of channels")
         if np.any([ch1 != ch2 for (ch1, ch2) in zip(channel_ids1, channel_ids2)]):
-            # TODO: here we can check location and run it on the union. Might be useful for reconfigurable probes
-            raise NotImplementedError
+            raise ValueError("The two recordings must have the same channel ids")
 
         self.matches = dict()
 
@@ -768,11 +772,6 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
             unit_ids2 = sorting_analyzer_2.sorting.get_unit_ids()
         self.unit_ids = [unit_ids1, unit_ids2]
 
-        if sparsity_dict is not None:
-            raise NotImplementedError
-        else:
-            self.sparsity = None
-
         self._do_agreement()
         self._do_matching()
 
@@ -781,7 +780,11 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
             print("Agreement scores...")
 
         agreement_scores = compute_template_similarity_by_pair(
-            self.sorting_analyzer_1, self.sorting_analyzer_2, method=self.similarity_method
+            self.sorting_analyzer_1,
+            self.sorting_analyzer_2,
+            method=self.similarity_method,
+            support=self.support,
+            num_shifts=self.num_shifts,
         )
         import pandas as pd
 

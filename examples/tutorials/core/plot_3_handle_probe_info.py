@@ -47,16 +47,23 @@ recording_2_shanks = recording.set_probe(other_probe, group_mode="by_shank")
 plot_probe(recording_2_shanks.get_probe())
 
 ###############################################################################
-# Now let's check what we have loaded. The `group_mode='by_shank'` automatically
+# Now let's check what we have loaded. The :code:`group_mode='by_shank'` automatically
 # sets the 'group' property depending on the shank id.
-# We can use this information to split the recording into two sub-recordings:
+# We can use this information to split the recording into two sub-recordings.
+# We can access this information either as a dict with :code:`outputs='dict'` (default)
+# or as a list of recordings with :code:`outputs='list'`.
 
 print(recording_2_shanks)
-print(recording_2_shanks.get_property("group"))
+print(f'\nGroup Property: {recording_2_shanks.get_property("group")}\n')
 
-rec0, rec1 = recording_2_shanks.split_by(property="group")
-print(rec0)
-print(rec1)
+# Here we split as a dict
+sub_recording_dict = recording_2_shanks.split_by(property="group", outputs='dict')
+
+# Then we can pull out the individual sub-recordings
+sub_rec0 = sub_recording_dict[0]
+sub_rec1 = sub_recording_dict[1]
+print(sub_rec0, '\n')
+print(sub_rec1)
 
 ###############################################################################
 # Note that some formats (MEArec, SpikeGLX) automatically handle the probe

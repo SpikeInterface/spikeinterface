@@ -5,30 +5,9 @@ from __future__ import annotations
 
 import numpy as np
 
-
-try:
-    import sklearn
-    from sklearn.feature_extraction.image import extract_patches_2d
-
-    HAVE_SKLEARN = True
-except ImportError:
-    HAVE_SKLEARN = False
-
-
 from spikeinterface.core import get_noise_levels
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakByChannel
 from spikeinterface.core.template import Templates
-
-try:
-    import scipy.spatial
-
-    import scipy
-
-    (potrs,) = scipy.linalg.get_lapack_funcs(("potrs",), dtype=np.float32)
-
-    (nrm2,) = scipy.linalg.get_blas_funcs(("nrm2",), dtype=np.float32)
-except:
-    pass
 
 spike_dtype = [
     ("sample_index", "int64"),
@@ -74,6 +53,9 @@ def compress_templates(templates_array, approx_rank, remove_mean=True, return_ne
 
 
 def compute_overlaps(templates, num_samples, num_channels, sparsities):
+    import scipy.spatial
+    import scipy
+
     num_templates = len(templates)
 
     dense_templates = np.zeros((num_templates, num_samples, num_channels), dtype=np.float32)
@@ -278,6 +260,13 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def main_function(cls, traces, d):
+        import scipy.spatial
+        import scipy
+
+        (potrs,) = scipy.linalg.get_lapack_funcs(("potrs",), dtype=np.float32)
+
+        (nrm2,) = scipy.linalg.get_blas_funcs(("nrm2",), dtype=np.float32)
+
         num_templates = d["num_templates"]
         num_samples = d["num_samples"]
         num_channels = d["num_channels"]
@@ -543,6 +532,9 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _prepare_templates(cls, d):
+        import scipy.spatial
+        import scipy
+
         templates = d["templates"]
         num_samples = d["num_samples"]
         num_channels = d["num_channels"]
@@ -634,6 +626,13 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
+        try:
+            from sklearn.feature_extraction.image import extract_patches_2d
+
+            HAVE_SKLEARN = True
+        except ImportError:
+            HAVE_SKLEARN = False
+
         assert HAVE_SKLEARN, "CircusPeeler needs sklearn to work"
         d = cls._default_params.copy()
         d.update(kwargs)
@@ -732,6 +731,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         peak_sample_index, peak_chan_ind = DetectPeakByChannel.detect_peaks(
             peak_traces, peak_sign, abs_threholds, exclude_sweep_size
         )
+        from sklearn.feature_extraction.image import extract_patches_2d
 
         if jitter > 0:
             jittered_peaks = peak_sample_index[:, np.newaxis] + np.arange(-jitter, jitter)

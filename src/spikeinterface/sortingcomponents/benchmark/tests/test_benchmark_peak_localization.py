@@ -3,14 +3,15 @@ import pytest
 import shutil
 
 
-from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset, cache_folder
+from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_peak_localization import PeakLocalizationStudy
 from spikeinterface.sortingcomponents.benchmark.benchmark_peak_localization import UnitLocalizationStudy
 
 
 @pytest.mark.skip()
-def test_benchmark_peak_localization():
+def test_benchmark_peak_localization(create_cache_folder):
+    cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="100ms")
 
     # recording, gt_sorting = make_dataset()
@@ -55,13 +56,14 @@ def test_benchmark_peak_localization():
 
 
 @pytest.mark.skip()
-def test_benchmark_unit_localization():
+def test_benchmark_unit_locations(create_cache_folder):
+    cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="100ms")
 
     recording, gt_sorting = make_dataset()
 
     # create study
-    study_folder = cache_folder / "study_unit_localization"
+    study_folder = cache_folder / "study_unit_locations"
     datasets = {"toy": (recording, gt_sorting)}
     cases = {}
     for method in ["center_of_mass", "grid_convolution", "monopolar_triangulation"]:
@@ -98,4 +100,4 @@ def test_benchmark_unit_localization():
 
 if __name__ == "__main__":
     # test_benchmark_peak_localization()
-    test_benchmark_unit_localization()
+    test_benchmark_unit_locations()

@@ -185,11 +185,11 @@ class ClusteringStudy(BenchmarkStudy):
             case_keys = list(self.cases.keys())
         import pylab as plt
 
-        fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
+        fig, axes = plt.subplots(ncols=1, nrows=3, figsize=figsize)
 
         for count, k in enumerate(("accuracy", "recall", "precision")):
 
-            ax = axs[count]
+            ax = axes[count]
             for key in case_keys:
                 label = self.cases[key]["label"]
 
@@ -211,7 +211,7 @@ class ClusteringStudy(BenchmarkStudy):
             case_keys = list(self.cases.keys())
         import pylab as plt
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+        fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
 
@@ -234,21 +234,25 @@ class ClusteringStudy(BenchmarkStudy):
             else:
                 distances = sklearn.metrics.pairwise_distances(a, b, metric)
 
-            im = axs[0, count].imshow(distances, aspect="auto")
-            axs[0, count].set_title(metric)
-            fig.colorbar(im, ax=axs[0, count])
+            im = axes[0, count].imshow(distances, aspect="auto")
+            axes[0, count].set_title(metric)
+            fig.colorbar(im, ax=axes[0, count])
             label = self.cases[key]["label"]
-            axs[0, count].set_title(label)
+            axes[0, count].set_title(label)
 
         return fig
 
-    def plot_metrics_vs_snr(self, metric="agreement", case_keys=None, figsize=(15, 5)):
+    def plot_metrics_vs_snr(self, metric="agreement", case_keys=None, figsize=(15, 5), axes=None):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
         import pylab as plt
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+        if axes is None:
+            fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+            axes = axes.flatten()
+        else:
+            fig = None
 
         for count, key in enumerate(case_keys):
 
@@ -287,13 +291,13 @@ class ClusteringStudy(BenchmarkStudy):
             elif metric == "agreement":
                 for found, real in zip(matched_ids2[mask], unit_ids1[mask]):
                     to_plot += [scores.at[real, found]]
-            axs[0, count].plot(snr_matched, to_plot, ".", label="matched")
-            axs[0, count].plot(snr_missed, np.zeros(len(snr_missed)), ".", c="r", label="missed")
-            axs[0, count].set_xlabel("snr")
-            axs[0, count].set_ylabel(metric)
+            axes[count].plot(snr_matched, to_plot, ".", label="matched")
+            axes[count].plot(snr_missed, np.zeros(len(snr_missed)), ".", c="r", label="missed")
+            axes[count].set_xlabel("snr")
+            axes[count].set_ylabel(metric)
             label = self.cases[key]["label"]
-            axs[0, count].set_title(label)
-            axs[0, count].legend()
+            axes[count].set_title(label)
+            axes[count].legend()
 
         return fig
 
@@ -303,7 +307,7 @@ class ClusteringStudy(BenchmarkStudy):
             case_keys = list(self.cases.keys())
         import pylab as plt
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+        fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
 
@@ -348,47 +352,61 @@ class ClusteringStudy(BenchmarkStudy):
             elif metric == "agreement":
                 for found, real in zip(matched_ids2[mask], unit_ids1[mask]):
                     to_plot += [scores.at[real, found]]
-            axs[0, count].scatter(depth_matched, snr_matched, c=to_plot, label="matched")
-            axs[0, count].scatter(depth_missed, snr_missed, c=np.zeros(len(snr_missed)), label="missed")
-            axs[0, count].set_xlabel("depth")
-            axs[0, count].set_ylabel("snr")
+            elif metric in ["recall", "precision", "accuracy"]:
+                to_plot = result["gt_comparison"].get_performance()[metric].values
+                depth_matched = depth
+                snr_matched = metrics["snr"]
+
+            im = axes[0, count].scatter(depth_matched, snr_matched, c=to_plot, label="matched")
+            im.set_clim(0, 1)
+            axes[0, count].scatter(depth_missed, snr_missed, c=np.zeros(len(snr_missed)), label="missed")
+            axes[0, count].set_xlabel("depth")
+            axes[0, count].set_ylabel("snr")
             label = self.cases[key]["label"]
-            axs[0, count].set_title(label)
+            axes[0, count].set_title(label)
+            if count > 0:
+                axes[0, count].set_ylabel("")
+                axes[0, count].set_yticks([], [])
             # axs[0, count].legend()
+
+        fig.subplots_adjust(right=0.85)
+        cbar_ax = fig.add_axes([0.9, 0.1, 0.025, 0.75])
+        fig.colorbar(im, cax=cbar_ax, label=metric)
 
         return fig
 
-    def plot_unit_losses(self, case_before, case_after, metric="agreement", figsize=None):
-        import pylab as plt
+    def plot_unit_losses(self, cases_before, cases_after, metric="agreement", figsize=None):
 
-        fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
+        fig, axs = plt.subplots(ncols=len(cases_before), nrows=1, figsize=figsize)
 
-        for count, k in enumerate(("accuracy", "recall", "precision")):
+        for count, (case_before, case_after) in enumerate(zip(cases_before, cases_after)):
 
             ax = axs[count]
-
-            # label = self.cases[case_after]["label"]
-
-            # positions = self.get_result(case_before)["gt_comparison"].sorting1.get_property("gt_unit_locations")
-
             dataset_key = self.cases[case_before]["dataset"]
-            rec, gt_sorting1 = self.datasets[dataset_key]
+            _, gt_sorting1 = self.datasets[dataset_key]
             positions = gt_sorting1.get_property("gt_unit_locations")
 
             analyzer = self.get_sorting_analyzer(case_before)
             metrics_before = analyzer.get_extension("quality_metrics").get_data()
             x = metrics_before["snr"].values
 
-            y_before = self.get_result(case_before)["gt_comparison"].get_performance()[k].values
-            y_after = self.get_result(case_after)["gt_comparison"].get_performance()[k].values
-            if count < 2:
-                ax.set_xticks([], [])
-            elif count == 2:
-                ax.set_xlabel("depth (um)")
-            im = ax.scatter(positions[:, 1], x, c=(y_after - y_before), marker=".", s=50, cmap="copper")
-            fig.colorbar(im, ax=ax)
-            ax.set_title(k)
+            y_before = self.get_result(case_before)["gt_comparison"].get_performance()[metric].values
+            y_after = self.get_result(case_after)["gt_comparison"].get_performance()[metric].values
+            ax.set_ylabel("depth (um)")
             ax.set_ylabel("snr")
+            if count > 0:
+                ax.set_ylabel("")
+                ax.set_yticks([], [])
+            im = ax.scatter(positions[:, 1], x, c=(y_after - y_before), cmap="coolwarm")
+            im.set_clim(-1, 1)
+            # fig.colorbar(im, ax=ax)
+            # ax.set_title(k)
+
+        fig.subplots_adjust(right=0.85)
+        cbar_ax = fig.add_axes([0.9, 0.1, 0.025, 0.75])
+        cbar = fig.colorbar(im, cax=cbar_ax, label=metric)
+        # cbar.set_clim(-1, 1)
+
         return fig
 
     def plot_comparison_clustering(

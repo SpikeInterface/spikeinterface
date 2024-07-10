@@ -18,12 +18,6 @@ from spikeinterface.core.node_pipeline import (
 )
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
-
-
 class AmplitudeExtractionNode(PipelineNode):
     def __init__(self, recording, parents=None, return_output=True, param0=5.5):
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
@@ -68,7 +62,14 @@ class WaveformsRootMeanSquare(PipelineNode):
         return rms_by_channels
 
 
-def test_run_node_pipeline():
+@pytest.fixture(scope="module")
+def cache_folder_creation(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
+    return cache_folder
+
+
+def test_run_node_pipeline(cache_folder_creation):
+    cache_folder = cache_folder_creation
     recording, sorting = generate_ground_truth_recording(num_channels=10, num_units=10, durations=[10.0])
 
     # job_kwargs = dict(chunk_duration="0.5s", n_jobs=2, progress_bar=False)
@@ -86,12 +87,12 @@ def test_run_node_pipeline():
     peak_retriever = PeakRetriever(recording, peaks)
     # channel index is from template
     spike_retriever_T = SpikeRetriever(
-        recording, sorting, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
+        sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
     )
     # channel index is per spike
     spike_retriever_S = SpikeRetriever(
-        recording,
         sorting,
+        recording,
         channel_from_template=False,
         extremum_channel_inds=extremum_channel_inds,
         radius_um=50,

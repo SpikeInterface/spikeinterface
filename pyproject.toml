@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.101.0"
+version = "0.101.0rc0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -20,7 +20,7 @@ classifiers = [
 
 
 dependencies = [
-    "numpy",
+    "numpy>=1.20, <2.0",  # 1.20 np.ptp, 1.26 might be necessary for avoiding pickling errors when numpy >2.0
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.16,<2.18",
@@ -65,18 +65,16 @@ extractors = [
     "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
-    "scipy<1.13",
+    "scipy",
     "ONE-api>=2.7.0", # alf sorter and streaming IBL
-    "ibllib>=2.32.5", # streaming IBL
+    "ibllib>=2.36.0", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
     "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
     "ONE-api>=2.7.0", # alf sorter and streaming IBL
-    "ibllib>=2.32.5", # streaming IBL
-    "scipy<1.13", # ibl has a dependency on scipy but it does not have an upper bound
-    # Remove this once https://github.com/int-brain-lab/ibllib/issues/753
+    "ibllib>=2.36.0", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
     "fsspec",
@@ -87,11 +85,17 @@ streaming_extractors = [
     "s3fs"
 ]
 
+
+preprocessing = [
+    "scipy",
+]
+
+
 full = [
     "h5py",
     "pandas",
     "xarray",
-    "scipy<1.13",
+    "scipy",
     "scikit-learn",
     "networkx",
     "distinctipy",
@@ -125,6 +129,19 @@ test_core = [
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
+test_extractors = [
+    # Functions to download data in neo test suite
+    "pooch>=1.8.2",
+    "datalad>=1.0.2",
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+]
+
+test_preprocessing = [
+    "ibllib>=2.36.0", # for IBL
+]
+
+
 test = [
     "pytest",
     "pytest-dependency",
@@ -133,6 +150,12 @@ test = [
     "xarray",
     "huggingface_hub",
 
+    # preprocessing
+    "ibllib>=2.36.0", # for IBL
+
+    # streaming templates
+    "s3fs",
+
     # tridesclous
     "numba",
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
@@ -140,9 +163,6 @@ test = [
     # for sortingview backend
     "sortingview",
 
-    # recent datalad need a too recent version for git-annex
-    # so we use an old one here
-    "datalad==0.16.2",
 
     ## install tridesclous for testing ##
     "tridesclous>=1.6.8",
@@ -154,8 +174,8 @@ test = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 docs = [
@@ -167,16 +187,19 @@ docs = [
     "ipython",
 
     # for notebooks in the gallery
-    "MEArec",   # Use as an example
-    "datalad==0.16.2",  # Download mearec data, not sure if needed as is installed with conda as well because of git-annex
+    "MEArec", # Use as an example
     "pandas", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "xarray", # For use of SortingAnalyzer zarr format
     "networkx",
+    # Download data
+    "pooch>=1.8.2",
+    "datalad>=1.0.2",
+
     # for release we need pypi, so this needs to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 
 ]
 
