@@ -333,6 +333,7 @@ bandpass_filter = define_function_from_class(source_class=BandpassFilterRecordin
 notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
 highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
 
+
 def causal_filter(
     recording,
     direction="forward",
@@ -397,6 +398,7 @@ def causal_filter(
         coeff=coeff,
         dtype=dtype,
     )
+
 
 bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
 highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
