@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 from probeinterface import Probe
-from probeinterface.plotting import get_auto_lims
-from seaborn import color_palette
 from warnings import warn
 from .base import BaseWidget, to_attr
 
@@ -51,24 +49,19 @@ class UnitSpatialDistributionsWidget(BaseWidget):
             # TODO: throw error or warning, no probe available
             pass
 
-        xrange, yrange, _ = get_auto_lims(probe, margin=0)
-        if bins is None:
-            bins = (
-                np.round(np.diff(xrange).squeeze() / 75).astype(int),
-                np.round(np.diff(yrange).squeeze() / 75).astype(int),
-            )
-            # TODO: change behaviour, if bins is not defined, bin only along the depth axis
-
-        if type(cmap) is str:
-            cmap = color_palette(cmap, as_cmap=True)
+        # xrange, yrange, _ = get_auto_lims(probe, margin=0)
+        # if bins is None:
+        #     bins = (
+        #         np.round(np.diff(xrange).squeeze() / 75).astype(int),
+        #         np.round(np.diff(yrange).squeeze() / 75).astype(int),
+        #     )
+        #     # TODO: change behaviour, if bins is not defined, bin only along the depth axis
 
         plot_data = dict(
             probe=probe,
             x=x,
             y=y,
             depth_axis=depth_axis,
-            xrange=xrange,
-            yrange=yrange,
             bins=bins,
             kde=kde,
             cmap=cmap,
@@ -82,10 +75,13 @@ class UnitSpatialDistributionsWidget(BaseWidget):
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.patches as patches
         import matplotlib.path as path
-        from seaborn import kdeplot, histplot
+        from probeinterface.plotting import get_auto_lims
+        from seaborn import color_palette, kdeplot, histplot
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
+        xrange, yrange, _ = get_auto_lims(dp.probe, margin=0)
+        cmap = color_palette(dp.cmap, as_cmap=True) if type(dp.cmap) is str else dp.cmap
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
@@ -96,8 +92,8 @@ class UnitSpatialDistributionsWidget(BaseWidget):
         ax.add_patch(patch)
 
         if dp.kde is not True:
-            hist, xedges, yedges = np.histogram2d(dp.x, dp.y, bins=dp.bins, range=[dp.xrange, dp.yrange])
-            pcm = ax.pcolormesh(xedges, yedges, hist.T, cmap=dp.cmap)
+            hist, xedges, yedges = np.histogram2d(dp.x, dp.y, bins=dp.bins, range=[xrange, yrange])
+            pcm = ax.pcolormesh(xedges, yedges, hist.T, cmap=cmap)
         else:
             kde_kws = dict(levels=100, thresh=0, fill=True, bw_adjust=0.1)
             if dp.kde_kws is not None:
@@ -105,15 +101,15 @@ class UnitSpatialDistributionsWidget(BaseWidget):
             data = dict(x=dp.x, y=dp.y)
             bg = ax.add_patch(
                 patches.Rectangle(
-                    [dp.xrange[0], dp.yrange[0]],
-                    np.diff(dp.xrange).squeeze(),
-                    np.diff(dp.yrange).squeeze(),
-                    facecolor=dp.cmap.colors[0],
+                    [xrange[0], yrange[0]],
+                    np.diff(xrange).squeeze(),
+                    np.diff(yrange).squeeze(),
+                    facecolor=cmap.colors[0],
                     fill=True,
                 )
             )
             bg.set_clip_path(patch)
-            kdeplot(data, x="x", y="y", clip=[dp.xrange, dp.yrange], cmap=dp.cmap, ax=ax, **kde_kws)
+            kdeplot(data, x="x", y="y", clip=[xrange, yrange], cmap=cmap, ax=ax, **kde_kws)
             pcm = ax.collections[0]
             ax.set_xlabel(None)
             ax.set_ylabel(None)
@@ -143,7 +139,7 @@ class UnitSpatialDistributionsWidget(BaseWidget):
                 y="y",
                 hue="group",
                 bins=dp.bins[1],
-                binrange=dp.yrange,
+                binrange=yrange,
                 palette=palette,
                 ax=ax_hist,
                 legend=False,
