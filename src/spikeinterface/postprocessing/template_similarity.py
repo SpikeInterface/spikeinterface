@@ -11,6 +11,7 @@ from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
+
 class ComputeTemplateSimilarity(AnalyzerExtension):
     """Compute similarity between templates with several methods.
 
@@ -73,7 +74,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
         )
         num_samples = templates_array.shape[1]
-        assert num_shifts < num_samples//2, "max_lag_ms is too large"
+        assert num_shifts < num_samples // 2, "max_lag_ms is too large"
         sparsity = self.sorting_analyzer.sparsity
         similarity = compute_similarity_with_templates_array(
             templates_array,
@@ -83,7 +84,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             support=self.params["support"],
             sparsity=sparsity,
             other_sparsity=sparsity,
-            **job_kwargs
+            **job_kwargs,
         )
         self.data["similarity"] = similarity
 
@@ -97,14 +98,10 @@ compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
 global _ctx
 
+
 def split_worker_init(
-                templates_array,
-                other_templates_array,
-                num_shifts,
-                overlapping_templates,
-                mask,
-                method, 
-                max_threads_per_process):
+    templates_array, other_templates_array, num_shifts, overlapping_templates, mask, method, max_threads_per_process
+):
     global _ctx
     _ctx = {}
 
@@ -120,25 +117,22 @@ def split_worker_init(
 def split_function_wrapper(row_index):
     global _ctx
     with threadpool_limits(limits=_ctx["max_threads_per_process"]):
-        distances = _compute_row(row_index,
+        distances = _compute_row(
+            row_index,
             _ctx["templates_array"],
             _ctx["other_templates_array"],
             _ctx["num_shifts"],
             _ctx["overlapping_templates"],
             _ctx["mask"],
-            _ctx["method"]
+            _ctx["method"],
         )
     return distances
 
-def _compute_row(row_index,
-                templates_array,
-                other_templates_array,
-                num_shifts,
-                overlapping_templates,
-                mask,
-                method):
+
+def _compute_row(row_index, templates_array, other_templates_array, num_shifts, overlapping_templates, mask, method):
 
     import sklearn.metrics.pairwise
+
     templates_array = templates_array[row_index][np.newaxis, :, :]
     num_templates = templates_array.shape[0]
     num_samples = templates_array.shape[1]
@@ -150,10 +144,10 @@ def _compute_row(row_index,
     for count, shift in enumerate(range(-num_shifts, 1)):
         src_sliced_templates = templates_array[:, num_shifts : num_samples - num_shifts]
         tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
-        
+
         src_template = src_sliced_templates[0]
         tgt_templates = tgt_sliced_templates[overlapping_templates[row_index]]
-        
+
         for gcount, j in enumerate(overlapping_templates[row_index]):
             # symmetric values are handled later
             if num_templates == other_num_templates and j < row_index:
@@ -172,19 +166,20 @@ def _compute_row(row_index,
                 distances[count, 0, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l2")
                 distances[count, 0, j] /= norm_i + norm_j
             else:
-                distances[count, 0, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="cosine")    
+                distances[count, 0, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="cosine")
 
     return row_index, distances
 
+
 def compute_similarity_with_templates_array(
-    templates_array, 
-    other_templates_array, 
-    method, 
-    support="union", 
-    num_shifts=0, 
-    sparsity=None, 
-    other_sparsity=None, 
-    **job_kwargs
+    templates_array,
+    other_templates_array,
+    method,
+    support="union",
+    num_shifts=0,
+    sparsity=None,
+    other_sparsity=None,
+    **job_kwargs,
 ):
 
     import sklearn.metrics.pairwise
@@ -229,7 +224,7 @@ def compute_similarity_with_templates_array(
 
     assert num_shifts < num_samples, "max_lag is too large"
     num_shifts_both_sides = 2 * num_shifts + 1
-    
+
     shape = (num_shifts_both_sides, num_templates, other_num_templates)
     distances = np.ones(shape, dtype=np.float32)
 
@@ -242,30 +237,32 @@ def compute_similarity_with_templates_array(
     Executor = get_poolexecutor(n_jobs)
 
     with Executor(
-            max_workers=n_jobs,
-            initializer=split_worker_init,
-            mp_context=get_context(method=mp_context),
-            initargs=(templates_array,
-                other_templates_array,
-                num_shifts,
-                overlapping_templates,
-                mask,
-                method, 
-                max_threads_per_process),
-        ) as pool:
-            
-            jobs = []
-            for row_index in range(num_templates):
-                jobs.append(pool.submit(split_function_wrapper, row_index))
+        max_workers=n_jobs,
+        initializer=split_worker_init,
+        mp_context=get_context(method=mp_context),
+        initargs=(
+            templates_array,
+            other_templates_array,
+            num_shifts,
+            overlapping_templates,
+            mask,
+            method,
+            max_threads_per_process,
+        ),
+    ) as pool:
 
-            if progress_bar:
-                iterator = tqdm(jobs, desc=f"compute similarity", total=num_templates)
-            else:
-                iterator = jobs
+        jobs = []
+        for row_index in range(num_templates):
+            jobs.append(pool.submit(split_function_wrapper, row_index))
 
-            for res in iterator:
-                row_index, local_distances = res.result()
-                distances[:, row_index, :] = local_distances[:, 0, :]
+        if progress_bar:
+            iterator = tqdm(jobs, desc=f"compute similarity", total=num_templates)
+        else:
+            iterator = jobs
+
+        for res in iterator:
+            row_index, local_distances = res.result()
+            distances[:, row_index, :] = local_distances[:, 0, :]
 
     for count, shift in enumerate(range(-num_shifts, 1)):
         if shift != 0:
