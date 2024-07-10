@@ -882,16 +882,16 @@ if HAVE_NUMBA:
         traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, num_templates
     ):
         num_z = traces_center.shape[0]
-        for template_ind in range(num_templates):
-            for z in range(num_z):
+        for z in range(num_z):
+            for template_ind in range(num_templates):
                 for s in range(peak_mask.shape[2]):
                     if not peak_mask[z, template_ind, s]:
                         continue
                     for neighbour in range(num_templates):
                         if not neighbours_mask[template_ind, neighbour]:
                             continue
-                        for j in range(num_z):
-                            for i in range(exclude_sweep_size):
+                        for i in range(exclude_sweep_size):
+                            for j in range(num_z):
                                 if template_ind >= neighbour:
                                     if z >= j:
                                         peak_mask[z, template_ind, s] &= (
