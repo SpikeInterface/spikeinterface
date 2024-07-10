@@ -53,24 +53,30 @@ def test_SortingAnalyzer_merge_all_extensions(dataset):
     merges = [[1, 2], [3, 4, 5]]
 
     t0 = time.perf_counter()
-    analyzer_merged_h = sorting_analyzer.merge_units(
+    analyzer_merged_hard = sorting_analyzer.merge_units(
         merge_unit_groups=merges, censor_ms=5, merging_mode="hard", n_jobs=1
     )
-    t_h = time.perf_counter() - t0
+    t_hard = time.perf_counter() - t0
 
     t0 = time.perf_counter()
-    analyzer_merged_s = sorting_analyzer.merge_units(
+    analyzer_merged_soft = sorting_analyzer.merge_units(
         merge_unit_groups=merges, censor_ms=5, merging_mode="soft", sparsity_overlap=0.0, n_jobs=1
     )
-    t_s = time.perf_counter() - t0
+    t_soft = time.perf_counter() - t0
     # print(analyzer_merged_h)
     # print(analyzer_merged_s)
 
-    assert t_s < t_h
-    np.testing.assert_array_equal(analyzer_merged_h.unit_ids, analyzer_merged_s.unit_ids)
-    np.testing.assert_array_equal(analyzer_merged_h.unit_ids, [0, 6, 7, 8])
+    # soft must faster
+    assert t_soft < t_hard
+    np.testing.assert_array_equal(analyzer_merged_hard.unit_ids, analyzer_merged_soft.unit_ids)
+    np.testing.assert_array_equal(analyzer_merged_hard.unit_ids, [0, 6, 7, 8])
 
     # TODO: add more tests
+
+    # pierre we must make tests that :
+    # 1. check that data are exactly the same for unchanged units between hard/soft/original
+    # 2 check bthat data are almost the same for merged units between hard/soft
+
 
 
 if __name__ == "__main__":
