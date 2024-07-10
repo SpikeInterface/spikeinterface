@@ -402,7 +402,6 @@ def causal_filter(
 
 bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
 highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
-causal_filter.__doc__ = causal_filter.__doc__.format(_common_filter_docs)
 
 
 def fix_dtype(recording, dtype):
