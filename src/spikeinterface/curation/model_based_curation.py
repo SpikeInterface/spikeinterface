@@ -1,5 +1,6 @@
 from typing import Sequence
 import numpy as np
+from pathlib import Path
 
 from spikeinterface.core import SortingAnalyzer
 from spikeinterface.qualitymetrics.quality_metric_calculator import get_default_qm_params
@@ -46,7 +47,7 @@ class ModelBasedClassification:
         self.pipeline = pipeline
         self.required_metrics = pipeline.feature_names_in_
 
-    def predict_labels(self):
+    def predict_labels(self, export_to_phy=False, export_to_sortingview=False):
         """
         Predicts the labels for the spike sorting data using the trained model.
 
@@ -76,6 +77,14 @@ class ModelBasedClassification:
             unit_id: (prediction, probability)
             for unit_id, prediction, probability in zip(input_data.index, predictions, probabilities)
         }
+
+        if export_to_phy:
+            self._export_to_phy(classified_units)
+
+        if export_to_sortingview:
+            pass
+            #TODO: implement
+            #self._export_to_sortingview(classified_units)
 
         return classified_units
 
@@ -136,8 +145,24 @@ class ModelBasedClassification:
         # TODO: decide whether to also check params against parent extensions of metrics (e.g. waveforms, templates)
         # This would need to account for the fact that these extensions may no longer exist
 
+    def _export_to_phy(self, classified_units):
+        """Export the classified units to Phy as cluster_prediction.tsv file"""
+        import pandas as pd
 
-def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline):
+        # Create a new DataFrame with unit_id, prediction, and probability columns from dict {unit_id: (prediction, probability)}
+        classified_df = pd.DataFrame.from_dict(classified_units, orient="index", columns=["prediction", "probability"])
+
+        # Export to Phy format
+        try:
+            sorting_path = self.sorting_analyzer.sorting.get_annotation("phy_folder")
+            assert sorting_path is not None
+            assert Path(sorting_path).is_dir()
+        except AssertionError:
+            raise ValueError("Phy folder not found in sorting annotations, or is not a directory")
+
+        classified_df.to_csv(f"{sorting_path}/cluster_prediction.tsv", sep="\t", index_label = "cluster_id")
+
+def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, export_to_phy=False, export_to_sortingview=False):
     """
     Automatically labels units based on a model-based classification.
 
@@ -160,7 +185,7 @@ def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline):
     if not isinstance(pipeline, Pipeline):
         raise ValueError("The pipeline must be an instance of sklearn.pipeline.Pipeline")
 
-    model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline)
+    model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline, export_to_phy, export_to_sortingview)
 
     classified_units = model_based_classification.predict_labels()
 

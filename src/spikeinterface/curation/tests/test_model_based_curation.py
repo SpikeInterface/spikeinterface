@@ -84,6 +84,20 @@ def test_model_based_classification_check_params_for_classification(
 
     model_based_classification._check_params_for_classification()
 
+def test_model_based_classification_export_to_phy(sorting_analyzer_for_curation, pipeline):
+    # Test the _export_to_phy() method of ModelBasedClassification
+    model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline)
+    classified_units = {0: (1, 0.5), 1: (0, 0.5), 2: (1, 0.5), 3: (0, 0.5), 4: (1, 0.5)}
+    # Function should fail here
+    with pytest.raises(ValueError):
+        model_based_classification._export_to_phy(classified_units)
+    # Make temp output folder and set as phy_folder
+    phy_folder = cache_folder / "phy_folder"
+    phy_folder.mkdir(parents=True, exist_ok=True)
+
+    model_based_classification.sorting_analyzer.sorting.annotate(phy_folder = phy_folder)
+    model_based_classification._export_to_phy(classified_units)
+    assert (phy_folder / "cluster_prediction.tsv").exists()
 
 # TODO: fix this test
 def test_model_based_classification_predict_labels(sorting_analyzer_for_curation, pipeline):
