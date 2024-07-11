@@ -643,16 +643,13 @@ class DetectPeakMatchedFiltering(PeakDetector):
         contact_locations = recording.get_channel_locations()
         dist = np.linalg.norm(contact_locations[:, np.newaxis] - contact_locations[np.newaxis, :], axis=2)
         weights, self.z_factors = get_convolution_weights(dist, **weight_method)
-
         self.num_z_factors = len(self.z_factors)
         self.num_channels = recording.get_num_channels()
         self.num_templates = self.num_channels
-
         if peak_sign == "both":
             weights = np.repeat(weights, 2, axis=1)
-            weights[1::2] *= -1
+            weights[:, 1::2, :] *= -1
             self.num_templates *= 2
-
         weights = weights.reshape(self.num_templates * self.num_z_factors, -1)
 
         templates = weights[:, None, :] * prototype[None, :, None]
