@@ -7,22 +7,25 @@ def generate_noise(
     probe, sampling_frequency, durations, dtype="float32", noise_levels=15.0, spatial_decay=None, seed=None
 ):
     """
+    Generate a noise recording.
 
     Parameters
     ----------
     probe : Probe
         A probe object.
     sampling_frequency : float
-        Sampling frequency
+        The sampling frequency of the recording.
     durations : list of float
-        Durations
+        The duration(s) of the recording segment(s) in seconds.
     dtype : np.dtype
-        Dtype
-    noise_levels : float | np.array | tuple
+        The dtype of the recording.
+    noise_levels : float | np.array | tuple, default: 15.0
         If scalar same noises on all channels.
         If array then per channels noise level.
         If tuple, then this represent the range.
-    seed : None | int
+    spatial_decay : float | None, default: None
+        If not None, the spatial decay of the noise used to generate the noise covariance matrix.
+    seed : int | None, default: None
         The seed for random generator.
 
     Returns
