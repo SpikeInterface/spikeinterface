@@ -117,7 +117,6 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
             proj_one_unit = ext.get_projections_one_unit(unit_id, sparse=False)
             np.testing.assert_array_almost_equal(some_projections[spike_mask], proj_one_unit[:, :, channel_indices])
 
-
     @pytest.mark.parametrize("sparse", [True, False])
     def test_compute_for_all_spikes(self, sparse):
         """

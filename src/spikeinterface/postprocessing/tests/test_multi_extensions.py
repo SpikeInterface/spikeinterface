@@ -78,7 +78,6 @@ def test_SortingAnalyzer_merge_all_extensions(dataset):
     # 2 check bthat data are almost the same for merged units between hard/soft
 
 
-
 if __name__ == "__main__":
     dataset = get_dataset()
     test_SortingAnalyzer_merge_all_extensions(dataset)
