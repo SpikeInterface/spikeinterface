@@ -20,7 +20,7 @@ def fetch_template_object_from_database(dataset="test_templates.zarr") -> Templa
     Returns
     -------
     Templates
-        _description_
+        The templates object.
     """
     s3_path = f"s3://spikeinterface-template-database/{dataset}/"
     zarr_group = zarr.open_consolidated(s3_path, storage_options={"anon": True})
