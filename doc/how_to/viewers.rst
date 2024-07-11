@@ -11,7 +11,7 @@ There are several ways to plot signals (raw, preprocessed) and spikes.
 4. You can use the :code:`phy` software
 
 
-spikeinterface.widgets
+spikeinterface-widgets
 ----------------------
 
 The easiest way to visualize :code:`spikeinterface` objects is to use the :code:`widgets` module for plotting.

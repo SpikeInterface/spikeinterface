@@ -68,11 +68,9 @@ both `random_spikes` and `waveforms`. We say that `principal_components` is a ch
 two. Other extensions, like `isi_histograms`, don't depend on anything. It has no children and no parents. The parent/child
 relationships of all the extensions currently defined in spikeinterface can be found in this diagram:
 
-|
 .. figure:: ../images/parent_child.svg
     :alt: Parent child relationships for the extensions in spikeinterface
     :align: center
-|
 
 If you try to calculate a child before calculating a parent, an error will be thrown. Further, when a parent is recalculated we delete
 its children. Why? Consider calculating :code:`principal_components`. This depends on random selection of spikes chosen
