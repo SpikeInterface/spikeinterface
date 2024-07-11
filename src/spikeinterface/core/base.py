@@ -950,12 +950,12 @@ class BaseExtractor:
         folder.mkdir(parents=True, exist_ok=False)
 
         # dump provenance
+        provenance_file_path = folder / f"provenance.json"
         if self.check_serializability("json"):
-            provenance_file = folder / f"provenance.json"
-            self.dump(provenance_file)
+            self.dump_to_json(file_path=provenance_file_path, relative_to=folder)
         elif self.check_serializability("pickle"):
             provenance_file = folder / f"provenance.pkl"
-            self.dump(provenance_file)
+            self.dump_to_pickle(provenance_file, relative_to=folder)
         else:
             warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
 
@@ -967,8 +967,9 @@ class BaseExtractor:
         # copy properties/
         self.copy_metadata(cached)
 
-        # dump
-        cached.dump(folder / f"si_folder.json", relative_to=folder)
+        # Dump the extractor to json file
+        si_folder_path = folder / f"si_folder.json"
+        cached.dump_to_json(file_path=si_folder_path, relative_to=folder)
 
         return cached
 
