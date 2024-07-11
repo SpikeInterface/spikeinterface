@@ -88,7 +88,7 @@ You can also have a look at the [spikeinterface-gui](https://github.com/SpikeInt
 
 ## How to install spikeinterface
 
-You can install the latest version of `spikeinterface` version with pip (using quotes ensures `pip install` works in all terminals):
+You can install the latest version of `spikeinterface` version with pip (using quotes ensures `pip install` works in all terminals/shells):
 
 ```bash
 pip install "spikeinterface[full]"
