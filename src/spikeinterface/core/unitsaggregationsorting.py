@@ -46,7 +46,7 @@ class UnitsAggregationSorting(BaseSorting):
             else:
                 default_unit_ids = [str(i) for i in range(num_all_units)]
                 if all_ids_are_same_type and np.issubdtype(unit_ids_dtypes[0], np.integer):
-                    unit_ids = np.arange(num_all_units, dtype=dtype)
+                    unit_ids = np.arange(num_all_units, dtype=np.uint64)
                 else:
                     unit_ids = default_unit_ids
 

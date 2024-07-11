@@ -34,12 +34,10 @@ def test_unitsaggregationsorting(create_cache_folder):
         spiketrain1_1 = sorting1.get_unit_spike_train(unit_ids[1], segment_index=seg)
         spiketrains2_0 = sorting2.get_unit_spike_train(unit_ids[0], segment_index=seg)
         spiketrains3_2 = sorting3.get_unit_spike_train(unit_ids[2], segment_index=seg)
-        assert np.allclose(spiketrain1_1, sorting_agg.get_unit_spike_train(str(unit_ids[1]), segment_index=seg))
+        assert np.allclose(spiketrain1_1, sorting_agg.get_unit_spike_train(unit_ids[1], segment_index=seg))
+        assert np.allclose(spiketrains2_0, sorting_agg.get_unit_spike_train(num_units + unit_ids[0], segment_index=seg))
         assert np.allclose(
-            spiketrains2_0, sorting_agg.get_unit_spike_train(str(num_units + unit_ids[0]), segment_index=seg)
-        )
-        assert np.allclose(
-            spiketrains3_2, sorting_agg.get_unit_spike_train(str(2 * num_units + unit_ids[2]), segment_index=seg)
+            spiketrains3_2, sorting_agg.get_unit_spike_train(2 * num_units + unit_ids[2], segment_index=seg)
         )
 
     # test rename units
