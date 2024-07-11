@@ -139,7 +139,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
             if new_num_chans < old_num_chans:
                 pca_projections = pca_projections[:, :, :new_num_chans]
 
-        new_data = dict(pca_projections=pca_projections)
+        new_data = dict(pca_projection=pca_projections)
 
         # one or several model
         for k, v in self.data.items():

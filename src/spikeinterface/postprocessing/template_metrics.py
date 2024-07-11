@@ -211,7 +211,8 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
         channel_locations = sorting_analyzer.get_channel_locations()
 
-        for unit_index, unit_id in enumerate(unit_ids):
+        for unit_id in unit_ids:
+            unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
             template_all_chans = all_templates[unit_index]
             chan_ids = np.array(extremum_channels_ids[unit_id])
             if chan_ids.ndim == 0:
