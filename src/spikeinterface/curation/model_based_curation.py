@@ -83,8 +83,8 @@ class ModelBasedClassification:
 
         if export_to_sortingview:
             pass
-            #TODO: implement
-            #self._export_to_sortingview(classified_units)
+            # TODO: implement
+            # self._export_to_sortingview(classified_units)
 
         return classified_units
 
@@ -160,7 +160,8 @@ class ModelBasedClassification:
         except AssertionError:
             raise ValueError("Phy folder not found in sorting annotations, or is not a directory")
 
-        classified_df.to_csv(f"{sorting_path}/cluster_prediction.tsv", sep="\t", index_label = "cluster_id")
+        classified_df.to_csv(f"{sorting_path}/cluster_prediction.tsv", sep="\t", index_label="cluster_id")
+
 
 def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, export_to_phy=False, export_to_sortingview=False):
     """
@@ -185,7 +186,9 @@ def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, export_to_phy=
     if not isinstance(pipeline, Pipeline):
         raise ValueError("The pipeline must be an instance of sklearn.pipeline.Pipeline")
 
-    model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline, export_to_phy, export_to_sortingview)
+    model_based_classification = ModelBasedClassification(
+        sorting_analyzer, pipeline, export_to_phy, export_to_sortingview
+    )
 
     classified_units = model_based_classification.predict_labels()
 
