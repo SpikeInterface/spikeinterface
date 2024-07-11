@@ -36,7 +36,7 @@ For each patient, the dataset contains two recording : a high pass (AP -
 
     from pathlib import Path
     import matplotlib.pyplot as plt
-    
+
     import spikeinterface.full as si
     from spikeinterface.sortingcomponents.motion import estimate_motion
 
@@ -57,7 +57,7 @@ read the spikeglx file
 
 .. parsed-literal::
 
-    SpikeGLXRecordingExtractor: 384 channels - 2.5kHz - 1 segments - 2,183,292 samples 
+    SpikeGLXRecordingExtractor: 384 channels - 2.5kHz - 1 segments - 2,183,292 samples
                                 873.32s (14.56 minutes) - int16 dtype - 1.56 GiB
 
 
@@ -87,7 +87,7 @@ eyes ont the traces plotted with the map mode.
         raw_rec,
         freq_min=0.5,
         freq_max=250,
-    
+
         margin_ms=1500.,
         filter_order=3,
         dtype="float32",
@@ -95,16 +95,16 @@ eyes ont the traces plotted with the map mode.
     )
     lfprec = si.phase_shift(lfprec)
     lfprec = si.resample(lfprec, resample_rate=250, margin_ms=1000)
-    
+
     lfprec = si.directional_derivative(lfprec, order=2, edge_order=1)
     lfprec = si.average_across_direction(lfprec)
-    
+
     print(lfprec)
 
 
 .. parsed-literal::
 
-    AverageAcrossDirectionRecording: 192 channels - 0.2kHz - 1 segments - 218,329 samples 
+    AverageAcrossDirectionRecording: 192 channels - 0.2kHz - 1 segments - 218,329 samples
                                      873.32s (14.56 minutes) - float32 dtype - 159.91 MiB
 
 
@@ -185,5 +185,3 @@ This motion match the LFP signal above.
 
 
 .. image:: drift_with_lfp_files/drift_with_lfp_12_1.png
-
-

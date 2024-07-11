@@ -96,8 +96,6 @@ class IterativeTemplateRegistration:
             zero_threshold=None,
         )
 
-
-
         # make a 3D histogram
         motion_histograms, temporal_hist_bin_edges, spatial_hist_bin_edges = make_3d_motion_histograms(
             recording,
@@ -141,7 +139,6 @@ class IterativeTemplateRegistration:
         motion = Motion([motion_array], [temporal_bins], non_rigid_window_centers, direction=direction)
 
         return motion
-
 
 
 def iterative_template_registration(

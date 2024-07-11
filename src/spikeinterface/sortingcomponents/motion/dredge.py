@@ -2,7 +2,7 @@
 Copy-paste and then refactoring of DREDge
 https://github.com/evarol/dredge
 
-For historical reason, some function from the DREDge package where implemeneted 
+For historical reason, some function from the DREDge package where implemeneted
 in spikeinterface in the motion_estimation.py before the DREDge package itself!
 
 Here a copy/paste (and small rewriting) of some functions from DREDge.
@@ -21,6 +21,7 @@ But this code is very similar to the original code.
 but the original function dredge_ap() and dredge_online_lfp() can be used directly.
 
 """
+
 import warnings
 
 from tqdm.auto import trange
@@ -28,10 +29,14 @@ import numpy as np
 
 import gc
 
-from .motion_utils import Motion, get_spatial_windows, get_window_domains, scipy_conv1d, make_2d_motion_histogram, get_spatial_bin_edges
-
-
-
+from .motion_utils import (
+    Motion,
+    get_spatial_windows,
+    get_window_domains,
+    scipy_conv1d,
+    make_2d_motion_histogram,
+    get_spatial_bin_edges,
+)
 
 
 # simple class wrapper to be compliant with estimate_motion
@@ -84,6 +89,7 @@ class DredgeApRegistration:
     device : str or torch.device
         What torch device to run on? E.g., "cpu" or "cuda" or "cuda:1".
     """
+
     @classmethod
     def run(
         cls,
@@ -101,7 +107,6 @@ class DredgeApRegistration:
         extra,
         **method_kwargs,
     ):
-
 
         outs = dredge_ap(
             recording,
@@ -141,7 +146,7 @@ def dredge_ap(
     bin_um=1.0,
     bin_s=1.0,
     max_disp_um=None,
-    time_horizon_s=1000.,
+    time_horizon_s=1000.0,
     mincorr=0.1,
     # weights arguments
     do_window_weights=True,
@@ -217,14 +222,12 @@ def dredge_ap(
     depths_um = peak_depths = peak_locations[direction]
     times_s = peak_times = recording.sample_index_to_time(peaks["sample_index"])
 
-
-
     thomas_kw = thomas_kw if thomas_kw is not None else {}
     xcorr_kw = xcorr_kw if xcorr_kw is not None else {}
     if time_horizon_s:
         xcorr_kw["max_dt_bins"] = np.ceil(time_horizon_s / bin_s)
-    
-    #TODO @charlie I think this is a bad to have the dict which is transported to every function
+
+    # TODO @charlie I think this is a bad to have the dict which is transported to every function
     # this should be used only in histogram function but not in weight_correlation_matrix()
     # only important kwargs should be explicitly reported
     # raster_kw = dict(
@@ -251,8 +254,6 @@ def dredge_ap(
     # this will store return values other than the MotionEstimate
     extra = {}
 
-
-
     # TODO charlie I switch this to make_2d_motion_histogram
     # but we need to add all options from the original spike_raster()
     # but I think this is OK
@@ -266,7 +267,7 @@ def dredge_ap(
     #     raster, spatial_bin_edges_um, time_bin_edges_s, counts = raster_res
     # else:
     #     raster, spatial_bin_edges_um, time_bin_edges_s = raster_res
-    
+
     motion_histogram, time_bin_edges_s, spatial_bin_edges_um = make_2d_motion_histogram(
         recording,
         peaks,
@@ -276,7 +277,7 @@ def dredge_ap(
         direction=direction,
         bin_s=bin_s,
         bin_um=bin_um,
-        hist_margin_um=0.,  # @charlie maybe we should expose this and set +20. for instance
+        hist_margin_um=0.0,  # @charlie maybe we should expose this and set +20. for instance
         spatial_bin_edges=None,
         depth_smooth_um=histogram_depth_smooth_um,
         time_smooth_s=histogram_time_smooth_s,
@@ -284,7 +285,6 @@ def dredge_ap(
     raster = motion_histogram.T
 
     # TODO charlie : put the log for hitstogram
-
 
     # TODO @charlie you should check that we are doing the same thing
     # windows, window_centers = get_spatial_windows(
@@ -301,7 +301,7 @@ def dredge_ap(
     dim = ["x", "y", "z"].index(direction)
     contact_depth = recording.get_channel_locations()[:, dim]
     spatial_bin_centers = 0.5 * (spatial_bin_edges_um[1:] + spatial_bin_edges_um[:-1])
-    
+
     windows, window_centers = get_spatial_windows(
         contact_depth,
         spatial_bin_centers,
@@ -310,16 +310,13 @@ def dredge_ap(
         win_step_um=win_step_um,
         win_scale_um=win_scale_um,
         win_margin_um=win_margin_um,
-        zero_threshold=1e-5
-        )
-
-
+        zero_threshold=1e-5,
+    )
 
     # TODO charlie : the count has disapeared
     # if extra_outputs and count_masked_correlation:
     #     extra["counts"] = counts
 
-    
     # cross-correlate to get D and C
     if precomputed_D_C_maxdisp is None:
         Ds, Cs, max_disp_um = xcorr_windows(
@@ -348,7 +345,7 @@ def dredge_ap(
         spatial_bin_edges_um,
         time_bin_edges_s,
         # raster_kw, #@charlie this is removed
-        post_transform=post_transform, # @charlie this isnew
+        post_transform=post_transform,  # @charlie this isnew
         lambda_t=thomas_kw.get("lambda_t", DEFAULT_LAMBDA_T),
         eps=thomas_kw.get("eps", DEFAULT_EPS),
         progress_bar=progress_bar,
@@ -403,6 +400,7 @@ class DredgeLfpRegistration:
 
     The reference is here https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1
     """
+
     name = "dredge_lfp"
     need_peak_location = False
     params_doc = """
@@ -447,6 +445,7 @@ class DredgeLfpRegistration:
     device : string or torch.device
         Controls torch device
     """
+
     @classmethod
     def run(
         cls,
@@ -462,7 +461,6 @@ class DredgeLfpRegistration:
         verbose,
         progress_bar,
         extra,
-
         **method_kwargs,
     ):
         # Note peaks and peak_locations are not used and can be None
@@ -488,24 +486,17 @@ class DredgeLfpRegistration:
         return motion
 
 
-
-
-
-
 def dredge_online_lfp(
     lfp_recording,
-    direction='y',
+    direction="y",
     # nonrigid window construction arguments
     rigid=True,
     win_shape="gaussian",
     win_step_um=800,
     win_scale_um=850,
     win_margin_um=None,
-    
     chunk_len_s=10.0,
     max_disp_um=500,
-    
-    
     time_horizon_s=None,
     # weighting arguments
     mincorr=0.8,
@@ -537,7 +528,6 @@ def dredge_online_lfp(
     # contact pos is the only on the direction
     contact_depth = lfp_recording.get_channel_locations()[:, dim]
 
-
     fs = lfp_recording.get_sampling_frequency()
     T_total = lfp_recording.get_num_samples()
     T_chunk = min(int(np.floor(fs * chunk_len_s)), T_total)
@@ -563,7 +553,6 @@ def dredge_online_lfp(
         bin_s=1 / fs,  # only relevant for time_horizon_s
     )
 
-    
     # here we check that contact positons are unique on the direction
     if contact_depth.size != np.unique(contact_depth).size:
         raise ValueError(
@@ -599,9 +588,7 @@ def dredge_online_lfp(
     # below, t0 is start of prev chunk, t1 start of cur chunk, t2 end of cur
     t0, t1 = 0, T_chunk
     traces0 = lfp_recording.get_traces(start_frame=t0, end_frame=t1)
-    Ds0, Cs0, max_disp_um = xcorr_windows(
-        traces0.T, windows, contact_depth, win_scale_um, **full_xcorr_kw
-    )
+    Ds0, Cs0, max_disp_um = xcorr_windows(traces0.T, windows, contact_depth, win_scale_um, **full_xcorr_kw)
     full_xcorr_kw["max_disp_um"] = max_disp_um
     Ss0, mincorr0 = threshold_correlation_matrix(
         Cs0,
@@ -646,19 +633,14 @@ def dredge_online_lfp(
         )
 
         # cross-correlation in current chunk
-        Ds1, Cs1, _ = xcorr_windows(
-            traces1.T, windows, contact_depth, win_scale_um, **full_xcorr_kw
-        )
+        Ds1, Cs1, _ = xcorr_windows(traces1.T, windows, contact_depth, win_scale_um, **full_xcorr_kw)
         Ss1, mincorr1 = threshold_correlation_matrix(
             Cs1,
             mincorr_percentile=mincorr_percentile,
             mincorr=mincorr,
             **threshold_kw,
         )
-        Ss10, _ = threshold_correlation_matrix(
-            Cs10, mincorr=mincorr1, t_offset_bins=T_chunk, **threshold_kw
-        )
-        
+        Ss10, _ = threshold_correlation_matrix(Cs10, mincorr=mincorr1, t_offset_bins=T_chunk, **threshold_kw)
 
         if extra_outputs:
             extra["mincorrs"].append(mincorr1)
@@ -692,7 +674,8 @@ def dredge_online_lfp(
     else:
         return motion
 
-dredge_online_lfp.__doc__  = dredge_online_lfp.__doc__.format(DredgeLfpRegistration.params_doc)
+
+dredge_online_lfp.__doc__ = dredge_online_lfp.__doc__.format(DredgeLfpRegistration.params_doc)
 
 
 # -- functions from dredgelib (zone forbiden for sam)
@@ -719,7 +702,6 @@ def laplacian(n, wink=True, eps=DEFAULT_EPS, lambd=1.0, ridge_mask=None):
         lap[i, i + 1] -= 0.5 * lambd
         lap[i + 1, i] -= 0.5 * lambd
     return lap
-
 
 
 def neg_hessian_likelihood_term(Ub, Ub_prevcur=None, Ub_curprev=None):
@@ -761,12 +743,7 @@ def newton_rhs(
 
     # online case
     align_term = (Ub_prevcur.T + Ub_curprev) @ Pb_prev
-    rhs = (
-        align_term
-        + grad_at_0
-        + (Ub_curprev * Db_curprev).sum(1)
-        - (Ub_prevcur * Db_prevcur).sum(0)
-    )
+    rhs = align_term + grad_at_0 + (Ub_curprev * Db_curprev).sum(1) - (Ub_prevcur * Db_prevcur).sum(0)
 
     return rhs
 
@@ -881,9 +858,7 @@ def thomas_solve(
         P = np.zeros((B, T))
         extra["HU"] = np.zeros((B, T, T))
         for b in range(B):
-            P[b], extra["HU"][b] = newton_solve_rigid(
-                Ds[b], Us[b], L_t[b], **online_kw_rhs(b)
-            )
+            P[b], extra["HU"][b] = newton_solve_rigid(Ds[b], Us[b], L_t[b], **online_kw_rhs(b))
         return P, extra
 
     # spatial prior is a sparse, block tridiagonal kronecker product
@@ -893,31 +868,21 @@ def thomas_solve(
     Lambda_s_offdiag = laplacian(T, eps=0, lambd=-lambda_s / 2)
 
     # initialize block-LU stuff and forward variable
-    alpha_hat_b = (
-        L_t[0]
-        + Lambda_s_diagb
-        + neg_hessian_likelihood_term(Us[0], **online_kw_hess(0))
-    )
-    targets = np.c_[
-        Lambda_s_offdiag, newton_rhs(Us[0], Ds[0], **online_kw_rhs(0))
-    ]
+    alpha_hat_b = L_t[0] + Lambda_s_diagb + neg_hessian_likelihood_term(Us[0], **online_kw_hess(0))
+    targets = np.c_[Lambda_s_offdiag, newton_rhs(Us[0], Ds[0], **online_kw_rhs(0))]
     res = solve(alpha_hat_b, targets, assume_a="pos")
     assert res.shape == (T, T + 1)
     gamma_hats = [res[:, :T]]
     ys = [res[:, T]]
 
     # forward pass
-    for b in (trange(1, B, desc="Solve") if progress_bar else range(1, B)):
+    for b in trange(1, B, desc="Solve") if progress_bar else range(1, B):
         if b < B - 1:
             Lambda_s_diagb = laplacian(T, eps=eps, lambd=lambda_s, ridge_mask=had_weights[b])
         else:
             Lambda_s_diagb = laplacian(T, eps=eps, lambd=lambda_s / 2, ridge_mask=had_weights[b])
 
-        Ab = (
-            L_t[b]
-            + Lambda_s_diagb
-            + neg_hessian_likelihood_term(Us[b], **online_kw_hess(b))
-        )
+        Ab = L_t[b] + Lambda_s_diagb + neg_hessian_likelihood_term(Us[b], **online_kw_hess(b))
         alpha_hat_b = Ab - Lambda_s_offdiag @ gamma_hats[b - 1]
         targets[:, T] = newton_rhs(Us[b], Ds[b], **online_kw_rhs(b))
         targets[:, T] -= Lambda_s_offdiag @ ys[b - 1]
@@ -938,7 +903,6 @@ def thomas_solve(
     return P, extra
 
 
-
 def threshold_correlation_matrix(
     Cs,
     mincorr=0.0,
@@ -952,10 +916,7 @@ def threshold_correlation_matrix(
     soft=True,
 ):
     if mincorr_percentile is not None:
-        diags = [
-            np.diagonal(Cs, offset=j, axis1=1, axis2=2).ravel()
-            for j in range(1, mincorr_percentile_nneighbs)
-        ]
+        diags = [np.diagonal(Cs, offset=j, axis1=1, axis2=2).ravel() for j in range(1, mincorr_percentile_nneighbs)]
         mincorr = np.percentile(
             np.concatenate(diags),
             mincorr_percentile,
@@ -974,12 +935,7 @@ def threshold_correlation_matrix(
             Ss = np.square((Cs >= mincorr) * Cs)
         else:
             Ss = (Cs >= mincorr).astype(Cs.dtype)
-    if (
-        time_horizon_s is not None
-        and time_horizon_s > 0
-        and T is not None
-        and time_horizon_s < T
-    ):
+    if time_horizon_s is not None and time_horizon_s > 0 and T is not None and time_horizon_s < T:
         tt0 = bin_s * np.arange(T)
         tt1 = tt0
         if t_offset_bins:
@@ -1136,11 +1092,7 @@ def calc_corr_decent_pair(
 
     # pick torch device if unset
     if device is None:
-        device = (
-            torch.device("cuda")
-            if torch.cuda.is_available()
-            else torch.device("cpu")
-        )
+        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
     # process rasters into the tensors we need for conv2ds below
     # convert to TxD device floats
@@ -1152,9 +1104,7 @@ def calc_corr_decent_pair(
     C = np.zeros((Ta, Tb), dtype=np.float32)
     for i in range(0, Ta, batch_size):
         for j in range(0, Tb, batch_size):
-            dt_bins = min(
-                abs(i - j), abs(i + batch_size - j), abs(i - j - batch_size)
-            )
+            dt_bins = min(abs(i - j), abs(i + batch_size - j), abs(i - j - batch_size))
             if max_dt_bins and dt_bins > max_dt_bins:
                 continue
             weights_ = weights
@@ -1186,53 +1136,52 @@ def normxcorr1d(
     normalized=True,
     padding="same",
     conv_engine="torch",
-
 ):
     """normxcorr1d: Normalized cross-correlation, optionally weighted
 
-    The API is like torch's F.conv1d, except I have accidentally
-    changed the position of input/weights -- template acts like weights,
-    and x acts like input.
+        The API is like torch's F.conv1d, except I have accidentally
+        changed the position of input/weights -- template acts like weights,
+        and x acts like input.
 
-    Returns the cross-correlation of `template` and `x` at spatial lags
-    determined by `mode`. Useful for estimating the location of `template`
-    within `x`.
+        Returns the cross-correlation of `template` and `x` at spatial lags
+        determined by `mode`. Useful for estimating the location of `template`
+        within `x`.
 
-    This might not be the most efficient implementation -- ideas welcome.
-    It uses a direct convolutional translation of the formula
-        corr = (E[XY] - EX EY) / sqrt(var X * var Y)
+        This might not be the most efficient implementation -- ideas welcome.
+        It uses a direct convolutional translation of the formula
+            corr = (E[XY] - EX EY) / sqrt(var X * var Y)
 
-    This also supports weights! In that case, the usual adaptation of
-    the above formula is made to the weighted case -- and all of the
-    normalizations are done per block in the same way.
+        This also supports weights! In that case, the usual adaptation of
+        the above formula is made to the weighted case -- and all of the
+        normalizations are done per block in the same way.
 
-    Arguments
-    ---------
-    template : tensor, shape (num_templates, length)
-        The reference template signal
-    x : tensor, 1d shape (length,) or 2d shape (num_inputs, length)
-        The signal in which to find `template`
-    weights : tensor, shape (length,)
-        Will use weighted means, variances, covariances if supplied.
-    centered : bool
-        If true, means will be subtracted (per weighted patch).
-    normalized : bool
-        If true, normalize by the variance (per weighted patch).
-    padding : int, optional
-        How far to look? if unset, we'll use half the length
-    conv_engine : "torch" | "numpy"
-        What library to use for computing cross-correlations.
-        If numpy, falls back to the scipy correlate function.
-conv_engine
-    Returns
-    -------
-    corr : tensor
+        Arguments
+        ---------
+        template : tensor, shape (num_templates, length)
+            The reference template signal
+        x : tensor, 1d shape (length,) or 2d shape (num_inputs, length)
+            The signal in which to find `template`
+        weights : tensor, shape (length,)
+            Will use weighted means, variances, covariances if supplied.
+        centered : bool
+            If true, means will be subtracted (per weighted patch).
+        normalized : bool
+            If true, normalize by the variance (per weighted patch).
+        padding : int, optional
+            How far to look? if unset, we'll use half the length
+        conv_engine : "torch" | "numpy"
+            What library to use for computing cross-correlations.
+            If numpy, falls back to the scipy correlate function.
+    conv_engine
+        Returns
+        -------
+        corr : tensor
     """
-
 
     if conv_engine == "torch":
         import torch
         import torch.nn.functional as F
+
         conv1d = F.conv1d
         npx = torch
     elif conv_engine == "numpy":
@@ -1297,9 +1246,7 @@ conv_engine
 
     # compute variances for denominator, using var X = E[X^2] - (EX)^2
     if normalized:
-        var_template = conv1d(
-            onesx, wt * template, padding=padding
-        )
+        var_template = conv1d(onesx, wt * template, padding=padding)
         var_template /= Nx
         var_x = conv1d(wx * x, weights, padding=padding)
         var_x /= Nx
@@ -1354,26 +1301,19 @@ def get_weights(
     if isinstance(weights_threshold_low, tuple):
         nspikes_threshold_low, amp_threshold_low = weights_threshold_low
         unif = np.full_like(windows[0], 1 / len(windows[0]))
-        weights_threshold_low = (
-            scale_fn(amp_threshold_low)
-            * windows
-            @ (nspikes_threshold_low * unif)
-        )
+        weights_threshold_low = scale_fn(amp_threshold_low) * windows @ (nspikes_threshold_low * unif)
         weights_threshold_low = weights_threshold_low[:, None]
     if isinstance(weights_threshold_high, tuple):
         nspikes_threshold_high, amp_threshold_high = weights_threshold_high
         unif = np.full_like(windows[0], 1 / len(windows[0]))
-        weights_threshold_high = (
-            scale_fn(amp_threshold_high)
-            * windows
-            @ (nspikes_threshold_high * unif)
-        )
+        weights_threshold_high = scale_fn(amp_threshold_high) * windows @ (nspikes_threshold_high * unif)
         weights_threshold_high = weights_threshold_high[:, None]
     weights_thresh = weights_orig.copy()
     weights_thresh[weights_orig < weights_threshold_low] = 0
     weights_thresh[weights_orig > weights_threshold_high] = np.inf
 
     return weights, weights_thresh, p_inds
+
 
 def weight_correlation_matrix(
     Ds,
@@ -1436,7 +1376,7 @@ def weight_correlation_matrix(
         raster,
         depth_bin_edges,
         time_bin_edges,
-        #raster_kw,
+        # raster_kw,
         post_transform=post_transform,
         weights_threshold_low=weights_threshold_low,
         weights_threshold_high=weights_threshold_high,

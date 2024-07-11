@@ -4,7 +4,6 @@ import warnings
 import numpy as np
 
 
-
 from spikeinterface.sortingcomponents.tools import make_multi_method_doc
 
 
@@ -22,8 +21,8 @@ def estimate_motion(
     direction="y",
     rigid=False,
     win_shape="gaussian",
-    win_step_um=50.0, # @alessio charlie is proposing here instead 400
-    win_scale_um=150.0, # @alessio charlie is proposing here instead 400
+    win_step_um=50.0,  # @alessio charlie is proposing here instead 400
+    win_scale_um=150.0,  # @alessio charlie is proposing here instead 400
     win_margin_um=None,
     method="decentralized",
     extra_outputs=False,
@@ -33,8 +32,8 @@ def estimate_motion(
     **method_kwargs,
 ):
     """
-    
-    
+
+
     Estimate motion with several possible methods.
 
     Most of methods except dredge_lfp needs peaks and after their localization.
@@ -98,7 +97,6 @@ def estimate_motion(
     if margin_um is not None:
         warnings.warn("estimate_motion() margin_um has been removed used hist_margin_um or win_margin_um")
 
-
     # TODO handle multi segment one day : Charlie this is for you
     assert recording.get_num_segments() == 1, "At the moment estimate_motion handle only unique segment"
 
@@ -119,13 +117,11 @@ def estimate_motion(
         peaks,
         peak_locations,
         direction,
-
         rigid,
         win_shape,
         win_step_um,
         win_scale_um,
         win_margin_um,
-
         verbose,
         progress_bar,
         extra,

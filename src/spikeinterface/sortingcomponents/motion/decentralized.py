@@ -111,8 +111,8 @@ class DecentralizedRegistration:
         bin_um=1.0,
         hist_margin_um=20.0,
         bin_s=1.0,
-        histogram_depth_smooth_um=1.,
-        histogram_time_smooth_s=1.,
+        histogram_depth_smooth_um=1.0,
+        histogram_time_smooth_s=1.0,
         pairwise_displacement_method="conv",
         max_displacement_um=100.0,
         weight_scale="linear",
@@ -135,7 +135,6 @@ class DecentralizedRegistration:
         lsqr_robust_n_iter=20,
         weight_with_amplitude=False,
     ):
-        
 
         dim = ["x", "y", "z"].index(direction)
         contact_depth = recording.get_channel_locations()[:, dim]
@@ -153,7 +152,7 @@ class DecentralizedRegistration:
             win_step_um=win_step_um,
             win_scale_um=win_scale_um,
             win_margin_um=win_margin_um,
-            zero_threshold=None
+            zero_threshold=None,
         )
 
         # make 2D histogram raster
@@ -322,6 +321,7 @@ def compute_pairwise_displacement(
         try:
             import torch
             import torch.nn.functional as F
+
             conv_engine = "torch"
         except ImportError:
             conv_engine = "numpy"
@@ -428,7 +428,6 @@ def compute_pairwise_displacement(
         pairwise_displacement_weight *= horizon_matrix
 
     return pairwise_displacement, pairwise_displacement_weight
-
 
 
 _possible_convergence_method = ("lsmr", "gradient_descent", "lsqr_robust")
@@ -685,9 +684,6 @@ def compute_global_displacement(
         )
 
     return np.squeeze(displacement)
-
-
-
 
 
 # normxcorr1d is now implemented in dredge

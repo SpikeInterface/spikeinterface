@@ -20,7 +20,7 @@ motion_options_preset = {
             peak_sign="neg",
             detect_threshold=8.0,
             exclude_sweep_ms=0.8,
-            radius_um=80.,
+            radius_um=80.0,
         ),
         "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
@@ -76,7 +76,7 @@ motion_options_preset = {
             peak_sign="neg",
             detect_threshold=8.0,
             exclude_sweep_ms=0.8,
-            radius_um=80.,
+            radius_um=80.0,
         ),
         "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
@@ -194,7 +194,6 @@ motion_options_preset = {
         "interpolate_motion_kwargs": {},
     },
 }
-
 
 
 def correct_motion(
@@ -398,14 +397,13 @@ def correct_motion(
 
     if not output_motion and not output_motion_info:
         return recording_corrected
-    
-    out = (recording_corrected, )
-    if output_motion:
-        out += (motion, )
-    if output_motion_info:
-        out += (motion_info, )
-    return out
 
+    out = (recording_corrected,)
+    if output_motion:
+        out += (motion,)
+    if output_motion_info:
+        out += (motion_info,)
+    return out
 
 
 _doc_presets = "\n"

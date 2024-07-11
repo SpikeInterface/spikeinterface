@@ -57,7 +57,7 @@ def dataset_fixture(create_cache_folder):
 def test_estimate_motion(dataset):
     # recording, sorting = make_dataset()
     recording, sorting, cache_folder = dataset
-    
+
     peaks = np.load(cache_folder / "dataset_peaks.npy")
     peak_locations = np.load(cache_folder / "dataset_peak_locations.npy")
 
@@ -222,6 +222,7 @@ def test_estimate_motion(dataset):
 
 if __name__ == "__main__":
     import tempfile
+
     with tempfile.TemporaryDirectory() as tmpdirname:
         cache_folder = Path(tmpdirname)
     args = setup_dataset_and_peaks(cache_folder)

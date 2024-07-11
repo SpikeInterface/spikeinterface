@@ -108,6 +108,3 @@ fig, ax = plt.subplots()
 si.plot_motion(motion, mode='line', ax=ax)
 ax.set_xlim(400, 420)
 ax.set_ylim(800, 1300)
-
-
-

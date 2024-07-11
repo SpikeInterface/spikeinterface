@@ -229,22 +229,21 @@ class Motion:
             [d.copy() for d in self.displacement],
             [t.copy() for t in self.temporal_bins_s],
             self.spatial_bins_um.copy(),
-            direction=self.direction,    
+            direction=self.direction,
             interpolation_method=self.interpolation_method,
         )
 
 
-
 def get_spatial_windows(
-        contact_depth,
-        spatial_bin_centers,
-        rigid=False,
-        win_shape="gaussian",
-        win_step_um=50.0,
-        win_scale_um=150.0,
-        win_margin_um=None,
-        zero_threshold=None
-    ):
+    contact_depth,
+    spatial_bin_centers,
+    rigid=False,
+    win_shape="gaussian",
+    win_step_um=50.0,
+    win_scale_um=150.0,
+    win_margin_um=None,
+    zero_threshold=None,
+):
     """
     Generate spatial windows (taper) for non-rigid motion.
     For rigid motion, this is equivalent to have one unique rectangular window that covers the entire probe.
@@ -297,14 +296,14 @@ def get_spatial_windows(
         middle = (spatial_bin_centers[0] + spatial_bin_centers[-1]) / 2.0
         window_centers = np.array([middle])
     else:
-        if win_scale_um <= win_step_um/5.:
+        if win_scale_um <= win_step_um / 5.0:
             warnings.warn(
                 f"get_spatial_windows(): spatial windows are probably not overlaping because {win_scale_um=} and {win_step_um=}"
             )
 
         if win_margin_um is None:
             # this ensure that first/last windows do not overflow outside the probe
-            win_margin_um = -win_scale_um / 2.
+            win_margin_um = -win_scale_um / 2.0
 
         min_ = np.min(contact_depth) - win_margin_um
         max_ = np.max(contact_depth) + win_margin_um
@@ -388,7 +387,6 @@ def get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um):
     return spatial_bins
 
 
-
 def make_2d_motion_histogram(
     recording,
     peaks,
@@ -465,7 +463,7 @@ def make_2d_motion_histogram(
         weights = None
 
     motion_histogram, edges = np.histogramdd(arr, bins=(temporal_bin_edges, spatial_bin_edges), weights=weights)
-    
+
     # average amplitude in each bin
     if weight_with_amplitude and avg_in_bin:
         bin_counts, _ = np.histogramdd(arr, bins=(temporal_bin_edges, spatial_bin_edges))

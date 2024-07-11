@@ -2,6 +2,7 @@ import numpy as np
 
 # TODO this need a full rewrite with motion object
 
+
 def clean_motion_vector(motion, temporal_bins, bin_duration_s, speed_threshold=30, sigma_smooth_s=None):
     """
     Simple machinery to remove spurious fast bump in the motion vector.
@@ -69,5 +70,3 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s, speed_threshold=3
         motion_clean = scipy.signal.fftconvolve(motion_clean, smooth_kernel, mode="same", axes=0)
 
     return motion_clean
-
-
