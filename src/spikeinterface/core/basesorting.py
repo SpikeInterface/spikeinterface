@@ -30,11 +30,10 @@ class BaseSorting(BaseExtractor):
         self._cached_spike_trains = {}
 
     def __repr__(self):
-        clsname = self.__class__.__name__
         nseg = self.get_num_segments()
         nunits = self.get_num_units()
         sf_khz = self.get_sampling_frequency() / 1000.0
-        txt = f"{clsname}: {nunits} units - {nseg} segments - {sf_khz:0.1f}kHz"
+        txt = f"{self.name}: {nunits} units - {nseg} segments - {sf_khz:0.1f}kHz"
         if "file_path" in self._kwargs:
             txt += "\n  file_path: {}".format(self._kwargs["file_path"])
         return txt
