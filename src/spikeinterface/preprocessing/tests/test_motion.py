@@ -13,9 +13,7 @@ def test_estimate_and_correct_motion(create_cache_folder):
     if folder.exists():
         shutil.rmtree(folder)
 
-    rec_corrected = correct_motion(
-        rec, folder=folder, estimate_motion_kwargs={"win_step_um": 20, "conv_engine": "numpy"}
-    )
+    rec_corrected = correct_motion(rec, folder=folder, estimate_motion_kwargs={"win_step_um": 50, "win_scale_um": 100})
     print(rec_corrected)
 
     # test reloading motion info

@@ -296,7 +296,7 @@ def get_spatial_windows(
     else:
         if win_scale_um <= win_step_um / 5.0:
             warnings.warn(
-                f"get_spatial_windows(): spatial windows are probably not overlaping because {win_scale_um=} and {win_step_um=}"
+                f"get_spatial_windows(): spatial windows are probably not overlapping because {win_scale_um=} and {win_step_um=}"
             )
 
         if win_margin_um is None:
@@ -305,37 +305,31 @@ def get_spatial_windows(
 
         min_ = np.min(contact_depths) - win_margin_um
         max_ = np.max(contact_depths) + win_margin_um
-        if min_ >= max_:
-            warnings.warn(f"get_spatial_windows(): win_margin_um is too large for the probe size. Using rigid motion.")
-            # if the probe is too small, we use a single window
-            windows, window_centers = get_rigid_windows(spatial_bin_centers)
-        else:
-            num_windows = int((max_ - min_) // win_step_um)
-            if num_windows == 0:
-                warnings.warn(
-                    f"get_spatial_windows(): win_step_um and win_margin_um are too large for the probe size. "
-                    "Using rigid motion."
-                )
-                windows, window_centers = get_rigid_windows(spatial_bin_centers)
-            else:
-                border = ((max_ - min_) % win_step_um) / 2
-                window_centers = np.arange(num_windows + 1) * win_step_um + min_ + border
-                windows = []
+        num_windows = int((max_ - min_) // win_step_um)
 
-                for win_center in window_centers:
-                    if win_shape == "gaussian":
-                        win = np.exp(-((spatial_bin_centers - win_center) ** 2) / (2 * win_scale_um**2))
-                    elif win_shape == "rect":
-                        win = np.abs(spatial_bin_centers - win_center) < (win_scale_um / 2.0)
-                        win = win.astype("float64")
-                    elif win_shape == "triangle":
-                        center_dist = np.abs(spatial_bin_centers - win_center)
-                        in_window = center_dist <= (win_scale_um / 2.0)
-                        win = -center_dist
-                        win[~in_window] = 0
-                        win[in_window] -= win[in_window].min()
-                        win[in_window] /= win[in_window].max()
-                    windows.append(win)
+        if num_windows < 1:
+            raise Exception(
+                f"get_spatial_windows(): win_step_um/win_scale_um/win_margin_um are too large for the probe size. "
+                "You can try to reduce them or use rigid motion."
+            )
+        border = ((max_ - min_) % win_step_um) / 2
+        window_centers = np.arange(num_windows + 1) * win_step_um + min_ + border
+        windows = []
+
+        for win_center in window_centers:
+            if win_shape == "gaussian":
+                win = np.exp(-((spatial_bin_centers - win_center) ** 2) / (2 * win_scale_um**2))
+            elif win_shape == "rect":
+                win = np.abs(spatial_bin_centers - win_center) < (win_scale_um / 2.0)
+                win = win.astype("float64")
+            elif win_shape == "triangle":
+                center_dist = np.abs(spatial_bin_centers - win_center)
+                in_window = center_dist <= (win_scale_um / 2.0)
+                win = -center_dist
+                win[~in_window] = 0
+                win[in_window] -= win[in_window].min()
+                win[in_window] /= win[in_window].max()
+            windows.append(win)
 
     windows = np.array(windows)
 
