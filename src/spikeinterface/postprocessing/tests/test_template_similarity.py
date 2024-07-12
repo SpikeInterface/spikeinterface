@@ -63,7 +63,7 @@ class TestSimilarityExtension(AnalyzerExtensionCommonTestSuite):
 )
 def test_compute_similarity_with_templates_array(params):
     # TODO @ pierre please make more test here
-    
+
     rng = np.random.default_rng(seed=2205)
     templates_array = rng.random(size=(2, 20, 5))
     other_templates_array = rng.random(size=(4, 20, 5))
@@ -72,7 +72,7 @@ def test_compute_similarity_with_templates_array(params):
     print(similarity.shape)
 
 
-if __name__ =="__main__":
+if __name__ == "__main__":
     from spikeinterface.postprocessing.tests.common_extension_tests import get_dataset
     from spikeinterface.core import estimate_sparsity
     from pathlib import Path
