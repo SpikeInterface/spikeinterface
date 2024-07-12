@@ -1137,45 +1137,46 @@ def normxcorr1d(
     padding="same",
     conv_engine="torch",
 ):
-    """normxcorr1d: Normalized cross-correlation, optionally weighted
+    """
+    normxcorr1d: Normalized cross-correlation, optionally weighted
 
-        The API is like torch's F.conv1d, except I have accidentally
-        changed the position of input/weights -- template acts like weights,
-        and x acts like input.
+    The API is like torch's F.conv1d, except I have accidentally
+    changed the position of input/weights -- template acts like weights,
+    and x acts like input.
 
-        Returns the cross-correlation of `template` and `x` at spatial lags
-        determined by `mode`. Useful for estimating the location of `template`
-        within `x`.
+    Returns the cross-correlation of `template` and `x` at spatial lags
+    determined by `mode`. Useful for estimating the location of `template`
+    within `x`.
 
-        This might not be the most efficient implementation -- ideas welcome.
-        It uses a direct convolutional translation of the formula
-            corr = (E[XY] - EX EY) / sqrt(var X * var Y)
+    This might not be the most efficient implementation -- ideas welcome.
+    It uses a direct convolutional translation of the formula
+        corr = (E[XY] - EX EY) / sqrt(var X * var Y)
 
-        This also supports weights! In that case, the usual adaptation of
-        the above formula is made to the weighted case -- and all of the
-        normalizations are done per block in the same way.
+    This also supports weights! In that case, the usual adaptation of
+    the above formula is made to the weighted case -- and all of the
+    normalizations are done per block in the same way.
 
-        Arguments
-        ---------
-        template : tensor, shape (num_templates, length)
-            The reference template signal
-        x : tensor, 1d shape (length,) or 2d shape (num_inputs, length)
-            The signal in which to find `template`
-        weights : tensor, shape (length,)
-            Will use weighted means, variances, covariances if supplied.
-        centered : bool
-            If true, means will be subtracted (per weighted patch).
-        normalized : bool
-            If true, normalize by the variance (per weighted patch).
-        padding : int, optional
-            How far to look? if unset, we'll use half the length
-        conv_engine : "torch" | "numpy"
-            What library to use for computing cross-correlations.
-            If numpy, falls back to the scipy correlate function.
-    conv_engine
-        Returns
-        -------
-        corr : tensor
+    Parameters
+    ----------
+    template : tensor, shape (num_templates, length)
+        The reference template signal
+    x : tensor, 1d shape (length,) or 2d shape (num_inputs, length)
+        The signal in which to find `template`
+    weights : tensor, shape (length,)
+        Will use weighted means, variances, covariances if supplied.
+    centered : bool
+        If true, means will be subtracted (per weighted patch).
+    normalized : bool
+        If true, normalize by the variance (per weighted patch).
+    padding : int, optional
+        How far to look? if unset, we'll use half the length
+    conv_engine : "torch" | "numpy"
+        What library to use for computing cross-correlations.
+        If numpy, falls back to the scipy correlate function.
+
+    Returns
+    -------
+    corr : tensor
     """
 
     if conv_engine == "torch":
@@ -1261,7 +1262,7 @@ def normxcorr1d(
     # now find the final normxcorr
     corr = cov  # renaming for clarity
     if normalized:
-        corr[torch.broadcast_to(empty, corr.shape)] = 0
+        corr[npx.broadcast_to(empty, corr.shape)] = 0
         corr /= npx.sqrt(var_x)
         corr /= npx.sqrt(var_template)
 
