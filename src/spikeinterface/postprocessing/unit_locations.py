@@ -71,13 +71,13 @@ class ComputeUnitLocations(AnalyzerExtension):
 
         all_new_unit_ids = new_sorting_analyzer.unit_ids
         unit_location = np.zeros((len(all_new_unit_ids), num_dims), dtype=old_unit_locations.dtype)
-        for unit_ind, unit_id in enumerate(all_new_unit_ids):
+        for unit_index, unit_id in enumerate(all_new_unit_ids):
             if unit_id not in new_unit_ids:
                 old_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
-                unit_location[unit_ind] = old_unit_locations[old_index]
+                unit_location[unit_index] = old_unit_locations[old_index]
             else:
                 new_index = list(new_unit_ids).index(unit_id)
-                unit_location[unit_ind] = new_unit_locations[new_index]
+                unit_location[unit_index] = new_unit_locations[new_index]
 
         return dict(unit_locations=unit_location)
 
@@ -97,8 +97,8 @@ class ComputeUnitLocations(AnalyzerExtension):
             return self.data["unit_locations"]
         elif outputs == "by_unit":
             locations_by_unit = {}
-            for unit_ind, unit_id in enumerate(self.sorting_analyzer.unit_ids):
-                locations_by_unit[unit_id] = self.data["unit_locations"][unit_ind]
+            for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
+                locations_by_unit[unit_id] = self.data["unit_locations"][unit_index]
             return locations_by_unit
 
 

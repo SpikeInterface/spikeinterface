@@ -191,7 +191,7 @@ def compute_similarity_with_templates_array(
         mask = np.ones((num_templates, other_num_templates, num_channels), dtype=bool)
 
     assert num_shifts < num_samples, "max_lag is too large"
-    num_shifts_both_sides = 2 * num_shifts + 1        dict(method="l1", max_lag_ms=0.2),
+    num_shifts_both_sides = 2 * num_shifts + 1
     distances = np.ones((num_shifts_both_sides, num_templates, other_num_templates), dtype=np.float32)
 
     # We can use the fact that dist[i,j] at lag t is equal to dist[j,i] at time -t

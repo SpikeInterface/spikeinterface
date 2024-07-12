@@ -77,6 +77,7 @@ def test_SortingAnalyzer_merge_all_extensions(dataset, sparse):
     data_with_miltiple_returns = ["isi_histograms", "correlograms"]
 
     # due to incremental PCA, hard computation could result in different results for PCA
+    # the model is differents always
     random_computation = ["principal_components"]
 
     sorting_analyzer.compute(extension_dict, n_jobs=1)
@@ -134,12 +135,27 @@ def test_SortingAnalyzer_merge_all_extensions(dataset, sparse):
             analyzer_merged_soft, data_soft, new_unit_ids, extension_data_type[ext]
         )
 
+
+        # if ext == "templates":
+        #     import matplotlib.pyplot as plt
+        #     from spikeinterface.widgets import plot_unit_templates
+        #     plot_unit_templates(analyzer_merged_hard, unit_ids=new_unit_ids)
+        #     plot_unit_templates(analyzer_merged_soft, unit_ids=new_unit_ids)
+        #     plt.show()
+
         if ext not in random_computation:
             if extension_data_type[ext] == "pandas":
                 data_hard_merged = data_hard_merged.dropna().to_numpy().astype("float")
                 data_soft_merged = data_soft_merged.dropna().to_numpy().astype("float")
             if data_hard_merged.dtype.fields is None:
                 if not np.allclose(data_hard_merged, data_soft_merged, rtol=0.1):
+
+                    # import matplotlib.pyplot as plt
+                    # fig, axs = plt.subplots(nrows=2)
+                    # axs[0].hist(data_hard_merged - data_soft_merged, bins=200)
+                    # axs[1].scatter(data_hard_merged, data_soft_merged)
+                    # plt.show()
+
                     print(f"Data are not close for {ext}")
                     print(np.max(np.abs(data_hard_merged - data_soft_merged)))
             else:
@@ -177,3 +193,4 @@ def get_extension_data_for_units(sorting_analyzer, data, unit_ids, ext_data_type
 if __name__ == "__main__":
     dataset = get_dataset()
     test_SortingAnalyzer_merge_all_extensions(dataset, False)
+
