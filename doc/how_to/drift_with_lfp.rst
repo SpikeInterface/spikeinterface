@@ -1,30 +1,27 @@
 Estimate drift using the LFP traces
 ===================================
 
-Charlie Windolf and colleagues have developed a method to estimate the
-motion using the LFP signal : **dredge**.
+Drift is a well known issue for long shank probes. Some datasets, especially from primates and humans,
+can experience very fast motion due to breathing and heart beats. In these cases, the standard motion
+estimation methods that use detected spikes as a basis for motion inference will fail, because there
+are not enough spikes to "follow" such fast drifts.
 
-You can see more detail in this preprint `DREDge: robust motion
-correction for high-density extracellular recordings across
-species <https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1>`__
+Charlie Windolf and colleagues from the Paninski Lab at Columbia have developed a method to estimate
+the motion using the LFP signal: **DREDge**. (more details about the method in the paper
+`DREDge: robust motion correction for high-density extracellular recordings across species <https://doi.org/10.1101/2023.10.24.563768>`_).
 
-This method is particularly adapated for the open dataset recorded at
-Massachusetts General Hospital by Angelique Paulk and colleagues. The
-dataset can be dowloaed `on
-datadryad <https://datadryad.org/stash/dataset/doi:10.5061/dryad.d2547d840>`__.
-This challenging dataset contain recording on patient with neuropixel
-probe! But a very high and very fast motion on the probe prevent doing
-spike sorting.
+This method is particularly suited for the open dataset recorded at Massachusetts General Hospital by Angelique Paulk and colleagues in humans (more details in the [paper](https://doi.org/10.1038/s41593-021-00997-0)). The dataset can be dowloaed from [datadryad](https://datadryad.org/stash/dataset/doi:10.5061/dryad.d2547d840) and it contains recordings on human patients with a Neuropixels probe, some of which with very high and fast motion on the probe, which prevents accurate spike sorting without a proper and adequate motion correction
 
-The **dredge** method has two sides **dredge_lfp** and **dredge_ap**.
-They both haave been ported inside spikeinterface. Here we will use the
-**dredge_lfp**.
+The **DREDge** method has two options: **dredge_lfp** and **dredge_ap**, which have both been ported inside `SpikeInterface`.
 
-Here we demonstrate how to use this method to estimate the fast and high
-drift on this recording.
+Here we will demonstrate the **dredge_lfp** method to estimate the fast and high drift on this recording.
 
-For each patient, the dataset contains two recording : a high pass (AP -
-30kHz) and a low pass (FP - 2.5kHz). We will use the low pass here.
+For each patient, the dataset contains two streams:
+
+* a highpass "action potential" (AP), sampled at 30kHz
+* a lowpass "local field" (LF) sampled at 2.5kHz
+
+For this demonstration, we will use the LF stream.
 
 .. code:: ipython3
 
@@ -46,7 +43,7 @@ For each patient, the dataset contains two recording : a high pass (AP -
     base_folder = Path("/mnt/data/sam/DataSpikeSorting/")
     np_data_drift = base_folder / 'human_neuropixel/Pt02/'
 
-read the spikeglx file
+Read the spikeglx file
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: ipython3
@@ -61,25 +58,20 @@ read the spikeglx file
                                 873.32s (14.56 minutes) - int16 dtype - 1.56 GiB
 
 
-preprocessing
+Preprocessing
 ~~~~~~~~~~~~~
 
-Contrary to **dredge_ap** which need peak and peak location, the
-**dredge_lfp** is estimating the motion directly on traces but the
-method need an important preprocessing: \* low pass filter : this focus
-the signal on a particular band \* phase_shift : this is needed to
-conpensate the digitalization unalignement \* resample : the sample
-fequency of the signal will be the sample frequency of the estimated
-motion. Here we choose 250Hz to have 4ms precission. \*
-directional_derivative : this optional step apply a derivative at second
-order to enhance edges on the traces. This is not a general rules and
-need to be tested case by case. \* average_across_direction : neuropixel
-1 probe has several contact per depth. They are average to get a unique
-virtual signal along the probe depth (“y” in probeinterface and
-spikeinterface).
+Contrary to the **dredge_ap** approach, which needs detected peaks and peak locations, the **dredge_lfp**
+method is estimating the motion directly on traces.
+Importantly, the method requires some additional pre-processing steps:
+  * ``bandpass_filter``: to "focus" the signal on a particular band
+  * ``phase_shift``: to compensate for the sampling misalignement
+  * ``resample``: to further reduce the sampling fequency of the signal and speed up the computation. The sampling frequency of the estimated motion will be the same as the resampling frequency. Here we choose 250Hz, which corresponds to a sampling interval of 4ms.
+  * ``directional_derivative``: this optional step applies a second order derivative in the spatial dimension to enhance edges on the traces.
+    This is not a general rules and need to be tested case by case.
+  * ``average_across_direction``: Neuropixels 1.0 probes have two contacts per depth. This steps averages them to obtain a unique virtual signal along the probe depth ("y" in ``spikeinterface``).
 
-When appying this preprocessing the motion can be estimated almost by
-eyes ont the traces plotted with the map mode.
+After appying this preprocessing chain, the motion can be estimated almost by eyes ont the traces plotted with the map mode.
 
 .. code:: ipython3
 
@@ -115,28 +107,20 @@ eyes ont the traces plotted with the map mode.
 
 
 
-
-.. parsed-literal::
-
-    <spikeinterface.widgets.traces.TracesWidget at 0x75bc74d0af90>
-
-
-
-
 .. image:: drift_with_lfp_files/drift_with_lfp_8_1.png
 
 
 Run the method
 ~~~~~~~~~~~~~~
 
-``estimate_motion()`` is the generic funciton with multi method in
-spikeinterface.
+``estimate_motion()`` is the generic function to estimate motion with multiple
+methods in ``spikeinterface``.
 
-This return a ``Motion`` object, you can note that the interval is
-exactly the same as downsampled signal.
+This function returns a ``Motion`` object and we can notice that the interval is exactly
+the same as downsampled signal.
 
-Here we use ``rigid=True``, this means that we have one unqiue signal to
-describe the motion for the entire probe.
+Here we use ``rigid=True``, which means that we have one unqiue signal to
+describe the motion across the entire probe depth.
 
 .. code:: ipython3
 
@@ -144,12 +128,9 @@ describe the motion for the entire probe.
     motion
 
 
-
 .. parsed-literal::
 
     Online chunks [10.0s each]:   0%|          | 0/87 [00:00<?, ?it/s]
-
-
 
 
 .. parsed-literal::
@@ -158,13 +139,13 @@ describe the motion for the entire probe.
 
 
 
-plot the drift
+Plot the drift
 ~~~~~~~~~~~~~~
 
-When plotting the drift, we can notice a very fast drift which
-corresponf to the heart rate.
+When plotting the drift, we can notice a very fast drift which corresponds to the heart rate.
+The slower oscillations can be attributed to the breathing signal.
 
-This motion match the LFP signal above.
+We can appreciate how the estimated motion signal matches the processed LFP traces plotted above.
 
 .. code:: ipython3
 
@@ -174,14 +155,9 @@ This motion match the LFP signal above.
     ax.set_ylim(800, 1300)
 
 
-
-
-
 .. parsed-literal::
 
     (800.0, 1300.0)
-
-
 
 
 .. image:: drift_with_lfp_files/drift_with_lfp_12_1.png
