@@ -547,7 +547,7 @@ def test_generate_sorting_to_inject():
     durations = [10.0, 20.0]
     sorting = generate_sorting(num_units=10, durations=durations, sampling_frequency=30000, firing_rates=1.0)
     injected_sorting = generate_sorting_to_inject(
-        sorting, [int(duration * sorting.sampling_frequency) for duration in durations]
+        sorting, [int(duration * sorting.sampling_frequency) for duration in durations], seed=2308
     )
     num_spikes = sorting.count_num_spikes_per_unit()
     num_injected_spikes = injected_sorting.count_num_spikes_per_unit()
