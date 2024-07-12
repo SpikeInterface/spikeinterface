@@ -130,7 +130,7 @@ sphinx_gallery_conf = {
                                        '../examples/tutorials/widgets',
                                        ]),
     'within_subsection_order': FileNameSortKey,
-    'ignore_pattern': '/generate_',
+    'ignore_pattern': '/generate_*',
     'nested_sections': False,
     'copyfile_regex': r'.*\.rst|.*\.png|.*\.svg'
 }
