@@ -514,11 +514,17 @@ class UnitWaveformsWidget(BaseWidget):
                     wfs = wf_ext.get_waveforms_one_unit(unit_id)
                     wfs = wfs[:, :, sparsity.mask[unit_index]]
             else:
-                # in this case we have to slice the dense waveforms based on the extra sparsity
-                # first get the sparse waveforms
-                wfs = wf_ext.get_waveforms_one_unit(unit_id, force_dense=True)
-                # apply extra sparsity
-                wfs = wfs[:, :, sparsity.mask[unit_index]]
+                # in this case we have to construct waveforms based on the extra sparsity and add the
+                # sparse waveforms on the valid channels
+                wfs_orig = wf_ext.get_waveforms_one_unit(unit_id, force_dense=False)
+                wfs = np.zeros(
+                    (wfs_orig.shape[0], wfs_orig.shape[1], sparsity.mask[unit_index].sum()), dtype=wfs_orig.dtype
+                )
+                # fill in the existing waveforms channels
+                valid_wfs_indices = sparsity.mask[unit_index][sorting_analyzer.sparsity.mask[unit_index]]
+                valid_extra_indices = sorting_analyzer.sparsity.mask[unit_index][sparsity.mask[unit_index]]
+                wfs[:, :, valid_extra_indices] = wfs_orig[:, :, valid_wfs_indices]
+
             wfs_by_ids[unit_id] = wfs
         return wfs_by_ids
 
