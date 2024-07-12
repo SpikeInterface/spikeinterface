@@ -157,7 +157,7 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
         # num samples are all the same
         return self._parent_segments[0].get_num_samples()
 
-    def get_traces(
+    def _get_traces(
         self,
         start_frame: int | None = None,
         end_frame: int | None = None,

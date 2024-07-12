@@ -122,7 +122,7 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         assert self._decimation_offset < parent_n_samp  # Sanity check (already enforced). Formula changes otherwise
         return int(np.ceil((parent_n_samp - self._decimation_offset) / self._decimation_factor))
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces(self, start_frame, end_frame, channel_indices):
         # Account for offset and end when querying parent traces
         parent_start_frame = self._decimation_offset + start_frame * self._decimation_factor
         parent_end_frame = parent_start_frame + (end_frame - start_frame) * self._decimation_factor
