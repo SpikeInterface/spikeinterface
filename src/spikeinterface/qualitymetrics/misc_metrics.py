@@ -1072,9 +1072,9 @@ def compute_drift_metrics(
 
     # reference positions are the medians across segments
     reference_positions = np.zeros(len(unit_ids))
-    for unit_id in unit_ids:
+    for i, unit_id in enumerate(unit_ids):
         unit_ind = sorting.id_to_index(unit_id)
-        reference_positions[unit_ind] = np.median(spike_locations_by_unit[unit_id][direction])
+        reference_positions[i] = np.median(spike_locations_by_unit[unit_id][direction])
 
     # now compute median positions and concatenate them over segments
     median_position_segments = None
@@ -1096,7 +1096,7 @@ def compute_drift_metrics(
             spikes_in_bin = spikes_in_segment[i0:i1]
             spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
 
-            for unit_id in unit_ids:
+            for i, unit_id in enumerate(unit_ids):
                 unit_ind = sorting.id_to_index(unit_id)
                 mask = spikes_in_bin["unit_index"] == unit_ind
                 if np.sum(mask) >= min_spikes_per_interval:
@@ -1108,9 +1108,8 @@ def compute_drift_metrics(
 
     # finally, compute deviations and drifts
     position_diffs = median_position_segments - reference_positions[:, None]
-    for unit_id in unit_ids:
-        unit_ind = sorting.id_to_index(unit_id)
-        position_diff = position_diffs[unit_ind]
+    for i, unit_id in enumerate(unit_ids):
+        position_diff = position_diffs[i]
         if np.any(np.isnan(position_diff)):
             # deal with nans: if more than 50% nans --> set to nan
             if np.sum(np.isnan(position_diff)) > min_fraction_valid_intervals * len(position_diff):
