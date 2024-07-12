@@ -360,6 +360,15 @@ examples is seen below:
         ["random_spikes", "waveforms", "templates", "noise_levels"]
     )
 
+Note that any extension entered into the :code:`compute` function will be computed. Thus, even if an extension has already been computed
+it will be recomputed when :code:`compute` is called even if the parameters are the same.
+To check if an extension has already been computed and reload it, you can simply do:
+
+.. code-block:: python
+
+    if sorting_analyzer.has_extension("templates"):
+        templates_extension = sorting_analyzer.get_extension("templates")
+
 It is important when calculating extensions to remember which backend you are using. :code:`compute` accepts an argument
 :code:`save` which will write results to disk if using the :code:`zarr` or :code:`binary_folder` backends. If your :code:`SortingAnalyzer`
 is in memory using :code:`save=True` **will not** write to disk since spikeinterface does not know where to save it.
