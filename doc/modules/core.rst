@@ -163,8 +163,6 @@ Internally, any sorting object can construct 2 internal caches:
   2. a unique numpy.array with structured dtype aka "spikes vector". This is useful for processing by small chunks of
      time, like for extracting amplitudes from a recording.
 
-.. _core-sorting-analyzer:
-
 SortingAnalyzer
 ---------------
 

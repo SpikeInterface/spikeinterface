@@ -74,6 +74,8 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting"
 ]
 
+autosectionlabel_prefix_document = True
+
 numpydoc_show_class_members = False
 
 
