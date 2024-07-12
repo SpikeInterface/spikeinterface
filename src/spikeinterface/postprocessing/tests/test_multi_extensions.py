@@ -3,7 +3,12 @@ import pytest
 import time
 import numpy as np
 
-from spikeinterface import create_sorting_analyzer, generate_ground_truth_recording, set_global_job_kwargs
+from spikeinterface import (
+    create_sorting_analyzer,
+    generate_ground_truth_recording,
+    set_global_job_kwargs,
+    get_template_extremum_amplitude,
+)
 from spikeinterface.core.generate import inject_some_split_units
 
 
@@ -17,8 +22,17 @@ def get_dataset():
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
+
+    # since templates are going to be averaged and this might be a problem for amplitude scaling
+    # we select the 3 units with the largest templates to split
+    analyzer_raw = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    analyzer_raw.compute(["random_spikes", "templates"])
+    # select 3 largest templates to split
+    sort_by_amp = np.argsort(list(get_template_extremum_amplitude(analyzer_raw).values()))[::-1]
+    split_ids = sorting.unit_ids[sort_by_amp][:3]
+
     sorting_with_splits, other_ids = inject_some_split_units(
-        sorting, num_split=3, split_ids=[2, 4, 6], output_ids=True, seed=0
+        sorting, num_split=3, split_ids=split_ids, output_ids=True, seed=0
     )
     return recording, sorting_with_splits, other_ids
 
@@ -135,33 +149,15 @@ def test_SortingAnalyzer_merge_all_extensions(dataset, sparse):
             analyzer_merged_soft, data_soft, new_unit_ids, extension_data_type[ext]
         )
 
-        # if ext == "templates":
-        #     import matplotlib.pyplot as plt
-        #     from spikeinterface.widgets import plot_unit_templates
-        #     plot_unit_templates(analyzer_merged_hard, unit_ids=new_unit_ids)
-        #     plot_unit_templates(analyzer_merged_soft, unit_ids=new_unit_ids)
-        #     plt.show()
-
         if ext not in random_computation:
             if extension_data_type[ext] == "pandas":
                 data_hard_merged = data_hard_merged.dropna().to_numpy().astype("float")
                 data_soft_merged = data_soft_merged.dropna().to_numpy().astype("float")
             if data_hard_merged.dtype.fields is None:
-                if not np.allclose(data_hard_merged, data_soft_merged, rtol=0.1):
-
-                    # import matplotlib.pyplot as plt
-                    # fig, axs = plt.subplots(nrows=2)
-                    # axs[0].hist(data_hard_merged - data_soft_merged, bins=200)
-                    # axs[1].scatter(data_hard_merged, data_soft_merged)
-                    # plt.show()
-
-                    print(f"Data are not close for {ext}")
-                    print(np.max(np.abs(data_hard_merged - data_soft_merged)))
+                assert np.allclose(data_hard_merged, data_soft_merged, rtol=0.1)
             else:
                 for f in data_hard_merged.dtype.fields:
-                    if not np.allclose(data_hard_merged[f], data_soft_merged[f], rtol=0.1):
-                        print(f"Data are not close for {ext} - field {f}")
-                        print(np.max(np.abs(data_hard_merged[f] - data_soft_merged[f])))
+                    assert np.allclose(data_hard_merged[f], data_soft_merged[f], rtol=0.1)
 
 
 def get_extension_data_for_units(sorting_analyzer, data, unit_ids, ext_data_type):
