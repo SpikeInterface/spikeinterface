@@ -184,7 +184,7 @@ class ModelBasedClassification:
         classified_df.to_csv(f"{sorting_path}/cluster_prediction.tsv", sep="\t", index_label="cluster_id")
 
 
-def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, label_conversion = None, export_to_phy=False):
+def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, label_conversion=None, export_to_phy=False):
     """
     Automatically labels units based on a model-based classification.
 
@@ -219,6 +219,8 @@ def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, label_conversi
 
     model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline)
 
-    classified_units = model_based_classification.predict_labels(label_conversion=label_conversion, export_to_phy=export_to_phy)
+    classified_units = model_based_classification.predict_labels(
+        label_conversion=label_conversion, export_to_phy=export_to_phy
+    )
 
     return classified_units

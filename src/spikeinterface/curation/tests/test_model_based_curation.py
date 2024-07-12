@@ -113,6 +113,7 @@ def test_model_based_classification_predict_labels(sorting_analyzer_for_curation
     predictions_labelled = [classified_units_labelled[i][0] for i in classified_units_labelled]
     assert predictions_labelled == ["good", "noise", "good", "noise", "good"]
 
+
 ## Code to create the trained pipeline for testing
 # import pandas as pd
 # from sklearn.preprocessing import StandardScaler
