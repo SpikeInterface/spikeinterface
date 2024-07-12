@@ -5,7 +5,6 @@ import warnings
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core.template_tools import get_dense_templates_array
-from spikeinterface.core.job_tools import fix_job_kwargs
 from tqdm.auto import tqdm
 from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
