@@ -320,11 +320,13 @@ def compute_pairwise_displacement(
         # use torch if installed
         try:
             import torch
-            import torch.nn.functional as F
 
             conv_engine = "torch"
         except ImportError:
             conv_engine = "numpy"
+
+    if conv_engine == "torch":
+        import torch
 
     assert conv_engine in ("torch", "numpy"), f"'conv_engine' must be 'torch' or 'numpy'"
     size = motion_hist.shape[0]
