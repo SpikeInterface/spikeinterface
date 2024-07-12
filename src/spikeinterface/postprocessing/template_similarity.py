@@ -107,7 +107,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                         s = self.data["similarity"][old_ind1, old_ind2]
                         similarity[unit_ind1, unit_ind2] = s
                         similarity[unit_ind1, unit_ind2] = s
-        
+
         # insert new similarity both way
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
             if unit_id in new_unit_ids:
@@ -116,7 +116,6 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 similarity[:, unit_ind] = new_similarity[new_index, :]
 
         return dict(similarity=similarity)
-
 
     def _run(self, verbose=False):
         num_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
@@ -229,7 +228,7 @@ def compute_similarity_with_templates_array(
                     distances[count, i, j] /= norm_i + norm_j
                 else:
                     distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="cosine")
-                
+
                 if same_array:
                     distances[count, j, i] = distances[count, i, j]
 

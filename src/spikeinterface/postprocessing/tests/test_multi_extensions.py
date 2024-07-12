@@ -135,7 +135,6 @@ def test_SortingAnalyzer_merge_all_extensions(dataset, sparse):
             analyzer_merged_soft, data_soft, new_unit_ids, extension_data_type[ext]
         )
 
-
         # if ext == "templates":
         #     import matplotlib.pyplot as plt
         #     from spikeinterface.widgets import plot_unit_templates
@@ -193,4 +192,3 @@ def get_extension_data_for_units(sorting_analyzer, data, unit_ids, ext_data_type
 if __name__ == "__main__":
     dataset = get_dataset()
     test_SortingAnalyzer_merge_all_extensions(dataset, False)
-
