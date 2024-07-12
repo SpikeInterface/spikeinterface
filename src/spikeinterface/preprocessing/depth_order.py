@@ -25,7 +25,6 @@ class DepthOrderRecording(ChannelSliceRecording):
         If flip is True then the order is upper first.
     """
 
-    name = "depth_order"
     installed = True
 
     def __init__(self, parent_recording, channel_ids=None, dimensions=("x", "y"), flip=False):
