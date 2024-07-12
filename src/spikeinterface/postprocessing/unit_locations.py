@@ -4,12 +4,10 @@ import numpy as np
 import warnings
 
 from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from .localization_tools import (
-    compute_center_of_mass,
-    compute_grid_convolution,
-    compute_monopolar_triangulation,
-)
+from .localization_tools import _unit_location_methods
 
+
+# this dict is for peak location
 dtype_localize_by_method = {
     "center_of_mass": [("x", "float64"), ("y", "float64")],
     "grid_convolution": [("x", "float64"), ("y", "float64"), ("z", "float64")],
@@ -61,41 +59,38 @@ class ComputeUnitLocations(AnalyzerExtension):
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
-        arr = self.data["unit_locations"]
-        num_dims = arr.shape[1]
+        old_unit_locations = self.data["unit_locations"]
+        num_dims = old_unit_locations.shape[1]
+
+        method = self.params.get("method")
+        method_kwargs = self.params.copy()
+        method_kwargs.pop("method")
+        func = _unit_location_methods[method]
+        new_unit_locations = func(new_sorting_analyzer, unit_ids=new_unit_ids, **method_kwargs)
+        assert new_unit_locations.shape[0] == len(new_unit_ids)
+
         all_new_unit_ids = new_sorting_analyzer.unit_ids
-        counts = self.sorting_analyzer.sorting.count_num_spikes_per_unit()
-        new_unit_location = np.zeros((len(all_new_unit_ids), num_dims), dtype=arr.dtype)
+        unit_location = np.zeros((len(all_new_unit_ids), num_dims), dtype=old_unit_locations.dtype)
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
             if unit_id not in new_unit_ids:
-                keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
-                new_unit_location[unit_ind] = arr[keep_unit_index]
+                old_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                unit_location[unit_ind] = old_unit_locations[old_index]
             else:
-                id = np.flatnonzero(new_unit_ids == unit_id)[0]
-                unit_ids = merge_unit_groups[id]
-                keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-                weights = np.zeros(len(unit_ids), dtype=np.float32)
-                for count, id in enumerate(unit_ids):
-                    weights[count] = counts[id]
-                weights /= weights.sum()
-                new_unit_location[unit_ind] = (arr[keep_unit_indices] * weights[:, np.newaxis]).sum(0)
+                new_index = list(new_unit_ids).index(unit_id)
+                unit_location[unit_ind] = new_unit_locations[new_index]
 
-        return dict(unit_locations=new_unit_location)
+        return dict(unit_locations=unit_location)
 
     def _run(self, verbose=False):
         method = self.params.get("method")
         method_kwargs = self.params.copy()
         method_kwargs.pop("method")
 
-        assert method in possible_localization_methods
+        if method not in _unit_location_methods:
+            raise ValueError(f"Wrong ethod for unit_locations : it should be in {list(_unit_location_methods.keys())}")
 
-        if method == "center_of_mass":
-            unit_location = compute_center_of_mass(self.sorting_analyzer, **method_kwargs)
-        elif method == "grid_convolution":
-            unit_location = compute_grid_convolution(self.sorting_analyzer, **method_kwargs)
-        elif method == "monopolar_triangulation":
-            unit_location = compute_monopolar_triangulation(self.sorting_analyzer, **method_kwargs)
-        self.data["unit_locations"] = unit_location
+        func = _unit_location_methods[method]
+        self.data["unit_locations"] = func(self.sorting_analyzer, **method_kwargs)
 
     def get_data(self, outputs="numpy"):
         if outputs == "numpy":
