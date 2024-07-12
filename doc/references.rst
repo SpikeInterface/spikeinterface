@@ -50,9 +50,11 @@ If you use the :code:`qualitymetrics` module, i.e. you use the :code:`analyzer.c
 or :code:`compute_quality_metrics()` methods, please include the citations for the :code:`metric_names` that were particularly
 important for your research:
 
-- :code:`amplitude_cutoff` or  :code:`isi_violation` [Hill]_
-- :code:`amplitude_median` or :code:`sliding_rp_violation` [IBL]_
+- :code:`amplitude_cutoff` [Hill]_
+- :code:`amplitude_median` [IBL]_
+- :code:`sliding_rp_violation` [IBL]_
 - :code:`drift` [Siegle]_
+- :code:`isi_violation` [UMS]_
 - :code:`rp_violation` [Llobet]_
 - :code:`sd_ratio` [Pouzat]_
 - :code:`snr` [Lemon]_ [Jackson]_
@@ -121,6 +123,8 @@ References
 .. [Schmitzer-Torbert] `Neuronal Activity in the Rodent Dorsal Striatum in Sequential Navigation: Separation of Spatial and Reward Responses on the Multiple T Task. 2004. <https://pubmed.ncbi.nlm.nih.gov/14736863/>`_
 
 .. [Siegle] `Survey of Spiking in the Mouse Visual System Reveals Functional Hierarchy. 2021. <https://pubmed.ncbi.nlm.nih.gov/33473216/>`_
+
+.. [UMS] `UltraMegaSort2000 - Spike sorting and quality metrics for extracellular spike data. 2011. <https://github.com/danamics/UMS2K>`_
 
 .. [Varol] `Decentralized Motion Inference and Registration of Neuropixel Data. 2021. <https://ieeexplore.ieee.org/document/9414145>`_
 

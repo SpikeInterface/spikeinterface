@@ -205,7 +205,7 @@ This extension computes the principal components of the waveforms. There are sev
 * "by_channel_global": fits the same PCA model to all channels (also termed temporal PCA)
 * "concatenated": concatenates all channels and fits a PCA model on the concatenated data
 
-If the input :code:`WaveformExtractor` is sparse, the sparsity is used when computing the PCA.
+If the input :code:`SortingAnalyzer` is sparse, the sparsity is used when computing the PCA.
 For dense waveforms, sparsity can also be passed as an argument.
 
 .. code-block:: python

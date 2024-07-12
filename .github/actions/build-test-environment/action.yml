@@ -21,7 +21,7 @@ runs:
         python -m pip install -U pip  # Official recommended way
         source ${{ github.workspace }}/test_env/bin/activate
         pip install tabulate  # This produces summaries at the end
-        pip install -e .[test,extractors,streaming_extractors,full]
+        pip install -e .[test,extractors,streaming_extractors,test_extractors,full]
       shell: bash
     - name: Force installation of latest dev from key-packages when running dev (not release)
       run: |

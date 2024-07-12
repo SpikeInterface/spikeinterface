@@ -52,10 +52,6 @@ class BinaryRecordingExtractor(BaseRecording):
         The recording Extractor
     """
 
-    extractor_name = "BinaryRecording"
-    mode = "file"
-    name = "binary"
-
     def __init__(
         self,
         file_paths,
@@ -167,25 +163,17 @@ BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.writ
 
 
 class BinaryRecordingSegment(BaseRecordingSegment):
-    def __init__(self, datfile, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset):
+    def __init__(self, file_path, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
         self.num_channels = num_channels
         self.dtype = np.dtype(dtype)
         self.file_offset = file_offset
         self.time_axis = time_axis
-        self.datfile = datfile
-        self.file = open(self.datfile, "r")
-        self.num_samples = (Path(datfile).stat().st_size - file_offset) // (num_channels * np.dtype(dtype).itemsize)
-        if self.time_axis == 0:
-            self.shape = (self.num_samples, self.num_channels)
-        else:
-            self.shape = (self.num_channels, self.num_samples)
-
-        byte_offset = self.file_offset
-        dtype_size_bytes = self.dtype.itemsize
-        data_size_bytes = dtype_size_bytes * self.num_samples * self.num_channels
-        self.memmap_offset, self.array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
-        self.memmap_length = data_size_bytes + self.array_offset
+        self.file_path = file_path
+        self.file = open(self.file_path, "rb")
+        self.bytes_per_sample = self.num_channels * self.dtype.itemsize
+        self.data_size_in_bytes = Path(file_path).stat().st_size - file_offset
+        self.num_samples = self.data_size_in_bytes // self.bytes_per_sample
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
@@ -201,23 +189,43 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         end_frame: int | None = None,
         channel_indices: list | None = None,
     ) -> np.ndarray:
-        length = self.memmap_length
-        memmap_offset = self.memmap_offset
+
+        # Calculate byte offsets for start and end frames
+        start_byte = self.file_offset + start_frame * self.bytes_per_sample
+        end_byte = self.file_offset + end_frame * self.bytes_per_sample
+
+        # Calculate the length of the data chunk to load into memory
+        length = end_byte - start_byte
+
+        # The mmap offset must be a multiple of mmap.ALLOCATIONGRANULARITY
+        memmap_offset, start_offset = divmod(start_byte, mmap.ALLOCATIONGRANULARITY)
+        memmap_offset *= mmap.ALLOCATIONGRANULARITY
+
+        # Adjust the length so it includes the extra data from rounding down
+        # the memmap offset to a multiple of ALLOCATIONGRANULARITY
+        length += start_offset
+
+        # Create the mmap object
         memmap_obj = mmap.mmap(self.file.fileno(), length=length, access=mmap.ACCESS_READ, offset=memmap_offset)
 
-        array = np.ndarray.__new__(
-            np.ndarray,
-            shape=self.shape,
+        # Create a numpy array using the mmap object as the buffer
+        # Note that the shape must be recalculated based on the new data chunk
+        if self.time_axis == 0:
+            shape = ((end_frame - start_frame), self.num_channels)
+        else:
+            shape = (self.num_channels, (end_frame - start_frame))
+
+        # Now the entire array should correspond to the data between start_frame and end_frame, so we can use it directly
+        traces = np.ndarray(
+            shape=shape,
             dtype=self.dtype,
             buffer=memmap_obj,
-            order="C",
-            offset=self.array_offset,
+            offset=start_offset,
         )
 
         if self.time_axis == 1:
-            array = array.T
+            traces = traces.T
 
-        traces = array[start_frame:end_frame]
         if channel_indices is not None:
             traces = traces[:, channel_indices]
 

@@ -360,6 +360,15 @@ examples is seen below:
         ["random_spikes", "waveforms", "templates", "noise_levels"]
     )
 
+Note that any extension entered into the :code:`compute` function will be computed. Thus, even if an extension has already been computed
+it will be recomputed when :code:`compute` is called even if the parameters are the same.
+To check if an extension has already been computed and reload it, you can simply do:
+
+.. code-block:: python
+
+    if sorting_analyzer.has_extension("templates"):
+        templates_extension = sorting_analyzer.get_extension("templates")
+
 It is important when calculating extensions to remember which backend you are using. :code:`compute` accepts an argument
 :code:`save` which will write results to disk if using the :code:`zarr` or :code:`binary_folder` backends. If your :code:`SortingAnalyzer`
 is in memory using :code:`save=True` **will not** write to disk since spikeinterface does not know where to save it.
@@ -496,19 +505,21 @@ Sparsity
 In several cases, it is not necessary to have waveforms on all channels. This is especially true for high-density
 probes, such as Neuropixels, because the waveforms of a unit will only appear on a small set of channels.
 Sparsity is defined as the subset of channels on which waveforms (and related information) are defined. Of course,
-sparsity is not global, but it is unit-specific.
+sparsity is not global, but it is unit-specific. Importantly, saving sparse waveforms, especially for high-density probes,
+dramatically reduces the size of the waveforms extension if computed.
 
-**NOTE** As of version :code:`0.99.0` the default for a :code:`extract_waveforms()` has :code:`sparse=True`, i.e. every :code:`waveform_extractor`
-will be sparse by default. Thus for users that wish to have dense waveforms they must set :code:`sparse=False`. Keyword arguments
-can still be input into the :code:`extract_wavforms()` to generate the desired sparsity as explained below.
+**NOTE** As of :code:`0.101.0` all :code:`SortingAnalyzer`'s have a default of :code:`sparse=True`. This was first
+introduced in :code:`0.99.0` for :code:`WaveformExtractor`'s and will be the default going forward. To obtain dense
+waveforms you will need to set :code:`sparse=False` at the creation of the :code:`SortingAnalyzer`.
 
-Sparsity can be computed from a :py:class:`~spikeinterface.core.WaveformExtractor` object with the
-:py:func:`~spikeinterface.core.compute_sparsity` function:
+
+Sparsity can be computed from a :py:class:`~spikeinterface.core.SortingAnalyzer` object with the
+:py:func:`~spikeinterface.core.estimate_sparsity` function:
 
 .. code-block:: python
 
-    # in this case 'we' should be a dense waveform_extractor
-    sparsity = compute_sparsity(we, method="radius", radius_um=40)
+    # in this case 'analyzer' should be a dense SortingAnalyzer
+    sparsity = compute_sparsity(analyzer, method="radius", radius_um=40)
 
 The returned :code:`sparsity` is a :py:class:`~spikeinterface.core.ChannelSparsity` object, which has convenient
 methods to access the sparsity information in several ways:
@@ -529,17 +540,19 @@ There are several methods to compute sparsity, including:
 * | :code:`method="by_property"`: selects channels based on a property, such as :code:`group`. This method is recommended
   | when working with tetrodes.
 
-The computed sparsity can be used in several postprocessing and visualization functions. In addition, a "dense"
-:py:class:`~spikeinterface.core.WaveformExtractor` can be saved as "sparse" as follows:
+The computed sparsity can be used in several postprocessing and visualization functions. In addition, this sparsity can be
+used when creating a :py:class:`~spikeinterface.core.SortingAnalyzer` which cause the :code:`sparse` boolean to be ignored.
 
 .. code-block:: python
 
-    we_sparse = we.save(sparsity=sparsity, folder="waveforms_sparse")
+    analyzer_sparse = si.create_sorting_analyzer(
+        sorting=sorting,
+        recording=recording,
+        sparsity=sparsity,
+        format='binary_folder',
+        folder="sparse_analyzer"
+    )
 
-The :code:`we_sparse` object will now have an associated sparsity (:code:`we.sparsity`), which is automatically taken
-into consideration for downstream analysis (with the :py:meth:`~spikeinterface.core.WaveformExtractor.is_sparse`
-method). Importantly, saving sparse waveforms, especially for high-density probes, dramatically reduces the size of the
-waveforms folder.
 
 .. _save_load:
 

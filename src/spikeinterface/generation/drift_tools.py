@@ -458,6 +458,9 @@ class InjectDriftingTemplatesRecording(BaseRecording):
 
         self.set_probe(drifting_templates.probe, in_place=True)
 
+        # templates are too large, we don't serialize them to JSON
+        self._serializability["json"] = False
+
         self._kwargs = {
             "sorting": sorting,
             "drifting_templates": drifting_templates,
@@ -567,7 +570,7 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
 
             wf = template[start_template:end_template]
             if self.amplitude_vector is not None:
-                wf *= self.amplitude_vector[i]
+                wf = wf * self.amplitude_vector[i]
             traces[start_traces:end_traces] += wf.astype(self.dtype, copy=False)
 
         return traces.astype(self.dtype)

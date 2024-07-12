@@ -37,10 +37,6 @@ class NumpyRecording(BaseRecording):
         An optional list of channel_ids. If None, linear channels are assumed
     """
 
-    extractor_name = "Numpy"
-    mode = "memory"
-    name = "numpy"
-
     def __init__(self, traces_list, sampling_frequency, t_starts=None, channel_ids=None):
         if isinstance(traces_list, list):
             all_elements_are_list = all(isinstance(e, list) for e in traces_list)
@@ -87,6 +83,9 @@ class NumpyRecording(BaseRecording):
     @staticmethod
     def from_recording(source_recording, **job_kwargs):
         traces_list, shms = write_memory_recording(source_recording, dtype=None, **job_kwargs)
+
+        t_starts = source_recording._get_t_starts()
+
         if shms[0] is not None:
             # if the computation was done in parallel then traces_list is shared array
             # this can lead to problem
@@ -95,13 +94,14 @@ class NumpyRecording(BaseRecording):
             for shm in shms:
                 shm.close()
                 shm.unlink()
-        # TODO later : propagte t_starts ?
+
         recording = NumpyRecording(
             traces_list,
             source_recording.get_sampling_frequency(),
-            t_starts=None,
+            t_starts=t_starts,
             channel_ids=source_recording.channel_ids,
         )
+        return recording
 
 
 class NumpyRecordingSegment(BaseRecordingSegment):
@@ -142,10 +142,6 @@ class SharedMemoryRecording(BaseRecording):
     main_shm_owner : bool, default: True
         If True, the main instance will unlink the sharedmem buffer when deleted
     """
-
-    extractor_name = "SharedMemory"
-    mode = "memory"
-    name = "SharedMemory"
 
     def __init__(
         self, shm_names, shape_list, dtype, sampling_frequency, channel_ids=None, t_starts=None, main_shm_owner=True
@@ -214,7 +210,7 @@ class SharedMemoryRecording(BaseRecording):
     def from_recording(source_recording, **job_kwargs):
         traces_list, shms = write_memory_recording(source_recording, buffer_type="sharedmem", **job_kwargs)
 
-        # TODO later : propagte t_starts ?
+        t_starts = source_recording._get_t_starts()
 
         recording = SharedMemoryRecording(
             shm_names=[shm.name for shm in shms],
@@ -222,7 +218,7 @@ class SharedMemoryRecording(BaseRecording):
             dtype=source_recording.dtype,
             sampling_frequency=source_recording.sampling_frequency,
             channel_ids=source_recording.channel_ids,
-            t_starts=None,
+            t_starts=t_starts,
             main_shm_owner=True,
         )
 
@@ -253,8 +249,6 @@ class NumpySorting(BaseSorting):
     channel_ids : list
         A list of unit_ids.
     """
-
-    name = "numpy"
 
     def __init__(self, spikes, sampling_frequency, unit_ids):
         """ """

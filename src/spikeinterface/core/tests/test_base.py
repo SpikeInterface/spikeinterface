@@ -4,8 +4,9 @@ but check only for BaseRecording general methods.
 """
 
 from typing import Sequence
+import numpy as np
 from spikeinterface.core.base import BaseExtractor
-from spikeinterface.core import generate_recording, concatenate_recordings
+from spikeinterface.core import generate_recording, generate_ground_truth_recording, concatenate_recordings
 
 
 class DummyDictExtractor(BaseExtractor):
@@ -63,6 +64,34 @@ def test_check_if_serializable():
     for extractor in extractors_not_json_serializable:
         print(extractor)
         assert not extractor.check_serializability("json")
+
+
+def test_name_and_repr():
+    test_recording, test_sorting = generate_ground_truth_recording(seed=0, durations=[2])
+    assert test_recording.name == "GroundTruthRecording"
+    assert test_sorting.name == "GroundTruthSorting"
+
+    # set a different name
+    test_recording.name = "MyRecording"
+    assert test_recording.name == "MyRecording"
+
+    # to/from dict
+    test_recording_dict = test_recording.to_dict()
+    test_recording2 = BaseExtractor.from_dict(test_recording_dict)
+    assert test_recording2.name == "MyRecording"
+
+    # repr
+    rec_str = str(test_recording2)
+    assert "MyRecording" in rec_str
+    test_recording2.name = None
+    assert "MyRecording" not in str(test_recording2)
+    assert test_recording2.__class__.__name__ in str(test_recording2)
+    # above 10khz, sampling frequency is printed in kHz
+    assert f"kHz" in rec_str
+    # below 10khz sampling frequency is printed in Hz
+    test_rec_low_fs = generate_recording(seed=0, durations=[2], sampling_frequency=5000)
+    rec_str = str(test_rec_low_fs)
+    assert "Hz" in rec_str
 
 
 if __name__ == "__main__":
