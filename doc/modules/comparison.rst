@@ -523,19 +523,19 @@ in the similarity of templates rather than spiking events.
 This enables us to use exactly the same tools for both types of comparisons, just by changing the way that agreement
 scores are computed.
 
-The functions to compare templates take a list of :py:class:`~spikeinterface.core.WaveformExtractor` objects as input,
+The functions to compare templates take a list of :py:class:`~spikeinterface.core.SortingAnalyzer` objects as input,
 which are assumed to be from different sessions of the same animal over time. In this case, let's assume we have 5
-waveform extractors from day 1 (:code:`we_day1`) to day 5 (:code:`we_day5`):
+sorting analyzers from day 1 (:code:`analyzer_day1`) to day 5 (:code:`analyzer_day5`):
 
 .. code-block:: python
 
-    we_list = [we_day1, we_day2, we_day3, we_day4, we_day5]
+    analyzer_list = [analyzer_day1, analyzer_day2, analyzer_day3, analyzer_day4, analyzer_day5]
 
     # match only day 1 and 2
-    p_tcmp = sc.compare_templates(we1=we_day1, we2=we_day2, we1_name="Day1", we2_name="Day2")
+    p_tcmp = sc.compare_templates(sorting_analyzer_1=analyzer_day1, sorting_analyzer2=analyzer_day2, name1="Day1", name2="Day2")
 
     # match all
-    m_tcmp = sc.compare_multiple_templates(waveform_list=we_list,
+    m_tcmp = sc.compare_multiple_templates(waveform_list=analyzer_list,
                                            name_list=["D1", "D2", "D3", "D4", "D5"])
 
 
