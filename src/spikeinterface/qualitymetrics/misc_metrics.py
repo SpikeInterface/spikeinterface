@@ -1036,6 +1036,7 @@ def compute_drift_metrics(
         spike_locations_by_unit = {}
         for unit_id in unit_ids:
             unit_index = sorting.id_to_index(unit_id)
+            # TODO @alessio this is very slow this sjould be done with spike_vector_to_indices() in code
             spike_mask = spikes["unit_index"] == unit_index
             spike_locations_by_unit[unit_id] = spike_locations[spike_mask]
 
@@ -1074,7 +1075,8 @@ def compute_drift_metrics(
 
     # reference positions are the medians across segments
     reference_positions = np.zeros(len(unit_ids))
-    for unit_ind, unit_id in enumerate(unit_ids):
+    for unit_id in unit_ids:
+        unit_ind = sorting.id_to_index(unit_id)
         reference_positions[unit_ind] = np.median(spike_locations_by_unit[unit_id][direction])
 
     # now compute median positions and concatenate them over segments
@@ -1097,8 +1099,9 @@ def compute_drift_metrics(
             spikes_in_bin = spikes_in_segment[i0:i1]
             spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
 
-            for i, unit_id in enumerate(unit_ids):
-                mask = spikes_in_bin["unit_index"] == sorting.id_to_index(unit_id)
+            for unit_id in unit_ids:
+                unit_ind = sorting.id_to_index(unit_id)
+                mask = spikes_in_bin["unit_index"] == unit_ind
                 if np.sum(mask) >= min_spikes_per_interval:
                     median_positions[i, bin_index] = np.median(spike_locations_in_bin[mask])
         if median_position_segments is None:
@@ -1108,7 +1111,8 @@ def compute_drift_metrics(
 
     # finally, compute deviations and drifts
     position_diffs = median_position_segments - reference_positions[:, None]
-    for unit_ind, unit_id in enumerate(unit_ids):
+    for unit_id in unit_ids:
+        unit_ind = sorting.id_to_index(unit_id)
         position_diff = position_diffs[unit_ind]
         if np.any(np.isnan(position_diff)):
             # deal with nans: if more than 50% nans --> set to nan
