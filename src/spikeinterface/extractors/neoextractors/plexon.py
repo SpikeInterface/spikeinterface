@@ -29,7 +29,7 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
 
         Example for wideband signals:
             names: ["WB01", "WB02", "WB03", "WB04"]
-            ids: ["1" , "2", "3", "4"]
+            ids: ["0" , "1", "2", "3"]
     """
 
     NeoRawIOClass = "PlexonRawIO"
