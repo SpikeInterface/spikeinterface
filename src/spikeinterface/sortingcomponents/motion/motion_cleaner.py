@@ -6,7 +6,7 @@ import numpy as np
 def clean_motion_vector(motion, temporal_bins, bin_duration_s, speed_threshold=30, sigma_smooth_s=None):
     """
     Simple machinery to remove spurious fast bump in the motion vector.
-    Also can applyt a smoothing.
+    Also can apply a smoothing.
 
 
     Arguments
