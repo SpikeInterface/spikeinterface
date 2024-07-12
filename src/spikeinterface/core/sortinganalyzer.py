@@ -821,7 +821,10 @@ class SortingAnalyzer:
         return s
 
     def get_total_duration(self) -> float:
-        duration = self.get_total_samples() / self.sampling_frequency
+        if self.has_recording() or self.has_temporary_recording():
+            duration = self.recording.get_total_duration()
+        else:
+            duration = self.get_total_samples() / self.sampling_frequency
         return duration
 
     def get_num_channels(self) -> int:
