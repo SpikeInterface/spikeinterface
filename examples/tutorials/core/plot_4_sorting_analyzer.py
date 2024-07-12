@@ -129,7 +129,8 @@ analyzer.compute("templates", operators=["average", "median", "std"])
 
 ###############################################################################
 # Note that there are a few different ways to calculate extensions. You might find it easier
-# to keep the calculation parameters in a dictionary. Let's recalculate everything using this notation:
+# to keep the calculation parameters in a dictionary. Let's recalculate everything using this notation
+# (note that extensions will be recomputed when we call compute even if the parameters are the same):
 
 job_kwargs = dict(n_jobs=8, chunk_duration="1s", progress_bar=True)
 compute_dict = {
