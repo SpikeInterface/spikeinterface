@@ -161,8 +161,8 @@ def compute_pc_metrics(
         if progress_bar:
             units_loop = tqdm(units_loop, desc="calculate_pc_metrics", total=len(unit_ids))
 
-        for unit_ind, unit_id in units_loop:
-            pca_metrics_unit = pca_metrics_one_unit(items[unit_ind])
+        for i, unit_id in units_loop:
+            pca_metrics_unit = pca_metrics_one_unit(items[i])
             for metric_name, metric in pca_metrics_unit.items():
                 pc_metrics[metric_name][unit_id] = metric
     else:
