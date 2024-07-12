@@ -137,7 +137,7 @@ class DecentralizedRegistration:
     ):
 
         dim = ["x", "y", "z"].index(direction)
-        contact_depth = recording.get_channel_locations()[:, dim]
+        contact_depths = recording.get_channel_locations()[:, dim]
 
         # spatial histogram bins
         spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
@@ -145,7 +145,7 @@ class DecentralizedRegistration:
 
         # get spatial windows
         non_rigid_windows, non_rigid_window_centers = get_spatial_windows(
-            contact_depth,
+            contact_depths,
             spatial_bin_centers,
             rigid=rigid,
             win_shape=win_shape,

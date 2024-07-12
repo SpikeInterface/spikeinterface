@@ -99,6 +99,7 @@ motion_options_preset = {
             win_shape="gaussian",
             win_step_um=100.0,
             win_scale_um=200.0,
+            win_margin_um=None,
             histogram_depth_smooth_um=5.0,
             histogram_time_smooth_s=None,
             pairwise_displacement_method="conv",

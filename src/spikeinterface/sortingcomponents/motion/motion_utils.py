@@ -235,7 +235,7 @@ class Motion:
 
 
 def get_spatial_windows(
-    contact_depth,
+    contact_depths,
     spatial_bin_centers,
     rigid=False,
     win_shape="gaussian",
@@ -248,13 +248,13 @@ def get_spatial_windows(
     Generate spatial windows (taper) for non-rigid motion.
     For rigid motion, this is equivalent to have one unique rectangular window that covers the entire probe.
     The windowing can be gaussian or rectangular.
-    Windows are centered between the min/max of contact_depth.
+    Windows are centered between the min/max of contact_depths.
     We can ensure window to not be to close from border with win_margin_um.
 
 
     Parameters
     ----------
-    contact_depth : np.ndarray
+    contact_depths : np.ndarray
         Position of electrodes of the corection direction shape=(num_channels, )
     spatial_bin_centers : np.array
         The pre-computed spatial bin centers
@@ -292,9 +292,7 @@ def get_spatial_windows(
 
     if rigid:
         # win_shape = 'rect' is forced
-        windows = [np.ones(n, dtype="float64")]
-        middle = (spatial_bin_centers[0] + spatial_bin_centers[-1]) / 2.0
-        window_centers = np.array([middle])
+        windows, window_centers = get_rigid_windows(spatial_bin_centers)
     else:
         if win_scale_um <= win_step_um / 5.0:
             warnings.warn(
@@ -305,27 +303,41 @@ def get_spatial_windows(
             # this ensure that first/last windows do not overflow outside the probe
             win_margin_um = -win_scale_um / 2.0
 
-        min_ = np.min(contact_depth) - win_margin_um
-        max_ = np.max(contact_depth) + win_margin_um
-        num_windows = int((max_ - min_) // win_step_um)
-        border = ((max_ - min_) % win_step_um) / 2
-        window_centers = np.arange(num_windows + 1) * win_step_um + min_ + border
-        windows = []
+        min_ = np.min(contact_depths) - win_margin_um
+        max_ = np.max(contact_depths) + win_margin_um
+        if min_ >= max_:
+            warnings.warn(
+                f"get_spatial_windows(): win_margin_um is too large for the probe size. " "Using rigid motion."
+            )
+            # if the probe is too small, we use a single window
+            windows, window_centers = get_rigid_windows(spatial_bin_centers)
+        else:
+            num_windows = int((max_ - min_) // win_step_um)
+            if num_windows == 0:
+                warnings.warn(
+                    f"get_spatial_windows(): win_step_um and win_margin_um are too large for the probe size. "
+                    "Using rigid motion."
+                )
+                windows, window_centers = get_rigid_windows(spatial_bin_centers)
+            else:
+                border = ((max_ - min_) % win_step_um) / 2
+                window_centers = np.arange(num_windows + 1) * win_step_um + min_ + border
+                windows = []
 
-        for win_center in window_centers:
-            if win_shape == "gaussian":
-                win = np.exp(-((spatial_bin_centers - win_center) ** 2) / (2 * win_scale_um**2))
-            elif win_shape == "rect":
-                win = np.abs(spatial_bin_centers - win_center) < (win_scale_um / 2.0)
-                win = win.astype("float64")
-            elif win_shape == "triangle":
-                center_dist = np.abs(spatial_bin_centers - win_center)
-                in_window = center_dist <= (win_scale_um / 2.0)
-                win = -center_dist
-                win[~in_window] = 0
-                win[in_window] -= win[in_window].min()
-                win[in_window] /= win[in_window].max()
-            windows.append(win)
+                for win_center in window_centers:
+                    if win_shape == "gaussian":
+                        win = np.exp(-((spatial_bin_centers - win_center) ** 2) / (2 * win_scale_um**2))
+                    elif win_shape == "rect":
+                        win = np.abs(spatial_bin_centers - win_center) < (win_scale_um / 2.0)
+                        win = win.astype("float64")
+                    elif win_shape == "triangle":
+                        center_dist = np.abs(spatial_bin_centers - win_center)
+                        in_window = center_dist <= (win_scale_um / 2.0)
+                        win = -center_dist
+                        win[~in_window] = 0
+                        win[in_window] -= win[in_window].min()
+                        win[in_window] /= win[in_window].max()
+                    windows.append(win)
 
     windows = np.array(windows)
 
@@ -333,6 +345,13 @@ def get_spatial_windows(
         windows[windows < zero_threshold] = 0
         windows /= windows.sum(axis=1, keepdims=True)
 
+    return windows, window_centers
+
+
+def get_rigid_windows(spatial_bin_centers):
+    """Generate a single rectangular window for rigid motion."""
+    windows = np.ones((1, spatial_bin_centers.size), dtype="float64")
+    window_centers = np.array([(spatial_bin_centers[0] + spatial_bin_centers[-1]) / 2.0])
     return windows, window_centers
 
 
@@ -378,10 +397,10 @@ def get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um):
     # contact along one axis
     probe = recording.get_probe()
     dim = ["x", "y", "z"].index(direction)
-    contact_depth = probe.contact_positions[:, dim]
+    contact_depths = probe.contact_positions[:, dim]
 
-    min_ = np.min(contact_depth) - hist_margin_um
-    max_ = np.max(contact_depth) + hist_margin_um
+    min_ = np.min(contact_depths) - hist_margin_um
+    max_ = np.max(contact_depths) + hist_margin_um
     spatial_bins = np.arange(min_, max_ + bin_um, bin_um)
 
     return spatial_bins

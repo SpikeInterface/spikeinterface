@@ -299,11 +299,11 @@ def dredge_ap(
     # )
 
     dim = ["x", "y", "z"].index(direction)
-    contact_depth = recording.get_channel_locations()[:, dim]
+    contact_depths = recording.get_channel_locations()[:, dim]
     spatial_bin_centers = 0.5 * (spatial_bin_edges_um[1:] + spatial_bin_edges_um[:-1])
 
     windows, window_centers = get_spatial_windows(
-        contact_depth,
+        contact_depths,
         spatial_bin_centers,
         rigid=rigid,
         win_shape=win_shape,
@@ -526,7 +526,7 @@ def dredge_online_lfp(
     """
     dim = ["x", "y", "z"].index(direction)
     # contact pos is the only on the direction
-    contact_depth = lfp_recording.get_channel_locations()[:, dim]
+    contact_depths = lfp_recording.get_channel_locations()[:, dim]
 
     fs = lfp_recording.get_sampling_frequency()
     T_total = lfp_recording.get_num_samples()
@@ -538,7 +538,7 @@ def dredge_online_lfp(
     thomas_kw = thomas_kw if thomas_kw is not None else {}
     full_xcorr_kw = dict(
         rigid=rigid,
-        bin_um=np.median(np.diff(contact_depth)),
+        bin_um=np.median(np.diff(contact_depths)),
         max_disp_um=max_disp_um,
         progress_bar=False,
         device=device,
@@ -554,21 +554,21 @@ def dredge_online_lfp(
     )
 
     # here we check that contact positons are unique on the direction
-    if contact_depth.size != np.unique(contact_depth).size:
+    if contact_depths.size != np.unique(contact_depths).size:
         raise ValueError(
             f"estimate motion with 'dredge_lfp' need channel_positions to be unique in the direction='{direction}'"
         )
-    if np.any(np.diff(contact_depth) < 0):
+    if np.any(np.diff(contact_depths) < 0):
         raise ValueError(
             f"estimate motion with 'dredge_lfp' need channel_positions to be ordered direction='{direction}'"
             "please use spikeinterface.preprocessing.depth_order(recording)"
         )
 
     # Important detail : in LFP bin center are contact position in the direction
-    spatial_bin_centers = contact_depth
+    spatial_bin_centers = contact_depths
 
     windows, window_centers = get_spatial_windows(
-        contact_depth=contact_depth,
+        contact_depths=contact_depths,
         spatial_bin_centers=spatial_bin_centers,
         rigid=rigid,
         win_margin_um=win_margin_um,
@@ -588,7 +588,7 @@ def dredge_online_lfp(
     # below, t0 is start of prev chunk, t1 start of cur chunk, t2 end of cur
     t0, t1 = 0, T_chunk
     traces0 = lfp_recording.get_traces(start_frame=t0, end_frame=t1)
-    Ds0, Cs0, max_disp_um = xcorr_windows(traces0.T, windows, contact_depth, win_scale_um, **full_xcorr_kw)
+    Ds0, Cs0, max_disp_um = xcorr_windows(traces0.T, windows, contact_depths, win_scale_um, **full_xcorr_kw)
     full_xcorr_kw["max_disp_um"] = max_disp_um
     Ss0, mincorr0 = threshold_correlation_matrix(
         Cs0,
@@ -626,14 +626,14 @@ def dredge_online_lfp(
         Ds10, Cs10, _ = xcorr_windows(
             traces1.T,
             windows,
-            contact_depth,
+            contact_depths,
             win_scale_um,
             raster_b=traces0.T,
             **full_xcorr_kw,
         )
 
         # cross-correlation in current chunk
-        Ds1, Cs1, _ = xcorr_windows(traces1.T, windows, contact_depth, win_scale_um, **full_xcorr_kw)
+        Ds1, Cs1, _ = xcorr_windows(traces1.T, windows, contact_depths, win_scale_um, **full_xcorr_kw)
         Ss1, mincorr1 = threshold_correlation_matrix(
             Cs1,
             mincorr_percentile=mincorr_percentile,

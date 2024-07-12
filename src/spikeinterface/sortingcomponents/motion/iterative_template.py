@@ -78,7 +78,7 @@ class IterativeTemplateRegistration:
     ):
 
         dim = ["x", "y", "z"].index(direction)
-        contact_depth = recording.get_channel_locations()[:, dim]
+        contact_depths = recording.get_channel_locations()[:, dim]
 
         # spatial histogram bins
         spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
@@ -86,7 +86,7 @@ class IterativeTemplateRegistration:
 
         # get spatial windows
         non_rigid_windows, non_rigid_window_centers = get_spatial_windows(
-            contact_depth=contact_depth,
+            contact_depths=contact_depths,
             spatial_bin_centers=spatial_bin_centers,
             rigid=rigid,
             win_margin_um=win_margin_um,
@@ -97,6 +97,8 @@ class IterativeTemplateRegistration:
         )
 
         # make a 3D histogram
+        if verbose:
+            print("Making 3D motion histograms")
         motion_histograms, temporal_hist_bin_edges, spatial_hist_bin_edges = make_3d_motion_histograms(
             recording,
             peaks,
@@ -110,6 +112,8 @@ class IterativeTemplateRegistration:
         temporal_bins = temporal_hist_bin_edges[:-1] + bin_s // 2.0
 
         # do alignment
+        if verbose:
+            print("Estimating alignment shifts")
         shift_indices, target_histogram, shift_covs_block = iterative_template_registration(
             motion_histograms,
             non_rigid_windows=non_rigid_windows,
