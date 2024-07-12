@@ -408,12 +408,6 @@ Peak Detection
 
     .. autofunction:: detect_peaks
 
-Motion Correction
-~~~~~~~~~~~~~~~~~
-.. automodule:: spikeinterface.sortingcomponents.motion_interpolation
-
-    .. autoclass:: InterpolateMotionRecording
-
 Clustering
 ~~~~~~~~~~
 .. automodule:: spikeinterface.sortingcomponents.clustering
@@ -425,3 +419,15 @@ Template Matching
 .. automodule:: spikeinterface.sortingcomponents.matching
 
     .. autofunction:: find_spikes_from_templates
+
+Motion Correction
+~~~~~~~~~~~~~~~~~
+.. automodule:: spikeinterface.sortingcomponents.motion
+
+    .. autoclass:: Motion
+    .. autofunction:: estimate_motion
+    .. autofunction:: interpolate_motion
+    .. autofunction:: correct_motion_on_peaks
+    .. autofunction:: interpolate_motion_on_traces
+    .. autofunction:: clean_motion_vector
+    .. autoclass:: InterpolateMotionRecording

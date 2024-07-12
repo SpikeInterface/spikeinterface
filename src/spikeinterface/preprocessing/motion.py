@@ -238,8 +238,8 @@ def correct_motion(
       * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks`
       * :py:func:`~spikeinterface.sortingcomponents.peak_selection.select_peaks`
       * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks`
-      * :py:func:`~spikeinterface.sortingcomponents.motion.motion_estimation.estimate_motion`
-      * :py:func:`~spikeinterface.sortingcomponents.motion.motion_interpolation.interpolate_motion`
+      * :py:func:`~spikeinterface.sortingcomponents.motion.motion.estimate_motion`
+      * :py:func:`~spikeinterface.sortingcomponents.motion.motion.interpolate_motion`
 
 
     Possible presets : {}
