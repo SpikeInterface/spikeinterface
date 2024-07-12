@@ -525,7 +525,7 @@ scores are computed.
 
 The functions to compare templates take a list of :py:class:`~spikeinterface.core.SortingAnalyzer` objects as input,
 which are assumed to be from different sessions of the same animal over time. In this case, let's assume we have 5
-waveform extractors from day 1 (:code:`analyzer_day1`) to day 5 (:code:`analyzer_day5`):
+sorting analyzers from day 1 (:code:`analyzer_day1`) to day 5 (:code:`analyzer_day5`):
 
 .. code-block:: python
 
