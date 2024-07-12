@@ -24,8 +24,8 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
     use_names_as_ids : bool, default: True
-        If True, the names of the signals are used as channel ids. If False, the channels ids are the ids provided
-        by the NeoRawIO.
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+    names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
 
         Example for wideband signals:
             names: ["WB01", "WB02", "WB03", "WB04"]
