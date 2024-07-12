@@ -74,7 +74,6 @@ def compute_monopolar_triangulation(
     assert optimizer in ("least_square", "minimize_with_log_penality")
 
     assert feature in ["ptp", "energy", "peak_voltage"], f"{feature} is not a valid feature"
-    
 
     contact_locations = sorting_analyzer_or_templates.get_channel_locations()
 
@@ -90,7 +89,6 @@ def compute_monopolar_triangulation(
         unit_ids = np.asanyarray(unit_ids)
         keep = np.isin(sorting_analyzer_or_templates.unit_ids, unit_ids)
         templates = templates[keep, :, :]
-
 
     if enforce_decrease:
         neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
@@ -647,13 +645,13 @@ def get_convolution_weights(
 
     return weights, z_factors
 
+
 if HAVE_NUMBA:
     enforce_decrease_shells = numba.jit(enforce_decrease_shells_data, nopython=True)
 
 
 _unit_location_methods = {
-    "center_of_mass" : compute_center_of_mass,
-    "grid_convolution" : compute_grid_convolution,
-    "monopolar_triangulation" : compute_monopolar_triangulation,
+    "center_of_mass": compute_center_of_mass,
+    "grid_convolution": compute_grid_convolution,
+    "monopolar_triangulation": compute_monopolar_triangulation,
 }
-
