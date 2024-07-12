@@ -593,6 +593,9 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
 
     sorting = sorting_analyzer.sorting
 
+    if unit_ids is None:
+        unit_ids = sorting.unit_ids
+
     spike_counts = sorting.count_num_spikes_per_unit(outputs="dict")
 
     spikes = sorting.to_spike_vector()
@@ -603,21 +606,15 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     for sync_idx, synchrony_size in enumerate(synchrony_sizes_np):
         sync_id_metrics_dict = {}
         for i, unit_id in enumerate(all_unit_ids):
+            if unit_id not in unit_ids:
+                continue
             if spike_counts[unit_id] != 0:
                 sync_id_metrics_dict[unit_id] = synchrony_counts[sync_idx][i] / spike_counts[unit_id]
             else:
                 sync_id_metrics_dict[unit_id] = 0
         synchrony_metrics_dict[f"sync_spike_{synchrony_size}"] = sync_id_metrics_dict
 
-    if np.all(unit_ids == None) or (len(unit_ids) == len(all_unit_ids)):
-        return res(**synchrony_metrics_dict)
-    else:
-        reduced_synchrony_metrics_dict = {}
-        for key in synchrony_metrics_dict:
-            reduced_synchrony_metrics_dict[key] = {
-                unit_id: synchrony_metrics_dict[key][unit_id] for unit_id in unit_ids
-            }
-        return res(**reduced_synchrony_metrics_dict)
+    return res(**synchrony_metrics_dict)
 
 
 _default_params["synchrony"] = dict(synchrony_sizes=(2, 4, 8))
