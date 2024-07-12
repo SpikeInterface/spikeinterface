@@ -47,7 +47,7 @@ class ModelBasedClassification:
         self.pipeline = pipeline
         self.required_metrics = pipeline.feature_names_in_
 
-    def predict_labels(self, input_data=None, export_to_phy=False):
+    def predict_labels(self, label_conversion=None, input_data=None, export_to_phy=False):
         """
         Predicts the labels for the spike sorting data using the trained model.
         Populates the sorting object with the predicted labels and probabilities as unit properties
@@ -86,6 +86,13 @@ class ModelBasedClassification:
         predictions = self.pipeline.predict(input_data)
         probabilities = self.pipeline.predict_proba(input_data)
         probabilities = np.max(probabilities, axis=1)
+
+        if isinstance(label_conversion, dict):
+            try:
+                assert set(predictions).issubset(label_conversion.keys())
+            except AssertionError:
+                raise ValueError("Labels in predictions do not match those in label_conversion")
+            predictions = [label_conversion[label] for label in predictions]
 
         # Make output dict with {unit_id: (prediction, probability)}
         classified_units = {
@@ -177,7 +184,7 @@ class ModelBasedClassification:
         classified_df.to_csv(f"{sorting_path}/cluster_prediction.tsv", sep="\t", index_label="cluster_id")
 
 
-def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, export_to_phy=False):
+def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, label_conversion = None, export_to_phy=False):
     """
     Automatically labels units based on a model-based classification.
 
@@ -188,7 +195,9 @@ def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, export_to_phy=
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object containing the spike sorting results.
     pipeline : Pipeline
-        The pipeline object containing the model-based classification pipeline.
+        The scikit-learn pipeline object containing the model-based classification pipeline.
+    label_conversion : dict, optional
+        A dictionary for converting the predicted labels (which are integers) to custom labels. The dictionary should have the format {old_label: new_label}.
     export_to_phy : bool, optional
         Whether to export the results to Phy format. Default is False.
 
@@ -208,8 +217,8 @@ def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, export_to_phy=
     if not isinstance(pipeline, Pipeline):
         raise ValueError("The pipeline must be an instance of sklearn.pipeline.Pipeline")
 
-    model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline, export_to_phy)
+    model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline)
 
-    classified_units = model_based_classification.predict_labels()
+    classified_units = model_based_classification.predict_labels(label_conversion=label_conversion, export_to_phy=export_to_phy)
 
     return classified_units

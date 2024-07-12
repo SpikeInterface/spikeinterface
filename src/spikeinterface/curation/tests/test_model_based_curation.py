@@ -101,15 +101,17 @@ def test_model_based_classification_export_to_phy(sorting_analyzer_for_curation,
     assert (phy_folder / "cluster_prediction.tsv").exists()
 
 
-# TODO: fix this test
 def test_model_based_classification_predict_labels(sorting_analyzer_for_curation, pipeline):
     # Test the predict_labels() method of ModelBasedClassification
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline)
     classified_units = model_based_classification.predict_labels()
-    # TODO: check that classifications match some known set of outputs
     predictions = [classified_units[i][0] for i in classified_units]
     assert predictions == [1, 0, 1, 0, 1]
 
+    conversion = {0: "noise", 1: "good"}
+    classified_units_labelled = model_based_classification.predict_labels(label_conversion=conversion)
+    predictions_labelled = [classified_units_labelled[i][0] for i in classified_units_labelled]
+    assert predictions_labelled == ["good", "noise", "good", "noise", "good"]
 
 ## Code to create the trained pipeline for testing
 # import pandas as pd

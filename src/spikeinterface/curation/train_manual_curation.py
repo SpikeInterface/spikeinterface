@@ -28,6 +28,8 @@ class CurationModelTrainer:
         A list of classifiers to evaluate. If None, default classifiers will be used.
     seed : int, optional
         Random seed for reproducibility. If None, a random seed will be generated.
+    smote : bool, optional
+        Whether to apply SMOTE for class imbalance. Default is True. Requires imbalanced-learn package.
 
     Attributes
     ----------
@@ -87,6 +89,7 @@ class CurationModelTrainer:
         scaling_techniques=None,
         classifiers=None,
         seed=None,
+        smote=True,
     ):
         if imputation_strategies is None:
             imputation_strategies = ["median", "most_frequent", "knn", "iterative"]
@@ -182,7 +185,7 @@ class CurationModelTrainer:
         else:
             raise ValueError(f"Target column {self.target_column} not found in testing metrics file")
 
-    def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val):
+    def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val, smote=True):
         """Impute and scale the data using the specified techniques."""
         from sklearn.experimental import enable_iterative_imputer
         from sklearn.impute import SimpleImputer, KNNImputer, IterativeImputer
@@ -213,8 +216,18 @@ class CurationModelTrainer:
         X_val_imputed = imputer.transform(X_val)
         X_train_scaled = scaler.fit_transform(X_train_imputed)
         X_val_scaled = scaler.transform(X_val_imputed)
-        return X_train_scaled, X_val_scaled, y_train, y_val, imputer, scaler
 
+        # Apply SMOTE for class imbalance
+        if smote:
+            try:
+                from imblearn.over_sampling import SMOTE
+            except ImportError:
+                raise ImportError("Please install imbalanced-learn package to use SMOTE")
+            smote = SMOTE(random_state=self.seed)
+            X_train_balanced, y_train_balanced = smote.fit_resample(X_train_scaled, y_train)
+        
+        return X_train_balanced, X_val_scaled, y_train_balanced, y_val, imputer, scaler
+    
     def get_classifier_instance(self, classifier_name):
         from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
         from sklearn.svm import SVC
