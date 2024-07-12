@@ -116,3 +116,21 @@ event_extractor_full_list = [MaxwellEventExtractor]
 event_extractor_full_list += neo_event_extractors_list
 
 snippets_extractor_full_list = [NpySnippetsExtractor, WaveClusSnippetsExtractor]
+
+recording_extractor_full_dict = {}
+for rec_class in recording_extractor_full_list:
+    # here we get the class name, remove "Recording" and "Extractor" and make it lower case
+    rec_class_name = rec_class.__name__.replace("Recording", "").replace("Extractor", "").lower()
+    recording_extractor_full_dict[rec_class_name] = rec_class
+
+sorting_extractor_full_dict = {}
+for sort_class in sorting_extractor_full_list:
+    # here we get the class name, remove "Extractor" and make it lower case
+    sort_class_name = sort_class.__name__.replace("Sorting", "").replace("Extractor", "").lower()
+    sorting_extractor_full_dict[sort_class_name] = sort_class
+
+event_extractor_full_dict = {}
+for event_class in event_extractor_full_list:
+    # here we get the class name, remove "Extractor" and make it lower case
+    event_class_name = event_class.__name__.replace("Event", "").replace("Extractor", "").lower()
+    event_extractor_full_dict[event_class_name] = event_class
