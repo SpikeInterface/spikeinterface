@@ -186,7 +186,7 @@ class CurationModelTrainer:
             raise ValueError(f"Target column {self.target_column} not found in testing metrics file")
 
     def apply_scaling_imputation(
-        self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val, smote=True
+        self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val, smote=False
     ):
         """Impute and scale the data using the specified techniques."""
         from sklearn.experimental import enable_iterative_imputer
@@ -223,8 +223,8 @@ class CurationModelTrainer:
         if smote:
             try:
                 from imblearn.over_sampling import SMOTE
-            except ImportError:
-                raise ImportError("Please install imbalanced-learn package to use SMOTE")
+            except ModuleNotFoundError:
+                raise ModuleNotFoundError("Please install imbalanced-learn package to use SMOTE")
             smote = SMOTE(random_state=self.seed)
             X_train_balanced, y_train_balanced = smote.fit_resample(X_train_scaled, y_train)
 

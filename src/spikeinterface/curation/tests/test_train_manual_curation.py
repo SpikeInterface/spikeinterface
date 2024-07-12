@@ -62,7 +62,7 @@ def test_apply_scaling_imputation(trainer):
     y_train = np.array([0, 1])
     y_val = np.array([2, 3])
     X_train_scaled, X_val_scaled, y_train, y_val, imputer, scaler = trainer.apply_scaling_imputation(
-        imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val
+        imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val, smote=False
     )
     assert X_train_scaled is not None
     assert X_val_scaled is not None
