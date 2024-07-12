@@ -306,9 +306,7 @@ def get_spatial_windows(
         min_ = np.min(contact_depths) - win_margin_um
         max_ = np.max(contact_depths) + win_margin_um
         if min_ >= max_:
-            warnings.warn(
-                f"get_spatial_windows(): win_margin_um is too large for the probe size. " "Using rigid motion."
-            )
+            warnings.warn(f"get_spatial_windows(): win_margin_um is too large for the probe size. Using rigid motion.")
             # if the probe is too small, we use a single window
             windows, window_centers = get_rigid_windows(spatial_bin_centers)
         else:
