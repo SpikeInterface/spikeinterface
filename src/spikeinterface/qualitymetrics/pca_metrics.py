@@ -110,11 +110,9 @@ def compute_pc_metrics(
         pc_metrics["nn_unit_id"] = {}
 
     possible_nn_metrics = ["nn_isolation", "nn_noise_overlap"]
-    nn_metrics = []
-    for possible_nn_metric in possible_nn_metrics:
-        if possible_nn_metric in metric_names:
-            metric_names.remove(possible_nn_metric)
-            nn_metrics.append(possible_nn_metric)
+
+    nn_metrics = list(set(metric_names).intersection(possible_nn_metrics))
+    non_nn_metrics = list(set(metric_names).difference(possible_nn_metrics))
 
     # Compute nspikes and firing rate outside of main loop for speed
     if nn_metrics:
@@ -149,7 +147,7 @@ def compute_pc_metrics(
         func_args = (
             pcs_flat,
             labels,
-            metric_names,
+            non_nn_metrics,
             unit_id,
             unit_ids,
             qm_params,
@@ -159,7 +157,7 @@ def compute_pc_metrics(
         )
         items.append(func_args)
 
-    if not run_in_parallel and metric_names:
+    if not run_in_parallel and non_nn_metrics:
         units_loop = enumerate(unit_ids)
         if progress_bar:
             units_loop = tqdm(units_loop, desc="calculate pc_metrics", total=len(unit_ids))
@@ -168,7 +166,7 @@ def compute_pc_metrics(
             pca_metrics_unit = pca_metrics_one_unit(items[unit_ind])
             for metric_name, metric in pca_metrics_unit.items():
                 pc_metrics[metric_name][unit_id] = metric
-    elif run_in_parallel and metric_names:
+    elif run_in_parallel and non_nn_metrics:
         with ProcessPoolExecutor(n_jobs) as executor:
             results = executor.map(pca_metrics_one_unit, items)
             if progress_bar:
