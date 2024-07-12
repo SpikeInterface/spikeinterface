@@ -88,10 +88,10 @@ You can also have a look at the [spikeinterface-gui](https://github.com/SpikeInt
 
 ## How to install spikeinterface
 
-You can install the latest version of `spikeinterface` version with pip:
+You can install the latest version of `spikeinterface` version with pip (using quotes ensures `pip install` works in all terminals/shells):
 
 ```bash
-pip install spikeinterface[full]
+pip install "spikeinterface[full]"
 ```
 
 The `[full]` option installs all the extra dependencies for all the different sub-modules.
@@ -99,7 +99,7 @@ The `[full]` option installs all the extra dependencies for all the different su
 To install all interactive widget backends, you can use:
 
 ```bash
- pip install spikeinterface[full,widgets]
+ pip install "spikeinterface[full,widgets]"
 ```
 
 
