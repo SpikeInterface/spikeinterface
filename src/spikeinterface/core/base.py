@@ -47,6 +47,7 @@ class BaseExtractor:
     _skip_properties = []
 
     installation_mesg = ""
+    installed = True
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
