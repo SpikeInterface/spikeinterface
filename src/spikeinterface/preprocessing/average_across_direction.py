@@ -7,7 +7,6 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 
 class AverageAcrossDirectionRecording(BaseRecording):
-    installed = True
 
     def __init__(
         self,

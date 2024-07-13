@@ -46,7 +46,6 @@ class BaseExtractor:
     # these properties are skipped by default in copy_metadata
     _skip_properties = []
 
-    installed = True
     installation_mesg = ""
 
     def __init__(self, main_ids: Sequence) -> None:

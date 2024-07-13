@@ -136,7 +136,6 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
 
 
 class ZeroChannelPaddedRecording(BaseRecording):
-    installed = True
 
     def __init__(self, recording: BaseRecording, num_channels: int, channel_mapping: Union[list, None] = None):
         """Pads a recording with channels that contain only zero.
