@@ -22,6 +22,13 @@ from .curation_tools import resolve_merging_graph
 
 _possible_presets = ["similarity_correlograms", "x_contaminations", "temporal_splits", "feature_neighbors"]
 
+_required_extensions = {
+    "unit_locations": ["unit_locations"],
+    "correlogram": ["correlograms"],
+    "template_similarity": ["template_similarity"],
+    "knn": ["spike_locations", "spike_amplitudes"],
+}
+
 
 def get_potential_auto_merge(
     sorting_analyzer: SortingAnalyzer,
@@ -36,18 +43,12 @@ def get_potential_auto_merge(
     presence_distance_thresh: float = 100,
     p_value: float = 0.2,
     cc_thresh: float = 0.1,
-    peak_sign: str = "neg",
-    bin_ms: float = 0.25,
-    window_ms: float = 100.0,
     censored_period_ms: float = 0.3,
     refractory_period_ms: float = 1.0,
     sigma_smooth_ms: float = 0.6,
     adaptative_window_thresh: float = 0.5,
     censor_correlograms_ms: float = 0.15,
-    num_channels: int = 5,
-    num_shift: int = 5,
     firing_contamination_balance: float = 2.5,
-    template_metric: str = "l1",
     k_nn: int = 10,
     knn_kwargs: dict | None = None,
     presence_distance_kwargs: dict | None = None,
@@ -62,7 +63,7 @@ def get_potential_auto_merge(
         * "num_spikes": enough spikes are found in each unit for computing the correlogram (`min_spikes`)
         * "snr": the SNR of the units is above a threshold (`min_snr`)
         * "remove_contaminated": each unit is not contaminated (by checking auto-correlogram - `contamination_thresh`)
-        * "unit_position": estimated unit locations are close enough (`max_distance_um`)
+        * "unit_locations": estimated unit locations are close enough (`max_distance_um`)
         * "correlogram": the cross-correlograms of the two units are similar to each auto-corrleogram (`corr_diff_thresh`)
         * "template_similarity": the templates of the two units are similar (`template_diff_thresh`)
         * "presence_distance": the presence of the units is complementary in time (`presence_distance_thresh`)
@@ -86,16 +87,16 @@ def get_potential_auto_merge(
         The preset to use for the auto-merge. Presets combine different steps into a recipe and focus on:
 
         * | "similarity_correlograms": mainly focused on template similarity and correlograms.
-          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
+          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_locations",
           | "template_similarity", "correlogram", "quality_score"
         * | "x_contaminations": similar to "similarity_correlograms", but checks for cross-contamination instead of correlograms.
-          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
+          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_locations",
           | "template_similarity", "cross_contamination", "quality_score"
         * | "temporal_splits": focused on finding temporal splits using presence distance.
-          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
+          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_locations",
           | "template_similarity", "presence_distance", "quality_score"
         * | "feature_neighbors": focused on finding unit pairs whose spikes are close in the feature space using kNN.
-          | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_position",
+          | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_locations",
           | "knn", "quality_score"
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
     resolve_graph : bool, default: False
@@ -121,14 +122,6 @@ def get_potential_auto_merge(
         The p-value threshold for the cross-contamination test.
     cc_thresh : float, default: 0.1
         The threshold on the cross-contamination for considering a merge.
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        Peak sign used to estimate the maximum channel of a template
-    bin_ms : float, default: 0.25
-        Bin size in ms used for computing the correlogram
-    window_ms : float, default: 100
-        Window size in ms used for computing the correlogram.
-    template_metric : 'l1' | 'l2' | 'cosine', default: 'l1'
-        The metric to be used when comparing templates.
     censored_period_ms : float, default: 0.3
         Used to compute the refractory period violations aka "contamination".
     refractory_period_ms : float, default: 1
@@ -139,10 +132,6 @@ def get_potential_auto_merge(
         Parameter to detect the window size in correlogram estimation.
     censor_correlograms_ms : float, default: 0.15
         The period to censor on the auto and cross-correlograms.
-    num_channels : int, default: 5
-        Number of channel to use for template similarity computation.
-    num_shift : int, default: 5
-        Number of shifts in samles to be explored for template similarity computation.
     firing_contamination_balance : float, default: 2.5
         Parameter to control the balance between firing rate and contamination in computing unit "quality score".
     k_nn : int, default 5
@@ -153,7 +142,7 @@ def get_potential_auto_merge(
         If True, an additional dictionary (`outs`) with processed data is returned.
     steps : None or list of str, default: None
         Which steps to run, if no preset is used.
-        Pontential steps : "num_spikes", "snr", "remove_contaminated", "unit_position", "correlogram",
+        Pontential steps : "num_spikes", "snr", "remove_contaminated", "unit_locations", "correlogram",
         "template_similarity", "presence_distance", "cross_contamination", "knn", "quality_score"
         Please check steps explanations above!
 
@@ -186,7 +175,7 @@ def get_potential_auto_merge(
         "num_spikes",
         "snr",
         "remove_contaminated",
-        "unit_position",
+        "unit_locations",
         "correlogram",
         "template_similarity",
         "presence_distance",
@@ -206,7 +195,7 @@ def get_potential_auto_merge(
             steps = [
                 "num_spikes",
                 "remove_contaminated",
-                "unit_position",
+                "unit_locations",
                 "template_similarity",
                 "correlogram",
                 "quality_score",
@@ -215,7 +204,7 @@ def get_potential_auto_merge(
             steps = [
                 "num_spikes",
                 "remove_contaminated",
-                "unit_position",
+                "unit_locations",
                 "template_similarity",
                 "presence_distance",
                 "quality_score",
@@ -224,24 +213,26 @@ def get_potential_auto_merge(
             steps = [
                 "num_spikes",
                 "remove_contaminated",
-                "unit_position",
+                "unit_locations",
                 "template_similarity",
                 "cross_contamination",
                 "quality_score",
             ]
         elif preset == "feature_neighbors":
-            if not sorting_analyzer.has_extension("spike_locations"):
-                raise ValueError("knn preset requires spike_locations extension")
-            if not sorting_analyzer.has_extension("spike_amplitudes"):
-                raise ValueError("knn preset requires spike_amplitudes extension")
             steps = [
                 "num_spikes",
                 "snr",
                 "remove_contaminated",
-                "unit_position",
+                "unit_locations",
                 "knn",
                 "quality_score",
             ]
+
+    for step in steps:
+        if step in _required_extensions:
+            for ext in _required_extensions[step]:
+                if not sorting_analyzer.has_extension(ext):
+                    raise ValueError(f"{step} requires {ext} extension")
 
     n = unit_ids.size
     pair_mask = np.triu(np.arange(n)) > 0
@@ -283,17 +274,9 @@ def get_potential_auto_merge(
             pair_mask[:, to_remove] = False
 
         # STEP : unit positions are estimated roughly with channel
-        elif step == "unit_position" in steps:
-            positions_ext = sorting_analyzer.get_extension("unit_locations")
-            if positions_ext is not None:
-                unit_locations = positions_ext.get_data()[:, :2]
-            else:
-                chan_loc = sorting_analyzer.get_channel_locations()
-                unit_max_chan = get_template_extremum_channel(
-                    sorting_analyzer, peak_sign=peak_sign, mode="extremum", outputs="index"
-                )
-                unit_max_chan = list(unit_max_chan.values())
-                unit_locations = chan_loc[unit_max_chan, :]
+        elif step == "unit_locations" in steps:
+            location_ext = sorting_analyzer.get_extension("unit_locations")
+            unit_locations = location_ext.get_data()[:, :2]
 
             unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
             pair_mask = pair_mask & (unit_distances <= max_distance_um)
@@ -302,10 +285,7 @@ def get_potential_auto_merge(
         # STEP : potential auto merge by correlogram
         elif step == "correlogram" in steps:
             correlograms_ext = sorting_analyzer.get_extension("correlograms")
-            if correlograms_ext is not None:
-                correlograms, bins = correlograms_ext.get_data()
-            else:
-                correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba")
+            correlograms, bins = correlograms_ext.get_data()
             mask = (bins[:-1] >= -censor_correlograms_ms) & (bins[:-1] < censor_correlograms_ms)
             correlograms[:, :, mask] = 0
             correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
@@ -333,26 +313,8 @@ def get_potential_auto_merge(
         # STEP : check if potential merge with CC also have template similarity
         elif step == "template_similarity" in steps:
             template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
-            if template_similarity_ext is not None:
-                templates_similarity = template_similarity_ext.get_data()
-                templates_diff = 1 - templates_similarity
-
-            else:
-                templates_ext = sorting_analyzer.get_extension("templates")
-                assert (
-                    templates_ext is not None
-                ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
-                templates_array = templates_ext.get_data(outputs="numpy")
-
-                templates_diff = compute_templates_diff(
-                    sorting,
-                    templates_array,
-                    num_channels=num_channels,
-                    num_shift=num_shift,
-                    pair_mask=pair_mask,
-                    template_metric=template_metric,
-                    sparsity=sorting_analyzer.sparsity,
-                )
+            templates_similarity = template_similarity_ext.get_data()
+            templates_diff = 1 - templates_similarity
             pair_mask = pair_mask & (templates_diff < template_diff_thresh)
             outs["templates_diff"] = templates_diff
 
@@ -640,94 +602,6 @@ def compute_cross_contaminations(analyzer, pair_mask, cc_thresh, refractory_peri
             )
 
     return CC, p_values
-
-
-def compute_templates_diff(
-    sorting, templates_array, num_channels=5, num_shift=5, pair_mask=None, template_metric="l1", sparsity=None
-):
-    """
-    Computes normalized template differences.
-
-    Parameters
-    ----------
-    sorting : BaseSorting
-        The sorting object
-    templates_array : np.array
-        The templates array (num_units, num_samples, num_channels).
-    num_channels : int, default: 5
-        Number of channel to use for template similarity computation
-    num_shift : int, default: 5
-        Number of shifts in samles to be explored for template similarity computation
-    pair_mask : None or boolean array
-        A bool matrix of size (num_units, num_units) to select
-        which pair to compute.
-    template_metric : 'l1', 'l2' or 'cosine'
-        The metric to consider when measuring the distances between templates. Default is l1
-    sparsity : None or ChannelSparsity
-        Optionaly a ChannelSparsity object.
-
-    Returns
-    -------
-    templates_diff : np.array
-        2D array with template differences
-    """
-    unit_ids = sorting.unit_ids
-    n = len(unit_ids)
-    assert template_metric in ["l1", "l2", "cosine"], "Not a valid metric!"
-
-    if pair_mask is None:
-        pair_mask = np.ones((n, n), dtype="bool")
-
-    if sparsity is None:
-        adaptative_masks = False
-        sparsity_mask = None
-    else:
-        adaptative_masks = num_channels == None
-        sparsity_mask = sparsity.mask
-
-    templates_diff = np.full((n, n), np.nan, dtype="float64")
-    all_shifts = range(-num_shift, num_shift + 1)
-    for unit_ind1 in range(n):
-        for unit_ind2 in range(unit_ind1 + 1, n):
-            if not pair_mask[unit_ind1, unit_ind2]:
-                continue
-
-            template1 = templates_array[unit_ind1]
-            template2 = templates_array[unit_ind2]
-            # take best channels
-            if not adaptative_masks:
-                chan_inds = np.argsort(np.max(np.abs(template1 + template2), axis=0))[::-1][:num_channels]
-            else:
-                chan_inds = np.flatnonzero(sparsity_mask[unit_ind1] * sparsity_mask[unit_ind2])
-
-            if len(chan_inds) > 0:
-                template1 = template1[:, chan_inds]
-                template2 = template2[:, chan_inds]
-
-                num_samples = template1.shape[0]
-                if template_metric == "l1":
-                    norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
-                elif template_metric == "l2":
-                    norm = np.sum(template1**2) + np.sum(template2**2)
-                elif template_metric == "cosine":
-                    norm = np.linalg.norm(template1) * np.linalg.norm(template2)
-                all_shift_diff = []
-                for shift in all_shifts:
-                    temp1 = template1[num_shift : num_samples - num_shift, :]
-                    temp2 = template2[num_shift + shift : num_samples - num_shift + shift, :]
-                    if template_metric == "l1":
-                        d = np.sum(np.abs(temp1 - temp2)) / norm
-                    elif template_metric == "l2":
-                        d = np.linalg.norm(temp1 - temp2) / norm
-                    elif template_metric == "cosine":
-                        d = 1 - np.sum(temp1 * temp2) / norm
-                    all_shift_diff.append(d)
-            else:
-                all_shift_diff = [1] * len(all_shifts)
-
-            templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
-
-    return templates_diff
 
 
 def check_improve_contaminations_score(
