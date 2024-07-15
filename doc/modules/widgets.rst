@@ -198,7 +198,7 @@ The functions have the following additional arguments:
 
     # sortingview backend
     w_ts = sw.plot_traces(recording=recording, backend="sortingview")
-    w_ss = sw.plot_sorting_summary(waveform_extractor=we, curation=True, backend="sortingview")
+    w_ss = sw.plot_sorting_summary(sorting_analyzer=sorting_analyzer, curation=True, backend="sortingview")
 
 
 **Output:**

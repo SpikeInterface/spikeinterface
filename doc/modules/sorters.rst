@@ -473,8 +473,8 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **HDSort** :code:`run_sorter(sorter_name='hdsort')`
 * **YASS** :code:`run_sorter(sorter_name='yass')`
 
-Intertnal Sorters
------------------
+Internal Sorters
+----------------
 
 Here a list of internal sorter based on `spikeinterface.sortingcomponents`; they are totally
 experimental for now:
