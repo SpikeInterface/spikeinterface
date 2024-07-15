@@ -497,9 +497,10 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
     >>> from dandi.dandiapi import DandiAPIClient
     >>>
     >>> # get s3 path
-    >>> dandiset_id, filepath = "101116", "sub-001/sub-001_ecephys.nwb"
+    >>> dandiset_id = "001054"
+    >>> filepath = "sub-Dory/sub-Dory_ses-2020-09-14-004_ecephys.nwb"
     >>> with DandiAPIClient() as client:
-    >>>     asset = client.get_dandiset(dandiset_id, "draft").get_asset_by_path(filepath)
+    >>>     asset = client.get_dandiset(dandiset_id).get_asset_by_path(filepath)
     >>>     s3_url = asset.get_content_url(follow_redirects=1, strip_query=True)
     >>>
     >>> rec = NwbRecordingExtractor(s3_url, stream_mode="remfile")
