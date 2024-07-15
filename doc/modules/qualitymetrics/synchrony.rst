@@ -48,4 +48,4 @@ References
 Literature
 ----------
 
-Based on concepts described in [Gruen]_
+Based on concepts described in [Grün]_

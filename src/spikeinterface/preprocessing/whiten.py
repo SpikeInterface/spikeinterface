@@ -55,8 +55,6 @@ class WhitenRecording(BasePreprocessor):
         The whitened recording extractor
     """
 
-    name = "whiten"
-
     def __init__(
         self,
         recording,

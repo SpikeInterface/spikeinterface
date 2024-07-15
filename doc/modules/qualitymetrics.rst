@@ -67,12 +67,3 @@ This code snippet shows how to compute quality metrics (with or without principa
 For more information about quality metrics, check out this excellent
 `documentation <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html>`_
 from the Allen Institute.
-
-
-Quality Metrics References
---------------------------
-
-.. toctree::
-  :maxdepth: 1
-
-  qualitymetrics/references

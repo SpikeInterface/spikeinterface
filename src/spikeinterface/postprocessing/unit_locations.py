@@ -4,12 +4,10 @@ import numpy as np
 import warnings
 
 from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from .localization_tools import (
-    compute_center_of_mass,
-    compute_grid_convolution,
-    compute_monopolar_triangulation,
-)
+from .localization_tools import _unit_location_methods
 
+
+# this dict is for peak location
 dtype_localize_by_method = {
     "center_of_mass": [("x", "float64"), ("y", "float64")],
     "grid_convolution": [("x", "float64"), ("y", "float64"), ("z", "float64")],
@@ -49,7 +47,8 @@ class ComputeUnitLocations(AnalyzerExtension):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, method="monopolar_triangulation", **method_kwargs):
-        params = dict(method=method, method_kwargs=method_kwargs)
+        params = dict(method=method)
+        params.update(method_kwargs)
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -57,27 +56,49 @@ class ComputeUnitLocations(AnalyzerExtension):
         new_unit_location = self.data["unit_locations"][unit_inds]
         return dict(unit_locations=new_unit_location)
 
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    ):
+        old_unit_locations = self.data["unit_locations"]
+        num_dims = old_unit_locations.shape[1]
+
+        method = self.params.get("method")
+        method_kwargs = self.params.copy()
+        method_kwargs.pop("method")
+        func = _unit_location_methods[method]
+        new_unit_locations = func(new_sorting_analyzer, unit_ids=new_unit_ids, **method_kwargs)
+        assert new_unit_locations.shape[0] == len(new_unit_ids)
+
+        all_new_unit_ids = new_sorting_analyzer.unit_ids
+        unit_location = np.zeros((len(all_new_unit_ids), num_dims), dtype=old_unit_locations.dtype)
+        for unit_index, unit_id in enumerate(all_new_unit_ids):
+            if unit_id not in new_unit_ids:
+                old_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                unit_location[unit_index] = old_unit_locations[old_index]
+            else:
+                new_index = list(new_unit_ids).index(unit_id)
+                unit_location[unit_index] = new_unit_locations[new_index]
+
+        return dict(unit_locations=unit_location)
+
     def _run(self, verbose=False):
-        method = self.params["method"]
-        method_kwargs = self.params["method_kwargs"]
+        method = self.params.get("method")
+        method_kwargs = self.params.copy()
+        method_kwargs.pop("method")
 
-        assert method in possible_localization_methods
+        if method not in _unit_location_methods:
+            raise ValueError(f"Wrong ethod for unit_locations : it should be in {list(_unit_location_methods.keys())}")
 
-        if method == "center_of_mass":
-            unit_location = compute_center_of_mass(self.sorting_analyzer, **method_kwargs)
-        elif method == "grid_convolution":
-            unit_location = compute_grid_convolution(self.sorting_analyzer, **method_kwargs)
-        elif method == "monopolar_triangulation":
-            unit_location = compute_monopolar_triangulation(self.sorting_analyzer, **method_kwargs)
-        self.data["unit_locations"] = unit_location
+        func = _unit_location_methods[method]
+        self.data["unit_locations"] = func(self.sorting_analyzer, **method_kwargs)
 
     def get_data(self, outputs="numpy"):
         if outputs == "numpy":
             return self.data["unit_locations"]
         elif outputs == "by_unit":
             locations_by_unit = {}
-            for unit_ind, unit_id in enumerate(self.sorting_analyzer.unit_ids):
-                locations_by_unit[unit_id] = self.data["unit_locations"][unit_ind]
+            for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
+                locations_by_unit[unit_id] = self.data["unit_locations"][unit_index]
             return locations_by_unit
 
 

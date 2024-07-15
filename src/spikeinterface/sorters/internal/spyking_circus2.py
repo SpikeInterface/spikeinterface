@@ -33,7 +33,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         },
         "apply_motion_correction": True,
         "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
-        "merging": {"method": "circus"},
+        "merging": {
+            "similarity_kwargs": {"method": "cosine", "support": "union", "max_lag_ms": 0.2},
+            "correlograms_kwargs": {},
+            "auto_merge": {
+                "min_spikes": 10,
+                "corr_diff_thresh": 0.5,
+                "censor_correlograms_ms": 0.4,
+            },
+        },
         "clustering": {"legacy": True},
         "matching": {"method": "wobble"},
         "apply_preprocessing": True,
@@ -313,7 +321,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 max_motion = max(
                     np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
                 )
-                merging_params["maximum_distance_um"] = max(50, 2 * max_motion)
+                merging_params["max_distance_um"] = max(50, 2 * max_motion)
 
             # peak_sign = params['detection'].get('peak_sign', 'neg')
             # best_amplitudes = get_template_extremum_amplitude(templates, peak_sign=peak_sign)
@@ -350,3 +358,29 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         set_global_job_kwargs(**job_kwargs_before)
 
         return sorting
+
+
+def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
+
+    from spikeinterface.core.sorting_tools import apply_merges_to_sorting
+    from spikeinterface.curation.curation_tools import resolve_merging_graph
+
+    sparsity = templates.sparsity
+    templates_array = templates.get_dense_templates().copy()
+
+    sa = create_sorting_analyzer(sorting, recording, format="memory", sparsity=sparsity)
+
+    sa.extensions["templates"] = ComputeTemplates(sa)
+    sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
+    sa.extensions["templates"].data["average"] = templates_array
+    sa.compute("unit_locations", method="monopolar_triangulation")
+    similarity_kwargs = merging_kwargs.pop("similarity_kwargs", {})
+    sa.compute("template_similarity", **similarity_kwargs)
+    correlograms_kwargs = merging_kwargs.pop("correlograms_kwargs", {})
+    sa.compute("correlograms", **correlograms_kwargs)
+    auto_merge_kwargs = merging_kwargs.pop("auto_merge", {})
+    merges = get_potential_auto_merge(sa, **auto_merge_kwargs)
+    merges = resolve_merging_graph(sorting, merges)
+    sorting = apply_merges_to_sorting(sorting, merges)
+
+    return sorting

@@ -28,7 +28,7 @@ def validate_curation_dict(curation_dict):
 
     # unit_ids
     labeled_unit_set = set([lbl["unit_id"] for lbl in curation_dict["manual_labels"]])
-    merged_units_set = set(sum(curation_dict["merged_unit_groups"], []))
+    merged_units_set = set(sum(curation_dict["merge_unit_groups"], []))
     removed_units_set = set(curation_dict["removed_units"])
 
     if curation_dict["unit_ids"] is not None:
@@ -41,7 +41,7 @@ def validate_curation_dict(curation_dict):
         if not removed_units_set.issubset(unit_set):
             raise ValueError("Curation format: some removed units are not in the unit list")
 
-    all_merging_groups = [set(group) for group in curation_dict["merged_unit_groups"]]
+    all_merging_groups = [set(group) for group in curation_dict["merge_unit_groups"]]
     for gp_1, gp_2 in combinations(all_merging_groups, 2):
         if len(gp_1.intersection(gp_2)) != 0:
             raise ValueError("Some units belong to multiple merge groups")
@@ -112,7 +112,7 @@ def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_fo
         "unit_ids": None,
         "label_definitions": labels_def,
         "manual_labels": manual_labels,
-        "merged_unit_groups": merge_groups,
+        "merge_unit_groups": merge_groups,
         "removed_units": [],
     }
 
