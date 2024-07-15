@@ -7,7 +7,6 @@ import warnings
 import weakref
 import json
 import pickle
-import os
 import random
 import string
 from packaging.version import parse
@@ -47,8 +46,8 @@ class BaseExtractor:
     # these properties are skipped by default in copy_metadata
     _skip_properties = []
 
-    installed = True
     installation_mesg = ""
+    installed = True
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
@@ -766,6 +765,7 @@ class BaseExtractor:
             if "warning" in d:
                 print("The extractor was not serializable to file")
                 return None
+
             extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
             return extractor
 
@@ -798,7 +798,11 @@ class BaseExtractor:
             return extractor
 
         else:
-            raise ValueError("spikeinterface.Base.load() file_path must be an existing folder or file")
+            error_msg = (
+                f"{file_path} is not a file or a folder. It should point to either a json, pickle file or a "
+                "folder that is the result of extractor.save(...)"
+            )
+            raise ValueError(error_msg)
 
     def __reduce__(self):
         """
@@ -951,13 +955,14 @@ class BaseExtractor:
         folder.mkdir(parents=True, exist_ok=False)
 
         # dump provenance
-        provenance_file = folder / f"provenance.json"
+        provenance_file_path = folder / f"provenance.json"
         if self.check_serializability("json"):
-            self.dump(provenance_file)
+            self.dump_to_json(file_path=provenance_file_path, relative_to=folder)
+        elif self.check_serializability("pickle"):
+            provenance_file = folder / f"provenance.pkl"
+            self.dump_to_pickle(provenance_file, relative_to=folder)
         else:
-            provenance_file.write_text(
-                json.dumps({"warning": "the provenace is not json serializable!!!"}), encoding="utf8"
-            )
+            warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
 
         self.save_metadata_to_folder(folder)
 
@@ -967,8 +972,9 @@ class BaseExtractor:
         # copy properties/
         self.copy_metadata(cached)
 
-        # dump
-        cached.dump(folder / f"si_folder.json", relative_to=folder)
+        # Dump the extractor to json file
+        si_folder_path = folder / f"si_folder.json"
+        cached.dump_to_json(file_path=si_folder_path, relative_to=folder)
 
         return cached
 
@@ -1024,7 +1030,6 @@ class BaseExtractor:
         cached: ZarrExtractor
             Saved copy of the extractor.
         """
-        import zarr
         from .zarrextractors import read_zarr
 
         save_kwargs.pop("format", None)

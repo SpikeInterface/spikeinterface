@@ -338,59 +338,58 @@ spikeinterface.curation
 spikeinterface.generation
 -------------------------
 
+.. currentmodule:: spikeinterface.generation
+
 Core
 ~~~~
-.. automodule:: spikeinterface.generation
 
-    .. autofunction:: generate_recording
-    .. autofunction:: generate_sorting
-    .. autofunction:: generate_snippets
-    .. autofunction:: generate_templates
-    .. autofunction:: generate_recording_by_size
-    .. autofunction:: generate_ground_truth_recording
-    .. autofunction:: add_synchrony_to_sorting
-    .. autofunction:: synthesize_random_firings
-    .. autofunction:: inject_some_duplicate_units
-    .. autofunction:: inject_some_split_units
-    .. autofunction:: synthetize_spike_train_bad_isi
-    .. autofunction:: inject_templates
-    .. autofunction:: noise_generator_recording
-    .. autoclass:: InjectTemplatesRecording
-    .. autoclass:: NoiseGeneratorRecording
+
+.. autofunction:: generate_recording
+.. autofunction:: generate_sorting
+.. autofunction:: generate_snippets
+.. autofunction:: generate_templates
+.. autofunction:: generate_recording_by_size
+.. autofunction:: generate_ground_truth_recording
+.. autofunction:: add_synchrony_to_sorting
+.. autofunction:: synthesize_random_firings
+.. autofunction:: inject_some_duplicate_units
+.. autofunction:: inject_some_split_units
+.. autofunction:: synthetize_spike_train_bad_isi
+.. autofunction:: inject_templates
+.. autofunction:: noise_generator_recording
+.. autoclass:: InjectTemplatesRecording
+.. autoclass:: NoiseGeneratorRecording
 
 Drift
 ~~~~~
-.. automodule:: spikeinterface.generation
 
-    .. autofunction:: generate_drifting_recording
-    .. autofunction:: generate_displacement_vector
-    .. autofunction:: make_one_displacement_vector
-    .. autofunction:: make_linear_displacement
-    .. autofunction:: move_dense_templates
-    .. autofunction:: interpolate_templates
-    .. autoclass:: DriftingTemplates
-    .. autoclass:: InjectDriftingTemplatesRecording
+.. autofunction:: generate_drifting_recording
+.. autofunction:: generate_displacement_vector
+.. autofunction:: make_one_displacement_vector
+.. autofunction:: make_linear_displacement
+.. autofunction:: move_dense_templates
+.. autofunction:: interpolate_templates
+.. autoclass:: DriftingTemplates
+.. autoclass:: InjectDriftingTemplatesRecording
 
 Hybrid
 ~~~~~~
-.. automodule:: spikeinterface.generation
 
-    .. autofunction:: generate_hybrid_recording
-    .. autofunction:: estimate_templates_from_recording
-    .. autofunction:: select_templates
-    .. autofunction:: scale_template_to_range
-    .. autofunction:: relocate_templates
-    .. autofunction:: fetch_template_object_from_database
-    .. autofunction:: fetch_templates_database_info
-    .. autofunction:: list_available_datasets_in_template_database
-    .. autofunction:: query_templates_from_database
+.. autofunction:: generate_hybrid_recording
+.. autofunction:: estimate_templates_from_recording
+.. autofunction:: select_templates
+.. autofunction:: scale_template_to_range
+.. autofunction:: relocate_templates
+.. autofunction:: fetch_template_object_from_database
+.. autofunction:: fetch_templates_database_info
+.. autofunction:: list_available_datasets_in_template_database
+.. autofunction:: query_templates_from_database
 
 
 Noise
 ~~~~~
-.. automodule:: spikeinterface.generation
 
-    .. autofunction:: generate_noise
+.. autofunction:: generate_noise
 
 
 spikeinterface.sortingcomponents
@@ -408,12 +407,6 @@ Peak Detection
 
     .. autofunction:: detect_peaks
 
-Motion Correction
-~~~~~~~~~~~~~~~~~
-.. automodule:: spikeinterface.sortingcomponents.motion_interpolation
-
-    .. autoclass:: InterpolateMotionRecording
-
 Clustering
 ~~~~~~~~~~
 .. automodule:: spikeinterface.sortingcomponents.clustering
@@ -425,3 +418,15 @@ Template Matching
 .. automodule:: spikeinterface.sortingcomponents.matching
 
     .. autofunction:: find_spikes_from_templates
+
+Motion Correction
+~~~~~~~~~~~~~~~~~
+.. automodule:: spikeinterface.sortingcomponents.motion
+
+    .. autoclass:: Motion
+    .. autofunction:: estimate_motion
+    .. autofunction:: interpolate_motion
+    .. autofunction:: correct_motion_on_peaks
+    .. autofunction:: interpolate_motion_on_traces
+    .. autofunction:: clean_motion_vector
+    .. autoclass:: InterpolateMotionRecording
