@@ -277,12 +277,38 @@ class TestTimeHandling:
         assert np.isclose(tstart_recording.get_total_duration(), sum(all_raw_durations), rtol=0, atol=1e-8)
         assert np.isclose(tvector_recording.get_total_duration(), sum(all_vector_durations), rtol=0, atol=1e-8)
 
-    #  def test_sorting_analyzer_get_durations(self, time_vector_recording):
-    #     """ """
-    #    breakpoint()
-    #   sorting = si.generate_sorting()
-    #  sorting_analyzer = si.create_sorting_analyzer(sorting, recording=None)
-    # si.sorting_an
+    def test_sorting_analyzer_get_durations_from_recording(self, time_vector_recording):
+        """
+        Test that when a recording is set on `sorting_analyzer`, the
+        total duration is propagated from the recording to the
+        `sorting_analyzer.get_total_duration()` function.
+        """
+        _, times_recording, _ = time_vector_recording
+
+        sorting = si.generate_sorting(
+            durations=[times_recording.get_duration(s) for s in range(times_recording.get_num_segments())]
+        )
+        sorting_analyzer = si.create_sorting_analyzer(sorting, recording=times_recording)
+
+        assert np.array_equal(sorting_analyzer.get_total_duration(), times_recording.get_total_duration())
+
+    def test_sorting_analyzer_get_durations_no_recording(self, time_vector_recording):
+        """
+        Test when the `sorting_analzyer` does not have a recording set,
+        the total duration is calculated on the fly from num samples and
+        sampling frequency (thus matching `raw_recording` with no times set
+        that uses the same method to calculate the total duration).
+        """
+        raw_recording, _, _ = time_vector_recording
+
+        sorting = si.generate_sorting(
+            durations=[raw_recording.get_duration(s) for s in range(raw_recording.get_num_segments())]
+        )
+        sorting_analyzer = si.create_sorting_analyzer(sorting, recording=raw_recording)
+
+        sorting_analyzer._recording = None
+
+        assert np.array_equal(sorting_analyzer.get_total_duration(), raw_recording.get_total_duration())
 
     # Helpers ####
     def _check_times_match(self, recording, all_times):
