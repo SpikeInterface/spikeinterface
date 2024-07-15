@@ -938,7 +938,7 @@ def binom_sf(x: int, n: float, p: float) -> float:
 
 if HAVE_NUMBA:
 
-    @numba.jit((numba.float32,), nopython=True, nogil=True, cache=True)
+    @numba.jit(nopython=True, nogil=True, cache=False)
     def _get_border_probabilities(max_time) -> tuple[int, int, float, float]:
         """
         Computes the integer borders, and the probability of 2 spikes distant by this border to be closer than max_time.
