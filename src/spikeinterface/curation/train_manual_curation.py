@@ -226,9 +226,9 @@ class CurationModelTrainer:
             except ModuleNotFoundError:
                 raise ModuleNotFoundError("Please install imbalanced-learn package to use SMOTE")
             smote = SMOTE(random_state=self.seed)
-            X_train_scaled, y_train_scaled = smote.fit_resample(X_train_scaled, y_train)
+            X_train_scaled, y_train = smote.fit_resample(X_train_scaled, y_train)
 
-        return X_train_scaled, X_val_scaled, y_train_scaled, y_val, imputer, scaler
+        return X_train_scaled, X_val_scaled, y_train, y_val, imputer, scaler
 
     def get_classifier_instance(self, classifier_name):
         from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
