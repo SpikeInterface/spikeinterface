@@ -13,6 +13,8 @@ from spikeinterface.core.sortinganalyzer import register_result_extension, Analy
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, fix_job_kwargs
 
+from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms
+
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
 
@@ -95,6 +97,50 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         new_data = dict()
         new_data["pca_projection"] = self.data["pca_projection"][keep_spike_mask, :, :]
+        # one or several model
+        for k, v in self.data.items():
+            if "model" in k:
+                new_data[k] = v
+        return new_data
+
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    ):
+
+        pca_projections = self.data["pca_projection"]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
+        if keep_mask is not None:
+            spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
+            valid = keep_mask[spike_indices]
+            some_spikes = some_spikes[valid]
+            pca_projections = pca_projections[valid]
+        else:
+            pca_projections = pca_projections.copy()
+
+        old_sparsity = self.sorting_analyzer.sparsity
+        if old_sparsity is not None:
+
+            # we need a realignement inside each group because we take the channel intersection sparsity
+            # the story is same as in "waveforms" extension
+            for group_ids in merge_unit_groups:
+                group_indices = self.sorting_analyzer.sorting.ids_to_indices(group_ids)
+                group_sparsity_mask = old_sparsity.mask[group_indices, :]
+                group_selection = []
+                for unit_id in group_ids:
+                    unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                    selection = np.flatnonzero(some_spikes["unit_index"] == unit_index)
+                    group_selection.append(selection)
+
+                _inplace_sparse_realign_waveforms(pca_projections, group_selection, group_sparsity_mask)
+
+            old_num_chans = int(np.max(np.sum(old_sparsity.mask, axis=1)))
+            new_num_chans = int(np.max(np.sum(new_sorting_analyzer.sparsity.mask, axis=1)))
+            if new_num_chans < old_num_chans:
+                pca_projections = pca_projections[:, :, :new_num_chans]
+
+        new_data = dict(pca_projection=pca_projections)
+
         # one or several model
         for k, v in self.data.items():
             if "model" in k:
