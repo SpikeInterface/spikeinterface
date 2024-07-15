@@ -1,45 +1,13 @@
 Curation module
 ===============
 
-**Note:** As of February 2023, this module is still under construction and quite experimental.
-The API of some of the functions could be changed/improved from time to time.
-
-Manual curation
----------------
-
-SpikeInterface offers machinery to manually curate a sorting output and keep track of the curation history.
-The curation has several "steps" that can be repeated and chained:
-
-  * remove/select units
-  * split units
-  * merge units
-
-This functionality is done with :py:class:`~spikeinterface.curation.CurationSorting` class.
-Internally, this class keeps the history of curation as a graph.
-The merging and splitting operations are handled by the :py:class:`~spikeinterface.curation.MergeUnitsSorting` and
-:py:class:`~spikeinterface.curation.SplitUnitSorting`. These two classes can also be used independently.
+.. note::
+    As of July 2024, this module is still under construction and quite experimental.
+    The API of some of the functions could be changed/improved from time to time.
 
 
-.. code-block:: python
 
-    from spikeinterface.curation import CurationSorting
 
-    sorting = run_sorter(sorter_name='kilosort2', recording=recording)
-
-    cs = CurationSorting(parent_sorting=sorting)
-
-    # make a first merge
-    cs.merge(units_to_merge=['#1', '#5', '#15'])
-
-    # make a second merge
-    cs.merge(units_to_merge=['#11', '#21'])
-
-    # make a split
-    split_index = ... # some criteria on spikes
-    cs.split(split_unit_id='#20', indices_list=split_index)
-
-    # here is the final clean sorting
-    clean_sorting = cs.sorting
 
 Manual curation format
 ----------------------
@@ -226,6 +194,44 @@ The manual curation (including merges and labels) can be applied to a SpikeInter
 Note that you can also "Export as JSON" and pass the json file as :code:`uri_or_json` parameter.
 
 The curation JSON file can be also pushed to a user-defined GitHub repository ("Save to GitHub as...")
+
+
+Manual curation
+---------------
+
+SpikeInterface offers machinery to manually curate a sorting output and keep track of the curation history.
+The curation has several "steps" that can be repeated and chained:
+
+  * remove/select units
+  * split units
+  * merge units
+
+This functionality is done with :py:class:`~spikeinterface.curation.CurationSorting` class.
+Internally, this class keeps the history of curation as a graph.
+The merging and splitting operations are handled by the :py:class:`~spikeinterface.curation.MergeUnitsSorting` and
+:py:class:`~spikeinterface.curation.SplitUnitSorting`. These two classes can also be used independently.
+
+
+.. code-block:: python
+
+    from spikeinterface.curation import CurationSorting
+
+    sorting = run_sorter(sorter_name='kilosort2', recording=recording)
+
+    cs = CurationSorting(parent_sorting=sorting)
+
+    # make a first merge
+    cs.merge(units_to_merge=['#1', '#5', '#15'])
+
+    # make a second merge
+    cs.merge(units_to_merge=['#11', '#21'])
+
+    # make a split
+    split_index = ... # some criteria on spikes
+    cs.split(split_unit_id='#20', indices_list=split_index)
+
+    # here is the final clean sorting
+    clean_sorting = cs.sorting
 
 
 Other curation tools

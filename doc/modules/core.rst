@@ -369,6 +369,8 @@ backends without writing to disk. So, you can compute an extension *in-memory* w
 you have decided on your desired parameters you can either use :code:`compute` with :code:`save=True` or use :code:`save_as`
 to write everything out to disk.
 
+#TODO: select_units and merge_units
+
 Event
 -----
 
