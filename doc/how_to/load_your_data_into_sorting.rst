@@ -18,7 +18,7 @@ to take your existing data and load it as a SpikeInterface :code:`Sorting` objec
 
 
 Reading a standard spike sorting format into a :code:`Sorting`
--------------------------------------------------------------
+--------------------------------------------------------------
 
 For most spike sorting output formats the :code:`Sorting` is automatically generated. For example one could do
 
@@ -36,7 +36,7 @@ current formats see :ref:`compatible_formats`.
 
 
 Loading your own data into a :code:`Sorting`
--------------------------------------------
+--------------------------------------------
 
 
 This :code:`Sorting` contains important information about your spike trains including:
@@ -115,7 +115,7 @@ using :code:`Neo.SpikeTrain`'s.
 
 
 Loading multisegment data into a :code:`Sorting`
------------------------------------------------
+------------------------------------------------
 
 One of the great advantages of SpikeInterface :code:`Sorting` objects is that they can also handle
 multisegment recordings and sortings (e.g. you have a baseline, stimulus, post-stimulus). The

@@ -27,7 +27,7 @@ sorters to retrieve installation instructions for other operating systems.
 We use **pip** to install packages, but **conda** should also work in many cases.
 
 Some novel spike sorting algorithms are implemented directly in SpikeInterface using the
-:py:mod:`spikeinterface.sortingcomponents` module. Checkout the :ref:`SpikeInterface-based spike sorters` section of this page
+:py:mod:`spikeinterface.sortingcomponents` module. Checkout the :ref:`get_started/install_sorters:SpikeInterface-based spike sorters` section of this page
 for more information!
 
 If you experience installation problems please directly contact the authors of these tools or write on the

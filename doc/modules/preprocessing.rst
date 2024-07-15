@@ -32,7 +32,7 @@ These two preprocessors will not compute anything at instantiation, but the comp
 
     traces = recording_cmr.get_traces(start_frame=100_000, end_frame=200_000)
 
-Some internal sorters (see :ref:`si_based`) can work directly on these preprocessed objects so there is no need to
+Some internal sorters (see :ref:`modules/sorters:Intertnal Sorters`) can work directly on these preprocessed objects so there is no need to
 save the object:
 
 .. code-block:: python
