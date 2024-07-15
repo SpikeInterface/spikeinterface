@@ -6,7 +6,8 @@ This backwards compatibility module aims to:
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+import warnings
+from typing import Optional
 
 from pathlib import Path
 
@@ -543,7 +544,11 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         ext = new_class(sorting_analyzer)
         with open(ext_folder / "params.json", "r") as f:
             params = json.load(f)
-        ext.params = params
+        # update params
+        new_params = ext._set_params()
+        updated_params = make_ext_params_up_to_date(ext, params, new_params)
+        ext.set_params(**updated_params)
+
         if new_name == "spike_amplitudes":
             amplitudes = []
             for segment_index in range(sorting.get_num_segments()):
@@ -602,6 +607,21 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         sorting_analyzer.extensions[new_name] = ext
 
     return sorting_analyzer
+
+
+def make_ext_params_up_to_date(ext, old_params, new_params):
+    # adjust params
+    old_name = ext.extension_name
+    updated_params = old_params.copy()
+    for p, values in old_params.items():
+        if isinstance(values, dict):
+            new_values = new_params.get(p, {})
+            updated_params[p] = make_ext_params_up_to_date(ext, values, new_values)
+        else:
+            if p not in new_params:
+                warnings.warn(f"Removing legacy param {p} from {old_name} extension")
+                updated_params.pop(p)
+    return updated_params
 
 
 # this was never used, let's comment it out

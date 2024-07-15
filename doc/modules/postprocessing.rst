@@ -59,7 +59,7 @@ To check what extensions spikeinterface can calculate, you can use the :code:`ge
 
     >>> ['random_spikes', 'waveforms', 'templates', 'noise_levels', 'amplitude_scalings', 'correlograms', 'isi_histograms', 'principal_components', 'spike_amplitudes', 'spike_locations', 'template_metrics', 'template_similarity', 'unit_locations', 'quality_metrics']
 
-There is detailed documentation about each extension :ref:`below<Available postprocessing extensions>`.
+There is detailed documentation about each extension :ref:`below<modules/postprocessing:Available postprocessing extensions>`.
 Each extension comes from a different module. To use the :code:`postprocessing` extensions, you'll need to have the `postprocessing`
 module loaded.
 
@@ -68,11 +68,9 @@ both `random_spikes` and `waveforms`. We say that `principal_components` is a ch
 two. Other extensions, like `isi_histograms`, don't depend on anything. It has no children and no parents. The parent/child
 relationships of all the extensions currently defined in spikeinterface can be found in this diagram:
 
-|
 .. figure:: ../images/parent_child.svg
     :alt: Parent child relationships for the extensions in spikeinterface
     :align: center
-|
 
 If you try to calculate a child before calculating a parent, an error will be thrown. Further, when a parent is recalculated we delete
 its children. Why? Consider calculating :code:`principal_components`. This depends on random selection of spikes chosen
@@ -205,7 +203,7 @@ This extension computes the principal components of the waveforms. There are sev
 * "by_channel_global": fits the same PCA model to all channels (also termed temporal PCA)
 * "concatenated": concatenates all channels and fits a PCA model on the concatenated data
 
-If the input :code:`WaveformExtractor` is sparse, the sparsity is used when computing the PCA.
+If the input :code:`SortingAnalyzer` is sparse, the sparsity is used when computing the PCA.
 For dense waveforms, sparsity can also be passed as an argument.
 
 .. code-block:: python
@@ -312,7 +310,7 @@ By default, the following metrics are computed:
 The units of :code:`recovery_slope` and :code:`repolarization_slope` depend on the
 input. Voltages are based on the units of the template. By default this is :math:`\mu V`
 but can be the raw output from the recording device (this depends on the
-:code:`return_scaled` parameter, read more here: :ref:`core-sorting-analyzer`).
+:code:`return_scaled` parameter, read more here: :ref:`modules/core:SortingAnalyzer`).
 Distances are in :math:`\mu m` and times are in seconds. So, for example, if the
 templates are in units of :math:`\mu V` then: :code:`repolarization_slope` is in
 :math:`mV / s`; :code:`peak_to_trough_ratio` is in :math:`\mu m` and the

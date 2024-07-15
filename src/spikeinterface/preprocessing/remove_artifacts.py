@@ -91,8 +91,6 @@ class RemoveArtifactsRecording(BasePreprocessor):
         The recording extractor after artifact removal
     """
 
-    name = "remove_artifacts"
-
     def __init__(
         self,
         recording,
