@@ -113,6 +113,9 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     # this bug requires that we have an info.json file so we calculate templates above
     select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=[1])
     assert len(select_units_sorting_analyer.unit_ids) == 1
+    remove_units_sorting_analyer = sorting_analyzer.remove_units(remove_unit_ids=[1])
+    assert len(remove_units_sorting_analyer.unit_ids) == len(sorting_analyzer.unit_ids) - 1
+    assert 1 not in remove_units_sorting_analyer.unit_ids
 
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
     if folder.exists():
@@ -216,34 +219,56 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         keep_unit_ids = original_sorting.unit_ids[::2]
         sorting_analyzer2 = sorting_analyzer.select_units(unit_ids=keep_unit_ids, format=format, folder=folder)
 
-        # check propagation of result data and correct sligin
+        # check propagation of result data and correct aligin
         assert np.array_equal(keep_unit_ids, sorting_analyzer2.unit_ids)
         data = sorting_analyzer2.get_extension("dummy").data
         assert data["result_one"] == sorting_analyzer.get_extension("dummy").data["result_one"]
         # unit 1, 3, ... should be removed
         assert np.all(~np.isin(data["result_two"], [1, 3]))
 
+        # remove unit_ids to several format
         if format != "memory":
             if format == "zarr":
-                folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}.zarr"
+                folder = cache_folder / f"test_SortingAnalyzer_remove_units_with_{format}.zarr"
             else:
-                folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}"
+                folder = cache_folder / f"test_SortingAnalyzer_remove_units_with_{format}"
             if folder.exists():
                 shutil.rmtree(folder)
         else:
             folder = None
-        sorting_analyzer3 = sorting_analyzer.merge_units(merge_unit_groups=[[0, 1]], format=format, folder=folder)
+        # compute one extension to check the slice
+        sorting_analyzer.compute("dummy")
+        remove_unit_ids = original_sorting.unit_ids[::2]
+        sorting_analyzer3 = sorting_analyzer.remove_units(remove_unit_ids=remove_unit_ids, format=format, folder=folder)
+
+        # check propagation of result data and correct aligin
+        assert np.array_equal(original_sorting.unit_ids[1::2], sorting_analyzer3.unit_ids)
+        data = sorting_analyzer3.get_extension("dummy").data
+        assert data["result_one"] == sorting_analyzer.get_extension("dummy").data["result_one"]
+        # unit 0, 2, ... should be removed
+        assert np.all(~np.isin(data["result_two"], [0, 2]))
 
         if format != "memory":
             if format == "zarr":
-                folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}.zarr"
+                folder = cache_folder / f"test_SortingAnalyzer_merge_soft_with_{format}.zarr"
             else:
-                folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}"
+                folder = cache_folder / f"test_SortingAnalyzer_merge_with_{format}"
             if folder.exists():
                 shutil.rmtree(folder)
         else:
             folder = None
-        sorting_analyzer4 = sorting_analyzer.merge_units(
+        sorting_analyzer4 = sorting_analyzer.merge_units(merge_unit_groups=[[0, 1]], format=format, folder=folder)
+
+        if format != "memory":
+            if format == "zarr":
+                folder = cache_folder / f"test_SortingAnalyzer_merge_hard_with_{format}.zarr"
+            else:
+                folder = cache_folder / f"test_SortingAnalyzer_merge_hard_with_{format}"
+            if folder.exists():
+                shutil.rmtree(folder)
+        else:
+            folder = None
+        sorting_analyzer5 = sorting_analyzer.merge_units(
             merge_unit_groups=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, mode="hard"
         )
 

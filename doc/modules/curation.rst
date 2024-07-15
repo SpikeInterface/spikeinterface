@@ -6,6 +6,18 @@ Curation module
     The API of some of the functions could be changed/improved from time to time.
 
 
+1. Curate with SortingAnalyzer
+
+2. Auto-merge
+
+3. Curation format
+
+4. SpikeInterface GUI
+
+5. sortingview
+
+6. Sorting curation (deprecated)
+
 
 
 

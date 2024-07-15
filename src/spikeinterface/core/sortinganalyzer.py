@@ -833,10 +833,10 @@ class SortingAnalyzer:
         ----------
         unit_ids : list or array
             The unit ids to keep in the new SortingAnalyzer object
+        format : "memory" | "binary_folder" | "zarr" , default: "memory"
+            The format of the returned SortingAnalyzer.
         folder : Path or None
-            The new folder where selected waveforms are copied
-        format : "auto" | "binary_folder" | "zarr"
-            The format of the folder.
+            The new folder where selected waveforms are copied.
 
         Returns
         -------
@@ -844,6 +844,31 @@ class SortingAnalyzer:
             The newly create sorting_analyzer with the selected units
         """
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
+        return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
+
+    def remove_units(self, remove_unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
+        """
+        This method is equivalent to `save_as()` but with removal of a subset of units.
+        Filters units by creating a new sorting analyzer object in a new folder.
+
+        Extensions are also updated to remove the unit ids.
+
+        Parameters
+        ----------
+        remove_unit_ids : list or array
+            The unit ids to remove in the new SortingAnalyzer object.
+        format : "memory" | "binary_folder" | "zarr" , default: "memory"
+            The format of the returned SortingAnalyzer.
+        folder : Path or None
+            The new folder where selected waveforms are copied.
+
+        Returns
+        -------
+        analyzer :  SortingAnalyzer
+            The newly create sorting_analyzer with the selected units
+        """
+        # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
+        unit_ids = self.unit_ids[~np.isin(self.unit_ids, remove_unit_ids)]
         return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
 
     def merge_units(
