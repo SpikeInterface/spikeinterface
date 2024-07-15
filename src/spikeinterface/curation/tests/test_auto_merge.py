@@ -1,7 +1,4 @@
 import pytest
-import shutil
-from pathlib import Path
-import numpy as np
 
 
 from spikeinterface.core import create_sorting_analyzer
@@ -12,7 +9,7 @@ from spikeinterface.curation import get_potential_auto_merge
 from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 
 
-@pytest.mark.parametrize("preset", ["xcont", "knn", "temporal_splits", "default"])
+@pytest.mark.parametrize("preset", ["xcontamination", "knn", "temporal_splits", "default"])
 def test_get_auto_merge_list(sorting_analyzer_for_curation, preset):
 
     print(sorting_analyzer_for_curation)
@@ -43,23 +40,23 @@ def test_get_auto_merge_list(sorting_analyzer_for_curation, preset):
             sorting_analyzer,
             preset=preset,
             min_spikes=1000,
-            maximum_distance_um=150.0,
+            max_distance_um=150.0,
+            contamination_thresh=0.2,
+            corr_diff_thresh=0.16,
+            template_diff_thresh=0.25,
             peak_sign="neg",
             bin_ms=0.25,
             window_ms=100.0,
-            corr_diff_thresh=0.16,
-            template_diff_thresh=0.25,
             censored_period_ms=0.0,
             refractory_period_ms=4.0,
             sigma_smooth_ms=0.6,
-            contamination_threshold=0.2,
-            adaptative_window_threshold=0.5,
+            adaptative_window_thresh=0.5,
             num_channels=5,
             num_shift=5,
             firing_contamination_balance=1.5,
             extra_outputs=True,
         )
-        if preset == "xcont":
+        if preset == "xcontamination":
             assert len(potential_merges) == num_unit_splited
             for true_pair in other_ids.values():
                 true_pair = tuple(true_pair)

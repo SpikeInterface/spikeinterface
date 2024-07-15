@@ -17,6 +17,10 @@ from ..postprocessing import compute_correlograms
 from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
 
 from .mergeunitssorting import MergeUnitsSorting
+from .curation_tools import resolve_merging_graph
+
+
+_possible_presets = ["default", "xcontamination", "temporal_splits", "knn"]
 
 
 def get_potential_auto_merge(
@@ -25,20 +29,20 @@ def get_potential_auto_merge(
     resolve_graph: bool = False,
     min_spikes: int = 100,
     min_snr: float = 2,
-    maximum_distance_um: float = 150.0,
+    max_distance_um: float = 150.0,
     corr_diff_thresh: float = 0.16,
     template_diff_thresh: float = 0.25,
-    contamination_threshold: float = 0.2,
+    contamination_thresh: float = 0.2,
     presence_distance_thresh: float = 100,
     p_value: float = 0.2,
-    cc_threshold: float = 0.1,
+    cc_thresh: float = 0.1,
     peak_sign: str = "neg",
     bin_ms: float = 0.25,
     window_ms: float = 100.0,
     censored_period_ms: float = 0.3,
     refractory_period_ms: float = 1.0,
     sigma_smooth_ms: float = 0.6,
-    adaptative_window_threshold: float = 0.5,
+    adaptative_window_thresh: float = 0.5,
     censor_correlograms_ms: float = 0.15,
     num_channels: int = 5,
     num_shift: int = 5,
@@ -55,14 +59,14 @@ def get_potential_auto_merge(
 
     The merges are proposed based on a series of steps with different criteria:
 
-        * "num_spikes": enough spikes are found in each units for computing the correlogram (`min_spikes`)
+        * "num_spikes": enough spikes are found in each unit for computing the correlogram (`min_spikes`)
         * "snr": the SNR of the units is above a threshold (`min_snr`)
-        * "remove_contaminated": each unit is not contaminated (by checking auto-correlogram - `contamination_threshold`)
-        * "unit_position": estimated unit locations are close enough (`maximum_distance_um`)
+        * "remove_contaminated": each unit is not contaminated (by checking auto-correlogram - `contamination_thresh`)
+        * "unit_position": estimated unit locations are close enough (`max_distance_um`)
         * "correlogram": the cross-correlograms of the two units are similar to each auto-corrleogram (`corr_diff_thresh`)
         * "template_similarity": the templates of the two units are similar (`template_diff_thresh`)
-        * "presence_distance": the presence distance of two units (`presence_distance_thresh`)
-        * "cross_contamination": the cross-contamination is not significant (`cc_threshold` and `p_value`)
+        * "presence_distance": the presence of the units is complementary in time (`presence_distance_thresh`)
+        * "cross_contamination": the cross-contamination is not significant (`cc_thresh` and `p_value`)
         * "knn": the two units are close in the feature space
         * "quality_score": the unit "quality score" is increased after the merge
 
@@ -78,11 +82,12 @@ def get_potential_auto_merge(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    preset : "default" | "xcont" | "temporal_splits" | "knn" | None, default: "default"
+    preset : "default" | "xcontamination" | "temporal_splits" | "knn" | None, default: "default"
         The preset to use for the auto-merge. Presets combine different steps into a recipe:
+
         * "default" uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
             "template_similarity", "correlogram", "quality_score"
-        * "xcont" uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
+        * "xcontamination" uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
             "template_similarity", "cross_contamination", "quality_score"
         * "temporal_splits" uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
             "template_similarity", "presence_distance", "quality_score"
@@ -90,13 +95,13 @@ def get_potential_auto_merge(
             "knn", "quality_score"
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
     resolve_graph : bool, default: False
-        If True, the function resolves the graph of potential merges.
+        If True, the function resolves the potential unit pairs to be merged into multiple-unit merges.
     min_spikes : int, default: 100
         Minimum number of spikes for each unit to consider a potential merge.
         Enough spikes are needed to estimate the correlogram
     min_snr : float, default 2
         Minimum Signal to Noise ratio for templates to be considered while merging
-    maximum_distance_um : float, default: 150
+    max_distance_um : float, default: 150
         Maximum distance between units for considering a merge
     corr_diff_thresh : float, default: 0.16
         The threshold on the "correlogram distance metric" for considering a merge.
@@ -104,14 +109,14 @@ def get_potential_auto_merge(
     template_diff_thresh : float, default: 0.25
         The threshold on the "template distance metric" for considering a merge.
         It needs to be between 0 and 1
-    contamination_threshold : float, default: 0.2
+    contamination_thresh : float, default: 0.2
         Threshold for not taking in account a unit when it is too contaminated.
-    p_value : float, default: 0.2
-        The p-value threshold for the cross-contamination test.
-    cc_threshold : float, default: 0.1
-        The threshold on the cross-contamination for considering a merge.
     presence_distance_thresh : float, default: 100
         Parameter to control how present two units should be simultaneously.
+    p_value : float, default: 0.2
+        The p-value threshold for the cross-contamination test.
+    cc_thresh : float, default: 0.1
+        The threshold on the cross-contamination for considering a merge.
     peak_sign : "neg" | "pos" | "both", default: "neg"
         Peak sign used to estimate the maximum channel of a template
     bin_ms : float, default: 0.25
@@ -126,7 +131,7 @@ def get_potential_auto_merge(
         Used to compute the refractory period violations aka "contamination".
     sigma_smooth_ms : float, default: 0.6
         Parameters to smooth the correlogram estimation.
-    adaptative_window_threshold : : float, default: 0.5
+    adaptative_window_thresh : float, default: 0.5
         Parameter to detect the window size in correlogram estimation.
     censor_correlograms_ms : float, default: 0.15
         The period to censor on the auto and cross-correlograms.
@@ -140,13 +145,10 @@ def get_potential_auto_merge(
         The number of neighbors to consider for every spike in the recording.
     knn_kwargs : dict, default None
         The dict of extra params to be passed to knn.
-    presence_distance_kwargs : dict, default None
-        The dict of extra params to be passed to presence_distance.
     extra_outputs : bool, default: False
         If True, an additional dictionary (`outs`) with processed data is returned.
     steps : None or list of str, default: None
-        which steps to run (gives flexibility to running just some steps)
-        If None all steps are done (except presence_distance).
+        Which steps to run, if no preset is used.
         Pontential steps : "num_spikes", "snr", "remove_contaminated", "unit_position", "correlogram",
         "template_similarity", "presence_distance", "cross_contamination", "knn", "quality_score"
         Please check steps explanations above!
@@ -162,7 +164,8 @@ def get_potential_auto_merge(
 
     References
     ----------
-    This function is inspired and built upon similar functions from Lussac version 1 done by Aurelien Wyngaard and Victor Llobet.
+    This function is inspired and built upon similar functions from Lussac [Llobet]_,
+    done by Aurelien Wyngaard and Victor Llobet.
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
     """
     import scipy
@@ -188,6 +191,9 @@ def get_potential_auto_merge(
         "quality_score",
     ]
 
+    if preset is not None and preset not in _possible_presets:
+        raise ValueError(f"preset must be one of {_possible_presets}")
+
     if steps is None:
         if preset is None:
             if steps is None:
@@ -210,7 +216,7 @@ def get_potential_auto_merge(
                 "presence_distance",
                 "quality_score",
             ]
-        elif preset == "xcont":
+        elif preset == "xcontamination":
             steps = [
                 "num_spikes",
                 "remove_contaminated",
@@ -268,7 +274,7 @@ def get_potential_auto_merge(
             )
             nb_violations = np.array(list(nb_violations.values()))
             contaminations = np.array(list(contaminations.values()))
-            to_remove = contaminations > contamination_threshold
+            to_remove = contaminations > contamination_thresh
             pair_mask[to_remove, :] = False
             pair_mask[:, to_remove] = False
 
@@ -286,7 +292,7 @@ def get_potential_auto_merge(
                 unit_locations = chan_loc[unit_max_chan, :]
 
             unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
-            pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
+            pair_mask = pair_mask & (unit_distances <= max_distance_um)
             outs["unit_distances"] = unit_distances
 
         # STEP : potential auto merge by correlogram
@@ -303,7 +309,7 @@ def get_potential_auto_merge(
             win_sizes = np.zeros(n, dtype=int)
             for unit_ind in range(n):
                 auto_corr = correlograms_smoothed[unit_ind, unit_ind, :]
-                thresh = np.max(auto_corr) * adaptative_window_threshold
+                thresh = np.max(auto_corr) * adaptative_window_thresh
                 win_size = get_unit_adaptive_window(auto_corr, thresh)
                 win_sizes[unit_ind] = win_size
             correlogram_diff = compute_correlogram_diff(
@@ -368,7 +374,7 @@ def get_potential_auto_merge(
         elif step == "cross_contamination" in steps:
             refractory = (censored_period_ms, refractory_period_ms)
             CC, p_values = compute_cross_contaminations(
-                sorting_analyzer, pair_mask, cc_threshold, refractory, contaminations
+                sorting_analyzer, pair_mask, cc_thresh, refractory, contaminations
             )
             pair_mask = pair_mask & (p_values > p_value)
             outs["cross_contaminations"] = CC, p_values
@@ -388,6 +394,9 @@ def get_potential_auto_merge(
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
     potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
+
+    if resolve_graph:
+        potential_merges = resolve_merging_graph(sorting, potential_merges)
 
     if extra_outputs:
         return potential_merges, outs
@@ -578,7 +587,7 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     return win_size
 
 
-def compute_cross_contaminations(analyzer, pair_mask, cc_threshold, refractory_period, contaminations=None):
+def compute_cross_contaminations(analyzer, pair_mask, cc_thresh, refractory_period, contaminations=None):
     """
     Looks at a sorting analyzer, and returns statistical tests for cross_contaminations
 
@@ -623,7 +632,7 @@ def compute_cross_contaminations(analyzer, pair_mask, cc_threshold, refractory_p
             else:
                 C1 = None
             CC[unit_ind1, unit_ind2], p_values[unit_ind1, unit_ind2] = estimate_cross_contamination(
-                spike_train1, spike_train2, sf, n_frames, refractory_period, limit=cc_threshold, C1=C1
+                spike_train1, spike_train2, sf, n_frames, refractory_period, limit=cc_thresh, C1=C1
             )
 
     return CC, p_values
