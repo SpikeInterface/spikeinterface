@@ -19,7 +19,7 @@ from .pca_metrics import _default_params as pca_metrics_params
 
 class ComputeQualityMetrics(AnalyzerExtension):
     """
-    Compute quality metrics on sorting_.
+    Compute quality metrics on a `sorting_analyzer`.
 
     Parameters
     ----------

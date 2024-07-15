@@ -718,7 +718,7 @@ class SortingAnalyzer:
 
     def select_units(self, unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
         """
-        This method is equivalent to `save_as()`but with a subset of units.
+        This method is equivalent to `save_as()` but with a subset of units.
         Filters units by creating a new sorting analyzer object in a new folder.
 
         Extensions are also updated to filter the selected unit ids.
@@ -876,11 +876,10 @@ class SortingAnalyzer:
         ----------
         input : str or dict or list
             The extensions to compute, which can be passed as:
-
             * a string: compute one extension. Additional parameters can be passed as key word arguments.
             * a dict: compute several extensions. The keys are the extension names and the values are dictiopnaries with the extension parameters.
             * a list: compute several extensions. The list contains the extension names. Additional parameters can be passed with the extension_params
-              argument.
+            argument.
         save : bool, default: True
             If True the extension is saved to disk (only if sorting analyzer format is not "memory")
         extension_params : dict or None, default: None
@@ -909,10 +908,11 @@ class SortingAnalyzer:
 
         Compute two extensions with an input list specifying custom parameters for one
         (the other will use default parameters):
-        >>> analyzer.compute(
-            ["random_spikes", "waveforms"],
-            extension_params={"waveforms":{"ms_before":1.5, "ms_after", "2.5"}}
-        )
+        >>> analyzer.compute(\
+["random_spikes", "waveforms"],\
+extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
+)
+
         """
         if isinstance(input, str):
             return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)

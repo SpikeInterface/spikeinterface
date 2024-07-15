@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
-from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
+from spikeinterface.sortingcomponents.motion import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.tests.common import make_dataset
@@ -18,12 +18,11 @@ if DEBUG:
     plt.show()
 
 
-@pytest.fixture(scope="module")
-def setup_module(tmp_path_factory):
-    recording, sorting = make_dataset()
-    cache_folder = tmp_path_factory.mktemp("cache_folder")
+def setup_dataset_and_peaks(cache_folder):
+    print(cache_folder, type(cache_folder))
     cache_folder.mkdir(parents=True, exist_ok=True)
 
+    recording, sorting = make_dataset()
     # detect and localize
     extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=0.1, ms_after=0.3, return_output=False)
     pipeline_nodes = [
@@ -49,9 +48,16 @@ def setup_module(tmp_path_factory):
     return recording, sorting, cache_folder
 
 
-def test_estimate_motion(setup_module):
+@pytest.fixture(scope="module", name="dataset")
+def dataset_fixture(create_cache_folder):
+    cache_folder = create_cache_folder / "motion_estimation"
+    return setup_dataset_and_peaks(cache_folder)
+
+
+def test_estimate_motion(dataset):
     # recording, sorting = make_dataset()
-    recording, sorting, cache_folder = setup_module
+    recording, sorting, cache_folder = dataset
+
     peaks = np.load(cache_folder / "dataset_peaks.npy")
     peak_locations = np.load(cache_folder / "dataset_peak_locations.npy")
 
@@ -146,14 +152,14 @@ def test_estimate_motion(setup_module):
 
         kwargs = dict(
             direction="y",
-            bin_duration_s=1.0,
+            bin_s=1.0,
             bin_um=10.0,
             margin_um=5,
-            output_extra_check=True,
+            extra_outputs=True,
         )
         kwargs.update(cases_kwargs)
 
-        motion, extra_check = estimate_motion(recording, peaks, peak_locations, **kwargs)
+        motion, extra = estimate_motion(recording, peaks, peak_locations, **kwargs)
         motions[name] = motion
 
         if cases_kwargs["rigid"]:
@@ -215,5 +221,9 @@ def test_estimate_motion(setup_module):
 
 
 if __name__ == "__main__":
-    setup_module()
-    test_estimate_motion()
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        cache_folder = Path(tmpdirname)
+    args = setup_dataset_and_peaks(cache_folder)
+    test_estimate_motion(args)

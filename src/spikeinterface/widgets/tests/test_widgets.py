@@ -190,8 +190,16 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                # test "larger" sparsity
-                with self.assertRaises(AssertionError):
+                # channel ids
+                sw.plot_unit_waveforms(
+                    self.sorting_analyzer_sparse,
+                    channel_ids=self.sorting_analyzer_sparse.channel_ids[::3],
+                    unit_ids=unit_ids,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                # test warning with "larger" sparsity
+                with self.assertWarns(UserWarning):
                     sw.plot_unit_waveforms(
                         self.sorting_analyzer_sparse,
                         sparsity=self.sparsity_large,
@@ -205,10 +213,10 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 print(f"Testing backend {backend}")
-                print("Dense")
+                # dense
                 sw.plot_unit_templates(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
                 unit_ids = self.sorting.unit_ids[:6]
-                print("Dense + radius")
+                # dense + radius
                 sw.plot_unit_templates(
                     self.sorting_analyzer_dense,
                     sparsity=self.sparsity_radius,
@@ -216,7 +224,7 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                print("Dense + best")
+                # dense + best
                 sw.plot_unit_templates(
                     self.sorting_analyzer_dense,
                     sparsity=self.sparsity_best,
@@ -225,7 +233,6 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
                 # test different shadings
-                print("Sparse")
                 sw.plot_unit_templates(
                     self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
@@ -233,7 +240,6 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                print("Sparse2")
                 sw.plot_unit_templates(
                     self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
@@ -242,8 +248,6 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                # test different shadings
-                print("Sparse3")
                 sw.plot_unit_templates(
                     self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
@@ -252,7 +256,6 @@ class TestWidgets(unittest.TestCase):
                     shade_templates=False,
                     **self.backend_kwargs[backend],
                 )
-                print("Sparse4")
                 sw.plot_unit_templates(
                     self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
@@ -260,7 +263,7 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                print("Extra sparsity")
+                # extra sparsity
                 sw.plot_unit_templates(
                     self.sorting_analyzer_sparse,
                     sparsity=self.sparsity_strict,
@@ -269,8 +272,18 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
+                # channel ids
+                sw.plot_unit_templates(
+                    self.sorting_analyzer_sparse,
+                    channel_ids=self.sorting_analyzer_sparse.channel_ids[::3],
+                    unit_ids=unit_ids,
+                    templates_percentile_shading=[1, 10, 90, 99],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+
                 # test "larger" sparsity
-                with self.assertRaises(AssertionError):
+                with self.assertWarns(UserWarning):
                     sw.plot_unit_templates(
                         self.sorting_analyzer_sparse,
                         sparsity=self.sparsity_large,

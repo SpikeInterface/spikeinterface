@@ -41,8 +41,6 @@ class DecimateRecording(BasePreprocessor):
 
     """
 
-    name = "decimate"
-
     def __init__(
         self,
         recording,

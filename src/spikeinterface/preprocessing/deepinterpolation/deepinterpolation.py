@@ -49,8 +49,6 @@ class DeepInterpolatedRecording(BasePreprocessor):
         The deepinterpolated recording extractor object
     """
 
-    name = "deepinterpolate"
-
     def __init__(
         self,
         recording,

@@ -64,8 +64,6 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     https://www.internationalbrainlab.com/repro-ephys
     """
 
-    name = "highpass_spatial_filter"
-
     def __init__(
         self,
         recording,

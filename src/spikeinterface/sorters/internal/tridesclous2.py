@@ -89,7 +89,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.clustering.main import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.preprocessing import correct_motion
-        from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+        from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
 
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
