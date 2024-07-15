@@ -9,7 +9,7 @@ from spikeinterface.curation import get_potential_auto_merge
 from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 
 
-@pytest.mark.parametrize("preset", ["xcontamination", "knn", "temporal_splits", "default"])
+@pytest.mark.parametrize("preset", ["xcontamination", "feature_neighbors", "temporal_splits", "default"])
 def test_get_auto_merge_list(sorting_analyzer_for_curation, preset):
 
     print(sorting_analyzer_for_curation)

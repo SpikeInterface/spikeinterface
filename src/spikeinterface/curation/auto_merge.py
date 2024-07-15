@@ -20,7 +20,7 @@ from .mergeunitssorting import MergeUnitsSorting
 from .curation_tools import resolve_merging_graph
 
 
-_possible_presets = ["default", "xcontamination", "temporal_splits", "knn"]
+_possible_presets = ["default", "xcontamination", "temporal_splits", "feature_neighbors"]
 
 
 def get_potential_auto_merge(
@@ -82,17 +82,21 @@ def get_potential_auto_merge(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    preset : "default" | "xcontamination" | "temporal_splits" | "knn" | None, default: "default"
-        The preset to use for the auto-merge. Presets combine different steps into a recipe:
+    preset : "default" | "xcontamination" | "temporal_splits" | "feature_neighbors" | None, default: "default"
+        The preset to use for the auto-merge. Presets combine different steps into a recipe and focus on:
 
-        * "default" uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
-            "template_similarity", "correlogram", "quality_score"
-        * "xcontamination" uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
-            "template_similarity", "cross_contamination", "quality_score"
-        * "temporal_splits" uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
-            "template_similarity", "presence_distance", "quality_score"
-        * "knn" uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_position",
-            "knn", "quality_score"
+        * | "default": mainly focused on template similarity and correlograms.
+          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
+          | "template_similarity", "correlogram", "quality_score"
+        * | "xcontamination": similar to "default", but checks for cross-contamination instead of correlograms.
+          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
+          | "template_similarity", "cross_contamination", "quality_score"
+        * | "temporal_splits": focused on finding temporal splits using presence distance.
+          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
+          | "template_similarity", "presence_distance", "quality_score"
+        * | "feature_neighbors": focused on finding unit pairs whose spikes are close in the feature space using kNN.
+          | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_position",
+          | "knn", "quality_score"
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
     resolve_graph : bool, default: False
         If True, the function resolves the potential unit pairs to be merged into multiple-unit merges.
@@ -225,7 +229,7 @@ def get_potential_auto_merge(
                 "cross_contamination",
                 "quality_score",
             ]
-        elif preset == "knn":
+        elif preset == "feature_neighbors":
             if not sorting_analyzer.has_extension("spike_locations"):
                 raise ValueError("knn preset requires spike_locations extension")
             if not sorting_analyzer.has_extension("spike_amplitudes"):
