@@ -20,12 +20,12 @@ from .mergeunitssorting import MergeUnitsSorting
 from .curation_tools import resolve_merging_graph
 
 
-_possible_presets = ["default", "xcontamination", "temporal_splits", "feature_neighbors"]
+_possible_presets = ["similarity_correlograms", "x_contaminations", "temporal_splits", "feature_neighbors"]
 
 
 def get_potential_auto_merge(
     sorting_analyzer: SortingAnalyzer,
-    preset: str | None = "default",
+    preset: str | None = "similarity_correlograms",
     resolve_graph: bool = False,
     min_spikes: int = 100,
     min_snr: float = 2,
@@ -82,13 +82,13 @@ def get_potential_auto_merge(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    preset : "default" | "xcontamination" | "temporal_splits" | "feature_neighbors" | None, default: "default"
+    preset : "similarity_correlograms" | "x_contaminations" | "temporal_splits" | "feature_neighbors" | None, default: "similarity_correlograms"
         The preset to use for the auto-merge. Presets combine different steps into a recipe and focus on:
 
-        * | "default": mainly focused on template similarity and correlograms.
+        * | "similarity_correlograms": mainly focused on template similarity and correlograms.
           | It uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
           | "template_similarity", "correlogram", "quality_score"
-        * | "xcontamination": similar to "default", but checks for cross-contamination instead of correlograms.
+        * | "x_contaminations": similar to "similarity_correlograms", but checks for cross-contamination instead of correlograms.
           | It uses the following steps: "num_spikes", "remove_contaminated", "unit_position",
           | "template_similarity", "cross_contamination", "quality_score"
         * | "temporal_splits": focused on finding temporal splits using presence distance.
@@ -202,7 +202,7 @@ def get_potential_auto_merge(
         if preset is None:
             if steps is None:
                 raise ValueError("You need to specify a preset or steps for the auto-merge function")
-        elif preset == "default":
+        elif preset == "similarity_correlograms":
             steps = [
                 "num_spikes",
                 "remove_contaminated",
@@ -220,7 +220,7 @@ def get_potential_auto_merge(
                 "presence_distance",
                 "quality_score",
             ]
-        elif preset == "xcontamination":
+        elif preset == "x_contaminations":
             steps = [
                 "num_spikes",
                 "remove_contaminated",
