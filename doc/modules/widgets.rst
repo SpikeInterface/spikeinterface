@@ -30,8 +30,8 @@ backends can be installed with:
    pip install spikeinterface[widgets]
 
 
-matplotlib
-^^^^^^^^^^
+Install matplotlib
+^^^^^^^^^^^^^^^^^^
 
 The :code:`matplotlib` backend (default) uses the :code:`matplotlib` package to generate static figures.
 
@@ -41,8 +41,8 @@ To install it, run:
 
    pip install matplotlib
 
-ipywidgets
-^^^^^^^^^^
+Install ipywidgets
+^^^^^^^^^^^^^^^^^^
 
 The :code:`ipywidgets` backend allows users to interact with the plot, for example, by selecting units or
 scrolling through a time series.
@@ -62,8 +62,8 @@ To enable interactive widgets in your notebook, add and run a cell with:
 
 .. _sorting_view:
 
-sortingview
-^^^^^^^^^^^
+Install sortingview
+^^^^^^^^^^^^^^^^^^^
 
 The :code:`sortingview` backend generates web-based and shareable links that can be viewed in the browser.
 
@@ -89,8 +89,8 @@ Finally, if you wish to set up another cloud provider, follow the instruction fr
 `kachery-cloud <https://github.com/flatironinstitute/kachery-cloud>`_ package ("Using your own storage bucket").
 
 
-ephyviewer
-^^^^^^^^^^
+Install ephyviewer
+^^^^^^^^^^^^^^^^^^
 
 This backend is Qt based with PyQt5, PyQt6 or PySide6 support. Qt is sometimes tedious to install.
 

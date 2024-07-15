@@ -30,8 +30,6 @@ class ClipRecording(BasePreprocessor):
         The clipped traces recording extractor object
     """
 
-    name = "clip"
-
     def __init__(self, recording, a_min=None, a_max=None):
         value_min = a_min
         value_max = a_max
@@ -85,8 +83,6 @@ class BlankSaturationRecording(BasePreprocessor):
         The filtered traces recording extractor object
 
     """
-
-    name = "blank_staturation"
 
     def __init__(
         self,

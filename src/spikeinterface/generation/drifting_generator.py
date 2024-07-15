@@ -339,11 +339,13 @@ def generate_drifting_recording(
         Same for both recordings.
     extra_infos:
         If extra_outputs=True, then return also a dict that contain various information like:
+
             * displacement_vectors
             * displacement_sampling_frequency
             * unit_locations
             * displacement_unit_factor
             * unit_displacements
+
         This can be helpfull for motion benchmark.
     """
 

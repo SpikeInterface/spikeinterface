@@ -534,7 +534,7 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
 
     References
     ----------
-    Based on concepts described in [Gruen]_
+    Based on concepts described in [Grün]_
     This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
     """
 
@@ -581,7 +581,7 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
 
     References
     ----------
-    Based on concepts described in [Gruen]_
+    Based on concepts described in [Grün]_
     This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
     """
     assert min(synchrony_sizes) > 1, "Synchrony sizes must be greater than 1"

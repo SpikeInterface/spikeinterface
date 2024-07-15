@@ -167,7 +167,7 @@ for preset in some_presets:
 # Case 1 is used before running a spike sorter and the case 2 is used here to display the results.
 
 # +
-from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
+from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 
 for preset in some_presets:
     folder = base_folder / "motion_folder_dataset1" / preset
