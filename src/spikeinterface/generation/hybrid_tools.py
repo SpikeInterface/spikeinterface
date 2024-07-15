@@ -400,6 +400,7 @@ def generate_hybrid_recording(
     num_segments = recording.get_num_segments()
     dtype = recording.dtype
     durations = np.array([recording.get_duration(segment_index) for segment_index in range(num_segments)])
+    num_samples = np.array([recording.get_num_samples(segment_index) for segment_index in range(num_segments)])
     channel_locations = probe.contact_positions
 
     assert (
@@ -548,7 +549,7 @@ def generate_hybrid_recording(
             displacement_vectors=displacement_vectors,
             displacement_sampling_frequency=displacement_sampling_frequency,
             displacement_unit_factor=displacement_unit_factor,
-            num_samples=(np.array(durations) * sampling_frequency).astype("int64"),
+            num_samples=num_samples.astype("int64"),
             amplitude_factor=amplitude_factor,
         )
 
