@@ -333,7 +333,7 @@ def compute_similarity_with_templates_array(
     if same_array:
         for count, shift in enumerate(range(-num_shifts, 1)):
             if shift != 0:
-                distances[num_shifts_both_sides - row_index - 1] = distances[row_index].T
+                distances[num_shifts_both_sides - count - 1] = distances[count].T
 
     distances = np.min(distances, axis=0)
     similarity = 1 - distances
