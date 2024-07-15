@@ -243,6 +243,47 @@ class TestTimeHandling:
 
         assert np.allclose(rec_slice.get_times(0), all_times[0][start_frame:end_frame], rtol=0, atol=1e-8)
 
+    def test_get_durations(self, time_vector_recording, t_start_recording):
+        """
+        Test the `get_durations` functions that return the total duration
+        for a segment. Test that it is correct after adding both `t_start`
+        or `time_vector` to the recording.
+        """
+        raw_recording, tvector_recording, all_time_vectors = time_vector_recording
+        _, tstart_recording, all_t_starts = t_start_recording
+
+        ts = 1 / raw_recording.get_sampling_frequency()
+
+        all_raw_durations = []
+        all_vector_durations = []
+        for segment_index in range(raw_recording.get_num_segments()):
+
+            # Test before `t_start` and `t_start` (`t_start` is just an offset,
+            # should not affect duration).
+            raw_duration = all_t_starts[segment_index][-1] - all_t_starts[segment_index][0] + ts
+
+            assert np.isclose(raw_recording.get_duration(segment_index), raw_duration, rtol=0, atol=1e-8)
+            assert np.isclose(tstart_recording.get_duration(segment_index), raw_duration, rtol=0, atol=1e-8)
+
+            # Test the duration from the time vector.
+            vector_duration = all_time_vectors[segment_index][-1] - all_time_vectors[segment_index][0] + ts
+
+            assert tvector_recording.get_duration(segment_index) == vector_duration
+
+            all_raw_durations.append(raw_duration)
+            all_vector_durations.append(vector_duration)
+
+        # Finally test the total recording duration
+        assert np.isclose(tstart_recording.get_total_duration(), sum(all_raw_durations), rtol=0, atol=1e-8)
+        assert np.isclose(tvector_recording.get_total_duration(), sum(all_vector_durations), rtol=0, atol=1e-8)
+
+    #  def test_sorting_analyzer_get_durations(self, time_vector_recording):
+    #     """ """
+    #    breakpoint()
+    #   sorting = si.generate_sorting()
+    #  sorting_analyzer = si.create_sorting_analyzer(sorting, recording=None)
+    # si.sorting_an
+
     # Helpers ####
     def _check_times_match(self, recording, all_times):
         """
