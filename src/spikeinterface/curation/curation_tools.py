@@ -136,24 +136,6 @@ def find_duplicated_spikes(
         raise ValueError(f"Method '{method}' isn't a valid method for find_duplicated_spikes. Use one of {_methods}")
 
 
-def remove_empty_units(sorting_or_sorting_analyzer, minimum_spikes=10):
-    if isinstance(sorting_or_sorting_analyzer, SortingAnalyzer):
-        sorting = sorting_or_sorting_analyzer.sorting
-        counts = sorting.get_total_num_spikes()
-        ids_to_select = []
-        for id, num_spikes in counts.items():
-            if num_spikes >= minimum_spikes:
-                ids_to_select += [id]
-        return sorting_or_sorting_analyzer.select_units(ids_to_select)
-    else:
-        counts = sorting_or_sorting_analyzer.get_total_num_spikes()
-        ids_to_select = []
-        for id, num_spikes in counts.items():
-            if num_spikes >= minimum_spikes:
-                ids_to_select += [id]
-        return sorting_or_sorting_analyzer.select_units(ids_to_select)
-
-
 def resolve_merging_graph(sorting, potential_merges):
     """
     Function to provide, given a list of potential_merges, a resolved merging
