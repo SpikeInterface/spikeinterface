@@ -93,7 +93,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             support=self.params["support"],
             sparsity=new_sparsity,
             other_sparsity=new_sorting_analyzer.sparsity,
-            **job_kwargs
+            **job_kwargs,
         )
 
         old_similarity = self.data["similarity"]
@@ -330,7 +330,7 @@ def compute_similarity_with_templates_array(
             row_index, local_distances = res.result()
             distances[:, row_index, :] = local_distances[:, 0, :]
 
-    if same_array:       
+    if same_array:
         for count, shift in enumerate(range(-num_shifts, 1)):
             if shift != 0:
                 distances[num_shifts_both_sides - row_index - 1] = distances[row_index].T
@@ -356,7 +356,7 @@ def compute_template_similarity_by_pair(
         num_shifts=num_shifts,
         sparsity=sparsity_1,
         other_sparsity=sparsity_2,
-        **job_kwargs
+        **job_kwargs,
     )
     return similarity
 
