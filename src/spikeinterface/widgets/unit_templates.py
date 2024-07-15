@@ -24,8 +24,8 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         assert len(dp.templates_shading) <= 4, "Only 2 ans 4 templates shading are supported in sortingview"
 
         # ensure serializable for sortingview
-        unit_id_to_channel_ids = dp.sparsity.unit_id_to_channel_ids
-        unit_id_to_channel_indices = dp.sparsity.unit_id_to_channel_indices
+        unit_id_to_channel_ids = dp.final_sparsity.unit_id_to_channel_ids
+        unit_id_to_channel_indices = dp.final_sparsity.unit_id_to_channel_indices
 
         unit_ids, channel_ids = make_serializable(dp.unit_ids, dp.channel_ids)
 
