@@ -8,13 +8,15 @@ START_DATE="$1"
 END_DATE="$2"
 
 if [ -z "$3" ] || [ "$3" = "all" ]; then
-    LABELS=("core" "extractors" "sorters" "postprocessing" "qualitymetrics" "curation" "widgets" "generation" "hybrid" "sortingcomponents" "motion correction" "documentation" "continuous integration" "packaging" "testing")
+    LABELS=("core" "extractors" "preprocessing" "sorters" "postprocessing" "qualitymetrics" "curation" "widgets" "generation" "hybrid" "sortingcomponents" "motion correction" "documentation" "continuous integration" "packaging" "testing")
 else
     LABELS=("$3")
 fi
 
 if [ -n "$4" ]; then
     IFS=',' read -ra BRANCHES <<< "$4"
+else
+    BRANCHES=("main")
 fi
 
 if [ -n "$5" ]; then

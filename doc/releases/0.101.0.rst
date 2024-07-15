@@ -9,14 +9,15 @@ Main changes:
 
 * Implementation of `SortingAnalyzer` (#2398)
 * Added framework for hybrid recording generation (#2436, #2769, #2857)
-* Improved auto-merging functions and enable `SortingAnalyzer` to merge units and extensions (#2934, #3043, #3154)
-* Refactored motion correction with addition of DREDGE AP and LFP (#2915, #3062)
+* Improved auto-merging functions and enable `SortingAnalyzer` to merge units and extensions (#3043, #3154, #3203)
+* Refactored motion correction with the `Motion` class and the DREDGE AP and LFP methods (#2915, #3062)
 * Better handling of time information (#3118, #3119, #3120)
 
 core:
 
-* Saving provenance with paths relative to folder (#3165)
+* Units aggregation preserve unit ids of aggregated sorters (#3180)
 * Better error message for `BaseExtractor.load()` (#3170)
+* Saving provenance with paths relative to folder (#3165)
 * Fix segment start/end frame None in `concatenate_recordings` (#3161)
 * Implement `apply_merges_to_sorting()` (#3154)
 * More explicit consistency checks for Channel aggregation  (#3151)
@@ -93,8 +94,29 @@ core:
 * Make binary recording memmap efficient III (Avoiding spikes by only reserving memory equal to the trace) (#1781)
 * Implementation of SortingAnalyzer (#2398)
 
+
+preprocessing:
+
+* Remove name class attribute in preprocessing module (#3200)
+* Add option to use ref_channel_ids in global common reference (#3139)
+* Adding option to overwrite while doing correct_motion and saving to a folder (#3088)
+* Docstrings preprocessing update, fix PR01 and PR02 (#3016)
+* Fix deepinterpolation tests (#2971)
+* Improve phase shift memory efficiency (#2946)
+* Fix highpass-spatial-filter return dtype (#2864)
+* Update detect_bad_channels docs (#2783)
+* Regularize whitening (#2744)
+* Seeding silence periods (#2611)
+* Added `round` option to `recording.astype` (#2513)
+* Small bug fix in zscore : gain / offset must be reset (#2510)
+
+
+
 extractors:
 
+* Fix naming when all_annotations=True in neo base extractors (#3198)
+* Propagate option for using neo channel names as ids in all neo extractors without changing the deafult behavior (#3195)
+* Update `nwbextractors` docstring (#3179)
 * Build extractor dicts automatically (#3169)
 * Remove unused legacy class name/mode from extractors (#3153)
 * Improved conditions for closing nwb when using hdf5 backend (#3150)
@@ -156,6 +178,7 @@ sorters:
 
 postprocessing:
 
+* Fix pca transform error (#3178)
 * Fix `spike_vector_to_indices()` (#3048)
 * Remove un-used argument (#3021)
 * Optimize numba cross-correlation and extend `correlograms.py` docstrings and tests (#3017)
@@ -175,8 +198,8 @@ qualitymetrics:
 
 curation:
 
+* Port auto-merge changes and refactor (#3203)
 * Implement `apply_merges_to_sorting()` (#3154)
-* Improve and benchmark auto-merging functions (#2934)
 * Proposal of format to hold the manual curation information (#2933)
 * Provide useful message if sorting used instead of analyzer for `remove_duplicate_units` (#2790)
 * Fix split in more than 2 units and extend curation docs and tests (#2775)
@@ -188,6 +211,7 @@ curation:
 
 widgets:
 
+* Channel ids sortingview (#3205)
 * Since the gui now has curation we should allow users to set curation when making sorting summary (#3104)
 * Add `plot_drift_raster_map` widget (#3068)
 * Fix bug in `plot_potential_merges` (#3044)
@@ -237,6 +261,9 @@ sortingcomponents:
 
 documentation:
 
+* Eradicate sphinx warnings (#3188)
+* Convert doc references from `wf_extractor` -> `sorting_analyzer` (#3185)
+* Add explainer of compute always computing in the analyzer (vs WaveformExtractor behavior) documentation (#3173)
 * Extend docs and API for generation module (#3167)
 * analyse -> analyze in Neuropixels docs (#3143)
 * Add pooch to docs extra (#3124)
@@ -317,6 +344,7 @@ packaging:
 
 testing:
 
+* Add a couple of seeds in tests (#3189)
 * Add test_extractors to full test with codecov (#3141)
 * Add streaming extractor tests to main  test script (#3129)
 * Add plexon2 tests action for install wine and drop full (linux only) tests (#3101)
