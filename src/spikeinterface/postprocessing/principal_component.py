@@ -493,7 +493,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
                     try:
                         proj = pca_model.transform(wfs[:, :, wf_ind])
                         pca_projection[:, :, wf_ind][spike_mask, :] = proj
-                    except NotFittedError as e:
+                    except:
                         # this could happen if len(wfs) is less then n_comp for a channel
                         project_on_non_fitted = True
             if project_on_non_fitted:
