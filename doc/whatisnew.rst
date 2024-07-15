@@ -46,12 +46,22 @@ Release notes
 Version 0.101.0
 ===============
 
-* Implementation of `SortingAnalyzer`` (#2398)
+* Implementation of `SortingAnalyzer` (#2398)
+* Improved auto-merging functions and enable `SortingAnalyzer` to merge units and extensions (#3043, #3154, #3203)
 * Added framework for hybrid recording generation (#2436, #2769, #2857)
-* Improved auto-merging functions and enable `SortingAnalyzer` to merge units and extensions (#2934, #3043, #3154)
-* Refactored motion correction with addition of DREDGE AP and LFP (#2915, #3062)
-* Better handling of time information (#3118, #3119, #3120)
+* Refactored motion correction with the `Motion` class and the DREDGE AP and LFP methods (#2915, #3062)
+* Extendeded benchmarking of `sortingcomponents` (#2501, #2518, #2586, #2811, #2959)
+* Added a powerful drift generator module (#2683)
 
+Version 0.101.0rc1
+==================
+
+* Release candidate for version 0.101.0 (15th July 2024)
+
+Version 0.101.0rc0
+==================
+
+* Release candidate for version 0.101.0 (8th June 2024)
 
 Version 0.100.8
 ===============

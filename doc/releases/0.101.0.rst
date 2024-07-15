@@ -3,15 +3,16 @@
 SpikeInterface 0.101.0 release notes
 ------------------------------------
 
-13th July 2024
+Estimated: 19th July 2024
 
 Main changes:
 
 * Implementation of `SortingAnalyzer` (#2398)
-* Added framework for hybrid recording generation (#2436, #2769, #2857)
 * Improved auto-merging functions and enable `SortingAnalyzer` to merge units and extensions (#3043, #3154, #3203)
+* Added framework for hybrid recording generation (#2436, #2769, #2857)
 * Refactored motion correction with the `Motion` class and the DREDGE AP and LFP methods (#2915, #3062)
-* Better handling of time information (#3118, #3119, #3120)
+* Extendeded benchmarking of `sortingcomponents` (#2501, #2518, #2586, #2811, #2959)
+* Added a powerful drift generator module (#2683)
 
 core:
 
@@ -229,6 +230,7 @@ widgets:
 
 generation:
 
+* Remove unit_params_range from generate.py (#3121)
 * Out-of-place multiply needed when using amplitude scaling in the drifty hybrid recording (#3115)
 * Update tests against template library (#3000)
 * Add select channel and select unit method for template objects (#2989)
@@ -236,8 +238,14 @@ generation:
 * Load `is_scaled` in from zarr Template representation (#2852)
 * Add `is_scaled` to `Templates` object (#2842)
 * Add template `generate_recording_from_template_database` (#2769)
+* Add a missing seed in  generator (#2706)
+* Generate drift (#2683)
+* Changing the generation of fake template with a decaying exponential and fix torch locally exclusive (#2674)
 * Proposal to inject anisotropy while creating fake templates (#2600)
+* Fix scaling of inject templates with copy (#2521)
 * Tools for Generation of Hybrid recordings (#2436)
+* Remove default values used as expressions in `generate.py`. (#2345)
+
 
 sortingcomponents:
 
