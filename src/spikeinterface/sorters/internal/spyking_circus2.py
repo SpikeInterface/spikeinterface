@@ -37,6 +37,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": True,
         "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
         "merging": {
+            "similarity_kwargs": {"method": "cosine", "support": "union", "max_lag_ms": 0.2},
             "min_spikes": 10,
             "corr_diff_thresh": 0.5,
             "template_metric": "cosine",
@@ -369,6 +370,8 @@ def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
     sa.extensions["templates"].params = {"nbefore": templates.nbefore}
     sa.extensions["templates"].data["average"] = templates_array
     sa.compute("unit_locations", method="monopolar_triangulation")
+    similarity_kwargs = merging_kwargs.pop("similarity_kwargs", None)
+    sa.compute("template_similarity", **similarity_kwargs)
     merges = get_potential_auto_merge(sa, **merging_kwargs)
     merges = resolve_merging_graph(sorting, merges)
     sorting = apply_merges_to_sorting(sorting, merges)
