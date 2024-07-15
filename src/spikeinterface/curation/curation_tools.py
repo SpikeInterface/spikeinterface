@@ -167,7 +167,7 @@ def resolve_merging_graph(sorting, potential_merges):
     for i, j in potential_merges:
         graph[sorting.id_to_index(i), sorting.id_to_index(j)] = 1
 
-    n_components, labels = connected_components(graph, directed=True, connection="weak", return_labels=True)
+    n_components, labels = connected_components(graph, directed=False, return_labels=True)
     final_merges = []
     for i in range(n_components):
         merges = labels == i
