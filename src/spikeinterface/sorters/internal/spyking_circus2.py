@@ -38,11 +38,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
         "merging": {
             "similarity_kwargs": {"method": "cosine", "support": "union", "max_lag_ms": 0.2},
-            "min_spikes": 10,
-            "corr_diff_thresh": 0.5,
-            "template_metric": "cosine",
-            "censor_correlograms_ms": 0.4,
-            "num_channels": None,
+            "auto_merge": {
+                "min_spikes": 10,
+                "corr_diff_thresh": 0.5,
+                "censor_correlograms_ms": 0.4,
+            },
         },
         "clustering": {"legacy": True},
         "matching": {"method": "wobble"},
@@ -372,9 +372,9 @@ def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
     sa.compute("unit_locations", method="monopolar_triangulation")
     similarity_kwargs = merging_kwargs.pop("similarity_kwargs", None)
     sa.compute("template_similarity", **similarity_kwargs)
-    merges = get_potential_auto_merge(sa, **merging_kwargs)
+    auto_merge_kwargs = merging_kwargs.pop("auto_merge", None)
+    merges = get_potential_auto_merge(sa, **auto_merge_kwargs)
     merges = resolve_merging_graph(sorting, merges)
     sorting = apply_merges_to_sorting(sorting, merges)
-    # sorting = merge_units_sorting(sorting, merges)
 
     return sorting
