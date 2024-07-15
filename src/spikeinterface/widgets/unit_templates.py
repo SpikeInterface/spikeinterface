@@ -27,7 +27,7 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         unit_id_to_channel_ids = dp.final_sparsity.unit_id_to_channel_ids
         unit_id_to_channel_indices = dp.final_sparsity.unit_id_to_channel_indices
 
-        unit_ids, channel_ids = make_serializable(dp.unit_ids, dp.channel_ids)
+        unit_ids, channel_ids = make_serializable(dp.unit_ids, sorting_analyzer.channel_ids)
 
         templates_dict = {}
         for u_i, unit in enumerate(unit_ids):
