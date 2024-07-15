@@ -8,7 +8,6 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
 class RectifyRecording(BasePreprocessor):
-    name = "rectify"
 
     def __init__(self, recording):
         BasePreprocessor.__init__(self, recording)

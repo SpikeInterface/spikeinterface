@@ -1679,6 +1679,7 @@ class InjectTemplatesRecording(BaseRecording):
     templates: np.ndarray[n_units, n_samples, n_channels] or np.ndarray[n_units, n_samples, n_oversampling]
         Array containing the templates to inject for all the units.
         Shape can be:
+
             * (num_units, num_samples, num_channels): standard case
             * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce sampling jitter.
     nbefore: list[int] | int | None, default: None
@@ -2059,6 +2060,7 @@ def generate_ground_truth_recording(
         The templates of units.
         If None they are generated.
         Shape can be:
+
             * (num_units, num_samples, num_channels): standard case
             * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce jitter.
     ms_before: float, default: 1.5

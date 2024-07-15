@@ -8,9 +8,7 @@ from spikeinterface.core import BaseSnippets, BaseSnippetsSegment
 
 
 class AlignSnippets(BaseSnippets):
-    installed = True  # check at class level if installed or not
     installation_mesg = ""  # err
-    name = "align_snippets"
 
     def __init__(self, snippets, new_nbefore, new_nafter, mode="main_peak", interpolate=1, det_sign=0):
         assert isinstance(snippets, BaseSnippets), "'snippets' must be a SnippetsExtractor"

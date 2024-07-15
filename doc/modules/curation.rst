@@ -33,12 +33,12 @@ This format has two part:
     * "merge_unit_groups"
     * "removed_units"
 
-Here is the description of the format with a simple example:
+Here is the description of the format with a simple example (the first part of the
+format is the definition; the second part of the format is manual action):
 
 .. code-block:: json
 
     {
-        # the first part of the format is the definitation
         "format_version": "1",
         "unit_ids": [
             "u1",
@@ -59,7 +59,7 @@ Here is the description of the format with a simple example:
                     "MUA",
                     "artifact"
                 ],
-                "exclusive": true
+                "exclusive": "true"
             },
             "putative_type": {
                 "label_options": [
@@ -68,10 +68,10 @@ Here is the description of the format with a simple example:
                     "pyramidal",
                     "mitral"
                 ],
-                "exclusive": false
+                "exclusive": "false"
             }
         },
-        # the second part of the format is manual action
+
         "manual_labels": [
             {
                 "unit_id": "u1",
