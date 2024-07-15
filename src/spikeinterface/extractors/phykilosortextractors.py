@@ -20,7 +20,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     keep_good_only : bool, default: True
         Whether to only keep good units.
-    remove_empty_units : bool, default: True
+    remove_empty_units : bool, default: False
         If True, empty units are removed from the sorting extractor.
     load_all_cluster_properties : bool, default: True
         If True, all cluster properties are loaded from the tsv/csv files.
