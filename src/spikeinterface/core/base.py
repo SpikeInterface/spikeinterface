@@ -46,8 +46,8 @@ class BaseExtractor:
     # these properties are skipped by default in copy_metadata
     _skip_properties = []
 
-    installed = True
     installation_mesg = ""
+    installed = True
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation

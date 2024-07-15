@@ -40,8 +40,6 @@ class GaussianFilterRecording(BasePreprocessor):
         The filtered recording extractor object.
     """
 
-    name = "gaussian_filter"
-
     def __init__(
         self, recording: BaseRecording, freq_min: float = 300.0, freq_max: float = 5000.0, margin_sd: float = 5.0
     ):
