@@ -58,7 +58,7 @@ important for your research:
 - :code:`rp_violation` [Llobet]_
 - :code:`sd_ratio` [Pouzat]_
 - :code:`snr` [Lemon]_ [Jackson]_
-- :code:`synchrony` [Grun]_
+- :code:`synchrony` [Grün]_
 
 If you use the :code:`qualitymetrics.pca_metrics` module, i.e. you use the
 :code:`compute_pc_metrics()` method, please include the citations for the :code:`metric_names` that were particularly
@@ -78,7 +78,7 @@ References
 
 .. [Buccino] `SpikeInterface, a unified framework for spike sorting. 2020. <https://pubmed.ncbi.nlm.nih.gov/33170122/>`_
 
-.. [Buzsaki] `The Log-Dynamic Brain: How Skewed Distributions Affect Network Operations. 2014. <https://pubmed.ncbi.nlm.nih.gov/24569488/>`_
+.. [Buzsáki] `The Log-Dynamic Brain: How Skewed Distributions Affect Network Operations. 2014. <https://pubmed.ncbi.nlm.nih.gov/24569488/>`_
 
 .. [Chaure] `A novel and fully automatic spike-sorting implementation with variable number of features. 2018. <https://pubmed.ncbi.nlm.nih.gov/29995603/>`_
 
@@ -88,7 +88,7 @@ References
 
 .. [Garcia] `A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. 2024. <https://pubmed.ncbi.nlm.nih.gov/38238082/>`_
 
-.. [Grun] `Impact of higher-order correlations on coincidence distributions of massively parallel data. 2007. <https://www.researchgate.net/publication/225145104_Impact_of_Higher-Order_Correlations_on_Coincidence_Distributions_of_Massively_Parallel_Data>`_
+.. [Grün] `Impact of higher-order correlations on coincidence distributions of massively parallel data. 2007. <https://www.researchgate.net/publication/225145104_Impact_of_Higher-Order_Correlations_on_Coincidence_Distributions_of_Massively_Parallel_Data>`_
 
 .. [Harris] `Temporal interaction between single spikes and complex spike bursts in hippocampal pyramidal cells. 2001. <https://pubmed.ncbi.nlm.nih.gov/11604145/>`_
 

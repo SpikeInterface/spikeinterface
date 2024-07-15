@@ -21,7 +21,7 @@ All classes support:
   * data on-demand (lazy loading)
   * multiple segments, where each segment is a contiguous piece of data (recording, sorting, events).
 
-.. _core-recording:
+
 Recording
 ---------
 
@@ -162,7 +162,6 @@ Internally, any sorting object can construct 2 internal caches:
   2. a unique numpy.array with structured dtype aka "spikes vector". This is useful for processing by small chunks of
      time, like for extracting amplitudes from a recording.
 
-.. _core-sorting-analyzer:
 SortingAnalyzer
 ---------------
 
@@ -178,7 +177,7 @@ to perform further analysis, such as calculating :code:`waveforms` and :code:`te
 
 Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* and the physical *scaling*.
 Sparsity defines the channels on which waveforms and templates are calculated using, for example,  a
-physical distance from the channel with the largest peak amplitude (see the :ref:`Sparsity` section). Scaling, set by
+physical distance from the channel with the largest peak amplitude (see the :ref:`modules/core:Sparsity` section). Scaling, set by
 the :code:`return_scaled` argument, determines whether the data is converted from integer values to :math:`\mu V` or not.
 By default, :code:`return_scaled` is true and all processed data voltage values are in :math:`\mu V` (e.g., waveforms, templates, spike amplitudes, etc.).
 
@@ -207,7 +206,7 @@ Now we will create a :code:`SortingAnalyzer` called :code:`sorting_analyzer`.
 The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in memory*, but it can be saved at any time
 (or upon instantiation) to one of the following backends:
 
-* | :code:`zarr`: the sorting analyzer is saved to a `Zarr <https://zarr.dev/>`_  folder, and each extension is a Zarr group. This is the recommended backend, since Zarr files can be written to/read from the cloud and compression is applied.
+* | :code:`zarr`: the sorting analyzer is saved to a `Zarr <https://zarr.dev/>`__  folder, and each extension is a Zarr group. This is the recommended backend, since Zarr files can be written to/read from the cloud and compression is applied.
 * | :code:`binary_folder`: the sorting analyzer is saved to a folder, and each extension creates a sub-folder. The extension data are saved to either :code:`npy` (for arrays), :code:`csv` (for dataframes), or :code:`pickle` (for everything else).
 
 If the sorting analyzer is in memory, the :code:`SortingAnalyzer.save_as` function can be used to save it
@@ -568,7 +567,7 @@ re-instantiate the object from scratch (this is true for all objects except in-m
 
 The :code:`save()` function allows to easily store SI objects to a folder on disk.
 :py:class:`~spikeinterface.core.BaseRecording` objects are stored in binary (.raw) or
-`Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`_ (.zarr) format and
+`Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`__ (.zarr) format and
 :py:class:`~spikeinterface.core.BaseSorting` and :py:class:`~spikeinterface.core.BaseSnippets` object in numpy (.npz)
 format. With the actual data, the :code:`save()` function also stores the provenance dictionary and all the properties
 and annotations associated to the object.
@@ -922,7 +921,7 @@ The :py:class:`~spikeinterface.core.WaveformExtractor` allows us to:
 * extract waveforms
 * sub-sample spikes for waveform extraction
 * compute templates (i.e. average extracellular waveforms) with different modes
-* save waveforms in a folder (in numpy / `Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`_) for easy retrieval
+* save waveforms in a folder (in numpy / `Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`__) for easy retrieval
 * save sparse waveforms or *sparsify* dense waveforms
 * select units and associated waveforms
 

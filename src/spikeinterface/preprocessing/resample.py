@@ -42,8 +42,6 @@ class ResampleRecording(BasePreprocessor):
 
     """
 
-    name = "resample"
-
     def __init__(
         self,
         recording,
