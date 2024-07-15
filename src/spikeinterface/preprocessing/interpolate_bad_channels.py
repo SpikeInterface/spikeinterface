@@ -41,8 +41,6 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
         The recording object with interpolated bad channels
     """
 
-    name = "interpolate_bad_channels"
-
     def __init__(self, recording, bad_channel_ids, sigma_um=None, p=1.3, weights=None):
         BasePreprocessor.__init__(self, recording)
 

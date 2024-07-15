@@ -39,8 +39,6 @@ class FilterOpenCLRecording(BasePreprocessor):
 
     """
 
-    name = "filter"
-
     def __init__(
         self,
         recording,

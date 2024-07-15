@@ -44,8 +44,6 @@ class SilencedPeriodsRecording(BasePreprocessor):
         The recording extractor after silencing some periods
     """
 
-    name = "silence_periods"
-
     def __init__(self, recording, list_periods, mode="zeros", noise_levels=None, seed=None, **random_chunk_kwargs):
         available_modes = ("zeros", "noise")
         num_seg = recording.get_num_segments()

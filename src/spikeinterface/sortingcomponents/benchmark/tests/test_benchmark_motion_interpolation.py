@@ -56,7 +56,7 @@ def test_benchmark_motion_interpolation(create_cache_folder):
     # plt.show()
 
     cases = {}
-    bin_duration_s = 1.0
+    bin_s = 1.0
 
     cases["static_SC2"] = dict(
         label="No drift - no correction - SC2",

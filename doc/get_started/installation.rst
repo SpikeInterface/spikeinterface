@@ -102,4 +102,4 @@ Sub-modules have more dependencies, so you should also install:
 
 
 All external spike sorters can be either run inside containers (Docker or Singularity - see :ref:`containerizedsorters`)
-or must be installed independently (see :ref:`Installing Spike Sorters`).
+or must be installed independently (see :ref:`get_started/install_sorters:Installing Spike Sorters`).

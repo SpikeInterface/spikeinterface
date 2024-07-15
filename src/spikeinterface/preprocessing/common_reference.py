@@ -76,8 +76,6 @@ class CommonReferenceRecording(BasePreprocessor):
 
     """
 
-    name = "common_reference"
-
     def __init__(
         self,
         recording: BaseRecording,

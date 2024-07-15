@@ -5,7 +5,7 @@ import numpy as np
 from .base import BaseWidget, to_attr
 
 from spikeinterface.core import BaseRecording, SortingAnalyzer
-from spikeinterface.sortingcomponents.motion_utils import Motion
+from spikeinterface.sortingcomponents.motion import Motion
 
 
 class MotionWidget(BaseWidget):
@@ -230,7 +230,7 @@ class DriftRasterMapWidget(BaseWidget):
         from matplotlib.colors import Normalize
         from .utils_matplotlib import make_mpl_figure
 
-        from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
+        from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 
         dp = to_attr(data_plot)
 
@@ -291,11 +291,9 @@ class MotionInfoWidget(BaseWidget):
     ----------
     motion_info : dict
         The motion info returned by correct_motion() or loaded back with load_motion_info().
+    recording : RecordingExtractor
+        The recording extractor object
     segment_index : int, default: None
-        The segment index to display.
-    recording : RecordingExtractor, default: None
-        The recording extractor object (only used to get "real" times).
-    segment_index : int, default: 0
         The segment index to display.
     sampling_frequency : float, default: None
         The sampling frequency (needed if recording is None).
@@ -320,8 +318,8 @@ class MotionInfoWidget(BaseWidget):
     def __init__(
         self,
         motion_info: dict,
+        recording: BaseRecording,
         segment_index: int | None = None,
-        recording: BaseRecording | None = None,
         depth_lim: tuple[float, float] | None = None,
         motion_lim: tuple[float, float] | None = None,
         color_amplitude: bool = False,
@@ -366,7 +364,7 @@ class MotionInfoWidget(BaseWidget):
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         from .utils_matplotlib import make_mpl_figure
 
-        from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
+        from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 
         dp = to_attr(data_plot)
 
