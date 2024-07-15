@@ -41,8 +41,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "correlograms_kwargs": {},
             "auto_merge": {
                 "min_spikes": 10,
-                "corr_diff_thresh": 0.5,
-                "censor_correlograms_ms": 0.4,
+                "corr_diff_thresh": 0.25,
             },
         },
         "clustering": {"legacy": True},
@@ -366,10 +365,14 @@ def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
     templates_array = templates.get_dense_templates().copy()
 
     sa = create_sorting_analyzer(sorting, recording, format="memory", sparsity=sparsity)
-
     sa.extensions["templates"] = ComputeTemplates(sa)
     sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
     sa.extensions["templates"].data["average"] = templates_array
+
+    non_empty_unit_ids = sa.sorting.get_non_empty_unit_ids()
+    if len(non_empty_unit_ids) < len(sa.unit_ids):
+        sa = sa.select_units(non_empty_unit_ids)
+
     sa.compute("unit_locations", method="monopolar_triangulation")
     similarity_kwargs = merging_kwargs.pop("similarity_kwargs", {})
     sa.compute("template_similarity", **similarity_kwargs)
