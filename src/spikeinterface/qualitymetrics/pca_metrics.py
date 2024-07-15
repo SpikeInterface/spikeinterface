@@ -185,7 +185,7 @@ def compute_pc_metrics(
         func = _nn_metric_name_to_func[metric_name]
         metric_params = qm_params[metric_name] if metric_name in qm_params else {}
 
-        for unit_ind, unit_id in units_loop:
+        for _, unit_id in units_loop:
             try:
                 res = func(
                     sorting_analyzer,
