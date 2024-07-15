@@ -388,7 +388,7 @@ and merging unit groups.
     sorting_analyzer_merge = sorting_analyzer.merge_units([0, 1], [2, 3])
 
 All computed extensions will be automatically propagated or merged when curating. Please refer to the
-:ref:`curation` documentation for more information.
+:ref:`modules/curation` documentation for more information.
 
 
 Event
