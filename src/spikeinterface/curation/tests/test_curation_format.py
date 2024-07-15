@@ -6,6 +6,7 @@ import json
 from spikeinterface.curation.curation_format import (
     validate_curation_dict,
     convert_from_sortingview_curation_format_v0,
+    curation_label_to_vectors,
     curation_label_to_dataframe,
 )
 
@@ -141,6 +142,20 @@ def test_convert_from_sortingview_curation_format_v0():
             validate_curation_dict(curation_v1)
 
 
+
+def test_curation_label_to_vectors():
+
+    labels = curation_label_to_vectors(curation_ids_int)
+    assert "quality" in labels
+    assert "excitatory" in labels
+    print(labels)
+
+    labels = curation_label_to_vectors(curation_ids_str)
+    print(labels)
+
+
+    
+
 def test_curation_label_to_dataframe():
 
     df = curation_label_to_dataframe(curation_ids_int)
@@ -152,10 +167,15 @@ def test_curation_label_to_dataframe():
     # print(df)
 
 
+def test_apply_curation():
+    pass
+    # TODO
+
 if __name__ == "__main__":
     # test_curation_format_validation()
     # test_to_from_json()
     # test_convert_from_sortingview_curation_format_v0()
-    # test_curation_label_to_dataframe()
+    # test_curation_label_to_vectors()
+    test_curation_label_to_dataframe()
 
-    print(json.dumps(curation_ids_str, indent=4))
+    # print(json.dumps(curation_ids_str, indent=4))

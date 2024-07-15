@@ -1,5 +1,8 @@
 from itertools import combinations
 
+import numpy as np
+
+from spikeinterface.core import BaseSorting, SortingAnalyzer, apply_merges_to_sorting
 
 supported_curation_format_versions = {"1"}
 
@@ -119,6 +122,52 @@ def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_fo
     return curation_dict
 
 
+def curation_label_to_vectors(curation_dict):
+    """
+    Transform the curation dict into dict of vectors.
+    For label category with exclusive=True : a column is created and values are the unique label.
+    For label category with exclusive=False : one column per possible is created and values are boolean.
+
+    If exclusive=False and the same label appear several times then it raises an error.
+
+    Parameters
+    ----------
+    curation_dict : dict
+        A curation dictionary
+
+    Returns
+    -------
+    labels: dict of numpy vector
+
+    """
+    unit_ids = list(curation_dict["unit_ids"])
+    n = len(unit_ids)
+
+    labels = {}
+
+    for label_key, label_def in curation_dict["label_definitions"].items():
+        if label_def["exclusive"]:
+            assert label_key not in labels, f"{label_key} is already a key"
+            labels[label_key] = [""] * n
+            for lbl in curation_dict["manual_labels"]:
+                value = lbl.get(label_key, [])
+                if len(value) == 1:
+                    unit_index = unit_ids.index(lbl["unit_id"])
+                    labels[label_key][unit_index] = value[0]
+            labels[label_key] = np.array(labels[label_key])
+        else:
+            for label_opt in label_def["label_options"]:
+                assert label_opt not in labels, f"{label_opt} is already a key"
+                labels[label_opt] = np.zeros(n, dtype=bool)
+            for lbl in curation_dict["manual_labels"]:
+                values = lbl.get(label_key, [])
+                for value in values:
+                    unit_index = unit_ids.index(lbl["unit_id"])
+                    labels[value][unit_index] = True
+
+    return labels
+
+
 def curation_label_to_dataframe(curation_dict):
     """
     Transform the curation dict into a pandas dataframe.
@@ -138,26 +187,90 @@ def curation_label_to_dataframe(curation_dict):
         dataframe with labels.
     """
     import pandas as pd
-
-    labels = pd.DataFrame(index=curation_dict["unit_ids"])
-
-    for label_key, label_def in curation_dict["label_definitions"].items():
-        if label_def["exclusive"]:
-            assert label_key not in labels.columns, f"{label_key} is already a column"
-            labels[label_key] = pd.Series(dtype=str)
-            labels[label_key][:] = ""
-            for lbl in curation_dict["manual_labels"]:
-                value = lbl.get(label_key, [])
-                if len(value) == 1:
-                    labels.at[lbl["unit_id"], label_key] = value[0]
-        else:
-            for label_opt in label_def["label_options"]:
-                assert label_opt not in labels.columns, f"{label_opt} is already a column"
-                labels[label_opt] = pd.Series(dtype=bool)
-                labels[label_opt][:] = False
-            for lbl in curation_dict["manual_labels"]:
-                values = lbl.get(label_key, [])
-                for value in values:
-                    labels.at[lbl["unit_id"], value] = True
-
+    labels = pd.DataFrame(curation_label_to_vectors(curation_dict), index=curation_dict["unit_ids"])
     return labels
+
+
+
+def apply_curation_labels(sorting, curation_dict):
+    labels = curation_label_to_vectors(curation_dict)
+    unit_ids = np.asarray(curation_dict["unit_ids"])
+    mask = np.isin(unit_ids, sorting.unit_ids)
+    for key, values in labels.items():
+        sorting.set_property(key, values[mask], unit_ids[mask])
+
+
+def apply_curation(sorting_or_analyzer, curation_dict, censor_ms=None, new_id_strategy="append",
+                   merging_mode="soft", sparsity_overlap=0.75, verbose=False,
+                   **job_kwargs):
+    """
+    Apply curation dict to a Sorting or an SortingAnalyzer.
+
+    Steps are done this order:
+      1. Apply removal using curation_dict["removed_units"]
+      2. Apply merges using curation_dict["merge_unit_groups"]
+      3. Set labels using curation_dict["manual_labels"]
+
+    A new Sorting or SortingAnalyzer (in memory) is returned.
+    The user (an adult) has the responsability to save it somewhere (or not).
+
+    Parameters
+    ----------
+    sorting_or_analyzer : Sorting | SortingAnalyzer
+        The Sorting object to apply merges.
+    curation_dict : dict
+        The curation dict.
+    censor_ms: float | None, default: None
+        When applying the merges, should be discard consecutive spikes violating a given refractory per
+    new_id_strategy : "append" | "take_first", default: "append"
+        The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+
+            * "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
+            * "take_first" : new_unit_ids will be the first unit_id of every list of merges
+    merging_mode : "soft" | "hard"
+        Used for SortingAnalyzer
+    sparsity_overlap:
+
+    verbose: 
+
+    **job_kwargs
+
+    Returns
+    -------
+    sorting_or_analyzer : Sorting | SortingAnalyzer
+        The curated object.
+
+
+    """
+    validate_curation_dict(curation_dict)
+    if not np.array_equal(np.asarray(curation_dict["unit_ids"]), sorting_or_analyzer.unit_ids):
+        raise ValueError("unit_ids from the curation_dict do not match the one from Sorting or SortingAnalyzer")
+
+
+    if isinstance(sorting_or_analyzer, BaseSorting):
+        sorting = sorting_or_analyzer
+        sorting = sorting.remove_units(curation_dict["removed_units"])
+        sorting = apply_merges_to_sorting(sorting, curation_dict["merge_unit_groups"],
+                                          censor_ms=censor_ms, return_kept=False, new_id_strategy=new_id_strategy)
+        apply_curation_labels(sorting, curation_dict)
+        return sorting
+    
+    elif isinstance(sorting_or_analyzer, SortingAnalyzer):
+        analyzer = sorting_or_analyzer
+        analyzer = analyzer.remove_units(curation_dict["removed_units"])
+        analyzer = analyzer.merge_units(
+            curation_dict["merge_unit_groups"],
+            censor_ms=censor_ms,
+            merging_mode=merging_mode,
+            sparsity_overlap=sparsity_overlap,
+            new_id_strategy=new_id_strategy,
+            format="memory",
+            verbose=verbose,
+            **job_kwargs,
+        )
+        apply_curation_labels(analyzer.sorting, curation_dict)
+        return analyzer
+    else:
+        raise ValueError("apply_curation() must have a Sorting or a SortingAnalyzer")
+
+
