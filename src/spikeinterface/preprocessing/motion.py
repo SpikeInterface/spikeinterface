@@ -19,8 +19,8 @@ motion_options_preset = {
             method="locally_exclusive",
             peak_sign="neg",
             detect_threshold=8.0,
-            exclude_sweep_ms=0.1,
-            radius_um=50,
+            exclude_sweep_ms=0.8,
+            radius_um=80.0,
         ),
         "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
@@ -35,16 +35,13 @@ motion_options_preset = {
         "estimate_motion_kwargs": dict(
             method="decentralized",
             direction="y",
-            bin_duration_s=2.0,
+            bin_s=1.0,
             rigid=False,
             bin_um=5.0,
-            margin_um=0.0,
-            # win_shape="gaussian",
-            # win_step_um=50.0,
-            # win_sigma_um=150.0,
+            hist_margin_um=20.0,
             win_shape="gaussian",
-            win_step_um=100.0,
-            win_sigma_um=200.0,
+            win_step_um=200.0,
+            win_scale_um=300.0,
             histogram_depth_smooth_um=5.0,
             histogram_time_smooth_s=None,
             pairwise_displacement_method="conv",
@@ -78,13 +75,14 @@ motion_options_preset = {
             method="locally_exclusive",
             peak_sign="neg",
             detect_threshold=8.0,
-            exclude_sweep_ms=0.5,
-            radius_um=50,
+            exclude_sweep_ms=0.8,
+            radius_um=80.0,
         ),
         "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
             method="grid_convolution",
-            radius_um=40.0,
+            # radius_um=40.0,
+            radius_um=80.0,
             upsampling_um=5.0,
             sigma_ms=0.25,
             margin_um=30.0,
@@ -94,16 +92,14 @@ motion_options_preset = {
         "estimate_motion_kwargs": dict(
             method="decentralized",
             direction="y",
-            bin_duration_s=2.0,
+            bin_s=2.0,
             rigid=False,
             bin_um=5.0,
-            margin_um=0.0,
-            # win_shape="gaussian",
-            # win_step_um=50.0,
-            # win_sigma_um=150.0,
+            hist_margin_um=0.0,
             win_shape="gaussian",
             win_step_um=100.0,
-            win_sigma_um=200.0,
+            win_scale_um=200.0,
+            win_margin_um=None,
             histogram_depth_smooth_um=5.0,
             histogram_time_smooth_s=None,
             pairwise_displacement_method="conv",
@@ -149,7 +145,7 @@ motion_options_preset = {
         ),
         "estimate_motion_kwargs": dict(
             method="decentralized",
-            bin_duration_s=10.0,
+            bin_s=10.0,
             rigid=True,
         ),
         "interpolate_motion_kwargs": dict(
@@ -179,11 +175,11 @@ motion_options_preset = {
         ),
         "estimate_motion_kwargs": dict(
             method="iterative_template",
-            bin_duration_s=2.0,
+            bin_s=2.0,
             rigid=False,
             win_step_um=50.0,
-            win_sigma_um=150.0,
-            margin_um=0,
+            win_scale_um=150.0,
+            hist_margin_um=0,
             win_shape="rect",
         ),
         "interpolate_motion_kwargs": dict(
@@ -205,6 +201,7 @@ def correct_motion(
     recording,
     preset="nonrigid_accurate",
     folder=None,
+    output_motion=False,
     output_motion_info=False,
     overwrite=False,
     detect_kwargs={},
@@ -241,8 +238,8 @@ def correct_motion(
       * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks`
       * :py:func:`~spikeinterface.sortingcomponents.peak_selection.select_peaks`
       * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks`
-      * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion`
-      * :py:func:`~spikeinterface.sortingcomponents.motion_interpolation.interpolate_motion`
+      * :py:func:`~spikeinterface.sortingcomponents.motion.motion.estimate_motion`
+      * :py:func:`~spikeinterface.sortingcomponents.motion.motion.interpolate_motion`
 
 
     Possible presets : {}
@@ -255,6 +252,8 @@ def correct_motion(
         The preset name
     folder : Path str or None, default: None
         If not None then intermediate motion info are saved into a folder
+    output_motion : bool, default: False
+        It True, the function returns a `motion` object.
     output_motion_info : bool, default: False
         If True, then the function returns a `motion_info` dictionary that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
@@ -279,15 +278,17 @@ def correct_motion(
     -------
     recording_corrected : Recording
         The motion corrected recording
+    motion : Motion
+        Optional output if `output_motion=True`.
     motion_info : dict
-        Optional output if `output_motion_info=True`. The key "motion" holds the Motion object.
+        Optional output if `output_motion_info=True`. This dict contains several variable for
+        for plotting. See `plot_motion_info()`
     """
     # local import are important because "sortingcomponents" is not important by default
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks, localize_peak_methods
-    from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-    from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+    from spikeinterface.sortingcomponents.motion import estimate_motion, InterpolateMotionRecording
     from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
 
     # get preset params and update if necessary
@@ -395,10 +396,15 @@ def correct_motion(
     if folder is not None:
         save_motion_info(motion_info, folder, overwrite=overwrite)
 
-    if output_motion_info:
-        return recording_corrected, motion_info
-    else:
+    if not output_motion and not output_motion_info:
         return recording_corrected
+
+    out = (recording_corrected,)
+    if output_motion:
+        out += (motion,)
+    if output_motion_info:
+        out += (motion_info,)
+    return out
 
 
 _doc_presets = "\n"
@@ -431,7 +437,7 @@ def save_motion_info(motion_info, folder, overwrite=False):
 
 
 def load_motion_info(folder):
-    from spikeinterface.sortingcomponents.motion_utils import Motion
+    from spikeinterface.sortingcomponents.motion import Motion
 
     folder = Path(folder)
 

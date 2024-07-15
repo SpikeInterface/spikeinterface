@@ -32,7 +32,7 @@ import spikeinterface.comparison as sc
 import spikeinterface.generation as sgen
 import spikeinterface.widgets as sw
 
-from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
+from spikeinterface.sortingcomponents.motion import estimate_motion
 
 import numpy as np
 import matplotlib.pyplot as plt
