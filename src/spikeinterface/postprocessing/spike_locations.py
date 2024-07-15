@@ -92,6 +92,19 @@ class ComputeSpikeLocations(AnalyzerExtension):
         new_spike_locations = self.data["spike_locations"][spike_mask]
         return dict(spike_locations=new_spike_locations)
 
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    ):
+
+        if keep_mask is None:
+            new_spike_locations = self.data["spike_locations"].copy()
+        else:
+            new_spike_locations = self.data["spike_locations"][keep_mask]
+
+        ### In theory here, we should recompute the locations since the peak positions
+        ### in a merged could be different. Should be discussed
+        return dict(spike_locations=new_spike_locations)
+
     def _get_pipeline_nodes(self):
         from spikeinterface.sortingcomponents.peak_localization import get_localization_pipeline_nodes
 

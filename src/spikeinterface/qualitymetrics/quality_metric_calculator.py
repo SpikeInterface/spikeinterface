@@ -86,7 +86,25 @@ class ComputeQualityMetrics(AnalyzerExtension):
         new_data = dict(metrics=new_metrics)
         return new_data
 
-    def _run(self, verbose=False, **job_kwargs):
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    ):
+        import pandas as pd
+
+        old_metrics = self.data["metrics"]
+
+        all_unit_ids = new_sorting_analyzer.unit_ids
+        not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
+
+        metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
+
+        metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
+        metrics.loc[new_unit_ids, :] = self._compute_metrics(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
+
+        new_data = dict(metrics=metrics)
+        return new_data
+
+    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, **job_kwargs):
         """
         Compute quality metrics.
         """
@@ -100,15 +118,19 @@ class ComputeQualityMetrics(AnalyzerExtension):
         n_jobs = job_kwargs["n_jobs"]
         progress_bar = job_kwargs["progress_bar"]
 
-        sorting = self.sorting_analyzer.sorting
-        unit_ids = sorting.unit_ids
-        non_empty_unit_ids = sorting.get_non_empty_unit_ids()
-        empty_unit_ids = unit_ids[~np.isin(unit_ids, non_empty_unit_ids)]
-        if len(empty_unit_ids) > 0:
-            warnings.warn(
-                f"Units {empty_unit_ids} are empty. Quality metrcs will be set to NaN "
-                f"for these units.\n To remove empty units, use `sorting.remove_empty_units()`."
-            )
+        if unit_ids is None:
+            sorting = sorting_analyzer.sorting
+            unit_ids = sorting.unit_ids
+            non_empty_unit_ids = sorting.get_non_empty_unit_ids()
+            empty_unit_ids = unit_ids[~np.isin(unit_ids, non_empty_unit_ids)]
+            if len(empty_unit_ids) > 0:
+                warnings.warn(
+                    f"Units {empty_unit_ids} are empty. Quality metrics will be set to NaN "
+                    f"for these units.\n To remove empty units, use `sorting.remove_empty_units()`."
+                )
+        else:
+            non_empty_unit_ids = unit_ids
+            empty_unit_ids = []
 
         import pandas as pd
 
@@ -126,7 +148,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
             func = _misc_metric_name_to_func[metric_name]
 
             params = qm_params[metric_name] if metric_name in qm_params else {}
-            res = func(self.sorting_analyzer, unit_ids=non_empty_unit_ids, **params)
+            res = func(sorting_analyzer, unit_ids=non_empty_unit_ids, **params)
             # QM with uninstall dependencies might return None
             if res is not None:
                 if isinstance(res, dict):
@@ -141,10 +163,10 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # metrics based on PCs
         pc_metric_names = [k for k in metric_names if k in _possible_pc_metric_names]
         if len(pc_metric_names) > 0 and not self.params["skip_pc_metrics"]:
-            if not self.sorting_analyzer.has_extension("principal_components"):
+            if not sorting_analyzer.has_extension("principal_components"):
                 raise ValueError("waveform_principal_component must be provied")
             pc_metrics = compute_pc_metrics(
-                self.sorting_analyzer,
+                sorting_analyzer,
                 unit_ids=non_empty_unit_ids,
                 metric_names=pc_metric_names,
                 # sparsity=sparsity,
@@ -160,7 +182,12 @@ class ComputeQualityMetrics(AnalyzerExtension):
         if len(empty_unit_ids) > 0:
             metrics.loc[empty_unit_ids] = np.nan
 
-        self.data["metrics"] = metrics
+        return metrics
+
+    def _run(self, verbose=False, **job_kwargs):
+        self.data["metrics"] = self._compute_metrics(
+            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, **job_kwargs
+        )
 
     def _get_data(self):
         return self.data["metrics"]
