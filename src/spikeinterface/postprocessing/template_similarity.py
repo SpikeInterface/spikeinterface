@@ -46,11 +46,11 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
-    
+
     def _handle_backward_compatibility_on_load(self):
         if "max_lag_ms" not in self.params:
             # make compatible analyzer created between february 24 and july 24
-            self.params["max_lag_ms"] = 0.
+            self.params["max_lag_ms"] = 0.0
             self.params["support"] = "union"
 
     def _set_params(self, method="cosine", max_lag_ms=0, support="union"):

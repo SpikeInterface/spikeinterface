@@ -1742,7 +1742,6 @@ class AnalyzerExtension:
         # must be implemented in subclass only if need_backward_compatibility_on_load=True
         raise NotImplementedError
 
-
     @classmethod
     def function_factory(cls):
         # make equivalent
