@@ -109,7 +109,7 @@ class HerdingspikesSorter(BaseSorter):
 
     @classmethod
     def _check_apply_filter_in_params(cls, params):
-        return params["filter"]
+        return False
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
