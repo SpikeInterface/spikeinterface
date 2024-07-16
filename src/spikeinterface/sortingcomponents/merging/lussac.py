@@ -9,6 +9,7 @@ from spikeinterface.curation.auto_merge import get_potential_auto_merge
 from spikeinterface.curation.curation_tools import resolve_merging_graph
 from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 
+
 class LussacMerging(BaseMergingEngine):
     """
     Meta merging inspired from the Lussac metric
