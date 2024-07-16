@@ -128,51 +128,22 @@ def get_potential_auto_merge(
         Used to compute the refractory period violations aka "contamination".
     sigma_smooth_ms : float, default: 0.6
         Parameters to smooth the correlogram estimation.
-<<<<<<< HEAD
-    contamination_threshold : float, default: 0.2
-        Threshold for not taking in account a unit when it is too contaminated.
-    adaptative_window_threshold : : float, default: 0.5
-        Parameter to detect the window size in correlogram estimation.
-    censor_correlograms_ms : float, default: 0.15
-        The period to censor on the auto and cross-correlograms.
-    num_channels : int, default: 5
-        Number of channel to use for template similarity computation.
-    num_shift : int, default: 5
-        Number of shifts in samles to be explored for template similarity computation.
-    firing_contamination_balance : float, default: 2.5
-        Parameter to control the balance between firing rate and contamination in computing unit "quality score".
-    presence_distance_thresh : float, default: 100
-        Parameter to control how present two units should be simultaneously.
-=======
     adaptative_window_thresh : float, default: 0.5
         Parameter to detect the window size in correlogram estimation.
     censor_correlograms_ms : float, default: 0.15
         The period to censor on the auto and cross-correlograms.
     firing_contamination_balance : float, default: 2.5
         Parameter to control the balance between firing rate and contamination in computing unit "quality score".
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
     k_nn : int, default 5
         The number of neighbors to consider for every spike in the recording.
     knn_kwargs : dict, default None
         The dict of extra params to be passed to knn.
-<<<<<<< HEAD
-    presence_distance_kwargs : dict, default None
-        The dict of extra params to be passed to presence_distance.
-    extra_outputs : bool, default: False
-        If True, an additional dictionary (`outs`) with processed data is returned.
-    steps : None or list of str, default: None
-        which steps to run (gives flexibility to running just some steps)
-        If None all steps are done (except presence_distance).
-        Pontential steps : "min_spikes", "remove_contaminated", "unit_positions", "correlogram",
-        "template_similarity", "presence_distance", "cross_contamination", "knn", "check_increase_score"
-=======
     extra_outputs : bool, default: False
         If True, an additional dictionary (`outs`) with processed data is returned.
     steps : None or list of str, default: None
         Which steps to run, if no preset is used.
         Pontential steps : "num_spikes", "snr", "remove_contaminated", "unit_locations", "correlogram",
         "template_similarity", "presence_distance", "cross_contamination", "knn", "quality_score"
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
         Please check steps explanations above!
 
     Returns
@@ -201,80 +172,25 @@ def get_potential_auto_merge(
     #    * to far away one from each other
 
     all_steps = [
-<<<<<<< HEAD
-        "min_spikes",
-        "min_snr",
-        "remove_contaminated",
-        "unit_positions",
-=======
         "num_spikes",
         "snr",
         "remove_contaminated",
         "unit_locations",
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
         "correlogram",
         "template_similarity",
         "presence_distance",
         "knn",
         "cross_contamination",
-<<<<<<< HEAD
-        "check_increase_score",
-    ]
-
-=======
         "quality_score",
     ]
 
     if preset is not None and preset not in _possible_presets:
         raise ValueError(f"preset must be one of {_possible_presets}")
 
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
     if steps is None:
         if preset is None:
             if steps is None:
                 raise ValueError("You need to specify a preset or steps for the auto-merge function")
-<<<<<<< HEAD
-        elif preset == "default":
-            steps = [
-                "min_spikes",
-                "remove_contaminated",
-                "unit_positions",
-                "template_similarity",
-                "correlogram",
-                "check_increase_score",
-            ]
-        elif preset == "temporal_splits":
-            steps = [
-                "min_spikes",
-                "remove_contaminated",
-                "unit_positions",
-                "template_similarity",
-                "presence_distance",
-                "check_increase_score",
-            ]
-        elif preset == "lussac":
-            steps = [
-                "min_spikes",
-                "remove_contaminated",
-                "unit_positions",
-                "template_similarity",
-                "cross_contamination",
-                "check_increase_score",
-            ]
-        elif preset == "knn":
-            if not sorting_analyzer.has_extension("spike_locations"):
-                raise ValueError("knn preset requires spike_locations extension")
-            if not sorting_analyzer.has_extension("spike_amplitudes"):
-                raise ValueError("knn preset requires spike_amplitudes extension")
-            steps = [
-                "min_spikes",
-                "min_snr",
-                "remove_contaminated",
-                "unit_positions",
-                "knn",
-                "check_increase_score",
-            ]
-=======
         elif preset == "similarity_correlograms":
             steps = [
                 "num_spikes",
@@ -317,7 +233,6 @@ def get_potential_auto_merge(
             for ext in _required_extensions[step]:
                 if not sorting_analyzer.has_extension(ext):
                     raise ValueError(f"{step} requires {ext} extension")
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
 
     n = unit_ids.size
     pair_mask = np.triu(np.arange(n)) > 0
@@ -330,11 +245,7 @@ def get_potential_auto_merge(
         # STEP : remove units with too few spikes
         if step == "min_spikes":
             num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
-<<<<<<< HEAD
-            to_remove = num_spikes < minimum_spikes
-=======
             to_remove = num_spikes < min_spikes
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
             pair_mask[to_remove, :] = False
             pair_mask[:, to_remove] = False
 
@@ -347,11 +258,7 @@ def get_potential_auto_merge(
                 qm_ext = sorting_analyzer.get_extension("quality_metrics")
 
             snrs = qm_ext.get_data()["snr"].values
-<<<<<<< HEAD
-            to_remove = snrs < minimum_snr
-=======
             to_remove = snrs < min_snr
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
             pair_mask[to_remove, :] = False
             pair_mask[:, to_remove] = False
 
@@ -362,51 +269,23 @@ def get_potential_auto_merge(
             )
             nb_violations = np.array(list(nb_violations.values()))
             contaminations = np.array(list(contaminations.values()))
-<<<<<<< HEAD
-            to_remove = contaminations > contamination_threshold
-=======
             to_remove = contaminations > contamination_thresh
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
             pair_mask[to_remove, :] = False
             pair_mask[:, to_remove] = False
 
         # STEP : unit positions are estimated roughly with channel
-<<<<<<< HEAD
-        elif step == "unit_positions" in steps:
-            positions_ext = sorting_analyzer.get_extension("unit_locations")
-            if positions_ext is not None:
-                unit_locations = positions_ext.get_data()[:, :2]
-            else:
-                chan_loc = sorting_analyzer.get_channel_locations()
-                unit_max_chan = get_template_extremum_channel(
-                    sorting_analyzer, peak_sign=peak_sign, mode="extremum", outputs="index"
-                )
-                unit_max_chan = list(unit_max_chan.values())
-                unit_locations = chan_loc[unit_max_chan, :]
-
-            unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
-            pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
-=======
         elif step == "unit_locations" in steps:
             location_ext = sorting_analyzer.get_extension("unit_locations")
             unit_locations = location_ext.get_data()[:, :2]
 
             unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
             pair_mask = pair_mask & (unit_distances <= max_distance_um)
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
             outs["unit_distances"] = unit_distances
 
         # STEP : potential auto merge by correlogram
         elif step == "correlogram" in steps:
             correlograms_ext = sorting_analyzer.get_extension("correlograms")
-<<<<<<< HEAD
-            if correlograms_ext is not None:
-                correlograms, bins = correlograms_ext.get_data()
-            else:
-                correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba")
-=======
             correlograms, bins = correlograms_ext.get_data()
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
             mask = (bins[:-1] >= -censor_correlograms_ms) & (bins[:-1] < censor_correlograms_ms)
             correlograms[:, :, mask] = 0
             correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
@@ -414,11 +293,7 @@ def get_potential_auto_merge(
             win_sizes = np.zeros(n, dtype=int)
             for unit_ind in range(n):
                 auto_corr = correlograms_smoothed[unit_ind, unit_ind, :]
-<<<<<<< HEAD
-                thresh = np.max(auto_corr) * adaptative_window_threshold
-=======
                 thresh = np.max(auto_corr) * adaptative_window_thresh
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
                 win_size = get_unit_adaptive_window(auto_corr, thresh)
                 win_sizes[unit_ind] = win_size
             correlogram_diff = compute_correlogram_diff(
@@ -438,49 +313,6 @@ def get_potential_auto_merge(
         # STEP : check if potential merge with CC also have template similarity
         elif step == "template_similarity" in steps:
             template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
-<<<<<<< HEAD
-            if template_similarity_ext is not None:
-                templates_similarity = template_similarity_ext.get_data()
-                templates_diff = 1 - templates_similarity
-
-            else:
-                templates_ext = sorting_analyzer.get_extension("templates")
-                assert (
-                    templates_ext is not None
-                ), "auto_merge with template_similarity requires a SortingAnalyzer with extension templates"
-                templates_array = templates_ext.get_data(outputs="numpy")
-
-                templates_diff = compute_templates_diff(
-                    sorting,
-                    templates_array,
-                    num_channels=num_channels,
-                    num_shift=num_shift,
-                    pair_mask=pair_mask,
-                    template_metric=template_metric,
-                    sparsity=sorting_analyzer.sparsity,
-                )
-            pair_mask = pair_mask & (templates_diff < template_diff_thresh)
-            outs["templates_diff"] = templates_diff
-
-        # STEP : check the vicinity of the spikes
-        elif step == "knn" in steps:
-            if knn_kwargs is None:
-                knn_kwargs = dict()
-            pair_mask = get_pairs_via_nntree(sorting_analyzer, k_nn, pair_mask, **knn_kwargs)
-
-        # STEP : check how the rates overlap in times
-        elif step == "presence_distance" in steps:
-            presence_distance_kwargs = presence_distance_kwargs or dict()
-            num_samples = [
-                sorting_analyzer.get_num_samples(segment_index) for segment_index in range(sorting.get_num_segments())
-            ]
-            presence_distances = compute_presence_distance(
-                sorting, pair_mask, num_samples=num_samples, **presence_distance_kwargs
-            )
-            pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
-            outs["presence_distances"] = presence_distances
-
-=======
             templates_similarity = template_similarity_ext.get_data()
             templates_diff = 1 - templates_similarity
             pair_mask = pair_mask & (templates_diff < template_diff_thresh)
@@ -504,26 +336,17 @@ def get_potential_auto_merge(
             pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
             outs["presence_distances"] = presence_distances
 
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
         # STEP : check if the cross contamination is significant
         elif step == "cross_contamination" in steps:
             refractory = (censored_period_ms, refractory_period_ms)
             CC, p_values = compute_cross_contaminations(
-<<<<<<< HEAD
-                sorting_analyzer, pair_mask, CC_threshold, refractory, contaminations
-=======
                 sorting_analyzer, pair_mask, cc_thresh, refractory, contaminations
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
             )
             pair_mask = pair_mask & (p_values > p_value)
             outs["cross_contaminations"] = CC, p_values
 
         # STEP : validate the potential merges with CC increase the contamination quality metrics
-<<<<<<< HEAD
-        elif step == "check_increase_score" in steps:
-=======
         elif step == "quality_score" in steps:
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
             pair_mask, pairs_decreased_score = check_improve_contaminations_score(
                 sorting_analyzer,
                 pair_mask,
@@ -730,66 +553,7 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     return win_size
 
 
-<<<<<<< HEAD
-def compute_cross_contaminations(analyzer, pair_mask, CC_threshold, refractory_period, contaminations=None):
-    """
-    Looks at a sorting analyzer, and returns statistical tests for cross_contaminations
-
-    Parameters
-    ----------
-    analyzer : SortingAnalyzer
-        The analyzer to look at
-    CC_treshold : float, default: 0.1
-        The threshold on the cross-contamination.
-        Any pair above this threshold will not be considered.
-    refractory_period : array/list/tuple of 2 floats
-        (censored_period_ms, refractory_period_ms)
-    contaminations : contaminations of the units, if already precomputed
-
-    """
-    from spikeinterface.sortingcomponents.merging.lussac import estimate_cross_contamination
-
-    sorting = analyzer.sorting
-    unit_ids = sorting.unit_ids
-    n = len(unit_ids)
-    sf = analyzer.sampling_frequency
-    n_frames = analyzer.get_total_samples()
-
-    if pair_mask is None:
-        pair_mask = np.ones((n, n), dtype="bool")
-
-    CC = np.zeros((n, n), dtype=np.float32)
-    p_values = np.zeros((n, n), dtype=np.float32)
-
-    for unit_ind1 in range(len(unit_ids)):
-
-        unit_id1 = unit_ids[unit_ind1]
-        spike_train1 = np.array(sorting.get_unit_spike_train(unit_id1))
-
-        for unit_ind2 in range(unit_ind1 + 1, len(unit_ids)):
-            if not pair_mask[unit_ind1, unit_ind2]:
-                continue
-
-            unit_id2 = unit_ids[unit_ind2]
-            spike_train2 = np.array(sorting.get_unit_spike_train(unit_id2))
-            # Compuyting the cross-contamination difference
-            if contaminations is not None:
-                C1 = contaminations[unit_ind1]
-            else:
-                C1 = None
-            CC[unit_ind1, unit_ind2], p_values[unit_ind1, unit_ind2] = estimate_cross_contamination(
-                spike_train1, spike_train2, sf, n_frames, refractory_period, limit=CC_threshold, C1=C1
-            )
-
-    return CC, p_values
-
-
-def compute_templates_diff(
-    sorting, templates_array, num_channels=5, num_shift=5, pair_mask=None, template_metric="l1", sparsity=None
-):
-=======
 def compute_cross_contaminations(analyzer, pair_mask, cc_thresh, refractory_period, contaminations=None):
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
     """
     Looks at a sorting analyzer, and returns statistical tests for cross_contaminations
 
@@ -817,19 +581,12 @@ def compute_cross_contaminations(analyzer, pair_mask, cc_thresh, refractory_peri
     CC = np.zeros((n, n), dtype=np.float32)
     p_values = np.zeros((n, n), dtype=np.float32)
 
-<<<<<<< HEAD
-    templates_diff = np.full((n, n), np.nan, dtype="float64")
-    all_shifts = range(-num_shift, num_shift + 1)
-    for unit_ind1 in range(n):
-        for unit_ind2 in range(unit_ind1 + 1, n):
-=======
     for unit_ind1 in range(len(unit_ids)):
 
         unit_id1 = unit_ids[unit_ind1]
         spike_train1 = np.array(sorting.get_unit_spike_train(unit_id1))
 
         for unit_ind2 in range(unit_ind1 + 1, len(unit_ids)):
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
             if not pair_mask[unit_ind1, unit_ind2]:
                 continue
 
@@ -839,45 +596,12 @@ def compute_cross_contaminations(analyzer, pair_mask, cc_thresh, refractory_peri
             if contaminations is not None:
                 C1 = contaminations[unit_ind1]
             else:
-<<<<<<< HEAD
-                chan_inds = np.flatnonzero(sparsity_mask[unit_ind1] * sparsity_mask[unit_ind2])
-
-            if len(chan_inds) > 0:
-                template1 = template1[:, chan_inds]
-                template2 = template2[:, chan_inds]
-
-                num_samples = template1.shape[0]
-                if template_metric == "l1":
-                    norm = np.sum(np.abs(template1)) + np.sum(np.abs(template2))
-                elif template_metric == "l2":
-                    norm = np.sum(template1**2) + np.sum(template2**2)
-                elif template_metric == "cosine":
-                    norm = np.linalg.norm(template1) * np.linalg.norm(template2)
-                all_shift_diff = []
-                for shift in all_shifts:
-                    temp1 = template1[num_shift : num_samples - num_shift, :]
-                    temp2 = template2[num_shift + shift : num_samples - num_shift + shift, :]
-                    if template_metric == "l1":
-                        d = np.sum(np.abs(temp1 - temp2)) / norm
-                    elif template_metric == "l2":
-                        d = np.linalg.norm(temp1 - temp2) / norm
-                    elif template_metric == "cosine":
-                        d = 1 - np.sum(temp1 * temp2) / norm
-                    all_shift_diff.append(d)
-            else:
-                all_shift_diff = [1] * len(all_shifts)
-
-            templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
-
-    return templates_diff
-=======
                 C1 = None
             CC[unit_ind1, unit_ind2], p_values[unit_ind1, unit_ind2] = estimate_cross_contamination(
                 spike_train1, spike_train2, sf, n_frames, refractory_period, limit=cc_thresh, C1=C1
             )
 
     return CC, p_values
->>>>>>> 7562b247bd5d3dc2c6e7c8723ab104beefbef1ab
 
 
 def check_improve_contaminations_score(
