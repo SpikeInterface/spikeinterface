@@ -194,10 +194,15 @@ def curation_label_to_dataframe(curation_dict):
 
 def apply_curation_labels(sorting, curation_dict):
     labels = curation_label_to_vectors(curation_dict)
-    unit_ids = np.asarray(curation_dict["unit_ids"])
-    mask = np.isin(unit_ids, sorting.unit_ids)
+    # unit_ids = np.asarray(curation_dict["unit_ids"])
+    # mask = np.isin(unit_ids, sorting.unit_ids)
     for key, values in labels.items():
-        sorting.set_property(key, values[mask], unit_ids[mask])
+        all_values = np.zeros(sorting.unit_ids.size, dtype=values.dtype)
+        for unit_ind, unit_id in enumerate(sorting.unit_ids):
+            if unit_id in curation_dict["unit_ids"]:
+                ind = curation_dict["unit_ids"].index(unit_id)
+                all_values[unit_ind] = values[ind]
+        sorting.set_property(key, all_values)
 
 
 def apply_curation(sorting_or_analyzer, curation_dict, censor_ms=None, new_id_strategy="append",
