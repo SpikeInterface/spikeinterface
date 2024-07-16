@@ -4,11 +4,44 @@ import numpy as np
 from pathlib import Path
 
 from .curationsorting import CurationSorting
+from .curation_format import convert_from_sortingview_curation_format_v0, apply_curation
 
 
-# @alessio
-# TODO later : this should be reimplemented using the new curation format
-def apply_sortingview_curation(
+# TODO discussion on this
+def apply_sortingview_curation(sorting, uri_or_json):
+ 
+    # download
+    if Path(uri_or_json).suffix == ".json" and not str(uri_or_json).startswith("gh://"):
+        with open(uri_or_json, "r") as f:
+            curation_dict = json.load(f)
+    else:
+        try:
+            import kachery_cloud as kcl
+        except ImportError:
+            raise ImportError(
+                "To apply a SortingView manual curation, you need to have sortingview installed: "
+                ">>> pip install sortingview"
+            )
+
+        try:
+            curation_dict = kcl.load_json(uri=uri_or_json)
+        except:
+            raise Exception(f"Could not retrieve curation from SortingView uri: {uri_or_json}")
+
+    # convert to new format
+    if "format_version" not in curation_dict:
+        curation_dict = convert_from_sortingview_curation_format_v0(curation_dict)
+
+    # apply
+    sorting_curated = apply_curation(sorting, curation_dict)
+    
+    return sorting_curated
+    
+
+
+
+# TODO discussion do we keep this ???
+def apply_sortingview_curation_legacy(
     sorting, uri_or_json, exclude_labels=None, include_labels=None, skip_merge=False, verbose=False
 ):
     """
