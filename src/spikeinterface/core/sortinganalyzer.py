@@ -1699,6 +1699,7 @@ class AnalyzerExtension:
     use_nodepipeline = False
     nodepipeline_variables = None
     need_job_kwargs = False
+    need_backward_compatibility_on_load = False
 
     def __init__(self, sorting_analyzer):
         self._sorting_analyzer = weakref.ref(sorting_analyzer)
@@ -1736,6 +1737,11 @@ class AnalyzerExtension:
     def _get_data(self):
         # must be implemented in subclass
         raise NotImplementedError
+
+    def _handle_backward_compatibility_on_load(self):
+        # must be implemented in subclass only if need_backward_compatibility_on_load=True
+        raise NotImplementedError
+
 
     @classmethod
     def function_factory(cls):
@@ -1814,6 +1820,9 @@ class AnalyzerExtension:
         ext = cls(sorting_analyzer)
         ext.load_params()
         ext.load_data()
+        if cls.need_backward_compatibility_on_load:
+            self._handle_backward_compatibility_on_load()
+
         return ext
 
     def load_params(self):
