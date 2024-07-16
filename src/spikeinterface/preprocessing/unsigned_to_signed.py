@@ -12,15 +12,13 @@ class UnsignedToSignedRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: Recording
+    recording : Recording
         The recording to be signed.
-    bit_depth: int or None, default: None
+    bit_depth : int or None, default: None
         In case the bit depth of the ADC does not match that of the data type,
         it specifies the bit depth of the ADC to estimate the offset.
         For example, a `bit_depth` of 12 will correct for an offset of `2**11`
     """
-
-    name = "unsigned_to_signed"
 
     def __init__(
         self,

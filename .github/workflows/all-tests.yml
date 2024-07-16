@@ -1,0 +1,227 @@
+name: Complete tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 0"  # Weekly on Sunday at noon UTC
+  pull_request:
+    types: [synchronize, opened, reopened]
+    branches:
+      - main
+
+env:
+  KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
+  KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+
+concurrency:  # Cancel previous workflows on the same pull request
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run:
+    name: ${{ matrix.os }} Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]  # Lower and higher versions we support
+        os: [macos-13, windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+
+      - name: List all changed files
+        shell: bash
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file was changed"
+          done
+
+      - name: Set testing environment  # This decides which tests are run and whether to install especial dependencies
+        shell: bash
+        run: |
+          changed_files="${{ steps.changed-files.outputs.all_changed_files }}"
+          python .github/determine_testing_environment.py $changed_files
+
+      - name: Display testing environment
+        shell: bash
+        run: |
+          echo "RUN_EXTRACTORS_TESTS=${RUN_EXTRACTORS_TESTS}"
+          echo "RUN_PREPROCESSING_TESTS=${RUN_PREPROCESSING_TESTS}"
+          echo "RUN_POSTPROCESSING_TESTS=${RUN_POSTPROCESSING_TESTS}"
+          echo "RUN_QUALITYMETRICS_TESTS=${RUN_QUALITYMETRICS_TESTS}"
+          echo "RUN_CURATION_TESTS=${RUN_CURATION_TESTS}"
+          echo "RUN_SORTINGCOMPONENTS_TESTS=${RUN_SORTINGCOMPONENTS_TESTS}"
+          echo "RUN_GENERATION_TESTS=${RUN_GENERATION_TESTS}"
+          echo "RUN_COMPARISON_TESTS=${RUN_COMPARISON_TESTS}"
+          echo "RUN_WIDGETS_TESTS=${RUN_WIDGETS_TESTS}"
+          echo "RUN_EXPORTERS_TESTS=${RUN_EXPORTERS_TESTS}"
+          echo "RUN_SORTERS_TESTS=${RUN_SORTERS_TESTS}"
+          echo "RUN_INTERNAL_SORTERS_TESTS=${RUN_INTERNAL_SORTERS_TESTS}"
+          echo "INSTALL_PLEXON_DEPENDENCIES=${INSTALL_PLEXON_DEPENDENCIES}"
+          echo "RUN_STREAMING_EXTRACTORS_TESTS=${RUN_STREAMING_EXTRACTORS_TESTS}"
+
+      - name: Install packages
+        run: |
+          pip install -e .[test_core]
+        shell: bash
+
+      - name: Test core
+        run: pytest -m "core"
+        shell: bash
+
+      - name: Install Dependencies for Timing Display
+        run: |
+          pip install tabulate
+          pip install pandas
+        shell: bash
+
+      - name: Get current hash (SHA) of the ephy_testing_data repo
+        shell: bash
+        id: repo_hash
+        run: echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+
+      - name: Cache datasets
+        if: env.RUN_EXTRACTORS_TESTS == 'true'
+        id: cache-datasets
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/spikeinterface_datasets
+          key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
+          restore-keys: ${{ runner.os }}-datasets
+
+      - name: Install git-annex
+        shell: bash
+        if: env.RUN_EXTRACTORS_TESTS == 'true'
+        run: |
+          pip install datalad-installer
+          if [ ${{ runner.os }} = 'Linux' ]; then
+            wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
+            mkdir /home/runner/work/installation
+            mv git-annex-standalone-amd64.tar.gz /home/runner/work/installation/
+            workdir=$(pwd)
+            cd /home/runner/work/installation
+            tar xvzf git-annex-standalone-amd64.tar.gz
+            echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
+            cd $workdir
+          elif [ ${{ runner.os }} = 'macOS' ]; then
+            datalad-installer --sudo ok git-annex --method brew
+          elif [ ${{ runner.os }} = 'Windows' ]; then
+            datalad-installer --sudo ok git-annex --method datalad/git-annex:release
+          fi
+          git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
+
+      - name : Install Plexon dependencies
+        if: env.INSTALL_PLEXON_DEPENDENCIES == 'true'
+        uses: ./.github/actions/install-wine
+
+      - name: Set execute permissions on run_tests.sh
+        shell: bash
+        run: chmod +x .github/run_tests.sh
+
+      - name: Test extractors
+        shell: bash
+        env:
+          HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
+        if: env.RUN_EXTRACTORS_TESTS == 'true'
+        run: |
+          pip install -e .[extractors,streaming_extractors,test_extractors]
+          ./.github/run_tests.sh "extractors and not streaming_extractors" --no-virtual-env
+
+      - name: Test streaming extractors
+        shell: bash
+        if: env.RUN_STREAMING_EXTRACTORS_TESTS
+        run: |
+          pip install -e .[streaming_extractors,test_extractors]
+          ./.github/run_tests.sh "streaming_extractors" --no-virtual-env
+
+      - name: Test preprocessing
+        shell: bash
+        if: env.RUN_PREPROCESSING_TESTS == 'true'
+        run: |
+          pip install -e .[preprocessing,test_preprocessing]
+          ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
+
+      - name: Install remaining testing dependencies # TODO: Remove this step once we have better modularization
+        shell: bash
+        run: |
+          pip install -e .[test]
+
+      - name: Test postprocessing
+        shell: bash
+        if: env.RUN_POSTPROCESSING_TESTS == 'true'
+        run: |
+          pip install -e .[full]
+          ./.github/run_tests.sh postprocessing --no-virtual-env
+
+      - name: Test quality metrics
+        shell: bash
+        if: env.RUN_QUALITYMETRICS_TESTS == 'true'
+        run: |
+          pip install -e .[qualitymetrics]
+          ./.github/run_tests.sh qualitymetrics --no-virtual-env
+
+      - name: Test comparison
+        shell: bash
+        if: env.RUN_COMPARISON_TESTS == 'true'
+        run: |
+          pip install -e .[full]
+          ./.github/run_tests.sh comparison --no-virtual-env
+
+      - name: Test core sorters
+        shell: bash
+        if: env.RUN_SORTERS_TESTS == 'true'
+        run: |
+          pip install -e .[full]
+          ./.github/run_tests.sh sorters --no-virtual-env
+
+      - name: Test internal sorters
+        shell: bash
+        if: env.RUN_INTERNAL_SORTERS_TESTS == 'true'
+        run: |
+          pip install -e .[full]
+          ./.github/run_tests.sh sorters_internal --no-virtual-env
+
+      - name: Test curation
+        shell: bash
+        if: env.RUN_CURATION_TESTS == 'true'
+        run: |
+          pip install -e .[full]
+          ./.github/run_tests.sh curation --no-virtual-env
+
+      - name: Test widgets
+        shell: bash
+        if: env.RUN_WIDGETS_TESTS == 'true'
+        run: |
+          pip install -e .[full]
+          ./.github/run_tests.sh widgets --no-virtual-env
+
+      - name: Test exporters
+        shell: bash
+        if: env.RUN_EXPORTERS_TESTS == 'true'
+        run: |
+          pip install -e .[full]
+          ./.github/run_tests.sh exporters --no-virtual-env
+
+      - name: Test sortingcomponents
+        shell: bash
+        if: env.RUN_SORTINGCOMPONENTS_TESTS == 'true'
+        run: |
+          pip install -e .[full]
+          ./.github/run_tests.sh sortingcomponents --no-virtual-env
+
+      - name: Test generation
+        shell: bash
+        if: env.RUN_GENERATION_TESTS == 'true'
+        run: |
+          pip install -e .[full]
+          ./.github/run_tests.sh generation --no-virtual-env

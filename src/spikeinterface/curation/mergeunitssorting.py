@@ -4,6 +4,7 @@ import numpy as np
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from copy import deepcopy
+from spikeinterface.core.sorting_tools import generate_unit_ids_for_merge_group
 
 
 class MergeUnitsSorting(BaseSorting):
@@ -12,28 +13,28 @@ class MergeUnitsSorting(BaseSorting):
 
     Parameters
     ----------
-    parent_sorting: Recording
+    sorting: BaseSorting
         The sorting object
-    units_to_merge: list/tuple of lists/tuples
+    units_to_merge : list/tuple of lists/tuples
         A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
         but it can also have more (merge multiple units at once).
-    new_unit_ids: None or list
+    new_unit_ids : None or list
         A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`
-    properties_policy: "keep" | "remove", default: "keep"
+    properties_policy : "keep" | "remove", default: "keep"
         Policy used to propagate properties. If "keep" the properties will be passed to the new units
          (if the units_to_merge have the same value). If "remove" the new units will have an empty
          value for all the properties of the new unit.
-    delta_time_ms: float or None
+    delta_time_ms : float or None
         Number of ms to consider for duplicated spikes. None won't check for duplications
 
     Returns
     -------
-    sorting: Sorting
+    sorting : Sorting
         Sorting object with the selected units merged
     """
 
-    def __init__(self, parent_sorting, units_to_merge, new_unit_ids=None, properties_policy="keep", delta_time_ms=0.4):
-        self._parent_sorting = parent_sorting
+    def __init__(self, sorting, units_to_merge, new_unit_ids=None, properties_policy="keep", delta_time_ms=0.4):
+        self._parent_sorting = sorting
 
         if not isinstance(units_to_merge[0], (list, tuple)):
             # keep backward compatibility : the previous behavior was only one merge
@@ -41,37 +42,17 @@ class MergeUnitsSorting(BaseSorting):
 
         num_merge = len(units_to_merge)
 
-        parents_unit_ids = parent_sorting.unit_ids
-        sampling_frequency = parent_sorting.get_sampling_frequency()
+        parents_unit_ids = sorting.unit_ids
+        sampling_frequency = sorting.get_sampling_frequency()
+
+        new_unit_ids = generate_unit_ids_for_merge_group(
+            sorting.unit_ids, units_to_merge, new_unit_ids=new_unit_ids, new_id_strategy="append"
+        )
 
         all_removed_ids = []
         for ids in units_to_merge:
             all_removed_ids.extend(ids)
         keep_unit_ids = [u for u in parents_unit_ids if u not in all_removed_ids]
-
-        if new_unit_ids is None:
-            dtype = parents_unit_ids.dtype
-            # select new_unit_ids greater that the max id, event greater than the numerical str ids
-            if np.issubdtype(dtype, np.character):
-                # dtype str
-                if all(p.isdigit() for p in parents_unit_ids):
-                    # All str are digit : we can generate a max
-                    m = max(int(p) for p in parents_unit_ids) + 1
-                    new_unit_ids = [str(m + i) for i in range(num_merge)]
-                else:
-                    # we cannot automatically find new names
-                    new_unit_ids = [f"merge{i}" for i in range(num_merge)]
-                    if np.any(np.isin(new_unit_ids, keep_unit_ids)):
-                        raise ValueError(
-                            "Unable to find 'new_unit_ids' because it is a string and parents "
-                            "already contain merges. Pass a list of 'new_unit_ids' as an argument."
-                        )
-            else:
-                # dtype int
-                new_unit_ids = list(max(parents_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
-        else:
-            if np.any(np.isin(new_unit_ids, keep_unit_ids)):
-                raise ValueError("'new_unit_ids' already exist in the sorting.unit_ids. Provide new ones")
 
         assert len(new_unit_ids) == num_merge, "new_unit_ids must have the same size as units_to_merge"
 
@@ -81,7 +62,7 @@ class MergeUnitsSorting(BaseSorting):
         assert properties_policy in ("keep", "remove"), "properties_policy must be " "keep" " or " "remove" ""
 
         # new units are put at the end
-        unit_ids = keep_unit_ids + new_unit_ids
+        unit_ids = keep_unit_ids + list(new_unit_ids)
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         # assert all(np.isin(keep_unit_ids, self.unit_ids)), 'new_unit_id should have a compatible format with the parent ids'
 
@@ -93,17 +74,17 @@ class MergeUnitsSorting(BaseSorting):
             sub_segment = MergeUnitsSortingSegment(parent_segment, units_to_merge, new_unit_ids, rm_dup_delta)
             self.add_sorting_segment(sub_segment)
 
-        ann_keys = parent_sorting._annotations.keys()
-        self._annotations = deepcopy({k: parent_sorting._annotations[k] for k in ann_keys})
+        ann_keys = sorting._annotations.keys()
+        self._annotations = deepcopy({k: sorting._annotations[k] for k in ann_keys})
 
         # copy properties for unchanged units, and check if units propierties are the same
-        keep_parent_inds = parent_sorting.ids_to_indices(keep_unit_ids)
+        keep_parent_inds = sorting.ids_to_indices(keep_unit_ids)
         # ~ all_removed_inds = parent_sorting.ids_to_indices(all_removed_ids)
         keep_inds = self.ids_to_indices(keep_unit_ids)
         # ~ merge_inds = self.ids_to_indices(new_unit_ids)
-        prop_keys = parent_sorting.get_property_keys()
+        prop_keys = sorting.get_property_keys()
         for key in prop_keys:
-            parent_values = parent_sorting.get_property(key)
+            parent_values = sorting.get_property(key)
 
             if properties_policy == "keep":
                 # propagate keep values
@@ -111,7 +92,7 @@ class MergeUnitsSorting(BaseSorting):
                 new_values = np.empty(shape=shape, dtype=parent_values.dtype)
                 new_values[keep_inds] = parent_values[keep_parent_inds]
                 for new_id, ids in zip(new_unit_ids, units_to_merge):
-                    removed_inds = parent_sorting.ids_to_indices(ids)
+                    removed_inds = sorting.ids_to_indices(ids)
                     merge_values = parent_values[removed_inds]
 
                     same_property_values = np.all([np.array_equal(m, merge_values[0]) for m in merge_values[1:]])
@@ -133,13 +114,13 @@ class MergeUnitsSorting(BaseSorting):
             elif properties_policy == "remove":
                 self.set_property(key, parent_values[keep_parent_inds], keep_unit_ids)
 
-        if parent_sorting.has_recording():
-            self.register_recording(parent_sorting._recording)
+        if sorting.has_recording():
+            self.register_recording(sorting._recording)
 
         # make it jsonable
         units_to_merge = [list(e) for e in units_to_merge]
         self._kwargs = dict(
-            parent_sorting=parent_sorting,
+            sorting=sorting,
             units_to_merge=units_to_merge,
             new_unit_ids=new_unit_ids,
             properties_policy=properties_policy,

@@ -23,13 +23,12 @@ def test_select_peaks():
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         chunk_size=10000,
-        verbose=1,
         progress_bar=False,
         noise_levels=noise_levels,
     )
 
     peak_locations = localize_peaks(
-        recording, peaks, method="center_of_mass", n_jobs=2, chunk_size=10000, verbose=True, progress_bar=True
+        recording, peaks, method="center_of_mass", n_jobs=2, chunk_size=10000, progress_bar=True
     )
 
     n_peaks = 100
@@ -42,6 +41,11 @@ def test_select_peaks():
     ]
     for method in select_methods:
         selected_peaks = select_peaks(peaks, method=method, **select_kwargs)
+        assert (
+            selected_peaks.size <= n_peaks
+        ), "selected_peaks is not the right size when return_indices=False, select_per_channel=False"
+
+        selected_peaks = select_peaks(peaks, recording=recording, method=method, margin=(10, 10), **select_kwargs)
         assert (
             selected_peaks.size <= n_peaks
         ), "selected_peaks is not the right size when return_indices=False, select_per_channel=False"

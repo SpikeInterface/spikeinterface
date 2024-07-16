@@ -22,21 +22,21 @@ class RemoveArtifactsRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to remove artifacts from
-    list_triggers: list of lists/arrays
+    list_triggers : list of lists/arrays
         One list per segment of int with the stimulation trigger frames
-    ms_before: float or None, default: 0.5
+    ms_before : float or None, default: 0.5
         Time interval in ms to remove before the trigger events.
         If None, then also ms_after must be None and a single sample is removed
-    ms_after: float or None, default: 3.0
+    ms_after : float or None, default: 3.0
         Time interval in ms to remove after the trigger events.
         If None, then also ms_before must be None and a single sample is removed
-    list_labels: list of lists/arrays or None
+    list_labels : list of lists/arrays or None
         One list per segment of labels with the stimulation labels for the given
         artifacts. labels should be strings, for JSON serialization.
         Required for "median" and "average" modes.
-    mode: "zeros", "linear", "cubic", "average", "median", default: "zeros"
+    mode : "zeros", "linear", "cubic", "average", "median", default: "zeros"
         Determines what artifacts are replaced by. Can be one of the following:
 
         - "zeros": Artifacts are replaced by zeros.
@@ -63,35 +63,33 @@ class RemoveArtifactsRecording(BasePreprocessor):
            continuation of the trace.
            If the trace starts or ends with an artifact, the gap is filled with
            the closest available value before or after the artifact.
-    fit_sample_spacing: float, default: 1.0
+    fit_sample_spacing : float, default: 1.0
         Determines the spacing (in ms) of reference points for the cubic spline
-        fit if mode = "cubic". Note: The actual fit samples are
+        fit if mode = "cubic". Note : The actual fit samples are
         the median of the 5 data points around the time of each sample point to
         avoid excessive influence from hyper-local fluctuations.
-    artifacts: dict or None, default: None
+    artifacts : dict or None, default: None
         If provided (when mode is "median" or "average") then it must be a dict with
         keys that are the labels of the artifacts, and values the artifacts themselves,
         on all channels (and thus bypassing ms_before and ms_after)
-    sparsity: dict or None, default: None
+    sparsity : dict or None, default: None
         If provided (when mode is "median" or "average") then it must be a dict with
         keys that are the labels of the artifacts, and values that are boolean mask of
         the channels where the artifacts should be considered (for subtraction/scaling)
-    scale_amplitude: False, default: False
+    scale_amplitude : False, default: False
         If true, then for mode "median" or "average" the amplitude of the template
         will be scaled in amplitude at each time occurence to minimize residuals
-    time_jitter: float, default: 0
+    time_jitter : float, default: 0
         If non 0, then for mode "median" or "average", a time jitter in ms
         can be allowed to minimize the residuals
-    waveforms_kwargs: None
+    waveforms_kwargs : None
         Deprecated and ignored
 
     Returns
     -------
-    removed_recording: RemoveArtifactsRecording
+    removed_recording : RemoveArtifactsRecording
         The recording extractor after artifact removal
     """
-
-    name = "remove_artifacts"
 
     def __init__(
         self,
@@ -262,11 +260,6 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         else:
             traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
-
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
 
         mask = (self.triggers >= start_frame) & (self.triggers < end_frame)
         triggers = self.triggers[mask] - start_frame

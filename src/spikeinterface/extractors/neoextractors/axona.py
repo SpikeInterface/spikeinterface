@@ -15,19 +15,25 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     """
 
-    mode = "folder"
     NeoRawIOClass = "AxonaRawIO"
-    name = "axona"
 
-    def __init__(self, file_path, all_annotations=False):
+    def __init__(self, file_path: str | Path, all_annotations: bool = False, use_names_as_ids: bool = False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        NeoBaseRecordingExtractor.__init__(self, all_annotations=all_annotations, **neo_kwargs)
+        NeoBaseRecordingExtractor.__init__(
+            self,
+            all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
+            **neo_kwargs,
+        )
         self._kwargs.update({"file_path": str(Path(file_path).absolute())})
 
     @classmethod

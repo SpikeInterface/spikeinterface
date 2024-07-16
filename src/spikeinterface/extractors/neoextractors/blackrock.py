@@ -4,7 +4,6 @@ from pathlib import Path
 from packaging import version
 from typing import Optional
 
-import neo
 
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -19,33 +18,33 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
+
     """
 
-    mode = "file"
     NeoRawIOClass = "BlackrockRawIO"
-    name = "blackrock"
 
     def __init__(
         self,
         file_path,
         stream_id=None,
         stream_name=None,
-        block_index=None,
-        all_annotations=False,
-        use_names_as_ids=False,
+        all_annotations: bool = False,
+        use_names_as_ids: bool = False,
     ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        if version.parse(neo.__version__) > version.parse("0.12.0"):
-            # do not load spike because this is slow but not released yet
-            neo_kwargs["load_nev"] = False
+        neo_kwargs["load_nev"] = False  # Avoid loading spikes release in neo 0.12.0
+
         # trick to avoid to select automatically the correct stream_id
         suffix = Path(file_path).suffix
         if ".ns" in suffix:
@@ -75,22 +74,20 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from
-    sampling_frequency: float, default: None
+    sampling_frequency : float, default: None
         The sampling frequency for the sorting extractor. When the signal data is available (.ncs) those files will be
         used to extract the frequency automatically. Otherwise, the sampling frequency needs to be specified for
         this extractor to be initialized
-    stream_id: str, default: None
+    stream_id : str, default: None
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
-    stream_name: str, default: None
+    stream_name : str, default: None
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
     """
 
-    mode = "file"
     NeoRawIOClass = "BlackrockRawIO"
     neo_returns_frames = False
-    name = "blackrock"
 
     def __init__(
         self,

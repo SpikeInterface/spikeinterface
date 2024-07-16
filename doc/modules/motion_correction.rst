@@ -151,8 +151,7 @@ The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-    from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-    from spikeinterface.sortingcomponents.motion_interpolation import interpolate_motion
+    from spikeinterface.sortingcomponents.motion import estimate_motion, interpolate_motion
 
     job_kwargs = dict(chunk_duration="1s", n_jobs=20, progress_bar=True)
     # Step 1 : activity profile
@@ -163,21 +162,19 @@ The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
                                     max_distance_um=150.0, **job_kwargs)
 
     # Step 2: motion inference
-    motion, temporal_bins, spatial_bins = estimate_motion(recording=rec,
-                                                          peaks=peaks,
-                                                          peak_locations=peak_locations,
-                                                          method="decentralized",
-                                                          direction="y",
-                                                          bin_duration_s=2.0,
-                                                          bin_um=5.0,
-                                                          win_step_um=50.0,
-                                                          win_sigma_um=150.0)
+    motion = estimate_motion(recording=rec,
+                             peaks=peaks,
+                             peak_locations=peak_locations,
+                             method="decentralized",
+                             direction="y",
+                             bin_duration_s=2.0,
+                             bin_um=5.0,
+                             win_step_um=50.0,
+                             win_sigma_um=150.0)
 
     # Step 3: motion interpolation
     # this step is lazy
     rec_corrected = interpolate_motion(recording=rec, motion=motion,
-                                       temporal_bins=temporal_bins,
-                                       spatial_bins=spatial_bins,
                                        border_mode="remove_channels",
                                        spatial_interpolation_method="kriging",
                                        sigma_um=30.)
@@ -220,8 +217,6 @@ different preprocessing chains: one for motion correction and one for spike sort
     rec_corrected2 = interpolate_motion(
                       recording=rec2,
                       motion=motion_info['motion'],
-                      temporal_bins=motion_info['temporal_bins'],
-                      spatial_bins=motion_info['spatial_bins'],
                       **motion_info['parameters']['interpolate_motion_kwargs'])
 
     sorting = run_sorter(sorter_name="montainsort5", recording=rec_corrected2)

@@ -1,23 +1,21 @@
 from __future__ import annotations
 
 import json
-import time
 from pathlib import Path
 import pickle
+import time
 
 import numpy as np
-import scipy.interpolate
 
 from spikeinterface.core import get_noise_levels
+from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
+from spikeinterface.sortingcomponents.motion import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
-
-
-import matplotlib.pyplot as plt
 from spikeinterface.widgets import plot_probe_map
+
+from spikeinterface.sortingcomponents.motion import Motion
 
 # import MEArec as mr
 
@@ -32,28 +30,33 @@ def get_gt_motion_from_unit_displacement(
     unit_displacements,
     displacement_sampling_frequency,
     unit_locations,
-    temporal_bins,
-    spatial_bins,
+    temporal_bins_s,
+    spatial_bins_um,
     direction_dim=1,
 ):
+    import scipy.interpolate
 
     unit_displacements = unit_displacements[:, :, direction_dim]
     times = np.arange(unit_displacements.shape[0]) / displacement_sampling_frequency
     f = scipy.interpolate.interp1d(times, unit_displacements, axis=0)
-    unit_displacements = f(temporal_bins)
+    unit_displacements = f(temporal_bins_s.clip(times[0], times[-1]))
 
     # spatial interpolataion of units discplacement
-    if spatial_bins.shape[0] == 1:
+    if spatial_bins_um.shape[0] == 1:
         # rigid
-        gt_motion = np.mean(unit_displacements, axis=1)[:, None]
+        gt_displacement = np.mean(unit_displacements, axis=1)[:, None]
     else:
         # non rigid
-        gt_motion = np.zeros((temporal_bins.size, spatial_bins.size))
-        for t in range(temporal_bins.shape[0]):
+        gt_displacement = np.zeros((temporal_bins_s.size, spatial_bins_um.size))
+        for t in range(temporal_bins_s.shape[0]):
             f = scipy.interpolate.interp1d(
                 unit_locations[:, direction_dim], unit_displacements[t, :], fill_value="extrapolate"
             )
-            gt_motion[t, :] = f(spatial_bins)
+            gt_displacement[t, :] = f(spatial_bins_um)
+
+    gt_motion = Motion(
+        gt_displacement, temporal_bins_s, spatial_bins_um, direction="xyz"[direction_dim], interpolation_method="linear"
+    )
 
     return gt_motion
 
@@ -95,9 +98,7 @@ class MotionEstimationBenchmark(Benchmark):
         t2 = time.perf_counter()
         peak_locations = localize_peaks(self.recording, selected_peaks, **p["localize_kwargs"], **job_kwargs)
         t3 = time.perf_counter()
-        motion, temporal_bins, spatial_bins = estimate_motion(
-            self.recording, selected_peaks, peak_locations, **p["estimate_motion_kwargs"]
-        )
+        motion = estimate_motion(self.recording, selected_peaks, peak_locations, **p["estimate_motion_kwargs"])
         t4 = time.perf_counter()
 
         step_run_times = dict(
@@ -109,43 +110,37 @@ class MotionEstimationBenchmark(Benchmark):
 
         self.result["step_run_times"] = step_run_times
         self.result["raw_motion"] = motion
-        self.result["temporal_bins"] = temporal_bins
-        self.result["spatial_bins"] = spatial_bins
 
     def compute_result(self, **result_params):
         raw_motion = self.result["raw_motion"]
-        temporal_bins = self.result["temporal_bins"]
-        spatial_bins = self.result["spatial_bins"]
 
         gt_motion = get_gt_motion_from_unit_displacement(
             self.unit_displacements,
             self.displacement_sampling_frequency,
             self.unit_locations,
-            temporal_bins,
-            spatial_bins,
+            raw_motion.temporal_bins_s[0],
+            raw_motion.spatial_bins_um,
             direction_dim=self.direction_dim,
         )
 
         # align globally gt_motion and motion to avoid offsets
         motion = raw_motion.copy()
-        motion += np.median(gt_motion - motion)
+        motion.displacement[0] += np.median(gt_motion.displacement[0] - motion.displacement[0])
         self.result["gt_motion"] = gt_motion
         self.result["motion"] = motion
 
     _run_key_saved = [
-        ("raw_motion", "npy"),
-        ("temporal_bins", "npy"),
-        ("spatial_bins", "npy"),
+        ("raw_motion", "Motion"),
         ("step_run_times", "pickle"),
     ]
     _result_key_saved = [
         (
             "gt_motion",
-            "npy",
+            "Motion",
         ),
         (
             "motion",
-            "npy",
+            "Motion",
         ),
     ]
 
@@ -166,6 +161,7 @@ class MotionEstimationStudy(BenchmarkStudy):
         self.plot_drift(case_keys=case_keys, tested_drift=False, scaling_probe=scaling_probe, figsize=figsize)
 
     def plot_drift(self, case_keys=None, gt_drift=True, tested_drift=True, scaling_probe=1.0, figsize=(8, 6)):
+        import matplotlib.pyplot as plt
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -191,20 +187,20 @@ class MotionEstimationStudy(BenchmarkStudy):
             # dirft
             ax = ax1 = fig.add_subplot(gs[2:7])
             ax1.sharey(ax0)
-            temporal_bins = bench.result["temporal_bins"]
-            spatial_bins = bench.result["spatial_bins"]
+            # temporal_bins_s = bench.result["temporal_bins_s"]
+            # spatial_bins_um = bench.result["spatial_bins_um"]
             gt_motion = bench.result["gt_motion"]
             motion = bench.result["motion"]
 
             # for i in range(self.gt_unit_positions.shape[1]):
-            #     ax.plot(temporal_bins, self.gt_unit_positions[:, i], alpha=0.5, ls="--", c="0.5")
+            #     ax.plot(temporal_bins_s, self.gt_unit_positions[:, i], alpha=0.5, ls="--", c="0.5")
 
-            for i in range(gt_motion.shape[1]):
-                depth = spatial_bins[i]
+            for i in range(gt_motion.displacement[0].shape[1]):
+                depth = motion.spatial_bins_um[i]
                 if gt_drift:
-                    ax.plot(temporal_bins, gt_motion[:, i] + depth, color="green", lw=4)
+                    ax.plot(motion.temporal_bins_s[0], gt_motion.displacement[0][:, i] + depth, color="green", lw=4)
                 if tested_drift:
-                    ax.plot(temporal_bins, motion[:, i] + depth, color="cyan", lw=2)
+                    ax.plot(motion.temporal_bins_s[0], motion.displacement[0][:, i] + depth, color="cyan", lw=2)
 
             ax.set_xlabel("time (s)")
             _simpleaxis(ax)
@@ -231,6 +227,7 @@ class MotionEstimationStudy(BenchmarkStudy):
             # ax0.set_ylim()
 
     def plot_errors(self, case_keys=None, figsize=None, lim=None):
+        import matplotlib.pyplot as plt
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -242,14 +239,14 @@ class MotionEstimationStudy(BenchmarkStudy):
 
             gt_motion = bench.result["gt_motion"]
             motion = bench.result["motion"]
-            temporal_bins = bench.result["temporal_bins"]
-            spatial_bins = bench.result["spatial_bins"]
+            # temporal_bins_s = bench.result["temporal_bins_s"]
+            # spatial_bins_um = bench.result["spatial_bins_um"]
 
             fig = plt.figure(figsize=figsize)
 
             gs = fig.add_gridspec(2, 2)
 
-            errors = gt_motion - motion
+            errors = gt_motion.displacement[0] - motion.displacement[0]
 
             channel_positions = bench.recording.get_channel_locations()
             probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
@@ -260,7 +257,12 @@ class MotionEstimationStudy(BenchmarkStudy):
                 aspect="auto",
                 interpolation="nearest",
                 origin="lower",
-                extent=(temporal_bins[0], temporal_bins[-1], spatial_bins[0], spatial_bins[-1]),
+                extent=(
+                    motion.temporal_bins_s[0][0],
+                    motion.temporal_bins_s[0][-1],
+                    motion.spatial_bins_um[0],
+                    motion.spatial_bins_um[-1],
+                ),
             )
             plt.colorbar(im, ax=ax, label="error")
             ax.set_ylabel("depth (um)")
@@ -271,7 +273,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 
             ax = fig.add_subplot(gs[1, 0])
             mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
-            ax.plot(temporal_bins, mean_error)
+            ax.plot(motion.temporal_bins_s[0], mean_error)
             ax.set_xlabel("time (s)")
             ax.set_ylabel("error")
             _simpleaxis(ax)
@@ -280,7 +282,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 
             ax = fig.add_subplot(gs[1, 1])
             depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
-            ax.plot(spatial_bins, depth_error)
+            ax.plot(motion.spatial_bins_um, depth_error)
             ax.axvline(probe_y_min, color="k", ls="--", alpha=0.5)
             ax.axvline(probe_y_max, color="k", ls="--", alpha=0.5)
             ax.set_xlabel("depth (um)")
@@ -289,12 +291,15 @@ class MotionEstimationStudy(BenchmarkStudy):
             if lim is not None:
                 ax.set_ylim(0, lim)
 
-    def plot_summary_errors(self, case_keys=None, show_legend=True, colors=None, figsize=(15, 5)):
+    def plot_summary_errors(self, case_keys=None, show_legend=True, figsize=(15, 5)):
+        import matplotlib.pyplot as plt
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
         fig, axes = plt.subplots(1, 3, figsize=figsize)
+
+        colors = self.get_colors()
 
         for count, key in enumerate(case_keys):
 
@@ -303,15 +308,17 @@ class MotionEstimationStudy(BenchmarkStudy):
 
             gt_motion = bench.result["gt_motion"]
             motion = bench.result["motion"]
-            temporal_bins = bench.result["temporal_bins"]
-            spatial_bins = bench.result["spatial_bins"]
+            # temporal_bins_s = bench.result["temporal_bins_s"]
+            # spatial_bins_um = bench.result["spatial_bins_um"]
 
-            c = colors[count] if colors is not None else None
-            errors = gt_motion - motion
+            # c = colors[count] if colors is not None else None
+            c = colors[key]
+
+            errors = gt_motion.displacement[0] - motion.displacement[0]
             mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
             depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
 
-            axes[0].plot(temporal_bins, mean_error, lw=1, label=label, color=c)
+            axes[0].plot(motion.temporal_bins_s[0], mean_error, lw=1, label=label, color=c)
             parts = axes[1].violinplot(mean_error, [count], showmeans=True)
             if c is not None:
                 for pc in parts["bodies"]:
@@ -321,7 +328,7 @@ class MotionEstimationStudy(BenchmarkStudy):
                     if k != "bodies":
                         # for line in parts[k]:
                         parts[k].set_color(c)
-            axes[2].plot(spatial_bins, depth_error, label=label, color=c)
+            axes[2].plot(motion.spatial_bins_um, depth_error, label=label, color=c)
 
         ax0 = ax = axes[0]
         ax.set_xlabel("Time [s]")
@@ -358,8 +365,8 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         "peaks",
 #         "selected_peaks",
 #         "motion",
-#         "temporal_bins",
-#         "spatial_bins",
+#         "temporal_bins_s",
+#         "spatial_bins_um",
 #         "peak_locations",
 #         "gt_motion",
 #     )
@@ -435,7 +442,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #             self.recording, self.selected_peaks, **self.localize_kwargs, **self.job_kwargs
 #         )
 #         t3 = time.perf_counter()
-#         self.motion, self.temporal_bins, self.spatial_bins = estimate_motion(
+#         self.motion, self.temporal_bins_s, self.spatial_bins_um = estimate_motion(
 #             self.recording, self.selected_peaks, self.peak_locations, **self.estimate_motion_kwargs
 #         )
 
@@ -460,7 +467,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #     def run_estimate_motion(self):
 #         # usefull to re run only the motion estimate with peak localization
 #         t3 = time.perf_counter()
-#         self.motion, self.temporal_bins, self.spatial_bins = estimate_motion(
+#         self.motion, self.temporal_bins_s, self.spatial_bins_um = estimate_motion(
 #             self.recording, self.selected_peaks, self.peak_locations, **self.estimate_motion_kwargs
 #         )
 #         t4 = time.perf_counter()
@@ -476,7 +483,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #             self.save_to_folder()
 
 #     def compute_gt_motion(self):
-#         self.gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filename, time_vector=self.temporal_bins)
+#         self.gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filename, time_vector=self.temporal_bins_s)
 
 #         template_locations = np.array(mr.load_recordings(self.mearec_filename).template_locations)
 #         assert len(template_locations.shape) == 3
@@ -486,18 +493,18 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         unit_motions = self.gt_unit_positions - unit_mid_positions
 #         # unit_positions = np.mean(self.gt_unit_positions, axis=0)
 
-#         if self.spatial_bins is None:
+#         if self.spatial_bins_um is None:
 #             self.gt_motion = np.mean(unit_motions, axis=1)[:, None]
 #             channel_positions = self.recording.get_channel_locations()
 #             probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
 #             center = (probe_y_min + probe_y_max) // 2
-#             self.spatial_bins = np.array([center])
+#             self.spatial_bins_um = np.array([center])
 #         else:
 #             # time, units
 #             self.gt_motion = np.zeros_like(self.motion)
 #             for t in range(self.gt_unit_positions.shape[0]):
 #                 f = scipy.interpolate.interp1d(unit_mid_positions, unit_motions[t, :], fill_value="extrapolate")
-#                 self.gt_motion[t, :] = f(self.spatial_bins)
+#                 self.gt_motion[t, :] = f(self.spatial_bins_um)
 
 #     def plot_true_drift(self, scaling_probe=1.5, figsize=(15, 10), axes=None):
 #         if axes is None:
@@ -531,11 +538,11 @@ class MotionEstimationStudy(BenchmarkStudy):
 #             ax = axes[1]
 
 #         for i in range(self.gt_unit_positions.shape[1]):
-#             ax.plot(self.temporal_bins, self.gt_unit_positions[:, i], alpha=0.5, ls="--", c="0.5")
+#             ax.plot(self.temporal_bins_s, self.gt_unit_positions[:, i], alpha=0.5, ls="--", c="0.5")
 
 #         for i in range(self.gt_motion.shape[1]):
-#             depth = self.spatial_bins[i]
-#             ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color="green", lw=4)
+#             depth = self.spatial_bins_um[i]
+#             ax.plot(self.temporal_bins_s, self.gt_motion[:, i] + depth, color="green", lw=4)
 
 #         # ax.set_ylim(ymin, ymax)
 #         ax.set_xlabel("time (s)")
@@ -614,15 +621,15 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         ax.axhline(probe_y_max, color="k", ls="--", alpha=0.5)
 
 #         if show_drift:
-#             if self.spatial_bins is None:
+#             if self.spatial_bins_um is None:
 #                 center = (probe_y_min + probe_y_max) // 2
-#                 ax.plot(self.temporal_bins, self.gt_motion[:, 0] + center, color="green", lw=1.5)
-#                 ax.plot(self.temporal_bins, self.motion[:, 0] + center, color="orange", lw=1.5)
+#                 ax.plot(self.temporal_bins_s, self.gt_motion[:, 0] + center, color="green", lw=1.5)
+#                 ax.plot(self.temporal_bins_s, self.motion[:, 0] + center, color="orange", lw=1.5)
 #             else:
 #                 for i in range(self.gt_motion.shape[1]):
-#                     depth = self.spatial_bins[i]
-#                     ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color="green", lw=1.5)
-#                     ax.plot(self.temporal_bins, self.motion[:, i] + depth, color="orange", lw=1.5)
+#                     depth = self.spatial_bins_um[i]
+#                     ax.plot(self.temporal_bins_s, self.gt_motion[:, i] + depth, color="green", lw=1.5)
+#                     ax.plot(self.temporal_bins_s, self.motion[:, i] + depth, color="orange", lw=1.5)
 
 #         if show_histogram:
 #             ax2 = fig.add_subplot(gs[3])
@@ -666,10 +673,9 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         peak_locations_corrected = correct_motion_on_peaks(
 #             self.selected_peaks,
 #             self.peak_locations,
-#             self.recording.sampling_frequency,
 #             self.motion,
-#             self.temporal_bins,
-#             self.spatial_bins,
+#             self.temporal_bins_s,
+#             self.spatial_bins_um,
 #             direction="y",
 #         )
 #         if axes is None:
@@ -731,18 +737,18 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         colors = plt.colormaps["jet"].resampled(n)
 #         for i in range(0, n, step):
 #             ax = axs[0]
-#             ax.plot(self.temporal_bins, self.gt_motion[:, i], lw=1.5, ls="--", color=colors(i))
+#             ax.plot(self.temporal_bins_s, self.gt_motion[:, i], lw=1.5, ls="--", color=colors(i))
 #             ax.plot(
-#                 self.temporal_bins,
+#                 self.temporal_bins_s,
 #                 self.motion[:, i],
 #                 lw=1.5,
 #                 ls="-",
 #                 color=colors(i),
-#                 label=f"{self.spatial_bins[i]:0.1f}",
+#                 label=f"{self.spatial_bins_um[i]:0.1f}",
 #             )
 
 #             ax = axs[1]
-#             ax.plot(self.temporal_bins, self.motion[:, i] - self.gt_motion[:, i], lw=1.5, ls="-", color=colors(i))
+#             ax.plot(self.temporal_bins_s, self.motion[:, i] - self.gt_motion[:, i], lw=1.5, ls="-", color=colors(i))
 
 #         ax = axs[0]
 #         ax.set_title(self.title)
@@ -771,7 +777,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #             aspect="auto",
 #             interpolation="nearest",
 #             origin="lower",
-#             extent=(self.temporal_bins[0], self.temporal_bins[-1], self.spatial_bins[0], self.spatial_bins[-1]),
+#             extent=(self.temporal_bins_s[0], self.temporal_bins_s[-1], self.spatial_bins_um[0], self.spatial_bins_um[-1]),
 #         )
 #         plt.colorbar(im, ax=ax, label="error")
 #         ax.set_ylabel("depth (um)")
@@ -782,7 +788,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 
 #         ax = fig.add_subplot(gs[1, 0])
 #         mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
-#         ax.plot(self.temporal_bins, mean_error)
+#         ax.plot(self.temporal_bins_s, mean_error)
 #         ax.set_xlabel("time (s)")
 #         ax.set_ylabel("error")
 #         _simpleaxis(ax)
@@ -791,7 +797,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 
 #         ax = fig.add_subplot(gs[1, 1])
 #         depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
-#         ax.plot(self.spatial_bins, depth_error)
+#         ax.plot(self.spatial_bins_um, depth_error)
 #         ax.axvline(probe_y_min, color="k", ls="--", alpha=0.5)
 #         ax.axvline(probe_y_max, color="k", ls="--", alpha=0.5)
 #         ax.set_xlabel("depth (um)")
@@ -813,7 +819,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
 #         depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
 
-#         axes[0].plot(benchmark.temporal_bins, mean_error, lw=1, label=benchmark.title, color=c)
+#         axes[0].plot(benchmark.temporal_bins_s, mean_error, lw=1, label=benchmark.title, color=c)
 #         parts = axes[1].violinplot(mean_error, [count], showmeans=True)
 #         if c is not None:
 #             for pc in parts["bodies"]:
@@ -823,7 +829,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #                 if k != "bodies":
 #                     # for line in parts[k]:
 #                     parts[k].set_color(c)
-#         axes[2].plot(benchmark.spatial_bins, depth_error, label=benchmark.title, color=c)
+#         axes[2].plot(benchmark.spatial_bins_um, depth_error, label=benchmark.title, color=c)
 
 #     ax0 = ax = axes[0]
 #     ax.set_xlabel("Time [s]")
@@ -872,10 +878,10 @@ class MotionEstimationStudy(BenchmarkStudy):
 #             interpolation="nearest",
 #             origin="lower",
 #             extent=(
-#                 benchmark.temporal_bins[0],
-#                 benchmark.temporal_bins[-1],
-#                 benchmark.spatial_bins[0],
-#                 benchmark.spatial_bins[-1],
+#                 benchmark.temporal_bins_s[0],
+#                 benchmark.temporal_bins_s[-1],
+#                 benchmark.spatial_bins_um[0],
+#                 benchmark.spatial_bins_um[-1],
 #             ),
 #         )
 #         fig.colorbar(im, ax=ax, label="error")
@@ -893,11 +899,11 @@ class MotionEstimationStudy(BenchmarkStudy):
 # def plot_motions_several_benchmarks(benchmarks):
 #     fig, ax = plt.subplots(figsize=(15, 5))
 
-#     ax.plot(list(benchmarks)[0].temporal_bins, list(benchmarks)[0].gt_motion[:, 0], lw=2, c="k", label="real motion")
+#     ax.plot(list(benchmarks)[0].temporal_bins_s, list(benchmarks)[0].gt_motion[:, 0], lw=2, c="k", label="real motion")
 #     for count, benchmark in enumerate(benchmarks):
-#         ax.plot(benchmark.temporal_bins, benchmark.motion.mean(1), lw=1, c=f"C{count}", label=benchmark.title)
+#         ax.plot(benchmark.temporal_bins_s, benchmark.motion.mean(1), lw=1, c=f"C{count}", label=benchmark.title)
 #         ax.fill_between(
-#             benchmark.temporal_bins,
+#             benchmark.temporal_bins_s,
 #             benchmark.motion.mean(1) - benchmark.motion.std(1),
 #             benchmark.motion.mean(1) + benchmark.motion.std(1),
 #             color=f"C{count}",

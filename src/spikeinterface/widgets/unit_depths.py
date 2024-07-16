@@ -22,7 +22,7 @@ class UnitDepthsWidget(BaseWidget):
         If given, a dictionary with unit ids as keys and colors as values
     depth_axis : int, default: 1
         The dimension of unit_locations that is depth
-    peak_sign: "neg" | "pos" | "both", default: "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         Sign of peak for amplitudes
     """
 

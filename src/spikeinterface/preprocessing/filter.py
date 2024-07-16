@@ -8,15 +8,18 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from ..core import get_chunk_with_margin
 
 
-_common_filter_docs = """**filter_kwargs: keyword arguments for parallel processing:
-
-            * filter_order: order
-                The order of the filter
-            * filter_mode: "sos or "ba"
-                "sos" is bi quadratic and more stable than ab so thery are prefered.
-            * ftype: str
-                Filter type for iirdesign ("butter" / "cheby1" / ... all possible of scipy.signal.iirdesign)
-    """
+_common_filter_docs = """**filter_kwargs : dict
+        Certain keyword arguments for `scipy.signal` filters:
+            filter_order : order
+                The order of the filter. Note as filtering is applied with scipy's
+                `filtfilt` functions (i.e. acausal, zero-phase) the effective
+                order will be double the `filter_order`.
+            filter_mode :  "sos" | "ba", default: "sos"
+                Filter form of the filter coefficients:
+                - second-order sections ("sos")
+                - numerator/denominator : ("ba")
+            ftype : str, default: "butter"
+                Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1"."""
 
 
 class FilterRecording(BasePreprocessor):
@@ -30,33 +33,35 @@ class FilterRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: Recording
+    recording : Recording
         The recording extractor to be re-referenced
-    band: float or list, default: [300.0, 6000.0]
+    band : float or list, default: [300.0, 6000.0]
         If float, cutoff frequency in Hz for "highpass" filter type
         If list. band (low, high) in Hz for "bandpass" filter type
-    btype: "bandpass" | "highpass", default: "bandpass"
+    btype : "bandpass" | "highpass", default: "bandpass"
         Type of the filter
-    margin_ms: float, default: 5.0
+    margin_ms : float, default: 5.0
         Margin in ms on border to avoid border effect
-    filter_mode: "sos" | "ba", default: "sos"
-        Filter form of the filter coefficients:
-        - second-order sections ("sos")
-        - numerator/denominator: ("ba")
-    coef: array or None, default: None
+    coeff : array | None, default: None
         Filter coefficients in the filter_mode form.
-    dtype: dtype or None, default: None
+    dtype : dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
-    {}
+    add_reflect_padding : Bool, default False
+        If True, uses a left and right margin during calculation.
+    filter_order : order
+        The order of the filter for `scipy.signal.iirfilter`
+    filter_mode :  "sos" | "ba", default: "sos"
+        Filter form of the filter coefficients for `scipy.signal.iirfilter`:
+        - second-order sections ("sos")
+        - numerator/denominator : ("ba")
+    ftype : str, default: "butter"
+        Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1".
 
     Returns
     -------
-    filter_recording: FilterRecording
+    filter_recording : FilterRecording
         The filtered recording extractor object
-
     """
-
-    name = "filter"
 
     def __init__(
         self,
@@ -168,24 +173,23 @@ class BandpassFilterRecording(FilterRecording):
 
     Parameters
     ----------
-    recording: Recording
+    recording : Recording
         The recording extractor to be re-referenced
-    freq_min: float
+    freq_min : float
         The highpass cutoff frequency in Hz
-    freq_max: float
+    freq_max : float
         The lowpass cutoff frequency in Hz
-    margin_ms: float
+    margin_ms : float
         Margin in ms on border to avoid border effect
-    dtype: dtype or None
+    dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     {}
+
     Returns
     -------
-    filter_recording: BandpassFilterRecording
+    filter_recording : BandpassFilterRecording
         The bandpass-filtered recording extractor object
     """
-
-    name = "bandpass_filter"
 
     def __init__(self, recording, freq_min=300.0, freq_max=6000.0, margin_ms=5.0, dtype=None, **filter_kwargs):
         FilterRecording.__init__(
@@ -204,22 +208,21 @@ class HighpassFilterRecording(FilterRecording):
 
     Parameters
     ----------
-    recording: Recording
+    recording : Recording
         The recording extractor to be re-referenced
-    freq_min: float
+    freq_min : float
         The highpass cutoff frequency in Hz
-    margin_ms: float
+    margin_ms : float
         Margin in ms on border to avoid border effect
-    dtype: dtype or None
+    dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     {}
+
     Returns
     -------
-    filter_recording: HighpassFilterRecording
+    filter_recording : HighpassFilterRecording
         The highpass-filtered recording extractor object
     """
-
-    name = "highpass_filter"
 
     def __init__(self, recording, freq_min=300.0, margin_ms=5.0, dtype=None, **filter_kwargs):
         FilterRecording.__init__(
@@ -234,20 +237,22 @@ class NotchFilterRecording(BasePreprocessor):
     """
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be notch-filtered
-    freq: int or float
+    freq : int or float
         The target frequency in Hz of the notch filter
-    q: int
+    q : int
         The quality factor of the notch filter
-    {}
+    dtype : None | dtype, default: None
+        dtype of recording. If None, will take from `recording`
+    margin_ms : float, default: 5.0
+        Margin in ms on border to avoid border effect
+
     Returns
     -------
-    filter_recording: NotchFilterRecording
+    filter_recording : NotchFilterRecording
         The notch-filtered recording extractor object
     """
-
-    name = "notch_filter"
 
     def __init__(self, recording, freq=3000, q=30, margin_ms=5.0, dtype=None):
         # coeef is 'ba' type
@@ -283,6 +288,9 @@ filter = define_function_from_class(source_class=FilterRecording, name="filter")
 bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
 notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
 highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
+
+bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
+highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
 
 
 def fix_dtype(recording, dtype):

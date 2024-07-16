@@ -62,6 +62,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
         return_scaled=False,
         sparsity_mask=sparsity_mask,
         copy=True,
+        verbose=False,
         **job_kwargs,
     )
 
@@ -69,18 +70,18 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
 
 
 def get_prototype_spike(recording, peaks, ms_before=0.5, ms_after=0.5, nb_peaks=1000, **job_kwargs):
-    if peaks.size > nb_peaks:
-        idx = np.sort(np.random.choice(len(peaks), nb_peaks, replace=False))
-        some_peaks = peaks[idx]
-    else:
-        some_peaks = peaks
-
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+
+    from spikeinterface.sortingcomponents.peak_selection import select_peaks
+
+    few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=nb_peaks, margin=(nbefore, nafter))
 
     waveforms = extract_waveform_at_max_channel(
-        recording, some_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+        recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
     )
-    prototype = np.nanmedian(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        prototype = np.median(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
     return prototype
 
 
@@ -103,7 +104,7 @@ def cache_preprocessing(recording, mode="memory", memory_limit=0.5, delete_cache
     if mode == "memory":
         if HAVE_PSUTIL:
             assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
-            memory_usage = memory_limit * psutil.virtual_memory()[4]
+            memory_usage = memory_limit * psutil.virtual_memory().available
             if recording.get_total_memory_size() < memory_usage:
                 recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
             else:
@@ -139,3 +140,14 @@ def remove_empty_templates(templates):
         probe=templates.probe,
         is_scaled=templates.is_scaled,
     )
+
+
+def sigmoid(x, x0, k, b):
+    return (1 / (1 + np.exp(-k * (x - x0)))) + b
+
+
+def fit_sigmoid(xdata, ydata, p0=None):
+    from scipy.optimize import curve_fit
+
+    popt, pcov = curve_fit(sigmoid, xdata, ydata, p0)
+    return popt

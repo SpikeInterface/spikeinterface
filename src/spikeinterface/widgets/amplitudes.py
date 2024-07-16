@@ -189,7 +189,7 @@ class AmplitudesWidget(BaseWidget):
         self.next_data_plot = data_plot.copy()
 
         cm = 1 / 2.54
-        we = data_plot["sorting_analyzer"]
+        analyzer = data_plot["sorting_analyzer"]
 
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
@@ -202,8 +202,8 @@ class AmplitudesWidget(BaseWidget):
                 self.figure = plt.figure(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
-        self.unit_selector = UnitSelector(we.unit_ids)
-        self.unit_selector.value = list(we.unit_ids)[:1]
+        self.unit_selector = UnitSelector(analyzer.unit_ids)
+        self.unit_selector.value = list(analyzer.unit_ids)[:1]
 
         self.checkbox_histograms = W.Checkbox(
             value=data_plot["plot_histograms"],
@@ -215,7 +215,7 @@ class AmplitudesWidget(BaseWidget):
                 self.unit_selector,
                 self.checkbox_histograms,
             ],
-            layout=W.Layout(align_items="center", width="4cm", height="100%"),
+            layout=W.Layout(align_items="center", width="100%", height="100%"),
         )
 
         self.widget = W.AppLayout(

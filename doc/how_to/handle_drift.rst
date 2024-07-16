@@ -245,7 +245,7 @@ to display the results.
 
 .. code:: ipython
 
-    from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
+    from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 
     for preset in some_presets:
         folder = base_folder / 'motion_folder_dataset1' / preset

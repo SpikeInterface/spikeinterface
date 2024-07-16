@@ -43,32 +43,38 @@ def toy_example(
 
     Parameters
     ----------
-    duration: float or list[float], default: 10
+    duration : float or list[float], default: 10
         Duration in seconds. If a list is provided, it will be the duration of each segment.
-    num_channels: int, default: 4
+    num_channels : int, default: 4
         Number of channels
-    num_units: int, default: 10
+    num_units : int, default: 10
         Number of units
-    sampling_frequency: float, default: 30000
+    sampling_frequency : float, default: 30000
         Sampling frequency
-    num_segments: int, default: 2
+    num_segments : int, default: 2
         Number of segments.
-    spike_times: np.array or list[nparray] or None, default: None
+    spike_times : np.array or list[nparray] or None, default: None
         Spike time in the recording
-    spike_labels: np.array or list[nparray] or None, default: None
+    spike_labels : np.array or list[nparray] or None, default: None
         Cluster label for each spike time (needs to specified both together).
-    # score_detection: int (between 0 and 1)
-    #    Generate the sorting based on a subset of spikes compare with the trace generation
-    firing_rate: float, default: 3.0
+    firing_rate : float, default: 3.0
         The firing rate for the units (in Hz)
-    seed: int or None, default: None
+    seed : int or None, default: None
         Seed for random initialization.
+    upsample_factor : None or int, default: None
+        An upsampling factor, used only when templates are not provided.
+    num_columns : int, default:  1
+        Number of columns in probe.
+    average_peak_amplitude : float, default: -100
+        Average peak amplitude of generated templates.
+    contact_spacing_um : float, default: 40.0
+        Spacing between probe contacts in micrometers.
 
     Returns
     -------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The output recording extractor.
-    sorting: SortingExtractor
+    sorting : SortingExtractor
         The output sorting extractor.
 
     """

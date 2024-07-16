@@ -1,23 +1,16 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
-
-from pathlib import Path
-import shutil
 
 
-from spikeinterface.sorters import run_sorter, read_sorter_folder
+from spikeinterface.sorters import run_sorter
 
 from spikeinterface.comparison import GroundTruthComparison
-from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+from spikeinterface.sortingcomponents.motion.motion_interpolation import InterpolateMotionRecording
 from spikeinterface.curation import MergeUnitsSorting
 
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
-
-
-import matplotlib.pyplot as plt
 
 
 class MotionInterpolationBenchmark(Benchmark):
@@ -51,9 +44,7 @@ class MotionInterpolationBenchmark(Benchmark):
             recording = self.drifting_recording
         elif self.params["recording_source"] == "corrected":
             correct_motion_kwargs = self.params["correct_motion_kwargs"]
-            recording = InterpolateMotionRecording(
-                self.drifting_recording, self.motion, self.temporal_bins, self.spatial_bins, **correct_motion_kwargs
-            )
+            recording = InterpolateMotionRecording(self.drifting_recording, self.motion, **correct_motion_kwargs)
         else:
             raise ValueError("recording_source")
 
@@ -132,6 +123,7 @@ class MotionInterpolationStudy(BenchmarkStudy):
         ax=None,
         axes=None,
     ):
+        import matplotlib.pyplot as plt
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -143,6 +135,7 @@ class MotionInterpolationStudy(BenchmarkStudy):
 
         if mode == "ordered_accuracy":
             if ax is None:
+
                 fig, ax = plt.subplots(figsize=figsize)
             else:
                 fig = ax.figure

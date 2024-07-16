@@ -15,48 +15,48 @@ class TracesWidget(BaseWidget):
 
     Parameters
     ----------
-    recording: RecordingExtractor, dict, or list
+    recording : RecordingExtractor, dict, or list
         The recording extractor object. If dict (or list) then it is a multi-layer display to compare, for example,
         different processing steps
-    segment_index: None or int, default: None
+    segment_index : None or int, default: None
         The segment index (required for multi-segment recordings)
-    channel_ids: list or None, default: None
+    channel_ids : list or None, default: None
         The channel ids to display
-    order_channel_by_depth: bool, default: False
+    order_channel_by_depth : bool, default: False
         Reorder channel by depth
-    time_range: list, tuple or None, default: None
+    time_range : list, tuple or None, default: None
         List with start time and end time
-    mode: "line" | "map" | "auto", default: "auto"
+    mode : "line" | "map" | "auto", default: "auto"
         Three possible modes
         * "line": classical for low channel count
         * "map": for high channel count use color heat map
         * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
-    return_scaled: bool, default: False
+    return_scaled : bool, default: False
         If True and the recording has scaled traces, it plots the scaled traces
-    events: np.array | list[np.narray] or None, default: None
+    events : np.array | list[np.narray] or None, default: None
         Events to display as vertical lines.
         The numpy arrays cen either be of dtype float, with event times in seconds,
         or a structured array with the "time" field,
         and optional "duration" and "label" fields.
         For multi-segment recordings, provide a list of numpy array events, one for each segment.
-    cmap: matplotlib colormap, default: "RdBu_r"
+    cmap : matplotlib colormap, default: "RdBu_r"
         matplotlib colormap used in mode "map"
-    show_channel_ids: bool, default: False
+    show_channel_ids : bool, default: False
         Set yticks with channel ids
-    color_groups: bool, default: False
+    color_groups : bool, default: False
         If True groups are plotted with different colors
-    color: str or None, default: None
+    color : str or None, default: None
         The color used to draw the traces
-    clim: None, tuple or dict, default: None
+    clim : None, tuple or dict, default: None
         When mode is "map", this argument controls color limits.
         If dict, keys should be the same as recording keys
-    scale: float, default: 1
+    scale : float, default: 1
         Scale factor for the traces
-    with_colorbar: bool, default: True
+    with_colorbar : bool, default: True
         When mode is "map", a colorbar is added
-    tile_size: int, default: 1500
+    tile_size : int, default: 1500
         For sortingview backend, the size of each tile in the rendered image
-    seconds_per_row: float, default: 0.2
+    seconds_per_row : float, default: 0.2
         For "map" mode and sortingview backend, seconds to render in each row
     add_legend : bool, default: True
         If True adds legend to figures
@@ -671,7 +671,7 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_s
 
     if return_scaled:
         assert all(
-            rec.has_scaled() for rec in recordings.values()
+            rec.has_scaleable_traces() for rec in recordings.values()
         ), "Some recording layers do not have scaled traces. Use `return_scaled=False`"
     if times is not None:
         frame_range = np.searchsorted(times, time_range)

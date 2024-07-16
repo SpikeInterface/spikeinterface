@@ -8,15 +8,12 @@ import string
 import shutil
 
 from spikeinterface.core import (
-    get_noise_levels,
-    NumpySorting,
     get_channel_distances,
     Templates,
     compute_sparsity,
     get_global_tmp_folder,
 )
 
-from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
     ExtractDenseWaveforms,
@@ -33,8 +30,6 @@ from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAP
 from spikeinterface.sortingcomponents.clustering.split import split_clusters
 from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
 from spikeinterface.sortingcomponents.clustering.tools import compute_template_from_sparse
-
-from sklearn.decomposition import TruncatedSVD
 
 
 class TdcClustering:
@@ -78,13 +73,18 @@ class TdcClustering:
         ms_before = params["waveforms"]["ms_before"]
         ms_after = params["waveforms"]["ms_after"]
 
+        nbefore = int(ms_before * sampling_frequency / 1000.0)
+        nafter = int(ms_after * sampling_frequency / 1000.0)
+
         # SVD for time compression
-        few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
+        few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=5000, margin=(nbefore, nafter))
         few_wfs = extract_waveform_at_max_channel(
             recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
         )
 
         wfs = few_wfs[:, :, 0]
+        from sklearn.decomposition import TruncatedSVD
+
         tsvd = TruncatedSVD(params["svd"]["n_components"])
         tsvd.fit(wfs)
 
@@ -158,13 +158,18 @@ class TdcClustering:
             method="local_feature_clustering",
             method_kwargs=dict(
                 clusterer="hdbscan",
+                clusterer_kwargs={
+                    "min_cluster_size": min_cluster_size,
+                    "allow_single_cluster": True,
+                    "cluster_selection_method": "eom",
+                },
                 # clusterer="isocut5",
+                # clusterer_kwargs={"min_cluster_size": min_cluster_size},
                 feature_name="sparse_tsvd",
                 # feature_name="sparse_wfs",
                 neighbours_mask=neighbours_mask,
                 waveforms_sparse_mask=sparse_mask,
                 min_size_split=min_cluster_size,
-                clusterer_kwargs={"min_cluster_size": min_cluster_size},
                 n_pca_features=3,
                 scale_n_pca_by_depth=True,
             ),

@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from spikeinterface.postprocessing.unit_localization import (
+from spikeinterface.postprocessing.localization_tools import (
     compute_center_of_mass,
     compute_monopolar_triangulation,
     compute_grid_convolution,
 )
-from spikeinterface.qualitymetrics import compute_quality_metrics
-import pylab as plt
 import numpy as np
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
@@ -86,6 +84,7 @@ class PeakLocalizationStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
 
@@ -213,6 +212,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
 
@@ -238,6 +238,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import pylab as plt
 
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
 

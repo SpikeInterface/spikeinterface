@@ -11,29 +11,29 @@ from .waveform_tools import estimate_templates_with_accumulator
 
 
 _sparsity_doc = """
-    method: str
-        * "best_channels": N best channels with the largest amplitude. Use the "num_channels" argument to specify the
+    method : str
+        * "best_channels" : N best channels with the largest amplitude. Use the "num_channels" argument to specify the
                          number of channels.
-        * "radius": radius around the best channel. Use the "radius_um" argument to specify the radius in um
-        * "snr": threshold based on template signal-to-noise ratio. Use the "threshold" argument
+        * "radius" : radius around the best channel. Use the "radius_um" argument to specify the radius in um
+        * "snr" : threshold based on template signal-to-noise ratio. Use the "threshold" argument
                  to specify the SNR threshold (in units of noise levels)
-        * "ptp": threshold based on the peak-to-peak values on every channels. Use the "threshold" argument
+        * "ptp" : threshold based on the peak-to-peak values on every channels. Use the "threshold" argument
                 to specify the ptp threshold (in units of noise levels)
-        * "energy": threshold based on the expected energy that should be present on the channels,
+        * "energy" : threshold based on the expected energy that should be present on the channels,
                     given their noise levels. Use the "threshold" argument to specify the SNR threshold
                     (in units of noise levels)
-        * "by_property": sparsity is given by a property of the recording and sorting(e.g. "group").
+        * "by_property" : sparsity is given by a property of the recording and sorting(e.g. "group").
                          Use the "by_property" argument to specify the property name.
 
-    peak_sign: str
+    peak_sign : str
         Sign of the template to compute best channels ("neg", "pos", "both")
-    num_channels: int
+    num_channels : int
         Number of channels for "best_channels" method
-    radius_um: float
+    radius_um : float
         Radius in um for "radius" method
-    threshold: float
+    threshold : float
         Threshold in SNR "threshold" method
-    by_property: object
+    by_property : object
         Property name for "by_property" method
 """
 
@@ -61,11 +61,11 @@ class ChannelSparsity:
 
     Parameters
     ----------
-    mask: np.array of bool
+    mask : np.array of bool
         The sparsity mask (num_units, num_channels)
-    unit_ids: list or array
+    unit_ids : list or array
         Unit ids vector or list
-    channel_ids: list or array
+    channel_ids : list or array
         Channel ids vector or list
 
     Examples
@@ -469,7 +469,7 @@ def compute_sparsity(
 
     Parameters
     ----------
-    templates_or_sorting_analyzer: Templates | SortingAnalyzer
+    templates_or_sorting_analyzer : Templates | SortingAnalyzer
         A Templates or a SortingAnalyzer object.
         Some methods accept both objects ("best_channels", "radius", )
         Other methods require only SortingAnalyzer because internally the recording is needed.
@@ -478,7 +478,7 @@ def compute_sparsity(
 
     Returns
     -------
-    sparsity: ChannelSparsity
+    sparsity : ChannelSparsity
         The estimated sparsity
     """
 
@@ -539,8 +539,8 @@ compute_sparsity.__doc__ = compute_sparsity.__doc__.format(_sparsity_doc)
 
 
 def estimate_sparsity(
-    recording: BaseRecording,
     sorting: BaseSorting,
+    recording: BaseRecording,
     num_spikes_for_sparsity: int = 100,
     ms_before: float = 1.0,
     ms_after: float = 2.5,
@@ -563,31 +563,32 @@ def estimate_sparsity(
 
     Parameters
     ----------
-    recording: BaseRecording
-        The recording
-    sorting: BaseSorting
+    sorting : BaseSorting
         The sorting
-    num_spikes_for_sparsity: int, default: 100
+    recording : BaseRecording
+        The recording
+
+    num_spikes_for_sparsity : int, default: 100
         How many spikes per units to compute the sparsity
-    ms_before: float, default: 1.0
+    ms_before : float, default: 1.0
         Cut out in ms before spike time
-    ms_after: float, default: 2.5
+    ms_after : float, default: 2.5
         Cut out in ms after spike time
-    method: "radius" | "best_channels", default: "radius"
+    method : "radius" | "best_channels", default: "radius"
         Sparsity method propagated to the `compute_sparsity()` function.
         Only "radius" or "best_channels" are implemented
-    peak_sign: "neg" | "pos" | "both", default: "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
-    radius_um: float, default: 100.0
+    radius_um : float, default: 100.0
         Used for "radius" method
-    num_channels: int, default: 5
+    num_channels : int, default: 5
         Used for "best_channels" method
 
     {}
 
     Returns
     -------
-    sparsity: ChannelSparsity
+    sparsity : ChannelSparsity
         The estimated sparsity
     """
     # Can't be done at module because this is a cyclic import, too bad

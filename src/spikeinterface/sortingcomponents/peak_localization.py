@@ -21,11 +21,14 @@ from .tools import make_multi_method_doc
 
 from spikeinterface.core import get_channel_distances
 
-from ..postprocessing.unit_localization import (
+from ..postprocessing.unit_locations import (
     dtype_localize_by_method,
     possible_localization_methods,
-    solve_monopolar_triangulation,
+)
+
+from ..postprocessing.localization_tools import (
     make_radial_order_parents,
+    solve_monopolar_triangulation,
     enforce_decrease_shells_data,
     get_grid_convolution_templates_and_weights,
 )
@@ -41,6 +44,8 @@ def get_localization_pipeline_nodes(
         method in possible_localization_methods
     ), f"Method {method} is not supported. Choose from {possible_localization_methods}"
 
+    # TODO : this is a bad idea becaise it trigger warning when n_jobs is not set globally
+    # because the job_kwargs is never transmitted until here
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
     if method == "center_of_mass":
@@ -66,6 +71,8 @@ def get_localization_pipeline_nodes(
     elif method == "grid_convolution":
         if "prototype" not in method_kwargs:
             assert isinstance(peak_source, (PeakRetriever, SpikeRetriever))
+            # extract prototypes silently
+            job_kwargs["progress_bar"] = False
             method_kwargs["prototype"] = get_prototype_spike(
                 recording, peak_source.peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
             )
@@ -163,7 +170,7 @@ class LocalizeCenterOfMass(LocalizeBase):
 
     Notes
     -----
-    See spikeinterface.postprocessing.unit_localization.
+    See spikeinterface.postprocessing.unit_locations.
     """
 
     need_waveforms = True
@@ -204,7 +211,7 @@ class LocalizeCenterOfMass(LocalizeBase):
             wf = waveforms[idx][:, :, chan_inds]
 
             if self.feature == "ptp":
-                wf_data = wf.ptp(axis=1)
+                wf_data = np.ptp(wf, axis=1)
             elif self.feature == "mean":
                 wf_data = wf.mean(axis=1)
             elif self.feature == "energy":
@@ -225,7 +232,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     Notes
     -----
     This method is from  Julien Boussard, Erdem Varol and Charlie Windolf
-    See spikeinterface.postprocessing.unit_localization.
+    See spikeinterface.postprocessing.unit_locations.
     """
 
     need_waveforms = False
@@ -293,7 +300,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
 
             wf = waveforms[i, :][:, chan_inds]
             if self.feature == "ptp":
-                wf_data = wf.ptp(axis=0)
+                wf_data = np.ptp(wf, axis=0)
             elif self.feature == "energy":
                 wf_data = np.linalg.norm(wf, axis=0)
             elif self.feature == "peak_voltage":
@@ -316,7 +323,7 @@ class LocalizeGridConvolution(PipelineNode):
 
     Notes
     -----
-    See spikeinterface.postprocessing.unit_localization.
+    See spikeinterface.postprocessing.unit_locations.
     """
 
     need_waveforms = True

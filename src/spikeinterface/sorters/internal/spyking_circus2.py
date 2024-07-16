@@ -1,9 +1,7 @@
 from __future__ import annotations
-from operator import is_
 
 from .si_based import ComponentsBasedSorter
 
-import os
 import shutil
 import numpy as np
 
@@ -11,7 +9,6 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.template import Templates
-from spikeinterface.core.template_tools import get_template_extremum_amplitude
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.preprocessing import common_reference, whiten, bandpass_filter, correct_motion
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
@@ -20,14 +17,6 @@ from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.curation.auto_merge import get_potential_auto_merge
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
-
-
-try:
-    import hdbscan
-
-    HAVE_HDBSCAN = True
-except:
-    HAVE_HDBSCAN = False
 
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
@@ -48,11 +37,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": True,
         "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
         "merging": {
-            "minimum_spikes": 10,
-            "corr_diff_thresh": 0.5,
-            "template_metric": "cosine",
-            "censor_correlograms_ms": 0.4,
-            "num_channels": None,
+            "similarity_kwargs": {"method": "cosine", "support": "union", "max_lag_ms": 0.2},
+            "correlograms_kwargs": {},
+            "auto_merge": {
+                "min_spikes": 10,
+                "corr_diff_thresh": 0.5,
+                "censor_correlograms_ms": 0.4,
+            },
         },
         "clustering": {"legacy": True},
         "matching": {"method": "wobble"},
@@ -100,6 +91,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        try:
+            import hdbscan
+
+            HAVE_HDBSCAN = True
+        except:
+            HAVE_HDBSCAN = False
+
         assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
         # this is importanted only on demand because numba import are too heavy
@@ -113,7 +111,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         job_kwargs = params["job_kwargs"]
         job_kwargs = fix_job_kwargs(job_kwargs)
-        job_kwargs.update({"verbose": verbose, "progress_bar": verbose})
+        job_kwargs.update({"progress_bar": verbose})
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -151,7 +149,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## We need to whiten before the template matching step, to boost the results
         # TODO add , regularize=True chen ready
-        recording_w = whiten(recording_f, mode="local", radius_um=radius_um, dtype="float32")
+        recording_w = whiten(recording_f, mode="local", radius_um=radius_um, dtype="float32", regularize=True)
 
         noise_levels = get_noise_levels(recording_w, return_scaled=False)
 
@@ -179,6 +177,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if params["matched_filtering"]:
             prototype = get_prototype_spike(recording_w, peaks, ms_before, ms_after, **job_kwargs)
             detection_params["prototype"] = prototype
+            detection_params["ms_before"] = ms_before
 
             for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
                 if value in detection_params:
@@ -281,29 +280,30 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_params["templates"] = templates
             matching_job_params = job_kwargs.copy()
 
-            for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-                if value in matching_job_params:
-                    matching_job_params[value] = None
-            matching_job_params["chunk_duration"] = "100ms"
+            if matching_method is not None:
+                for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
+                    if value in matching_job_params:
+                        matching_job_params[value] = None
+                matching_job_params["chunk_duration"] = "100ms"
 
-            spikes = find_spikes_from_templates(
-                recording_w, matching_method, method_kwargs=matching_params, **matching_job_params
-            )
+                spikes = find_spikes_from_templates(
+                    recording_w, matching_method, method_kwargs=matching_params, **matching_job_params
+                )
 
-            if params["debug"]:
-                fitting_folder = sorter_output_folder / "fitting"
-                fitting_folder.mkdir(parents=True, exist_ok=True)
-                np.save(fitting_folder / "spikes", spikes)
+                if params["debug"]:
+                    fitting_folder = sorter_output_folder / "fitting"
+                    fitting_folder.mkdir(parents=True, exist_ok=True)
+                    np.save(fitting_folder / "spikes", spikes)
 
-            if verbose:
-                print("We found %d spikes" % len(spikes))
+                if verbose:
+                    print("We found %d spikes" % len(spikes))
 
-            ## And this is it! We have a spyking circus
-            sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
-            sorting["sample_index"] = spikes["sample_index"]
-            sorting["unit_index"] = spikes["cluster_index"]
-            sorting["segment_index"] = spikes["segment_index"]
-            sorting = NumpySorting(sorting, sampling_frequency, unit_ids)
+                ## And this is it! We have a spyking circus
+                sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
+                sorting["sample_index"] = spikes["sample_index"]
+                sorting["unit_index"] = spikes["cluster_index"]
+                sorting["segment_index"] = spikes["segment_index"]
+                sorting = NumpySorting(sorting, sampling_frequency, unit_ids)
 
         sorting_folder = sorter_output_folder / "sorting"
         if sorting_folder.exists():
@@ -316,7 +316,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 from spikeinterface.preprocessing.motion import load_motion_info
 
                 motion_info = load_motion_info(motion_folder)
-                merging_params["maximum_distance_um"] = max(50, 2 * np.abs(motion_info["motion"]).max())
+                motion = motion_info["motion"]
+                max_motion = max(
+                    np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
+                )
+                merging_params["max_distance_um"] = max(50, 2 * max_motion)
 
             # peak_sign = params['detection'].get('peak_sign', 'neg')
             # best_amplitudes = get_template_extremum_amplitude(templates, peak_sign=peak_sign)
@@ -355,10 +359,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
 def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
 
-    from spikeinterface.sortingcomponents.clustering.clustering_tools import (
-        resolve_merging_graph,
-        apply_merges_to_sorting,
-    )
+    from spikeinterface.core.sorting_tools import apply_merges_to_sorting
+    from spikeinterface.curation.curation_tools import resolve_merging_graph
 
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
@@ -366,12 +368,16 @@ def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
     sa = create_sorting_analyzer(sorting, recording, format="memory", sparsity=sparsity)
 
     sa.extensions["templates"] = ComputeTemplates(sa)
-    sa.extensions["templates"].params = {"nbefore": templates.nbefore}
+    sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
     sa.extensions["templates"].data["average"] = templates_array
     sa.compute("unit_locations", method="monopolar_triangulation")
-    merges = get_potential_auto_merge(sa, **merging_kwargs)
+    similarity_kwargs = merging_kwargs.pop("similarity_kwargs", {})
+    sa.compute("template_similarity", **similarity_kwargs)
+    correlograms_kwargs = merging_kwargs.pop("correlograms_kwargs", {})
+    sa.compute("correlograms", **correlograms_kwargs)
+    auto_merge_kwargs = merging_kwargs.pop("auto_merge", {})
+    merges = get_potential_auto_merge(sa, **auto_merge_kwargs)
     merges = resolve_merging_graph(sorting, merges)
     sorting = apply_merges_to_sorting(sorting, merges)
-    # sorting = merge_units_sorting(sorting, merges)
 
     return sorting

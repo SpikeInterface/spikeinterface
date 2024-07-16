@@ -71,7 +71,7 @@ class SimpleSorter(ComponentsBasedSorter):
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         job_kwargs = params["job_kwargs"]
         job_kwargs = fix_job_kwargs(job_kwargs)
-        job_kwargs.update({"verbose": verbose, "progress_bar": verbose})
+        job_kwargs.update({"progress_bar": verbose})
 
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
@@ -112,9 +112,12 @@ class SimpleSorter(ComponentsBasedSorter):
 
         ms_before = params["waveforms"]["ms_before"]
         ms_after = params["waveforms"]["ms_after"]
+        nbefore = int(ms_before * sampling_frequency / 1000.0)
+        nafter = int(ms_after * sampling_frequency / 1000.0)
 
         # SVD for time compression
-        few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
+
+        few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=5000, margin=(nbefore, nafter))
         few_wfs = extract_waveform_at_max_channel(
             recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
         )

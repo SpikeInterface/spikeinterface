@@ -48,16 +48,24 @@ class BaseRecordingSnippets(BaseExtractor):
     def get_dtype(self):
         return self._dtype
 
-    def has_scaled(self):
+    def has_scaleable_traces(self) -> bool:
         if self.get_property("gain_to_uV") is None or self.get_property("offset_to_uV") is None:
             return False
         else:
             return True
 
-    def has_probe(self):
+    def has_scaled(self):
+        warn(
+            "`has_scaled` has been deprecated and will be removed in 0.103.0. Please use `has_scaleable_traces()`",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.has_scaleable_traces()
+
+    def has_probe(self) -> bool:
         return "contact_vector" in self.get_property_keys()
 
-    def has_channel_location(self):
+    def has_channel_location(self) -> bool:
         return self.has_probe() or "location" in self.get_property_keys()
 
     def is_filtered(self):
@@ -65,9 +73,6 @@ class BaseRecordingSnippets(BaseExtractor):
         return self._annotations.get("is_filtered", False)
 
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
-        raise NotImplementedError
-
-    def _frame_slice(self, channel_ids, renamed_channel_ids=None):
         raise NotImplementedError
 
     def set_probe(self, probe, group_mode="by_probe", in_place=False):
@@ -93,12 +98,12 @@ class BaseRecordingSnippets(BaseExtractor):
         assert isinstance(probe, Probe), "must give Probe"
         probegroup = ProbeGroup()
         probegroup.add_probe(probe)
-        return self.set_probes(probegroup, group_mode=group_mode, in_place=in_place)
+        return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
     def set_probegroup(self, probegroup, group_mode="by_probe", in_place=False):
-        return self.set_probes(probegroup, group_mode=group_mode, in_place=in_place)
+        return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
-    def set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
+    def _set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
         """
         Attach a list of Probe objects to a recording.
         For this Probe.device_channel_indices is used to link contacts to recording channels.
@@ -182,7 +187,7 @@ class BaseRecordingSnippets(BaseExtractor):
             if np.array_equal(new_channel_ids, self.get_channel_ids()):
                 sub_recording = self.clone()
             else:
-                sub_recording = self.channel_slice(new_channel_ids)
+                sub_recording = self.select_channels(new_channel_ids)
 
         # create a vector that handle all contacts in property
         sub_recording.set_property("contact_vector", probe_as_numpy_array, ids=None)
@@ -222,6 +227,21 @@ class BaseRecordingSnippets(BaseExtractor):
         for probe in probegroup.probes:
             probes_info.append(probe.annotations)
         self.annotate(probes_info=probes_info)
+
+        return sub_recording
+
+    def set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
+
+        warning_msg = (
+            "`set_probes` is now a private function and the public function will be "
+            "removed in 0.103.0. Please use `set_probe` or `set_probegroups` instead"
+        )
+
+        warn(warning_msg, category=DeprecationWarning, stacklevel=2)
+
+        sub_recording = self._set_probes(
+            probe_or_probegroup=probe_or_probegroup, group_mode=group_mode, in_place=in_place
+        )
 
         return sub_recording
 
@@ -321,7 +341,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def set_channel_locations(self, locations, channel_ids=None):
         if self.get_property("contact_vector") is not None:
-            raise ValueError("set_channel_locations(..) destroy the probe description, prefer set_probes(..)")
+            raise ValueError("set_channel_locations(..) destroys the probe description, prefer _set_probes(..)")
         self.set_property("location", locations, ids=channel_ids)
 
     def get_channel_locations(self, channel_ids=None, axes: str = "xy"):
@@ -346,7 +366,7 @@ class BaseRecordingSnippets(BaseExtractor):
             locations = np.asarray(locations)[channel_indices]
             return select_axes(locations, axes)
 
-    def has_3d_locations(self):
+    def has_3d_locations(self) -> bool:
         return self.get_property("location").shape[1] == 3
 
     def clear_channel_locations(self, channel_ids=None):
@@ -438,6 +458,22 @@ class BaseRecordingSnippets(BaseExtractor):
         """
         return self._channel_slice(channel_ids, renamed_channel_ids=renamed_channel_ids)
 
+    def select_channels(self, channel_ids):
+        """
+        Returns a new object with sliced channels.
+
+        Parameters
+        ----------
+        channel_ids : np.array or list
+            The list of channels to keep
+
+        Returns
+        -------
+        BaseRecordingSnippets
+            The object with sliced channels
+        """
+        raise NotImplementedError
+
     def remove_channels(self, remove_channel_ids):
         """
         Returns a new object with removed channels.
@@ -471,7 +507,7 @@ class BaseRecordingSnippets(BaseExtractor):
         BaseRecordingSnippets
             The object with sliced frames
         """
-        return self._frame_slice(start_frame, end_frame)
+        raise NotImplementedError
 
     def select_segments(self, segment_indices):
         """
@@ -522,7 +558,7 @@ class BaseRecordingSnippets(BaseExtractor):
         for value in np.unique(values):
             (inds,) = np.nonzero(values == value)
             new_channel_ids = self.get_channel_ids()[inds]
-            subrec = self.channel_slice(new_channel_ids)
+            subrec = self.select_channels(new_channel_ids)
             if outputs == "list":
                 recordings.append(subrec)
             elif outputs == "dict":

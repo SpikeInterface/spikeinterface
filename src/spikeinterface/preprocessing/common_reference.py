@@ -36,26 +36,27 @@ class CommonReferenceRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be re-referenced
-    reference: "global" | "single" | "local", default: "global"
-        If "global" the reference is the average or median across all the channels.
+    reference : "global" | "single" | "local", default: "global"
+        If "global" the reference is the average or median across all the channels. To select a subset of channels,
+        you can use the `ref_channel_ids` parameter.
         If "single", the reference is a single channel or a list of channels that need to be set with the `ref_channel_ids`.
         If "local", the reference is the set of channels within an annulus that must be set with the `local_radius` parameter.
-    operator: "median" | "average", default: "median"
+    operator : "median" | "average", default: "median"
         If "median", a common median reference (CMR) is implemented (the median of
             the selected channels is removed for each timestamp).
         If "average", common average reference (CAR) is implemented (the mean of the selected channels is removed
             for each timestamp).
-    groups: list or None, default: None
+    groups : list or None, default: None
         List of lists containing the channel ids for splitting the reference. The CMR, CAR, or referencing with respect to
         single channels are applied group-wise. However, this is not applied for the local CAR.
         It is useful when dealing with different channel groups, e.g. multiple tetrodes.
-    ref_channel_ids: list or str or int, default: None
-        If no "groups" are specified, all channels are referenced to "ref_channel_ids". If "groups" is provided, then a
-        list of channels to be applied to each group is expected. If "single" reference, a list of one channel or an
-        int is expected.
-    local_radius: tuple(int, int), default: (30, 55)
+    ref_channel_ids : list | str | int | None, default: None
+        If "global" reference, a list of channels to be used as reference.
+        If "single" reference, a list of one channel or a single channel id is expected.
+        If "groups" is provided, then a list of channels to be applied to each group is expected.
+    local_radius : tuple(int, int), default: (30, 55)
         Use in the local CAR implementation as the selecting annulus with the following format:
 
         `(exclude radius, include radius)`
@@ -65,27 +66,25 @@ class CommonReferenceRecording(BasePreprocessor):
         include radius delineates the outer boundary of the annulus whose role is to exclude channels
         that are too far away.
 
-    dtype: None or dtype, default: None
+    dtype : None or dtype, default: None
         If None the parent dtype is kept.
 
     Returns
     -------
-    referenced_recording: CommonReferenceRecording
+    referenced_recording : CommonReferenceRecording
         The re-referenced recording extractor object
 
     """
-
-    name = "common_reference"
 
     def __init__(
         self,
         recording: BaseRecording,
         reference: Literal["global", "single", "local"] = "global",
         operator: Literal["median", "average"] = "median",
-        groups=None,
-        ref_channel_ids=None,
-        local_radius=(30, 55),
-        dtype=None,
+        groups: list | None = None,
+        ref_channel_ids: list | str | int | None = None,
+        local_radius: tuple[float, float] = (30.0, 55.0),
+        dtype: str | np.dtype | None = None,
     ):
         num_chans = recording.get_num_channels()
         neighbors = None
@@ -96,7 +95,9 @@ class CommonReferenceRecording(BasePreprocessor):
             raise ValueError("'operator' must be either 'median', 'average'")
 
         if reference == "global":
-            pass
+            if ref_channel_ids is not None:
+                if not isinstance(ref_channel_ids, list):
+                    raise ValueError("With 'global' reference, provide 'ref_channel_ids' as a list")
         elif reference == "single":
             assert ref_channel_ids is not None, "With 'single' reference, provide 'ref_channel_ids'"
             if groups is not None:
@@ -182,7 +183,10 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
             traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
 
             if self.reference == "global":
-                shift = self.operator_func(traces, axis=1, keepdims=True)
+                if self.ref_channel_indices is None:
+                    shift = self.operator_func(traces, axis=1, keepdims=True)
+                else:
+                    shift = self.operator_func(traces[:, self.ref_channel_indices], axis=1, keepdims=True)
                 re_referenced_traces = traces[:, channel_indices] - shift
             elif self.reference == "single":
                 # single channel -> no need of operator
@@ -230,7 +234,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
 
         Parameters
         ----------
-        channel_indices: array-like
+        channel_indices : array-like
             The channel indices to be sliced
 
         Returns

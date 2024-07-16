@@ -221,6 +221,7 @@ def distribute_waveforms_to_buffers(
     mode="memmap",
     sparsity_mask=None,
     job_name=None,
+    verbose=False,
     **job_kwargs,
 ):
     """
@@ -281,7 +282,9 @@ def distribute_waveforms_to_buffers(
     )
     if job_name is None:
         job_name = f"extract waveforms {mode} multi buffer"
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
+    processor = ChunkRecordingExecutor(
+        recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
+    )
     processor.run()
 
 
@@ -410,6 +413,7 @@ def extract_waveforms_to_single_buffer(
     sparsity_mask=None,
     copy=True,
     job_name=None,
+    verbose=False,
     **job_kwargs,
 ):
     """
@@ -523,7 +527,9 @@ def extract_waveforms_to_single_buffer(
         if job_name is None:
             job_name = f"extract waveforms {mode} mono buffer"
 
-        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
+        processor = ChunkRecordingExecutor(
+            recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
+        )
         processor.run()
 
     if mode == "memmap":
@@ -673,16 +679,16 @@ def split_waveforms_by_units(unit_ids, spikes, all_waveforms, sparsity_mask=None
     return waveforms_by_units
 
 
-def has_exceeding_spikes(recording, sorting):
+def has_exceeding_spikes(sorting, recording) -> bool:
     """
     Check if the sorting objects has spikes exceeding the recording number of samples, for all segments
 
     Parameters
     ----------
-    recording : BaseRecording
-        The recording object
     sorting : BaseSorting
         The sorting object
+    recording : BaseRecording
+        The recording object
 
     Returns
     -------
@@ -783,6 +789,7 @@ def estimate_templates_with_accumulator(
     return_scaled: bool = True,
     job_name=None,
     return_std: bool = False,
+    verbose: bool = False,
     **job_kwargs,
 ):
     """
@@ -861,7 +868,9 @@ def estimate_templates_with_accumulator(
 
     if job_name is None:
         job_name = "estimate_templates_with_accumulator"
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
+    processor = ChunkRecordingExecutor(
+        recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
+    )
     processor.run()
 
     # average

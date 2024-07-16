@@ -42,11 +42,9 @@ def test_ensure_n_jobs():
 
 
 def test_ensure_chunk_size():
-    recording = generate_recording(num_channels=2)
+    recording = generate_recording(num_channels=2, durations=[5.0, 2.5])  # This is the default value for two semgents
     dtype = recording.get_dtype()
     assert dtype == "float32"
-    # make serializable
-    recording = recording.save()
 
     chunk_size = ensure_chunk_size(recording, total_memory="512M", chunk_size=None, chunk_memory=None, n_jobs=2)
     assert chunk_size == 32000000
@@ -68,6 +66,15 @@ def test_ensure_chunk_size():
 
     chunk_size = ensure_chunk_size(recording, chunk_duration="500ms")
     assert chunk_size == 15000
+
+    # Test edge case to define single chunk for n_jobs=1
+    chunk_size = ensure_chunk_size(recording, n_jobs=1, chunk_size=None)
+    chunks = divide_recording_into_chunks(recording, chunk_size)
+    assert len(chunks) == recording.get_num_segments()
+    for chunk in chunks:
+        segment_index, start_frame, end_frame = chunk
+        assert start_frame == 0
+        assert end_frame == recording.get_num_frames(segment_index=segment_index)
 
 
 def func(segment_index, start_frame, end_frame, worker_ctx):
@@ -181,9 +188,9 @@ def test_fix_job_kwargs():
         assert fixed_job_kwargs["n_jobs"] == 1
 
     # test float value > 1 is cast to correct int
-    job_kwargs = dict(n_jobs=4.0, progress_bar=False, chunk_duration="1s")
+    job_kwargs = dict(n_jobs=float(os.cpu_count()), progress_bar=False, chunk_duration="1s")
     fixed_job_kwargs = fix_job_kwargs(job_kwargs)
-    assert fixed_job_kwargs["n_jobs"] == 4
+    assert fixed_job_kwargs["n_jobs"] == os.cpu_count()
 
     # test wrong keys
     with pytest.raises(AssertionError):

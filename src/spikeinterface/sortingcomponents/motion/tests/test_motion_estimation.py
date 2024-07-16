@@ -1,24 +1,13 @@
-import pytest
 from pathlib import Path
-import shutil
 
 import numpy as np
-
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-
-
-from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+import pytest
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
-
+from spikeinterface.sortingcomponents.motion import estimate_motion
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
-
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sortingcomponents"
-else:
-    cache_folder = Path("cache_folder") / "sortingcomponents"
 
 DEBUG = False
 
@@ -29,11 +18,11 @@ if DEBUG:
     plt.show()
 
 
-def setup_module():
-    recording, sorting = make_dataset()
-
+def setup_dataset_and_peaks(cache_folder):
+    print(cache_folder, type(cache_folder))
     cache_folder.mkdir(parents=True, exist_ok=True)
 
+    recording, sorting = make_dataset()
     # detect and localize
     extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=0.1, ms_after=0.3, return_output=False)
     pipeline_nodes = [
@@ -47,16 +36,27 @@ def setup_module():
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         chunk_size=10000,
-        verbose=1,
         progress_bar=True,
         pipeline_nodes=pipeline_nodes,
     )
-    np.save(cache_folder / "dataset_peaks.npy", peaks)
-    np.save(cache_folder / "dataset_peak_locations.npy", peak_locations)
+
+    peaks_path = cache_folder / "dataset_peaks.npy"
+    np.save(peaks_path, peaks)
+    peak_location_path = cache_folder / "dataset_peak_locations.npy"
+    np.save(peak_location_path, peak_locations)
+
+    return recording, sorting, cache_folder
 
 
-def test_estimate_motion():
-    recording, sorting = make_dataset()
+@pytest.fixture(scope="module", name="dataset")
+def dataset_fixture(create_cache_folder):
+    cache_folder = create_cache_folder / "motion_estimation"
+    return setup_dataset_and_peaks(cache_folder)
+
+
+def test_estimate_motion(dataset):
+    # recording, sorting = make_dataset()
+    recording, sorting, cache_folder = dataset
 
     peaks = np.load(cache_folder / "dataset_peaks.npy")
     peak_locations = np.load(cache_folder / "dataset_peak_locations.npy")
@@ -152,39 +152,34 @@ def test_estimate_motion():
 
         kwargs = dict(
             direction="y",
-            bin_duration_s=1.0,
+            bin_s=1.0,
             bin_um=10.0,
             margin_um=5,
-            output_extra_check=True,
-            progress_bar=False,
-            verbose=False,
+            extra_outputs=True,
         )
         kwargs.update(cases_kwargs)
 
-        motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations, **kwargs)
-
+        motion, extra = estimate_motion(recording, peaks, peak_locations, **kwargs)
         motions[name] = motion
 
-        assert temporal_bins.shape[0] == motion.shape[0]
-        assert spatial_bins.shape[0] == motion.shape[1]
-
         if cases_kwargs["rigid"]:
-            assert motion.shape[1] == 1
+            assert motion.displacement[0].shape[1] == 1
         else:
-            assert motion.shape[1] > 1
+            assert motion.displacement[0].shape[1] > 1
 
-        # Test saving to disk
-        corrected_rec = InterpolateMotionRecording(
-            recording, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate"
-        )
-        rec_folder = cache_folder / (name.replace("/", "").replace(" ", "_") + "_recording")
-        if rec_folder.exists():
-            shutil.rmtree(rec_folder)
-        corrected_rec.save(folder=rec_folder)
+        # # Test saving to disk
+        # corrected_rec = InterpolateMotionRecording(
+        #     recording, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate"
+        # )
+        # rec_folder = cache_folder / (name.replace("/", "").replace(" ", "_") + "_recording")
+        # if rec_folder.exists():
+        #     shutil.rmtree(rec_folder)
+        # corrected_rec.save(folder=rec_folder)
 
         if DEBUG:
             fig, ax = plt.subplots()
-            ax.plot(temporal_bins, motion)
+            seg_index = 0
+            ax.plot(motion.temporal_bins_s[0], motion.displacement[seg_index])
 
             # motion_histogram = extra_check['motion_histogram']
             # spatial_hist_bins = extra_check['spatial_hist_bin_edges']
@@ -204,35 +199,31 @@ def test_estimate_motion():
             plt.show()
 
     # same params with differents engine should be the same
-    motion0, motion1 = motions["rigid / decentralized / torch"], motions["rigid / decentralized / numpy"]
-    assert (motion0 == motion1).all()
+    motion0 = motions["rigid / decentralized / torch"]
+    motion1 = motions["rigid / decentralized / numpy"]
+    assert motion0 == motion1
 
-    motion0, motion1 = (
-        motions["rigid / decentralized / torch / time_horizon_s"],
-        motions["rigid / decentralized / numpy / time_horizon_s"],
-    )
-    # TODO : later torch and numpy used to be the same
-    # assert np.testing.assert_almost_equal(motion0, motion1)
+    motion0 = motions["rigid / decentralized / torch / time_horizon_s"]
+    motion1 = motions["rigid / decentralized / numpy / time_horizon_s"]
+    np.testing.assert_array_almost_equal(motion0.displacement, motion1.displacement)
 
-    motion0, motion1 = motions["non-rigid / decentralized / torch"], motions["non-rigid / decentralized / numpy"]
-    # TODO : later torch and numpy used to be the same
-    # assert np.testing.assert_almost_equal(motion0, motion1)
+    motion0 = motions["non-rigid / decentralized / torch"]
+    motion1 = motions["non-rigid / decentralized / numpy"]
+    np.testing.assert_array_almost_equal(motion0.displacement, motion1.displacement)
 
-    motion0, motion1 = (
-        motions["non-rigid / decentralized / torch / time_horizon_s"],
-        motions["non-rigid / decentralized / numpy / time_horizon_s"],
-    )
-    # TODO : later torch and numpy used to be the same
-    # assert np.testing.assert_almost_equal(motion0, motion1)
+    motion0 = motions["non-rigid / decentralized / torch / time_horizon_s"]
+    motion1 = motions["non-rigid / decentralized / numpy / time_horizon_s"]
+    np.testing.assert_array_almost_equal(motion0.displacement, motion1.displacement)
 
-    motion0, motion1 = (
-        motions["non-rigid / decentralized / torch / spatial_prior"],
-        motions["non-rigid / decentralized / numpy / spatial_prior"],
-    )
-    # TODO : later torch and numpy used to be the same
-    # assert np.testing.assert_almost_equal(motion0, motion1)
+    motion0 = motions["non-rigid / decentralized / torch / spatial_prior"]
+    motion1 = motions["non-rigid / decentralized / numpy / spatial_prior"]
+    np.testing.assert_array_almost_equal(motion0.displacement, motion1.displacement)
 
 
 if __name__ == "__main__":
-    setup_module()
-    test_estimate_motion()
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        cache_folder = Path(tmpdirname)
+    args = setup_dataset_and_peaks(cache_folder)
+    test_estimate_motion(args)

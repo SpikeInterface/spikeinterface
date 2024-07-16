@@ -1,9 +1,5 @@
 import pytest
 
-import spikeinterface.full as si
-import pandas as pd
-from pathlib import Path
-import matplotlib.pyplot as plt
 
 import numpy as np
 
@@ -12,7 +8,6 @@ import shutil
 
 from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import (
     make_drifting_dataset,
-    cache_folder,
 )
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_motion_interpolation import MotionInterpolationStudy
@@ -23,8 +18,8 @@ from spikeinterface.sortingcomponents.benchmark.benchmark_motion_estimation impo
 
 
 @pytest.mark.skip()
-def test_benchmark_motion_interpolation():
-
+def test_benchmark_motion_interpolation(create_cache_folder):
+    cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="1s")
 
     data = make_drifting_dataset()
@@ -53,12 +48,15 @@ def test_benchmark_motion_interpolation():
         spatial_bins,
         direction_dim=1,
     )
+    # print(gt_motion)
+
+    # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
-    # ax.imshow(gt_motion.T)
+    # ax.imshow(gt_motion.displacement[0].T)
     # plt.show()
 
     cases = {}
-    bin_duration_s = 1.0
+    bin_s = 1.0
 
     cases["static_SC2"] = dict(
         label="No drift - no correction - SC2",
@@ -134,6 +132,8 @@ def test_benchmark_motion_interpolation():
     study.plot_sorting_accuracy(mode="snr", mode_best_merge=True)
     study.plot_sorting_accuracy(mode="depth", mode_best_merge=False)
     study.plot_sorting_accuracy(mode="depth", mode_best_merge=True)
+
+    import matplotlib.pyplot as plt
 
     plt.show()
 

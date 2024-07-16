@@ -152,29 +152,29 @@ class SpikeRetriever(PeakSource):
       * compute_spike_amplitudes()
       * compute_principal_components()
 
+    sorting : BaseSorting
+        The sorting object.
     recording : BaseRecording
         The recording object.
-    sorting: BaseSorting
-        The sorting object.
-    channel_from_template: bool, default: True
+    channel_from_template : bool, default: True
         If True, then the channel_index is inferred from the template and `extremum_channel_inds` must be provided.
         If False, the max channel is computed for each spike given a radius around the template max channel.
-    extremum_channel_inds: dict of int | None, default: None
+    extremum_channel_inds : dict of int | None, default: None
         The extremum channel index dict given from template.
-    radius_um: float, default: 50
+    radius_um : float, default: 50
         The radius to find the real max channel.
         Used only when channel_from_template=False
-    peak_sign: "neg" | "pos", default: "neg"
+    peak_sign : "neg" | "pos", default: "neg"
         Peak sign to find the max channel.
         Used only when channel_from_template=False
-    include_spikes_in_margin: bool, default False
+    include_spikes_in_margin : bool, default False
         If not None then spikes in margin are added and an extra filed in dtype is added
     """
 
     def __init__(
         self,
-        recording,
         sorting,
+        recording,
         channel_from_template=True,
         extremum_channel_inds=None,
         radius_um=50,
@@ -473,6 +473,7 @@ def run_node_pipeline(
     squeeze_output=True,
     folder=None,
     names=None,
+    verbose=False,
 ):
     """
     Common function to run pipeline with peak detector or already detected peak.
@@ -499,6 +500,7 @@ def run_node_pipeline(
         init_args,
         gather_func=gather_func,
         job_name=job_name,
+        verbose=verbose,
         **job_kwargs,
     )
 
@@ -514,7 +516,6 @@ def _init_peak_pipeline(recording, nodes):
     worker_ctx["recording"] = recording
     worker_ctx["nodes"] = nodes
     worker_ctx["max_margin"] = max(node.get_trace_margin() for node in nodes)
-
     return worker_ctx
 
 
@@ -645,7 +646,7 @@ class GatherToNpy:
         self.shapes0 = []
         self.final_shapes = []
         for name in names:
-            filename = folder / (name + ".npy")
+            filename = self.folder / (name + ".npy")
             f = open(filename, "wb+")
             f.seek(npy_header_size)
             self.files.append(f)

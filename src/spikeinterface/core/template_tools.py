@@ -3,7 +3,6 @@ import numpy as np
 import warnings
 
 from .template import Templates
-from .sparsity import _sparsity_doc
 from .sortinganalyzer import SortingAnalyzer
 
 
@@ -13,14 +12,14 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_sc
 
     Parameters
     ----------
-    one_object: Templates | SortingAnalyzer
+    one_object : Templates | SortingAnalyzer
         The Templates or SortingAnalyzer objects. If SortingAnalyzer, it needs the "templates" extension.
-    return_scaled: bool, default: True
+    return_scaled : bool, default: True
         If True, templates are scaled.
 
     Returns
     -------
-    dense_templates: np.ndarray
+    dense_templates : np.ndarray
         The dense templates (num_units, num_samples, num_channels)
     """
     if isinstance(one_object, Templates):
@@ -50,7 +49,7 @@ def _get_nbefore(one_object):
             raise ValueError("SortingAnalyzer need extension 'templates' to be computed")
         return ext.nbefore
     else:
-        raise ValueError("Input should be Templates or SortingAnalyzer or SortingAnalyzer")
+        raise ValueError("Input should be Templates or SortingAnalyzer")
 
 
 def get_template_amplitudes(
@@ -65,23 +64,23 @@ def get_template_amplitudes(
 
     Parameters
     ----------
-    templates_or_sorting_analyzer: Templates | SortingAnalyzer
+    templates_or_sorting_analyzer : Templates | SortingAnalyzer
         A Templates or a SortingAnalyzer object
-    peak_sign:  "neg" | "pos" | "both"
+    peak_sign :  "neg" | "pos" | "both"
         Sign of the template to find extremum channels
-    mode: "extremum" | "at_index" | "peak_to_peak", default: "at_index"
+    mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
         Where the amplitude is computed
-        * "extremum": take the peak value (max or min depending on `peak_sign`)
-        * "at_index": take value at `nbefore` index
-        * "peak_to_peak": take the peak-to-peak amplitude
-    return_scaled: bool, default True
+        * "extremum" : take the peak value (max or min depending on `peak_sign`)
+        * "at_index" : take value at `nbefore` index
+        * "peak_to_peak" : take the peak-to-peak amplitude
+    return_scaled : bool, default True
         The amplitude is scaled or not.
-    abs_value: bool = True
+    abs_value : bool = True
         Whether the extremum amplitude should be returned as an absolute value or not
 
     Returns
     -------
-    peak_values: dict
+    peak_values : dict
         Dictionary with unit ids as keys and template amplitudes as values
     """
     assert peak_sign in ("both", "neg", "pos"), "'peak_sign' must be 'both', 'neg', or 'pos'"
@@ -131,22 +130,22 @@ def get_template_extremum_channel(
 
     Parameters
     ----------
-    templates_or_sorting_analyzer: Templates | SortingAnalyzer
+    templates_or_sorting_analyzer : Templates | SortingAnalyzer
         A Templates or a SortingAnalyzer object
-    peak_sign:  "neg" | "pos" | "both"
+    peak_sign :  "neg" | "pos" | "both"
         Sign of the template to find extremum channels
-    mode: "extremum" | "at_index" | "peak_to_peak", default: "at_index"
+    mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
         Where the amplitude is computed
-        * "extremum": take the peak value (max or min depending on `peak_sign`)
-        * "at_index": take value at `nbefore` index
-        * "peak_to_peak": take the peak-to-peak amplitude
-    outputs: "id" | "index", default: "id"
-        * "id": channel id
-        * "index": channel index
+        * "extremum" : take the peak value (max or min depending on `peak_sign`)
+        * "at_index" : take value at `nbefore` index
+        * "peak_to_peak" : take the peak-to-peak amplitude
+    outputs : "id" | "index", default: "id"
+        * "id" : channel id
+        * "index" : channel index
 
     Returns
     -------
-    extremum_channels: dict
+    extremum_channels : dict
         Dictionary with unit ids as keys and extremum channels (id or index based on "outputs")
         as values
     """
@@ -188,14 +187,14 @@ def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak
 
     Parameters
     ----------
-    templates_or_sorting_analyzer: Templates | SortingAnalyzer
+    templates_or_sorting_analyzer : Templates | SortingAnalyzer
         A Templates or a SortingAnalyzer object
-    peak_sign:  "neg" | "pos" | "both"
+    peak_sign :  "neg" | "pos" | "both"
         Sign of the template to find extremum channels
 
     Returns
     -------
-    shifts: dict
+    shifts : dict
         Dictionary with unit ids as keys and shifts as values
     """
     unit_ids = templates_or_sorting_analyzer.unit_ids
@@ -244,22 +243,22 @@ def get_template_extremum_amplitude(
 
     Parameters
     ----------
-    templates_or_sorting_analyzer: Templates | SortingAnalyzer
+    templates_or_sorting_analyzer : Templates | SortingAnalyzer
         A Templates or a SortingAnalyzer object
-    peak_sign:  "neg" | "pos" | "both"
+    peak_sign :  "neg" | "pos" | "both"
         Sign of the template to find extremum channels
-    mode: "extremum" | "at_index" | "peak_to_peak", default: "at_index"
+    mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
         Where the amplitude is computed
         * "extremum": take the peak value (max or min depending on `peak_sign`)
         * "at_index": take value at `nbefore` index
         * "peak_to_peak": take the peak-to-peak amplitude
-    abs_value: bool = True
+    abs_value : bool = True
         Whether the extremum amplitude should be returned as an absolute value or not
 
 
     Returns
     -------
-    amplitudes: dict
+    amplitudes : dict
         Dictionary with unit ids as keys and amplitudes as values
     """
     assert peak_sign in ("both", "neg", "pos"), "'peak_sign' must be  'neg' or 'pos' or 'both'"

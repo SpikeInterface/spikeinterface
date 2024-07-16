@@ -1,23 +1,18 @@
 import pytest
 
-import spikeinterface.full as si
-import pandas as pd
-from pathlib import Path
-import matplotlib.pyplot as plt
 
 import shutil
 
 from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import (
     make_drifting_dataset,
-    cache_folder,
 )
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_motion_estimation import MotionEstimationStudy
 
 
 @pytest.mark.skip()
-def test_benchmark_motion_estimaton():
-
+def test_benchmark_motion_estimaton(create_cache_folder):
+    cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="1s")
 
     data = make_drifting_dataset()
@@ -46,11 +41,11 @@ def test_benchmark_motion_estimaton():
                 localize_kwargs=dict(method=loc_method),
                 estimate_motion_kwargs=dict(
                     method=est_method,
-                    bin_duration_s=1.0,
+                    bin_s=1.0,
                     bin_um=5.0,
                     rigid=False,
                     win_step_um=50.0,
-                    win_sigma_um=200.0,
+                    win_scale_um=200.0,
                 ),
             ),
         )
@@ -70,8 +65,11 @@ def test_benchmark_motion_estimaton():
 
     # plots
     study.plot_true_drift()
+    study.plot_drift()
     study.plot_errors()
     study.plot_summary_errors()
+
+    import matplotlib.pyplot as plt
 
     plt.show()
 

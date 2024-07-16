@@ -4,15 +4,16 @@ from pathlib import Path
 import shutil
 import json
 import numpy as np
-import pandas as pd
+
 
 import time
 
-import os
 
 from spikeinterface.core import SortingAnalyzer
-from spikeinterface.core.core_tools import check_json
-from spikeinterface import load_extractor, split_job_kwargs, create_sorting_analyzer, load_sorting_analyzer
+
+from spikeinterface import load_extractor, create_sorting_analyzer, load_sorting_analyzer
+from spikeinterface.widgets import get_some_colors
+
 
 import pickle
 
@@ -43,6 +44,7 @@ class BenchmarkStudy:
         self.cases = {}
         self.benchmarks = {}
         self.scan_folder()
+        self.colors = None
 
     @classmethod
     def create(cls, study_folder, datasets={}, cases={}, levels=None):
@@ -225,6 +227,20 @@ class BenchmarkStudy:
             benchmark.result["run_time"] = float(t1 - t0)
             benchmark.save_main(bench_folder)
 
+    def set_colors(self, colors=None, map_name="tab20"):
+        if colors is None:
+            case_keys = list(self.cases.keys())
+            self.colors = get_some_colors(
+                case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0
+            )
+        else:
+            self.colors = colors
+
+    def get_colors(self):
+        if self.colors is None:
+            self.set_colors()
+        return self.colors
+
     def get_run_times(self, case_keys=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -234,6 +250,7 @@ class BenchmarkStudy:
             benchmark = self.benchmarks[key]
             assert benchmark is not None
             run_times[key] = benchmark.result["run_time"]
+        import pandas as pd
 
         df = pd.DataFrame(dict(run_times=run_times))
         if not isinstance(self.levels, str):
@@ -245,7 +262,21 @@ class BenchmarkStudy:
             case_keys = list(self.cases.keys())
         run_times = self.get_run_times(case_keys=case_keys)
 
-        run_times.plot(kind="bar")
+        colors = self.get_colors()
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots()
+        labels = []
+        for i, key in enumerate(case_keys):
+            labels.append(self.cases[key]["label"])
+            rt = run_times.at[key, "run_times"]
+            ax.bar(i, rt, width=0.8, color=colors[key])
+        ax.set_xticks(np.arange(len(case_keys)))
+        ax.set_xticklabels(labels, rotation=45.0)
+        return fig
+
+        # ax = run_times.plot(kind="bar")
+        # return ax.figure
 
     def compute_results(self, case_keys=None, verbose=False, **result_params):
         if case_keys is None:
@@ -368,6 +399,8 @@ class Benchmark:
 
     def _save_keys(self, saved_keys, folder):
         for k, format in saved_keys:
+            if k not in self.result or self.result[k] is None:
+                continue
             if format == "npy":
                 np.save(folder / f"{k}.npy", self.result[k])
             elif format == "pickle":
@@ -375,6 +408,8 @@ class Benchmark:
                     pickle.dump(self.result[k], f)
             elif format == "sorting":
                 self.result[k].save(folder=folder / k, format="numpy_folder", overwrite=True)
+            elif format == "Motion":
+                self.result[k].save(folder=folder / k)
             elif format == "zarr_templates":
                 self.result[k].to_zarr(folder / k)
             elif format == "sorting_analyzer":
@@ -409,6 +444,10 @@ class Benchmark:
                 from spikeinterface.core import load_extractor
 
                 result[k] = load_extractor(folder / k)
+            elif format == "Motion":
+                from spikeinterface.sortingcomponents.motion import Motion
+
+                result[k] = Motion.load(folder / k)
             elif format == "zarr_templates":
                 from spikeinterface.core.template import Templates
 

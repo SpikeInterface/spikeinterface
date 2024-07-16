@@ -25,27 +25,41 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to the binary container usually a .dat, .lfp, .eeg extension.
-    xml_file_path: str, default: None
+    xml_file_path : str, default: None
         The path to the xml file. If None, the xml file is assumed to have the same name as the binary file.
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     """
 
-    mode = "file"
     NeoRawIOClass = "NeuroScopeRawIO"
-    name = "neuroscope"
 
-    def __init__(self, file_path, xml_file_path=None, stream_id=None, stream_name=None, all_annotations=False):
+    def __init__(
+        self,
+        file_path,
+        xml_file_path=None,
+        stream_id=None,
+        stream_name: bool = None,
+        all_annotations: bool = False,
+        use_names_as_ids: bool = False,
+    ):
         neo_kwargs = self.map_to_neo_kwargs(file_path, xml_file_path)
 
         NeoBaseRecordingExtractor.__init__(
-            self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
+            **neo_kwargs,
         )
         if xml_file_path is not None:
             xml_file_path = str(Path(xml_file_path).absolute())
@@ -102,9 +116,6 @@ class NeuroScopeSortingExtractor(BaseSorting):
     xml_file_path : PathType, default: None
         Path to the .xml file referenced by this sorting.
     """
-
-    extractor_name = "NeuroscopeSortingExtractor"
-    name = "neuroscope"
 
     def __init__(
         self,
@@ -302,18 +313,18 @@ def read_neuroscope(
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The xml file.
-    stream_id: str or None
+    stream_id : str or None
         The stream id to load. If None, the first stream is loaded
-    keep_mua_units: bool, default: False
+    keep_mua_units : bool, default: False
         Optional. Whether or not to return sorted spikes from multi-unit activity
-    exclude_shanks: list
+    exclude_shanks : list
         Optional. List of indices to ignore. The set of all possible indices is chosen by default, extracted as the
         final integer of all the .res. % i and .clu. % i pairs.
-    load_recording: bool, default: True
+    load_recording : bool, default: True
         If True, the recording is loaded
-    load_sorting: bool, default: False
+    load_sorting : bool, default: False
         If True, the sorting is loaded
     """
     outputs = ()

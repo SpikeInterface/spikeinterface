@@ -18,24 +18,37 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    stream_id: str or None, default: None
+    stream_id : str or None, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str or None, default: None
+    stream_name : str or None, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     """
 
-    mode = "file"
     NeoRawIOClass = "SpikeGadgetsRawIO"
-    name = "spikegadgets"
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
+    def __init__(
+        self,
+        file_path,
+        stream_id=None,
+        stream_name=None,
+        all_annotations: bool = False,
+        use_names_as_ids: bool = False,
+    ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(
-            self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
+            **neo_kwargs,
         )
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id))
 
@@ -44,7 +57,7 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
             probegroup = probeinterface.read_spikegadgets(file_path, raise_error=False)
 
         if probegroup is not None:
-            self.set_probes(probegroup, in_place=True)
+            self.set_probegroup(probegroup, in_place=True)
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):

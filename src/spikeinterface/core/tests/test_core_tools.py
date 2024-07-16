@@ -11,109 +11,168 @@ from spikeinterface.core.core_tools import (
     check_paths_relative,
     normal_pdf,
     convert_string_to_bytes,
+    add_suffix,
 )
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
+def test_add_suffix():
+    # first case - no dot provided before extension
+    file_path = "testpath"
+    possible_suffix = ["raw", "bin", "path"]
+    file_path_with_suffix = add_suffix(file_path, possible_suffix)
+    expected_path = "testpath.raw"
+    assert str(file_path_with_suffix) == expected_path
+
+    # second case - dot provided before extension
+    file_path = "testpath"
+    possible_suffix = [".raw", ".bin", ".path"]
+    file_path_with_suffix = add_suffix(file_path, possible_suffix)
+    expected_path = "testpath.raw"
+    assert str(file_path_with_suffix) == expected_path
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Runs on posix only")
 def test_path_utils_functions():
-    if platform.system() != "Windows":
-        # posix path
-        d = {
-            "kwargs": {
-                "path": "/yep/sub/path1",
-                "recording": {
-                    "module": "mock_module",
-                    "class": "mock_class",
-                    "version": "1.2",
-                    "annotations": {},
-                    "kwargs": {"path": "/yep/sub/path2"},
-                },
-            }
+    # posix path
+    d = {
+        "kwargs": {
+            "path": "/yep/sub/path1",
+            "recording": {
+                "module": "mock_module",
+                "class": "mock_class",
+                "version": "1.2",
+                "annotations": {},
+                "kwargs": {"path": "/yep/sub/path2"},
+            },
         }
+    }
 
-        d2 = recursive_path_modifier(d, lambda p: p.replace("/yep", "/yop"))
-        assert d2["kwargs"]["path"].startswith("/yop")
-        assert d2["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
+    d2 = recursive_path_modifier(d, lambda p: p.replace("/yep", "/yop"))
+    assert d2["kwargs"]["path"].startswith("/yop")
+    assert d2["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
 
-        d3 = make_paths_relative(d, Path("/yep"))
-        assert d3["kwargs"]["path"] == "sub/path1"
-        assert d3["kwargs"]["recording"]["kwargs"]["path"] == "sub/path2"
 
-        d4 = make_paths_absolute(d3, "/yop")
-        assert d4["kwargs"]["path"].startswith("/yop")
-        assert d4["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Runs only on Windows")
+def test_relative_path_on_windows():
 
-    if platform.system() == "Windows":
-        # test for windows Path
-        d = {
-            "kwargs": {
-                "path": r"c:\yep\sub\path1",
-                "recording": {
-                    "module": "mock_module",
-                    "class": "mock_class",
-                    "version": "1.2",
-                    "annotations": {},
-                    "kwargs": {"path": r"c:\yep\sub\path2"},
-                },
-            }
+    d = {
+        "kwargs": {
+            "path": r"c:\yep\sub\path1",
+            "recording": {
+                "module": "mock_module",
+                "class": "mock_class",
+                "version": "1.2",
+                "annotations": {},
+                "kwargs": {"path": r"c:\yep\sub\path2"},
+            },
         }
+    }
 
-        d2 = make_paths_relative(d, "c:\\yep")
-        # the str be must unix like path even on windows for more portability
-        assert d2["kwargs"]["path"] == "sub/path1"
-        assert d2["kwargs"]["recording"]["kwargs"]["path"] == "sub/path2"
+    # same drive
+    assert check_paths_relative(d, r"c:\yep")
+    # not the same drive
+    assert not check_paths_relative(d, r"d:\yep")
 
-        # same drive
-        assert check_paths_relative(d, r"c:\yep")
-        # not the same drive
-        assert not check_paths_relative(d, r"d:\yep")
 
-        d = {
-            "kwargs": {
-                "path": r"\\host\share\yep\sub\path1",
-            }
+@pytest.mark.skipif(platform.system() != "Windows", reason="Runs only on Windows")
+def test_universal_naming_convention():
+    d = {
+        "kwargs": {
+            "path": r"\\host\share\yep\sub\path1",
         }
-        # UNC cannot be relative to d: drive
-        assert not check_paths_relative(d, r"d:\yep")
+    }
+    # UNC cannot be relative to d: drive
+    assert not check_paths_relative(d, r"d:\yep")
 
-        # UNC can be relative to the same UNC
-        assert check_paths_relative(d, r"\\host\share")
+    # UNC can be relative to the same UNC
+    assert check_paths_relative(d, r"\\host\share")
 
-    def test_convert_string_to_bytes():
-        # Test SI prefixes
-        assert convert_string_to_bytes("1k") == 1000
-        assert convert_string_to_bytes("1M") == 1000000
-        assert convert_string_to_bytes("1G") == 1000000000
-        assert convert_string_to_bytes("1T") == 1000000000000
-        assert convert_string_to_bytes("1P") == 1000000000000000
-        # Test IEC prefixes
-        assert convert_string_to_bytes("1Ki") == 1024
-        assert convert_string_to_bytes("1Mi") == 1048576
-        assert convert_string_to_bytes("1Gi") == 1073741824
-        assert convert_string_to_bytes("1Ti") == 1099511627776
-        assert convert_string_to_bytes("1Pi") == 1125899906842624
-        # Test mixed values
-        assert convert_string_to_bytes("1.5k") == 1500
-        assert convert_string_to_bytes("2.5M") == 2500000
-        assert convert_string_to_bytes("0.5G") == 500000000
-        assert convert_string_to_bytes("1.2T") == 1200000000000
-        assert convert_string_to_bytes("1.5Pi") == 1688849860263936
-        # Test zero values
-        assert convert_string_to_bytes("0k") == 0
-        assert convert_string_to_bytes("0Ki") == 0
-        # Test invalid inputs (should raise assertion error)
-        with pytest.raises(AssertionError) as e:
-            convert_string_to_bytes("1Z")
-            assert str(e.value) == "Unknown suffix: Z"
 
-        with pytest.raises(AssertionError) as e:
-            convert_string_to_bytes("1Xi")
-            assert str(e.value) == "Unknown suffix: Xi"
+def test_make_paths_relative(tmp_path):
+
+    path_1 = tmp_path / "sub" / "path1"
+    path_2 = tmp_path / "sub" / "path2"
+
+    # Create the objects in the path
+    path_1.mkdir(parents=True, exist_ok=True)
+    path_2.mkdir(parents=True, exist_ok=True)
+    extractor_dict = {
+        "kwargs": {
+            "path": str(path_1),  # Note this is different in windows and posix
+            "electrical_series_path": "/acquisition/timeseries",  # non-existent path-like objects should not be modified
+            "recording": {
+                "module": "mock_module",
+                "class": "mock_class",
+                "version": "1.2",
+                "annotations": {},
+                "kwargs": {"path": str(path_2)},
+            },
+        }
+    }
+    modified_extractor_dict = make_paths_relative(extractor_dict, tmp_path)
+    assert modified_extractor_dict["kwargs"]["path"] == "sub/path1"
+    assert modified_extractor_dict["kwargs"]["recording"]["kwargs"]["path"] == "sub/path2"
+    assert modified_extractor_dict["kwargs"]["electrical_series_path"] == "/acquisition/timeseries"
+
+
+def test_make_paths_absolute(tmp_path):
+
+    path_1 = tmp_path / "sub" / "path1"
+    path_2 = tmp_path / "sub" / "path2"
+
+    path_1.mkdir(parents=True, exist_ok=True)
+    path_2.mkdir(parents=True, exist_ok=True)
+
+    extractor_dict = {
+        "kwargs": {
+            "path": "sub/path1",
+            "electrical_series_path": "/acquisition/timeseries",  # non-existent path-like objects should not be modified
+            "recording": {
+                "module": "mock_module",
+                "class": "mock_class",
+                "version": "1.2",
+                "annotations": {},
+                "kwargs": {"path": "sub/path2"},
+            },
+        }
+    }
+
+    modified_extractor_dict = make_paths_absolute(extractor_dict, tmp_path)
+    assert modified_extractor_dict["kwargs"]["path"].startswith(str(tmp_path.as_posix()))
+    assert modified_extractor_dict["kwargs"]["recording"]["kwargs"]["path"].startswith(str(tmp_path.as_posix()))
+    assert modified_extractor_dict["kwargs"]["electrical_series_path"] == "/acquisition/timeseries"
+
+
+def test_convert_string_to_bytes():
+    # Test SI prefixes
+    assert convert_string_to_bytes("1k") == 1000
+    assert convert_string_to_bytes("1M") == 1000000
+    assert convert_string_to_bytes("1G") == 1000000000
+    assert convert_string_to_bytes("1T") == 1000000000000
+    assert convert_string_to_bytes("1P") == 1000000000000000
+    # Test IEC prefixes
+    assert convert_string_to_bytes("1Ki") == 1024
+    assert convert_string_to_bytes("1Mi") == 1048576
+    assert convert_string_to_bytes("1Gi") == 1073741824
+    assert convert_string_to_bytes("1Ti") == 1099511627776
+    assert convert_string_to_bytes("1Pi") == 1125899906842624
+    # Test mixed values
+    assert convert_string_to_bytes("1.5k") == 1500
+    assert convert_string_to_bytes("2.5M") == 2500000
+    assert convert_string_to_bytes("0.5G") == 500000000
+    assert convert_string_to_bytes("1.2T") == 1200000000000
+    assert convert_string_to_bytes("1.5Pi") == 1688849860263936
+    # Test zero values
+    assert convert_string_to_bytes("0k") == 0
+    assert convert_string_to_bytes("0Ki") == 0
+    # Test invalid inputs (should raise assertion error)
+    with pytest.raises(AssertionError) as e:
+        convert_string_to_bytes("1Z")
+        assert str(e.value) == "Unknown suffix: Z"
+
+    with pytest.raises(AssertionError) as e:
+        convert_string_to_bytes("1Xi")
+        assert str(e.value) == "Unknown suffix: Xi"
 
 
 def test_normal_pdf() -> None:
