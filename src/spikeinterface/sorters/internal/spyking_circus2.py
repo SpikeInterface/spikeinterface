@@ -17,6 +17,7 @@ from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.curation.auto_merge import get_potential_auto_merge
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
+from spikeinterface.core.sparsity import ChannelSparsity
 
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
@@ -361,7 +362,6 @@ def create_sorting_analyzer_with_templates(sorting, recording, templates, remove
     templates_array = templates.get_dense_templates().copy()
     
     if remove_empty:
-        from spikeinterface.core.sparsity import ChannelSparsity
         non_empty_unit_ids = sorting.get_non_empty_unit_ids()
         non_empty_sorting = sorting.remove_empty_units()
         non_empty_unit_indices = sorting.ids_to_indices(non_empty_unit_ids)
