@@ -360,7 +360,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 def create_sorting_analyzer_with_templates(sorting, recording, templates, remove_empty=True):
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
-    
+
     if remove_empty:
         non_empty_unit_ids = sorting.get_non_empty_unit_ids()
         non_empty_sorting = sorting.remove_empty_units()
@@ -377,21 +377,20 @@ def create_sorting_analyzer_with_templates(sorting, recording, templates, remove
     sa.extensions["templates"].data["average"] = templates_array
     return sa
 
+
 def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
 
     from spikeinterface.core.sorting_tools import apply_merges_to_sorting
-    from spikeinterface.curation.curation_tools import resolve_merging_graph
 
     sa = create_sorting_analyzer_with_templates(sorting, recording, templates)
-    
+
     sa.compute("unit_locations", method="monopolar_triangulation")
     similarity_kwargs = merging_kwargs.pop("similarity_kwargs", {})
     sa.compute("template_similarity", **similarity_kwargs)
     correlograms_kwargs = merging_kwargs.pop("correlograms_kwargs", {})
     sa.compute("correlograms", **correlograms_kwargs)
     auto_merge_kwargs = merging_kwargs.pop("auto_merge", {})
-    merges = get_potential_auto_merge(sa, **auto_merge_kwargs)
-    merges = resolve_merging_graph(sa.sorting, merges)
+    merges = get_potential_auto_merge(sa, resolve_graph=True, **auto_merge_kwargs)
     sorting = apply_merges_to_sorting(sa.sorting, merges)
 
     return sorting
