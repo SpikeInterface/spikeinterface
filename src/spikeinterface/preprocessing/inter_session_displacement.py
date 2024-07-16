@@ -35,6 +35,7 @@ from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 def correct_inter_session_displacement(
     recordings_list: list[BaseRecording],
     existing_motion_info: Optional[list[Dict]] = None,
+    keep_channels_constant=False,
     detect_kwargs={},  # TODO: make non-mutable (same for motion.py)
     select_kwargs={},
     localize_peaks_kwargs={},
@@ -44,10 +45,10 @@ def correct_inter_session_displacement(
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks, localize_peak_methods
-    from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-    from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+    from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion
+    from spikeinterface.sortingcomponents.motion.motion_interpolation import InterpolateMotionRecording
     from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
-    from spikeinterface.sortingcomponents.motion_utils import Motion
+    from spikeinterface.sortingcomponents.motion.motion_utils import Motion, get_spatial_windows
 
     # TODO: do not accept multi-segment recordings.
     # TODO: check all recordings have the same probe dimensions!
@@ -101,12 +102,13 @@ def correct_inter_session_displacement(
         peaks_list = [info["peaks"] for info in existing_motion_info]
         peak_locations_list = [info["peak_locations"] for info in existing_motion_info]
 
-    from spikeinterface.sortingcomponents.motion_estimation import make_2d_motion_histogram, make_3d_motion_histograms
+    from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_histogram, make_3d_motion_histograms
 
     # make motion histogram
     motion_histogram_dim = "2D"  # "2D" or "3D", for now only handle 2D case
 
     motion_histogram_list = []
+    all_temporal_bin_edges = []  # TODO: fix naming
 
     bin_um = 2  # TODO: critial paraneter. easier to take no binning and gaus smooth?
 
@@ -125,13 +127,13 @@ def correct_inter_session_displacement(
                 peak_locations,
                 weight_with_amplitude=False,
                 direction="y",
-                bin_duration_s=recording.get_duration(segment_index=0),  # 1.0,
+                bin_s=recording.get_duration(segment_index=0),  # 1.0,
                 bin_um=bin_um,
-                margin_um=50,
+                hist_margin_um=50,
                 spatial_bin_edges=None,
             )
         else:
-            assert NotImplementedError
+            assert NotImplementedError  # TODO: might be old API pre-dredge
             motion_histogram = make_3d_motion_histograms(
                 recording,
                 peaks,
@@ -146,8 +148,8 @@ def correct_inter_session_displacement(
             )
         motion_histogram_list.append(motion_histogram[0].squeeze())
         # store bin edges
-        temporal_bin_edges = motion_histogram[1]
-        spatial_bin_edges = motion_histogram[2]
+        all_temporal_bin_edges.append(motion_histogram[1])
+        spatial_bin_edges_um = motion_histogram[2]  # should be same across all recordings
 
     # Do some checks on temporal and spatial bin edges that they are all the same?
     # TODO: do some smoothing? Try some other methds (e.g. NMI, KL divergence)
@@ -183,6 +185,12 @@ def correct_inter_session_displacement(
         # TODO: think will need to make this negative
         shifts[i] = (midpoint - np.argmax(conv)) * bin_um  # # TODO: the bin spacing is super important for resoltuion
 
+    # half
+    # TODO: need to figure out interpolation to the center point, weird;y
+    # the below does not work
+    # shifts[0] = (shifts[1] / 2)
+    #  shifts[1] = (shifts[1] / 2) * -1
+    #   print("SHIFTS", shifts)
     # TODO: handle only the 2D case for now
     # TODO: do multi-session optimisation
 
@@ -196,16 +204,37 @@ def correct_inter_session_displacement(
     for i, recording in enumerate(recordings_list):
 
         # TODO: direct copy, use 'get_window' from motion machinery
-        bin_centers = spatial_bin_edges[:-1] + bin_um / 2.0
-        n = bin_centers.size
-        non_rigid_windows = [np.ones(n, dtype="float64")]
-        middle = (spatial_bin_edges[0] + spatial_bin_edges[-1]) / 2.0
-        non_rigid_window_centers = np.array([middle])
+        if False:
+            bin_centers = spatial_bin_edges[:-1] + bin_um / 2.0
+            n = bin_centers.size
+            non_rigid_windows = [np.ones(n, dtype="float64")]
+            middle = (spatial_bin_edges[0] + spatial_bin_edges[-1]) / 2.0
+            non_rigid_window_centers = np.array([middle])
 
-        motion_array = shifts[i]  # TODO: this is the rigid case!
+        dim = 1  # ["x", "y", "z"].index(direction)
+        contact_depths = recording.get_channel_locations()[:, dim]
+        spatial_bin_centers = 0.5 * (spatial_bin_edges_um[1:] + spatial_bin_edges_um[:-1])
+
+        _, window_centers = get_spatial_windows(
+            contact_depths, spatial_bin_centers, rigid=True  # TODO: handle non-rigid case
+        )
+        #        win_shape=win_shape,  TODO: handle defaults better
+        #       win_step_um=win_step_um,
+        #      win_scale_um=win_scale_um,
+        #     win_margin_um=win_margin_um,
+        #    zero_threshold=1e-5,
+
+        #    if shifts[i] == 0:
+        ##       all_recording_corrected.append(recording)  # TODO
+        #     continue
+        temporal_bin_edges = all_temporal_bin_edges[i]
         temporal_bins = 0.5 * (temporal_bin_edges[1:] + temporal_bin_edges[:-1])
+
+        motion_array = np.zeros((temporal_bins.size, window_centers.size))  # TODO: check this is the expected shape
+        motion_array[:, :] = shifts[i]  # TODO: this is the rigid case!
+
         motion = Motion(
-            [np.atleast_2d(motion_array)], [temporal_bins], non_rigid_window_centers, direction="y"
+            [motion_array], [temporal_bins], window_centers, direction="y"
         )  # will be same for all except for shifts
         all_motion_info.append(motion)  # not certain on this
 
@@ -225,4 +254,15 @@ def correct_inter_session_displacement(
         "all_motion_histograms": motion_histogram_list,  # TODO: naming
         "all_shifts": shifts,
     }
+
+    if keep_channels_constant:
+        # TODO: use set
+        import functools
+
+        common_channels = functools.reduce(
+            np.intersect1d, [recording.channel_ids for recording in all_recording_corrected]
+        )
+
+        all_recording_corrected = [recording.channel_slice(common_channels) for recording in all_recording_corrected]
+
     return all_recording_corrected, displacement_info  # TODO: output more stuff later e.g. the Motion object
