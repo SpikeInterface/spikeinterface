@@ -43,6 +43,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = False
+    need_backward_compatibility_on_load = True
 
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
