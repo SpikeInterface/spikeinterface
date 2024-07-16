@@ -135,7 +135,7 @@ class AnalyzerExtensionCommonTestSuite:
 
         some_merges = [sorting_analyzer.unit_ids[:2].tolist()]
         num_units_after_merge = len(sorting_analyzer.unit_ids) - 1
-        merged = sorting_analyzer.merge_units(some_merges, format="memory", mode="soft", sparsity_overlap=0.0)
+        merged = sorting_analyzer.merge_units(some_merges, format="memory", merging_mode="soft", sparsity_overlap=0.0)
         assert len(merged.unit_ids) == num_units_after_merge
 
     def run_extension_tests(self, extension_class, params):
