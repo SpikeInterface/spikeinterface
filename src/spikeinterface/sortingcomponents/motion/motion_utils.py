@@ -148,6 +148,12 @@ class Motion:
         # reshape to grid domain shape if necessary
         displacement = displacement.reshape(out_shape)
 
+        # TODO: hacky
+        if self.temporal_bins_s[segment_index].size == 1 and self.spatial_bins_um.size == 1:
+            assert np.all(np.isnan(displacement))
+            assert self.displacement[segment_index].size == 1
+            displacement[:] = self.displacement[segment_index]
+
         return displacement
 
     def to_dict(self):
