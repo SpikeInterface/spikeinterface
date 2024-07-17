@@ -377,6 +377,20 @@ backends without writing to disk. So, you can compute an extension *in-memory* w
 you have decided on your desired parameters you can either use :code:`compute` with :code:`save=True` or use :code:`save_as`
 to write everything out to disk.
 
+
+Finally, the :code:`SortingAnalyzer` object can be used directly to curate a spike sorting output by selecting/removing units
+and merging unit groups.
+
+.. code-block:: python
+
+    sorting_analyzer_select = sorting_analyzer.select_units(unit_ids=[0, 1, 2, 3])
+    sorting_analyzer_remove = sorting_analyzer.remove_units(remove_unit_ids=[0])
+    sorting_analyzer_merge = sorting_analyzer.merge_units([0, 1], [2, 3])
+
+All computed extensions will be automatically propagated or merged when curating. Please refer to the
+:ref:`modules/curation:Curation module` documentation for more information.
+
+
 Event
 -----
 

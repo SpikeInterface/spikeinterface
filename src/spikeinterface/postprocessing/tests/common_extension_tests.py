@@ -101,7 +101,7 @@ class AnalyzerExtensionCommonTestSuite:
         sorting_analyzer = self.get_sorting_analyzer(
             self.recording, self.sorting, format=format, sparsity=sparsity_, name=extension_class.extension_name
         )
-        sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
+        sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
 
         for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
@@ -132,6 +132,11 @@ class AnalyzerExtensionCommonTestSuite:
         some_unit_ids = sorting_analyzer.unit_ids[::2]
         sliced = sorting_analyzer.select_units(some_unit_ids, format="memory")
         assert np.array_equal(sliced.unit_ids, sorting_analyzer.unit_ids[::2])
+
+        some_merges = [sorting_analyzer.unit_ids[:2].tolist()]
+        num_units_after_merge = len(sorting_analyzer.unit_ids) - 1
+        merged = sorting_analyzer.merge_units(some_merges, format="memory", merging_mode="soft", sparsity_overlap=0.0)
+        assert len(merged.unit_ids) == num_units_after_merge
 
     def run_extension_tests(self, extension_class, params):
         """

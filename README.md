@@ -46,11 +46,13 @@
 [![Twitter](https://img.shields.io/badge/@spikeinterface-%231DA1F2.svg?style=for-the-badge&logo=Twitter&logoColor=white)](https://twitter.com/spikeinterface) [![Mastodon](https://img.shields.io/badge/-@spikeinterface-%232B90D9?style=for-the-badge&logo=mastodon&logoColor=white)](https://fosstodon.org/@spikeinterface)
 
 
-> :warning::warning::warning:
-> **New features under construction!** 🚧🚧🚧: after the 0.100.0 release (and related bug fixes), the next release will contain
-> a major API improvement: the `SortingAnalyzer`. To read more about this, checkout the
-> [enhancement proposal](https://github.com/SpikeInterface/spikeinterface/issues/2282).
-> Please refer to the stable documentation [here](https://spikeinterface.readthedocs.io/en/0.100.4)
+> :rocket::rocket::rocket:
+> **New features!**: after months of development and testing, we are happy to announce that
+> the latest release (0.101.0) includes a major API improvement: the `SortingAnalyzer`!
+> To read more about why we did this, checkout the
+> [SpikeInterface Enhancement Proposal](https://github.com/SpikeInterface/spikeinterface/issues/2282).
+> Please follow this guide to transition from the old API to the new one:
+> [Updating from legacy](https://spikeinterface.readthedocs.io/en/0.101.0/tutorials/waveform_extractor_to_sorting_analyzer.html).
 
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
@@ -74,11 +76,13 @@ With SpikeInterface, users can:
 
 ## Documentation
 
-Detailed documentation of the latest PyPI release of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/0.100.1).
+Detailed documentation of the latest PyPI release of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/stable).
 
 Detailed documentation of the development version of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
 
 Several tutorials to get started can be found in [spiketutorials](https://github.com/SpikeInterface/spiketutorials).
+
+Checkout our YouTube channel for video tutorials: [SpikeInterface YouTube Channel](https://www.youtube.com/@Spikeinterface).
 
 There are also some useful notebooks [on our blog](https://spikeinterface.github.io) that cover advanced benchmarking
 and sorting components.
@@ -128,3 +132,6 @@ If you find SpikeInterface useful in your research, please cite:
   publisher={eLife Sciences Publications Limited}
 }
 ```
+
+Please also cite other relevant papers for the specific components you use.
+For a ful list of references, please check the [references](https://spikeinterface.readthedocs.io/en/latest/references.html) page.

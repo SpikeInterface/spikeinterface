@@ -973,6 +973,8 @@ def inject_some_split_units(sorting, split_ids: list, num_split=2, output_ids=Fa
     -------
     sorting_with_split : NumpySorting
         A sorting with split units.
+    other_ids : dict
+        The dictionary with the split unit_ids. Returned only if output_ids is True.
     """
     unit_ids = sorting.unit_ids
     assert unit_ids.dtype.kind == "i"

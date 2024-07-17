@@ -1,10 +1,13 @@
 import pytest
 
+import numpy as np
+
 from spikeinterface.postprocessing.tests.common_extension_tests import (
     AnalyzerExtensionCommonTestSuite,
 )
 
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap, ComputeTemplateSimilarity
+from spikeinterface.postprocessing.template_similarity import compute_similarity_with_templates_array
 
 
 class TestSimilarityExtension(AnalyzerExtensionCommonTestSuite):
@@ -45,3 +48,42 @@ class TestSimilarityExtension(AnalyzerExtensionCommonTestSuite):
                 waveforms1 = wf_ext.get_waveforms_one_unit(unit_id1)
 
                 assert not check_equal_template_with_distribution_overlap(waveforms0, waveforms1)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(method="cosine"),
+        dict(method="cosine", num_shifts=8),
+        dict(method="l2"),
+        dict(method="l1", support="intersection"),
+        dict(method="l2", support="union"),
+        dict(method="cosine", support="dense"),
+    ],
+)
+def test_compute_similarity_with_templates_array(params):
+    # TODO @ pierre please make more test here
+
+    rng = np.random.default_rng(seed=2205)
+    templates_array = rng.random(size=(2, 20, 5))
+    other_templates_array = rng.random(size=(4, 20, 5))
+
+    similarity = compute_similarity_with_templates_array(templates_array, other_templates_array, **params)
+    print(similarity.shape)
+
+
+if __name__ == "__main__":
+    from spikeinterface.postprocessing.tests.common_extension_tests import get_dataset
+    from spikeinterface.core import estimate_sparsity
+    from pathlib import Path
+
+    test = TestSimilarityExtension()
+
+    test.recording, test.sorting = get_dataset()
+
+    test.sparsity = estimate_sparsity(test.sorting, test.recording, method="radius", radius_um=20)
+    test.cache_folder = Path("./cache_folder")
+    test.test_extension(params=dict(method="l2"))
+
+    # params = dict(method="cosine", num_shifts=8)
+    # test_compute_similarity_with_templates_array(params)
