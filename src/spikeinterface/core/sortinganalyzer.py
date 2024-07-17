@@ -777,6 +777,10 @@ class SortingAnalyzer:
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
         sorted_extensions = _sort_extensions_by_dependency(self.extensions)
+        # hack: quality metrics are computed at last
+        qm_extension_params = sorted_extensions.pop("quality_metrics")
+        if qm_extension_params is not None:
+            sorted_extensions["quality_metrics"] = qm_extension_params
         recompute_dict = {}
 
         for extension_name, extension in sorted_extensions.items():

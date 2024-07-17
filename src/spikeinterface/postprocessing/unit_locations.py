@@ -42,9 +42,16 @@ class ComputeUnitLocations(AnalyzerExtension):
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = False
+    need_backward_compatibility_on_load = True
 
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
+
+    def _handle_backward_compatibility_on_load(self):
+        if "method_kwargs" in self.params:
+            # make compatible analyzer created between february 24 and july 24
+            method_kwargs = self.params.pop("method_kwargs")
+            self.params.updated(**method_kwargs)
 
     def _set_params(self, method="monopolar_triangulation", **method_kwargs):
         params = dict(method=method)
