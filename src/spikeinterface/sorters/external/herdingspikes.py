@@ -133,7 +133,7 @@ class HerdingspikesSorter(BaseSorter):
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
-        sorted_file = str(sorter_output_folder / "HS2_sorted")
+        sorted_file = str(sorter_output_folder / "HS2_sorted.hdf5")
         params["out_file"] = str(sorter_output_folder / "HS2_detected")
         p = params
 
