@@ -30,6 +30,7 @@ _required_extensions = {
     "knn": ["spike_locations", "spike_amplitudes"],
 }
 
+_templates_needed = ['unit_locations', 'min_snr', 'template_similarity', 'spike_locations', 'spike_amplitudes']
 
 def auto_merges(
     sorting_analyzer: SortingAnalyzer,
@@ -201,13 +202,17 @@ def auto_merges(
         if step in _required_extensions:
             for ext in _required_extensions[step]:
                 if compute_needed_extensions:
+                    if step in _templates_needed:
+                        template_ext = sorting_analyzer.get_extension("templates")
+                        if template_ext is None:
+                            sorting_analyzer.compute(["random_spikes", "templates"])
                     params = eval(f"{step}_kwargs")
                     params = params.get(ext, dict())
                     sorting_analyzer.compute(ext, **params, **job_kwargs)
                 else:
                     if not sorting_analyzer.has_extension(ext):
                         raise ValueError(f"{step} requires {ext} extension")
-
+    
     n = unit_ids.size
     pair_mask = np.triu(np.arange(n)) > 0
     outs = dict()
@@ -228,7 +233,7 @@ def auto_merges(
         elif step == "snr":
             qm_ext = sorting_analyzer.get_extension("quality_metrics")
             if qm_ext is None:
-                sorting_analyzer.compute(["noise_levels", "random_spikes", "templates"], **job_kwargs)
+                sorting_analyzer.compute(["noise_levels"], **job_kwargs)
                 sorting_analyzer.compute("quality_metrics", metric_names=["snr"], **job_kwargs)
                 qm_ext = sorting_analyzer.get_extension("quality_metrics")
 
@@ -301,7 +306,7 @@ def auto_merges(
 
         # STEP : check the vicinity of the spikes
         elif step == "knn" in steps:
-            pair_mask = get_pairs_via_nntree(sorting_analyzer, **knn_kwargs, pair_mask=pair_mask, job_kwargs=job_kwargs)
+            pair_mask = get_pairs_via_nntree(sorting_analyzer, **knn_kwargs, pair_mask=pair_mask)
 
         # STEP : check how the rates overlap in times
         elif step == "presence_distance" in steps:
@@ -524,7 +529,7 @@ def get_potential_auto_merge(
     )
 
 
-def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, job_kwargs=None, **knn_kwargs):
+def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs):
 
     sorting = sorting_analyzer.sorting
     unit_ids = sorting.unit_ids

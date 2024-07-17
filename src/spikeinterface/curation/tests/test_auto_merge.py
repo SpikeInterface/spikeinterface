@@ -71,7 +71,7 @@ def test_get_auto_merge_list(sorting_analyzer_for_curation, preset):
         with pytest.raises(ValueError):
             potential_merges = get_potential_auto_merge(sorting_analyzer, preset=preset)
         potential_merges = get_potential_auto_merge(
-            sorting_analyzer, preset=preset, steps=["min_spikes", "min_snr", "remove_contaminated", "unit_locations"]
+            sorting_analyzer, preset=preset, steps=["num_spikes", "snr", "remove_contaminated", "unit_locations"]
         )
 
     # DEBUG
