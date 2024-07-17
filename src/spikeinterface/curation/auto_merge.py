@@ -206,7 +206,7 @@ def auto_merges(
                     if step in _templates_needed:
                         template_ext = sorting_analyzer.get_extension("templates")
                         if template_ext is None:
-                            sorting_analyzer.compute(["random_spikes", "templates"])
+                            sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
                     params = eval(f"{step}_kwargs")
                     params = params.get(ext, dict())
                     sorting_analyzer.compute(ext, **params, **job_kwargs)
