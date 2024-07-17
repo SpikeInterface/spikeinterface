@@ -55,7 +55,7 @@ def auto_merges(
     quality_score_kwargs={"firing_contamination_balance" : 2.5,
                           "refractory_period_ms" : 1.0,
                           "censored_period_ms" : 0.3},
-    compute_needed_extensions=True,
+    compute_needed_extensions: bool = True,
     extra_outputs: bool = False,
     steps: list[str] | None = None,
     **job_kwargs
@@ -201,14 +201,13 @@ def auto_merges(
     for step in steps:
         if step in _required_extensions:
             for ext in _required_extensions[step]:
-                if not sorting_analyzer.has_extension(ext):
-                    if not compute_needed_extensions:
+                if compute_needed_extensions:
+                    params = eval(f"{step}_kwargs")
+                    params = params.get(ext, dict())
+                    sorting_analyzer.compute(ext, **params, **job_kwargs)
+                else:
+                    if not sorting_analyzer.has_extension(ext):
                         raise ValueError(f"{step} requires {ext} extension")
-                    else:
-                        params = eval(f"{step}_kwargs")
-                        print("toto", params, step, ext)
-                        sorting_analyzer.compute(ext, **params, **job_kwargs)
-            
 
     n = unit_ids.size
     pair_mask = np.triu(np.arange(n)) > 0

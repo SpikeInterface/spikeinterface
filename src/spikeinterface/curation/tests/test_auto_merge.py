@@ -14,7 +14,6 @@ from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_
 )
 def test_get_auto_merge_list(sorting_analyzer_for_curation, preset):
 
-    print(sorting_analyzer_for_curation)
     sorting = sorting_analyzer_for_curation.sorting
     recording = sorting_analyzer_for_curation.recording
     num_unit_splited = 1
@@ -72,7 +71,7 @@ def test_get_auto_merge_list(sorting_analyzer_for_curation, preset):
         with pytest.raises(ValueError):
             potential_merges = get_potential_auto_merge(sorting_analyzer, preset=preset)
         potential_merges = get_potential_auto_merge(
-            sorting_analyzer, preset=preset, steps=["min_spikes", "min_snr", "remove_contaminated", "unit_positions"]
+            sorting_analyzer, preset=preset, steps=["min_spikes", "min_snr", "remove_contaminated", "unit_locations"]
         )
 
     # DEBUG
