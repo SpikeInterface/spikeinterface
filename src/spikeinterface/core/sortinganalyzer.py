@@ -777,6 +777,10 @@ class SortingAnalyzer:
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
         sorted_extensions = _sort_extensions_by_dependency(self.extensions)
+        # hack: quality metrics are computed at last
+        qm_extension_params = sorted_extensions.pop("quality_metrics", None)
+        if qm_extension_params is not None:
+            sorted_extensions["quality_metrics"] = qm_extension_params
         recompute_dict = {}
 
         for extension_name, extension in sorted_extensions.items():
@@ -1204,7 +1208,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         # check dependencies
         if extension_class.need_recording:
-            assert self.has_recording(), f"Extension {extension_name} requires the recording"
+            assert (
+                self.has_recording() or self.has_temporary_recording()
+            ), f"Extension {extension_name} requires the recording"
         for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
                 ok = any(self.get_extension(name) is not None for name in dependency_name.split("|"))
@@ -1398,9 +1404,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         extension_class = get_extension_class(extension_name)
 
-        extension_instance = extension_class(self)
-        extension_instance.load_params()
-        extension_instance.load_data()
+        extension_instance = extension_class.load(self)
 
         self.extensions[extension_name] = extension_instance
 
@@ -1699,6 +1703,7 @@ class AnalyzerExtension:
     use_nodepipeline = False
     nodepipeline_variables = None
     need_job_kwargs = False
+    need_backward_compatibility_on_load = False
 
     def __init__(self, sorting_analyzer):
         self._sorting_analyzer = weakref.ref(sorting_analyzer)
@@ -1735,6 +1740,10 @@ class AnalyzerExtension:
 
     def _get_data(self):
         # must be implemented in subclass
+        raise NotImplementedError
+
+    def _handle_backward_compatibility_on_load(self):
+        # must be implemented in subclass only if need_backward_compatibility_on_load=True
         raise NotImplementedError
 
     @classmethod
@@ -1814,6 +1823,9 @@ class AnalyzerExtension:
         ext = cls(sorting_analyzer)
         ext.load_params()
         ext.load_data()
+        if cls.need_backward_compatibility_on_load:
+            ext._handle_backward_compatibility_on_load()
+
         return ext
 
     def load_params(self):
