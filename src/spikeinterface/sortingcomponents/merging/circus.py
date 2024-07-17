@@ -13,10 +13,9 @@ class CircusMerging(BaseMergingEngine):
     default_params = {
         "verbose": True,
         "merging_kwargs": {"merging_mode": "soft", "sparsity_overlap": 0.25, "censor_ms": 3},
-        "similarity_correlograms_kwargs": {"unit_locations_kwargs" : {
-                                "max_distance_um": 50, 
-                                "unit_locations" : {"method" : "monopolar_triangulation"}}
-                                },
+        "similarity_correlograms_kwargs": {
+            "unit_locations_kwargs": {"max_distance_um": 50, "unit_locations": {"method": "monopolar_triangulation"}}
+        },
         "temporal_splits_kwargs": None,
     }
 
