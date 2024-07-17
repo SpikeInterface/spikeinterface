@@ -96,7 +96,7 @@ def test_apply_merges_to_sorting():
         spikes1[spikes1["unit_index"] == 2]["sample_index"], spikes2[spikes2["unit_index"] == 0]["sample_index"]
     )
 
-    sorting3, keep_mask = apply_merges_to_sorting(sorting1, [["a", "b"]], censor_ms=1.5, return_kept=True)
+    sorting3, keep_mask, _ = apply_merges_to_sorting(sorting1, [["a", "b"]], censor_ms=1.5, return_extra=True)
     spikes3 = sorting3.to_spike_vector()
     assert spikes3.size < spikes1.size
     assert not keep_mask[1]
@@ -152,6 +152,13 @@ def test_generate_unit_ids_for_merge_group():
         ["0", "5", "12", "9", "15"], [["0", "5"], ["9", "15"]], new_id_strategy="take_first"
     )
     assert np.array_equal(new_unit_ids, ["0", "9"])
+
+    new_unit_ids = generate_unit_ids_for_merge_group(
+        ["0", "5", "12", "9", "15"], [["0", "5"], ["9", "15"]], new_id_strategy="join"
+    )
+    assert np.array_equal(new_unit_ids, ["0-5", "9-15"])
+
+
 
 
 if __name__ == "__main__":
