@@ -348,6 +348,9 @@ def _get_ids_after_merging(old_unit_ids, merge_unit_groups, new_unit_ids):
     """
     old_unit_ids = np.asarray(old_unit_ids)
     dtype = old_unit_ids.dtype
+    if dtype.kind == 'U':
+        # the new dtype can be longer
+        dtype = 'U'
 
     assert len(new_unit_ids) == len(merge_unit_groups), "new_unit_ids should have the same len as merge_unit_groups"
 
