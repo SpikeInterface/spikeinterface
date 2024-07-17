@@ -12,13 +12,12 @@ class LussacMerging(BaseMergingEngine):
 
     default_params = {
         "verbose": True,
-        "compute_needed_extensions" : True,
+        "compute_needed_extensions": True,
         "merging_kwargs": {"merging_mode": "soft", "sparsity_overlap": 0, "censor_ms": 3},
         "template_diff_thresh": np.arange(0, 0.5, 0.05),
-        "x_contaminations_kwargs": {"unit_locations_kwargs": {
-                        "max_distance_um": 50, 
-                        "unit_locations": {"method": "monopolar_triangulation"}}
-        }
+        "x_contaminations_kwargs": {
+            "unit_locations_kwargs": {"max_distance_um": 50, "unit_locations": {"method": "monopolar_triangulation"}}
+        },
     }
 
     def __init__(self, sorting_analyzer, kwargs):
