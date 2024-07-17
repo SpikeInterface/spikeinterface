@@ -171,6 +171,10 @@ def test_estimate_motion(dataset):
             else:
                 assert motion.displacement[0].shape[1] > 1
 
+            if rec.has_time_vector():
+                assert np.all(motion.temporal_bins_s[0] >= rec.get_times()[0])
+                assert np.all(motion.temporal_bins_s[0] <= rec.get_times()[-1])
+
             # # Test saving to disk
             # corrected_rec = InterpolateMotionRecording(
             #     recording, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate"
