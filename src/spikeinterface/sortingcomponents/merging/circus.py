@@ -12,7 +12,8 @@ class CircusMerging(BaseMergingEngine):
 
     default_params = {
         "verbose": True,
-        "merging_kwargs": {"merging_mode": "soft", "sparsity_overlap": 0.25, "censor_ms": 3},
+        "compute_needed_extensions" : True,
+        "merging_kwargs": {"merging_mode": "soft", "sparsity_overlap": 0, "censor_ms": 3},
         "similarity_correlograms_kwargs": {
             "unit_locations_kwargs": {"max_distance_um": 50, "unit_locations": {"method": "monopolar_triangulation"}}
         },
@@ -23,7 +24,6 @@ class CircusMerging(BaseMergingEngine):
         self.params = self.default_params.copy()
         self.params.update(**kwargs)
         self.analyzer = sorting_analyzer
-        self.verbose = self.params["verbose"]
 
     def run(self, **job_kwargs):
         presets = ["similarity_correlograms", "temporal_splits"]
@@ -34,7 +34,8 @@ class CircusMerging(BaseMergingEngine):
             self.analyzer,
             presets=presets,
             params=params,
-            verbose=self.verbose,
+            verbose=self.params["verbose"],
+            compute_needed_extensions=self.params["compute_needed_extensions"],
             merging_kwargs=self.params["merging_kwargs"],
             **job_kwargs,
         )
