@@ -33,7 +33,6 @@ _required_extensions = {
 _templates_needed = ["unit_locations", "min_snr", "template_similarity", "spike_locations", "spike_amplitudes"]
 
 
-
 def auto_merges(
     sorting_analyzer: SortingAnalyzer,
     preset: str | None = "similarity_correlograms",
@@ -531,25 +530,34 @@ def get_potential_auto_merge(
     )
 
 
-def iterative_merges(sorting_analyzer, 
-                         presets, 
-                         params=None, 
-                         merging_params={'merging_mode' : 'soft', "censor_ms" : 3},
-                         compute_needed_extensions=True,
-                         verbose=False,
-                         **job_kwargs):
+def iterative_merges(
+    sorting_analyzer,
+    presets,
+    params=None,
+    merging_params={"merging_mode": "soft", "censor_ms": 3},
+    compute_needed_extensions=True,
+    verbose=False,
+    **job_kwargs,
+):
     if params is None:
-        params = [{}]*len(presets)
+        params = [{}] * len(presets)
 
     assert len(presets) == len(params)
 
     for i in range(len(presets)):
-        merges = auto_merges(sorting_analyzer, resolve_graph=True, compute_needed_extensions=compute_needed_extensions, **params[i], **job_kwargs)
+        merges = auto_merges(
+            sorting_analyzer,
+            resolve_graph=True,
+            compute_needed_extensions=compute_needed_extensions,
+            **params[i],
+            **job_kwargs,
+        )
         if verbose:
             n_merges = len(merges)
             print(f"{n_merges} have been made during pass", presets[i])
         sorting_analyzer = sorting_analyzer.merge_units(merges, **merging_params, **job_kwargs)
     return sorting_analyzer
+
 
 def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs):
 
