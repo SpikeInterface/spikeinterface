@@ -13,6 +13,9 @@ class LussacMerging(BaseMergingEngine):
     default_params = {
         "verbose": True,
         "merging_kwargs": {"merging_mode": "soft", "sparsity_overlap": 0.25, "censor_ms": 3},
+        "unit_locations_kwargs": { "max_distance_um": 50, 
+                                   "unit_locations" : {"method" : "monopolar_triangulation"}
+                                },
         "template_diff_thresh": np.arange(0, 0.5, 0.05),
         "x_contaminations_kwargs": None,
     }
@@ -26,7 +29,11 @@ class LussacMerging(BaseMergingEngine):
 
     def run(self, **job_kwargs):
         presets = ["x_contaminations"] * len(self.iterations)
-        params = [{"template_similarity_kwargs": {"template_diff_thresh": i}} for i in self.iterations]
+        params = []
+        for i in self.iterations:
+            local_param = {"unit_locations_kwargs" : self.params["unit_locations_kwargs"].copy()}
+            local_param["template_similarity_kwargs"] = {"template_diff_thresh": i}
+            params += [local_param]
         merging_kwargs = self.params["merging_kwargs"] or dict()
         analyzer = iterative_merges(
             self.analyzer,

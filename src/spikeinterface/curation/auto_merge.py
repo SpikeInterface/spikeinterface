@@ -43,7 +43,7 @@ def auto_merges(
     unit_locations_kwargs={"max_distance_um": 50},
     correlogram_kwargs={
         "corr_diff_thresh": 0.16,
-        "censor_correlograms_ms": 0.15,
+        "censor_correlograms_ms": 0.3,
         "sigma_smooth_ms": 0.6,
         "adaptative_window_thresh": 0.5,
     },
@@ -547,6 +547,7 @@ def iterative_merges(
     for i in range(len(presets)):
         merges = auto_merges(
             sorting_analyzer,
+            preset=presets[i],
             resolve_graph=True,
             compute_needed_extensions=compute_needed_extensions * (i == 0),
             extra_outputs=False,
