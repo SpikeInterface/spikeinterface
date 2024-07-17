@@ -14,10 +14,6 @@ from spikeinterface.preprocessing import common_reference, whiten, bandpass_filt
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-from spikeinterface.curation.auto_merge import get_potential_auto_merge
-from spikeinterface.core.analyzer_extension_core import ComputeTemplates
-from spikeinterface.core.sparsity import ChannelSparsity
 
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
@@ -37,14 +33,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         },
         "apply_motion_correction": True,
         "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
-        "merging": {
-            "similarity_kwargs": {"method": "cosine", "support": "union", "max_lag_ms": 0.2},
-            "correlograms_kwargs": {},
-            "auto_merge": {
-                "min_spikes": 10,
-                "corr_diff_thresh": 0.25,
-            },
-        },
+        "merging": {"method" : "lussac"},
         "clustering": {"legacy": True},
         "matching": {"method": "wobble"},
         "apply_preprocessing": True,
@@ -340,8 +329,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting.save(folder=curation_folder)
                 # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
-            merging_params["method_kwargs"] = {"templates": templates}
-            sorting = merge_spikes(recording_w, sorting, **merging_params)
+            sorting = merge_spikes(recording_w, sorting, templates=templates, verbose=verbose, **merging_params)
 
             if verbose:
                 print(f"Final merging, keeping {len(sorting.unit_ids)} units")
@@ -361,42 +349,3 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         set_global_job_kwargs(**job_kwargs_before)
 
         return sorting
-
-
-def create_sorting_analyzer_with_templates(sorting, recording, templates, remove_empty=True):
-    sparsity = templates.sparsity
-    templates_array = templates.get_dense_templates().copy()
-
-    if remove_empty:
-        non_empty_unit_ids = sorting.get_non_empty_unit_ids()
-        non_empty_sorting = sorting.remove_empty_units()
-        non_empty_unit_indices = sorting.ids_to_indices(non_empty_unit_ids)
-        templates_array = templates_array[non_empty_unit_indices]
-        sparsity_mask = sparsity.mask[non_empty_unit_indices, :]
-        sparsity = ChannelSparsity(sparsity_mask, non_empty_unit_ids, sparsity.channel_ids)
-    else:
-        non_empty_sorting = sorting
-
-    sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
-    sa.extensions["templates"] = ComputeTemplates(sa)
-    sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
-    sa.extensions["templates"].data["average"] = templates_array
-    return sa
-
-
-def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
-
-    from spikeinterface.core.sorting_tools import apply_merges_to_sorting
-
-    sa = create_sorting_analyzer_with_templates(sorting, recording, templates)
-
-    sa.compute("unit_locations", method="monopolar_triangulation")
-    similarity_kwargs = merging_kwargs.pop("similarity_kwargs", {})
-    sa.compute("template_similarity", **similarity_kwargs)
-    correlograms_kwargs = merging_kwargs.pop("correlograms_kwargs", {})
-    sa.compute("correlograms", **correlograms_kwargs)
-    auto_merge_kwargs = merging_kwargs.pop("auto_merge", {})
-    merges = get_potential_auto_merge(sa, resolve_graph=True, **auto_merge_kwargs)
-    sorting = apply_merges_to_sorting(sa.sorting, merges)
-
-    return sorting

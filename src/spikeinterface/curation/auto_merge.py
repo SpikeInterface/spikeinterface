@@ -554,7 +554,7 @@ def iterative_merges(
             **job_kwargs,
         )
         if verbose:
-            n_merges = np.sum([len(i) for i in merges])
+            n_merges = int(np.sum([len(i) for i in merges]))
             print(f"{n_merges} merges have been made during pass", presets[i])
 
         sorting_analyzer = sorting_analyzer.merge_units(merges, **merging_kwargs, **job_kwargs)

@@ -12,7 +12,7 @@ class CircusMerging(BaseMergingEngine):
 
     default_params = {
         "verbose": True,
-        "merging_kwargs": {"merging_mode": "soft", "sparsity_overlap": 0.5, "censor_ms": 3},
+        "merging_kwargs": {"merging_mode": "soft", "sparsity_overlap": 0.25, "censor_ms": 3},
         "similarity_correlograms_kwargs": None,
         "temporal_splits_kwargs": None,
     }

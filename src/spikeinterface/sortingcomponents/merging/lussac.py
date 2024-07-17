@@ -12,7 +12,7 @@ class LussacMerging(BaseMergingEngine):
 
     default_params = {
         "verbose": True,
-        "merging_kwargs": {"merging_mode": "soft", "sparsity_overlap": 0.5, "censor_ms": 3},
+        "merging_kwargs": {"merging_mode": "soft", "sparsity_overlap": 0.25, "censor_ms": 3},
         "template_diff_thresh": np.arange(0, 0.5, 0.05),
         "x_contaminations_kwargs": None,
     }
