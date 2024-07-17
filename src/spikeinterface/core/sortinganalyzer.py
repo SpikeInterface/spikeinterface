@@ -1398,9 +1398,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         extension_class = get_extension_class(extension_name)
 
-        extension_instance = extension_class(self)
-        extension_instance.load_params()
-        extension_instance.load_data()
+        extension_instance = extension_class.load(self)
 
         self.extensions[extension_name] = extension_instance
 
@@ -1820,7 +1818,7 @@ class AnalyzerExtension:
         ext.load_params()
         ext.load_data()
         if cls.need_backward_compatibility_on_load:
-            self._handle_backward_compatibility_on_load()
+            ext._handle_backward_compatibility_on_load()
 
         return ext
 
