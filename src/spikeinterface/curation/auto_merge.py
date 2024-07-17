@@ -530,24 +530,29 @@ def get_potential_auto_merge(
     )
 
 
-def iterative_merges(sorting_analyzer, 
-                         presets, 
-                         params=None, 
-                         merging_kwargs={'merging_mode' : 'soft', "sparsity_overlap" : 0.5, "censor_ms" : 3},
-                         compute_needed_extensions=True,
-                         verbose=False,
-                         **job_kwargs):
+def iterative_merges(
+    sorting_analyzer,
+    presets,
+    params=None,
+    merging_kwargs={"merging_mode": "soft", "sparsity_overlap": 0.5, "censor_ms": 3},
+    compute_needed_extensions=True,
+    verbose=False,
+    **job_kwargs,
+):
     if params is None:
         params = [{}] * len(presets)
 
     assert len(presets) == len(params)
 
     for i in range(len(presets)):
-        merges = auto_merges(sorting_analyzer, 
-                             resolve_graph=True, 
-                             compute_needed_extensions=compute_needed_extensions * (i==0), 
-                             extra_outputs=False,
-                             **params[i], **job_kwargs)
+        merges = auto_merges(
+            sorting_analyzer,
+            resolve_graph=True,
+            compute_needed_extensions=compute_needed_extensions * (i == 0),
+            extra_outputs=False,
+            **params[i],
+            **job_kwargs,
+        )
         if verbose:
             n_merges = len(merges)
             print(f"{n_merges} merges have been made during pass", presets[i])

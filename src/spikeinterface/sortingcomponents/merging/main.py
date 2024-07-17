@@ -27,8 +27,16 @@ def create_sorting_analyzer_with_templates(sorting, recording, templates, remove
     sa.extensions["templates"].data["average"] = templates_array
     return sa
 
+
 def merge_spikes(
-    recording, sorting, method="circus", templates=None, remove_empty=True, method_kwargs={}, verbose=False, **job_kwargs
+    recording,
+    sorting,
+    method="circus",
+    templates=None,
+    remove_empty=True,
+    method_kwargs={},
+    verbose=False,
+    **job_kwargs,
 ):
     """Find spike from a recording from given templates.
 
