@@ -25,7 +25,7 @@ _possible_presets = ["similarity_correlograms", "x_contaminations", "temporal_sp
 _required_extensions = {
     "unit_locations": ["unit_locations"],
     "correlogram": ["correlograms"],
-    "min_snr" : ["noise_levels", "templates"],
+    "min_snr": ["noise_levels", "templates"],
     "template_similarity": ["template_similarity"],
     "knn": ["spike_locations", "spike_amplitudes"],
 }
@@ -35,32 +35,31 @@ def auto_merges(
     sorting_analyzer: SortingAnalyzer,
     preset: str | None = "similarity_correlograms",
     resolve_graph: bool = False,
-    num_spikes_kwargs={"min_spikes" : 100},
-    snr_kwargs={"min_snr" : 2},
-    remove_contaminated_kwargs={"contamination_thresh" : 0.2,
-                                "refractory_period_ms" : 1.0,
-                                "censored_period_ms" : 0.3},
-    unit_locations_kwargs={"max_distance_um" : 150},
-    correlogram_kwargs={"corr_diff_thresh" : 0.16, 
-                        "censor_correlograms_ms" : 0.15, 
-                        "sigma_smooth_ms" : 0.6,
-                        "adaptative_window_thresh" : 0.5},
-    template_similarity_kwargs={"template_diff_thresh" : 0.25},
-    presence_distance_kwargs={"presence_distance_thresh" : 100},
-    knn_kwargs={"k_nn" : 10},
-    cross_contamination_kwargs={"cc_thresh" : 0.1,
-                                "p_value" : 0.2,
-                                "refractory_period_ms" : 1.0,
-                                "censored_period_ms" : 0.3},
-    quality_score_kwargs={"firing_contamination_balance" : 2.5,
-                          "refractory_period_ms" : 1.0,
-                          "censored_period_ms" : 0.3},
+    num_spikes_kwargs={"min_spikes": 100},
+    snr_kwargs={"min_snr": 2},
+    remove_contaminated_kwargs={"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+    unit_locations_kwargs={"max_distance_um": 150},
+    correlogram_kwargs={
+        "corr_diff_thresh": 0.16,
+        "censor_correlograms_ms": 0.15,
+        "sigma_smooth_ms": 0.6,
+        "adaptative_window_thresh": 0.5,
+    },
+    template_similarity_kwargs={"template_diff_thresh": 0.25},
+    presence_distance_kwargs={"presence_distance_thresh": 100},
+    knn_kwargs={"k_nn": 10},
+    cross_contamination_kwargs={
+        "cc_thresh": 0.1,
+        "p_value": 0.2,
+        "refractory_period_ms": 1.0,
+        "censored_period_ms": 0.3,
+    },
+    quality_score_kwargs={"firing_contamination_balance": 2.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
     compute_needed_extensions: bool = True,
     extra_outputs: bool = False,
     steps: list[str] | None = None,
-    **job_kwargs
+    **job_kwargs,
 ) -> list[tuple[int | str, int | str]] | Tuple[tuple[int | str, int | str], dict]:
-    
     """
     Algorithm to find and check potential merges between units.
 
@@ -242,9 +241,9 @@ def auto_merges(
         # STEP : remove contaminated auto corr
         elif step == "remove_contaminated":
             contaminations, nb_violations = compute_refrac_period_violations(
-                sorting_analyzer, 
-                refractory_period_ms=remove_contaminated_kwargs["refractory_period_ms"], 
-                censored_period_ms=remove_contaminated_kwargs["censored_period_ms"]
+                sorting_analyzer,
+                refractory_period_ms=remove_contaminated_kwargs["refractory_period_ms"],
+                censored_period_ms=remove_contaminated_kwargs["censored_period_ms"],
             )
             nb_violations = np.array(list(nb_violations.values()))
             contaminations = np.array(list(contaminations.values()))
@@ -319,8 +318,10 @@ def auto_merges(
 
         # STEP : check if the cross contamination is significant
         elif step == "cross_contamination" in steps:
-            refractory = (cross_contamination_kwargs["censored_period_ms"], 
-                          cross_contamination_kwargs["refractory_period_ms"])
+            refractory = (
+                cross_contamination_kwargs["censored_period_ms"],
+                cross_contamination_kwargs["refractory_period_ms"],
+            )
             CC, p_values = compute_cross_contaminations(
                 sorting_analyzer, pair_mask, cross_contamination_kwargs["cc_thresh"], refractory, contaminations
             )
@@ -350,9 +351,6 @@ def auto_merges(
         return potential_merges, outs
     else:
         return potential_merges
-
-        
-
 
 
 def get_potential_auto_merge(
@@ -492,29 +490,38 @@ def get_potential_auto_merge(
         sorting_analyzer,
         preset,
         resolve_graph,
-        num_spikes_kwargs={"min_spikes" : min_spikes},
-        snr_kwargs={"min_snr" : min_snr},
-        remove_contaminated_kwargs={"contamination_thresh" : contamination_thresh,
-                                    "refractory_period_ms" : refractory_period_ms,
-                                    "censored_period_ms" : censored_period_ms},
-        unit_locations_kwargs={"max_distance_um" : max_distance_um},
-        correlogram_kwargs={"corr_diff_thresh" : corr_diff_thresh, 
-                            "censor_correlograms_ms" : censor_correlograms_ms, 
-                            "sigma_smooth_ms" : sigma_smooth_ms,
-                            "adaptative_window_thresh" : adaptative_window_thresh},
-        template_similarity_kwargs={"template_diff_thresh" : template_diff_thresh},
-        presence_distance_kwargs={"presence_distance_thresh" : presence_distance_thresh, **presence_distance_kwargs},
-        knn_kwargs={"k_nn" : k_nn, **knn_kwargs},
-        cross_contamination_kwargs={"cc_thresh" : cc_thresh,
-                                    "p_value" : p_value,
-                                    "refractory_period_ms" : refractory_period_ms,
-                                    "censored_period_ms" : censored_period_ms},
-        quality_score_kwargs={"firing_contamination_balance" : firing_contamination_balance,
-                            "refractory_period_ms" : refractory_period_ms,
-                            "censored_period_ms" : censored_period_ms},
+        num_spikes_kwargs={"min_spikes": min_spikes},
+        snr_kwargs={"min_snr": min_snr},
+        remove_contaminated_kwargs={
+            "contamination_thresh": contamination_thresh,
+            "refractory_period_ms": refractory_period_ms,
+            "censored_period_ms": censored_period_ms,
+        },
+        unit_locations_kwargs={"max_distance_um": max_distance_um},
+        correlogram_kwargs={
+            "corr_diff_thresh": corr_diff_thresh,
+            "censor_correlograms_ms": censor_correlograms_ms,
+            "sigma_smooth_ms": sigma_smooth_ms,
+            "adaptative_window_thresh": adaptative_window_thresh,
+        },
+        template_similarity_kwargs={"template_diff_thresh": template_diff_thresh},
+        presence_distance_kwargs={"presence_distance_thresh": presence_distance_thresh, **presence_distance_kwargs},
+        knn_kwargs={"k_nn": k_nn, **knn_kwargs},
+        cross_contamination_kwargs={
+            "cc_thresh": cc_thresh,
+            "p_value": p_value,
+            "refractory_period_ms": refractory_period_ms,
+            "censored_period_ms": censored_period_ms,
+        },
+        quality_score_kwargs={
+            "firing_contamination_balance": firing_contamination_balance,
+            "refractory_period_ms": refractory_period_ms,
+            "censored_period_ms": censored_period_ms,
+        },
         compute_needed_extensions=False,
         extra_outputs=extra_outputs,
-        steps=steps)
+        steps=steps,
+    )
 
 
 def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, job_kwargs=None, **knn_kwargs):
