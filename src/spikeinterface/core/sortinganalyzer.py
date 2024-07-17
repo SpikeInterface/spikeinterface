@@ -1208,7 +1208,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         # check dependencies
         if extension_class.need_recording:
-            assert self.has_recording() or self.has_temporary_recording(), f"Extension {extension_name} requires the recording"
+            assert (
+                self.has_recording() or self.has_temporary_recording()
+            ), f"Extension {extension_name} requires the recording"
         for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
                 ok = any(self.get_extension(name) is not None for name in dependency_name.split("|"))
