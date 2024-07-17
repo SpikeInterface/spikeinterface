@@ -375,7 +375,6 @@ class ComputeTemplates(AnalyzerExtension):
             # compatibility february 2024 > july 2024
             self.params["ms_after"] = self.params["nafter"] * 1000.0 / self.sorting_analyzer.sampling_frequency
 
-
     def _set_params(self, ms_before: float = 1.0, ms_after: float = 2.0, operators=None):
         operators = operators or ["average", "std"]
         assert isinstance(operators, list)
