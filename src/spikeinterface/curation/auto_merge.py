@@ -40,7 +40,7 @@ def auto_merges(
     num_spikes_kwargs={"min_spikes": 100},
     snr_kwargs={"min_snr": 2},
     remove_contaminated_kwargs={"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    unit_locations_kwargs={"max_distance_um": 150},
+    unit_locations_kwargs={"max_distance_um": 50},
     correlogram_kwargs={
         "corr_diff_thresh": 0.16,
         "censor_correlograms_ms": 0.15,
@@ -554,7 +554,7 @@ def iterative_merges(
             **job_kwargs,
         )
         if verbose:
-            n_merges = len(merges)
+            n_merges = np.sum([len(i) for i in merges])
             print(f"{n_merges} merges have been made during pass", presets[i])
 
         sorting_analyzer = sorting_analyzer.merge_units(merges, **merging_kwargs, **job_kwargs)
