@@ -51,7 +51,7 @@ class ComputeUnitLocations(AnalyzerExtension):
         if "method_kwargs" in self.params:
             # make compatible analyzer created between february 24 and july 24
             method_kwargs = self.params.pop("method_kwargs")
-            self.params.updated(**method_kwargs)
+            self.params.update(**method_kwargs)
 
     def _set_params(self, method="monopolar_triangulation", **method_kwargs):
         params = dict(method=method)
