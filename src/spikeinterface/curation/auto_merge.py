@@ -30,7 +30,8 @@ _required_extensions = {
     "knn": ["spike_locations", "spike_amplitudes"],
 }
 
-_templates_needed = ['unit_locations', 'min_snr', 'template_similarity', 'spike_locations', 'spike_amplitudes']
+_templates_needed = ["unit_locations", "min_snr", "template_similarity", "spike_locations", "spike_amplitudes"]
+
 
 
 def auto_merges(
@@ -213,7 +214,7 @@ def auto_merges(
                 else:
                     if not sorting_analyzer.has_extension(ext):
                         raise ValueError(f"{step} requires {ext} extension")
-    
+
     n = unit_ids.size
     pair_mask = np.triu(np.arange(n)) > 0
     outs = dict()
