@@ -620,7 +620,7 @@ def iterative_merges(
                 for k in m:
                     if k in final_merges:
                         new_list.remove(k)
-                        new_list += final_merges[k] 
+                        new_list += final_merges[k]
                 final_merges[count + n_units] = new_list
             n_units = max(final_merges.keys()) + 1
 
