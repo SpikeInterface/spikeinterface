@@ -531,7 +531,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
             templates[mode] = np.load(template_file)
     if len(templates) > 0:
         ext = ComputeTemplates(sorting_analyzer)
-        ext.params = dict(nbefore=nbefore, nafter=nafter, operators=list(templates.keys()))
+        ext.params = dict(ms_before=params["ms_before"], ms_after=params["ms_after"], operators=list(templates.keys()))
         for mode, arr in templates.items():
             ext.data[mode] = arr
         sorting_analyzer.extensions["templates"] = ext
@@ -548,6 +548,8 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         new_params = ext._set_params()
         updated_params = make_ext_params_up_to_date(ext, params, new_params)
         ext.set_params(**updated_params, save=False)
+        if ext.need_backward_compatibility_on_load:
+            ext._handle_backward_compatibility_on_load()
 
         if new_name == "spike_amplitudes":
             amplitudes = []
