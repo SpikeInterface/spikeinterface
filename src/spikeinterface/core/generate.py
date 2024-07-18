@@ -1714,7 +1714,7 @@ class InjectTemplatesRecording(BaseRecording):
         amplitude_factor: Union[List[List[float]], List[float], float, None] = None,
         parent_recording: Union[BaseRecording, None] = None,
         num_samples: Optional[List[int]] = None,
-        upsample_vector: Union[List[int], None] = None,
+        upsample_vector: Union[List[int], int, None] = None,
         check_borders: bool = False,
     ) -> None:
         templates = np.asarray(templates)
