@@ -39,7 +39,7 @@ class MergingBenchmark(Benchmark):
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
         self.result["gt_comparison"] = comp
 
-    _run_key_saved = [("sorting", "sorting"), ("merges", "pickle")]
+    _run_key_saved = [("sorting", "sorting"), ("merges", "pickle"), ("outs", "pickle")]
     _result_key_saved = [("gt_comparison", "pickle")]
 
 

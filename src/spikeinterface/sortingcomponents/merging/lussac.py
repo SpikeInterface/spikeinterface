@@ -1,6 +1,6 @@
 from __future__ import annotations
 import numpy as np
-
+import copy
 from .main import BaseMergingEngine
 from spikeinterface.curation.auto_merge import iterative_merges
 
@@ -30,8 +30,8 @@ class LussacMerging(BaseMergingEngine):
         presets = ["x_contaminations"] * len(self.iterations)
         params = []
         for thresh in self.iterations:
-            local_param = self.params["x_contaminations_kwargs"].copy()
-            local_param["template_similarity_kwargs"].update({"template_diff_thresh": thresh})
+            local_param = copy.deepcopy(self.params["x_contaminations_kwargs"])
+            local_param["template_similarity_kwargs"].update({"template_diff_thresh" : thresh})
             params += [local_param]
 
         result = iterative_merges(
