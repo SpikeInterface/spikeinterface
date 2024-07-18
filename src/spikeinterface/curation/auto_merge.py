@@ -548,13 +548,13 @@ def iterative_merges(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    presets : list of presets for the auto_merges() functions. Presets can be in    
+    presets : list of presets for the auto_merges() functions. Presets can be in
             "similarity_correlograms" | "x_contaminations" | "temporal_splits" | "feature_neighbors"
             (see auto_merge for more details)
     params : list of params that should be given to all presets. Should have the same length as presets
     merging_kwargs : dict, the paramaters that should be used while merging units after each preset
     compute_needed_extensions  : bool, default True
-            During the preset, boolean to specify is extensions needed by the steps should be recomputed, 
+            During the preset, boolean to specify is extensions needed by the steps should be recomputed,
             or used as they are if already present in the sorting_analyzer
     extra_outputs : bool, default: False
         If True, additional list of merges applied at every preset, and dictionary (`outs`) with processed data are returned.
@@ -563,12 +563,12 @@ def iterative_merges(
     -------
     sorting_analyzer:
         The new sorting analyzer where all the merges from all the presets have been applied
-    
+
     merges, outs:
         Returned only when extra_outputs=True
         A list with all the merges performed at every steps, and dictionaries that contains data for debugging and plotting.
     """
-    
+
     if params is None:
         params = [{}] * len(presets)
 
