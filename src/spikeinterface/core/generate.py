@@ -1150,7 +1150,6 @@ class NoiseGeneratorRecording(BaseRecording):
             "sampling_frequency": sampling_frequency,
             "noise_levels": noise_levels,
             "cov_matrix": cov_matrix,
-            "noise_levels": noise_levels,
             "dtype": dtype,
             "seed": seed,
             "strategy": strategy,
