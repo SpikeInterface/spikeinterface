@@ -1090,7 +1090,7 @@ class NoiseGeneratorRecording(BaseRecording):
         num_channels: int,
         sampling_frequency: float,
         durations: List[float],
-        noise_levels: float | np.array = 1.0,
+        noise_levels: float = 1.0,
         cov_matrix: Optional[np.array] = None,
         dtype: Optional[Union[np.dtype, str]] = "float32",
         seed: Optional[int] = None,
