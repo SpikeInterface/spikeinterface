@@ -551,22 +551,29 @@ def iterative_merges(
 
     for i in range(len(presets)):
         
-        result = auto_merges(
-                sorting_analyzer,
-                preset=presets[i],
-                resolve_graph=True,
-                compute_needed_extensions=compute_needed_extensions * (i == 0),
-                extra_outputs=extra_outputs,
-                **params[i],
-                **job_kwargs,
-            )
-
         if extra_outputs:
-            merges = result[0]
+            merges, outs = auto_merges(
+                    sorting_analyzer,
+                    preset=presets[i],
+                    resolve_graph=True,
+                    compute_needed_extensions=compute_needed_extensions * (i == 0),
+                    extra_outputs=extra_outputs,
+                    **params[i],
+                    **job_kwargs,
+                )
+
             all_merges += [merges]
-            all_outs += [result[1]]
-        else:
-            merges = result
+            all_outs += [outs]
+        else:            
+            merges = auto_merges(
+                    sorting_analyzer,
+                    preset=presets[i],
+                    resolve_graph=True,
+                    compute_needed_extensions=compute_needed_extensions * (i == 0),
+                    extra_outputs=extra_outputs,
+                    **params[i],
+                    **job_kwargs,
+                )
 
         if verbose:
             n_merges = int(np.sum([len(i) for i in merges]))

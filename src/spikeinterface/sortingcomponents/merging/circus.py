@@ -15,7 +15,7 @@ class CircusMerging(BaseMergingEngine):
         "merging_kwargs": {"merging_mode": "soft", "sparsity_overlap": 0, "censor_ms": 3},
         "similarity_correlograms_kwargs": {
             "unit_locations_kwargs": {"max_distance_um": 50, "unit_locations": {"method": "monopolar_triangulation"}},
-            #"template_similarity_kwargs": {"template_diff_thresh": 0.25, "template_similarity": {"method": "cosine", "max_lag_ms" : 0}}
+            "template_similarity_kwargs": {"template_diff_thresh": 0.25, "template_similarity": {"method": "cosine", "max_lag_ms" : 0.1}}
         },
         "temporal_splits_kwargs": None,
     }
@@ -30,18 +30,22 @@ class CircusMerging(BaseMergingEngine):
         similarity_kwargs = self.params["similarity_correlograms_kwargs"] or dict()
         temporal_kwargs = self.params["temporal_splits_kwargs"] or dict()
         params = [similarity_kwargs, temporal_kwargs]
+
         result = iterative_merges(
-            self.analyzer,
-            presets=presets,
-            params=params,
-            verbose=verbose,
-            extra_outputs=extra_outputs,
-            compute_needed_extensions=self.params["compute_needed_extensions"],
-            merging_kwargs=self.params["merging_kwargs"],
-            **job_kwargs,
-        )
+                self.analyzer,
+                presets=presets,
+                params=params,
+                verbose=verbose,
+                extra_outputs=extra_outputs,
+                compute_needed_extensions=self.params["compute_needed_extensions"],
+                merging_kwargs=self.params["merging_kwargs"],
+                **job_kwargs,
+            )
+        
         if extra_outputs:
             return result[0].sorting, result[1], result[2]
         else:
             return result.sorting
+        
+
         
