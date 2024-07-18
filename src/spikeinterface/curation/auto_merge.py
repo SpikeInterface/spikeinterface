@@ -573,6 +573,7 @@ def iterative_merges(
         params = [{}] * len(presets)
 
     assert len(presets) == len(params)
+    n_units = max(sorting_analyzer.unit_ids) + 1
 
     if extra_outputs:
         all_merges = []
@@ -611,7 +612,19 @@ def iterative_merges(
         sorting_analyzer = sorting_analyzer.merge_units(merges, **merging_kwargs, **job_kwargs)
 
     if extra_outputs:
-        return sorting_analyzer, all_merges, all_outs
+
+        final_merges = {}
+        for merge in all_merges:
+            for count, m in enumerate(merge):
+                new_list = m
+                for k in m:
+                    if k in final_merges:
+                        new_list.remove(k)
+                        new_list += final_merges[k] 
+                final_merges[count + n_units] = new_list
+            n_units = max(final_merges.keys()) + 1
+
+        return sorting_analyzer, list(final_merges.values()), all_outs
     else:
         return sorting_analyzer
 
