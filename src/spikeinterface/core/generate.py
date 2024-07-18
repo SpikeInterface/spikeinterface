@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 import warnings
 import numpy as np
-from typing import Union, Optional, List, Literal
+from typing import List, Literal
 from math import ceil
 
 from .basesorting import SpikeVectorSortingSegment
@@ -47,10 +47,10 @@ def generate_recording(
     durations: List[float], default: [5.0, 2.5]
         The duration in seconds of each segment in the recording, default: [5.0, 2.5].
         Note that the number of segments is determined by the length of this list.
-    set_probe: bool, default: True
-    ndim : int, default: 2
+    set_probe: bool | None, default: True
+    ndim : int | None, default: 2
         The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probe.
-    seed : Optional[int]
+    seed : int | None, default: None
         A seed for the np.ramdom.default_rng function
 
     Returns
@@ -253,13 +253,13 @@ def generate_sorting_to_inject(
     num_samples: list of size num_segments.
         The number of samples in all the segments of the sorting, to generate spike times
         covering entire the entire duration of the segments.
-    max_injected_per_unit: int, default 1000
+    max_injected_per_unit: int, default: 1000
         The maximal number of spikes injected per units.
-    injected_rate: float, default 0.05
+    injected_rate: float, default: 0.05
         The rate at which spikes are injected.
-    refractory_period_ms: float, default 1.5
+    refractory_period_ms: float, default: 1.5
         The refractory period that should not be violated while injecting new spikes.
-    seed: int, default None
+    seed: int, default: None
         The random seed.
 
     Returns
@@ -313,13 +313,13 @@ class TransformSorting(BaseSorting):
     ----------
     sorting : BaseSorting
         The sorting object.
-    added_spikes_existing_units : np.array (spike_vector)
+    added_spikes_existing_units : np.array (spike_vector) | None, default: None
         The spikes that should be added to the sorting object, for existing units.
-    added_spikes_new_units: np.array (spike_vector)
+    added_spikes_new_units: np.array (spike_vector) | None, default: None
         The spikes that should be added to the sorting object, for new units.
-    new_units_ids: list
+    new_units_ids: list[str, int] | None, default: None
         The unit_ids that should be added if spikes for new units are added.
-    refractory_period_ms : float, default None
+    refractory_period_ms : float | None, default: None
         The refractory period violation to prevent duplicates and/or unphysiological addition
         of spikes. Any spike times in added_spikes violating the refractory period will be
         discarded.
@@ -333,10 +333,10 @@ class TransformSorting(BaseSorting):
     def __init__(
         self,
         sorting: BaseSorting,
-        added_spikes_existing_units=None,
-        added_spikes_new_units=None,
-        new_unit_ids: Optional[List[Union[str, int]]] = None,
-        refractory_period_ms: Optional[float] = None,
+        added_spikes_existing_units: np.array | None = None,
+        added_spikes_new_units: np.array | None = None,
+        new_unit_ids: List[str | int] | None = None,
+        refractory_period_ms: float | None = None,
     ):
         sampling_frequency = sorting.get_sampling_frequency()
         unit_ids = list(sorting.get_unit_ids())
@@ -432,7 +432,7 @@ class TransformSorting(BaseSorting):
             The first sorting.
         sorting2: BaseSorting
             The second sorting.
-        refractory_period_ms : float, default None
+        refractory_period_ms : float, default: None
             The refractory period violation to prevent duplicates and/or unphysiological addition
             of spikes. Any spike times in added_spikes violating the refractory period will be
             discarded.
@@ -498,7 +498,7 @@ class TransformSorting(BaseSorting):
             The first sorting
         dict_list: list of dict
             A list of dict with unit_ids as keys and spike times as values.
-        refractory_period_ms : float, default None
+        refractory_period_ms : float, default: None
             The refractory period violation to prevent duplicates and/or unphysiological addition
             of spikes. Any spike times in added_spikes violating the refractory period will be
             discarded.
@@ -528,7 +528,7 @@ class TransformSorting(BaseSorting):
         unit_ids: list or None, default: None
             The explicit list of unit_ids that should be extracted from labels_list
             If None, then it will be np.unique(labels_list).
-        refractory_period_ms : float, default None
+        refractory_period_ms : float, default: None
             The refractory period violation to prevent duplicates and/or unphysiological addition
             of spikes. Any spike times in added_spikes violating the refractory period will be
             discarded.
@@ -1064,7 +1064,7 @@ class NoiseGeneratorRecording(BaseRecording):
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
     noise_levels: float or array, default: 1
         Std of the white noise (if an array, defined by per channels)
-    cov_matrix: np.array | None, default None
+    cov_matrix: np.array | None, default: None
         The covariance matrix of the noise
     dtype : np.dtype | str |None, default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
@@ -1279,7 +1279,7 @@ def generate_recording_by_size(
         The size in gigabytes (GiB) of the recording.
     num_channels: int
         Number of channels.
-    seed : int, default: None
+    seed : int | None, default: None
         The seed for np.random.default_rng.
 
     Returns
@@ -1688,10 +1688,10 @@ class InjectTemplatesRecording(BaseRecording):
         Can be None (no scaling).
         Can be scalar all spikes have the same factor (certainly useless).
         Can be a vector with same shape of spike_vector of the sorting.
-    parent_recording: BaseRecording | None
+    parent_recording: BaseRecording | None, default: None
         The recording over which to add the templates.
         If None, will default to traces containing all 0.
-    num_samples: list[int] | int | None
+    num_samples: list[int] | int | None, default: None
         The number of samples in the recording per segment.
         You can use int for mono-segment objects.
     upsample_vector: np.array | None, default: None.
@@ -1844,10 +1844,10 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         spike_vector: np.ndarray,
         templates: np.ndarray,
         nbefore: int,
-        amplitude_vector: Union[List[float], None],
-        upsample_vector: Union[List[float], None],
-        parent_recording_segment: Union[BaseRecordingSegment, None] = None,
-        num_samples: Union[int, None] = None,
+        amplitude_vector: List[float] | None,
+        upsample_vector: List[float] | None,
+        parent_recording_segment: BaseRecordingSegment | None = None,
+        num_samples: int | None = None,
     ) -> None:
         BaseRecordingSegment.__init__(
             self,
@@ -1867,9 +1867,9 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: List | None = None,
     ) -> np.ndarray:
         if channel_indices is None:
             n_channels = self.templates.shape[2]
