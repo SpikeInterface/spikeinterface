@@ -329,7 +329,7 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
 
 # This is the current definition that an element in a extractor_dict is a path
 # This is shared across a couple of definition so it is here for DNRY
-element_is_path = lambda element: "path" in element.name and isinstance(element.value, (str, Path))
+element_is_path = lambda element: isinstance(element.value, (str, Path)) and "path" in element.name
 
 
 def _get_paths_list(d: dict) -> list[str | Path]:
