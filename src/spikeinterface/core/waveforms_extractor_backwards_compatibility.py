@@ -544,12 +544,6 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         ext = new_class(sorting_analyzer)
         with open(ext_folder / "params.json", "r") as f:
             params = json.load(f)
-        # update params
-        new_params = ext._set_params()
-        updated_params = make_ext_params_up_to_date(ext, params, new_params)
-        ext.set_params(**updated_params, save=False)
-        if ext.need_backward_compatibility_on_load:
-            ext._handle_backward_compatibility_on_load()
 
         if new_name == "spike_amplitudes":
             amplitudes = []
@@ -606,6 +600,13 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
                     pc_all[mask, ...] = pc_one
                 ext.data["pca_projection"] = pc_all
 
+        # update params
+        new_params = ext._set_params()
+        updated_params = make_ext_params_up_to_date(ext, params, new_params)
+        ext.set_params(**updated_params, save=False)
+        if ext.need_backward_compatibility_on_load:
+            ext._handle_backward_compatibility_on_load()
+
         sorting_analyzer.extensions[new_name] = ext
 
     return sorting_analyzer
@@ -617,7 +618,7 @@ def make_ext_params_up_to_date(ext, old_params, new_params):
     updated_params = old_params.copy()
     for p, values in old_params.items():
         if p not in new_params:
-            warnings.warn(f"Removing legacy param {p} from {old_name} extension")
+            warnings.warn(f"Removing legacy parameter {p} from {old_name} extension")
             updated_params.pop(p)
         elif isinstance(values, dict):
             new_values = new_params.get(p, {})
