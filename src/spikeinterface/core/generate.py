@@ -27,12 +27,12 @@ def _ensure_seed(seed):
 
 
 def generate_recording(
-    num_channels: Optional[int] = 2,
-    sampling_frequency: Optional[float] = 30000.0,
-    durations: Optional[List[float]] = [5.0, 2.5],
-    set_probe: Optional[bool] = True,
-    ndim: Optional[int] = 2,
-    seed: Optional[int] = None,
+    num_channels: int = 2,
+    sampling_frequency: float = 30000.0,
+    durations: List[float] = [5.0, 2.5],
+    set_probe: bool | None = True,
+    ndim: int | None = 2,
+    seed: int | None = None,
 ) -> BaseRecording:
     """
     Generate a lazy recording object.
@@ -1090,7 +1090,7 @@ class NoiseGeneratorRecording(BaseRecording):
         num_channels: int,
         sampling_frequency: float,
         durations: List[float],
-        noise_levels: float = 1.0,
+        noise_levels: float | np.array = 1.0,
         cov_matrix: Optional[np.array] = None,
         dtype: Optional[Union[np.dtype, str]] = "float32",
         seed: Optional[int] = None,
