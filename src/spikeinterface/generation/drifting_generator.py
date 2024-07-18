@@ -383,9 +383,7 @@ def generate_drifting_recording(
             unit_displacements[:, :, direction] += m
 
     # unit_params need to be fixed before the displacement steps
-    generate_templates_kwargs = generate_templates_kwargs.copy()
-    unit_params = _ensure_unit_params(generate_templates_kwargs.get("unit_params", {}), num_units, seed)
-    generate_templates_kwargs["unit_params"] = unit_params
+    generate_templates_kwargs = fix_generate_templates_kwargs(generate_templates_kwargs, num_units, seed)
 
     # generate templates
     templates_array = generate_templates(
@@ -500,3 +498,28 @@ def generate_probe(generate_probe_kwargs: dict, probe_name: str | None = None) -
     probe.set_device_channel_indices(np.arange(num_channels))
 
     return probe
+
+
+def fix_generate_templates_kwargs(generate_templates_kwargs: dict, num_units: int, seed: int) -> dict:
+    """
+    Fix the generate_template_kwargs such that the same units are created
+    across calls to `generate_template`. We must explicitly pre-set
+    the parameters for each unit, done in `_ensure_unit_params()`.
+
+    Parameters
+    ----------
+
+    generate_templates_kwargs : dict
+        These kwargs will have the "unit_params" entry edited such that the
+        parameters are explicitly set for each unit to create (rather than
+        generated randomly on the fly).
+    num_units : int
+        Number of units to fix the kwargs for
+    seed : int
+        Random seed.
+    """
+    generate_templates_kwargs = generate_templates_kwargs.copy()
+    unit_params = _ensure_unit_params(generate_templates_kwargs.get("unit_params", {}), num_units, seed)
+    generate_templates_kwargs["unit_params"] = unit_params
+
+    return generate_templates_kwargs
