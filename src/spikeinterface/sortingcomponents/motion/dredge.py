@@ -283,6 +283,7 @@ def dredge_ap(
         time_smooth_s=histogram_time_smooth_s,
     )
     raster = motion_histogram.T
+    print(raster.shape)
 
     # TODO charlie : put the log for hitstogram
 

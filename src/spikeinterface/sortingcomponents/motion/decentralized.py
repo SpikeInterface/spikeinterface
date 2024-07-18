@@ -72,7 +72,7 @@ class DecentralizedRegistration:
         When not None the parwise discplament matrix is computed in a small time horizon.
         In short only pair of bins close in time.
         So the pariwaise matrix is super sparse and have values only the diagonal.
-    convergence_method: "lsmr" | "lsqr_robust" | "gradient_descent", default: "lsqr_robust"
+    convergence_method: "lsmr" | "lsqr_robust" | "gradient_descent", default: "lsmr"
         Which method to use to compute the global displacement vector from the pairwise matrix.
     robust_regression_sigma: float
         Use for convergence_method="lsqr_robust" for iterative selection of the regression.
@@ -122,7 +122,7 @@ class DecentralizedRegistration:
         batch_size=1,
         corr_threshold=0.0,
         time_horizon_s=None,
-        convergence_method="lsqr_robust",
+        convergence_method="lsmr",
         soft_weights=False,
         normalized_xcorr=True,
         centered_xcorr=True,
@@ -197,6 +197,7 @@ class DecentralizedRegistration:
             if verbose:
                 print(f"Computing pairwise displacement: {i + 1} / {len(non_rigid_windows)}")
 
+            
             pairwise_displacement, pairwise_displacement_weight = compute_pairwise_displacement(
                 motion_histogram[:, window_slice],
                 bin_um,
@@ -363,6 +364,7 @@ def compute_pairwise_displacement(
         correlation = np.empty((size, size), dtype=motion_hist.dtype)
 
         for i in xrange(0, size, batch_size):
+            print('yep', i, size, conv_engine, motion_hist_engine.shape)
             corr = normxcorr1d(
                 motion_hist_engine,
                 motion_hist_engine[i : i + batch_size],
@@ -741,7 +743,10 @@ def compute_global_displacement(
 #     corr : tensor
 #     """
 #     if conv_engine == "torch":
-#         assert HAVE_TORCH
+#         import torch
+#         import torch.nn.functional as F
+        
+#         # assert HAVE_TORCH
 #         conv1d = F.conv1d
 #         npx = torch
 #     elif conv_engine == "numpy":
