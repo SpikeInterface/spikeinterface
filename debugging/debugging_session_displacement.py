@@ -30,20 +30,22 @@ default_unit_params_range = dict(
     z_angle=(0, np.pi),
 )
 
-default_unit_params_range["alpha"] = (400, 500)  # do this or change the margin on generate_unit_locations_kwargs
+default_unit_params_range["alpha"] = (500, 500)  # do this or change the margin on generate_unit_locations_kwargs
+default_unit_params_range["b"] = (0.5, 1) # and make the units fatter, easier to receive signal!
+default_unit_params_range["c"] = (0.5, 1)
 
 rec_list, _ = generate_inter_session_displacement_recordings(
-    non_rigid_gradient=None,  # 0.05,
+    non_rigid_gradient=None,  # 0.05, TODO: note this will set nonlinearity to both x and y (the same)
     num_units=5,
     rec_durations=(25, 25, 25),  # TODO: checks on inputs
     rec_shifts=(
-        0,
-        200,
-        400,
+        (0, 0),
+        (0, 0),
+        (50, 200),
     ),
     generate_sorting_kwargs=dict(firing_rates=(149, 150), refractory_period_ms=4.0),
     generate_templates_kwargs=dict(unit_params=default_unit_params_range, ms_before=1.5, ms_after=3),
-    seed=44,
+    seed=None,
     generate_unit_locations_kwargs=dict(
         margin_um=0.0,  # if this is say 20, then units go off the edge of the probe and are such low amplitude they are not picked up.
         minimum_z=5.0,
@@ -54,6 +56,8 @@ rec_list, _ = generate_inter_session_displacement_recordings(
     ),
 )
 
+# Iterate through each recording, plotting the raw traces then
+# detecting and plotting the peaks.
 
 for rec in rec_list:
 

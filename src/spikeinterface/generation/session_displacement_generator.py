@@ -16,9 +16,9 @@ from spikeinterface.core import InjectTemplatesRecording
 
 def generate_inter_session_displacement_recordings(
     num_units=250,
-    rec_durations=(10, 10, 10),  # TODO: expose the x as well as y shift...
-    rec_shifts=(0, 5, 10),
-    non_rigid_gradient=None,  # 0.1
+    rec_durations=(10, 10, 10),
+    rec_shifts=((0, 0), (0, 25), (0, 50)),
+    non_rigid_gradient=None,
     sampling_frequency=30000.0,
     probe_name="Neuropixel-128",
     generate_probe_kwargs=None,
@@ -29,21 +29,6 @@ def generate_inter_session_displacement_recordings(
         minimum_distance=18.0,
         max_iteration=100,
         distance_strict=False,
-    ),
-    generate_displacement_vector_kwargs=dict(
-        displacement_sampling_frequency=5.0,
-        drift_start_um=[0, 20],
-        drift_stop_um=[0, -20],
-        drift_step_um=1,
-        motion_list=[
-            dict(
-                drift_mode="zigzag",
-                non_rigid_gradient=None,
-                t_start_drift=60.0,
-                t_end_drift=None,
-                period_s=200,
-            ),
-        ],
     ),
     generate_templates_kwargs=dict(
         ms_before=1.5,
@@ -56,7 +41,6 @@ def generate_inter_session_displacement_recordings(
     ),
     generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),
     generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
-    extra_outputs=False,
     seed=None,
 ):
     """ """
@@ -114,7 +98,6 @@ def generate_inter_session_displacement_recordings(
             seed=seed,
             **generate_noise_kwargs,
         )
-        breakpoint()
 
         ms_before = generate_templates_kwargs["ms_before"]
         nbefore = int(sampling_frequency * ms_before / 1000.0)
@@ -145,7 +128,7 @@ def get_inter_session_displacements(shift, non_rigid_gradient, num_units, unit_l
     """
     TODO
     """
-    displacement_vector = np.atleast_2d([0, shift])
+    displacement_vector = np.atleast_2d(shift)
 
     if non_rigid_gradient is None or shift == 0:
         displacement_unit_factor = np.ones((num_units, 1))
@@ -154,7 +137,7 @@ def get_inter_session_displacements(shift, non_rigid_gradient, num_units, unit_l
             non_rigid_gradient,
             unit_locations[:, :2],
             drift_start_um=np.array([0, 0], dtype=float),
-            drift_stop_um=np.array([0, shift], dtype=float),  # TODO: expose x as well!
+            drift_stop_um=np.array(shift, dtype=float),  # TODO: expose x as well!
         )
         displacement_unit_factor = displacement_unit_factor[:, np.newaxis]
 
