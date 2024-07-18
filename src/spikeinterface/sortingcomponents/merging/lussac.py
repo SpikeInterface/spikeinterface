@@ -11,13 +11,13 @@ class LussacMerging(BaseMergingEngine):
     """
 
     default_params = {
-        "compute_needed_extensions" : True,
+        "compute_needed_extensions": True,
         "merging_kwargs": {"merging_mode": "soft", "sparsity_overlap": 0, "censor_ms": 3},
         "template_diff_thresh": np.arange(0.05, 0.5, 0.05),
         "x_contaminations_kwargs": {
-                "unit_locations_kwargs": {"max_distance_um": 50, "unit_locations": {"method": "monopolar_triangulation"}},
-                "template_similarity_kwargs": {"template_similarity": {"method": "cosine", "max_lag_ms" : 0.1}}
-        }
+            "unit_locations_kwargs": {"max_distance_um": 50, "unit_locations": {"method": "monopolar_triangulation"}},
+            "template_similarity_kwargs": {"template_similarity": {"method": "cosine", "max_lag_ms": 0.1}},
+        },
     }
 
     def __init__(self, sorting_analyzer, kwargs):
@@ -35,15 +35,15 @@ class LussacMerging(BaseMergingEngine):
             params += [local_param]
 
         result = iterative_merges(
-                self.analyzer,
-                presets=presets,
-                params=params,
-                verbose=verbose,
-                extra_outputs=extra_outputs,
-                compute_needed_extensions=self.params["compute_needed_extensions"],
-                merging_kwargs=self.params["merging_kwargs"],
-                **job_kwargs,
-            )
+            self.analyzer,
+            presets=presets,
+            params=params,
+            verbose=verbose,
+            extra_outputs=extra_outputs,
+            compute_needed_extensions=self.params["compute_needed_extensions"],
+            merging_kwargs=self.params["merging_kwargs"],
+            **job_kwargs,
+        )
 
         if extra_outputs:
             return result[0].sorting, result[1], result[2]
