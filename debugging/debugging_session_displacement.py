@@ -40,12 +40,12 @@ rec_list, _ = generate_inter_session_displacement_recordings(
     rec_durations=(25, 25, 25),  # TODO: checks on inputs
     rec_shifts=(
         (0, 0),
-        (0, 0),
+        (0, 200),
         (50, 200),
     ),
     generate_sorting_kwargs=dict(firing_rates=(149, 150), refractory_period_ms=4.0),
     generate_templates_kwargs=dict(unit_params=default_unit_params_range, ms_before=1.5, ms_after=3),
-    seed=None,
+    seed=44,
     generate_unit_locations_kwargs=dict(
         margin_um=0.0,  # if this is say 20, then units go off the edge of the probe and are such low amplitude they are not picked up.
         minimum_z=5.0,

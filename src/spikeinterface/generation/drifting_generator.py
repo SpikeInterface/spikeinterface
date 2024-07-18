@@ -8,6 +8,7 @@ This module implements generation of more realistics signal than `spikeinterface
 
 """
 
+from __future__ import annotations
 import numpy as np
 
 from probeinterface import generate_multi_columns_probe
