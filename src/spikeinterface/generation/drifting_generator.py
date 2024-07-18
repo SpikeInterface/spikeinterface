@@ -8,6 +8,7 @@ This module implements generation of more realistics signal than `spikeinterface
 
 """
 
+from __future__ import annotations
 import numpy as np
 
 from probeinterface import generate_multi_columns_probe
@@ -21,7 +22,6 @@ from spikeinterface.core.generate import (
 )
 from .drift_tools import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
 from .noise_tools import generate_noise
-from typing import Optional
 from probeinterface import Probe
 
 
@@ -183,7 +183,7 @@ def generate_displacement_vector(
     duration : float
         Duration of the displacement vector in seconds
     unit_locations : np.array
-        The unit location with shape (num_units, 3)
+        The unit location with shape (num_units, 2)
     displacement_sampling_frequency : float, default: 5.
         The sampling frequency of the displacement vector
     drift_start_um : list of float, default: [0, 20.]
@@ -242,20 +242,62 @@ def generate_displacement_vector(
         if non_rigid_gradient is None:
             displacement_unit_factor[:, m] = 1
         else:
-            gradient_direction = drift_stop_um - drift_start_um
-            gradient_direction /= np.linalg.norm(gradient_direction)
-
-            proj = np.dot(unit_locations, gradient_direction).squeeze()
-            factors = (proj - np.min(proj)) / (np.max(proj) - np.min(proj))
-            if non_rigid_gradient < 0:
-                # reverse
-                factors = 1 - factors
-            f = np.abs(non_rigid_gradient)
-            displacement_unit_factor[:, m] = factors * (1 - f) + f
+            displacement_unit_factor[:, m] = calculate_displacement_unit_factor(
+                non_rigid_gradient, unit_locations, drift_start_um, drift_stop_um
+            )
 
     displacement_vectors = np.concatenate(displacement_vectors, axis=2)
 
     return displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps
+
+
+def calculate_displacement_unit_factor(
+    non_rigid_gradient: float, unit_locations: np.array, drift_start_um: np.array, drift_stop_um: np.array
+) -> np.array:
+    """
+    In the case of introducing non-rigid drift, a set of scaling
+    factors (one per unit) is generated for scaling the displacement
+    as a function of unit position.
+
+    The projections of the gradient vector (x, y)
+    and unit locations (x, y) are normalised to range between
+    0 and 1 (i.e. based on relative location to the gradient).
+    These factors are scaled by `non_rigid_gradient`.
+
+    Parameters
+    ----------
+
+    non_rigid_gradient : float
+        A number in the range [0, 1] by which to scale the scaling factors
+        that are based on unit location. This sets the weighting given to the factors
+        based on unit locations. When 1, the factors will all equal 1 (no effect),
+        when 0, the scaling factor based on unit location will be used directly.
+    unit_locations : np.array
+        The unit location with shape (num_units, 2)
+    drift_start_um : np.array
+        The start boundary of the motion in the x and y direction.
+    drift_stop_um : np.array
+        The stop boundary of the motion in the x and y direction.
+
+    Returns
+    -------
+    displacement_unit_factor : np.array
+        An array of scaling factors (one per unit) by which
+        to scale the displacement.
+    """
+    gradient_direction = drift_stop_um - drift_start_um
+    gradient_direction /= np.linalg.norm(gradient_direction)
+
+    proj = np.dot(unit_locations, gradient_direction).squeeze()
+    factors = (proj - np.min(proj)) / (np.max(proj) - np.min(proj))
+
+    if non_rigid_gradient < 0:  # reverse
+        factors = 1 - factors
+
+    f = np.abs(non_rigid_gradient)
+    displacement_unit_factor = factors * (1 - f) + f
+
+    return displacement_unit_factor
 
 
 def generate_drifting_recording(
