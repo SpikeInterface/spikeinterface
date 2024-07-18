@@ -617,7 +617,7 @@ def make_ext_params_up_to_date(ext, old_params, new_params):
     updated_params = old_params.copy()
     for p, values in old_params.items():
         if p not in new_params:
-            warnings.warn(f"Removing legacy param {p} from {old_name} extension")
+            warnings.warn(f"Removing legacy parameter {p} from {old_name} extension")
             updated_params.pop(p)
         elif isinstance(values, dict):
             new_values = new_params.get(p, {})
