@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 import warnings
 import numpy as np
-from typing import List, Literal
+from typing import Literal
 from math import ceil
 
 from .basesorting import SpikeVectorSortingSegment
@@ -29,7 +29,7 @@ def _ensure_seed(seed):
 def generate_recording(
     num_channels: int = 2,
     sampling_frequency: float = 30000.0,
-    durations: List[float] = [5.0, 2.5],
+    durations: list[float] = [5.0, 2.5],
     set_probe: bool | None = True,
     ndim: int | None = 2,
     seed: int | None = None,
@@ -44,7 +44,7 @@ def generate_recording(
         The number of channels in the recording.
     sampling_frequency : float, default: 30000. (in Hz)
         The sampling frequency of the recording, default: 30000.
-    durations: List[float], default: [5.0, 2.5]
+    durations: list[float], default: [5.0, 2.5]
         The duration in seconds of each segment in the recording, default: [5.0, 2.5].
         Note that the number of segments is determined by the length of this list.
     set_probe: bool | None, default: True
@@ -236,7 +236,7 @@ def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
 
 def generate_sorting_to_inject(
     sorting: BaseSorting,
-    num_samples: List[int],
+    num_samples: list[int],
     max_injected_per_unit: int = 1000,
     injected_rate: float = 0.05,
     refractory_period_ms: float = 1.5,
@@ -335,7 +335,7 @@ class TransformSorting(BaseSorting):
         sorting: BaseSorting,
         added_spikes_existing_units: np.array | None = None,
         added_spikes_new_units: np.array | None = None,
-        new_unit_ids: List[str | int] | None = None,
+        new_unit_ids: list[str | int] | None = None,
         refractory_period_ms: float | None = None,
     ):
         sampling_frequency = sorting.get_sampling_frequency()
@@ -1060,7 +1060,7 @@ class NoiseGeneratorRecording(BaseRecording):
         The number of channels.
     sampling_frequency : float
         The sampling frequency of the recorder.
-    durations : List[float]
+    durations : list[float]
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
     noise_levels: float or array, default: 1
         Std of the white noise (if an array, defined by per channels)
@@ -1089,7 +1089,7 @@ class NoiseGeneratorRecording(BaseRecording):
         self,
         num_channels: int,
         sampling_frequency: float,
-        durations: List[float],
+        durations: list[float],
         noise_levels: float | np.array = 1.0,
         cov_matrix: np.array | None = None,
         dtype: np.dtype | str | None = "float32",
@@ -1206,7 +1206,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         self,
         start_frame: int | None = None,
         end_frame: int | None = None,
-        channel_indices: List | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         start_frame_within_block = start_frame % self.noise_block_size
         end_frame_within_block = end_frame % self.noise_block_size
@@ -1708,10 +1708,10 @@ class InjectTemplatesRecording(BaseRecording):
         self,
         sorting: BaseSorting,
         templates: np.ndarray,
-        nbefore: List[int] | int | None = None,
-        amplitude_factor: List[float] | float | None = None,
+        nbefore: list[int] | int | None = None,
+        amplitude_factor: list[float] | float | None = None,
         parent_recording: BaseRecording | None = None,
-        num_samples: List[int] | int | None = None,
+        num_samples: list[int] | int | None = None,
         upsample_vector: np.array | None = None,
         check_borders: bool = False,
     ) -> None:
@@ -1844,8 +1844,8 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         spike_vector: np.ndarray,
         templates: np.ndarray,
         nbefore: int,
-        amplitude_vector: List[float] | None,
-        upsample_vector: List[float] | None,
+        amplitude_vector: list[float] | None,
+        upsample_vector: list[float] | None,
         parent_recording_segment: BaseRecordingSegment | None = None,
         num_samples: int | None = None,
     ) -> None:
@@ -1869,7 +1869,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         self,
         start_frame: int | None = None,
         end_frame: int | None = None,
-        channel_indices: List | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         if channel_indices is None:
             n_channels = self.templates.shape[2]
