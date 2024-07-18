@@ -457,7 +457,7 @@ def make_2d_motion_histogram(
     """
     n_samples = recording.get_num_samples()
     mint_s = recording.sample_index_to_time(0)
-    maxt_s = recording.sample_index_to_time(n_samples)
+    maxt_s = recording.sample_index_to_time(n_samples - 1)
     temporal_bin_edges = np.arange(mint_s, maxt_s + bin_s, bin_s)
     if spatial_bin_edges is None:
         spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
@@ -542,7 +542,7 @@ def make_3d_motion_histograms(
     """
     n_samples = recording.get_num_samples()
     mint_s = recording.sample_index_to_time(0)
-    maxt_s = recording.sample_index_to_time(n_samples)
+    maxt_s = recording.sample_index_to_time(n_samples - 1)
     temporal_bin_edges = np.arange(mint_s, maxt_s + bin_s, bin_s)
     if spatial_bin_edges is None:
         spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
