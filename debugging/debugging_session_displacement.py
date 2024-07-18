@@ -34,7 +34,7 @@ default_unit_params_range["alpha"] = (400, 500)  # do this or change the margin 
 
 rec_list, _ = generate_inter_session_displacement_recordings(
     non_rigid_gradient=None,  # 0.05,
-    num_units=1,
+    num_units=5,
     rec_durations=(25, 25, 25),  # TODO: checks on inputs
     rec_shifts=(
         0,
