@@ -31,7 +31,7 @@ class LussacMerging(BaseMergingEngine):
         params = []
         for thresh in self.iterations:
             local_param = copy.deepcopy(self.params["x_contaminations_kwargs"])
-            local_param["template_similarity_kwargs"].update({"template_diff_thresh" : thresh})
+            local_param["template_similarity_kwargs"].update({"template_diff_thresh": thresh})
             params += [local_param]
 
         result = iterative_merges(
