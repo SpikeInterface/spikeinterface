@@ -900,7 +900,7 @@ class SortingAnalyzer:
         new_unit_ids : None or list
             A new unit_ids for merged units. If given, it needs to have the same length as `merge_unit_groups`. If None,
             merged units will have the first unit_id of every lists of merges
-        censor_ms : None or float, default: None
+        censor_ms : None | float, default: None
             When merging units, any spikes violating this refractory period will be discarded. If None all units are kept
         merging_mode : ["soft", "hard"], default: "soft"
             How merges are performed. If the `merge_mode` is "soft" , merges will be approximated, with no reloading of the
@@ -913,7 +913,7 @@ class SortingAnalyzer:
             The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
                 * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
                 * "take_first" : new_unit_ids will be the first unit_id of every list of merges
-        folder : Path or None | default: None
+        folder : Path | None, default: None
             The new folder where selected waveforms are copied for `format` "binary_folder" or "zarr"
         format : "memory" | "binary_folder" | "zarr", default: "memory"
             The format of SortingAnalyzer
@@ -924,7 +924,7 @@ class SortingAnalyzer:
         Returns
         -------
         analyzer :  SortingAnalyzer
-            The newly create SortingAnalyzer with the selected units
+            The newly create `SortingAnalyzer` with the selected units
         """
 
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
