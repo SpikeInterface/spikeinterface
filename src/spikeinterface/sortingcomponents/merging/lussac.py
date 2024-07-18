@@ -16,7 +16,7 @@ class LussacMerging(BaseMergingEngine):
         "template_diff_thresh": np.arange(0.05, 0.5, 0.05),
         "x_contaminations_kwargs": {
             "unit_locations_kwargs": {"max_distance_um": 50, "unit_locations": {"method": "monopolar_triangulation"}},
-            "template_similarity_kwargs": {"template_similarity": {"method": "cosine", "max_lag_ms": 0.1}},
+            "template_similarity_kwargs": {"template_similarity": {"method": "l2", "max_lag_ms": 0.1}},
         },
     }
 
