@@ -21,6 +21,8 @@ from spikeinterface.core.generate import (
 )
 from .drift_tools import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
 from .noise_tools import generate_noise
+from typing import Optional
+from probeinterface import Probe
 
 
 # this should be moved in probeinterface but later
@@ -351,12 +353,9 @@ def generate_drifting_recording(
         This can be helpfull for motion benchmark.
     """
     # probe
-    if generate_probe_kwargs is None:
-        generate_probe_kwargs = _toy_probes[probe_name]
-    probe = generate_multi_columns_probe(**generate_probe_kwargs)
-    num_channels = probe.get_contact_count()
-    probe.set_device_channel_indices(np.arange(num_channels))
+    probe = generate_probe(generate_probe_kwargs, probe_name)
     channel_locations = probe.contact_positions
+
     # import matplotlib.pyplot as plt
     # import probeinterface.plotting
     # fig, ax = plt.subplots()
@@ -479,3 +478,25 @@ def generate_drifting_recording(
         return static_recording, drifting_recording, sorting, extra_infos
     else:
         return static_recording, drifting_recording, sorting
+
+
+def generate_probe(generate_probe_kwargs: dict, probe_name: str | None = None) -> Probe:
+    """
+    Generate a probe for use in certain ground-truth recordings.
+
+    Parameters
+    ----------
+
+    generate_probe_kwargs : dict
+        The kwargs to pass to `generate_multi_columns_probe()`
+    probe_name : str | None
+        The probe type if generate_probe_kwargs is None.
+    """
+    if generate_probe_kwargs is None:
+        assert probe_name is not None, "`probe_name` must be set if `generate_probe_kwargs` is `None`."
+        generate_probe_kwargs = _toy_probes[probe_name]
+    probe = generate_multi_columns_probe(**generate_probe_kwargs)
+    num_channels = probe.get_contact_count()
+    probe.set_device_channel_indices(np.arange(num_channels))
+
+    return probe
