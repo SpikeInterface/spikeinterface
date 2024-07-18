@@ -1260,7 +1260,7 @@ noise_generator_recording = define_function_from_class(
 
 def generate_recording_by_size(
     full_traces_size_GiB: float,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
 ) -> NoiseGeneratorRecording:
     """
