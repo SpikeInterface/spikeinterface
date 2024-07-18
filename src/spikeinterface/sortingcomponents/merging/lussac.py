@@ -11,37 +11,41 @@ class LussacMerging(BaseMergingEngine):
     """
 
     default_params = {
-        "verbose": True,
-        "compute_needed_extensions": True,
+        "compute_needed_extensions" : True,
         "merging_kwargs": {"merging_mode": "soft", "sparsity_overlap": 0, "censor_ms": 3},
-        "template_diff_thresh": np.arange(0, 0.5, 0.05),
+        "template_diff_thresh": np.arange(0.05, 0.5, 0.05),
         "x_contaminations_kwargs": {
-            "unit_locations_kwargs": {"max_distance_um": 50, "unit_locations": {"method": "monopolar_triangulation"}}
-        },
+                "unit_locations_kwargs": {"max_distance_um": 50, "unit_locations": {"method": "monopolar_triangulation"}},
+                "template_similarity_kwargs": {}
+                #"template_similarity_kwargs": {"template_similarity": {"method": "cosine", "max_lag_ms" : 0}}
+        }
     }
 
     def __init__(self, sorting_analyzer, kwargs):
         self.params = self.default_params.copy()
         self.params.update(**kwargs)
         self.analyzer = sorting_analyzer
-        self.verbose = self.params["verbose"]
         self.iterations = self.params["template_diff_thresh"]
 
-    def run(self, **job_kwargs):
+    def run(self, extra_outputs=False, verbose=False, **job_kwargs):
         presets = ["x_contaminations"] * len(self.iterations)
         params = []
         for i in self.iterations:
             local_param = self.params["x_contaminations_kwargs"].copy()
-            local_param["template_similarity_kwargs"] = {"template_diff_thresh": i}
+            local_param["template_similarity_kwargs"].update({"template_diff_thresh": i})
             params += [local_param]
 
-        analyzer = iterative_merges(
+        result = iterative_merges(
             self.analyzer,
             presets=presets,
             params=params,
-            verbose=self.params["verbose"],
+            verbose=verbose,
+            extra_outputs=extra_outputs,
             compute_needed_extensions=self.params["compute_needed_extensions"],
             merging_kwargs=self.params["merging_kwargs"],
             **job_kwargs,
         )
-        return analyzer.sorting
+        if extra_outputs:
+            return result[0].sorting, result[1], result[2]
+        else:
+            return result.sorting

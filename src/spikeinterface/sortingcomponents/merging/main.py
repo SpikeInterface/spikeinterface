@@ -35,6 +35,7 @@ def merge_spikes(
     templates=None,
     remove_empty=True,
     method_kwargs={},
+    extra_outputs=False,
     verbose=False,
     **job_kwargs,
 ):
@@ -76,7 +77,7 @@ def merge_spikes(
 
     method_instance = method_class(sorting_analyzer, method_kwargs)
 
-    return method_instance.run(**job_kwargs)
+    return method_instance.run(extra_outputs=extra_outputs, verbose=verbose, **job_kwargs)
 
 
 # generic class for template engine

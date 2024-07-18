@@ -537,6 +537,7 @@ def iterative_merges(
     merging_kwargs={"merging_mode": "soft", "sparsity_overlap": 0.5, "censor_ms": 3},
     compute_needed_extensions=True,
     verbose=False,
+    extra_outputs=False,
     **job_kwargs,
 ):
     if params is None:
@@ -544,22 +545,39 @@ def iterative_merges(
 
     assert len(presets) == len(params)
 
+    if extra_outputs:
+        all_merges = []
+        all_outs = []
+
     for i in range(len(presets)):
-        merges = auto_merges(
-            sorting_analyzer,
-            preset=presets[i],
-            resolve_graph=True,
-            compute_needed_extensions=compute_needed_extensions * (i == 0),
-            extra_outputs=False,
-            **params[i],
-            **job_kwargs,
-        )
+        
+        result = auto_merges(
+                sorting_analyzer,
+                preset=presets[i],
+                resolve_graph=True,
+                compute_needed_extensions=compute_needed_extensions * (i == 0),
+                extra_outputs=extra_outputs,
+                **params[i],
+                **job_kwargs,
+            )
+
+        if extra_outputs:
+            merges = result[0]
+            all_merges += [merges]
+            all_outs += [result[1]]
+        else:
+            merges = result
+
         if verbose:
             n_merges = int(np.sum([len(i) for i in merges]))
             print(f"{n_merges} merges have been made during pass", presets[i])
 
         sorting_analyzer = sorting_analyzer.merge_units(merges, **merging_kwargs, **job_kwargs)
-    return sorting_analyzer
+    
+    if extra_outputs:
+        return sorting_analyzer, all_merges, all_outs
+    else:
+        return sorting_analyzer
 
 
 def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs):

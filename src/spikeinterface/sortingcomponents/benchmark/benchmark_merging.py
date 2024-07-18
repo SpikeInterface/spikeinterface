@@ -25,10 +25,12 @@ class MergingBenchmark(Benchmark):
         self.result = {}
 
     def run(self, **job_kwargs):
-        self.result["sorting"] = merge_spikes(
+        self.result["sorting"], self.result["merges"], self.result["outs"] = merge_spikes(
             self.recording,
             self.splitted_sorting,
             method=self.method,
+            verbose=True, 
+            extra_outputs=True,
             method_kwargs=self.method_kwargs,
         )
 
