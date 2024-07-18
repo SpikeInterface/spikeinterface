@@ -1064,11 +1064,11 @@ class NoiseGeneratorRecording(BaseRecording):
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
     noise_levels: float or array, default: 1
         Std of the white noise (if an array, defined by per channels)
-    cov_matrix: np.array, default None
+    cov_matrix: np.array | None, default None
         The covariance matrix of the noise
-    dtype : Optional[Union[np.dtype, str]], default: "float32"
+    dtype : np.dtype | str |None, default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
-    seed : Optional[int], default: None
+    seed : int | None, default: None
         The seed for np.random.default_rng.
     strategy : "tile_pregenerated" or "on_the_fly"
         The strategy of generating noise chunk:
@@ -1090,10 +1090,10 @@ class NoiseGeneratorRecording(BaseRecording):
         num_channels: int,
         sampling_frequency: float,
         durations: List[float],
-        noise_levels: float = 1.0,
-        cov_matrix: Optional[np.array] = None,
-        dtype: Optional[Union[np.dtype, str]] = "float32",
-        seed: Optional[int] = None,
+        noise_levels: float | np.array = 1.0,
+        cov_matrix: np.array | None = None,
+        dtype: np.dtype | str | None = "float32",
+        seed: int | None = None,
         strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
         noise_block_size: int = 30000,
     ):
