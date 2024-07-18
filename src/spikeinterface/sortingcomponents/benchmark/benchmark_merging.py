@@ -29,7 +29,7 @@ class MergingBenchmark(Benchmark):
             self.recording,
             self.splitted_sorting,
             method=self.method,
-            verbose=True, 
+            verbose=True,
             extra_outputs=True,
             method_kwargs=self.method_kwargs,
         )
