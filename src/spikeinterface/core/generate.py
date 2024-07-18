@@ -2437,12 +2437,19 @@ def generate_ground_truth_recording(
         parent_recording=noise_rec,
         upsample_vector=upsample_vector,
     )
-    recording.annotate(is_filtered=True)
-    recording.set_probe(probe, in_place=True)
-    recording.set_channel_gains(1.0)
-    recording.set_channel_offsets(0.0)
-
+    setup_inject_templates_recording(recording, probe)
     recording.name = "GroundTruthRecording"
     sorting.name = "GroundTruthSorting"
 
     return recording, sorting
+
+
+def setup_inject_templates_recording(recording: BaseRecording, probe: Probe) -> None:
+    """
+    Convenience function to modify a generated
+    recording in-place with annotation and probe details
+    """
+    recording.annotate(is_filtered=True)
+    recording.set_probe(probe, in_place=True)
+    recording.set_channel_gains(1.0)
+    recording.set_channel_offsets(0.0)
