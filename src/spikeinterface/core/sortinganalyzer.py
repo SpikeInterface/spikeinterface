@@ -897,7 +897,7 @@ class SortingAnalyzer:
         merge_unit_groups : list/tuple of lists/tuples
             A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
             but it can also have more (merge multiple units at once).
-        new_unit_ids : None or list
+        new_unit_ids : None | list, default: None
             A new unit_ids for merged units. If given, it needs to have the same length as `merge_unit_groups`. If None,
             merged units will have the first unit_id of every lists of merges
         censor_ms : None | float, default: None
