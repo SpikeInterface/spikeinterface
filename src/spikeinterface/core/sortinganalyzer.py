@@ -816,7 +816,7 @@ class SortingAnalyzer:
         Parameters
         ----------
         folder : str | Path | None, default: None
-            The output waveform folder if `format` is "zarr" or "binary_folder"
+            The output folder if `format` is "zarr" or "binary_folder"
         format : "memory" | "binary_folder" | "zarr", default: "memory"
             The new backend format to use
         """
@@ -836,7 +836,7 @@ class SortingAnalyzer:
         format : "memory" | "binary_folder" | "zarr" , default: "memory"
             The format of the returned SortingAnalyzer.
         folder : Path | None, deafult: None
-            The new folder where selected waveforms are copied if `format` is
+            The new folder where the analyzer with selected units is copied if `format` is
             "binary_folder" or "zarr"
 
         Returns
@@ -861,7 +861,7 @@ class SortingAnalyzer:
         format : "memory" | "binary_folder" | "zarr" , default: "memory"
             The format of the returned SortingAnalyzer.
         folder : Path or None, default: None
-            The new folder where selected waveforms are copied if `format`
+            The new folder where the analyzer without removed units is copied if `format`
             is "binary_folder" or "zarr"
 
         Returns
@@ -914,7 +914,7 @@ class SortingAnalyzer:
                 * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
                 * "take_first" : new_unit_ids will be the first unit_id of every list of merges
         folder : Path | None, default: None
-            The new folder where selected waveforms are copied for `format` "binary_folder" or "zarr"
+            The new folder where the analyzer with merged units is copied for `format` "binary_folder" or "zarr"
         format : "memory" | "binary_folder" | "zarr", default: "memory"
             The format of SortingAnalyzer
         verbose : bool, default: False
