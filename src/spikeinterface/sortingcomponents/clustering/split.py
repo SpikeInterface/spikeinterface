@@ -24,7 +24,7 @@ def split_clusters(
     peak_labels,
     recording,
     features_dict_or_folder,
-    method="hdbscan_on_local_pca",
+    method="local_feature_clustering",
     method_kwargs={},
     recursive=False,
     recursive_depth=None,

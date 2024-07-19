@@ -36,7 +36,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "seed": 42,
         },
         "apply_motion_correction": True,
-        "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
+        "motion_correction": {"preset": "dredge_fast"},
         "merging": {
             "similarity_kwargs": {"method": "cosine", "support": "union", "max_lag_ms": 0.2},
             "correlograms_kwargs": {},
@@ -196,7 +196,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
             ## channels as flat as possible
             selection_params = params["selection"]
-            selection_params["n_peaks"] = params["selection"]["n_peaks_per_channel"] * num_channels
+            selection_params["n_peaks"] = min(len(peaks), selection_params["n_peaks_per_channel"] * num_channels)
             selection_params["n_peaks"] = max(selection_params["min_n_peaks"], selection_params["n_peaks"])
 
             selection_params.update({"noise_levels": noise_levels})

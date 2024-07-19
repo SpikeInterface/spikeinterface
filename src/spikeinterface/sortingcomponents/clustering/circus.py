@@ -191,6 +191,7 @@ class CircusClustering:
 
             original_labels = peaks["channel_index"]
             from spikeinterface.sortingcomponents.clustering.split import split_clusters
+            min_size = params["hdbscan_kwargs"].get("min_cluster_size", 50)
 
             peak_labels, _ = split_clusters(
                 original_labels,
@@ -202,7 +203,7 @@ class CircusClustering:
                     feature_name="sparse_tsvd",
                     neighbours_mask=neighbours_mask,
                     waveforms_sparse_mask=sparse_mask,
-                    min_size_split=50,
+                    min_size_split=min_size,
                     clusterer_kwargs=d["hdbscan_kwargs"],
                     n_pca_features=params["n_svd"][1],
                     scale_n_pca_by_depth=True,
@@ -233,7 +234,7 @@ class CircusClustering:
         if d["rank"] is not None:
             from spikeinterface.sortingcomponents.matching.circus import compress_templates
 
-            _, _, _, templates_array = compress_templates(templates_array, 5)
+            _, _, _, templates_array = compress_templates(templates_array, d["rank"])
 
         templates = Templates(
             templates_array=templates_array,
