@@ -108,6 +108,11 @@ class DredgeApRegistration:
         **method_kwargs,
     ):
 
+        try:
+            import torch
+        except ImportError:
+            raise ImportError("The dredge method require torch: pip install torch")
+
         outs = dredge_ap(
             recording,
             peaks,

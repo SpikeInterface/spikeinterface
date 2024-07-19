@@ -517,6 +517,7 @@ def generate_hybrid_recording(
         elif dim == 2:
             raise NotImplementedError("3D motion not implemented yet")
         num_step = int((stop - start)[dim] / drift_step_um)
+        num_step = max(1, num_step)
         displacements = make_linear_displacement(start, stop, num_step=num_step)
 
         # use templates_, because templates_array might have been scaled
