@@ -336,6 +336,7 @@ spikeinterface.curation
 Deprecated
 ~~~~~~~~~~
 .. automodule:: spikeinterface.curation
+    :noindex:
 
     .. autofunction:: apply_sortingview_curation
     .. autoclass:: CurationSorting
