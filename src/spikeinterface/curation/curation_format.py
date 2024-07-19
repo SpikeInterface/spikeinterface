@@ -192,8 +192,6 @@ def clean_curation_dict(curation_dict):
     return curation_dict
 
 
-
-
 def curation_label_to_dataframe(curation_dict):
     """
     Transform the curation dict into a pandas dataframe.
@@ -213,9 +211,9 @@ def curation_label_to_dataframe(curation_dict):
         dataframe with labels.
     """
     import pandas as pd
+
     labels = pd.DataFrame(curation_label_to_vectors(curation_dict), index=curation_dict["unit_ids"])
     return labels
-
 
 
 def apply_curation_labels(sorting, new_unit_ids, curation_dict):
@@ -247,7 +245,7 @@ def apply_curation_labels(sorting, new_unit_ids, curation_dict):
                 for unit_id in old_group_ids:
                     ind = curation_dict["unit_ids"].index(unit_id)
                     value = manual_labels[label_key][ind]
-                    if value != '':
+                    if value != "":
                         group_values.append(value)
                 if len(set(group_values)) == 1:
                     # all group has the same label or empty
@@ -264,10 +262,16 @@ def apply_curation_labels(sorting, new_unit_ids, curation_dict):
                     sorting.set_property(key, values=[new_value], ids=[new_unit_id])
 
 
-
-def apply_curation(sorting_or_analyzer, curation_dict, censor_ms=None, new_id_strategy="append",
-                   merging_mode="soft", sparsity_overlap=0.75, verbose=False,
-                   **job_kwargs):
+def apply_curation(
+    sorting_or_analyzer,
+    curation_dict,
+    censor_ms=None,
+    new_id_strategy="append",
+    merging_mode="soft",
+    sparsity_overlap=0.75,
+    verbose=False,
+    **job_kwargs,
+):
     """
     Apply curation dict to a Sorting or a SortingAnalyzer.
 
@@ -316,13 +320,16 @@ def apply_curation(sorting_or_analyzer, curation_dict, censor_ms=None, new_id_st
     if not np.array_equal(np.asarray(curation_dict["unit_ids"]), sorting_or_analyzer.unit_ids):
         raise ValueError("unit_ids from the curation_dict do not match the one from Sorting or SortingAnalyzer")
 
-
     if isinstance(sorting_or_analyzer, BaseSorting):
         sorting = sorting_or_analyzer
         sorting = sorting.remove_units(curation_dict["removed_units"])
-        sorting, _, new_unit_ids = apply_merges_to_sorting(sorting, curation_dict["merge_unit_groups"],
-                                          censor_ms=censor_ms, return_extra=True,
-                                          new_id_strategy=new_id_strategy)
+        sorting, _, new_unit_ids = apply_merges_to_sorting(
+            sorting,
+            curation_dict["merge_unit_groups"],
+            censor_ms=censor_ms,
+            return_extra=True,
+            new_id_strategy=new_id_strategy,
+        )
         apply_curation_labels(sorting, new_unit_ids, curation_dict)
         return sorting
 
@@ -343,4 +350,6 @@ def apply_curation(sorting_or_analyzer, curation_dict, censor_ms=None, new_id_st
         apply_curation_labels(analyzer.sorting, new_unit_ids, curation_dict)
         return analyzer
     else:
-        raise TypeError(f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)}")
+        raise TypeError(
+            f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)}"
+        )
