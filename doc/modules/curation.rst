@@ -1,4 +1,5 @@
 .. _curation:
+
 Curation module
 ===============
 
