@@ -647,9 +647,10 @@ class DetectPeakMatchedFiltering(PeakDetector):
         self.num_channels = recording.get_num_channels()
         self.num_templates = self.num_channels
         if peak_sign == "both":
-            weights = np.repeat(weights, 2, axis=1)
-            weights[:, 1::2, :] *= -1
+            weights = np.hstack((weights, weights))
+            weights[:, self.num_templates:, :] *= -1
             self.num_templates *= 2
+        
         weights = weights.reshape(self.num_templates * self.num_z_factors, -1)
 
         templates = weights[:, None, :] * prototype[None, :, None]
@@ -707,7 +708,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
             self.abs_thresholds,
             self.peak_sign,
             self.neighbours_mask,
-            self.num_templates,
+            self.num_channels,
         )
 
         # Find peaks and correct for time shift
@@ -874,37 +875,28 @@ if HAVE_NUMBA:
 
     @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_matched_filtering(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, num_templates
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, num_channels
     ):
         num_z = traces_center.shape[0]
-        for z in range(num_z):
-            for template_ind in range(num_templates):
+        num_templates = traces_center.shape[1]
+        for template_ind in range(num_templates):
+            for z in range(num_z):        
                 for s in range(peak_mask.shape[2]):
                     if not peak_mask[z, template_ind, s]:
                         continue
                     for neighbour in range(num_templates):
-                        if not neighbours_mask[template_ind, neighbour]:
-                            continue
-                        for i in range(exclude_sweep_size):
-                            for j in range(num_z):
-                                if template_ind >= neighbour:
-                                    if z >= j:
-                                        peak_mask[z, template_ind, s] &= (
-                                            traces_center[z, template_ind, s] >= traces_center[j, neighbour, s]
-                                        )
-                                    else:
-                                        peak_mask[z, template_ind, s] &= (
-                                            traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
-                                        )
-                                elif template_ind < neighbour:
-                                    if z > j:
-                                        peak_mask[z, template_ind, s] &= (
-                                            traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
-                                        )
-                                    else:
-                                        peak_mask[z, template_ind, s] &= (
-                                            traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
-                                        )
+                        for j in range(num_z):                    
+                            if not neighbours_mask[template_ind % num_channels, neighbour % num_channels]:
+                                continue
+                            for i in range(exclude_sweep_size):
+                                if template_ind >= neighbour and z >= j:
+                                    peak_mask[z, template_ind, s] &= (
+                                        traces_center[z, template_ind, s] >= traces_center[j, neighbour, s]
+                                    )
+                                else:
+                                    peak_mask[z, template_ind, s] &= (
+                                        traces_center[z, template_ind, s] > traces_center[j, neighbour, s]
+                                    )
                                 peak_mask[z, template_ind, s] &= (
                                     traces_center[z, template_ind, s] > traces[j, neighbour, s + i]
                                 )
