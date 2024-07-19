@@ -6,7 +6,7 @@ import numpy as np
 from spikeinterface.sorters import run_sorter
 
 from spikeinterface.comparison import GroundTruthComparison
-from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+from spikeinterface.sortingcomponents.motion.motion_interpolation import InterpolateMotionRecording
 from spikeinterface.curation import MergeUnitsSorting
 
 
@@ -44,9 +44,7 @@ class MotionInterpolationBenchmark(Benchmark):
             recording = self.drifting_recording
         elif self.params["recording_source"] == "corrected":
             correct_motion_kwargs = self.params["correct_motion_kwargs"]
-            recording = InterpolateMotionRecording(
-                self.drifting_recording, self.motion, self.temporal_bins, self.spatial_bins, **correct_motion_kwargs
-            )
+            recording = InterpolateMotionRecording(self.drifting_recording, self.motion, **correct_motion_kwargs)
         else:
             raise ValueError("recording_source")
 

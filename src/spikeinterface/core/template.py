@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import json
-from dataclasses import dataclass, field, astuple
+from dataclasses import dataclass, field, astuple, replace
 from probeinterface import Probe
 from pathlib import Path
 from .sparsity import ChannelSparsity
@@ -97,8 +97,20 @@ class Templates:
         # Initialize sparsity object
         if self.channel_ids is None:
             self.channel_ids = np.arange(self.num_channels)
+        else:
+            self.channel_ids = np.asarray(self.channel_ids)
+            assert (
+                len(self.channel_ids) == self.num_channels
+            ), f"length of channel ids {len(self.channel_ids)} must be equal to the number of channels {self.num_channels}"
+
         if self.unit_ids is None:
             self.unit_ids = np.arange(self.num_units)
+        else:
+            self.unit_ids = np.asarray(self.unit_ids)
+            assert (
+                self.unit_ids.size == self.num_units
+            ), f"length of units ids {self.unit_ids.size} must be equal to the number of units {self.num_units}"
+
         if self.sparsity_mask is not None:
             self.sparsity = ChannelSparsity(
                 mask=self.sparsity_mask,
@@ -127,6 +139,53 @@ class Templates:
             repr_str += f"\n{self.sparsity.__repr__()}"
 
         return repr_str
+
+    def select_units(self, unit_ids) -> Templates:
+        """
+        Return a new Templates object with only the selected units.
+
+        Parameters
+        ----------
+        unit_ids : list
+            List of unit IDs to select.
+        """
+        unit_ids_list = list(self.unit_ids)
+        unit_indices = np.array([unit_ids_list.index(unit_id) for unit_id in unit_ids], dtype=int)
+        sliced_sparsity_mask = None if self.sparsity_mask is None else self.sparsity_mask[unit_indices]
+
+        # Data class method to only change selected fields
+        return replace(
+            self,
+            templates_array=self.templates_array[unit_indices],
+            sparsity_mask=sliced_sparsity_mask,
+            unit_ids=unit_ids,
+            check_for_consistent_sparsity=False,
+        )
+
+    def select_channels(self, channel_ids) -> Templates:
+        """
+        Return a new Templates object with only the selected channels.
+        This operation can be useful to remove bad channels for hybrid recording
+        generation.
+
+        Parameters
+        ----------
+        channel_ids : list
+            List of channel IDs to select.
+        """
+        assert not self.are_templates_sparse(), "Cannot select channels on sparse templates"
+        channel_ids_list = list(self.channel_ids)
+        channel_indices = np.array([channel_ids_list.index(channel_id) for channel_id in channel_ids])
+        sliced_sparsity_mask = None if self.sparsity_mask is None else self.sparsity_mask[:, channel_indices]
+
+        # Data class method to only change selected fields
+        return replace(
+            self,
+            templates_array=self.templates_array[:, :, channel_indices],
+            sparsity_mask=sliced_sparsity_mask,
+            channel_ids=channel_ids,
+            check_for_consistent_sparsity=False,
+        )
 
     def to_sparse(self, sparsity):
         # Turn a dense representation of templates into a sparse one, given some sparsity.
@@ -294,9 +353,9 @@ class Templates:
         the `add_templates_to_zarr_group` method.
 
         """
-        templates_array = zarr_group["templates_array"]
-        channel_ids = zarr_group["channel_ids"]
-        unit_ids = zarr_group["unit_ids"]
+        templates_array = zarr_group["templates_array"][:]
+        channel_ids = zarr_group["channel_ids"][:]
+        unit_ids = zarr_group["unit_ids"][:]
         sampling_frequency = zarr_group.attrs["sampling_frequency"]
         nbefore = zarr_group.attrs["nbefore"]
 
@@ -305,7 +364,7 @@ class Templates:
 
         sparsity_mask = None
         if "sparsity_mask" in zarr_group:
-            sparsity_mask = zarr_group["sparsity_mask"]
+            sparsity_mask = zarr_group["sparsity_mask"][:]
 
         probe = None
         if "probe" in zarr_group:
@@ -390,7 +449,7 @@ class Templates:
 
         return True
 
-    def get_channel_locations(self):
+    def get_channel_locations(self) -> np.ndarray:
         assert self.probe is not None, "Templates.get_channel_locations() needs a probe to be set"
         channel_locations = self.probe.contact_positions
         return channel_locations

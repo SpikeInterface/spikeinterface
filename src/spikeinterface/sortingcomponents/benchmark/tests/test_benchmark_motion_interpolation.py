@@ -48,12 +48,15 @@ def test_benchmark_motion_interpolation(create_cache_folder):
         spatial_bins,
         direction_dim=1,
     )
+    # print(gt_motion)
+
+    # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
-    # ax.imshow(gt_motion.T)
+    # ax.imshow(gt_motion.displacement[0].T)
     # plt.show()
 
     cases = {}
-    bin_duration_s = 1.0
+    bin_s = 1.0
 
     cases["static_SC2"] = dict(
         label="No drift - no correction - SC2",
@@ -129,6 +132,8 @@ def test_benchmark_motion_interpolation(create_cache_folder):
     study.plot_sorting_accuracy(mode="snr", mode_best_merge=True)
     study.plot_sorting_accuracy(mode="depth", mode_best_merge=False)
     study.plot_sorting_accuracy(mode="depth", mode_best_merge=True)
+
+    import matplotlib.pyplot as plt
 
     plt.show()
 

@@ -59,7 +59,7 @@ To check what extensions spikeinterface can calculate, you can use the :code:`ge
 
     >>> ['random_spikes', 'waveforms', 'templates', 'noise_levels', 'amplitude_scalings', 'correlograms', 'isi_histograms', 'principal_components', 'spike_amplitudes', 'spike_locations', 'template_metrics', 'template_similarity', 'unit_locations', 'quality_metrics']
 
-There is detailed documentation about each extension :ref:`below<Available postprocessing extensions>`.
+There is detailed documentation about each extension :ref:`below<modules/postprocessing:Available postprocessing extensions>`.
 Each extension comes from a different module. To use the :code:`postprocessing` extensions, you'll need to have the `postprocessing`
 module loaded.
 
@@ -68,11 +68,9 @@ both `random_spikes` and `waveforms`. We say that `principal_components` is a ch
 two. Other extensions, like `isi_histograms`, don't depend on anything. It has no children and no parents. The parent/child
 relationships of all the extensions currently defined in spikeinterface can be found in this diagram:
 
-|
 .. figure:: ../images/parent_child.svg
     :alt: Parent child relationships for the extensions in spikeinterface
     :align: center
-|
 
 If you try to calculate a child before calculating a parent, an error will be thrown. Further, when a parent is recalculated we delete
 its children. Why? Consider calculating :code:`principal_components`. This depends on random selection of spikes chosen
@@ -205,7 +203,7 @@ This extension computes the principal components of the waveforms. There are sev
 * "by_channel_global": fits the same PCA model to all channels (also termed temporal PCA)
 * "concatenated": concatenates all channels and fits a PCA model on the concatenated data
 
-If the input :code:`WaveformExtractor` is sparse, the sparsity is used when computing the PCA.
+If the input :code:`SortingAnalyzer` is sparse, the sparsity is used when computing the PCA.
 For dense waveforms, sparsity can also be passed as an argument.
 
 .. code-block:: python
@@ -301,21 +299,30 @@ template_metrics
 This extension computes commonly used waveform/template metrics.
 By default, the following metrics are computed:
 
-* "peak_to_valley": duration between negative and positive peaks
-* "halfwidth": duration in s at 50% of the amplitude
+* "peak_to_valley": duration in :math:`s` between negative and positive peaks
+* "halfwidth": duration in :math:`s` at 50% of the amplitude
 * "peak_to_trough_ratio": ratio between negative and positive peaks
-* "recovery_slope": speed in V/s to recover from the negative peak to 0
-* "repolarization_slope": speed in V/s to repolarize from the positive peak to 0
+* "recovery_slope": speed to recover from the negative peak to 0
+* "repolarization_slope": speed to repolarize from the positive peak to 0
 * "num_positive_peaks": the number of positive peaks
 * "num_negative_peaks": the number of negative peaks
+
+The units of :code:`recovery_slope` and :code:`repolarization_slope` depend on the
+input. Voltages are based on the units of the template. By default this is :math:`\mu V`
+but can be the raw output from the recording device (this depends on the
+:code:`return_scaled` parameter, read more here: :ref:`modules/core:SortingAnalyzer`).
+Distances are in :math:`\mu m` and times are in seconds. So, for example, if the
+templates are in units of :math:`\mu V` then: :code:`repolarization_slope` is in
+:math:`mV / s`; :code:`peak_to_trough_ratio` is in :math:`\mu m` and the
+:code:`halfwidth` is in :math:`s`.
 
 Optionally, the following multi-channel metrics can be computed by setting:
 :code:`include_multi_channel_metrics=True`
 
-* "velocity_above": the velocity above the max channel of the template
-* "velocity_below": the velocity below the max channel of the template
-* "exp_decay": the exponential decay of the template amplitude over distance
-* "spread": the spread of the template amplitude over distance
+* "velocity_above": the velocity in :math:`\mu m/s` above the max channel of the template
+* "velocity_below": the velocity in :math:`\mu m/s` below the max channel of the template
+* "exp_decay": the exponential decay in :math:`\mu m` of the template amplitude over distance
+* "spread": the spread in :math:`\mu m` of the template amplitude over distance
 
 .. figure:: ../images/1d_waveform_features.png
 

@@ -3,14 +3,6 @@ from __future__ import annotations
 import numpy as np
 
 
-try:
-    import distinctipy
-
-    HAVE_DISTINCTIPY = True
-except ImportError:
-    HAVE_DISTINCTIPY = False
-
-
 def get_some_colors(
     keys, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None, margin=None
 ):
@@ -47,6 +39,13 @@ def get_some_colors(
         HAVE_MPL = True
     except ImportError:
         HAVE_MPL = False
+
+    try:
+        import distinctipy
+
+        HAVE_DISTINCTIPY = True
+    except ImportError:
+        HAVE_DISTINCTIPY = False
 
     assert color_engine in ("auto", "distinctipy", "matplotlib", "colorsys")
 
@@ -152,6 +151,7 @@ def array_to_image(
     output_image : 3D numpy array
 
     """
+    import matplotlib.pyplot as plt
 
     from scipy.ndimage import zoom
 

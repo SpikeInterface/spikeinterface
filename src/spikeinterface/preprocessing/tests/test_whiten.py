@@ -8,13 +8,13 @@ from spikeinterface.preprocessing import whiten, scale, compute_whitening_matrix
 
 def test_whiten(create_cache_folder):
     cache_folder = create_cache_folder
-    rec = generate_recording(num_channels=4)
+    rec = generate_recording(num_channels=4, seed=2205)
 
     print(rec.get_channel_locations())
     random_chunk_kwargs = {}
-    W, M = compute_whitening_matrix(rec, "global", random_chunk_kwargs, apply_mean=False, radius_um=None)
-    print(W)
-    print(M)
+    W1, M = compute_whitening_matrix(rec, "global", random_chunk_kwargs, apply_mean=False, radius_um=None)
+    # print(W)
+    # print(M)
 
     with pytest.raises(AssertionError):
         W, M = compute_whitening_matrix(rec, "local", random_chunk_kwargs, apply_mean=False, radius_um=None)
@@ -40,6 +40,10 @@ def test_whiten(create_cache_folder):
     rec4 = whiten(rec_int, dtype=None, int_scale=256)
     assert rec4.get_dtype() == "int16"
     assert rec4._kwargs["M"] is None
+
+    # test regularization : norm should be smaller
+    W2, M = compute_whitening_matrix(rec, "global", random_chunk_kwargs, apply_mean=False, regularize=True)
+    assert np.linalg.norm(W1) > np.linalg.norm(W2)
 
 
 if __name__ == "__main__":

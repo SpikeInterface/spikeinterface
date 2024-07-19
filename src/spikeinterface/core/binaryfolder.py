@@ -25,10 +25,6 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         The recording
     """
 
-    extractor_name = "BinaryFolder"
-    mode = "folder"
-    name = "binaryfolder"
-
     def __init__(self, folder_path):
         folder_path = Path(folder_path)
 
@@ -53,7 +49,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
             assert "num_chan" in self._bin_kwargs, "Cannot find num_channels or num_chan in binary.json"
             self._bin_kwargs["num_channels"] = self._bin_kwargs["num_chan"]
 
-    def is_binary_compatible(self):
+    def is_binary_compatible(self) -> bool:
         return True
 
     def get_binary_description(self):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core import ChannelSparsity, get_chunk_with_margin
+from spikeinterface.core import ChannelSparsity
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs, fix_job_kwargs
 
 from spikeinterface.core.template_tools import get_template_extremum_channel
@@ -12,8 +12,6 @@ from spikeinterface.core.sortinganalyzer import register_result_extension, Analy
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
 
 from ..core.template_tools import get_dense_templates_array, _get_nbefore
-
-# TODO extra sparsity and job_kwargs handling
 
 
 class ComputeAmplitudeScalings(AnalyzerExtension):
@@ -114,6 +112,22 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
             new_data["collision_mask"] = self.data["collision_mask"][keep_spike_mask]
         return new_data
 
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    ):
+        new_data = dict()
+
+        if keep_mask is None:
+            new_data["amplitude_scalings"] = self.data["amplitude_scalings"].copy()
+            if self.params["handle_collisions"]:
+                new_data["collision_mask"] = self.data["collision_mask"].copy()
+        else:
+            new_data["amplitude_scalings"] = self.data["amplitude_scalings"][keep_mask]
+            if self.params["handle_collisions"]:
+                new_data["collision_mask"] = self.data["collision_mask"][keep_mask]
+
+        return new_data
+
     def _get_pipeline_nodes(self):
 
         recording = self.sorting_analyzer.recording
@@ -170,8 +184,8 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
         sparsity_mask = sparsity.mask
 
         spike_retriever_node = SpikeRetriever(
-            recording,
             sorting,
+            recording,
             channel_from_template=True,
             extremum_channel_inds=extremum_channels_indices,
             include_spikes_in_margin=True,

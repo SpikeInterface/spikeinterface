@@ -7,13 +7,6 @@ import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-try:
-    import h5py
-
-    HAVE_MCSH5 = True
-except ImportError:
-    HAVE_MCSH5 = False
-
 
 class MCSH5RecordingExtractor(BaseRecording):
     """Load a MCS H5 file as a recording extractor.
@@ -31,16 +24,15 @@ class MCSH5RecordingExtractor(BaseRecording):
         The loaded data.
     """
 
-    extractor_name = "MCSH5Recording"
-    installed = HAVE_MCSH5  # check at class level if installed or not
-    mode = "file"
-    installation_mesg = (
-        "To use the MCSH5RecordingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
-    )
-    name = "mcsh5"
+    installation_mesg = "To use the MCSH5RecordingExtractor install h5py: \n\n pip install h5py\n\n"
 
     def __init__(self, file_path, stream_id=0):
-        assert self.installed, self.installation_mesg
+
+        try:
+            import h5py
+        except ImportError:
+            raise ImportError(self.installation_mesg)
+
         self._file_path = file_path
 
         mcs_info = openMCSH5File(self._file_path, stream_id)
@@ -62,6 +54,9 @@ class MCSH5RecordingExtractor(BaseRecording):
 
         # set gain
         self.set_channel_gains(mcs_info["gain"])
+
+        # set offsets
+        self.set_channel_offsets(mcs_info["offset"])
 
         # set other properties
         self.set_property("electrode_labels", mcs_info["electrode_labels"])
@@ -102,7 +97,13 @@ class MCSH5RecordingSegment(BaseRecordingSegment):
 
 
 def openMCSH5File(filename, stream_id):
-    """Open an MCS hdf5 file, read and return the recording info."""
+    """Open an MCS hdf5 file, read and return the recording info.
+    Specs can be found online
+    https://www.multichannelsystems.com/downloads/documentation?page=3
+    """
+
+    import h5py
+
     rf = h5py.File(filename, "r")
 
     stream_name = "Stream_" + str(stream_id)
@@ -121,7 +122,8 @@ def openMCSH5File(filename, stream_id):
     Tick = info["Tick"][0] / 1e6
     exponent = info["Exponent"][0]
     convFact = info["ConversionFactor"][0]
-    gain = convFact.astype(float) * (10.0**exponent)
+    gain_uV = 1e6 * (convFact.astype(float) * (10.0**exponent))
+    offset_uV = -1e6 * (info["ADZero"].astype(float) * (10.0**exponent)) * gain_uV
 
     nRecCh, nFrames = data.shape
     channel_ids = [f"Ch{ch}" for ch in info["ChannelID"]]
@@ -149,8 +151,9 @@ def openMCSH5File(filename, stream_id):
         "num_channels": nRecCh,
         "channel_ids": channel_ids,
         "electrode_labels": electrodeLabels,
-        "gain": gain,
+        "gain": gain_uV,
         "dtype": dtype,
+        "offset": offset_uV,
     }
 
     return mcs_info

@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-from packaging import version
-
-import numpy as np
 from pathlib import Path
 
-import neo
 import probeinterface
 
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
@@ -14,7 +10,7 @@ from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_s
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 
-from .neobaseextractor import NeoBaseRecordingExtractor
+from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
 
 
 class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
@@ -42,16 +38,30 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream name you want to load.
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     """
 
-    mode = "folder"
     NeoRawIOClass = "SpikeGLXRawIO"
-    name = "spikeglx"
 
-    def __init__(self, folder_path, load_sync_channel=False, stream_id=None, stream_name=None, all_annotations=False):
+    def __init__(
+        self,
+        folder_path,
+        load_sync_channel=False,
+        stream_id=None,
+        stream_name=None,
+        all_annotations: bool = False,
+        use_names_as_ids: bool = False,
+    ):
         neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel=load_sync_channel)
         NeoBaseRecordingExtractor.__init__(
-            self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
+            **neo_kwargs,
         )
 
         # open the corresponding stream probe for LF and AP
@@ -102,3 +112,45 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
 
 read_spikeglx = define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")
+
+
+class SpikeGLXEventExtractor(NeoBaseEventExtractor):
+    """
+    Class for reading events saved on the event channel by SpikeGLX software.
+
+    Parameters
+    ----------
+    folder_path: str
+
+    """
+
+    NeoRawIOClass = "SpikeGLXRawIO"
+
+    def __init__(self, folder_path, block_index=None):
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
+        NeoBaseEventExtractor.__init__(self, block_index=block_index, **neo_kwargs)
+
+    @classmethod
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {"dirname": str(folder_path)}
+        return neo_kwargs
+
+
+def read_spikeglx_event(folder_path, block_index=None):
+    """
+    Read SpikeGLX events
+
+    Parameters
+    ----------
+    folder_path: str or Path
+        Path to openephys folder
+    block_index: int, default: None
+        If there are several blocks (experiments), specify the block index you want to load.
+
+    Returns
+    -------
+    event: SpikeGLXEventExtractor
+    """
+
+    event = SpikeGLXEventExtractor(folder_path, block_index=block_index)
+    return event

@@ -48,7 +48,7 @@ class BaseRecordingSnippets(BaseExtractor):
     def get_dtype(self):
         return self._dtype
 
-    def has_scaleable_traces(self):
+    def has_scaleable_traces(self) -> bool:
         if self.get_property("gain_to_uV") is None or self.get_property("offset_to_uV") is None:
             return False
         else:
@@ -62,23 +62,17 @@ class BaseRecordingSnippets(BaseExtractor):
         )
         return self.has_scaleable_traces()
 
-    def has_probe(self):
+    def has_probe(self) -> bool:
         return "contact_vector" in self.get_property_keys()
 
-    def has_channel_location(self):
+    def has_channel_location(self) -> bool:
         return self.has_probe() or "location" in self.get_property_keys()
 
     def is_filtered(self):
         # the is_filtered is handle with annotation
         return self._annotations.get("is_filtered", False)
 
-    def _select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecordingSnippets":
-        raise NotImplementedError
-
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
-        raise NotImplementedError
-
-    def _frame_slice(self, channel_ids, renamed_channel_ids=None):
         raise NotImplementedError
 
     def set_probe(self, probe, group_mode="by_probe", in_place=False):
@@ -372,7 +366,7 @@ class BaseRecordingSnippets(BaseExtractor):
             locations = np.asarray(locations)[channel_indices]
             return select_axes(locations, axes)
 
-    def has_3d_locations(self):
+    def has_3d_locations(self) -> bool:
         return self.get_property("location").shape[1] == 3
 
     def clear_channel_locations(self, channel_ids=None):
@@ -478,7 +472,7 @@ class BaseRecordingSnippets(BaseExtractor):
         BaseRecordingSnippets
             The object with sliced channels
         """
-        return self._select_channels(channel_ids)
+        raise NotImplementedError
 
     def remove_channels(self, remove_channel_ids):
         """
@@ -513,7 +507,7 @@ class BaseRecordingSnippets(BaseExtractor):
         BaseRecordingSnippets
             The object with sliced frames
         """
-        return self._frame_slice(start_frame, end_frame)
+        raise NotImplementedError
 
     def select_segments(self, segment_indices):
         """
