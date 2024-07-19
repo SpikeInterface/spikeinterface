@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional
 import numpy as np
+from spikeinterface import SortingAnalyzer
 
 
 try:
@@ -133,3 +134,26 @@ def find_duplicated_spikes(
         return _find_duplicated_spikes_keep_last_iterative(spike_train.astype(np.int64), censored_period)
     else:
         raise ValueError(f"Method '{method}' isn't a valid method for find_duplicated_spikes. Use one of {_methods}")
+
+
+def resolve_merging_graph(sorting, potential_merges):
+    """
+    Function to provide, given a list of potential_merges, a resolved merging
+    graph based on the connected components.
+    """
+    from scipy.sparse.csgraph import connected_components
+    from scipy.sparse import lil_matrix
+
+    n = len(sorting.unit_ids)
+    graph = lil_matrix((n, n))
+    for i, j in potential_merges:
+        graph[sorting.id_to_index(i), sorting.id_to_index(j)] = 1
+
+    n_components, labels = connected_components(graph, directed=False, return_labels=True)
+    final_merges = []
+    for i in range(n_components):
+        merges = labels == i
+        if merges.sum() > 1:
+            final_merges += [list(sorting.unit_ids[np.flatnonzero(merges)])]
+
+    return final_merges

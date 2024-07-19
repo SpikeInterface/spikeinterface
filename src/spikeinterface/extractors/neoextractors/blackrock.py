@@ -27,7 +27,8 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
     use_names_as_ids : bool, default: False
-        If False, use default IDs inherited from Neo. If True, use channel names as IDs.
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
 
     """
 
@@ -38,8 +39,8 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         file_path,
         stream_id=None,
         stream_name=None,
-        all_annotations=False,
-        use_names_as_ids=False,
+        all_annotations: bool = False,
+        use_names_as_ids: bool = False,
     ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         neo_kwargs["load_nev"] = False  # Avoid loading spikes release in neo 0.12.0

@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+import numpy as np
 
 import shutil
 
@@ -112,6 +113,9 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     # this bug requires that we have an info.json file so we calculate templates above
     select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=[1])
     assert len(select_units_sorting_analyer.unit_ids) == 1
+    remove_units_sorting_analyer = sorting_analyzer.remove_units(remove_unit_ids=[1])
+    assert len(remove_units_sorting_analyer.unit_ids) == len(sorting_analyzer.unit_ids) - 1
+    assert 1 not in remove_units_sorting_analyer.unit_ids
 
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
     if folder.exists():
@@ -215,12 +219,58 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         keep_unit_ids = original_sorting.unit_ids[::2]
         sorting_analyzer2 = sorting_analyzer.select_units(unit_ids=keep_unit_ids, format=format, folder=folder)
 
-        # check propagation of result data and correct sligin
+        # check propagation of result data and correct aligin
         assert np.array_equal(keep_unit_ids, sorting_analyzer2.unit_ids)
         data = sorting_analyzer2.get_extension("dummy").data
         assert data["result_one"] == sorting_analyzer.get_extension("dummy").data["result_one"]
         # unit 1, 3, ... should be removed
         assert np.all(~np.isin(data["result_two"], [1, 3]))
+
+        # remove unit_ids to several format
+        if format != "memory":
+            if format == "zarr":
+                folder = cache_folder / f"test_SortingAnalyzer_remove_units_with_{format}.zarr"
+            else:
+                folder = cache_folder / f"test_SortingAnalyzer_remove_units_with_{format}"
+            if folder.exists():
+                shutil.rmtree(folder)
+        else:
+            folder = None
+        # compute one extension to check the slice
+        sorting_analyzer.compute("dummy")
+        remove_unit_ids = original_sorting.unit_ids[::2]
+        sorting_analyzer3 = sorting_analyzer.remove_units(remove_unit_ids=remove_unit_ids, format=format, folder=folder)
+
+        # check propagation of result data and correct aligin
+        assert np.array_equal(original_sorting.unit_ids[1::2], sorting_analyzer3.unit_ids)
+        data = sorting_analyzer3.get_extension("dummy").data
+        assert data["result_one"] == sorting_analyzer.get_extension("dummy").data["result_one"]
+        # unit 0, 2, ... should be removed
+        assert np.all(~np.isin(data["result_two"], [0, 2]))
+
+        if format != "memory":
+            if format == "zarr":
+                folder = cache_folder / f"test_SortingAnalyzer_merge_soft_with_{format}.zarr"
+            else:
+                folder = cache_folder / f"test_SortingAnalyzer_merge_with_{format}"
+            if folder.exists():
+                shutil.rmtree(folder)
+        else:
+            folder = None
+        sorting_analyzer4 = sorting_analyzer.merge_units(merge_unit_groups=[[0, 1]], format=format, folder=folder)
+
+        if format != "memory":
+            if format == "zarr":
+                folder = cache_folder / f"test_SortingAnalyzer_merge_hard_with_{format}.zarr"
+            else:
+                folder = cache_folder / f"test_SortingAnalyzer_merge_hard_with_{format}"
+            if folder.exists():
+                shutil.rmtree(folder)
+        else:
+            folder = None
+        sorting_analyzer5 = sorting_analyzer.merge_units(
+            merge_unit_groups=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, mode="hard"
+        )
 
     # test compute with extension-specific params
     sorting_analyzer.compute(["dummy"], extension_params={"dummy": {"param1": 5.5}})
@@ -237,11 +287,11 @@ def test_extension_params():
         assert ext in computable_extension
         if mod == "spikeinterface.core":
             default_params = get_default_analyzer_extension_params(ext)
-            print(ext, default_params)
+            # print(ext, default_params)
         else:
             try:
                 default_params = get_default_analyzer_extension_params(ext)
-                print(ext, default_params)
+                # print(ext, default_params)
             except:
                 print(f"Failed to import {ext}")
 
@@ -254,7 +304,6 @@ class DummyAnalyzerExtension(AnalyzerExtension):
 
     def _set_params(self, param0="yep", param1=1.2, param2=[1, 2, 3.0]):
         params = dict(param0=param0, param1=param1, param2=param2)
-        params["more_option"] = "yep"
         return params
 
     def _run(self, **kwargs):
@@ -264,6 +313,7 @@ class DummyAnalyzerExtension(AnalyzerExtension):
         # and represent nothing (the trick is to use unit_index for testing slice)
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
         self.data["result_two"] = spikes["unit_index"].copy()
+        self.data["result_three"] = np.zeros((len(self.sorting_analyzer.unit_ids), 2))
 
     def _select_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
@@ -275,6 +325,32 @@ class DummyAnalyzerExtension(AnalyzerExtension):
         new_data = dict()
         new_data["result_one"] = self.data["result_one"]
         new_data["result_two"] = self.data["result_two"][keep_spike_mask]
+
+        keep_spike_mask = np.isin(self.sorting_analyzer.unit_ids, unit_ids)
+        new_data["result_three"] = self.data["result_three"][keep_spike_mask]
+
+        return new_data
+
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    ):
+
+        all_new_unit_ids = new_sorting_analyzer.unit_ids
+        new_data = dict()
+        new_data["result_one"] = self.data["result_one"]
+        new_data["result_two"] = self.data["result_two"]
+
+        arr = self.data["result_three"]
+        num_dims = arr.shape[1]
+        new_data["result_three"] = np.zeros((len(all_new_unit_ids), num_dims), dtype=arr.dtype)
+        for unit_ind, unit_id in enumerate(all_new_unit_ids):
+            if unit_id not in new_unit_ids:
+                keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                new_data["result_three"][unit_ind] = arr[keep_unit_index]
+            else:
+                id = np.flatnonzero(new_unit_ids == unit_id)[0]
+                keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_groups[id])
+                new_data["result_three"][unit_ind] = arr[keep_unit_indices].mean(axis=0)
 
         return new_data
 
@@ -331,4 +407,5 @@ if __name__ == "__main__":
     test_SortingAnalyzer_zarr(tmp_path, dataset)
     test_SortingAnalyzer_tmp_recording(dataset)
     test_extension()
+    test_SortingAnalyzer_merge_all_extensions()
     test_extension_params()
