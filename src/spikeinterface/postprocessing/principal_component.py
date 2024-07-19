@@ -637,7 +637,11 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
             w = wf[:, chan_ind]
             if w.size > 0:
                 w = w[None, :]
-                all_pcs[i, :, c] = pca_model[chan_ind].transform(w)
+                try:
+                    all_pcs[i, :, c] = pca_model[chan_ind].transform(w)
+                except:
+                    # this could happen if len(wfs) is less then n_comp for a channel
+                    pass
 
 
 def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model):

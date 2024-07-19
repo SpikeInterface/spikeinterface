@@ -2,11 +2,16 @@ import pytest
 
 from pathlib import Path
 import json
+import numpy as np
+
+from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
 
 from spikeinterface.curation.curation_format import (
     validate_curation_dict,
     convert_from_sortingview_curation_format_v0,
+    curation_label_to_vectors,
     curation_label_to_dataframe,
+    apply_curation,
 )
 
 
@@ -141,6 +146,17 @@ def test_convert_from_sortingview_curation_format_v0():
             validate_curation_dict(curation_v1)
 
 
+def test_curation_label_to_vectors():
+
+    labels = curation_label_to_vectors(curation_ids_int)
+    assert "quality" in labels
+    assert "excitatory" in labels
+    print(labels)
+
+    labels = curation_label_to_vectors(curation_ids_str)
+    print(labels)
+
+
 def test_curation_label_to_dataframe():
 
     df = curation_label_to_dataframe(curation_ids_int)
@@ -152,10 +168,25 @@ def test_curation_label_to_dataframe():
     # print(df)
 
 
+def test_apply_curation():
+    recording, sorting = generate_ground_truth_recording(durations=[10.0], num_units=9, seed=2205)
+    sorting._main_ids = np.array([1, 2, 3, 6, 10, 14, 20, 31, 42])
+    analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
+
+    sorting_curated = apply_curation(sorting, curation_ids_int)
+    assert sorting_curated.get_property("quality", ids=[1])[0] == "good"
+    assert sorting_curated.get_property("quality", ids=[2])[0] == "noise"
+    assert sorting_curated.get_property("excitatory", ids=[2])[0]
+
+    analyzer_curated = apply_curation(analyzer, curation_ids_int)
+    assert "quality" in analyzer_curated.sorting.get_property_keys()
+
+
 if __name__ == "__main__":
     # test_curation_format_validation()
     # test_to_from_json()
     # test_convert_from_sortingview_curation_format_v0()
+    # test_curation_label_to_vectors()
     # test_curation_label_to_dataframe()
 
-    print(json.dumps(curation_ids_str, indent=4))
+    test_apply_curation()

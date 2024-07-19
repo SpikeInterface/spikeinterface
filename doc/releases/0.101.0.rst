@@ -8,7 +8,7 @@ Estimated: 19th July 2024
 Main changes:
 
 * Implementation of `SortingAnalyzer` (#2398)
-* Improved auto-merging functions and enable `SortingAnalyzer` to merge units and extensions (#3043, #3154, #3203)
+* Improved auto-merging functions and enable `SortingAnalyzer` to merge units and extensions (#3043, #3154, #3203, #3208)
 * Added framework for hybrid recording generation (#2436, #2769, #2857)
 * Refactored motion correction with the `Motion` class and the DREDGE AP and LFP methods (#2915, #3062)
 * Extendeded benchmarking of `sortingcomponents` (#2501, #2518, #2586, #2811, #2959)
@@ -16,6 +16,7 @@ Main changes:
 
 core:
 
+* Implement a simple system to have backward compatibility for Analyzer extension (#3215)
 * Units aggregation preserve unit ids of aggregated sorters (#3180)
 * Better error message for `BaseExtractor.load()` (#3170)
 * Saving provenance with paths relative to folder (#3165)
@@ -98,6 +99,7 @@ core:
 
 preprocessing:
 
+* Update doc handle drift + better preset (#3232)
 * Remove name class attribute in preprocessing module (#3200)
 * Add option to use ref_channel_ids in global common reference (#3139)
 * Adding option to overwrite while doing correct_motion and saving to a folder (#3088)
@@ -150,6 +152,7 @@ extractors:
 
 sorters:
 
+* Patch for SC2 after release AND bugs in auto merge (#3213)
 * Improve error log to json in run_sorter (#3057)
 * Add support for kilosort>=4.0.12 (#3055)
 * Make sure we check `is_filtered()` rather than bound method during run basesorter (#3037)
@@ -179,7 +182,7 @@ sorters:
 
 postprocessing:
 
-* Fix pca transform error (#3178)
+* Fix pca transform error (#3178, #3224)
 * Fix `spike_vector_to_indices()` (#3048)
 * Remove un-used argument (#3021)
 * Optimize numba cross-correlation and extend `correlograms.py` docstrings and tests (#3017)
@@ -199,6 +202,7 @@ qualitymetrics:
 
 curation:
 
+* Add `apply_curation()` (#3208)
 * Port auto-merge changes and refactor (#3203)
 * Implement `apply_merges_to_sorting()` (#3154)
 * Proposal of format to hold the manual curation information (#2933)
@@ -249,6 +253,7 @@ generation:
 
 sortingcomponents:
 
+* Fix estimate_motion when time_vector is set (#3218)
 * Fix select peaks (#3132)
 * Dredge lfp and dredge ap (#3062)
 * Use "available" for memory caching (#3008)
@@ -269,6 +274,7 @@ sortingcomponents:
 
 documentation:
 
+* Analyzer docstring cleanup (#3220)
 * Eradicate sphinx warnings (#3188)
 * Convert doc references from `wf_extractor` -> `sorting_analyzer` (#3185)
 * Add explainer of compute always computing in the analyzer (vs WaveformExtractor behavior) documentation (#3173)
