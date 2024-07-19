@@ -133,7 +133,7 @@ def auto_merges(
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
     """
     import scipy
-
+    
     sorting = sorting_analyzer.sorting
     unit_ids = sorting.unit_ids
 
@@ -198,6 +198,10 @@ def auto_merges(
                 "knn",
                 "quality_score",
             ]
+
+    if compute_needed_extensions:
+        # To avoid erasing the extensions of the user
+        sorting_analyzer = sorting_analyzer.copy()
 
     for step in steps:
         if step in _required_extensions:
