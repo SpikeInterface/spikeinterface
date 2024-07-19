@@ -47,11 +47,11 @@ Here we will use *dataset1* with *neuropixel1*. This dataset is the
     from pathlib import Path
     import matplotlib.pyplot as plt
     import numpy as np
-    
+
     import shutil
-    
+
     import spikeinterface.full as si
-    
+
     from spikeinterface.preprocessing import get_motion_parameters_preset, get_motion_presets
 
 
@@ -1401,7 +1401,7 @@ nonrigid_accurate but faster (using grid_convolution).
         # load
         folder = base_folder / "motion_folder_dataset1" / preset
         motion_info = si.load_motion_info(folder)
-    
+
         # and plot
         fig = plt.figure(figsize=(14, 8))
         si.plot_motion_info(
@@ -1412,7 +1412,7 @@ nonrigid_accurate but faster (using grid_convolution).
             amplitude_cmap="inferno",
             scatter_decimate=10,
         )
-    
+
         fig.suptitle(f"{preset=}")
 
 
@@ -1465,18 +1465,18 @@ to display the results.
 .. code:: ipython3
 
     from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
-    
+
     for preset in some_presets:
         folder = base_folder / "motion_folder_dataset1" / preset
         motion_info = si.load_motion_info(folder)
-    
+
         motion = motion_info["motion"]
-    
+
         fig, axs = plt.subplots(ncols=2, figsize=(12, 8), sharey=True)
-    
+
         ax = axs[0]
         si.plot_probe_map(rec, ax=ax)
-    
+
         peaks = motion_info["peaks"]
         sr = rec.get_sampling_frequency()
         time_lim0 = 750.0
@@ -1486,20 +1486,20 @@ to display the results.
         amps = np.abs(peaks["amplitude"][mask][sl])
         amps /= np.quantile(amps, 0.95)
         c = plt.get_cmap("inferno")(amps)
-    
+
         color_kargs = dict(alpha=0.2, s=2, c=c)
-    
+
         peak_locations = motion_info["peak_locations"]
         # color='black',
         ax.scatter(peak_locations["x"][mask][sl], peak_locations["y"][mask][sl], **color_kargs)
-    
+
         peak_locations2 = correct_motion_on_peaks(peaks, peak_locations, motion,rec)
-    
+
         ax = axs[1]
         si.plot_probe_map(rec, ax=ax)
         #  color='black',
         ax.scatter(peak_locations2["x"][mask][sl], peak_locations2["y"][mask][sl], **color_kargs)
-    
+
         ax.set_ylim(400, 600)
         fig.suptitle(f"{preset=}")
 
@@ -1543,7 +1543,7 @@ computation speeds. It is good to have this in mind!
         motion_info = si.load_motion_info(folder)
         run_times.append(motion_info["run_times"])
     keys = run_times[0].keys()
-    
+
     bottom = np.zeros(len(run_times))
     fig, ax = plt.subplots(figsize=(14, 6))
     for k in keys:
@@ -1564,6 +1564,3 @@ computation speeds. It is good to have this in mind!
 
 
 .. image:: handle_drift_files/handle_drift_21_1.png
-
-
-

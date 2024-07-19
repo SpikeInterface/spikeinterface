@@ -39,7 +39,7 @@ motion_options_preset = {
         ),
         "interpolate_motion_kwargs": dict(
             border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
-        ),    
+        ),
     },
     # similar than dredge but faster
     "dredge_fast": {
@@ -66,9 +66,8 @@ motion_options_preset = {
         ),
         "interpolate_motion_kwargs": dict(
             border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
-        ),    
-    }, 
-
+        ),
+    },
     # This preset is the encestor of dredge
     "nonrigid_accurate": {
         "doc": "method by Paninski lab (monopolar_triangulation + decentralized)",
@@ -110,12 +109,12 @@ motion_options_preset = {
             peak_sign="neg",
             detect_threshold=8.0,
             exclude_sweep_ms=0.1,
-            radius_um=75.,
+            radius_um=75.0,
         ),
         "select_kwargs": dict(),
         # "localize_peaks_kwargs": dict(method="grid_convolution"),
         "localize_peaks_kwargs": dict(method="center_of_mass"),
-        "estimate_motion_kwargs": dict(method="dredge_ap", bin_s=5., rigid=True),
+        "estimate_motion_kwargs": dict(method="dredge_ap", bin_s=5.0, rigid=True),
         "interpolate_motion_kwargs": dict(
             border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
@@ -139,8 +138,8 @@ motion_options_preset = {
             method="iterative_template",
             bin_s=2.0,
             rigid=False,
-            win_step_um=200.,
-            win_scale_um=400.,
+            win_step_um=200.0,
+            win_scale_um=400.0,
             hist_margin_um=0,
             win_shape="rect",
         ),
@@ -148,7 +147,6 @@ motion_options_preset = {
             border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
-
     # empty preset
     "": {
         "detect_kwargs": {},
@@ -159,6 +157,7 @@ motion_options_preset = {
     },
 }
 
+
 def _get_default_motion_params():
     # dirty code that inspect class to get parameters
     # when multi method for detect_peak/localize_peak/estimate_motion
@@ -168,7 +167,6 @@ def _get_default_motion_params():
     from spikeinterface.sortingcomponents.peak_detection import detect_peak_methods
     from spikeinterface.sortingcomponents.peak_localization import localize_peak_methods
     from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion_methods, estimate_motion
-
 
     params["detect_kwargs"] = dict()
     for method_name, method_class in detect_peak_methods.items():
@@ -184,9 +182,7 @@ def _get_default_motion_params():
     params["localize_peaks_kwargs"] = dict()
     for method_name, method_class in localize_peak_methods.items():
         sig = inspect.signature(method_class.__init__)
-        p = {
-            k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty
-        }
+        p = {k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty}
         p.pop("parents", None)
         p.pop("return_output", None)
         p.pop("return_tensor", None)
@@ -195,16 +191,14 @@ def _get_default_motion_params():
     params["estimate_motion_kwargs"] = dict()
     for method_name, method_class in estimate_motion_methods.items():
         sig = inspect.signature(estimate_motion)
-        p = {
-            k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty
-        }
+        p = {k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty}
         for k in ("peaks", "peak_locations", "method", "extra_outputs", "verbose", "progress_bar", "margin_um"):
             p.pop(k)
-        
+
         sig = inspect.signature(method_class.run)
-        p.update({
-            k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty
-        })
+        p.update(
+            {k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty}
+        )
         params["estimate_motion_kwargs"][method_name] = p
 
     # no design by subclass
@@ -218,6 +212,7 @@ def get_motion_presets():
     preset_keys.remove("")
     return preset_keys
 
+
 def get_motion_parameters_preset(preset):
     """
     Get the parameters tree for a given preset for motion correction.
@@ -229,7 +224,7 @@ def get_motion_parameters_preset(preset):
         if isinstance(step_params, str):
             # the doc key
             params[step] = step_params
-        
+
         elif len(step_params) == 0:
             # empty dict with no methods = skip the step (select_peaks for instance)
             params[step] = dict()

@@ -255,7 +255,3 @@ for k in keys:
     bottom += rtimes
 ax.legend()
 # -
-
-
-
-
