@@ -274,10 +274,10 @@ a ``BaseSorting`` or ``SortingAnalyzer`` object using the :py:func:`~spikeinterf
         curation_dict = json.load(f)
 
     # apply the curation to the sorting output
-    clean_sorting = apply_curation(sorting=sorting, curation_dict=curation_dict)
+    clean_sorting = apply_curation(sorting, curation_dict=curation_dict)
 
     # apply the curation to the sorting analyzer
-    clean_sorting_analyzer = apply_curation(sorting_analyzer=sorting_analyzer, curation_dict=curation_dict)
+    clean_sorting_analyzer = apply_curation(sorting_analyzer, curation_dict=curation_dict)
 
 
 Using the ``SpikeInterface GUI``
