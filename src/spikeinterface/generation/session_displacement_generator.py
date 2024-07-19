@@ -41,6 +41,7 @@ def generate_inter_session_displacement_recordings(
     ),
     generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),
     generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
+    extra_outputs=False,
     seed=None,
 ):
     """ """
@@ -61,6 +62,11 @@ def generate_inter_session_displacement_recordings(
 
     output_recordings = []
     output_sortings = []
+
+    extra_outputs = {
+        "unit_locations": [],
+        "template_array_moved": [],
+    }
     for shift, duration in zip(rec_shifts, rec_durations):
 
         displacement_vector, displacement_unit_factor = get_inter_session_displacements(
@@ -120,8 +126,13 @@ def generate_inter_session_displacement_recordings(
 
         output_recordings.append(recording)
         output_sortings.append(sorting)
+        extra_outputs["unit_locations"].append(unit_locations)
+        extra_outputs["template_array_moved"].append(templates_moved_array)
 
-    return output_recordings, output_sortings
+    if extra_outputs:
+        return output_recordings, output_sortings, extra_outputs
+    else:
+        return output_recordings, output_sortings
 
 
 def get_inter_session_displacements(shift, non_rigid_gradient, num_units, unit_locations):
