@@ -324,15 +324,21 @@ spikeinterface.curation
 ------------------------
 .. automodule:: spikeinterface.curation
 
-    .. autoclass:: CurationSorting
-    .. autoclass:: MergeUnitsSorting
-    .. autoclass:: SplitUnitSorting
+    .. autofunction:: apply_curation
     .. autofunction:: get_potential_auto_merge
     .. autofunction:: find_redundant_units
     .. autofunction:: remove_redundant_units
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
+
+Deprecated
+~~~~~~~~~~
+.. automodule:: spikeinterface.curation
+
     .. autofunction:: apply_sortingview_curation
+    .. autoclass:: CurationSorting
+    .. autoclass:: MergeUnitsSorting
+    .. autoclass:: SplitUnitSorting
 
 
 spikeinterface.generation
