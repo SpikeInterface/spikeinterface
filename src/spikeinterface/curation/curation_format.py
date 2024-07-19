@@ -343,4 +343,4 @@ def apply_curation(sorting_or_analyzer, curation_dict, censor_ms=None, new_id_st
         apply_curation_labels(analyzer.sorting, new_unit_ids, curation_dict)
         return analyzer
     else:
-        raise TypeError(f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)")
+        raise TypeError(f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)}")
