@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.101.0rc0"
+version = "0.101.0rc1"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -25,7 +25,7 @@ dependencies = [
     "tqdm",
     "zarr>=2.16,<2.18",
     "neo>=0.13.0",
-    "probeinterface>=0.2.21",
+    "probeinterface>=0.2.22",
     "packaging",
 ]
 
@@ -125,16 +125,16 @@ test_core = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test_extractors = [
     # Functions to download data in neo test suite
     "pooch>=1.8.2",
     "datalad>=1.0.2",
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test_preprocessing = [

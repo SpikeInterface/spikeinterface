@@ -348,6 +348,10 @@ def _get_ids_after_merging(old_unit_ids, merge_unit_groups, new_unit_ids):
 
     """
     old_unit_ids = np.asarray(old_unit_ids)
+    dtype = old_unit_ids.dtype
+    if dtype.kind == "U":
+        # the new dtype can be longer
+        dtype = "U"
 
     assert len(new_unit_ids) == len(merge_unit_groups), "new_unit_ids should have the same len as merge_unit_groups"
 
@@ -362,7 +366,7 @@ def _get_ids_after_merging(old_unit_ids, merge_unit_groups, new_unit_ids):
                 all_unit_ids.remove(unit_id)
         if new_unit_id not in all_unit_ids:
             all_unit_ids.append(new_unit_id)
-    return np.array(all_unit_ids)
+    return np.array(all_unit_ids, dtype=dtype)
 
 
 def generate_unit_ids_for_merge_group(old_unit_ids, merge_unit_groups, new_unit_ids=None, new_id_strategy="append"):

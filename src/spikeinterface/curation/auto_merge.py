@@ -243,14 +243,14 @@ def get_potential_auto_merge(
         assert step in all_steps, f"{step} is not a valid step"
 
         # STEP : remove units with too few spikes
-        if step == "min_spikes":
+        if step == "num_spikes":
             num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
             to_remove = num_spikes < min_spikes
             pair_mask[to_remove, :] = False
             pair_mask[:, to_remove] = False
 
         # STEP : remove units with too small SNR
-        elif step == "min_snr":
+        elif step == "snr":
             qm_ext = sorting_analyzer.get_extension("quality_metrics")
             if qm_ext is None:
                 sorting_analyzer.compute("noise_levels")

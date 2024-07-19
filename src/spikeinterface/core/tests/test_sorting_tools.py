@@ -168,4 +168,4 @@ if __name__ == "__main__":
 
     test_apply_merges_to_sorting()
     test_get_ids_after_merging()
-    test_generate_unit_ids_for_merge_group()
+    # test_generate_unit_ids_for_merge_group()
