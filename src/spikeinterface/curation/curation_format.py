@@ -175,7 +175,7 @@ def clean_curation_dict(curation_dict):
     For instance, some unit_ids are both in 'merge_unit_groups' and 'removed_units'.
     This is ambiguous!
 
-    This cleaner helper units tagged as removed will be revmove from merges lists.
+    This cleaner helper function ensures units tagged as `removed_units` are removed from the `merge_unit_groups`
     """
     curation_dict = copy.deepcopy(curation_dict)
 
@@ -200,7 +200,7 @@ def curation_label_to_dataframe(curation_dict):
     For label category with exclusive=True : a column is created and values are the unique label.
     For label category with exclusive=False : one column per possible is created and values are boolean.
 
-    If exclusive=False and the same label appear several times then it raises an error.
+    If exclusive=False and the same label appears several times then an error is raised.
 
     Parameters
     ----------
@@ -269,9 +269,9 @@ def apply_curation(sorting_or_analyzer, curation_dict, censor_ms=None, new_id_st
                    merging_mode="soft", sparsity_overlap=0.75, verbose=False,
                    **job_kwargs):
     """
-    Apply curation dict to a Sorting or an SortingAnalyzer.
+    Apply curation dict to a Sorting or a SortingAnalyzer.
 
-    Steps are done this order:
+    Steps are done in this order:
       1. Apply removal using curation_dict["removed_units"]
       2. Apply merges using curation_dict["merge_unit_groups"]
       3. Set labels using curation_dict["manual_labels"]
@@ -286,15 +286,20 @@ def apply_curation(sorting_or_analyzer, curation_dict, censor_ms=None, new_id_st
     curation_dict : dict
         The curation dict.
     censor_ms: float | None, default: None
-        When applying the merges, should be discard consecutive spikes violating a given refractory per
+        When applying the merges, any consecutive spikes within the `censor_ms` are removed. This can be thought of
+        as the desired refractory period. If `censor_ms=None`, no spikes are discarded. 
     new_id_strategy : "append" | "take_first", default: "append"
         The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
 
-            * "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
+            * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
             * "take_first" : new_unit_ids will be the first unit_id of every list of merges
-    merging_mode : "soft" | "hard"
-        Used for SortingAnalyzer
-    sparsity_overlap:
+    merging_mode  : "soft" | "hard", default: "soft"
+        How merges are performed for SortingAnalyzer. If the `merge_mode` is "soft" , merges will be approximated, with no reloading of 
+        the waveforms. This will lead to approximations. If `merge_mode` is "hard", recomputations are accurately 
+        performed, reloading waveforms if needed
+    sparsity_overlap : float, default 0.75
+            The percentage of overlap that units should share in order to accept merges. If this criteria is not
+            achieved, soft merging will not be possible and an error will be raised. This is for use with a SortingAnalyzer input.
 
     verbose: 
 
@@ -338,6 +343,6 @@ def apply_curation(sorting_or_analyzer, curation_dict, censor_ms=None, new_id_st
         apply_curation_labels(analyzer.sorting, new_unit_ids, curation_dict)
         return analyzer
     else:
-        raise ValueError("apply_curation() must have a Sorting or a SortingAnalyzer")
+        raise TypeError(f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)")
 
 
