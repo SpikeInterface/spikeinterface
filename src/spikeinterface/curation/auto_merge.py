@@ -60,6 +60,7 @@ def auto_merges(
     compute_needed_extensions: bool = True,
     extra_outputs: bool = False,
     steps: list[str] | None = None,
+    force_copy : bool = True,
     **job_kwargs,
 ) -> list[tuple[int | str, int | str]] | Tuple[tuple[int | str, int | str], dict]:
     """
@@ -108,14 +109,18 @@ def auto_merges(
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
     resolve_graph : bool, default: False
         If True, the function resolves the potential unit pairs to be merged into multiple-unit merges.
-
+    compute_needed_extensions : bool, default : True
+        Should we force the computation of needed extensions?
     extra_outputs : bool, default: False
         If True, an additional dictionary (`outs`) with processed data is returned.
     steps : None or list of str, default: None
         Which steps to run, if no preset is used.
         Pontential steps : "num_spikes", "snr", "remove_contaminated", "unit_locations", "correlogram",
         "template_similarity", "presence_distance", "cross_contamination", "knn", "quality_score"
-        Please check steps explanations above!
+        Please check steps explanations above!$
+    force_copy : boolean, default: True
+        When new extensions are computed, the default is to make a copy of the analyzer, to avoid overwriting
+        already computed extensions. False if you want to overwrite
 
     Returns
     -------
@@ -198,8 +203,7 @@ def auto_merges(
                 "knn",
                 "quality_score",
             ]
-
-    if compute_needed_extensions:
+    if force_copy and compute_needed_extensions:
         # To avoid erasing the extensions of the user
         sorting_analyzer = sorting_analyzer.copy()
 
@@ -579,19 +583,22 @@ def iterative_merges(
     assert len(presets) == len(params)
     n_units = max(sorting_analyzer.unit_ids) + 1
 
+    if compute_needed_extensions:
+        sorting_analyzer = sorting_analyzer.copy()
+
     if extra_outputs:
         all_merges = []
         all_outs = []
 
     for i in range(len(presets)):
-
         if extra_outputs:
             merges, outs = auto_merges(
                 sorting_analyzer,
                 preset=presets[i],
                 resolve_graph=True,
-                compute_needed_extensions=compute_needed_extensions * (i == 0),
+                compute_needed_extensions=bool(compute_needed_extensions * (i == 0)),
                 extra_outputs=extra_outputs,
+                force_copy=False,
                 **params[i],
                 **job_kwargs,
             )
@@ -605,6 +612,7 @@ def iterative_merges(
                 resolve_graph=True,
                 compute_needed_extensions=compute_needed_extensions * (i == 0),
                 extra_outputs=extra_outputs,
+                force_copy=False,
                 **params[i],
                 **job_kwargs,
             )
@@ -626,7 +634,8 @@ def iterative_merges(
                         new_list.remove(k)
                         new_list += final_merges[k]
                 final_merges[count + n_units] = new_list
-            n_units = max(final_merges.keys()) + 1
+            if len(final_merges.keys()) > 0:
+                n_units = max(final_merges.keys()) + 1
 
         return sorting_analyzer, list(final_merges.values()), all_outs
     else:
