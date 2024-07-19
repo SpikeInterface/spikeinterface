@@ -244,7 +244,7 @@ def get_motion_parameters_preset(preset):
 
 def correct_motion(
     recording,
-    preset="dredge",
+    preset="dredge_fast",
     folder=None,
     output_motion=False,
     output_motion_info=False,
