@@ -79,7 +79,7 @@ def test_estimate_templates(create_cache_folder):
 
 
 if __name__ == "__main__":
-    test_generate_hybrid_no_motion()
+    # test_generate_hybrid_no_motion()
     test_generate_hybrid_motion()
-    test_estimate_templates()
-    test_generate_hybrid_with_sorting()
+    # test_estimate_templates()
+    # test_generate_hybrid_with_sorting()
