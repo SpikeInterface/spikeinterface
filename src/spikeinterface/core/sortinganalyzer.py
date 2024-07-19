@@ -777,6 +777,10 @@ class SortingAnalyzer:
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
         sorted_extensions = _sort_extensions_by_dependency(self.extensions)
+        # hack: quality metrics are computed at last
+        qm_extension_params = sorted_extensions.pop("quality_metrics", None)
+        if qm_extension_params is not None:
+            sorted_extensions["quality_metrics"] = qm_extension_params
         recompute_dict = {}
 
         for extension_name, extension in sorted_extensions.items():
@@ -815,10 +819,10 @@ class SortingAnalyzer:
 
         Parameters
         ----------
-        folder : str or Path
-            The output waveform folder
-        format : "binary_folder" | "zarr", default: "binary_folder"
-            The backend to use for saving the waveforms
+        folder : str | Path | None, default: None
+            The output folder if `format` is "zarr" or "binary_folder"
+        format : "memory" | "binary_folder" | "zarr", default: "memory"
+            The new backend format to use
         """
         return self._save_or_select_or_merge(format=format, folder=folder)
 
@@ -835,8 +839,9 @@ class SortingAnalyzer:
             The unit ids to keep in the new SortingAnalyzer object
         format : "memory" | "binary_folder" | "zarr" , default: "memory"
             The format of the returned SortingAnalyzer.
-        folder : Path or None
-            The new folder where selected waveforms are copied.
+        folder : Path | None, deafult: None
+            The new folder where the analyzer with selected units is copied if `format` is
+            "binary_folder" or "zarr"
 
         Returns
         -------
@@ -859,8 +864,9 @@ class SortingAnalyzer:
             The unit ids to remove in the new SortingAnalyzer object.
         format : "memory" | "binary_folder" | "zarr" , default: "memory"
             The format of the returned SortingAnalyzer.
-        folder : Path or None
-            The new folder where selected waveforms are copied.
+        folder : Path or None, default: None
+            The new folder where the analyzer without removed units is copied if `format`
+            is "binary_folder" or "zarr"
 
         Returns
         -------
@@ -886,42 +892,43 @@ class SortingAnalyzer:
     ) -> "SortingAnalyzer":
         """
         This method is equivalent to `save_as()`but with a list of merges that have to be achieved.
-        Merges units by creating a new sorting analyzer object in a new folder with appropriate merges
+        Merges units by creating a new SortingAnalyzer object with the appropriate merges
 
-        Extensions are also updated to display the merged unit ids.
+        Extensions are also updated to display the merged `unit_ids`.
 
         Parameters
         ----------
         merge_unit_groups : list/tuple of lists/tuples
             A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
             but it can also have more (merge multiple units at once).
-        new_unit_ids : None or list
+        new_unit_ids : None | list, default: None
             A new unit_ids for merged units. If given, it needs to have the same length as `merge_unit_groups`. If None,
             merged units will have the first unit_id of every lists of merges
-        censor_ms : None or float
-            When merging units, any spikes violating this refractory period will be discarded. Default is None
-        merging_mode : "soft" can be in ["soft", "hard"]
-            How merges are performed. In the "soft" mode, merges will be approximated, with no reloading of the
-            waveforms. This will lead to approximations. If "hard", recomputations are accuratly performed,
+        censor_ms : None | float, default: None
+            When merging units, any spikes violating this refractory period will be discarded. If None all units are kept
+        merging_mode : ["soft", "hard"], default: "soft"
+            How merges are performed. If the `merge_mode` is "soft" , merges will be approximated, with no reloading of the
+            waveforms. This will lead to approximations. If `merge_mode` is "hard", recomputations are accurately performed,
             reloading waveforms if needed
         sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
-            achieved, soft merging will not be possible
+            achieved, soft merging will not be possible and an error will be raised
         new_id_strategy : "append" | "take_first", default: "append"
             The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
-                * "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
+                * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
                 * "take_first" : new_unit_ids will be the first unit_id of every list of merges
-        folder : Path or None
-            The new folder where selected waveforms are copied
-        format : "auto" | "binary_folder" | "zarr"
-            The format of the folder.
-        verbose:
+        folder : Path | None, default: None
+            The new folder where the analyzer with merged units is copied for `format` "binary_folder" or "zarr"
+        format : "memory" | "binary_folder" | "zarr", default: "memory"
+            The format of SortingAnalyzer
+        verbose : bool, default: False
+            Whether to display calculations (such as sparsity estimation)
 
 
         Returns
         -------
         analyzer :  SortingAnalyzer
-            The newly create sorting_analyzer with the selected units
+            The newly create `SortingAnalyzer` with the selected units
         """
 
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
@@ -1204,7 +1211,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         # check dependencies
         if extension_class.need_recording:
-            assert self.has_recording(), f"Extension {extension_name} requires the recording"
+            assert (
+                self.has_recording() or self.has_temporary_recording()
+            ), f"Extension {extension_name} requires the recording"
         for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
                 ok = any(self.get_extension(name) is not None for name in dependency_name.split("|"))
@@ -1398,9 +1407,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         extension_class = get_extension_class(extension_name)
 
-        extension_instance = extension_class(self)
-        extension_instance.load_params()
-        extension_instance.load_data()
+        extension_instance = extension_class.load(self)
 
         self.extensions[extension_name] = extension_instance
 
@@ -1699,6 +1706,7 @@ class AnalyzerExtension:
     use_nodepipeline = False
     nodepipeline_variables = None
     need_job_kwargs = False
+    need_backward_compatibility_on_load = False
 
     def __init__(self, sorting_analyzer):
         self._sorting_analyzer = weakref.ref(sorting_analyzer)
@@ -1735,6 +1743,10 @@ class AnalyzerExtension:
 
     def _get_data(self):
         # must be implemented in subclass
+        raise NotImplementedError
+
+    def _handle_backward_compatibility_on_load(self):
+        # must be implemented in subclass only if need_backward_compatibility_on_load=True
         raise NotImplementedError
 
     @classmethod
@@ -1814,6 +1826,9 @@ class AnalyzerExtension:
         ext = cls(sorting_analyzer)
         ext.load_params()
         ext.load_data()
+        if cls.need_backward_compatibility_on_load:
+            ext._handle_backward_compatibility_on_load()
+
         return ext
 
     def load_params(self):
