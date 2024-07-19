@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.16.3
+#       jupytext_version: 1.16.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -80,26 +80,37 @@ rec = preprocess_chain(raw_rec)
 
 job_kwargs = dict(n_jobs=40, chunk_duration="1s", progress_bar=True)
 
-# ### Run motion correction with one function!
+#
 #
 # Correcting for drift is easy! You just need to run a single function.
-# We will try this function with 3 presets.
+# We will try this function with some presets.
 #
 # Internally a preset is a dictionary of dictionaries containing all parameters for every steps.
 #
 # Here we also save the motion correction results into a folder to be able to load them later.
 
+# ### preset and parameters
+#
+# Motion correction has some steps and eevry step can be controlled by a method and related parameters.
+#
+# A preset is a nested dict that contains theses methods/parameters.
+
 # internally, we can explore a preset like this
 # every parameter can be overwritten at runtime
-from spikeinterface.preprocessing.motion import motion_options_preset
+from spikeinterface.preprocessing.motion import get_motion_parameters_preset
 
-motion_options_preset["kilosort_like"]
+params = get_motion_parameters_preset("kilosort_like")
+params
 
-# lets try theses 5 presets
-some_presets = ("rigid_fast", "kilosort_like",  "nonrigid_accurate", "nonrigid_fast_and_accurate", "dredge",)
-some_presets = ("nonrigid_accurate", "nonrigid_fast_and_accurate", "dredge",)
-some_presets = ("rigid_fast", "kilosort_like",  "nonrigid_accurate",)
+# ### Run motion correction with one function!
+#
+# Correcting for drift is easy! You just need to run a single function.
+# We will try this function with some presets.
+#
+# Here we also save the motion correction results into a folder to be able to load them later.
 
+# lets try theses presets
+some_presets = ("rigid_fast", "kilosort_like",  "nonrigid_accurate", "nonrigid_fast_and_accurate", "dredge", "dredge_fast")
 
 
 # compute motion with theses presets
@@ -131,15 +142,20 @@ for preset in some_presets:
 #   The motion vector is computed for different depths.
 #   The corrected peak locations are flatter than the rigid case.
 #   The motion vector map is still be a bit noisy at some depths (e.g around 1000um).
-# * The preset **nonrigid_accurate** this is the legacy "dredge" before was published.
-#   It seems to give the good results on this recording.
-#   The motion vector seems less noisy globally, but it is not "perfect" (see at the top of the probe 3200um to 3800um).
-#   Also note that in the first part of the recording before the imposed motion (0-600s) we clearly have a non-rigid motion:
+# * The preset **dredge** is offcial DREDge re-implementation in spikeinterface.
+#   It give the best result : very fast and smooth motion estimation. Very few noise.
+#   This method also capture very well the non rigid motion gradient along the probe.
+#   The best method on the market at the moement.
+#   An enormous thanks to the dream team :  Charlie Windolf, Julien Boussard, Erdem Varol, Liam Paninski.
+#   Note that in the first part of the recording before the imposed motion (0-600s) we clearly have a non-rigid motion:
 #   the upper part of the probe (2000-3000um) experience some drifts, but the lower part (0-1000um) is relatively stable.
 #   The method defined by this preset is able to capture this.
-# * The preset **nonrigid_fast_and_accurate**
-#   It is very similar than **nonrigid_accurate**, it use a faster peak location estimation.
-# * The preset **dredge** give very very similar results than **nonrigid_accurate** but it is quite faster.
+# * The preset **nonrigid_accurate** this is the ancestor of "dredge" before it was published.
+#   It seems to give the good results on this recording but with bit more noise.
+# * The preset **dredge_fast** similar than dredge but faster (using grid_convolution).
+# * The preset **nonrigid_fast_and_accurate** a variant of nonrigid_accurate but faster (using grid_convolution).
+#
+#
 
 for preset in some_presets:
     # load
@@ -230,7 +246,7 @@ for preset in some_presets:
 keys = run_times[0].keys()
 
 bottom = np.zeros(len(run_times))
-fig, ax = plt.subplots(figsize=(12, 6))
+fig, ax = plt.subplots(figsize=(14, 6))
 for k in keys:
     rtimes = np.array([rt[k] for rt in run_times])
     if np.any(rtimes > 0.0):
@@ -238,5 +254,7 @@ for k in keys:
     bottom += rtimes
 ax.legend()
 # -
+
+
 
 
