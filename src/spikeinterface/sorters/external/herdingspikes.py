@@ -60,7 +60,7 @@ class HerdingspikesSorter(BaseSorter):
         "spike_duration": "Maximum duration over which a spike is evaluated (ms). (`float`, `1.0`)",
         "amp_avg_duration": "Maximum duration over which the spike amplitude  is evaluated (ms). (`float`, `0.4`)",
         "min_avg_amp": "Minimum integrated spike amplitude for a true spike. (`float`, `1.0`)",
-        "AHP_thr": "Minimum value of the spike repolarisation for a true spike. (`float`, `1.0`)",
+        "AHP_thr": "Minimum value of the spike repolarisation for a true spike. (`float`, `0.0`)",
         "neighbor_radius": "Radius of area around probe channel for neighbor classification (microns). (`float`, `90.0`)",
         "inner_radius": "Radius of area around probe channel for spike localisation (microns). (`float`, `70.0`)",
         "peak_jitter": "Maximum peak misalignment for synchronous spike (ms). (`float`, `0.25`)",
