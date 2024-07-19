@@ -60,7 +60,7 @@ def auto_merges(
     compute_needed_extensions: bool = True,
     extra_outputs: bool = False,
     steps: list[str] | None = None,
-    force_copy : bool = True,
+    force_copy: bool = True,
     **job_kwargs,
 ) -> list[tuple[int | str, int | str]] | Tuple[tuple[int | str, int | str], dict]:
     """
