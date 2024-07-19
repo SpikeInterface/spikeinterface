@@ -213,6 +213,11 @@ def _get_default_motion_params():
     return params
 
 
+def get_motion_presets():
+    preset_keys = list(motion_options_preset.keys())
+    preset_keys.remove("")
+    return preset_keys
+
 def get_motion_parameters_preset(preset):
     """
     Get the parameters tree for a given preset for motion correction.

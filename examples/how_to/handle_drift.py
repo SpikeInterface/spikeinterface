@@ -55,6 +55,8 @@ import shutil
 
 import spikeinterface.full as si
 
+from spikeinterface.preprocessing import get_motion_parameters_preset, get_motion_presets
+
 # -
 
 base_folder = Path("/mnt/data/sam/DataSpikeSorting/imposed_motion_nick")
@@ -95,12 +97,11 @@ job_kwargs = dict(n_jobs=40, chunk_duration="1s", progress_bar=True)
 #
 # A preset is a nested dict that contains theses methods/parameters.
 
-# internally, we can explore a preset like this
-# every parameter can be overwritten at runtime
-from spikeinterface.preprocessing.motion import get_motion_parameters_preset
+preset_keys = get_motion_presets()
+preset_keys
 
-params = get_motion_parameters_preset("kilosort_like")
-params
+one_preset_params = get_motion_parameters_preset("kilosort_like")
+one_preset_params
 
 # ### Run motion correction with one function!
 #

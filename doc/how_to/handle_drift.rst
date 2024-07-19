@@ -51,6 +51,8 @@ Here we will use *dataset1* with *neuropixel1*. This dataset is the
     import shutil
     
     import spikeinterface.full as si
+    
+    from spikeinterface.preprocessing import get_motion_parameters_preset, get_motion_presets
 
 
 .. code:: ipython3
@@ -1148,14 +1150,27 @@ A preset is a nested dict that contains theses methods/parameters.
 
 .. code:: ipython3
 
-    # internally, we can explore a preset like this
-    # every parameter can be overwritten at runtime
-    from spikeinterface.preprocessing.motion import get_motion_parameters_preset
+    preset_keys = get_motion_presets()
+    preset_keys
+
+
+
+
+.. parsed-literal::
+
+    ['dredge',
+     'dredge_fast',
+     'nonrigid_accurate',
+     'nonrigid_fast_and_accurate',
+     'rigid_fast',
+     'kilosort_like']
+
+
 
 .. code:: ipython3
 
-    params = get_motion_parameters_preset("kilosort_like")
-    params
+    one_preset_params = get_motion_parameters_preset("kilosort_like")
+    one_preset_params
 
 
 

@@ -159,6 +159,8 @@ spikeinterface.preprocessing
     .. autofunction:: common_reference
     .. autofunction:: correct_lsb
     .. autofunction:: correct_motion
+    .. autofunction:: get_motion_presets
+    .. autofunction:: get_motion_parameters_preset
     .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
     .. autofunction:: directional_derivative
