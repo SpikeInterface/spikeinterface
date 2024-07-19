@@ -14,12 +14,12 @@ state-of-the-art spike sorters, post-process and curate the output, compute qual
 
 .. warning::
 
-    Version 0.101.0 introduces a major API improvement: the :code:`SortingAnalyzer`.`
+    Version 0.101.0 introduces a major API improvement: the :code:`SortingAnalyzer`.
     To read more about the motivations, checkout the
     `enhancement proposal <https://github.com/SpikeInterface/spikeinterface/issues/2282>`_.
     Learn how to :ref:`update your code here <tutorials/waveform_extractor_to_sorting_analyzer:From WaveformExtractor to SortingAnalyzer>`
     and read more about the :code:`SortingAnalyzer`, please refer to the
-    :ref:`core <modules/core:SortingAnalyzer>` and :ref:`postprocessing <modules/postprocessing>` module
+    :ref:`core <modules/core:SortingAnalyzer>` and :ref:`postprocessing <modules/postprocessing:Postprocessing module>` module
     documentation.
 
 
