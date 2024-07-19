@@ -227,8 +227,7 @@ def random_spikes_selection(
 
 
 def apply_merges_to_sorting(
-    sorting, merge_unit_groups, new_unit_ids=None, censor_ms=None, return_extra=False,
-    new_id_strategy="append"
+    sorting, merge_unit_groups, new_unit_ids=None, censor_ms=None, return_extra=False, new_id_strategy="append"
 ):
     """
     Apply a resolved representation of the merges to a sorting object.

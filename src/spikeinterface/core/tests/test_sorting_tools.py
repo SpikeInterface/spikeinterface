@@ -159,8 +159,6 @@ def test_generate_unit_ids_for_merge_group():
     assert np.array_equal(new_unit_ids, ["0-5", "9-15"])
 
 
-
-
 if __name__ == "__main__":
     # test_spike_vector_to_spike_trains()
     # test_spike_vector_to_indices()

@@ -11,7 +11,7 @@ from spikeinterface.curation.curation_format import (
     convert_from_sortingview_curation_format_v0,
     curation_label_to_vectors,
     curation_label_to_dataframe,
-    apply_curation
+    apply_curation,
 )
 
 
@@ -146,7 +146,6 @@ def test_convert_from_sortingview_curation_format_v0():
             validate_curation_dict(curation_v1)
 
 
-
 def test_curation_label_to_vectors():
 
     labels = curation_label_to_vectors(curation_ids_int)
@@ -157,8 +156,6 @@ def test_curation_label_to_vectors():
     labels = curation_label_to_vectors(curation_ids_str)
     print(labels)
 
-
-    
 
 def test_curation_label_to_dataframe():
 
@@ -172,7 +169,7 @@ def test_curation_label_to_dataframe():
 
 
 def test_apply_curation():
-    recording, sorting = generate_ground_truth_recording(durations=[10.], num_units=9, seed=2205)
+    recording, sorting = generate_ground_truth_recording(durations=[10.0], num_units=9, seed=2205)
     sorting._main_ids = np.array([1, 2, 3, 6, 10, 14, 20, 31, 42])
     analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
 
@@ -193,4 +190,3 @@ if __name__ == "__main__":
     # test_curation_label_to_dataframe()
 
     test_apply_curation()
-

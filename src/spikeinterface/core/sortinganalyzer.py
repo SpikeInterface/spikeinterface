@@ -954,7 +954,7 @@ class SortingAnalyzer:
         )
         all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
 
-        new_analyzer =  self._save_or_select_or_merge(
+        new_analyzer = self._save_or_select_or_merge(
             format=format,
             folder=folder,
             merge_unit_groups=merge_unit_groups,
@@ -970,8 +970,6 @@ class SortingAnalyzer:
             return new_analyzer, new_unit_ids
         else:
             return new_analyzer
-            
-
 
     def copy(self):
         """

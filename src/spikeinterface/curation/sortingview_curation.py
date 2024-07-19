@@ -7,12 +7,17 @@ import numpy as np
 from pathlib import Path
 
 from .curationsorting import CurationSorting
-from .curation_format import convert_from_sortingview_curation_format_v0, apply_curation, curation_label_to_vectors, clean_curation_dict
+from .curation_format import (
+    convert_from_sortingview_curation_format_v0,
+    apply_curation,
+    curation_label_to_vectors,
+    clean_curation_dict,
+)
 
 
 def apply_sortingview_curation(
-        sorting_or_analyzer, uri_or_json, exclude_labels=None, include_labels=None, skip_merge=False, verbose=None
-    ):
+    sorting_or_analyzer, uri_or_json, exclude_labels=None, include_labels=None, skip_merge=False, verbose=None
+):
     """
     Apply curation from SortingView manual legacy curation format (before the official "curation_format")
 
@@ -35,14 +40,14 @@ def apply_sortingview_curation(
         If True, merges are not applied (only labels)
     verbose : None
         Deprecated
-        
+
 
     Returns
     -------
     sorting_or_analyzer_curated : BaseSorting
         The curated sorting or analyzer
     """
-    
+
     if verbose is not None:
         warnings.warn("versobe in apply_sortingview_curation() is deprecated")
 
@@ -68,10 +73,9 @@ def apply_sortingview_curation(
     if "format_version" not in curation_dict:
         curation_dict = convert_from_sortingview_curation_format_v0(curation_dict)
 
-
     unit_ids = sorting_or_analyzer.unit_ids
 
-    # this is a hack because it was not in the old format    
+    # this is a hack because it was not in the old format
     curation_dict["unit_ids"] = list(unit_ids)
 
     if exclude_labels is not None:
@@ -92,7 +96,7 @@ def apply_sortingview_curation(
             removed_units.extend(unit_ids[remove_mask])
         removed_units = np.unique(removed_units)
         curation_dict["removed_units"] = removed_units
-    
+
     if skip_merge:
         curation_dict["merge_unit_groups"] = []
 
@@ -101,10 +105,8 @@ def apply_sortingview_curation(
 
     # apply
     sorting_curated = apply_curation(sorting_or_analyzer, curation_dict, new_id_strategy="join")
-    
-    return sorting_curated
-    
 
+    return sorting_curated
 
 
 # TODO @alessio you remove this after testing

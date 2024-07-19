@@ -187,7 +187,7 @@ def clean_curation_dict(curation_dict):
                 clean_group.append(unit_id)
         if len(clean_group) > 1:
             clean_merge_unit_groups.append(clean_group)
-    
+
     curation_dict["merge_unit_groups"] = clean_merge_unit_groups
     return curation_dict
 
@@ -239,7 +239,7 @@ def apply_curation_labels(sorting, new_unit_ids, curation_dict):
                 ind = curation_dict["unit_ids"].index(unit_id)
                 all_values[unit_ind] = values[ind]
         sorting.set_property(key, all_values)
-    
+
     for new_unit_id, old_group_ids in zip(new_unit_ids, curation_dict["merge_unit_groups"]):
         for label_key, label_def in curation_dict["label_definitions"].items():
             if label_def["exclusive"]:
@@ -287,21 +287,21 @@ def apply_curation(sorting_or_analyzer, curation_dict, censor_ms=None, new_id_st
         The curation dict.
     censor_ms: float | None, default: None
         When applying the merges, any consecutive spikes within the `censor_ms` are removed. This can be thought of
-        as the desired refractory period. If `censor_ms=None`, no spikes are discarded. 
+        as the desired refractory period. If `censor_ms=None`, no spikes are discarded.
     new_id_strategy : "append" | "take_first", default: "append"
         The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
 
             * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
             * "take_first" : new_unit_ids will be the first unit_id of every list of merges
     merging_mode  : "soft" | "hard", default: "soft"
-        How merges are performed for SortingAnalyzer. If the `merge_mode` is "soft" , merges will be approximated, with no reloading of 
-        the waveforms. This will lead to approximations. If `merge_mode` is "hard", recomputations are accurately 
+        How merges are performed for SortingAnalyzer. If the `merge_mode` is "soft" , merges will be approximated, with no reloading of
+        the waveforms. This will lead to approximations. If `merge_mode` is "hard", recomputations are accurately
         performed, reloading waveforms if needed
     sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
             achieved, soft merging will not be possible and an error will be raised. This is for use with a SortingAnalyzer input.
 
-    verbose: 
+    verbose:
 
     **job_kwargs
 
@@ -325,7 +325,7 @@ def apply_curation(sorting_or_analyzer, curation_dict, censor_ms=None, new_id_st
                                           new_id_strategy=new_id_strategy)
         apply_curation_labels(sorting, new_unit_ids, curation_dict)
         return sorting
-    
+
     elif isinstance(sorting_or_analyzer, SortingAnalyzer):
         analyzer = sorting_or_analyzer
         analyzer = analyzer.remove_units(curation_dict["removed_units"])
@@ -344,5 +344,3 @@ def apply_curation(sorting_or_analyzer, curation_dict, censor_ms=None, new_id_st
         return analyzer
     else:
         raise TypeError(f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)")
-
-
