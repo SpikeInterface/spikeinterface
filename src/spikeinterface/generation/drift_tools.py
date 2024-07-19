@@ -262,9 +262,9 @@ def make_linear_displacement(start, stop, num_step=10):
     displacements : np.array
         The displacements with shape (num_step, 2)
     """
-    if num_step < 1: 
+    if num_step < 1:
         raise ValueError("make_linear_displacement needs num_step > 0")
-    if num_step == 1: 
+    if num_step == 1:
         displacements = ((start + stop) / 2)[np.newaxis, :]
     else:
         displacements = (stop[np.newaxis, :] - start[np.newaxis, :]) / (num_step - 1) * np.arange(num_step)[
