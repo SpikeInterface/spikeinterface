@@ -21,8 +21,8 @@ def estimate_motion(
     direction="y",
     rigid=False,
     win_shape="gaussian",
-    win_step_um=50.0,  # @alessio charlie is proposing here instead 400
-    win_scale_um=150.0,  # @alessio charlie is proposing here instead 400
+    win_step_um=200.,
+    win_scale_um=300.,
     win_margin_um=None,
     method="decentralized",
     extra_outputs=False,

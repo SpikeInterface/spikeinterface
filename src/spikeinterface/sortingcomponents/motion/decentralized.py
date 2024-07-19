@@ -108,9 +108,9 @@ class DecentralizedRegistration:
         verbose,
         progress_bar,
         extra,
-        bin_um=1.0,
+        bin_um=5.0,
         hist_margin_um=20.0,
-        bin_s=1.0,
+        bin_s=2.0,
         histogram_depth_smooth_um=1.0,
         histogram_time_smooth_s=1.0,
         pairwise_displacement_method="conv",
@@ -183,7 +183,7 @@ class DecentralizedRegistration:
         motion_array = np.zeros((temporal_bins.size, len(non_rigid_windows)), dtype=np.float64)
         windows_iter = non_rigid_windows
         if progress_bar:
-            windows_iter = tqdm(windows_iter, desc="windows")
+            windows_iter = tqdm(windows_iter, desc="pairwise displacement")
         if spatial_prior:
             all_pairwise_displacements = np.empty(
                 (len(non_rigid_windows), temporal_bins.size, temporal_bins.size), dtype=np.float64
@@ -300,7 +300,7 @@ def compute_pairwise_displacement(
     method="conv",
     weight_scale="linear",
     error_sigma=0.2,
-    conv_engine="numpy",
+    conv_engine=None,
     torch_device=None,
     batch_size=1,
     max_displacement_um=1500,
@@ -364,7 +364,6 @@ def compute_pairwise_displacement(
         correlation = np.empty((size, size), dtype=motion_hist.dtype)
 
         for i in xrange(0, size, batch_size):
-            print('yep', i, size, conv_engine, motion_hist_engine.shape)
             corr = normxcorr1d(
                 motion_hist_engine,
                 motion_hist_engine[i : i + batch_size],
