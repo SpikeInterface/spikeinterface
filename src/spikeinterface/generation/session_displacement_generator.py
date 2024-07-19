@@ -63,7 +63,7 @@ def generate_inter_session_displacement_recordings(
     output_recordings = []
     output_sortings = []
 
-    extra_outputs = {
+    extra_outputs_dict = {
         "unit_locations": [],
         "template_array_moved": [],
     }
@@ -126,11 +126,11 @@ def generate_inter_session_displacement_recordings(
 
         output_recordings.append(recording)
         output_sortings.append(sorting)
-        extra_outputs["unit_locations"].append(unit_locations)
-        extra_outputs["template_array_moved"].append(templates_moved_array)
+        extra_outputs_dict["unit_locations"].append(unit_locations_moved)
+        extra_outputs_dict["template_array_moved"].append(templates_moved_array)
 
     if extra_outputs:
-        return output_recordings, output_sortings, extra_outputs
+        return output_recordings, output_sortings, extra_outputs_dict
     else:
         return output_recordings, output_sortings
 
@@ -141,14 +141,14 @@ def get_inter_session_displacements(shift, non_rigid_gradient, num_units, unit_l
     """
     displacement_vector = np.atleast_2d(shift)
 
-    if non_rigid_gradient is None or shift == 0:
+    if non_rigid_gradient is None or shift == (0, 0):
         displacement_unit_factor = np.ones((num_units, 1))
     else:
         displacement_unit_factor = calculate_displacement_unit_factor(
             non_rigid_gradient,
             unit_locations[:, :2],
             drift_start_um=np.array([0, 0], dtype=float),
-            drift_stop_um=np.array(shift, dtype=float),  # TODO: expose x as well!
+            drift_stop_um=np.array(shift, dtype=float),
         )
         displacement_unit_factor = displacement_unit_factor[:, np.newaxis]
 
