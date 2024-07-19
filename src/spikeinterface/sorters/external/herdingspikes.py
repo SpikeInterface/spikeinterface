@@ -122,14 +122,14 @@ class HerdingspikesSorter(BaseSorter):
 
         hs_version = version.parse(hs.__version__)
 
-        if hs_version >= version.parse("0.4"):
+        if hs_version >= version.parse("0.4.001"):
             lightning_api = True
         else:
             lightning_api = False
 
         assert (
             lightning_api
-        ), "HerdingSpikes version <0.4 is no longer supported. run:\n>>> pip install --upgrade herdingspikes"
+        ), "HerdingSpikes version <0.4.001 is no longer supported. run:\n>>> pip install --upgrade herdingspikes"
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
