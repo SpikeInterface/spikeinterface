@@ -648,9 +648,9 @@ class DetectPeakMatchedFiltering(PeakDetector):
         self.num_templates = self.num_channels
         if peak_sign == "both":
             weights = np.hstack((weights, weights))
-            weights[:, self.num_templates:, :] *= -1
+            weights[:, self.num_templates :, :] *= -1
             self.num_templates *= 2
-        
+
         weights = weights.reshape(self.num_templates * self.num_z_factors, -1)
 
         templates = weights[:, None, :] * prototype[None, :, None]
@@ -880,12 +880,12 @@ if HAVE_NUMBA:
         num_z = traces_center.shape[0]
         num_templates = traces_center.shape[1]
         for template_ind in range(num_templates):
-            for z in range(num_z):        
+            for z in range(num_z):
                 for s in range(peak_mask.shape[2]):
                     if not peak_mask[z, template_ind, s]:
                         continue
                     for neighbour in range(num_templates):
-                        for j in range(num_z):                    
+                        for j in range(num_z):
                             if not neighbours_mask[template_ind % num_channels, neighbour % num_channels]:
                                 continue
                             for i in range(exclude_sweep_size):
