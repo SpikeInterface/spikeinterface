@@ -161,7 +161,7 @@ def test_estimate_motion(dataset):
                 margin_um=5,
                 extra_outputs=True,
                 win_step_um=100.0,
-                win_scale_um=100.0
+                win_scale_um=100.0,
             )
             kwargs.update(cases_kwargs)
 
