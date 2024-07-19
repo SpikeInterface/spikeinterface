@@ -227,7 +227,7 @@ def random_spikes_selection(
 
 
 def apply_merges_to_sorting(
-    sorting, merge_unit_groups, new_unit_ids=None, censor_ms=None, return_kept=False, new_id_strategy="append"
+    sorting, merge_unit_groups, new_unit_ids=None, censor_ms=None, return_extra=False, new_id_strategy="append"
 ):
     """
     Apply a resolved representation of the merges to a sorting object.
@@ -250,8 +250,8 @@ def apply_merges_to_sorting(
         merged units will have the first unit_id of every lists of merges.
     censor_ms: float | None, default: None
         When applying the merges, should be discard consecutive spikes violating a given refractory per
-    return_kept : bool, default: False
-        If True, also return also a boolean mask of kept spikes.
+    return_extra : bool, default: False
+        If True, also return also a boolean mask of kept spikes and new_unit_ids.
     new_id_strategy : "append" | "take_first", default: "append"
         The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
 
@@ -316,8 +316,8 @@ def apply_merges_to_sorting(
     spikes = spikes[keep_mask]
     sorting = NumpySorting(spikes, sorting.sampling_frequency, all_unit_ids)
 
-    if return_kept:
-        return sorting, keep_mask
+    if return_extra:
+        return sorting, keep_mask, new_unit_ids
     else:
         return sorting
 
@@ -347,6 +347,10 @@ def _get_ids_after_merging(old_unit_ids, merge_unit_groups, new_unit_ids):
 
     """
     old_unit_ids = np.asarray(old_unit_ids)
+    dtype = old_unit_ids.dtype
+    if dtype.kind == "U":
+        # the new dtype can be longer
+        dtype = "U"
 
     assert len(new_unit_ids) == len(merge_unit_groups), "new_unit_ids should have the same len as merge_unit_groups"
 
@@ -361,7 +365,7 @@ def _get_ids_after_merging(old_unit_ids, merge_unit_groups, new_unit_ids):
                 all_unit_ids.remove(unit_id)
         if new_unit_id not in all_unit_ids:
             all_unit_ids.append(new_unit_id)
-    return np.array(all_unit_ids)
+    return np.array(all_unit_ids, dtype=dtype)
 
 
 def generate_unit_ids_for_merge_group(old_unit_ids, merge_unit_groups, new_unit_ids=None, new_id_strategy="append"):
@@ -380,11 +384,13 @@ def generate_unit_ids_for_merge_group(old_unit_ids, merge_unit_groups, new_unit_
     new_unit_ids : list | None, default: None
         Optional new unit_ids for merged units. If given, it needs to have the same length as `merge_unit_groups`.
         If None, new ids will be generated.
-    new_id_strategy : "append" | "take_first", default: "append"
+    new_id_strategy : "append" | "take_first" | "join", default: "append"
         The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
 
             * "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
             * "take_first" : new_unit_ids will be the first unit_id of every list of merges
+            * "join" : new_unit_ids will join unit_ids of groups with a "-".
+                       Only works if unit_ids are str otherwise switch to "append"
 
     Returns
     -------
@@ -416,6 +422,12 @@ def generate_unit_ids_for_merge_group(old_unit_ids, merge_unit_groups, new_unit_
                 else:
                     # we cannot automatically find new names
                     new_unit_ids = [f"merge{i}" for i in range(num_merge)]
+            else:
+                # dtype int
+                new_unit_ids = list(max(old_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
+        elif new_id_strategy == "join":
+            if np.issubdtype(dtype, np.character):
+                new_unit_ids = ["-".join(group) for group in merge_unit_groups]
             else:
                 # dtype int
                 new_unit_ids = list(max(old_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))

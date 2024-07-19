@@ -9,8 +9,8 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s, speed_threshold=3
     Also can apply a smoothing.
 
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     motion: numpy array 2d
         Motion estimate in um.
     temporal_bins: numpy.array 1d
