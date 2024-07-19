@@ -133,7 +133,7 @@ def auto_merges(
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
     """
     import scipy
-    
+
     sorting = sorting_analyzer.sorting
     unit_ids = sorting.unit_ids
 
