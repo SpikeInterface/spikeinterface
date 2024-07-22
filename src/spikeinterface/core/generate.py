@@ -333,10 +333,10 @@ class TransformSorting(BaseSorting):
     def __init__(
         self,
         sorting: BaseSorting,
-        added_spikes_existing_units: np.array | None = None,
-        added_spikes_new_units: np.array | None = None,
-        new_unit_ids: list[str | int] | None = None,
-        refractory_period_ms: float | None = None,
+        added_spikes_existing_units : np.array | None = None,
+        added_spikes_new_units : np.array | None = None,
+        new_unit_ids : list[str | int] | None = None,
+        refractory_period_ms : float | None = None,
     ):
         sampling_frequency = sorting.get_sampling_frequency()
         unit_ids = list(sorting.get_unit_ids())
