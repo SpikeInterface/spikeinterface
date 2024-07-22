@@ -1688,7 +1688,7 @@ class InjectTemplatesRecording(BaseRecording):
         Can be None (no scaling).
         Can be scalar all spikes have the same factor (certainly useless).
         Can be a vector with same shape of spike_vector of the sorting.
-    parent_recording: BaseRecording | None, default: None
+    parent_recording : BaseRecording | None, default: None
         The recording over which to add the templates.
         If None, will default to traces containing all 0.
     num_samples: list[int] | int | None, default: None
