@@ -32,7 +32,7 @@ class UnitSummaryWidget(BaseWidget):
         If SortingAnalyzer is already sparse, the argument is ignored
     unitlocationswidget_params : dict or None, default: None
         Parameters for UnitLocationsWidget (see UnitLocationsWidget for details)
-    unitwaveformswidgets_params : dict or None, default: None
+    unitwaveformswidget_params : dict or None, default: None
         Parameters for UnitWaveformsWidget (see UnitWaveformsWidget for details)
     unitwaveformdensitymapwidget_params : dict or None, default: None
         Parameters for UnitWaveformDensityMapWidget (see UnitWaveformDensityMapWidget for details)
