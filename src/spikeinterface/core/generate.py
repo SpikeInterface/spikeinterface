@@ -1844,10 +1844,10 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         spike_vector: np.ndarray,
         templates: np.ndarray,
         nbefore: int,
-        amplitude_vector: list[float] | None,
-        upsample_vector: list[float] | None,
-        parent_recording_segment: BaseRecordingSegment | None = None,
-        num_samples: int | None = None,
+        amplitude_vector : list[float] | None,
+        upsample_vector : list[float] | None,
+        parent_recording_segment : BaseRecordingSegment | None = None,
+        num_samples : int | None = None,
     ) -> None:
         BaseRecordingSegment.__init__(
             self,
