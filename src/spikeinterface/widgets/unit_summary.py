@@ -83,7 +83,7 @@ class UnitSummaryWidget(BaseWidget):
             unitwaveformswidget_params=unitwaveformswidget_params,
             unitwaveformdensitymapwidget_params=unitwaveformdensitymapwidget_params,
             autocorrelogramswidget_params=autocorrelogramswidget_params,
-            amplitudeswidget_params=amplitudeswidget_params
+            amplitudeswidget_params=amplitudeswidget_params,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -133,7 +133,7 @@ class UnitSummaryWidget(BaseWidget):
                 plot_legend=False,
                 backend="matplotlib",
                 ax=ax1,
-                **unitlocationswidget_params  
+                **unitlocationswidget_params,
             )
 
             unit_locations = sorting_analyzer.get_extension("unit_locations").get_data(outputs="by_unit")
@@ -156,7 +156,7 @@ class UnitSummaryWidget(BaseWidget):
             sparsity=sparsity,
             backend="matplotlib",
             ax=ax2,
-            **unitwaveformswidget_params
+            **unitwaveformswidget_params,
         )
 
         ax2.set_title(None)
@@ -170,7 +170,7 @@ class UnitSummaryWidget(BaseWidget):
             same_axis=False,
             backend="matplotlib",
             ax=ax3,
-            **unitwaveformdensitymapwidget_params
+            **unitwaveformdensitymapwidget_params,
         )
         ax3.set_ylabel(None)
 
@@ -182,7 +182,7 @@ class UnitSummaryWidget(BaseWidget):
                 unit_colors=unit_colors,
                 backend="matplotlib",
                 ax=ax4,
-                **autocorrelogramswidget_params
+                **autocorrelogramswidget_params,
             )
 
             ax4.set_title(None)
@@ -200,7 +200,7 @@ class UnitSummaryWidget(BaseWidget):
                 plot_histograms=True,
                 backend="matplotlib",
                 axes=axes,
-                **amplitudeswidget_params
+                **amplitudeswidget_params,
             )
 
         fig.suptitle(f"unit_id: {dp.unit_id}")
