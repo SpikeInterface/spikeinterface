@@ -1708,11 +1708,11 @@ class InjectTemplatesRecording(BaseRecording):
         self,
         sorting: BaseSorting,
         templates: np.ndarray,
-        nbefore: list[int] | int | None = None,
-        amplitude_factor: list[float] | float | None = None,
-        parent_recording: BaseRecording | None = None,
-        num_samples: list[int] | int | None = None,
-        upsample_vector: np.array | None = None,
+        nbefore : list[int] | int | None = None,
+        amplitude_factor : list[float] | float | None = None,
+        parent_recording : BaseRecording | None = None,
+        num_samples : list[int] | int | None = None,
+        upsample_vector : np.array | None = None,
         check_borders: bool = False,
     ) -> None:
         templates = np.asarray(templates)
