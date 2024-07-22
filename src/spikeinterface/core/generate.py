@@ -47,7 +47,7 @@ def generate_recording(
     durations : list[float], default: [5.0, 2.5]
         The duration in seconds of each segment in the recording, default: [5.0, 2.5].
         Note that the number of segments is determined by the length of this list.
-    set_probe: bool | None, default: True
+    set_probe : bool | None, default: True
     ndim : int | None, default: 2
         The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probe.
     seed : int | None, default: None
@@ -188,7 +188,7 @@ def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
     ----------
     sorting : BaseSorting
         The sorting object.
-    sync_event_ratio : float
+    sync_event_ratio : float, default: 0.3
         The ratio of added synchronous spikes with respect to the total number of spikes.
         E.g., 0.5 means that the final sorting will have 1.5 times number of spikes, and all the extra
         spikes are synchronous (same sample_index), but on different units (not duplicates).
@@ -250,7 +250,7 @@ def generate_sorting_to_inject(
     ----------
     sorting : BaseSorting
         The sorting object.
-    num_samples: list of size num_segments.
+    num_samples : list[int] of size num_segments.
         The number of samples in all the segments of the sorting, to generate spike times
         covering entire the entire duration of the segments.
     max_injected_per_unit : int, default: 1000
@@ -333,10 +333,10 @@ class TransformSorting(BaseSorting):
     def __init__(
         self,
         sorting: BaseSorting,
-        added_spikes_existing_units : np.array | None = None,
-        added_spikes_new_units : np.array | None = None,
-        new_unit_ids : list[str | int] | None = None,
-        refractory_period_ms : float | None = None,
+        added_spikes_existing_units: np.array | None = None,
+        added_spikes_new_units: np.array | None = None,
+        new_unit_ids: list[str | int] | None = None,
+        refractory_period_ms: float | None = None,
     ):
         sampling_frequency = sorting.get_sampling_frequency()
         unit_ids = list(sorting.get_unit_ids())
@@ -428,9 +428,9 @@ class TransformSorting(BaseSorting):
 
         Parameters
         ----------
-        sorting1: BaseSorting
+        sorting1 : BaseSorting
             The first sorting.
-        sorting2: BaseSorting
+        sorting2 : BaseSorting
             The second sorting.
         refractory_period_ms : float, default: None
             The refractory period violation to prevent duplicates and/or unphysiological addition
@@ -484,7 +484,7 @@ class TransformSorting(BaseSorting):
 
     @staticmethod
     def add_from_unit_dict(
-        sorting1: BaseSorting, units_dict_list: dict, refractory_period_ms=None
+        sorting1: BaseSorting, units_dict_list: list[dict] | dict, refractory_period_ms=None
     ) -> "TransformSorting":
         """
         Construct TransformSorting by adding one sorting with a
@@ -494,9 +494,9 @@ class TransformSorting(BaseSorting):
         Parameters
         ----------
 
-        sorting1: BaseSorting
+        sorting1 : BaseSorting
             The first sorting
-        dict_list: list of dict
+        dict_list : list[dict] | dict
             A list of dict with unit_ids as keys and spike times as values.
         refractory_period_ms : float, default: None
             The refractory period violation to prevent duplicates and/or unphysiological addition
@@ -519,13 +519,15 @@ class TransformSorting(BaseSorting):
 
         Parameters
         ----------
-        sorting1: BaseSorting
+        sorting1 : BaseSorting
             The first sorting
-        times_list: list of array (or array)
+        times_list : list[np.array] | np.array
             An array of spike times (in frames).
-        labels_list: list of array (or array)
+        labels_list : list[np.array] | np.array
             An array of spike labels corresponding to the given times.
-        unit_ids: list or None, default: None
+        sampling_frequency : float, default: 30000. (in Hz)
+            The sampling frequency of the recording, default: 30000.
+        unit_ids : list | None, default: None
             The explicit list of unit_ids that should be extracted from labels_list
             If None, then it will be np.unique(labels_list).
         refractory_period_ms : float, default: None
@@ -592,7 +594,7 @@ def generate_snippets(
     nafter=44,
     num_channels=2,
     wf_folder=None,
-    sampling_frequency=30000.0,  # in Hz
+    sampling_frequency=30000.0,
     durations=[10.325, 3.5],  #  in s for 2 segments
     set_probe=True,
     ndim=2,
@@ -613,7 +615,7 @@ def generate_snippets(
         Number of channels.
     wf_folder : str | Path | None, default: None
         Optional folder to save the waveform snippets. If None, snippets are in memory.
-    sampling_frequency : float, default: 30000.0
+    sampling_frequency : float, default: 30000.0 (in Hz)
         The sampling frequency of the snippets.
     ndim : int, default: 2
         The number of dimensions of the probe.
@@ -690,7 +692,7 @@ def synthesize_poisson_spike_vector(
     ----------
     num_units : int, default: 20
         Number of neuronal units to simulate.
-    sampling_frequency : float, default: 30000.0
+    sampling_frequency : float, default: 30000.0 (in Hz)
         Sampling frequency in Hz.
     duration : float, default: 60.0
         Duration of the simulation in seconds.
@@ -793,20 +795,20 @@ def synthesize_random_firings(
 
     Parameters
     ----------
-    num_units : int
+    num_units : int, default: 20
         Number of units.
-    sampling_frequency : float
+    sampling_frequency : float, default: 30000.0 (in Hz)
         Sampling rate.
-    duration : float
+    duration : float, default: 60
         Duration of the segment in seconds.
-    refractory_period_ms: float
+    refractory_period_ms : float, default: 4.0
         Refractory period in ms.
-    firing_rates: float or list[float]
+    firing_rates : float or list[float], default: 3.0
         The firing rate of each unit (in Hz).
         If float, all units will have the same firing rate.
-    add_shift_shuffle: bool, default: False
+    add_shift_shuffle : bool, default: False
         Optionally add a small shuffle on half of the spikes to make the autocorrelogram less flat.
-    seed: int, default: None
+    seed : int, default: None
         Seed for the generator.
 
     Returns
@@ -899,12 +901,14 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
     ----------
     sorting :
         Original sorting.
-    num : int
+    num : int, default: 4
         Number of injected units.
-    max_shift : int
+    max_shift : int, default: 5
         range of the shift in sample.
-    ratio: float
+    ratio : float | None, default: None
         Proportion of original spike in the injected units.
+    seed : int, default: None
+        Seed for the generator.
 
     Returns
     -------
@@ -1062,21 +1066,21 @@ class NoiseGeneratorRecording(BaseRecording):
         The sampling frequency of the recorder.
     durations : list[float]
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
-    noise_levels: float or array, default: 1
+    noise_levels : float | np.array, default: 1.0
         Std of the white noise (if an array, defined by per channels)
     cov_matrix : np.array | None, default: None
         The covariance matrix of the noise
-    dtype : np.dtype | str |None, default: "float32"
+    dtype : np.dtype | str | None, default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : int | None, default: None
         The seed for np.random.default_rng.
-    strategy : "tile_pregenerated" or "on_the_fly"
+    strategy : "tile_pregenerated" | "on_the_fly", default: "tile_pregenerated"
         The strategy of generating noise chunk:
           * "tile_pregenerated": pregenerate a noise chunk of noise_block_size sample and repeat it
                                  very fast and cusume only one noise block.
           * "on_the_fly": generate on the fly a new noise block by combining seed + noise block index
                           no memory preallocation but a bit more computaion (random)
-    noise_block_size: int
+    noise_block_size : int, default: 30000
         Size in sample of noise block.
 
     Note
@@ -1089,11 +1093,11 @@ class NoiseGeneratorRecording(BaseRecording):
         self,
         num_channels: int,
         sampling_frequency: float,
-        durations : list[float],
-        noise_levels : float | np.array = 1.0,
-        cov_matrix : np.array | None = None,
-        dtype : np.dtype | str | None = "float32",
-        seed : int | None = None,
+        durations: list[float],
+        noise_levels: float | np.array = 1.0,
+        cov_matrix: np.array | None = None,
+        dtype: np.dtype | str | None = "float32",
+        seed: int | None = None,
         strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
         noise_block_size: int = 30000,
     ):
@@ -1277,11 +1281,14 @@ def generate_recording_by_size(
     ----------
     full_traces_size_GiB : float
         The size in gigabytes (GiB) of the recording.
-    num_channels: int
-        Number of channels.
     seed : int | None, default: None
         The seed for np.random.default_rng.
-
+    strategy : "tile_pregenerated" | "on_the_fly", default: "tile_pregenerated"
+        The strategy of generating noise chunk:
+          * "tile_pregenerated": pregenerate a noise chunk of noise_block_size sample and repeat it
+                                 very fast and cusume only one noise block.
+          * "on_the_fly": generate on the fly a new noise block by combining seed + noise block index
+                          no memory preallocation but a bit more computaion (random)
     Returns
     -------
     GeneratorRecording
@@ -1517,25 +1524,25 @@ def generate_templates(
     Parameters
     ----------
 
-    channel_locations: np.ndarray
+    channel_locations : np.ndarray
         Channel locations.
-    units_locations: np.ndarray
+    units_locations : np.ndarray
         Must be 3D.
-    sampling_frequency: float
+    sampling_frequency : float
         Sampling frequency.
-    ms_before: float
+    ms_before : float
         Cut out in ms before spike peak.
-    ms_after: float
+    ms_after : float
         Cut out in ms after spike peak.
-    seed: int or None
+    seed : int | None
         A seed for random.
-    dtype: numpy.dtype, default: "float32"
+    dtype : numpy.dtype, default: "float32"
         Templates dtype
-    upsample_factor: None or int
+    upsample_factor : int | None, default: None
         If not None then template are generated upsampled by this factor.
         Then a new dimention (axis=3) is added to the template with intermediate inter sample representation.
         This allow easy random jitter by choising a template this new dim
-    unit_params: dict of arrays or dict of scalar of dict of tuple
+    unit_params : dict[np.array] | dict[float] | dict[tuple] | None, default: None
         An optional dict containing parameters per units.
         Keys are parameter names:
 
@@ -1552,6 +1559,10 @@ def generate_templates(
             * array of the same length of units
             * scalar, then an array is created
             * tuple, then this difine a range for random values.
+    mode : "ellipsoid" | "sphere", default: "ellipsoid"
+        Method used to calculate the distance between unit and channel location.
+        Ellipoid injects some anisotropy dependent on unit shape, sphere is equivalent
+        to Euclidean distance.
 
     Returns
     -------
@@ -1672,18 +1683,18 @@ class InjectTemplatesRecording(BaseRecording):
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         Sorting object containing all the units and their spike train.
-    templates: np.ndarray[n_units, n_samples, n_channels] or np.ndarray[n_units, n_samples, n_oversampling]
+    templates : np.ndarray[n_units, n_samples, n_channels] | np.ndarray[n_units, n_samples, n_oversampling]
         Array containing the templates to inject for all the units.
         Shape can be:
 
             * (num_units, num_samples, num_channels): standard case
             * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce sampling jitter.
-    nbefore: list[int] | int | None, default: None
+    nbefore : list[int] | int | None, default: None
         The number of samples before the peak of the template to align the spike.
         If None, will default to the highest peak.
-    amplitude_factor: list[float] | float | None, default: None
+    amplitude_factor : list[float] | float | None, default: None
         The amplitude of each spike for each unit.
         Can be None (no scaling).
         Can be scalar all spikes have the same factor (certainly useless).
@@ -1691,7 +1702,7 @@ class InjectTemplatesRecording(BaseRecording):
     parent_recording : BaseRecording | None, default: None
         The recording over which to add the templates.
         If None, will default to traces containing all 0.
-    num_samples: list[int] | int | None, default: None
+    num_samples : list[int] | int | None, default: None
         The number of samples in the recording per segment.
         You can use int for mono-segment objects.
     upsample_vector : np.array | None, default: None.
@@ -1708,11 +1719,11 @@ class InjectTemplatesRecording(BaseRecording):
         self,
         sorting: BaseSorting,
         templates: np.ndarray,
-        nbefore : list[int] | int | None = None,
-        amplitude_factor : list[float] | float | None = None,
-        parent_recording : BaseRecording | None = None,
-        num_samples : list[int] | int | None = None,
-        upsample_vector : np.array | None = None,
+        nbefore: list[int] | int | None = None,
+        amplitude_factor: list[float] | float | None = None,
+        parent_recording: BaseRecording | None = None,
+        num_samples: list[int] | int | None = None,
+        upsample_vector: np.array | None = None,
         check_borders: bool = False,
     ) -> None:
         templates = np.asarray(templates)
@@ -1844,10 +1855,10 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         spike_vector: np.ndarray,
         templates: np.ndarray,
         nbefore: int,
-        amplitude_vector : list[float] | None,
-        upsample_vector : list[float] | None,
-        parent_recording_segment : BaseRecordingSegment | None = None,
-        num_samples : int | None = None,
+        amplitude_vector: list[float] | None,
+        upsample_vector: list[float] | None,
+        parent_recording_segment: BaseRecordingSegment | None = None,
+        num_samples: int | None = None,
     ) -> None:
         BaseRecordingSegment.__init__(
             self,
@@ -1867,9 +1878,9 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame : int | None = None,
-        end_frame : int | None = None,
-        channel_indices : list | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         if channel_indices is None:
             n_channels = self.templates.shape[2]
@@ -2040,55 +2051,55 @@ def generate_ground_truth_recording(
 
     Parameters
     ----------
-    durations: list of float, default: [10.]
+    durations : list[float], default: [10.]
         Durations in seconds for all segments.
-    sampling_frequency: float, default: 25000
+    sampling_frequency : float, default: 25000.0
         Sampling frequency.
-    num_channels: int, default: 4
+    num_channels : int, default: 4
         Number of channels, not used when probe is given.
-    num_units: int, default: 10
+    num_units : int, default: 10
         Number of units,  not used when sorting is given.
-    sorting: Sorting or None
+    sorting : Sorting | None
         An external sorting object. If not provide, one is genrated.
-    probe: Probe or None
+    probe : Probe | None
         An external Probe object. If not provided a probe is generated using generate_probe_kwargs.
-    generate_probe_kwargs: dict
+    generate_probe_kwargs : dict
         A dict to constuct the Probe using :py:func:`probeinterface.generate_multi_columns_probe()`.
-    templates: np.array or None
+    templates : np.array | None
         The templates of units.
         If None they are generated.
         Shape can be:
 
             * (num_units, num_samples, num_channels): standard case
             * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce jitter.
-    ms_before: float, default: 1.5
+    ms_before : float, default: 1.5
         Cut out in ms before spike peak.
-    ms_after: float, default: 3
+    ms_after : float, default: 3
         Cut out in ms after spike peak.
-    upsample_factor: None or int, default: None
+    upsample_factor : None | int, default: None
         A upsampling factor used only when templates are not provided.
-    upsample_vector: np.array or None
+    upsample_vector : np.array | None
         Optional the upsample_vector can given. This has the same shape as spike_vector
-    generate_sorting_kwargs: dict
+    generate_sorting_kwargs : dict
         When sorting is not provide, this dict is used to generated a Sorting.
-    noise_kwargs: dict
+    noise_kwargs : dict
         Dict used to generated the noise with NoiseGeneratorRecording.
-    generate_unit_locations_kwargs: dict
+    generate_unit_locations_kwargs : dict
         Dict used to generated template when template not provided.
-    generate_templates_kwargs: dict
+    generate_templates_kwargs : dict
         Dict used to generated template when template not provided.
-    dtype: np.dtype, default: "float32"
+    dtype : np.dtype, default: "float32"
         The dtype of the recording.
-    seed: int or None
+    seed : int | None
         Seed for random initialization.
         If None a diffrent Recording is generated at every call.
         Note: even with None a generated recording keep internaly a seed to regenerate the same signal after dump/load.
 
     Returns
     -------
-    recording: Recording
+    recording : Recording
         The generated recording extractor.
-    sorting: Sorting
+    sorting : Sorting
         The generated sorting extractor.
     """
     generate_templates_kwargs = generate_templates_kwargs or dict()
