@@ -315,7 +315,7 @@ class TransformSorting(BaseSorting):
         The sorting object.
     added_spikes_existing_units : np.array (spike_vector) | None, default: None
         The spikes that should be added to the sorting object, for existing units.
-    added_spikes_new_units: np.array (spike_vector) | None, default: None
+    added_spikes_new_units : np.array (spike_vector) | None, default: None
         The spikes that should be added to the sorting object, for new units.
     new_units_ids: list[str, int] | None, default: None
         The unit_ids that should be added if spikes for new units are added.
