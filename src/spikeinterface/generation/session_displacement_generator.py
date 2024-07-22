@@ -14,7 +14,7 @@ from spikeinterface.core.generate import setup_inject_templates_recording
 from spikeinterface.core import InjectTemplatesRecording
 
 
-def generate_inter_session_displacement_recordings(
+def generate_session_displacement_recordings(
     num_units=250,
     rec_durations=(10, 10, 10),
     rec_shifts=((0, 0), (0, 25), (0, 50)),
