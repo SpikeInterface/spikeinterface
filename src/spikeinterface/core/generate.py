@@ -1867,9 +1867,9 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: int | None = None,
-        end_frame: int | None = None,
-        channel_indices: list | None = None,
+        start_frame : int | None = None,
+        end_frame : int | None = None,
+        channel_indices : list | None = None,
     ) -> np.ndarray:
         if channel_indices is None:
             n_channels = self.templates.shape[2]
