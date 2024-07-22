@@ -255,7 +255,7 @@ def generate_sorting_to_inject(
         covering entire the entire duration of the segments.
     max_injected_per_unit : int, default: 1000
         The maximal number of spikes injected per units.
-    injected_rate: float, default: 0.05
+    injected_rate : float, default: 0.05
         The rate at which spikes are injected.
     refractory_period_ms: float, default: 1.5
         The refractory period that should not be violated while injecting new spikes.
