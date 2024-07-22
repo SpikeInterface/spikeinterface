@@ -333,10 +333,10 @@ class TransformSorting(BaseSorting):
     def __init__(
         self,
         sorting: BaseSorting,
-        added_spikes_existing_units : np.array | None = None,
-        added_spikes_new_units : np.array | None = None,
-        new_unit_ids : list[str | int] | None = None,
-        refractory_period_ms : float | None = None,
+        added_spikes_existing_units: np.array | None = None,
+        added_spikes_new_units: np.array | None = None,
+        new_unit_ids: list[str | int] | None = None,
+        refractory_period_ms: float | None = None,
     ):
         sampling_frequency = sorting.get_sampling_frequency()
         unit_ids = list(sorting.get_unit_ids())
@@ -1089,11 +1089,11 @@ class NoiseGeneratorRecording(BaseRecording):
         self,
         num_channels: int,
         sampling_frequency: float,
-        durations : list[float],
-        noise_levels : float | np.array = 1.0,
-        cov_matrix : np.array | None = None,
-        dtype : np.dtype | str | None = "float32",
-        seed : int | None = None,
+        durations: list[float],
+        noise_levels: float | np.array = 1.0,
+        cov_matrix: np.array | None = None,
+        dtype: np.dtype | str | None = "float32",
+        seed: int | None = None,
         strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
         noise_block_size: int = 30000,
     ):
@@ -1708,11 +1708,11 @@ class InjectTemplatesRecording(BaseRecording):
         self,
         sorting: BaseSorting,
         templates: np.ndarray,
-        nbefore : list[int] | int | None = None,
-        amplitude_factor : list[float] | float | None = None,
-        parent_recording : BaseRecording | None = None,
-        num_samples : list[int] | int | None = None,
-        upsample_vector : np.array | None = None,
+        nbefore: list[int] | int | None = None,
+        amplitude_factor: list[float] | float | None = None,
+        parent_recording: BaseRecording | None = None,
+        num_samples: list[int] | int | None = None,
+        upsample_vector: np.array | None = None,
         check_borders: bool = False,
     ) -> None:
         templates = np.asarray(templates)
@@ -1844,10 +1844,10 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         spike_vector: np.ndarray,
         templates: np.ndarray,
         nbefore: int,
-        amplitude_vector : list[float] | None,
-        upsample_vector : list[float] | None,
-        parent_recording_segment : BaseRecordingSegment | None = None,
-        num_samples : int | None = None,
+        amplitude_vector: list[float] | None,
+        upsample_vector: list[float] | None,
+        parent_recording_segment: BaseRecordingSegment | None = None,
+        num_samples: int | None = None,
     ) -> None:
         BaseRecordingSegment.__init__(
             self,
@@ -1867,9 +1867,9 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame : int | None = None,
-        end_frame : int | None = None,
-        channel_indices : list | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         if channel_indices is None:
             n_channels = self.templates.shape[2]
