@@ -259,7 +259,7 @@ def generate_sorting_to_inject(
         The rate at which spikes are injected.
     refractory_period_ms: float, default: 1.5
         The refractory period that should not be violated while injecting new spikes.
-    seed: int, default: None
+    seed : int, default: None
         The random seed.
 
     Returns
