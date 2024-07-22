@@ -1064,7 +1064,7 @@ class NoiseGeneratorRecording(BaseRecording):
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
     noise_levels: float or array, default: 1
         Std of the white noise (if an array, defined by per channels)
-    cov_matrix: np.array | None, default: None
+    cov_matrix : np.array | None, default: None
         The covariance matrix of the noise
     dtype : np.dtype | str |None, default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
