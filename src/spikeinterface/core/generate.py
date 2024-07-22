@@ -44,7 +44,7 @@ def generate_recording(
         The number of channels in the recording.
     sampling_frequency : float, default: 30000. (in Hz)
         The sampling frequency of the recording, default: 30000.
-    durations: list[float], default: [5.0, 2.5]
+    durations : list[float], default: [5.0, 2.5]
         The duration in seconds of each segment in the recording, default: [5.0, 2.5].
         Note that the number of segments is determined by the length of this list.
     set_probe: bool | None, default: True
