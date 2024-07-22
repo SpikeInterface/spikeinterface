@@ -317,7 +317,7 @@ class TransformSorting(BaseSorting):
         The spikes that should be added to the sorting object, for existing units.
     added_spikes_new_units : np.array (spike_vector) | None, default: None
         The spikes that should be added to the sorting object, for new units.
-    new_units_ids: list[str, int] | None, default: None
+    new_units_ids : list[str, int] | None, default: None
         The unit_ids that should be added if spikes for new units are added.
     refractory_period_ms : float | None, default: None
         The refractory period violation to prevent duplicates and/or unphysiological addition
