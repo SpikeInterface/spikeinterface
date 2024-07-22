@@ -1694,7 +1694,7 @@ class InjectTemplatesRecording(BaseRecording):
     num_samples: list[int] | int | None, default: None
         The number of samples in the recording per segment.
         You can use int for mono-segment objects.
-    upsample_vector: np.array | None, default: None.
+    upsample_vector : np.array | None, default: None.
         When templates is 4d we can simulate a jitter.
         Optional the upsample_vector is the jitter index with a number per spike in range 0-templates.shape[3].
 
