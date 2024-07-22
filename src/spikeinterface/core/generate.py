@@ -253,7 +253,7 @@ def generate_sorting_to_inject(
     num_samples: list of size num_segments.
         The number of samples in all the segments of the sorting, to generate spike times
         covering entire the entire duration of the segments.
-    max_injected_per_unit: int, default: 1000
+    max_injected_per_unit : int, default: 1000
         The maximal number of spikes injected per units.
     injected_rate: float, default: 0.05
         The rate at which spikes are injected.
