@@ -14,6 +14,7 @@ class TestCausalFilter:
     propagation of margin kwargs, these are general filter params
     and can be tested later.
     """
+
     @pytest.fixture(scope="session")
     def recording_and_data(self):
         recording = generate_recording(durations=[1])
@@ -41,9 +42,7 @@ class TestCausalFilter:
         test_data = sosfilt(sos, raw_data, axis=0)
         test_data.astype(recording.dtype)
 
-        filt_data = causal_filter(
-            recording, direction="forward", **options, margin_ms=0
-        ).get_traces()
+        filt_data = causal_filter(recording, direction="forward", **options, margin_ms=0).get_traces()
 
         assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6)
 
@@ -51,8 +50,8 @@ class TestCausalFilter:
         # and check the backwards version.
         options["band"] = [671]
         options["btype"] = "highpass"
-        options["filter_order"] =12
-        options["ftype"] ="bessel"
+        options["filter_order"] = 12
+        options["ftype"] = "bessel"
         options["filter_mode"] = "ba"
         options["dtype"] = np.float16
 
@@ -63,9 +62,7 @@ class TestCausalFilter:
         test_data = np.flip(test_data, axis=0)
         test_data = test_data.astype(options["dtype"])
 
-        filt_data = causal_filter(
-            recording, direction="backward", **options, margin_ms=0
-        ).get_traces()
+        filt_data = causal_filter(recording, direction="backward", **options, margin_ms=0).get_traces()
 
         assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6)
 
@@ -86,18 +83,12 @@ class TestCausalFilter:
 
         # Finally, check the custom coeff are propagated in
         # both modes First, in ba mode
-        test_data = lfilter(
-            options["coeff"][0], options["coeff"][1], raw_data, axis=0
-        )
-        test_data = test_data.astype(options["dtype"])  #TODO
+        test_data = lfilter(options["coeff"][0], options["coeff"][1], raw_data, axis=0)
+        test_data = test_data.astype(options["dtype"])  # TODO
 
-        filt_data = causal_filter(
-            recording, direction="forward", **options, margin_ms=0
-        ).get_traces()
+        filt_data = causal_filter(recording, direction="forward", **options, margin_ms=0).get_traces()
 
-        assert np.allclose(
-            test_data, filt_data, rtol=0, atol=1e-6, equal_nan=True
-        )
+        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6, equal_nan=True)
 
         # Next, in sos mode
         options["filter_mode"] = "sos"
@@ -106,13 +97,9 @@ class TestCausalFilter:
         test_data = sosfilt(options["coeff"], raw_data, axis=0)
         test_data.astype(options["dtype"])
 
-        filt_data = causal_filter(
-            recording, direction="forward", **options, margin_ms=0
-        ).get_traces()
+        filt_data = causal_filter(recording, direction="forward", **options, margin_ms=0).get_traces()
 
-        assert np.allclose(
-            test_data, filt_data, rtol=0, atol=1e-6, equal_nan=True
-        )
+        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6, equal_nan=True)
 
     def test_causal_kwarg_error_raised(self, recording_and_data):
         """
@@ -123,9 +110,7 @@ class TestCausalFilter:
         recording, raw_data = recording_and_data
 
         with pytest.raises(BaseException) as e:
-            filt_data = causal_filter(
-                recording, direction="forward-backward"
-            )
+            filt_data = causal_filter(recording, direction="forward-backward")
 
     def _run_iirfilter(self, options, recording):
         """
@@ -138,19 +123,18 @@ class TestCausalFilter:
             btype=options["btype"],
             ftype=options["ftype"],
             output=options["filter_mode"],
-            fs=recording.get_sampling_frequency()
+            fs=recording.get_sampling_frequency(),
         )
 
     def _get_filter_options(self):
-            return {
-                "band": [300.0, 6000.0],
-                "btype": "bandpass",
-                "filter_order": 5,
-                "ftype": "butter",
-                "filter_mode": "sos",
-                "coeff": None,
-            }
-
+        return {
+            "band": [300.0, 6000.0],
+            "btype": "bandpass",
+            "filter_order": 5,
+            "ftype": "butter",
+            "filter_mode": "sos",
+            "coeff": None,
+        }
 
 
 def test_filter():
