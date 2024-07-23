@@ -60,9 +60,10 @@ class FilterRecording(BasePreprocessor):
         Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1".
     direction : "forward" | "backward" | "forward-backward", default: "forward-backward"
         Direction of filtering:
-        - forward and backward filter in just one direction, creating phase shifts in the signal.
-        - forward-backward filters in both directions, a zero-phase filtering.
-
+        - "forward" - filter is applied to the timeseries in one direction, creating phase shifts
+        - "backward" - the timeseries is reversed, the filter is applied and filtered timeseries reversed again. Creates phase shifts in the opposite direction to "forward"
+        - "forward-backward" - Applies the filter in the forward and backward direction, resulting in zero-phase filtering. Note this doubles the effective filter order.
+        
     Returns
     -------
     filter_recording : FilterRecording
