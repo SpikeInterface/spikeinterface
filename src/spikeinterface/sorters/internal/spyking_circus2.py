@@ -32,7 +32,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "seed": 42,
         },
         "apply_motion_correction": True,
-        "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
+        "motion_correction": {"preset": "dredge_fast"},
         "merging": {"method": "lussac"},
         "clustering": {"legacy": True},
         "matching": {"method": "wobble"},
