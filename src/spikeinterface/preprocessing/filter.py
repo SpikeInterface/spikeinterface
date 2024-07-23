@@ -24,11 +24,12 @@ _common_filter_docs = """**filter_kwargs : dict
 
 class FilterRecording(BasePreprocessor):
     """
-    Generic filter class based on:
-
-      * scipy.signal.iirfilter
-      * scipy.signal.filtfilt or scipy.signal.sosfiltfilt when direction = "forward-backward"
-      * scipy.signal.lfilt or scipy.signal.sosfilt
+    A generic filter class based on:
+        For filter coefficient generation:
+            * scipy.signal.iirfilter
+        For filter application:
+            * scipy.signal.filtfilt or scipy.signal.sosfiltfilt when direction = "forward-backward"
+            * scipy.signal.lfilter or scipy.signal.sosfilt when direction = "forward" or "backward"
 
     BandpassFilterRecording is built on top of it.
 
