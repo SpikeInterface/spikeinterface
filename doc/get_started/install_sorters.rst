@@ -43,9 +43,10 @@ Herdingspikes2
 
 * Python + C++
 * Url: https://github.com/mhhennig/hs2
-* Authors: Matthias Hennig, Jano Horvath,Cole Hurwitz, Oliver Muthmann, Albert Puente Encinas, Martino Sorbaro, Cesar Juarez Ramirez, Raimon Wintzer: GUI and visualisation
+* Authors: Matthias Hennig, Jano Horvath, Cole Hurwitz, Rickey K. Liang, Oliver Muthmann, Albert Puente Encinas, Martino Sorbaro, Cesar Juarez Ramirez, Raimon Wintzer
 * Installation::
 
+    pip install cython numpy
     pip install herdingspikes
 
 
