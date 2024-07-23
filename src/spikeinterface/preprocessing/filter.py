@@ -189,7 +189,7 @@ class FilterRecordingSegment(BasePreprocessorSegment):
                 filtered_traces = scipy.signal.sosfilt(self.coeff, traces_chunk, axis=0)
             elif self.filter_mode == "ba":
                 b, a = self.coeff
-                filtered_traces = scipy.signal.lfilt(b, a, traces_chunk, axis=0)
+                filtered_traces = scipy.signal.lfilter(b, a, traces_chunk, axis=0)
 
             if self.direction == "backward":
                 filtered_traces = np.flip(filtered_traces, axis=0)
