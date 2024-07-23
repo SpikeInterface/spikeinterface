@@ -384,7 +384,7 @@ def causal_filter(
     filter_recording : FilterRecording
         The causal-filtered recording extractor object
     """
-    assert direction in ["forward", "backward"], "Direction can be either 'forward' or 'backward'"
+    assert direction in ["forward", "backward"], "Direction must be either 'forward' or 'backward'"
     return filter(
         recording=recording,
         direction=direction,
