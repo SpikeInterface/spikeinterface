@@ -9,17 +9,16 @@ from spikeinterface.preprocessing import filter, bandpass_filter, notch_filter, 
 
 class TestCausalFilter:
     """
-    The only thing that is not tested (as of 23/07/2024) is the
+    The only thing that is not tested (JZ, as of 23/07/2024) is the
     propagation of margin kwargs, these are general filter params
-    and can be tested later.
+    and can be tested in an upcoming PR.
     """
 
     @pytest.fixture(scope="session")
     def recording_and_data(self):
-        from scipy.signal import iirfilter, lfilter, sosfilt
-
         recording = generate_recording(durations=[1])
         raw_data = recording.get_traces()
+
         return (recording, raw_data)
 
     def test_causal_filter_main_kwargs(self, recording_and_data):
@@ -32,6 +31,8 @@ class TestCausalFilter:
         Next, change every filter-related kwarg and set in the backwards
         direction. Again check it matches expected scipy output.
         """
+        from scipy.signal import lfilter, sosfilt
+
         recording, raw_data = recording_and_data
 
         # First, check in the forward direction with
@@ -73,30 +74,29 @@ class TestCausalFilter:
         Therefore, explicitly test the expected outputs are obtained
         when passing custom coeff, under the "ba" and "sos" conditions.
         """
-        recording, raw_data = recording_and_data
+        from scipy.signal import lfilter, sosfilt
 
-        recording = generate_recording(durations=[1])  # TODO: use fixture
-        raw_data = recording.get_traces()
+        recording, raw_data = recording_and_data
 
         options = self._get_filter_options()
         options["filter_mode"] = "ba"
         options["coeff"] = (np.array([0.1, 0.2, 0.3]), np.array([0.4, 0.5, 0.6]))
 
-        # Finally, check the custom coeff are propagated in
-        # both modes First, in ba mode
+        # Check the custom coeff are propagated in both modes.
+        # First, in "ba" mode
         test_data = lfilter(options["coeff"][0], options["coeff"][1], raw_data, axis=0)
-        test_data = test_data.astype(options["dtype"])  # TODO
+        test_data = test_data.astype(recording.get_dtype())
 
         filt_data = causal_filter(recording, direction="forward", **options, margin_ms=0).get_traces()
 
         assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6, equal_nan=True)
 
-        # Next, in sos mode
+        # Next, in "sos" mode
         options["filter_mode"] = "sos"
         options["coeff"] = np.ones((2, 6))
 
         test_data = sosfilt(options["coeff"], raw_data, axis=0)
-        test_data.astype(options["dtype"])
+        test_data = test_data.astype(recording.get_dtype())
 
         filt_data = causal_filter(recording, direction="forward", **options, margin_ms=0).get_traces()
 
@@ -118,6 +118,8 @@ class TestCausalFilter:
         Convenience function to convert Si kwarg
         names to Scipy.
         """
+        from scipy.signal import iirfilter
+
         return iirfilter(
             N=options["filter_order"],
             Wn=options["band"],
