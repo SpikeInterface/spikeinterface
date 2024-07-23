@@ -52,7 +52,7 @@ class TestCausalFilter:
         # and check the backwards version.
         options["band"] = [671]
         options["btype"] = "highpass"
-        options["filter_order"] = 12
+        options["filter_order"] = 8
         options["ftype"] = "bessel"
         options["filter_mode"] = "ba"
         options["dtype"] = np.float16
