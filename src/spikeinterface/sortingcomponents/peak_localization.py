@@ -131,7 +131,7 @@ class LocalizeBase(PipelineNode):
         self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
         self._kwargs["radius_um"] = radius_um
 
     def get_dtype(self):

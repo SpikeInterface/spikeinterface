@@ -136,7 +136,7 @@ class CircusClustering:
         pipeline_nodes = [node0, node1, node2]
 
         if len(params["recursive_kwargs"]) == 0:
-
+            from sklearn.decomposition import PCA
             all_pc_data = run_node_pipeline(
                 recording,
                 pipeline_nodes,
@@ -150,11 +150,11 @@ class CircusClustering:
                 mask = peaks["channel_index"] == c
                 sub_data = all_pc_data[mask]
                 sub_data = sub_data.reshape(len(sub_data), -1)
-
+                
                 if all_pc_data.shape[1] > params["n_svd"][1]:
-                    tsvd = TruncatedSVD(params["n_svd"][1])
+                    tsvd = PCA(params["n_svd"][1], whiten=True)
                 else:
-                    tsvd = TruncatedSVD(all_pc_data.shape[1])
+                    tsvd = PCA(all_pc_data.shape[1], whiten=True)
 
                 hdbscan_data = tsvd.fit_transform(sub_data)
                 try:
@@ -184,7 +184,7 @@ class CircusClustering:
             )
 
             sparse_mask = node1.neighbours_mask
-            neighbours_mask = get_channel_distances(recording) < radius_um
+            neighbours_mask = get_channel_distances(recording) <= radius_um
 
             # np.save(features_folder / "sparse_mask.npy", sparse_mask)
             np.save(features_folder / "peaks.npy", peaks)
