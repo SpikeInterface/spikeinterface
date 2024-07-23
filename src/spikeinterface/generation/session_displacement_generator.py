@@ -19,6 +19,7 @@ def generate_session_displacement_recordings(
     rec_durations=(10, 10, 10),
     rec_shifts=((0, 0), (0, 25), (0, 50)),
     non_rigid_gradient=None,
+    rec_unit_amplitude_scaling=None,
     sampling_frequency=30000.0,
     probe_name="Neuropixel-128",
     generate_probe_kwargs=None,
@@ -44,7 +45,15 @@ def generate_session_displacement_recordings(
     extra_outputs=False,
     seed=None,
 ):
-    """ """
+    """
+
+    TODO
+    ----
+    - ever handle multi-segment?
+    """
+
+    # TODO: check inputs!
+
     probe = generate_probe(generate_probe_kwargs, probe_name)
     channel_locations = probe.contact_positions
 
@@ -56,8 +65,8 @@ def generate_session_displacement_recordings(
         **generate_unit_locations_kwargs,
     )
 
-    # Fix generate template kwargs so they are the same for
-    # every created recording.
+    # Fix generate template kwargs so they are the
+    # same for every created recording.
     generate_templates_kwargs = fix_generate_templates_kwargs(generate_templates_kwargs, num_units, seed)
 
     output_recordings = []
@@ -67,7 +76,7 @@ def generate_session_displacement_recordings(
         "unit_locations": [],
         "template_array_moved": [],
     }
-    for shift, duration in zip(rec_shifts, rec_durations):
+    for rec_idx, (shift, duration) in enumerate(zip(rec_shifts, rec_durations)):  # TODO: maybe just use iter
 
         displacement_vector, displacement_unit_factor = get_inter_session_displacements(
             shift,
@@ -76,7 +85,7 @@ def generate_session_displacement_recordings(
             unit_locations,
         )
 
-        # Move the canonical `unit_locations` according to the set (x, y) shifts TODO: add x
+        # Move the canonical `unit_locations` according to the set (x, y) shifts
         unit_locations_moved = unit_locations.copy()
         unit_locations_moved[:, :2] += displacement_vector[0, :][np.newaxis, :] * displacement_unit_factor
 
@@ -88,14 +97,33 @@ def generate_session_displacement_recordings(
             **generate_templates_kwargs,
         )
 
-        sorting = generate_sorting(
+        sorting, sorting_extra_outputs = generate_sorting(
             num_units=num_units,
             sampling_frequency=sampling_frequency,
             durations=[duration],
             **generate_sorting_kwargs,
+            extra_outputs=True,
             seed=seed,
         )
         sorting.set_property("gt_unit_locations", unit_locations_moved)
+
+        # TODO: think more about this. Alternatively use only the max
+        # channel peak...
+        if rec_unit_amplitude_scaling is not None:
+            amplitude_scalings = get_unit_amplitude_scalings(
+                templates_moved_array, rec_unit_amplitude_scaling, sorting_extra_outputs, rec_idx
+            )
+            rescaled_templates = (
+                templates_moved_array * amplitude_scalings
+            )  # rec_unit_amplitude_scaling["scalings"][order_idx][:, np.newaxis, np.newaxis]
+
+            import matplotlib.pyplot as plt
+
+            for i in range(5):
+                plt.plot(templates_moved_array[i, :, :])
+                plt.show()
+                plt.plot(rescaled_templates[i, :, :])
+                plt.show()
 
         noise = generate_noise(
             probe=probe,
@@ -108,13 +136,13 @@ def generate_session_displacement_recordings(
         ms_before = generate_templates_kwargs["ms_before"]
         nbefore = int(sampling_frequency * ms_before / 1000.0)
 
-        recording = InjectTemplatesRecording(  # TODO: what if unit locations have gone off the probe!
+        recording = InjectTemplatesRecording(
             sorting=sorting,
             templates=templates_moved_array,
             nbefore=nbefore,
             amplitude_factor=None,
             parent_recording=noise,
-            num_samples=noise.get_num_samples(0),  # TODO: handle multi segment
+            num_samples=noise.get_num_samples(0),
             upsample_vector=None,
             check_borders=False,
         )
@@ -153,3 +181,35 @@ def get_inter_session_displacements(shift, non_rigid_gradient, num_units, unit_l
         displacement_unit_factor = displacement_unit_factor[:, np.newaxis]
 
     return displacement_vector, displacement_unit_factor
+
+
+def get_unit_amplitude_scalings(templates_moved_array, rec_unit_amplitude_scaling, sorting_extra_outputs, rec_idx):
+
+    if rec_unit_amplitude_scaling["method"] == "by_impact":
+
+        templates_moved_array_neg = templates_moved_array.copy()
+        templates_moved_array_neg[np.where(templates_moved_array_neg > 0)] = 0
+        integral = np.sum(np.sum(templates_moved_array_neg, axis=2), axis=1)
+        firing_rates_hz = sorting_extra_outputs["firing_rates"][0]
+
+        impact = np.abs(integral * firing_rates_hz)
+        order_idx = np.flip(np.argsort(impact))
+
+        try:
+            ordered_rec_scalings = rec_unit_amplitude_scaling["scalings"][rec_idx][order_idx, np.newaxis, np.newaxis]
+        except:
+            breakpoint()
+
+    elif rec_unit_amplitude_scaling["method"] == "by_passed_order":
+
+        ordered_rec_scalings = rec_unit_amplitude_scaling["scalings"][rec_idx][:, np.newaxis, np.newaxis]
+    else:
+        raise ValueError("`rec_unit_amplitude_scaling` 'method' entry must be" "'by_impact' or 'by_passed_order'.")
+
+    return ordered_rec_scalings
+
+
+#    # assert len is the same
+#   amplitude_scalings = get_unit_amplitude_scalings(
+#      templates_moved_array, rec_unit_amplitude_scaling
+# )

@@ -2,7 +2,7 @@
 TODO: some notes on this debugging script.
 """
 import spikeinterface.full as si
-from spikeinterface.generation.session_displacement_generator import generate_inter_session_displacement_recordings
+from spikeinterface.generation.session_displacement_generator import generate_session_displacement_recordings
 import matplotlib.pyplot as plt
 import numpy as np
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -34,15 +34,22 @@ default_unit_params_range["alpha"] = (500, 500)  # do this or change the margin 
 default_unit_params_range["b"] = (0.5, 1) # and make the units fatter, easier to receive signal!
 default_unit_params_range["c"] = (0.5, 1)
 
-rec_list, _ = generate_inter_session_displacement_recordings(
+scale_ = [np.array([0.25, 0.5, 1, 1, 0])] * 2
+scale_ = [np.ones(5)] + scale_
+
+rec_list, _ = generate_session_displacement_recordings(
     non_rigid_gradient=None,  # 0.05, TODO: note this will set nonlinearity to both x and y (the same)
     num_units=5,
     rec_durations=(25, 25, 25),  # TODO: checks on inputs
     rec_shifts=(
         (0, 0),
-        (0, 200),
-        (50, 200),
+        (0, 0),
+        (0, 0),
     ),
+    rec_unit_amplitude_scaling={
+        "method": "by_impact",
+        "scalings": scale_,
+    },
     generate_sorting_kwargs=dict(firing_rates=(149, 150), refractory_period_ms=4.0),
     generate_templates_kwargs=dict(unit_params=default_unit_params_range, ms_before=1.5, ms_after=3),
     seed=44,
