@@ -40,13 +40,13 @@ scale_ = [np.ones(5)] + scale_
 rec_list, _ = generate_session_displacement_recordings(
     non_rigid_gradient=None,  # 0.05, TODO: note this will set nonlinearity to both x and y (the same)
     num_units=5,
-    rec_durations=(25, 25, 25),  # TODO: checks on inputs
-    rec_shifts=(
+    recording_durations=(25, 25, 25),  # TODO: checks on inputs
+    recording_shifts=(
         (0, 0),
         (0, 0),
         (0, 0),
     ),
-    amplitude_scaling_options= {
+    recording_amplitude_scalings= {
         "method": "by_amplitude_and_firing_rate",
         "scalings": scale_,
     },
