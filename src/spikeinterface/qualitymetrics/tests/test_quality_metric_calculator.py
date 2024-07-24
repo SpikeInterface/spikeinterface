@@ -2,7 +2,6 @@ import pytest
 from pathlib import Path
 import numpy as np
 
-
 from spikeinterface.core import (
     generate_ground_truth_recording,
     create_sorting_analyzer,
@@ -15,49 +14,7 @@ from spikeinterface.qualitymetrics import (
     compute_quality_metrics,
 )
 
-
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
-
-
-def get_sorting_analyzer(seed=2205):
-    # we need high firing rate for amplitude_cutoff
-    recording, sorting = generate_ground_truth_recording(
-        durations=[
-            120.0,
-        ],
-        sampling_frequency=30_000.0,
-        num_channels=6,
-        num_units=10,
-        generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
-        generate_unit_locations_kwargs=dict(
-            margin_um=5.0,
-            minimum_z=5.0,
-            maximum_z=20.0,
-        ),
-        generate_templates_kwargs=dict(
-            unit_params=dict(
-                alpha=(200.0, 500.0),
-            )
-        ),
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
-        seed=seed,
-    )
-
-    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
-
-    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=300, seed=seed)
-    sorting_analyzer.compute("noise_levels")
-    sorting_analyzer.compute("waveforms", **job_kwargs)
-    sorting_analyzer.compute("templates")
-    sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
-
-    return sorting_analyzer
-
-
-@pytest.fixture(scope="module")
-def sorting_analyzer_simple():
-    sorting_analyzer = get_sorting_analyzer(seed=2205)
-    return sorting_analyzer
 
 
 def test_compute_quality_metrics(sorting_analyzer_simple):
@@ -118,6 +75,7 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
     )
 
     for metric_name in metrics.columns:
+        print(metric_name)
         if metric_name == "sd_ratio":
             # this one need recording!!!
             continue
@@ -291,9 +249,6 @@ def test_empty_units(sorting_analyzer_simple):
 
 if __name__ == "__main__":
 
-    sorting_analyzer = get_sorting_analyzer()
-    print(sorting_analyzer)
-
-    test_compute_quality_metrics(sorting_analyzer)
-    test_compute_quality_metrics_recordingless(sorting_analyzer)
-    test_empty_units(sorting_analyzer)
+    test_compute_quality_metrics(sorting_analyzer_simple)
+    test_compute_quality_metrics_recordingless(sorting_analyzer_simple)
+    test_empty_units(sorting_analyzer_simple)

@@ -135,36 +135,6 @@ def test_unit_id_order_independence(small_sorting_analyzer):
         assert quality_metrics_2[metric][1] == metric_1_data["#4"]
 
 
-def _sorting_analyzer_simple():
-    recording, sorting = generate_ground_truth_recording(
-        durations=[
-            50.0,
-        ],
-        sampling_frequency=30_000.0,
-        num_channels=6,
-        num_units=10,
-        generate_sorting_kwargs=dict(firing_rates=6.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
-        seed=2205,
-    )
-
-    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
-
-    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=300, seed=2205)
-    sorting_analyzer.compute("noise_levels")
-    sorting_analyzer.compute("waveforms", **job_kwargs)
-    sorting_analyzer.compute("templates")
-    sorting_analyzer.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
-    sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
-
-    return sorting_analyzer
-
-
-@pytest.fixture(scope="module")
-def sorting_analyzer_simple():
-    return _sorting_analyzer_simple()
-
-
 def _sorting_violation():
     max_time = 100.0
     sampling_frequency = 30000
@@ -570,27 +540,36 @@ def test_calculate_sd_ratio(sorting_analyzer_simple):
 
 if __name__ == "__main__":
 
-    sorting_analyzer = _sorting_analyzer_simple()
-    print(sorting_analyzer)
+    test_unit_structure_in_output(small_sorting_analyzer)
+    test_unit_id_order_independence(small_sorting_analyzer)
 
-    test_unit_structure_in_output(_small_sorting_analyzer())
+    test_synchrony_counts_no_sync()
+    test_synchrony_counts_one_sync()
+    test_synchrony_counts_one_quad_sync()
+    test_synchrony_counts_not_all_units()
 
-    # test_calculate_firing_rate_num_spikes(sorting_analyzer)
-    # test_calculate_snrs(sorting_analyzer)
-    # test_calculate_amplitude_cutoff(sorting_analyzer)
-    # test_calculate_presence_ratio(sorting_analyzer)
-    # test_calculate_amplitude_median(sorting_analyzer)
-    # test_calculate_sliding_rp_violations(sorting_analyzer)
-    # test_calculate_drift_metrics(sorting_analyzer)
-    # test_synchrony_metrics(sorting_analyzer)
-    # test_synchrony_metrics_unit_id_subset(sorting_analyzer)
-    # test_synchrony_metrics_no_unit_ids(sorting_analyzer)
-    # test_calculate_firing_range(sorting_analyzer)
-    # test_calculate_amplitude_cv_metrics(sorting_analyzer)
-    # test_calculate_sd_ratio(sorting_analyzer)
+    test_mahalanobis_metrics()
+    test_lda_metrics()
+    test_nearest_neighbors_metrics()
+    test_silhouette_score_metrics()
+    test_simplified_silhouette_score_metrics()
 
-    # sorting_analyzer_violations = _sorting_analyzer_violations()
+    test_calculate_firing_rate_num_spikes(sorting_analyzer_simple)
+    test_calculate_snrs(sorting_analyzer)
+    test_calculate_amplitude_cutoff(sorting_analyzer)
+    test_calculate_presence_ratio(sorting_analyzer)
+    test_calculate_amplitude_median(sorting_analyzer)
+    test_calculate_sliding_rp_violations(sorting_analyzer)
+    test_calculate_drift_metrics(sorting_analyzer)
+    test_synchrony_metrics(sorting_analyzer)
+    test_synchrony_metrics_unit_id_subset(sorting_analyzer)
+    test_synchrony_metrics_no_unit_ids(sorting_analyzer)
+    test_calculate_firing_range(sorting_analyzer)
+    test_calculate_amplitude_cv_metrics(sorting_analyzer)
+    test_calculate_sd_ratio(sorting_analyzer)
+
+    sorting_analyzer_violations = _sorting_analyzer_violations()
     # print(sorting_analyzer_violations)
-    # test_calculate_isi_violations(sorting_analyzer_violations)
-    # test_calculate_sliding_rp_violations(sorting_analyzer_violations)
-    # test_calculate_rp_violations(sorting_analyzer_violations)
+    test_calculate_isi_violations(sorting_analyzer_violations)
+    test_calculate_sliding_rp_violations(sorting_analyzer_violations)
+    test_calculate_rp_violations(sorting_analyzer_violations)

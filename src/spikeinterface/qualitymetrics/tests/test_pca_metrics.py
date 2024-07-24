@@ -22,3 +22,8 @@ def test_calculate_pc_metrics(small_sorting_analyzer):
             assert not np.all(np.isnan(res2[metric_name].values))
 
         assert np.array_equal(res1[metric_name].values, res2[metric_name].values)
+
+
+if __name__ == "__main__":
+
+    test_calculate_pc_metrics(small_sorting_analyzer)
