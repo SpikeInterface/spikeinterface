@@ -16,11 +16,6 @@ from spikeinterface.core.generate import setup_inject_templates_recording
 from spikeinterface.core import InjectTemplatesRecording
 
 
-# TODO: test metadata
-# TOOD: test new amplitude scalings
-# TODO: test correct unit_locations are on the sortings (part of metadata)
-
-
 def generate_session_displacement_recordings(
     num_units=250,
     recording_durations=(10, 10, 10),
@@ -131,7 +126,7 @@ def generate_session_displacement_recordings(
     # and scaled as required
     extra_outputs_dict = {
         "unit_locations": [],
-        "template_array_moved": [],
+        "templates_array_moved": [],
     }
     output_recordings = []
     output_sortings = []
@@ -170,7 +165,7 @@ def generate_session_displacement_recordings(
         )
 
         # Generate the (possibly shifted, scaled) unit templates
-        template_array_moved = generate_templates(
+        templates_array_moved = generate_templates(
             channel_locations,
             unit_locations_moved,
             sampling_frequency=sampling_frequency,
@@ -179,9 +174,8 @@ def generate_session_displacement_recordings(
         )
 
         if recording_amplitude_scalings is not None:
-
-            template_array_moved = _amplitude_scale_templates_in_place(
-                template_array_moved, recording_amplitude_scalings, sorting_extra_outputs, rec_idx
+            _amplitude_scale_templates_in_place(
+                templates_array_moved, recording_amplitude_scalings, sorting_extra_outputs, rec_idx
             )
 
         # Bring it all together in a `InjectTemplatesRecording` and
@@ -191,7 +185,7 @@ def generate_session_displacement_recordings(
 
         recording = InjectTemplatesRecording(
             sorting=sorting,
-            templates=template_array_moved,
+            templates=templates_array_moved,
             nbefore=nbefore,
             amplitude_factor=None,
             parent_recording=noise,
@@ -208,7 +202,7 @@ def generate_session_displacement_recordings(
         output_recordings.append(recording)
         output_sortings.append(sorting)
         extra_outputs_dict["unit_locations"].append(unit_locations_moved)
-        extra_outputs_dict["template_array_moved"].append(template_array_moved)
+        extra_outputs_dict["templates_array_moved"].append(templates_array_moved)
 
     if extra_outputs:
         return output_recordings, output_sortings, extra_outputs_dict
@@ -344,12 +338,13 @@ def _check_generate_session_displacement_arguments(
         if not "method" in keys or not "scalings" in keys:
             raise ValueError("`recording_amplitude_scalings` must be a dict " "with keys `method` and `scalings`.")
 
-        allowed_methods = ["by_passed_value", "by_amplitude_and_firing_rate", "by_firing_rate"]
+        allowed_methods = ["by_passed_order", "by_amplitude_and_firing_rate", "by_firing_rate"]
         if not recording_amplitude_scalings["method"] in allowed_methods:
             raise ValueError(f"`recording_amplitude_scalings` must be one of {allowed_methods}")
 
         rec_scalings = recording_amplitude_scalings["scalings"]
         if not len(rec_scalings) == expected_num_recs:
+            breakpoint()
             raise ValueError("`recording_amplitude_scalings` 'scalings' " "must have one array per recording.")
 
         if not all([len(scale) == num_units for scale in rec_scalings]):
