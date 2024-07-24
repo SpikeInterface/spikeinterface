@@ -149,8 +149,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## We need to whiten before the template matching step, to boost the results
         # TODO add , regularize=True chen ready
-        recording_w = whiten(recording_f, mode="local", radius_um=radius_um, dtype="float32", regularize=True)
-
+        if num_channels > 1:
+            regularize = True
+        else:
+            regularize = False
+        recording_w = whiten(recording_f, mode="local", 
+                             radius_um=radius_um, 
+                             dtype="float32", 
+                             regularize=regularize)
         noise_levels = get_noise_levels(recording_w, return_scaled=False)
 
         if recording_w.check_serializability("json"):

@@ -187,7 +187,7 @@ class LocalFeatureClustering:
         min_size_split=25,
         n_pca_features=2,
         scale_n_pca_by_depth=False,
-        minimum_common_channels=2,
+        minimum_common_channels=1,
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
@@ -199,27 +199,10 @@ class LocalFeatureClustering:
         # target channel subset is done intersect local channels + neighbours
         local_chans = np.unique(peaks["channel_index"][peak_indices])
         target_channels = np.flatnonzero(np.all(neighbours_mask[local_chans, :], axis=0))
+        #print(recursion_level, target_channels)
         # TODO fix this a better way, this when cluster have too few overlapping channels
         if target_channels.size < minimum_common_channels:
-            if target_channels.size == 1:
-                flatten_features = sparse_features.reshape(sparse_features.shape[0], -1)
-                print(flatten_features.shape)
-                if flatten_features.shape[1] > n_pca_features:
-                    from sklearn.decomposition import PCA
-                    if scale_n_pca_by_depth:
-                        tsvd = PCA(n_pca_features * recursion_level, whiten=True)
-                    else:
-                        tsvd = PCA(n_pca_features, whiten=True)
-                    final_features = tsvd.fit_transform(flatten_features)
-                else:
-                    final_features = flatten_features
-                from hdbscan import HDBSCAN
-                clust = HDBSCAN(**clusterer_kwargs)
-                clust.fit(final_features)
-                possible_labels = clust.labels_
-                return False, possible_labels
-            else:
-                return False, None
+            return False, None
         
         aligned_wfs, dont_have_channels = aggregate_sparse_features(
             peaks, peak_indices, sparse_features, waveforms_sparse_mask, target_channels
@@ -227,7 +210,7 @@ class LocalFeatureClustering:
 
         local_labels[dont_have_channels] = -2
         kept = np.flatnonzero(~dont_have_channels)
-
+        #print(recursion_level, kept.size, min_size_split)
         if kept.size < min_size_split:
             return False, None
 
