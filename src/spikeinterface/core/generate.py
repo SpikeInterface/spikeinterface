@@ -42,8 +42,8 @@ def generate_recording(
     ----------
     num_channels : int, default: 2
         The number of channels in the recording.
-    sampling_frequency : float, default: 30000. (in Hz)
-        The sampling frequency of the recording, default: 30000.
+    sampling_frequency : float, default: 30000.0
+        The sampling frequency of the recording in Hz
     durations : list[float], default: [5.0, 2.5]
         The duration in seconds of each segment in the recording, default: [5.0, 2.5].
         Note that the number of segments is determined by the length of this list.
@@ -105,7 +105,7 @@ def generate_sorting(
     num_units : int, default: 5
         Number of units.
     sampling_frequency : float, default: 30000.0
-        The sampling frequency.
+        The sampling frequency of the recording in Hz.
     durations : list, default: [10.325, 3.5]
         Duration of each segment in s.
     firing_rates : float, default: 3.0
@@ -525,8 +525,8 @@ class TransformSorting(BaseSorting):
             An array of spike times (in frames).
         labels_list : list[np.array] | np.array
             An array of spike labels corresponding to the given times.
-        sampling_frequency : float, default: 30000. (in Hz)
-            The sampling frequency of the recording, default: 30000.
+        sampling_frequency : float, default: 30000.0
+            The sampling frequency of the recording in Hz.
         unit_ids : list | None, default: None
             The explicit list of unit_ids that should be extracted from labels_list
             If None, then it will be np.unique(labels_list).
@@ -615,8 +615,8 @@ def generate_snippets(
         Number of channels.
     wf_folder : str | Path | None, default: None
         Optional folder to save the waveform snippets. If None, snippets are in memory.
-    sampling_frequency : float, default: 30000.0 (in Hz)
-        The sampling frequency of the snippets.
+    sampling_frequency : float, default: 30000.0
+        The sampling frequency of the snippets in Hz.
     ndim : int, default: 2
         The number of dimensions of the probe.
     num_units : int, default: 5
@@ -692,7 +692,7 @@ def synthesize_poisson_spike_vector(
     ----------
     num_units : int, default: 20
         Number of neuronal units to simulate.
-    sampling_frequency : float, default: 30000.0 (in Hz)
+    sampling_frequency : float, default: 30000.0
         Sampling frequency in Hz.
     duration : float, default: 60.0
         Duration of the simulation in seconds.
@@ -797,8 +797,8 @@ def synthesize_random_firings(
     ----------
     num_units : int, default: 20
         Number of units.
-    sampling_frequency : float, default: 30000.0 (in Hz)
-        Sampling rate.
+    sampling_frequency : float, default: 30000.0
+        Sampling rate in Hz.
     duration : float, default: 60
         Duration of the segment in seconds.
     refractory_period_ms : float, default: 4.0
