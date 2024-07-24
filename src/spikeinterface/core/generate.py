@@ -1288,7 +1288,7 @@ def generate_recording_by_size(
           * "tile_pregenerated": pregenerate a noise chunk of noise_block_size sample and repeat it
                                  very fast and consume only one noise block.
           * "on_the_fly": generate on the fly a new noise block by combining seed + noise block index
-                          no memory preallocation but a bit more computaion (random)
+                          no memory preallocation but a bit more computation (random)
     Returns
     -------
     GeneratorRecording
