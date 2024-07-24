@@ -75,7 +75,6 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
     )
 
     for metric_name in metrics.columns:
-        print(metric_name)
         if metric_name == "sd_ratio":
             # this one need recording!!!
             continue
