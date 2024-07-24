@@ -137,6 +137,7 @@ class CircusClustering:
 
         if len(params["recursive_kwargs"]) == 0:
             from sklearn.decomposition import PCA
+
             all_pc_data = run_node_pipeline(
                 recording,
                 pipeline_nodes,
@@ -150,7 +151,7 @@ class CircusClustering:
                 mask = peaks["channel_index"] == c
                 sub_data = all_pc_data[mask]
                 sub_data = sub_data.reshape(len(sub_data), -1)
-                
+
                 if all_pc_data.shape[1] > params["n_svd"][1]:
                     tsvd = PCA(params["n_svd"][1], whiten=True)
                 else:
@@ -191,6 +192,7 @@ class CircusClustering:
 
             original_labels = peaks["channel_index"]
             from spikeinterface.sortingcomponents.clustering.split import split_clusters
+
             min_size = params["hdbscan_kwargs"].get("min_cluster_size", 50)
 
             peak_labels, _ = split_clusters(

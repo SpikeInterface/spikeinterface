@@ -119,7 +119,7 @@ def split_clusters(
                     for label in new_labels_set:
                         peak_indices = np.flatnonzero(peak_labels == label)
                         if peak_indices.size > 0:
-                            #print('Relaunched', label, len(peak_indices), recursion_level)
+                            # print('Relaunched', label, len(peak_indices), recursion_level)
                             jobs.append(pool.submit(split_function_wrapper, peak_indices, recursion_level))
                             if progress_bar:
                                 iterator.total += 1
@@ -199,18 +199,18 @@ class LocalFeatureClustering:
         # target channel subset is done intersect local channels + neighbours
         local_chans = np.unique(peaks["channel_index"][peak_indices])
         target_channels = np.flatnonzero(np.all(neighbours_mask[local_chans, :], axis=0))
-        #print(recursion_level, target_channels)
+        # print(recursion_level, target_channels)
         # TODO fix this a better way, this when cluster have too few overlapping channels
         if target_channels.size < minimum_common_channels:
             return False, None
-        
+
         aligned_wfs, dont_have_channels = aggregate_sparse_features(
             peaks, peak_indices, sparse_features, waveforms_sparse_mask, target_channels
         )
 
         local_labels[dont_have_channels] = -2
         kept = np.flatnonzero(~dont_have_channels)
-        #print(recursion_level, kept.size, min_size_split)
+        # print(recursion_level, kept.size, min_size_split)
         if kept.size < min_size_split:
             return False, None
 
@@ -220,13 +220,14 @@ class LocalFeatureClustering:
 
         if flatten_features.shape[1] > n_pca_features:
             from sklearn.decomposition import PCA
-            #from sklearn.decomposition import TruncatedSVD
+
+            # from sklearn.decomposition import TruncatedSVD
 
             if scale_n_pca_by_depth:
-                # tsvd = TruncatedSVD(n_pca_features * recursion_level)
+                # tsvd = TruncatedSVD(n_pca_features * recursion_level)
                 tsvd = PCA(n_pca_features * recursion_level, whiten=True)
             else:
-                #tsvd = TruncatedSVD(n_pca_features)
+                # tsvd = TruncatedSVD(n_pca_features)
                 tsvd = PCA(n_pca_features, whiten=True)
             final_features = tsvd.fit_transform(flatten_features)
         else:

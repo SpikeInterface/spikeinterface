@@ -153,10 +153,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             regularize = True
         else:
             regularize = False
-        recording_w = whiten(recording_f, mode="local", 
-                             radius_um=radius_um, 
-                             dtype="float32", 
-                             regularize=regularize)
+        recording_w = whiten(recording_f, mode="local", radius_um=radius_um, dtype="float32", regularize=regularize)
         noise_levels = get_noise_levels(recording_w, return_scaled=False)
 
         if recording_w.check_serializability("json"):
