@@ -1561,7 +1561,7 @@ def generate_templates(
             * tuple, then this difine a range for random values.
     mode : "ellipsoid" | "sphere", default: "ellipsoid"
         Method used to calculate the distance between unit and channel location.
-        Ellipoid injects some anisotropy dependent on unit shape, sphere is equivalent
+        Ellipsoid injects some anisotropy dependent on unit shape, sphere is equivalent
         to Euclidean distance.
 
     Returns
