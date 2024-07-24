@@ -69,7 +69,7 @@ def split_clusters(
 
     original_labels = peak_labels
     peak_labels = peak_labels.copy()
-    split_count = np.zeros(peak_labels.size, dtype=int)
+    split_count = np.ones(peak_labels.size, dtype=int)
 
     Executor = get_poolexecutor(n_jobs)
 
@@ -101,7 +101,6 @@ def split_clusters(
             mask = local_labels >= 0
             peak_labels[peak_indices[mask]] = local_labels[mask] + current_max_label
             peak_labels[peak_indices[~mask]] = local_labels[~mask]
-
             split_count[peak_indices] += 1
 
             current_max_label += np.max(local_labels[mask]) + 1
@@ -120,6 +119,7 @@ def split_clusters(
                     for label in new_labels_set:
                         peak_indices = np.flatnonzero(peak_labels == label)
                         if peak_indices.size > 0:
+                            #print('Relaunched', label, len(peak_indices), recursion_level)
                             jobs.append(pool.submit(split_function_wrapper, peak_indices, recursion_level))
                             if progress_bar:
                                 iterator.total += 1
