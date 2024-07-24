@@ -5,7 +5,7 @@ from spikeinterface.core import (
     create_sorting_analyzer,
 )
 
-job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
+job_kwargs = dict(n_jobs=-1, progress_bar=True, chunk_duration="1s")
 
 
 def _small_sorting_analyzer():
