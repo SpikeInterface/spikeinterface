@@ -1,3 +1,5 @@
+import copy
+
 from spikeinterface.generation.drifting_generator import (
     generate_probe,
     fix_generate_templates_kwargs,
@@ -14,12 +16,17 @@ from spikeinterface.core.generate import setup_inject_templates_recording
 from spikeinterface.core import InjectTemplatesRecording
 
 
+# TODO: test metadata
+# TOOD: test new amplitude scalings
+# TODO:
+
+
 def generate_session_displacement_recordings(
     num_units=250,
-    rec_durations=(10, 10, 10),
-    rec_shifts=((0, 0), (0, 25), (0, 50)),
+    recording_durations=(10, 10, 10),
+    recording_shifts=((0, 0), (0, 25), (0, 50)),
     non_rigid_gradient=None,
-    rec_unit_amplitude_scaling=None,
+    recording_amplitude_scalings=None,
     sampling_frequency=30000.0,
     probe_name="Neuropixel-128",
     generate_probe_kwargs=None,
@@ -45,19 +52,15 @@ def generate_session_displacement_recordings(
     extra_outputs=False,
     seed=None,
 ):
-    """
-
-    TODO
-    ----
-    - ever handle multi-segment?
-    """
-
-    # TODO: check inputs!
+    """ """
+    _check_generate_session_displacement_inputs(
+        num_units, recording_durations, recording_shifts, recording_amplitude_scalings
+    )
 
     probe = generate_probe(generate_probe_kwargs, probe_name)
     channel_locations = probe.contact_positions
 
-    # Create the starting unit locations (which will be shifted.
+    # Create the starting unit locations (which will be shifted).
     unit_locations = generate_unit_locations(
         num_units,
         channel_locations,
@@ -65,8 +68,8 @@ def generate_session_displacement_recordings(
         **generate_unit_locations_kwargs,
     )
 
-    # Fix generate template kwargs so they are the
-    # same for every created recording.
+    # Fix generate template kwargs so they
+    # are the same for every created recording.
     generate_templates_kwargs = fix_generate_templates_kwargs(generate_templates_kwargs, num_units, seed)
 
     output_recordings = []
@@ -76,7 +79,7 @@ def generate_session_displacement_recordings(
         "unit_locations": [],
         "template_array_moved": [],
     }
-    for rec_idx, (shift, duration) in enumerate(zip(rec_shifts, rec_durations)):  # TODO: maybe just use iter
+    for rec_idx, (shift, duration) in enumerate(zip(recording_shifts, recording_durations)):
 
         displacement_vector, displacement_unit_factor = get_inter_session_displacements(
             shift,
@@ -89,14 +92,7 @@ def generate_session_displacement_recordings(
         unit_locations_moved = unit_locations.copy()
         unit_locations_moved[:, :2] += displacement_vector[0, :][np.newaxis, :] * displacement_unit_factor
 
-        templates_moved_array = generate_templates(
-            channel_locations,
-            unit_locations_moved,
-            sampling_frequency=sampling_frequency,
-            seed=seed,
-            **generate_templates_kwargs,
-        )
-
+        # Generate the sorting (e.g. spike times) for the recording
         sorting, sorting_extra_outputs = generate_sorting(
             num_units=num_units,
             sampling_frequency=sampling_frequency,
@@ -107,24 +103,7 @@ def generate_session_displacement_recordings(
         )
         sorting.set_property("gt_unit_locations", unit_locations_moved)
 
-        # TODO: think more about this. Alternatively use only the max
-        # channel peak...
-        if rec_unit_amplitude_scaling is not None:
-            amplitude_scalings = get_unit_amplitude_scalings(
-                templates_moved_array, rec_unit_amplitude_scaling, sorting_extra_outputs, rec_idx
-            )
-            rescaled_templates = (
-                templates_moved_array * amplitude_scalings
-            )  # rec_unit_amplitude_scaling["scalings"][order_idx][:, np.newaxis, np.newaxis]
-
-            import matplotlib.pyplot as plt
-
-            for i in range(5):
-                plt.plot(templates_moved_array[i, :, :])
-                plt.show()
-                plt.plot(rescaled_templates[i, :, :])
-                plt.show()
-
+        # Generate the noise in the recording
         noise = generate_noise(
             probe=probe,
             sampling_frequency=sampling_frequency,
@@ -133,6 +112,23 @@ def generate_session_displacement_recordings(
             **generate_noise_kwargs,
         )
 
+        # Generate the (possibly shifted, scaled) unit templates
+        templates_moved_array = generate_templates(
+            channel_locations,
+            unit_locations_moved,
+            sampling_frequency=sampling_frequency,
+            seed=seed,
+            **generate_templates_kwargs,
+        )
+
+        if recording_amplitude_scalings is not None:
+
+            templates_moved_array = amplitude_scale_templates_in_place(
+                templates_moved_array, recording_amplitude_scalings, sorting_extra_outputs, rec_idx
+            )
+
+        # Bring it all together in a `InjectTemplatesRecording` and
+        # propagate all relevant metadata to the recording.
         ms_before = generate_templates_kwargs["ms_before"]
         nbefore = int(sampling_frequency * ms_before / 1000.0)
 
@@ -164,9 +160,7 @@ def generate_session_displacement_recordings(
 
 
 def get_inter_session_displacements(shift, non_rigid_gradient, num_units, unit_locations):
-    """
-    TODO
-    """
+    """ """
     displacement_vector = np.atleast_2d(shift)
 
     if non_rigid_gradient is None or shift == (0, 0):
@@ -183,33 +177,43 @@ def get_inter_session_displacements(shift, non_rigid_gradient, num_units, unit_l
     return displacement_vector, displacement_unit_factor
 
 
-def get_unit_amplitude_scalings(templates_moved_array, rec_unit_amplitude_scaling, sorting_extra_outputs, rec_idx):
+def amplitude_scale_templates_in_place(templates_array, recording_amplitude_scalings, sorting_extra_outputs, rec_idx):
+    """ """
+    if recording_amplitude_scalings["method"] in ["by_amplitude_and_firing_rate", "by_firing_rate"]:
 
-    if rec_unit_amplitude_scaling["method"] == "by_impact":
-
-        templates_moved_array_neg = templates_moved_array.copy()
-        templates_moved_array_neg[np.where(templates_moved_array_neg > 0)] = 0
-        integral = np.sum(np.sum(templates_moved_array_neg, axis=2), axis=1)
         firing_rates_hz = sorting_extra_outputs["firing_rates"][0]
 
-        impact = np.abs(integral * firing_rates_hz)
-        order_idx = np.flip(np.argsort(impact))
+        if recording_amplitude_scalings["method"] == "by_amplitude_and_firing_rate":
+            neg_ampl = np.min(np.min(templates_array, axis=2), axis=1)
+            score = firing_rates_hz * neg_ampl
+        else:
+            score = firing_rates_hz
 
-        try:
-            ordered_rec_scalings = rec_unit_amplitude_scaling["scalings"][rec_idx][order_idx, np.newaxis, np.newaxis]
-        except:
-            breakpoint()
+        assert np.all(score < 0), "assumes all amplitudes are negative here."
+        order_idx = np.argsort(score)
+        ordered_rec_scalings = recording_amplitude_scalings["scalings"][rec_idx][order_idx, np.newaxis, np.newaxis]
 
-    elif rec_unit_amplitude_scaling["method"] == "by_passed_order":
+    elif recording_amplitude_scalings["method"] == "by_passed_order":
 
-        ordered_rec_scalings = rec_unit_amplitude_scaling["scalings"][rec_idx][:, np.newaxis, np.newaxis]
+        ordered_rec_scalings = recording_amplitude_scalings["scalings"][rec_idx][:, np.newaxis, np.newaxis]
     else:
-        raise ValueError("`rec_unit_amplitude_scaling` 'method' entry must be" "'by_impact' or 'by_passed_order'.")
+        raise ValueError(
+            "`recording_amplitude_scalings` 'method' entry must be "
+            "'by_amplitude_and_firing_rate', 'by_firing_rate' or "
+            "'by_passed_order'."
+        )
 
-    return ordered_rec_scalings
+    templates_array *= ordered_rec_scalings
 
 
+def _check_generate_session_displacement_inputs(
+    num_units, recording_durations, recording_shifts, recording_amplitude_scalings
+):
+    breakpoint()
+
+
+# TODO: a lot of input checks
 #    # assert len is the same
 #   amplitude_scalings = get_unit_amplitude_scalings(
-#      templates_moved_array, rec_unit_amplitude_scaling
+#      templates_moved_array, recording_amplitude_scalings
 # )

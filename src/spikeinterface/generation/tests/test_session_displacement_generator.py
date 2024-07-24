@@ -32,8 +32,8 @@ class TestSessionDisplacementGenerator:
         """
         options = {
             "kwargs": {
-                "rec_durations": (10, 10, 25, 33),
-                "rec_shifts": ((0, 0), (2, -100), (-3, 275), (4, 1e6)),
+                "recording_durations": (10, 10, 25, 33),
+                "recording_shifts": ((0, 0), (2, -100), (-3, 275), (4, 1e6)),
                 "num_units": 5,
                 "extra_outputs": True,
                 "seed": 42,
@@ -58,7 +58,7 @@ class TestSessionDisplacementGenerator:
         The session displacement works by generating a set of
         templates shared across all recordings, but set with
         different `unit_locations()`. Check here that the
-        (x, y) displacements passed in `rec_shifts` are properly
+        (x, y) displacements passed in `recording_shifts` are properly
         propagated.
 
         First, check the set `unit_locations` are moved as expected according
@@ -73,7 +73,7 @@ class TestSessionDisplacementGenerator:
         """
         output_recordings, _, extra_outputs = generate_session_displacement_recordings(**options["kwargs"])
         num_units = options["kwargs"]["num_units"]
-        rec_shifts = options["kwargs"]["rec_shifts"]
+        recording_shifts = options["kwargs"]["recording_shifts"]
 
         # test unit locations are shifted as expected according
         # to the record shifts
@@ -81,7 +81,7 @@ class TestSessionDisplacementGenerator:
 
         for rec_idx in range(1, 4):
 
-            shifts = rec_shifts[rec_idx]
+            shifts = recording_shifts[rec_idx]
 
             assert np.array_equal(
                 locations_1 + np.r_[shifts, 0].astype(np.float32), extra_outputs["unit_locations"][rec_idx]
@@ -107,7 +107,7 @@ class TestSessionDisplacementGenerator:
                     extra_outputs["template_array_moved"][rec_idx][unit_idx], options["y_bin_um"]
                 )
 
-                y_shift = rec_shifts[rec_idx][1]
+                y_shift = recording_shifts[rec_idx][1]
                 if start_pos + y_shift > max_channel_loc:
                     assert new_pos == max_channel_loc or new_pos == 0
                 elif start_pos + y_shift < min_channel_loc:
@@ -132,13 +132,13 @@ class TestSessionDisplacementGenerator:
 
     def test_recordings_length(self, options):
         """
-        Test that the `rec_durations` that sets the
+        Test that the `recording_durations` that sets the
         length of each recording changes the recording
         length as expected.
         """
         output_recordings = generate_session_displacement_recordings(**options["kwargs"])[0]
 
-        for rec, expected_rec_length in zip(output_recordings, options["kwargs"]["rec_durations"]):
+        for rec, expected_rec_length in zip(output_recordings, options["kwargs"]["recording_durations"]):
             assert rec.get_total_duration() == expected_rec_length
 
     def test_spike_times_across_recordings(self, options):
@@ -149,7 +149,7 @@ class TestSessionDisplacementGenerator:
         to be identical. However, if no seed is set, then the spike
         times will be different across recordings.
         """
-        options["kwargs"]["rec_durations"] = (10,) * options["num_recs"]
+        options["kwargs"]["recording_durations"] = (10,) * options["num_recs"]
 
         output_sortings_same = generate_session_displacement_recordings(**options["kwargs"])[1]
 
@@ -184,7 +184,7 @@ class TestSessionDisplacementGenerator:
         and when it is `1`, and the displacement is directly propotional to
         the unit position.
         """
-        options["kwargs"]["rec_shifts"] = ((0, 0), (10, 15), (15, 20), (20, 25))
+        options["kwargs"]["recording_shifts"] = ((0, 0), (10, 15), (15, 20), (20, 25))
 
         _, _, rigid_info = generate_session_displacement_recordings(
             **options["kwargs"],
@@ -206,7 +206,7 @@ class TestSessionDisplacementGenerator:
         # are as expected.
         for rec_idx in range(1, options["num_recs"]):
 
-            shift = options["kwargs"]["rec_shifts"][rec_idx][dim_idx]
+            shift = options["kwargs"]["recording_shifts"][rec_idx][dim_idx]
 
             # Get the rigid shift between the first recording and this shifted recording
             # Check shifts for all unit locations are all the same.
@@ -248,8 +248,8 @@ class TestSessionDisplacementGenerator:
         # chosen to make the recording as small as possible as this
         # test is slow for larger recordings.
         y_shift = 50
-        options["kwargs"]["rec_shifts"] = ((0, 0), (0, y_shift))
-        options["kwargs"]["rec_durations"] = (0.5, 0.5)
+        options["kwargs"]["recording_shifts"] = ((0, 0), (0, y_shift))
+        options["kwargs"]["recording_durations"] = (0.5, 0.5)
         options["num_recs"] = 2
         options["kwargs"]["num_units"] = 1
         options["kwargs"]["generate_probe_kwargs"]["num_contact_per_column"] = 18
@@ -301,8 +301,8 @@ class TestSessionDisplacementGenerator:
         # Generate a inter-session displacement recording with no displacement
         no_shift_recording, _ = generate_session_displacement_recordings(
             num_units=num_units,
-            rec_durations=[duration],
-            rec_shifts=((0, 0)),
+            recording_durations=[duration],
+            recording_shifts=((0, 0)),
             sampling_frequency=sampling_frequency,
             probe_name=probe_name,
             generate_probe_kwargs=generate_probe_kwargs,

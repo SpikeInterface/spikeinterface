@@ -46,8 +46,8 @@ rec_list, _ = generate_session_displacement_recordings(
         (0, 0),
         (0, 0),
     ),
-    rec_unit_amplitude_scaling={
-        "method": "by_impact",
+    amplitude_scaling_options= {
+        "method": "by_amplitude_and_firing_rate",
         "scalings": scale_,
     },
     generate_sorting_kwargs=dict(firing_rates=(149, 150), refractory_period_ms=4.0),
