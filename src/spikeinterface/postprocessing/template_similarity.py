@@ -13,24 +13,21 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 
     Similarity is defined as 1 - distance(T_1, T_2) for two templates T_1, T_2
 
-
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object
     method : str, default: "cosine"
         The method to compute the similarity. Can be in ["cosine", "l2", "l1"]
+        In case of "l1" or "l2", the formula used is:
+        - similarity = 1 - norm(T_1 - T_2)/(norm(T_1) + norm(T_2)).
+        In case of cosine it is:
+        - similarity = 1 - sum(T_1.T_2)/(norm(T_1)norm(T_2)).
     max_lag_ms : float, default: 0
         If specified, the best distance for all given lag within max_lag_ms is kept, for every template
     support : "dense" | "union" | "intersection", default: "union"
         Support that should be considered to compute the distances between the templates, given their sparsities.
         Can be either ["dense", "union", "intersection"]
-
-    In case of "l1" or "l2", the formula used is:
-        similarity = 1 - norm(T_1 - T_2)/(norm(T_1) + norm(T_2))
-
-    In case of cosine this is:
-        similarity = 1 - sum(T_1.T_2)/(norm(T_1)norm(T_2))
 
     Returns
     -------

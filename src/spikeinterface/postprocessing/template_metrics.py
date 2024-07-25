@@ -50,7 +50,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object
     metric_names : list or None, default: None
         List of metrics to compute (see si.postprocessing.get_template_metric_names())
@@ -58,13 +58,13 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         Whether to use the positive ("pos") or negative ("neg") peaks to estimate extremum channels.
     upsampling_factor : int, default: 10
         The upsampling factor to upsample the templates
-    sparsity: ChannelSparsity or None, default: None
+    sparsity : ChannelSparsity or None, default: None
         If None, template metrics are computed on the extremum channel only.
         If sparsity is given, template metrics are computed on all sparse channels of each unit.
         For more on generating a ChannelSparsity, see the `~spikeinterface.compute_sparsity()` function.
-    include_multi_channel_metrics: bool, default: False
+    include_multi_channel_metrics : bool, default: False
         Whether to compute multi-channel metrics
-    metrics_kwargs: dict
+    metrics_kwargs : dict
         Additional arguments to pass to the metric functions. Including:
             * recovery_window_ms: the window in ms after the peak to compute the recovery_slope, default: 0.7
             * peak_relative_threshold: the relative threshold to detect positive and negative peaks, default: 0.2

@@ -98,6 +98,7 @@ def get_potential_auto_merge(
         * | "feature_neighbors": focused on finding unit pairs whose spikes are close in the feature space using kNN.
           | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_locations",
           | "knn", "quality_score"
+
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
     resolve_graph : bool, default: False
         If True, the function resolves the potential unit pairs to be merged into multiple-unit merges.
@@ -145,6 +146,8 @@ def get_potential_auto_merge(
         Pontential steps : "num_spikes", "snr", "remove_contaminated", "unit_locations", "correlogram",
         "template_similarity", "presence_distance", "cross_contamination", "knn", "quality_score"
         Please check steps explanations above!
+    presence_distance_kwargs : None|dict, default: None
+        A dictionary of kwargs to be passed to compute_presence_distance().
 
     Returns
     -------

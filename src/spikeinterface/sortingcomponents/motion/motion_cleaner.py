@@ -11,16 +11,16 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s, speed_threshold=3
 
     Parameters
     ----------
-    motion: numpy array 2d
+    motion : numpy array 2d
         Motion estimate in um.
-    temporal_bins: numpy.array 1d
+    temporal_bins : numpy.array 1d
         temporal bins (bin center)
-    bin_duration_s: float
+    bin_duration_s : float
         bin duration in second
-    speed_threshold: float (units um/s)
+    speed_threshold : float (units um/s)
         Maximum speed treshold between 2 bins allowed.
         Expressed in um/s
-    sigma_smooth_s: None or float
+    sigma_smooth_s : None or float
         Optional smooting gaussian kernel.
 
     Returns

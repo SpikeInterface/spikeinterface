@@ -24,16 +24,16 @@ class ComputeUnitLocations(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    method: "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
+    method : "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
         The method to use for localization
-    method_kwargs: dict, default: {}
+    method_kwargs : dict, default: {}
         Other kwargs depending on the method
 
     Returns
     -------
-    unit_locations: np.array
+    unit_locations : np.array
         unit location with shape (num_unit, 2) or (num_unit, 3) or (num_unit, 3) (with alpha)
     """
 
