@@ -628,8 +628,10 @@ class DetectPeakMatchedFiltering(PeakDetector):
         self.use_torch = use_torch
         if HAVE_TORCH and self.use_torch:
             if device is None:
-                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
+                self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            else:
+                self.device = device
+
         self.exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)
         self.neighbours_mask = channel_distance <= radius_um
@@ -673,9 +675,9 @@ class DetectPeakMatchedFiltering(PeakDetector):
         singular = singular.T[:, :, np.newaxis]
 
         if HAVE_TORCH and self.use_torch:
-            self.spatial = torch.from_numpy(spatial.astype(np.float32))
-            self.singular = torch.from_numpy(singular.astype(np.float32))
-            self.temporal = torch.from_numpy(temporal.copy().astype(np.float32)).swapaxes(0, 1).unsqueeze(2)      
+            self.spatial = torch.as_tensor(spatial.astype(np.float32), device=self.device)
+            self.singular = torch.as_tensor(singular.astype(np.float32), device=self.device)
+            self.temporal = torch.as_tensor(temporal.copy().astype(np.float32), device=self.device).swapaxes(0, 1).unsqueeze(2)      
         else:
             self.temporal = temporal.astype(np.float32)
             self.spatial = spatial.astype(np.float32)
@@ -756,7 +758,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         if HAVE_TORCH and self.use_torch:
             
             from torch.nn.functional import conv2d
-            torch_traces = torch.from_numpy(traces.T[None, :, :])
+            torch_traces = torch.as_tensor(traces.T[None, :, :], device=self.device)
             num_templates, num_channels = temporal.shape[0], temporal.shape[1]
             num_samples = torch_traces.shape[2]
             spatially_filtered_data = torch.matmul(spatial, torch_traces)
