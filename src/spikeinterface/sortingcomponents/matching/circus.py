@@ -40,9 +40,9 @@ def compress_templates(templates_array, approx_rank, remove_mean=True, return_ne
 
     temporal, singular, spatial = np.linalg.svd(templates_array, full_matrices=False)
     # Keep only the strongest components
-    temporal = temporal[:, :, :approx_rank]
-    singular = singular[:, :approx_rank]
-    spatial = spatial[:, :approx_rank, :]
+    temporal = temporal[:, :, :approx_rank].astype(np.float32)
+    singular = singular[:, :approx_rank].astype(np.float32)
+    spatial = spatial[:, :approx_rank, :].astype(np.float32)
 
     if return_new_templates:
         templates_array = np.matmul(temporal * singular[:, np.newaxis, :], spatial)

@@ -677,9 +677,9 @@ class DetectPeakMatchedFiltering(PeakDetector):
             self.singular = torch.from_numpy(singular.astype(np.float32))
             self.temporal = torch.from_numpy(temporal.copy().astype(np.float32)).swapaxes(0, 1).unsqueeze(2)      
         else:
-            self.temporal = temporal
-            self.spatial = spatial
-            self.singular = singular
+            self.temporal = temporal.astype(np.float32)
+            self.spatial = spatial.astype(np.float32)
+            self.singular = singular.astype(np.float32)
 
         random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
         conv_random_data = self.get_convolved_traces(random_data, self.temporal, self.spatial, self.singular)

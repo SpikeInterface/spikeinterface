@@ -833,10 +833,10 @@ def compress_templates(templates, approx_rank):
     temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
 
     # Keep only the strongest components
-    temporal = temporal[:, :, :approx_rank]
+    temporal = temporal[:, :, :approx_rank].astype(np.float32)
     temporal = np.flip(temporal, axis=1)
-    singular = singular[:, :approx_rank]
-    spatial = spatial[:, :approx_rank, :]
+    singular = singular[:, :approx_rank].astype(np.float32)
+    spatial = spatial[:, :approx_rank, :].astype(np.float32)
     return temporal, singular, spatial
 
 
