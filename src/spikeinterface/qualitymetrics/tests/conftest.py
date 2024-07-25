@@ -5,10 +5,11 @@ from spikeinterface.core import (
     create_sorting_analyzer,
 )
 
-job_kwargs = dict(n_jobs=-1, progress_bar=True, chunk_duration="1s")
+job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 
-def _small_sorting_analyzer():
+@pytest.fixture(scope="module")
+def small_sorting_analyzer():
     recording, sorting = generate_ground_truth_recording(
         durations=[2.0],
         num_units=10,
@@ -35,12 +36,7 @@ def _small_sorting_analyzer():
 
 
 @pytest.fixture(scope="module")
-def small_sorting_analyzer():
-    return _small_sorting_analyzer()
-
-
-def _sorting_analyzer_simple():
-
+def sorting_analyzer_simple():
     # we need high firing rate for amplitude_cutoff
     recording, sorting = generate_ground_truth_recording(
         durations=[
@@ -73,16 +69,3 @@ def _sorting_analyzer_simple():
     sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
 
     return sorting_analyzer
-
-
-@pytest.fixture(scope="module")
-def sorting_analyzer_simple():
-    sorting_analyzer = get_sorting_analyzer(seed=2205)
-    return sorting_analyzer
-
-    return sorting_analyzer
-
-
-@pytest.fixture(scope="module")
-def sorting_analyzer_simple():
-    return _sorting_analyzer_simple()
