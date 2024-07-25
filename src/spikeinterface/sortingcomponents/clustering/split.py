@@ -81,7 +81,6 @@ def split_clusters(
     ) as pool:
         labels_set = np.setdiff1d(peak_labels, [-1])
         current_max_label = np.max(labels_set) + 1
-
         jobs = []
         for label in labels_set:
             peak_indices = np.flatnonzero(peak_labels == label)
@@ -95,6 +94,7 @@ def split_clusters(
 
         for res in iterator:
             is_split, local_labels, peak_indices = res.result()
+            #print(is_split, local_labels, peak_indices)
             if not is_split:
                 continue
 
@@ -102,7 +102,6 @@ def split_clusters(
             peak_labels[peak_indices[mask]] = local_labels[mask] + current_max_label
             peak_labels[peak_indices[~mask]] = local_labels[~mask]
             split_count[peak_indices] += 1
-
             current_max_label += np.max(local_labels[mask]) + 1
 
             if recursive:
@@ -187,7 +186,7 @@ class LocalFeatureClustering:
         min_size_split=25,
         n_pca_features=2,
         scale_n_pca_by_depth=False,
-        minimum_common_channels=1,
+        sparsity_overlap=0.25,
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
@@ -198,14 +197,18 @@ class LocalFeatureClustering:
 
         # target channel subset is done intersect local channels + neighbours
         local_chans = np.unique(peaks["channel_index"][peak_indices])
-        target_channels = np.flatnonzero(np.all(neighbours_mask[local_chans, :], axis=0))
-        # print(recursion_level, target_channels)
+        
+        target_intersection_channels = np.flatnonzero(np.all(neighbours_mask[local_chans, :], axis=0))
+        target_union_channels = np.flatnonzero(np.any(neighbours_mask[local_chans, :], axis=0))
+        num_intersection = len(target_intersection_channels)
+        num_union = len(target_union_channels)
+
         # TODO fix this a better way, this when cluster have too few overlapping channels
-        if target_channels.size < minimum_common_channels:
+        if (num_intersection / num_union) < sparsity_overlap:
             return False, None
 
         aligned_wfs, dont_have_channels = aggregate_sparse_features(
-            peaks, peak_indices, sparse_features, waveforms_sparse_mask, target_channels
+            peaks, peak_indices, sparse_features, waveforms_sparse_mask, target_intersection_channels
         )
 
         local_labels[dont_have_channels] = -2
