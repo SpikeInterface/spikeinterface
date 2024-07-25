@@ -94,7 +94,7 @@ def split_clusters(
 
         for res in iterator:
             is_split, local_labels, peak_indices = res.result()
-            #print(is_split, local_labels, peak_indices)
+            # print(is_split, local_labels, peak_indices)
             if not is_split:
                 continue
 
@@ -197,7 +197,7 @@ class LocalFeatureClustering:
 
         # target channel subset is done intersect local channels + neighbours
         local_chans = np.unique(peaks["channel_index"][peak_indices])
-        
+
         target_intersection_channels = np.flatnonzero(np.all(neighbours_mask[local_chans, :], axis=0))
         target_union_channels = np.flatnonzero(np.any(neighbours_mask[local_chans, :], axis=0))
         num_intersection = len(target_intersection_channels)
