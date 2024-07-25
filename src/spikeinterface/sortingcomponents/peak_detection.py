@@ -618,12 +618,18 @@ class DetectPeakMatchedFiltering(PeakDetector):
         noise_levels=None,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
+        use_torch=True,
+        device=None
     ):
         PeakDetector.__init__(self, recording, return_output=True)
 
         if not HAVE_NUMBA:
             raise ModuleNotFoundError('matched_filtering" needs numba which is not installed')
-
+        self.use_torch = use_torch
+        if HAVE_TORCH and self.use_torch:
+            if device is None:
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
         self.exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)
         self.neighbours_mask = channel_distance <= radius_um
@@ -658,7 +664,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         spatial = spatial[:, :rank, :]
         templates = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
         norms = np.linalg.norm(templates, axis=(1, 2))
-        del templates
+        del templates            
 
         temporal /= norms[:, np.newaxis, np.newaxis]
         temporal = np.flip(temporal, axis=1)
@@ -666,12 +672,17 @@ class DetectPeakMatchedFiltering(PeakDetector):
         temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
         singular = singular.T[:, :, np.newaxis]
 
-        self.temporal = temporal
-        self.spatial = spatial
-        self.singular = singular
+        if HAVE_TORCH and self.use_torch:
+            self.spatial = torch.from_numpy(spatial.astype(np.float32))
+            self.singular = torch.from_numpy(singular.astype(np.float32))
+            self.temporal = torch.from_numpy(temporal.copy().astype(np.float32)).swapaxes(0, 1).unsqueeze(2)      
+        else:
+            self.temporal = temporal
+            self.spatial = spatial
+            self.singular = singular
 
         random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
-        conv_random_data = self.get_convolved_traces(random_data, temporal, spatial, singular)
+        conv_random_data = self.get_convolved_traces(random_data, self.temporal, self.spatial, self.singular)
         medians = np.median(conv_random_data, axis=1)
         medians = medians[:, None]
         noise_levels = np.median(np.abs(conv_random_data - medians), axis=1) / 0.6744897501960817
@@ -741,14 +752,26 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
     def get_convolved_traces(self, traces, temporal, spatial, singular):
         import scipy.signal
-
-        num_timesteps, num_templates = len(traces), temporal.shape[1]
-        num_peaks = num_timesteps - self.conv_margin + 1
-        scalar_products = np.zeros((num_templates, num_peaks), dtype=np.float32)
-        spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
-        scaled_filtered_data = spatially_filtered_data * singular
-        objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="valid")
-        scalar_products += np.sum(objective_by_rank, axis=0)
+        
+        if HAVE_TORCH and self.use_torch:
+            
+            from torch.nn.functional import conv2d
+            torch_traces = torch.from_numpy(traces.T[None, :, :])
+            num_templates, num_channels = temporal.shape[0], temporal.shape[1]
+            num_samples = torch_traces.shape[2]
+            spatially_filtered_data = torch.matmul(spatial, torch_traces)
+            scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1).unsqueeze(2)
+            scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, 1, num_samples)
+            scalar_products = conv2d(scaled_filtered_data_, self.temporal, groups=num_templates, padding='valid')
+            scalar_products = scalar_products.numpy()[0, :, 0, :] 
+        else:
+            num_timesteps, num_templates = len(traces), temporal.shape[1]
+            num_peaks = num_timesteps - self.conv_margin + 1
+            scalar_products = np.zeros((num_templates, num_peaks), dtype=np.float32)
+            spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
+            scaled_filtered_data = spatially_filtered_data * singular
+            objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="valid")
+            scalar_products += np.sum(objective_by_rank, axis=0)
         return scalar_products
 
 
