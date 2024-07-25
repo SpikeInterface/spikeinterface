@@ -12,8 +12,13 @@ from spikeinterface.core.generate import (
 )
 import numpy as np
 from spikeinterface.generation.noise_tools import generate_noise
-from spikeinterface.core.generate import setup_inject_templates_recording
+from spikeinterface.core.generate import setup_inject_templates_recording, _ensure_firing_rates
 from spikeinterface.core import InjectTemplatesRecording
+
+
+# TODO: add note on what is fixed / not fixed across sessions
+# TODO: tests are failing because of mutable default arguments.
+# will need to fix this before proceeding.
 
 
 def generate_session_displacement_recordings(
@@ -87,7 +92,8 @@ def generate_session_displacement_recordings(
             "scalings" - a list of numpy arrays, one for each recording, with
                 each entry an array of length num_units holding the unit scalings.
                 e.g. for 3 recordings, 2 units: ((1, 1), (1, 1), (0.5, 0.5)).
-
+    generate_sorting_kwargs : dict
+        Only `firing_rates` and `refractory_period_ms` are expected if passed.
     All other parameters are used as in from `generate_drifting_recording()`.
 
     Returns
@@ -103,6 +109,19 @@ def generate_session_displacement_recordings(
         "templates_array_moved" : list[np.array]
             A list (length num records) of (num_units, num_samples, num_channels)
             arrays of templates that have been shifted.
+
+
+    Notes
+    -----
+    It is important to consider what unit properties are maintained
+    across the session. Here, all `generate_template_kwargs` are fixed
+    across sessions, to be sure the unit properties do not change.
+    The firing rates passed to `generate_sorting` for each unit are
+    also fixed across sessions. When a seed is set, the exact spike times
+    will also be fixed across recordings. otherwise, when seed is `None`
+    the actual spike times will be different across recordings, although
+    all other unit properties will be maintained (except any location
+    shifting and template scaling applied).
     """
     _check_generate_session_displacement_arguments(
         num_units, recording_durations, recording_shifts, recording_amplitude_scalings
@@ -120,13 +139,18 @@ def generate_session_displacement_recordings(
     )
 
     # Fix generate template kwargs, so they are the same for every created recording.
+    # Also fix unit firing rates across recordings.
     generate_templates_kwargs = fix_generate_templates_kwargs(generate_templates_kwargs, num_units, seed)
+
+    fixed_firing_rates = _ensure_firing_rates(generate_sorting_kwargs["firing_rates"], num_units, seed)
+    generate_sorting_kwargs["firing_rates"] = fixed_firing_rates
 
     # Start looping over parameters, creating recordings shifted
     # and scaled as required
     extra_outputs_dict = {
         "unit_locations": [],
         "templates_array_moved": [],
+        "firing_rates": [],
     }
     output_recordings = []
     output_sortings = []
@@ -173,9 +197,16 @@ def generate_session_displacement_recordings(
             **generate_templates_kwargs,
         )
 
+        # TODO: these first amplitdues don't change per loop, but are usually not
+        # needed...
         if recording_amplitude_scalings is not None:
+
+            first_rec_templates = (
+                templates_array_moved if rec_idx == 0 else extra_outputs_dict["templates_array_moved"][0]
+            )
+
             _amplitude_scale_templates_in_place(
-                templates_array_moved, recording_amplitude_scalings, sorting_extra_outputs, rec_idx
+                first_rec_templates, templates_array_moved, recording_amplitude_scalings, sorting_extra_outputs, rec_idx
             )
 
         # Bring it all together in a `InjectTemplatesRecording` and
@@ -203,6 +234,7 @@ def generate_session_displacement_recordings(
         output_sortings.append(sorting)
         extra_outputs_dict["unit_locations"].append(unit_locations_moved)
         extra_outputs_dict["templates_array_moved"].append(templates_array_moved)
+        extra_outputs_dict["firing_rates"].append(sorting_extra_outputs["firing_rates"][0])
 
     if extra_outputs:
         return output_recordings, output_sortings, extra_outputs_dict
@@ -255,7 +287,9 @@ def _get_inter_session_displacements(shift, non_rigid_gradient, num_units, unit_
     return displacement_vector, displacement_unit_factor
 
 
-def _amplitude_scale_templates_in_place(templates_array, recording_amplitude_scalings, sorting_extra_outputs, rec_idx):
+def _amplitude_scale_templates_in_place(
+    first_rec_templates, moved_templates, recording_amplitude_scalings, sorting_extra_outputs, rec_idx
+):
     """
     Scale a set of templates given a set of scaling values. The scaling
     values can be applied in the order passed, or instead in order of
@@ -264,9 +298,13 @@ def _amplitude_scale_templates_in_place(templates_array, recording_amplitude_sca
 
     Parameters
     ----------
-    templates_array : np.array
-        A (num_units, num_samples, num_channels) array of
-        template waveforms for all units.
+    first_rec_templates : np.array
+        The (num_units, num_samples, num_channels) templates array from the
+        first recording. Scaling by amplitude scales based on the amplitudes in
+        the first session.
+    moved_templates : np.array
+        A (num_units, num_samples, num_channels) array moved templates to the
+        current recording, that will be scaled.
     recording_amplitude_scalings : dict
         see `generate_session_displacement_recordings()`.
     sorting_extra_outputs : dict
@@ -294,12 +332,12 @@ def _amplitude_scale_templates_in_place(templates_array, recording_amplitude_sca
         firing_rates_hz = sorting_extra_outputs["firing_rates"][0]
 
         if method == "by_amplitude_and_firing_rate":
-            neg_ampl = np.min(np.min(templates_array, axis=2), axis=1)
+            neg_ampl = np.min(np.min(first_rec_templates, axis=2), axis=1)
+            assert np.all(neg_ampl < 0), "assumes all amplitudes are negative here."
             score = firing_rates_hz * neg_ampl
         else:
             score = firing_rates_hz
 
-        assert np.all(score < 0), "assumes all amplitudes are negative here."
         order_idx = np.argsort(score)
         ordered_rec_scalings = recording_amplitude_scalings["scalings"][rec_idx][order_idx, np.newaxis, np.newaxis]
 
@@ -310,7 +348,7 @@ def _amplitude_scale_templates_in_place(templates_array, recording_amplitude_sca
     else:
         raise ValueError("`recording_amplitude_scalings['method']` not recognised.")
 
-    templates_array *= ordered_rec_scalings
+    moved_templates *= ordered_rec_scalings
 
 
 def _check_generate_session_displacement_arguments(

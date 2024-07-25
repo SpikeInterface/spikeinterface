@@ -12,7 +12,7 @@ class TestSessionDisplacementGenerator:
     """
     This class tests the `generate_session_displacement_recordings` that
     returns a recordings / sorting in which the units are shifted
-    across sessions. This is acheived by shifting the unit locations
+    across sessions. This is achieved by shifting the unit locations
     in both (x, y) on the generated templates that are used in
     `InjectTemplatesRecording()`.
     """
@@ -136,7 +136,7 @@ class TestSessionDisplacementGenerator:
         for rec, expected_rec_length in zip(output_recordings, options["kwargs"]["recording_durations"]):
             assert rec.get_total_duration() == expected_rec_length
 
-    def test_spike_times_across_recordings(self, options):
+    def test_spike_times_and_firing_rates_across_recordings(self, options):
         """
         Check the randomisation of spike times across recordings.
         When a seed is set, this is passed to `generate_sorting`
@@ -146,14 +146,17 @@ class TestSessionDisplacementGenerator:
         """
         options["kwargs"]["recording_durations"] = (10,) * options["num_recs"]
 
-        output_sortings_same = generate_session_displacement_recordings(**options["kwargs"])[1]
+        output_sortings_same, extra_outputs_same = generate_session_displacement_recordings(**options["kwargs"])[1:3]
 
         options["kwargs"]["seed"] = None
-        output_sortings_different = generate_session_displacement_recordings(**options["kwargs"])[1]
+        output_sortings_different, extra_outputs_different = generate_session_displacement_recordings(
+            **options["kwargs"]
+        )[1:3]
 
         for unit_idx in range(options["kwargs"]["num_units"]):
             for rec_idx in range(1, options["num_recs"]):
 
+                # Exact spike times are not preserved when seed is None
                 assert np.array_equal(
                     output_sortings_same[0].get_unit_spike_train(unit_idx),
                     output_sortings_same[rec_idx].get_unit_spike_train(unit_idx),
@@ -161,6 +164,15 @@ class TestSessionDisplacementGenerator:
                 assert not np.array_equal(
                     output_sortings_different[0].get_unit_spike_train(unit_idx),
                     output_sortings_different[rec_idx].get_unit_spike_train(unit_idx),
+                )
+                # Firing rates should always be preserved.
+                assert np.array_equal(
+                    extra_outputs_same["firing_rates"][0][unit_idx],
+                    extra_outputs_same["firing_rates"][rec_idx][unit_idx],
+                )
+                assert np.array_equal(
+                    extra_outputs_different["firing_rates"][0][unit_idx],
+                    extra_outputs_different["firing_rates"][rec_idx][unit_idx],
                 )
 
     @pytest.mark.parametrize("dim_idx", [0, 1])
@@ -271,32 +283,70 @@ class TestSessionDisplacementGenerator:
         assert np.isclose(new_pos, first_pos + y_shift, rtol=0, atol=options["y_bin_um"])
 
     def test_amplitude_scalings(self, options):
-
+        """
+        Test that the templates are scaled by the passed scaling factors
+        in the specified order. The order can be in the passed order,
+        in the order of highest-to-lowest firing unit, or in the order
+        of (amplitude * firing_rate) (highest to lowest unit).
+        """
+        # Setup arguments to create an unshifted set of recordings
+        # where the templates are to be scaled with `true_scalings`
         options["kwargs"]["recording_durations"] = (10, 10)
         options["kwargs"]["recording_shifts"] = ((0, 0), (0, 0))
         options["kwargs"]["num_units"] == 5,
 
+        true_scalings = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+
         recording_amplitude_scalings = {
             "method": "by_passed_order",
-            "scalings": (np.ones(5), np.array([0.1, 0.2, 0.3, 0.4, 0.5])),
+            "scalings": (np.ones(5), true_scalings),
         }
 
         _, output_sortings, extra_outputs = generate_session_displacement_recordings(
             **options["kwargs"],
             recording_amplitude_scalings=recording_amplitude_scalings,
         )
-        breakpoint()
-        first, second = extra_outputs["templates_array_moved"]  # TODO: own function
+
+        # Check that the unit templates are scaled in the order
+        # the scalings were passed.
+        test_scalings = self._calculate_scalings_from_output(extra_outputs)
+        assert np.allclose(test_scalings, true_scalings)
+
+        # Now run, again applying the scalings in the order of
+        # unit firing rates (highest to lowest).
+        firing_rates = np.array([5, 4, 3, 2, 1])
+        generate_sorting_kwargs = dict(firing_rates=firing_rates, refractory_period_ms=4.0)
+        recording_amplitude_scalings["method"] = "by_firing_rate"
+        _, output_sortings, extra_outputs = generate_session_displacement_recordings(
+            **options["kwargs"],
+            recording_amplitude_scalings=recording_amplitude_scalings,
+            generate_sorting_kwargs=generate_sorting_kwargs,
+        )
+
+        test_scalings = self._calculate_scalings_from_output(extra_outputs)
+        assert np.allclose(test_scalings, true_scalings[np.argsort(firing_rates)])
+
+        # Finally, run again applying the scalings in the order of
+        # unit amplitude * firing_rate
+        recording_amplitude_scalings["method"] = "by_amplitude_and_firing_rate"  # TODO: method -> order
+        amplitudes = np.min(np.min(extra_outputs["templates_array_moved"][0], axis=2), axis=1)
+        firing_rate_by_amplitude = np.argsort(amplitudes * firing_rates)
+
+        _, output_sortings, extra_outputs = generate_session_displacement_recordings(
+            **options["kwargs"],
+            recording_amplitude_scalings=recording_amplitude_scalings,
+            generate_sorting_kwargs=generate_sorting_kwargs,
+        )
+
+        test_scalings = self._calculate_scalings_from_output(extra_outputs)
+        assert np.allclose(test_scalings, true_scalings[firing_rate_by_amplitude])
+
+    def _calculate_scalings_from_output(self, extra_outputs):
+        first, second = extra_outputs["templates_array_moved"]
         first_min = np.min(np.min(first, axis=2), axis=1)
         second_min = np.min(np.min(second, axis=2), axis=1)
-        scales = second_min / first_min
-
-        assert np.allclose(scales, shifts)
-
-        # TODO: scale based on recording output
-        # check scaled by amplitude.
-
-        breakpoint()
+        test_scalings = second_min / first_min
+        return test_scalings
 
     def test_metadata(self, options):
         """
@@ -339,7 +389,7 @@ class TestSessionDisplacementGenerator:
         generate_probe_kwargs = None
         generate_unit_locations_kwargs = dict()
         generate_templates_kwargs = dict(ms_before=1.5, ms_after=3)
-        generate_sorting_kwargs = dict()
+        generate_sorting_kwargs = dict(firing_rates=1)
         generate_noise_kwargs = dict()
         seed = 42
 

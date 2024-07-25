@@ -50,9 +50,9 @@ rec_list, _ = generate_session_displacement_recordings(
         "method": "by_amplitude_and_firing_rate",
         "scalings": scale_,
     },
-    generate_sorting_kwargs=dict(firing_rates=(149, 150), refractory_period_ms=4.0),
+    generate_sorting_kwargs=dict(firing_rates=(0, 200), refractory_period_ms=4.0),
     generate_templates_kwargs=dict(unit_params=default_unit_params_range, ms_before=1.5, ms_after=3),
-    seed=44,
+    seed=None,
     generate_unit_locations_kwargs=dict(
         margin_um=0.0,  # if this is say 20, then units go off the edge of the probe and are such low amplitude they are not picked up.
         minimum_z=5.0,
