@@ -14,7 +14,7 @@ from spikeinterface.qualitymetrics import (
     compute_quality_metrics,
 )
 
-job_kwargs = dict(n_jobs=-1, progress_bar=True, chunk_duration="1s")
+job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 
 def test_compute_quality_metrics(sorting_analyzer_simple):

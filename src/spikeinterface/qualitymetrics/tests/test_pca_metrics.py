@@ -13,7 +13,7 @@ def test_calculate_pc_metrics(small_sorting_analyzer):
     res1 = compute_pc_metrics(sorting_analyzer, n_jobs=1, progress_bar=True, seed=1205)
     res1 = pd.DataFrame(res1)
 
-    res2 = compute_pc_metrics(sorting_analyzer, n_jobs=-1, progress_bar=True, seed=1205)
+    res2 = compute_pc_metrics(sorting_analyzer, n_jobs=2, progress_bar=True, seed=1205)
     res2 = pd.DataFrame(res2)
 
     for metric_name in res1.columns:

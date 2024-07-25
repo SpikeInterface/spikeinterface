@@ -44,7 +44,7 @@ from spikeinterface.qualitymetrics import (
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
 
-job_kwargs = dict(n_jobs=-1, progress_bar=True, chunk_duration="1s")
+job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 
 def test_unit_structure_in_output(small_sorting_analyzer):
