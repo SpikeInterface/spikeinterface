@@ -17,6 +17,14 @@ spike_dtype = [
     ("segment_index", "int64"),
 ]
 
+try:
+    import torch
+    import torch.nn.functional as F
+
+    HAVE_TORCH = True
+except ImportError:
+    HAVE_TORCH = False
+
 from .main import BaseTemplateMatchingEngine
 
 
@@ -104,18 +112,22 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
     Parameters
     ----------
-    amplitude: tuple
+    amplitude : tuple
         (Minimal, Maximal) amplitudes allowed for every template
-    max_failures: int
+    max_failures : int
         Stopping criteria of the OMP algorithm, as number of retry while updating amplitudes
-    sparse_kwargs: dict
+    sparse_kwargs : dict
         Parameters to extract a sparsity mask from the waveform_extractor, if not
         already sparse.
-    rank: int, default: 5
+    rank : int, default: 5
         Number of components used internally by the SVD
-    vicinity: int
+    vicinity : int
         Size of the area surrounding a spike to perform modification (expressed in terms
         of template temporal width)
+    use_torch : bool
+        If torch is present, it is used by default
+    device : string or torch.device
+        Controls torch device
     -----
     """
 
@@ -129,6 +141,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         "rank": 5,
         "ignore_inds": [],
         "vicinity": 3,
+        "use_torch" : False, 
+        "device" : None
     }
 
     @classmethod
@@ -161,7 +175,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
         d["temporal"] /= d["norms"][:, np.newaxis, np.newaxis]
         d["temporal"] = np.flip(d["temporal"], axis=1)
-
+            
         d["overlaps"] = []
         d["max_similarity"] = np.zeros((num_templates, num_templates), dtype=np.float32)
         for i in range(num_templates):
@@ -200,6 +214,12 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         d["spatial"] = np.moveaxis(d["spatial"], [0, 1, 2], [1, 0, 2])
         d["temporal"] = np.moveaxis(d["temporal"], [0, 1, 2], [1, 2, 0])
         d["singular"] = d["singular"].T[:, :, np.newaxis]
+
+        if HAVE_TORCH and d['use_torch']:
+            d['spatial'] = torch.as_tensor(d["spatial"])
+            d['singular'] = torch.as_tensor(d["singular"])
+            d['temporal'] = torch.as_tensor(d["temporal"]).swapaxes(0, 1).unsqueeze(2)
+
         return d
 
     @classmethod
@@ -489,27 +509,27 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     Parameters
     ----------
-    peak_sign: str
+    peak_sign : str
         Sign of the peak (neg, pos, or both)
-    exclude_sweep_ms: float
+    exclude_sweep_ms : float
         The number of samples before/after to classify a peak (should be low)
-    jitter: int
+    jitter : int
         The number of samples considered before/after every peak to search for
         matches
-    detect_threshold: int
+    detect_threshold : int
         The detection threshold
-    noise_levels: array
+    noise_levels : array
         The noise levels, for every channels
-    random_chunk_kwargs: dict
+    random_chunk_kwargs : dict
         Parameters for computing noise levels, if not provided (sub optimal)
-    max_amplitude: float
+    max_amplitude : float
         Maximal amplitude allowed for every template
-    min_amplitude: float
+    min_amplitude : float
         Minimal amplitude allowed for every template
-    use_sparse_matrix_threshold: float
+    use_sparse_matrix_threshold : float
         If density of the templates is below a given threshold, sparse matrix
         are used (memory efficient)
-    sparse_kwargs: dict
+    sparse_kwargs : dict
         Parameters to extract a sparsity mask from the waveform_extractor, if not
         already sparse.
     -----
