@@ -993,6 +993,10 @@ def compute_objective(traces, template_data, approx_rank, use_torch=True, device
     temporal, singular, spatial, _ = template_data.compressed_templates
     if HAVE_TORCH and use_torch:
         from torch.nn.functional import conv2d
+        nt = temporal.shape[3] - 1
+        nb_channels = traces.shape[1]
+        blank = np.zeros((nt, nb_channels), dtype=np.float32)
+        traces = np.vstack((blank, traces, blank))
         torch_traces = torch.as_tensor(traces.T[None, :, :], device=device)
         num_templates, num_channels = temporal.shape[0], temporal.shape[1]
         num_samples = torch_traces.shape[2]
@@ -1000,19 +1004,17 @@ def compute_objective(traces, template_data, approx_rank, use_torch=True, device
         scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1).unsqueeze(2)
         scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, 1, num_samples)
         objective = conv2d(scaled_filtered_data_, temporal, groups=num_templates, padding='valid')
-        objective = objective.cpu().numpy()[0, :, 0, :] 
+        objective = objective.cpu().numpy()[0, :, 0, :]
     else:
         num_channels, num_templates  = temporal.shape[0], temporal.shape[1]
         num_samples = temporal.shape[2]
         objective_len = get_convolution_len(traces.shape[0], num_samples)
         conv_shape = (num_templates, objective_len)
         objective = np.zeros(conv_shape, dtype=np.float32)
-        
         # Filter using overlap-and-add convolution
         spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
         scaled_filtered_data = spatially_filtered_data * singular
         from scipy import signal
-
         objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="full")
         objective += np.sum(objective_by_rank, axis=0)
     return objective
