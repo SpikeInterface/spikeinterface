@@ -73,7 +73,7 @@ class WobbleParameters:
     scale_min: float = 0
     scale_max: float = np.inf
     scale_amplitudes: bool = False
-    use_torch: bool = False
+    use_torch: bool = True
     device: str = None
 
     def __post_init__(self):
@@ -387,6 +387,12 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
+
+        if params.device is None:
+            kwargs['device'] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            kwargs['device'] = params.device
+
         template_meta = TemplateMetadata.from_parameters_and_templates(params, templates_array)
         if not templates.are_templates_sparse():
             sparsity = Sparsity.from_parameters_and_templates(params, templates_array)
@@ -401,6 +407,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         pairwise_convolution = convolve_templates(
             compressed_templates, params.jitter_factor, params.approx_rank, template_meta.jittered_indices, sparsity
         )
+
         norm_squared = compute_template_norm(sparsity.visible_channels, templates_array)
         template_data = TemplateData(
             compressed_templates=compressed_templates,
@@ -408,7 +415,18 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             norm_squared=norm_squared,
         )
         
+        spatial = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
+        temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
+        singular = singular.T[:, :, np.newaxis]
 
+        if HAVE_TORCH and params.use_torch:
+            spatial = torch.as_tensor(spatial, device=kwargs['device'])
+            singular = torch.as_tensor(singular, device=kwargs['device'])
+            temporal = torch.as_tensor(temporal.copy(), device=kwargs['device']).swapaxes(0, 1).unsqueeze(2)
+            template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
+        else:
+            template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
+    
         # Pack initial data into kwargs
         kwargs["params"] = params
         kwargs["template_meta"] = template_meta
@@ -416,11 +434,6 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         kwargs["template_data"] = template_data
         kwargs["nbefore"] = templates.nbefore
         kwargs["nafter"] = templates.nafter
-
-        if params.device is None:
-            kwargs['device'] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        else:
-            kwargs['device'] = params.device
 
         d.update(kwargs)
         return d
@@ -861,6 +874,7 @@ def compress_templates(templates, approx_rank):
     temporal = np.flip(temporal, axis=1)
     singular = singular[:, :approx_rank].astype(np.float32)
     spatial = spatial[:, :approx_rank, :].astype(np.float32)
+
     return temporal, singular, spatial
 
 
@@ -977,14 +991,8 @@ def compute_objective(traces, template_data, approx_rank, use_torch=True, device
     objective : ndarray (template_meta.num_templates, traces.shape[0]+template_meta.num_samples-1)
             Template matching objective for each template.
     """
-    temporal, singular, spatial, temporal_jittered = template_data.compressed_templates
+    temporal, singular, spatial, _ = template_data.compressed_templates
     if HAVE_TORCH and use_torch:
-        spatial_filters = np.moveaxis(spatial[:, :approx_rank, :], [0, 1, 2], [1, 0, 2])
-        temporal_filters = np.moveaxis(temporal[:, :, :approx_rank], [0, 1, 2], [1, 2, 0])
-        singular_filters = singular.T[:, :, np.newaxis]
-        spatial = torch.as_tensor(spatial_filters.astype(np.float32), device=device)
-        singular = torch.as_tensor(singular_filters.astype(np.float32), device=device)
-        temporal = torch.as_tensor(temporal_filters.copy().astype(np.float32), device=device).swapaxes(0, 1).unsqueeze(2)
         from torch.nn.functional import conv2d
         torch_traces = torch.as_tensor(traces.T[None, :, :], device=device)
         num_templates, num_channels = temporal.shape[0], temporal.shape[1]
@@ -995,21 +1003,18 @@ def compute_objective(traces, template_data, approx_rank, use_torch=True, device
         objective = conv2d(scaled_filtered_data_, temporal, groups=num_templates, padding='valid')
         objective = objective.numpy()[0, :, 0, :] 
     else:
-        num_templates = temporal.shape[0]
-        num_samples = temporal.shape[1]
-        objective_len = get_convolution_len(traces.shape[0], num_samples)
+        num_channels, num_templates  = temporal.shape[0], temporal.shape[1]
+        num_samples = temporal.shape[2]
+        objective_len = traces.shape[0] - num_samples + 1
         conv_shape = (num_templates, objective_len)
         objective = np.zeros(conv_shape, dtype=np.float32)
-        spatial_filters = np.moveaxis(spatial[:, :approx_rank, :], [0, 1, 2], [1, 0, 2])
-        temporal_filters = np.moveaxis(temporal[:, :, :approx_rank], [0, 1, 2], [1, 2, 0])
-        singular_filters = singular.T[:, :, np.newaxis]
-
+        
         # Filter using overlap-and-add convolution
-        spatially_filtered_data = np.matmul(spatial_filters, traces.T[np.newaxis, :, :])
-        scaled_filtered_data = spatially_filtered_data * singular_filters
+        spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
+        scaled_filtered_data = spatially_filtered_data * singular
         from scipy import signal
 
-        objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal_filters, axes=2, mode="full")
+        objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="valid")
         objective += np.sum(objective_by_rank, axis=0)
     return objective
 
