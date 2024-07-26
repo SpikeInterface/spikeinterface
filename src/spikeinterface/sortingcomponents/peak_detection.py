@@ -618,7 +618,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         noise_levels=None,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
-        use_torch=True,
+        use_torch=False,
         device=None
     ):
         PeakDetector.__init__(self, recording, return_output=True)
