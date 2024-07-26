@@ -912,7 +912,6 @@ def upsample_and_jitter(temporal, jitter_factor, num_samples):
 
     shape_temporal_jittered = (-1, num_samples, approx_rank)
     temporal_jittered = np.reshape(temporal_jittered[:, shifted_index, :], shape_temporal_jittered)
-
     temporal_jittered = np.flip(temporal_jittered, axis=1)
     return temporal_jittered
 
@@ -1001,11 +1000,11 @@ def compute_objective(traces, template_data, approx_rank, use_torch=True, device
         scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1).unsqueeze(2)
         scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, 1, num_samples)
         objective = conv2d(scaled_filtered_data_, temporal, groups=num_templates, padding='valid')
-        objective = objective.numpy()[0, :, 0, :] 
+        objective = objective.cpu().numpy()[0, :, 0, :] 
     else:
         num_channels, num_templates  = temporal.shape[0], temporal.shape[1]
         num_samples = temporal.shape[2]
-        objective_len = traces.shape[0] - num_samples + 1
+        objective_len = get_convolution_len(traces.shape[0], num_samples)
         conv_shape = (num_templates, objective_len)
         objective = np.zeros(conv_shape, dtype=np.float32)
         
@@ -1014,7 +1013,7 @@ def compute_objective(traces, template_data, approx_rank, use_torch=True, device
         scaled_filtered_data = spatially_filtered_data * singular
         from scipy import signal
 
-        objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="valid")
+        objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="full")
         objective += np.sum(objective_by_rank, axis=0)
     return objective
 

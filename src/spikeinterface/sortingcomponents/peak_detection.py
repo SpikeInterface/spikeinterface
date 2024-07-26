@@ -765,7 +765,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
             scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1).unsqueeze(2)
             scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, 1, num_samples)
             scalar_products = conv2d(scaled_filtered_data_, self.temporal, groups=num_templates, padding='valid')
-            scalar_products = scalar_products.numpy()[0, :, 0, :] 
+            scalar_products = scalar_products.cpu().numpy()[0, :, 0, :] 
         else:
             num_timesteps, num_templates = len(traces), temporal.shape[1]
             num_peaks = num_timesteps - self.conv_margin + 1
