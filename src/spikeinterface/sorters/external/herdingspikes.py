@@ -19,6 +19,7 @@ class HerdingspikesSorter(BaseSorter):
         "chunk_size": None,
         "rescale": True,
         "rescale_value": -1280.0,
+        "lowpass": True,
         "common_reference": "median",
         "spike_duration": 1.0,
         "amp_avg_duration": 0.4,
@@ -53,6 +54,7 @@ class HerdingspikesSorter(BaseSorter):
         "out_file": "Path and filename to store detection and clustering results. (`str`, `HS2_detected`)",
         "verbose": "Print progress information. (`bool`, `True`)",
         "chunk_size": " Number of samples per chunk during detection. If `None`, a suitable value will be estimated. (`int`, `None`)",
+        "lowpass": "Enable internal low-pass filtering (simple two-step average). (`bool`, `True`)",
         "common_reference": "Method for common reference filtering, can be `average` or `median` (`str`, `median`)",
         "rescale": "Automatically re-scale the data.  (`bool`, `True`)",
         "rescale_value": "Factor by which data is re-scaled. (`float`, `-1280.0`)",
@@ -122,20 +124,21 @@ class HerdingspikesSorter(BaseSorter):
 
         hs_version = version.parse(hs.__version__)
 
-        if hs_version >= version.parse("0.4.001"):
+        if hs_version >= version.parse("0.4.1"):
             lightning_api = True
         else:
             lightning_api = False
 
         assert (
             lightning_api
-        ), "HerdingSpikes version <0.4.001 is no longer supported. run:\n>>> pip install --upgrade herdingspikes"
+        ), "HerdingSpikes version <0.4.001 is no longer supported. To upgrade, run:\n>>> pip install --upgrade herdingspikes"
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
         sorted_file = str(sorter_output_folder / "HS2_sorted.hdf5")
         params["out_file"] = str(sorter_output_folder / "HS2_detected")
         p = params
+        p.update({"verbose": verbose})
 
         det = hs.HSDetectionLightning(recording, p)
         det.DetectFromRaw()
