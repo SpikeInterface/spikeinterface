@@ -56,6 +56,7 @@ class Kilosort4Sorter(BaseSorter):
         "save_extra_kwargs": False,
         "skip_kilosort_preprocessing": False,
         "scaleproc": None,
+        "save_preprocessed_copy": False,
         "torch_device": "auto",
     }
 
@@ -98,6 +99,7 @@ class Kilosort4Sorter(BaseSorter):
         "save_extra_kwargs": "If True, additional kwargs are saved to the output",
         "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
+        "save_preprocessed_copy": "save a pre-processed copy of the data (including drift correction) to temp_wh.dat in the results directory",
         "torch_device": "Select the torch device auto/cuda/cpu",
     }
 
@@ -186,6 +188,7 @@ class Kilosort4Sorter(BaseSorter):
         do_CAR = params["do_CAR"]
         invert_sign = params["invert_sign"]
         save_extra_vars = params["save_extra_kwargs"]
+        save_preprocessed_copy = (params["save_preprocessed_copy"],)
         progress_bar = None
         settings_ks = {k: v for k, v in params.items() if k in DEFAULT_SETTINGS}
         settings_ks["n_chan_bin"] = recording.get_num_channels()
@@ -207,7 +210,15 @@ class Kilosort4Sorter(BaseSorter):
         results_dir = sorter_output_folder
         filename, data_dir, results_dir, probe = set_files(settings, filename, probe, probe_name, data_dir, results_dir)
         if version.parse(cls.get_sorter_version()) >= version.parse("4.0.12"):
-            ops = initialize_ops(settings, probe, recording.get_dtype(), do_CAR, invert_sign, device, False)
+            ops = initialize_ops(
+                settings,
+                probe,
+                recording.get_dtype(),
+                do_CAR,
+                invert_sign,
+                device,
+                save_preprocesed_copy=save_preprocessed_copy,
+            )
             n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact, _, _ = (
                 get_run_parameters(ops)
             )
