@@ -732,12 +732,12 @@ class SortingAnalyzer:
         else:
             from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 
-            sorting_provenance, keep_mask = apply_merges_to_sorting(
+            sorting_provenance, keep_mask, _ = apply_merges_to_sorting(
                 sorting=sorting_provenance,
                 merge_unit_groups=merge_unit_groups,
                 new_unit_ids=new_unit_ids,
                 censor_ms=censor_ms,
-                return_kept=True,
+                return_extra=True,
             )
             if censor_ms is None:
                 # in this case having keep_mask None is faster instead of having a vector of ones
@@ -885,6 +885,7 @@ class SortingAnalyzer:
         merging_mode="soft",
         sparsity_overlap=0.75,
         new_id_strategy="append",
+        return_new_unit_ids=False,
         format="memory",
         folder=None,
         verbose=False,
@@ -917,13 +918,14 @@ class SortingAnalyzer:
             The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
                 * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
                 * "take_first" : new_unit_ids will be the first unit_id of every list of merges
+        return_new_unit_ids : bool, default False
+            Alse return new_unit_ids which are the ids of the new units.
         folder : Path | None, default: None
             The new folder where the analyzer with merged units is copied for `format` "binary_folder" or "zarr"
         format : "memory" | "binary_folder" | "zarr", default: "memory"
             The format of SortingAnalyzer
         verbose : bool, default: False
             Whether to display calculations (such as sparsity estimation)
-
 
         Returns
         -------
@@ -952,7 +954,7 @@ class SortingAnalyzer:
         )
         all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
 
-        return self._save_or_select_or_merge(
+        new_analyzer = self._save_or_select_or_merge(
             format=format,
             folder=folder,
             merge_unit_groups=merge_unit_groups,
@@ -964,6 +966,10 @@ class SortingAnalyzer:
             new_unit_ids=new_unit_ids,
             **job_kwargs,
         )
+        if return_new_unit_ids:
+            return new_analyzer, new_unit_ids
+        else:
+            return new_analyzer
 
     def copy(self):
         """

@@ -13,12 +13,12 @@ Extensions as AnalyzerExtensions
 --------------------------------
 
 There are several postprocessing tools available, and all of them are implemented as a
-:py:class:`~spikeinterface.core.ResultExtension`. If the :code:`SortingAnalyzer` is saved to disk, all computations on
+:py:class:`~spikeinterface.core.AnalyzerExtension`. If the :code:`SortingAnalyzer` is saved to disk, all computations on
 top of it will be saved alongside the :code:`SortingAnalyzer` itself (sub folder, zarr path or sub dict).
 This workflow is convenient for retrieval of time-consuming computations (such as pca or spike amplitudes) when reloading a
 :code:`SortingAnalyzer`.
 
-:py:class:`~spikeinterface.core.ResultExtension` objects are tightly connected to the
+:py:class:`~spikeinterface.core.AnalyzerExtension` objects are tightly connected to the
 parent :code:`SortingAnalyzer` object, so that operations done on the :code:`SortingAnalyzer`, such as saving,
 loading, or selecting units, will be automatically applied to all extensions.
 
