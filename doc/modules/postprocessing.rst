@@ -208,9 +208,11 @@ For dense waveforms, sparsity can also be passed as an argument.
 
 .. code-block:: python
 
-    pc = sorting_analyzer.compute(input="principal_components",
-                             n_components=3,
-                             mode="by_channel_local")
+    pc = sorting_analyzer.compute(
+        input="principal_components",
+        n_components=3,
+        mode="by_channel_local"
+    )
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_principal_components`
 
@@ -243,9 +245,7 @@ each spike.
 
 .. code-block:: python
 
-    amplitudes = sorting_analyzer.compute(input="spike_amplitudes",
-                             peak_sign="neg",
-                             outputs="concatenated")
+    amplitudes = sorting_analyzer.compute(input="spike_amplitudes", peak_sign="neg")
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_spike_amplitudes`
 
@@ -263,15 +263,17 @@ with center of mass (:code:`method="center_of_mass"` - fast, but less accurate),
 
 .. code-block:: python
 
-    spike_locations = sorting_analyzer.compute(input="spike_locations",
-                             ms_before=0.5,
-                             ms_after=0.5,
-                             spike_retriever_kwargs=dict(
-                                channel_from_template=True,
-                                radius_um=50,
-                                peak_sign="neg"
-                                              ),
-                             method="center_of_mass")
+    spike_locations = sorting_analyzer.compute(
+        input="spike_locations",
+        ms_before=0.5,
+        ms_after=0.5,
+        spike_retriever_kwargs=dict(
+            channel_from_template=True,
+            radius_um=50,
+            peak_sign="neg"
+        ),
+        method="center_of_mass"
+    )
 
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_spike_locations`
@@ -329,6 +331,12 @@ Optionally, the following multi-channel metrics can be computed by setting:
     Visualization of template metrics. Image from `ecephys_spike_sorting <https://github.com/AllenInstitute/ecephys_spike_sorting/tree/v0.2/ecephys_spike_sorting/modules/mean_waveforms>`_
     from the Allen Institute.
 
+
+.. code-block:: python
+
+    tm = sorting_analyzer.compute(input="template_metrics", include_multi_channel_metrics=True)
+
+
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_template_metrics`
 
 
@@ -340,10 +348,12 @@ with shape (num_units, num_units, num_bins) with all correlograms for each pair 
 
 .. code-block:: python
 
-    ccg = sorting_analyzer.compute(input="correlograms",
-                            window_ms=50.0,
-                            bin_ms=1.0,
-                            method="auto")
+    ccg = sorting_analyzer.compute(
+        input="correlograms",
+        window_ms=50.0,
+        bin_ms=1.0,
+        method="auto"
+    )
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_correlograms`
 
@@ -357,10 +367,12 @@ This extension computes the histograms of inter-spike-intervals. The computed ou
 
 .. code-block:: python
 
-   isi =  sorting_analyer.compute(input="isi_histograms"
-                            window_ms=50.0,
-                            bin_ms=1.0,
-                            method="auto")
+    isi =  sorting_analyer.compute(
+        input="isi_histograms"
+        window_ms=50.0,
+        bin_ms=1.0,
+        method="auto"
+    )
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_isi_histograms`
 
