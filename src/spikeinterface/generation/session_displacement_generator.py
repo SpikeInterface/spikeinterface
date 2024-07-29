@@ -16,11 +16,6 @@ from spikeinterface.core.generate import setup_inject_templates_recording, _ensu
 from spikeinterface.core import InjectTemplatesRecording
 
 
-# TODO: add note on what is fixed / not fixed across sessions
-# TODO: tests are failing because of mutable default arguments.
-# will need to fix this before proceeding.
-
-
 def generate_session_displacement_recordings(
     num_units=250,
     recording_durations=(10, 10, 10),
@@ -123,6 +118,12 @@ def generate_session_displacement_recordings(
     all other unit properties will be maintained (except any location
     shifting and template scaling applied).
     """
+    # temporary fix
+    generate_unit_locations_kwargs = copy.deepcopy(generate_unit_locations_kwargs)
+    generate_templates_kwargs = copy.deepcopy(generate_templates_kwargs)
+    generate_sorting_kwargs = copy.deepcopy(generate_sorting_kwargs)
+    generate_noise_kwargs = copy.deepcopy(generate_noise_kwargs)
+
     _check_generate_session_displacement_arguments(
         num_units, recording_durations, recording_shifts, recording_amplitude_scalings
     )
@@ -197,8 +198,6 @@ def generate_session_displacement_recordings(
             **generate_templates_kwargs,
         )
 
-        # TODO: these first amplitdues don't change per loop, but are usually not
-        # needed...
         if recording_amplitude_scalings is not None:
 
             first_rec_templates = (
