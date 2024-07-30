@@ -218,7 +218,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         if HAVE_TORCH and d['use_torch']:
             d['spatial'] = torch.as_tensor(d["spatial"])
             d['singular'] = torch.as_tensor(d["singular"])
-            d['temporal'] = torch.as_tensor(d["temporal"]).swapaxes(0, 1).unsqueeze(2)
+            d['temporal'] = torch.as_tensor(d["temporal"]).swapaxes(0, 1)
+            d['temporal'] = torch.flip(d['temporal'], (2,))
 
         return d
 

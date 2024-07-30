@@ -74,7 +74,7 @@ class WobbleParameters:
     scale_min: float = 0
     scale_max: float = np.inf
     scale_amplitudes: bool = False
-    use_torch: bool = True
+    use_torch: bool = False
     device: str = None
 
     def __post_init__(self):
