@@ -36,7 +36,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "seed": 42,
         },
         "apply_motion_correction": True,
-        "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
+        "motion_correction": {"preset": "dredge_fast"},
         "merging": {
             "similarity_kwargs": {"method": "cosine", "support": "union", "max_lag_ms": 0.2},
             "correlograms_kwargs": {},
@@ -109,8 +109,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.tools import get_prototype_spike, check_probe_for_drift_correction
         from spikeinterface.sortingcomponents.tools import get_prototype_spike
 
-        job_kwargs = params["job_kwargs"]
-        job_kwargs = fix_job_kwargs(job_kwargs)
+        job_kwargs = fix_job_kwargs(params["job_kwargs"])
         job_kwargs.update({"progress_bar": verbose})
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
@@ -143,14 +142,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     print("Motion correction activated (probe geometry compatible)")
                 motion_folder = sorter_output_folder / "motion"
                 params["motion_correction"].update({"folder": motion_folder})
-                recording_f = correct_motion(recording_f, **params["motion_correction"])
+                recording_f = correct_motion(recording_f, **params["motion_correction"], **job_kwargs)
         else:
             motion_folder = None
 
         ## We need to whiten before the template matching step, to boost the results
         # TODO add , regularize=True chen ready
-        recording_w = whiten(recording_f, mode="local", radius_um=radius_um, dtype="float32", regularize=True)
-
+        if num_channels > 1:
+            regularize = True
+        else:
+            regularize = False
+        recording_w = whiten(recording_f, mode="local", radius_um=radius_um, dtype="float32", regularize=regularize)
         noise_levels = get_noise_levels(recording_w, return_scaled=False)
 
         if recording_w.check_serializability("json"):
@@ -196,7 +198,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
             ## channels as flat as possible
             selection_params = params["selection"]
-            selection_params["n_peaks"] = params["selection"]["n_peaks_per_channel"] * num_channels
+            selection_params["n_peaks"] = min(len(peaks), selection_params["n_peaks_per_channel"] * num_channels)
             selection_params["n_peaks"] = max(selection_params["min_n_peaks"], selection_params["n_peaks"])
 
             selection_params.update({"noise_levels": noise_levels})
