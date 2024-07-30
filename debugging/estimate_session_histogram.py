@@ -17,59 +17,75 @@ from scipy.optimize import minimize
 # if specifying 5 units, 5 unit peaks are clearly visible, none are lost
 # because their position is too far from probe.
 
-default_unit_params_range = dict(
-    alpha=(100.0, 500.0),
-    depolarization_ms=(0.09, 0.14),
-    repolarization_ms=(0.5, 0.8),
-    recovery_ms=(1.0, 1.5),
-    positive_amplitude=(0.1, 0.25),
-    smooth_ms=(0.03, 0.07),
-    spatial_decay=(20, 40),
-    propagation_speed=(250.0, 350.0),
-    b=(0.1, 1),
-    c=(0.1, 1),
-    x_angle=(0, np.pi),
-    y_angle=(0, np.pi),
-    z_angle=(0, np.pi),
+if False:
+    default_unit_params_range = dict(
+        alpha=(100.0, 500.0),
+        depolarization_ms=(0.09, 0.14),
+        repolarization_ms=(0.5, 0.8),
+        recovery_ms=(1.0, 1.5),
+        positive_amplitude=(0.1, 0.25),
+        smooth_ms=(0.03, 0.07),
+        spatial_decay=(20, 40),
+        propagation_speed=(250.0, 350.0),
+        b=(0.1, 1),
+        c=(0.1, 1),
+        x_angle=(0, np.pi),
+        y_angle=(0, np.pi),
+        z_angle=(0, np.pi),
+    )
+
+    default_unit_params_range["alpha"] = (100, 600)  # do this or change the margin on generate_unit_locations_kwargs
+    default_unit_params_range["b"] = (0.5, 1) # and make the units fatter, easier to receive signal!
+    default_unit_params_range["c"] = (0.5, 1)
+
+    rec_list, _ = generate_session_displacement_recordings(
+        non_rigid_gradient=None,  # 0.05, TODO: note this will set nonlinearity to both x and y (the same)
+        num_units=100,
+        recording_durations=(50,),  # TODO: checks on inputs
+        recording_shifts=(
+            (0, 0),
+        ),
+        recording_amplitude_scalings=None,
+    #    generate_sorting_kwargs=dict(firing_rates=(50, 100), refractory_period_ms=4.0),
+    #    generate_templates_kwargs=dict(unit_params=default_unit_params_range, ms_before=1.5, ms_after=3),
+        seed=None,
+    #    generate_unit_locations_kwargs=dict(
+    #        margin_um=0.0,  # if this is say 20, then units go off the edge of the probe and are such low amplitude they are not picked up.
+    #        minimum_z=5.0,
+    #        maximum_z=45.0,
+    #        minimum_distance=18.0,
+    #        max_iteration=100,
+    #        distance_strict=False,
+    #    ),
+    )
+
+_, drift_rec, _ = si.generate_drifting_recording(duration=250)
+
+corrected_recording, motion_info = si.correct_motion(drift_rec, preset="kilosort_like", output_motion_info=True)
+
+from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
+
+peaks = motion_info["peaks"]
+peak_locations = correct_motion_on_peaks(
+    peaks,
+    motion_info["peak_locations"],
+    motion_info["motion"],
+    corrected_recording,
 )
 
-default_unit_params_range["alpha"] = (100, 600)  # do this or change the margin on generate_unit_locations_kwargs
-default_unit_params_range["b"] = (0.5, 1) # and make the units fatter, easier to receive signal!
-default_unit_params_range["c"] = (0.5, 1)
+if False:
+    recording = rec_list[0]
 
-rec_list, _ = generate_session_displacement_recordings(
-    non_rigid_gradient=None,  # 0.05, TODO: note this will set nonlinearity to both x and y (the same)
-    num_units=100,
-    recording_durations=(50,),  # TODO: checks on inputs
-    recording_shifts=(
-        (0, 0),
-    ),
-    recording_amplitude_scalings=None,
-#    generate_sorting_kwargs=dict(firing_rates=(50, 100), refractory_period_ms=4.0),
-#    generate_templates_kwargs=dict(unit_params=default_unit_params_range, ms_before=1.5, ms_after=3),
-    seed=None,
-#    generate_unit_locations_kwargs=dict(
-#        margin_um=0.0,  # if this is say 20, then units go off the edge of the probe and are such low amplitude they are not picked up.
-#        minimum_z=5.0,
-#        maximum_z=45.0,
-#        minimum_distance=18.0,
-#        max_iteration=100,
-#        distance_strict=False,
-#    ),
-)
+    peaks = detect_peaks(recording, method="locally_exclusive")
+    peak_locations = localize_peaks(recording, peaks, method="grid_convolution")
 
-recording = rec_list[0]
-
-peaks = detect_peaks(recording, method="locally_exclusive")
-peak_locations = localize_peaks(recording, peaks, method="grid_convolution")
-
-si.plot_drift_raster_map(
-    peaks=peaks,
-    peak_locations=peak_locations,
-    recording=recording,
-    clim=(-300, 0)  # fix clim for comparability across plots
-)
-plt.show()
+    si.plot_drift_raster_map(
+        peaks=peaks,
+        peak_locations=peak_locations,
+        recording=recording,
+        clim=(-300, 0)  # fix clim for comparability across plots
+    )
+    plt.show()
 
 
 # TODO: to test, get a real recording, interpolate each recording
@@ -78,16 +94,19 @@ plt.show()
 # -----------------------------------------------------------------------------
 # Over Entire Session
 # -----------------------------------------------------------------------------
-bin_um = 1
+
+# TODO: figure out dynamic bin sizing based on 1-um histogram.
+#
+bin_um = 25  # TODO: maybe do some testing on benchmarks backed by some theory.
 
 print("starting make hist")
 entire_session_hist, temporal_bin_edges, spatial_bin_edges = make_2d_motion_histogram(
-                recording,
+                corrected_recording,
                 peaks,
                 peak_locations,
                 weight_with_amplitude=False,
                 direction="y",
-                bin_s=recording.get_duration(segment_index=0),  # 1.0,
+                bin_s=corrected_recording.get_duration(segment_index=0),  # 1.0,
                 bin_um=bin_um,
                 hist_margin_um=50,
                 spatial_bin_edges=None,
@@ -103,12 +122,12 @@ plt.show()
 # -----------------------------------------------------------------------------
 
 chunk_session_hist, temporal_bin_edges, spatial_bin_edges = make_2d_motion_histogram(
-                recording,
+                corrected_recording,
                 peaks,
                 peak_locations,
                 weight_with_amplitude=False,
                 direction="y",
-                bin_s=1,  # Now make 25 histograms
+                bin_s=5,  # Now make 25 histograms
                 bin_um=bin_um,
                 hist_margin_um=50,
                 spatial_bin_edges=None,
@@ -162,6 +181,7 @@ first_eigenvalue /= np.max(first_eigenvalue)
 # -----------------------------------------------------------------------------
 # Poisson Modelling
 # -----------------------------------------------------------------------------
+# Under assumption of independent bins and time points
 
 def obj_fun(lambda_, m, sum_k ):
     return -(sum_k * np.log(lambda_) - m * lambda_)
