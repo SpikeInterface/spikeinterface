@@ -37,7 +37,7 @@ except ImportError:
 try:
     import torch
     import torch.nn.functional as F
-
+    from torch.nn.functional import conv1d
     HAVE_TORCH = True
 except ImportError:
     HAVE_TORCH = False
@@ -677,7 +677,8 @@ class DetectPeakMatchedFiltering(PeakDetector):
         if HAVE_TORCH and self.use_torch:
             self.spatial = torch.as_tensor(spatial.astype(np.float32), device=self.device)
             self.singular = torch.as_tensor(singular.astype(np.float32), device=self.device)
-            self.temporal = torch.as_tensor(temporal.copy().astype(np.float32), device=self.device).swapaxes(0, 1).unsqueeze(2)      
+            self.temporal = torch.as_tensor(temporal.copy().astype(np.float32), device=self.device).swapaxes(0, 1)      
+            self.temporal = torch.flip(self.temporal, (2,))
         else:
             self.temporal = temporal.astype(np.float32)
             self.spatial = spatial.astype(np.float32)
@@ -756,16 +757,14 @@ class DetectPeakMatchedFiltering(PeakDetector):
         import scipy.signal
         
         if HAVE_TORCH and self.use_torch:
-            
-            from torch.nn.functional import conv2d
             torch_traces = torch.as_tensor(traces.T[None, :, :], device=self.device)
             num_templates, num_channels = temporal.shape[0], temporal.shape[1]
             num_samples = torch_traces.shape[2]
             spatially_filtered_data = torch.matmul(spatial, torch_traces)
-            scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1).unsqueeze(2)
-            scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, 1, num_samples)
-            scalar_products = conv2d(scaled_filtered_data_, self.temporal, groups=num_templates, padding='valid')
-            scalar_products = scalar_products.cpu().numpy()[0, :, 0, :] 
+            scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1)
+            scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, num_samples)
+            scalar_products = conv1d(scaled_filtered_data_, self.temporal, groups=num_templates, padding='valid')
+            scalar_products = scalar_products.cpu().numpy()[0, :, :] 
         else:
             num_timesteps, num_templates = len(traces), temporal.shape[1]
             num_peaks = num_timesteps - self.conv_margin + 1

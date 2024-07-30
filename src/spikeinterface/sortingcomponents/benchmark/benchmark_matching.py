@@ -79,7 +79,7 @@ class MatchingStudy(BenchmarkStudy):
     def plot_performances_vs_snr(self, case_keys=None, figsize=None, metrics=["accuracy", "recall", "precision"]):
         if case_keys is None:
             case_keys = list(self.cases.keys())
-
+        import pylab as plt
         fig, axs = plt.subplots(ncols=1, nrows=len(metrics), figsize=figsize, squeeze=False)
 
         for count, k in enumerate(metrics):
@@ -103,7 +103,7 @@ class MatchingStudy(BenchmarkStudy):
     def plot_collisions(self, case_keys=None, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
-
+        import pylab as plt
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):

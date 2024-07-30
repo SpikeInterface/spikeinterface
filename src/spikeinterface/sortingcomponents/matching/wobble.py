@@ -12,6 +12,7 @@ try:
     import torch.nn.functional as F
 
     HAVE_TORCH = True
+    from torch.nn.functional import conv1d
 except ImportError:
     HAVE_TORCH = False
 
@@ -73,7 +74,7 @@ class WobbleParameters:
     scale_min: float = 0
     scale_max: float = np.inf
     scale_amplitudes: bool = False
-    use_torch: bool = False
+    use_torch: bool = True
     device: str = None
 
     def __post_init__(self):
@@ -422,7 +423,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         if HAVE_TORCH and params.use_torch:
             spatial = torch.as_tensor(spatial, device=kwargs['device'])
             singular = torch.as_tensor(singular, device=kwargs['device'])
-            temporal = torch.as_tensor(temporal.copy(), device=kwargs['device']).swapaxes(0, 1).unsqueeze(2)
+            temporal = torch.as_tensor(temporal.copy(), device=kwargs['device']).swapaxes(0, 1)
+            temporal = torch.flip(temporal, (2,))
             template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
         else:
             template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
@@ -992,8 +994,7 @@ def compute_objective(traces, template_data, approx_rank, use_torch=True, device
     """
     temporal, singular, spatial, _ = template_data.compressed_templates
     if HAVE_TORCH and use_torch:
-        from torch.nn.functional import conv2d
-        nt = temporal.shape[3] - 1
+        nt = temporal.shape[2] - 1
         nb_channels = traces.shape[1]
         blank = np.zeros((nt, nb_channels), dtype=np.float32)
         traces = np.vstack((blank, traces, blank))
@@ -1001,10 +1002,10 @@ def compute_objective(traces, template_data, approx_rank, use_torch=True, device
         num_templates, num_channels = temporal.shape[0], temporal.shape[1]
         num_samples = torch_traces.shape[2]
         spatially_filtered_data = torch.matmul(spatial, torch_traces)
-        scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1).unsqueeze(2)
-        scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, 1, num_samples)
-        objective = conv2d(scaled_filtered_data_, temporal, groups=num_templates, padding='valid')
-        objective = objective.cpu().numpy()[0, :, 0, :]
+        scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1)
+        scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, num_samples)
+        objective = conv1d(scaled_filtered_data_, temporal, groups=num_templates, padding='valid')
+        objective = objective.cpu().numpy()[0, :, :]
     else:
         num_channels, num_templates  = temporal.shape[0], temporal.shape[1]
         num_samples = temporal.shape[2]
