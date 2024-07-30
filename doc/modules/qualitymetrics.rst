@@ -57,7 +57,7 @@ This code snippet shows how to compute quality metrics (with or without principa
 
     # with PCs (depends on "pca" in addition to the above metrics)
 
-    qm_ext = sorting_analyzer.compute(input={"pca": dict(n_components=5, mode="by_channel_local"),
+    qm_ext = sorting_analyzer.compute(input={"principal_components": dict(n_components=5, mode="by_channel_local"),
                                     "quality_metrics": dict(skip_pc_metrics=False)})
      metrics = qm_ext.get_data()
      assert 'isolation_distance' in metrics.columns

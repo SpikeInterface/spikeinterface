@@ -108,6 +108,11 @@ class DredgeApRegistration:
         **method_kwargs,
     ):
 
+        try:
+            import torch
+        except ImportError:
+            raise ImportError("The dredge method require torch: pip install torch")
+
         outs = dredge_ap(
             recording,
             peaks,
@@ -177,8 +182,8 @@ def dredge_ap(
     matrix (or several, one for each nonrigid window). This matrix is used to solve for a
     motion estimate.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     recording: BaseRecording
         The recording extractor
     peaks: numpy array
@@ -513,8 +518,8 @@ def dredge_online_lfp(
 ):
     """Online registration of a preprocessed LFP recording
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     {}
 
     Returns
@@ -1060,8 +1065,8 @@ def calc_corr_decent_pair(
     the normxcorrs at the best displacement, and the matrix of the best
     displacements.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     raster : DxT array
     batch_size : int
         How many raster rows to xcorr against the whole raster

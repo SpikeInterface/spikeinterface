@@ -72,7 +72,7 @@ class DecentralizedRegistration:
         When not None the parwise discplament matrix is computed in a small time horizon.
         In short only pair of bins close in time.
         So the pariwaise matrix is super sparse and have values only the diagonal.
-    convergence_method: "lsmr" | "lsqr_robust" | "gradient_descent", default: "lsqr_robust"
+    convergence_method: "lsmr" | "lsqr_robust" | "gradient_descent", default: "lsmr"
         Which method to use to compute the global displacement vector from the pairwise matrix.
     robust_regression_sigma: float
         Use for convergence_method="lsqr_robust" for iterative selection of the regression.
@@ -108,9 +108,9 @@ class DecentralizedRegistration:
         verbose,
         progress_bar,
         extra,
-        bin_um=1.0,
+        bin_um=5.0,
         hist_margin_um=20.0,
-        bin_s=1.0,
+        bin_s=2.0,
         histogram_depth_smooth_um=1.0,
         histogram_time_smooth_s=1.0,
         pairwise_displacement_method="conv",
@@ -122,7 +122,7 @@ class DecentralizedRegistration:
         batch_size=1,
         corr_threshold=0.0,
         time_horizon_s=None,
-        convergence_method="lsqr_robust",
+        convergence_method="lsmr",
         soft_weights=False,
         normalized_xcorr=True,
         centered_xcorr=True,
@@ -183,7 +183,7 @@ class DecentralizedRegistration:
         motion_array = np.zeros((temporal_bins.size, len(non_rigid_windows)), dtype=np.float64)
         windows_iter = non_rigid_windows
         if progress_bar:
-            windows_iter = tqdm(windows_iter, desc="windows")
+            windows_iter = tqdm(windows_iter, desc="pairwise displacement")
         if spatial_prior:
             all_pairwise_displacements = np.empty(
                 (len(non_rigid_windows), temporal_bins.size, temporal_bins.size), dtype=np.float64
@@ -299,7 +299,7 @@ def compute_pairwise_displacement(
     method="conv",
     weight_scale="linear",
     error_sigma=0.2,
-    conv_engine="numpy",
+    conv_engine=None,
     torch_device=None,
     batch_size=1,
     max_displacement_um=1500,
@@ -741,7 +741,10 @@ def compute_global_displacement(
 #     corr : tensor
 #     """
 #     if conv_engine == "torch":
-#         assert HAVE_TORCH
+#         import torch
+#         import torch.nn.functional as F
+
+#         # assert HAVE_TORCH
 #         conv1d = F.conv1d
 #         npx = torch
 #     elif conv_engine == "numpy":
