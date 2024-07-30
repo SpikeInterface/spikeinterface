@@ -109,8 +109,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.tools import get_prototype_spike, check_probe_for_drift_correction
         from spikeinterface.sortingcomponents.tools import get_prototype_spike
 
-        job_kwargs = params["job_kwargs"]
-        job_kwargs = fix_job_kwargs(job_kwargs)
+        job_kwargs = fix_job_kwargs(params["job_kwargs"])
         job_kwargs.update({"progress_bar": verbose})
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
@@ -143,7 +142,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     print("Motion correction activated (probe geometry compatible)")
                 motion_folder = sorter_output_folder / "motion"
                 params["motion_correction"].update({"folder": motion_folder})
-                recording_f = correct_motion(recording_f, **params["motion_correction"])
+                recording_f = correct_motion(recording_f, **params["motion_correction"], **job_kwargs)
         else:
             motion_folder = None
 
