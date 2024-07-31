@@ -760,8 +760,8 @@ class DetectPeakMatchedFilteringTorch(DetectPeakMatchedFiltering):
     params_doc = (
         DetectPeakMatchedFiltering.params_doc
         + """
-    device : str or None
-        The torch device to be used
+    device : str or torch.device
+        What torch device to run on? E.g., "cpu" or "cuda" or "cuda:1".
     """
     )
 
