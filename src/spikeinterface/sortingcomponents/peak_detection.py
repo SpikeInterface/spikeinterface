@@ -618,19 +618,11 @@ class DetectPeakMatchedFiltering(PeakDetector):
         noise_levels=None,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
-        use_torch=False,
-        device=None
     ):
         PeakDetector.__init__(self, recording, return_output=True)
 
         if not HAVE_NUMBA:
             raise ModuleNotFoundError('matched_filtering" needs numba which is not installed')
-        self.use_torch = use_torch
-        if HAVE_TORCH and self.use_torch:
-            if device is None:
-                self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            else:
-                self.device = device
 
         self.exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)
@@ -674,23 +666,17 @@ class DetectPeakMatchedFiltering(PeakDetector):
         temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
         singular = singular.T[:, :, np.newaxis]
 
-        if HAVE_TORCH and self.use_torch:
-            self.spatial = torch.as_tensor(spatial.astype(np.float32), device=self.device)
-            self.singular = torch.as_tensor(singular.astype(np.float32), device=self.device)
-            self.temporal = torch.as_tensor(temporal.copy().astype(np.float32), device=self.device).swapaxes(0, 1)      
-            self.temporal = torch.flip(self.temporal, (2,))
-        else:
-            self.temporal = temporal.astype(np.float32)
-            self.spatial = spatial.astype(np.float32)
-            self.singular = singular.astype(np.float32)
-
+        self.temporal = temporal.astype(np.float32)
+        self.spatial = spatial.astype(np.float32)
+        self.singular = singular.astype(np.float32)
+        self.num_templates = self.temporal.shape[1]
         random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
-        conv_random_data = self.get_convolved_traces(random_data, self.temporal, self.spatial, self.singular)
+        conv_random_data = self.get_convolved_traces(random_data)
         medians = np.median(conv_random_data, axis=1)
         medians = medians[:, None]
         noise_levels = np.median(np.abs(conv_random_data - medians), axis=1) / 0.6744897501960817
         self.abs_thresholds = noise_levels * detect_threshold
-
+        
         self._dtype = np.dtype(base_peak_dtype + [("z", "float32")])
 
     def get_dtype(self):
@@ -702,7 +688,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
 
         assert HAVE_NUMBA, "You need to install numba"
-        conv_traces = self.get_convolved_traces(traces, self.temporal, self.spatial, self.singular)
+        conv_traces = self.get_convolved_traces(traces)
         conv_traces /= self.abs_thresholds[:, None]
         conv_traces = conv_traces[:, self.conv_margin : -self.conv_margin]
         traces_center = conv_traces[:, self.exclude_sweep_size : -self.exclude_sweep_size]
@@ -753,27 +739,91 @@ class DetectPeakMatchedFiltering(PeakDetector):
         # return is always a tuple
         return (local_peaks,)
 
-    def get_convolved_traces(self, traces, temporal, spatial, singular):
+    def get_convolved_traces(self, traces):
         import scipy.signal
-        
-        if HAVE_TORCH and self.use_torch:
-            torch_traces = torch.as_tensor(traces.T[None, :, :], device=self.device)
-            num_templates, num_channels = temporal.shape[0], temporal.shape[1]
-            num_samples = torch_traces.shape[2]
-            spatially_filtered_data = torch.matmul(spatial, torch_traces)
-            scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1)
-            scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, num_samples)
-            scalar_products = conv1d(scaled_filtered_data_, self.temporal, groups=num_templates, padding='valid')
-            scalar_products = scalar_products.cpu().numpy()[0, :, :] 
-        else:
-            num_timesteps, num_templates = len(traces), temporal.shape[1]
-            num_peaks = num_timesteps - self.conv_margin + 1
-            scalar_products = np.zeros((num_templates, num_peaks), dtype=np.float32)
-            spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
-            scaled_filtered_data = spatially_filtered_data * singular
-            objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="valid")
-            scalar_products += np.sum(objective_by_rank, axis=0)
+        num_timesteps = len(traces)
+        num_peaks = num_timesteps - self.conv_margin + 1
+        scalar_products = np.zeros((self.num_templates, num_peaks), dtype=np.float32)
+        spatially_filtered_data = np.matmul(self.spatial, traces.T[np.newaxis, :, :])
+        scaled_filtered_data = spatially_filtered_data * self.singular
+        objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, self.temporal, axes=2, mode="valid")
+        scalar_products += np.sum(objective_by_rank, axis=0)
         return scalar_products
+
+
+class DetectPeakMatchedFilteringTorch(DetectPeakMatchedFiltering):
+    """Detect peaks using the 'matched_filtering' method."""
+
+    name = "matched_filtering_torch"
+    engine = "torch"
+    preferred_mp_context = "spawn"
+    params_doc = (
+        DetectPeakMatchedFiltering.params_doc
+        + """
+    device : str or None
+        The torch device to be used
+    """
+    )
+
+    def __init__(
+        self,
+        recording,
+        prototype,
+        ms_before,
+        peak_sign="neg",
+        detect_threshold=5,
+        exclude_sweep_ms=0.1,
+        radius_um=50,
+        rank=1,
+        noise_levels=None,
+        random_chunk_kwargs={"num_chunks_per_segment": 5},
+        weight_method={},
+        device=None
+    ):
+        PeakDetector.__init__(self, recording, return_output=True)
+
+        if not HAVE_NUMBA:
+            raise ModuleNotFoundError('matched_filtering_torch" needs numba which is not installed')
+        
+        if not HAVE_TORCH:
+            raise ModuleNotFoundError('matched_filtering_torch" needs torch which is not installed')
+
+        if device is None:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = device
+
+        DetectPeakMatchedFiltering.__init__(self, recording, 
+                                            prototype, 
+                                            ms_before,
+                                            peak_sign,
+                                            detect_threshold,
+                                            exclude_sweep_ms,
+                                            radius_um,
+                                            rank,
+                                            noise_levels,
+                                            random_chunk_kwargs,
+                                            weight_method)
+    
+    def _convert_data_for_torch(self):
+        self.spatial = torch.as_tensor(self.spatial.astype(np.float32), device=self.device)
+        self.singular = torch.as_tensor(self.singular.astype(np.float32), device=self.device)
+        self.temporal = torch.as_tensor(self.temporal.copy().astype(np.float32), device=self.device).swapaxes(0, 1)      
+        self.temporal = torch.flip(self.temporal, (2,))
+    
+    def get_convolved_traces(self, traces):
+        if isinstance(self.temporal, np.ndarray):
+            self._convert_data_for_torch()
+        torch_traces = torch.as_tensor(traces.T[None, :, :], device=self.device)
+        num_templates, num_channels = self.temporal.shape[0], self.temporal.shape[1]
+        num_samples = torch_traces.shape[2]
+        spatially_filtered_data = torch.matmul(self.spatial, torch_traces)
+        scaled_filtered_data = (spatially_filtered_data * self.singular).swapaxes(0, 1)
+        scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, num_samples)
+        scalar_products = conv1d(scaled_filtered_data_, self.temporal, groups=num_templates, padding='valid')
+        scalar_products = scalar_products.cpu().numpy()[0, :, :]
+        return scalar_products
+
 
 
 class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
@@ -1329,6 +1379,7 @@ _methods_list = [
     DetectPeakByChannelTorch,
     DetectPeakLocallyExclusiveTorch,
     DetectPeakMatchedFiltering,
+    DetectPeakMatchedFilteringTorch,
 ]
 detect_peak_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
