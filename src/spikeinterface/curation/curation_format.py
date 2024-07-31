@@ -87,7 +87,7 @@ def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_fo
 
     Returns
     -------
-    curation_dict: dict
+    curation_dict : dict
         A curation dictionary
     """
 
@@ -138,7 +138,7 @@ def curation_label_to_vectors(curation_dict):
 
     Returns
     -------
-    labels: dict of numpy vector
+    labels : dict of numpy vector
 
     """
     unit_ids = list(curation_dict["unit_ids"])
