@@ -217,7 +217,7 @@ class Kilosort4Sorter(BaseSorter):
                 do_CAR,
                 invert_sign,
                 device,
-                save_preprocesed_copy=save_preprocessed_copy,
+                save_preprocesed_copy=save_preprocessed_copy,  # this kwarg is correct (typo)
             )
             n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact, _, _ = (
                 get_run_parameters(ops)
