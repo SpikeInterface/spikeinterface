@@ -24,9 +24,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
     _default_params = {
-        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
+        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 75},
         "sparsity": {"method": "ptp", "threshold": 0.25},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2},
+        "whitening": {"mode" : "local", "regularize" : True},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
             "method": "uniform",
@@ -62,6 +63,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                                         and also the radius_um used to be considered during clustering",
         "sparsity": "A dictionary to be passed to all the calls to sparsify the templates",
         "filtering": "A dictionary for the high_pass filter to be used during preprocessing",
+        "whitening": "A dictionary for the whitening option to be used during preprocessing",
         "detection": "A dictionary for the peak detection node (locally_exclusive)",
         "selection": "A dictionary for the peak selection node. Default is to use smart_sampling_amplitudes, with a minimum of 20000 peaks\
                                          and 5000 peaks per electrode on average.",
@@ -118,7 +120,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         num_channels = recording.get_num_channels()
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
-        radius_um = params["general"].get("radius_um", 100)
+        radius_um = params["general"].get("radius_um", 75)
         exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after) / 2)
 
         ## First, we are filtering the data
@@ -148,11 +150,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## We need to whiten before the template matching step, to boost the results
         # TODO add , regularize=True chen ready
-        if num_channels > 1:
-            regularize = True
-        else:
-            regularize = False
-        recording_w = whiten(recording_f, mode="local", radius_um=radius_um, dtype="float32", regularize=regularize)
+        whitening_kwargs = params["whitening"].copy()
+        whitening_kwargs["dtype"] = "float32"
+        whitening_kwargs["radius_um"] = radius_um
+        if num_channels == 1:
+            whitening_kwargs["regularize"] = False
+
+        recording_w = whiten(recording_f, **whitening_kwargs)
         noise_levels = get_noise_levels(recording_w, return_scaled=False)
 
         if recording_w.check_serializability("json"):
