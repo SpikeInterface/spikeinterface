@@ -10,6 +10,7 @@ from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.motion.motion_utils import \
     make_2d_motion_histogram, make_3d_motion_histograms
 from scipy.optimize import minimize
+from pathlib import Path
 
 # Generate a ground truth recording where every unit is firing a lot,
 # with high amplitude, and is close to the spike, so all picked up.
@@ -17,6 +18,7 @@ from scipy.optimize import minimize
 # if specifying 5 units, 5 unit peaks are clearly visible, none are lost
 # because their position is too far from probe.
 
+# TODO: what to do about multi shanks? check what motion_correction does
 if False:
     default_unit_params_range = dict(
         alpha=(100.0, 500.0),
@@ -59,19 +61,20 @@ if False:
     #    ),
     )
 
-_, drift_rec, _ = si.generate_drifting_recording(duration=250)
+if False:
+    _, drift_rec, _ = si.generate_drifting_recording(duration=250)
 
-corrected_recording, motion_info = si.correct_motion(drift_rec, preset="kilosort_like", output_motion_info=True)
+    corrected_recording, motion_info = si.correct_motion(drift_rec, preset="kilosort_like", output_motion_info=True)
 
-from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
+    from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 
-peaks = motion_info["peaks"]
-peak_locations = correct_motion_on_peaks(
-    peaks,
-    motion_info["peak_locations"],
-    motion_info["motion"],
-    corrected_recording,
-)
+    peaks = motion_info["peaks"]
+    peak_locations = correct_motion_on_peaks(
+        peaks,
+        motion_info["peak_locations"],
+        motion_info["motion"],
+        corrected_recording,
+    )
 
 if False:
     recording = rec_list[0]
@@ -88,6 +91,11 @@ if False:
     plt.show()
 
 
+base_path = Path(r"X:\neuroinformatics\scratch\jziminski\ephys\inter-session-alignment\histogram_estimation")
+peaks = np.load(base_path / "peaks_corrected.npy")
+peak_locations = np.load(base_path / "peak_locations_corrected.npy")
+recording = si.load_extractor(base_path / "recording")
+
 # TODO: to test, get a real recording, interpolate each recording
 # one up, one down a small amount.
 
@@ -101,12 +109,12 @@ bin_um = 25  # TODO: maybe do some testing on benchmarks backed by some theory.
 
 print("starting make hist")
 entire_session_hist, temporal_bin_edges, spatial_bin_edges = make_2d_motion_histogram(
-                corrected_recording,
+                recording,
                 peaks,
                 peak_locations,
                 weight_with_amplitude=False,
                 direction="y",
-                bin_s=corrected_recording.get_duration(segment_index=0),  # 1.0,
+                bin_s=recording.get_duration(segment_index=0),  # 1.0,
                 bin_um=bin_um,
                 hist_margin_um=50,
                 spatial_bin_edges=None,
@@ -122,12 +130,12 @@ plt.show()
 # -----------------------------------------------------------------------------
 
 chunk_session_hist, temporal_bin_edges, spatial_bin_edges = make_2d_motion_histogram(
-                corrected_recording,
+                recording,
                 peaks,
                 peak_locations,
                 weight_with_amplitude=False,
                 direction="y",
-                bin_s=5,  # Now make 25 histograms
+                bin_s=60,  # Now make 25 histograms
                 bin_um=bin_um,
                 hist_margin_um=50,
                 spatial_bin_edges=None,
@@ -206,11 +214,9 @@ plt.plot(entire_session_hist)  # obs this is equal to mean hist
 plt.plot(mean_hist)
 plt.plot(median_hist)
 plt.plot(first_eigenvalue)
-plt.plot(poisson_estimate)
-plt.legend(["entire", "chunk mean", "chunk median", "chunk eigenvalue", "Poisson estimate"])
+#plt.plot(poisson_estimate)
+plt.legend(["entire", "chunk mean", "chunk median", "chunk eigenvalue"])
 plt.show()
-
-breakpoint()
 
 # After this try (x, y) alignment
 # estimate chunk size based on firing rate
