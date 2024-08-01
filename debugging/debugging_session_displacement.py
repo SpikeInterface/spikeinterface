@@ -77,7 +77,6 @@ for rec in rec_list:
     si.plot_drift_raster_map(
         peaks=peaks,
         peak_locations=peak_locs,
-        recording=rec,
         clim=(-300, 0)  # fix clim for comparability across plots
     )
     plt.show()
