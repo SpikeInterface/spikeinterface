@@ -63,9 +63,9 @@ class BaseMultiComparison(BaseComparison):
         Computes subgraphs of connected components.
         Returns
         -------
-        sg_object_names: list
+        sg_object_names : list
             List of sorter names for each node in the connected component subgraph
-        sg_units: list
+        sg_units : list
             List of unit ids for each node in the connected component subgraph
         """
         if self.clean_graph is not None:
