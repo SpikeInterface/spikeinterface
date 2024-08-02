@@ -94,7 +94,7 @@ def test_sequential_reading_of_small_traces(folder_with_binary_files):
 
     file_paths = [folder / "traces_cached_seg0.raw"]
     recording = BinaryRecordingExtractor(
-        num_chan=num_channels,
+        num_channels=num_channels,
         file_paths=file_paths,
         sampling_frequency=sampling_frequency,
         dtype=dtype,
