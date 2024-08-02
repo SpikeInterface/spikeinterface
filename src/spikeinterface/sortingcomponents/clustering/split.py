@@ -24,7 +24,7 @@ def split_clusters(
     peak_labels,
     recording,
     features_dict_or_folder,
-    method="hdbscan_on_local_pca",
+    method="local_feature_clustering",
     method_kwargs={},
     recursive=False,
     recursive_depth=None,
@@ -69,7 +69,7 @@ def split_clusters(
 
     original_labels = peak_labels
     peak_labels = peak_labels.copy()
-    split_count = np.zeros(peak_labels.size, dtype=int)
+    split_count = np.ones(peak_labels.size, dtype=int)
 
     Executor = get_poolexecutor(n_jobs)
 
@@ -81,7 +81,6 @@ def split_clusters(
     ) as pool:
         labels_set = np.setdiff1d(peak_labels, [-1])
         current_max_label = np.max(labels_set) + 1
-
         jobs = []
         for label in labels_set:
             peak_indices = np.flatnonzero(peak_labels == label)
@@ -95,15 +94,14 @@ def split_clusters(
 
         for res in iterator:
             is_split, local_labels, peak_indices = res.result()
+            # print(is_split, local_labels, peak_indices)
             if not is_split:
                 continue
 
             mask = local_labels >= 0
             peak_labels[peak_indices[mask]] = local_labels[mask] + current_max_label
             peak_labels[peak_indices[~mask]] = local_labels[~mask]
-
             split_count[peak_indices] += 1
-
             current_max_label += np.max(local_labels[mask]) + 1
 
             if recursive:
@@ -120,6 +118,7 @@ def split_clusters(
                     for label in new_labels_set:
                         peak_indices = np.flatnonzero(peak_labels == label)
                         if peak_indices.size > 0:
+                            # print('Relaunched', label, len(peak_indices), recursion_level)
                             jobs.append(pool.submit(split_function_wrapper, peak_indices, recursion_level))
                             if progress_bar:
                                 iterator.total += 1
@@ -187,7 +186,7 @@ class LocalFeatureClustering:
         min_size_split=25,
         n_pca_features=2,
         scale_n_pca_by_depth=False,
-        minimum_common_channels=2,
+        sparsity_overlap=0.25,
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
@@ -199,19 +198,22 @@ class LocalFeatureClustering:
         # target channel subset is done intersect local channels + neighbours
         local_chans = np.unique(peaks["channel_index"][peak_indices])
 
-        target_channels = np.flatnonzero(np.all(neighbours_mask[local_chans, :], axis=0))
+        target_intersection_channels = np.flatnonzero(np.all(neighbours_mask[local_chans, :], axis=0))
+        target_union_channels = np.flatnonzero(np.any(neighbours_mask[local_chans, :], axis=0))
+        num_intersection = len(target_intersection_channels)
+        num_union = len(target_union_channels)
 
         # TODO fix this a better way, this when cluster have too few overlapping channels
-        if target_channels.size < minimum_common_channels:
+        if (num_intersection / num_union) < sparsity_overlap:
             return False, None
 
         aligned_wfs, dont_have_channels = aggregate_sparse_features(
-            peaks, peak_indices, sparse_features, waveforms_sparse_mask, target_channels
+            peaks, peak_indices, sparse_features, waveforms_sparse_mask, target_intersection_channels
         )
 
         local_labels[dont_have_channels] = -2
         kept = np.flatnonzero(~dont_have_channels)
-
+        # print(recursion_level, kept.size, min_size_split)
         if kept.size < min_size_split:
             return False, None
 
@@ -221,6 +223,8 @@ class LocalFeatureClustering:
 
         if flatten_features.shape[1] > n_pca_features:
             from sklearn.decomposition import PCA
+
+            # from sklearn.decomposition import TruncatedSVD
 
             if scale_n_pca_by_depth:
                 # tsvd = TruncatedSVD(n_pca_features * recursion_level)
