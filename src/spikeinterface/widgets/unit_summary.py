@@ -31,7 +31,7 @@ class UnitSummaryWidget(BaseWidget):
     sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply.
         If SortingAnalyzer is already sparse, the argument is ignored
-    widget_params : dict or None, default: None  
+    widget_params : dict or None, default: None
         Parameters for the subwidgets in a nested dictionary
             unitlocations_params: UnitLocationsWidget (see UnitLocationsWidget for details)
             unitwaveforms_params: UnitWaveformsWidget (see UnitWaveformsWidget for details)
@@ -58,7 +58,7 @@ class UnitSummaryWidget(BaseWidget):
             unit_colors = get_unit_colors(sorting_analyzer)
 
         if widget_params is None:
-            widget_params = dict()        
+            widget_params = dict()
 
         plot_data = dict(
             sorting_analyzer=sorting_analyzer,
@@ -82,11 +82,11 @@ class UnitSummaryWidget(BaseWidget):
         sparsity = dp.sparsity
 
         widget_params = defaultdict(lambda: dict(), dp.widget_params)
-        unitlocationswidget_params = widget_params['unitlocations_params']
-        unitwaveformswidget_params = widget_params['unitwaveforms_params']
-        unitwaveformdensitymapwidget_params = widget_params['unitwaveformdensitymap_params']
-        autocorrelogramswidget_params = widget_params['autocorrelograms_params']
-        amplitudeswidget_params = widget_params['amplitudes_params']
+        unitlocationswidget_params = widget_params["unitlocations_params"]
+        unitwaveformswidget_params = widget_params["unitwaveforms_params"]
+        unitwaveformdensitymapwidget_params = widget_params["unitwaveformdensitymap_params"]
+        autocorrelogramswidget_params = widget_params["autocorrelograms_params"]
+        amplitudeswidget_params = widget_params["amplitudes_params"]
 
         # force the figure without axes
         if "figsize" not in backend_kwargs:
