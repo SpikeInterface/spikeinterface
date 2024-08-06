@@ -229,12 +229,14 @@ class BaseExtractor:
             Array of values for the property
         ids : list/np.array, default: None
             List of subset of ids to set the values, default: None
+            if None which is the default all the ids are set or changed
         missing_value : object, default: None
             In case the property is set on a subset of values ("ids" not None),
             it specifies the how the missing values should be filled.
             The missing_value has to be specified for types int and unsigned int.
         """
 
+        # This deletes the values but we have `delete_property` maybe we should eliminate this?
         if values is None:
             if key in self._properties:
                 self._properties.pop(key)
@@ -257,16 +259,15 @@ class BaseExtractor:
                 non_unique_ids = [id for id in ids if np.count_nonzero(ids == id) > 1]
                 raise ValueError(f"IDs are not unique: {non_unique_ids}")
 
-            # This branch is used for unit and channel aggregation
+            # Not clear where this branch is used, perhaps on aggregation of extractors?
             if ids.size < size:
                 if key not in self._properties:
 
                     if missing_value is None:
                         if dtype_kind not in self.default_missing_property_values.keys():
-                            raise Exception(
-                                "For values dtypes other than float, string, object or unicode, the missing value "
-                                "cannot be automatically inferred. Please specify it with the 'missing_value' "
-                                "argument."
+                            raise ValueError(
+                                f"Can't infer a natural missing value for dtype {dtype_kind}. "
+                                "Please provide it with the missing_value argument"
                             )
                         else:
                             missing_value = self.default_missing_property_values[dtype_kind]
@@ -286,9 +287,10 @@ class BaseExtractor:
                     if ids.size == 0:
                         return
                 else:
-                    assert dtype_kind == self._properties[key].dtype.kind, (
-                        "Mismatch between existing property dtype " "values dtype."
-                    )
+                    existing_property = self._properties[key].dtype
+                    assert (
+                        dtype_kind == existing_property.kind
+                    ), f"Mismatch between existing property dtype {existing_property.kind} and provided values dtype {dtype_kind}."
 
                 indices = self.ids_to_indices(ids)
                 self._properties[key][indices] = values
