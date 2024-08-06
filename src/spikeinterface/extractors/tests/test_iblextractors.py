@@ -19,12 +19,15 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
         from one.api import ONE
 
         cls.eid = EID
-        cls.one = ONE(
-            base_url="https://openalyx.internationalbrainlab.org",
-            password="international",
-            silent=True,
-            cache_dir=None,
-        )
+        try:
+            cls.one = ONE(
+                base_url="https://openalyx.internationalbrainlab.org",
+                password="international",
+                silent=True,
+                cache_dir=None,
+            )
+        except:
+            pytest.skip("Skipping test due to server being down.")
         try:
             cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", one=cls.one)
         except requests.exceptions.HTTPError as e:
