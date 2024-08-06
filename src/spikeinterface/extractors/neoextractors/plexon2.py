@@ -28,6 +28,11 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
             ids: ["source3.1" , "source3.2", "source3.3", "source3.4"]
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+
+    Examples
+    --------
+    >>> from spikeinterface.extractors import read_plexon2
+    >>> recording = read_plexon2(file_path=r'my_data.pl2')
     """
 
     NeoRawIOClass = "Plexon2RawIO"

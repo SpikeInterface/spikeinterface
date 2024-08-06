@@ -34,7 +34,13 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
         In Intan the ids provided by NeoRawIO are the hardware channel ids while the names are custom names given by
         the user
 
-
+    Examples
+    --------
+    >>> from spikeinterface.extractors import read_intan
+    # intan amplifier data is stored in stream_id = '0'
+    >>> recording = read_intan(file_path=r'my_data.rhd', stream_id='0')
+    # intan has multi-file formats as well, but in this case our path should point to the header file 'info.rhd'
+    >>> recording = read_intan(file_path=r'info.rhd', stream_id='0')
     """
 
     NeoRawIOClass = "IntanRawIO"

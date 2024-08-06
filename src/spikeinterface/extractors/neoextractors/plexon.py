@@ -30,6 +30,11 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
         Example for wideband signals:
             names: ["WB01", "WB02", "WB03", "WB04"]
             ids: ["0" , "1", "2", "3"]
+
+    Examples
+    --------
+    >>> from spikeinterface.extractors import read_plexon
+    >>> recording = read_plexon(file_path=r'my_data.plx')
     """
 
     NeoRawIOClass = "PlexonRawIO"

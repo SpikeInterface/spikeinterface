@@ -18,7 +18,7 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
     folder_path : str or Path-like
         The folder path to the AlphaOmega recordings.
     lsx_files : list of strings or None, default: None
-        A list of listings files that refers to mpx files to load.
+        A list of files that refers to mpx files to load.
     stream_id : {"RAW", "LFP", "SPK", "ACC", "AI", "UD"}, default: "RAW"
         If there are several streams, specify the stream id you want to load.
     stream_name : str, default: None
@@ -28,6 +28,12 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
     use_names_as_ids : bool, default: False
         Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
         names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
+
+    Examples
+    --------
+    >>> from spikeinterface.extractors import read_alphaomega
+    >>> recording = read_alphaomega(folder_path="alphaomega_folder")
+
     """
 
     NeoRawIOClass = "AlphaOmegaRawIO"
