@@ -7,7 +7,6 @@ import os
 import mmap
 import tqdm
 
-
 import numpy as np
 
 from .core_tools import add_suffix, make_shared_array
@@ -517,6 +516,7 @@ def get_random_data_chunks(
     concatenated=True,
     seed=0,
     margin_frames=0,
+    **job_kwargs,
 ):
     """
     Extract random chunks across segments
@@ -540,6 +540,9 @@ def get_random_data_chunks(
     margin_frames : int, default: 0
         Margin in number of frames to avoid edge effects
 
+    job kwargs:
+    {}
+
     Returns
     -------
     chunk_list : np.array
@@ -549,42 +552,42 @@ def get_random_data_chunks(
     # Should be done by changing kwargs with total_num_chunks=XXX and total_duration=YYYY
     # And randomize the number of chunk per segment weighted by segment duration
 
-    # check chunk size
-    num_segments = recording.get_num_segments()
-    for segment_index in range(num_segments):
-        chunk_size_limit = recording.get_num_frames(segment_index) - 2 * margin_frames
-        if chunk_size > chunk_size_limit:
-            chunk_size = chunk_size_limit - 1
-            warnings.warn(
-                f"chunk_size is greater than the number "
-                f"of samples for segment index {segment_index}. "
-                f"Using {chunk_size}."
-            )
+    from .node_pipeline import run_traces_pipeline
+    from .job_tools import divide_segment_into_chunks
 
     rng = np.random.default_rng(seed)
-    chunk_list = []
+    all_chunks = []
+
+    ### What seems to be a correct implementation, with no overlapping chunks. Cons:
+    ### margin is not taken into account, and we can have less samples than what is requested
+    # for segment_index in range(recording.get_num_segments()):
+    #     num_frames = recording.get_num_samples(segment_index)
+    #     chunks = divide_segment_into_chunks(num_frames, chunk_size)
+    #     indices = np.random.permutation(np.arange(len(chunks)))[:num_chunks_per_segment]
+    #     for i in indices:
+    #         frame_start, frame_stop = chunks[i]
+    #         all_chunks += [(segment_index, frame_start, frame_stop)]
+
+    ### Former implementation. Cons: overlapping chunks can be drawn
     low = margin_frames
-    size = num_chunks_per_segment
-    for segment_index in range(num_segments):
+    for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_frames(segment_index)
         high = num_frames - chunk_size - margin_frames
-        random_starts = rng.integers(low=low, high=high, size=size)
-        segment_trace_chunk = [
-            recording.get_traces(
-                start_frame=start_frame,
-                end_frame=(start_frame + chunk_size),
-                segment_index=segment_index,
-                return_scaled=return_scaled,
-            )
-            for start_frame in random_starts
-        ]
+        random_starts = rng.integers(low=low, high=high, size=num_chunks_per_segment)
+        for start_frame in random_starts:
+            all_chunks += [(segment_index, start_frame, start_frame + chunk_size)]
 
-        chunk_list.extend(segment_trace_chunk)
-
+    data = run_traces_pipeline(
+        recording, job_kwargs, all_chunks=all_chunks, return_scaled=return_scaled, squeeze_output=True
+    )
     if concatenated:
-        return np.concatenate(chunk_list, axis=0)
+        return data
     else:
-        return chunk_list
+        num_chunks = recording.get_num_segments() * num_chunks_per_segment
+        return np.split(data, chunk_size * np.arange(1, num_chunks))
+
+
+get_random_data_chunks.__doc__ = get_random_data_chunks.__doc__.format(_shared_job_kwargs_doc)
 
 
 def get_channel_distances(recording):
