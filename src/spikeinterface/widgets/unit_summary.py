@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import defaultdict
 
 import numpy as np
 
@@ -30,6 +31,13 @@ class UnitSummaryWidget(BaseWidget):
     sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply.
         If SortingAnalyzer is already sparse, the argument is ignored
+    widget_params : dict or None, default: None
+        Parameters for the subwidgets in a nested dictionary
+            unitlocations_params: UnitLocationsWidget (see UnitLocationsWidget for details)
+            unitwaveforms_params: UnitWaveformsWidget (see UnitWaveformsWidget for details)
+            unitwaveformdensitymap_params : UnitWaveformDensityMapWidget (see UnitWaveformDensityMapWidget for details)
+            autocorrelograms_params : AutoCorrelogramsWidget (see AutoCorrelogramsWidget for details)
+            amplitudes_params : AmplitudesWidget (see AmplitudesWidget for details)
     """
 
     # possible_backends = {}
@@ -40,21 +48,24 @@ class UnitSummaryWidget(BaseWidget):
         unit_id,
         unit_colors=None,
         sparsity=None,
-        radius_um=100,
+        widget_params=None,
         backend=None,
         **backend_kwargs,
     ):
-
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
 
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting_analyzer)
+
+        if widget_params is None:
+            widget_params = dict()
 
         plot_data = dict(
             sorting_analyzer=sorting_analyzer,
             unit_id=unit_id,
             unit_colors=unit_colors,
             sparsity=sparsity,
+            widget_params=widget_params,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -69,6 +80,13 @@ class UnitSummaryWidget(BaseWidget):
         sorting_analyzer = dp.sorting_analyzer
         unit_colors = dp.unit_colors
         sparsity = dp.sparsity
+
+        widget_params = defaultdict(lambda: dict(), dp.widget_params)
+        unitlocationswidget_params = widget_params["unitlocations_params"]
+        unitwaveformswidget_params = widget_params["unitwaveforms_params"]
+        unitwaveformdensitymapwidget_params = widget_params["unitwaveformdensitymap_params"]
+        autocorrelogramswidget_params = widget_params["autocorrelograms_params"]
+        amplitudeswidget_params = widget_params["amplitudes_params"]
 
         # force the figure without axes
         if "figsize" not in backend_kwargs:
@@ -99,6 +117,7 @@ class UnitSummaryWidget(BaseWidget):
                 plot_legend=False,
                 backend="matplotlib",
                 ax=ax1,
+                **unitlocationswidget_params,
             )
 
             unit_locations = sorting_analyzer.get_extension("unit_locations").get_data(outputs="by_unit")
@@ -121,6 +140,7 @@ class UnitSummaryWidget(BaseWidget):
             sparsity=sparsity,
             backend="matplotlib",
             ax=ax2,
+            **unitwaveformswidget_params,
         )
 
         ax2.set_title(None)
@@ -134,6 +154,7 @@ class UnitSummaryWidget(BaseWidget):
             same_axis=False,
             backend="matplotlib",
             ax=ax3,
+            **unitwaveformdensitymapwidget_params,
         )
         ax3.set_ylabel(None)
 
@@ -145,6 +166,7 @@ class UnitSummaryWidget(BaseWidget):
                 unit_colors=unit_colors,
                 backend="matplotlib",
                 ax=ax4,
+                **autocorrelogramswidget_params,
             )
 
             ax4.set_title(None)
@@ -162,6 +184,7 @@ class UnitSummaryWidget(BaseWidget):
                 plot_histograms=True,
                 backend="matplotlib",
                 axes=axes,
+                **amplitudeswidget_params,
             )
 
         fig.suptitle(f"unit_id: {dp.unit_id}")
