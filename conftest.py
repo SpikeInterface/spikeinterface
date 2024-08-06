@@ -7,6 +7,7 @@ def create_cache_folder(tmp_path_factory):
     cache_folder = tmp_path_factory.mktemp("cache_folder")
     return cache_folder
 
+
 def pytest_collection_modifyitems(config, items):
     """
     This function marks (in the pytest sense) the tests according to their name and file_path location
@@ -16,7 +17,11 @@ def pytest_collection_modifyitems(config, items):
     rootdir = Path(config.rootdir)
     modules_location = rootdir / "src" / "spikeinterface"
     for item in items:
-        rel_path = Path(item.fspath).relative_to(modules_location)
+        try:
+            rel_path = Path(item.fspath).relative_to(modules_location)
+        except:
+            continue
+
         module = rel_path.parts[0]
         if module == "sorters":
             if "internal" in rel_path.parts:
