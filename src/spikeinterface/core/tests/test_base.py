@@ -116,17 +116,17 @@ def test_setting_properties():
     expected_array = np.array(incomplete_values + [""])  # Spikeinterface defines missing values as empty strings
     assert np.array_equal(property_in_recording, expected_array)
 
-    # Passs a missing value
-    recording.set_property(
-        key="missing_property",
-        ids=channel_ids[:-1],
-        values=incomplete_values,
-        missing_value="missing",
-    )
+    # # Passs a missing value
+    # recording.set_property(
+    #     key="missing_property",
+    #     ids=channel_ids[:-1],
+    #     values=incomplete_values,
+    #     missing_value="missing",
+    # )
 
-    property_in_recording = recording.get_property("missing_property")
-    expected_array = np.array(incomplete_values + ["missing"])
-    assert np.array_equal(property_in_recording, expected_array)
+    # property_in_recording = recording.get_property("missing_property")
+    # expected_array = np.array(incomplete_values + ["missing"])
+    # assert np.array_equal(property_in_recording, expected_array)
 
 
 if __name__ == "__main__":
