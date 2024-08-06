@@ -181,6 +181,14 @@ class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class NeuronexusRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuronexusRecordingExtractor
+    downloads = ["neuronexus"]
+    entities = [
+        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "0"}),
+    ]
+
+
 class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = PlexonRecordingExtractor
     downloads = ["plexon"]
