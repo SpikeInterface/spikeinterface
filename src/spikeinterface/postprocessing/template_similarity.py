@@ -5,6 +5,10 @@ import warnings
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core.template_tools import get_dense_templates_array
+from tqdm.auto import tqdm
+from multiprocessing import get_context
+from threadpoolctl import threadpool_limits
+from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 from ..core.sparsity import ChannelSparsity
 
 
@@ -96,6 +100,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             support=self.params["support"],
             sparsity=new_sparsity,
             other_sparsity=new_sorting_analyzer.sparsity,
+            **job_kwargs,
         )
 
         old_similarity = self.data["similarity"]
@@ -124,11 +129,13 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 
         return dict(similarity=similarity)
 
-    def _run(self, verbose=False):
+    def _run(self, verbose=False, **job_kwargs):
         num_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
         templates_array = get_dense_templates_array(
             self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
         )
+        num_samples = templates_array.shape[1]
+        assert num_shifts < num_samples // 2, "max_lag_ms is too large"
         sparsity = self.sorting_analyzer.sparsity
         similarity = compute_similarity_with_templates_array(
             templates_array,
@@ -138,6 +145,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             support=self.params["support"],
             sparsity=sparsity,
             other_sparsity=sparsity,
+            **job_kwargs,
         )
         self.data["similarity"] = similarity
 
@@ -149,9 +157,100 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 register_result_extension(ComputeTemplateSimilarity)
 compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
+global _ctx
+
+
+def split_worker_init(
+    templates_array, other_templates_array, num_shifts, overlapping_templates, mask, method, max_threads_per_process
+):
+    global _ctx
+    _ctx = {}
+
+    _ctx["templates_array"] = templates_array
+    _ctx["other_templates_array"] = other_templates_array
+    _ctx["num_shifts"] = num_shifts
+    _ctx["overlapping_templates"] = overlapping_templates
+    _ctx["mask"] = mask
+    _ctx["method"] = method
+    _ctx["max_threads_per_process"] = max_threads_per_process
+
+
+def split_function_wrapper(row_index):
+    global _ctx
+    with threadpool_limits(limits=_ctx["max_threads_per_process"]):
+        distances = _compute_row(
+            row_index,
+            _ctx["templates_array"],
+            _ctx["other_templates_array"],
+            _ctx["num_shifts"],
+            _ctx["overlapping_templates"],
+            _ctx["mask"],
+            _ctx["method"],
+        )
+    return distances
+
+
+def _compute_row(row_index, templates_array, other_templates_array, num_shifts, overlapping_templates, mask, method):
+
+    import sklearn.metrics.pairwise
+
+    templates_array = templates_array[row_index][np.newaxis, :, :]
+    num_templates = templates_array.shape[0]
+    num_samples = templates_array.shape[1]
+    other_num_templates = other_templates_array.shape[0]
+    num_shifts_both_sides = 2 * num_shifts + 1
+    shape = (num_shifts_both_sides, num_templates, other_num_templates)
+    distances = np.ones(shape, dtype=np.float32)
+
+    same_array = np.array_equal(templates_array, other_templates_array)
+
+    if same_array:
+        # optimisation when array are the same because of symetry in shift
+        shift_loop = range(-num_shifts, 1)
+    else:
+        shift_loop = range(-num_shifts, num_shifts + 1)
+
+    for count, shift in enumerate(shift_loop):
+        src_sliced_templates = templates_array[:, num_shifts : num_samples - num_shifts]
+        tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
+
+        src_template = src_sliced_templates[0]
+        tgt_templates = tgt_sliced_templates[overlapping_templates[row_index]]
+
+        for gcount, j in enumerate(overlapping_templates[row_index]):
+            # symmetric values are handled later
+            if same_array and j < row_index:
+                # no need exhaustive looping when same template
+                continue
+
+            src = src_template[:, mask[row_index, j]].reshape(1, -1)
+            tgt = (tgt_templates[gcount][:, mask[row_index, j]]).reshape(1, -1)
+
+            if method == "l1":
+                norm_i = np.sum(np.abs(src))
+                norm_j = np.sum(np.abs(tgt))
+                distances[count, 0, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l1")
+                distances[count, 0, j] /= norm_i + norm_j
+            elif method == "l2":
+                norm_i = np.linalg.norm(src, ord=2)
+                norm_j = np.linalg.norm(tgt, ord=2)
+                distances[count, 0, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l2")
+                distances[count, 0, j] /= norm_i + norm_j
+            else:
+                distances[count, 0, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="cosine")
+
+    return row_index, distances
+
 
 def compute_similarity_with_templates_array(
-    templates_array, other_templates_array, method, support="union", num_shifts=0, sparsity=None, other_sparsity=None
+    templates_array,
+    other_templates_array,
+    method,
+    support="union",
+    num_shifts=0,
+    sparsity=None,
+    other_sparsity=None,
+    **job_kwargs,
 ):
 
     import sklearn.metrics.pairwise
@@ -198,49 +297,50 @@ def compute_similarity_with_templates_array(
 
     assert num_shifts < num_samples, "max_lag is too large"
     num_shifts_both_sides = 2 * num_shifts + 1
-    distances = np.ones((num_shifts_both_sides, num_templates, other_num_templates), dtype=np.float32)
 
-    # We can use the fact that dist[i,j] at lag t is equal to dist[j,i] at time -t
-    # So the matrix can be computed only for negative lags and be transposed
+    shape = (num_shifts_both_sides, num_templates, other_num_templates)
+    distances = np.ones(shape, dtype=np.float32)
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    n_jobs = job_kwargs["n_jobs"]
+    mp_context = job_kwargs.get("mp_context", None)
+    progress_bar = job_kwargs["progress_bar"]
+    max_threads_per_process = job_kwargs.get("max_threads_per_process", 1)
+
+    Executor = get_poolexecutor(n_jobs)
+
+    with Executor(
+        max_workers=n_jobs,
+        initializer=split_worker_init,
+        mp_context=get_context(method=mp_context),
+        initargs=(
+            templates_array,
+            other_templates_array,
+            num_shifts,
+            overlapping_templates,
+            mask,
+            method,
+            max_threads_per_process,
+        ),
+    ) as pool:
+
+        jobs = []
+        for row_index in range(num_templates):
+            jobs.append(pool.submit(split_function_wrapper, row_index))
+
+        if progress_bar:
+            iterator = tqdm(jobs, desc=f"compute similarity", total=num_templates)
+        else:
+            iterator = jobs
+
+        for res in iterator:
+            row_index, local_distances = res.result()
+            distances[:, row_index, :] = local_distances[:, 0, :]
 
     if same_array:
-        # optimisation when array are the same because of symetry in shift
-        shift_loop = range(-num_shifts, 1)
-    else:
-        shift_loop = range(-num_shifts, num_shifts + 1)
-
-    for count, shift in enumerate(shift_loop):
-        src_sliced_templates = templates_array[:, num_shifts : num_samples - num_shifts]
-        tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
-        for i in range(num_templates):
-            src_template = src_sliced_templates[i]
-            tgt_templates = tgt_sliced_templates[overlapping_templates[i]]
-            for gcount, j in enumerate(overlapping_templates[i]):
-                # symmetric values are handled later
-                if same_array and j < i:
-                    # no need exhaustive looping when same template
-                    continue
-                src = src_template[:, mask[i, j]].reshape(1, -1)
-                tgt = (tgt_templates[gcount][:, mask[i, j]]).reshape(1, -1)
-
-                if method == "l1":
-                    norm_i = np.sum(np.abs(src))
-                    norm_j = np.sum(np.abs(tgt))
-                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l1")
-                    distances[count, i, j] /= norm_i + norm_j
-                elif method == "l2":
-                    norm_i = np.linalg.norm(src, ord=2)
-                    norm_j = np.linalg.norm(tgt, ord=2)
-                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l2")
-                    distances[count, i, j] /= norm_i + norm_j
-                else:
-                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="cosine")
-
-                if same_array:
-                    distances[count, j, i] = distances[count, i, j]
-
-        if same_array and num_shifts != 0:
-            distances[num_shifts_both_sides - count - 1] = distances[count].T
+        for count, shift in enumerate(range(-num_shifts, 1)):
+            if shift != 0:
+                distances[num_shifts_both_sides - count - 1] = distances[count].T
 
     distances = np.min(distances, axis=0)
     similarity = 1 - distances
@@ -249,7 +349,7 @@ def compute_similarity_with_templates_array(
 
 
 def compute_template_similarity_by_pair(
-    sorting_analyzer_1, sorting_analyzer_2, method="cosine", support="union", num_shifts=0
+    sorting_analyzer_1, sorting_analyzer_2, method="cosine", support="union", num_shifts=0, **job_kwargs
 ):
     templates_array_1 = get_dense_templates_array(sorting_analyzer_1, return_scaled=True)
     templates_array_2 = get_dense_templates_array(sorting_analyzer_2, return_scaled=True)
@@ -263,6 +363,7 @@ def compute_template_similarity_by_pair(
         num_shifts=num_shifts,
         sparsity=sparsity_1,
         other_sparsity=sparsity_2,
+        **job_kwargs,
     )
     return similarity
 
