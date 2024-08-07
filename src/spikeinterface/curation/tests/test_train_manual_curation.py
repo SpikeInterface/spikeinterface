@@ -45,7 +45,7 @@ def test_load_and_preprocess_full(trainer):
     temp_file_path = make_temp_training_csv()
 
     # Load and preprocess the data from the temporary CSV file
-    trainer.load_and_preprocess_full(temp_file_path)
+    trainer.load_and_preprocess_csv(temp_file_path)
 
     # Assert that the data is loaded and preprocessed correctly
     assert trainer.X is not None
@@ -98,6 +98,7 @@ def test_train_model():
     target_label = "label"
     metrics_list = ["metric1", "metric2", "metric3"]
     trainer = train_model(
+        mode="csv",
         metrics_path=metrics_path,
         output_folder=output_folder,
         target_label=target_label,

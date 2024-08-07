@@ -16,8 +16,8 @@ class CurationModelTrainer:
     ----------
     target_column : str
         The name of the target column in the dataset.
-    output_folder : str
-        The folder where outputs such as models and evaluation metrics will be saved.
+    output_folder : str, optional
+        The folder where outputs such as models and evaluation metrics will be saved, if specified.
     metrics_to_use : list of str, optional
         A list of metrics to use for training. If None, default metrics will be used.
     imputation_strategies : list of str, optional
@@ -125,7 +125,7 @@ class CurationModelTrainer:
         else:
             self.metrics_list = metrics_to_use
 
-        if not os.path.exists(output_folder):
+        if output_folder is not None and not os.path.exists(output_folder):
             os.makedirs(output_folder)
             print(f"Created output folder: {output_folder}")
 
@@ -137,14 +137,20 @@ class CurationModelTrainer:
         """Returns the default list of metrics."""
         return get_quality_metric_list() + get_quality_pca_metric_list() + get_template_metric_names()
 
-    def load_and_preprocess_full(self, path):
-        self.load_data_file(path)
-        self.process_test_data_for_classification()
-
-    def load_data_file(self, path):
+    def load_and_preprocess_analyzers(self, analyzers):
+        """
+        Loads and preprocesses the quality metrics and labels from the given list of SortingAnalyzer objects.
+        """
         import pandas as pd
 
-        self.testing_metrics = {0: pd.read_csv(path, index_col=0)}
+        self.testing_metrics = {0: pd.concat([self._get_metrics_for_classification(an) for an in analyzers], axis=0)}
+        self.testing_metrics[0]["label"] = np.concatenate([an.sorting.get_property("quality") for an in analyzers])
+
+        self.process_test_data_for_classification()
+
+    def load_and_preprocess_csv(self, path):
+        self._load_data_file(path)
+        self.process_test_data_for_classification()
 
     def process_test_data_for_classification(self):
         """
@@ -366,6 +372,32 @@ class CurationModelTrainer:
             self.imputation_strategies, self.scaling_techniques, classifier_instances, X_train, X_test, y_train, y_test
         )
 
+    def _get_metrics_for_classification(self, analyzer):
+        """Check if all required metrics are present and return a DataFrame of metrics for classification"""
+
+        import pandas as pd
+
+        try:
+            quality_metrics = analyzer.extensions["quality_metrics"].data["metrics"]
+            template_metrics = analyzer.extensions["template_metrics"].data["metrics"]
+        except KeyError:
+            raise ValueError("Quality and template metrics must be computed before classification")
+
+        # Create DataFrame of all metrics and reorder columns to match the model
+        calculated_metrics = pd.concat([quality_metrics, template_metrics], axis=1)
+
+        # Remove any metrics for non-existent units, raise error if no units are present
+        calculated_metrics = calculated_metrics.loc[calculated_metrics.index.isin(analyzer.sorting.get_unit_ids())]
+        if calculated_metrics.shape[0] == 0:
+            raise ValueError("No units present in sorting data")
+
+        return calculated_metrics
+
+    def _load_data_file(self, path):
+        import pandas as pd
+
+        self.testing_metrics = {0: pd.read_csv(path, index_col=0)}
+
     def _evaluate(self, imputation_strategies, scaling_techniques, classifiers, X_train, X_test, y_train, y_test):
         from joblib import Parallel, delayed
         from sklearn.pipeline import Pipeline
@@ -441,8 +473,10 @@ class CurationModelTrainer:
 
 
 def train_model(
-    metrics_path,
-    target_label,
+    mode="analyzers",
+    target_label="label",
+    analyzers=None,
+    metrics_path=None,
     output_folder=None,
     metrics_list=None,
     imputation_strategies=None,
@@ -459,12 +493,16 @@ def train_model(
 
     Parameters
     ----------
+    mode : str
+        The mode to use for training. Options are 'analyzers', 'csv'. Default is 'analyzers'.
+    analyzers : list of SortingAnalyzer
+        The list of SortingAnalyzer objects containing the quality metrics and labels to use for training.
+    target_label : str
+        The name of the target column in the dataset. Default is 'label'.
     metrics_path : str
         The path to the CSV file containing the metrics data.
-    output_folder : str
+    output_folder : str, optional
         The folder where outputs such as models and evaluation metrics will be saved.
-    target_label : str
-        The name of the target column in the dataset.
     metrics_list : list of str, optional
         A list of metrics to use for training. If None, default metrics will be used.
     imputation_strategies : list of str, optional
@@ -487,14 +525,21 @@ def train_model(
     and evaluating the models. The evaluation results are saved to the specified output folder.
     """
     trainer = CurationModelTrainer(
-        target_label,
-        output_folder,
+        target_column=target_label,
+        output_folder=output_folder,
         metrics_to_use=metrics_list,
         imputation_strategies=imputation_strategies,
         scaling_techniques=scaling_techniques,
         classifiers=classifiers,
         seed=seed,
     )
-    trainer.load_and_preprocess_full(metrics_path)
+
+    if mode == "analyzers":
+        assert analyzers is not None, "Analyzers must be provided as a list for mode 'analyzers'"
+        trainer.load_and_preprocess_analyzers(analyzers)
+    elif mode == "csv":
+        assert os.path.exists(metrics_path), "Valid metrics path must be provided for mode 'csv'"
+        trainer.load_and_preprocess_csv(metrics_path)
+
     trainer.evaluate_model_config()
     return trainer
