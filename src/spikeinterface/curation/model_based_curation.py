@@ -73,7 +73,7 @@ class ModelBasedClassification:
         else:
             if not isinstance(input_data, pd.DataFrame):
                 raise ValueError("Input data must be a pandas DataFrame")
-    
+
         # Check all the required metrics have been calculated
         try:
             input_data = input_data[self.required_metrics]
