@@ -73,10 +73,12 @@ class ModelBasedClassification:
         else:
             if not isinstance(input_data, pd.DataFrame):
                 raise ValueError("Input data must be a pandas DataFrame")
-            try:
-                input_data = input_data[self.required_metrics]
-            except KeyError:
-                print("Input data does not contain all required metrics for classification")
+    
+        # Check all the required metrics have been calculated
+        try:
+            input_data = input_data[self.required_metrics]
+        except KeyError:
+            print("Input data does not contain all required metrics for classification")
 
         # Prepare input data
         input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
@@ -120,16 +122,8 @@ class ModelBasedClassification:
         except KeyError:
             raise ValueError("Quality and template metrics must be computed before classification")
 
-        # Check if any metrics are missing
-        metrics_list = quality_metrics.columns.to_list() + template_metrics.columns.to_list()
-        missing_metrics = [metric for metric in self.required_metrics if metric not in metrics_list]
-
-        if len(missing_metrics) > 0:
-            raise ValueError(f"Missing metrics: {missing_metrics}")
-
         # Create DataFrame of all metrics and reorder columns to match the model
         calculated_metrics = pd.concat([quality_metrics, template_metrics], axis=1)
-        calculated_metrics = calculated_metrics[self.required_metrics]
 
         # Remove any metrics for non-existent units, raise error if no units are present
         calculated_metrics = calculated_metrics.loc[

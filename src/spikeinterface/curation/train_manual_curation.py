@@ -83,7 +83,7 @@ class CurationModelTrainer:
     def __init__(
         self,
         target_column,
-        output_folder,
+        output_folder=None,
         metrics_to_use=None,
         imputation_strategies=None,
         scaling_techniques=None,
@@ -112,7 +112,7 @@ class CurationModelTrainer:
                 "MLPClassifier",
             ]
 
-        self.output_folder = output_folder
+        self.output_folder = output_folder if output_folder is not None else None
         self.target_column = target_column
         self.imputation_strategies = imputation_strategies
         self.scaling_techniques = scaling_techniques
@@ -393,11 +393,15 @@ class CurationModelTrainer:
             [("imputer", best_imputer), ("scaler", best_scaler), ("classifier", best_model.best_estimator_)]
         )
 
-        model_name = self.target_column
-        pkl.dump(best_pipeline, open(os.path.join(self.output_folder, f"best_model_{model_name}.pkl"), "wb"))
-        test_accuracies_df.to_csv(
-            os.path.join(self.output_folder, f"model_{model_name}_accuracies.csv"), float_format="%.4f"
-        )
+        self.best_pipeline = best_pipeline
+
+        # Dump to pickle if output_folder is provided
+        if self.output_folder is not None:
+            model_name = self.target_column
+            pkl.dump(best_pipeline, open(os.path.join(self.output_folder, f"best_model_{model_name}.pkl"), "wb"))
+            test_accuracies_df.to_csv(
+                os.path.join(self.output_folder, f"model_{model_name}_accuracies.csv"), float_format="%.4f"
+            )
 
     def _train_and_evaluate(self, imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, model_id):
         from sklearn.metrics import balanced_accuracy_score, precision_score, recall_score
@@ -438,8 +442,8 @@ class CurationModelTrainer:
 
 def train_model(
     metrics_path,
-    output_folder,
     target_label,
+    output_folder=None,
     metrics_list=None,
     imputation_strategies=None,
     scaling_techniques=None,
