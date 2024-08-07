@@ -6,7 +6,6 @@ import weakref
 import warnings
 from copy import deepcopy
 
-import pandas as pd
 import numpy as np
 
 from spikeinterface.core.job_tools import fix_job_kwargs
@@ -60,7 +59,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
             self.data = {"metrics": qm_extension.get_data()}
         else:
             self.params = {}
-            self.data = {"metrics": pd.DataFrame(index=sorting_analyzer.sorting.unit_ids)}
+            self.data = {"metrics": None}
 
     def _set_params(self, metric_names=None, qm_params=None, peak_sign=None, seed=None, skip_pc_metrics=False):
         if metric_names is None:
@@ -152,6 +151,8 @@ class ComputeQualityMetrics(AnalyzerExtension):
         import pandas as pd
 
         metrics = self.data["metrics"]
+        if metrics is None:
+            metrics = pd.DataFrame(index=sorting_analyzer.sorting.unit_ids)
 
         # simple metrics not based on PCs
         for metric_name in metric_names:
