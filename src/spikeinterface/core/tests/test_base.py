@@ -94,6 +94,41 @@ def test_name_and_repr():
     assert "Hz" in rec_str
 
 
+def test_setting_properties():
+
+    num_channels = 5
+    recording = generate_recording(num_channels=5, durations=[1.0])
+    channel_ids = ["a", "b", "c", "d", "e"]
+    recording = recording.rename_channels(new_channel_ids=channel_ids)
+
+    complete_values = ["value"] * num_channels
+    recording.set_property(key="a_property", values=complete_values)
+
+    property_in_recording = recording.get_property("a_property")
+    expected_array = np.array(complete_values)
+    assert np.array_equal(property_in_recording, expected_array)
+
+    # Set property with missing values
+    incomplete_values = ["value"] * (num_channels - 1)
+    recording.set_property(key="incomplete_property", ids=channel_ids[:-1], values=incomplete_values)
+
+    property_in_recording = recording.get_property("incomplete_property")
+    expected_array = np.array(incomplete_values + [""])  # Spikeinterface defines missing values as empty strings
+    assert np.array_equal(property_in_recording, expected_array)
+
+    # # Passs a missing value
+    # recording.set_property(
+    #     key="missing_property",
+    #     ids=channel_ids[:-1],
+    #     values=incomplete_values,
+    #     missing_value="missing",
+    # )
+
+    # property_in_recording = recording.get_property("missing_property")
+    # expected_array = np.array(incomplete_values + ["missing"])
+    # assert np.array_equal(property_in_recording, expected_array)
+
+
 if __name__ == "__main__":
     test_check_if_memory_serializable()
     test_check_if_serializable()
