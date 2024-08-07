@@ -208,7 +208,7 @@ class BaseExtractor:
     def set_property(
         self,
         key,
-        values: list | np.ndarray | tuple | None,
+        values: list | np.ndarray | tuple,
         ids: list | np.ndarray | tuple | None = None,
         missing_value: Any = None,
     ) -> None:
@@ -236,12 +236,6 @@ class BaseExtractor:
             The missing_value has to be specified for types int and unsigned int.
         """
 
-        # This deletes the values but we have `delete_property` maybe we should eliminate this?
-        if values is None:
-            if key in self._properties:
-                self._properties.pop(key)
-            return
-
         size = self._main_ids.size
         values = np.asarray(values)
         dtype = values.dtype
@@ -267,7 +261,7 @@ class BaseExtractor:
                         if dtype_kind not in self.default_missing_property_values.keys():
                             raise ValueError(
                                 f"Can't infer a natural missing value for dtype {dtype_kind}. "
-                                "Please provide it with the missing_value argument"
+                                "Please provide it with the `missing_value` argument"
                             )
                         else:
                             missing_value = self.default_missing_property_values[dtype_kind]
