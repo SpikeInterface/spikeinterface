@@ -177,7 +177,7 @@ class CurationModelTrainer:
             self.y = self.testing_metrics[self.target_column]
         except KeyError:
             raise ValueError(f"Target column '{self.target_column}' not found in testing metrics file")
-        
+
         if self.y.dtype == "object":
             self.y = self.y.astype("category").cat.codes
             self.label_conversion = dict(
@@ -192,7 +192,9 @@ class CurationModelTrainer:
         # Extract features
         try:
             self.X = self.testing_metrics[self.metrics_list]
-            print(f"Dropped metrics (calculated but not included in metrics_list): {set(self.testing_metrics.columns) - set(self.metrics_list)}")
+            print(
+                f"Dropped metrics (calculated but not included in metrics_list): {set(self.testing_metrics.columns) - set(self.metrics_list)}"
+            )
         except KeyError as e:
             print("metrics_list contains invalid metric names")
             raise e
