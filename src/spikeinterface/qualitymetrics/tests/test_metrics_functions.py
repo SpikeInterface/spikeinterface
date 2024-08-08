@@ -1,6 +1,7 @@
 import pytest
 from pathlib import Path
 import numpy as np
+from copy import deepcopy
 from spikeinterface.core import (
     NumpySorting,
     synthetize_spike_train_bad_isi,
@@ -45,6 +46,64 @@ from spikeinterface.core.basesorting import minimum_spike_dtype
 
 
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
+
+
+def test_compute_new_quality_metrics(small_sorting_analyzer):
+    """
+    Computes quality metrics then computes a subset of quality metrics, and checks
+    that the old quality metrics are not deleted.
+    """
+
+    qm_params = {
+        "presence_ratio": {"bin_duration_s": 0.1},
+        "amplitude_cutoff": {"num_histogram_bins": 3},
+        "firing_range": {"bin_size_s": 1},
+    }
+
+    small_sorting_analyzer.compute(
+        {"quality_metrics": {"metric_names": list(qm_params.keys()), "qm_params": qm_params}}
+    )
+    small_sorting_analyzer.compute({"quality_metrics": {"metric_names": ["snr"]}})
+
+    quality_metric_extension = small_sorting_analyzer.get_extension("quality_metrics")
+
+    # Check old metrics are not deleted and the new one is added to the data and metadata
+    assert list(quality_metric_extension.get_data().keys()) == [
+        "amplitude_cutoff",
+        "firing_range",
+        "presence_ratio",
+        "snr",
+    ]
+    assert list(quality_metric_extension.params.get("metric_names")) == [
+        "amplitude_cutoff",
+        "firing_range",
+        "presence_ratio",
+        "snr",
+    ]
+
+    # check that, when parameters are changed, the data and metadata are updated
+    old_snr_data = deepcopy(quality_metric_extension.get_data()["snr"].values)
+    small_sorting_analyzer.compute(
+        {"quality_metrics": {"metric_names": ["snr"], "qm_params": {"snr": {"peak_mode": "peak_to_peak"}}}}
+    )
+    new_quality_metric_extension = small_sorting_analyzer.get_extension("quality_metrics")
+    new_snr_data = new_quality_metric_extension.get_data()["snr"].values
+
+    assert np.all(old_snr_data != new_snr_data)
+    assert new_quality_metric_extension.params["qm_params"]["snr"]["peak_mode"] == "peak_to_peak"
+
+    # check that all quality metrics are deleted when parents are recomputed, even after
+    # recomputation
+    extensions_to_compute = {
+        "templates": {"operators": ["average", "median"]},
+        "spike_amplitudes": {},
+        "spike_locations": {},
+        "principal_components": {},
+    }
+
+    small_sorting_analyzer.compute(extensions_to_compute)
+
+    assert small_sorting_analyzer.get_extension("quality_metrics") is None
 
 
 def test_unit_structure_in_output(small_sorting_analyzer):

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-
+import weakref
 import warnings
 from copy import deepcopy
 
@@ -49,6 +49,19 @@ class ComputeQualityMetrics(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = True
 
+    def __init__(self, sorting_analyzer):
+
+        self._sorting_analyzer = weakref.ref(sorting_analyzer)
+
+        qm_class = sorting_analyzer.extensions.get("quality_metrics")
+
+        if qm_class:
+            self.params = qm_class.params
+            self.data = {"metrics": qm_class.get_data()}
+        else:
+            self.params = {}
+            self.data = {"metrics": None}
+
     def _set_params(self, metric_names=None, qm_params=None, peak_sign=None, seed=None, skip_pc_metrics=False):
         if metric_names is None:
             metric_names = list(_misc_metric_name_to_func.keys())
@@ -71,8 +84,15 @@ class ComputeQualityMetrics(AnalyzerExtension):
             if "peak_sign" in qm_params_[k] and peak_sign is not None:
                 qm_params_[k]["peak_sign"] = peak_sign
 
+        metric_names_for_params = metric_names
+        qm_extension = self.sorting_analyzer.get_extension("quality_metrics")
+        if qm_extension is not None:
+            existing_metric_names = qm_extension.params.get("metric_names")
+            if existing_metric_names is not None:
+                metric_names_for_params.extend(existing_metric_names)
+
         params = dict(
-            metric_names=[str(name) for name in np.unique(metric_names)],
+            metric_names=[str(name) for name in np.unique(metric_names_for_params)],
             peak_sign=peak_sign,
             seed=seed,
             qm_params=qm_params_,
@@ -89,8 +109,6 @@ class ComputeQualityMetrics(AnalyzerExtension):
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
-        import pandas as pd
-
         old_metrics = self.data["metrics"]
 
         all_unit_ids = new_sorting_analyzer.unit_ids
@@ -134,7 +152,9 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
         import pandas as pd
 
-        metrics = pd.DataFrame(index=unit_ids)
+        metrics = self.data["metrics"]
+        if metrics is None:
+            metrics = pd.DataFrame(index=sorting_analyzer.sorting.unit_ids)
 
         # simple metrics not based on PCs
         for metric_name in metric_names:
