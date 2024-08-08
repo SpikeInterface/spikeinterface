@@ -83,11 +83,12 @@ class ComputeQualityMetrics(AnalyzerExtension):
             if "peak_sign" in qm_params_[k] and peak_sign is not None:
                 qm_params_[k]["peak_sign"] = peak_sign
 
-        try:
-            existing_metric_names = self.sorting_analyzer.get_extension("quality_metrics").params.get("metric_names")
-            metric_names_for_params = np.concatenate((existing_metric_names, metric_names))
-        except:
-            metric_names_for_params = metric_names
+        metric_names_for_params = metric_names
+        qm_extension = self.sorting_analyzer.get_extension("quality_metrics")
+        if qm_extension:
+            existing_metric_names = qm_extension.params.get("metric_names")
+            if existing_metric_names is not None:
+                metric_names_for_params.extend(existing_metric_names)
 
         params = dict(
             metric_names=[str(name) for name in np.unique(metric_names_for_params)],
