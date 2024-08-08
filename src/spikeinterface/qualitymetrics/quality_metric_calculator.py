@@ -86,7 +86,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
         metric_names_for_params = metric_names
         qm_extension = self.sorting_analyzer.get_extension("quality_metrics")
-        if qm_extension:
+        if qm_extension is not None:
             existing_metric_names = qm_extension.params.get("metric_names")
             if existing_metric_names is not None:
                 metric_names_for_params.extend(existing_metric_names)
