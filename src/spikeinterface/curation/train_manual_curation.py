@@ -143,8 +143,8 @@ class CurationModelTrainer:
         """
         import pandas as pd
 
-        self.testing_metrics = {0: pd.concat([self._get_metrics_for_classification(an) for an in analyzers], axis=0)}
-        self.testing_metrics[0]["label"] = np.concatenate([an.sorting.get_property("quality") for an in analyzers])
+        self.testing_metrics = pd.concat([self._get_metrics_for_classification(an) for an in analyzers], axis=0)
+        self.testing_metrics["label"] = np.concatenate([an.sorting.get_property("quality") for an in analyzers])
 
         self.process_test_data_for_classification()
 
@@ -172,24 +172,34 @@ class CurationModelTrainer:
         are converted to integer codes. The mapping from string labels to integer codes
         is stored in the `label_conversion` attribute.
         """
-        if self.target_column in self.testing_metrics[0].columns:
-            self.y = self.testing_metrics[0][self.target_column]
-            if self.y.dtype == "object":
-                self.y = self.y.astype("category").cat.codes
-                self.label_conversion = dict(
-                    zip(self.testing_metrics[0][self.target_column].astype("category").cat.categories, self.y)
-                )
-                warnings.warn(
-                    "Target column contains string labels, converting to integers. "
-                    "Please ensure that the labels are in the correct order."
-                    "Conversion can be found in self.label_conversion"
-                )
-            self.X = self.testing_metrics[0].reindex(columns=self.metrics_list)
-            self.X = self.X.astype("float32")
-            self.X = self.X.map(lambda x: np.nan if np.isinf(x) else x)
-            self.X.fillna(0, inplace=True)
-        else:
-            raise ValueError(f"Target column {self.target_column} not found in testing metrics file")
+        # Extract target variable
+        try:
+            self.y = self.testing_metrics[self.target_column]
+        except KeyError:
+            raise ValueError(f"Target column '{self.target_column}' not found in testing metrics file")
+        
+        if self.y.dtype == "object":
+            self.y = self.y.astype("category").cat.codes
+            self.label_conversion = dict(
+                zip(self.testing_metrics[self.target_column].astype("category").cat.categories, self.y)
+            )
+            warnings.warn(
+                "Target column contains string labels, converting to integers. "
+                "Please ensure that the labels are in the correct order."
+                "Conversion can be found in self.label_conversion"
+            )
+
+        # Extract features
+        try:
+            self.X = self.testing_metrics[self.metrics_list]
+            print(f"Dropped metrics (calculated but not included in metrics_list): {set(self.testing_metrics.columns) - set(self.metrics_list)}")
+        except KeyError as e:
+            print("metrics_list contains invalid metric names")
+            raise e
+        self.X = self.testing_metrics.reindex(columns=self.metrics_list)
+        self.X = self.X.astype("float32")
+        self.X = self.X.map(lambda x: np.nan if np.isinf(x) else x)
+        self.X.fillna(0, inplace=True)
 
     def apply_scaling_imputation(
         self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val, smote=False
@@ -396,7 +406,7 @@ class CurationModelTrainer:
     def _load_data_file(self, path):
         import pandas as pd
 
-        self.testing_metrics = {0: pd.read_csv(path, index_col=0)}
+        self.testing_metrics = pd.read_csv(path, index_col=0)
 
     def _evaluate(self, imputation_strategies, scaling_techniques, classifiers, X_train, X_test, y_train, y_test):
         from joblib import Parallel, delayed

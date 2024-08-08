@@ -28,10 +28,10 @@ def make_temp_training_csv():
     # Create a temporary CSV file with sham data
     with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
         writer = csv.writer(temp_file)
-        writer.writerow(["metric1", "metric2", "metric3", "label"])
-        for _ in range(5):
-            writer.writerow([0, 0, 0, 0])
-            writer.writerow([1, 1, 1, 1])
+        writer.writerow(["unit_id","metric1", "metric2", "metric3", "label"])
+        for i in range(5):
+            writer.writerow([i*2, 0, 0, 0, 0])
+            writer.writerow([i*2+1, 1, 1, 1, 1])
     return temp_file.name
 
 
