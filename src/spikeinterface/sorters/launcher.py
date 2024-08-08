@@ -26,14 +26,14 @@ _default_engine_kwargs = dict(
     joblib=dict(n_jobs=-1, backend="loky"),
     processpoolexecutor=dict(max_workers=2, mp_context=None),
     dask=dict(client=None),
-    slurm=dict(tmp_script_folder=None, cpus_per_task=1, mem="1G"),
+    slurm={"tmp_script_folder": None, "sbatch_args": {"cpus-per-task": 1, "mem": "1G"}},
 )
 
 
 _implemented_engine = list(_default_engine_kwargs.keys())
 
 
-def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=False):
+def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=False):
     """
     Run several :py:func:`run_sorter()` sequentially or in parallel given a list of jobs.
 
@@ -55,10 +55,9 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
 
     Where *blocking* means that this function is blocking until the results are returned.
     This is in opposition to *asynchronous*, where the function returns `None` almost immediately (aka non-blocking),
-    but the results must be retrieved by hand when jobs are finished. No mechanisim is provided here to be know
-    when jobs are finish.
+    but the results must be retrieved by hand when jobs are finished. No mechanism is provided here to know
+    when jobs are finished.
     In this *asynchronous* case, the :py:func:`~spikeinterface.sorters.read_sorter_folder()` helps to retrieve individual results.
-
 
     Parameters
     ----------
@@ -68,10 +67,17 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
         The engine to run the list.
         * "loop" : a simple loop. This engine is
     engine_kwargs : dict
+        In the case of engine="slum", possible kwargs are:
+        - tmp_script_folder: str, default None
+            the folder in which the job scripts are created. Default: directory created by
+            the `tempfile` library
+        - sbatch_args: dict
+          arguments to be passed to sbatch. They are translated to the --args form.
+          see the [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html) for a list of possible arguments
 
-    return_output : bool, dfault False
+    return_output : bool, default False
         Return a sortings or None.
-        This also overwrite kwargs in  in run_sorter(with_sorting=True/False)
+        This also overwrite kwargs in run_sorter(with_sorting=True/False)
 
     Returns
     -------
@@ -81,6 +87,8 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
 
     assert engine in _implemented_engine, f"engine must be in {_implemented_engine}"
 
+    if engine_kwargs is None:
+        engine_kwargs = dict()
     engine_kwargs_ = dict()
     engine_kwargs_.update(_default_engine_kwargs[engine])
     engine_kwargs_.update(engine_kwargs)
@@ -150,9 +158,6 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
         if tmp_script_folder is None:
             tmp_script_folder = tempfile.mkdtemp(prefix="spikeinterface_slurm_")
         tmp_script_folder = Path(tmp_script_folder)
-        cpus_per_task = engine_kwargs["cpus_per_task"]
-        mem = engine_kwargs["mem"]
-
         tmp_script_folder.mkdir(exist_ok=True, parents=True)
 
         for i, kwargs in enumerate(job_list):
@@ -181,7 +186,13 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
                 f.write(slurm_script)
                 os.fchmod(f.fileno(), mode=stat.S_IRWXU)
 
-            subprocess.Popen(["sbatch", str(script_name.absolute()), f"-cpus-per-task={cpus_per_task}", f"-mem={mem}"])
+            progr = ["sbatch"]
+            for k, v in engine_kwargs["sbatch_args"].items():
+                progr.append(f"--{k}")
+                progr.append(f"{v}")
+            progr.append(str(script_name.absolute()))
+            p = subprocess.run(progr, capture_output=True, text=True)
+            print(p.stdout)
 
     return out
 
