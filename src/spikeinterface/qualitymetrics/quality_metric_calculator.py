@@ -53,10 +53,11 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
         self._sorting_analyzer = weakref.ref(sorting_analyzer)
 
-        qm_extension = sorting_analyzer.get_extension("quality_metrics")
-        if qm_extension:
-            self.params = qm_extension.params
-            self.data = {"metrics": qm_extension.get_data()}
+        qm_class = sorting_analyzer.extensions.get("quality_metrics")
+
+        if qm_class:
+            self.params = qm_class.params
+            self.data = {"metrics": qm_class.get_data()}
         else:
             self.params = {}
             self.data = {"metrics": None}
