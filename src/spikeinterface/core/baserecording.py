@@ -96,14 +96,18 @@ class BaseRecording(BaseRecordingSnippets):
     def _repr_header(self):
         num_segments = self.get_num_segments()
         num_channels = self.get_num_channels()
-        sf_hz = self.get_sampling_frequency()
-        sf_khz = sf_hz / 1000
         dtype = self.get_dtype()
 
         total_samples = self.get_total_samples()
         total_duration = self.get_total_duration()
         total_memory_size = self.get_total_memory_size()
-        sampling_frequency_repr = f"{sf_khz:0.1f}kHz" if sf_hz > 10_000.0 else f"{sf_hz:0.1f}Hz"
+
+        sf_hz = self.get_sampling_frequency()
+        if not sf_hz.is_integer():
+            sampling_frequency_repr = f"{sf_hz:f} Hz"
+        else:
+            # Khz for high sampling rate and Hz for LFP
+            sampling_frequency_repr = f"{(sf_hz/1000.0):0.1f}kHz" if sf_hz > 10_000.0 else f"{sf_hz:0.1f}Hz"
 
         txt = (
             f"{self.name}: "
