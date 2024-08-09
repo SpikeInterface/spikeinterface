@@ -229,7 +229,7 @@ class BinaryRecordingSegment(BaseRecordingSegment):
             if channel_indices is not None:
                 traces = traces[:, channel_indices]
 
-        return traces
+            return traces
 
 
 # For backward compatibility (old good time)
