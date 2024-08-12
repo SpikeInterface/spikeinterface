@@ -11,6 +11,7 @@ from spikeinterface.sortingcomponents.motion.motion_utils import \
     make_2d_motion_histogram, make_3d_motion_histograms
 from scipy.optimize import minimize
 from pathlib import Path
+import alignment_utils
 
 # Generate a ground truth recording where every unit is firing a lot,
 # with high amplitude, and is close to the spike, so all picked up.
@@ -111,180 +112,191 @@ if __name__ == "__main__":
         peak_locations = np.load(base_path / "peak_locations_corrected.npy")
         recording = si.load_extractor(base_path / "recording")
 
-    # TODO: to test, get a real recording, interpolate each recording
-    # one up, one down a small amount.
+    est_dict = alignment_utils.get_all_hist_estimation(
+        recording, peaks, peak_locations
+    )
 
-    # -----------------------------------------------------------------------------
-    # Over Entire Session
-    # -----------------------------------------------------------------------------
+    alignment_utils.plot_all_hist_estimation(
+        est_dict["chunked_session_hist"], est_dict["chunk_spatial_bins"],
+    )
 
-    # TODO: figure out dynamic bin sizing based on 1-um histogram.
-    #
-    bin_um = 25  # TODO: maybe do some testing on benchmarks backed by some theory.
-    WEIGHT_WITH_AMPLITUDE = False
+    alignment_utils.plot_chunked_session_hist(
+        est_dict
+    )
 
-    print("starting make hist")
-    entire_session_hist, temporal_bin_edges, spatial_bin_edges = make_2d_motion_histogram(
-                    recording,
-                    peaks,
-                    peak_locations,
-                    weight_with_amplitude=WEIGHT_WITH_AMPLITUDE,
-                    direction="y",
-                    bin_s=recording.get_duration(segment_index=0),  # 1.0,
-                    bin_um=bin_um,
-                    hist_margin_um=50,
-                    spatial_bin_edges=None,
-                )
-    entire_session_hist = entire_session_hist[0]
-    raw_entire_session_hist = entire_session_hist.copy()
-    entire_session_hist /= np.max(entire_session_hist)
-    centers = (spatial_bin_edges[1:] + spatial_bin_edges[:-1]) / 2
-    plt.plot(centers, entire_session_hist)
-    plt.show()
+    if False:
+        # TODO: to test, get a real recording, interpolate each recording
+        # one up, one down a small amount.
 
-    # -----------------------------------------------------------------------------
-    # CHUNKING!
-    # -----------------------------------------------------------------------------
+        # -----------------------------------------------------------------------------
+        # Over Entire Session
+        # -----------------------------------------------------------------------------
 
-    # Estimating the temporal bin size from firing rates
-    # based on law of large numbers for Poisson distribution
-    # E[X] -> λ, STD = \sqrt{\dfrac{t \lambda}{n}}
-    # maybe this is too conservative... 95% of chunks within 10% of lambda theoretically
-    def estimate_chunk_size(firing_rate):
-        l_pois = firing_rate
-        l_exp = 1 / l_pois
-        perc = 0.1
-        s = (l_exp * perc) / 2  # 99% of values (this is very conservative)
-        n = 1 / (s ** 2 / l_exp ** 2)
-        t = n / l_pois
-        return t, n
+        # TODO: figure out dynamic bin sizing based on 1-um histogram.
+        #
+        bin_um = 25  # TODO: maybe do some testing on benchmarks backed by some theory.
+        WEIGHT_WITH_AMPLITUDE = False
 
-    # spikes per second
-    raw_entire_session_hist /= recording.get_duration(segment_index=0)
+        print("starting make hist")
+        entire_session_hist, temporal_bin_edges, spatial_bin_edges = make_2d_motion_histogram(
+                        recording,
+                        peaks,
+                        peak_locations,
+                        weight_with_amplitude=WEIGHT_WITH_AMPLITUDE,
+                        direction="y",
+                        bin_s=recording.get_duration(segment_index=0),  # 1.0,
+                        bin_um=bin_um,
+                        hist_margin_um=50,
+                        spatial_bin_edges=None,
+                    )
+        entire_session_hist = entire_session_hist[0]
+        raw_entire_session_hist = entire_session_hist.copy()
+        entire_session_hist /= np.max(entire_session_hist)
+        centers = (spatial_bin_edges[1:] + spatial_bin_edges[:-1]) / 2
+        plt.plot(centers, entire_session_hist)
+        plt.show()
 
-    est_lambda = np.percentile(raw_entire_session_hist, 85)
+        # -----------------------------------------------------------------------------
+        # CHUNKING!
+        # -----------------------------------------------------------------------------
 
-    est_t, _ = estimate_chunk_size(est_lambda)
-    print(est_t)
-    chunk_session_hist, temporal_bin_edges, spatial_bin_edges = make_2d_motion_histogram(
-                    recording,
-                    peaks,
-                    peak_locations,
-                    weight_with_amplitude=WEIGHT_WITH_AMPLITUDE,
-                    direction="y",
-                    bin_s=est_t,  # Now make 25 histograms
-                    bin_um=bin_um,
-                    hist_margin_um=50,
-                    spatial_bin_edges=None,
-                )
+        # Estimating the temporal bin size from firing rates
+        # based on law of large numbers for Poisson distribution
+        # E[X] -> λ, STD = \sqrt{\dfrac{t \lambda}{n}}
+        # maybe this is too conservative... 95% of chunks within 10% of lambda theoretically
+        def estimate_chunk_size(firing_rate):
+            l_pois = firing_rate
+            l_exp = 1 / l_pois
+            perc = 0.1
+            s = (l_exp * perc) / 2  # 99% of values (this is very conservative)
+            n = 1 / (s ** 2 / l_exp ** 2)
+            t = n / l_pois
+            return t, n
 
-    m = chunk_session_hist.shape[0]  # TODO: n_hist
-    n = chunk_session_hist.shape[1]  # TOOD: n_bin
+        # spikes per second
+        raw_entire_session_hist /= recording.get_duration(segment_index=0)
+
+        est_lambda = np.percentile(raw_entire_session_hist, 85)
+
+        est_t, _ = estimate_chunk_size(est_lambda)
+        print(est_t)
+        chunk_session_hist, temporal_bin_edges, spatial_bin_edges = make_2d_motion_histogram(
+                        recording,
+                        peaks,
+                        peak_locations,
+                        weight_with_amplitude=WEIGHT_WITH_AMPLITUDE,
+                        direction="y",
+                        bin_s=est_t,  # Now make 25 histograms
+                        bin_um=bin_um,
+                        hist_margin_um=50,
+                        spatial_bin_edges=None,
+                    )
+
+        m = chunk_session_hist.shape[0]  # TODO: n_hist
+        n = chunk_session_hist.shape[1]  # TOOD: n_bin
 
 
-    # TODO: try trimmed mean / median  and trimming bins for Poisson
-    # TODO: try excluding entire histogram based on `session_std`.
+        # TODO: try trimmed mean / median  and trimming bins for Poisson
+        # TODO: try excluding entire histogram based on `session_std`.
 
-    # TODO: could treat the std per bin as a vector and take norm (rather than avg here).
-    session_std = np.sum(np.std(chunk_session_hist, axis=0)) / n
-    print("Histogram STD:: ", session_std)
+        # TODO: could treat the std per bin as a vector and take norm (rather than avg here).
+        session_std = np.sum(np.std(chunk_session_hist, axis=0)) / n
+        print("Histogram STD:: ", session_std)
 
-    # TODOs estimation
-    # Try with amplitude scaling
-    # Try with 3d histogram (same idea)
-    # Try with (x, y) probe positions (note this will have to be per shank? no I dont think so)
-    # TODO: exclude histograms at the level of entire histogram or bin
-    # TODO: how to handle this multidimensional std. think more.
-    # TODO: for now scale by max for interpretability
-    # TODO: think about shank!
-    # TODO: do LFP
-    # TODO: handle nonlinear!
+        # TODOs estimation
+        # Try with amplitude scaling
+        # Try with 3d histogram (same idea)
+        # Try with (x, y) probe positions (note this will have to be per shank? no I dont think so)
+        # TODO: exclude histograms at the level of entire histogram or bin
+        # TODO: how to handle this multidimensional std. think more.
+        # TODO: for now scale by max for interpretability
+        # TODO: think about shank!
+        # TODO: do LFP
+        # TODO: handle nonlinear!
 
-    # I think for now:
-    # 1) think about dynamic bin sizing, formalisation
-    # 2) figure out dynamic chunking, based on firing rates.
-    # 2) Think about (robust) optimisation
-    # 3) Do a minimal working version
+        # I think for now:
+        # 1) think about dynamic bin sizing, formalisation
+        # 2) figure out dynamic chunking, based on firing rates.
+        # 2) Think about (robust) optimisation
+        # 3) Do a minimal working version
 
-    # 4) do some reading, try above approaches
+        # 4) do some reading, try above approaches
 
-    spatial_centers = (spatial_bin_edges[1:] + spatial_bin_edges[:-1]) / 2  # TODO: own function!
-    temporal_centers = (temporal_bin_edges[1:] + temporal_bin_edges[:-1]) / 2
+        spatial_centers = (spatial_bin_edges[1:] + spatial_bin_edges[:-1]) / 2  # TODO: own function!
+        temporal_centers = (temporal_bin_edges[1:] + temporal_bin_edges[:-1]) / 2
 
-    for i in range(chunk_session_hist.shape[0]):
-        plt.plot(spatial_centers, chunk_session_hist[i, :])
-    plt.show()
+        for i in range(chunk_session_hist.shape[0]):
+            plt.plot(spatial_centers, chunk_session_hist[i, :])
+        plt.show()
 
-    # -----------------------------------------------------------------------------
-    # Sup of Chunks
-    # -----------------------------------------------------------------------------
+        # -----------------------------------------------------------------------------
+        # Sup of Chunks
+        # -----------------------------------------------------------------------------
 
-    max_hist = np.max(chunk_session_hist, axis=0)
-    max_hist /= np.max(max_hist)
+        max_hist = np.max(chunk_session_hist, axis=0)
+        max_hist /= np.max(max_hist)
 
-    # -----------------------------------------------------------------------------
-    # Mean of Chunks
-    # -----------------------------------------------------------------------------
+        # -----------------------------------------------------------------------------
+        # Mean of Chunks
+        # -----------------------------------------------------------------------------
 
-    mean_hist = np.mean(chunk_session_hist, axis=0)
-    mean_hist /= np.max(mean_hist)
+        mean_hist = np.mean(chunk_session_hist, axis=0)
+        mean_hist /= np.max(mean_hist)
 
-    # -----------------------------------------------------------------------------
-    # Median of Chunks
-    # -----------------------------------------------------------------------------
+        # -----------------------------------------------------------------------------
+        # Median of Chunks
+        # -----------------------------------------------------------------------------
 
-    median_hist = np.median(chunk_session_hist, axis=0)  # interesting, this is probably dumb
-    median_hist /= np.max(median_hist)
+        median_hist = np.median(chunk_session_hist, axis=0)  # interesting, this is probably dumb
+        median_hist /= np.max(median_hist)
 
-    # -----------------------------------------------------------------------------
-    # Eigenvectors of Chunks
-    # -----------------------------------------------------------------------------
+        # -----------------------------------------------------------------------------
+        # Eigenvectors of Chunks
+        # -----------------------------------------------------------------------------
 
-    A = chunk_session_hist
-    S = A.T @ A  # (num hist, num_bins)
+        A = chunk_session_hist
+        S = A.T @ A  # (num hist, num_bins)
 
-    U,S, Vh = np.linalg.svd(S)
+        U,S, Vh = np.linalg.svd(S)
 
-    # TODO: check why this is flipped
-    first_eigenvalue = U[:, 0] * -1  # TODO: revise a little + consider another distance metric
-    first_eigenvalue /= np.max(first_eigenvalue)
+        # TODO: check why this is flipped
+        first_eigenvalue = U[:, 0] * -1  # TODO: revise a little + consider another distance metric
+        first_eigenvalue /= np.max(first_eigenvalue)
 
-    # -----------------------------------------------------------------------------
-    # Poisson Modelling
-    # -----------------------------------------------------------------------------
-    # Under assumption of independent bins and time points
+        # -----------------------------------------------------------------------------
+        # Poisson Modelling
+        # -----------------------------------------------------------------------------
+        # Under assumption of independent bins and time points
 
-    def obj_fun(lambda_, m, sum_k ):
-        return -(sum_k * np.log(lambda_) - m * lambda_)
+        def obj_fun(lambda_, m, sum_k ):
+            return -(sum_k * np.log(lambda_) - m * lambda_)
 
-    poisson_estimate = np.zeros(chunk_session_hist.shape[1])  # TODO: var names
-    for i in range(chunk_session_hist.shape[1]):
+        poisson_estimate = np.zeros(chunk_session_hist.shape[1])  # TODO: var names
+        for i in range(chunk_session_hist.shape[1]):
 
-        ks = chunk_session_hist[:, i]
+            ks = chunk_session_hist[:, i]
 
-        m = ks.shape
-        sum_k = np.sum(ks)
+            m = ks.shape
+            sum_k = np.sum(ks)
 
-        # lol, this is painfully close to the mean...
-        try:
+            # lol, this is painfully close to the mean...
             poisson_estimate[i] = minimize(obj_fun, 0.5, (m, sum_k), bounds=((1e-10, np.inf),)).x
-        except:
-            breakpoint()
-    poisson_estimate /= np.max(poisson_estimate)
 
-    # -----------------------------------------------------------------------------
-    # Plotting Results
-    # -----------------------------------------------------------------------------
+        poisson_estimate /= np.max(poisson_estimate)
 
-    plt.plot(entire_session_hist)  # obs this is equal to mean hist
-    plt.plot(max_hist)
-    plt.plot(mean_hist)
-    plt.plot(median_hist)
-    plt.plot(first_eigenvalue)
-    plt.plot(poisson_estimate)
-    plt.legend(["entire", "chunk_max", "chunk mean", "chunk median", "chunk eigenvalue", "Poisson estimate"])
-    plt.show()
+        # -----------------------------------------------------------------------------
+        # Plotting Results
+        # -----------------------------------------------------------------------------
 
-    # After this try (x, y) alignment
-    # estimate chunk size based on firing rate
-    # figure out best histogram size based on x0x0x0
+        plt.plot(entire_session_hist)  # obs this is equal to mean hist
+        plt.plot(max_hist)
+        plt.plot(mean_hist)
+        plt.plot(median_hist)
+        plt.plot(first_eigenvalue)
+        plt.plot(poisson_estimate)
+        plt.legend(["entire", "chunk_max", "chunk mean", "chunk median", "chunk eigenvalue", "Poisson estimate"])
+        plt.show()
+
+        # After this try (x, y) alignment
+        # estimate chunk size based on firing rate
+        # figure out best histogram size based on x0x0x0
