@@ -44,8 +44,8 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         The localization method to use
     method_kwargs : dict, default: dict()
         Other kwargs depending on the method.
-    outputs : "concatenated" | "by_unit", default: "concatenated"
-        The output format
+    outputs : "numpy" | "by_unit", default: "numpy"
+        The output format, either concatenated as numpy array or separated on a per unit basis
 
     Returns
     -------
@@ -148,7 +148,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
                     amplitudes_by_units[segment_index][unit_id] = all_amplitudes[inds]
             return amplitudes_by_units
         else:
-            raise ValueError(f"Wrong .get_data(outputs={outputs})")
+            raise ValueError(f"Wrong .get_data(outputs={outputs}); possibilities are `numpy` or `by_unit`")
 
 
 register_result_extension(ComputeSpikeAmplitudes)
