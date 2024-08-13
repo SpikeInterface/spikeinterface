@@ -113,11 +113,11 @@ if __name__ == "__main__":
         recording = si.load_extractor(base_path / "recording")
 
     est_dict = alignment_utils.get_all_hist_estimation(
-        recording, peaks, peak_locations
+        recording, peaks, peak_locations, bin_um=15,
     )
 
     alignment_utils.plot_all_hist_estimation(
-        est_dict["chunked_session_hist"], est_dict["chunk_spatial_bins"],
+        est_dict["chunked_session_hist"], est_dict["chunked_spatial_bins"],
     )
 
     alignment_utils.plot_chunked_session_hist(
