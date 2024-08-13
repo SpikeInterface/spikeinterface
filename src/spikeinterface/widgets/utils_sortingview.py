@@ -5,6 +5,7 @@ import numpy as np
 from ..core.core_tools import check_json
 from warnings import warn
 
+
 def make_serializable(*args):
     dict_to_serialize = {int(i): a for i, a in enumerate(args)}
     serializable_dict = check_json(dict_to_serialize)
@@ -47,8 +48,9 @@ def handle_display_and_url(widget, view, **backend_kwargs):
 
 def generate_unit_table_view(analyzer, unit_properties=None, similarity_scores=None):
     import sortingview.views as vv
+
     sorting = analyzer.sorting
-    
+
     # Find available unit properties from all sources
     sorting_props = sorting.get_property_keys()
     if analyzer.get_extension("quality_metrics") is not None:
@@ -66,7 +68,9 @@ def generate_unit_table_view(analyzer, unit_properties=None, similarity_scores=N
     all_props = sorting_props + qm_props + tm_props
     overlap_props = [prop for prop in all_props if all_props.count(prop) > 1]
     if len(overlap_props) > 0:
-        warn(f"Warning: Overlapping properties found in sorting, quality_metrics, and template_metrics: {overlap_props}")
+        warn(
+            f"Warning: Overlapping properties found in sorting, quality_metrics, and template_metrics: {overlap_props}"
+        )
 
     # Get unit properties
     if unit_properties is None:
@@ -92,7 +96,7 @@ def generate_unit_table_view(analyzer, unit_properties=None, similarity_scores=N
                 property_values = tm_data[prop_name].values
             else:
                 raise ValueError(f"Property '{prop_name}' not found in sorting, quality_metrics, or template_metrics")
-            
+
             # make dtype available
             val0 = np.array(property_values[0])
             if val0.dtype.kind in ("i", "u"):
@@ -121,8 +125,10 @@ def generate_unit_table_view(analyzer, unit_properties=None, similarity_scores=N
                 elif prop_name in tm_props:
                     property_values = tm_data[prop_name].values
                 else:
-                    raise ValueError(f"Property '{prop_name}' not found in sorting, quality_metrics, or template_metrics")
-                
+                    raise ValueError(
+                        f"Property '{prop_name}' not found in sorting, quality_metrics, or template_metrics"
+                    )
+
                 # Check for NaN values
                 val0 = np.array(property_values[0])
                 if val0.dtype.kind == "f":
