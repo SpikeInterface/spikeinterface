@@ -276,7 +276,7 @@ class InterpolateMotionRecording(BasePreprocessor):
         Interpolation needs to convert to a floating dtype. If dtype is supplied, that will be used.
         If the input recording is already floating and dtype=None, then its dtype is used by default.
         If the input recording is integer, then float32 is used by default.
-    **spatial_interpolation_kwargs: dict
+    **spatial_interpolation_kwargs : dict
         Spatial interpolation kwargs for `interpolate_motion_on_traces`.
 
     Returns

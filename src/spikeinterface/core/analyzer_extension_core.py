@@ -677,7 +677,8 @@ class ComputeNoiseLevels(AnalyzerExtension):
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    **params : dict with additional parameters for the `spikeinterface.get_noise_levels()` function
+    **kwargs : dict
+        Additional parameters for the `spikeinterface.get_noise_levels()` function
 
     Returns
     -------

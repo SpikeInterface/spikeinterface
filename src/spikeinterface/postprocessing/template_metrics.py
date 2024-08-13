@@ -77,9 +77,9 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             * spread_threshold: the threshold to compute the spread, default: 0.2
             * spread_smooth_um: the smoothing in um to compute the spread, default: 20
             * column_range: the range in um in the horizontal direction to consider channels for velocity, default: None
-                        - If None, all channels all channels are considered
-                        - If 0 or 1, only the "column" that includes the max channel is considered
-                        - If > 1, only channels within range (+/-) um from the max channel horizontal position are used
+                - If None, all channels all channels are considered
+                - If 0 or 1, only the "column" that includes the max channel is considered
+                - If > 1, only channels within range (+/-) um from the max channel horizontal position are used
 
     Returns
     -------

@@ -32,8 +32,6 @@ def estimate_motion(
     **method_kwargs,
 ):
     """
-
-
     Estimate motion with several possible methods.
 
     Most of methods except dredge_lfp needs peaks and after their localization.
@@ -55,7 +53,6 @@ def estimate_motion(
         Dimension on which the motion is estimated. "y" is depth along the probe.
 
     {method_doc}
-
 
     rigid : bool, default: False
         Compute rigid (one motion for the entire probe) or non rigid motion
@@ -82,6 +79,7 @@ def estimate_motion(
         Display progress bar or not
     verbose : bool, default: False
         If True, output is verbose
+    **method_kwargs :
 
     Returns
     -------
