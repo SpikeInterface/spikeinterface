@@ -137,7 +137,7 @@ class BaseEventSegment(BaseSegment):
     def __init__(self):
         BaseSegment.__init__(self)
 
-    def get_event_times(self, channel_id: int | str, start_time: float, end_time: float):
+    def get_event_times(self, channel_id: int | str, start_time: float, end_time: float) -> np.ndarray:
         """Returns event timestamps of a channel in seconds
         Parameters
         ----------
