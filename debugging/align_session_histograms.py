@@ -22,14 +22,22 @@ import pickle
 
 # TODO: what to do about multi shanks? check what motion_correction does
 
-si.set_global_job_kwargs(n_jobs=10
-                         )
+# TODO: most noise in the histogram is from variation in poisson firing rate?
+# what other sources of noise are there?
+# TODO: robust and rescaling during poisson estimation
+# (x, y) alignment!)
+
+# Kilosort method
+# Iterate over all
+# Align to first, iteration
+# robust and non-robust correlation!
 
 # TODO tomorrow:
-# 1) scale the histograms to firing rate. Don't "normalise" it makes everything uninterpretable between sessions
 # 2) Add a robust xcorr
 # 3) check the all-0s std case in breakpoint below.
 
+
+si.set_global_job_kwargs(n_jobs=10)
 
 SEED = 45
 np.random.seed(SEED)
@@ -59,21 +67,22 @@ if __name__ == "__main__":
     # TODO: this isn't making any sense, why does removing the highest-frequency
     # unit not kill any of the largest peaks in the histogram, which are not
     # based on amplitude at all?
-    num_units = 6
+    num_units = 15
 
     # TOOD: we should scale the firing rates no the amplitude idiot!?
 
-    rec_list, _ = generate_session_displacement_recordings(
+    recordings_list, _ = generate_session_displacement_recordings(
         non_rigid_gradient=None,  # 0.05, TODO: note this will set nonlinearity to both x and y (the same)
         num_units=num_units,  # 100
-        recording_durations=(100, 100, 100, 75, 100),  # TODO: checks on inputs
+        recording_durations=(100, 25, 100, 15, 10),  # TODO: checks on inputs
         recording_shifts=(
             (0, 0), (0, -15), (0, 15), (0, -50), (0, 75)  # TODO: options, to center vs. to specific session
         ),
-        recording_amplitude_scalings={
-            "method": "by_amplitude_and_firing_rate",
-            "scalings": (np.r_[1, np.ones(num_units-1)], np.r_[0, 0, 0, np.ones(num_units-3)], np.r_[0, np.ones(num_units-1)], np.r_[0, np.ones(num_units-1)], np.r_[0, np.ones(num_units-1)])
-        },
+        recording_amplitude_scalings=None,
+#        {
+#            "method": "by_amplitude_and_firing_rate",
+#            "scalings": (np.r_[1, np.ones(num_units-1)], np.r_[0, 0, 0, np.ones(num_units-3)], np.r_[0, np.ones(num_units-1)], np.r_[0, np.ones(num_units-1)], np.r_[0, np.ones(num_units-1)])
+#        },
     #    generate_sorting_kwargs=dict(firing_rates=(50, 100), refractory_period_ms=4.0),
     #    generate_templates_kwargs=dict(unit_params=default_unit_params_range, ms_before=1.5, ms_after=3),
         seed=SEED,
@@ -88,106 +97,53 @@ if __name__ == "__main__":
     )
     bin_um = 2.5  # TODO: pass this below
 
-    PLOT = True
+    PLOT = False # True
 
-#    if False:
-    all_recordings = []
+    # TODO: project all hist together perform PCA
+    # project all hist onto first eig
+    # align this!
+    # OR, do on the histogram directly like eigenfaces/
+    # TODO: perform a phase-shift to align time?
 
-    for recording in rec_list:
+    if False:
 
-        peaks, peak_locations = alignment_utils.prep_recording(
-            recording, plot=PLOT,
-        )
+        peaks_list = []
+        peak_locations_list = []
 
-        est_dict = alignment_utils.get_all_hist_estimation(
-            recording, peaks, peak_locations, bin_um=bin_um
-        )
+        for recording in recordings_list:
 
-        if PLOT:
-            alignment_utils.plot_all_hist_estimation(
-                est_dict["chunked_session_hist"], est_dict["chunked_spatial_bins"],
+            peaks, peak_locations = alignment_utils.prep_recording(
+                recording, plot=PLOT,
             )
+            peaks_list.append(peaks)
+            peak_locations_list.append(peak_locations)
 
-            alignment_utils.plot_chunked_session_hist(
-                est_dict
-            )
-
-        all_recordings.append(
-            (recording, peaks, peak_locations, est_dict)
-        )
-
-    # something relatively easy, only 15 units
-    with open('all_recordings.pickle', 'wb') as handle:
-        pickle.dump(all_recordings, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        # something relatively easy, only 15 units
+        with open('all_recordings.pickle', 'wb') as handle:
+            pickle.dump((recordings_list, peaks_list, peak_locations_list),
+                        handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     with open('all_recordings.pickle', 'rb') as handle:
-        all_recordings = pickle.load(handle)
+        recordings_list, peaks_list, peak_locations_list = pickle.load(handle)
 
-    all_hists_pois = []
-    all_hists_mean = []
-    all_spatial_bins = []
-    all_temporal_bins = []  # TODO: these won't be the same!!
-    for rec_info in all_recordings:
-        est_dict = rec_info[-1]
-        all_hists_pois.append(est_dict["poisson_hist"])
-        all_hists_mean.append(est_dict["mean_hist"])
-        all_spatial_bins.append(est_dict["chunked_spatial_bins"])
-        all_temporal_bins.append(est_dict["chunked_temporal_bins"])
-
-        plt.plot(est_dict["poisson_hist"])
-        plt.plot(est_dict["mean_hist"])
-        plt.show()
-
-    all_hists_pois = np.array(all_hists_pois)
-    all_hists_mean = np.array(all_hists_mean)
-
-    for i in range(len(all_spatial_bins)):
-        assert np.array_equal(all_spatial_bins[0], all_spatial_bins[i])
-
-    # TODO: robust cross-correlation
-    # optimize noninterger with interpolation?
-    # brute force is never going to work, e.g. 272**5 bins = 1488827973632!
-
-    non_rigid_windows, non_rigid_window_centers = alignment_utils.get_spatial_windows_2(
-        rec_list[0], all_spatial_bins[0]
+    alignment_utils.estimate_session_displacement_benchmarking(
+        recordings_list, peaks_list, peak_locations_list, bin_um
     )
 
-#    motion_array_ks = -alignment_utils.run_kilosort_like_rigid_registration(
-#        all_hists, non_rigid_windows
-#    ) * bin_um
+    if False:
 
-    # TOOD: try some density smoothing
+        corrected_recordings_pois, all_motions_pois = alignment_utils.create_motion_recordings(
+            all_recordings, motion_array_pois, all_temporal_bins, non_rigid_window_centers
+        )
 
-    motion_array_pois = alignment_utils.run_alignment_estimation_rigid(
-        all_hists_pois, all_spatial_bins[0]
-    ) * bin_um
+        corrected_recordings_mean, all_motions_mean = alignment_utils.create_motion_recordings(
+            all_recordings, motion_array_mean, all_temporal_bins, non_rigid_window_centers
+        )
 
-    motion_array_mean = alignment_utils.run_alignment_estimation_rigid(
-        all_hists_mean, all_spatial_bins[0]
-    ) * bin_um
+        alignment_utils.correct_peaks_and_plot_histogram(
+            corrected_recordings_pois, all_recordings, all_motions_pois, bin_um
+        )
 
-    corrected_recordings_pois, all_motions_pois = alignment_utils.create_motion_recordings(
-        all_recordings, motion_array_pois, all_temporal_bins, non_rigid_window_centers
-    )
-
-    corrected_recordings_mean, all_motions_mean = alignment_utils.create_motion_recordings(
-        all_recordings, motion_array_mean, all_temporal_bins, non_rigid_window_centers
-    )
-
-    alignment_utils.correct_peaks_and_plot_histogram(
-        corrected_recordings_pois, all_recordings, all_motions_pois, bin_um
-    )
-
-    alignment_utils.correct_peaks_and_plot_histogram(
-        corrected_recordings_mean, all_recordings, all_motions_mean, bin_um
-    )
-
-# TODO: most noise in the histogram is from variation in poisson firing rate?
-# what other sources of noise are there?
-# TODO: robust and rescaling during poisson estimation
-# (x, y) alignment!)
-
-# Kilosort method
-# Iterate over all
-# Align to first, iteration
-# robust and non-robust correlation!
+        alignment_utils.correct_peaks_and_plot_histogram(
+            corrected_recordings_mean, all_recordings, all_motions_mean, bin_um
+        )
