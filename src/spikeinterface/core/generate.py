@@ -44,7 +44,7 @@ def generate_recording(
         The number of channels in the recording.
     sampling_frequency : float, default: 30000. (in Hz)
         The sampling frequency of the recording, default: 30000.
-    durations : List[float], default: [5.0, 2.5]
+    durations : list[float], default: [5.0, 2.5]
         The duration in seconds of each segment in the recording.
         The number of segments is determined by the length of this list.
     set_probe : bool, default: True
@@ -1295,8 +1295,8 @@ def generate_recording_by_size(
         The seed for np.random.default_rng.
     strategy : "tile_pregenerated"| "on_the_fly", default: "tile_pregenerated"
         The strategy of generating noise chunk:
-        * "tile_pregenerated": pregenerate a noise chunk of noise_block_size sample and repeat it very fast and cusume only one noise block.
-        * "on_the_fly": generate on the fly a new noise block by combining seed + noise block index no memory preallocation but a bit more computaion (random)
+        * "tile_pregenerated": pregenerate a noise chunk of `noise_block_size` samples and repeat it quickly consuming only one noise block.
+        * "on_the_fly": generate on the fly a new noise block by combining seed + noise block index. No memory preallocation but a bit more computaion (random)
 
     Returns
     -------
@@ -2062,9 +2062,9 @@ def generate_ground_truth_recording(
 
     Parameters
     ----------
-    durations : list of float, default: [10.]
+    durations : list[float], default: [10.]
         Durations in seconds for all segments.
-    sampling_frequency : float, default: 25000
+    sampling_frequency : float, default: 25000.0
         Sampling frequency.
     num_channels : int, default: 4
         Number of channels, not used when probe is given.
@@ -2085,7 +2085,7 @@ def generate_ground_truth_recording(
             * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce jitter.
     ms_before : float, default: 1.5
         Cut out in ms before spike peak.
-    ms_after : float, default: 3
+    ms_after : float, default: 3.0
         Cut out in ms after spike peak.
     upsample_factor : None or int, default: None
         A upsampling factor used only when templates are not provided.

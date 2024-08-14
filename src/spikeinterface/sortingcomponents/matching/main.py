@@ -16,7 +16,7 @@ def find_spikes_from_templates(
     ----------
     recording : RecordingExtractor
         The recording extractor object
-    method : "naive" | "tridesclous" | "circus" | "circus-omp" | "wobble"
+    method : "naive" | "tridesclous" | "circus" | "circus-omp" | "wobble", default: "naive"
         Which method to use for template matching
     method_kwargs : dict, optional
         Keyword arguments for the chosen method

@@ -17,8 +17,8 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object
-    method : str, default: "cosine"
-        The method to compute the similarity. Can be in ["cosine", "l2", "l1"]
+    method : "cosine" | "l1" | "l2", default: "cosine"
+        The method to compute the similarity.
         In case of "l1" or "l2", the formula used is:
         - similarity = 1 - norm(T_1 - T_2)/(norm(T_1) + norm(T_2)).
         In case of cosine it is:

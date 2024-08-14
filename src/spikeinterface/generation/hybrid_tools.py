@@ -183,7 +183,7 @@ def scale_template_to_range(
         The minimum amplitude of the output templates after scaling.
     max_amplitude : float
         The maximum amplitude of the output templates after scaling.
-    amplitude_function : "ptp" | "min" | "max", default: "pip"
+    amplitude_function : "ptp" | "min" | "max", default: "ptp"
         The function to use to compute the amplitude of the templates. Can be "ptp", "min" or "max".
 
     Returns

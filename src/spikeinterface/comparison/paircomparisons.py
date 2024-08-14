@@ -566,7 +566,7 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Parameters
         ----------
-        redundant_score : float, default: None
+        redundant_score : float | None, default: None
             The agreement score below which tested units
             are counted as "false positive"" (and not "redundant").
         """
@@ -747,7 +747,7 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         List of units from sorting_analyzer_2 to compare.
     name1 : str, default: "sess1"
         Name of first session.
-    name2 : str, default: "sess1"
+    name2 : str, default: "sess2"
         Name of second session.
     similarity_method : "cosine" | "l1" | "l2", default: "cosine"
         Method for the similarity matrix.

@@ -45,7 +45,7 @@ class GroundTruthStudy:
 
     Parameters
     ----------
-    study_folder : srt | Path
+    study_folder : str | Path
         Path to folder containing `GroundTruthStudy`
     """
 
