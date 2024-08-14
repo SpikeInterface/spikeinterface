@@ -522,7 +522,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
     # TODO: Replace this method with equivalent from spikeinterface
     @classmethod
-    def find_peaks(cls, objective, objective_normalized, spike_trains, params, template_data, template_meta)->tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def find_peaks(
+        cls, objective, objective_normalized, spike_trains, params, template_data, template_meta
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Find new peaks in the objective and update spike train accordingly.
 
         Parameters
@@ -746,7 +748,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         return template_shift, time_shift, non_refractory_indices, scalings
 
     @classmethod
-    def enforce_refractory(cls, spike_train, objective, objective_normalized, params, template_meta) -> tuple[np.ndarray, np.ndarray]:
+    def enforce_refractory(
+        cls, spike_train, objective, objective_normalized, params, template_meta
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Enforcing the refractory period for each unit by setting the objective to -infinity.
 
         Parameters
@@ -973,7 +977,9 @@ def compute_objective(traces, template_data, approx_rank) -> np.ndarray:
     return objective
 
 
-def compute_scale_amplitudes(high_resolution_conv, norm_peaks, scale_min, scale_max, amplitude_variance) -> tuple[np.ndarray, np.ndarray]:
+def compute_scale_amplitudes(
+    high_resolution_conv, norm_peaks, scale_min, scale_max, amplitude_variance
+) -> tuple[np.ndarray, np.ndarray]:
     """Compute optimal amplitude scaling and the high-resolution objective resulting from scaled spikes.
 
     Without hard clipping, the objective can be obtained via
