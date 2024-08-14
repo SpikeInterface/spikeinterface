@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 
 
-def count_matching_events(times1, times2, delta=10):
+def count_matching_events(times1: list, times2: list, delta=10):
     """
     Counts matching events.
 
@@ -39,7 +39,7 @@ def count_matching_events(times1, times2, delta=10):
     return len(inds2) + 1
 
 
-def compute_agreement_score(num_matches, num1, num2):
+def compute_agreement_score(num_matches: int, num1: int, num2: int) -> float:
     """
     Computes agreement score.
 

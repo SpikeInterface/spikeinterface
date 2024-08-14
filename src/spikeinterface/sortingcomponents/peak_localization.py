@@ -88,7 +88,7 @@ def get_localization_pipeline_nodes(
     return pipeline_nodes
 
 
-def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs):
+def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs) -> np.ndarray:
     """Localize peak (spike) in 2D or 3D depending the method.
 
     When a probe is 2D then:
