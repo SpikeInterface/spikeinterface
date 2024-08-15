@@ -304,7 +304,8 @@ def prep_recording(recording, plot=False):
     :param recording:
     :return:
     """
-    peaks = detect_peaks(recording, method="locally_exclusive")
+    peaks = detect_peaks(recording, method="by_channel")  # "locally_exclusive")
+
     peak_locations = localize_peaks(recording, peaks,
                                     method="grid_convolution")
 
