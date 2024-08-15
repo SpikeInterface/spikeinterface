@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
     elif benchmark == "bin_size":
 
-        bin_size = np.array([2.5, 5, 10, 20, 40, 60, 90, 120, 240])
+        bin_size = np.array([1, 2.5, 5, 10, 20, 40, 60, 90, 120, 240])
 
         all_comb = list(product(shifts, bin_size))
 
@@ -109,14 +109,14 @@ if __name__ == "__main__":
 
         for args in all_comb:  #    num_units_run_func(method_output_path, all_comb[i])
 
-            shift, bin_size = args
+            shift, rate = args
 
             all_results = mp_funcs.run_benchmarking(
                 shift=25,
                 recording_durations=(100, 100),
                 num_units=25,
                 bin_um=2.5,
-                firing_rates=firing_rates,
+                firing_rates=rate,
                 seed=None,
             )
 
