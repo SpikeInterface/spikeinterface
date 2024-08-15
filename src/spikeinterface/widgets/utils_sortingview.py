@@ -52,14 +52,14 @@ def generate_unit_table_view(analyzer, unit_properties=None, similarity_scores=N
     sorting = analyzer.sorting
 
     # Find available unit properties from all sources
-    sorting_props = sorting.get_property_keys()
+    sorting_props = list(sorting.get_property_keys())
     if analyzer.get_extension("quality_metrics") is not None:
-        qm_props = analyzer.get_extension("quality_metrics").get_data().columns
+        qm_props = list(analyzer.get_extension("quality_metrics").get_data().columns)
         qm_data = analyzer.get_extension("quality_metrics").get_data()
     else:
         qm_props = []
     if analyzer.get_extension("template_metrics") is not None:
-        tm_props = analyzer.get_extension("template_metrics").get_data().columns
+        tm_props = list(analyzer.get_extension("template_metrics").get_data().columns)
         tm_data = analyzer.get_extension("template_metrics").get_data()
     else:
         tm_props = []
