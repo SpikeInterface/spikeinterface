@@ -21,8 +21,8 @@ def run_benchmarking(
         shift=15,
         recording_durations=(100, 100),
         num_units=60,
-        alpha=(100, 600),
         bin_um=2.5,
+        firing_rates=(50, 100),
         seed=None,
 ):
     """
@@ -44,7 +44,7 @@ def run_benchmarking(
         z_angle=(0, np.pi),
     )
 
-    default_unit_params_range["alpha"] = alpha
+    # default_unit_params_range["alpha"] = alpha
     # default_unit_params_range["b"] = (0.5, 1)
     # default_unit_params_range["c"] = (0.5, 1)
 
@@ -57,6 +57,7 @@ def run_benchmarking(
         ),
         recording_amplitude_scalings=None,
         seed=seed,
+        generate_sorting_kwargs=dict(firing_rates=firing_rates, refractory_period_ms=4.0),
     )
 
     peaks_list = []
@@ -81,7 +82,7 @@ def run_benchmarking(
     return alignment_results, recordings_list, peaks_list, peak_locations_list
 
 
-def num_units_run_func(input):
+def num_units_run_func(method_output_path, input):
     shift, num_units = input
 
     all_results = run_benchmarking(
@@ -94,6 +95,25 @@ def num_units_run_func(input):
     )
 
     filename = f"nu-{num_units}_shift-{shift}.pickle"
+    dump_results(method_output_path, filename, all_results)
+
+
+def num_units_run_func(method_output_path, input):
+    shift, num_units = input
+
+    all_results = run_benchmarking(
+        shift=shift,
+        recording_durations=(100, 100),
+        num_units=num_units,
+        alpha=(100, 600),
+        bin_um=2.5,
+        seed=None,
+    )
+
+    filename = f"nu-{num_units}_shift-{shift}.pickle"
+
+
+def dump_results(method_output_path, filename, all_results):
     output_file = method_output_path / filename
 
     if output_file.is_file():

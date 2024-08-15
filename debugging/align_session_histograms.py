@@ -37,7 +37,7 @@ import pickle
 # 3) check the all-0s std case in breakpoint below.
 
 
-si.set_global_job_kwargs(n_jobs=10)
+si.set_global_job_kwargs(n_jobs=1)
 
 SEED = 45
 np.random.seed(SEED)
