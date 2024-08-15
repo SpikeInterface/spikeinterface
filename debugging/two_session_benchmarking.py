@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # np.random.seed(SEED)
 
     from pathlib import Path
-    output_path = Path("/Users/joeziminski/data/alignment_benchmarking")
+    output_path = Path("/ceph/neuroinformatics/neuroinformatics/scratch/jziminski")
 
     si.set_global_job_kwargs(n_jobs=1)
 
@@ -38,7 +38,7 @@ if __name__ == "__main__":
         from itertools import product
 
         method_output_path = output_path / "num_units"
-        method_output_path.mkdir(exist_ok=True)
+        method_output_path.mkdir(exist_ok=True, parents=True)
 
         from mp_funcs import num_units_run_func
 
