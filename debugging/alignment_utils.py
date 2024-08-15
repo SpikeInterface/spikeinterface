@@ -236,18 +236,7 @@ def estimate_session_displacement_benchmarking(
         alignment_results["histograms"][hist_name] = all_ses_histogram
         alignment_results["motion_arrays"][hist_name] = motion_array
 
-    # Hacky
-    from pprint import pprint
-    from rich import print as rprint
-    rprint(alignment_results["motion_arrays"])
-
-    # norm
-    for key in alignment_results["motion_arrays"].keys():
-        arr = alignment_results["motion_arrays"][key]
-        arr -= arr[0]
-        alignment_results["motion_arrays"][key] = arr
-
-    rprint(alignment_results["motion_arrays"])
+    return alignment_results
 
 
 def get_all_hist_estimation(recording, peaks, peak_locations, bin_um):
