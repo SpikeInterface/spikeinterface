@@ -92,7 +92,8 @@ def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_fo
     """
 
     assert destination_format == "1"
-
+    if "mergeGroups" not in sortingview_dict.keys():
+        sortingview_dict["mergeGroups"] = []
     merge_groups = sortingview_dict["mergeGroups"]
     merged_units = sum(merge_groups, [])
     if len(merged_units) > 0:
