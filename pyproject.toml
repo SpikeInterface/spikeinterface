@@ -186,6 +186,7 @@ docs = [
     "sphinx-design",
     "numpydoc",
     "ipython",
+    "sphinxcontrib-jquery",
 
     # for notebooks in the gallery
     "MEArec", # Use as an example
