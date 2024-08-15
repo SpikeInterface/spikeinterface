@@ -249,10 +249,9 @@ def test_json_no_merge_curation():
     """
     sorting = generate_sorting(num_units=10)
 
-    # from curation.json
     json_file = parent_folder / "sv-sorting-curation-no-merge.json"
-    # print(f"Sorting: {sorting.get_unit_ids()}")
     sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file)
+    # ValueError: Curation format: some labeled units are not in the unit list
 
 
 if __name__ == "__main__":
