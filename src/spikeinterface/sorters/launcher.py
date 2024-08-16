@@ -4,7 +4,6 @@ Utils functions to launch several sorter on several recording in parallel or not
 
 from __future__ import annotations
 
-
 from pathlib import Path
 import shutil
 import numpy as np
@@ -28,7 +27,6 @@ _default_engine_kwargs = dict(
     dask=dict(client=None),
     slurm={"tmp_script_folder": None, "sbatch_args": {"cpus-per-task": 1, "mem": "1G"}},
 )
-
 
 _implemented_engine = list(_default_engine_kwargs.keys())
 
@@ -72,8 +70,9 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
             the folder in which the job scripts are created. Default: directory created by
             the `tempfile` library
         - sbatch_args: dict
-          arguments to be passed to sbatch. They are translated to the --args form.
-          see the [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html) for a list of possible arguments
+          arguments to be passed to sbatch. They will be automatically prefixed with --.
+          Arguments must be in the format slurm specify, see the
+          [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html) for a list of possible arguments
 
     return_output : bool, default False
         Return a sortings or None.
@@ -153,6 +152,9 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
             task.result()
 
     elif engine == "slurm":
+        if 'cpus_per_task' in engine_kwargs:
+            raise ValueError('keyword argument cpus_per_task is no longer supported for slurm engine, '
+                             'please use cpus-per-task instead.')
         # generate python script for slurm
         tmp_script_folder = engine_kwargs["tmp_script_folder"]
         if tmp_script_folder is None:
@@ -193,6 +195,8 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
             progr.append(str(script_name.absolute()))
             p = subprocess.run(progr, capture_output=True, text=True)
             print(p.stdout)
+            if len(p.stderr) > 0:
+                warnings.warn(p.stderr)
 
     return out
 
