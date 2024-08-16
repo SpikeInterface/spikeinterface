@@ -7,9 +7,9 @@ from spikeinterface.core.core_tools import define_function_from_class
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
-class NeuronexusRecordingExtractor(NeoBaseRecordingExtractor):
+class NeuroNexusRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading data from Neuronexus Allego.
+    Class for reading data from NeuroNexus Allego.
 
     Based on :py:class:`neo.rawio.NeuronexusRawIO`
 
@@ -33,7 +33,7 @@ class NeuronexusRecordingExtractor(NeoBaseRecordingExtractor):
 
     """
 
-    NeoRawIOClass = "NeuronexusRawIO"
+    NeoRawIOClass = "NeuroNexusRawIO"
 
     def __init__(
         self,
@@ -63,4 +63,4 @@ class NeuronexusRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_neuronexus = define_function_from_class(source_class=NeuronexusRecordingExtractor, name="read_neuronexus")
+read_neuronexus = define_function_from_class(source_class=NeuroNexusRecordingExtractor, name="read_neuronexus")
