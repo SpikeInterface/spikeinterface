@@ -152,9 +152,11 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
             task.result()
 
     elif engine == "slurm":
-        if 'cpus_per_task' in engine_kwargs:
-            raise ValueError('keyword argument cpus_per_task is no longer supported for slurm engine, '
-                             'please use cpus-per-task instead.')
+        if "cpus_per_task" in engine_kwargs:
+            raise ValueError(
+                "keyword argument cpus_per_task is no longer supported for slurm engine, "
+                "please use cpus-per-task instead."
+            )
         # generate python script for slurm
         tmp_script_folder = engine_kwargs["tmp_script_folder"]
         if tmp_script_folder is None:
