@@ -125,6 +125,7 @@ def test_run_sorter_jobs_slurm(job_list, create_cache_folder):
         ),
     )
 
+
 @pytest.mark.skip("Slurm launcher need a machine with slurm")
 def test_run_sorter_jobs_slurm_kwargs(mocker, tmp_path, job_list):
     """
@@ -135,20 +136,18 @@ def test_run_sorter_jobs_slurm_kwargs(mocker, tmp_path, job_list):
     # then check the mocked `subprocess.run()` was called with the
     # expected signature. Two jobs are passed in `jobs_list`, first
     # check the most recent call.
-    mock_subprocess_run = mocker.patch(
-        "spikeinterface.sorters.launcher.subprocess.run"
-    )
+    mock_subprocess_run = mocker.patch("spikeinterface.sorters.launcher.subprocess.run")
 
     tmp_script_folder = tmp_path / "slurm_scripts"
 
-    engine_kwargs =dict(
+    engine_kwargs = dict(
         tmp_script_folder=tmp_script_folder,
         sbatch_args={
             "cpus-per-task": 32,
             "mem": "32G",
             "gres": "gpu:1",
             "any_random_kwarg": 12322,
-        }
+        },
     )
     run_sorter_jobs(
         job_list,
@@ -160,7 +159,16 @@ def test_run_sorter_jobs_slurm_kwargs(mocker, tmp_path, job_list):
     script_1_path = f"{tmp_script_folder}/si_script_1.py"
 
     expected_command = [
-        "sbatch", "--cpus-per-task", "32", "--mem", "32G", "--gres", "gpu:1", "--any_random_kwarg", "12322", script_1_path
+        "sbatch",
+        "--cpus-per-task",
+        "32",
+        "--mem",
+        "32G",
+        "--gres",
+        "gpu:1",
+        "--any_random_kwarg",
+        "12322",
+        script_1_path,
     ]
     mock_subprocess_run.assert_called_with(expected_command, capture_output=True, text=True)
 
@@ -177,9 +185,7 @@ def test_run_sorter_jobs_slurm_kwargs(mocker, tmp_path, job_list):
         engine="slurm",
         engine_kwargs={"tmp_script_folder": tmp_script_folder},
     )
-    expected_command = [
-        "sbatch", "--cpus-per-task", "1", "--mem", "1G", script_1_path
-    ]
+    expected_command = ["sbatch", "--cpus-per-task", "1", "--mem", "1G", script_1_path]
     mock_subprocess_run.assert_called_with(expected_command, capture_output=True, text=True)
 
     # Finally, check that the `tmp_script_folder` is generated on the
@@ -297,9 +303,6 @@ def test_run_sorter_by_property(create_cache_folder):
     sorting1 = run_sorter_by_property(sorter_name, rec1, "group", working_folder2, engine="loop", verbose=False)
     assert "group" in sorting1.get_property_keys()
     assert all([g in group_names1 for g in sorting1.get_property("group")])
-
-
-
 
 
 if __name__ == "__main__":
