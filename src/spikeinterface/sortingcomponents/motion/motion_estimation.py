@@ -30,7 +30,7 @@ def estimate_motion(
     verbose=False,
     margin_um=None,
     **method_kwargs,
-):
+) -> Motion | tuple[Motion, dict]:
     """
 
 

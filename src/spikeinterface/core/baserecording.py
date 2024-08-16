@@ -301,7 +301,7 @@ class BaseRecording(BaseRecordingSnippets):
         order: "C" | "F" | None = None,
         return_scaled: bool = False,
         cast_unsigned: bool = False,
-    ):
+    ) -> np.ndarray:
         """Returns traces from recording.
 
         Parameters

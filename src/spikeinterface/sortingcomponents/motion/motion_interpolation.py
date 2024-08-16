@@ -7,7 +7,7 @@ from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, Base
 from spikeinterface.preprocessing.filter import fix_dtype
 
 
-def correct_motion_on_peaks(peaks, peak_locations, motion, recording):
+def correct_motion_on_peaks(peaks, peak_locations, motion, recording) -> np.ndarray:
     """
     Given the output of estimate_motion(), apply inverse motion on peak locations.
 

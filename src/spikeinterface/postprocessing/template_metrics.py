@@ -337,7 +337,7 @@ def get_trough_and_peak_idx(template):
 
 #########################################################################################
 # Single-channel metrics
-def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs):
+def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs) -> float:
     """
     Return the peak to valley duration in seconds of input waveforms.
 
@@ -363,7 +363,7 @@ def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, pea
     return ptv
 
 
-def get_peak_trough_ratio(template_single, sampling_frequency=None, trough_idx=None, peak_idx=None, **kwargs):
+def get_peak_trough_ratio(template_single, sampling_frequency=None, trough_idx=None, peak_idx=None, **kwargs) -> float:
     """
     Return the peak to trough ratio of input waveforms.
 
@@ -389,7 +389,7 @@ def get_peak_trough_ratio(template_single, sampling_frequency=None, trough_idx=N
     return ptratio
 
 
-def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs):
+def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs) -> float:
     """
     Return the half width of input waveforms in seconds.
 
@@ -889,7 +889,7 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
     return exp_decay_value
 
 
-def get_spread(template, channel_locations, sampling_frequency, **kwargs):
+def get_spread(template, channel_locations, sampling_frequency, **kwargs) -> float:
     """
     Compute the spread of the template amplitude over distance in units um/s.
 

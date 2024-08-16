@@ -117,7 +117,7 @@ def compute_presence_ratios(sorting_analyzer, bin_duration_s=60.0, mean_fr_ratio
 
     Returns
     -------
-    presence_ratio : dict of flaots
+    presence_ratio : dict of floats
         The presence ratio for each unit ID.
 
     Notes
@@ -514,7 +514,7 @@ _default_params["sliding_rp_violation"] = dict(
 )
 
 
-def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
+def get_synchrony_count(spikes, synchrony_sizes, all_unit_ids):
     """
     Compute synchrony counts, the number of simultaneous spikes with sizes `synchrony_sizes`.
 

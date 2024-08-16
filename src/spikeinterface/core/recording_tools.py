@@ -640,7 +640,7 @@ def get_noise_levels(
     method: Literal["mad", "std"] = "mad",
     force_recompute: bool = False,
     **random_chunk_kwargs,
-):
+) -> np.ndarray:
     """
     Estimate noise for each channel using MAD methods.
     You can use standard deviation with `method="std"`

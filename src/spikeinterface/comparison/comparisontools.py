@@ -433,7 +433,7 @@ def make_possible_match(agreement_scores, min_score):
     return possible_match_12, possible_match_21
 
 
-def make_best_match(agreement_scores, min_score):
+def make_best_match(agreement_scores, min_score) -> tuple["pd.Series", "pd.Series"]:
     """
     Given an agreement matrix and a min_score threshold.
     return a dict a best match for each units independently of others.
