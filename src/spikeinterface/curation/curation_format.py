@@ -96,10 +96,13 @@ def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_fo
         sortingview_dict["mergeGroups"] = []
     merge_groups = sortingview_dict["mergeGroups"]
     merged_units = sum(merge_groups, [])
-    if len(merged_units) > 0:
-        unit_id_type = int if isinstance(merged_units[0], int) else str
+
+    first_unit_id = next(iter(sortingview_dict["labelsByUnit"].keys()))
+    if str.isdigit(first_unit_id):
+        unit_id_type = int
     else:
         unit_id_type = str
+
     all_units = []
     all_labels = []
     manual_labels = []
