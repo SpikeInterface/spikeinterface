@@ -35,17 +35,31 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream name you want to load.
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     """
 
-    mode = "file"
     NeoRawIOClass = "NeuroScopeRawIO"
-    name = "neuroscope"
 
-    def __init__(self, file_path, xml_file_path=None, stream_id=None, stream_name=None, all_annotations=False):
+    def __init__(
+        self,
+        file_path,
+        xml_file_path=None,
+        stream_id=None,
+        stream_name: bool = None,
+        all_annotations: bool = False,
+        use_names_as_ids: bool = False,
+    ):
         neo_kwargs = self.map_to_neo_kwargs(file_path, xml_file_path)
 
         NeoBaseRecordingExtractor.__init__(
-            self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
+            **neo_kwargs,
         )
         if xml_file_path is not None:
             xml_file_path = str(Path(xml_file_path).absolute())
@@ -102,9 +116,6 @@ class NeuroScopeSortingExtractor(BaseSorting):
     xml_file_path : PathType, default: None
         Path to the .xml file referenced by this sorting.
     """
-
-    extractor_name = "NeuroscopeSortingExtractor"
-    name = "neuroscope"
 
     def __init__(
         self,

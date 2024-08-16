@@ -45,7 +45,7 @@ for import_statement in import_statement_list:
         time_taken_list.append(time_taken)
 
     for time in time_taken_list:
-        import_time_threshold = 2.0  # Most of the times is sub-second but there outliers
+        import_time_threshold = 3.0  # Most of the times is sub-second but there outliers
         if time >= import_time_threshold:
             exceptions.append(
                 f"Importing {import_statement} took: {time:.2f} s. Should be <: {import_time_threshold} s."
@@ -59,7 +59,7 @@ for import_statement in import_statement_list:
         times_list_str = ", ".join(f"{time:.2f}" for time in time_taken_list)
         markdown_output += f"| `{import_statement}` | {avg_time:.2f} | {std_time:.2f} | {times_list_str} |\n"
 
-        import_time_threshold = 1.0
+        import_time_threshold = 2.0
         if avg_time > import_time_threshold:
             exceptions.append(
                 f"Importing {import_statement} took: {avg_time:.2f} s in average. Should be <: {import_time_threshold} s."

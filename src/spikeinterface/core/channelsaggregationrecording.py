@@ -15,10 +15,15 @@ class ChannelsAggregationRecording(BaseRecording):
 
     def __init__(self, recording_list, renamed_channel_ids=None):
 
-        # Generate a default list of channel ids that are unique and consecutive numbers as strings.
-        channel_map = {}
-        num_all_channels = sum(rec.get_num_channels() for rec in recording_list)
+        self._recordings = recording_list
 
+        self._perform_consistency_checks()
+        sampling_frequency = recording_list[0].get_sampling_frequency()
+        dtype = recording_list[0].get_dtype()
+        num_segments = recording_list[0].get_num_segments()
+
+        # Generate a default list of channel ids that are unique and consecutive numbers as strings.
+        num_all_channels = sum(rec.get_num_channels() for rec in recording_list)
         if renamed_channel_ids is not None:
             assert (
                 len(np.unique(renamed_channel_ids)) == num_all_channels
@@ -38,33 +43,6 @@ class ChannelsAggregationRecording(BaseRecording):
                 # If IDs are not unique or not of the same type, use default as stringify IDs
                 default_channel_ids = [str(i) for i in range(num_all_channels)]
                 channel_ids = default_channel_ids
-
-        ch_id = 0
-        for r_i, recording in enumerate(recording_list):
-            single_channel_ids = recording.get_channel_ids()
-            single_channel_indices = recording.ids_to_indices(single_channel_ids)
-            for chan_id, chan_idx in zip(single_channel_ids, single_channel_indices):
-                channel_map[ch_id] = {"recording_id": r_i, "channel_index": chan_idx}
-                ch_id += 1
-
-        sampling_frequency = recording_list[0].get_sampling_frequency()
-        num_segments = recording_list[0].get_num_segments()
-        dtype = recording_list[0].get_dtype()
-
-        ok1 = all(sampling_frequency == rec.get_sampling_frequency() for rec in recording_list)
-        ok2 = all(num_segments == rec.get_num_segments() for rec in recording_list)
-        ok3 = all(dtype == rec.get_dtype() for rec in recording_list)
-        ok4 = True
-        for i_seg in range(num_segments):
-            num_samples = recording_list[0].get_num_samples(i_seg)
-            ok4 = all(num_samples == rec.get_num_samples(i_seg) for rec in recording_list)
-            if not ok4:
-                break
-
-        if not (ok1 and ok2 and ok3 and ok4):
-            raise ValueError(
-                "Recordings do not have consistent sampling frequency, number of segments, data type, or number of samples."
-            )
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
@@ -99,18 +77,59 @@ class ChannelsAggregationRecording(BaseRecording):
                 "Locations are not unique! " "Cannot aggregate recordings!"
             )
 
-        # finally add segments
+        # finally add segments, we need a channel mapping
+        ch_id = 0
+        channel_map = {}
+        for r_i, recording in enumerate(recording_list):
+            single_channel_ids = recording.get_channel_ids()
+            single_channel_indices = recording.ids_to_indices(single_channel_ids)
+            for chan_id, chan_idx in zip(single_channel_ids, single_channel_indices):
+                channel_map[ch_id] = {"recording_id": r_i, "channel_index": chan_idx}
+                ch_id += 1
+
         for i_seg in range(num_segments):
             parent_segments = [rec._recording_segments[i_seg] for rec in recording_list]
             sub_segment = ChannelsAggregationRecordingSegment(channel_map, parent_segments)
             self.add_recording_segment(sub_segment)
 
-        self._recordings = recording_list
         self._kwargs = {"recording_list": recording_list, "renamed_channel_ids": renamed_channel_ids}
 
     @property
     def recordings(self):
         return self._recordings
+
+    def _perform_consistency_checks(self):
+
+        # Check for consistent sampling frequency across recordings
+        sampling_frequencies = [rec.get_sampling_frequency() for rec in self.recordings]
+        sampling_frequency = sampling_frequencies[0]
+        consistent_sampling_frequency = all(sampling_frequency == sf for sf in sampling_frequencies)
+        if not consistent_sampling_frequency:
+            raise ValueError(f"Inconsistent sampling frequency among recordings: {sampling_frequencies}")
+
+        # Check for consistent number of segments across recordings
+        num_segments_list = [rec.get_num_segments() for rec in self.recordings]
+        num_segments = num_segments_list[0]
+        consistent_num_segments = all(num_segments == ns for ns in num_segments_list)
+        if not consistent_num_segments:
+            raise ValueError(f"Inconsistent number of segments among recordings: {num_segments_list}")
+
+        # Check for consistent data type across recordings
+        data_types = [rec.get_dtype() for rec in self.recordings]
+        dtype = data_types[0]
+        consistent_dtype = all(dtype == dt for dt in data_types)
+        if not consistent_dtype:
+            raise ValueError(f"Inconsistent data type among recordings: {data_types}")
+
+        # Check for consistent number of samples across recordings for each segment
+        for segment_index in range(num_segments):
+            num_samples_list = [rec.get_num_samples(segment_index=segment_index) for rec in self.recordings]
+            num_samples = num_samples_list[0]
+            consistent_num_samples = all(num_samples == ns for ns in num_samples_list)
+            if not consistent_num_samples:
+                raise ValueError(
+                    f"Inconsistent number of samples in segment {segment_index} among recordings: {num_samples_list}"
+                )
 
 
 class ChannelsAggregationRecordingSegment(BaseRecordingSegment):

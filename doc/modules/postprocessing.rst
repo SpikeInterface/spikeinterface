@@ -13,12 +13,12 @@ Extensions as AnalyzerExtensions
 --------------------------------
 
 There are several postprocessing tools available, and all of them are implemented as a
-:py:class:`~spikeinterface.core.ResultExtension`. If the :code:`SortingAnalyzer` is saved to disk, all computations on
+:py:class:`~spikeinterface.core.AnalyzerExtension`. If the :code:`SortingAnalyzer` is saved to disk, all computations on
 top of it will be saved alongside the :code:`SortingAnalyzer` itself (sub folder, zarr path or sub dict).
 This workflow is convenient for retrieval of time-consuming computations (such as pca or spike amplitudes) when reloading a
 :code:`SortingAnalyzer`.
 
-:py:class:`~spikeinterface.core.ResultExtension` objects are tightly connected to the
+:py:class:`~spikeinterface.core.AnalyzerExtension` objects are tightly connected to the
 parent :code:`SortingAnalyzer` object, so that operations done on the :code:`SortingAnalyzer`, such as saving,
 loading, or selecting units, will be automatically applied to all extensions.
 
@@ -59,7 +59,7 @@ To check what extensions spikeinterface can calculate, you can use the :code:`ge
 
     >>> ['random_spikes', 'waveforms', 'templates', 'noise_levels', 'amplitude_scalings', 'correlograms', 'isi_histograms', 'principal_components', 'spike_amplitudes', 'spike_locations', 'template_metrics', 'template_similarity', 'unit_locations', 'quality_metrics']
 
-There is detailed documentation about each extension :ref:`below<Available postprocessing extensions>`.
+There is detailed documentation about each extension :ref:`below<modules/postprocessing:Available postprocessing extensions>`.
 Each extension comes from a different module. To use the :code:`postprocessing` extensions, you'll need to have the `postprocessing`
 module loaded.
 
@@ -68,11 +68,9 @@ both `random_spikes` and `waveforms`. We say that `principal_components` is a ch
 two. Other extensions, like `isi_histograms`, don't depend on anything. It has no children and no parents. The parent/child
 relationships of all the extensions currently defined in spikeinterface can be found in this diagram:
 
-|
 .. figure:: ../images/parent_child.svg
     :alt: Parent child relationships for the extensions in spikeinterface
     :align: center
-|
 
 If you try to calculate a child before calculating a parent, an error will be thrown. Further, when a parent is recalculated we delete
 its children. Why? Consider calculating :code:`principal_components`. This depends on random selection of spikes chosen
@@ -205,14 +203,16 @@ This extension computes the principal components of the waveforms. There are sev
 * "by_channel_global": fits the same PCA model to all channels (also termed temporal PCA)
 * "concatenated": concatenates all channels and fits a PCA model on the concatenated data
 
-If the input :code:`WaveformExtractor` is sparse, the sparsity is used when computing the PCA.
+If the input :code:`SortingAnalyzer` is sparse, the sparsity is used when computing the PCA.
 For dense waveforms, sparsity can also be passed as an argument.
 
 .. code-block:: python
 
-    pc = sorting_analyzer.compute(input="principal_components",
-                             n_components=3,
-                             mode="by_channel_local")
+    pc = sorting_analyzer.compute(
+        input="principal_components",
+        n_components=3,
+        mode="by_channel_local"
+    )
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_principal_components`
 
@@ -245,9 +245,7 @@ each spike.
 
 .. code-block:: python
 
-    amplitudes = sorting_analyzer.compute(input="spike_amplitudes",
-                             peak_sign="neg",
-                             outputs="concatenated")
+    amplitudes = sorting_analyzer.compute(input="spike_amplitudes", peak_sign="neg")
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_spike_amplitudes`
 
@@ -265,15 +263,17 @@ with center of mass (:code:`method="center_of_mass"` - fast, but less accurate),
 
 .. code-block:: python
 
-    spike_locations = sorting_analyzer.compute(input="spike_locations",
-                             ms_before=0.5,
-                             ms_after=0.5,
-                             spike_retriever_kwargs=dict(
-                                channel_from_template=True,
-                                radius_um=50,
-                                peak_sign="neg"
-                                              ),
-                             method="center_of_mass")
+    spike_locations = sorting_analyzer.compute(
+        input="spike_locations",
+        ms_before=0.5,
+        ms_after=0.5,
+        spike_retriever_kwargs=dict(
+            channel_from_template=True,
+            radius_um=50,
+            peak_sign="neg"
+        ),
+        method="center_of_mass"
+    )
 
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_spike_locations`
@@ -312,7 +312,7 @@ By default, the following metrics are computed:
 The units of :code:`recovery_slope` and :code:`repolarization_slope` depend on the
 input. Voltages are based on the units of the template. By default this is :math:`\mu V`
 but can be the raw output from the recording device (this depends on the
-:code:`return_scaled` parameter, read more here: :ref:`core-sorting-analyzer`).
+:code:`return_scaled` parameter, read more here: :ref:`modules/core:SortingAnalyzer`).
 Distances are in :math:`\mu m` and times are in seconds. So, for example, if the
 templates are in units of :math:`\mu V` then: :code:`repolarization_slope` is in
 :math:`mV / s`; :code:`peak_to_trough_ratio` is in :math:`\mu m` and the
@@ -331,6 +331,12 @@ Optionally, the following multi-channel metrics can be computed by setting:
     Visualization of template metrics. Image from `ecephys_spike_sorting <https://github.com/AllenInstitute/ecephys_spike_sorting/tree/v0.2/ecephys_spike_sorting/modules/mean_waveforms>`_
     from the Allen Institute.
 
+
+.. code-block:: python
+
+    tm = sorting_analyzer.compute(input="template_metrics", include_multi_channel_metrics=True)
+
+
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_template_metrics`
 
 
@@ -342,10 +348,12 @@ with shape (num_units, num_units, num_bins) with all correlograms for each pair 
 
 .. code-block:: python
 
-    ccg = sorting_analyzer.compute(input="correlograms",
-                            window_ms=50.0,
-                            bin_ms=1.0,
-                            method="auto")
+    ccg = sorting_analyzer.compute(
+        input="correlograms",
+        window_ms=50.0,
+        bin_ms=1.0,
+        method="auto"
+    )
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_correlograms`
 
@@ -359,10 +367,12 @@ This extension computes the histograms of inter-spike-intervals. The computed ou
 
 .. code-block:: python
 
-   isi =  sorting_analyer.compute(input="isi_histograms"
-                            window_ms=50.0,
-                            bin_ms=1.0,
-                            method="auto")
+    isi =  sorting_analyer.compute(
+        input="isi_histograms"
+        window_ms=50.0,
+        bin_ms=1.0,
+        method="auto"
+    )
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_isi_histograms`
 

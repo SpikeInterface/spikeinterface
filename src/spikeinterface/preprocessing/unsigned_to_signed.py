@@ -20,8 +20,6 @@ class UnsignedToSignedRecording(BasePreprocessor):
         For example, a `bit_depth` of 12 will correct for an offset of `2**11`
     """
 
-    name = "unsigned_to_signed"
-
     def __init__(
         self,
         recording,

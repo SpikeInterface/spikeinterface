@@ -74,6 +74,8 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting"
 ]
 
+autosectionlabel_prefix_document = True
+
 numpydoc_show_class_members = False
 
 
@@ -128,7 +130,7 @@ sphinx_gallery_conf = {
                                        '../examples/tutorials/widgets',
                                        ]),
     'within_subsection_order': FileNameSortKey,
-    'ignore_pattern': '/generate_',
+    'ignore_pattern': '/generate_*',
     'nested_sections': False,
     'copyfile_regex': r'.*\.rst|.*\.png|.*\.svg'
 }

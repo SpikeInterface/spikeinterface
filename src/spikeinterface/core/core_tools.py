@@ -75,7 +75,7 @@ class SIJsonEncoder(json.JSONEncoder):
 
     def default(self, obj):
         from spikeinterface.core.base import BaseExtractor
-        from spikeinterface.sortingcomponents.motion_utils import Motion
+        from spikeinterface.sortingcomponents.motion.motion_utils import Motion
 
         # Over-write behaviors for datetime object
         if isinstance(obj, datetime.datetime):
@@ -329,7 +329,7 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
 
 # This is the current definition that an element in a extractor_dict is a path
 # This is shared across a couple of definition so it is here for DNRY
-element_is_path = lambda element: "path" in element.name and isinstance(element.value, (str, Path))
+element_is_path = lambda element: isinstance(element.value, (str, Path)) and "path" in element.name
 
 
 def _get_paths_list(d: dict) -> list[str | Path]:
@@ -659,3 +659,28 @@ def retrieve_importing_provenance(a_class):
     }
 
     return info
+
+
+def measure_memory_allocation(measure_in_process: bool = True) -> float:
+    """
+    A local utility to measure memory allocation at a specific point in time.
+    Can measure either the process resident memory or system wide memory available
+
+    Uses psutil package.
+
+    Parameters
+    ----------
+    measure_in_process : bool, True by default
+        Mesure memory allocation in the current process only, if false then measures at the system
+        level.
+    """
+    import psutil
+
+    if measure_in_process:
+        process = psutil.Process()
+        memory = process.memory_info().rss
+    else:
+        mem_info = psutil.virtual_memory()
+        memory = mem_info.total - mem_info.available
+
+    return memory

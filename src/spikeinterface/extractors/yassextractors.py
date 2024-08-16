@@ -7,13 +7,6 @@ import numpy as np
 from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-try:
-    import yaml
-
-    HAVE_YAML = True
-except:
-    HAVE_YAML = False
-
 
 class YassSortingExtractor(BaseSorting):
     """Load YASS format data as a sorting extractor.
@@ -29,16 +22,13 @@ class YassSortingExtractor(BaseSorting):
         Loaded data.
     """
 
-    extractor_name = "YassExtractor"
-    mode = "folder"
-    installed = HAVE_YAML  # check at class level if installed or not
-    installation_mesg = (
-        "To use the Yass extractor, install pyyaml: \n\n pip install pyyaml\n\n"  # error message when not installed
-    )
-    name = "yass"
+    installation_mesg = "To use the Yass extractor, install pyyaml: \n\n pip install pyyaml\n\n"
 
     def __init__(self, folder_path):
-        assert HAVE_YAML, self.installation_mesg
+        try:
+            import yaml
+        except:
+            raise ImportError(self.installation_mesg)
 
         folder_path = Path(folder_path)
 

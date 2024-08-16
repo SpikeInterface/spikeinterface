@@ -29,6 +29,9 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
     exclude_filename : list[str], default: None
         List of filename to exclude from the loading.
         For example, use `exclude_filename=["events.nev"]` to skip loading the event file.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     strict_gap_mode : bool, default: False
         See neo documentation.
         Detect gaps using strict mode or not.
@@ -40,22 +43,26 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         Note that here the default is False contrary to neo.
     """
 
-    mode = "folder"
     NeoRawIOClass = "NeuralynxRawIO"
-    name = "neuralynx"
 
     def __init__(
         self,
-        folder_path,
+        folder_path: str | Path,
         stream_id=None,
         stream_name=None,
         all_annotations=False,
         exclude_filename=None,
         strict_gap_mode=False,
+        use_names_as_ids: bool = False,
     ):
         neo_kwargs = self.map_to_neo_kwargs(folder_path, exclude_filename, strict_gap_mode)
         NeoBaseRecordingExtractor.__init__(
-            self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
+            **neo_kwargs,
         )
         self._kwargs.update(
             dict(folder_path=str(Path(folder_path).absolute()), exclude_filename=exclude_filename),
@@ -90,11 +97,9 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
     """
 
-    mode = "folder"
     NeoRawIOClass = "NeuralynxRawIO"
     neo_returns_frames = True
     need_t_start_from_signal_stream = True
-    name = "neuralynx"
 
     def __init__(
         self,

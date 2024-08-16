@@ -10,8 +10,10 @@ import time
 
 
 from spikeinterface.core import SortingAnalyzer
-from spikeinterface import load_extractor, split_job_kwargs, create_sorting_analyzer, load_sorting_analyzer
+
+from spikeinterface import load_extractor, create_sorting_analyzer, load_sorting_analyzer
 from spikeinterface.widgets import get_some_colors
+
 
 import pickle
 
@@ -443,7 +445,7 @@ class Benchmark:
 
                 result[k] = load_extractor(folder / k)
             elif format == "Motion":
-                from spikeinterface.sortingcomponents.motion_utils import Motion
+                from spikeinterface.sortingcomponents.motion import Motion
 
                 result[k] = Motion.load(folder / k)
             elif format == "zarr_templates":

@@ -7,7 +7,7 @@ from spikeinterface.core.generate import (
     generate_templates,
     generate_unit_locations,
 )
-from spikeinterface.preprocessing.motion import correct_motion, load_motion_info
+from spikeinterface.preprocessing.motion import correct_motion
 from spikeinterface.generation.hybrid_tools import (
     estimate_templates_from_recording,
     generate_hybrid_recording,
@@ -35,8 +35,10 @@ def test_generate_hybrid_with_sorting():
 
 
 def test_generate_hybrid_motion():
-    rec, _ = generate_ground_truth_recording(sampling_frequency=20000, durations=[10], seed=0)
-    _, motion_info = correct_motion(rec, output_motion_info=True)
+    rec, _ = generate_ground_truth_recording(sampling_frequency=20000, durations=[10], num_channels=16, seed=0)
+    _, motion_info = correct_motion(
+        rec, output_motion_info=True, estimate_motion_kwargs={"win_step_um": 20, "win_scale_um": 20}
+    )
     motion = motion_info["motion"]
     hybrid, sorting_hybrid = generate_hybrid_recording(rec, motion=motion, seed=0)
     assert rec.get_num_channels() == hybrid.get_num_channels()
@@ -77,7 +79,7 @@ def test_estimate_templates(create_cache_folder):
 
 
 if __name__ == "__main__":
-    test_generate_hybrid_no_motion()
+    # test_generate_hybrid_no_motion()
     test_generate_hybrid_motion()
-    test_estimate_templates()
-    test_generate_hybrid_with_sorting()
+    # test_estimate_templates()
+    # test_generate_hybrid_with_sorting()

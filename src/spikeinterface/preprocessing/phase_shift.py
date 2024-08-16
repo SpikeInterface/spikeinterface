@@ -41,8 +41,6 @@ class PhaseShiftRecording(BasePreprocessor):
         The phase shifted recording object
     """
 
-    name = "phase_shift"
-
     def __init__(self, recording, margin_ms=40.0, inter_sample_shift=None, dtype=None):
         if inter_sample_shift is None:
             assert "inter_sample_shift" in recording.get_property_keys(), "'inter_sample_shift' is not a property!"

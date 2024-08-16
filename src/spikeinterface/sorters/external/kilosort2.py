@@ -148,14 +148,14 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
 
         Parameters
         ----------
-        ops: dict
+        ops : dict
             options data
-        params: dict
+        params : dict
             Custom parameters dictionary for kilosort3
 
         Returns
         ----------
-        ops: dict
+        ops : dict
             Final ops data
         """
 

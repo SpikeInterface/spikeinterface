@@ -80,6 +80,8 @@ def generate_recording(
         probe.set_device_channel_indices(np.arange(num_channels))
         recording.set_probe(probe, in_place=True)
 
+    recording.name = "SyntheticRecording"
+
     return recording
 
 
@@ -101,11 +103,11 @@ def generate_sorting(
     Parameters
     ----------
     num_units : int, default: 5
-        Number of units
+        Number of units.
     sampling_frequency : float, default: 30000.0
-        The sampling frequency
+        The sampling frequency.
     durations : list, default: [10.325, 3.5]
-        Duration of each segment in s
+        Duration of each segment in s.
     firing_rates : float, default: 3.0
         The firing rate of each unit (in Hz).
     empty_units : list, default: None
@@ -121,12 +123,12 @@ def generate_sorting(
     border_size_samples : int, default: 20
         The size of the border in samples to add border spikes.
     seed : int, default: None
-        The random seed
+        The random seed.
 
     Returns
     -------
     sorting : NumpySorting
-        The sorting object
+        The sorting object.
     """
     seed = _ensure_seed(seed)
     rng = np.random.default_rng(seed)
@@ -185,19 +187,19 @@ def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
     Parameters
     ----------
     sorting : BaseSorting
-        The sorting object
+        The sorting object.
     sync_event_ratio : float
         The ratio of added synchronous spikes with respect to the total number of spikes.
         E.g., 0.5 means that the final sorting will have 1.5 times number of spikes, and all the extra
         spikes are synchronous (same sample_index), but on different units (not duplicates).
     seed : int, default: None
-        The random seed
+        The random seed.
 
 
     Returns
     -------
     sorting : TransformSorting
-        The sorting object, keeping track of added spikes
+        The sorting object, keeping track of added spikes.
 
     """
     rng = np.random.default_rng(seed)
@@ -247,18 +249,18 @@ def generate_sorting_to_inject(
     Parameters
     ----------
     sorting : BaseSorting
-        The sorting object
+        The sorting object.
     num_samples: list of size num_segments.
         The number of samples in all the segments of the sorting, to generate spike times
-        covering entire the entire duration of the segments
+        covering entire the entire duration of the segments.
     max_injected_per_unit: int, default 1000
-        The maximal number of spikes injected per units
+        The maximal number of spikes injected per units.
     injected_rate: float, default 0.05
-        The rate at which spikes are injected
+        The rate at which spikes are injected.
     refractory_period_ms: float, default 1.5
-        The refractory period that should not be violated while injecting new spikes
+        The refractory period that should not be violated while injecting new spikes.
     seed: int, default None
-        The random seed
+        The random seed.
 
     Returns
     -------
@@ -310,22 +312,22 @@ class TransformSorting(BaseSorting):
     Parameters
     ----------
     sorting : BaseSorting
-        The sorting object
+        The sorting object.
     added_spikes_existing_units : np.array (spike_vector)
-        The spikes that should be added to the sorting object, for existing units
+        The spikes that should be added to the sorting object, for existing units.
     added_spikes_new_units: np.array (spike_vector)
-        The spikes that should be added to the sorting object, for new units
+        The spikes that should be added to the sorting object, for new units.
     new_units_ids: list
-        The unit_ids that should be added if spikes for new units are added
+        The unit_ids that should be added if spikes for new units are added.
     refractory_period_ms : float, default None
         The refractory period violation to prevent duplicates and/or unphysiological addition
         of spikes. Any spike times in added_spikes violating the refractory period will be
-        discarded
+        discarded.
 
     Returns
     -------
     sorting : TransformSorting
-        The sorting object with the added spikes and/or units
+        The sorting object with the added spikes and/or units.
     """
 
     def __init__(
@@ -426,12 +428,14 @@ class TransformSorting(BaseSorting):
 
         Parameters
         ----------
-        sorting1: the first sorting
-        sorting2: the second sorting
+        sorting1: BaseSorting
+            The first sorting.
+        sorting2: BaseSorting
+            The second sorting.
         refractory_period_ms : float, default None
             The refractory period violation to prevent duplicates and/or unphysiological addition
             of spikes. Any spike times in added_spikes violating the refractory period will be
-            discarded
+            discarded.
         """
         assert (
             sorting1.get_sampling_frequency() == sorting2.get_sampling_frequency()
@@ -490,12 +494,14 @@ class TransformSorting(BaseSorting):
         Parameters
         ----------
 
-        sorting1: the first sorting
+        sorting1: BaseSorting
+            The first sorting
         dict_list: list of dict
+            A list of dict with unit_ids as keys and spike times as values.
         refractory_period_ms : float, default None
             The refractory period violation to prevent duplicates and/or unphysiological addition
             of spikes. Any spike times in added_spikes violating the refractory period will be
-            discarded
+            discarded.
         """
         sorting2 = NumpySorting.from_unit_dict(units_dict_list, sorting1.get_sampling_frequency())
         sorting = TransformSorting.add_from_sorting(sorting1, sorting2, refractory_period_ms)
@@ -513,18 +519,19 @@ class TransformSorting(BaseSorting):
 
         Parameters
         ----------
-        sorting1: the first sorting
+        sorting1: BaseSorting
+            The first sorting
         times_list: list of array (or array)
-            An array of spike times (in frames)
+            An array of spike times (in frames).
         labels_list: list of array (or array)
-            An array of spike labels corresponding to the given times
+            An array of spike labels corresponding to the given times.
         unit_ids: list or None, default: None
             The explicit list of unit_ids that should be extracted from labels_list
-            If None, then it will be np.unique(labels_list)
+            If None, then it will be np.unique(labels_list).
         refractory_period_ms : float, default None
             The refractory period violation to prevent duplicates and/or unphysiological addition
             of spikes. Any spike times in added_spikes violating the refractory period will be
-            discarded
+            discarded.
         """
 
         sorting2 = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency, unit_ids)
@@ -554,6 +561,16 @@ class TransformSorting(BaseSorting):
 
 
 def create_sorting_npz(num_seg, file_path):
+    """
+    Create a NPZ sorting file.
+
+    Parameters
+    ----------
+    num_seg : int
+        The number of segments.
+    file_path : str | Path
+        The file path to save the NPZ file.
+    """
     # create a NPZ sorting file
     d = {}
     d["unit_ids"] = np.array([0, 1, 2], dtype="int64")
@@ -583,6 +600,35 @@ def generate_snippets(
     empty_units=None,
     **job_kwargs,
 ):
+    """
+    Generates a synthetic Snippets object.
+
+    Parameters
+    ----------
+    nbefore : int, default: 20
+        Number of samples before the peak.
+    nafter : int, default: 44
+        Number of samples after the peak.
+    num_channels : int, default: 2
+        Number of channels.
+    wf_folder : str | Path | None, default: None
+        Optional folder to save the waveform snippets. If None, snippets are in memory.
+    sampling_frequency : float, default: 30000.0
+        The sampling frequency of the snippets.
+    ndim : int, default: 2
+        The number of dimensions of the probe.
+    num_units : int, default: 5
+        The number of units.
+    empty_units : list | None, default: None
+        A list of units that will have no spikes.
+
+    Returns
+    -------
+    snippets : NumpySnippets
+        The snippets object.
+    sorting : NumpySorting
+        The associated sorting object.
+    """
     recording = generate_recording(
         durations=durations,
         num_channels=num_channels,
@@ -643,18 +689,18 @@ def synthesize_poisson_spike_vector(
     Parameters
     ----------
     num_units : int, default: 20
-        Number of neuronal units to simulate
+        Number of neuronal units to simulate.
     sampling_frequency : float, default: 30000.0
-        Sampling frequency in Hz
+        Sampling frequency in Hz.
     duration : float, default: 60.0
-        Duration of the simulation in seconds
+        Duration of the simulation in seconds.
     refractory_period_ms : float, default: 4.0
-        Refractory period between spikes in milliseconds
+        Refractory period between spikes in milliseconds.
     firing_rates : float or array_like or tuple, default: 3.0
         Firing rate(s) in Hz. Can be a single value for all units or an array of firing rates with
-        each element being the firing rate for one unit
+        each element being the firing rate for one unit.
     seed : int, default: 0
-        Seed for random number generator
+        Seed for random number generator.
 
     Returns
     -------
@@ -748,27 +794,27 @@ def synthesize_random_firings(
     Parameters
     ----------
     num_units : int
-        number of units
+        Number of units.
     sampling_frequency : float
-        sampling rate
+        Sampling rate.
     duration : float
-        duration of the segment in seconds
+        Duration of the segment in seconds.
     refractory_period_ms: float
-        refractory_period in ms
+        Refractory period in ms.
     firing_rates: float or list[float]
         The firing rate of each unit (in Hz).
         If float, all units will have the same firing rate.
     add_shift_shuffle: bool, default: False
         Optionally add a small shuffle on half of the spikes to make the autocorrelogram less flat.
     seed: int, default: None
-        seed for the generator
+        Seed for the generator.
 
     Returns
     -------
-    times:
-        Concatenated and sorted times vector
-    labels:
-        Concatenated and sorted label vector
+    times: np.array
+        Concatenated and sorted times vector.
+    labels: np.array
+        Concatenated and sorted label vector.
 
     """
 
@@ -852,11 +898,11 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
     Parameters
     ----------
     sorting :
-        Original sorting
+        Original sorting.
     num : int
-        Number of injected units
+        Number of injected units.
     max_shift : int
-        range of the shift in sample
+        range of the shift in sample.
     ratio: float
         Proportion of original spike in the injected units.
 
@@ -907,8 +953,29 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
 
 
 def inject_some_split_units(sorting, split_ids: list, num_split=2, output_ids=False, seed=None):
-    """ """
+    """
+    Inject some split units in a sorting.
 
+    Parameters
+    ----------
+    sorting : BaseSorting
+        Original sorting.
+    split_ids : list
+        List of unit_ids to split.
+    num_split : int, default: 2
+        Number of split units.
+    output_ids : bool, default: False
+        If True, return the new unit_ids.
+    seed : int, default: None
+        Random seed.
+
+    Returns
+    -------
+    sorting_with_split : NumpySorting
+        A sorting with split units.
+    other_ids : dict
+        The dictionary with the split unit_ids. Returned only if output_ids is True.
+    """
     unit_ids = sorting.unit_ids
     assert unit_ids.dtype.kind == "i"
 
@@ -958,7 +1025,7 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
     num_violations : int
         Number of contaminating spikes.
     violation_delta : float, default: 1e-5
-        Temporal offset of contaminating spikes (in seconds)
+        Temporal offset of contaminating spikes (in seconds).
 
     Returns
     -------
@@ -1012,8 +1079,8 @@ class NoiseGeneratorRecording(BaseRecording):
     noise_block_size: int
         Size in sample of noise block.
 
-    Note
-    ----
+    Notes
+    -----
     If modifying this function, ensure that only one call to malloc is made per call get_traces to
     maintain the optimized memory profile.
     """
@@ -1215,7 +1282,7 @@ def generate_recording_by_size(
     num_channels: int
         Number of channels.
     seed : int, default: None
-        The seed for np.random.default_rng
+        The seed for np.random.default_rng.
 
     Returns
     -------
@@ -1440,7 +1507,6 @@ def generate_templates(
     dtype="float32",
     upsample_factor=None,
     unit_params=None,
-    unit_params_range=None,
     mode="ellipsoid",
 ):
     """
@@ -1497,9 +1563,7 @@ def generate_templates(
             * (num_units, num_samples, num_channels, upsample_factor) if upsample_factor is not None
 
     """
-
     unit_params = unit_params or dict()
-    unit_params_range = unit_params_range or dict()
     rng = np.random.default_rng(seed=seed)
 
     # neuron location must be 3D
@@ -1615,10 +1679,11 @@ class InjectTemplatesRecording(BaseRecording):
     templates: np.ndarray[n_units, n_samples, n_channels] or np.ndarray[n_units, n_samples, n_oversampling]
         Array containing the templates to inject for all the units.
         Shape can be:
+
             * (num_units, num_samples, num_channels): standard case
             * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce sampling jitter.
     nbefore: list[int] | int | None, default: None
-        Where is the center of the template for each unit?
+        The number of samples before the peak of the template to align the spike.
         If None, will default to the highest peak.
     amplitude_factor: list[float] | float | None, default: None
         The amplitude of each spike for each unit.
@@ -1633,7 +1698,7 @@ class InjectTemplatesRecording(BaseRecording):
         You can use int for mono-segment objects.
     upsample_vector: np.array or None, default: None.
         When templates is 4d we can simulate a jitter.
-        Optional the upsample_vector is the jitter index with a number per spike in range 0-templates.sahpe[3]
+        Optional the upsample_vector is the jitter index with a number per spike in range 0-templates.shape[3].
 
     Returns
     -------
@@ -1741,6 +1806,8 @@ class InjectTemplatesRecording(BaseRecording):
             )
             self.add_recording_segment(recording_segment)
 
+        # to discuss: maybe we could set json serializability to False always
+        # because templates could be large!
         if not sorting.check_serializability("json"):
             self._serializability["json"] = False
         if parent_recording is not None:
@@ -1993,6 +2060,7 @@ def generate_ground_truth_recording(
         The templates of units.
         If None they are generated.
         Shape can be:
+
             * (num_units, num_samples, num_channels): standard case
             * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce jitter.
     ms_before: float, default: 1.5
@@ -2124,5 +2192,8 @@ def generate_ground_truth_recording(
     recording.set_probe(probe, in_place=True)
     recording.set_channel_gains(1.0)
     recording.set_channel_offsets(0.0)
+
+    recording.name = "GroundTruthRecording"
+    sorting.name = "GroundTruthSorting"
 
     return recording, sorting

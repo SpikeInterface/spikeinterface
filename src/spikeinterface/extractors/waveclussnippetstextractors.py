@@ -10,8 +10,6 @@ from typing import List, Union
 
 
 class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
-    extractor_name = "WaveClusSnippetsExtractor"
-    name = "waveclus"
 
     def __init__(self, file_path):
         file_path = Path(file_path) if isinstance(file_path, str) else file_path

@@ -262,9 +262,14 @@ def make_linear_displacement(start, stop, num_step=10):
     displacements : np.array
         The displacements with shape (num_step, 2)
     """
-    displacements = (stop[np.newaxis, :] - start[np.newaxis, :]) / (num_step - 1) * np.arange(num_step)[
-        :, np.newaxis
-    ] + start[np.newaxis, :]
+    if num_step < 1:
+        raise ValueError("make_linear_displacement needs num_step > 0")
+    if num_step == 1:
+        displacements = ((start + stop) / 2)[np.newaxis, :]
+    else:
+        displacements = (stop[np.newaxis, :] - start[np.newaxis, :]) / (num_step - 1) * np.arange(num_step)[
+            :, np.newaxis
+        ] + start[np.newaxis, :]
     return displacements
 
 
@@ -457,6 +462,9 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             self.add_recording_segment(recording_segment)
 
         self.set_probe(drifting_templates.probe, in_place=True)
+
+        # templates are too large, we don't serialize them to JSON
+        self._serializability["json"] = False
 
         self._kwargs = {
             "sorting": sorting,

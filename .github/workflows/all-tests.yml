@@ -68,6 +68,7 @@ jobs:
           echo "RUN_SORTERS_TESTS=${RUN_SORTERS_TESTS}"
           echo "RUN_INTERNAL_SORTERS_TESTS=${RUN_INTERNAL_SORTERS_TESTS}"
           echo "INSTALL_PLEXON_DEPENDENCIES=${INSTALL_PLEXON_DEPENDENCIES}"
+          echo "RUN_STREAMING_EXTRACTORS_TESTS=${RUN_STREAMING_EXTRACTORS_TESTS}"
 
       - name: Install packages
         run: |
@@ -135,6 +136,13 @@ jobs:
         run: |
           pip install -e .[extractors,streaming_extractors,test_extractors]
           ./.github/run_tests.sh "extractors and not streaming_extractors" --no-virtual-env
+
+      - name: Test streaming extractors
+        shell: bash
+        if: env.RUN_STREAMING_EXTRACTORS_TESTS
+        run: |
+          pip install -e .[streaming_extractors,test_extractors]
+          ./.github/run_tests.sh "streaming_extractors" --no-virtual-env
 
       - name: Test preprocessing
         shell: bash

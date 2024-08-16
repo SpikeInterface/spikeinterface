@@ -29,11 +29,12 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream name you want to load.
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     """
 
-    mode = "file"
     NeoRawIOClass = "BiocamRawIO"
-    name = "biocam"
 
     def __init__(
         self,
@@ -42,11 +43,17 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         electrode_width=None,
         stream_id=None,
         stream_name=None,
-        all_annotations=False,
+        all_annotations: bool = False,
+        use_names_as_ids: bool = False,
     ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(
-            self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
+            **neo_kwargs,
         )
 
         # load probe from probeinterface

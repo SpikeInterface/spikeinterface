@@ -59,14 +59,15 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several blocks (experiments), specify the block index you want to load
     all_annotations : bool, default: False
         Load exhaustively all annotation from neo
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     ignore_timestamps_errors : None
         Deprecated keyword argument. This is now ignored.
         neo.OpenEphysRawIO is now handling gaps directly but makes the read slower.
     """
 
-    mode = "folder"
     NeoRawIOClass = "OpenEphysRawIO"
-    name = "openephyslegacy"
 
     def __init__(
         self,
@@ -74,8 +75,9 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         stream_id=None,
         stream_name=None,
         block_index=None,
-        all_annotations=False,
-        ignore_timestamps_errors=None,
+        all_annotations: bool = False,
+        use_names_as_ids: bool = False,
+        ignore_timestamps_errors: bool = None,
     ):
         if ignore_timestamps_errors is not None:
             warnings.warn(
@@ -90,6 +92,7 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
             stream_name=stream_name,
             block_index=block_index,
             all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
             **neo_kwargs,
         )
         self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute())))
@@ -138,9 +141,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
     """
 
-    mode = "folder"
     NeoRawIOClass = "OpenEphysBinaryRawIO"
-    name = "openephys"
 
     def __init__(
         self,
@@ -287,9 +288,7 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
 
     """
 
-    mode = "folder"
     NeoRawIOClass = "OpenEphysBinaryRawIO"
-    name = "openephys"
 
     def __init__(self, folder_path, block_index=None):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)

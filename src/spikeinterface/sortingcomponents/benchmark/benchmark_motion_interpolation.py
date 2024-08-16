@@ -6,7 +6,7 @@ import numpy as np
 from spikeinterface.sorters import run_sorter
 
 from spikeinterface.comparison import GroundTruthComparison
-from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+from spikeinterface.sortingcomponents.motion.motion_interpolation import InterpolateMotionRecording
 from spikeinterface.curation import MergeUnitsSorting
 
 

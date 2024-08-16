@@ -17,7 +17,6 @@ from .misc_metrics import compute_num_spikes, compute_firing_rates
 from ..core import get_random_data_chunks, compute_sparsity
 from ..core.template_tools import get_template_extremum_channel
 
-
 _possible_pc_metric_names = [
     "isolation_distance",
     "l_ratio",
@@ -90,7 +89,7 @@ def compute_pc_metrics(
     sorting = sorting_analyzer.sorting
 
     if metric_names is None:
-        metric_names = _possible_pc_metric_names
+        metric_names = _possible_pc_metric_names.copy()
     if qm_params is None:
         qm_params = _default_params
 
@@ -110,8 +109,13 @@ def compute_pc_metrics(
     if "nn_isolation" in metric_names:
         pc_metrics["nn_unit_id"] = {}
 
+    possible_nn_metrics = ["nn_isolation", "nn_noise_overlap"]
+
+    nn_metrics = list(set(metric_names).intersection(possible_nn_metrics))
+    non_nn_metrics = list(set(metric_names).difference(possible_nn_metrics))
+
     # Compute nspikes and firing rate outside of main loop for speed
-    if any([n in metric_names for n in ["nn_isolation", "nn_noise_overlap"]]):
+    if nn_metrics:
         n_spikes_all_units = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
         fr_all_units = compute_firing_rates(sorting_analyzer, unit_ids=unit_ids)
     else:
@@ -119,9 +123,6 @@ def compute_pc_metrics(
         fr_all_units = None
 
     run_in_parallel = n_jobs > 1
-
-    if run_in_parallel:
-        parallel_functions = []
 
     # this get dense projection for selected unit_ids
     dense_projections, spike_unit_indices = pca_ext.get_some_projections(channel_ids=None, unit_ids=unit_ids)
@@ -146,7 +147,7 @@ def compute_pc_metrics(
         func_args = (
             pcs_flat,
             labels,
-            metric_names,
+            non_nn_metrics,
             unit_id,
             unit_ids,
             qm_params,
@@ -156,16 +157,16 @@ def compute_pc_metrics(
         )
         items.append(func_args)
 
-    if not run_in_parallel:
+    if not run_in_parallel and non_nn_metrics:
         units_loop = enumerate(unit_ids)
         if progress_bar:
-            units_loop = tqdm(units_loop, desc="calculate_pc_metrics", total=len(unit_ids))
+            units_loop = tqdm(units_loop, desc="calculate pc_metrics", total=len(unit_ids))
 
-        for unit_ind, unit_id in units_loop:
-            pca_metrics_unit = pca_metrics_one_unit(items[unit_ind])
+        for i, unit_id in units_loop:
+            pca_metrics_unit = pca_metrics_one_unit(items[i])
             for metric_name, metric in pca_metrics_unit.items():
                 pc_metrics[metric_name][unit_id] = metric
-    else:
+    elif run_in_parallel and non_nn_metrics:
         with ProcessPoolExecutor(n_jobs) as executor:
             results = executor.map(pca_metrics_one_unit, items)
             if progress_bar:
@@ -175,6 +176,37 @@ def compute_pc_metrics(
                 unit_id = unit_ids[ui]
                 for metric_name, metric in pca_metrics_unit.items():
                     pc_metrics[metric_name][unit_id] = metric
+
+    for metric_name in nn_metrics:
+        units_loop = enumerate(unit_ids)
+        if progress_bar:
+            units_loop = tqdm(units_loop, desc=f"calculate {metric_name} metric", total=len(unit_ids))
+
+        func = _nn_metric_name_to_func[metric_name]
+        metric_params = qm_params[metric_name] if metric_name in qm_params else {}
+
+        for _, unit_id in units_loop:
+            try:
+                res = func(
+                    sorting_analyzer,
+                    unit_id,
+                    seed=seed,
+                    n_spikes_all_units=n_spikes_all_units,
+                    fr_all_units=fr_all_units,
+                    **metric_params,
+                )
+            except:
+                if metric_name == "nn_isolation":
+                    res = (np.nan, np.nan)
+                elif metric_name == "nn_noise_overlap":
+                    res = np.nan
+
+            if metric_name == "nn_isolation":
+                nn_isolation, nn_unit_id = res
+                pc_metrics["nn_isolation"][unit_id] = nn_isolation
+                pc_metrics["nn_unit_id"][unit_id] = nn_unit_id
+            elif metric_name == "nn_noise_overlap":
+                pc_metrics["nn_noise_overlap"][unit_id] = res
 
     return pc_metrics
 
@@ -677,6 +709,14 @@ def nearest_neighbors_noise_overlap(
     templates_ext = sorting_analyzer.get_extension("templates")
     assert templates_ext is not None, "nearest_neighbors_isolation() need extension 'templates'"
 
+    try:
+        sorting_analyzer.get_extension("templates").get_data(operator="median")
+    except KeyError:
+        warnings.warn(
+            "nearest_neighbors_isolation() need extension 'templates' calculated with the 'median' operator."
+            "You can run sorting_analyzer.compute('templates', operators=['average', 'median']) to calculate templates based on both average and median modes."
+        )
+
     if n_spikes_all_units is None:
         n_spikes_all_units = compute_num_spikes(sorting_analyzer)
     if fr_all_units is None:
@@ -955,11 +995,13 @@ def pca_metrics_one_unit(args):
     pc_metrics = {}
     # metrics
     if "isolation_distance" in metric_names or "l_ratio" in metric_names:
+
         try:
             isolation_distance, l_ratio = mahalanobis_metrics(pcs_flat, labels, unit_id)
         except:
             isolation_distance = np.nan
             l_ratio = np.nan
+
         if "isolation_distance" in metric_names:
             pc_metrics["isolation_distance"] = isolation_distance
         if "l_ratio" in metric_names:
@@ -973,6 +1015,7 @@ def pca_metrics_one_unit(args):
                 d_prime = lda_metrics(pcs_flat, labels, unit_id)
             except:
                 d_prime = np.nan
+
         pc_metrics["d_prime"] = d_prime
 
     if "nearest_neighbor" in metric_names:
@@ -985,36 +1028,6 @@ def pca_metrics_one_unit(args):
             nn_miss_rate = np.nan
         pc_metrics["nn_hit_rate"] = nn_hit_rate
         pc_metrics["nn_miss_rate"] = nn_miss_rate
-
-    if "nn_isolation" in metric_names:
-        try:
-            nn_isolation, nn_unit_id = nearest_neighbors_isolation(
-                we,
-                unit_id,
-                seed=seed,
-                n_spikes_all_units=n_spikes_all_units,
-                fr_all_units=fr_all_units,
-                **qm_params["nn_isolation"],
-            )
-        except:
-            nn_isolation = np.nan
-            nn_unit_id = np.nan
-        pc_metrics["nn_isolation"] = nn_isolation
-        pc_metrics["nn_unit_id"] = nn_unit_id
-
-    if "nn_noise_overlap" in metric_names:
-        try:
-            nn_noise_overlap = nearest_neighbors_noise_overlap(
-                we,
-                unit_id,
-                n_spikes_all_units=n_spikes_all_units,
-                fr_all_units=fr_all_units,
-                seed=seed,
-                **qm_params["nn_noise_overlap"],
-            )
-        except:
-            nn_noise_overlap = np.nan
-        pc_metrics["nn_noise_overlap"] = nn_noise_overlap
 
     if "silhouette" in metric_names:
         silhouette_method = qm_params["silhouette"]["method"]
@@ -1032,3 +1045,9 @@ def pca_metrics_one_unit(args):
             pc_metrics["silhouette_full"] = unit_silhouette_score
 
     return pc_metrics
+
+
+_nn_metric_name_to_func = {
+    "nn_isolation": nearest_neighbors_isolation,
+    "nn_noise_overlap": nearest_neighbors_noise_overlap,
+}

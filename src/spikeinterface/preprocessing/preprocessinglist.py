@@ -24,6 +24,8 @@ from .normalize_scale import (
     CenterRecording,
     center,
 )
+from .scale import scale_to_uV
+
 from .whiten import WhitenRecording, whiten, compute_whitening_matrix
 from .rectify import RectifyRecording, rectify
 from .clip import BlankSaturationRecording, blank_staturation, ClipRecording, clip
@@ -78,5 +80,4 @@ preprocessers_full_list = [
     UnsignedToSignedRecording,
 ]
 
-installed_preprocessers_list = [pp for pp in preprocessers_full_list if pp.installed]
 preprocesser_dict = {pp_class.name: pp_class for pp_class in preprocessers_full_list}
