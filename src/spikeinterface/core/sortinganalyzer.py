@@ -1011,6 +1011,9 @@ class SortingAnalyzer:
     def is_sparse(self) -> bool:
         return self.sparsity is not None
 
+    def is_filtered(self) -> bool:
+        return self.rec_attributes["filtered"]
+
     def get_sorting_provenance(self):
         """
         Get the original sorting if possible otherwise return None
