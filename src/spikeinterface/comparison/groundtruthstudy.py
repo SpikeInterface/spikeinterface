@@ -158,6 +158,7 @@ class GroundTruthStudy:
         self.sortings = {k: None for k in self.cases}
         self.comparisons = {k: None for k in self.cases}
         for key in self.cases:
+            gt_sorting = self.datasets[self.cases[key]["dataset"]][1]
             sorting_folder = self.folder / "sortings" / self.key_to_str(key)
             if sorting_folder.exists():
                 self.sortings[key] = load_extractor(sorting_folder)
@@ -167,6 +168,9 @@ class GroundTruthStudy:
                 with open(comparison_file, mode="rb") as f:
                     try:
                         self.comparisons[key] = pickle.load(f)
+                        # since we avoided pickling the absolute sorting paths, we need to set them here
+                        self.comparisons[key].sorting1 = gt_sorting
+                        self.comparisons[key].sorting2 = self.sortings[key]
                     except Exception:
                         pass
 
@@ -375,8 +379,19 @@ class GroundTruthStudy:
             self.comparisons[key] = comp
 
             comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
-            with open(comparison_file, mode="wb") as f:
-                pickle.dump(comp, f)
+            # Since dumping to pickle hard-codes the sorting paths, here we temporarily set the sorting paths to None
+            # so that the comparison object can be pickled
+            # Upon reloading, we will set the sorting paths back to the correct values
+            comp.sorting1 = None
+            comp.sorting2 = None
+            # we also need a try-except block in case the folder is read-only
+            try:
+                with open(comparison_file, mode="wb") as f:
+                    pickle.dump(comp, f)
+            except:
+                pass
+            comp.sorting1 = gt_sorting
+            comp.sorting2 = sorting
 
     def get_run_times(self, case_keys=None):
         """
