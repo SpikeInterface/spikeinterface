@@ -128,7 +128,7 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        """kilosort version <4.0.10 is always '4'"""
+        """kilosort.__version__ <4.0.10 is always '4'"""
         return importlib_version("kilosort")
 
     @classmethod
