@@ -6,15 +6,19 @@ from .base import BaseWidget, to_attr
 
 
 def handle_levels(df, study, case_keys, levels):
+    import pandas as pd
+
     if case_keys is None:
         case_keys = list(study.cases.keys())
-        labels = {key: study.cases[key]["label"] for key in case_keys}
+    labels = {key: study.cases[key]["label"] for key in case_keys}
 
     if levels is not None:
         drop_levels = [l for l in study.levels if l not in levels]
         df = df.droplevel(drop_levels).sort_index()
+        if len(levels) > 1:
+            df = df.reorder_levels(levels)
         case_keys = list(np.unique(df.index))
-        if isinstance(df.index, df.MultiIndex):
+        if isinstance(df.index, pd.MultiIndex):
             labels = {key: "-".join(key) for key in case_keys}
         else:
             labels = {key: key for key in case_keys}
@@ -35,7 +39,11 @@ class StudyRunTimesWidget(BaseWidget):
         A selection of cases to plot, if None, then all cases are plotted.
     levels : str or list-like or None, default: None
         A selection of levels to group cases by, if None, then all
-        cases are treated as separate.
+        cases are treated as separate in a bar plot. 
+        When specified, ff levels is a string or a 1-element tuple/list,
+        then it will be treated as the "x" variable of a boxplot. In case it's a 
+        2-element object, the first element is "x", the second is "hue".
+        More than 2 elements are not supported
     """
 
     def __init__(
@@ -43,6 +51,7 @@ class StudyRunTimesWidget(BaseWidget):
         study,
         case_keys=None,
         levels=None,
+        cmap="tab20",
         backend=None,
         **backend_kwargs,
     ):
@@ -50,6 +59,9 @@ class StudyRunTimesWidget(BaseWidget):
             case_keys = list(study.cases.keys())
 
         if levels is not None:
+            if isinstance(levels, str):
+                levels = [levels]
+            assert len(levels) < 3, "You can pass at most 2 levels to plot against!"
             assert all([l in study.levels for l in levels]), f"levels must be in {study.levels}"
 
         plot_data = dict(
@@ -58,12 +70,16 @@ class StudyRunTimesWidget(BaseWidget):
             case_keys=case_keys,
             levels=levels,
             colors=study.get_colors(),
+            cmap=cmap
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
+        import seaborn as sns
+
+        from .utils import get_some_colors
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
@@ -72,12 +88,29 @@ class StudyRunTimesWidget(BaseWidget):
 
         run_times, case_keys, labels = handle_levels(dp.run_times, dp.study, dp.case_keys, dp.levels)
 
-        for i, key in enumerate(case_keys):
-            label = dp.study.cases[key]["label"]
-            rt = run_times.loc[key]
-            self.ax.bar(i, rt, width=0.8, label=label, facecolor=dp.colors[key])
+        if dp.levels is None:
+            x = None
+            hue = case_keys
+            colors = get_some_colors(case_keys, map_name=dp.cmap, color_engine="matplotlib", shuffle=False, margin=0)
+            plt_fun = sns.barplot
+        elif len(dp.levels) == 1:
+            x = None
+            colors = get_some_colors(case_keys, map_name=dp.cmap, color_engine="matplotlib", shuffle=False, margin=0)
+            hue = dp.levels[0]
+            plt_fun = sns.boxplot
+        elif len(dp.levels) == 2:
+            x, hue = dp.levels
+            hues = np.unique([c[1] for c in case_keys])
+            colors = get_some_colors(hues, map_name=dp.cmap, color_engine="matplotlib", shuffle=False, margin=0)
+            plt_fun = sns.boxplot
+
+        plt_fun(data=run_times, y="run_time", x=x, hue=hue, ax=self.ax, palette=colors)
+
         self.ax.set_ylabel("run time (s)")
-        self.ax.legend()
+        sns.despine(ax=self.ax)
+        if dp.levels is None:
+            h, l = self.ax.get_legend_handles_labels()
+            self.ax.legend(h, list(labels.values()))            
 
 
 class StudyUnitCountsWidget(BaseWidget):
@@ -105,6 +138,8 @@ class StudyUnitCountsWidget(BaseWidget):
         **backend_kwargs,
     ):
         if levels is not None:
+            if isinstance(levels, str):
+                levels = [levels]
             assert all([l in study.levels for l in levels]), f"levels must be in {study.levels}"
         plot_data = dict(
             study=study, count_units=study.get_count_units(case_keys=case_keys), case_keys=case_keys, levels=levels
@@ -113,10 +148,12 @@ class StudyUnitCountsWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import seaborn as sns
+        import pandas as pd
+
         from .utils_matplotlib import make_mpl_figure
         from .utils import get_some_colors
 
-        import pandas as pd
 
         dp = to_attr(data_plot)
         count_units = dp.count_units
@@ -128,17 +165,23 @@ class StudyUnitCountsWidget(BaseWidget):
         columns = count_units.columns.tolist()
         columns.remove("num_gt")
         columns.remove("num_sorter")
-
         ncol = len(columns)
+
+        if dp.levels is not None:
+            if len(columns) > 1:
+                assert len(levels) == 1, f"Only one level at a time is allowed to display {ncol} counts: {columns}"
 
         colors = get_some_colors(columns, color_engine="auto", map_name="hot")
         colors["num_well_detected"] = "green"
 
         xticklabels = []
+
+        # use melt
         for i, key in enumerate(case_keys):
             for c, col in enumerate(columns):
                 x = i + 1 + c / (ncol + 1)
                 y = count_units.loc[key, col]
+                print(y)
                 if not "well_detected" in col:
                     y = -y
 
@@ -150,9 +193,10 @@ class StudyUnitCountsWidget(BaseWidget):
                 self.ax.bar([x], [y], width=1 / (ncol + 2), label=label, color=colors[col])
             xticklabels.append(labels[key])
 
-        self.ax.set_xticks(np.arange(len(dp.case_keys)) + 1)
+        self.ax.set_xticks(np.arange(len(case_keys)) + 1)
         self.ax.set_xticklabels(xticklabels)
         self.ax.legend()
+        sns.despine(ax=self.ax)
 
 
 class StudyPerformances(BaseWidget):
@@ -211,15 +255,14 @@ class StudyPerformances(BaseWidget):
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
-        from .utils_matplotlib import make_mpl_figure
-        from .utils import get_some_colors
-
         import pandas as pd
         import seaborn as sns
 
+        from .utils_matplotlib import make_mpl_figure
+        from .utils import get_some_colors
+
         dp = to_attr(data_plot)
         perfs, case_keys, labels = handle_levels(dp.perfs, dp.study, dp.case_keys, dp.levels)
-
         colors = get_some_colors(case_keys, map_name=dp.cmap, color_engine="matplotlib", shuffle=False, margin=0)
 
         if dp.mode in ("ordered", "snr"):
@@ -237,6 +280,7 @@ class StudyPerformances(BaseWidget):
                 ax.set_title(performance_name)
                 if count == len(dp.performance_names) - 1:
                     ax.legend(bbox_to_anchor=(0.05, 0.05), loc="lower left", framealpha=0.8)
+                sns.despine(ax=ax)
 
         elif dp.mode == "snr":
             metric_name = dp.mode
@@ -255,6 +299,7 @@ class StudyPerformances(BaseWidget):
                 ax.set_ylim(0, 1.05)
                 if count == 0:
                     ax.legend(loc="lower right")
+                sns.despine(ax=ax)
 
         elif dp.mode == "swarm":
             levels = perfs.index.names if dp.levels is None else dp.levels
@@ -266,7 +311,8 @@ class StudyPerformances(BaseWidget):
                 value_vars=dp.performance_names,
             )
             df["x"] = df.apply(lambda r: " ".join([r[col] for col in levels]), axis=1)
-            sns.swarmplot(data=df, x="x", y="Score", hue="Metric", dodge=True)
+            sns.swarmplot(data=df, x="x", y="Score", hue="Metric", dodge=True, ax=self.ax)
+            sns.despine(ax=self.ax)
 
 
 class StudyAgreementMatrix(BaseWidget):
