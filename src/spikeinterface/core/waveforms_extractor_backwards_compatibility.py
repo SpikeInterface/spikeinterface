@@ -446,10 +446,6 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
     else:
         rec_attributes["probegroup"] = None
 
-    if "dtype" not in rec_attributes:
-        warnings.warn("dtype not found in rec_attributes. Setting to float32")
-        rec_attributes["dtype"] = "float32"
-
     # recording
     recording = None
     if (folder / "recording.json").exists():

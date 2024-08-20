@@ -141,8 +141,17 @@ def test_SortingAnalyzer_tmp_recording(dataset):
     recording_sliced = recording.channel_slice(recording.channel_ids[:-1])
 
     # wrong channels
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         sorting_analyzer.set_temporary_recording(recording_sliced)
+
+    # test with different is_filtered
+    recording_filt = recording.clone()
+    recording_filt.annotate(is_filtered=False)
+    with pytest.raises(ValueError):
+        sorting_analyzer.set_temporary_recording(recording_filt)
+
+    # thest with additional check_is_filtered
+    sorting_analyzer.set_temporary_recording(recording_filt, check_is_filtered=False)
 
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
