@@ -85,14 +85,6 @@ PARAMS_TO_TEST = [
     ("duplicate_spike_bins", 5),
 ]
 
-# Update PARAMS_TO_TEST with version-dependent kwargs
-if parse(version("kilosort")) >= parse("4.0.12"):
-    pass  # TODO: expose?
-#    PARAMS_TO_TEST.extend(
-#         [
-#             ("save_preprocessed_copy", False),
-#         ]
-#    )
 if parse(version("kilosort")) >= parse("4.0.11"):
     PARAMS_TO_TEST.extend(
         [
