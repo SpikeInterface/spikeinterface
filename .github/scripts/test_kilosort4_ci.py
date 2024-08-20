@@ -337,7 +337,7 @@ class TestKilosort4Long:
 
     def _check_arguments(self, object_, expected_arguments):
         """
-        Check that the argument signature of  `object_` is as expected 
+        Check that the argument signature of  `object_` is as expected
         (i..e has not changed across kilosort versions).
         """
         sig = signature(object_)
