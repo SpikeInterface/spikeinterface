@@ -169,8 +169,8 @@ class GroundTruthStudy:
                     try:
                         self.comparisons[key] = pickle.load(f)
                         # since we avoided pickling the absolute sorting paths, we need to set them here
-                        self.comparisons[key].sorting1 = gt_sorting
-                        self.comparisons[key].sorting2 = self.sortings[key]
+                        self.comparisons[key]._sorting1 = gt_sorting
+                        self.comparisons[key]._sorting2 = self.sortings[key]
                     except Exception:
                         pass
 
@@ -382,16 +382,16 @@ class GroundTruthStudy:
             # Since dumping to pickle hard-codes the sorting paths, here we temporarily set the sorting paths to None
             # so that the comparison object can be pickled
             # Upon reloading, we will set the sorting paths back to the correct values
-            comp.sorting1 = None
-            comp.sorting2 = None
+            comp._sorting1 = None
+            comp._sorting2 = None
             # we also need a try-except block in case the folder is read-only
             try:
                 with open(comparison_file, mode="wb") as f:
                     pickle.dump(comp, f)
             except:
                 pass
-            comp.sorting1 = gt_sorting
-            comp.sorting2 = sorting
+            comp._sorting1 = gt_sorting
+            comp._sorting2 = sorting
 
     def get_run_times(self, case_keys=None):
         """
