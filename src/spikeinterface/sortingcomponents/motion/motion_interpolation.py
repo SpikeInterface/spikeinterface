@@ -27,6 +27,9 @@ def correct_motion_on_peaks(peaks, peak_locations, motion, recording):
     corrected_peak_locations: np.array
         Motion-corrected peak locations
     """
+    if recording is None:
+        raise ValueError("correct_motion_on_peaks need recording to be not None")
+
     corrected_peak_locations = peak_locations.copy()
 
     for segment_index in range(motion.num_segments):

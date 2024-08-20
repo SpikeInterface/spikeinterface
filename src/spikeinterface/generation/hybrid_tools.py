@@ -15,7 +15,7 @@ from spikeinterface.core.generate import (
 )
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
-from spikeinterface.sortingcomponents.motion_utils import Motion
+from spikeinterface.sortingcomponents.motion import Motion
 
 from spikeinterface.generation.drift_tools import (
     InjectDriftingTemplatesRecording,
@@ -400,6 +400,7 @@ def generate_hybrid_recording(
     num_segments = recording.get_num_segments()
     dtype = recording.dtype
     durations = np.array([recording.get_duration(segment_index) for segment_index in range(num_segments)])
+    num_samples = np.array([recording.get_num_samples(segment_index) for segment_index in range(num_segments)])
     channel_locations = probe.contact_positions
 
     assert (
@@ -516,6 +517,7 @@ def generate_hybrid_recording(
         elif dim == 2:
             raise NotImplementedError("3D motion not implemented yet")
         num_step = int((stop - start)[dim] / drift_step_um)
+        num_step = max(1, num_step)
         displacements = make_linear_displacement(start, stop, num_step=num_step)
 
         # use templates_, because templates_array might have been scaled
@@ -548,7 +550,7 @@ def generate_hybrid_recording(
             displacement_vectors=displacement_vectors,
             displacement_sampling_frequency=displacement_sampling_frequency,
             displacement_unit_factor=displacement_unit_factor,
-            num_samples=(np.array(durations) * sampling_frequency).astype("int64"),
+            num_samples=num_samples.astype("int64"),
             amplitude_factor=amplitude_factor,
         )
 

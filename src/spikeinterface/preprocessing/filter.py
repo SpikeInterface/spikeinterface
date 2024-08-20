@@ -70,8 +70,6 @@ class FilterRecording(BasePreprocessor):
         The filtered recording extractor object
     """
 
-    name = "filter"
-
     def __init__(
         self,
         recording,
@@ -231,8 +229,6 @@ class BandpassFilterRecording(FilterRecording):
         The bandpass-filtered recording extractor object
     """
 
-    name = "bandpass_filter"
-
     def __init__(self, recording, freq_min=300.0, freq_max=6000.0, margin_ms=5.0, dtype=None, **filter_kwargs):
         FilterRecording.__init__(
             self, recording, band=[freq_min, freq_max], margin_ms=margin_ms, dtype=dtype, **filter_kwargs
@@ -266,8 +262,6 @@ class HighpassFilterRecording(FilterRecording):
         The highpass-filtered recording extractor object
     """
 
-    name = "highpass_filter"
-
     def __init__(self, recording, freq_min=300.0, margin_ms=5.0, dtype=None, **filter_kwargs):
         FilterRecording.__init__(
             self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype, btype="highpass", **filter_kwargs
@@ -297,8 +291,6 @@ class NotchFilterRecording(BasePreprocessor):
     filter_recording : NotchFilterRecording
         The notch-filtered recording extractor object
     """
-
-    name = "notch_filter"
 
     def __init__(self, recording, freq=3000, q=30, margin_ms=5.0, dtype=None):
         # coeef is 'ba' type

@@ -1,5 +1,9 @@
 from itertools import combinations
 
+import numpy as np
+
+from spikeinterface.core import BaseSorting, SortingAnalyzer, apply_merges_to_sorting
+import copy
 
 supported_curation_format_versions = {"1"}
 
@@ -28,7 +32,7 @@ def validate_curation_dict(curation_dict):
 
     # unit_ids
     labeled_unit_set = set([lbl["unit_id"] for lbl in curation_dict["manual_labels"]])
-    merged_units_set = set(sum(curation_dict["merged_unit_groups"], []))
+    merged_units_set = set(sum(curation_dict["merge_unit_groups"], []))
     removed_units_set = set(curation_dict["removed_units"])
 
     if curation_dict["unit_ids"] is not None:
@@ -41,7 +45,7 @@ def validate_curation_dict(curation_dict):
         if not removed_units_set.issubset(unit_set):
             raise ValueError("Curation format: some removed units are not in the unit list")
 
-    all_merging_groups = [set(group) for group in curation_dict["merged_unit_groups"]]
+    all_merging_groups = [set(group) for group in curation_dict["merge_unit_groups"]]
     for gp_1, gp_2 in combinations(all_merging_groups, 2):
         if len(gp_1.intersection(gp_2)) != 0:
             raise ValueError("Some units belong to multiple merge groups")
@@ -83,7 +87,7 @@ def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_fo
 
     Returns
     -------
-    curation_dict: dict
+    curation_dict : dict
         A curation dictionary
     """
 
@@ -112,10 +116,79 @@ def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_fo
         "unit_ids": None,
         "label_definitions": labels_def,
         "manual_labels": manual_labels,
-        "merged_unit_groups": merge_groups,
+        "merge_unit_groups": merge_groups,
         "removed_units": [],
     }
 
+    return curation_dict
+
+
+def curation_label_to_vectors(curation_dict):
+    """
+    Transform the curation dict into dict of vectors.
+    For label category with exclusive=True : a column is created and values are the unique label.
+    For label category with exclusive=False : one column per possible is created and values are boolean.
+
+    If exclusive=False and the same label appear several times then it raises an error.
+
+    Parameters
+    ----------
+    curation_dict : dict
+        A curation dictionary
+
+    Returns
+    -------
+    labels : dict of numpy vector
+
+    """
+    unit_ids = list(curation_dict["unit_ids"])
+    n = len(unit_ids)
+
+    labels = {}
+
+    for label_key, label_def in curation_dict["label_definitions"].items():
+        if label_def["exclusive"]:
+            assert label_key not in labels, f"{label_key} is already a key"
+            labels[label_key] = [""] * n
+            for lbl in curation_dict["manual_labels"]:
+                value = lbl.get(label_key, [])
+                if len(value) == 1:
+                    unit_index = unit_ids.index(lbl["unit_id"])
+                    labels[label_key][unit_index] = value[0]
+            labels[label_key] = np.array(labels[label_key])
+        else:
+            for label_opt in label_def["label_options"]:
+                assert label_opt not in labels, f"{label_opt} is already a key"
+                labels[label_opt] = np.zeros(n, dtype=bool)
+            for lbl in curation_dict["manual_labels"]:
+                values = lbl.get(label_key, [])
+                for value in values:
+                    unit_index = unit_ids.index(lbl["unit_id"])
+                    labels[value][unit_index] = True
+
+    return labels
+
+
+def clean_curation_dict(curation_dict):
+    """
+    In some cases the curation_dict can have inconsistencies (like in the sorting view format).
+    For instance, some unit_ids are both in 'merge_unit_groups' and 'removed_units'.
+    This is ambiguous!
+
+    This cleaner helper function ensures units tagged as `removed_units` are removed from the `merge_unit_groups`
+    """
+    curation_dict = copy.deepcopy(curation_dict)
+
+    clean_merge_unit_groups = []
+    for group in curation_dict["merge_unit_groups"]:
+        clean_group = []
+        for unit_id in group:
+            if unit_id not in curation_dict["removed_units"]:
+                clean_group.append(unit_id)
+        if len(clean_group) > 1:
+            clean_merge_unit_groups.append(clean_group)
+
+    curation_dict["merge_unit_groups"] = clean_merge_unit_groups
     return curation_dict
 
 
@@ -125,7 +198,7 @@ def curation_label_to_dataframe(curation_dict):
     For label category with exclusive=True : a column is created and values are the unique label.
     For label category with exclusive=False : one column per possible is created and values are boolean.
 
-    If exclusive=False and the same label appear several times then it raises an error.
+    If exclusive=False and the same label appears several times then an error is raised.
 
     Parameters
     ----------
@@ -139,25 +212,144 @@ def curation_label_to_dataframe(curation_dict):
     """
     import pandas as pd
 
-    labels = pd.DataFrame(index=curation_dict["unit_ids"])
-
-    for label_key, label_def in curation_dict["label_definitions"].items():
-        if label_def["exclusive"]:
-            assert label_key not in labels.columns, f"{label_key} is already a column"
-            labels[label_key] = pd.Series(dtype=str)
-            labels[label_key][:] = ""
-            for lbl in curation_dict["manual_labels"]:
-                value = lbl.get(label_key, [])
-                if len(value) == 1:
-                    labels.at[lbl["unit_id"], label_key] = value[0]
-        else:
-            for label_opt in label_def["label_options"]:
-                assert label_opt not in labels.columns, f"{label_opt} is already a column"
-                labels[label_opt] = pd.Series(dtype=bool)
-                labels[label_opt][:] = False
-            for lbl in curation_dict["manual_labels"]:
-                values = lbl.get(label_key, [])
-                for value in values:
-                    labels.at[lbl["unit_id"], value] = True
-
+    labels = pd.DataFrame(curation_label_to_vectors(curation_dict), index=curation_dict["unit_ids"])
     return labels
+
+
+def apply_curation_labels(sorting, new_unit_ids, curation_dict):
+    """
+    Apply manual labels after merges.
+
+    Rules:
+      * label for non merge is applied first
+      * for merged group, when exclusive=True, if all have the same label then this label is applied
+      * for merged group, when exclusive=False, if one unit has the label then the new one have also it
+    """
+
+    # Please note that manual_labels is done on the unit_ids before the merge!!!
+    manual_labels = curation_label_to_vectors(curation_dict)
+
+    # apply on non merged
+    for key, values in manual_labels.items():
+        all_values = np.zeros(sorting.unit_ids.size, dtype=values.dtype)
+        for unit_ind, unit_id in enumerate(sorting.unit_ids):
+            if unit_id not in new_unit_ids:
+                ind = curation_dict["unit_ids"].index(unit_id)
+                all_values[unit_ind] = values[ind]
+        sorting.set_property(key, all_values)
+
+    for new_unit_id, old_group_ids in zip(new_unit_ids, curation_dict["merge_unit_groups"]):
+        for label_key, label_def in curation_dict["label_definitions"].items():
+            if label_def["exclusive"]:
+                group_values = []
+                for unit_id in old_group_ids:
+                    ind = curation_dict["unit_ids"].index(unit_id)
+                    value = manual_labels[label_key][ind]
+                    if value != "":
+                        group_values.append(value)
+                if len(set(group_values)) == 1:
+                    # all group has the same label or empty
+                    sorting.set_property(key, values=group_values, ids=[new_unit_id])
+            else:
+
+                for key in label_def["label_options"]:
+                    group_values = []
+                    for unit_id in old_group_ids:
+                        ind = curation_dict["unit_ids"].index(unit_id)
+                        value = manual_labels[key][ind]
+                        group_values.append(value)
+                    new_value = np.any(group_values)
+                    sorting.set_property(key, values=[new_value], ids=[new_unit_id])
+
+
+def apply_curation(
+    sorting_or_analyzer,
+    curation_dict,
+    censor_ms=None,
+    new_id_strategy="append",
+    merging_mode="soft",
+    sparsity_overlap=0.75,
+    verbose=False,
+    **job_kwargs,
+):
+    """
+    Apply curation dict to a Sorting or a SortingAnalyzer.
+
+    Steps are done in this order:
+      1. Apply removal using curation_dict["removed_units"]
+      2. Apply merges using curation_dict["merge_unit_groups"]
+      3. Set labels using curation_dict["manual_labels"]
+
+    A new Sorting or SortingAnalyzer (in memory) is returned.
+    The user (an adult) has the responsability to save it somewhere (or not).
+
+    Parameters
+    ----------
+    sorting_or_analyzer : Sorting | SortingAnalyzer
+        The Sorting object to apply merges.
+    curation_dict : dict
+        The curation dict.
+    censor_ms: float | None, default: None
+        When applying the merges, any consecutive spikes within the `censor_ms` are removed. This can be thought of
+        as the desired refractory period. If `censor_ms=None`, no spikes are discarded.
+    new_id_strategy : "append" | "take_first", default: "append"
+        The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+
+            * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
+            * "take_first" : new_unit_ids will be the first unit_id of every list of merges
+    merging_mode  : "soft" | "hard", default: "soft"
+        How merges are performed for SortingAnalyzer. If the `merge_mode` is "soft" , merges will be approximated, with no reloading of
+        the waveforms. This will lead to approximations. If `merge_mode` is "hard", recomputations are accurately
+        performed, reloading waveforms if needed
+    sparsity_overlap : float, default 0.75
+            The percentage of overlap that units should share in order to accept merges. If this criteria is not
+            achieved, soft merging will not be possible and an error will be raised. This is for use with a SortingAnalyzer input.
+
+    verbose:
+
+    **job_kwargs
+
+    Returns
+    -------
+    sorting_or_analyzer : Sorting | SortingAnalyzer
+        The curated object.
+
+
+    """
+    validate_curation_dict(curation_dict)
+    if not np.array_equal(np.asarray(curation_dict["unit_ids"]), sorting_or_analyzer.unit_ids):
+        raise ValueError("unit_ids from the curation_dict do not match the one from Sorting or SortingAnalyzer")
+
+    if isinstance(sorting_or_analyzer, BaseSorting):
+        sorting = sorting_or_analyzer
+        sorting = sorting.remove_units(curation_dict["removed_units"])
+        sorting, _, new_unit_ids = apply_merges_to_sorting(
+            sorting,
+            curation_dict["merge_unit_groups"],
+            censor_ms=censor_ms,
+            return_extra=True,
+            new_id_strategy=new_id_strategy,
+        )
+        apply_curation_labels(sorting, new_unit_ids, curation_dict)
+        return sorting
+
+    elif isinstance(sorting_or_analyzer, SortingAnalyzer):
+        analyzer = sorting_or_analyzer
+        analyzer = analyzer.remove_units(curation_dict["removed_units"])
+        analyzer, new_unit_ids = analyzer.merge_units(
+            curation_dict["merge_unit_groups"],
+            censor_ms=censor_ms,
+            merging_mode=merging_mode,
+            sparsity_overlap=sparsity_overlap,
+            new_id_strategy=new_id_strategy,
+            return_new_unit_ids=True,
+            format="memory",
+            verbose=verbose,
+            **job_kwargs,
+        )
+        apply_curation_labels(analyzer.sorting, new_unit_ids, curation_dict)
+        return analyzer
+    else:
+        raise TypeError(
+            f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)}"
+        )

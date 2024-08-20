@@ -1,0 +1,16 @@
+.. _release0.100.8:
+
+SpikeInterface 0.100.8 release notes
+------------------------------------
+
+24th June 2024
+
+Minor release with bug fixes
+
+* Remove separate default job_kwarg n_jobs for sorters (#2712)
+* Fix math error in sd_ratio (#2964)
+* Add `whiteningRange` added as Kilosort 2/2.5/3 parameter (#2997)
+* Make sure we check `is_filtered()`` rather than bound method during run basesorter (#3037)
+* Numpy 2.0 cap Fix most egregorious deprecated behavior and cap version (#3032, #3056)
+* Add support for kilosort>=4.0.12 (#3055)
+* Check start_frame/end_frame in BaseRecording.get_traces() (#3059)

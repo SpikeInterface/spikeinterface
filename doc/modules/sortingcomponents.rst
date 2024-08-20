@@ -190,10 +190,10 @@ Here is an example with non-rigid motion estimation:
     peak_locations = localize_peaks(recording=recording, peaks=peaks, ...) # as above
 
 
-    from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
+    from spikeinterface.sortingcomponents.motion import estimate_motion
     motion, temporal_bins, spatial_bins,
                 extra_check = estimate_motion(recording=recording, peaks=peaks, peak_locations=peak_locations,
-                                              direction='y', bin_duration_s=10., bin_um=10., margin_um=0.,
+                                              direction='y', bin_s=10., bin_um=10., margin_um=0.,
                                               method='decentralized_registration',
                                               rigid=False, win_shape='gaussian', win_step_um=50., win_sigma_um=150.,
                                               progress_bar=True, verbose=True)
@@ -206,7 +206,7 @@ Motion interpolation
 
 The estimated motion can be used to interpolate traces, in other words, for drift correction.
 One possible way is to make an interpolation sample-by-sample to compensate for the motion.
-The :py:class:`~spikeinterface.sortingcomponents.motion_interpolation.InterpolateMotionRecording` is a preprocessing
+The :py:class:`~spikeinterface.sortingcomponents.motion.InterpolateMotionRecording` is a preprocessing
 step doing this. This preprocessing is *lazy*, so that interpolation is done on-the-fly. However, the class needs the
 "motion vector" as input, which requires a relatively long computation (peak detection, localization and motion
 estimation).
@@ -216,7 +216,7 @@ Here is a short example that depends on the output of "Motion interpolation":
 
 .. code-block:: python
 
-  from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
+  from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
 
   recording_corrected = InterpolateMotionRecording(recording=recording_with_drift, motion=motion, temporal_bins=temporal_bins, spatial_bins=spatial_bins
                                                    spatial_interpolation_method='kriging',

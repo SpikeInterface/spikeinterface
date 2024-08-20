@@ -44,6 +44,8 @@ def get_localization_pipeline_nodes(
         method in possible_localization_methods
     ), f"Method {method} is not supported. Choose from {possible_localization_methods}"
 
+    # TODO : this is a bad idea becaise it trigger warning when n_jobs is not set globally
+    # because the job_kwargs is never transmitted until here
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
     if method == "center_of_mass":

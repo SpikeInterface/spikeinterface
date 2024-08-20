@@ -44,8 +44,8 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         The localization method to use
     method_kwargs : dict, default: dict()
         Other kwargs depending on the method.
-    outputs : "concatenated" | "by_unit", default: "concatenated"
-        The output format
+    outputs : "numpy" | "by_unit", default: "numpy"
+        The output format, either concatenated as numpy array or separated on a per unit basis
 
     Returns
     -------
@@ -78,6 +78,18 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
 
         new_data = dict()
         new_data["amplitudes"] = self.data["amplitudes"][keep_spike_mask]
+
+        return new_data
+
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    ):
+        new_data = dict()
+
+        if keep_mask is None:
+            new_data["amplitudes"] = self.data["amplitudes"].copy()
+        else:
+            new_data["amplitudes"] = self.data["amplitudes"][keep_mask]
 
         return new_data
 
@@ -136,7 +148,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
                     amplitudes_by_units[segment_index][unit_id] = all_amplitudes[inds]
             return amplitudes_by_units
         else:
-            raise ValueError(f"Wrong .get_data(outputs={outputs})")
+            raise ValueError(f"Wrong .get_data(outputs={outputs}); possibilities are `numpy` or `by_unit`")
 
 
 register_result_extension(ComputeSpikeAmplitudes)
