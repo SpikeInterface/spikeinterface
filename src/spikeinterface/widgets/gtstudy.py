@@ -5,6 +5,23 @@ import numpy as np
 from .base import BaseWidget, to_attr
 
 
+def handle_levels(df, study, case_keys, levels):
+    if case_keys is None:
+        case_keys = list(study.cases.keys())
+        labels = {key: study.cases[key]["label"] for key in case_keys}
+
+    if levels is not None:
+        drop_levels = [l for l in study.levels if l not in levels]
+        df = df.droplevel(drop_levels).sort_index()
+        case_keys = list(np.unique(df.index))
+        if isinstance(df.index, df.MultiIndex):
+            labels = {key: "-".join(key) for key in case_keys}
+        else:
+            labels = {key: key for key in case_keys}
+
+    return df, case_keys, labels
+
+
 class StudyRunTimesWidget(BaseWidget):
     """
     Plot sorter run times for a GroundTruthStudy
@@ -32,6 +49,9 @@ class StudyRunTimesWidget(BaseWidget):
         if case_keys is None:
             case_keys = list(study.cases.keys())
 
+        if levels is not None:
+            assert all([l in study.levels for l in levels]), f"levels must be in {study.levels}"
+
         plot_data = dict(
             study=study,
             run_times=study.get_run_times(case_keys),
@@ -50,9 +70,11 @@ class StudyRunTimesWidget(BaseWidget):
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-        for i, key in enumerate(dp.case_keys):
+        run_times, case_keys, labels = handle_levels(dp.run_times, dp.study, dp.case_keys, dp.levels)
+
+        for i, key in enumerate(case_keys):
             label = dp.study.cases[key]["label"]
-            rt = dp.run_times.loc[key]
+            rt = run_times.loc[key]
             self.ax.bar(i, rt, width=0.8, label=label, facecolor=dp.colors[key])
         self.ax.set_ylabel("run time (s)")
         self.ax.legend()
@@ -82,6 +104,8 @@ class StudyUnitCountsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+        if levels is not None:
+            assert all([l in study.levels for l in levels]), f"levels must be in {study.levels}"
         plot_data = dict(
             study=study, count_units=study.get_count_units(case_keys=case_keys), case_keys=case_keys, levels=levels
         )
@@ -96,26 +120,14 @@ class StudyUnitCountsWidget(BaseWidget):
 
         dp = to_attr(data_plot)
         count_units = dp.count_units
-        study = dp.study
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-        if dp.case_keys is None:
-            case_keys = list(study.cases.keys())
-            labels = {key: study.cases[key]["label"] for key in case_keys}
+        count_units, case_keys, labels = handle_levels(dp.count_units, dp.study, dp.case_keys, dp.levels)
 
         columns = count_units.columns.tolist()
         columns.remove("num_gt")
         columns.remove("num_sorter")
-
-        if dp.levels is not None:
-            drop_levels = [l for l in study.levels if l not in dp.levels]
-            count_units = count_units.droplevel(drop_levels).sort_index()
-            case_keys = list(np.unique(count_units.index))
-            if isinstance(count_units.index, pd.MultiIndex):
-                labels = {key: "-".join(key) for key in case_keys}
-            else:
-                labels = {key: key for key in case_keys}
 
         ncol = len(columns)
 
@@ -178,6 +190,8 @@ class StudyPerformances(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+        if levels is not None:
+            assert all([l in study.levels for l in levels]), f"levels must be in {study.levels}"
         perfs_by_unit = study.get_performance_by_unit(case_keys=case_keys)
         if mode == "snr":
             metrics = study.get_metrics(case_keys=case_keys)
@@ -204,21 +218,7 @@ class StudyPerformances(BaseWidget):
         import seaborn as sns
 
         dp = to_attr(data_plot)
-        perfs = dp.perfs
-        study = dp.study
-
-        if dp.case_keys is None:
-            case_keys = list(study.cases.keys())
-            labels = {key: study.cases[key]["label"] for key in case_keys}
-
-        if dp.levels is not None:
-            drop_levels = [l for l in study.levels if l not in dp.levels]
-            perfs = perfs.droplevel(drop_levels).sort_index()
-            case_keys = list(np.unique(perfs.index))
-            if isinstance(perfs.index, pd.MultiIndex):
-                labels = {key: "-".join(key) for key in case_keys}
-            else:
-                labels = {key: key for key in case_keys}
+        perfs, case_keys, labels = handle_levels(dp.perfs, dp.study, dp.case_keys, dp.levels)
 
         colors = get_some_colors(case_keys, map_name=dp.cmap, color_engine="matplotlib", shuffle=False, margin=0)
 

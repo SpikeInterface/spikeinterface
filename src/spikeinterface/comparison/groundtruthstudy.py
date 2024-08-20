@@ -169,8 +169,8 @@ class GroundTruthStudy:
                     try:
                         self.comparisons[key] = pickle.load(f)
                         # since we avoided pickling the absolute sorting paths, we need to set them here
-                        self.comparisons[key]._sorting1 = gt_sorting
-                        self.comparisons[key]._sorting2 = self.sortings[key]
+                        self.comparisons[key].sorting1 = gt_sorting
+                        self.comparisons[key].sorting2 = self.sortings[key]
                     except Exception:
                         pass
 
@@ -382,47 +382,16 @@ class GroundTruthStudy:
             # Since dumping to pickle hard-codes the sorting paths, here we temporarily set the sorting paths to None
             # so that the comparison object can be pickled
             # Upon reloading, we will set the sorting paths back to the correct values
-            comp._sorting1 = None
-            comp._sorting2 = None
+            comp.sorting1 = None
+            comp.sorting2 = None
             # we also need a try-except block in case the folder is read-only
             try:
                 with open(comparison_file, mode="wb") as f:
                     pickle.dump(comp, f)
             except:
                 pass
-            comp._sorting1 = gt_sorting
-            comp._sorting2 = sorting
-
-    def get_run_times(self, case_keys=None):
-        """
-        Return the run times for the given case keys.
-
-        Parameters
-        ----------
-        case_keys : list or None
-            The case keys to get the run times for. If None, all cases are returned.
-
-        Returns
-        -------
-        run_times : dict
-            A dictionary with the case keys as keys and the run times as values\
-        """
-        import pandas as pd
-
-        if case_keys is None:
-            case_keys = self.cases.keys()
-
-        log_folder = self.folder / "sortings" / "run_logs"
-
-        run_times = {}
-        for key in case_keys:
-            log_file = log_folder / f"{self.key_to_str(key)}.json"
-            with open(log_file, mode="r") as logfile:
-                log = json.load(logfile)
-                run_time = log.get("run_time", None)
-            run_times[key] = run_time
-
-        return pd.Series(run_times, name="run_time")
+            comp.sorting1 = gt_sorting
+            comp.sorting2 = sorting
 
     def create_sorting_analyzer_gt(self, case_keys=None, random_params=None, template_params=None, **job_kwargs):
         """
@@ -546,7 +515,11 @@ class GroundTruthStudy:
             new_metrics = pd.read_csv(filename, sep="\t", index_col=0)
             _, gt_sorting = self.datasets[dataset_key]
             new_metrics.loc[:, "gt_unit_id"] = gt_sorting.unit_ids
-            new_metrics.index = pd.MultiIndex.from_tuples([key] * len(new_metrics), names=self.levels)
+            if isinstance(key, str):
+                index = [key] * len(new_metrics)
+            elif isinstance(key, tuple):
+                index = pd.MultiIndex.from_tuples([key] * len(new_metrics), names=self.levels)
+            new_metrics.index = index
             if metrics is None:
                 metrics = new_metrics
             else:
@@ -568,6 +541,45 @@ class GroundTruthStudy:
             The snr for each case.
         """
         return self.get_metrics(case_keys)["snr"]
+
+    def get_run_times(self, case_keys=None):
+        """
+        Return the run times for the given case keys.
+
+        Parameters
+        ----------
+        case_keys : list or None
+            The case keys to get the run times for. If None, all cases are returned.
+
+        Returns
+        -------
+        run_times : dict
+            A dictionary with the case keys as keys and the run times as values\
+        """
+        import pandas as pd
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+
+        log_folder = self.folder / "sortings" / "run_logs"
+
+        run_times = []
+
+        if isinstance(case_keys[0], str):
+            index = case_keys
+        elif isinstance(case_keys[0], tuple):
+            index = pd.MultiIndex.from_tuples(case_keys, names=self.levels)
+
+        for key in case_keys:
+            log_file = log_folder / f"{self.key_to_str(key)}.json"
+            with open(log_file, mode="r") as logfile:
+                log = json.load(logfile)
+                run_time = log.get("run_time", None)
+            run_times.append(run_time)
+
+        run_times_df = pd.DataFrame(data={"run_time": run_times}, index=index)
+
+        return run_times_df
 
     def get_performance_by_unit(self, case_keys=None):
         """
@@ -594,18 +606,15 @@ class GroundTruthStudy:
             assert comp is not None, "You need to do study.run_comparisons() first"
 
             perf = comp.get_performance(method="by_unit", output="pandas")
-
+            perf.loc[:, "gt_unit_id"] = perf.index
             if isinstance(key, str):
-                perf[self.levels] = key
+                perf.index = [key] * len(perf)
             elif isinstance(key, tuple):
-                for col, k in zip(self.levels, key):
-                    perf[col] = k
+                perf.index = pd.MultiIndex.from_tuples([key] * len(perf), names=self.levels)
 
-            perf = perf.reset_index()
             perf_by_unit.append(perf)
 
         perf_by_unit = pd.concat(perf_by_unit)
-        perf_by_unit = perf_by_unit.set_index(self.levels)
         perf_by_unit = perf_by_unit.sort_index()
         return perf_by_unit
 
