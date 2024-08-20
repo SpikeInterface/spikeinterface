@@ -31,14 +31,7 @@ class ZarrRecordingExtractor(BaseRecording):
         The recording Extractor
     """
 
-    extractor_name = "ZarrRecording"
-    installed = True
-    mode = "folder"
-    installation_mesg = ""
-    name = "zarr"
-
     def __init__(self, folder_path: Path | str, storage_options: dict | None = None):
-        assert self.installed, self.installation_mesg
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
@@ -168,14 +161,7 @@ class ZarrSortingExtractor(BaseSorting):
         The sorting Extractor
     """
 
-    extractor_name = "ZarrSorting"
-    installed = True
-    mode = "folder"
-    installation_mesg = ""
-    name = "zarr"
-
     def __init__(self, folder_path: Path | str, storage_options: dict | None = None, zarr_group: str | None = None):
-        assert self.installed, self.installation_mesg
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 

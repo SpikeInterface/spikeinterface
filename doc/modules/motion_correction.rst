@@ -151,8 +151,7 @@ The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-    from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-    from spikeinterface.sortingcomponents.motion_interpolation import interpolate_motion
+    from spikeinterface.sortingcomponents.motion import estimate_motion, interpolate_motion
 
     job_kwargs = dict(chunk_duration="1s", n_jobs=20, progress_bar=True)
     # Step 1 : activity profile

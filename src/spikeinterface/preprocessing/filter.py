@@ -10,15 +10,16 @@ from ..core import get_chunk_with_margin
 
 _common_filter_docs = """**filter_kwargs : dict
         Certain keyword arguments for `scipy.signal` filters:
-        filter_order : order
-            The order of the filter
-        filter_mode :  "sos" | "ba", default: "sos"
-            Filter form of the filter coefficients:
-            - second-order sections ("sos")
-            - numerator/denominator : ("ba")
-        ftype : str, default: "butter"
-            Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1".
-    """
+            filter_order : order
+                The order of the filter. Note as filtering is applied with scipy's
+                `filtfilt` functions (i.e. acausal, zero-phase) the effective
+                order will be double the `filter_order`.
+            filter_mode :  "sos" | "ba", default: "sos"
+                Filter form of the filter coefficients:
+                - second-order sections ("sos")
+                - numerator/denominator : ("ba")
+            ftype : str, default: "butter"
+                Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1"."""
 
 
 class FilterRecording(BasePreprocessor):
@@ -61,8 +62,6 @@ class FilterRecording(BasePreprocessor):
     filter_recording : FilterRecording
         The filtered recording extractor object
     """
-
-    name = "filter"
 
     def __init__(
         self,
@@ -192,8 +191,6 @@ class BandpassFilterRecording(FilterRecording):
         The bandpass-filtered recording extractor object
     """
 
-    name = "bandpass_filter"
-
     def __init__(self, recording, freq_min=300.0, freq_max=6000.0, margin_ms=5.0, dtype=None, **filter_kwargs):
         FilterRecording.__init__(
             self, recording, band=[freq_min, freq_max], margin_ms=margin_ms, dtype=dtype, **filter_kwargs
@@ -227,8 +224,6 @@ class HighpassFilterRecording(FilterRecording):
         The highpass-filtered recording extractor object
     """
 
-    name = "highpass_filter"
-
     def __init__(self, recording, freq_min=300.0, margin_ms=5.0, dtype=None, **filter_kwargs):
         FilterRecording.__init__(
             self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype, btype="highpass", **filter_kwargs
@@ -258,8 +253,6 @@ class NotchFilterRecording(BasePreprocessor):
     filter_recording : NotchFilterRecording
         The notch-filtered recording extractor object
     """
-
-    name = "notch_filter"
 
     def __init__(self, recording, freq=3000, q=30, margin_ms=5.0, dtype=None):
         # coeef is 'ba' type

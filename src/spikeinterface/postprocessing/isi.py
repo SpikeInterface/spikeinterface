@@ -56,6 +56,30 @@ class ComputeISIHistograms(AnalyzerExtension):
         new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
         return new_extension_data
 
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+    ):
+        new_bins = self.data["bins"]
+        arr = self.data["isi_histograms"]
+        num_dims = arr.shape[1]
+        all_new_units = new_sorting_analyzer.unit_ids
+        new_isi_hists = np.zeros((len(all_new_units), num_dims), dtype=arr.dtype)
+
+        # compute all new isi at once
+        new_sorting = new_sorting_analyzer.sorting.select_units(new_unit_ids)
+        only_new_hist, _ = _compute_isi_histograms(new_sorting, **self.params)
+
+        for unit_ind, unit_id in enumerate(all_new_units):
+            if unit_id not in new_unit_ids:
+                keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                new_isi_hists[unit_ind, :] = arr[keep_unit_index, :]
+            else:
+                new_unit_index = new_sorting.id_to_index(unit_id)
+                new_isi_hists[unit_ind, :] = only_new_hist[new_unit_index, :]
+
+        new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
+        return new_extension_data
+
     def _run(self, verbose=False):
         isi_histograms, bins = _compute_isi_histograms(self.sorting_analyzer.sorting, **self.params)
         self.data["isi_histograms"] = isi_histograms

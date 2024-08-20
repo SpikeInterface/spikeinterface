@@ -27,11 +27,17 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
         If True, data that violates integrity assumptions will be loaded. At the moment the only integrity
         check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
         the attribute `discontinuous_timestamps` to True in the underlying neo object.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
+
+        In Intan the ids provided by NeoRawIO are the hardware channel ids while the names are custom names given by
+        the user
+
+
     """
 
-    mode = "file"
     NeoRawIOClass = "IntanRawIO"
-    name = "intan"
 
     def __init__(
         self,

@@ -54,7 +54,7 @@ class FrameSliceSorting(BaseSorting):
             assert (
                 start_frame <= parent_n_samples
             ), "`start_frame` should be smaller than the sortings' total number of samples."
-            if check_spike_frames and has_exceeding_spikes(parent_sorting._recording, parent_sorting):
+            if check_spike_frames and has_exceeding_spikes(parent_sorting, parent_sorting._recording):
                 raise ValueError(
                     "The sorting object has spikes whose times go beyond the recording duration."
                     "This could indicate a bug in the sorter. "

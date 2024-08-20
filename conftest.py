@@ -1,17 +1,5 @@
 import pytest
-import shutil
-import os
 from pathlib import Path
-
-
-ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
-
-
-# define marks
-mark_names = ["core", "extractors", "preprocessing", "postprocessing",
-              "sorters_external", "sorters_internal", "sorters",
-              "qualitymetrics", "comparison", "curation",
-              "widgets", "exporters", "sortingcomponents", "generation"]
 
 
 @pytest.fixture(scope="module")

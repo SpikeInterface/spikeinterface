@@ -14,16 +14,16 @@ def count_matching_events(times1, times2, delta=10):
 
     Parameters
     ----------
-    times1: list
+    times1 : list
         List of spike train 1 frames
-    times2: list
+    times2 : list
         List of spike train 2 frames
-    delta: int
+    delta : int
         Number of frames for considering matching events
 
     Returns
     -------
-    matching_count: int
+    matching_count : int
         Number of matching events
     """
     times_concat = np.concatenate((times1, times2))
@@ -45,16 +45,16 @@ def compute_agreement_score(num_matches, num1, num2):
 
     Parameters
     ----------
-    num_matches: int
+    num_matches : int
         Number of matches
-    num1: int
+    num1 : int
         Number of events in spike train 1
-    num2: int
+    num2 : int
         Number of events in spike train 2
 
     Returns
     -------
-    score: float
+    score : float
         Agreement score
     """
     denom = num1 + num2 - num_matches
@@ -71,12 +71,12 @@ def do_count_event(sorting):
 
     Parameters
     ----------
-    sorting: SortingExtractor
+    sorting : SortingExtractor
         A sorting extractor
 
     Returns
     -------
-    event_count: pd.Series
+    event_count : pd.Series
         Nb of spike by units.
     """
     import pandas as pd
@@ -90,14 +90,14 @@ def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, ev
 
     Parameters
     ----------
-    times1: array
+    times1 : array
         Spike train 1 frames
-    all_times2: list of array
+    all_times2 : list of array
         List of spike trains from sorting 2
 
     Returns
     -------
-    matching_events_count: list
+    matching_events_count : list
         List of counts of matching events
     """
     matching_event_counts = np.zeros(len(all_times2), dtype="int64")
@@ -337,18 +337,18 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, ensure_symmetry=True
 
     Parameters
     ----------
-    sorting1: SortingExtractor
+    sorting1 : SortingExtractor
         The first sorting extractor
-    sorting2: SortingExtractor
+    sorting2 : SortingExtractor
         The second sorting extractor
-    delta_frames: int
+    delta_frames : int
         Number of frames to consider spikes coincident
-    ensure_symmetry: bool, default: True
+    ensure_symmetry : bool, default: True
         If ensure_symmetry is True, then the algo is run two times by switching sorting1 and sorting2.
         And the minimum of the two results is taken.
     Returns
     -------
-    agreement_scores: array (float)
+    agreement_scores : array (float)
         The agreement score matrix.
     """
     import pandas as pd
@@ -401,16 +401,16 @@ def make_possible_match(agreement_scores, min_score):
 
     Parameters
     ----------
-    agreement_scores: pd.DataFrame
+    agreement_scores : pd.DataFrame
 
-    min_score: float
+    min_score : float
 
 
     Returns
     -------
-    best_match_12: pd.Series
+    best_match_12 : pd.Series
 
-    best_match_21: pd.Series
+    best_match_21 : pd.Series
 
     """
     unit1_ids = np.array(agreement_scores.index)
@@ -442,16 +442,16 @@ def make_best_match(agreement_scores, min_score):
 
     Parameters
     ----------
-    agreement_scores: pd.DataFrame
+    agreement_scores : pd.DataFrame
 
-    min_score: float
+    min_score : float
 
 
     Returns
     -------
-    best_match_12: pd.Series
+    best_match_12 : pd.Series
 
-    best_match_21: pd.Series
+    best_match_21 : pd.Series
 
     """
     import pandas as pd
@@ -490,14 +490,14 @@ def make_hungarian_match(agreement_scores, min_score):
     ----------
     agreement_scores: pd.DataFrame
 
-    min_score: float
+    min_score : float
 
 
     Returns
     -------
-    hungarian_match_12: pd.Series
+    hungarian_match_12 : pd.Series
 
-    hungarian_match_21: pd.Series
+    hungarian_match_21 : pd.Series
 
     """
     import pandas as pd
@@ -541,22 +541,22 @@ def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclass
 
     Parameters
     ----------
-    sorting1: SortingExtractor instance
+    sorting1 : SortingExtractor instance
         The ground truth sorting
-    sorting2: SortingExtractor instance
+    sorting2 : SortingExtractor instance
         The tested sorting
-    delta_frames: int
+    delta_frames : int
         Number of frames to consider spikes coincident
-    unit_map12: pd.Series
+    unit_map12 : pd.Series
         Dict of matching from sorting1 to sorting2
-    label_misclassification: bool
+    label_misclassification : bool
         If True, misclassification errors are labelled
 
     Returns
     -------
-    labels_st1: dict of lists of np.array of str
+    labels_st1 : dict of lists of np.array of str
         Contain score labels for units of sorting 1 for each segment
-    labels_st2: dict of lists of np.array of str
+    labels_st2 : dict of lists of np.array of str
         Contain score labels for units of sorting 2 for each segment
     """
     unit1_ids = sorting1.get_unit_ids()
@@ -647,12 +647,12 @@ def compare_spike_trains(spiketrain1, spiketrain2, delta_frames=10):
 
     Parameters
     ----------
-    spiketrain1, spiketrain2: numpy.array
+    spiketrain1, spiketrain2 : numpy.array
         Times of spikes for the 2 spike trains.
 
     Returns
     -------
-    lab_st1, lab_st2: numpy.array
+    lab_st1, lab_st2 : numpy.array
         Label of score for each spike
     """
     lab_st1 = np.array(["UNPAIRED"] * len(spiketrain1))
@@ -684,19 +684,19 @@ def do_confusion_matrix(event_counts1, event_counts2, match_12, match_event_coun
 
     Parameters
     ----------
-    event_counts1: pd.Series
+    event_counts1 : pd.Series
         Number of event per units 1
-    event_counts2: pd.Series
+    event_counts2 : pd.Series
         Number of event per units 2
-    match_12: pd.Series
+    match_12 : pd.Series
         Series of matching from sorting1 to sorting2.
         Can be the hungarian or best match.
-    match_event_count: pd.DataFrame
+    match_event_count : pd.DataFrame
         The match count matrix given by make_match_count_matrix
 
     Returns
     -------
-    confusion_matrix: pd.DataFrame
+    confusion_matrix : pd.DataFrame
         The confusion matrix
         index are units1 reordered
         columns are units2 redordered
@@ -746,19 +746,19 @@ def do_count_score(event_counts1, event_counts2, match_12, match_event_count):
 
     Parameters
     ----------
-    event_counts1: pd.Series
+    event_counts1 : pd.Series
         Number of event per units 1
-    event_counts2: pd.Series
+    event_counts2 : pd.Series
         Number of event per units 2
-    match_12: pd.Series
+    match_12 : pd.Series
         Series of matching from sorting1 to sorting2.
         Can be the hungarian or best match.
-    match_event_count: pd.DataFrame
+    match_event_count : pd.DataFrame
         The match count matrix given by make_match_count_matrix
 
     Returns
     -------
-    count_score: pd.DataFrame
+    count_score : pd.DataFrame
         A table with one line per GT units and columns
         are tp/fn/fp/...
     """
@@ -837,16 +837,16 @@ def make_matching_events(times1, times2, delta):
 
     Parameters
     ----------
-    times1: list
+    times1 : list
         List of spike train 1 frames
-    times2: list
+    times2 : list
         List of spike train 2 frames
-    delta: int
+    delta : int
         Number of frames for considering matching events
 
     Returns
     -------
-    matching_event: numpy array dtype = ["index1", "index2", "delta"]
+    matching_event : numpy array dtype = ["index1", "index2", "delta"]
         1d of collision
     """
     times_concat = np.concatenate((times1, times2))
@@ -894,14 +894,14 @@ def make_collision_events(sorting, delta):
 
     Parameters
     ----------
-    sorting: SortingExtractor
+    sorting : SortingExtractor
         The sorting extractor object for counting collision events
-    delta: int
+    delta : int
         Number of frames for considering collision events
 
     Returns
     -------
-    collision_events: numpy array
+    collision_events : numpy array
             dtype =  [('index1', 'int64'), ('unit_id1', 'int64'),
                       ('index2', 'int64'), ('unit_id2', 'int64'),
                       ('delta', 'int64')]

@@ -401,7 +401,40 @@ def _retrieve_electrodes_indices_from_electrical_series_backend(open_file, elect
     return electrodes_indices
 
 
-class NwbRecordingExtractor(BaseRecording):
+class _BaseNWBExtractor:
+    "A class for common methods for NWB extractors."
+
+    def _close_hdf5_file(self):
+        has_hdf5_backend = hasattr(self, "_file")
+        if has_hdf5_backend:
+            import h5py
+
+            main_file_id = self._file.id
+            open_object_ids_main = h5py.h5f.get_obj_ids(main_file_id, types=h5py.h5f.OBJ_ALL)
+            for object_id in open_object_ids_main:
+                object_name = h5py.h5i.get_name(object_id).decode("utf-8")
+                try:
+                    object_id.close()
+                except:
+                    import warnings
+
+                    warnings.warn(f"Error closing object {object_name}")
+
+    def __del__(self):
+        # backend mode
+        if hasattr(self, "_file"):
+            if hasattr(self._file, "store"):
+                self._file.store.close()
+            else:
+                self._close_hdf5_file()
+        # pynwb mode
+        elif hasattr(self, "_nwbfile"):
+            io = self._nwbfile.get_read_io()
+            if io is not None:
+                io.close()
+
+
+class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
     """Load an NWBFile as a RecordingExtractor.
 
     Parameters
@@ -464,17 +497,15 @@ class NwbRecordingExtractor(BaseRecording):
     >>> from dandi.dandiapi import DandiAPIClient
     >>>
     >>> # get s3 path
-    >>> dandiset_id, filepath = "101116", "sub-001/sub-001_ecephys.nwb"
-    >>> with DandiAPIClient("https://api-staging.dandiarchive.org/api") as client:
-    >>>     asset = client.get_dandiset(dandiset_id, "draft").get_asset_by_path(filepath)
+    >>> dandiset_id = "001054"
+    >>> filepath = "sub-Dory/sub-Dory_ses-2020-09-14-004_ecephys.nwb"
+    >>> with DandiAPIClient() as client:
+    >>>     asset = client.get_dandiset(dandiset_id).get_asset_by_path(filepath)
     >>>     s3_url = asset.get_content_url(follow_redirects=1, strip_query=True)
     >>>
-    >>> rec = NwbRecordingExtractor(s3_url, stream_mode="fsspec", stream_cache_path="cache")
+    >>> rec = NwbRecordingExtractor(s3_url, stream_mode="remfile")
     """
 
-    extractor_name = "NwbRecording"
-    mode = "file"
-    name = "nwb"
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
 
     def __init__(
@@ -625,19 +656,6 @@ class NwbRecordingExtractor(BaseRecording):
             "stream_cache_path": stream_cache_path,
             "file": file,
         }
-
-    def __del__(self):
-        # backend mode
-        if hasattr(self, "_file"):
-            if hasattr(self._file, "store"):
-                self._file.store.close()
-            else:
-                self._file.close()
-        # pynwb mode
-        elif hasattr(self, "_nwbfile"):
-            io = self._nwbfile.get_read_io()
-            if io is not None:
-                io.close()
 
     def _fetch_recording_segment_info_pynwb(self, file, cache, load_time_vector, samples_for_rate_estimation):
         self._nwbfile = read_nwbfile(
@@ -952,7 +970,7 @@ class NwbRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-class NwbSortingExtractor(BaseSorting):
+class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
     """Load an NWBFile as a SortingExtractor.
     Parameters
     ----------
@@ -1001,10 +1019,7 @@ class NwbSortingExtractor(BaseSorting):
         The sorting extractor for the NWB file.
     """
 
-    extractor_name = "NwbSorting"
-    mode = "file"
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
-    name = "nwb"
 
     def __init__(
         self,
@@ -1110,19 +1125,6 @@ class NwbSortingExtractor(BaseSorting):
             "load_unit_properties": load_unit_properties,
             "t_start": self.t_start,
         }
-
-    def __del__(self):
-        # backend mode
-        if hasattr(self, "_file"):
-            if hasattr(self._file, "store"):
-                self._file.store.close()
-            else:
-                self._file.close()
-        # pynwb mode
-        elif hasattr(self, "_nwbfile"):
-            io = self._nwbfile.get_read_io()
-            if io is not None:
-                io.close()
 
     def _fetch_sorting_segment_info_pynwb(
         self, unit_table_path: str = None, samples_for_rate_estimation: int = 1000, cache: bool = False

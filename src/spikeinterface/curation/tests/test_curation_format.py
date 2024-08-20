@@ -2,11 +2,16 @@ import pytest
 
 from pathlib import Path
 import json
+import numpy as np
+
+from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
 
 from spikeinterface.curation.curation_format import (
     validate_curation_dict,
     convert_from_sortingview_curation_format_v0,
+    curation_label_to_vectors,
     curation_label_to_dataframe,
+    apply_curation,
 )
 
 
@@ -23,7 +28,7 @@ from spikeinterface.curation.curation_format import (
          category_key1': List[str],
          }
     ],
-    'merged_unit_groups': List[List[unit_ids]],  # one cell goes into at most one list
+    'merge_unit_groups': List[List[unit_ids]],  # one cell goes into at most one list
     'removed_units': List[unit_ids]  # Can not be  in the merged_units
 }
 """
@@ -50,7 +55,7 @@ curation_ids_int = {
         },
         {"unit_id": 3, "putative_type": ["inhibitory"]},
     ],
-    "merged_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
+    "merge_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
     "removed_units": [31, 42],  # Can not be  in the merged_units
 }
 
@@ -75,23 +80,23 @@ curation_ids_str = {
         },
         {"unit_id": "u3", "putative_type": ["inhibitory"]},
     ],
-    "merged_unit_groups": [["u3", "u6"], ["u10", "u14", "u20"]],  # one cell goes into at most one list
+    "merge_unit_groups": [["u3", "u6"], ["u10", "u14", "u20"]],  # one cell goes into at most one list
     "removed_units": ["u31", "u42"],  # Can not be  in the merged_units
 }
 
 # This is a failure example with duplicated merge
 duplicate_merge = curation_ids_int.copy()
-duplicate_merge["merged_unit_groups"] = [[3, 6, 10], [10, 14, 20]]
+duplicate_merge["merge_unit_groups"] = [[3, 6, 10], [10, 14, 20]]
 
 
 # This is a failure example with unit 3 both in removed and merged
 merged_and_removed = curation_ids_int.copy()
-merged_and_removed["merged_unit_groups"] = [[3, 6], [10, 14, 20]]
+merged_and_removed["merge_unit_groups"] = [[3, 6], [10, 14, 20]]
 merged_and_removed["removed_units"] = [3, 31, 42]
 
 # this is a failure because unit 99 is not in the initial list
 unknown_merged_unit = curation_ids_int.copy()
-unknown_merged_unit["merged_unit_groups"] = [[3, 6, 99], [10, 14, 20]]
+unknown_merged_unit["merge_unit_groups"] = [[3, 6, 99], [10, 14, 20]]
 
 # this is a failure because unit 99 is not in the initial list
 unknown_removed_unit = curation_ids_int.copy()
@@ -141,6 +146,17 @@ def test_convert_from_sortingview_curation_format_v0():
             validate_curation_dict(curation_v1)
 
 
+def test_curation_label_to_vectors():
+
+    labels = curation_label_to_vectors(curation_ids_int)
+    assert "quality" in labels
+    assert "excitatory" in labels
+    print(labels)
+
+    labels = curation_label_to_vectors(curation_ids_str)
+    print(labels)
+
+
 def test_curation_label_to_dataframe():
 
     df = curation_label_to_dataframe(curation_ids_int)
@@ -152,10 +168,25 @@ def test_curation_label_to_dataframe():
     # print(df)
 
 
+def test_apply_curation():
+    recording, sorting = generate_ground_truth_recording(durations=[10.0], num_units=9, seed=2205)
+    sorting._main_ids = np.array([1, 2, 3, 6, 10, 14, 20, 31, 42])
+    analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
+
+    sorting_curated = apply_curation(sorting, curation_ids_int)
+    assert sorting_curated.get_property("quality", ids=[1])[0] == "good"
+    assert sorting_curated.get_property("quality", ids=[2])[0] == "noise"
+    assert sorting_curated.get_property("excitatory", ids=[2])[0]
+
+    analyzer_curated = apply_curation(analyzer, curation_ids_int)
+    assert "quality" in analyzer_curated.sorting.get_property_keys()
+
+
 if __name__ == "__main__":
     # test_curation_format_validation()
     # test_to_from_json()
     # test_convert_from_sortingview_curation_format_v0()
+    # test_curation_label_to_vectors()
     # test_curation_label_to_dataframe()
 
-    print(json.dumps(curation_ids_str, indent=4))
+    test_apply_curation()

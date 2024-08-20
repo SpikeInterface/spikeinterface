@@ -94,11 +94,12 @@ def test_move_dense_templates():
 
 def test_DriftingTemplates():
     static_templates = make_some_templates()
-    drifting_templates = DriftingTemplates.from_static(static_templates)
+    drifting_templates = DriftingTemplates.from_static_templates(static_templates)
 
     displacement = np.array([[5.0, 10.0]])
     unit_index = 0
     moved_template_array = drifting_templates.move_one_template(unit_index, displacement)
+    assert not np.array_equal(moved_template_array, static_templates.templates_array[unit_index])
 
     num_move = 5
     amplitude_motion_um = 20
@@ -112,6 +113,25 @@ def test_DriftingTemplates():
         static_templates.num_channels,
     )
 
+    # test from precomputed
+    drifting_templates_from_precomputed = DriftingTemplates.from_precomputed_templates(
+        templates_array_moved=drifting_templates.templates_array_moved,
+        displacements=drifting_templates.displacements,
+        sampling_frequency=drifting_templates.sampling_frequency,
+        probe=drifting_templates.probe,
+        nbefore=drifting_templates.nbefore,
+    )
+    assert drifting_templates_from_precomputed.templates_array_moved.shape == (
+        num_move,
+        static_templates.num_units,
+        static_templates.num_samples,
+        static_templates.num_channels,
+    )
+    assert np.array_equal(
+        drifting_templates_from_precomputed.templates_array_moved, drifting_templates.templates_array_moved
+    )
+    assert np.array_equal(drifting_templates_from_precomputed.displacements, drifting_templates.displacements)
+
 
 def test_InjectDriftingTemplatesRecording(create_cache_folder):
     cache_folder = create_cache_folder
@@ -119,7 +139,7 @@ def test_InjectDriftingTemplatesRecording(create_cache_folder):
     probe = templates.probe
 
     # drifting templates
-    drifting_templates = DriftingTemplates.from_static(templates)
+    drifting_templates = DriftingTemplates.from_static_templates(templates)
     channel_locations = probe.contact_positions
 
     num_units = templates.unit_ids.size

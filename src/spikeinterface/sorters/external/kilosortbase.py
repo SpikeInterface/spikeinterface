@@ -79,11 +79,11 @@ class KilosortBase:
 
         Parameters
         ----------
-        recording: BaseRecording
+        recording : BaseRecording
             The recording to generate the channel map file
-        params: dict
+        params : dict
             Custom parameters dictionary for kilosort
-        sorter_output_folder: pathlib.Path
+        sorter_output_folder : pathlib.Path
             Path object to save `ops.mat`
         """
         ops = {}
@@ -146,7 +146,7 @@ class KilosortBase:
                 padding_start = 0
                 padding_end = pad
                 padded_recording = TracePaddedRecording(
-                    parent_recording=recording,
+                    recording=recording,
                     padding_start=padding_start,
                     padding_end=padding_end,
                 )

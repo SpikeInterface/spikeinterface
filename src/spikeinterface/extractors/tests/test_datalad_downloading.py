@@ -1,15 +1,12 @@
 import pytest
 from spikeinterface.core import download_dataset
-
-try:
-    import datalad
-
-    HAVE_DATALAD = True
-except:
-    HAVE_DATALAD = False
+import importlib.util
 
 
-@pytest.mark.skipif(not HAVE_DATALAD, reason="No datalad")
+@pytest.mark.skipif(
+    importlib.util.find_spec("pooch") is None or importlib.util.find_spec("datalad") is None,
+    reason="Either pooch or datalad is not installed",
+)
 def test_download_dataset():
     repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
     remote_path = "mearec"
