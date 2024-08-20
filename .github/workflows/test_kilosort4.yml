@@ -42,7 +42,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12"]  # TODO: just checking python version is not cause of failing test.
+        python-version: ["3.12"] 
         os: [ubuntu-latest]
         ks_version: ${{ fromJson(needs.versions.outputs.matrix) }}
     steps:
