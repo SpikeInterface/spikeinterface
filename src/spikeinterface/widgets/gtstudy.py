@@ -39,9 +39,9 @@ class StudyRunTimesWidget(BaseWidget):
         A selection of cases to plot, if None, then all cases are plotted.
     levels : str or list-like or None, default: None
         A selection of levels to group cases by, if None, then all
-        cases are treated as separate in a bar plot. 
+        cases are treated as separate in a bar plot.
         When specified, ff levels is a string or a 1-element tuple/list,
-        then it will be treated as the "x" variable of a boxplot. In case it's a 
+        then it will be treated as the "x" variable of a boxplot. In case it's a
         2-element object, the first element is "x", the second is "hue".
         More than 2 elements are not supported
     """
@@ -70,7 +70,7 @@ class StudyRunTimesWidget(BaseWidget):
             case_keys=case_keys,
             levels=levels,
             colors=study.get_colors(),
-            cmap=cmap
+            cmap=cmap,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -110,7 +110,7 @@ class StudyRunTimesWidget(BaseWidget):
         sns.despine(ax=self.ax)
         if dp.levels is None:
             h, l = self.ax.get_legend_handles_labels()
-            self.ax.legend(h, list(labels.values()))            
+            self.ax.legend(h, list(labels.values()))
 
 
 class StudyUnitCountsWidget(BaseWidget):
@@ -153,7 +153,6 @@ class StudyUnitCountsWidget(BaseWidget):
 
         from .utils_matplotlib import make_mpl_figure
         from .utils import get_some_colors
-
 
         dp = to_attr(data_plot)
         count_units = dp.count_units
