@@ -563,7 +563,7 @@ class SortingAnalyzer:
     def load_from_zarr(cls, folder, recording=None, storage_options=None):
         import zarr
 
-        zarr_root = zarr.open_consolidated(str(folder), mode="r", storage_options=storage_options)
+        zarr_root = zarr.open(str(folder), mode="r", storage_options=storage_options)
 
         # load internal sorting in memory
         sorting = NumpySorting.from_sorting(
