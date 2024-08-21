@@ -40,7 +40,7 @@ class StudyRunTimesWidget(BaseWidget):
     levels : str or list-like or None, default: None
         A selection of levels to group cases by, if None, then all
         cases are treated as separate in a bar plot.
-        When specified, ff levels is a string or a 1-element tuple/list,
+        When specified, if levels is a string or a 1-element tuple/list,
         then it will be treated as the "x" variable of a boxplot. In case it's a
         2-element object, the first element is "x", the second is "hue".
         More than 2 elements are not supported
@@ -127,6 +127,17 @@ class StudyUnitCountsWidget(BaseWidget):
     levels : str or list-like or None, default: None
         A selection of levels to group cases by, if None, then all
         cases are treated as separate.
+        When specified, if levels is a string or a 1-element tuple/list,
+        then it will be treated as the "x" variable of a boxplot. In case it's a
+        2-element object, the first element is "x", the second is "hue".
+        More than 2 elements are not supported.
+        If the number of counts to plot is more than one (e.g., in case of exhaustive
+        ground truth), then only one level at a time is supported.
+    labels : dict or None, default: None
+        The labels to use for each case key in case levels is None.
+    rotation : int or None, default: 45
+        The rotation for the x tick labels
+
     """
 
     def __init__(
@@ -134,7 +145,10 @@ class StudyUnitCountsWidget(BaseWidget):
         study,
         case_keys=None,
         levels=None,
+        labels=None,
+        rotation=45,
         backend=None,
+        cmap="tab20",
         **backend_kwargs,
     ):
         if levels is not None:
@@ -142,7 +156,13 @@ class StudyUnitCountsWidget(BaseWidget):
                 levels = [levels]
             assert all([l in study.levels for l in levels]), f"levels must be in {study.levels}"
         plot_data = dict(
-            study=study, count_units=study.get_count_units(case_keys=case_keys), case_keys=case_keys, levels=levels
+            study=study,
+            count_units=study.get_count_units(case_keys=case_keys),
+            case_keys=case_keys,
+            levels=levels,
+            labels=labels,
+            cmap=cmap,
+            rotation=rotation
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -155,46 +175,64 @@ class StudyUnitCountsWidget(BaseWidget):
         from .utils import get_some_colors
 
         dp = to_attr(data_plot)
+        study = dp.study
         count_units = dp.count_units
+        levels = dp.levels
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-        count_units, case_keys, labels = handle_levels(dp.count_units, dp.study, dp.case_keys, dp.levels)
+        count_units, case_keys, labels = handle_levels(dp.count_units, dp.study, dp.case_keys, levels)
+        count_units = count_units.drop(columns=["num_gt", "num_sorter"])
+
+        if dp.labels is not None:
+            labels = dp.labels
+
+        for col in count_units.columns:
+            vals = count_units[col].values
+            if not "well_detected" in col:
+                vals = -vals
+            col_name = col.replace("num_", "").replace("_", " ").title()
+            count_units.loc[:, col_name] = vals
+            del count_units[col]
 
         columns = count_units.columns.tolist()
-        columns.remove("num_gt")
-        columns.remove("num_sorter")
         ncol = len(columns)
 
-        if dp.levels is not None:
-            if len(columns) > 1:
-                assert len(levels) == 1, f"Only one level at a time is allowed to display {ncol} counts: {columns}"
+        count_units = count_units.reset_index()
+        if levels is not None:
+            if len(levels) == 1:
+                var_name = "Metric"
+                x = levels[0]
+                y = "Num Units"
+                hue = "Metric"
+                color_list = columns
+            else:
+                assert len(columns) == 1, (
+                    f"Multi-levels is not supported when multiple metrics counts are available ({columns})"
+                )
+                var_name = None
+                x, hue = levels
+                y = columns[0]
+                color_list = list(np.unique(count_units[hue]))
+        else:
+            count_units.loc[:, "Label"] = labels.values()
+            levels = study.levels + ["Label"]
+            var_name = "Metric"
+            x = "Label"
+            y = "Num Units"
+            hue = "Metric"
+            color_list = columns
 
-        colors = get_some_colors(columns, color_engine="auto", map_name="hot")
-        colors["num_well_detected"] = "green"
+        colors = get_some_colors(color_list, color_engine="auto", map_name=dp.cmap)
+        # Well Detected is always present
+        colors["Well Detected"] = "green"
+        if var_name is not None:
+            df = count_units.melt(id_vars=levels, var_name=var_name, value_name="Num Units")
+        else:
+            df = count_units
 
-        xticklabels = []
-
-        # use melt
-        for i, key in enumerate(case_keys):
-            for c, col in enumerate(columns):
-                x = i + 1 + c / (ncol + 1)
-                y = count_units.loc[key, col]
-                print(y)
-                if not "well_detected" in col:
-                    y = -y
-
-                if i == 0:
-                    label = col.replace("num_", "").replace("_", " ").title()
-                else:
-                    label = None
-
-                self.ax.bar([x], [y], width=1 / (ncol + 2), label=label, color=colors[col])
-            xticklabels.append(labels[key])
-
-        self.ax.set_xticks(np.arange(len(case_keys)) + 1)
-        self.ax.set_xticklabels(xticklabels)
-        self.ax.legend()
+        sns.barplot(df, x=x, y=y, hue=hue, ax=self.ax, palette=colors,)
+        _ = self.ax.set_xticklabels(self.ax.get_xticklabels(), rotation=dp.rotation)
         sns.despine(ax=self.ax)
 
 
