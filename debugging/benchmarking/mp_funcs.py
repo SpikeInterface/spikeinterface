@@ -1,0 +1,93 @@
+"""
+TODO: some notes on this debugging script.
+"""
+import spikeinterface.full as si
+from spikeinterface.generation.session_displacement_generator import generate_session_displacement_recordings
+import matplotlib.pyplot as plt
+import numpy as np
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+from spikeinterface.sortingcomponents.motion.motion_utils import \
+    make_2d_motion_histogram, make_3d_motion_histograms
+from scipy.optimize import minimize
+from pathlib import Path
+import alignment_utils
+import pickle
+from concurrent.futures import ProcessPoolExecutor
+import multiprocessing
+
+
+def run_benchmarking(
+        shift=15,
+        recording_durations=(100, 100),
+        num_units=60,
+        bin_um=2.5,
+        firing_rates=(50, 100),
+        seed=None,
+):
+    """
+
+    """
+    # TODO: can play with default_unit_params_range
+
+    recordings_list, _ = generate_session_displacement_recordings(
+        non_rigid_gradient=None,
+        num_units=num_units,
+        recording_durations=recording_durations,
+        recording_shifts=(
+            (0, 0), (0, shift)
+        ),
+        recording_amplitude_scalings=None,
+        seed=seed,
+        generate_sorting_kwargs=dict(firing_rates=firing_rates, refractory_period_ms=4.0),
+    )
+
+    peaks_list = []
+    peak_locations_list = []
+
+    for recording in recordings_list:
+        peaks, peak_locations = alignment_utils.prep_recording(
+            recording, plot=False,
+        )
+        peaks_list.append(peaks)
+        peak_locations_list.append(peak_locations)
+
+    alignment_results = alignment_utils.estimate_session_displacement_benchmarking(
+        recordings_list, peaks_list, peak_locations_list, bin_um
+    )
+
+    for key in alignment_results["motion_arrays"].keys():
+        arr = alignment_results["motion_arrays"][key]
+        arr -= arr[0]
+        alignment_results["motion_arrays"][key] = arr
+
+    return alignment_results, recordings_list, peaks_list, peak_locations_list
+
+
+def num_units_run_func(method_output_path, input):
+    shift, num_units = input
+
+    all_results = run_benchmarking(
+        shift=shift,
+        recording_durations=(100, 100),
+        num_units=num_units,
+        alpha=(100, 600),
+        bin_um=2.5,
+        seed=None,
+    )
+
+    filename = f"nu-{num_units}_shift-{shift}.pickle"
+    dump_results(method_output_path, filename, all_results)
+
+
+def dump_results(method_output_path, filename, all_results):
+    output_file = method_output_path / filename
+
+    if output_file.is_file():
+        output_file.unlink()
+
+    print(f"Writing: {filename}")
+    with open(output_file, 'wb') as handle:
+        pickle.dump(
+            all_results, handle, protocol=pickle.HIGHEST_PROTOCOL
+    )
