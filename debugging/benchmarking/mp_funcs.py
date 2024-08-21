@@ -28,25 +28,7 @@ def run_benchmarking(
     """
 
     """
-    default_unit_params_range = dict(
-        alpha=(100.0, 500.0),
-        depolarization_ms=(0.09, 0.14),
-        repolarization_ms=(0.5, 0.8),
-        recovery_ms=(1.0, 1.5),
-        positive_amplitude=(0.1, 0.25),
-        smooth_ms=(0.03, 0.07),
-        spatial_decay=(20, 40),
-        propagation_speed=(250.0, 350.0),
-        b=(0.1, 1),
-        c=(0.1, 1),
-        x_angle=(0, np.pi),
-        y_angle=(0, np.pi),
-        z_angle=(0, np.pi),
-    )
-
-    # default_unit_params_range["alpha"] = alpha
-    # default_unit_params_range["b"] = (0.5, 1)
-    # default_unit_params_range["c"] = (0.5, 1)
+    # TODO: can play with default_unit_params_range
 
     recordings_list, _ = generate_session_displacement_recordings(
         non_rigid_gradient=None,
@@ -96,21 +78,6 @@ def num_units_run_func(method_output_path, input):
 
     filename = f"nu-{num_units}_shift-{shift}.pickle"
     dump_results(method_output_path, filename, all_results)
-
-
-def num_units_run_func(method_output_path, input):
-    shift, num_units = input
-
-    all_results = run_benchmarking(
-        shift=shift,
-        recording_durations=(100, 100),
-        num_units=num_units,
-        alpha=(100, 600),
-        bin_um=2.5,
-        seed=None,
-    )
-
-    filename = f"nu-{num_units}_shift-{shift}.pickle"
 
 
 def dump_results(method_output_path, filename, all_results):
