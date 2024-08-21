@@ -684,3 +684,20 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
         memory = mem_info.total - mem_info.available
 
     return memory
+
+
+def is_path_remote(path: str | Path) -> bool:
+    """
+    Returns True if the path is a remote path (e.g., s3:// or gcs://).
+
+    Parameters
+    ----------
+    path : str or Path
+        The path to check.
+
+    Returns
+    -------
+    bool
+        Whether the path is a remote path.
+    """
+    return "s3://" in str(path) or "gcs://" in str(path)
