@@ -4,7 +4,140 @@ import numpy as np
 from spikeinterface.core import generate_recording
 from spikeinterface import NumpyRecording, set_global_tmp_folder
 
-from spikeinterface.preprocessing import filter, bandpass_filter, notch_filter
+from spikeinterface.preprocessing import filter, bandpass_filter, notch_filter, causal_filter
+
+
+class TestCausalFilter:
+    """
+    The only thing that is not tested (JZ, as of 23/07/2024) is the
+    propagation of margin kwargs, these are general filter params
+    and can be tested in an upcoming PR.
+    """
+
+    @pytest.fixture(scope="session")
+    def recording_and_data(self):
+        recording = generate_recording(durations=[1])
+        raw_data = recording.get_traces()
+
+        return (recording, raw_data)
+
+    def test_causal_filter_main_kwargs(self, recording_and_data):
+        """
+        Perform a test that expected output is returned under change
+        of all key filter-related kwargs. First run the filter in
+        the forward direction with options and compare it
+        to the expected output from scipy.
+
+        Next, change every filter-related kwarg and set in the backwards
+        direction. Again check it matches expected scipy output.
+        """
+        from scipy.signal import lfilter, sosfilt
+
+        recording, raw_data = recording_and_data
+
+        # First, check in the forward direction with
+        # the default set of kwargs
+        options = self._get_filter_options()
+
+        sos = self._run_iirfilter(options, recording)
+
+        test_data = sosfilt(sos, raw_data, axis=0)
+        test_data.astype(recording.dtype)
+
+        filt_data = causal_filter(recording, direction="forward", **options, margin_ms=0).get_traces()
+
+        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6)
+
+        # Then, change all kwargs to ensure they are propagated
+        # and check the backwards version.
+        options["band"] = [671]
+        options["btype"] = "highpass"
+        options["filter_order"] = 8
+        options["ftype"] = "bessel"
+        options["filter_mode"] = "ba"
+        options["dtype"] = np.float16
+
+        b, a = self._run_iirfilter(options, recording)
+
+        flip_raw = np.flip(raw_data, axis=0)
+        test_data = lfilter(b, a, flip_raw, axis=0)
+        test_data = np.flip(test_data, axis=0)
+        test_data = test_data.astype(options["dtype"])
+
+        filt_data = causal_filter(recording, direction="backward", **options, margin_ms=0).get_traces()
+
+        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6)
+
+    def test_causal_filter_custom_coeff(self, recording_and_data):
+        """
+        A different path is taken when custom coeff is selected.
+        Therefore, explicitly test the expected outputs are obtained
+        when passing custom coeff, under the "ba" and "sos" conditions.
+        """
+        from scipy.signal import lfilter, sosfilt
+
+        recording, raw_data = recording_and_data
+
+        options = self._get_filter_options()
+        options["filter_mode"] = "ba"
+        options["coeff"] = (np.array([0.1, 0.2, 0.3]), np.array([0.4, 0.5, 0.6]))
+
+        # Check the custom coeff are propagated in both modes.
+        # First, in "ba" mode
+        test_data = lfilter(options["coeff"][0], options["coeff"][1], raw_data, axis=0)
+        test_data = test_data.astype(recording.get_dtype())
+
+        filt_data = causal_filter(recording, direction="forward", **options, margin_ms=0).get_traces()
+
+        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6, equal_nan=True)
+
+        # Next, in "sos" mode
+        options["filter_mode"] = "sos"
+        options["coeff"] = np.ones((2, 6))
+
+        test_data = sosfilt(options["coeff"], raw_data, axis=0)
+        test_data = test_data.astype(recording.get_dtype())
+
+        filt_data = causal_filter(recording, direction="forward", **options, margin_ms=0).get_traces()
+
+        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6, equal_nan=True)
+
+    def test_causal_kwarg_error_raised(self, recording_and_data):
+        """
+        Test that passing the "forward-backward" direction results in
+        an error. It is is critical this error is raised,
+        otherwise the filter will no longer be causal.
+        """
+        recording, raw_data = recording_and_data
+
+        with pytest.raises(BaseException) as e:
+            filt_data = causal_filter(recording, direction="forward-backward")
+
+    def _run_iirfilter(self, options, recording):
+        """
+        Convenience function to convert Si kwarg
+        names to Scipy.
+        """
+        from scipy.signal import iirfilter
+
+        return iirfilter(
+            N=options["filter_order"],
+            Wn=options["band"],
+            btype=options["btype"],
+            ftype=options["ftype"],
+            output=options["filter_mode"],
+            fs=recording.get_sampling_frequency(),
+        )
+
+    def _get_filter_options(self):
+        return {
+            "band": [300.0, 6000.0],
+            "btype": "bandpass",
+            "filter_order": 5,
+            "ftype": "butter",
+            "filter_mode": "sos",
+            "coeff": None,
+        }
 
 
 def test_filter():
@@ -28,6 +161,8 @@ def test_filter():
     # other filtering types
     rec3 = filter(rec, band=500.0, btype="highpass", filter_mode="ba", filter_order=2)
     rec4 = notch_filter(rec, freq=3000, q=30, margin_ms=5.0)
+    rec5 = causal_filter(rec, direction="forward")
+    rec6 = causal_filter(rec, direction="backward")
 
     # filter from coefficients
     from scipy.signal import iirfilter
