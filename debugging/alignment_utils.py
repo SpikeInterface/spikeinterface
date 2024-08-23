@@ -19,7 +19,7 @@ from spikeinterface.sortingcomponents.motion.motion_interpolation import \
 # -----------------------------------------------------------------------------
 
 # TODO: this function might be pointless
-def get_entire_session_hist(recording, peaks, peak_locations, bin_um):
+def get_entire_session_hist(recording, peaks, peak_locations, spatial_bin_edges):
     """
     TODO: assumes 1-segment recording
     """
@@ -31,9 +31,9 @@ def get_entire_session_hist(recording, peaks, peak_locations, bin_um):
         weight_with_amplitude=False,
         direction="y",
         bin_s=recording.get_duration(segment_index=0),
-        bin_um=bin_um,
-        hist_margin_um=50,  # TODO: ?
-        spatial_bin_edges=None,
+        bin_um=None,
+        hist_margin_um=None,
+        spatial_bin_edges=spatial_bin_edges,
     )
     entire_session_hist = entire_session_hist[0]
 
@@ -45,9 +45,9 @@ def get_entire_session_hist(recording, peaks, peak_locations, bin_um):
 
 
 def get_chunked_histogram(  # TODO: this function might be pointless
-        recording, peaks, peak_locations, bin_s, bin_um, weight_with_amplitude=False
+        recording, peaks, peak_locations, bin_s, spatial_bin_edges, weight_with_amplitude=False
 ):
-    chunked_session_hist, temporal_bin_edges, spatial_bin_edges = \
+    chunked_session_hist, temporal_bin_edges, _ = \
         make_2d_motion_histogram(
         recording,
         peaks,
@@ -55,9 +55,9 @@ def get_chunked_histogram(  # TODO: this function might be pointless
         weight_with_amplitude=weight_with_amplitude,
         direction="y",
         bin_s=bin_s,
-        bin_um=bin_um,
-        hist_margin_um=50,  # TODO: ?
-        spatial_bin_edges=None,
+        bin_um=None,
+        hist_margin_um=None,  # TODO: ?
+        spatial_bin_edges=spatial_bin_edges,
     )
 
     temporal_centers = get_bin_centers(temporal_bin_edges)
@@ -209,7 +209,7 @@ def estimate_session_displacement_benchmarking(
             all_ses_histogram.append(info[hist_name])
         all_ses_histogram = np.array(all_ses_histogram)
 
-        motion_array = run_alignment_estimation_rigid(
+        motion_array = run_alignment_estimation(
             all_ses_histogram, spatial_bins
         ) * bin_um
 
@@ -316,7 +316,7 @@ def create_motion_recordings(all_recordings, motion_array, all_temporal_bins, no
     all_motions = []
     for i in range(len(all_recordings)):
 
-        ses_motion = motion_array[i][:, np.newaxis]
+        ses_motion = motion_array[i][np.newaxis, :]
 
         # TODO: such a hack on the temporal bins
         temporal_bin = np.array([np.mean(all_temporal_bins[i])])
@@ -354,8 +354,8 @@ def run_kilosort_like_rigid_registration(all_hists, non_rigid_windows):
     return -optimal_shift_indices  # TODO: these are reversed at this stage
 
 
-def run_alignment_estimation_rigid(
-    all_session_hists, spatial_bin_centers, robust=False
+def run_alignment_estimation(
+    all_session_hists, spatial_bin_centers, rigid, robust=False
 ):
     """
     """
@@ -365,6 +365,89 @@ def run_alignment_estimation_rigid(
     num_bins = spatial_bin_centers.size
     num_sessions = all_session_hists.shape[0]
 
+    hist_array = _compute_rigid_hist_crosscorr(
+        num_sessions, num_bins, all_session_hists, robust
+    )  # TODO: rename
+
+    optimal_shift_indices = -np.mean(hist_array, axis=0)[:, np.newaxis]
+    # (2, 1)
+    if rigid:
+        # TODO: this just shifts everything to the center. It would be (better?)
+        # to optmize so all shifts are about the same.
+        non_rigid_windows, non_rigid_window_centers = get_spatial_windows(
+            spatial_bin_centers,
+            # TODO: used to get window center, for now just get them from the spatial bin centers and use no margin, which was applied earlier
+            spatial_bin_centers,
+            rigid=True,
+            win_shape="gaussian",  # rect
+            win_step_um=None,  # TODO: expose! CHECK THIS!
+            #        win_scale_um=win_scale_um,
+            win_margin_um=0,
+            #        zero_threshold=None,
+        )
+
+        return optimal_shift_indices, non_rigid_window_centers  # TODO: rename rigid, also this is weird to pass back bins in the rigid case
+
+    # TODO: this is basically a re-implimentation of the nonrigid part
+    # of iterative template. Want to leave separate for now for prototyping
+    # but should combine the shared parts later.
+
+    num_steps = 7
+    win_step_um = (np.max(spatial_bin_centers) - np.min(spatial_bin_centers)) / num_steps
+
+    non_rigid_windows, non_rigid_window_centers = get_spatial_windows(
+        spatial_bin_centers,  # TODO: used to get window center, for now just get them from the spatial bin centers and use no margin, which was applied earlier
+        spatial_bin_centers,
+        rigid=False,
+        win_shape="gaussian",  # rect
+        win_step_um=win_step_um,  # TODO: expose!
+#        win_scale_um=win_scale_um,
+        win_margin_um=0,
+#        zero_threshold=None,
+    )
+    # TODO: I wonder if it is better to estimate the hitsogram with finer bin size
+    # than try and interpolate the xcorr. What about smoothing the activity histograms directly?
+
+    # TOOD: the iterative_template seems a little different to the interpolation
+    # of nonrigid segments that is described in the NP2.0 paper. Oh, the KS
+    # implementation is different to that described in the paper/ where is the
+    # Akima spline interpolation?
+
+    # TODO: make sure that the num bins will always align.
+    # Apply the linear shifts, don't roll, as we don't want circular (why would the top of the probe appear at the bottom?)
+    # They roll the windowed version that is zeros, but here we want all done up front to simplify later code
+
+    import matplotlib.pyplot as plt
+
+    # TODO: for recursive version, shift cannot be larger than previous shift!
+    shifted_histograms = np.zeros_like(all_session_hists)
+    for i in range(all_session_hists.shape[0]):
+
+        shift = int(optimal_shift_indices[i, 0])
+        abs_shift = np.abs(shift)
+        pad_tuple = (0, abs_shift) if shift > 0 else (abs_shift, 0)  # TODO: check direction!
+
+        padded_hist = np.pad(all_session_hists[i, :], pad_tuple, mode="constant")
+        cut_padded_hist = padded_hist[abs_shift:] if shift > 0 else padded_hist[:-abs_shift]
+        shifted_histograms[i, :] = cut_padded_hist
+
+    non_rigid_shifts = np.zeros((num_sessions, non_rigid_windows.shape[0]))
+    for i, window in enumerate(non_rigid_windows):  # TODO: use same name
+
+        windowed_histogram = shifted_histograms * window
+
+        window_hist_array = _compute_rigid_hist_crosscorr(
+            num_sessions, num_bins, windowed_histogram, robust=False  # this method just xcorr the entire window does not provide subset of samples like kilosort_like
+        )
+        non_rigid_shifts[:, i] = -np.mean(window_hist_array, axis=0)
+
+    return optimal_shift_indices + non_rigid_shifts, non_rigid_window_centers  # TODO: tidy up
+
+    # TODO: what about the Akima Spline
+    # TODO: try out logarithmic scaling as some neurons fire too much...
+
+def _compute_rigid_hist_crosscorr(num_sessions, num_bins, all_session_hists, robust=False):
+    """"""
     hist_array = np.zeros((num_sessions, num_sessions))
     for i in range(num_sessions):
         for j in range(num_sessions):  # TODO: can make this much faster
@@ -379,12 +462,7 @@ def run_alignment_estimation_rigid(
             shift = (argmax - center_bin)
             hist_array[i, j] = shift
 
-    # TODO: this just shifts everything to the center. It would be (better?)
-    # to optmize so all shifts are about the same.
-    optimal_shift_indices = -np.mean(hist_array, axis=0)[:, np.newaxis]
-
-    return optimal_shift_indices
-
+    return hist_array
 
 def correct_peaks_and_plot_histogram(
     corrected_recordings, all_recordings, all_motions, bin_um
