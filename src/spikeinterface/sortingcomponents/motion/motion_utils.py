@@ -57,7 +57,10 @@ class Motion:
     def check_properties(self):
         assert all(d.ndim == 2 for d in self.displacement)
         assert all(t.ndim == 1 for t in self.temporal_bins_s)
-        assert all(self.spatial_bins_um.shape == (d.shape[1],) for d in self.displacement)
+        try:
+            assert all(self.spatial_bins_um.shape == (d.shape[1],) for d in self.displacement)
+        except:
+            breakpoint()
 
     def __repr__(self):
         nbins = self.spatial_bins_um.shape[0]

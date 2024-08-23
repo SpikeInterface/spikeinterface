@@ -66,78 +66,110 @@ if trimmed_percentiles is not False:
 #    entire session. Otherwise, we will want to add chunking as part of above.
 
 def run_inter_session_displacement_correction(
-        recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method
+        recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method, rigid=True
 ):  # TOOD: rename
     """
     """
-    motion_estimates_list, all_temporal_bin_centers, all_spatial_bin_centers, histogram_info = estimate_inter_session_displacement(
-        recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method
+    motion_estimates_list, all_temporal_bin_centers, spatial_bin_centers, non_rigid_bin_centers, histogram_info = estimate_inter_session_displacement(
+        recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method, rigid
     )
 
-    _, non_ridgid_spatial_windows = alignment_utils.get_spatial_windows_alignment(
-        recordings_list[0], all_spatial_bin_centers[0]
+   # _, non_ridgid_spatial_windows = alignment_utils.get_spatial_windows_alignment(
+    #    recordings_list[0], spatial_bin_centers  # TODO: check assumption
+    #)
+
+    corrected_recordings_list, motion_objects_list = alignment_utils.create_motion_recordings(
+        recordings_list, motion_estimates_list, all_temporal_bin_centers, non_rigid_bin_centers
     )
 
-    all_corrected_recordings, motion_objects_list = alignment_utils.create_motion_recordings(
-        recordings_list, motion_estimates_list, all_temporal_bin_centers, non_ridgid_spatial_windows
+    corrected_peak_locations_list, corrected_session_histogram_list = _session_displacement_correct_peaks_and_generate_histogram(
+        corrected_recordings_list, peaks_list, peak_locations_list, motion_objects_list, spatial_bin_centers
     )
 
     extra_outputs_dict = {
         "motion_estimates_list": motion_estimates_list,
         "all_temporal_bin_centers": all_temporal_bin_centers,
-        "all_spatial_bin_centers": all_spatial_bin_centers,
+        "spatial_bin_centers": spatial_bin_centers,
         "histogram_info": histogram_info,
+        "corrected": {
+            "corrected_peak_locations_list": corrected_peak_locations_list,
+            "corrected_session_histogram_list": corrected_session_histogram_list,
+        }
     }
-    return all_corrected_recordings, motion_objects_list, extra_outputs_dict
+
+    return corrected_recordings_list, motion_objects_list, extra_outputs_dict
+
+
+def _session_displacement_correct_peaks_and_generate_histogram(
+        recordings_list, peaks_list, peak_locations_list, motion_objects_list, spatial_bin_centers
+):
+    """
+    """
+    corrected_peak_locations_list = []
+
+    for i in range(len(recordings_list)):
+        corrected_peak_locations_list.append(
+            correct_motion_on_peaks(
+                peaks_list[i],
+                peak_locations_list[i],
+                motion_objects_list[i],
+                recordings_list[i],
+            )
+        )
+
+    corrected_session_histogram_list = []
+
+    for i in range(len(corrected_peak_locations_list)):  # TODO: unwrap a bit
+        corrected_session_histogram_list.append(
+            alignment_utils.get_entire_session_hist(recordings_list[i], peaks_list[i], corrected_peak_locations_list[i], spatial_bin_centers)[0]
+        )
+
+    return corrected_peak_locations_list, corrected_session_histogram_list
 
 def estimate_inter_session_displacement(
-    recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method
+    recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method, rigid
 ):
     """
     """
     assert alignment_method in ["kilosort_like", "mean_crosscorr"], "TODO"
 
+    min_y = np.min([np.min(locs["y"]) for locs in peak_locations_list])
+    max_y = np.max([np.max(locs["y"]) for locs in peak_locations_list])
+
+    spatial_bin_edges = np.arange(min_y, max_y + bin_um, bin_um)  # TODO: expose a margin...
+    spatial_bin_centers = alignment_utils.get_bin_centers(spatial_bin_edges)
+
     # Estimate an activity histogram per-session
     all_session_hists = []  # TODO: probably better as a dict
     all_temporal_bin_centers = []
-    all_spatial_bin_centers = []
     all_session_chunked_hists = []
     all_chunked_hist_stdevs = []
 
     for recording, peaks, peak_locations in zip(recordings_list, peaks_list, peak_locations_list):
 
-        session_hist, temporal_bin_centers, spatial_bin_centers, session_chunked_hists, chunked_hist_stdevs = _get_single_session_activity_histogram(
-                recording, peaks, peak_locations, bin_um, histogram_estimation_method
+        session_hist, temporal_bin_centers, session_chunked_hists, chunked_hist_stdevs = _get_single_session_activity_histogram(
+                recording, peaks, peak_locations, histogram_estimation_method, spatial_bin_edges
         )
 
         all_session_hists.append(session_hist)
         all_temporal_bin_centers.append(temporal_bin_centers)
-        all_spatial_bin_centers.append(spatial_bin_centers)
         all_session_chunked_hists.append(session_chunked_hists)
         all_chunked_hist_stdevs.append(chunked_hist_stdevs)
-
-        # TODO: decide what to do with session_chunked_hists, chunked_hist_stdevs
-        all_motion_arrays = []
-
-    # Check all spatial bins are the same.
-    for i in range(len(all_spatial_bin_centers)):
-        assert np.array_equal(all_spatial_bin_centers[0],
-                              all_spatial_bin_centers[i],
-                              )
 
     # Estimate the alignment based on the activity histograms
     if alignment_method == "kilosort_like":
         non_rigid_windows, non_rigid_window_centers = alignment_utils.get_spatial_windows_alignment(
-            recordings_list[0], all_spatial_bin_centers[0]
+            recordings_list[0], spatial_bin_centers
             # TODO: double check these assumptions (first session) are good
         )
         all_motion_arrays = alignment_utils.run_kilosort_like_rigid_registration(  # TODO: check sign
             all_session_hists, non_rigid_windows
         ) * bin_um
     else:
-        all_motion_arrays = alignment_utils.run_alignment_estimation_rigid(
-            all_session_hists, all_spatial_bin_centers[0]
-        ) * bin_um  # TODO: here the motion arrays are made negative initially. In motion correction they are done later. Discuss with others and make consistent.
+        all_motion_arrays, non_rigid_bin_centers = alignment_utils.run_alignment_estimation(  # TODO: rename because some times rigid!
+            all_session_hists, spatial_bin_centers, rigid
+        )  # TODO: here the motion arrays are made negative initially. In motion correction they are done later. Discuss with others and make consistent.
+        all_motion_arrays *= bin_um
 
     extra_outputs_dict = {
         "all_session_hists": all_session_hists,
@@ -145,10 +177,10 @@ def estimate_inter_session_displacement(
         "all_chunked_hist_stdevs": all_chunked_hist_stdevs
     }
 
-    return all_motion_arrays, all_temporal_bin_centers, all_spatial_bin_centers, extra_outputs_dict
+    return all_motion_arrays, all_temporal_bin_centers, spatial_bin_centers, non_rigid_bin_centers, extra_outputs_dict
 
 
-def _get_single_session_activity_histogram(recording, peaks, peak_locations, bin_um, method):
+def _get_single_session_activity_histogram(recording, peaks, peak_locations, method, spatial_bin_edges):
     """
     """
     accepted_methods = ["entire_session", "chunked_mean", "chunked_median", "chunked_supremum", "chunked_poisson"]
@@ -157,19 +189,19 @@ def _get_single_session_activity_histogram(recording, peaks, peak_locations, bin
 
     )
     # First, get the histogram across the entire session
-    entire_session_hist, temporal_bin_centers, spatial_bin_centers = alignment_utils.get_entire_session_hist(
-        recording, peaks, peak_locations, bin_um
+    entire_session_hist, temporal_bin_centers, _ = alignment_utils.get_entire_session_hist(  # TODO: assert spatial bin edges
+        recording, peaks, peak_locations, spatial_bin_edges
     )
 
     if method == "entire_session":
-        return entire_session_hist, temporal_bin_centers, spatial_bin_centers, None, None
+        return entire_session_hist, temporal_bin_centers, None, None
 
     # If method is not "entire_session", estimate the session
     # histogram based on histograms calculated from chunks.
     bin_s, percentile_lambda = alignment_utils.estimate_chunk_size(entire_session_hist, recording)
 
-    chunked_session_hist, chunked_temporal_bin_centers, chunked_spatial_bins_centers = alignment_utils.get_chunked_histogram(
-        recording, peaks, peak_locations, bin_s, bin_um
+    chunked_session_hist, chunked_temporal_bin_centers, _ = alignment_utils.get_chunked_histogram(  # TODO: do the centering higher levle as duplciating
+        recording, peaks, peak_locations, bin_s, spatial_bin_edges
     )
     session_std = np.sum(np.std(chunked_session_hist, axis=0)) / chunked_session_hist.shape[1]
 
@@ -191,4 +223,4 @@ def _get_single_session_activity_histogram(recording, peaks, peak_locations, bin
     elif method == "chunked_poisson":
         summary_chunked_hist = alignment_utils.get_chunked_hist_poisson_estimate(chunked_session_hist)
 
-    return summary_chunked_hist, chunked_temporal_bin_centers, chunked_spatial_bins_centers, chunked_session_hist, session_std
+    return summary_chunked_hist, chunked_temporal_bin_centers, chunked_session_hist, session_std

@@ -37,20 +37,22 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 # TODO: add different modes (to mean, to nth session...)
 # TODO: document that the output is Hz
 
+# What we really want to find is maximal subset of the data that matches
+
 SAVE = False
 PLOT = False
 BIN_UM = 2
 
 if SAVE:
-
+    scalings = [np.ones(25), np.r_[np.zeros(10), np.ones(15)]]  # TODO: there is something wrong here, because why are the maximum histograms not removed?
     recordings_list, _ = generate_session_displacement_recordings(
-        non_rigid_gradient=None,
-        num_units=15,
-        recording_durations=(200, 200),
+        non_rigid_gradient=0.1, # None,
+        num_units=25,
+        recording_durations=(100, 100),
         recording_shifts=(
-            (0, 0), (0, 25),
+            (0, 0), (0, 75),
         ),
-        recording_amplitude_scalings=None,
+        recording_amplitude_scalings=None, # {"method": "by_amplitude_and_firing_rate", "scalings": scalings},
         seed=None,
     )
 
@@ -74,33 +76,14 @@ with open('all_recordings.pickle', 'rb') as handle:
 
 
 corrected_recordings_list, motion_objects_list, extra_info = session_alignment.run_inter_session_displacement_correction(
-    recordings_list, peaks_list, peak_locations_list, bin_um=BIN_UM, histogram_estimation_method="chunked_mean", alignment_method="mean_crosscorr"
+    recordings_list, peaks_list, peak_locations_list, bin_um=BIN_UM, histogram_estimation_method="entire_session", alignment_method="mean_crosscorr", rigid=True
 )
 
-corrected_peak_locations_list = []
-
-for i in range(len(corrected_recordings_list)):
-    corrected_peak_locations_list.append(
-        correct_motion_on_peaks(
-            peaks_list[i],
-            peak_locations_list[i],
-            motion_objects_list[i],        # TODO: should probably return directly... or return motion objects not motion estimates
-            corrected_recordings_list[i],  #  TODO: why is the recording needed
-        )
-    )
-corrected_hists = []
-for i in range(len(corrected_peak_locations_list)):
-    corrected_hists.append(
-        alignment_utils.get_entire_session_hist(
-            recordings_list[1], peaks_list[1], corrected_peak_locations_list[1], bin_um=BIN_UM
-        )[0]
-    )
-x = extra_info["all_spatial_bin_centers"][0]
-
-plot = plotting.SessionAlignmentHistogramWidget(
-    [hist_ for hist_ in extra_info["histogram_info"]["all_session_hists"]] + corrected_hists,
-    extra_info["all_spatial_bin_centers"][0],
-    legend=["session 1", "session 2", "session_1_corrected", "session 2 corrected"],
-    linewidths=(1, 1, 2, 2)
+plotting.SessionAlignmentWidget(
+    recordings_list,
+    peaks_list,
+    peak_locations_list,
+    extra_info["histogram_info"]["all_session_hists"],
+    **extra_info["corrected"]
 )
 plt.show()
