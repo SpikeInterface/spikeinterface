@@ -243,11 +243,23 @@ def test_label_inheritance_str():
     assert np.all(sorting_include_accept.get_property("accept"))
 
 
+def test_json_no_merge_curation():
+    """
+    Test curation with no merges using a JSON file.
+    """
+    sorting = generate_sorting(num_units=10)
+
+    json_file = parent_folder / "sv-sorting-curation-no-merge.json"
+    sorting_curated = apply_sortingview_curation(sorting, uri_or_json=json_file)
+
+
 if __name__ == "__main__":
     # generate_sortingview_curation_dataset()
     # test_sha1_curation()
+
     test_gh_curation()
     test_json_curation()
     test_false_positive_curation()
     test_label_inheritance_int()
     test_label_inheritance_str()
+    test_json_no_merge_curation()

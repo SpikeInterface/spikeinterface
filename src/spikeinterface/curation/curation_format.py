@@ -87,18 +87,22 @@ def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_fo
 
     Returns
     -------
-    curation_dict: dict
+    curation_dict : dict
         A curation dictionary
     """
 
     assert destination_format == "1"
-
+    if "mergeGroups" not in sortingview_dict.keys():
+        sortingview_dict["mergeGroups"] = []
     merge_groups = sortingview_dict["mergeGroups"]
     merged_units = sum(merge_groups, [])
-    if len(merged_units) > 0:
-        unit_id_type = int if isinstance(merged_units[0], int) else str
+
+    first_unit_id = next(iter(sortingview_dict["labelsByUnit"].keys()))
+    if str.isdigit(first_unit_id):
+        unit_id_type = int
     else:
         unit_id_type = str
+
     all_units = []
     all_labels = []
     manual_labels = []
@@ -138,7 +142,7 @@ def curation_label_to_vectors(curation_dict):
 
     Returns
     -------
-    labels: dict of numpy vector
+    labels : dict of numpy vector
 
     """
     unit_ids = list(curation_dict["unit_ids"])
