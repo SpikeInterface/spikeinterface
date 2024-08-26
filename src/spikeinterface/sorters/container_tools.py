@@ -55,16 +55,16 @@ class ContainerClient:
         """
         Parameters
         ----------
-        mode: "docker" | "singularity"
+        mode : "docker" | "singularity"
             The container mode
-        container_image: str
+        container_image : str
             container image name and tag
-        volumes: dict
+        volumes : dict
             dict of volumes to bind
-        py_user_base: str
+        py_user_base : str
             Python user base folder to set as PYTHONUSERBASE env var in Singularity mode
             Prevents from overwriting user's packages when running pip install
-        extra_kwargs: dict
+        extra_kwargs : dict
             Extra kwargs to start container
         """
         assert mode in ("docker", "singularity")
@@ -180,28 +180,28 @@ def install_package_in_container(
 
     Parameters
     ----------
-    container_client: ContainerClient
+    container_client : ContainerClient
         The container client
-    package_name: str
+    package_name : str
         The package name
-    installation_mode: str
+    installation_mode : str
         The installation mode
-    extra: str
+    extra : str
         Extra pip install arguments, e.g. [full]
-    version: str
+    version : str
         The package version to install
-    tag: str
+    tag : str
         The github tag to install
-    github_url: str
+    github_url : str
         The github url to install (needed for github mode)
-    container_folder_source: str
+    container_folder_source : str
         The container folder source (needed for folder mode)
-    verbose: bool
+    verbose : bool
         If True, print output of pip install command
 
     Returns
     -------
-    res_output: str
+    res_output : str
         The output of the pip install command
     """
     assert installation_mode in ("pypi", "github", "folder")
