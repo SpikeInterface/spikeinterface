@@ -2,10 +2,11 @@ import os
 import pickle as pkl
 import warnings
 import numpy as np
+import json
+import spikeinterface
 from spikeinterface.qualitymetrics import get_quality_metric_list, get_quality_pca_metric_list
 from spikeinterface.postprocessing import get_template_metric_names
-
-warnings.filterwarnings("ignore")
+from pathlib import Path
 
 
 class CurationModelTrainer:
@@ -118,6 +119,7 @@ class CurationModelTrainer:
         self.scaling_techniques = scaling_techniques
         self.classifiers = classifiers
         self.seed = seed if seed is not None else np.random.default_rng(seed=None).integers(0, 2**31)
+        self.metrics_params = {}
 
         if metrics_to_use is None:
             self.metrics_list = self.get_default_metrics_list()
@@ -143,10 +145,26 @@ class CurationModelTrainer:
         """
         import pandas as pd
 
-        self.testing_metrics = pd.concat([self._get_metrics_for_classification(an) for an in analyzers], axis=0)
+        self.testing_metrics = pd.concat(
+            [self._get_metrics_for_classification(an, an_index) for an_index, an in enumerate(analyzers)], axis=0
+        )
         self.testing_metrics["label"] = np.concatenate([an.sorting.get_property("quality") for an in analyzers])
 
+        self._check_metrics_parameters()
+
         self.process_test_data_for_classification()
+
+    def _check_metrics_parameters(self):
+        """Checks that the metrics of each analyzer have been calcualted using the same parameters"""
+        metrics_params = self.metrics_params
+        first_metrics_params = metrics_params["analyzer_0"]
+        for analyzer_metrics_params in metrics_params.values():
+            if analyzer_metrics_params != first_metrics_params:
+                warnings.warn(
+                    "Parameters used to calculate the metrics are different"
+                    "for different sorting_analyzers. It is advised to use the"
+                    "same parameters for each sorting_analyzer."
+                )
 
     def load_and_preprocess_csv(self, path):
         self._load_data_file(path)
@@ -384,7 +402,7 @@ class CurationModelTrainer:
             self.imputation_strategies, self.scaling_techniques, classifier_instances, X_train, X_test, y_train, y_test
         )
 
-    def _get_metrics_for_classification(self, analyzer):
+    def _get_metrics_for_classification(self, analyzer, analyzer_index):
         """Check if all required metrics are present and return a DataFrame of metrics for classification"""
 
         import pandas as pd
@@ -394,6 +412,12 @@ class CurationModelTrainer:
             template_metrics = analyzer.extensions["template_metrics"].data["metrics"]
         except KeyError:
             raise ValueError("Quality and template metrics must be computed before classification")
+
+        # Store metrics metadata
+        analyzer_name = "analyzer_" + str(analyzer_index)
+        self.metrics_params[analyzer_name] = {}
+        self.metrics_params[analyzer_name]["quality_metric_params"] = analyzer.extensions["quality_metrics"].params
+        self.metrics_params[analyzer_name]["template_metric_params"] = analyzer.extensions["template_metrics"].params
 
         # Create DataFrame of all metrics and reorder columns to match the model
         calculated_metrics = pd.concat([quality_metrics, template_metrics], axis=1)
@@ -428,9 +452,9 @@ class CurationModelTrainer:
         )
 
         test_accuracies, models = zip(*results)
-        test_accuracies_df = pd.DataFrame(test_accuracies).sort_values("accuracy", ascending=False)
-        print(test_accuracies_df)
-        best_model_id = int(test_accuracies_df.iloc[0]["model_id"])
+        self.test_accuracies_df = pd.DataFrame(test_accuracies).sort_values("accuracy", ascending=False)
+
+        best_model_id = int(self.test_accuracies_df.iloc[0]["model_id"])
         best_model, best_imputer, best_scaler = models[best_model_id]
 
         best_pipeline = Pipeline(
@@ -439,13 +463,27 @@ class CurationModelTrainer:
 
         self.best_pipeline = best_pipeline
 
-        # Dump to pickle if output_folder is provided
         if self.output_folder is not None:
-            model_name = self.target_column
-            pkl.dump(best_pipeline, open(os.path.join(self.output_folder, f"best_model_{model_name}.pkl"), "wb"))
-            test_accuracies_df.to_csv(
-                os.path.join(self.output_folder, f"model_{model_name}_accuracies.csv"), float_format="%.4f"
-            )
+            self._save()
+
+    def _save(self):
+
+        # Dump to pickle if output_folder is provided
+        model_name = self.target_column
+        pkl.dump(self.best_pipeline, open(os.path.join(self.output_folder, f"best_model_{model_name}.pkl"), "wb"))
+        self.test_accuracies_df.to_csv(
+            os.path.join(self.output_folder, f"model_{model_name}_accuracies.csv"), float_format="%.4f"
+        )
+
+        model_info = {}
+        model_info["metric_params"] = self.metrics_params
+
+        model_info["spikeinterface_info"] = {}
+        model_info["spikeinterface_info"]["version"] = spikeinterface.__version__
+
+        param_file = self.output_folder + "/model_info.json"
+        print(param_file)
+        Path(param_file).write_text(json.dumps(model_info, indent=4), encoding="utf8")
 
     def _train_and_evaluate(self, imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, model_id):
         from sklearn.metrics import balanced_accuracy_score, precision_score, recall_score
@@ -549,6 +587,7 @@ def train_model(
     if mode == "analyzers":
         assert analyzers is not None, "Analyzers must be provided as a list for mode 'analyzers'"
         trainer.load_and_preprocess_analyzers(analyzers)
+
     elif mode == "csv":
         assert os.path.exists(metrics_path), "Valid metrics path must be provided for mode 'csv'"
         trainer.load_and_preprocess_csv(metrics_path)

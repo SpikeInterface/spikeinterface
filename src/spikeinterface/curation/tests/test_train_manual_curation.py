@@ -89,6 +89,7 @@ def test_evaluate_model_config(trainer):
     assert os.path.exists(trainer.output_folder)
     assert os.path.exists(os.path.join(trainer.output_folder, "best_model_label.pkl"))
     assert os.path.exists(os.path.join(trainer.output_folder, "model_label_accuracies.csv"))
+    assert os.path.exists(os.path.join(trainer.output_folder, "model_info.json"))
 
 
 def test_train_model():

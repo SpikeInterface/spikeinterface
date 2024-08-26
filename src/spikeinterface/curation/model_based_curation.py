@@ -1,6 +1,7 @@
 from typing import Sequence
 import numpy as np
 from pathlib import Path
+import json
 
 from spikeinterface.core import SortingAnalyzer
 from spikeinterface.qualitymetrics.quality_metric_calculator import get_default_qm_params
@@ -144,16 +145,20 @@ class ModelBasedClassification:
         except KeyError:
             raise ValueError("Quality and template metrics must be computed before classification")
 
-        # TODO: check metrics_params match those used to train the model - how?
-        # TEMP - check that params match the default. Need to add ability to check against model training params
-        default_quality_metrics_params = get_default_qm_params()
-        default_template_metrics_params
+        pipeline_folder = self.pipeline.output_folder
+        pipeline_info = json.loads(pipeline_folder)
+        pipeline_quality_metrics_params = pipeline_info["metric_params"]["quality_metric_params"]["qm_params"]
+        pipeline_template_metrics_params = pipeline_info["metric_params"]["template_metric_params"]["qm_params"]
 
         # Check that dicts are identical
-        if quality_metrics_params != default_quality_metrics_params:
-            raise ValueError("Quality metrics params do not match default params")
-        elif template_metric_params != default_template_metrics_params:
-            raise ValueError("Template metrics params do not match default params")
+        if quality_metrics_params != pipeline_quality_metrics_params:
+            raise ValueError(
+                "Quality metrics params do not match those used to train pipeline. Check these in the 'pipeline_info.json' file."
+            )
+        elif template_metric_params != pipeline_template_metrics_params:
+            raise ValueError(
+                "Template metrics params do not match those used to train pipeline. Check these in the 'pipeline_info.json' file."
+            )
         else:
             pass
 
