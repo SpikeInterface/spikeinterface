@@ -261,11 +261,23 @@ format is the definition; the second part of the format is manual action):
     }
 
 
-.. note::
-    The curation format was recently introduced (v0.101.0), and we are still working on
-    properly integrating it into the SpikeInterface ecosystem.
-    Soon there will be functions vailable, in the curation module, to apply this
-    standardized curation format to ``SortingAnalyzer`` and a ``BaseSorting`` objects.
+The curation format can be loaded into a dictionary and directly applied to
+a ``BaseSorting`` or ``SortingAnalyzer`` object using the :py:func:`~spikeinterface.curation.apply_curation` function.
+
+.. code-block:: python
+
+    from spikeinterface.curation import apply_curation
+
+    # load the curation JSON file
+    curation_json = "path/to/curation.json"
+    with open(curation_json, 'r') as f:
+        curation_dict = json.load(f)
+
+    # apply the curation to the sorting output
+    clean_sorting = apply_curation(sorting, curation_dict=curation_dict)
+
+    # apply the curation to the sorting analyzer
+    clean_sorting_analyzer = apply_curation(sorting_analyzer, curation_dict=curation_dict)
 
 
 Using the ``SpikeInterface GUI``

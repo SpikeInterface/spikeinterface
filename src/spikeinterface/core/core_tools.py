@@ -329,7 +329,7 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
 
 # This is the current definition that an element in a extractor_dict is a path
 # This is shared across a couple of definition so it is here for DNRY
-element_is_path = lambda element: "path" in element.name and isinstance(element.value, (str, Path))
+element_is_path = lambda element: isinstance(element.value, (str, Path)) and "path" in element.name
 
 
 def _get_paths_list(d: dict) -> list[str | Path]:
@@ -684,3 +684,20 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
         memory = mem_info.total - mem_info.available
 
     return memory
+
+
+def is_path_remote(path: str | Path) -> bool:
+    """
+    Returns True if the path is a remote path (e.g., s3:// or gcs://).
+
+    Parameters
+    ----------
+    path : str or Path
+        The path to check.
+
+    Returns
+    -------
+    bool
+        Whether the path is a remote path.
+    """
+    return "s3://" in str(path) or "gcs://" in str(path)

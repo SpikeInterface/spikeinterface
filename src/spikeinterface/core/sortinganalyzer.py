@@ -23,7 +23,7 @@ from .basesorting import BaseSorting
 
 from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
-from .core_tools import check_json, retrieve_importing_provenance
+from .core_tools import check_json, retrieve_importing_provenance, is_path_remote
 from .sorting_tools import generate_unit_ids_for_merge_group, _get_ids_after_merging
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
@@ -195,6 +195,7 @@ class SortingAnalyzer:
         format=None,
         sparsity=None,
         return_scaled=True,
+        storage_options=None,
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
@@ -204,6 +205,7 @@ class SortingAnalyzer:
         self.format = format
         self.sparsity = sparsity
         self.return_scaled = return_scaled
+        self.storage_options = storage_options
         # this is used to store temporary recording
         self._temporary_recording = None
 
@@ -276,17 +278,15 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     @classmethod
-    def load(cls, folder, recording=None, load_extensions=True, format="auto"):
+    def load(cls, folder, recording=None, load_extensions=True, format="auto", storage_options=None):
         """
         Load folder or zarr.
         The recording can be given if the recording location has changed.
         Otherwise the recording is loaded when possible.
         """
-        folder = Path(folder)
-        assert folder.is_dir(), "Waveform folder does not exists"
         if format == "auto":
             # make better assumption and check for auto guess format
-            if folder.suffix == ".zarr":
+            if Path(folder).suffix == ".zarr":
                 format = "zarr"
             else:
                 format = "binary_folder"
@@ -294,12 +294,18 @@ class SortingAnalyzer:
         if format == "binary_folder":
             sorting_analyzer = SortingAnalyzer.load_from_binary_folder(folder, recording=recording)
         elif format == "zarr":
-            sorting_analyzer = SortingAnalyzer.load_from_zarr(folder, recording=recording)
+            sorting_analyzer = SortingAnalyzer.load_from_zarr(
+                folder, recording=recording, storage_options=storage_options
+            )
 
-        sorting_analyzer.folder = folder
+        if is_path_remote(str(folder)):
+            sorting_analyzer.folder = folder
+            # in this case we only load extensions when needed
+        else:
+            sorting_analyzer.folder = Path(folder)
 
-        if load_extensions:
-            sorting_analyzer.load_all_saved_extension()
+            if load_extensions:
+                sorting_analyzer.load_all_saved_extension()
 
         return sorting_analyzer
 
@@ -470,7 +476,9 @@ class SortingAnalyzer:
     def _get_zarr_root(self, mode="r+"):
         import zarr
 
-        zarr_root = zarr.open(self.folder, mode=mode)
+        if is_path_remote(str(self.folder)):
+            mode = "r"
+        zarr_root = zarr.open(self.folder, mode=mode, storage_options=self.storage_options)
         return zarr_root
 
     @classmethod
@@ -552,25 +560,22 @@ class SortingAnalyzer:
         recording_info = zarr_root.create_group("extensions")
 
     @classmethod
-    def load_from_zarr(cls, folder, recording=None):
+    def load_from_zarr(cls, folder, recording=None, storage_options=None):
         import zarr
 
-        folder = Path(folder)
-        assert folder.is_dir(), f"This folder does not exist {folder}"
-
-        zarr_root = zarr.open(folder, mode="r")
+        zarr_root = zarr.open(str(folder), mode="r", storage_options=storage_options)
 
         # load internal sorting in memory
-        # TODO propagate storage_options
         sorting = NumpySorting.from_sorting(
-            ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True, copy_spike_vector=True
+            ZarrSortingExtractor(folder, zarr_group="sorting", storage_options=storage_options),
+            with_metadata=True,
+            copy_spike_vector=True,
         )
 
         # load recording if possible
         if recording is None:
             rec_dict = zarr_root["recording"][0]
             try:
-
                 recording = load_extractor(rec_dict, base_folder=folder)
             except:
                 recording = None
@@ -732,12 +737,12 @@ class SortingAnalyzer:
         else:
             from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 
-            sorting_provenance, keep_mask = apply_merges_to_sorting(
+            sorting_provenance, keep_mask, _ = apply_merges_to_sorting(
                 sorting=sorting_provenance,
                 merge_unit_groups=merge_unit_groups,
                 new_unit_ids=new_unit_ids,
                 censor_ms=censor_ms,
-                return_kept=True,
+                return_extra=True,
             )
             if censor_ms is None:
                 # in this case having keep_mask None is faster instead of having a vector of ones
@@ -777,6 +782,10 @@ class SortingAnalyzer:
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
         sorted_extensions = _sort_extensions_by_dependency(self.extensions)
+        # hack: quality metrics are computed at last
+        qm_extension_params = sorted_extensions.pop("quality_metrics", None)
+        if qm_extension_params is not None:
+            sorted_extensions["quality_metrics"] = qm_extension_params
         recompute_dict = {}
 
         for extension_name, extension in sorted_extensions.items():
@@ -815,10 +824,10 @@ class SortingAnalyzer:
 
         Parameters
         ----------
-        folder : str or Path
-            The output waveform folder
-        format : "binary_folder" | "zarr", default: "binary_folder"
-            The backend to use for saving the waveforms
+        folder : str | Path | None, default: None
+            The output folder if `format` is "zarr" or "binary_folder"
+        format : "memory" | "binary_folder" | "zarr", default: "memory"
+            The new backend format to use
         """
         return self._save_or_select_or_merge(format=format, folder=folder)
 
@@ -835,8 +844,9 @@ class SortingAnalyzer:
             The unit ids to keep in the new SortingAnalyzer object
         format : "memory" | "binary_folder" | "zarr" , default: "memory"
             The format of the returned SortingAnalyzer.
-        folder : Path or None
-            The new folder where selected waveforms are copied.
+        folder : Path | None, deafult: None
+            The new folder where the analyzer with selected units is copied if `format` is
+            "binary_folder" or "zarr"
 
         Returns
         -------
@@ -859,8 +869,9 @@ class SortingAnalyzer:
             The unit ids to remove in the new SortingAnalyzer object.
         format : "memory" | "binary_folder" | "zarr" , default: "memory"
             The format of the returned SortingAnalyzer.
-        folder : Path or None
-            The new folder where selected waveforms are copied.
+        folder : Path or None, default: None
+            The new folder where the analyzer without removed units is copied if `format`
+            is "binary_folder" or "zarr"
 
         Returns
         -------
@@ -879,6 +890,7 @@ class SortingAnalyzer:
         merging_mode="soft",
         sparsity_overlap=0.75,
         new_id_strategy="append",
+        return_new_unit_ids=False,
         format="memory",
         folder=None,
         verbose=False,
@@ -886,42 +898,44 @@ class SortingAnalyzer:
     ) -> "SortingAnalyzer":
         """
         This method is equivalent to `save_as()`but with a list of merges that have to be achieved.
-        Merges units by creating a new sorting analyzer object in a new folder with appropriate merges
+        Merges units by creating a new SortingAnalyzer object with the appropriate merges
 
-        Extensions are also updated to display the merged unit ids.
+        Extensions are also updated to display the merged `unit_ids`.
 
         Parameters
         ----------
         merge_unit_groups : list/tuple of lists/tuples
             A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
             but it can also have more (merge multiple units at once).
-        new_unit_ids : None or list
+        new_unit_ids : None | list, default: None
             A new unit_ids for merged units. If given, it needs to have the same length as `merge_unit_groups`. If None,
             merged units will have the first unit_id of every lists of merges
-        censor_ms : None or float
-            When merging units, any spikes violating this refractory period will be discarded. Default is None
-        merging_mode : "soft" can be in ["soft", "hard"]
-            How merges are performed. In the "soft" mode, merges will be approximated, with no reloading of the
-            waveforms. This will lead to approximations. If "hard", recomputations are accuratly performed,
+        censor_ms : None | float, default: None
+            When merging units, any spikes violating this refractory period will be discarded. If None all units are kept
+        merging_mode : ["soft", "hard"], default: "soft"
+            How merges are performed. If the `merge_mode` is "soft" , merges will be approximated, with no reloading of the
+            waveforms. This will lead to approximations. If `merge_mode` is "hard", recomputations are accurately performed,
             reloading waveforms if needed
         sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
-            achieved, soft merging will not be possible
+            achieved, soft merging will not be possible and an error will be raised
         new_id_strategy : "append" | "take_first", default: "append"
             The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
-                * "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
+                * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
                 * "take_first" : new_unit_ids will be the first unit_id of every list of merges
-        folder : Path or None
-            The new folder where selected waveforms are copied
-        format : "auto" | "binary_folder" | "zarr"
-            The format of the folder.
-        verbose:
-
+        return_new_unit_ids : bool, default False
+            Alse return new_unit_ids which are the ids of the new units.
+        folder : Path | None, default: None
+            The new folder where the analyzer with merged units is copied for `format` "binary_folder" or "zarr"
+        format : "memory" | "binary_folder" | "zarr", default: "memory"
+            The format of SortingAnalyzer
+        verbose : bool, default: False
+            Whether to display calculations (such as sparsity estimation)
 
         Returns
         -------
         analyzer :  SortingAnalyzer
-            The newly create sorting_analyzer with the selected units
+            The newly create `SortingAnalyzer` with the selected units
         """
 
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
@@ -945,7 +959,7 @@ class SortingAnalyzer:
         )
         all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
 
-        return self._save_or_select_or_merge(
+        new_analyzer = self._save_or_select_or_merge(
             format=format,
             folder=folder,
             merge_unit_groups=merge_unit_groups,
@@ -957,6 +971,10 @@ class SortingAnalyzer:
             new_unit_ids=new_unit_ids,
             **job_kwargs,
         )
+        if return_new_unit_ids:
+            return new_analyzer, new_unit_ids
+        else:
+            return new_analyzer
 
     def copy(self):
         """
@@ -1204,7 +1222,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         # check dependencies
         if extension_class.need_recording:
-            assert self.has_recording(), f"Extension {extension_name} requires the recording"
+            assert (
+                self.has_recording() or self.has_temporary_recording()
+            ), f"Extension {extension_name} requires the recording"
         for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
                 ok = any(self.get_extension(name) is not None for name in dependency_name.split("|"))
@@ -1398,9 +1418,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         extension_class = get_extension_class(extension_name)
 
-        extension_instance = extension_class(self)
-        extension_instance.load_params()
-        extension_instance.load_data()
+        extension_instance = extension_class.load(self)
 
         self.extensions[extension_name] = extension_instance
 
@@ -1699,6 +1717,7 @@ class AnalyzerExtension:
     use_nodepipeline = False
     nodepipeline_variables = None
     need_job_kwargs = False
+    need_backward_compatibility_on_load = False
 
     def __init__(self, sorting_analyzer):
         self._sorting_analyzer = weakref.ref(sorting_analyzer)
@@ -1735,6 +1754,10 @@ class AnalyzerExtension:
 
     def _get_data(self):
         # must be implemented in subclass
+        raise NotImplementedError
+
+    def _handle_backward_compatibility_on_load(self):
+        # must be implemented in subclass only if need_backward_compatibility_on_load=True
         raise NotImplementedError
 
     @classmethod
@@ -1814,6 +1837,9 @@ class AnalyzerExtension:
         ext = cls(sorting_analyzer)
         ext.load_params()
         ext.load_data()
+        if cls.need_backward_compatibility_on_load:
+            ext._handle_backward_compatibility_on_load()
+
         return ext
 
     def load_params(self):
