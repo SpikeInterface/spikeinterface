@@ -159,6 +159,8 @@ spikeinterface.preprocessing
     .. autofunction:: common_reference
     .. autofunction:: correct_lsb
     .. autofunction:: correct_motion
+    .. autofunction:: get_motion_presets
+    .. autofunction:: get_motion_parameters_preset
     .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
     .. autofunction:: directional_derivative
@@ -169,6 +171,7 @@ spikeinterface.preprocessing
     .. autofunction:: interpolate_bad_channels
     .. autofunction:: normalize_by_quantile
     .. autofunction:: notch_filter
+    .. autofunction:: causal_filter
     .. autofunction:: phase_shift
     .. autofunction:: rectify
     .. autofunction:: remove_artifacts
@@ -324,15 +327,22 @@ spikeinterface.curation
 ------------------------
 .. automodule:: spikeinterface.curation
 
-    .. autoclass:: CurationSorting
-    .. autoclass:: MergeUnitsSorting
-    .. autoclass:: SplitUnitSorting
+    .. autofunction:: apply_curation
     .. autofunction:: get_potential_auto_merge
     .. autofunction:: find_redundant_units
     .. autofunction:: remove_redundant_units
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
+
+Deprecated
+~~~~~~~~~~
+.. automodule:: spikeinterface.curation
+    :noindex:
+
     .. autofunction:: apply_sortingview_curation
+    .. autoclass:: CurationSorting
+    .. autoclass:: MergeUnitsSorting
+    .. autoclass:: SplitUnitSorting
 
 
 spikeinterface.generation

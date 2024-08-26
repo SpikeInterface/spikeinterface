@@ -1079,8 +1079,8 @@ class NoiseGeneratorRecording(BaseRecording):
     noise_block_size: int
         Size in sample of noise block.
 
-    Note
-    ----
+    Notes
+    -----
     If modifying this function, ensure that only one call to malloc is made per call get_traces to
     maintain the optimized memory profile.
     """

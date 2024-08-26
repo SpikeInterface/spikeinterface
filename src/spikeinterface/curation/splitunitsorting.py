@@ -13,7 +13,7 @@ class SplitUnitSorting(BaseSorting):
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The sorting object
     parent_unit_id : int
         Unit id of the unit to split

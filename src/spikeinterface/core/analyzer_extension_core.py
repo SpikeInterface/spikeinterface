@@ -364,6 +364,16 @@ class ComputeTemplates(AnalyzerExtension):
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = True
+    need_backward_compatibility_on_load = True
+
+    def _handle_backward_compatibility_on_load(self):
+        if "ms_before" not in self.params:
+            # compatibility february 2024 > july 2024
+            self.params["ms_before"] = self.params["nbefore"] * 1000.0 / self.sorting_analyzer.sampling_frequency
+
+        if "ms_after" not in self.params:
+            # compatibility february 2024 > july 2024
+            self.params["ms_after"] = self.params["nafter"] * 1000.0 / self.sorting_analyzer.sampling_frequency
 
     def _set_params(self, ms_before: float = 1.0, ms_after: float = 2.0, operators=None):
         operators = operators or ["average", "std"]
@@ -487,31 +497,11 @@ class ComputeTemplates(AnalyzerExtension):
 
     @property
     def nbefore(self):
-        if "ms_before" not in self.params:
-            # compatibility february 2024 > july 2024
-            self.params["ms_before"] = self.params["nbefore"] * 1000.0 / self.sorting_analyzer.sampling_frequency
-            warnings.warn(
-                "The 'nbefore' parameter is deprecated and it's been replaced by 'ms_before' in the params."
-                "You can save the sorting_analyzer to update the params.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-
         nbefore = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
         return nbefore
 
     @property
     def nafter(self):
-        if "ms_after" not in self.params:
-            # compatibility february 2024 > july 2024
-            warnings.warn(
-                "The 'nafter' parameter is deprecated and it's been replaced by 'ms_after' in the params."
-                "You can save the sorting_analyzer to update the params.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            self.params["ms_after"] = self.params["nafter"] * 1000.0 / self.sorting_analyzer.sampling_frequency
-
         nafter = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
         return nafter
 
