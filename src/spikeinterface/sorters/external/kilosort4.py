@@ -222,6 +222,7 @@ class Kilosort4Sorter(BaseSorter):
             probe_name=probe_name,
             data_dir=data_dir,
             results_dir=results_dir,
+            bad_channels=None
         )
 
         if version.parse(cls.get_sorter_version()) >= version.parse("4.0.12"):
@@ -232,7 +233,7 @@ class Kilosort4Sorter(BaseSorter):
                 do_CAR=do_CAR,
                 invert_sign=invert_sign,
                 device=device,
-                save_preprocesed_copy=save_preprocessed_copy,  # this kwarg is correct (typo)
+                save_preprocessed_copy=save_preprocessed_copy,  # this kwarg is correct (typo)
             )
         else:
             ops = initialize_ops(
