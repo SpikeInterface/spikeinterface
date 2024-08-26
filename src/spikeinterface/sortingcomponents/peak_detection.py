@@ -93,6 +93,7 @@ def detect_peaks(
     method_class = detect_peak_methods[method]
 
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
+
     job_kwargs["mp_context"] = method_class.preferred_mp_context
 
     node0 = method_class(recording, **method_kwargs)

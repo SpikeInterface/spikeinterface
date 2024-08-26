@@ -27,7 +27,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 75},
         "sparsity": {"method": "ptp", "threshold": 0.25},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2},
-        "whitening": {"mode" : "local", "regularize" : True},
+        "whitening": {"mode" : "local", "regularize" : False},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
             "method": "uniform",
@@ -49,10 +49,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "clustering": {"legacy": True},
         "matching": {"method": "wobble"},
         "apply_preprocessing": True,
-        "matched_filtering": True,
+        "matched_filtering": "numpy",
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
+        "torch_kwargs" : {"device" : "cpu"},
         "debug": False,
     }
 
@@ -191,7 +192,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             detection_params["chunk_duration"] = "100ms"
 
-            peaks = detect_peaks(recording_w, "matched_filtering", **detection_params)
+            if params["torch_kwargs"] is None:
+                peaks = detect_peaks(recording_w, "matched_filtering", **detection_params)
+            else:
+                peaks = detect_peaks(recording_w, "matched_filtering_torch", **detection_params)
 
         if verbose:
             print("We found %d peaks in total" % len(peaks))
