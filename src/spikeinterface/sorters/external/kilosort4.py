@@ -222,7 +222,7 @@ class Kilosort4Sorter(BaseSorter):
             probe_name=probe_name,
             data_dir=data_dir,
             results_dir=results_dir,
-            bad_channels=None
+            bad_channels=None,
         )
 
         if version.parse(cls.get_sorter_version()) >= version.parse("4.0.12"):
