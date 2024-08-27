@@ -122,6 +122,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
         radius_um = params["general"].get("radius_um", 75)
+        torch_device = params["torch_kwargs"].get('device', None)
         exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after) / 2)
 
         ## First, we are filtering the data
@@ -191,11 +192,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     detection_params.pop(value)
 
             detection_params["chunk_duration"] = "100ms"
-
-            if params["torch_kwargs"] is None:
+            
+            if torch_device is None:
                 peaks = detect_peaks(recording_w, "matched_filtering", **detection_params)
             else:
-                peaks = detect_peaks(recording_w, "matched_filtering_torch", **detection_params)
+                peaks = detect_peaks(recording_w, "matched_filtering_torch", **detection_params, **params["torch_kwargs"])
 
         if verbose:
             print("We found %d peaks in total" % len(peaks))
@@ -295,6 +296,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     if value in matching_job_params:
                         matching_job_params[value] = None
                 matching_job_params["chunk_duration"] = "100ms"
+                if torch_device is not None and torch_device != "cpu":
+                    matching_job_params["mp_context"] = "spawn"
+                else:
+                    matching_job_params["mp_context"] = job_kwargs.get('mp_context', None)
 
                 spikes = find_spikes_from_templates(
                     recording_w, matching_method, method_kwargs=matching_params, **matching_job_params
