@@ -16,6 +16,7 @@ else:
 @pytest.fixture
 def pipeline():
     from skops.io import load, get_untrusted_types
+
     pipeline_path = Path(__file__).parent / "trained_pipeline.skops"
 
     # Load trained_pipeline.skops
