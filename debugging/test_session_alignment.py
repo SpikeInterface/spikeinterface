@@ -39,6 +39,12 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 
 # What we really want to find is maximal subset of the data that matches
 
+# TOOD: here use natural log for scaling, should prob go to base 10
+
+# TODO: major check, refactor and tidy up
+# list out carefully all notes
+# handle the case where the passed recordings are not motion correction recordings.
+
 SAVE = False
 PLOT = False
 BIN_UM = 2
@@ -46,11 +52,11 @@ BIN_UM = 2
 if SAVE:
     scalings = [np.ones(25), np.r_[np.zeros(10), np.ones(15)]]  # TODO: there is something wrong here, because why are the maximum histograms not removed?
     recordings_list, _ = generate_session_displacement_recordings(
-        non_rigid_gradient=0.1, # None,
-        num_units=25,
-        recording_durations=(100, 100),
+        non_rigid_gradient=None, # 0.05, # None,
+        num_units=15,
+        recording_durations=(100, 100, 100, 100),
         recording_shifts=(
-            (0, 0), (0, 75),
+            (0, 0), (0, 75), (0, -125), (0, 25),
         ),
         recording_amplitude_scalings=None, # {"method": "by_amplitude_and_firing_rate", "scalings": scalings},
         seed=None,
@@ -76,7 +82,7 @@ with open('all_recordings.pickle', 'rb') as handle:
 
 
 corrected_recordings_list, motion_objects_list, extra_info = session_alignment.run_inter_session_displacement_correction(
-    recordings_list, peaks_list, peak_locations_list, bin_um=BIN_UM, histogram_estimation_method="entire_session", alignment_method="mean_crosscorr", rigid=True
+    recordings_list, peaks_list, peak_locations_list, bin_um=BIN_UM, histogram_estimation_method="entire_session", alignment_method="mean_crosscorr", rigid=False, log_scale=True, num_nonrigid_bins=7
 )
 
 plotting.SessionAlignmentWidget(
