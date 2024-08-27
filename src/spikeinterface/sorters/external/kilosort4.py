@@ -4,8 +4,11 @@ from pathlib import Path
 from typing import Union
 from packaging import version
 
-from ..basesorter import BaseSorter
+
+from ...core import write_binary_recording
+from ..basesorter import BaseSorter, get_job_kwargs
 from .kilosortbase import KilosortBase
+from ..basesorter import get_job_kwargs
 from importlib.metadata import version as importlib_version
 
 PathType = Union[str, Path]
@@ -17,6 +20,7 @@ class Kilosort4Sorter(BaseSorter):
     sorter_name: str = "kilosort4"
     requires_locations = True
     gpu_capability = "nvidia-optional"
+    requires_binary_data = False
 
     _default_params = {
         "batch_size": 60000,
@@ -60,6 +64,7 @@ class Kilosort4Sorter(BaseSorter):
         "save_preprocessed_copy": False,
         "torch_device": "auto",
         "bad_channels": None,
+        "use_binary_file": False,
     }
 
     _params_description = {
@@ -103,6 +108,8 @@ class Kilosort4Sorter(BaseSorter):
         "save_preprocessed_copy": "save a pre-processed copy of the data (including drift correction) to temp_wh.dat in the results directory and format Phy output to use that copy of the data",
         "torch_device": "Select the torch device auto/cuda/cpu",
         "bad_channels": "A list of channel indices (rows in the binary file) that should not be included in sorting. Listing channels here is equivalent to excluding them from the probe dictionary.",
+        "use_binary_file": "If True, the Kilosort is run from a binary file. In this case, if the recording is not binary it is written to a binary file in the output folder"
+        "If False, the Kilosort is run on the recording object directly using the RecordingExtractorAsArray object. Default is False.",
     }
 
     sorter_description = """Kilosort4 is a Python package for spike sorting on GPUs with template matching.
@@ -163,6 +170,16 @@ class Kilosort4Sorter(BaseSorter):
         probe_filename = sorter_output_folder / "probe.prb"
         write_prb(probe_filename, pg)
 
+        if params["use_binary_file"] and not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
+            # local copy needed
+            binary_file_path = sorter_output_folder / "recording.dat"
+            write_binary_recording(
+                recording=recording,
+                file_paths=[binary_file_path],
+                **get_job_kwargs(params, verbose),
+            )
+            params["filename"] = str(binary_file_path)
+
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         from kilosort.run_kilosort import (
@@ -207,10 +224,22 @@ class Kilosort4Sorter(BaseSorter):
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
         probe = load_probe(probe_path=probe_filename)
         probe_name = ""
-        filename = ""
 
-        # this internally concatenates the recording
-        file_object = RecordingExtractorAsArray(recording_extractor=recording)
+        if params["use_binary_file"]:
+            if recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
+                # no copy
+                binary_description = recording.get_binary_description()
+                filename = str(binary_description["file_paths"][0])
+                file_object = None
+            else:
+                # a local copy has been written
+                filename = str(sorter_output_folder / "recording.dat")
+                file_object = None
+        else:
+            # this internally concatenates the recording
+            filename = ""
+            file_object = RecordingExtractorAsArray(recording_extractor=recording)
+        data_dtype = recording.get_dtype()
 
         do_CAR = params["do_CAR"]
         invert_sign = params["invert_sign"]
@@ -250,7 +279,7 @@ class Kilosort4Sorter(BaseSorter):
         ops = initialize_ops(
             settings=settings,
             probe=probe,
-            data_dtype=recording.get_dtype(),
+            data_dtype=data_dtype,
             do_CAR=do_CAR,
             invert_sign=invert_sign,
             device=device,
