@@ -1,4 +1,3 @@
-from typing import Sequence
 import numpy as np
 from pathlib import Path
 import json

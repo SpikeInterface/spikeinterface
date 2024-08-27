@@ -1,15 +1,12 @@
 import pytest
 from pathlib import Path
-import numpy as np
-import pickle as pkl
-
-from spikeinterface.core import create_sorting_analyzer
-from spikeinterface.core.generate import inject_some_split_units
-from spikeinterface.curation import get_potential_auto_merge
-from spikeinterface.qualitymetrics import get_quality_metric_list
-
+from skops.io import load, get_untrusted_types
 from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 from spikeinterface.curation.model_based_curation import ModelBasedClassification
+
+from spikeinterface import set_global_job_kwargs
+
+set_global_job_kwargs(n_jobs=-1)
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "curation"
@@ -19,13 +16,13 @@ else:
 
 @pytest.fixture
 def pipeline():
-    from sklearn.pipeline import Pipeline
 
-    pipeline_path = Path(__file__).parent / "trained_pipeline.pkl"
+    pipeline_path = Path(__file__).parent / "trained_pipeline.skops"
 
-    # Load trained_pipeline.pkl
-    with open(pipeline_path, "rb") as f:
-        pipeline = pkl.load(f)
+    # Load trained_pipeline.skops
+    unknown_types = get_untrusted_types(file=pipeline_path)
+    print(unknown_types)
+    pipeline = load(pipeline_path, trusted=unknown_types)
     return pipeline
 
 
@@ -114,13 +111,13 @@ def test_model_based_classification_predict_labels(sorting_analyzer_for_curation
     assert predictions_labelled == ["good", "noise", "good", "noise", "good"]
 
 
-## Code to create the trained pipeline for testing
+# # Code to create the trained pipeline for testing
 # import pandas as pd
 # from sklearn.preprocessing import StandardScaler
 # from sklearn.linear_model import LogisticRegression
 # from sklearn.pipeline import Pipeline
 # import numpy as np
-# import pickle as pkl
+# from skops.io import dump
 
 # from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 
@@ -149,6 +146,5 @@ def test_model_based_classification_predict_labels(sorting_analyzer_for_curation
 # # Fit the pipeline
 # pipeline.fit(X, y)
 
-# # Save the pipeline to a pickle file
-# with open("trained_pipeline.pkl", "wb") as f:
-#     pkl.dump(pipeline, f)
+# # Save the pipeline to a skops file
+# dump(pipeline, "trained_pipeline.skops")

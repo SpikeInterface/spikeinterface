@@ -1,9 +1,9 @@
 import os
-import pickle as pkl
 import warnings
 import numpy as np
 import json
 import spikeinterface
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.qualitymetrics import get_quality_metric_list, get_quality_pca_metric_list
 from spikeinterface.postprocessing import get_template_metric_names
 from pathlib import Path
@@ -15,35 +15,37 @@ class CurationModelTrainer:
 
     Parameters
     ----------
-    target_column : str
-        The name of the target column in the dataset.
+    target_column : str or list
+        The name of the target column in the dataset, or a list of labels to use as target. If a list is provided, the target column is not extracted from the dataset/analyzer. Default is 'label'.
     output_folder : str, optional
-        The folder where outputs such as models and evaluation metrics will be saved, if specified.
-    metrics_to_use : list of str, optional
+        The folder where outputs such as models and evaluation metrics will be saved, if specified. Requires the skops library.
+    metrics_list : list of str, optional
         A list of metrics to use for training. If None, default metrics will be used.
     imputation_strategies : list of str, optional
         A list of imputation strategies to apply. If None, default strategies will be used.
     scaling_techniques : list of str, optional
         A list of scaling techniques to apply. If None, default techniques will be used.
-    classifiers : list of str, optional
-        A list of classifiers to evaluate. If None, default classifiers will be used.
+    classifiers : list of str or dict, optional
+        A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_default_classifier_search_spaces` method for the default search spaces & format for custom spaces.
     seed : int, optional
         Random seed for reproducibility. If None, a random seed will be generated.
     smote : bool, optional
-        Whether to apply SMOTE for class imbalance. Default is True. Requires imbalanced-learn package.
+        Whether to apply SMOTE for class imbalance. Default is False. Requires imbalanced-learn package.
 
     Attributes
     ----------
     output_folder : str
-        The folder where outputs such as models and evaluation metrics will be saved.
-    target_column : str
-        The name of the target column in the dataset.
+        The folder where outputs such as models and evaluation metrics will be saved. Requires the skops library.
+    target : str or list
+        The name of the target column in the dataset, or a list of labels to use as target.
     imputation_strategies : list of str
         The list of imputation strategies to apply.
     scaling_techniques : list of str
         The list of scaling techniques to apply.
     classifiers : list of str
         The list of classifiers to evaluate.
+    classifier_search_space : dict or None
+        Dictionary of classifiers and their hyperparameter search spaces, if provided. If None, default search spaces are used.
     seed : int
         Random seed for reproducibility.
     metrics_list : list of str
@@ -73,24 +75,29 @@ class CurationModelTrainer:
         Returns an instance of the specified classifier.
     get_classifier_search_space(classifier_name)
         Returns the search space for hyperparameter tuning for the specified classifier.
+    get_default_classifier_search_spaces()
+        Returns the default search spaces for hyperparameter tuning for the classifiers.
     evaluate_model_config(imputation_strategies, scaling_techniques, classifiers)
         Evaluates the model configurations with the given imputation strategies, scaling techniques, and classifiers.
     _evaluate(imputation_strategies, scaling_techniques, classifiers, X_train, X_test, y_train, y_test)
         Internal method to perform evaluation with parallel processing.
     _train_and_evaluate(imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, model_id)
         Internal method to train and evaluate a single model configuration.
+    _save()
+        Saves the best model and evaluation metrics to the output folder using the skops library.
     """
 
     def __init__(
         self,
-        target_column,
+        target="label",
         output_folder=None,
-        metrics_to_use=None,
+        metrics_list=None,
         imputation_strategies=None,
         scaling_techniques=None,
         classifiers=None,
         seed=None,
-        smote=True,
+        smote=False,
+        **job_kwargs,
     ):
         if imputation_strategies is None:
             imputation_strategies = ["median", "most_frequent", "knn", "iterative"]
@@ -101,7 +108,7 @@ class CurationModelTrainer:
                 "robust_scaler",
             ]
         if classifiers is None:
-            classifiers = [
+            self.classifiers = [
                 "RandomForestClassifier",
                 "AdaBoostClassifier",
                 "GradientBoostingClassifier",
@@ -112,28 +119,48 @@ class CurationModelTrainer:
                 "LGBMClassifier",
                 "MLPClassifier",
             ]
+            self.classifier_search_space = None
+        elif type(classifiers) == dict:
+            self.classifiers = list(classifiers.keys())
+            self.classifier_search_space = classifiers
+        elif type(classifiers) == list:
+            self.classifiers = classifiers
+            self.classifier_search_space = None
+        else:
+            raise ValueError("classifiers must be a list or dictionary")
 
         self.output_folder = output_folder if output_folder is not None else None
-        self.target_column = target_column
         self.imputation_strategies = imputation_strategies
         self.scaling_techniques = scaling_techniques
-        self.classifiers = classifiers
         self.seed = seed if seed is not None else np.random.default_rng(seed=None).integers(0, 2**31)
         self.metrics_params = {}
+        self.smote = smote
 
-        if metrics_to_use is None:
+        self.X = None
+        self.testing_metrics = None
+
+        # Set target column to extract from analyzer OR list of labels to use as target
+        if type(target) == str:
+            self.target_column = target
+            self.y = None
+        elif type(target) == list:
+            self.y = target
+        else:
+            raise ValueError("target must be a string (name of column containing labels) or a single list of labels")
+
+        if metrics_list is None:
             self.metrics_list = self.get_default_metrics_list()
             print("No metrics list provided, using default metrics list (all)")
         else:
-            self.metrics_list = metrics_to_use
+            self.metrics_list = metrics_list
 
         if output_folder is not None and not os.path.exists(output_folder):
             os.makedirs(output_folder)
             print(f"Created output folder: {output_folder}")
 
-        self.X = None
-        self.y = None
-        self.testing_metrics = None
+        # update job_kwargs with global ones
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        self.n_jobs = job_kwargs["n_jobs"]
 
     def get_default_metrics_list(self):
         """Returns the default list of metrics."""
@@ -190,12 +217,13 @@ class CurationModelTrainer:
         are converted to integer codes. The mapping from string labels to integer codes
         is stored in the `label_conversion` attribute.
         """
-        # Extract target variable
+        # Extract target variable if not provided as list during init
         try:
-            self.y = self.testing_metrics[self.target_column]
+            self.y = self.testing_metrics[self.target_column] if self.y is None else self.y
         except KeyError:
             raise ValueError(f"Target column '{self.target_column}' not found in testing metrics file")
 
+        # Convert string labels to integer codes to allow classification
         if self.y.dtype == "object":
             self.y = self.y.astype("category").cat.codes
             self.label_conversion = dict(
@@ -221,9 +249,7 @@ class CurationModelTrainer:
         self.X = self.X.map(lambda x: np.nan if np.isinf(x) else x)
         self.X.fillna(0, inplace=True)
 
-    def apply_scaling_imputation(
-        self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val, smote=False
-    ):
+    def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val):
         """Impute and scale the data using the specified techniques."""
         from sklearn.experimental import enable_iterative_imputer
         from sklearn.impute import SimpleImputer, KNNImputer, IterativeImputer
@@ -256,7 +282,7 @@ class CurationModelTrainer:
         X_val_scaled = scaler.transform(X_val_imputed)
 
         # Apply SMOTE for class imbalance
-        if smote:
+        if self.smote:
             try:
                 from imblearn.over_sampling import SMOTE
             except ModuleNotFoundError:
@@ -310,6 +336,19 @@ class CurationModelTrainer:
         return classifier_mapping[classifier_name]
 
     def get_classifier_search_space(self, classifier_name):
+        param_space_mapping = self.get_default_classifier_search_spaces()
+
+        if classifier_name not in param_space_mapping:
+            raise ValueError(f"Unknown classifier: {classifier_name}")
+
+        model = self.get_classifier_instance(classifier_name)
+        if self.classifier_search_space is not None:
+            param_space = self.classifier_search_space[classifier_name]
+        else:
+            param_space = param_space_mapping[classifier_name]
+        return model, param_space
+
+    def get_default_classifier_search_spaces(self):
         param_space_mapping = {
             "RandomForestClassifier": {
                 "n_estimators": [100, 150],
@@ -357,13 +396,7 @@ class CurationModelTrainer:
                 "n_iter_no_change": [32],
             },
         }
-
-        if classifier_name not in param_space_mapping:
-            raise ValueError(f"Unknown classifier: {classifier_name}")
-
-        model = self.get_classifier_instance(classifier_name)
-        param_space = param_space_mapping[classifier_name]
-        return model, param_space
+        return param_space_mapping
 
     def evaluate_model_config(self):
         """
@@ -403,24 +436,44 @@ class CurationModelTrainer:
         )
 
     def _get_metrics_for_classification(self, analyzer, analyzer_index):
-        """Check if all required metrics are present and return a DataFrame of metrics for classification"""
+        """Check if required metrics are present and return a DataFrame of metrics for classification."""
 
         import pandas as pd
 
+        # Initialize variables
+        quality_metrics = None
+        template_metrics = None
+
+        # Try to get quality metrics if available
         try:
             quality_metrics = analyzer.extensions["quality_metrics"].data["metrics"]
+        except KeyError:
+            pass  # Quality metrics are not available
+
+        # Try to get template metrics if available
+        try:
             template_metrics = analyzer.extensions["template_metrics"].data["metrics"]
         except KeyError:
-            raise ValueError("Quality and template metrics must be computed before classification")
+            pass  # Template metrics are not available
 
-        # Store metrics metadata
+        # Check if at least one of the metrics is available
+        if quality_metrics is None and template_metrics is None:
+            raise ValueError(
+                "At least one of quality metrics or template metrics must be computed before classification"
+            )
+
+        # Store metrics metadata (only if available)
         analyzer_name = "analyzer_" + str(analyzer_index)
         self.metrics_params[analyzer_name] = {}
-        self.metrics_params[analyzer_name]["quality_metric_params"] = analyzer.extensions["quality_metrics"].params
-        self.metrics_params[analyzer_name]["template_metric_params"] = analyzer.extensions["template_metrics"].params
+        if quality_metrics is not None:
+            self.metrics_params[analyzer_name]["quality_metric_params"] = analyzer.extensions["quality_metrics"].params
+        if template_metrics is not None:
+            self.metrics_params[analyzer_name]["template_metric_params"] = analyzer.extensions[
+                "template_metrics"
+            ].params
 
-        # Create DataFrame of all metrics and reorder columns to match the model
-        calculated_metrics = pd.concat([quality_metrics, template_metrics], axis=1)
+        # Concatenate the available metrics
+        calculated_metrics = pd.concat([m for m in [quality_metrics, template_metrics] if m is not None], axis=1)
 
         # Remove any metrics for non-existent units, raise error if no units are present
         calculated_metrics = calculated_metrics.loc[calculated_metrics.index.isin(analyzer.sorting.get_unit_ids())]
@@ -439,7 +492,7 @@ class CurationModelTrainer:
         from sklearn.pipeline import Pipeline
         import pandas as pd
 
-        results = Parallel(n_jobs=-1)(
+        results = Parallel(n_jobs=self.n_jobs)(
             delayed(self._train_and_evaluate)(
                 imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, idx
             )
@@ -467,10 +520,12 @@ class CurationModelTrainer:
             self._save()
 
     def _save(self):
+        from skops.io import dump
 
         # Dump to pickle if output_folder is provided
         model_name = self.target_column
-        pkl.dump(self.best_pipeline, open(os.path.join(self.output_folder, f"best_model_{model_name}.pkl"), "wb"))
+
+        dump(self.best_pipeline, os.path.join(self.output_folder, f"best_model_{model_name}.skops"))
         self.test_accuracies_df.to_csv(
             os.path.join(self.output_folder, f"model_{model_name}_accuracies.csv"), float_format="%.4f"
         )
@@ -497,13 +552,19 @@ class CurationModelTrainer:
             from skopt import BayesSearchCV
 
             model = BayesSearchCV(
-                model, param_space, cv=3, scoring="balanced_accuracy", n_iter=25, random_state=self.seed, n_jobs=-1
+                model,
+                param_space,
+                cv=3,
+                scoring="balanced_accuracy",
+                n_iter=25,
+                random_state=self.seed,
+                n_jobs=self.n_jobs,
             )
         except:
             print("BayesSearchCV from scikit-optimize not available, using GridSearchCV")
             from sklearn.model_selection import RandomizedSearchCV
 
-            model = RandomizedSearchCV(model, param_space, cv=3, scoring="balanced_accuracy", n_jobs=-1)
+            model = RandomizedSearchCV(model, param_space, cv=3, scoring="balanced_accuracy", n_jobs=self.n_jobs)
 
         model.fit(X_train_scaled, y_train)
         y_pred = model.predict(X_test_scaled)
@@ -524,7 +585,7 @@ class CurationModelTrainer:
 
 def train_model(
     mode="analyzers",
-    target_label="label",
+    target="label",
     analyzers=None,
     metrics_path=None,
     output_folder=None,
@@ -533,6 +594,7 @@ def train_model(
     scaling_techniques=None,
     classifiers=None,
     seed=None,
+    **job_kwargs,
 ):
     """
     Trains and evaluates machine learning models for spike sorting curation.
@@ -559,8 +621,8 @@ def train_model(
         A list of imputation strategies to apply. If None, default strategies will be used.
     scaling_techniques : list of str, optional
         A list of scaling techniques to apply. If None, default techniques will be used.
-    classifiers : list of str, optional
-        A list of classifiers to evaluate. If None, default classifiers will be used.
+    classifiers : list of str or dict, optional
+        A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_default_classifier_search_spaces` method for the default search spaces & format for custom spaces.
     seed : int, optional
         Random seed for reproducibility. If None, a random seed will be generated.
 
@@ -575,13 +637,14 @@ def train_model(
     and evaluating the models. The evaluation results are saved to the specified output folder.
     """
     trainer = CurationModelTrainer(
-        target_column=target_label,
+        target=target,
         output_folder=output_folder,
-        metrics_to_use=metrics_list,
+        metrics_list=metrics_list,
         imputation_strategies=imputation_strategies,
         scaling_techniques=scaling_techniques,
         classifiers=classifiers,
         seed=seed,
+        **job_kwargs,
     )
 
     if mode == "analyzers":

@@ -2,7 +2,10 @@ import pytest
 import os
 import numpy as np
 from spikeinterface.curation.train_manual_curation import CurationModelTrainer, train_model
+from spikeinterface import set_global_job_kwargs
 import tempfile, csv
+
+set_global_job_kwargs(n_jobs=-1)
 
 
 @pytest.fixture
@@ -15,9 +18,9 @@ def trainer():
     classifiers = ["LogisticRegression"]
     metrics_list = ["metric1", "metric2", "metric3"]
     return CurationModelTrainer(
-        target_column=target_column,
+        target=target_column,
         output_folder=output_folder,
-        metrics_to_use=metrics_list,
+        metrics_list=metrics_list,
         imputation_strategies=imputation_strategies,
         scaling_techniques=scaling_techniques,
         classifiers=classifiers,
@@ -62,7 +65,7 @@ def test_apply_scaling_imputation(trainer):
     y_train = np.array([0, 1])
     y_val = np.array([2, 3])
     X_train_scaled, X_val_scaled, y_train, y_val, imputer, scaler = trainer.apply_scaling_imputation(
-        imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val, smote=False
+        imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val
     )
     assert X_train_scaled is not None
     assert X_val_scaled is not None
@@ -80,6 +83,21 @@ def test_get_classifier_search_space(trainer):
     assert isinstance(param_space, dict)
 
 
+def test_get_custom_classifier_search_space():
+    classifier = {
+        "LogisticRegression": {
+            "C": [0.001, 8.0],
+            "solver": ["newton-cg", "lbfgs", "liblinear", "sag", "saga"],
+            "max_iter": [100, 400],
+        }
+    }
+    trainer = CurationModelTrainer(classifiers=classifier)
+
+    model, param_space = trainer.get_classifier_search_space(list(classifier.keys())[0])
+    assert model is not None
+    assert param_space == classifier["LogisticRegression"]
+
+
 def test_evaluate_model_config(trainer):
 
     trainer.X = np.ones((10, 3))
@@ -87,7 +105,7 @@ def test_evaluate_model_config(trainer):
 
     trainer.evaluate_model_config()
     assert os.path.exists(trainer.output_folder)
-    assert os.path.exists(os.path.join(trainer.output_folder, "best_model_label.pkl"))
+    assert os.path.exists(os.path.join(trainer.output_folder, "best_model_label.skops"))
     assert os.path.exists(os.path.join(trainer.output_folder, "model_label_accuracies.csv"))
     assert os.path.exists(os.path.join(trainer.output_folder, "model_info.json"))
 
@@ -102,7 +120,7 @@ def test_train_model():
         mode="csv",
         metrics_path=metrics_path,
         output_folder=output_folder,
-        target_label=target_label,
+        target=target_label,
         metrics_list=metrics_list,
         imputation_strategies=["median"],
         scaling_techniques=["standard_scaler"],
