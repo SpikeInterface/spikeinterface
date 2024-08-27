@@ -1104,7 +1104,7 @@ class SortingAnalyzer:
         return self.sorting.get_num_units()
 
     ## extensions zone
-    def compute(self, input, save=True, extension_params=None, verbose=False, **kwargs) -> "SortingAnalyzer" | None:
+    def compute(self, input, save=True, extension_params=None, verbose=False, **kwargs) -> "SortingAnalyzer | None":
         """
         Compute one extension or several extensiosn.
         Internally calls compute_one_extension() or compute_several_extensions() depending on the input type.
