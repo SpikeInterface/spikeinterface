@@ -1,6 +1,5 @@
 import pytest
 from pathlib import Path
-from skops.io import load, get_untrusted_types
 from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 from spikeinterface.curation.model_based_curation import ModelBasedClassification
 
@@ -16,7 +15,7 @@ else:
 
 @pytest.fixture
 def pipeline():
-
+    from skops.io import load, get_untrusted_types
     pipeline_path = Path(__file__).parent / "trained_pipeline.skops"
 
     # Load trained_pipeline.skops
