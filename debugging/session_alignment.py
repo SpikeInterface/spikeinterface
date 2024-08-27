@@ -136,7 +136,8 @@ def estimate_inter_session_displacement(
     min_y = np.min([np.min(locs["y"]) for locs in peak_locations_list])
     max_y = np.max([np.max(locs["y"]) for locs in peak_locations_list])
 
-    spatial_bin_edges = np.arange(min_y, max_y + bin_um, bin_um)  # TODO: expose a margin...
+    # TOOD: specifically chosen to get num bins to work!!!!!!!!!!!!!!!!!! #######################################################################################################
+    spatial_bin_edges = np.linspace(min_y, max_y, 1024 + 1) # np.arange(min_y, max_y + bin_um, bin_um)  # TODO: expose a margin...
     spatial_bin_centers = alignment_utils.get_bin_centers(spatial_bin_edges)
 
     # Estimate an activity histogram per-session
