@@ -33,7 +33,7 @@ _default_params = dict(
         max_spikes=10000,
         n_neighbors=5,
     ),
-    nn_isolation=dict(max_spikes=10000, min_spikes=10, min_fr=0.0, n_neighbors=4),
+    nn_isolation=dict(max_spikes=10000, min_spikes=10, min_fr=0.0, n_neighbors=5),
     nn_noise_overlap=dict(
         max_spikes=10000, min_spikes=10, min_fr=0.0, n_neighbors=4, n_components=10, radius_um=100, peak_sign="neg"
     ),
@@ -452,7 +452,7 @@ def nearest_neighbors_isolation(
     nn_isolation : float
         The calculation nearest neighbor isolation metric for `this_unit_id`.
         If the unit has fewer than `min_spikes`, returns numpy.NaN instead.
-    nn_unit_id : np.int16
+    nn_unit_id : float
         Id of the "nearest neighbor" unit (unit with lowest isolation score from `this_unit_id`).
 
     Notes
@@ -498,33 +498,20 @@ def nearest_neighbors_isolation(
 
 def isolation_score_two_clusters(pcs, labels, unit_id, other_unit_id, n_neighbors, seed, max_spikes):
     """
-    Calculate unit isolation score of two clusters.
+    Calculate pairwise isolation score of two units.
 
     Parameters
     ----------
-    all_units_ids
-    pcs_flat : 2d array
+    pcs : 2d array
         The PCs for all spikes, organized as [num_spikes, PCs].
     labels : 1d array
         The cluster labels for all spikes. Must have length of number of spikes.
-    this_unit_id : int | str
-        The ID for the unit to calculate these metrics for.
-    n_spikes_all_units : dict, default: None
-        Dictionary of the form ``{<unit_id>: <n_spikes>}`` for the waveform extractor.
-        Recomputed if None.
-    fr_all_units : dict, default: None
-        Dictionary of the form ``{<unit_id>: <firing_rate>}`` for the waveform extractor.
-        Recomputed if None.
+    unit_id : int | str
+        The ID for the unit being compared.
+    other_unit_id : int | str
+        The ID for the other unit which is being compared against.
     max_spikes : int, default: 1000
         Max number of spikes to use per unit.
-    min_spikes : int, default: 10
-        Min number of spikes a unit must have to go through with metric computation.
-        Units with spikes < min_spikes gets numpy.NaN as the quality metric,
-        and are ignored when selecting other units' neighbors.
-    min_fr : float, default: 0.0
-        Min firing rate a unit must have to go through with metric computation.
-        Units with firing rate < min_fr gets numpy.NaN as the quality metric,
-        and are ignored when selecting other units' neighbors.
     n_neighbors : int, default: 5
         Number of neighbors to check membership of.
     seed : int, default: None
@@ -532,28 +519,8 @@ def isolation_score_two_clusters(pcs, labels, unit_id, other_unit_id, n_neighbor
 
     Returns
     -------
-    nn_isolation : float
-        The calculation nearest neighbor isolation metric for `this_unit_id`.
-        If the unit has fewer than `min_spikes`, returns numpy.NaN instead.
-    nn_unit_id : np.int16
-        Id of the "nearest neighbor" unit (unit with lowest isolation score from `this_unit_id`).
-
-    Notes
-    -----
-    The overall logic of this approach is:
-
-    #. Choose a cluster
-    #. Compute the isolation score with every other cluster
-    #. Isolation score is defined as the min of 2. (i.e. 'worst-case measure')
-
-    We set \\|A\\| = \\|B\\| = min(\\|A\\|, \\|B\\|, max_spikes).
-
-    This is because the metric is affected by the size of the clusters being compared
-    independently of how well-isolated they are.
-
-    References
-    ----------
-    Based on isolation metric described in [Chung]_
+    isolation_score : float
+        Pairwise isolation score between the two units.
     """
 
     rng = np.random.default_rng(seed=seed)
@@ -578,7 +545,8 @@ def isolation_score_two_clusters(pcs, labels, unit_id, other_unit_id, n_neighbor
     A_isolated = np.sum(indices[:n_A, 1:] < n_A)
     B_isolated = np.sum(indices[n_B:, 1:] >= n_B)
 
-    return (A_isolated + B_isolated) / ((n_neighbors) * (n_A + n_B))
+    isolation_score = (A_isolated + B_isolated) / ((n_neighbors) * (n_A + n_B))
+    return isolation_score
 
 
 def nearest_neighbors_noise_overlap(
