@@ -49,7 +49,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "clustering": {"legacy": True},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
-        "matched_filtering": "numpy",
+        "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
@@ -80,6 +80,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                          memory_limit will control how much RAM can be used. In case of folder or zarr, delete_cache controls if cache is cleaned after sorting",
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
+        "torch_kwargs" : "A dictionary to specify which device to use if torch is present",
         "debug": "Boolean to specify if internal data structures made during the sorting should be kept for debugging",
     }
 
@@ -96,10 +97,16 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         try:
             import hdbscan
-
             HAVE_HDBSCAN = True
         except:
             HAVE_HDBSCAN = False
+
+        try:
+            import torch
+        except ImportError:
+            HAVE_TORCH = False
+            print("spykingcircus2 could benefit from using torch")
+            params.update("torch_kwargs", {"device" : None})
 
         assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
