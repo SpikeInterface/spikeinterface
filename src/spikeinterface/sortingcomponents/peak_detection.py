@@ -49,6 +49,24 @@ TODO:
 """
 
 
+torch_keys = ("device", )
+
+def split_torch_kwargs(mixed_kwargs):
+    """
+    This function splits mixed kwargs into torch_kwargs and specific_kwargs.
+    This can be useful for some function with generic signature
+    mixing specific and job kwargs.
+    """
+    torch_kwargs = {}
+    specific_kwargs = {}
+    for k, v in mixed_kwargs.items():
+        if k in torch_keys:
+            torch_kwargs[k] = v
+        else:
+            specific_kwargs[k] = v
+    return specific_kwargs, torch_kwargs
+
+
 def detect_peaks(
     recording, method="locally_exclusive", pipeline_nodes=None, gather_mode="memory", folder=None, names=None, **kwargs
 ):
@@ -93,8 +111,13 @@ def detect_peaks(
     method_class = detect_peak_methods[method]
 
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
+    _, torch_kwargs = split_job_kwargs(method_kwargs)
 
-    job_kwargs["mp_context"] = method_class.preferred_mp_context
+    device = torch_kwargs.get("device", None)
+    if device is not None and device != "cpu":
+        job_kwargs["mp_context"] = "spawn"
+    else:
+        job_kwargs["mp_context"] = job_kwargs.get('mp_context', None)
 
     node0 = method_class(recording, **method_kwargs)
     nodes = [node0]
@@ -363,7 +386,6 @@ class DetectPeakByChannel(PeakDetectorWrapper):
 
     name = "by_channel"
     engine = "numpy"
-    preferred_mp_context = None
     params_doc = """
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the peak
@@ -445,7 +467,6 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
 
     name = "by_channel_torch"
     engine = "torch"
-    preferred_mp_context = "spawn"
     params_doc = """
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the peak
@@ -513,7 +534,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
 
     name = "locally_exclusive"
     engine = "numba"
-    preferred_mp_context = None
+
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
@@ -589,7 +610,6 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
     name = "matched_filtering"
     engine = "numba"
-    preferred_mp_context = None
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
@@ -757,7 +777,6 @@ class DetectPeakMatchedFilteringTorch(DetectPeakMatchedFiltering):
 
     name = "matched_filtering_torch"
     engine = "torch"
-    preferred_mp_context = "spawn"
     params_doc = (
         DetectPeakMatchedFiltering.params_doc
         + """
@@ -832,7 +851,6 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
 
     name = "locally_exclusive_torch"
     engine = "torch"
-    preferred_mp_context = "spawn"
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
@@ -1127,7 +1145,6 @@ if HAVE_TORCH:
 class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
     name = "locally_exclusive_cl"
     engine = "opencl"
-    preferred_mp_context = None
     params_doc = (
         DetectPeakLocallyExclusive.params_doc
         + """
