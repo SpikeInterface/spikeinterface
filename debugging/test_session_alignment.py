@@ -40,7 +40,7 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 # What we really want to find is maximal subset of the data that matches
 
 SAVE = False
-PLOT = True
+PLOT = False
 BIN_UM = 2
 
 if SAVE:
@@ -50,7 +50,7 @@ if SAVE:
         num_units=25,
         recording_durations=(100, 100),
         recording_shifts=(
-            (0, 0), (0, 75),  # TODO: check the histogram, why is this shift not actually 75 um!??!?!?  could be an x-axis plotting issue...
+            (0, 0), (0, 75),
         ),
         recording_amplitude_scalings=None, # {"method": "by_amplitude_and_firing_rate", "scalings": scalings},
         seed=None,
@@ -76,10 +76,9 @@ with open('all_recordings.pickle', 'rb') as handle:
 
 
 corrected_recordings_list, motion_objects_list, extra_info = session_alignment.run_inter_session_displacement_correction(
-    recordings_list, peaks_list, peak_locations_list, bin_um=BIN_UM, histogram_estimation_method="entire_session", alignment_method="mean_crosscorr", rigid=False
+    recordings_list, peaks_list, peak_locations_list, bin_um=BIN_UM, histogram_estimation_method="entire_session", alignment_method="mean_crosscorr", rigid=True
 )
 
-# TODO: make sure raster plot y-axis are aligned
 plotting.SessionAlignmentWidget(
     recordings_list,
     peaks_list,
