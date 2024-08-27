@@ -514,7 +514,7 @@ _default_params["sliding_rp_violation"] = dict(
 )
 
 
-def get_synchrony_count(spikes, synchrony_sizes, all_unit_ids):
+def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     """
     Compute synchrony counts, the number of simultaneous spikes with sizes `synchrony_sizes`.
 
