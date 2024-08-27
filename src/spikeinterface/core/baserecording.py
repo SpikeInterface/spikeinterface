@@ -422,7 +422,7 @@ class BaseRecording(BaseRecordingSnippets):
 
         return time_kwargs
 
-    def get_times(self, segment_index=None):
+    def get_times(self, segment_index=None) -> np.ndarray:
         """Get time vector for a recording segment.
 
         If the segment has a time_vector, then it is returned. Otherwise
@@ -809,12 +809,10 @@ class BaseRecordingSegment(BaseSegment):
 
         BaseSegment.__init__(self)
 
-    def get_times(self):
+    def get_times(self) -> np.ndarray:
         if self.time_vector is not None:
-            if isinstance(self.time_vector, np.ndarray):
-                return self.time_vector
-            else:
-                return np.array(self.time_vector)
+            self.time_vector = np.asarray(self.time_vector)
+            return self.time_vector
         else:
             time_vector = np.arange(self.get_num_samples(), dtype="float64")
             time_vector /= self.sampling_frequency
