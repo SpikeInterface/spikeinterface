@@ -985,21 +985,21 @@ def compute_objective(traces, template_data, device=None):
     temporal, singular, spatial, _ = template_data.compressed_templates
     if HAVE_TORCH and device is not None:
         nt = temporal.shape[2] - 1
-        nb_channels = traces.shape[1]
-        blank = np.zeros((nt, nb_channels), dtype=np.float32)
+        num_channels = traces.shape[1]
+        blank = np.zeros((nt, num_channels), dtype=np.float32)
         traces = np.vstack((blank, traces, blank))
         torch_traces = torch.as_tensor(traces.T[None, :, :], device=device)
         num_templates, num_channels = temporal.shape[0], temporal.shape[1]
-        num_samples = torch_traces.shape[2]
+        num_timesteps = torch_traces.shape[2]
         spatially_filtered_data = torch.matmul(spatial, torch_traces)
         scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1)
-        scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, num_samples)
+        scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, num_timesteps)
         objective = conv1d(scaled_filtered_data_, temporal, groups=num_templates, padding='valid')
         objective = objective.cpu().numpy()[0, :, :]
     else:
         num_channels, num_templates  = temporal.shape[0], temporal.shape[1]
-        num_samples = temporal.shape[2]
-        objective_len = get_convolution_len(traces.shape[0], num_samples)
+        num_timesteps = temporal.shape[2]
+        objective_len = get_convolution_len(traces.shape[0], num_timesteps)
         conv_shape = (num_templates, objective_len)
         objective = np.zeros(conv_shape, dtype=np.float32)
         # Filter using overlap-and-add convolution

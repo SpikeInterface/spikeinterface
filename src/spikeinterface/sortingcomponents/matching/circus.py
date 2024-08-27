@@ -22,6 +22,7 @@ try:
     import torch.nn.functional as F
 
     HAVE_TORCH = True
+    from torch.nn.functional import conv1d
 except ImportError:
     HAVE_TORCH = False
 
@@ -124,8 +125,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
     vicinity : int
         Size of the area surrounding a spike to perform modification (expressed in terms
         of template temporal width)
-    use_torch : bool
-        If torch is present, it is used by default
     device : string or torch.device
         Controls torch device
     -----
@@ -141,7 +140,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         "rank": 5,
         "ignore_inds": [],
         "vicinity": 3,
-        "use_torch" : False, 
         "device" : None
     }
 
@@ -215,10 +213,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         d["temporal"] = np.moveaxis(d["temporal"], [0, 1, 2], [1, 2, 0])
         d["singular"] = d["singular"].T[:, :, np.newaxis]
 
-        if HAVE_TORCH and d['use_torch']:
-            d['spatial'] = torch.as_tensor(d["spatial"])
-            d['singular'] = torch.as_tensor(d["singular"])
-            d['temporal'] = torch.as_tensor(d["temporal"]).swapaxes(0, 1)
+        if HAVE_TORCH and d['device']is not None:
+            d['spatial'] = torch.as_tensor(d['spatial'], device=d['device'])
+            d['singular'] = torch.as_tensor(d['singular'], device=d['device'])
+            d['temporal'] = torch.as_tensor(d['temporal'].copy(), device=d['device']).swapaxes(0, 1)
             d['temporal'] = torch.flip(d['temporal'], (2,))
 
         return d
@@ -293,6 +291,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         num_channels = d["num_channels"]
         overlaps_array = d["overlaps"]
         norms = d["norms"]
+        device = d["device"]
         omp_tol = np.finfo(np.float32).eps
         num_samples = d["nafter"] + d["nbefore"]
         neighbor_window = num_samples - 1
@@ -305,27 +304,36 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         ignore_inds = d["ignore_inds"]
         vicinity = d["vicinity"]
 
-        num_timesteps = len(traces)
-
-        num_peaks = num_timesteps - num_samples + 1
-        conv_shape = (num_templates, num_peaks)
-        scalar_products = np.zeros(conv_shape, dtype=np.float32)
+        if HAVE_TORCH and device is not None:
+            nt = d["temporal"].shape[2] - 1
+            blank = np.zeros((nt, num_channels), dtype=np.float32)
+            traces = np.vstack((blank, traces, blank))
+            torch_traces = torch.as_tensor(traces.T[None, :, :], device=d["device"])
+            num_templates, num_channels = d["temporal"].shape[0], d["temporal"].shape[1]
+            num_timesteps = torch_traces.shape[2]
+            spatially_filtered_data = torch.matmul(d["spatial"], torch_traces)
+            scaled_filtered_data = (spatially_filtered_data * d["singular"]).swapaxes(0, 1)
+            scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, num_timesteps)
+            scalar_products = conv1d(scaled_filtered_data_, d["temporal"], groups=num_templates, padding='valid')
+            scalar_products = scalar_products.cpu().numpy()[0, :, :]
+        else:
+            num_channels, num_templates  = d["temporal"].shape[0], d["temporal"].shape[1]
+            num_timesteps = d["temporal"].shape[2]
+            objective_len = traces.shape[0] + num_timesteps - 1
+            conv_shape = (num_templates, objective_len)
+            scalar_products = np.zeros(conv_shape, dtype=np.float32)
+            # Filter using overlap-and-add convolution
+            spatially_filtered_data = np.matmul(d["spatial"], traces.T[np.newaxis, :, :])
+            scaled_filtered_data = spatially_filtered_data * d["singular"]
+            from scipy import signal
+            objective_by_rank = signal.oaconvolve(scaled_filtered_data, d["temporal"], axes=2, mode="full")
+            scalar_products += np.sum(objective_by_rank, axis=0)
+        num_peaks = scalar_products.shape[1]
 
         # Filter using overlap-and-add convolution
         if len(ignore_inds) > 0:
-            not_ignored = ~np.isin(np.arange(num_templates), ignore_inds)
-            spatially_filtered_data = np.matmul(d["spatial"][:, not_ignored, :], traces.T[np.newaxis, :, :])
-            scaled_filtered_data = spatially_filtered_data * d["singular"][:, not_ignored, :]
-            objective_by_rank = scipy.signal.oaconvolve(
-                scaled_filtered_data, d["temporal"][:, not_ignored, :], axes=2, mode="valid"
-            )
-            scalar_products[not_ignored] += np.sum(objective_by_rank, axis=0)
             scalar_products[ignore_inds] = -np.inf
-        else:
-            spatially_filtered_data = np.matmul(d["spatial"], traces.T[np.newaxis, :, :])
-            scaled_filtered_data = spatially_filtered_data * d["singular"]
-            objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, d["temporal"], axes=2, mode="valid")
-            scalar_products += np.sum(objective_by_rank, axis=0)
+            not_ignored = ~np.isin(np.arange(num_templates), ignore_inds)
 
         num_spikes = 0
 
