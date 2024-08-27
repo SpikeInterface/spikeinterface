@@ -19,7 +19,7 @@ from spikeinterface.sortingcomponents.motion.motion_interpolation import \
 # -----------------------------------------------------------------------------
 
 # TODO: this function might be pointless
-def get_entire_session_hist(recording, peaks, peak_locations, spatial_bin_edges):
+def get_entire_session_hist(recording, peaks, peak_locations, spatial_bin_edges, log_scale):
     """
     TODO: assumes 1-segment recording
     """
@@ -41,11 +41,14 @@ def get_entire_session_hist(recording, peaks, peak_locations, spatial_bin_edges)
 
     spatial_centers = get_bin_centers(spatial_bin_edges)
 
+    if log_scale:
+        entire_session_hist = np.log10(1 + entire_session_hist)
+
     return entire_session_hist, temporal_bin_edges, spatial_centers
 
 
 def get_chunked_histogram(  # TODO: this function might be pointless
-        recording, peaks, peak_locations, bin_s, spatial_bin_edges, weight_with_amplitude=False
+        recording, peaks, peak_locations, bin_s, spatial_bin_edges, log_scale, weight_with_amplitude=False
 ):
     chunked_session_hist, temporal_bin_edges, _ = \
         make_2d_motion_histogram(
@@ -65,6 +68,9 @@ def get_chunked_histogram(  # TODO: this function might be pointless
 
     bin_times = np.diff(temporal_bin_edges)[:, np.newaxis]
     chunked_session_hist /= bin_times
+
+    if log_scale:
+        chunked_session_hist = np.log10(1 + chunked_session_hist)
 
     return chunked_session_hist, temporal_centers, spatial_centers
 
@@ -354,72 +360,81 @@ def run_kilosort_like_rigid_registration(all_hists, non_rigid_windows):
     return -optimal_shift_indices  # TODO: these are reversed at this stage
 
 
+# TODO: I wonder if it is better to estimate the hitsogram with finer bin size
+# than try and interpolate the xcorr. What about smoothing the activity histograms directly?
+
+# TOOD: the iterative_template seems a little different to the interpolation
+# of nonrigid segments that is described in the NP2.0 paper. Oh, the KS
+# implementation is different to that described in the paper/ where is the
+# Akima spline interpolation?
+
+# TODO: make sure that the num bins will always align.
+# Apply the linear shifts, don't roll, as we don't want circular (why would the top of the probe appear at the bottom?)
+# They roll the windowed version that is zeros, but here we want all done up front to simplify later code
+
+# TODO: this is basically a re-implimentation of the nonrigid part
+# of iterative template. Want to leave separate for now for prototyping
+# but should combine the shared parts later.
+
+# TOOD: important differenence, this does not roll, will need to test when new spikes are added...
+
+# TODO: try out logarithmic scaling as some neurons fire too much...
+
+
+
 def run_alignment_estimation(
-    all_session_hists, spatial_bin_centers, rigid, robust=False
+    all_session_hists, spatial_bin_centers, rigid, num_nonrigid_bins, robust=False
 ):
     """
     """
+    # TODO: figure out best way to represent this, should probably be
+    # suffix _list instead of prefixed all_ for consistency
     if isinstance(all_session_hists, list):
-        all_session_hists = np.array(all_session_hists)  # TODO: figure out best way to represent this, should probably be suffix _list instead of prefixed all_ for consistency
+        all_session_hists = np.array(all_session_hists)
 
     num_bins = spatial_bin_centers.size
     num_sessions = all_session_hists.shape[0]
 
+    # TODO: rename
     hist_array = _compute_rigid_hist_crosscorr(
         num_sessions, num_bins, all_session_hists, robust
-    )  # TODO: rename
+    )
 
     optimal_shift_indices = -np.mean(hist_array, axis=0)[:, np.newaxis]
-    # (2, 1)
+
+    # First, perform the rigid alignment.
+
     if rigid:
-        # TODO: this just shifts everything to the center. It would be (better?)
-        # to optmize so all shifts are about the same.
+        # TODO: used to get window center, for now just get them from the spatial bin
+        #  centers and use no margin, which was applied earlier. Same below.
         non_rigid_windows, non_rigid_window_centers = get_spatial_windows(
             spatial_bin_centers,
-            # TODO: used to get window center, for now just get them from the spatial bin centers and use no margin, which was applied earlier
             spatial_bin_centers,
             rigid=True,
-            win_shape="gaussian",  # rect
-            win_step_um=None,  # TODO: expose! CHECK THIS!
-            #        win_scale_um=win_scale_um,
+            win_shape="gaussian",
+            win_step_um=None,
             win_margin_um=0,
-            #        zero_threshold=None,
+            # win_scale_um=win_scale_um,
+            # zero_threshold=None,
         )
 
-        return optimal_shift_indices, non_rigid_window_centers  # TODO: rename rigid, also this is weird to pass back bins in the rigid case
+        # TODO: rename rigid, also this is weird to pass back bins in the rigid case
+        return optimal_shift_indices, non_rigid_window_centers
 
-    # TODO: this is basically a re-implimentation of the nonrigid part
-    # of iterative template. Want to leave separate for now for prototyping
-    # but should combine the shared parts later.
-
-    num_steps = 7
-    win_step_um = (np.max(spatial_bin_centers) - np.min(spatial_bin_centers)) / num_steps
+    win_step_um = (np.max(spatial_bin_centers) - np.min(spatial_bin_centers)) / num_nonrigid_bins
 
     non_rigid_windows, non_rigid_window_centers = get_spatial_windows(
-        spatial_bin_centers,  # TODO: used to get window center, for now just get them from the spatial bin centers and use no margin, which was applied earlier
+        spatial_bin_centers,
         spatial_bin_centers,
         rigid=False,
-        win_shape="gaussian",  # rect
+        win_shape="gaussian",
         win_step_um=win_step_um,  # TODO: expose!
-#        win_scale_um=win_scale_um,
         win_margin_um=0,
-#        zero_threshold=None,
+        # win_scale_um=win_scale_um,
+        # zero_threshold=None,
     )
-    # TODO: I wonder if it is better to estimate the hitsogram with finer bin size
-    # than try and interpolate the xcorr. What about smoothing the activity histograms directly?
 
-    # TOOD: the iterative_template seems a little different to the interpolation
-    # of nonrigid segments that is described in the NP2.0 paper. Oh, the KS
-    # implementation is different to that described in the paper/ where is the
-    # Akima spline interpolation?
-
-    # TODO: make sure that the num bins will always align.
-    # Apply the linear shifts, don't roll, as we don't want circular (why would the top of the probe appear at the bottom?)
-    # They roll the windowed version that is zeros, but here we want all done up front to simplify later code
-
-    import matplotlib.pyplot as plt
-
-    # TODO: for recursive version, shift cannot be larger than previous shift!
+    # Shift the histograms according to the rigid shift
     shifted_histograms = np.zeros_like(all_session_hists)
     for i in range(all_session_hists.shape[0]):
 
@@ -431,20 +446,39 @@ def run_alignment_estimation(
         cut_padded_hist = padded_hist[abs_shift:] if shift > 0 else padded_hist[:-abs_shift]
         shifted_histograms[i, :] = cut_padded_hist
 
+    # For each nonrigid window, compute the shift
     non_rigid_shifts = np.zeros((num_sessions, non_rigid_windows.shape[0]))
-    for i, window in enumerate(non_rigid_windows):  # TODO: use same name
+    for i, window in enumerate(non_rigid_windows):
 
         windowed_histogram = shifted_histograms * window
 
+        # NOTE: this method just xcorr the entire window,
+        # does not provide subset of samples like kilosort_like
         window_hist_array = _compute_rigid_hist_crosscorr(
-            num_sessions, num_bins, windowed_histogram, robust=False  # this method just xcorr the entire window does not provide subset of samples like kilosort_like
+            num_sessions, num_bins, windowed_histogram, robust=False
         )
         non_rigid_shifts[:, i] = -np.mean(window_hist_array, axis=0)
 
-    return optimal_shift_indices + non_rigid_shifts, non_rigid_window_centers  # TODO: tidy up
+    akima = False  # TODO: decide whether to keep, factor to own function
+    if akima:
+        from scipy.interpolate import Akima1DInterpolator
+        x = win_step_um * np.arange(non_rigid_windows.shape[0])
+        xs = spatial_bin_centers
 
-    # TODO: what about the Akima Spline
-    # TODO: try out logarithmic scaling as some neurons fire too much...
+        new_nonrigid_shifts = np.zeros((non_rigid_shifts.shape[0], num_bins))
+        for ses_idx in range(non_rigid_shifts.shape[0]):
+
+            y = non_rigid_shifts[ses_idx]
+            y_new = Akima1DInterpolator(x, y, method="akima", extrapolate=True)(xs)  # requires scipy 14
+            new_nonrigid_shifts[ses_idx, :] = y_new
+
+        shifts = optimal_shift_indices + new_nonrigid_shifts
+        non_rigid_window_centers = spatial_bin_centers
+    else:
+        shifts = optimal_shift_indices + non_rigid_shifts
+
+    return shifts, non_rigid_window_centers
+
 
 def _compute_rigid_hist_crosscorr(num_sessions, num_bins, all_session_hists, robust=False):
     """"""
