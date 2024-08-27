@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import copy
 import numpy as np
 import json
 import shutil
 from pathlib import Path
 import time
+import inspect
 
 from spikeinterface.core import get_noise_levels, fix_job_kwargs
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
@@ -12,9 +14,9 @@ from spikeinterface.core.core_tools import SIJsonEncoder
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 
 motion_options_preset = {
-    # This preset should be the most acccurate
-    "nonrigid_accurate": {
-        "doc": "method by Paninski lab (monopolar_triangulation + decentralized)",
+    # dredge
+    "dredge": {
+        "doc": "Official Dredge preset",
         "detect_kwargs": dict(
             method="locally_exclusive",
             peak_sign="neg",
@@ -25,46 +27,60 @@ motion_options_preset = {
         "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
             method="monopolar_triangulation",
-            radius_um=75.0,
-            max_distance_um=150.0,
-            optimizer="minimize_with_log_penality",
-            enforce_decrease=True,
-            # feature="peak_voltage",
-            feature="ptp",
         ),
         "estimate_motion_kwargs": dict(
-            method="decentralized",
+            method="dredge_ap",
             direction="y",
-            bin_s=1.0,
             rigid=False,
-            bin_um=5.0,
-            hist_margin_um=20.0,
             win_shape="gaussian",
-            win_step_um=200.0,
-            win_scale_um=300.0,
-            histogram_depth_smooth_um=5.0,
-            histogram_time_smooth_s=None,
-            pairwise_displacement_method="conv",
-            max_displacement_um=100.0,
-            weight_scale="linear",
-            error_sigma=0.2,
-            conv_engine=None,
-            torch_device=None,
-            batch_size=1,
-            corr_threshold=0.0,
-            time_horizon_s=None,
-            convergence_method="lsmr",
-            soft_weights=False,
-            normalized_xcorr=True,
-            centered_xcorr=True,
-            temporal_prior=True,
-            spatial_prior=False,
-            force_spatial_median_continuity=False,
-            reference_displacement="median",
-            reference_displacement_time_s=0,
-            robust_regression_sigma=2,
-            weight_with_amplitude=False,
+            win_step_um=400.0,
+            win_scale_um=400.0,
+            win_margin_um=None,
         ),
+        "interpolate_motion_kwargs": dict(
+            border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
+        ),
+    },
+    # similar than dredge but faster
+    "dredge_fast": {
+        "doc": "Modified and faster Dredge preset",
+        "detect_kwargs": dict(
+            method="locally_exclusive",
+            peak_sign="neg",
+            detect_threshold=8.0,
+            exclude_sweep_ms=0.8,
+            radius_um=80.0,
+        ),
+        "select_kwargs": dict(),
+        "localize_peaks_kwargs": dict(
+            method="grid_convolution",
+        ),
+        "estimate_motion_kwargs": dict(
+            method="dredge_ap",
+            direction="y",
+            rigid=False,
+            win_shape="gaussian",
+            win_step_um=400.0,
+            win_scale_um=400.0,
+            win_margin_um=None,
+        ),
+        "interpolate_motion_kwargs": dict(
+            border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
+        ),
+    },
+    # This preset is the encestor of dredge
+    "nonrigid_accurate": {
+        "doc": "method by Paninski lab (monopolar_triangulation + decentralized)",
+        "detect_kwargs": dict(
+            method="locally_exclusive",
+            peak_sign="neg",
+            detect_threshold=8.0,
+            exclude_sweep_ms=0.8,
+            radius_um=80.0,
+        ),
+        "select_kwargs": dict(),
+        "localize_peaks_kwargs": dict(method="monopolar_triangulation"),
+        "estimate_motion_kwargs": dict(method="decentralized", direction="y", rigid=False),
         "interpolate_motion_kwargs": dict(
             border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
@@ -79,50 +95,8 @@ motion_options_preset = {
             radius_um=80.0,
         ),
         "select_kwargs": dict(),
-        "localize_peaks_kwargs": dict(
-            method="grid_convolution",
-            # radius_um=40.0,
-            radius_um=80.0,
-            upsampling_um=5.0,
-            sigma_ms=0.25,
-            margin_um=30.0,
-            prototype=None,
-            percentile=5.0,
-        ),
-        "estimate_motion_kwargs": dict(
-            method="decentralized",
-            direction="y",
-            bin_s=2.0,
-            rigid=False,
-            bin_um=5.0,
-            hist_margin_um=0.0,
-            win_shape="gaussian",
-            win_step_um=100.0,
-            win_scale_um=200.0,
-            win_margin_um=None,
-            histogram_depth_smooth_um=5.0,
-            histogram_time_smooth_s=None,
-            pairwise_displacement_method="conv",
-            max_displacement_um=100.0,
-            weight_scale="linear",
-            error_sigma=0.2,
-            conv_engine=None,
-            torch_device=None,
-            batch_size=1,
-            corr_threshold=0.0,
-            time_horizon_s=None,
-            convergence_method="lsmr",
-            soft_weights=False,
-            normalized_xcorr=True,
-            centered_xcorr=True,
-            temporal_prior=True,
-            spatial_prior=False,
-            force_spatial_median_continuity=False,
-            reference_displacement="median",
-            reference_displacement_time_s=0,
-            robust_regression_sigma=2,
-            weight_with_amplitude=False,
-        ),
+        "localize_peaks_kwargs": dict(method="grid_convolution"),
+        "estimate_motion_kwargs": dict(method="decentralized", direction="y", rigid=False),
         "interpolate_motion_kwargs": dict(
             border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
@@ -135,19 +109,12 @@ motion_options_preset = {
             peak_sign="neg",
             detect_threshold=8.0,
             exclude_sweep_ms=0.1,
-            radius_um=50,
+            radius_um=75.0,
         ),
         "select_kwargs": dict(),
-        "localize_peaks_kwargs": dict(
-            method="center_of_mass",
-            radius_um=75.0,
-            feature="ptp",
-        ),
-        "estimate_motion_kwargs": dict(
-            method="decentralized",
-            bin_s=10.0,
-            rigid=True,
-        ),
+        # "localize_peaks_kwargs": dict(method="grid_convolution"),
+        "localize_peaks_kwargs": dict(method="center_of_mass"),
+        "estimate_motion_kwargs": dict(method="dredge_ap", bin_s=5.0, rigid=True),
         "interpolate_motion_kwargs": dict(
             border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
@@ -165,20 +132,14 @@ motion_options_preset = {
         "select_kwargs": dict(),
         "localize_peaks_kwargs": dict(
             method="grid_convolution",
-            radius_um=40.0,
-            upsampling_um=5.0,
             weight_method={"mode": "gaussian_2d", "sigma_list_um": np.linspace(5, 25, 5)},
-            sigma_ms=0.25,
-            margin_um=30.0,
-            prototype=None,
-            percentile=5.0,
         ),
         "estimate_motion_kwargs": dict(
             method="iterative_template",
             bin_s=2.0,
             rigid=False,
-            win_step_um=50.0,
-            win_scale_um=150.0,
+            win_step_um=200.0,
+            win_scale_um=400.0,
             hist_margin_um=0,
             win_shape="rect",
         ),
@@ -197,9 +158,93 @@ motion_options_preset = {
 }
 
 
+def _get_default_motion_params():
+    # dirty code that inspect class to get parameters
+    # when multi method for detect_peak/localize_peak/estimate_motion
+
+    params = dict()
+
+    from spikeinterface.sortingcomponents.peak_detection import detect_peak_methods
+    from spikeinterface.sortingcomponents.peak_localization import localize_peak_methods
+    from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion_methods, estimate_motion
+
+    params["detect_kwargs"] = dict()
+    for method_name, method_class in detect_peak_methods.items():
+        if hasattr(method_class, "check_params"):
+            sig = inspect.signature(method_class.check_params)
+            params["detect_kwargs"][method_name] = {
+                k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty
+            }
+
+    # no design by subclass
+    params["select_kwargs"] = dict()
+
+    params["localize_peaks_kwargs"] = dict()
+    for method_name, method_class in localize_peak_methods.items():
+        sig = inspect.signature(method_class.__init__)
+        p = {k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty}
+        p.pop("parents", None)
+        p.pop("return_output", None)
+        p.pop("return_tensor", None)
+        params["localize_peaks_kwargs"][method_name] = p
+
+    params["estimate_motion_kwargs"] = dict()
+    for method_name, method_class in estimate_motion_methods.items():
+        sig = inspect.signature(estimate_motion)
+        p = {k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty}
+        for k in ("peaks", "peak_locations", "method", "extra_outputs", "verbose", "progress_bar", "margin_um"):
+            p.pop(k)
+
+        sig = inspect.signature(method_class.run)
+        p.update(
+            {k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty}
+        )
+        params["estimate_motion_kwargs"][method_name] = p
+
+    # no design by subclass
+    params["interpolate_motion_kwargs"] = dict()
+
+    return params
+
+
+def get_motion_presets():
+    preset_keys = list(motion_options_preset.keys())
+    preset_keys.remove("")
+    return preset_keys
+
+
+def get_motion_parameters_preset(preset):
+    """
+    Get the parameters tree for a given preset for motion correction.
+    """
+    preset_params = copy.deepcopy(motion_options_preset[preset])
+    all_default_params = _get_default_motion_params()
+    params = dict()
+    for step, step_params in preset_params.items():
+        if isinstance(step_params, str):
+            # the doc key
+            params[step] = step_params
+
+        elif len(step_params) == 0:
+            # empty dict with no methods = skip the step (select_peaks for instance)
+            params[step] = dict()
+
+        elif isinstance(step_params, dict):
+            if "method" in step_params:
+                method = step_params["method"]
+                params[step] = all_default_params[step][method]
+            else:
+                params[step] = dict()
+            params[step].update(step_params)
+        else:
+            raise ValueError(f"Preset {preset} is wrong")
+
+    return params
+
+
 def correct_motion(
     recording,
-    preset="nonrigid_accurate",
+    preset="dredge_fast",
     folder=None,
     output_motion=False,
     output_motion_info=False,
@@ -318,6 +363,7 @@ def correct_motion(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     noise_levels = get_noise_levels(recording, return_scaled=False)
+    progress_bar = job_kwargs.get("progress_bar", False)
 
     if folder is not None:
         folder = Path(folder)
@@ -380,7 +426,7 @@ def correct_motion(
         )
 
     t0 = time.perf_counter()
-    motion = estimate_motion(recording, peaks, peak_locations, **estimate_motion_kwargs)
+    motion = estimate_motion(recording, peaks, peak_locations, progress_bar=progress_bar, **estimate_motion_kwargs)
     t1 = time.perf_counter()
     run_times["estimate_motion"] = t1 - t0
 

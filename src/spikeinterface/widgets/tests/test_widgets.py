@@ -57,7 +57,12 @@ class TestWidgets(unittest.TestCase):
         cls.sorting = sorting
 
         # estimate motion for motion widgets
-        _, cls.motion_info = correct_motion(recording, preset="kilosort_like", output_motion_info=True)
+        _, cls.motion_info = correct_motion(
+            recording,
+            preset="kilosort_like",
+            output_motion_info=True,
+            estimate_motion_kwargs={"win_step_um": 50, "win_scale_um": 100},
+        )
 
         cls.num_units = len(cls.sorting.get_unit_ids())
 

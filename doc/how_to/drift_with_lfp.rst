@@ -64,6 +64,7 @@ Preprocessing
 Contrary to the **dredge_ap** approach, which needs detected peaks and peak locations, the **dredge_lfp**
 method is estimating the motion directly on traces.
 Importantly, the method requires some additional pre-processing steps:
+
   * ``bandpass_filter``: to "focus" the signal on a particular band
   * ``phase_shift``: to compensate for the sampling misalignement
   * ``resample``: to further reduce the sampling fequency of the signal and speed up the computation. The sampling frequency of the estimated motion will be the same as the resampling frequency. Here we choose 250Hz, which corresponds to a sampling interval of 4ms.
