@@ -26,13 +26,7 @@ from scipy.optimize import minimize
 from pathlib import Path
 import alignment_utils
 """
-Weight on confidence
-two problems:
-- how to measure 'confidence' (peak height? std?) larger peaks may have
-  higher std, but we care about them more, so I think this is largely pointless.
-
-
-trimmed_percentiles = (20, 80)  # TODO: this is originally in the context of Poisson estimation
+Trimmed_percentiles = (20, 80)  # TODO: this is originally in the context of Poisson estimation
 if trimmed_percentiles is not False:
     min, max = trimmed_percentiles
     min_percentile = np.percentile(ks, min)
@@ -41,11 +35,20 @@ if trimmed_percentiles is not False:
     ks = ks[
         np.logical_and(ks >= min_percentile, ks <= max_percentile)
     ]
+
+Easiest way is to NaN them out and skip in the compute methods.
+
 """
 
 # -----------------------------------------------------------------------------
 # Get Histograms
 # -----------------------------------------------------------------------------
+
+# 1) tidy up and check
+# 2) expose trimmed versions, robust xcorr, akima interpolation, kriging interpolation / smoothing of histograms
+# 3) write a final version that can take motion corrected or not.
+# 4) write a list of things I'd like to do but dont have time to do now. Finish the generation function.
+
 
 # 1) for now, assume it is a multi-session recording. Then,
 #    add the peak-detection stuff if not later
@@ -61,10 +64,6 @@ def run_inter_session_displacement_correction(
     motion_estimates_list, all_temporal_bin_centers, spatial_bin_centers, non_rigid_bin_centers, histogram_info = estimate_inter_session_displacement(
         recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method, rigid, log_scale, num_nonrigid_bins
     )
-
-   # _, non_ridgid_spatial_windows = alignment_utils.get_spatial_windows_alignment(
-    #    recordings_list[0], spatial_bin_centers  # TODO: check assumption
-    #)
 
     corrected_recordings_list, motion_objects_list = alignment_utils.create_motion_recordings(
         recordings_list, motion_estimates_list, all_temporal_bin_centers, non_rigid_bin_centers
@@ -146,10 +145,13 @@ def estimate_inter_session_displacement(
 
     # Estimate the alignment based on the activity histograms
     if alignment_method == "kilosort_like":
-        non_rigid_windows, non_rigid_window_centers = alignment_utils.get_spatial_windows_alignment(
-            recordings_list[0], spatial_bin_centers
-            # TODO: double check these assumptions (first session) are good
+        # TODO: double check these assumptions (first session) are good
+        contact_depths = recordings_list[0].get_channel_locations()[:, 1]
+
+        non_rigid_windows, non_rigid_window_centers = get_spatial_windows(
+            contact_depths, spatial_bin_centers, rigid=True
         )
+
         all_motion_arrays = alignment_utils.run_kilosort_like_rigid_registration(  # TODO: check sign
             all_session_hists, non_rigid_windows
         ) * bin_um

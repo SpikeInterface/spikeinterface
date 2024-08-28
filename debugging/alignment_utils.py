@@ -18,7 +18,7 @@ from spikeinterface.sortingcomponents.motion.motion_interpolation import \
 # Get Histograms
 # -----------------------------------------------------------------------------
 
-# TODO: this function might be pointless
+
 def get_entire_session_hist(recording, peaks, peak_locations, spatial_bin_edges, log_scale):
     """
     TODO: assumes 1-segment recording
@@ -49,7 +49,7 @@ def get_entire_session_hist(recording, peaks, peak_locations, spatial_bin_edges,
     return entire_session_hist, temporal_bin_edges, spatial_centers
 
 
-def get_chunked_histogram(  # TODO: this function might be pointless
+def get_chunked_histogram(
         recording, peaks, peak_locations, bin_s, spatial_bin_edges, log_scale, weight_with_amplitude=False
 ):
     chunked_session_hist, temporal_bin_edges, _ = \
@@ -92,8 +92,6 @@ def estimate_chunk_size(activity_histogram, recording):
     estimated within 10% 99% of the time,
     corrected based on assumption
     of Poisson firing (based on CLT).
-
-    TODO: activity histogram must be scaled to spikes-per-second
     """
     firing_rate = np.percentile(activity_histogram, 98)
 
@@ -133,26 +131,6 @@ def get_chunked_hist_supremum(chunked_session_hist):
     return max_hist
 
 
-# TODO: currently deprecated due to scaling issues between
-# sessions. A much better way will to make PCA from all
-# sessions, then align based on projection
-def get_chunked_hist_eigenvector(chunked_session_hist):
-    """
-    """
-    if chunked_session_hist.shape[0] == 1:  # TODO: handle elsewhere
-        return chunked_session_hist.squeeze()
-
-    A = chunked_session_hist - np.mean(chunked_session_hist, axis=0)[np.newaxis, :]
-    S = (1/A.shape[0]) * A.T @ A  # (num hist, num_bins)
-
-    U, S, Vh = np.linalg.svd(S)  # TODO: this is already symmetric PSD so use eig
-
-    # TODO: check why this is flipped
-    first_eigenvector = U[:, 0] * -1 * S[0]  # * np.sqrt(S[0]) # TODO: revise a little + consider another distance metric
-
-    return first_eigenvector
-
-# TODO: move this trimming etc. to a new funciton
 def get_chunked_hist_poisson_estimate(chunked_session_hist, trimmed_percentiles=False, weight_on_confidence=False):
     """
     Basically the mean, I guess with robust it becomes trimmed mean
@@ -176,90 +154,25 @@ def get_chunked_hist_poisson_estimate(chunked_session_hist, trimmed_percentiles=
                                        bounds=((1e-10, np.inf),)).x
     return poisson_estimate
 
-# Benchmarking Methods that should be deprecated in favour of estimate methods
 
-# TODO: deprecate soon
-def estimate_session_displacement_benchmarking(
-        recordings_list, peaks_list, peak_locations_list, bin_um
-):
-    # Make histograms per session
-    session_histogram_info = []
-    for i in range(len(recordings_list)):
-
-        ses_info = get_all_hist_estimation(recordings_list[i], peaks_list[i], peak_locations_list[i], bin_um)
-
-        print(f"Session {i}\n-------------------")
-        print("firing rate", ses_info["percentile_lambda"])
-        print("Histogram STD:: ", ses_info["session_std"])
-        print("bin_s", ses_info["bin_s"])
-        print("recording duration", ses_info["recording_duration"])
-
-        session_histogram_info.append(ses_info)
-
-    # Check all the bins are the same, get the windows
-    for i in range(len(session_histogram_info)):
-        assert np.array_equal(session_histogram_info[0]["chunked_spatial_bins"],
-                              session_histogram_info[i]["chunked_spatial_bins"]
-                              )
-
-    spatial_bins = session_histogram_info[0]["chunked_spatial_bins"]
-
-    _, non_rigid_window_centers = get_spatial_windows_alignment(
-        recordings_list[0], spatial_bins
-    )
-
-    # Compute the estimated alignment.
-    alignment_results = {"histograms": {}, "motion_arrays": {}, "corrected_recordings": {}}
-
-    for hist_name in ["mean_hist", "median_hist", "max_hist", "poisson_hist"]:
-        all_ses_histogram = []
-        for info in session_histogram_info:
-            all_ses_histogram.append(info[hist_name])
-        all_ses_histogram = np.array(all_ses_histogram)
-
-        motion_array = run_alignment_estimation(
-            all_ses_histogram, spatial_bins
-        ) * bin_um
-
-        alignment_results["histograms"][hist_name] = all_ses_histogram
-        alignment_results["motion_arrays"][hist_name] = motion_array
-
-    return alignment_results
-
-# TODO: deprecate
-def get_all_hist_estimation(recording, peaks, peak_locations, bin_um):
+# TODO: currently deprecated due to scaling issues between
+# sessions. A much better way will to make PCA from all
+# sessions, then align based on projection
+def get_chunked_hist_eigenvector(chunked_session_hist):
     """
     """
-    entire_session_hist, _, _ = get_entire_session_hist(
-        recording, peaks, peak_locations, bin_um
-    )
+    if chunked_session_hist.shape[0] == 1:  # TODO: handle elsewhere
+        return chunked_session_hist.squeeze()
 
-    bin_s, percentile_lambda = estimate_chunk_size(entire_session_hist, recording)
+    A = chunked_session_hist - np.mean(chunked_session_hist, axis=0)[np.newaxis, :]
+    S = (1/A.shape[0]) * A.T @ A  # (num hist, num_bins)
 
-    chunked_session_hist, chunked_temporal_bins, chunked_spatial_bins = get_chunked_histogram(
-        recording, peaks, peak_locations, bin_s, bin_um
-    )
-    session_std = np.sum(np.std(chunked_session_hist, axis=0)) / chunked_session_hist.shape[1]
+    U, S, Vh = np.linalg.svd(S)  # TODO: this is already symmetric PSD so use eig
 
-    mean_hist = get_chunked_hist_mean(chunked_session_hist)
-    median_hist = get_chunked_hist_median(chunked_session_hist)
-    max_hist = get_chunked_hist_supremum(chunked_session_hist)
-    poisson_hist = get_chunked_hist_poisson_estimate(chunked_session_hist)
+    # TODO: check why this is flipped
+    first_eigenvector = U[:, 0] * -1 * S[0]  # * np.sqrt(S[0]) # TODO: revise a little + consider another distance metric
 
-    return {
-        "entire_session_hist": entire_session_hist,
-        "chunked_session_hist": chunked_session_hist,
-        "chunked_temporal_bins": chunked_temporal_bins,
-        "chunked_spatial_bins": chunked_spatial_bins,
-        "mean_hist": mean_hist,
-        "median_hist": median_hist,
-        "max_hist": max_hist,
-        "poisson_hist": poisson_hist,
-        "bin_s": bin_s,
-        "recording_duration": recording.get_duration(0),
-        "session_std": session_std,
-        "percentile_lambda": percentile_lambda,
-    }
+    return first_eigenvector
 
 
 def plot_chunked_session_hist(est_dict, scale_to_max=False):
@@ -275,14 +188,6 @@ def plot_chunked_session_hist(est_dict, scale_to_max=False):
         legend.append(plot_name)
 
     plt.legend(legend)
-    plt.show()
-
-
-def plot_all_hist_estimation(chunked_session_hist, chunked_spatial_bins):
-    """
-    """
-    for i in range(chunked_session_hist.shape[0]):
-        plt.plot(chunked_spatial_bins, chunked_session_hist[i, :])
     plt.show()
 
 
@@ -339,17 +244,6 @@ def create_motion_recordings(all_recordings, motion_array, all_temporal_bins, no
 
 
     return corrected_recordings, all_motions
-
-# TODO: merge this functions with motion correction
-def get_spatial_windows_alignment(recording, spatial_bin_centers):
-    dim = 1  # "["x", "y", "z"].index(direction)
-    contact_depths = recording.get_channel_locations()[:, dim]
-
-    non_rigid_windows, non_rigid_window_centers = get_spatial_windows(
-        contact_depths, spatial_bin_centers, rigid=True
-    )
-    return non_rigid_windows, non_rigid_window_centers
-
 
 # Kilosort-like registration
 def run_kilosort_like_rigid_registration(all_hists, non_rigid_windows):
@@ -499,25 +393,3 @@ def _compute_rigid_hist_crosscorr(num_sessions, num_bins, all_session_hists, rob
             hist_array[i, j] = shift
 
     return hist_array
-
-def correct_peaks_and_plot_histogram(
-    corrected_recordings, all_recordings, all_motions, bin_um
-):
-    legend = []
-
-    for i, recording in enumerate(corrected_recordings):
-        corr_peak_locations = correct_motion_on_peaks(
-            all_recordings[i][1],
-            all_recordings[i][2],
-            all_motions[i],
-            recording
-        )
-
-        entire_session_hist, _, spatial_bins = get_entire_session_hist(
-            recording, all_recordings[i][1], corr_peak_locations, bin_um
-        )
-
-        plt.plot(spatial_bins, entire_session_hist)
-        legend.append(all_motions[i].displacement[0].squeeze())
-    plt.legend(legend)
-    plt.show()
