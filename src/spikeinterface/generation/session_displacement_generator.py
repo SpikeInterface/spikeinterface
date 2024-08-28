@@ -367,13 +367,13 @@ def _check_generate_session_displacement_arguments(
 
     shifts_are_2d = [len(shift) == 2 for shift in recording_shifts]
     if not all(shifts_are_2d):
-        raise ValueError("Each record entry for `recording_shifts` must have " "two elements, the x and y shift.")
+        raise ValueError("Each record entry for `recording_shifts` must have two elements, the x and y shift.")
 
     if recording_amplitude_scalings is not None:
 
         keys = recording_amplitude_scalings.keys()
         if not "method" in keys or not "scalings" in keys:
-            raise ValueError("`recording_amplitude_scalings` must be a dict " "with keys `method` and `scalings`.")
+            raise ValueError("`recording_amplitude_scalings` must be a dict with keys `method` and `scalings`.")
 
         allowed_methods = ["by_passed_order", "by_amplitude_and_firing_rate", "by_firing_rate"]
         if not recording_amplitude_scalings["method"] in allowed_methods:
@@ -381,8 +381,7 @@ def _check_generate_session_displacement_arguments(
 
         rec_scalings = recording_amplitude_scalings["scalings"]
         if not len(rec_scalings) == expected_num_recs:
-            breakpoint()
-            raise ValueError("`recording_amplitude_scalings` 'scalings' " "must have one array per recording.")
+            raise ValueError("`recording_amplitude_scalings` 'scalings' must have one array per recording.")
 
         if not all([len(scale) == num_units for scale in rec_scalings]):
             raise ValueError(
