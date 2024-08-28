@@ -162,7 +162,7 @@ class StudyUnitCountsWidget(BaseWidget):
             levels=levels,
             labels=labels,
             cmap=cmap,
-            rotation=rotation
+            rotation=rotation,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -207,9 +207,9 @@ class StudyUnitCountsWidget(BaseWidget):
                 hue = "Metric"
                 color_list = columns
             else:
-                assert len(columns) == 1, (
-                    f"Multi-levels is not supported when multiple metrics counts are available ({columns})"
-                )
+                assert (
+                    len(columns) == 1
+                ), f"Multi-levels is not supported when multiple metrics counts are available ({columns})"
                 var_name = None
                 x, hue = levels
                 y = columns[0]
@@ -231,7 +231,14 @@ class StudyUnitCountsWidget(BaseWidget):
         else:
             df = count_units
 
-        sns.barplot(df, x=x, y=y, hue=hue, ax=self.ax, palette=colors,)
+        sns.barplot(
+            df,
+            x=x,
+            y=y,
+            hue=hue,
+            ax=self.ax,
+            palette=colors,
+        )
         _ = self.ax.set_xticklabels(self.ax.get_xticklabels(), rotation=dp.rotation)
         sns.despine(ax=self.ax)
 
