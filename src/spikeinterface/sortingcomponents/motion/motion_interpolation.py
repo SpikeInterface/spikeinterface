@@ -386,6 +386,10 @@ class InterpolateMotionRecording(BasePreprocessor):
             )
             self.add_recording_segment(rec_segment)
 
+        # this object is currently not JSON-serializable because the Motion obejct cannot be reloaded properly
+        # see issue #3313
+        self._serializability["json"] = False
+
         self._kwargs = dict(
             recording=recording,
             motion=motion,
