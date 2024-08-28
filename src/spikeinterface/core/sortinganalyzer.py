@@ -11,6 +11,7 @@ import weakref
 import shutil
 import warnings
 import importlib
+from time import time
 
 import numpy as np
 
@@ -1984,12 +1985,15 @@ class AnalyzerExtension:
             self._save_importing_provenance()
             self._save_run_info()
 
+        start = time()
         self._run(**kwargs)
-        
+        end = time()
+
         if save and not self.sorting_analyzer.is_read_only():
             self._save_data(**kwargs)
             self.run_info["data_loadable"] = self._check_data_loadable()  # maybe overkill?
-            
+
+        self.run_info["runtime_s"] = np.round(end - start, 1)
         self.run_info["run_completed"] = True
         self._save_run_info()
 
