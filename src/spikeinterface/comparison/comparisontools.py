@@ -233,8 +233,8 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, ensure_symmetry=Fa
         And the minimum of the two results is taken.
     Returns
     -------
-    matching_matrix : ndarray
-        A 2D numpy array of shape `(num_units_train1, num_units_train2)`. Each element `[i, j]` represents
+    matching_matrix : pd.DataFrame
+        A 2D pandas DataFrame of shape `(num_units_train1, num_units_train2)`. Each element `[i, j]` represents
         the count of matching spike pairs between unit `i` from `spike_frames_train1` and unit `j` from `spike_frames_train2`.
 
     Notes
@@ -349,7 +349,7 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, ensure_symmetry=True
         And the minimum of the two results is taken.
     Returns
     -------
-    agreement_scores : array (float)
+    agreement_scores : pd.DataFrame
         The agreement score matrix.
     """
     import pandas as pd
@@ -409,9 +409,9 @@ def make_possible_match(agreement_scores, min_score):
 
     Returns
     -------
-    best_match_12 : pd.Series
+    best_match_12 : dict[NDArray]
 
-    best_match_21 : pd.Series
+    best_match_21 : dict[NDArray]
 
     """
     unit1_ids = np.array(agreement_scores.index)

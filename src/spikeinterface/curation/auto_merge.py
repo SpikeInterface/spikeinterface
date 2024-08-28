@@ -754,7 +754,7 @@ def compute_presence_distance(sorting, pair_mask, num_samples=None, **presence_d
 
     Returns
     -------
-    potential_merges : list
+    potential_merges : NDArray
         The list of potential merges
 
     """

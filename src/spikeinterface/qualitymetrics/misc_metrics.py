@@ -529,7 +529,7 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
 
     Returns
     -------
-    synchrony_counts : dict
+    synchrony_counts : np.ndarray
         The synchrony counts for the synchrony sizes.
 
     References
