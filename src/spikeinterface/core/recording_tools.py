@@ -951,7 +951,7 @@ def do_recording_attributes_match(
     bool
         True if the recordings have the same attributes
     str
-        A string with the an exception message with attributes that do not match
+        A string with the exception message with the attributes that do not match
     """
     recording1_attributes = get_rec_attributes(recording1)
     recording2_attributes = deepcopy(recording2_attributes)
