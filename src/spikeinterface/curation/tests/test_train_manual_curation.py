@@ -2,10 +2,7 @@ import pytest
 import os
 import numpy as np
 from spikeinterface.curation.train_manual_curation import CurationModelTrainer, train_model
-from spikeinterface import set_global_job_kwargs
 import tempfile, csv
-
-set_global_job_kwargs(n_jobs=-1)
 
 
 @pytest.fixture

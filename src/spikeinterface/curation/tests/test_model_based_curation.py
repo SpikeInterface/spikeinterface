@@ -3,10 +3,6 @@ from pathlib import Path
 from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 from spikeinterface.curation.model_based_curation import ModelBasedClassification
 
-from spikeinterface import set_global_job_kwargs
-
-set_global_job_kwargs(n_jobs=-1)
-
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "curation"
 else:
