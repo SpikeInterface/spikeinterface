@@ -164,6 +164,8 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
         The loaded SortingAnalyzer
 
     """
+    if format == "zarr":
+        folder = clean_zarr_folder_name(folder)
     return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format)
 
 
