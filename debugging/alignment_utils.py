@@ -23,6 +23,7 @@ def get_entire_session_hist(recording, peaks, peak_locations, spatial_bin_edges,
     """
     TODO: assumes 1-segment recording
     """
+    # TODO: this is weird, don't return spatial_bin_edges here... amybe assert..
     entire_session_hist, temporal_bin_edges, spatial_bin_edges = \
         make_2d_motion_histogram(
         recording,
@@ -35,6 +36,7 @@ def get_entire_session_hist(recording, peaks, peak_locations, spatial_bin_edges,
         hist_margin_um=None,
         spatial_bin_edges=spatial_bin_edges,
     )
+
     entire_session_hist = entire_session_hist[0]
 
     entire_session_hist /= recording.get_duration(segment_index=0)
@@ -290,7 +292,7 @@ def prep_recording(recording, plot=False):
     :param recording:
     :return:
     """
-    peaks = detect_peaks(recording, method="by_channel")  # "locally_exclusive")
+    peaks = detect_peaks(recording, method="locally_exclusive")
 
     peak_locations = localize_peaks(recording, peaks,
                                     method="grid_convolution")
