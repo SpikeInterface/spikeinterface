@@ -1,10 +1,11 @@
 import numpy as np
 from pathlib import Path
 import json
+import pandas as pd
+import warnings
 
 from spikeinterface.core import SortingAnalyzer
-from spikeinterface.qualitymetrics.quality_metric_calculator import get_default_qm_params
-from spikeinterface.postprocessing.template_metrics import _default_function_kwargs as default_template_metrics_params
+from spikeinterface.curation.train_manual_curation import try_to_get_metrics_from_analyzer
 
 
 class ModelBasedClassification:
@@ -47,7 +48,7 @@ class ModelBasedClassification:
         self.pipeline = pipeline
         self.required_metrics = pipeline.feature_names_in_
 
-    def predict_labels(self, label_conversion=None, input_data=None, export_to_phy=False):
+    def predict_labels(self, label_conversion=None, input_data=None, export_to_phy=False, pipeline_info_path=None):
         """
         Predicts the labels for the spike sorting data using the trained model.
         Populates the sorting object with the predicted labels and probabilities as unit properties
@@ -58,6 +59,8 @@ class ModelBasedClassification:
             The input data for classification. If not provided, the method will extract metrics stored in the sorting analyzer.
         export_to_phy : bool, optional
             Whether to export the classified units to Phy format. Default is False.
+        pipeline_info_path : str or Path, default: None
+            Path to pipeline info, used to check metric parameters used to train Pipeline.
 
         Returns
         -------
@@ -65,7 +68,6 @@ class ModelBasedClassification:
             A dictionary containing the classified units and their corresponding predictions and probabilities.
             The dictionary has the format {unit_id: (prediction, probability)}.
         """
-        import pandas as pd
 
         # Get metrics DataFrame for classification
         if input_data is None:
@@ -75,10 +77,16 @@ class ModelBasedClassification:
                 raise ValueError("Input data must be a pandas DataFrame")
 
         # Check all the required metrics have been calculated
-        try:
+        calculated_metrics = set(input_data.keys())
+        required_metrics = set(self.required_metrics)
+        if required_metrics.issubset(calculated_metrics):
             input_data = input_data[self.required_metrics]
-        except KeyError:
+        else:
             print("Input data does not contain all required metrics for classification")
+            print("Missing metrics: ", required_metrics.difference(calculated_metrics))
+
+        print(pipeline_info_path)
+        self._check_params_for_classification(pipeline_info_path=pipeline_info_path)
 
         # Prepare input data
         input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
@@ -114,13 +122,7 @@ class ModelBasedClassification:
     def _get_metrics_for_classification(self):
         """Check if all required metrics are present and return a DataFrame of metrics for classification"""
 
-        import pandas as pd
-
-        try:
-            quality_metrics = self.sorting_analyzer.extensions["quality_metrics"].data["metrics"]
-            template_metrics = self.sorting_analyzer.extensions["template_metrics"].data["metrics"]
-        except KeyError:
-            raise ValueError("Quality and template metrics must be computed before classification")
+        quality_metrics, template_metrics = try_to_get_metrics_from_analyzer(self.sorting_analyzer)
 
         # Create DataFrame of all metrics and reorder columns to match the model
         calculated_metrics = pd.concat([quality_metrics, template_metrics], axis=1)
@@ -134,39 +136,61 @@ class ModelBasedClassification:
 
         return calculated_metrics
 
-    def _check_params_for_classification(self):
-        """Check that quality and template metrics parameters match those used to train the model
-        NEEDS UPDATING TO PULL IN PARAMS FROM TRAINING DATA"""
+    def _check_params_for_classification(self, pipeline_info_path):
+        """
+        Check that quality and template metrics parameters match those used to train the model
 
-        try:
-            quality_metrics_params = self.sorting_analyzer.extensions["quality_metrics"].params["qm_params"]
-            template_metric_params = self.sorting_analyzer.extensions["template_metrics"].params["metrics_kwargs"]
-        except KeyError:
-            raise ValueError("Quality and template metrics must be computed before classification")
+        Parameters
+        ----------
+        pipeline_info_path : str or Path
+            Path to pipeline_info.json provenance file
+        """
 
-        pipeline_folder = self.pipeline.output_folder
-        pipeline_info = json.loads(pipeline_folder)
-        pipeline_quality_metrics_params = pipeline_info["metric_params"]["quality_metric_params"]["qm_params"]
-        pipeline_template_metrics_params = pipeline_info["metric_params"]["template_metric_params"]["qm_params"]
+        quality_metrics_extension = self.sorting_analyzer.get_extension("quality_metrics")
+        template_metrics_extension = self.sorting_analyzer.get_extension("template_metrics")
 
-        # Check that dicts are identical
-        if quality_metrics_params != pipeline_quality_metrics_params:
-            raise ValueError(
-                "Quality metrics params do not match those used to train pipeline. Check these in the 'pipeline_info.json' file."
-            )
-        elif template_metric_params != pipeline_template_metrics_params:
-            raise ValueError(
-                "Template metrics params do not match those used to train pipeline. Check these in the 'pipeline_info.json' file."
-            )
+        if pipeline_info_path is None:
+            try:
+                pipeline_info_path = self.pipeline.output_folder + "/model_info.json"
+            except:
+                pass
         else:
-            pass
+            try:
+                with open(pipeline_info_path) as fd:
+                    pipeline_info = json.load(fd)
+            except:
+                warnings.warn(
+                    "Could not check if metric parameters are consistent between trained model and this sorting_analyzer. Please supply the path to the `model_info.json` file using `pipeline_info_path` to check this."
+                )
+                return
 
-        # TODO: decide whether to also check params against parent extensions of metrics (e.g. waveforms, templates)
-        # This would need to account for the fact that these extensions may no longer exist
+        if quality_metrics_extension is not None:
+
+            pipeline_quality_metrics_params = pipeline_info["metric_params"]["analyzer_0"]["quality_metric_params"][
+                "qm_params"
+            ]
+            quality_metrics_params = quality_metrics_extension.params["qm_params"]
+
+            # need to make sure both dicts are in json format, so that lists are equal
+            if json.dumps(quality_metrics_params) != json.dumps(pipeline_quality_metrics_params):
+                warnings.warn(
+                    "Quality metrics params do not match those used to train pipeline. Check these in the 'pipeline_info.json' file."
+                )
+
+        if template_metrics_extension is not None:
+
+            pipeline_template_metrics_params = pipeline_info["metric_params"]["analyzer_0"]["template_metric_params"][
+                "metrics_kwargs"
+            ]
+            template_metrics_params = template_metrics_extension.params["metrics_kwargs"]
+
+            if template_metrics_params != pipeline_template_metrics_params:
+                warnings.warn(
+                    "Template metrics metrics params do not match those used to train pipeline. Check these in the 'model_info.json' file."
+                )
 
     def _export_to_phy(self, classified_units):
         """Export the classified units to Phy as cluster_prediction.tsv file"""
-        import pandas as pd
 
         # Create a new DataFrame with unit_id, prediction, and probability columns from dict {unit_id: (prediction, probability)}
         classified_df = pd.DataFrame.from_dict(classified_units, orient="index", columns=["prediction", "probability"])
@@ -182,7 +206,13 @@ class ModelBasedClassification:
         classified_df.to_csv(f"{sorting_path}/cluster_prediction.tsv", sep="\t", index_label="cluster_id")
 
 
-def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, label_conversion=None, export_to_phy=False):
+def auto_label_units(
+    sorting_analyzer: SortingAnalyzer,
+    pipeline,
+    label_conversion=None,
+    export_to_phy=False,
+    pipeline_info_path=None,
+):
     """
     Automatically labels units based on a model-based classification.
 
@@ -198,6 +228,8 @@ def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, label_conversi
         A dictionary for converting the predicted labels (which are integers) to custom labels. The dictionary should have the format {old_label: new_label}.
     export_to_phy : bool, optional
         Whether to export the results to Phy format. Default is False.
+    pipeline_info_path : str or Path, default: None
+        Path to pipeline info, used to check metric parameters used to train Pipeline.
 
     Returns
     -------
@@ -218,7 +250,7 @@ def auto_label_units(sorting_analyzer: SortingAnalyzer, pipeline, label_conversi
     model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline)
 
     classified_units = model_based_classification.predict_labels(
-        label_conversion=label_conversion, export_to_phy=export_to_phy
+        label_conversion=label_conversion, export_to_phy=export_to_phy, pipeline_info_path=pipeline_info_path
     )
 
     return classified_units

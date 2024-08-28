@@ -19,7 +19,7 @@ class CurationModelTrainer:
         The name of the target column in the dataset, or a list of labels to use as target. If a list is provided, the target column is not extracted from the dataset/analyzer. Default is 'label'.
     output_folder : str, optional
         The folder where outputs such as models and evaluation metrics will be saved, if specified. Requires the skops library.
-    metrics_list : list of str, optional
+    metric_names : list of str, optional
         A list of metrics to use for training. If None, default metrics will be used.
     imputation_strategies : list of str, optional
         A list of imputation strategies to apply. If None, default strategies will be used.
@@ -91,7 +91,7 @@ class CurationModelTrainer:
         self,
         target="label",
         output_folder=None,
-        metrics_list=None,
+        metric_names=None,
         imputation_strategies=None,
         scaling_techniques=None,
         classifiers=None,
@@ -120,10 +120,10 @@ class CurationModelTrainer:
                 "MLPClassifier",
             ]
             self.classifier_search_space = None
-        elif type(classifiers) == dict:
+        elif isinstance(classifiers, dict):
             self.classifiers = list(classifiers.keys())
             self.classifier_search_space = classifiers
-        elif type(classifiers) == list:
+        elif isinstance(classifiers, list):
             self.classifiers = classifiers
             self.classifier_search_space = None
         else:
@@ -140,23 +140,22 @@ class CurationModelTrainer:
         self.testing_metrics = None
 
         # Set target column to extract from analyzer OR list of labels to use as target
-        if type(target) == str:
+        if isinstance(target, str):
             self.target_column = target
             self.y = None
-        elif type(target) == list:
+        elif isinstance(target, list):
             self.y = target
         else:
             raise ValueError("target must be a string (name of column containing labels) or a single list of labels")
 
-        if metrics_list is None:
-            self.metrics_list = self.get_default_metrics_list()
+        if metric_names is None:
+            self.metric_names = self.get_default_metrics_list()
             print("No metrics list provided, using default metrics list (all)")
         else:
-            self.metrics_list = metrics_list
+            self.metric_names = metric_names
 
         if output_folder is not None and not os.path.exists(output_folder):
             os.makedirs(output_folder)
-            print(f"Created output folder: {output_folder}")
 
         # update job_kwargs with global ones
         job_kwargs = fix_job_kwargs(job_kwargs)
@@ -237,14 +236,14 @@ class CurationModelTrainer:
 
         # Extract features
         try:
-            self.X = self.testing_metrics[self.metrics_list]
+            self.X = self.testing_metrics[self.metric_names]
             print(
-                f"Dropped metrics (calculated but not included in metrics_list): {set(self.testing_metrics.columns) - set(self.metrics_list)}"
+                f"Dropped metrics (calculated but not included in metric_names): {set(self.testing_metrics.columns) - set(self.metric_names)}"
             )
         except KeyError as e:
             print("metrics_list contains invalid metric names")
             raise e
-        self.X = self.testing_metrics.reindex(columns=self.metrics_list)
+        self.X = self.testing_metrics.reindex(columns=self.metric_names)
         self.X = self.X.astype("float32")
         self.X = self.X.map(lambda x: np.nan if np.isinf(x) else x)
         self.X.fillna(0, inplace=True)
@@ -440,27 +439,7 @@ class CurationModelTrainer:
 
         import pandas as pd
 
-        # Initialize variables
-        quality_metrics = None
-        template_metrics = None
-
-        # Try to get quality metrics if available
-        try:
-            quality_metrics = analyzer.extensions["quality_metrics"].data["metrics"]
-        except KeyError:
-            pass  # Quality metrics are not available
-
-        # Try to get template metrics if available
-        try:
-            template_metrics = analyzer.extensions["template_metrics"].data["metrics"]
-        except KeyError:
-            pass  # Template metrics are not available
-
-        # Check if at least one of the metrics is available
-        if quality_metrics is None and template_metrics is None:
-            raise ValueError(
-                "At least one of quality metrics or template metrics must be computed before classification"
-            )
+        quality_metrics, template_metrics = try_to_get_metrics_from_analyzer(analyzer)
 
         # Store metrics metadata (only if available)
         analyzer_name = "analyzer_" + str(analyzer_index)
@@ -589,7 +568,7 @@ def train_model(
     analyzers=None,
     metrics_path=None,
     output_folder=None,
-    metrics_list=None,
+    metric_names=None,
     imputation_strategies=None,
     scaling_techniques=None,
     classifiers=None,
@@ -615,7 +594,7 @@ def train_model(
         The path to the CSV file containing the metrics data.
     output_folder : str, optional
         The folder where outputs such as models and evaluation metrics will be saved.
-    metrics_list : list of str, optional
+    metric_names : list of str, optional
         A list of metrics to use for training. If None, default metrics will be used.
     imputation_strategies : list of str, optional
         A list of imputation strategies to apply. If None, default strategies will be used.
@@ -639,7 +618,7 @@ def train_model(
     trainer = CurationModelTrainer(
         target=target,
         output_folder=output_folder,
-        metrics_list=metrics_list,
+        metric_names=metric_names,
         imputation_strategies=imputation_strategies,
         scaling_techniques=scaling_techniques,
         classifiers=classifiers,
@@ -653,7 +632,33 @@ def train_model(
 
     elif mode == "csv":
         assert os.path.exists(metrics_path), "Valid metrics path must be provided for mode 'csv'"
-        trainer.load_and_preprocess_csv(metrics_path)
+        trainer.load_and_preprocess_csv(metric_names)
 
     trainer.evaluate_model_config()
     return trainer
+
+
+def try_to_get_metrics_from_analyzer(sorting_analyzer):
+
+    quality_metrics = None
+    template_metrics = None
+
+    # Try to get metrics if available
+    try:
+        quality_metrics = sorting_analyzer.get_extension("quality_metrics").get_data()
+    except:
+        pass
+
+    try:
+        template_metrics = sorting_analyzer.get_extension("template_metrics").get_data()
+    except:
+        pass
+
+    # Check if at least one of the metrics is available
+    if quality_metrics is None and template_metrics is None:
+        raise ValueError(
+            "At least one of quality metrics or template metrics must be computed before classification.",
+            "Compute both using `sorting_analyzer.compute('quality_metrics', 'template_metrics')",
+        )
+
+    return quality_metrics, template_metrics
