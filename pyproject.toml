@@ -102,6 +102,7 @@ full = [
     "matplotlib>=3.6", # matplotlib.colormaps
     "cuda-python; platform_system != 'Darwin'",
     "numba",
+    "skops"
 ]
 
 widgets = [
@@ -172,6 +173,9 @@ test = [
     "pymde",
     "torch",
     "pynndescent",
+
+    # curation
+    "skops",
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
