@@ -152,7 +152,7 @@ class GroundTruthStudy:
         recording = load_extractor(rec_file)
         return recording
 
-    def scan_folder(self, load_recordings=False, load_comparisons=False):
+    def scan_folder(self):
         """
         Scan the folder to load or reload the datasets, cases, sortings, and comparisons.
         """
@@ -174,10 +174,7 @@ class GroundTruthStudy:
             self.datasets = {}
             for key in self.cases:
                 dataset_key = self.cases[key]["dataset"]
-                if load_recordings:
-                    recording = self.load_recording(dataset_key)
-                else:
-                    recording = None
+                recording = self.load_recording(dataset_key)
                 gt_sorting = load_extractor(self.folder / f"datasets" / "gt_sortings" / dataset_key)
                 self.datasets[dataset_key] = (recording, gt_sorting)
 
@@ -192,19 +189,18 @@ class GroundTruthStudy:
         # load comparisons
         if self.comparisons is None:
             self.comparisons = {}
-            if load_comparisons:
-                for key in self.cases:
-                    comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
-                    if comparison_file.exists():
-                        with open(comparison_file, mode="rb") as f:
-                            try:
-                                gt_sorting = self.datasets[self.cases[key]["dataset"]][1]
-                                self.comparisons[key] = pickle.load(f)
-                                # since we avoided pickling the absolute sorting paths, we need to set them here
-                                self.comparisons[key]._sorting1 = gt_sorting
-                                self.comparisons[key]._sorting2 = self.sortings[key]
-                            except Exception:
-                                pass
+            for key in self.cases:
+                comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
+                if comparison_file.exists():
+                    with open(comparison_file, mode="rb") as f:
+                        try:
+                            gt_sorting = self.datasets[self.cases[key]["dataset"]][1]
+                            self.comparisons[key] = pickle.load(f)
+                            # since we avoided pickling the absolute sorting paths, we need to set them here
+                            self.comparisons[key]._sorting1 = gt_sorting
+                            self.comparisons[key]._sorting2 = self.sortings[key]
+                        except Exception:
+                            pass
 
     def __repr__(self):
         t = f"{self.__class__.__name__} {self.folder.stem} \n"
@@ -327,9 +323,6 @@ class GroundTruthStudy:
             # this ensure that sorter_name is given
             dataset_key = self.cases[key]["dataset"]
             recording, _ = self.datasets[dataset_key]
-            if recording is None:
-                recording = self.load_recording(dataset_key)
-                self.datasets[dataset_key] = (recording, self.datasets[dataset_key][1])
             sorter_name = params.pop("sorter_name")
             job = dict(
                 sorter_name=sorter_name,
