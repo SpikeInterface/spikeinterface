@@ -370,6 +370,48 @@ class TestSessionDisplacementGenerator:
             )
             assert output_sortings[i].name == "InterSessionDisplacementSorting"
 
+    def test_shift_units_outside_probe(self, options):
+        """
+        When `shift_units_outside_probe` is `True`, a new set of
+        units above and below the probe (y dimension) are created,
+        such that they may be shifted into the recording.
+
+        Here, check that these new units are created when `shift_units_outside_probe`
+        is on and that the kwargs for the central set of units match those
+        as when `shift_units_outside_probe` is `False`.
+        """
+        num_sessions = len(options["kwargs"]["recording_durations"])
+        _, _, baseline_outputs = generate_session_displacement_recordings(
+            **options["kwargs"],
+        )
+
+        _, _, outside_probe_outputs = generate_session_displacement_recordings(
+            **options["kwargs"], shift_units_outside_probe=True
+        )
+
+        num_units = options["kwargs"]["num_units"]
+        num_extended_units = num_units * 3
+
+        for ses_idx in range(num_sessions):
+
+            # There are 3x the number of units when new units are created
+            # (one new set above, and one new set below the probe).
+            for key in ["unit_locations", "templates_array_moved", "firing_rates"]:
+                assert outside_probe_outputs[key][ses_idx].shape[0] == num_extended_units
+
+                assert np.array_equal(
+                    baseline_outputs[key][ses_idx], outside_probe_outputs[key][ses_idx][num_units:-num_units]
+                )
+
+            # The kwargs of the units in the central positions should be identical
+            # to those when `shift_units_outside_probe` is `False`.
+            lower_unit_pos = outside_probe_outputs["unit_locations"][ses_idx][-num_units:][:, 1]
+            upper_unit_pos = outside_probe_outputs["unit_locations"][ses_idx][:num_units][:, 1]
+            middle_unit_pos = baseline_outputs["unit_locations"][ses_idx][:, 1]
+
+            assert np.min(upper_unit_pos) > np.max(middle_unit_pos)
+            assert np.max(lower_unit_pos) < np.min(middle_unit_pos)
+
     def test_same_as_generate_ground_truth_recording(self):
         """
         It is expected that inter-session displacement randomly

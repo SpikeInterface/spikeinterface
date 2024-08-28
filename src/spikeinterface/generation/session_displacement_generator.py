@@ -22,6 +22,7 @@ def generate_session_displacement_recordings(
     recording_shifts=((0, 0), (0, 25), (0, 50)),
     non_rigid_gradient=None,
     recording_amplitude_scalings=None,
+    shift_units_outside_probe=False,
     sampling_frequency=30000.0,
     probe_name="Neuropixel-128",
     generate_probe_kwargs=None,
@@ -87,8 +88,16 @@ def generate_session_displacement_recordings(
             "scalings" - a list of numpy arrays, one for each recording, with
                 each entry an array of length num_units holding the unit scalings.
                 e.g. for 3 recordings, 2 units: ((1, 1), (1, 1), (0.5, 0.5)).
+    shift_units_outside_probe : bool
+        By default (`False`), when units are shifted across sessions, new units are
+        not introduced into the recording (e.g. the region in which units
+        have been shifted out of is left at baseline level).  In reality,
+        when the probe shifts new units from outside the original recorded
+        region are shifted into the recording. When `True`, new units
+        are shifted into the generated recording.
     generate_sorting_kwargs : dict
         Only `firing_rates` and `refractory_period_ms` are expected if passed.
+
     All other parameters are used as in from `generate_drifting_recording()`.
 
     Returns
@@ -104,7 +113,6 @@ def generate_session_displacement_recordings(
         "templates_array_moved" : list[np.array]
             A list (length num records) of (num_units, num_samples, num_channels)
             arrays of templates that have been shifted.
-
 
     Notes
     -----
@@ -141,12 +149,28 @@ def generate_session_displacement_recordings(
 
     # Fix generate template kwargs, so they are the same for every created recording.
     # Also fix unit firing rates across recordings.
-    generate_templates_kwargs = fix_generate_templates_kwargs(generate_templates_kwargs, num_units, seed)
+    fixed_generate_templates_kwargs = fix_generate_templates_kwargs(generate_templates_kwargs, num_units, seed)
 
     fixed_firing_rates = _ensure_firing_rates(generate_sorting_kwargs["firing_rates"], num_units, seed)
-    generate_sorting_kwargs["firing_rates"] = fixed_firing_rates
+    fixed_generate_sorting_kwargs = copy.deepcopy(generate_sorting_kwargs)
+    fixed_generate_sorting_kwargs["firing_rates"] = fixed_firing_rates
 
-    # Start looping over parameters, creating recordings shifted
+    if shift_units_outside_probe:
+        num_units, unit_locations, fixed_generate_templates_kwargs, fixed_generate_sorting_kwargs = (
+            _update_kwargs_for_extended_units(
+                num_units,
+                channel_locations,
+                unit_locations,
+                generate_unit_locations_kwargs,
+                generate_templates_kwargs,
+                generate_sorting_kwargs,
+                fixed_generate_templates_kwargs,
+                fixed_generate_sorting_kwargs,
+                seed,
+            )
+        )
+
+        # Start looping over parameters, creating recordings shifted
     # and scaled as required
     extra_outputs_dict = {
         "unit_locations": [],
@@ -174,7 +198,7 @@ def generate_session_displacement_recordings(
             num_units=num_units,
             sampling_frequency=sampling_frequency,
             durations=[duration],
-            **generate_sorting_kwargs,
+            **fixed_generate_sorting_kwargs,
             extra_outputs=True,
             seed=seed,
         )
@@ -195,7 +219,7 @@ def generate_session_displacement_recordings(
             unit_locations_moved,
             sampling_frequency=sampling_frequency,
             seed=seed,
-            **generate_templates_kwargs,
+            **fixed_generate_templates_kwargs,
         )
 
         if recording_amplitude_scalings is not None:
@@ -210,7 +234,7 @@ def generate_session_displacement_recordings(
 
         # Bring it all together in a `InjectTemplatesRecording` and
         # propagate all relevant metadata to the recording.
-        ms_before = generate_templates_kwargs["ms_before"]
+        ms_before = fixed_generate_templates_kwargs["ms_before"]
         nbefore = int(sampling_frequency * ms_before / 1000.0)
 
         recording = InjectTemplatesRecording(
@@ -388,3 +412,89 @@ def _check_generate_session_displacement_arguments(
                 "The entry for each recording in `recording_amplitude_scalings` "
                 "must have the same length as the number of units."
             )
+
+
+def _update_kwargs_for_extended_units(
+    num_units,
+    channel_locations,
+    unit_locations,
+    generate_unit_locations_kwargs,
+    generate_templates_kwargs,
+    generate_sorting_kwargs,
+    fixed_generate_templates_kwargs,
+    fixed_generate_sorting_kwargs,
+    seed,
+):
+    """
+    In a real world situation, if the probe moves up / down
+    not only will previously recorded units be shifted, but
+    new units will be introduced into the recording.
+
+    This function extends the default num units, unit locations,
+    and template / sorting kwargs to extend the unit of units
+    one probe's height (y dimension) above and below the probe.
+    Now, when the unit locations are shifted, new units will be
+    introduced into the recording (from below or above).
+
+    It is important that the unit kwargs for the units are kept the
+    same across runs when seeded (i.e. whether `shift_units_outside_probe`
+    is `True` or `False`). To acheive this, the fixed unit kwargs
+    are extended with new units located above and below these fixed
+    units. The seeds are shifted slightly, so the introduced
+    units do not duplicate the existing units.
+
+    """
+    seed_top = seed + 1 if seed is not None else None
+    seed_bottom = seed - 1 if seed is not None else None
+
+    # Set unit locations above and below the probe and extend
+    # the `unit_locations` array.
+    channel_locations_extend_top = channel_locations.copy()
+    channel_locations_extend_top[:, 1] -= np.max(channel_locations[:, 1])
+
+    extend_top_locations = generate_unit_locations(
+        num_units,
+        channel_locations_extend_top,
+        seed=seed_top,
+        **generate_unit_locations_kwargs,
+    )
+
+    channel_locations_extend_bottom = channel_locations.copy()
+    channel_locations_extend_bottom[:, 1] += np.max(channel_locations[:, 1])
+
+    extend_bottom_locations = generate_unit_locations(
+        num_units,
+        channel_locations_extend_bottom,
+        seed=seed_bottom,
+        **generate_unit_locations_kwargs,
+    )
+
+    unit_locations = np.r_[extend_bottom_locations, unit_locations, extend_top_locations]
+
+    # For the new units located above and below the probe, generate a set of
+    # firing rates and template kwargs.
+
+    # Extend the template kwargs
+    template_kwargs_top = fix_generate_templates_kwargs(generate_templates_kwargs, num_units, seed_top)
+    template_kwargs_bottom = fix_generate_templates_kwargs(generate_templates_kwargs, num_units, seed_bottom)
+
+    for key in fixed_generate_templates_kwargs["unit_params"].keys():
+        fixed_generate_templates_kwargs["unit_params"][key] = np.r_[
+            template_kwargs_top["unit_params"][key],
+            fixed_generate_templates_kwargs["unit_params"][key],
+            template_kwargs_bottom["unit_params"][key],
+        ]
+
+    # Extend the firing rates
+    firing_rates_top = _ensure_firing_rates(generate_sorting_kwargs["firing_rates"], num_units, seed_top)
+    firing_rates_bottom = _ensure_firing_rates(generate_sorting_kwargs["firing_rates"], num_units, seed_bottom)
+
+    fixed_generate_sorting_kwargs["firing_rates"] = np.r_[
+        firing_rates_top, fixed_generate_sorting_kwargs["firing_rates"], firing_rates_bottom
+    ]
+
+    # Update the number of units (3x as a
+    # new set above and below the existing units)
+    num_units *= 3
+
+    return num_units, unit_locations, fixed_generate_templates_kwargs, fixed_generate_sorting_kwargs
