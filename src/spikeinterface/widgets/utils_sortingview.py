@@ -86,8 +86,6 @@ def generate_unit_table_view(analyzer, unit_properties=None, similarity_scores=N
         for prop_name in unit_properties:
 
             # Get property values from correct location
-            # import pdb
-            # pdb.set_trace()
             if prop_name in sorting_props:
                 property_values = sorting.get_property(prop_name)
             elif prop_name in qm_props:
