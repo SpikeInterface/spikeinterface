@@ -830,6 +830,8 @@ class SortingAnalyzer:
         format : "memory" | "binary_folder" | "zarr", default: "memory"
             The new backend format to use
         """
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
         return self._save_or_select_or_merge(format=format, folder=folder)
 
     def select_units(self, unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
@@ -855,6 +857,8 @@ class SortingAnalyzer:
             The newly create sorting_analyzer with the selected units
         """
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
         return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
 
     def remove_units(self, remove_unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
@@ -881,6 +885,8 @@ class SortingAnalyzer:
         """
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
         unit_ids = self.unit_ids[~np.isin(self.unit_ids, remove_unit_ids)]
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
         return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
 
     def merge_units(
@@ -938,6 +944,9 @@ class SortingAnalyzer:
         analyzer :  SortingAnalyzer
             The newly create `SortingAnalyzer` with the selected units
         """
+
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
 
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
 
