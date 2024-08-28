@@ -76,16 +76,6 @@ class ModelBasedClassification:
             if not isinstance(input_data, pd.DataFrame):
                 raise ValueError("Input data must be a pandas DataFrame")
 
-        # Check all the required metrics have been calculated
-        calculated_metrics = set(input_data.keys())
-        required_metrics = set(self.required_metrics)
-        if required_metrics.issubset(calculated_metrics):
-            input_data = input_data[self.required_metrics]
-        else:
-            print("Input data does not contain all required metrics for classification")
-            print("Missing metrics: ", required_metrics.difference(calculated_metrics))
-
-        print(pipeline_info_path)
         self._check_params_for_classification(pipeline_info_path=pipeline_info_path)
 
         # Prepare input data
@@ -136,35 +126,41 @@ class ModelBasedClassification:
         if calculated_metrics.shape[0] == 0:
             raise ValueError("No units present in sorting data")
 
-        return calculated_metrics
+        # Check all the required metrics have been calculated
+        required_metrics = set(self.required_metrics)
+        if required_metrics.issubset(set(calculated_metrics)):
+            input_data = calculated_metrics[self.required_metrics]
+        else:
+            raise ValueError(
+                "Input data does not contain all required metrics for classification",
+                f"Missing metrics: {required_metrics.difference(calculated_metrics)}",
+            )
 
-    def _check_params_for_classification(self, pipeline_info_path):
+        return input_data
+
+    def _check_params_for_classification(self, pipeline_info_path=None):
         """
         Check that quality and template metrics parameters match those used to train the model
 
         Parameters
         ----------
-        pipeline_info_path : str or Path
+        pipeline_info_path : str or Path, default: None
             Path to pipeline_info.json provenance file
         """
 
         quality_metrics_extension = self.sorting_analyzer.get_extension("quality_metrics")
         template_metrics_extension = self.sorting_analyzer.get_extension("template_metrics")
 
-        if pipeline_info_path is None:
-            try:
-                pipeline_info_path = self.pipeline.output_folder + "/model_info.json"
-            except:
-                pass
-        else:
-            try:
-                with open(pipeline_info_path) as fd:
-                    pipeline_info = json.load(fd)
-            except:
-                warnings.warn(
-                    "Could not check if metric parameters are consistent between trained model and this sorting_analyzer. Please supply the path to the `model_info.json` file using `pipeline_info_path` to check this."
-                )
-                return
+        pipeline_info = None
+
+        try:
+            with open(pipeline_info_path) as fd:
+                pipeline_info = json.load(fd)
+        except:
+            warnings.warn(
+                "Could not check if metric parameters are consistent between trained model and this sorting_analyzer. Please supply the path to the `model_info.json` file using `pipeline_info_path` to check this."
+            )
+            return
 
         if quality_metrics_extension is not None:
 

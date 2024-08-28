@@ -13,11 +13,11 @@ def trainer():
     imputation_strategies = ["median"]
     scaling_techniques = ["standard_scaler"]
     classifiers = ["LogisticRegression"]
-    metrics_list = ["metric1", "metric2", "metric3"]
+    metric_names = ["metric1", "metric2", "metric3"]
     return CurationModelTrainer(
         target=target_column,
         output_folder=output_folder,
-        metrics_list=metrics_list,
+        metric_names=metric_names,
         imputation_strategies=imputation_strategies,
         scaling_techniques=scaling_techniques,
         classifiers=classifiers,
@@ -112,13 +112,13 @@ def test_train_model():
     metrics_path = make_temp_training_csv()
     output_folder = tempfile.mkdtemp()
     target_label = "label"
-    metrics_list = ["metric1", "metric2", "metric3"]
+    metric_names = ["metric1", "metric2", "metric3"]
     trainer = train_model(
         mode="csv",
         metrics_path=metrics_path,
         output_folder=output_folder,
         target=target_label,
-        metrics_list=metrics_list,
+        metric_names=metric_names,
         imputation_strategies=["median"],
         scaling_techniques=["standard_scaler"],
         classifiers=["LogisticRegression"],

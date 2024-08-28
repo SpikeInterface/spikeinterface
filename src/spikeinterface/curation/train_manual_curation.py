@@ -632,7 +632,7 @@ def train_model(
 
     elif mode == "csv":
         assert os.path.exists(metrics_path), "Valid metrics path must be provided for mode 'csv'"
-        trainer.load_and_preprocess_csv(metric_names)
+        trainer.load_and_preprocess_csv(metrics_path)
 
     trainer.evaluate_model_config()
     return trainer

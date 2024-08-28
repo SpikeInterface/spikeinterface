@@ -68,7 +68,7 @@ def test_model_based_classification_check_params_for_classification(
     # Test the _check_params_for_classification() method of ModelBasedClassification
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline)
     # Check that ValueError is raised when required_metrics are not computed
-    with pytest.raises(ValueError):
+    with pytest.warns(UserWarning):
         model_based_classification._check_params_for_classification()
 
     # Check that function runs without error when required_metrics are computed
