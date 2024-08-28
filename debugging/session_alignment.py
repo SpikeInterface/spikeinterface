@@ -125,7 +125,7 @@ def estimate_inter_session_displacement(
     max_y = np.max([np.max(locs["y"]) for locs in peak_locations_list])
 
     spatial_bin_edges = np.arange(min_y, max_y + bin_um, bin_um)  # TODO: expose a margin...
-    spatial_bin_centers = alignment_utils.get_bin_centers(spatial_bin_edges)
+    spatial_bin_centers = alignment_utils.get_bin_centers(spatial_bin_edges)  # TODO: own function
 
     # Estimate an activity histogram per-session
     all_session_hists = []  # TODO: probably better as a dict
