@@ -266,7 +266,7 @@ class BaseExtractor:
                         if dtype_kind not in self.default_missing_property_values.keys():
                             raise ValueError(
                                 f"Can't infer a natural missing value for dtype {dtype_kind}. "
-                                "Please provide it with the missing_value argument"
+                                "Please provide it with the `missing_value` argument"
                             )
                         else:
                             missing_value = self.default_missing_property_values[dtype_kind]
