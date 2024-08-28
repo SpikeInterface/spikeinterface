@@ -134,10 +134,29 @@ class GroundTruthStudy:
 
         return cls(study_folder)
 
-    def scan_folder(self):
+    def load_recording(self, dataset_key):
+        """
+        Load the recording for a given dataset key.
+
+        Parameters
+        ----------
+        dataset_key : str
+            The dataset key.
+
+        Returns
+        -------
+        recording : Recording
+            The recording object.
+        """
+        rec_file = self.folder / "datasets" / "recordings" / f"{dataset_key}.pickle"
+        recording = load_extractor(rec_file)
+        return recording
+
+    def scan_folder(self, load_recordings=False, load_comparisons=False):
         """
         Scan the folder to load or reload the datasets, cases, sortings, and comparisons.
         """
+        print("Scanning folder")
         if not (self.folder / "datasets").exists():
             raise ValueError(f"This is folder is not a GroundTruthStudy : {self.folder.absolute()}")
 
@@ -146,33 +165,37 @@ class GroundTruthStudy:
 
         self.levels = self.info["levels"]
 
-        for rec_file in (self.folder / "datasets" / "recordings").glob("*.pickle"):
-            key = rec_file.stem
-            rec = load_extractor(rec_file)
-            gt_sorting = load_extractor(self.folder / f"datasets" / "gt_sortings" / key)
-            self.datasets[key] = (rec, gt_sorting)
-
         with open(self.folder / "cases.pickle", "rb") as f:
             self.cases = pickle.load(f)
 
         self.sortings = {k: None for k in self.cases}
         self.comparisons = {k: None for k in self.cases}
+        self.datasets = {}
         for key in self.cases:
-            gt_sorting = self.datasets[self.cases[key]["dataset"]][1]
+            dataset_key = self.cases[key]["dataset"]
+            if dataset_key not in self.datasets:
+                if load_recordings:
+                    recording = load_extractor(dataset_key)
+                else:
+                    recording = None
+                gt_sorting = load_extractor(self.folder / f"datasets" / "gt_sortings" / dataset_key)
+                self.datasets[dataset_key] = (recording, gt_sorting)
             sorting_folder = self.folder / "sortings" / self.key_to_str(key)
             if sorting_folder.exists():
                 self.sortings[key] = load_extractor(sorting_folder)
 
-            comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
-            if comparison_file.exists():
-                with open(comparison_file, mode="rb") as f:
-                    try:
-                        self.comparisons[key] = pickle.load(f)
-                        # since we avoided pickling the absolute sorting paths, we need to set them here
-                        self.comparisons[key]._sorting1 = gt_sorting
-                        self.comparisons[key]._sorting2 = self.sortings[key]
-                    except Exception:
-                        pass
+            if load_comparisons:
+                comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
+                if comparison_file.exists():
+                    with open(comparison_file, mode="rb") as f:
+                        try:
+                            gt_sorting = self.datasets[self.cases[key]["dataset"]][1]
+                            self.comparisons[key] = pickle.load(f)
+                            # since we avoided pickling the absolute sorting paths, we need to set them here
+                            self.comparisons[key]._sorting1 = gt_sorting
+                            self.comparisons[key]._sorting2 = self.sortings[key]
+                        except Exception:
+                            pass
 
     def __repr__(self):
         t = f"{self.__class__.__name__} {self.folder.stem} \n"
@@ -293,7 +316,11 @@ class GroundTruthStudy:
 
             params = self.cases[key]["run_sorter_params"].copy()
             # this ensure that sorter_name is given
-            recording, _ = self.datasets[self.cases[key]["dataset"]]
+            dataset_key = self.cases[key]["dataset"]
+            recording, _ = self.datasets[dataset_key]
+            if recording is None:
+                recording = self.load_recording(dataset_key)
+                self.datasets[dataset_key] = (recording, self.datasets[dataset_key][1])
             sorter_name = params.pop("sorter_name")
             job = dict(
                 sorter_name=sorter_name,
@@ -422,6 +449,8 @@ class GroundTruthStudy:
             # the waveforms depend on the dataset key
             folder = base_folder / self.key_to_str(dataset_key)
             recording, gt_sorting = self.datasets[dataset_key]
+            if recording is None:
+                recording = self.load_recording(dataset_key)
             sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="binary_folder", folder=folder)
             sorting_analyzer.compute("random_spikes", **random_params)
             sorting_analyzer.compute("templates", **template_params, **job_kwargs)
