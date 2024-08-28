@@ -44,13 +44,13 @@ class GroundTruthStudy:
     Note that the underlying folder structure is not backward compatible!
     """
 
-    def __init__(self, study_folder):
+    def __init__(self, study_folder, datasets=None, cases=None, sortings=None, comparisons=None):
         self.folder = Path(study_folder)
 
-        self.datasets = {}
-        self.cases = {}
-        self.sortings = {}
-        self.comparisons = {}
+        self.datasets = datasets
+        self.cases = cases
+        self.sortings = sortings
+        self.comparisons = comparisons
         self.colors = None
 
         self.scan_folder()
@@ -132,7 +132,7 @@ class GroundTruthStudy:
         # cases is dumped to a pickle file, json is not possible because of the tuple key
         (study_folder / "cases.pickle").write_bytes(pickle.dumps(cases))
 
-        return cls(study_folder)
+        return cls(study_folder, datasets=datasets, cases=cases)
 
     def load_recording(self, dataset_key):
         """
@@ -165,37 +165,46 @@ class GroundTruthStudy:
 
         self.levels = self.info["levels"]
 
-        with open(self.folder / "cases.pickle", "rb") as f:
-            self.cases = pickle.load(f)
+        if self.cases is None:
+            with open(self.folder / "cases.pickle", "rb") as f:
+                self.cases = pickle.load(f)
 
-        self.sortings = {k: None for k in self.cases}
-        self.comparisons = {k: None for k in self.cases}
-        self.datasets = {}
-        for key in self.cases:
-            dataset_key = self.cases[key]["dataset"]
-            if dataset_key not in self.datasets:
+        # load datasets
+        if self.datasets is None:
+            self.datasets = {}
+            for key in self.cases:
+                dataset_key = self.cases[key]["dataset"]
                 if load_recordings:
-                    recording = load_extractor(dataset_key)
+                    recording = self.load_recording(dataset_key)
                 else:
                     recording = None
                 gt_sorting = load_extractor(self.folder / f"datasets" / "gt_sortings" / dataset_key)
                 self.datasets[dataset_key] = (recording, gt_sorting)
-            sorting_folder = self.folder / "sortings" / self.key_to_str(key)
-            if sorting_folder.exists():
-                self.sortings[key] = load_extractor(sorting_folder)
 
+        # load sortings
+        if self.sortings is None:
+            self.sortings = {}
+            for key in self.cases:
+                sorting_folder = self.folder / "sortings" / self.key_to_str(key)
+                if sorting_folder.exists():
+                    self.sortings[key] = load_extractor(sorting_folder)
+
+        # load comparisons
+        if self.comparisons is None:
+            self.comparisons = {}
             if load_comparisons:
-                comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
-                if comparison_file.exists():
-                    with open(comparison_file, mode="rb") as f:
-                        try:
-                            gt_sorting = self.datasets[self.cases[key]["dataset"]][1]
-                            self.comparisons[key] = pickle.load(f)
-                            # since we avoided pickling the absolute sorting paths, we need to set them here
-                            self.comparisons[key]._sorting1 = gt_sorting
-                            self.comparisons[key]._sorting2 = self.sortings[key]
-                        except Exception:
-                            pass
+                for key in self.cases:
+                    comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
+                    if comparison_file.exists():
+                        with open(comparison_file, mode="rb") as f:
+                            try:
+                                gt_sorting = self.datasets[self.cases[key]["dataset"]][1]
+                                self.comparisons[key] = pickle.load(f)
+                                # since we avoided pickling the absolute sorting paths, we need to set them here
+                                self.comparisons[key]._sorting1 = gt_sorting
+                                self.comparisons[key]._sorting2 = self.sortings[key]
+                            except Exception:
+                                pass
 
     def __repr__(self):
         t = f"{self.__class__.__name__} {self.folder.stem} \n"
