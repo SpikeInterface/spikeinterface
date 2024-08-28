@@ -99,7 +99,7 @@ class ContainerClient:
                 singularity_image = sif_file
             else:
 
-                docker_image = self._get_docker_image(container_image)
+                docker_image = Client.load("docker://" + container_image)
                 if docker_image and len(docker_image.tags) > 0:
                     tag = docker_image.tags[0]
                     print(f"Building singularity image from local docker image: {tag}")

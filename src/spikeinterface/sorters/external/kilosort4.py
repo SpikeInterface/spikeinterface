@@ -6,6 +6,7 @@ from packaging import version
 
 from ..basesorter import BaseSorter
 from .kilosortbase import KilosortBase
+from importlib.metadata import version as importlib_version
 
 PathType = Union[str, Path]
 
@@ -94,7 +95,6 @@ class Kilosort4Sorter(BaseSorter):
         "cluster_pcs": "Maximum number of spatiotemporal PC features used for clustering. Default value: 64.",
         "x_centers": "Number of x-positions to use when determining center points for template groupings. If None, this will be determined automatically by finding peaks in channel density. For 2D array type probes, we recommend specifying this so that centers are placed every few hundred microns.",
         "duplicate_spike_bins": "Number of bins for which subsequent spikes from the same cluster are assumed to be artifacts. A value of 0 disables this step. Default value: 7.",
-        "keep_good_only": "If True only 'good' units are returned",
         "do_correction": "If True, drift correction is performed",
         "save_extra_kwargs": "If True, additional kwargs are saved to the output",
         "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing",
@@ -131,9 +131,8 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        import kilosort as ks
-
-        return ks.__version__
+        """kilosort.__version__ <4.0.10 is always '4'"""
+        return importlib_version("kilosort")
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
@@ -167,6 +166,13 @@ class Kilosort4Sorter(BaseSorter):
 
             logging.basicConfig(level=logging.INFO)
 
+        if version.parse(cls.get_sorter_version()) < version.parse("4.0.5"):
+            raise RuntimeError(
+                "Kilosort versions before 4.0.5 are not supported"
+                "in SpikeInterface. "
+                "Please upgrade Kilosort version."
+            )
+
         sorter_output_folder = sorter_output_folder.absolute()
 
         probe_filename = sorter_output_folder / "probe.prb"
@@ -178,12 +184,12 @@ class Kilosort4Sorter(BaseSorter):
 
         # load probe
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
-        probe = load_probe(probe_filename)
+        probe = load_probe(probe_path=probe_filename)
         probe_name = ""
         filename = ""
 
         # this internally concatenates the recording
-        file_object = RecordingExtractorAsArray(recording)
+        file_object = RecordingExtractorAsArray(recording_extractor=recording)
 
         do_CAR = params["do_CAR"]
         invert_sign = params["invert_sign"]
@@ -208,39 +214,58 @@ class Kilosort4Sorter(BaseSorter):
         # NOTE: Also modifies settings in-place
         data_dir = ""
         results_dir = sorter_output_folder
-        filename, data_dir, results_dir, probe = set_files(settings, filename, probe, probe_name, data_dir, results_dir)
+
+        filename, data_dir, results_dir, probe = set_files(
+            settings=settings,
+            filename=filename,
+            probe=probe,
+            probe_name=probe_name,
+            data_dir=data_dir,
+            results_dir=results_dir,
+        )
+
         if version.parse(cls.get_sorter_version()) >= version.parse("4.0.12"):
             ops = initialize_ops(
-                settings,
-                probe,
-                recording.get_dtype(),
-                do_CAR,
-                invert_sign,
-                device,
+                settings=settings,
+                probe=probe,
+                data_dtype=recording.get_dtype(),
+                do_CAR=do_CAR,
+                invert_sign=invert_sign,
+                device=device,
                 save_preprocesed_copy=save_preprocessed_copy,  # this kwarg is correct (typo)
             )
+        else:
+            ops = initialize_ops(
+                settings=settings,
+                probe=probe,
+                data_dtype=recording.get_dtype(),
+                do_CAR=do_CAR,
+                invert_sign=invert_sign,
+                device=device,
+            )
+
+        if version.parse(cls.get_sorter_version()) >= version.parse("4.0.11"):
             n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact, _, _ = (
                 get_run_parameters(ops)
             )
         else:
-            ops = initialize_ops(settings, probe, recording.get_dtype(), do_CAR, invert_sign, device)
             n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact = (
                 get_run_parameters(ops)
             )
 
         # Set preprocessing and drift correction parameters
         if not params["skip_kilosort_preprocessing"]:
-            ops = compute_preprocessing(ops, device, tic0=tic0, file_object=file_object)
+            ops = compute_preprocessing(ops=ops, device=device, tic0=tic0, file_object=file_object)
         else:
             print("Skipping kilosort preprocessing.")
             bfile = BinaryFiltered(
-                ops["filename"],
-                n_chan_bin,
-                fs,
-                NT,
-                nt,
-                twav_min,
-                chan_map,
+                filename=ops["filename"],
+                n_chan_bin=n_chan_bin,
+                fs=fs,
+                NT=NT,
+                nt=nt,
+                nt0min=twav_min,
+                chan_map=chan_map,
                 hp_filter=None,
                 device=device,
                 do_CAR=do_CAR,
@@ -254,26 +279,31 @@ class Kilosort4Sorter(BaseSorter):
             ops["preprocessing"] = dict(hp_filter=None, whiten_mat=None)
             ops["Wrot"] = torch.as_tensor(np.eye(recording.get_num_channels()))
             ops["Nbatches"] = bfile.n_batches
+        #            bfile.close()  # TODO: KS do this after preprocessing?
 
         np.random.seed(1)
         torch.cuda.manual_seed_all(1)
         torch.random.manual_seed(1)
-        # if not params["skip_kilosort_preprocessing"]:
+
         if not params["do_correction"]:
             print("Skipping drift correction.")
             ops["nblocks"] = 0
 
         # this function applies both preprocessing and drift correction
         ops, bfile, st0 = compute_drift_correction(
-            ops, device, tic0=tic0, progress_bar=progress_bar, file_object=file_object
+            ops=ops, device=device, tic0=tic0, progress_bar=progress_bar, file_object=file_object
         )
 
         if save_preprocessed_copy:
             save_preprocessing(results_dir / "temp_wh.dat", ops, bfile)
 
         # Sort spikes and save results
-        st, tF, _, _ = detect_spikes(ops, device, bfile, tic0=tic0, progress_bar=progress_bar)
-        clu, Wall = cluster_spikes(st, tF, ops, device, bfile, tic0=tic0, progress_bar=progress_bar)
+        st, tF, _, _ = detect_spikes(ops=ops, device=device, bfile=bfile, tic0=tic0, progress_bar=progress_bar)
+
+        clu, Wall = cluster_spikes(
+            st=st, tF=tF, ops=ops, device=device, bfile=bfile, tic0=tic0, progress_bar=progress_bar
+        )
+
         if params["skip_kilosort_preprocessing"]:
             ops["preprocessing"] = dict(
                 hp_filter=torch.as_tensor(np.zeros(1)), whiten_mat=torch.as_tensor(np.eye(recording.get_num_channels()))
@@ -281,14 +311,14 @@ class Kilosort4Sorter(BaseSorter):
 
         if version.parse(cls.get_sorter_version()) >= version.parse("4.0.12"):
             _ = save_sorting(
-                ops,
-                results_dir,
-                st,
-                clu,
-                tF,
-                Wall,
-                bfile.imin,
-                tic0,
+                ops=ops,
+                results_dir=results_dir,
+                st=st,
+                clu=clu,
+                tF=tF,
+                Wall=Wall,
+                imin=bfile.imin,
+                tic0=tic0,
                 save_extra_vars=save_extra_vars,
                 save_preprocessed_copy=save_preprocessed_copy,
             )
