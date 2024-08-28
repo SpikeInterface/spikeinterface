@@ -316,16 +316,6 @@ def test_do_recording_attributes_match():
     assert not do_match
     assert "sampling_frequency" in exc
 
-    # check is_filtered options
-    rec_attributes = get_rec_attributes(recording)
-    rec_attributes["is_filtered"] = not rec_attributes["is_filtered"]
-
-    do_match, exc = do_recording_attributes_match(recording, rec_attributes)
-    assert not do_match
-    assert "is_filtered" in exc
-    do_match, exc = do_recording_attributes_match(recording, rec_attributes, check_is_filtered=False)
-    assert do_match
-
     # check dtype options
     rec_attributes = get_rec_attributes(recording)
     rec_attributes["dtype"] = "int16"

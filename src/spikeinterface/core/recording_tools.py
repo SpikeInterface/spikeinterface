@@ -1,6 +1,6 @@
 from __future__ import annotations
 from copy import deepcopy
-from typing import Literal, Tuple
+from typing import Literal
 import warnings
 from pathlib import Path
 import os
@@ -930,8 +930,8 @@ def get_rec_attributes(recording):
 
 
 def do_recording_attributes_match(
-    recording1: "BaseRecording", recording2_attributes: bool, check_is_filtered: bool = True, check_dtype: bool = True
-) -> Tuple[bool, str]:
+    recording1: "BaseRecording", recording2_attributes: bool, check_dtype: bool = True
+) -> tuple[bool, str]:
     """
     Check if two recordings have the same attributes
 
@@ -941,8 +941,6 @@ def do_recording_attributes_match(
         The first recording object
     recording2_attributes : dict
         The recording attributes to test against
-    check_is_filtered : bool, default: True
-        If True, check if the recordings are filtered
     check_dtype : bool, default: True
         If True, check if the recordings have the same dtype
 
@@ -962,31 +960,24 @@ def do_recording_attributes_match(
     non_matching_attrs = []
 
     if not np.array_equal(recording1_attributes["channel_ids"], recording2_attributes["channel_ids"]):
-        attributes_match = False
         non_matching_attrs.append("channel_ids")
     if not recording1_attributes["sampling_frequency"] == recording2_attributes["sampling_frequency"]:
-        attributes_match = False
         non_matching_attrs.append("sampling_frequency")
     if not recording1_attributes["num_channels"] == recording2_attributes["num_channels"]:
-        attributes_match = False
         non_matching_attrs.append("num_channels")
     if not recording1_attributes["num_samples"] == recording2_attributes["num_samples"]:
-        attributes_match = False
         non_matching_attrs.append("num_samples")
-    if check_is_filtered:
-        if not recording1_attributes["is_filtered"] == recording2_attributes["is_filtered"]:
-            attributes_match = False
-            non_matching_attrs.append("is_filtered")
     # dtype is optional
     if "dtype" in recording1_attributes and "dtype" in recording2_attributes:
         if check_dtype:
             if not recording1_attributes["dtype"] == recording2_attributes["dtype"]:
-                attributes_match = False
                 non_matching_attrs.append("dtype")
 
     if len(non_matching_attrs) > 0:
+        attributes_match = False
         exception_str = f"Recordings do not match in the following attributes: {non_matching_attrs}"
     else:
+        attributes_match = True
         exception_str = ""
 
     return attributes_match, exception_str
