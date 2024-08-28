@@ -1214,11 +1214,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 print(f"Deleting {child}")
                 self.delete_extension(child)
 
-        if extension_class.need_job_kwargs:
-            params, job_kwargs = split_job_kwargs(kwargs)
-        else:
-            params = kwargs
-            job_kwargs = {}
+        params, job_kwargs = split_job_kwargs(kwargs)
 
         # check dependencies
         if extension_class.need_recording:
