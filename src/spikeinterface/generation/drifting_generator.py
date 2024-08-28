@@ -350,9 +350,6 @@ def generate_drifting_recording(
 
         This can be helpfull for motion benchmark.
     """
-
-    rng = np.random.default_rng(seed=seed)
-
     # probe
     if generate_probe_kwargs is None:
         generate_probe_kwargs = _toy_probes[probe_name]
