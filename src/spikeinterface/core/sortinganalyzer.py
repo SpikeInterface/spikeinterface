@@ -2002,6 +2002,8 @@ class AnalyzerExtension:
         self._save_importing_provenance()
         self._save_data(**kwargs)
         self.run_info["data_loadable"] = self._check_data_loadable()
+        if self.run_info["data_loadable"]:
+            self.run_info["run_completed"] = True  # extensions that go through compute_several_extensions() and then run_node_pipeline() never have ext_instance.run() called, so need to check here (or at least somewhere) instead
         self._save_run_info()
 
     def _save_data(self, **kwargs):
@@ -2122,6 +2124,7 @@ class AnalyzerExtension:
         if save:
             self._save_params()
             self._save_importing_provenance()
+            self._save_run_info()
 
     def _save_params(self):
         params_to_save = self.params.copy()
