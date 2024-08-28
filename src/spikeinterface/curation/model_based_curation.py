@@ -1,7 +1,6 @@
 import numpy as np
 from pathlib import Path
 import json
-import pandas as pd
 import warnings
 
 from spikeinterface.core import SortingAnalyzer
@@ -68,6 +67,7 @@ class ModelBasedClassification:
             A dictionary containing the classified units and their corresponding predictions and probabilities.
             The dictionary has the format {unit_id: (prediction, probability)}.
         """
+        import pandas as pd
 
         # Get metrics DataFrame for classification
         if input_data is None:
@@ -121,6 +121,8 @@ class ModelBasedClassification:
 
     def _get_metrics_for_classification(self):
         """Check if all required metrics are present and return a DataFrame of metrics for classification"""
+
+        import pandas as pd
 
         quality_metrics, template_metrics = try_to_get_metrics_from_analyzer(self.sorting_analyzer)
 
@@ -191,6 +193,8 @@ class ModelBasedClassification:
 
     def _export_to_phy(self, classified_units):
         """Export the classified units to Phy as cluster_prediction.tsv file"""
+
+        import pandas as pd
 
         # Create a new DataFrame with unit_id, prediction, and probability columns from dict {unit_id: (prediction, probability)}
         classified_df = pd.DataFrame.from_dict(classified_units, orient="index", columns=["prediction", "probability"])
