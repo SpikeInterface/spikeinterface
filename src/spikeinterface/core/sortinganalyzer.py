@@ -18,6 +18,8 @@ import probeinterface
 
 import spikeinterface
 
+from zarr.errors import ArrayNotFoundError
+
 from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 
@@ -1719,7 +1721,11 @@ class AnalyzerExtension:
         self._sorting_analyzer = weakref.ref(sorting_analyzer)
 
         self.params = None
+        self.run_info = self._default_run_info_dict()
         self.data = dict()
+
+    def _default_run_info_dict(self):
+        return dict(run_completed=False, data_loadable=False, runtime_s=None)
 
     #######
     # This 3 methods must be implemented in the subclass!!!
@@ -1832,11 +1838,35 @@ class AnalyzerExtension:
     def load(cls, sorting_analyzer):
         ext = cls(sorting_analyzer)
         ext.load_params()
-        ext.load_data()
-        if cls.need_backward_compatibility_on_load:
-            ext._handle_backward_compatibility_on_load()
+        ext.load_run_info()
+        if ext.run_info["run_completed"] and ext.run_info["data_loadable"]:
+            ext.load_data()
+            if cls.need_backward_compatibility_on_load:
+                ext._handle_backward_compatibility_on_load()
+            return ext
+        elif ext.run_info["run_completed"] and not ext.run_info["data_loadable"]:
+            warnings.warn(
+                f"Extension {cls.extension_name} has been computed but the data is not loadable. "
+                "The extension should be re-computed."
+            )
+            return ext
+        else:
+            return None
+    
+    def load_run_info(self):
+        if self.format == "binary_folder":
+            extension_folder = self._get_binary_extension_folder()
+            run_info_file = extension_folder / "run_info.json"
+            assert run_info_file.is_file(), f"No run_info file in extension {self.extension_name} folder"
+            with open(str(run_info_file), "r") as f:
+                run_info = json.load(f)
+        
+        elif self.format == "zarr":
+            extension_group = self._get_zarr_extension_group(mode="r")
+            assert "run_info" in extension_group.attrs, f"No run_info file in extension {self.extension_name} folder"
+            run_info = extension_group.attrs["run_info"]
 
-        return ext
+        self.run_info = run_info
 
     def load_params(self):
         if self.format == "binary_folder":
@@ -1853,13 +1883,15 @@ class AnalyzerExtension:
 
         self.params = params
 
-    def load_data(self):
+    def load_data(self, keep=True):
+        ext_data = None
+
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             for ext_data_file in extension_folder.iterdir():
                 # patch for https://github.com/SpikeInterface/spikeinterface/issues/3041
                 # maybe add a check for version number from the info.json during loading only
-                if ext_data_file.name == "params.json" or ext_data_file.name == "info.json":
+                if ext_data_file.name == "params.json" or ext_data_file.name == "info.json" or ext_data_file.name == "run_info.json":
                     continue
                 ext_data_name = ext_data_file.stem
                 if ext_data_file.suffix == ".json":
@@ -1878,7 +1910,6 @@ class AnalyzerExtension:
                     ext_data = pickle.load(ext_data_file.open("rb"))
                 else:
                     continue
-                self.data[ext_data_name] = ext_data
 
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
@@ -1898,12 +1929,29 @@ class AnalyzerExtension:
                 else:
                     # this load in memmory
                     ext_data = np.array(ext_data_)
-                self.data[ext_data_name] = ext_data
+        
+        if ext_data is None:
+            warnings.warn(f"Found no data for {self.extension_name}, extension should be re-computed.")
+        
+        if keep:
+            self.data[ext_data_name] = ext_data
+
+    def _check_data_loadable(self):
+        try:
+            self.load_data(keep=False)
+            return True
+        except (
+            ValueError, IOError, EOFError, KeyError, UnicodeDecodeError,
+            json.JSONDecodeError, pickle.UnpicklingError, pd.errors.ParserError,
+            ArrayNotFoundError
+            ):
+            return False
 
     def copy(self, new_sorting_analyzer, unit_ids=None):
         # alessio : please note that this also replace the old select_units!!!
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
+        new_extension.run_info = self.run_info.copy()  # TODO: does copy() assume both extensions have been run?
         if unit_ids is None:
             new_extension.data = self.data
         else:
@@ -1922,6 +1970,7 @@ class AnalyzerExtension:
     ):
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
+        new_extension.run_info = self.run_info.copy()  # TODO: does merge() assume both extensions have been run?
         new_extension.data = self._merge_extension_data(
             merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=verbose, **job_kwargs
         )
@@ -1930,19 +1979,26 @@ class AnalyzerExtension:
 
     def run(self, save=True, **kwargs):
         if save and not self.sorting_analyzer.is_read_only():
-            # this also reset the folder or zarr group
-            self._save_params()
+            # NB: this call to _save_params() also resets the folder or zarr group
+            self._save_params()  
             self._save_importing_provenance()
+            self._save_run_info()
 
         self._run(**kwargs)
-
+        
         if save and not self.sorting_analyzer.is_read_only():
             self._save_data(**kwargs)
+            self.run_info["data_loadable"] = self._check_data_loadable()  # maybe overkill?
+            
+        self.run_info["run_completed"] = True
+        self._save_run_info()
 
     def save(self, **kwargs):
         self._save_params()
         self._save_importing_provenance()
         self._save_data(**kwargs)
+        self.run_info["data_loadable"] = self._check_data_loadable()
+        self._save_run_info()
 
     def _save_data(self, **kwargs):
         if self.format == "memory":
@@ -2041,6 +2097,7 @@ class AnalyzerExtension:
         """
         self._reset_extension_folder()
         self.params = None
+        self.run_info = self._default_run_info_dict()
         self.data = dict()
 
     def set_params(self, save=True, **params):
@@ -2097,6 +2154,17 @@ class AnalyzerExtension:
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r+")
             extension_group.attrs["info"] = info
+
+    def _save_run_info(self):
+        run_info = self.run_info.copy()
+
+        if self.format == "binary_folder":
+            extension_folder = self._get_binary_extension_folder()
+            run_info_file = extension_folder / "run_info.json"
+            run_info_file.write_text(json.dumps(run_info, indent=4), encoding="utf8")
+        elif self.format == "zarr":
+            extension_group = self._get_zarr_extension_group(mode="r+")
+            extension_group.attrs["run_info"] = run_info
 
     def get_pipeline_nodes(self):
         assert (
