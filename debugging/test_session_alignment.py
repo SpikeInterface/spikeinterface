@@ -45,14 +45,24 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 # list out carefully all notes
 # handle the case where the passed recordings are not motion correction recordings.
 
-SAVE = False
+
+# 1) get all commits and PRs in order. Work on the original PR
+# 2) investigate why the expected peaks do not drop when recording_amplitude_scalings (rename) is used
+# 3) think about and add  new neurons that are introduced when shifted
+
+# 4) add interpolation of the histograms prior to cross correlation
+# 5) add robust cross-correlation
+# 6) add trimmed methods
+# 7) add better way to estimate chunk length.
+
+SAVE = True
 PLOT = False
 BIN_UM = 2
 
 if SAVE:
     scalings = [np.ones(25), np.r_[np.zeros(10), np.ones(15)]]  # TODO: there is something wrong here, because why are the maximum histograms not removed?
     recordings_list, _ = generate_session_displacement_recordings(
-        non_rigid_gradient=None, # 0.05, # None,
+        non_rigid_gradient=0.1, # 0.05, # None,
         num_units=15,
         recording_durations=(100, 100, 100, 100),
         recording_shifts=(
@@ -82,7 +92,7 @@ with open('all_recordings.pickle', 'rb') as handle:
 
 
 corrected_recordings_list, motion_objects_list, extra_info = session_alignment.run_inter_session_displacement_correction(
-    recordings_list, peaks_list, peak_locations_list, bin_um=BIN_UM, histogram_estimation_method="entire_session", alignment_method="mean_crosscorr", rigid=False, log_scale=True, num_nonrigid_bins=7
+    recordings_list, peaks_list, peak_locations_list, bin_um=BIN_UM, histogram_estimation_method="entire_session", alignment_method="mean_crosscorr", rigid=False, log_scale=True, num_nonrigid_bins=24
 )
 
 plotting.SessionAlignmentWidget(
