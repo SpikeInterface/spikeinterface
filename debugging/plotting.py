@@ -143,7 +143,7 @@ class SessionAlignmentWidget(BaseWidget):
                 ax_top.set_title(f"Session {i + 1}")
                 ax_top.set_xlabel(None)
 
-                plot = DriftRasterMapWidget(
+                DriftRasterMapWidget(
                     dp.peaks_list[i],
                     dp.corrected_peak_locations_list[i],
                     recording=dp.recordings_list[i],
@@ -163,7 +163,7 @@ class SessionAlignmentWidget(BaseWidget):
 
             ax = fig.add_subplot(gs[num_rows, :])
 
-            plot = SessionAlignmentHistogramWidget(
+            SessionAlignmentHistogramWidget(
                 dp.session_histogram_list,
                 dp.histogram_spatial_bin_centers,
                 ax=ax,
@@ -242,6 +242,7 @@ class SessionAlignmentHistogramWidget(BaseWidget):
         if isinstance(linewidths, int):
             linewidths = [linewidths] * num_histograms
 
+        # TODO: this leads to quite unexpected behaviours, figure something else out.
         if spatial_bin_centers is None:
             num_bins = dp.session_histogram_list[0].size
             spatial_bin_centers = [np.arange(num_bins)] * num_histograms

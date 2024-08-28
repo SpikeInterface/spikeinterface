@@ -46,8 +46,6 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 # handle the case where the passed recordings are not motion correction recordings.
 
 
-# 1) get all commits and PRs in order. Work on the original PR
-# 2) investigate why the expected peaks do not drop when recording_amplitude_scalings (rename) is used
 # 3) think about and add  new neurons that are introduced when shifted
 
 # 4) add interpolation of the histograms prior to cross correlation
