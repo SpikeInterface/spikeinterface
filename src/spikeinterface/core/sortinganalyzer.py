@@ -11,7 +11,7 @@ import weakref
 import shutil
 import warnings
 import importlib
-from time import time
+from time import perf_counter
 
 import numpy as np
 
