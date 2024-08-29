@@ -8,14 +8,13 @@ import tempfile, csv
 @pytest.fixture
 def trainer():
 
-    target_label = "label"
     output_folder = tempfile.mkdtemp()  # Create a temporary output folder
     imputation_strategies = ["median"]
     scaling_techniques = ["standard_scaler"]
     classifiers = ["LogisticRegression"]
     metric_names = ["metric1", "metric2", "metric3"]
     return CurationModelTrainer(
-        target_label=target_label,
+        labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1]],
         output_folder=output_folder,
         metric_names=metric_names,
         imputation_strategies=imputation_strategies,
@@ -28,10 +27,10 @@ def make_temp_training_csv():
     # Create a temporary CSV file with sham data
     with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
         writer = csv.writer(temp_file)
-        writer.writerow(["unit_id", "metric1", "metric2", "metric3", "label"])
+        writer.writerow(["unit_id", "metric1", "metric2", "metric3"])
         for i in range(5):
-            writer.writerow([i * 2, 0, 0, 0, 0])
-            writer.writerow([i * 2 + 1, 1, 1, 1, 1])
+            writer.writerow([i * 2, 0, 0, 0])
+            writer.writerow([i * 2 + 1, 1, 1, 1])
     return temp_file.name
 
 
@@ -88,7 +87,7 @@ def test_get_custom_classifier_search_space():
             "max_iter": [100, 400],
         }
     }
-    trainer = CurationModelTrainer(classifiers=classifier)
+    trainer = CurationModelTrainer(classifiers=classifier, labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1]])
 
     model, param_space = trainer.get_classifier_search_space(list(classifier.keys())[0])
     assert model is not None
@@ -102,22 +101,21 @@ def test_evaluate_model_config(trainer):
 
     trainer.evaluate_model_config()
     assert os.path.exists(trainer.output_folder)
-    assert os.path.exists(os.path.join(trainer.output_folder, "best_model_label.skops"))
-    assert os.path.exists(os.path.join(trainer.output_folder, "model_label_accuracies.csv"))
-    assert os.path.exists(os.path.join(trainer.output_folder, "model_info.json"))
+    assert os.path.exists(os.path.join(trainer.output_folder, "best_model.skops"))
+    assert os.path.exists(os.path.join(trainer.output_folder, "model_accuracies.csv"))
+    assert os.path.exists(os.path.join(trainer.output_folder, "pipeline_info.json"))
 
 
 def test_train_model():
 
     metrics_path = make_temp_training_csv()
     output_folder = tempfile.mkdtemp()
-    target_label = "label"
     metric_names = ["metric1", "metric2", "metric3"]
     trainer = train_model(
         mode="csv",
         metrics_path=metrics_path,
         output_folder=output_folder,
-        target_label=target_label,
+        labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1]],
         metric_names=metric_names,
         imputation_strategies=["median"],
         scaling_techniques=["standard_scaler"],

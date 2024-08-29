@@ -15,10 +15,8 @@ class CurationModelTrainer:
 
     Parameters
     ----------
-    labels : list, default: None
+    labels : list of lists, default: None
         List of curated labels for each unit; must be in the same order as the metrics data.
-    target_label : str, default: 'label'
-        The name of the target column in given csv. Default is 'label'.
     output_folder : str, optional
         The folder where outputs such as models and evaluation metrics will be saved, if specified. Requires the skops library.
     metric_names : list of str, optional
@@ -40,8 +38,6 @@ class CurationModelTrainer:
         The folder where outputs such as models and evaluation metrics will be saved. Requires the skops library.
     labels : list, default: None
         List of curated labels for each unit; must be in the same order as the metrics data.
-    target_label : str, default: 'label'
-        The name of the target column in given csv. Default is 'label'.
     imputation_strategies : list of str
         The list of imputation strategies to apply.
     scaling_techniques : list of str
@@ -93,7 +89,6 @@ class CurationModelTrainer:
 
     def __init__(
         self,
-        target_label="label",
         labels=None,
         output_folder=None,
         metric_names=None,
@@ -130,17 +125,14 @@ class CurationModelTrainer:
         self.seed = seed if seed is not None else np.random.default_rng(seed=None).integers(0, 2**31)
         self.metrics_params = {}
         self.smote = smote
-        self.target_column = target_label
-        self.y = None
+        self.label_conversion = None
 
         self.X = None
         self.testing_metrics = None
 
-        # Set target column to extract from analyzer OR list of labels to use as target
-        if labels is not None:
-            import pandas as pd
+        import pandas as pd
 
-            self.y = pd.DataFrame(labels)[0]
+        self.y = pd.concat([pd.DataFrame(one_labels)[0] for one_labels in labels])
 
         self.metric_names = metric_names
 
@@ -155,7 +147,7 @@ class CurationModelTrainer:
         """Returns the default list of metrics."""
         return get_quality_metric_list() + get_quality_pca_metric_list() + get_template_metric_names()
 
-    def load_and_preprocess_analyzers(self, analyzers, no_labels):
+    def load_and_preprocess_analyzers(self, analyzers):
         """
         Loads and preprocesses the quality metrics and labels from the given list of SortingAnalyzer objects.
         """
@@ -167,12 +159,8 @@ class CurationModelTrainer:
 
         # Set metric names to those calculated if not provided
         if self.metric_names is None:
-            print("No metric_names provided, using all metrics calculated by the analyzers")
+            warnings.warn("No metric_names provided, using all metrics calculated by the analyzers")
             self.metric_names = self.testing_metrics.columns.tolist()
-
-        # if no labels, look at phy's default export location
-        if no_labels:
-            self.testing_metrics["label"] = np.concatenate([an.sorting.get_property("quality") for an in analyzers])
 
         self._check_metrics_parameters()
 
@@ -214,22 +202,12 @@ class CurationModelTrainer:
         are converted to integer codes. The mapping from string labels to integer codes
         is stored in the `label_conversion` attribute.
         """
-        # Extract target variable if not provided as list during init
-        try:
-            self.y = self.testing_metrics[self.target_column] if self.y is None else self.y
-        except KeyError:
-            raise ValueError(f"Target column '{self.target_column}' not found in testing metrics file")
 
         # Convert string labels to integer codes to allow classification
-        if self.y.dtype == "object":
-            new_y = self.y.astype("category").cat.codes
-            self.label_conversion = dict(zip(self.y.astype("category").cat.categories, self.y))
-            self.y = new_y
-            warnings.warn(
-                "Target column contains string labels, converting to integers. "
-                "Please ensure that the labels are in the correct order."
-                "Conversion can be found in self.label_conversion"
-            )
+        # if self.y.dtype == "object":
+        new_y = self.y.astype("category").cat.codes
+        self.label_conversion = dict(zip(self.y.astype("category").cat.categories, self.y))
+        self.y = new_y
 
         # Extract features
         try:
@@ -499,13 +477,9 @@ class CurationModelTrainer:
     def _save(self):
         from skops.io import dump
 
-        # Dump to pickle if output_folder is provided
-        model_name = self.target_column
-
-        dump(self.best_pipeline, os.path.join(self.output_folder, f"best_model_{model_name}.skops"))
-        self.test_accuracies_df.to_csv(
-            os.path.join(self.output_folder, f"model_{model_name}_accuracies.csv"), float_format="%.4f"
-        )
+        # Dump to skops if output_folder is provided
+        dump(self.best_pipeline, os.path.join(self.output_folder, f"best_model.skops"))
+        self.test_accuracies_df.to_csv(os.path.join(self.output_folder, f"model_accuracies.csv"), float_format="%.4f")
 
         model_info = {}
         model_info["metric_params"] = self.metrics_params
@@ -515,7 +489,7 @@ class CurationModelTrainer:
 
         model_info["label_conversion"] = self.label_conversion
 
-        param_file = self.output_folder + "/model_info.json"
+        param_file = self.output_folder + "/pipeline_info.json"
         Path(param_file).write_text(json.dumps(model_info, indent=4), encoding="utf8")
 
     def _train_and_evaluate(self, imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, model_id):
@@ -564,7 +538,6 @@ class CurationModelTrainer:
 def train_model(
     mode="analyzers",
     labels=None,
-    target_label="label",
     analyzers=None,
     metrics_path=None,
     output_folder=None,
@@ -588,10 +561,8 @@ def train_model(
         The mode to use for training. Options are 'analyzers', 'csv'. Default is 'analyzers'.
     analyzers : list of SortingAnalyzer
         The list of SortingAnalyzer objects containing the quality metrics and labels to use for training, if using 'analyzers' mode.
-    labels : list, default: None
+    labels : list of list, default: None
         List of curated labels for each unit; must be in the same order as the metrics data.
-    target_label : str, default: 'label'
-        The name of the target column in given csv. Default is 'label'.
     metrics_path : str
         The path to the CSV file containing the metrics data if using 'csv' mode.
     output_folder : str, optional
@@ -618,12 +589,14 @@ def train_model(
     and evaluating the models. The evaluation results are saved to the specified output folder.
     """
 
+    if labels is None:
+        raise Exception("You must supply a list of curated labels using `labels = ...`")
+
     if mode not in ["analyzers", "csv"]:
         raise Exception("`mode` must be equal to 'analyzers' or 'csv'.")
 
     trainer = CurationModelTrainer(
         labels=labels,
-        target_label=target_label,
         output_folder=output_folder,
         metric_names=metric_names,
         imputation_strategies=imputation_strategies,
@@ -635,8 +608,7 @@ def train_model(
 
     if mode == "analyzers":
         assert analyzers is not None, "Analyzers must be provided as a list for mode 'analyzers'"
-        no_labels = labels is None
-        trainer.load_and_preprocess_analyzers(analyzers, no_labels)
+        trainer.load_and_preprocess_analyzers(analyzers)
 
     elif mode == "csv":
         assert os.path.exists(metrics_path), "Valid metrics path must be provided for mode 'csv'"
