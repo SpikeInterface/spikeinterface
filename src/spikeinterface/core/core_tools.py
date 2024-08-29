@@ -153,6 +153,13 @@ def check_json(dictionary: dict) -> dict:
     return json.loads(json_string)
 
 
+def clean_zarr_folder_name(folder):
+    folder = Path(folder)
+    if folder.suffix != ".zarr":
+        folder = folder.parent / f"{folder.stem}.zarr"
+    return folder
+
+
 def add_suffix(file_path, possible_suffix):
     file_path = Path(file_path)
     if isinstance(possible_suffix, str):

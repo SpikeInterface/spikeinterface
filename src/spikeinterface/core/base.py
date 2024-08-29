@@ -17,6 +17,7 @@ import numpy as np
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import (
     check_json,
+    clean_zarr_folder_name,
     is_dict_extractor,
     SIJsonEncoder,
     make_paths_relative,
@@ -1061,9 +1062,7 @@ class BaseExtractor:
                         print(f"Use zarr_path={zarr_path}")
         else:
             if storage_options is None:
-                folder = Path(folder)
-                if folder.suffix != ".zarr":
-                    folder = folder.parent / f"{folder.stem}.zarr"
+                folder = clean_zarr_folder_name(folder)
                 if folder.is_dir() and overwrite:
                     shutil.rmtree(folder)
                 zarr_path = folder
