@@ -2186,7 +2186,9 @@ class AnalyzerExtension:
         return self._get_pipeline_nodes()
 
     def get_data(self, *args, **kwargs):
-        assert self.run_info["run_completed"], f"You must run the extension {self.extension_name} before retrieving data"
+        assert self.run_info[
+            "run_completed"
+        ], f"You must run the extension {self.extension_name} before retrieving data"
         assert len(self.data) > 0, "Extension has been run but no data found."
         return self._get_data(*args, **kwargs)
 
