@@ -513,6 +513,8 @@ class CurationModelTrainer:
         model_info["spikeinterface_info"] = {}
         model_info["spikeinterface_info"]["version"] = spikeinterface.__version__
 
+        model_info["label_conversion"] = self.label_conversion
+
         param_file = self.output_folder + "/model_info.json"
         Path(param_file).write_text(json.dumps(model_info, indent=4), encoding="utf8")
 
