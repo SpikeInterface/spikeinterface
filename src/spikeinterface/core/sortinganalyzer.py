@@ -2013,9 +2013,9 @@ class AnalyzerExtension:
             self._save_importing_provenance()
             self._save_run_info()
 
-        start = time()
+        start = perf_counter()
         self._run(**kwargs)
-        end = time()
+        end = perf_counter()
 
         if save and not self.sorting_analyzer.is_read_only():
             self._save_data(**kwargs)
