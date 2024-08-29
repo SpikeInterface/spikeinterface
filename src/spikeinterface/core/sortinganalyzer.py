@@ -1744,7 +1744,7 @@ class AnalyzerExtension:
         self.data = dict()
 
     def _default_run_info_dict(self):
-        return dict(run_completed=False, data_loadable=False, runtime_s=None)
+        return dict(run_completed=False, runtime_s=None)
 
     #######
     # This 3 methods must be implemented in the subclass!!!
@@ -1858,16 +1858,10 @@ class AnalyzerExtension:
         ext = cls(sorting_analyzer)
         ext.load_params()
         ext.load_run_info()
-        if ext.run_info["run_completed"] and ext.run_info["data_loadable"]:
+        if ext.run_info["run_completed"]:
             ext.load_data()
             if cls.need_backward_compatibility_on_load:
                 ext._handle_backward_compatibility_on_load()
-            return ext
-        elif ext.run_info["run_completed"] and not ext.run_info["data_loadable"]:
-            warnings.warn(
-                f"Extension {cls.extension_name} has been computed but the data is not loadable. "
-                "The extension should be re-computed."
-            )
             return ext
         else:
             return None
@@ -1902,7 +1896,7 @@ class AnalyzerExtension:
 
         self.params = params
 
-    def load_data(self, keep=True):
+    def load_data(self):
         ext_data = None
 
         if self.format == "binary_folder":
@@ -1956,25 +1950,7 @@ class AnalyzerExtension:
         if ext_data is None:
             warnings.warn(f"Found no data for {self.extension_name}, extension should be re-computed.")
 
-        if keep:
-            self.data[ext_data_name] = ext_data
-
-    def _check_data_loadable(self):
-        try:
-            self.load_data(keep=False)
-            return True
-        except (
-            ValueError,
-            IOError,
-            EOFError,
-            KeyError,
-            UnicodeDecodeError,
-            json.JSONDecodeError,
-            pickle.UnpicklingError,
-            pd.errors.ParserError,
-            ArrayNotFoundError,
-        ):
-            return False
+        self.data[ext_data_name] = ext_data
 
     def copy(self, new_sorting_analyzer, unit_ids=None):
         # alessio : please note that this also replace the old select_units!!!
@@ -2016,12 +1992,11 @@ class AnalyzerExtension:
         start = perf_counter()
         self._run(**kwargs)
         end = perf_counter()
+        self.run_info["runtime_s"] = np.round(end - start, 1)
 
         if save and not self.sorting_analyzer.is_read_only():
             self._save_data(**kwargs)
-            self.run_info["data_loadable"] = self._check_data_loadable()  # maybe overkill?
 
-        self.run_info["runtime_s"] = np.round(end - start, 1)
         self.run_info["run_completed"] = True
         self._save_run_info()
 
@@ -2029,11 +2004,9 @@ class AnalyzerExtension:
         self._save_params()
         self._save_importing_provenance()
         self._save_data(**kwargs)
-        self.run_info["data_loadable"] = self._check_data_loadable()
-        if self.run_info["data_loadable"]:
-            self.run_info["run_completed"] = (
-                True  # extensions that go through compute_several_extensions() and then run_node_pipeline() never have ext_instance.run() called, so need to check here (or at least somewhere) instead
-            )
+        self.run_info["run_completed"] = (
+            True  # extensions that go through compute_several_extensions() and then run_node_pipeline() never have ext_instance.run() called, so need to change run_completed here (or somewhere, at least)
+        )
         self._save_run_info()
 
     def _save_data(self, **kwargs):
