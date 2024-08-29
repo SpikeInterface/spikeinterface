@@ -539,6 +539,21 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
+                # add unit_properties
+                sw.plot_sorting_summary(
+                    self.sorting_analyzer_sparse,
+                    unit_table_properties=["firing_rate", "snr"],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                # adding a missing property should raise a warning
+                with self.assertWarns(UserWarning):
+                    sw.plot_sorting_summary(
+                        self.sorting_analyzer_sparse,
+                        unit_table_properties=["missing_property"],
+                        backend=backend,
+                        **self.backend_kwargs[backend],
+                    )
 
     def test_plot_agreement_matrix(self):
         possible_backends = list(sw.AgreementMatrixWidget.get_possible_backends())
