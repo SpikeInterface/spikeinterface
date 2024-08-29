@@ -204,7 +204,6 @@ class CurationModelTrainer:
         """
 
         # Convert string labels to integer codes to allow classification
-        # if self.y.dtype == "object":
         new_y = self.y.astype("category").cat.codes
         self.label_conversion = dict(zip(self.y.astype("category").cat.categories, self.y))
         self.y = new_y
