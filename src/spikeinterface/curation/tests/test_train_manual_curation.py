@@ -8,14 +8,14 @@ import tempfile, csv
 @pytest.fixture
 def trainer():
 
-    target_column = "label"
+    target_label = "label"
     output_folder = tempfile.mkdtemp()  # Create a temporary output folder
     imputation_strategies = ["median"]
     scaling_techniques = ["standard_scaler"]
     classifiers = ["LogisticRegression"]
     metric_names = ["metric1", "metric2", "metric3"]
     return CurationModelTrainer(
-        target=target_column,
+        target_label=target_label,
         output_folder=output_folder,
         metric_names=metric_names,
         imputation_strategies=imputation_strategies,
@@ -117,7 +117,7 @@ def test_train_model():
         mode="csv",
         metrics_path=metrics_path,
         output_folder=output_folder,
-        target=target_label,
+        target_label=target_label,
         metric_names=metric_names,
         imputation_strategies=["median"],
         scaling_techniques=["standard_scaler"],

@@ -15,8 +15,10 @@ class CurationModelTrainer:
 
     Parameters
     ----------
-    target_column : str or list
-        The name of the target column in the dataset, or a list of labels to use as target. If a list is provided, the target column is not extracted from the dataset/analyzer. Default is 'label'.
+    labels : list, default: None
+        List of curated labels for each unit; must be in the same order as the metrics data.
+    target_label : str, default: 'label'
+        The name of the target column in given csv. Default is 'label'.
     output_folder : str, optional
         The folder where outputs such as models and evaluation metrics will be saved, if specified. Requires the skops library.
     metric_names : list of str, optional
@@ -36,8 +38,10 @@ class CurationModelTrainer:
     ----------
     output_folder : str
         The folder where outputs such as models and evaluation metrics will be saved. Requires the skops library.
-    target : str or list
-        The name of the target column in the dataset, or a list of labels to use as target.
+    labels : list, default: None
+        List of curated labels for each unit; must be in the same order as the metrics data.
+    target_label : str, default: 'label'
+        The name of the target column in given csv. Default is 'label'.
     imputation_strategies : list of str
         The list of imputation strategies to apply.
     scaling_techniques : list of str
@@ -89,7 +93,8 @@ class CurationModelTrainer:
 
     def __init__(
         self,
-        target="label",
+        target_label="label",
+        labels=None,
         output_folder=None,
         metric_names=None,
         imputation_strategies=None,
@@ -135,18 +140,17 @@ class CurationModelTrainer:
         self.seed = seed if seed is not None else np.random.default_rng(seed=None).integers(0, 2**31)
         self.metrics_params = {}
         self.smote = smote
+        self.target_column = target_label
+        self.y = None
 
         self.X = None
         self.testing_metrics = None
 
         # Set target column to extract from analyzer OR list of labels to use as target
-        if isinstance(target, str):
-            self.target_column = target
-            self.y = None
-        elif isinstance(target, list):
-            self.y = target
-        else:
-            raise ValueError("target must be a string (name of column containing labels) or a single list of labels")
+        if labels is not None:
+            import pandas as pd
+
+            self.y = pd.DataFrame(labels)[0]
 
         if metric_names is None:
             self.metric_names = self.get_default_metrics_list()
@@ -165,7 +169,7 @@ class CurationModelTrainer:
         """Returns the default list of metrics."""
         return get_quality_metric_list() + get_quality_pca_metric_list() + get_template_metric_names()
 
-    def load_and_preprocess_analyzers(self, analyzers):
+    def load_and_preprocess_analyzers(self, analyzers, no_labels):
         """
         Loads and preprocesses the quality metrics and labels from the given list of SortingAnalyzer objects.
         """
@@ -174,7 +178,10 @@ class CurationModelTrainer:
         self.testing_metrics = pd.concat(
             [self._get_metrics_for_classification(an, an_index) for an_index, an in enumerate(analyzers)], axis=0
         )
-        self.testing_metrics["label"] = np.concatenate([an.sorting.get_property("quality") for an in analyzers])
+
+        # if no labels, look at phy's default export location
+        if no_labels:
+            self.testing_metrics["label"] = np.concatenate([an.sorting.get_property("quality") for an in analyzers])
 
         self._check_metrics_parameters()
 
@@ -222,12 +229,13 @@ class CurationModelTrainer:
         except KeyError:
             raise ValueError(f"Target column '{self.target_column}' not found in testing metrics file")
 
+        print(self.y)
+
         # Convert string labels to integer codes to allow classification
         if self.y.dtype == "object":
-            self.y = self.y.astype("category").cat.codes
-            self.label_conversion = dict(
-                zip(self.testing_metrics[self.target_column].astype("category").cat.categories, self.y)
-            )
+            new_y = self.y.astype("category").cat.codes
+            self.label_conversion = dict(zip(self.y.astype("category").cat.categories, self.y))
+            self.y = new_y
             warnings.warn(
                 "Target column contains string labels, converting to integers. "
                 "Please ensure that the labels are in the correct order."
@@ -564,7 +572,8 @@ class CurationModelTrainer:
 
 def train_model(
     mode="analyzers",
-    target="label",
+    labels=None,
+    target_label="label",
     analyzers=None,
     metrics_path=None,
     output_folder=None,
@@ -587,11 +596,13 @@ def train_model(
     mode : str
         The mode to use for training. Options are 'analyzers', 'csv'. Default is 'analyzers'.
     analyzers : list of SortingAnalyzer
-        The list of SortingAnalyzer objects containing the quality metrics and labels to use for training.
-    target_label : str
-        The name of the target column in the dataset. Default is 'label'.
+        The list of SortingAnalyzer objects containing the quality metrics and labels to use for training, if using 'analyzers' mode.
+    labels : list, default: None
+        List of curated labels for each unit; must be in the same order as the metrics data.
+    target_label : str, default: 'label'
+        The name of the target column in given csv. Default is 'label'.
     metrics_path : str
-        The path to the CSV file containing the metrics data.
+        The path to the CSV file containing the metrics data if using 'csv' mode.
     output_folder : str, optional
         The folder where outputs such as models and evaluation metrics will be saved.
     metric_names : list of str, optional
@@ -615,8 +626,13 @@ def train_model(
     This function handles the entire workflow of initializing the trainer, loading and preprocessing the data,
     and evaluating the models. The evaluation results are saved to the specified output folder.
     """
+
+    if mode not in ["analyzers", "csv"]:
+        raise Exception("`mode` must be equal to 'analyzers' or 'csv'.")
+
     trainer = CurationModelTrainer(
-        target=target,
+        labels=labels,
+        target_label=target_label,
         output_folder=output_folder,
         metric_names=metric_names,
         imputation_strategies=imputation_strategies,
@@ -628,7 +644,8 @@ def train_model(
 
     if mode == "analyzers":
         assert analyzers is not None, "Analyzers must be provided as a list for mode 'analyzers'"
-        trainer.load_and_preprocess_analyzers(analyzers)
+        no_labels = labels is None
+        trainer.load_and_preprocess_analyzers(analyzers, no_labels)
 
     elif mode == "csv":
         assert os.path.exists(metrics_path), "Valid metrics path must be provided for mode 'csv'"
