@@ -113,17 +113,7 @@ class CurationModelTrainer:
                 "robust_scaler",
             ]
         if classifiers is None:
-            self.classifiers = [
-                "RandomForestClassifier",
-                "AdaBoostClassifier",
-                "GradientBoostingClassifier",
-                "SVC",
-                "LogisticRegression",
-                "XGBClassifier",
-                "CatBoostClassifier",
-                "LGBMClassifier",
-                "MLPClassifier",
-            ]
+            self.classifiers = ["RandomForestClassifier"]
             self.classifier_search_space = None
         elif isinstance(classifiers, dict):
             self.classifiers = list(classifiers.keys())
