@@ -219,8 +219,6 @@ class CurationModelTrainer:
         except KeyError:
             raise ValueError(f"Target column '{self.target_column}' not found in testing metrics file")
 
-        print(self.y)
-
         # Convert string labels to integer codes to allow classification
         if self.y.dtype == "object":
             new_y = self.y.astype("category").cat.codes
@@ -514,7 +512,6 @@ class CurationModelTrainer:
         model_info["spikeinterface_info"]["version"] = spikeinterface.__version__
 
         param_file = self.output_folder + "/model_info.json"
-        print(param_file)
         Path(param_file).write_text(json.dumps(model_info, indent=4), encoding="utf8")
 
     def _train_and_evaluate(self, imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, model_id):
