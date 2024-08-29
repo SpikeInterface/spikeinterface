@@ -141,7 +141,7 @@ def test_SortingAnalyzer_tmp_recording(dataset):
     recording_sliced = recording.channel_slice(recording.channel_ids[:-1])
 
     # wrong channels
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         sorting_analyzer.set_temporary_recording(recording_sliced)
 
 
