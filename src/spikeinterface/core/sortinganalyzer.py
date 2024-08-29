@@ -143,7 +143,7 @@ def create_sorting_analyzer(
     return sorting_analyzer
 
 
-def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
+def load_sorting_analyzer(folder, load_extensions=True, format="auto", storage_options=None):
     """
     Load a SortingAnalyzer object from disk.
 
@@ -155,6 +155,9 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
         Load all extensions or not.
     format : "auto" | "binary_folder" | "zarr"
         The format of the folder.
+    storage_options : dict | None, default: None
+        The storage options to specify credentials to remote zarr bucket.
+        For open buckets, it doesn't need to be specified.
 
     Returns
     -------
@@ -162,7 +165,7 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
         The loaded SortingAnalyzer
 
     """
-    return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format)
+    return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format, storage_options=storage_options)
 
 
 class SortingAnalyzer:
