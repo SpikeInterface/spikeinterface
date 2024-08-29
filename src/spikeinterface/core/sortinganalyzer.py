@@ -23,7 +23,7 @@ from .basesorting import BaseSorting
 
 from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
-from .core_tools import check_json, retrieve_importing_provenance, is_path_remote
+from .core_tools import check_json, retrieve_importing_provenance, is_path_remote, clean_zarr_folder_name
 from .sorting_tools import generate_unit_ids_for_merge_group, _get_ids_after_merging
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
@@ -111,6 +111,8 @@ def create_sorting_analyzer(
     sparsity off (or give external sparsity) like this.
     """
     if format != "memory":
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
         if Path(folder).is_dir():
             if not overwrite:
                 raise ValueError(f"Folder already exists {folder}! Use overwrite=True to overwrite it.")
@@ -162,6 +164,8 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
         The loaded SortingAnalyzer
 
     """
+    if format == "zarr":
+        folder = clean_zarr_folder_name(folder)
     return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format)
 
 
@@ -269,6 +273,8 @@ class SortingAnalyzer:
             sorting_analyzer = cls.load_from_binary_folder(folder, recording=recording)
             sorting_analyzer.folder = Path(folder)
         elif format == "zarr":
+            assert folder is not None, "For format='zarr' folder must be provided"
+            folder = clean_zarr_folder_name(folder)
             cls.create_zarr(folder, sorting, recording, sparsity, return_scaled, rec_attributes=None)
             sorting_analyzer = cls.load_from_zarr(folder, recording=recording)
             sorting_analyzer.folder = Path(folder)
@@ -487,10 +493,7 @@ class SortingAnalyzer:
         import zarr
         import numcodecs
 
-        folder = Path(folder)
-        # force zarr sufix
-        if folder.suffix != ".zarr":
-            folder = folder.parent / f"{folder.stem}.zarr"
+        folder = clean_zarr_folder_name(folder)
 
         if folder.is_dir():
             raise ValueError(f"Folder already exists {folder}")
@@ -768,9 +771,7 @@ class SortingAnalyzer:
 
         elif format == "zarr":
             assert folder is not None, "For format='zarr' folder must be provided"
-            folder = Path(folder)
-            if folder.suffix != ".zarr":
-                folder = folder.parent / f"{folder.stem}.zarr"
+            folder = clean_zarr_folder_name(folder)
             SortingAnalyzer.create_zarr(
                 folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes
             )
@@ -829,6 +830,8 @@ class SortingAnalyzer:
         format : "memory" | "binary_folder" | "zarr", default: "memory"
             The new backend format to use
         """
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
         return self._save_or_select_or_merge(format=format, folder=folder)
 
     def select_units(self, unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
@@ -854,6 +857,8 @@ class SortingAnalyzer:
             The newly create sorting_analyzer with the selected units
         """
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
         return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
 
     def remove_units(self, remove_unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
@@ -880,6 +885,8 @@ class SortingAnalyzer:
         """
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
         unit_ids = self.unit_ids[~np.isin(self.unit_ids, remove_unit_ids)]
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
         return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
 
     def merge_units(
@@ -937,6 +944,9 @@ class SortingAnalyzer:
         analyzer :  SortingAnalyzer
             The newly create `SortingAnalyzer` with the selected units
         """
+
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
 
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
 
