@@ -1862,9 +1862,12 @@ class AnalyzerExtension:
             ext.load_data()
             if cls.need_backward_compatibility_on_load:
                 ext._handle_backward_compatibility_on_load()
-            return ext
-        else:
-            return None
+            if len(ext.data) > 0:
+                return ext
+
+        # If extension run not completed, or data has gone missing,
+        # return None to indicate that the extension should be (re)computed.
+        return None
 
     def load_run_info(self):
         if self.format == "binary_folder":
@@ -2183,12 +2186,8 @@ class AnalyzerExtension:
         return self._get_pipeline_nodes()
 
     def get_data(self, *args, **kwargs):
-        assert self.run_info[
-            "run_completed"
-        ], f"You must run the extension {self.extension_name} before retrieving data"
-        assert (
-            len(self.data) > 0
-        ), "Extension has been run but no data found — data file might be missing. Re-compute the extension."
+        assert self.run_info["run_completed"], f"You must run the extension {self.extension_name} before retrieving data"
+        assert len(self.data) > 0, "Extension has been run but no data found."
         return self._get_data(*args, **kwargs)
 
 
