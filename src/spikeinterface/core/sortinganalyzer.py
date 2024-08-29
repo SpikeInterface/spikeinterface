@@ -616,7 +616,7 @@ class SortingAnalyzer:
 
         return sorting_analyzer
 
-    def set_temporary_recording(self, recording: BaseRecording):
+    def set_temporary_recording(self, recording: BaseRecording, check_dtype: bool = True):
         """
         Sets a temporary recording object. This function can be useful to temporarily set
         a "cached" recording object that is not saved in the SortingAnalyzer object to speed up
@@ -628,12 +628,17 @@ class SortingAnalyzer:
         ----------
         recording : BaseRecording
             The recording object to set as temporary recording.
+        check_dtype : bool, default: True
+            If True, check that the dtype of the temporary recording is the same as the original recording.
         """
         # check that recording is compatible
-        assert do_recording_attributes_match(recording, self.rec_attributes), "Recording attributes do not match."
-        assert np.array_equal(
-            recording.get_channel_locations(), self.get_channel_locations()
-        ), "Recording channel locations do not match."
+        attributes_match, exception_str = do_recording_attributes_match(
+            recording, self.rec_attributes, check_dtype=check_dtype
+        )
+        if not attributes_match:
+            raise ValueError(exception_str)
+        if not np.array_equal(recording.get_channel_locations(), self.get_channel_locations()):
+            raise ValueError("Recording channel locations do not match.")
         if self._recording is not None:
             warnings.warn("SortingAnalyzer recording is already set. The current recording is temporarily replaced.")
         self._temporary_recording = recording
@@ -1025,6 +1030,9 @@ class SortingAnalyzer:
 
     def is_sparse(self) -> bool:
         return self.sparsity is not None
+
+    def is_filtered(self) -> bool:
+        return self.rec_attributes["is_filtered"]
 
     def get_sorting_provenance(self):
         """
