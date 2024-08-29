@@ -343,6 +343,16 @@ class MockWaveformExtractor:
         return templates[0]
 
 
+def load_sorting_analyzer_or_waveforms(folder, sorting=None):
+    folder = Path(folder)
+    if folder.suffix == ".zarr":
+        return load_sorting_analyzer(folder)
+    elif (folder / "spikeinterface_info.json").exists():
+        return load_sorting_analyzer(folder)
+    else:
+        return load_waveforms(folder, sorting=sorting, output="SortingAnalyzer")
+
+
 def load_waveforms(
     folder,
     with_recording: bool = True,
