@@ -455,13 +455,13 @@ class GroundTruthComparison(BasePairSorterComparison):
         d = dict(
             num_gt=len(self.unit1_ids),
             num_tested=len(self.unit2_ids),
-            num_well_detected=self.count_well_detected_units(well_detected_score),
-            num_redundant=self.count_redundant_units(redundant_score),
-            num_overmerged=self.count_overmerged_units(overmerged_score),
+            num_well_detected=self.count_well_detected_units(well_detected_score)
         )
 
         if self.exhaustive_gt:
             txt = txt + _template_summary_part2
+            d["num_redundant"] = self.count_redundant_units(redundant_score)
+            d["num_overmerged"] = self.count_overmerged_units(overmerged_score)
             d["num_false_positive_units"] = self.count_false_positive_units()
             d["num_bad"] = self.count_bad_units()
 
@@ -676,11 +676,11 @@ _template_summary_part1 = """SUMMARY
 GT num_units: {num_gt}
 TESTED num_units: {num_tested}
 num_well_detected: {num_well_detected}
-num_redundant: {num_redundant}
-num_overmerged: {num_overmerged}
 """
 
-_template_summary_part2 = """num_false_positive_units {num_false_positive_units}
+_template_summary_part2 = """num_redundant: {num_redundant}
+num_overmerged: {num_overmerged}
+num_false_positive_units {num_false_positive_units}
 num_bad: {num_bad}
 """
 
