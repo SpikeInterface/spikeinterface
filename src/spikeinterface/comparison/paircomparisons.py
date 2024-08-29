@@ -455,7 +455,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         d = dict(
             num_gt=len(self.unit1_ids),
             num_tested=len(self.unit2_ids),
-            num_well_detected=self.count_well_detected_units(well_detected_score)
+            num_well_detected=self.count_well_detected_units(well_detected_score),
         )
 
         if self.exhaustive_gt:
