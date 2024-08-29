@@ -1947,10 +1947,10 @@ class AnalyzerExtension:
                     # this load in memmory
                     ext_data = np.array(ext_data_)
 
-        if ext_data is None:
+        if ext_data is not None:
+            self.data[ext_data_name] = ext_data    
+        else:
             warnings.warn(f"Found no data for {self.extension_name}, extension should be re-computed.")
-
-        self.data[ext_data_name] = ext_data
 
     def copy(self, new_sorting_analyzer, unit_ids=None):
         # alessio : please note that this also replace the old select_units!!!
@@ -2183,7 +2183,8 @@ class AnalyzerExtension:
         return self._get_pipeline_nodes()
 
     def get_data(self, *args, **kwargs):
-        assert len(self.data) > 0, f"You must run the extension {self.extension_name} before retrieving data"
+        assert self.run_info["run_completed"], f"You must run the extension {self.extension_name} before retrieving data"
+        assert len(self.data) > 0, "Extension has been run but no data found — data file might be missing. Re-compute the extension."
         return self._get_data(*args, **kwargs)
 
 
