@@ -1948,7 +1948,7 @@ class AnalyzerExtension:
                     ext_data = np.array(ext_data_)
 
         if ext_data is not None:
-            self.data[ext_data_name] = ext_data    
+            self.data[ext_data_name] = ext_data
         else:
             warnings.warn(f"Found no data for {self.extension_name}, extension should be re-computed.")
 
@@ -2183,8 +2183,12 @@ class AnalyzerExtension:
         return self._get_pipeline_nodes()
 
     def get_data(self, *args, **kwargs):
-        assert self.run_info["run_completed"], f"You must run the extension {self.extension_name} before retrieving data"
-        assert len(self.data) > 0, "Extension has been run but no data found — data file might be missing. Re-compute the extension."
+        assert self.run_info[
+            "run_completed"
+        ], f"You must run the extension {self.extension_name} before retrieving data"
+        assert (
+            len(self.data) > 0
+        ), "Extension has been run but no data found — data file might be missing. Re-compute the extension."
         return self._get_data(*args, **kwargs)
 
 
