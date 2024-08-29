@@ -142,11 +142,7 @@ class CurationModelTrainer:
 
             self.y = pd.DataFrame(labels)[0]
 
-        if metric_names is None:
-            self.metric_names = self.get_default_metrics_list()
-            print("No metrics list provided, using default metrics list (all)")
-        else:
-            self.metric_names = metric_names
+        self.metric_names = metric_names
 
         if output_folder is not None and not os.path.exists(output_folder):
             os.makedirs(output_folder)
@@ -168,6 +164,11 @@ class CurationModelTrainer:
         self.testing_metrics = pd.concat(
             [self._get_metrics_for_classification(an, an_index) for an_index, an in enumerate(analyzers)], axis=0
         )
+
+        # Set metric names to those calculated if not provided
+        if self.metric_names is None:
+            print("No metric_names provided, using all metrics calculated by the analyzers")
+            self.metric_names = self.testing_metrics.columns.tolist()
 
         # if no labels, look at phy's default export location
         if no_labels:
@@ -232,10 +233,11 @@ class CurationModelTrainer:
 
         # Extract features
         try:
+            if set(self.metric_names) - set(self.testing_metrics.columns) != set():
+                print(
+                    f"Dropped metrics (calculated but not included in metric_names): {set(self.testing_metrics.columns) - set(self.metric_names)}"
+                )
             self.X = self.testing_metrics[self.metric_names]
-            print(
-                f"Dropped metrics (calculated but not included in metric_names): {set(self.testing_metrics.columns) - set(self.metric_names)}"
-            )
         except KeyError as e:
             print("metrics_list contains invalid metric names")
             raise e

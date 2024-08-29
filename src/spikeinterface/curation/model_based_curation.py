@@ -254,3 +254,41 @@ def auto_label_units(
     )
 
     return classified_units
+
+def compute_all_metrics(analyzer):
+    """
+    Function to compute all quality metrics for a given spikeinterface analyzer object
+    Note: this can be a time-consuming step, especially computing PCA-based metrics for long recordings
+
+    Parameters
+    ----------
+    analyzer : spikeinterface.core.Analyzer
+        The spikeinterface analyzer object to compute metrics for
+    
+    Returns
+    -------
+    calculated_metrics : pandas.DataFrame
+        A dataframe containing all calculated quality metrics
+    """
+    import pandas as pd
+
+    # Compute required extensions for quality metrics
+    analyzer.compute({
+	'noise_levels': {},
+	'random_spikes': {'max_spikes_per_unit': 1_000},
+	'templates': {'ms_before': 1.5, 'ms_after': 3.5},
+	'spike_amplitudes': {},
+	'waveforms': {},
+	'principal_components': {},
+	'spike_locations': {},
+	'unit_locations': {},
+	})
+
+    # Compute all available quality metrics
+    analyzer.compute("quality_metrics")
+    analyzer.compute("template_metrics")
+
+	# Make metric dataframe
+    quality_metrics, template_metrics = try_to_get_metrics_from_analyzer(analyzer)
+    
+    return quality_metrics, template_metrics
