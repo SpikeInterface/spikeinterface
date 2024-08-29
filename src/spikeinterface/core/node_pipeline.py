@@ -103,6 +103,9 @@ class PeakSource(PipelineNode):
     def get_dtype(self):
         return base_peak_dtype
 
+    def get_peak_slice(self, segment_index, start_frame, end_frame, ):
+        # not needed for PeakDetector
+        raise NotImplementedError
 
 # this is used in sorting components
 class PeakDetector(PeakSource):
@@ -127,11 +130,18 @@ class PeakRetriever(PeakSource):
     def get_dtype(self):
         return base_peak_dtype
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
-        # get local peaks
+    def get_peak_slice(self, segment_index, start_frame, end_frame, max_margin):
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
         i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        return i0, i1
+
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
+        # get local peaks
+        sl = self.segment_slices[segment_index]
+        peaks_in_segment = self.peaks[sl]
+        # i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        i0, i1 = peak_slice
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
@@ -212,8 +222,7 @@ class SpikeRetriever(PeakSource):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
-        # get local peaks
+    def get_peak_slice(self, segment_index, start_frame, end_frame, max_margin):
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
         if self.include_spikes_in_margin:
@@ -222,6 +231,20 @@ class SpikeRetriever(PeakSource):
             )
         else:
             i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        return i0, i1
+
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
+        # get local peaks
+        sl = self.segment_slices[segment_index]
+        peaks_in_segment = self.peaks[sl]
+        # if self.include_spikes_in_margin:
+        #     i0, i1 = np.searchsorted(
+        #         peaks_in_segment["sample_index"], [start_frame - max_margin, end_frame + max_margin]
+        #     )
+        # else:
+        #     i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        i0, i1 = peak_slice
+
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
@@ -525,64 +548,79 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     nodes = worker_ctx["nodes"]
 
     recording_segment = recording._recording_segments[segment_index]
-    traces_chunk, left_margin, right_margin = get_chunk_with_margin(
-        recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
-    )
-
-    # compute the graph
-    pipeline_outputs = {}
-    for node in nodes:
-        node_parents = node.parents if node.parents else list()
-        node_input_args = tuple()
-        for parent in node_parents:
-            parent_output = pipeline_outputs[parent]
-            parent_outputs_tuple = parent_output if isinstance(parent_output, tuple) else (parent_output,)
-            node_input_args += parent_outputs_tuple
-        if isinstance(node, PeakDetector):
-            # to handle compatibility peak detector is a special case
-            # with specific margin
-            #  TODO later when in master: change this later
-            extra_margin = max_margin - node.get_trace_margin()
-            if extra_margin:
-                trace_detection = traces_chunk[extra_margin:-extra_margin]
+    node0 = nodes[0]
+    
+    if isinstance(node0, (SpikeRetriever, PeakRetriever)):
+        # in this case PeakSource could have no peaks and so no need to load traces just skip
+        peak_slice = i0, i1 = node0.get_peak_slice(segment_index, start_frame, end_frame, max_margin)
+        load_trace_and_compute = i0 < i1
+    else:
+        # PeakDetector always need traces
+        load_trace_and_compute = True
+    
+    if load_trace_and_compute:
+        traces_chunk, left_margin, right_margin = get_chunk_with_margin(
+            recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
+        )
+        # compute the graph
+        pipeline_outputs = {}
+        for node in nodes:
+            node_parents = node.parents if node.parents else list()
+            node_input_args = tuple()
+            for parent in node_parents:
+                parent_output = pipeline_outputs[parent]
+                parent_outputs_tuple = parent_output if isinstance(parent_output, tuple) else (parent_output,)
+                node_input_args += parent_outputs_tuple
+            if isinstance(node, PeakDetector):
+                # to handle compatibility peak detector is a special case
+                # with specific margin
+                #  TODO later when in master: change this later
+                extra_margin = max_margin - node.get_trace_margin()
+                if extra_margin:
+                    trace_detection = traces_chunk[extra_margin:-extra_margin]
+                else:
+                    trace_detection = traces_chunk
+                node_output = node.compute(trace_detection, start_frame, end_frame, segment_index, max_margin)
+                # set sample index to local
+                node_output[0]["sample_index"] += extra_margin
+            elif isinstance(node, PeakSource):
+                node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, peak_slice)
             else:
-                trace_detection = traces_chunk
-            node_output = node.compute(trace_detection, start_frame, end_frame, segment_index, max_margin)
-            # set sample index to local
-            node_output[0]["sample_index"] += extra_margin
-        elif isinstance(node, PeakSource):
-            node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
-        else:
-            # TODO later when in master: change the signature of all nodes (or maybe not!)
-            node_output = node.compute(traces_chunk, *node_input_args)
-        pipeline_outputs[node] = node_output
+                # TODO later when in master: change the signature of all nodes (or maybe not!)
+                node_output = node.compute(traces_chunk, *node_input_args)
+            pipeline_outputs[node] = node_output
 
-    # propagate the output
-    pipeline_outputs_tuple = tuple()
-    for node in nodes:
-        # handle which buffer are given to the output
-        # this is controlled by node.return_output being a bool or tuple of bool
-        out = pipeline_outputs[node]
-        if isinstance(out, tuple):
-            if isinstance(node.return_output, bool) and node.return_output:
-                pipeline_outputs_tuple += out
-            elif isinstance(node.return_output, tuple):
-                for flag, e in zip(node.return_output, out):
-                    if flag:
-                        pipeline_outputs_tuple += (e,)
-        else:
-            if isinstance(node.return_output, bool) and node.return_output:
-                pipeline_outputs_tuple += (out,)
-            elif isinstance(node.return_output, tuple):
-                # this should not apppend : maybe a checker somewhere before ?
-                pass
+        # propagate the output
+        pipeline_outputs_tuple = tuple()
+        for node in nodes:
+            # handle which buffer are given to the output
+            # this is controlled by node.return_output being a bool or tuple of bool
+            out = pipeline_outputs[node]
+            if isinstance(out, tuple):
+                if isinstance(node.return_output, bool) and node.return_output:
+                    pipeline_outputs_tuple += out
+                elif isinstance(node.return_output, tuple):
+                    for flag, e in zip(node.return_output, out):
+                        if flag:
+                            pipeline_outputs_tuple += (e,)
+            else:
+                if isinstance(node.return_output, bool) and node.return_output:
+                    pipeline_outputs_tuple += (out,)
+                elif isinstance(node.return_output, tuple):
+                    # this should not apppend : maybe a checker somewhere before ?
+                    pass
 
-    if isinstance(nodes[0], PeakDetector):
-        # the first out element is the peak vector
-        # we need to go back to absolut sample index
-        pipeline_outputs_tuple[0]["sample_index"] += start_frame - left_margin
+        if isinstance(nodes[0], PeakDetector):
+            # the first out element is the peak vector
+            # we need to go back to absolut sample index
+            pipeline_outputs_tuple[0]["sample_index"] += start_frame - left_margin
 
-    return pipeline_outputs_tuple
+        return pipeline_outputs_tuple
+
+    else:
+        # the gather will skip this output and not concatenate it
+        return
+
 
 
 class GatherToMemory:
@@ -595,6 +633,9 @@ class GatherToMemory:
         self.tuple_mode = None
 
     def __call__(self, res):
+        if res is None:
+            return
+
         if self.tuple_mode is None:
             # first loop only
             self.tuple_mode = isinstance(res, tuple)
@@ -655,6 +696,9 @@ class GatherToNpy:
             self.final_shapes.append(None)
 
     def __call__(self, res):
+        if res is None:
+            return
+
         if self.tuple_mode is None:
             # first loop only
             self.tuple_mode = isinstance(res, tuple)

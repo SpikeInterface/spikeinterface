@@ -83,8 +83,12 @@ def test_run_node_pipeline(cache_folder_creation):
     extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="index")
 
     peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
+    print(peaks.size)
 
     peak_retriever = PeakRetriever(recording, peaks)
+    # this test when no spikes in last chunks
+    peak_retriever_few = PeakRetriever(recording, peaks[:peaks.size//2])
+
     # channel index is from template
     spike_retriever_T = SpikeRetriever(
         sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
@@ -100,7 +104,7 @@ def test_run_node_pipeline(cache_folder_creation):
     )
 
     # test with 3 differents first nodes
-    for loop, peak_source in enumerate((peak_retriever, spike_retriever_T, spike_retriever_S)):
+    for loop, peak_source in enumerate((peak_retriever, peak_retriever_few, spike_retriever_T, spike_retriever_S)):
         # one step only : squeeze output
         nodes = [
             peak_source,
@@ -139,10 +143,12 @@ def test_run_node_pipeline(cache_folder_creation):
 
         num_peaks = peaks.shape[0]
         num_channels = recording.get_num_channels()
-        assert waveforms_rms.shape[0] == num_peaks
+        if peak_source != peak_retriever_few:
+            assert waveforms_rms.shape[0] == num_peaks
         assert waveforms_rms.shape[1] == num_channels
 
-        assert waveforms_rms.shape[0] == num_peaks
+        if peak_source != peak_retriever_few:
+            assert waveforms_rms.shape[0] == num_peaks
         assert waveforms_rms.shape[1] == num_channels
 
         # gather npy mode
@@ -186,4 +192,5 @@ def test_run_node_pipeline(cache_folder_creation):
 
 
 if __name__ == "__main__":
-    test_run_node_pipeline()
+    folder = Path("./cache_folder/core")
+    test_run_node_pipeline(folder)
