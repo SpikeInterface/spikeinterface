@@ -337,11 +337,10 @@ def correct_motion(
         for plotting. See `plot_motion_info()`
     """
     # local import are important because "sortingcomponents" is not important by default
-    from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
+    from spikeinterface.sortingcomponents.peak_detection import detect_peaks
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
-    from spikeinterface.sortingcomponents.peak_localization import localize_peaks, localize_peak_methods
+    from spikeinterface.sortingcomponents.peak_localization import localize_peaks
     from spikeinterface.sortingcomponents.motion import estimate_motion, InterpolateMotionRecording
-    from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
 
     # get preset params and update if necessary
     params = motion_options_preset[preset]
@@ -385,34 +384,11 @@ def correct_motion(
     if not do_selection:
         # maybe do this directly in the folder when not None, but might be slow on external storage
         gather_mode = "memory"
-        # node detect
-        method = detect_kwargs.pop("method", "locally_exclusive")
-        method_class = detect_peak_methods[method]
-        node0 = method_class(recording, **detect_kwargs)
 
-        node1 = ExtractDenseWaveforms(recording, parents=[node0], ms_before=0.1, ms_after=0.3)
-
-        # node detect + localize
-        method = localize_peaks_kwargs.pop("method", "center_of_mass")
-        method_class = localize_peak_methods[method]
-        node2 = method_class(recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs)
-        pipeline_nodes = [node0, node1, node2]
-        t0 = time.perf_counter()
-        peaks, peak_locations = run_node_pipeline(
-            recording,
-            pipeline_nodes,
-            job_kwargs,
-            job_name="detect and localize",
-            gather_mode=gather_mode,
-            gather_kwargs=None,
-            squeeze_output=False,
-            folder=None,
-            names=None,
+        peaks, peak_locations, peaks_run_time = run_peak_detection_pipeline_node(
+            recording, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs
         )
-        t1 = time.perf_counter()
-        run_times = dict(
-            detect_and_localize=t1 - t0,
-        )
+        run_times = dict(detect_and_localize=peaks_run_time)
     else:
         # localization is done after select_peaks()
         pipeline_nodes = None
@@ -460,6 +436,40 @@ def correct_motion(
     if output_motion_info:
         out += (motion_info,)
     return out
+
+
+def run_peak_detection_pipeline_node(recording, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs):
+    from spikeinterface.sortingcomponents.peak_detection import detect_peak_methods
+    from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
+    from spikeinterface.sortingcomponents.peak_localization import localize_peak_methods
+
+    # node detect
+    method = detect_kwargs.pop("method", "locally_exclusive")
+    method_class = detect_peak_methods[method]
+    node0 = method_class(recording, **detect_kwargs)
+
+    node1 = ExtractDenseWaveforms(recording, parents=[node0], ms_before=0.1, ms_after=0.3)
+
+    # node detect + localize
+    method = localize_peaks_kwargs.pop("method", "center_of_mass")
+    method_class = localize_peak_methods[method]
+    node2 = method_class(recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs)
+    pipeline_nodes = [node0, node1, node2]
+    t0 = time.perf_counter()
+    peaks, peak_locations = run_node_pipeline(
+        recording,
+        pipeline_nodes,
+        job_kwargs,
+        job_name="detect and localize",
+        gather_mode=gather_mode,
+        gather_kwargs=None,
+        squeeze_output=False,
+        folder=None,
+        names=None,
+    )
+    run_time = time.perf_counter() - t0
+
+    return peaks, peak_locations, run_time
 
 
 _doc_presets = "\n"
