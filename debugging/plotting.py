@@ -28,7 +28,7 @@ class SessionAlignmentWidget(BaseWidget):
         peaks_list,
         peak_locations_list,
         session_histogram_list,
-        histogram_spatial_bin_centers=None,
+        spatial_bin_centers=None,
         corrected_peak_locations_list=None,
         corrected_session_histogram_list=None,
         drift_raster_map_kwargs=None,
@@ -74,7 +74,7 @@ class SessionAlignmentWidget(BaseWidget):
             peaks_list=peaks_list,
             peak_locations_list=peak_locations_list,
             session_histogram_list=session_histogram_list,
-            histogram_spatial_bin_centers=histogram_spatial_bin_centers,
+            spatial_bin_centers=spatial_bin_centers,
             corrected_peak_locations_list=corrected_peak_locations_list,
             corrected_session_histogram_list=corrected_session_histogram_list,
             drift_raster_map_kwargs=drift_raster_map_kwargs,
@@ -98,6 +98,9 @@ class SessionAlignmentWidget(BaseWidget):
         fig.clear()
 
         # TODO: use self.axes I think.
+        min_y = np.min(np.hstack([locs["y"] for locs in dp.peak_locations_list]))
+        max_y = np.max(np.hstack([locs["y"] for locs in dp.peak_locations_list]))
+
         if dp.corrected_peak_locations_list is None:
 
             # Own function
@@ -112,14 +115,14 @@ class SessionAlignmentWidget(BaseWidget):
 
                 ax = fig.add_subplot(gs[row_col])
 
-                plot = DriftRasterMapWidget(
+                DriftRasterMapWidget(
                     dp.peaks_list[i],
                     dp.peak_locations_list[i],
                     recording=dp.recordings_list[i],
                     ax=ax,
                     **dp.drift_raster_map_kwargs
                 )
-
+                ax.set_ylim((min_y, max_y))
         else:
 
             # Own function, then see if can compare
@@ -133,7 +136,7 @@ class SessionAlignmentWidget(BaseWidget):
                 ax_top = fig.add_subplot(gs[0, i])
                 ax_bottom = fig.add_subplot(gs[1, i])
 
-                plot = DriftRasterMapWidget(
+                DriftRasterMapWidget(
                     dp.peaks_list[i],
                     dp.peak_locations_list[i],
                     recording=dp.recordings_list[i],
@@ -142,6 +145,7 @@ class SessionAlignmentWidget(BaseWidget):
                 )
                 ax_top.set_title(f"Session {i + 1}")
                 ax_top.set_xlabel(None)
+                ax_top.set_ylim((min_y, max_y))
 
                 DriftRasterMapWidget(
                     dp.peaks_list[i],
@@ -151,12 +155,13 @@ class SessionAlignmentWidget(BaseWidget):
                     **dp.drift_raster_map_kwargs
                 )
                 ax_bottom.set_title(f"Corrected Session {i + 1}")
+                ax_bottom.set_ylim((min_y, max_y))
 
     # TODO: then histograms.
         num_sessions = len(dp.session_histogram_list)
 
         if "legend" not in dp.session_alignment_histogram_kwargs:
-            sessions = [f"session {i}" for i in range(num_sessions)]
+            sessions = [f"session {i + 1}" for i in range(num_sessions)]
             dp.session_alignment_histogram_kwargs["legend"] = sessions
 
         if not dp.corrected_session_histogram_list:
@@ -165,7 +170,7 @@ class SessionAlignmentWidget(BaseWidget):
 
             SessionAlignmentHistogramWidget(
                 dp.session_histogram_list,
-                dp.histogram_spatial_bin_centers,
+                dp.spatial_bin_centers,
                 ax=ax,
                 **dp.session_alignment_histogram_kwargs,
             )
@@ -179,13 +184,13 @@ class SessionAlignmentWidget(BaseWidget):
 
             SessionAlignmentHistogramWidget(
                 dp.session_histogram_list,
-                dp.histogram_spatial_bin_centers,
+                dp.spatial_bin_centers,
                 ax=ax_left,
                 **dp.session_alignment_histogram_kwargs,
             )
             SessionAlignmentHistogramWidget(
                 dp.corrected_session_histogram_list,
-                dp.histogram_spatial_bin_centers,
+                dp.spatial_bin_centers,
                 ax=ax_right,
                 **dp.session_alignment_histogram_kwargs,
             )
