@@ -57,10 +57,7 @@ class Motion:
     def check_properties(self):
         assert all(d.ndim == 2 for d in self.displacement)
         assert all(t.ndim == 1 for t in self.temporal_bins_s)
-        try:
-            assert all(self.spatial_bins_um.shape == (d.shape[1],) for d in self.displacement)
-        except:
-            breakpoint()
+        assert all(self.spatial_bins_um.shape == (d.shape[1],) for d in self.displacement)
 
     def __repr__(self):
         nbins = self.spatial_bins_um.shape[0]
@@ -405,6 +402,18 @@ def get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um):
     spatial_bins = np.arange(min_, max_ + bin_um, bin_um)
 
     return spatial_bins
+
+
+def get_spatial_bins(recording, direction, hist_margin_um, bin_um):
+    # TODO: could this be merged with the above function?
+    dim = ["x", "y", "z"].index(direction)
+    contact_depths = recording.get_channel_locations()[:, dim]
+
+    # spatial histogram bins
+    spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
+    spatial_bin_centers = 0.5 * (spatial_bin_edges[1:] + spatial_bin_edges[:-1])
+
+    return spatial_bin_centers, spatial_bin_edges, contact_depths
 
 
 def make_2d_motion_histogram(
