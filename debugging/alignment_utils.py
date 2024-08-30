@@ -223,10 +223,12 @@ def run_alignment_estimation(
 
     non_rigid_shifts = -np.mean(rigid_session_offsets_matrix, axis=1).T  # fix the order in _compute_histogram_crosscorrelation to avoid this transpose
 
+    # TODO: fix this
     akima = False  # TODO: decide whether to keep, factor to own function
     if akima:
         from scipy.interpolate import Akima1DInterpolator
-        x = win_step_um * np.arange(non_rigid_windows.shape[0])
+
+        x = non_rigid_window_centers
         xs = spatial_bin_centers
 
         new_nonrigid_shifts = np.zeros((non_rigid_shifts.shape[0], num_bins))
@@ -242,11 +244,6 @@ def run_alignment_estimation(
 
     return shifts
 
-
-# the gaussian smooth the activity profiles
-
-# kriging interpolate the xcorr
-# gaussian smooth the xcorr.
 
 def _compute_histogram_crosscorrelation(num_sessions, num_bins, session_histogram_list, non_rigid_windows, robust=False):
     """"""
@@ -291,7 +288,7 @@ def _compute_histogram_crosscorrelation(num_sessions, num_bins, session_histogra
             if interpolate:
 
                 shifts = np.arange(xcorr_matrix.shape[1])
-                shifts_upsampled = np.linspace(shifts[0], shifts[-1], shifts.size * upsample_n)  # TODO: why arbitarily 10, ask Sam. The KS2.5 implementation (MATLAB) seems to differ from the paper?
+                shifts_upsampled = np.linspace(shifts[0], shifts[-1], shifts.size * upsample_n)  # TODO: why arbitarily 10, its not stated in NP2 paper actually, ask Sam if he knows. The KS2.5 implementation (MATLAB) seems to differ from the paper?
 
                 sigma = 1  # TODO: expose
                 p = 2

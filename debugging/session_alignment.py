@@ -28,9 +28,10 @@ Easiest way is to NaN them out and skip in the compute methods.
 # -----------------------------------------------------------------------------
 
 # 1) tidy up and check
-# 2) expose trimmed versions, robust xcorr, akima interpolation, kriging interpolation / smoothing of histograms
-# 3) write a final version that can take motion corrected or not.
-# 4) write a list of things I'd like to do but dont have time to do now. Finish the generation function.
+# 2) expose trimmed versions, robust xcorr, akima interpolation
+# 3) not using entire session, passing chunks of peaks / peak locations
+# 4) check all inputs, write checking functions
+# 5) write a list of things I'd like to do but dont have time to do now. Finish the generation function.
 
 
 # 1) for now, assume it is a multi-session recording. Then,
