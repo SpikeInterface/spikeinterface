@@ -344,6 +344,21 @@ class MockWaveformExtractor:
 
 
 def load_sorting_analyzer_or_waveforms(folder, sorting=None):
+    """
+    Load a SortingAnalyzer from either a newly saved SortingAnalyzer folder or an old WaveformExtractor folder.
+
+    Parameters
+    ----------
+    folder: str | Path
+        The folder to the sorting analyzer or waveform extractor
+    sorting: BaseSorting | None, default: None
+        The sorting object to instantiate with the SortingAnalyzer (only used for old WaveformExtractor)
+
+    Returns
+    -------
+    sorting_analyzer: SortingAnalyzer
+        The returned SortingAnalyzer.
+    """
     folder = Path(folder)
     if folder.suffix == ".zarr":
         return load_sorting_analyzer(folder)
