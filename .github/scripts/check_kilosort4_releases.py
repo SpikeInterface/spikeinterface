@@ -22,7 +22,7 @@ def get_pypi_versions(package_name):
         "At version 0.101.1, this should be updated to support newer"
         "kilosort verrsions."
     )
-    versions = [ver for ver in versions if parse("4.0.12") >= parse(ver) >= parse("4.0.5")]
+    versions = [ver for ver in versions if parse(ver) >= parse("4.0.16")]
     return versions
 
 
