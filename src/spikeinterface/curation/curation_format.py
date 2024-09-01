@@ -340,7 +340,7 @@ def apply_curation(
     elif isinstance(sorting_or_analyzer, SortingAnalyzer):
         analyzer = sorting_or_analyzer
         analyzer = analyzer.remove_units(curation_dict["removed_units"])
-        analyzer, new_unit_ids = analyzer.merge_units(
+        analyzer = analyzer.merge_units(
             curation_dict["merge_unit_groups"],
             censor_ms=censor_ms,
             merging_mode=merging_mode,
@@ -351,7 +351,7 @@ def apply_curation(
             verbose=verbose,
             **job_kwargs,
         )
-        apply_curation_labels(analyzer.sorting, new_unit_ids, curation_dict)
+        apply_curation_labels(analyzer.sorting, analyzer.unit_ids, curation_dict)
         return analyzer
     else:
         raise TypeError(
