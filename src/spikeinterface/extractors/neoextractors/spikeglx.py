@@ -41,6 +41,13 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     use_names_as_ids : bool, default: False
         Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
         names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
+
+    Examples
+    --------
+    >>> from spikeinterface.extractors import read_spikeglx
+    >>> recording = read_spikeglx(folder_path=r'path_to_folder_with_data', load_sync_channel=False)
+    # we can load the sync channel, but then the probe is not loaded
+    >>> recording = read_spikeglx(folder_path=r'pat_to_folder_with_data', load_sync_channel=True)
     """
 
     NeoRawIOClass = "SpikeGLXRawIO"
