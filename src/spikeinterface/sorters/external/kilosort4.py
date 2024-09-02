@@ -108,8 +108,8 @@ class Kilosort4Sorter(BaseSorter):
         "save_preprocessed_copy": "save a pre-processed copy of the data (including drift correction) to temp_wh.dat in the results directory and format Phy output to use that copy of the data",
         "torch_device": "Select the torch device auto/cuda/cpu",
         "bad_channels": "A list of channel indices (rows in the binary file) that should not be included in sorting. Listing channels here is equivalent to excluding them from the probe dictionary.",
-        "use_binary_file": "If True, the Kilosort is run from a binary file. In this case, if the recording is not binary it is written to a binary file in the output folder"
-        "If False, the Kilosort is run on the recording object directly using the RecordingExtractorAsArray object. Default is False.",
+        "use_binary_file": "If True and the recording is not binary compatible, then Kilosort is written to a binary file in the output folder. If False, the Kilosort is run on the recording object directly using the RecordingExtractorAsArray object. "
+        "If the recording is binary compatible, then the sorter will always use the binary file. Default is False.",
     }
 
     sorter_description = """Kilosort4 is a Python package for spike sorting on GPUs with template matching.
@@ -225,20 +225,21 @@ class Kilosort4Sorter(BaseSorter):
         probe = load_probe(probe_path=probe_filename)
         probe_name = ""
 
-        if params["use_binary_file"]:
-            if recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
-                # no copy
-                binary_description = recording.get_binary_description()
-                filename = str(binary_description["file_paths"][0])
-                file_object = None
-            else:
-                # a local copy has been written
-                filename = str(sorter_output_folder / "recording.dat")
-                file_object = None
+        if recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
+            # no copy
+            binary_description = recording.get_binary_description()
+            filename = str(binary_description["file_paths"][0])
+            file_object = None
+        elif params["use_binary_file"]:
+            # a local copy has been written
+            filename = str(sorter_output_folder / "recording.dat")
+            file_object = None
         else:
-            # this internally concatenates the recording
+            # the recording is not binary compatible and no binary copy has been written.
+            # in this case, we use the RecordingExtractorAsArray object
             filename = ""
             file_object = RecordingExtractorAsArray(recording_extractor=recording)
+
         data_dtype = recording.get_dtype()
 
         do_CAR = params["do_CAR"]
@@ -346,21 +347,18 @@ class Kilosort4Sorter(BaseSorter):
                 hp_filter=torch.as_tensor(np.zeros(1)), whiten_mat=torch.as_tensor(np.eye(recording.get_num_channels()))
             )
 
-        if version.parse(cls.get_sorter_version()) >= version.parse("4.0.12"):
-            _ = save_sorting(
-                ops=ops,
-                results_dir=results_dir,
-                st=st,
-                clu=clu,
-                tF=tF,
-                Wall=Wall,
-                imin=bfile.imin,
-                tic0=tic0,
-                save_extra_vars=save_extra_vars,
-                save_preprocessed_copy=save_preprocessed_copy,
-            )
-        else:
-            _ = save_sorting(ops, results_dir, st, clu, tF, Wall, bfile.imin, tic0, save_extra_vars=save_extra_vars)
+        _ = save_sorting(
+            ops=ops,
+            results_dir=results_dir,
+            st=st,
+            clu=clu,
+            tF=tF,
+            Wall=Wall,
+            imin=bfile.imin,
+            tic0=tic0,
+            save_extra_vars=save_extra_vars,
+            save_preprocessed_copy=save_preprocessed_copy,
+        )
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
