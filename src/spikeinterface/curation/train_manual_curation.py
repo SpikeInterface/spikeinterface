@@ -131,6 +131,10 @@ class CurationModelTrainer:
         self.testing_metrics = None
 
         import pandas as pd
+        
+        # check if labels is a list of lists
+        if not all(isinstance(labels, list) for labels in labels):
+            raise ValueError("labels must be a list of lists")
 
         self.y = pd.concat([pd.DataFrame(one_labels)[0] for one_labels in labels])
 
