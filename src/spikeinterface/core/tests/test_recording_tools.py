@@ -333,14 +333,14 @@ def test_do_recording_attributes_match():
 
 if __name__ == "__main__":
     # Create a temporary folder using the standard library
-    import tempfile
+    # import tempfile
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        tmp_path = Path(tmpdirname)
-        test_write_binary_recording(tmp_path)
-    test_write_memory_recording()
+    # with tempfile.TemporaryDirectory() as tmpdirname:
+    #     tmp_path = Path(tmpdirname)
+    #     test_write_binary_recording(tmp_path)
+    # test_write_memory_recording()
 
     test_get_random_data_chunks()
-    test_get_closest_channels()
-    test_get_noise_levels()
-    test_order_channels_by_depth()
+    # test_get_closest_channels()
+    # test_get_noise_levels()
+    # test_order_channels_by_depth()

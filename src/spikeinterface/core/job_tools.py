@@ -187,6 +187,21 @@ def ensure_n_jobs(recording, n_jobs=1):
 
     return n_jobs
 
+def chunk_duration_to_chunk_size(chunk_duration, recording):
+    if isinstance(chunk_duration, float):
+        chunk_size = int(chunk_duration * recording.get_sampling_frequency())
+    elif isinstance(chunk_duration, str):
+        if chunk_duration.endswith("ms"):
+            chunk_duration = float(chunk_duration.replace("ms", "")) / 1000.0
+        elif chunk_duration.endswith("s"):
+            chunk_duration = float(chunk_duration.replace("s", ""))
+        else:
+            raise ValueError("chunk_duration must ends with s or ms")
+        chunk_size = int(chunk_duration * recording.get_sampling_frequency())
+    else:
+        raise ValueError("chunk_duration must be str or float")    
+    return chunk_size
+
 
 def ensure_chunk_size(
     recording, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
@@ -234,18 +249,7 @@ def ensure_chunk_size(
         num_channels = recording.get_num_channels()
         chunk_size = int(total_memory / (num_channels * n_bytes * n_jobs))
     elif chunk_duration is not None:
-        if isinstance(chunk_duration, float):
-            chunk_size = int(chunk_duration * recording.get_sampling_frequency())
-        elif isinstance(chunk_duration, str):
-            if chunk_duration.endswith("ms"):
-                chunk_duration = float(chunk_duration.replace("ms", "")) / 1000.0
-            elif chunk_duration.endswith("s"):
-                chunk_duration = float(chunk_duration.replace("s", ""))
-            else:
-                raise ValueError("chunk_duration must ends with s or ms")
-            chunk_size = int(chunk_duration * recording.get_sampling_frequency())
-        else:
-            raise ValueError("chunk_duration must be str or float")
+        chunk_size = chunk_duration_to_chunk_size(chunk_duration, recording)
     else:
         # Edge case to define single chunk per segment for n_jobs=1.
         # All chunking parameters equal None mean single chunk per segment
