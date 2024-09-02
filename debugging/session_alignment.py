@@ -27,9 +27,12 @@ Easiest way is to NaN them out and skip in the compute methods.
 # Get Histograms
 # -----------------------------------------------------------------------------
 
-# 1) tidy up and check
-# 2) expose trimmed versions, robust xcorr, akima interpolation
+# TODO: ask about best way to chunk, as ofc the peak detection takes
+# recording as inputs so cannot use get traces with chunks function as planned.
+# TODO: expose trimmed versions, robust xcorr
+
 # 3) not using entire session, passing chunks of peaks / peak locations
+
 # 4) check all inputs, write checking functions
 # 5) write a list of things I'd like to do but dont have time to do now. Finish the generation function.
 
@@ -84,7 +87,7 @@ def align_sessions(
     """
     """
     motion_estimates_list, temporal_bin_centers_list, spatial_bin_centers, spatial_bin_edges, non_rigid_window_centers, histogram_info = estimate_inter_session_displacement(
-        recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method, chunked_bin_size_s, log_scale, rigid, non_rigid_window_kwargs
+        recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method, chunked_bin_size_s, log_scale, rigid, non_rigid_window_kwargs, alignment_order
     )
 
     corrected_recordings_list, motion_objects_list = _create_motion_recordings(
@@ -109,9 +112,6 @@ def align_sessions(
     }
 
     return corrected_recordings_list, motion_objects_list, extra_outputs_dict
-
-
-# CHECKS
 
 
 def align_sessions_after_motion_correction(recordings_list, motion_info_list, rigid, override_nonrigid_window_kwargs=False, **align_sessions_kwargs):
@@ -147,10 +147,8 @@ def align_sessions_after_motion_correction(recordings_list, motion_info_list, ri
         **align_sessions_kwargs
     )
 
-# CHECKS
 
-
-def compute_peaks_and_locations_list(recording_list, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs):  # TODO: handle empty
+def compute_peaks_for_session_alignment(recording_list, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs):  # TODO: handle empty
     """
     """
     peaks_list = []
@@ -167,7 +165,7 @@ def compute_peaks_and_locations_list(recording_list, gather_mode, detect_kwargs,
 
 
 def estimate_inter_session_displacement(
-    recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method, chunked_bin_size_s, log_scale, rigid, non_rigid_window_kwargs
+    recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method, chunked_bin_size_s, log_scale, rigid, non_rigid_window_kwargs, alignment_order
 ):
     """
     # Next, estimate the alignment based on the activity histograms
@@ -211,7 +209,7 @@ def estimate_inter_session_displacement(
         ) * bin_um
     else:
         all_motion_arrays, non_rigid_window_centers = alignment_utils.run_alignment_estimation(
-            extra_outputs_dict["session_histogram_list"], spatial_bin_centers, non_rigid_windows, non_rigid_window_centers
+            extra_outputs_dict["session_histogram_list"], spatial_bin_centers, non_rigid_windows, non_rigid_window_centers, alignment_order
         )
         all_motion_arrays *= bin_um
 
@@ -246,8 +244,6 @@ def _get_single_session_activity_histogram(recording, peaks, peak_locations, met
         recording, peaks, peak_locations, chunked_bin_size_s, spatial_bin_edges, log_scale
     )
     session_std = np.sum(np.std(chunked_session_histograms, axis=0)) / chunked_session_histograms.shape[1]
-
-    # TODO: handle_trim
 
     if method == "chunked_mean":
         summary_chunked_hist = alignment_utils.get_chunked_hist_mean(chunked_session_histograms)
@@ -332,7 +328,6 @@ def _add_displacement_to_interpolate_recording(recording, new_displacement, new_
             # with the new, nonrigid displacement added to the old, rigid displacement.
             # TODO: check + ask Sam if any other fields need to be chagned. This is a little
             # hairy so test thoroughly.
-
             num_time_bins = corrected_recording_motion.displacement[0].shape[0]
             tiled_nonrigid_displacement = np.repeat(new_displacement, num_time_bins, axis=0)
             new_displacement = tiled_nonrigid_displacement + corrected_recording_motion.displacement
