@@ -74,7 +74,7 @@ Low-level
     .. autoclass:: ChunkRecordingExecutor
 
 
-Back-compatibility with ``WaveformExtraxctor`` (version < 0.101.0)
+Back-compatibility with ``WaveformExtractor`` (version < 0.101.0)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: spikeinterface.core
