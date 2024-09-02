@@ -11,16 +11,16 @@ How to train a model to predict curation labels
 -  Full tutorial for model-based curation can be found
    `here<https://spikeinterface.readthedocs.io/en/latest/tutorials/qualitymetrics/plot_5_automated_curation.html>`
 
-.. code:: 
+.. code::
 
     from pathlib import Path
     import pandas as pd
     from spikeinterface.curation.train_manual_curation import train_model
-    
+
     analyzer_list = [analyzer_1, analyzer_2]
     labels_list = [analyzer_1_labels, analyzer_2_labels]
     output_folder = "/path/to/output_folder"
-    
+
     trainer = train_model(
         mode="analyzers",
         labels=labels_list,
@@ -32,14 +32,14 @@ How to train a model to predict curation labels
         classifiers=None, # Defaults to Random Forest classifier only - we usually find this gives the best results, but a range of classifiers is available
         seed=None, # Set a seed for reproducibility
     )
-    
-    
+
+
     best_model = trainer.best_pipeline
     best_model
 
 Load and disply top 5 pipelines and accuracies
 
-.. code:: 
+.. code::
 
     accuracies = pd.read_csv(Path(output_folder) / Path("model_label_accuracies.csv"), index_col = 0)
     accuracies.head()
@@ -48,7 +48,7 @@ This training function can also be run in “csv” mode if you want to
 store metrics in a single .csv file. If the target labels are stored in
 the file, you can point to these with the ``target_label`` parameter
 
-.. code:: 
+.. code::
 
     trainer = train_model(
         mode="csv",

@@ -7,7 +7,7 @@ Full tutorial for model-based curation can be found `here <https://spikeinterfac
     - The model (``.skops``) file AND the ``pipeline_info.json`` (both produced when training the model) are required for full prediction
 
 
-.. code:: 
+.. code::
 
     # Load a model
     from huggingface_hub import hf_hub_download
@@ -23,7 +23,7 @@ Full tutorial for model-based curation can be found `here <https://spikeinterfac
 
 Use the model to predict labels on your SortingAnalyzer
 
-.. code:: 
+.. code::
 
     from spikeinterface.curation.model_based_curation import auto_label_units
 
