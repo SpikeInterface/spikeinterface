@@ -67,15 +67,20 @@ def test_model_based_classification_check_params_for_classification(
 
     # Test the _check_params_for_classification() method of ModelBasedClassification
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline)
-    # Check that ValueError is raised when required_metrics are not computed
-    with pytest.warns(UserWarning):
-        model_based_classification._check_params_for_classification()
 
     # Check that function runs without error when required_metrics are computed
     sorting_analyzer_for_curation.compute("quality_metrics", metric_names=required_metrics[0])
     sorting_analyzer_for_curation.compute("template_metrics", metric_names=required_metrics[1])
 
-    model_based_classification._check_params_for_classification()
+    pipeline_info = {"metric_params": {"analyzer_0": {}}}
+    pipeline_info["metric_params"]["analyzer_0"]["quality_metric_params"] = sorting_analyzer_for_curation.get_extension(
+        "quality_metrics"
+    ).params
+    pipeline_info["metric_params"]["analyzer_0"]["template_metric_params"] = (
+        sorting_analyzer_for_curation.get_extension("template_metrics").params
+    )
+
+    model_based_classification._check_params_for_classification(pipeline_info=pipeline_info)
 
 
 def test_model_based_classification_export_to_phy(sorting_analyzer_for_curation, pipeline):
@@ -95,6 +100,8 @@ def test_model_based_classification_export_to_phy(sorting_analyzer_for_curation,
 
 
 def test_model_based_classification_predict_labels(sorting_analyzer_for_curation, pipeline):
+    sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
+    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["num_spikes"])
     # Test the predict_labels() method of ModelBasedClassification
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline)
     classified_units = model_based_classification.predict_labels()

@@ -54,12 +54,15 @@ class ModelBasedClassification:
 
         Parameters
         ----------
+        pipeline_info_path : str or Path, default: None
+            Path to pipeline info, used to check metric parameters used to train Pipeline.
+        label_conversion : dict, default: None
+            A dictionary for converting the predicted labels (which are integers) to custom labels. If None,
+            tries to find in `pipeline_info` file. The dictionary should have the format {old_label: new_label}.
         input_data : pandas.DataFrame, optional
             The input data for classification. If not provided, the method will extract metrics stored in the sorting analyzer.
         export_to_phy : bool, optional
             Whether to export the classified units to Phy format. Default is False.
-        pipeline_info_path : str or Path, default: None
-            Path to pipeline info, used to check metric parameters used to train Pipeline.
 
         Returns
         -------
@@ -76,7 +79,25 @@ class ModelBasedClassification:
             if not isinstance(input_data, pd.DataFrame):
                 raise ValueError("Input data must be a pandas DataFrame")
 
-        self._check_params_for_classification(pipeline_info_path=pipeline_info_path)
+        pipeline_info = None
+        try:
+            with open(pipeline_info_path) as fd:
+                pipeline_info = json.load(fd)
+        except:
+            warnings.warn("Could not open `pipeline_info.json` file.")
+
+        if pipeline_info is not None:
+            self._check_params_for_classification(pipeline_info=pipeline_info)
+
+        if pipeline_info is not None and label_conversion is None:
+            try:
+                string_label_conversion = pipeline_info["label_conversion"]
+                # json keys are strings; we convert these to ints
+                label_conversion = {}
+                for key, value in string_label_conversion.items():
+                    label_conversion[int(key)] = value
+            except:
+                warnings.warn("Could not find `label_conversion` key in `pipeline_info.json` file")
 
         # Prepare input data
         input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
@@ -138,7 +159,7 @@ class ModelBasedClassification:
 
         return input_data
 
-    def _check_params_for_classification(self, pipeline_info_path=None):
+    def _check_params_for_classification(self, pipeline_info=None):
         """
         Check that quality and template metrics parameters match those used to train the model
 
@@ -150,17 +171,6 @@ class ModelBasedClassification:
 
         quality_metrics_extension = self.sorting_analyzer.get_extension("quality_metrics")
         template_metrics_extension = self.sorting_analyzer.get_extension("template_metrics")
-
-        pipeline_info = None
-
-        try:
-            with open(pipeline_info_path) as fd:
-                pipeline_info = json.load(fd)
-        except:
-            warnings.warn(
-                "Could not check if metric parameters are consistent between trained model and this sorting_analyzer. Please supply the path to the `model_info.json` file using `pipeline_info_path` to check this."
-            )
-            return
 
         if quality_metrics_extension is not None:
 
@@ -209,9 +219,9 @@ class ModelBasedClassification:
 def auto_label_units(
     sorting_analyzer: SortingAnalyzer,
     pipeline,
+    pipeline_info_path=None,
     label_conversion=None,
     export_to_phy=False,
-    pipeline_info_path=None,
 ):
     """
     Automatically labels units based on a model-based classification.
@@ -224,12 +234,13 @@ def auto_label_units(
         The sorting analyzer object containing the spike sorting results.
     pipeline : Pipeline
         The scikit-learn pipeline object containing the model-based classification pipeline.
-    label_conversion : dict, optional
-        A dictionary for converting the predicted labels (which are integers) to custom labels. The dictionary should have the format {old_label: new_label}.
-    export_to_phy : bool, optional
+    pipeline_info_path : str | Path | None, default: None
+        Path to pipeline information json file, created when a pipeline is trained.
+    label_conversion : dic | None, default: None
+        A dictionary for converting the predicted labels (which are integers) to custom labels. If None,
+        tries to extract from `pipeline_info.json` file. The dictionary should have the format {old_label: new_label}.
+    export_to_phy : bool, default: False
         Whether to export the results to Phy format. Default is False.
-    pipeline_info_path : str or Path, default: None
-        Path to pipeline info, used to check metric parameters used to train Pipeline.
 
     Returns
     -------

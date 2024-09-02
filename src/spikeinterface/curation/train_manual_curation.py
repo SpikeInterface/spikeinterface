@@ -17,19 +17,19 @@ class CurationModelTrainer:
     ----------
     labels : list of lists, default: None
         List of curated labels for each unit; must be in the same order as the metrics data.
-    output_folder : str, optional
-        The folder where outputs such as models and evaluation metrics will be saved, if specified. Requires the skops library.
-    metric_names : list of str, optional
+    output_folder : str, default: None
+        The folder where outputs such as models and evaluation metrics will be saved, if specified. Requires the skops library. If None, output will not be saved on file system.
+    metric_names : list of str, default: None
         A list of metrics to use for training. If None, default metrics will be used.
-    imputation_strategies : list of str, optional
+    imputation_strategies : list of str, default: None
         A list of imputation strategies to apply. If None, default strategies will be used.
-    scaling_techniques : list of str, optional
+    scaling_techniques : list of str, default: None
         A list of scaling techniques to apply. If None, default techniques will be used.
-    classifiers : list of str or dict, optional
+    classifiers : list of str or dict, default: None
         A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_default_classifier_search_spaces` method for the default search spaces & format for custom spaces.
-    seed : int, optional
+    seed : int, default: None
         Random seed for reproducibility. If None, a random seed will be generated.
-    smote : bool, optional
+    smote : bool, default: False
         Whether to apply SMOTE for class imbalance. Default is False. Requires imbalanced-learn package.
 
     Attributes
@@ -205,7 +205,7 @@ class CurationModelTrainer:
 
         # Convert string labels to integer codes to allow classification
         new_y = self.y.astype("category").cat.codes
-        self.label_conversion = dict(zip(self.y.astype("category").cat.categories, self.y))
+        self.label_conversion = dict(zip(new_y, self.y))
         self.y = new_y
 
         # Extract features
@@ -380,15 +380,6 @@ class CurationModelTrainer:
         combinations of imputation strategies, scaling techniques, and classifiers. The evaluation results are
         saved to the output folder.
 
-        Parameters
-        ----------
-        imputation_strategies : list of str
-            A list of imputation strategies to apply to the data.
-        scaling_techniques : list of str
-            A list of scaling techniques to apply to the data.
-        classifiers : list of str
-            A list of classifier names to evaluate.
-
         Raises
         ------
         ValueError
@@ -556,25 +547,25 @@ def train_model(
 
     Parameters
     ----------
-    mode : str
-        The mode to use for training. Options are 'analyzers', 'csv'. Default is 'analyzers'.
-    analyzers : list of SortingAnalyzer
-        The list of SortingAnalyzer objects containing the quality metrics and labels to use for training, if using 'analyzers' mode.
-    labels : list of list, default: None
+    mode : "analyzers" | "csv", default: "analyzers"
+        Mode to use for training.
+    analyzers : list of SortingAnalyzer | None, default: None
+         List of SortingAnalyzer objects containing the quality metrics and labels to use for training, if using 'analyzers' mode.
+    labels : list of list | None, default: None
         List of curated labels for each unit; must be in the same order as the metrics data.
-    metrics_path : str
+    metrics_path : str or None, default: None
         The path to the CSV file containing the metrics data if using 'csv' mode.
-    output_folder : str, optional
+    output_folder : str | None, default: None
         The folder where outputs such as models and evaluation metrics will be saved.
-    metric_names : list of str, optional
+    metric_names : list of str | None, default: None
         A list of metrics to use for training. If None, default metrics will be used.
-    imputation_strategies : list of str, optional
+    imputation_strategies : list of str | None, default: None
         A list of imputation strategies to apply. If None, default strategies will be used.
-    scaling_techniques : list of str, optional
+    scaling_techniques : list of str | None, default: None
         A list of scaling techniques to apply. If None, default techniques will be used.
-    classifiers : list of str or dict, optional
+    classifiers : list of str | dict | None, default: None
         A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_default_classifier_search_spaces` method for the default search spaces & format for custom spaces.
-    seed : int, optional
+    seed : int | None, default: None
         Random seed for reproducibility. If None, a random seed will be generated.
 
     Returns
