@@ -52,6 +52,9 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 # try and interpolate /smooth the xcorr. What about smoothing the activity histograms directly?
 # look into te akima spline
 
+# TODO: think about the nonrigid alignment, it correlates
+# over the entire window. is this wise? try cutting it down a bit?
+
 
 MOTION = False  # True
 SAVE = False
@@ -62,11 +65,11 @@ BIN_UM = 1
 if SAVE:
     scalings = [np.ones(25), np.r_[np.zeros(10), np.ones(15)]]
     recordings_list, _ = generate_session_displacement_recordings(
-        non_rigid_gradient=0.1, # 0.05,
-        num_units=25,
-        recording_durations=(100, 100), #  100, 100),
+        non_rigid_gradient=0.05, # 0.05,
+        num_units=55,
+        recording_durations=(100, 100, 100, 100),
         recording_shifts=(
-            (0, 0), (0, 75) # , (0, -125), (0, 25),
+            (0, 0), (0, 75), (0, -125), (0, 200),
         ),
         recording_amplitude_scalings=None, # {"method": "by_amplitude_and_firing_rate", "scalings": scalings},
         seed=42,
@@ -140,7 +143,7 @@ if MOTION:
 else:
     non_rigid_window_kwargs = {
         "win_shape": "gaussian",
-        "win_step_um": 25,
+        "win_step_um": 100,
         "win_margin_um": 0,
     }
     corrected_recordings_list, motion_objects_list, extra_info = session_alignment.align_sessions(
@@ -148,9 +151,9 @@ else:
         peaks_list,
         peak_locations_list,
         bin_um=BIN_UM,
-        histogram_estimation_method="chunked_mean",
+        histogram_estimation_method="chunked_poisson",
         alignment_method="mean_crosscorr",
-        log_scale=True,
+        log_scale=False,
         rigid=False,
         non_rigid_window_kwargs=non_rigid_window_kwargs,
         chunked_bin_size_s="estimate"
