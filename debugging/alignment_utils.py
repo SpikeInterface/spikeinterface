@@ -13,6 +13,8 @@ from spikeinterface.sortingcomponents.motion.motion_utils import get_spatial_win
 from spikeinterface.sortingcomponents.motion.iterative_template import iterative_template_registration
 from spikeinterface.sortingcomponents.motion.motion_interpolation import \
     correct_motion_on_peaks
+from scipy.ndimage import gaussian_filter
+from spikeinterface.sortingcomponents.motion.iterative_template import kriging_kernel
 
 # -----------------------------------------------------------------------------
 # Get Histograms
@@ -32,7 +34,7 @@ def get_entire_session_hist(recording, peaks, peak_locations, spatial_bin_edges,
         direction="y",
         bin_s=recording.get_duration(segment_index=0),
         bin_um=None,
-        hist_margin_um=None,  # TODO: check all margins etc. are excluded and already passed in the spatial bins
+        hist_margin_um=None,
         spatial_bin_edges=spatial_bin_edges,
         depth_smooth_um=smooth_um
     )
@@ -64,7 +66,7 @@ def get_chunked_histogram(
         direction="y",
         bin_s=bin_s,
         bin_um=None,
-        hist_margin_um=None,  # TODO: check all margins etc. are excluded and already passed in the spatial bins
+        hist_margin_um=None,
         spatial_bin_edges=spatial_bin_edges,
         depth_smooth_um=smooth_um
     )
@@ -159,7 +161,7 @@ def get_chunked_hist_poisson_estimate(chunked_session_histograms):
 
 
 # TODO: currently deprecated due to scaling issues between
-# sessions. A much better way will to make PCA from all
+# sessions. A much better (?) way will to make PCA from all
 # sessions, then align based on projection
 def get_chunked_hist_eigenvector(chunked_session_histograms):
     """
@@ -198,72 +200,93 @@ def run_alignment_estimation(
     rigid_session_offsets_matrix = _compute_histogram_crosscorrelation(
         num_sessions, num_bins, session_histogram_list, np.ones(num_bins)[np.newaxis, :], robust
     )
-    optimal_shift_indices = -np.mean(rigid_session_offsets_matrix, axis=1).T
 
-    if non_rigid_window_centers.shape[0] == 1:  # TODO: Check - rigid case
+    optimal_shift_indices = get_shifts_from_session_matrix("TODO", rigid_session_offsets_matrix)
+
+    if non_rigid_window_centers.shape[0] == 1:  # rigid case
         return optimal_shift_indices
 
-    # Shift the histograms according to the rigid shift
-    # TODO: could do this with a kriging interpolation.
+    # For non-rigid, first shift the histograms according to the rigid shift
     shifted_histograms = np.zeros_like(session_histogram_list)
     for i in range(session_histogram_list.shape[0]):
 
         shift = int(optimal_shift_indices[i, 0])
         abs_shift = np.abs(shift)
-        pad_tuple = (0, abs_shift) if shift > 0 else (abs_shift, 0)  # TODO: check direction!
+        pad_tuple = (0, abs_shift) if shift > 0 else (abs_shift, 0)
 
         padded_hist = np.pad(session_histogram_list[i, :], pad_tuple, mode="constant")
-        cut_padded_hist = padded_hist[abs_shift:] if shift > 0 else padded_hist[:-abs_shift]
+
+        cut_padded_hist = padded_hist[abs_shift:] if shift >= 0 else padded_hist[:-abs_shift]
         shifted_histograms[i, :] = cut_padded_hist
 
-
-    rigid_session_offsets_matrix = _compute_histogram_crosscorrelation(
+    rigid_session_offsets_matrix = _compute_histogram_crosscorrelation(  # TODO: rename variable
         num_sessions, num_bins, shifted_histograms, non_rigid_windows, robust
     )
+    non_rigid_shifts = get_shifts_from_session_matrix("TODO", rigid_session_offsets_matrix)
 
-    non_rigid_shifts = -np.mean(rigid_session_offsets_matrix, axis=1).T  # fix the order in _compute_histogram_crosscorrelation to avoid this transpose
-
-    # TODO: fix this
-    akima = False  # TODO: decide whether to keep, factor to own function
+    akima = False  # TODO: expose this
     if akima:
-        from scipy.interpolate import Akima1DInterpolator
-
-        x = non_rigid_window_centers
-        xs = spatial_bin_centers
-
-        new_nonrigid_shifts = np.zeros((non_rigid_shifts.shape[0], num_bins))
-        for ses_idx in range(non_rigid_shifts.shape[0]):
-
-            y = non_rigid_shifts[ses_idx]
-            y_new = Akima1DInterpolator(x, y, method="akima", extrapolate=True)(xs)  # requires scipy 14
-            new_nonrigid_shifts[ses_idx, :] = y_new
-
-        shifts = optimal_shift_indices + new_nonrigid_shifts
+        interp_nonrigid_shifts = akima_interpolate_nonrigid_shifts(
+            non_rigid_shifts, non_rigid_window_centers, spatial_bin_centers
+        )
+        shifts = optimal_shift_indices + interp_nonrigid_shifts
+        non_rigid_window_centers = spatial_bin_centers
     else:
         shifts = optimal_shift_indices + non_rigid_shifts
 
-    return shifts
+    return shifts, non_rigid_window_centers
+
+
+def get_shifts_from_session_matrix(alignment_method, session_offsets_matrix):  # TODO: rename
+    """
+    """
+    alignment_method = "to_middle"  # TOOD: do a lot of arg checks
+    if alignment_method == "to_middle":
+        optimal_shift_indices = -np.mean(session_offsets_matrix, axis=0)  # TODO: these are not symmetrical because of interpolation?
+    else:
+        ses_idx = int(alignment_method.split("_")[-1]) - 1
+        optimal_shift_indices = -session_offsets_matrix[ses_idx, :, :]
+
+    return optimal_shift_indices
+
+
+def akima_interpolate_nonrigid_shifts(non_rigid_shifts, non_rigid_window_centers, spatial_bin_centers):
+    """
+    """
+    from scipy.interpolate import Akima1DInterpolator
+
+    x = non_rigid_window_centers
+    xs = spatial_bin_centers
+
+    num_sessions = non_rigid_shifts.shape[0]
+    num_bins = spatial_bin_centers.shape[0]
+
+    interp_nonrigid_shifts = np.zeros((num_sessions, num_bins))
+    for ses_idx in range(num_sessions):
+        y = non_rigid_shifts[ses_idx]
+        y_new = Akima1DInterpolator(x, y, method="akima", extrapolate=True)(xs) # TODO: requires scipy 14
+        interp_nonrigid_shifts[ses_idx, :] = y_new
+
+    return interp_nonrigid_shifts
 
 
 def _compute_histogram_crosscorrelation(num_sessions, num_bins, session_histogram_list, non_rigid_windows, robust=False):
-    """"""
-    import time
-    t = time.perf_counter()
-    num_windows = non_rigid_windows.shape[0]
-
-    shift_matrix = np.zeros((num_windows, num_sessions, num_sessions))
-
-    import matplotlib.pyplot as plt
-    from scipy.ndimage import gaussian_filter1d, gaussian_filter
-
+    """
     # TODO: this is kind of wasteful, no optimisations made against redundant
     # session computation, but these in generate very fast.
+    """
+    num_windows = non_rigid_windows.shape[0]
+
+    shift_matrix = np.zeros((num_sessions, num_sessions, num_windows))
 
     for i in range(num_sessions):
-        for j in range(num_sessions):  # TODO: can make this much faster
+        for j in range(num_sessions):
 
+            # Create the (num windows, num_bins) matrix for this pair of sessions
             xcorr_matrix = np.zeros((non_rigid_windows.shape[0], num_bins * 2 - 1))
 
+            # For each window, window the session histograms (`window` is binary)
+            # and perform the cross correlations
             for win_idx, window in enumerate(non_rigid_windows):
                 windowed_histogram_i = session_histogram_list[i, :] * window
                 windowed_histogram_j = session_histogram_list[j, :] * window
@@ -274,27 +297,25 @@ def _compute_histogram_crosscorrelation(num_sessions, num_bins, session_histogra
                 else:
                     xcorr_matrix[win_idx, :] = np.correlate(windowed_histogram_i, windowed_histogram_j, mode="full")
 
-            smooth_um = 0.5  # TODO: what are the physical interperation of this...
-            if smooth_um is not None:  # RENAME
+            # Smooth the cross-correlations across the bins
+            smooth_um = 0.5  # TODO: what are the physical interperation of this... also expose ... also rename
+            if smooth_um is not None:
                 xcorr_matrix = gaussian_filter(xcorr_matrix, smooth_um, axes=1)
 
-            smooth_window = 1
+            # Smooth the cross-correlations across the windows
+            smooth_window = 1  # TODO: expose
             if num_windows > 1 and smooth_window:
-                xcorr_matrix_ = gaussian_filter(xcorr_matrix, smooth_window, axes=0)
+                xcorr_matrix = gaussian_filter(xcorr_matrix, smooth_window, axes=0)
 
-            interpolate = True
-            upsample_n = 10  # TODO: fix this.
-
+            # Upsample the cross-correlation by a factor of 10  # TODO: expose
+            interpolate = False
+            upsample_n = 10  # TODO: fix this. factor of 10 is arbitary (?), can combine args
             if interpolate:
-
                 shifts = np.arange(xcorr_matrix.shape[1])
-                shifts_upsampled = np.linspace(shifts[0], shifts[-1], shifts.size * upsample_n)  # TODO: why arbitarily 10, its not stated in NP2 paper actually, ask Sam if he knows. The KS2.5 implementation (MATLAB) seems to differ from the paper?
+                shifts_upsampled = np.linspace(shifts[0], shifts[-1], shifts.size * upsample_n)
 
-                sigma = 1  # TODO: expose
-                p = 2
-                d = 2
-                dists = np.repeat(shifts[:, np.newaxis], shifts_upsampled.size, axis=1) - shifts_upsampled[np.newaxis, :]
-                K = np.exp(-((dists / sigma) ** p) / d)
+                sigma = 1; p = 2; d = 2 # TODO: expose
+                K = kriging_kernel(np.c_[np.ones_like(shifts), shifts], np.c_[np.ones_like(shifts_upsampled), shifts_upsampled], sigma, p, d)
 
                 xcorr_matrix = np.matmul(xcorr_matrix, K, axes=[(-2, -1), (-2, -1), (-2, -1)])
 
@@ -302,25 +323,26 @@ def _compute_histogram_crosscorrelation(num_sessions, num_bins, session_histogra
             else:
                 argmax = np.argmax(xcorr_matrix, axis=1)
 
-            argmax = argmax.squeeze()  # TODO: fix this
-
             center_bin = np.floor((num_bins * 2 - 1)/2)
             shift = (argmax - center_bin)
-            shift_matrix[:, i, j] = shift
+            shift_matrix[i, j, :] = shift
 
-    print("DONE", time.perf_counter() - t)
     return shift_matrix
 
 
 # Kilosort-like registration
 def run_kilosort_like_rigid_registration(all_hists, non_rigid_windows):
+    """
+    TODO: this doesn't really work in the inter-session context,
+    just for testing. Remove soon. JZ 02/09/2024
+    """
     histograms = np.array(all_hists)[:, :, np.newaxis]
 
     optimal_shift_indices, _, _ = iterative_template_registration(
         histograms, non_rigid_windows=non_rigid_windows
     )
 
-    return -optimal_shift_indices  # TODO: these are reversed at this stage
+    return -optimal_shift_indices
 
 
 # TODO: deprecate
