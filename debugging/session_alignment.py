@@ -74,6 +74,7 @@ def align_sessions(
         bin_um=2,
         histogram_estimation_method="chunked_mean",
         alignment_method="mean_crosscorr",
+        alignment_order="to_middle",
         chunked_bin_size_s="estimate",
         log_scale=True,
         rigid=True,
@@ -209,7 +210,7 @@ def estimate_inter_session_displacement(
             extra_outputs_dict["session_histogram_list"], non_rigid_windows
         ) * bin_um
     else:
-        all_motion_arrays = alignment_utils.run_alignment_estimation(
+        all_motion_arrays, non_rigid_window_centers = alignment_utils.run_alignment_estimation(
             extra_outputs_dict["session_histogram_list"], spatial_bin_centers, non_rigid_windows, non_rigid_window_centers
         )
         all_motion_arrays *= bin_um
