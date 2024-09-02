@@ -131,7 +131,7 @@ class CurationModelTrainer:
         self.testing_metrics = None
 
         import pandas as pd
-        
+
         # check if labels is a list of lists
         if not all(isinstance(labels, list) for labels in labels):
             raise ValueError("labels must be a list of lists")
