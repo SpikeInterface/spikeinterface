@@ -44,19 +44,42 @@ class GroundTruthStudy:
     Note that the underlying folder structure is not backward compatible!
     """
 
-    def __init__(self, study_folder):
+    def __init__(self, study_folder, datasets=None, cases=None, sortings=None, comparisons=None):
         self.folder = Path(study_folder)
 
-        self.datasets = {}
-        self.cases = {}
-        self.sortings = {}
-        self.comparisons = {}
+        self.datasets = datasets
+        self.cases = cases
+        self.sortings = sortings
+        self.comparisons = comparisons
         self.colors = None
 
         self.scan_folder()
 
     @classmethod
     def create(cls, study_folder, datasets={}, cases={}, levels=None):
+        """
+        Create a GroundTruthStudy object from a dictionary of datasets and cases.
+
+        Parameters
+        ----------
+        study_folder : str
+            The folder where the GroundTruthStudy will be saved.
+        datasets : dict
+            A dictionary with the dataset keys and values as (recording, gt_sorting) tuples.
+        cases : dict
+            A dictionary with the case keys and values as dictionaries with the following keys:
+                * dataset: the key of the dataset
+                * label: a label for the case
+                * run_sorter_params: the parameters to run the sorter
+            If the keys are tuples of strings, they can represent several levels of parameters.
+        levels : str or list or None, default: None
+            The levels of the cases keys. If None, the levels are named "level0", "level1", etc.
+
+        Returns
+        -------
+        study : GroundTruthStudy
+            The GroundTruthStudy object.
+        """
         # check that cases keys are homogeneous
         key0 = list(cases.keys())[0]
         if isinstance(key0, str):
@@ -109,9 +132,31 @@ class GroundTruthStudy:
         # cases is dumped to a pickle file, json is not possible because of the tuple key
         (study_folder / "cases.pickle").write_bytes(pickle.dumps(cases))
 
-        return cls(study_folder)
+        return cls(study_folder, datasets=datasets, cases=cases)
+
+    def load_recording(self, dataset_key):
+        """
+        Load the recording for a given dataset key.
+
+        Parameters
+        ----------
+        dataset_key : str
+            The dataset key.
+
+        Returns
+        -------
+        recording : Recording
+            The recording object.
+        """
+        rec_file = self.folder / "datasets" / "recordings" / f"{dataset_key}.pickle"
+        recording = load_extractor(rec_file)
+        return recording
 
     def scan_folder(self):
+        """
+        Scan the folder to load or reload the datasets, cases, sortings, and comparisons.
+        """
+        print("Scanning folder")
         if not (self.folder / "datasets").exists():
             raise ValueError(f"This is folder is not a GroundTruthStudy : {self.folder.absolute()}")
 
@@ -120,29 +165,42 @@ class GroundTruthStudy:
 
         self.levels = self.info["levels"]
 
-        for rec_file in (self.folder / "datasets" / "recordings").glob("*.pickle"):
-            key = rec_file.stem
-            rec = load_extractor(rec_file)
-            gt_sorting = load_extractor(self.folder / f"datasets" / "gt_sortings" / key)
-            self.datasets[key] = (rec, gt_sorting)
+        if self.cases is None:
+            with open(self.folder / "cases.pickle", "rb") as f:
+                self.cases = pickle.load(f)
 
-        with open(self.folder / "cases.pickle", "rb") as f:
-            self.cases = pickle.load(f)
+        # load datasets
+        if self.datasets is None:
+            self.datasets = {}
+            for key in self.cases:
+                dataset_key = self.cases[key]["dataset"]
+                recording = self.load_recording(dataset_key)
+                gt_sorting = load_extractor(self.folder / f"datasets" / "gt_sortings" / dataset_key)
+                self.datasets[dataset_key] = (recording, gt_sorting)
 
-        self.sortings = {k: None for k in self.cases}
-        self.comparisons = {k: None for k in self.cases}
-        for key in self.cases:
-            sorting_folder = self.folder / "sortings" / self.key_to_str(key)
-            if sorting_folder.exists():
-                self.sortings[key] = load_extractor(sorting_folder)
+        # load sortings
+        if self.sortings is None:
+            self.sortings = {}
+            for key in self.cases:
+                sorting_folder = self.folder / "sortings" / self.key_to_str(key)
+                if sorting_folder.exists():
+                    self.sortings[key] = load_extractor(sorting_folder)
 
-            comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
-            if comparison_file.exists():
-                with open(comparison_file, mode="rb") as f:
-                    try:
-                        self.comparisons[key] = pickle.load(f)
-                    except Exception:
-                        pass
+        # load comparisons
+        if self.comparisons is None:
+            self.comparisons = {}
+            for key in self.cases:
+                comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
+                if comparison_file.exists():
+                    with open(comparison_file, mode="rb") as f:
+                        try:
+                            gt_sorting = self.datasets[self.cases[key]["dataset"]][1]
+                            self.comparisons[key] = pickle.load(f)
+                            # since we avoided pickling the absolute sorting paths, we need to set them here
+                            self.comparisons[key]._sorting1 = gt_sorting
+                            self.comparisons[key]._sorting2 = self.sortings[key]
+                        except Exception:
+                            pass
 
     def __repr__(self):
         t = f"{self.__class__.__name__} {self.folder.stem} \n"
@@ -154,6 +212,9 @@ class GroundTruthStudy:
         return t
 
     def key_to_str(self, key):
+        """
+        Convert a case key to a string.
+        """
         if isinstance(key, str):
             return key
         elif isinstance(key, tuple):
@@ -162,6 +223,14 @@ class GroundTruthStudy:
             raise ValueError("Keys for cases must str or tuple")
 
     def remove_sorting(self, key):
+        """
+        Remove the sorting for a given case key.
+
+        Parameters
+        ----------
+        key : str or tuple
+            The case key to remove the sorting for.
+        """
         sorting_folder = self.folder / "sortings" / self.key_to_str(key)
         log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
         comparison_file = self.folder / "comparisons" / self.key_to_str(key)
@@ -174,6 +243,17 @@ class GroundTruthStudy:
                 f.unlink()
 
     def set_colors(self, colors=None, map_name="tab20"):
+        """
+        Set the colors for the cases. The self.colors will be a dictionary with
+        the case keys as keys and the colors as values.
+
+        Parameters
+        ----------
+        colors : list or None
+            The colors to use. If None, the colors are automatically generated.
+        map_name : str
+            The name of the color map to use.
+        """
         from spikeinterface.widgets import get_some_colors
 
         if colors is None:
@@ -184,14 +264,36 @@ class GroundTruthStudy:
         else:
             self.colors = colors
 
-    def get_colors(self):
+    def get_colors(self, map_name="tab20"):
+        """
+        Return the colors for the cases. If the colors are not set, they are automatically generated.
+        """
         if self.colors is None:
-            self.set_colors()
+            self.set_colors(map_name=map_name)
         return self.colors
 
-    def run_sorters(self, case_keys=None, engine="loop", engine_kwargs={}, keep=True, verbose=False):
+    def run_sorters(self, case_keys=None, engine="loop", engine_kwargs=None, keep=True, verbose=False):
+        """
+        Runs the sorters for the given case keys.
+
+        Parameters
+        ----------
+        case_keys : list or None
+            The case keys to run the sorters for. If None, all cases are run.
+        engine : "loop" | "slurm", default: "loop"
+            The engine to use. Can be "loop" or "slurm".
+        engine_kwargs : dict or None, default: None
+            The kwargs to pass to the engine.
+        keep : bool, default: True
+            If True, the sorting is kept if it already exists.
+        verbose : bool, default: False
+            If True, print more information.
+        """
         if case_keys is None:
             case_keys = self.cases.keys()
+
+        if engine_kwargs is None:
+            engine_kwargs = {}
 
         job_list = []
         for key in case_keys:
@@ -219,7 +321,8 @@ class GroundTruthStudy:
 
             params = self.cases[key]["run_sorter_params"].copy()
             # this ensure that sorter_name is given
-            recording, _ = self.datasets[self.cases[key]["dataset"]]
+            dataset_key = self.cases[key]["dataset"]
+            recording, _ = self.datasets[dataset_key]
             sorter_name = params.pop("sorter_name")
             job = dict(
                 sorter_name=sorter_name,
@@ -239,6 +342,17 @@ class GroundTruthStudy:
             self.copy_sortings(case_keys)
 
     def copy_sortings(self, case_keys=None, force=True):
+        """
+        Copy the sortings from the sorter-specific folder to the sortings folder
+        usinf the numpy_folder format.
+
+        Parameters
+        ----------
+        case_keys : list or None
+            The case keys to copy the sortings for. If None, all cases are copied.
+        force : bool, default: True
+            If True, the sorting is copied even if it already exists.
+        """
         if case_keys is None:
             case_keys = self.cases.keys()
 
@@ -268,6 +382,18 @@ class GroundTruthStudy:
                 shutil.copyfile(sorter_folder / "spikeinterface_log.json", log_file)
 
     def run_comparisons(self, case_keys=None, comparison_class=GroundTruthComparison, **kwargs):
+        """
+        Run the comparisons with the ground-truth sorting for the given case keys.
+
+        Parameters
+        ----------
+        case_keys : list or None
+            The case keys to run the comparisons for. If None, all cases are run.
+        comparison_class : class, default: GroundTruthComparison
+            The class to use for the comparison.
+        kwargs : dict
+            The kwargs to pass to the comparison class.
+        """
         if case_keys is None:
             case_keys = self.cases.keys()
 
@@ -282,28 +408,35 @@ class GroundTruthStudy:
             self.comparisons[key] = comp
 
             comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
-            with open(comparison_file, mode="wb") as f:
-                pickle.dump(comp, f)
+            # Since dumping to pickle hard-codes the sorting paths, here we temporarily set the sorting paths to None
+            # so that the comparison object can be pickled
+            # Upon reloading, we will set the sorting paths back to the correct values
+            comp._sorting1 = None
+            comp._sorting2 = None
+            # we also need a try-except block in case the folder is read-only
+            try:
+                with open(comparison_file, mode="wb") as f:
+                    pickle.dump(comp, f)
+            except:
+                pass
+            comp._sorting1 = gt_sorting
+            comp._sorting2 = sorting
 
-    def get_run_times(self, case_keys=None):
-        import pandas as pd
+    def create_sorting_analyzer_gt(self, case_keys=None, random_params=None, template_params=None, **job_kwargs):
+        """
+        Create the sorting analyzer for the ground-truth sorting for the given case keys.
 
-        if case_keys is None:
-            case_keys = self.cases.keys()
-
-        log_folder = self.folder / "sortings" / "run_logs"
-
-        run_times = {}
-        for key in case_keys:
-            log_file = log_folder / f"{self.key_to_str(key)}.json"
-            with open(log_file, mode="r") as logfile:
-                log = json.load(logfile)
-                run_time = log.get("run_time", None)
-            run_times[key] = run_time
-
-        return pd.Series(run_times, name="run_time")
-
-    def create_sorting_analyzer_gt(self, case_keys=None, random_params={}, waveforms_params={}, **job_kwargs):
+        Parameters
+        ----------
+        case_keys : list or None
+            The case keys to create the sorting analyzer for. If None, all cases are created.
+        random_params : dict or None
+            The parameters to pass to the `random_spikes` computation.
+        template_params : dict or None
+            The parameters to pass to the `templates` computation.
+        job_kwargs : keyword arguments
+            The kwargs to pass to the sorting analyzer.
+        """
         if case_keys is None:
             case_keys = self.cases.keys()
 
@@ -312,16 +445,35 @@ class GroundTruthStudy:
 
         dataset_keys = [self.cases[key]["dataset"] for key in case_keys]
         dataset_keys = set(dataset_keys)
+        random_params = random_params if random_params is not None else {}
+        template_params = template_params if template_params is not None else {}
         for dataset_key in dataset_keys:
             # the waveforms depend on the dataset key
             folder = base_folder / self.key_to_str(dataset_key)
             recording, gt_sorting = self.datasets[dataset_key]
+            if recording is None:
+                recording = self.load_recording(dataset_key)
             sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="binary_folder", folder=folder)
             sorting_analyzer.compute("random_spikes", **random_params)
-            sorting_analyzer.compute("templates", **job_kwargs)
+            sorting_analyzer.compute("templates", **template_params, **job_kwargs)
             sorting_analyzer.compute("noise_levels")
 
     def get_sorting_analyzer(self, case_key=None, dataset_key=None):
+        """
+        Get the ground-truth sorting analyzer for the given case key.
+
+        Parameters
+        ----------
+        case_key : str or tuple
+            The case key to get the sorting analyzer for.
+        dataset_key : str
+            The dataset key to get the sorting analyzer for.
+
+        Returns
+        -------
+        sorting_analyzer : SortingAnalyzer
+            The sorting analyzer.
+        """
         if case_key is not None:
             dataset_key = self.cases[case_key]["dataset"]
 
@@ -329,12 +481,21 @@ class GroundTruthStudy:
         sorting_analyzer = load_sorting_analyzer(folder)
         return sorting_analyzer
 
-    # def get_templates(self, key, mode="average"):
-    #     analyzer = self.get_sorting_analyzer(case_key=key)
-    #     templates = sorting_analyzer.get_all_templates(mode=mode)
-    #     return templates
+    def compute_metrics(self, case_keys=None, metric_names=["snr", "firing_rate"], force=False, **kwargs):
+        """
+        Compute quality metrics for ground-truth units for the given case keys.
 
-    def compute_metrics(self, case_keys=None, metric_names=["snr", "firing_rate"], force=False):
+        Parameters
+        ----------
+        case_keys : list or None
+            The case keys to compute the metrics for. If None, all cases are computed.
+        metric_names : list, default: ["snr", "firing_rate"]
+            The quality metrics to compute.
+        force : bool, default: False
+            If True, the metrics are recomputed even if they already exist.
+        kwargs : keyword arguments
+            The kwargs to pass to the quality metrics computation
+        """
         if case_keys is None:
             case_keys = self.cases.keys()
 
@@ -352,28 +513,119 @@ class GroundTruthStudy:
                 else:
                     continue
             analyzer = self.get_sorting_analyzer(key)
-            metrics = compute_quality_metrics(analyzer, metric_names=metric_names)
+            metrics = compute_quality_metrics(analyzer, metric_names=metric_names, **kwargs)
             metrics.to_csv(filename, sep="\t", index=True)
 
-    def get_metrics(self, key):
+    def get_metrics(self, case_keys=None):
+        """
+        Return the metrics for the given case keys.
+
+        Parameters
+        ----------
+        case_keys : list or None
+            The case keys to get the metrics for. If None, all cases are returned.
+
+        Returns
+        -------
+        metrics : pandas.DataFrame
+            The metrics for each case. The dataframe has a MultiIndex with
+            the case keys and a "gt_unit_id" column with the ground-truth unit ids.
+        """
         import pandas as pd
 
-        dataset_key = self.cases[key]["dataset"]
+        if case_keys is None:
+            case_keys = self.cases.keys()
 
-        filename = self.folder / "metrics" / f"{self.key_to_str(dataset_key)}.csv"
-        if not filename.exists():
-            return
-        metrics = pd.read_csv(filename, sep="\t", index_col=0)
-        dataset_key = self.cases[key]["dataset"]
-        recording, gt_sorting = self.datasets[dataset_key]
-        metrics.index = gt_sorting.unit_ids
+        metrics = None
+        for key in case_keys:
+            dataset_key = self.cases[key]["dataset"]
+
+            filename = self.folder / "metrics" / f"{self.key_to_str(dataset_key)}.csv"
+            if not filename.exists():
+                continue
+            new_metrics = pd.read_csv(filename, sep="\t", index_col=0)
+            _, gt_sorting = self.datasets[dataset_key]
+            new_metrics.loc[:, "gt_unit_id"] = gt_sorting.unit_ids
+            if isinstance(key, str):
+                index = [key] * len(new_metrics)
+            elif isinstance(key, tuple):
+                index = pd.MultiIndex.from_tuples([key] * len(new_metrics), names=self.levels)
+            new_metrics.index = index
+            if metrics is None:
+                metrics = new_metrics
+            else:
+                metrics = pd.concat([metrics, new_metrics])
         return metrics
 
-    def get_units_snr(self, key):
-        """ """
-        return self.get_metrics(key)["snr"]
+    def get_units_snr(self, case_keys=None):
+        """
+        Return the snr for the given case keys.
+
+        Parameters
+        ----------
+        case_keys : list or None
+            The case keys to get the snr for. If None, all cases are returned.
+
+        Returns
+        -------
+        snr : pandas.Series
+            The snr for each case.
+        """
+        return self.get_metrics(case_keys)["snr"]
+
+    def get_run_times(self, case_keys=None):
+        """
+        Return the run times for the given case keys.
+
+        Parameters
+        ----------
+        case_keys : list or None
+            The case keys to get the run times for. If None, all cases are returned.
+
+        Returns
+        -------
+        run_times : dict
+            A dictionary with the case keys as keys and the run times as values\
+        """
+        import pandas as pd
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+
+        log_folder = self.folder / "sortings" / "run_logs"
+
+        run_times = []
+
+        if isinstance(case_keys[0], str):
+            index = case_keys
+        elif isinstance(case_keys[0], tuple):
+            index = pd.MultiIndex.from_tuples(case_keys, names=self.levels)
+
+        for key in case_keys:
+            log_file = log_folder / f"{self.key_to_str(key)}.json"
+            with open(log_file, mode="r") as logfile:
+                log = json.load(logfile)
+                run_time = log.get("run_time", None)
+            run_times.append(run_time)
+
+        run_times_df = pd.DataFrame(data={"run_time": run_times}, index=index)
+
+        return run_times_df
 
     def get_performance_by_unit(self, case_keys=None):
+        """
+        Return a dataframe with the performance of the sorter for each unit for the given case keys.
+
+        Parameters
+        ----------
+        case_keys : list or None
+            The case keys to get the performance for. If None, all cases are returned.
+
+        Returns
+        -------
+        perf_by_unit : pandas.DataFrame
+            The performance for each unit and each case.
+        """
         import pandas as pd
 
         if case_keys is None:
@@ -385,22 +637,38 @@ class GroundTruthStudy:
             assert comp is not None, "You need to do study.run_comparisons() first"
 
             perf = comp.get_performance(method="by_unit", output="pandas")
-
+            perf.loc[:, "gt_unit_id"] = perf.index
             if isinstance(key, str):
-                perf[self.levels] = key
+                perf.index = [key] * len(perf)
             elif isinstance(key, tuple):
-                for col, k in zip(self.levels, key):
-                    perf[col] = k
+                perf.index = pd.MultiIndex.from_tuples([key] * len(perf), names=self.levels)
 
-            perf = perf.reset_index()
             perf_by_unit.append(perf)
 
         perf_by_unit = pd.concat(perf_by_unit)
-        perf_by_unit = perf_by_unit.set_index(self.levels)
         perf_by_unit = perf_by_unit.sort_index()
         return perf_by_unit
 
     def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):
+        """
+        Return a dataframe with the count of units for the given case keys.
+
+        Parameters
+        ----------
+        case_keys : list or None
+            The case keys to get the count for. If None, all cases are returned.
+        well_detected_score : float | None, default: None
+            The score to consider a unit as well detected.
+        redundant_score : float | None, default: None
+            The score to consider a unit as redundant.
+        overmerged_score : float | None, default: None
+            The score to consider a unit as overmerged.
+
+        Returns
+        -------
+        count_units : pandas.DataFrame
+            The count of units for each case
+        """
         import pandas as pd
 
         if case_keys is None:

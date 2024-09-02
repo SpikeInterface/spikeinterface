@@ -85,8 +85,11 @@ def test_GroundTruthStudy(setup_module):
 
     study.compute_metrics()
 
-    for key in study.cases:
-        metrics = study.get_metrics(key)
+    all_metrics = study.get_metrics()
+    print(all_metrics)
+
+    for key in study.cases.keys():
+        metrics = study.get_metrics(case_keys=[key])
         print(metrics)
 
     study.get_performance_by_unit()
@@ -94,5 +97,8 @@ def test_GroundTruthStudy(setup_module):
 
 
 if __name__ == "__main__":
-    setup_module()
-    test_GroundTruthStudy()
+    study_folder = Path("test")
+    if study_folder.is_dir():
+        shutil.rmtree(study_folder)
+    create_a_study(study_folder)
+    test_GroundTruthStudy(study_folder)
