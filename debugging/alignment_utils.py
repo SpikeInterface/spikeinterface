@@ -186,7 +186,7 @@ def get_chunked_hist_eigenvector(chunked_session_histograms):
 
 
 def run_alignment_estimation(
-    session_histogram_list, spatial_bin_centers, non_rigid_windows, non_rigid_window_centers, robust=False
+    session_histogram_list, spatial_bin_centers, non_rigid_windows, non_rigid_window_centers, alignment_order, robust=False
 ):
     """
     """
@@ -201,7 +201,7 @@ def run_alignment_estimation(
         num_sessions, num_bins, session_histogram_list, np.ones(num_bins)[np.newaxis, :], robust
     )
 
-    optimal_shift_indices = get_shifts_from_session_matrix("TODO", rigid_session_offsets_matrix)
+    optimal_shift_indices = get_shifts_from_session_matrix(alignment_order, rigid_session_offsets_matrix)
 
     if non_rigid_window_centers.shape[0] == 1:  # rigid case
         return optimal_shift_indices
@@ -222,7 +222,7 @@ def run_alignment_estimation(
     rigid_session_offsets_matrix = _compute_histogram_crosscorrelation(  # TODO: rename variable
         num_sessions, num_bins, shifted_histograms, non_rigid_windows, robust
     )
-    non_rigid_shifts = get_shifts_from_session_matrix("TODO", rigid_session_offsets_matrix)
+    non_rigid_shifts = get_shifts_from_session_matrix(alignment_order, rigid_session_offsets_matrix)
 
     akima = False  # TODO: expose this
     if akima:
@@ -237,14 +237,13 @@ def run_alignment_estimation(
     return shifts, non_rigid_window_centers
 
 
-def get_shifts_from_session_matrix(alignment_method, session_offsets_matrix):  # TODO: rename
+def get_shifts_from_session_matrix(alignment_order, session_offsets_matrix):  # TODO: rename
     """
     """
-    alignment_method = "to_middle"  # TOOD: do a lot of arg checks
-    if alignment_method == "to_middle":
+    if alignment_order == "to_middle":  # TODO: do a lot of arg checks
         optimal_shift_indices = -np.mean(session_offsets_matrix, axis=0)  # TODO: these are not symmetrical because of interpolation?
     else:
-        ses_idx = int(alignment_method.split("_")[-1]) - 1
+        ses_idx = int(alignment_order.split("_")[-1]) - 1
         optimal_shift_indices = -session_offsets_matrix[ses_idx, :, :]
 
     return optimal_shift_indices
@@ -291,11 +290,7 @@ def _compute_histogram_crosscorrelation(num_sessions, num_bins, session_histogra
                 windowed_histogram_i = session_histogram_list[i, :] * window
                 windowed_histogram_j = session_histogram_list[j, :] * window
 
-                if robust:
-                    iterations = np.arange(-num_bins, num_bins)
-                    # TODO: xcorr with weighted least squares
-                else:
-                    xcorr_matrix[win_idx, :] = np.correlate(windowed_histogram_i, windowed_histogram_j, mode="full")
+                xcorr_matrix[win_idx, :] = np.correlate(windowed_histogram_i, windowed_histogram_j, mode="full")
 
             # Smooth the cross-correlations across the bins
             smooth_um = 0.5  # TODO: what are the physical interperation of this... also expose ... also rename
