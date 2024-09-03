@@ -224,15 +224,15 @@ def _get_single_session_activity_histogram(recording, peaks, peak_locations, met
 
     if method == "entire_session" or chunked_bin_size_s == "estimate":
 
-        entire_session_hist, chunked_temporal_bin_centers, _ = alignment_utils.get_entire_session_hist(
+        entire_session_hist, chunked_temporal_bin_centers, _ = alignment_utils.get_activity_histogram(
             recording, peaks, peak_locations, spatial_bin_edges,
-            log_scale=False
+            log_scale=False, bin_s=None
         )
         if method == "entire_session":
             if log_scale:
                 entire_session_hist = np.log10(1 + entire_session_hist)
 
-            return entire_session_hist, temporal_bin_centers, chunked_temporal_bin_centers, None, None
+            return entire_session_hist.squeeze(), temporal_bin_centers, chunked_temporal_bin_centers, None, None
 
     if chunked_bin_size_s == "estimate":
         # It is important that the passed histogram is scaled to firing rate
@@ -240,8 +240,8 @@ def _get_single_session_activity_histogram(recording, peaks, peak_locations, met
             entire_session_hist
         )
 
-    chunked_session_histograms, chunked_temporal_bin_centers, _ = alignment_utils.get_chunked_histogram(
-        recording, peaks, peak_locations, chunked_bin_size_s, spatial_bin_edges, log_scale
+    chunked_session_histograms, chunked_temporal_bin_centers, _ = alignment_utils.get_activity_histogram(
+        recording, peaks, peak_locations, spatial_bin_edges, log_scale, bin_s=chunked_bin_size_s,
     )
     session_std = np.sum(np.std(chunked_session_histograms, axis=0)) / chunked_session_histograms.shape[1]
 
@@ -374,13 +374,16 @@ def _correct_session_displacement(
     corrected_session_histogram_list = []
     for ses_idx in range(num_sessions):
 
-        corrected_histogram = alignment_utils.get_entire_session_hist(
+        corrected_histogram = alignment_utils.get_activity_histogram(
             recordings_list[ses_idx],
             peaks_list[ses_idx],
             corrected_peak_locations_list[ses_idx],
             spatial_bin_edges,
-            log_scale
+            log_scale,
+            bin_s=None,
         )[0]
-        corrected_session_histogram_list.append(corrected_histogram)
+        corrected_session_histogram_list.append(
+            corrected_histogram.squeeze()
+        )
 
     return corrected_peak_locations_list, corrected_session_histogram_list

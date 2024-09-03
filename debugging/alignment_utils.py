@@ -21,18 +21,18 @@ from spikeinterface.sortingcomponents.motion.iterative_template import kriging_k
 # -----------------------------------------------------------------------------
 
 
-def get_entire_session_hist(recording, peaks, peak_locations, spatial_bin_edges, log_scale, smooth_um=None):  # TODO: expose smooth_um
+def get_activity_histogram(recording, peaks, peak_locations, spatial_bin_edges, log_scale, bin_s, smooth_um=None):  # TODO: expose smooth_um
     """
     TODO: assumes 1-segment recording
     """
-    entire_session_hist, temporal_bin_edges, generated_spatial_bin_edges = \
+    activity_histogram, temporal_bin_edges, generated_spatial_bin_edges = \
         make_2d_motion_histogram(
         recording,
         peaks,
         peak_locations,
         weight_with_amplitude=False,
         direction="y",
-        bin_s=recording.get_duration(segment_index=0),
+        bin_s=bin_s if bin_s is not None else recording.get_duration(segment_index=0),
         bin_um=None,
         hist_margin_um=None,
         spatial_bin_edges=spatial_bin_edges,
@@ -42,45 +42,20 @@ def get_entire_session_hist(recording, peaks, peak_locations, spatial_bin_edges,
         generated_spatial_bin_edges, spatial_bin_edges
     ), "TODO: remove soon after testing"
 
-    entire_session_hist = entire_session_hist[0]
+    temporal_bin_centers = get_bin_centers(temporal_bin_edges)
+    spatial_bin_centers = get_bin_centers(spatial_bin_edges)
 
-    entire_session_hist /= recording.get_duration(segment_index=0)
+    if bin_s is None:
+        scaler = 1 / recording.get_duration(segment_index=0)
+    else:
+        scaler = np.diff(temporal_bin_edges)[:, np.newaxis]
 
-    spatial_centers = get_bin_centers(spatial_bin_edges)
-
-    if log_scale:
-        entire_session_hist = np.log10(1 + entire_session_hist)
-
-    return entire_session_hist, temporal_bin_edges, spatial_centers
-
-
-def get_chunked_histogram(
-        recording, peaks, peak_locations, bin_s, spatial_bin_edges, log_scale, weight_with_amplitude=False, smooth_um=None,  # TODO: expose_um
-):
-    chunked_session_histograms, temporal_bin_edges, _ = \
-        make_2d_motion_histogram(
-        recording,
-        peaks,
-        peak_locations,
-        weight_with_amplitude=weight_with_amplitude,
-        direction="y",
-        bin_s=bin_s,
-        bin_um=None,
-        hist_margin_um=None,
-        spatial_bin_edges=spatial_bin_edges,
-        depth_smooth_um=smooth_um
-    )
-
-    temporal_centers = get_bin_centers(temporal_bin_edges)
-    spatial_centers = get_bin_centers(spatial_bin_edges)
-
-    bin_times = np.diff(temporal_bin_edges)[:, np.newaxis]
-    chunked_session_histograms /= bin_times
+    activity_histogram *= scaler
 
     if log_scale:
-        chunked_session_histograms = np.log10(1 + chunked_session_histograms)
+        activity_histogram = np.log10(1 + activity_histogram)
 
-    return chunked_session_histograms, temporal_centers, spatial_centers
+    return activity_histogram, temporal_bin_centers, spatial_bin_centers
 
 # -----------------------------------------------------------------------------
 # Utils
@@ -204,7 +179,7 @@ def run_alignment_estimation(
     optimal_shift_indices = get_shifts_from_session_matrix(alignment_order, rigid_session_offsets_matrix)
 
     if non_rigid_window_centers.shape[0] == 1:  # rigid case
-        return optimal_shift_indices
+        return optimal_shift_indices, non_rigid_window_centers  # TOOD: this is weird
 
     # For non-rigid, first shift the histograms according to the rigid shift
     shifted_histograms = np.zeros_like(session_histogram_list)
@@ -293,12 +268,12 @@ def _compute_histogram_crosscorrelation(num_sessions, num_bins, session_histogra
                 xcorr_matrix[win_idx, :] = np.correlate(windowed_histogram_i, windowed_histogram_j, mode="full")
 
             # Smooth the cross-correlations across the bins
-            smooth_um = 0.5  # TODO: what are the physical interperation of this... also expose ... also rename
+            smooth_um = None # 0.5  # TODO: what are the physical interperation of this... also expose ... also rename
             if smooth_um is not None:
                 xcorr_matrix = gaussian_filter(xcorr_matrix, smooth_um, axes=1)
 
             # Smooth the cross-correlations across the windows
-            smooth_window = 1  # TODO: expose
+            smooth_window = None # 1  # TODO: expose
             if num_windows > 1 and smooth_window:
                 xcorr_matrix = gaussian_filter(xcorr_matrix, smooth_window, axes=0)
 
@@ -317,6 +292,12 @@ def _compute_histogram_crosscorrelation(num_sessions, num_bins, session_histogra
                 argmax = np.argmax(xcorr_matrix, axis=1) / upsample_n
             else:
                 argmax = np.argmax(xcorr_matrix, axis=1)
+
+
+            import matplotlib.pyplot as plt
+            plt.plot(xcorr_matrix.squeeze())
+            plt.title(f"{i} and {j}")
+            plt.show()
 
             center_bin = np.floor((num_bins * 2 - 1)/2)
             shift = (argmax - center_bin)
