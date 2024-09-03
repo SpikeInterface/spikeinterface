@@ -19,6 +19,7 @@ from .job_tools import (
     ChunkRecordingExecutor,
     _shared_job_kwargs_doc,
     chunk_duration_to_chunk_size,
+    split_job_kwargs,
 )
 
 
@@ -666,7 +667,6 @@ def get_random_data_chunks(
                                 # chunk_duration=chunk_duration,
                                 margin_frames=margin_frames,
                                 seed=seed)
-    print(recording_slices)
 
     chunk_list = []
     for segment_index, start_frame, stop_frame in recording_slices:
@@ -731,12 +731,42 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     return np.array(closest_channels_inds), np.array(dists)
 
 
+def _noise_level_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    recording = worker_ctx["recording"]
+    
+    one_chunk = recording.get_traces(
+        start_frame=start_frame,
+        end_frame=end_frame,
+        segment_index=segment_index,
+        return_scaled=worker_ctx["return_scaled"],
+    )
+
+
+    if worker_ctx["method"] == "mad":
+        med = np.median(one_chunk, axis=0, keepdims=True)
+        # hard-coded so that core doesn't depend on scipy
+        noise_levels = np.median(np.abs(one_chunk - med), axis=0) / 0.6744897501960817
+    elif worker_ctx["method"] == "std":
+        noise_levels = np.std(one_chunk, axis=0)
+
+    return noise_levels
+
+
+def _noise_level_chunk_init(recording, return_scaled, method):
+    worker_ctx = {}
+    worker_ctx["recording"] = recording
+    worker_ctx["return_scaled"] = return_scaled
+    worker_ctx["method"] = method
+    return worker_ctx
+
 def get_noise_levels(
     recording: "BaseRecording",
     return_scaled: bool = True,
     method: Literal["mad", "std"] = "mad",
     force_recompute: bool = False,
-    **random_chunk_kwargs,
+    **kwargs,
+    # **random_chunk_kwargs,
+    # **job_kwargs
 ):
     """
     Estimate noise for each channel using MAD methods.
@@ -773,17 +803,38 @@ def get_noise_levels(
     if key in recording.get_property_keys() and not force_recompute:
         noise_levels = recording.get_property(key=key)
     else:
-        random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
+        # random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
 
-        if method == "mad":
-            med = np.median(random_chunks, axis=0, keepdims=True)
-            # hard-coded so that core doesn't depend on scipy
-            noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
-        elif method == "std":
-            noise_levels = np.std(random_chunks, axis=0)
+        # if method == "mad":
+        #     med = np.median(random_chunks, axis=0, keepdims=True)
+        #     # hard-coded so that core doesn't depend on scipy
+        #     noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
+        # elif method == "std":
+        #     noise_levels = np.std(random_chunks, axis=0)
+
+        random_slices_kwargs, job_kwargs = split_job_kwargs(kwargs)
+        recording_slices = get_random_recording_slices(recording,**random_slices_kwargs)
+
+        noise_levels_chunks = []
+        def append_noise_chunk(res):
+            noise_levels_chunks.append(res)
+
+        func = _noise_level_chunk
+        init_func = _noise_level_chunk_init
+        init_args = (recording, return_scaled, method)
+        executor = ChunkRecordingExecutor(
+            recording, func, init_func, init_args, job_name="noise_level", verbose=False,
+            gather_func=append_noise_chunk, **job_kwargs
+        )
+        executor.run(all_chunks=recording_slices)
+        noise_levels_chunks = np.stack(noise_levels_chunks)
+        noise_levels = np.mean(noise_levels_chunks, axis=0)
+
+        # set property
         recording.set_property(key, noise_levels)
 
     return noise_levels
+
 
 
 def get_chunk_with_margin(

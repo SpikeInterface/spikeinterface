@@ -389,11 +389,13 @@ class ChunkRecordingExecutor:
                 f"chunk_duration={chunk_duration_str}",
             )
 
-    def run(self):
+    def run(self, all_chunks=None):
         """
         Runs the defined jobs.
         """
-        all_chunks = divide_recording_into_chunks(self.recording, self.chunk_size)
+
+        if all_chunks is None:
+            all_chunks = divide_recording_into_chunks(self.recording, self.chunk_size)
 
         if self.handle_returns:
             returns = []
