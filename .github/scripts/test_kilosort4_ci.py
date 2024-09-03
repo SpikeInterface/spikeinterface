@@ -21,19 +21,21 @@ of the tests are:
 
 import copy
 from typing import Any
-import spikeinterface.full as si
 import numpy as np
 import torch
 import kilosort
 from kilosort.io import load_probe
 import pandas as pd
-from spikeinterface.sorters.external.kilosort4 import Kilosort4Sorter
 import pytest
-from probeinterface.io import write_prb
-from kilosort.parameters import DEFAULT_SETTINGS
 from packaging.version import parse
 from importlib.metadata import version
 from inspect import signature
+
+import spikeinterface.full as si
+from spikeinterface.sorters.external.kilosort4 import Kilosort4Sorter
+from probeinterface.io import write_prb
+
+from kilosort.parameters import DEFAULT_SETTINGS
 from kilosort.run_kilosort import (
     set_files,
     initialize_ops,
@@ -66,6 +68,7 @@ PARAMS_TO_TEST = [
     ("nt", 93),
     ("nskip", 1),
     ("whitening_range", 16),
+    ("highpass_cutoff", 200),
     ("sig_interp", 5),
     ("nt0min", 25),
     ("dmin", 15),
@@ -87,10 +90,11 @@ PARAMS_TO_TEST = [
     ("ccg_threshold", 1e12),
     ("acg_threshold", 1e12),
     ("cluster_downsampling", 2),
-    ("duplicate_spike_bins", 5),
+    ("duplicate_spike_ms", 0.3),
     ("drift_smoothing", [250, 250, 250]),
-    ("bad_channels", None),
     ("save_preprocessed_copy", False),
+    ("shift", 0),
+    ("scale", 1),
 ]
 
 
@@ -194,7 +198,10 @@ class TestKilosort4Long:
                 continue
 
             if param_key not in RUN_KILOSORT_ARGS:
-                assert DEFAULT_SETTINGS[param_key] != param_value, f"{param_key} values should be different in test."
+                assert DEFAULT_SETTINGS[param_key] != param_value, (
+                    f"{param_key} values should be different in test: "
+                    f"{param_value} vs. {DEFAULT_SETTINGS[param_key]}"
+                )
 
     def test_default_settings_all_represented(self):
         """
@@ -227,7 +234,7 @@ class TestKilosort4Long:
 
     # Testing Arguments ###
     def test_set_files_arguments(self):
-        self._check_arguments(set_files, ["settings", "filename", "probe", "probe_name", "data_dir", "results_dir"])
+        self._check_arguments(set_files, ["settings", "filename", "probe", "probe_name", "data_dir", "results_dir", "bad_channels"])
 
     def test_initialize_ops_arguments(self):
         expected_arguments = [
@@ -249,13 +256,13 @@ class TestKilosort4Long:
         self._check_arguments(compute_preprocessing, ["ops", "device", "tic0", "file_object"])
 
     def test_compute_drift_location_arguments(self):
-        self._check_arguments(compute_drift_correction, ["ops", "device", "tic0", "progress_bar", "file_object"])
+        self._check_arguments(compute_drift_correction, ["ops", "device", "tic0", "progress_bar", "file_object", "clear_cache"])
 
     def test_detect_spikes_arguments(self):
-        self._check_arguments(detect_spikes, ["ops", "device", "bfile", "tic0", "progress_bar"])
+        self._check_arguments(detect_spikes, ["ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"])
 
     def test_cluster_spikes_arguments(self):
-        self._check_arguments(cluster_spikes, ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar"])
+        self._check_arguments(cluster_spikes, ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"])
 
     def test_save_sorting_arguments(self):
         expected_arguments = ["ops", "results_dir", "st", "clu", "tF", "Wall", "imin", "tic0", "save_extra_vars"]
