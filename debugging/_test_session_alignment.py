@@ -63,7 +63,7 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 MOTION = False  # True
 SAVE = False
 PLOT = False
-BIN_UM = 2
+BIN_UM = 1  # 0.1 actually works really well!
 
 
 if SAVE:
@@ -147,7 +147,7 @@ if MOTION:
 else:
     non_rigid_window_kwargs = {
         "win_shape": "gaussian",
-        "win_step_um": 100,
+        "win_step_um": 25,
         "win_margin_um": 0,
     }
     corrected_recordings_list, motion_objects_list, extra_info = session_alignment.align_sessions(
@@ -157,19 +157,21 @@ else:
         bin_um=BIN_UM,
         histogram_estimation_method="chunked_poisson",
         alignment_method="mean_crosscorr",
-        log_scale=False,
-        rigid=True,
+        alignment_order="to_middle",  # TODO: really need to think more about the nonrigid step for multiple sessions... its not like KS because there is no mean template...
+        log_scale=False,  #  TODO: check this
+        rigid=False,
         non_rigid_window_kwargs=non_rigid_window_kwargs,
         chunked_bin_size_s="estimate"
     )
-
+    # TODO: check firing rate, completely different for corrected data! This is just
+    # shifting the positions so must be a scaling error
 plotting.SessionAlignmentWidget(
     recordings_list,
     peaks_list,
     peak_locations_list,
-    extra_info["histogram_info"]["session_histogram_list"],
+    extra_info["session_histogram_list"],
     **extra_info["corrected"],
-    spatial_bin_centers=extra_info["spatial_bin_centers"],
+    spatial_bin_centers=extra_info["bins"]["spatial_bin_centers"],
 )
 
 plt.show()
