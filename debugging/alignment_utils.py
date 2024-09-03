@@ -48,7 +48,7 @@ def get_activity_histogram(recording, peaks, peak_locations, spatial_bin_edges, 
     if bin_s is None:
         scaler = 1 / recording.get_duration(segment_index=0)
     else:
-        scaler = np.diff(temporal_bin_edges)[:, np.newaxis]
+        scaler = 1 / np.diff(temporal_bin_edges)[:, np.newaxis]
 
     activity_histogram *= scaler
 
@@ -161,14 +161,14 @@ def get_chunked_hist_eigenvector(chunked_session_histograms):
 
 
 def run_alignment_estimation(
-    session_histogram_list, spatial_bin_centers, non_rigid_windows, non_rigid_window_centers, alignment_order, robust=False
+    session_histogram_list, bins, alignment_order, robust=False
 ):
     """
     """
     if isinstance(session_histogram_list, list):
         session_histogram_list = np.array(session_histogram_list)
 
-    num_bins = spatial_bin_centers.size
+    num_bins = bins["spatial_bin_centers"].size
     num_sessions = session_histogram_list.shape[0]
 
     # First, perform the rigid alignment.
@@ -178,8 +178,8 @@ def run_alignment_estimation(
 
     optimal_shift_indices = get_shifts_from_session_matrix(alignment_order, rigid_session_offsets_matrix)
 
-    if non_rigid_window_centers.shape[0] == 1:  # rigid case
-        return optimal_shift_indices, non_rigid_window_centers  # TOOD: this is weird
+    if bins["non_rigid_window_centers"].shape[0] == 1:  # rigid case
+        return optimal_shift_indices, bins["non_rigid_window_centers"]  # TOOD: this is weird
 
     # For non-rigid, first shift the histograms according to the rigid shift
     shifted_histograms = np.zeros_like(session_histogram_list)
@@ -195,19 +195,20 @@ def run_alignment_estimation(
         shifted_histograms[i, :] = cut_padded_hist
 
     rigid_session_offsets_matrix = _compute_histogram_crosscorrelation(  # TODO: rename variable
-        num_sessions, num_bins, shifted_histograms, non_rigid_windows, robust
+        num_sessions, num_bins, shifted_histograms, bins["non_rigid_windows"], robust
     )
     non_rigid_shifts = get_shifts_from_session_matrix(alignment_order, rigid_session_offsets_matrix)
 
     akima = False  # TODO: expose this
     if akima:
         interp_nonrigid_shifts = akima_interpolate_nonrigid_shifts(
-            non_rigid_shifts, non_rigid_window_centers, spatial_bin_centers
+            non_rigid_shifts, bins["non_rigid_window_centers"], bins["spatial_bin_centers"]
         )
         shifts = optimal_shift_indices + interp_nonrigid_shifts
-        non_rigid_window_centers = spatial_bin_centers
+        non_rigid_window_centers = bins["spatial_bin_centers"]
     else:
         shifts = optimal_shift_indices + non_rigid_shifts
+        non_rigid_window_centers = bins["non_rigid_window_centers"]
 
     return shifts, non_rigid_window_centers
 
@@ -216,7 +217,12 @@ def get_shifts_from_session_matrix(alignment_order, session_offsets_matrix):  # 
     """
     """
     if alignment_order == "to_middle":  # TODO: do a lot of arg checks
-        optimal_shift_indices = -np.mean(session_offsets_matrix, axis=0)  # TODO: these are not symmetrical because of interpolation?
+        # TODO: this doesn't do the right thing!!!
+        # optimal_shift_indices = -np.mean(session_offsets_matrix, axis=0)  # TODO: these are not symmetrical because of interpolation?
+        # TODO: carefully check this! this puts to the center of all points.
+        # Maybe we want to optimise such that all shifts are similar or closed form...
+        mean_0 = np.mean(session_offsets_matrix, axis=0)[0, :]
+        optimal_shift_indices = -session_offsets_matrix[0, :, :] + mean_0
     else:
         ses_idx = int(alignment_order.split("_")[-1]) - 1
         optimal_shift_indices = -session_offsets_matrix[ses_idx, :, :]
@@ -256,6 +262,10 @@ def _compute_histogram_crosscorrelation(num_sessions, num_bins, session_histogra
     for i in range(num_sessions):
         for j in range(num_sessions):
 
+            # The problem is this stratergy completely fails when thexcorr is very bad.
+            # The smoothing and interpolation make it much worse, because bad xcorr are
+            # merged together.
+
             # Create the (num windows, num_bins) matrix for this pair of sessions
             xcorr_matrix = np.zeros((non_rigid_windows.shape[0], num_bins * 2 - 1))
 
@@ -265,43 +275,62 @@ def _compute_histogram_crosscorrelation(num_sessions, num_bins, session_histogra
                 windowed_histogram_i = session_histogram_list[i, :] * window
                 windowed_histogram_j = session_histogram_list[j, :] * window
 
-                xcorr_matrix[win_idx, :] = np.correlate(windowed_histogram_i, windowed_histogram_j, mode="full")
+                windowed_histogram_i = windowed_histogram_i / np.linalg.norm(windowed_histogram_i)
+                windowed_histogram_j = windowed_histogram_j / np.linalg.norm(windowed_histogram_j)
 
-            # Smooth the cross-correlations across the bins
-            smooth_um = None # 0.5  # TODO: what are the physical interperation of this... also expose ... also rename
-            if smooth_um is not None:
-                xcorr_matrix = gaussian_filter(xcorr_matrix, smooth_um, axes=1)
+                # xcorr_matrix[win_idx, :] = np.correlate(windowed_histogram_i, windowed_histogram_j, mode="full")
 
-            # Smooth the cross-correlations across the windows
-            smooth_window = None # 1  # TODO: expose
-            if num_windows > 1 and smooth_window:
-                xcorr_matrix = gaussian_filter(xcorr_matrix, smooth_window, axes=0)
+                xcorr = np.correlate(windowed_histogram_i, windowed_histogram_j, mode="full")
 
-            # Upsample the cross-correlation by a factor of 10  # TODO: expose
-            interpolate = False
-            upsample_n = 10  # TODO: fix this. factor of 10 is arbitary (?), can combine args
-            if interpolate:
-                shifts = np.arange(xcorr_matrix.shape[1])
-                shifts_upsampled = np.linspace(shifts[0], shifts[-1], shifts.size * upsample_n)
+                if np.max(xcorr) < 0.1:  # TODO: such a weird cutoff...
+                    shift = 0
+                else:
+                    xcorr = np.correlate(windowed_histogram_i, windowed_histogram_j, mode="full")
 
-                sigma = 1; p = 2; d = 2 # TODO: expose
-                K = kriging_kernel(np.c_[np.ones_like(shifts), shifts], np.c_[np.ones_like(shifts_upsampled), shifts_upsampled], sigma, p, d)
+                    max = np.argmax(xcorr)
+                    center_bin = np.floor((num_bins * 2 - 1) / 2)
+                    shift = (max - center_bin)
 
-                xcorr_matrix = np.matmul(xcorr_matrix, K, axes=[(-2, -1), (-2, -1), (-2, -1)])
+                shift_matrix[i, j, win_idx] = shift  # TODO: this is way more wasteful but avoids bad mergings.
 
-                argmax = np.argmax(xcorr_matrix, axis=1) / upsample_n
-            else:
-                argmax = np.argmax(xcorr_matrix, axis=1)
+            if False:
+                # Smooth the cross-correlations across the bins
+                smooth_um = None # 0.5  # TODO: what are the physical interperation of this... also expose ... also rename
+                if smooth_um is not None:
+                    xcorr_matrix = gaussian_filter(xcorr_matrix, smooth_um, axes=1)
 
+                if False:
+                    # Smooth the cross-correlations across the windows
+                    smooth_window = None # 1  # TODO: expose
+                    if num_windows > 1 and smooth_window:
+                        xcorr_matrix = gaussian_filter(xcorr_matrix, smooth_window, axes=0)
 
-            import matplotlib.pyplot as plt
-            plt.plot(xcorr_matrix.squeeze())
-            plt.title(f"{i} and {j}")
-            plt.show()
+                # Upsample the cross-correlation by a factor of 10  # TODO: expose
+                interpolate = False
+                upsample_n = 10  # TODO: fix this. factor of 10 is arbitary (?), can combine args
+                if interpolate:
+                    shifts = np.arange(xcorr_matrix.shape[1])
+                    shifts_upsampled = np.linspace(shifts[0], shifts[-1], shifts.size * upsample_n)
 
-            center_bin = np.floor((num_bins * 2 - 1)/2)
-            shift = (argmax - center_bin)
-            shift_matrix[i, j, :] = shift
+                    sigma = 1; p = 2; d = 2 # TODO: expose
+                    K = kriging_kernel(np.c_[np.ones_like(shifts), shifts], np.c_[np.ones_like(shifts_upsampled), shifts_upsampled], sigma, p, d)
+
+                    xcorr_matrix = np.matmul(xcorr_matrix, K, axes=[(-2, -1), (-2, -1), (-2, -1)])
+
+                    argmax = np.argmax(xcorr_matrix, axis=1) / upsample_n
+                else:
+                    argmax = np.argmax(xcorr_matrix, axis=1)
+
+                if xcorr_matrix.shape[1] > 1:
+                    breakpoint()
+                import matplotlib.pyplot as plt
+                plt.plot(xcorr_matrix.T)
+                plt.title(f"{i} and {j}")
+                plt.show()
+
+                center_bin = np.floor((num_bins * 2 - 1)/2)
+                shift = (argmax - center_bin)
+                shift_matrix[i, j, :] = shift
 
     return shift_matrix
 
