@@ -213,8 +213,6 @@ class TestKilosort4Long:
 
         for param_key in DEFAULT_SETTINGS:
             if param_key not in ["n_chan_bin", "fs", "tmin", "tmax"]:
-                if parse(version("kilosort")) == parse("4.0.9") and param_key == "nblocks":
-                    continue
                 assert param_key in tested_keys, f"param: {param_key} in DEFAULT SETTINGS but not tested."
 
     def test_spikeinterface_defaults_against_kilsort(self):
@@ -267,8 +265,7 @@ class TestKilosort4Long:
     def test_save_sorting_arguments(self):
         expected_arguments = ["ops", "results_dir", "st", "clu", "tF", "Wall", "imin", "tic0", "save_extra_vars"]
 
-        if parse(version("kilosort")) > parse("4.0.11"):
-            expected_arguments.append("save_preprocessed_copy")
+        expected_arguments.append("save_preprocessed_copy")
 
         self._check_arguments(save_sorting, expected_arguments)
 
@@ -369,14 +366,9 @@ class TestKilosort4Long:
             assert ops[param_key] == param_value
 
         # Finally, check out test parameters actually change the output of
-        # KS4, ensuring our tests are actually doing something. This is not
-        # done prior to 4.0.4 because a number of parameters seem to stop
-        # having an effect. This is probably due to small changes in their
-        # behaviour, and the test file chosen here.
-        if parse(version("kilosort")) > parse("4.0.4"):
-            self._check_test_parameters_are_changing_the_output(results, default_results, param_key)
+        # KS4, ensuring our tests are actually doing something.
+        self._check_test_parameters_are_changing_the_output(results, default_results, param_key)
 
-    @pytest.mark.skipif(parse(version("kilosort")) == parse("4.0.9"), reason="nblock=0 fails on KS4=4.0.9")
     def test_kilosort4_no_correction(self, recording_and_paths, tmp_path):
         """
         Test the SpikeInterface wrappers `do_correction` argument. We set
@@ -415,7 +407,6 @@ class TestKilosort4Long:
         assert np.array_equal(results["ks"]["st"], results["si"]["st"])
         assert np.array_equal(results["ks"]["clus"], results["si"]["clus"])
 
-    @pytest.mark.skipif(parse(version("kilosort")) == parse("4.0.9"), reason="nblock=0 fails on KS4=4.0.9")
     @pytest.mark.parametrize(
         "param_to_test",
         [
