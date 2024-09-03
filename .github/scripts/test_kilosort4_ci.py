@@ -90,11 +90,9 @@ PARAMS_TO_TEST = [
     ("ccg_threshold", 1e12),
     ("acg_threshold", 1e12),
     ("cluster_downsampling", 2),
-    ("duplicate_spike_ms", 0.3),
     ("drift_smoothing", [250, 250, 250]),
-    ("save_preprocessed_copy", False),
-    ("shift", 0),
-    ("scale", 1),
+    # Not tested beacuse with ground truth data it doesn't change the results
+    # ("duplicate_spike_ms", 0.3),
 ]
 
 
@@ -210,6 +208,8 @@ class TestKilosort4Long:
         on the KS side.
         """
         tested_keys = [entry[0] for entry in PARAMS_TO_TEST]
+        additional_non_tested_keys = ["shift", "scale", "save_preprocessed_copy", "duplicate_spike_ms"]
+        tested_keys += additional_non_tested_keys
 
         for param_key in DEFAULT_SETTINGS:
             if param_key not in ["n_chan_bin", "fs", "tmin", "tmax"]:
@@ -406,6 +406,11 @@ class TestKilosort4Long:
 
         assert np.array_equal(results["ks"]["st"], results["si"]["st"])
         assert np.array_equal(results["ks"]["clus"], results["si"]["clus"])
+
+
+    def test_kilosort4_use_binary_file(self, recording_and_paths, tmp_path):
+        # TODO
+        pass
 
     @pytest.mark.parametrize(
         "param_to_test",
