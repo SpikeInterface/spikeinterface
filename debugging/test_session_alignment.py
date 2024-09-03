@@ -35,6 +35,10 @@ import session_alignment  # TODO
 from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 
 
+# Note, the cross correlation is intrinsically limited because for large
+# shifts the value is too reduced by the reduction in number of points.
+# but, of course cannot scale by number of points due to instability at edges
+
 # TODO: add different modes (to mean, to nth session...)
 # TODO: document that the output is Hz
 
@@ -59,17 +63,17 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 MOTION = False  # True
 SAVE = False
 PLOT = False
-BIN_UM = 1
+BIN_UM = 2
 
 
 if SAVE:
     scalings = [np.ones(25), np.r_[np.zeros(10), np.ones(15)]]
     recordings_list, _ = generate_session_displacement_recordings(
-        non_rigid_gradient=0.05, # 0.05,
+        non_rigid_gradient=None, # 0.05, # 0.05,
         num_units=55,
         recording_durations=(100, 100, 100, 100),
         recording_shifts=(
-            (0, 0), (0, 75), (0, -125), (0, 200),
+            (0, 0), (0, 250), (0, -350), (0, 450),
         ),
         recording_amplitude_scalings=None, # {"method": "by_amplitude_and_firing_rate", "scalings": scalings},
         seed=42,
@@ -154,7 +158,7 @@ else:
         histogram_estimation_method="chunked_poisson",
         alignment_method="mean_crosscorr",
         log_scale=False,
-        rigid=False,
+        rigid=True,
         non_rigid_window_kwargs=non_rigid_window_kwargs,
         chunked_bin_size_s="estimate"
     )
