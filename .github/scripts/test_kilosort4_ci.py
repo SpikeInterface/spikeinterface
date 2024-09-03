@@ -415,27 +415,46 @@ class TestKilosort4Long:
         sorting_ks4 = si.run_sorter(
             "kilosort4",
             recording,
-            folder=tmp_path / "spikeinterface_output_dir_wrapper",
-            use_binary_file=False,
+            folder=tmp_path / "ks4_output_si_wrapper_default",
+            use_binary_file=None,
             remove_existing_folder=True,
         )
         sorting_ks4_bin = si.run_sorter(
             "kilosort4",
             recording_bin,
-            folder=tmp_path / "spikeinterface_output_dir_bin",
-            use_binary_file=False,
+            folder=tmp_path / "ks4_output_bin_default",
+            use_binary_file=None,
             remove_existing_folder=True,
         )
-        sorting_ks4_non_bin = si.run_sorter(
+        sorting_ks4_force_binary = si.run_sorter(
             "kilosort4",
             recording,
-            folder=tmp_path / "spikeinterface_output_dir_non_bin",
+            folder=tmp_path / "ks4_output_force_bin",
             use_binary_file=True,
             remove_existing_folder=True,
         )
+        assert not (tmp_path / "ks4_output_force_bin" / "sorter_output" / "recording.dat").exists()
+        sorting_ks4_force_non_binary = si.run_sorter(
+            "kilosort4",
+            recording_bin,
+            folder=tmp_path / "ks4_output_force_wrapper",
+            use_binary_file=False,
+            remove_existing_folder=True,
+        )
+        # test deleting recording.dat
+        sorting_ks4_force_binary_keep = si.run_sorter(
+            "kilosort4",
+            recording,
+            folder=tmp_path / "ks4_output_force_bin_keep",
+            use_binary_file=True,
+            delete_recording_dat=False,
+            remove_existing_folder=True,
+        )
+        assert (tmp_path / "ks4_output_force_bin_keep" / "sorter_output" / "recording.dat").exists()
 
         check_sortings_equal(sorting_ks4, sorting_ks4_bin)
-        check_sortings_equal(sorting_ks4, sorting_ks4_non_bin)
+        check_sortings_equal(sorting_ks4, sorting_ks4_force_binary)
+        check_sortings_equal(sorting_ks4, sorting_ks4_force_non_binary)
 
     @pytest.mark.parametrize(
         "param_to_test",
