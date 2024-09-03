@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 12 * * 0"  # Weekly on Sunday at noon UTC
-  push:
+  pull_request:
     paths:
       - '**/kilosort4.py'
 
