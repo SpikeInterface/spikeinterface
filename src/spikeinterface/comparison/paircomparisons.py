@@ -225,7 +225,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         The name of sorter 2
     delta_time : float, default: 0.4
         Number of ms to consider coincident spikes.
-        This means that two spikes are considered simultaneous if they are within delta_time of each other or
+        This means that two spikes are considered simultaneous if they are within `delta_time` of each other or
         mathematically abs(spike1_time - spike2_time) <= delta_time.
     match_score : float, default: 0.5
         Minimum agreement score to match units
