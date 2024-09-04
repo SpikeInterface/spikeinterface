@@ -257,15 +257,13 @@ def set_value_in_extractor_dict(extractor_dict: dict, access_path: tuple, new_va
 
     Returns
     -------
-    dict
-        The modified dictionary
+    None
     """
 
     current = extractor_dict
     for key in access_path[:-1]:
         current = current[key]
     current[access_path[-1]] = new_value
-    return current
 
 
 def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
