@@ -495,6 +495,14 @@ class BaseRecording(BaseRecordingSnippets):
                 "Use this carefully!"
             )
 
+    def reset_times(self):
+        """Reset times in-memory for all segments that have a time vector."""
+        for segment_index in range(self.get_num_segments()):
+            if self.has_time_vector(segment_index):
+                rs = self._recording_segments[segment_index]
+                rs.t_start = None
+                rs.time_vector = None
+
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
         Transform sample index into time in seconds
