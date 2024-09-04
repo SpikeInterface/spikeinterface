@@ -32,7 +32,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotations from neo.
     use_names_as_ids : bool, default: False
         Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
-    names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     rec_name : str, default: None
         When the file contains several recordings you need to specify the one
         you want to extract. (rec_name='rec0000').
