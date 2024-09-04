@@ -111,7 +111,7 @@ class Kilosort4Sorter(BaseSorter):
         "save_preprocessed_copy": "save a pre-processed copy of the data (including drift correction) to temp_wh.dat in the results directory and format Phy output to use that copy of the data",
         "torch_device": "Select the torch device auto/cuda/cpu",
         "bad_channels": "A list of channel indices (rows in the binary file) that should not be included in sorting. Listing channels here is equivalent to excluding them from the probe dictionary.",
-        "use_binary_file": "If True then Kilosort is run using a binary file. In this case, if the input recording is not binaru compatible, it is written to a binary file in the output folder. "
+        "use_binary_file": "If True then Kilosort is run using a binary file. In this case, if the input recording is not binary compatible, it is written to a binary file in the output folder. "
         "If False then Kilosort is run on the recording object directly using the RecordingExtractorAsArray object. If None, then if the recording is binary compatible, the sorter will use the binary file, otherwise the RecordingExtractorAsArray. "
         "Default is None.",
         "delete_recording_dat": "If True, if a temporary binary file is created, it is deleted after the sorting is done. Default is True.",
