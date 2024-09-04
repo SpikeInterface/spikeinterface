@@ -69,7 +69,7 @@ def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
     return num_spikes
 
 
-def compute_firing_rates(sorting_analyzer, unit_ids=None, **kwargs):
+def compute_firing_rates(sorting_analyzer, unit_ids=None):
     """
     Compute the firing rate across segments.
 
@@ -98,7 +98,7 @@ def compute_firing_rates(sorting_analyzer, unit_ids=None, **kwargs):
     return firing_rates
 
 
-def compute_presence_ratios(sorting_analyzer, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0, unit_ids=None, **kwargs):
+def compute_presence_ratios(sorting_analyzer, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0, unit_ids=None):
     """
     Calculate the presence ratio, the fraction of time the unit is firing above a certain threshold.
 
@@ -620,7 +620,7 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
 _default_params["synchrony"] = dict(synchrony_sizes=(2, 4, 8))
 
 
-def compute_firing_ranges(sorting_analyzer, bin_size_s=5, percentiles=(5, 95), unit_ids=None, **kwargs):
+def compute_firing_ranges(sorting_analyzer, bin_size_s=5, percentiles=(5, 95), unit_ids=None):
     """
     Calculate firing range, the range between the 5th and 95th percentiles of the firing rates distribution
     computed in non-overlapping time bins.
@@ -1437,6 +1437,8 @@ def compute_sd_ratio(
     In this case, noise refers to the global voltage trace on the same channel as the best channel of the unit.
     (ideally (not implemented yet), the noise would be computed outside of spikes from the unit itself).
 
+    TODO: Take jitter into account.
+
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
@@ -1450,9 +1452,8 @@ def compute_sd_ratio(
         and will make a rough estimation of what that impact is (and remove it).
     unit_ids : list or None, default: None
         The list of unit ids to compute this metric. If None, all units are used.
-    **kwargs:
+    **kwargs : dict, default: {}
         Keyword arguments for computing spike amplitudes and extremum channel.
-    TODO: Take jitter into account.
 
     Returns
     -------

@@ -20,8 +20,8 @@ class ComputeCorrelograms(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer_or_sorting : SortingAnalyzer | Sorting
+        A SortingAnalyzer or Sorting object
     window_ms : float, default: 50.0
         The window around the spike to compute the correlation in ms. For example,
          if 50 ms, the correlations will be computed at lags -25 ms ... 25 ms.
