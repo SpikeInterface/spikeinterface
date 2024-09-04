@@ -237,6 +237,7 @@ def _get_single_session_activity_histogram(recording, peaks, peak_locations, met
         "chunked_histograms": chunked_histograms,
         "chunked_temporal_bin_centers": chunked_temporal_bin_centers,
         "session_std": session_std,
+        "chunked_bin_size_s": chunked_bin_size_s,
     }
 
     return session_histogram, temporal_bin_centers, histogram_info
@@ -244,9 +245,12 @@ def _get_single_session_activity_histogram(recording, peaks, peak_locations, met
 
 def _create_motion_recordings(all_recordings, motion_array, bins, update_recordings_list):
     """
+    # assert motion object is only 1 segment
+    # TODO: need to handle the number of bins not being the same!
+    # TODO: add an annotation to the corrected recording
     """
     interpolate_motion_kwargs = dict(
-        border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
+        border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2  # TODO: expose
     )
     corrected_recordings_list = []
     all_motions = []
@@ -255,20 +259,17 @@ def _create_motion_recordings(all_recordings, motion_array, bins, update_recordi
         recording = all_recordings[i]
         ses_displacement = motion_array[i][np.newaxis, :]
 
-        assert ses_displacement.shape[0] == 1, "time dimension should be 1 for session displacement"
+        assert ses_displacement.shape[0] == 1, "time dimension should be 1 for session displacement"  # TODO
         assert recording.get_num_segments() == 1, "TOOD: only support 1 segment"
 
         if update_recordings_list:
 
             if not isinstance(recording, InterpolateMotionRecording):
-                raise ValueError("Explain")
+                raise ValueError("Explain") # TODO
 
             corrected_recording = _add_displacement_to_interpolate_recording(
                 recording, ses_displacement, bins["non_rigid_window_centers"]
             )
-            # assert motion object is only 1 segment
-            # TODO: need to handle the number of bins not being the same!
-            # TODO: add an annotation to the corrected recording
             all_motions.append(None)
             corrected_recordings_list.append(corrected_recording)
         else:
