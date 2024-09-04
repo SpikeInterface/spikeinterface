@@ -19,8 +19,6 @@ import probeinterface
 
 import spikeinterface
 
-from zarr.errors import ArrayNotFoundError
-
 from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 
@@ -1339,6 +1337,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
             job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
 
+            t_start = perf_counter()
             results = run_node_pipeline(
                 self.recording,
                 all_nodes,
@@ -1348,10 +1347,14 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 squeeze_output=False,
                 verbose=verbose,
             )
+            t_end = perf_counter()
+            # for pipeline node extensions we can only track the runtime of the run_node_pipeline
+            runtime_s = np.round(t_end - t_start, 1)
 
             for r, result in enumerate(results):
                 extension_name, variable_name = result_routage[r]
                 extension_instances[extension_name].data[variable_name] = result
+                extension_instances[extension_name].run_info["runtime_s"] = runtime_s
 
             for extension_name, extension_instance in extension_instances.items():
                 self.extensions[extension_name] = extension_instance
@@ -1859,13 +1862,20 @@ class AnalyzerExtension:
         ext = cls(sorting_analyzer)
         ext.load_params()
         ext.load_run_info()
-        if ext.run_info["run_completed"]:
+        if ext.run_info is not None:
+            if ext.run_info["run_completed"]:
+                ext.load_data()
+                if cls.need_backward_compatibility_on_load:
+                    ext._handle_backward_compatibility_on_load()
+                if len(ext.data) > 0:
+                    return ext
+        else:
+            # this is for back-compatibility of old analyzers
             ext.load_data()
             if cls.need_backward_compatibility_on_load:
                 ext._handle_backward_compatibility_on_load()
             if len(ext.data) > 0:
                 return ext
-
         # If extension run not completed, or data has gone missing,
         # return None to indicate that the extension should be (re)computed.
         return None
@@ -1874,15 +1884,18 @@ class AnalyzerExtension:
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             run_info_file = extension_folder / "run_info.json"
-            assert run_info_file.is_file(), f"No run_info file in extension {self.extension_name} folder"
-            with open(str(run_info_file), "r") as f:
-                run_info = json.load(f)
+            if run_info_file.is_file():
+                with open(str(run_info_file), "r") as f:
+                    run_info = json.load(f)
+            else:
+                warnings.warn(f"Found no run_info file for {self.extension_name}, extension should be re-computed.")
+                run_info = None
 
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
-            assert "run_info" in extension_group.attrs, f"No run_info file in extension {self.extension_name} folder"
-            run_info = extension_group.attrs["run_info"]
-
+            run_info = extension_group.attrs.get("run_info", None)
+        if run_info is None:
+            warnings.warn(f"Found no run_info file for {self.extension_name}, extension should be re-computed.")
         self.run_info = run_info
 
     def load_params(self):
@@ -1902,7 +1915,6 @@ class AnalyzerExtension:
 
     def load_data(self):
         ext_data = None
-
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             for ext_data_file in extension_folder.iterdir():
@@ -1922,6 +1934,7 @@ class AnalyzerExtension:
                     # and have a link to the old buffer on windows then it fails
                     # ext_data = np.load(ext_data_file, mmap_mode="r")
                     # so we go back to full loading
+                    print(f"{ext_data_file} is numpy!")
                     ext_data = np.load(ext_data_file)
                 elif ext_data_file.suffix == ".csv":
                     import pandas as pd
@@ -1931,6 +1944,7 @@ class AnalyzerExtension:
                     ext_data = pickle.load(ext_data_file.open("rb"))
                 else:
                     continue
+                self.data[ext_data_name] = ext_data
 
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
@@ -1950,21 +1964,20 @@ class AnalyzerExtension:
                 else:
                     # this load in memmory
                     ext_data = np.array(ext_data_)
+                self.data[ext_data_name] = ext_data
 
-        if ext_data is not None:
-            self.data[ext_data_name] = ext_data
-        else:
+        if len(self.data) == 0:
             warnings.warn(f"Found no data for {self.extension_name}, extension should be re-computed.")
 
     def copy(self, new_sorting_analyzer, unit_ids=None):
         # alessio : please note that this also replace the old select_units!!!
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
-        new_extension.run_info = self.run_info.copy()  # TODO: does copy() assume both extensions have been run?
         if unit_ids is None:
             new_extension.data = self.data
         else:
             new_extension.data = self._select_extension_data(unit_ids)
+        new_extension.run_info = self.run_info.copy()
         new_extension.save()
         return new_extension
 
@@ -1979,10 +1992,10 @@ class AnalyzerExtension:
     ):
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
-        new_extension.run_info = self.run_info.copy()  # TODO: does merge() assume both extensions have been run?
         new_extension.data = self._merge_extension_data(
             merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=verbose, **job_kwargs
         )
+        new_extension.run_info = self.run_info.copy()
         new_extension.save()
         return new_extension
 
@@ -1993,10 +2006,10 @@ class AnalyzerExtension:
             self._save_importing_provenance()
             self._save_run_info()
 
-        start = perf_counter()
+        t_start = perf_counter()
         self._run(**kwargs)
-        end = perf_counter()
-        self.run_info["runtime_s"] = np.round(end - start, 1)
+        t_end = perf_counter()
+        self.run_info["runtime_s"] = np.round(t_end - t_start, 1)
 
         if save and not self.sorting_analyzer.is_read_only():
             self._save_data(**kwargs)
