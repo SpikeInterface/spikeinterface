@@ -569,6 +569,7 @@ class TestKilosort4Long:
         results["si"]["st"] = np.load(spikeinterface_output_dir / "sorter_output" / "spike_times.npy")
         results["si"]["clus"] = np.load(spikeinterface_output_dir / "sorter_output" / "spike_clusters.npy")
         assert np.allclose(results["ks"]["st"], results["si"]["st"], rtol=0, atol=1)
+        assert np.array_equal(results["ks"]["clus"], results["si"]["clus"])
 
     ##### Helpers ######
     def _get_kilosort_native_settings(self, recording, paths, param_key, param_value):
