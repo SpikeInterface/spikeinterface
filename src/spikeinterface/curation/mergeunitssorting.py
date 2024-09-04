@@ -13,7 +13,7 @@ class MergeUnitsSorting(BaseSorting):
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The sorting object
     units_to_merge : list/tuple of lists/tuples
         A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),

@@ -98,10 +98,14 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object.
-    peaks: array
+    peaks : array
         Peaks array, as returned by detect_peaks() in "compact_numpy" way.
+    ms_before : float
+        The number of milliseconds to include before the peak of the spike
+    ms_after : float
+        The number of milliseconds to include after the peak of the spike
 
     {method_doc}
 

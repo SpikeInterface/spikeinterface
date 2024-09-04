@@ -216,6 +216,11 @@ def get_motion_presets():
 def get_motion_parameters_preset(preset):
     """
     Get the parameters tree for a given preset for motion correction.
+
+    Parameters
+    ----------
+    preset : str, default: None
+        The preset name. See available presets using `spikeinterface.preprocessing.get_motion_presets()`.
     """
     preset_params = copy.deepcopy(motion_options_preset[preset])
     all_default_params = _get_default_motion_params()

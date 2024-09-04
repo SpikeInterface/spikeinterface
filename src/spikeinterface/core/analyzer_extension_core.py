@@ -675,13 +675,14 @@ class ComputeNoiseLevels(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    **params: dict with additional parameters for the `spikeinterface.get_noise_levels()` function
+    **kwargs : dict
+        Additional parameters for the `spikeinterface.get_noise_levels()` function
 
     Returns
     -------
-    noise_levels: np.array
+    noise_levels : np.array
         The noise level vector
     """
 
