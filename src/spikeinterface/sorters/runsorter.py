@@ -272,7 +272,9 @@ def run_sorter_local(
     # only classmethod call not instance (stateless at instance level but state is in folder)
     folder = SorterClass.initialize_folder(recording, folder, verbose, remove_existing_folder)
     SorterClass.set_params_to_folder(recording, folder, sorter_params, verbose)
+    # This writes parameters and recording to binary and can happen in the host
     SorterClass.setup_recording(recording, folder, verbose=verbose)
+    # This NEEDS to happen in the docker because of dependencies
     SorterClass.run_from_folder(folder, raise_error, verbose)
     if with_output:
         sorting = SorterClass.get_result_from_folder(folder, register_recording=True, sorting_info=True)
