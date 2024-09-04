@@ -139,7 +139,7 @@ jobs:
 
       - name: Test streaming extractors
         shell: bash
-        if: env.RUN_STREAMING_EXTRACTORS_TESTS
+        if: env.RUN_STREAMING_EXTRACTORS_TESTS == 'true'
         run: |
           pip install -e .[streaming_extractors,test_extractors]
           ./.github/run_tests.sh "streaming_extractors" --no-virtual-env
