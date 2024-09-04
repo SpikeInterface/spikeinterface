@@ -2021,9 +2021,7 @@ class AnalyzerExtension:
         self._save_params()
         self._save_importing_provenance()
         self._save_data(**kwargs)
-        self.run_info["run_completed"] = (
-            True  # extensions that go through compute_several_extensions() and then run_node_pipeline() never have ext_instance.run() called, so need to change run_completed here (or somewhere, at least)
-        )
+        self.run_info["run_completed"] = True
         self._save_run_info()
 
     def _save_data(self, **kwargs):
