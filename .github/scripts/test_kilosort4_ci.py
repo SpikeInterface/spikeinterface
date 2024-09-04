@@ -92,7 +92,7 @@ PARAMETERS_NOT_AFFECTING_RESULTS = [
     "acg_threshold",
     "cluster_downsampling",
     "cluster_pcs",
-    "duplicate_spike_ms",  # this is because gorund-truth spikes don't have violations
+    "duplicate_spike_ms",  # this is because ground-truth spikes don't have violations
 ]
 
 # THIS IS A PLACEHOLDER FOR FUTURE PARAMS TO TEST
