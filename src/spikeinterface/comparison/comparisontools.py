@@ -3,13 +3,10 @@ Some functions internally use by SortingComparison.
 """
 
 from __future__ import annotations
-from typing import Iterable
-
-
 import numpy as np
 
 
-def count_matching_events(times1: Iterable, times2: Iterable, delta: int = 10):
+def count_matching_events(times1, times2: np.ndarray | list, delta: int = 10):
     """
     Counts matching events.
 
