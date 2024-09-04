@@ -18,6 +18,8 @@ from .job_tools import (
     fix_job_kwargs,
     ChunkRecordingExecutor,
     _shared_job_kwargs_doc,
+    chunk_duration_to_chunk_size,
+    split_job_kwargs,
 )
 
 
@@ -509,6 +511,87 @@ def determine_cast_unsigned(recording, dtype):
     return cast_unsigned
 
 
+
+
+def get_random_recording_slices(recording,
+                                method="legacy",
+                                num_chunks_per_segment=20,
+                                chunk_duration="500ms",
+                                chunk_size=None,
+                                margin_frames=0,
+                                seed=None):
+    """
+    Get random slice of a recording across segments.
+
+    This is used for instance in get_noise_levels() and get_random_data_chunks() to estimate noise on traces.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording to get random chunks from
+    methid : "legacy"
+        The method used.
+    num_chunks_per_segment : int, default: 20
+        Number of chunks per segment
+    chunk_duration : str | float | None, default "500ms"
+        The duration of each chunk in 's' or 'ms'
+    chunk_size : int | None
+        Size of a chunk in number of frames
+    
+    concatenated : bool, default: True
+        If True chunk are concatenated along time axis
+    seed : int, default: 0
+        Random seed
+    margin_frames : int, default: 0
+        Margin in number of frames to avoid edge effects
+
+    Returns
+    -------
+    chunk_list : np.array
+        Array of concatenate chunks per segment
+
+
+    """
+    # TODO: if segment have differents length make another sampling that dependant on the length of the segment
+    # Should be done by changing kwargs with total_num_chunks=XXX and total_duration=YYYY
+    # And randomize the number of chunk per segment weighted by segment duration
+
+    if method == "legacy":
+        if chunk_size is None:
+            if chunk_duration is not None:
+                chunk_size = chunk_duration_to_chunk_size(chunk_duration, recording)
+            else:
+                raise ValueError("get_random_recording_slices need chunk_size or chunk_duration")
+
+        # check chunk size
+        num_segments = recording.get_num_segments()
+        for segment_index in range(num_segments):
+            chunk_size_limit = recording.get_num_frames(segment_index) - 2 * margin_frames
+            if chunk_size > chunk_size_limit:
+                chunk_size = chunk_size_limit - 1
+                warnings.warn(
+                    f"chunk_size is greater than the number "
+                    f"of samples for segment index {segment_index}. "
+                    f"Using {chunk_size}."
+                )
+        rng = np.random.default_rng(seed)
+        recording_slices = []
+        low = margin_frames
+        size = num_chunks_per_segment
+        for segment_index in range(num_segments):
+            num_frames = recording.get_num_frames(segment_index)
+            high = num_frames - chunk_size - margin_frames
+            random_starts = rng.integers(low=low, high=high, size=size)
+            random_starts = np.sort(random_starts)
+            recording_slices += [
+                (segment_index, start_frame, (start_frame + chunk_size)) for start_frame in random_starts
+            ]
+    else:
+        raise ValueError(f"get_random_recording_slices : wrong method {method}")
+    
+    return recording_slices
+
+
 def get_random_data_chunks(
     recording,
     return_scaled=False,
@@ -545,41 +628,55 @@ def get_random_data_chunks(
     chunk_list : np.array
         Array of concatenate chunks per segment
     """
-    # TODO: if segment have differents length make another sampling that dependant on the length of the segment
-    # Should be done by changing kwargs with total_num_chunks=XXX and total_duration=YYYY
-    # And randomize the number of chunk per segment weighted by segment duration
+    # # check chunk size
+    # num_segments = recording.get_num_segments()
+    # for segment_index in range(num_segments):
+    #     chunk_size_limit = recording.get_num_frames(segment_index) - 2 * margin_frames
+    #     if chunk_size > chunk_size_limit:
+    #         chunk_size = chunk_size_limit - 1
+    #         warnings.warn(
+    #             f"chunk_size is greater than the number "
+    #             f"of samples for segment index {segment_index}. "
+    #             f"Using {chunk_size}."
+    #         )
 
-    # check chunk size
-    num_segments = recording.get_num_segments()
-    for segment_index in range(num_segments):
-        chunk_size_limit = recording.get_num_frames(segment_index) - 2 * margin_frames
-        if chunk_size > chunk_size_limit:
-            chunk_size = chunk_size_limit - 1
-            warnings.warn(
-                f"chunk_size is greater than the number "
-                f"of samples for segment index {segment_index}. "
-                f"Using {chunk_size}."
-            )
+    # rng = np.random.default_rng(seed)
+    # chunk_list = []
+    # low = margin_frames
+    # size = num_chunks_per_segment
+    # for segment_index in range(num_segments):
+    #     num_frames = recording.get_num_frames(segment_index)
+    #     high = num_frames - chunk_size - margin_frames
+    #     random_starts = rng.integers(low=low, high=high, size=size)
+    #     segment_trace_chunk = [
+    #         recording.get_traces(
+    #             start_frame=start_frame,
+    #             end_frame=(start_frame + chunk_size),
+    #             segment_index=segment_index,
+    #             return_scaled=return_scaled,
+    #         )
+    #         for start_frame in random_starts
+    #     ]
 
-    rng = np.random.default_rng(seed)
+    #     chunk_list.extend(segment_trace_chunk)
+
+    recording_slices = get_random_recording_slices(recording,
+                                method="legacy",
+                                num_chunks_per_segment=num_chunks_per_segment,
+                                chunk_size=chunk_size,
+                                # chunk_duration=chunk_duration,
+                                margin_frames=margin_frames,
+                                seed=seed)
+
     chunk_list = []
-    low = margin_frames
-    size = num_chunks_per_segment
-    for segment_index in range(num_segments):
-        num_frames = recording.get_num_frames(segment_index)
-        high = num_frames - chunk_size - margin_frames
-        random_starts = rng.integers(low=low, high=high, size=size)
-        segment_trace_chunk = [
-            recording.get_traces(
-                start_frame=start_frame,
-                end_frame=(start_frame + chunk_size),
-                segment_index=segment_index,
-                return_scaled=return_scaled,
-            )
-            for start_frame in random_starts
-        ]
-
-        chunk_list.extend(segment_trace_chunk)
+    for segment_index, start_frame, stop_frame in recording_slices:
+        traces_chunk = recording.get_traces(
+            start_frame=start_frame,
+            end_frame=(start_frame + chunk_size),
+            segment_index=segment_index,
+            return_scaled=return_scaled,
+        )
+        chunk_list.append(traces_chunk)
 
     if concatenated:
         return np.concatenate(chunk_list, axis=0)
@@ -634,12 +731,42 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     return np.array(closest_channels_inds), np.array(dists)
 
 
+def _noise_level_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    recording = worker_ctx["recording"]
+    
+    one_chunk = recording.get_traces(
+        start_frame=start_frame,
+        end_frame=end_frame,
+        segment_index=segment_index,
+        return_scaled=worker_ctx["return_scaled"],
+    )
+
+
+    if worker_ctx["method"] == "mad":
+        med = np.median(one_chunk, axis=0, keepdims=True)
+        # hard-coded so that core doesn't depend on scipy
+        noise_levels = np.median(np.abs(one_chunk - med), axis=0) / 0.6744897501960817
+    elif worker_ctx["method"] == "std":
+        noise_levels = np.std(one_chunk, axis=0)
+
+    return noise_levels
+
+
+def _noise_level_chunk_init(recording, return_scaled, method):
+    worker_ctx = {}
+    worker_ctx["recording"] = recording
+    worker_ctx["return_scaled"] = return_scaled
+    worker_ctx["method"] = method
+    return worker_ctx
+
 def get_noise_levels(
     recording: "BaseRecording",
     return_scaled: bool = True,
     method: Literal["mad", "std"] = "mad",
     force_recompute: bool = False,
-    **random_chunk_kwargs,
+    **kwargs,
+    # **random_chunk_kwargs,
+    # **job_kwargs
 ):
     """
     Estimate noise for each channel using MAD methods.
@@ -676,17 +803,38 @@ def get_noise_levels(
     if key in recording.get_property_keys() and not force_recompute:
         noise_levels = recording.get_property(key=key)
     else:
-        random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
+        # random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
 
-        if method == "mad":
-            med = np.median(random_chunks, axis=0, keepdims=True)
-            # hard-coded so that core doesn't depend on scipy
-            noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
-        elif method == "std":
-            noise_levels = np.std(random_chunks, axis=0)
+        # if method == "mad":
+        #     med = np.median(random_chunks, axis=0, keepdims=True)
+        #     # hard-coded so that core doesn't depend on scipy
+        #     noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
+        # elif method == "std":
+        #     noise_levels = np.std(random_chunks, axis=0)
+
+        random_slices_kwargs, job_kwargs = split_job_kwargs(kwargs)
+        recording_slices = get_random_recording_slices(recording,**random_slices_kwargs)
+
+        noise_levels_chunks = []
+        def append_noise_chunk(res):
+            noise_levels_chunks.append(res)
+
+        func = _noise_level_chunk
+        init_func = _noise_level_chunk_init
+        init_args = (recording, return_scaled, method)
+        executor = ChunkRecordingExecutor(
+            recording, func, init_func, init_args, job_name="noise_level", verbose=False,
+            gather_func=append_noise_chunk, **job_kwargs
+        )
+        executor.run(all_chunks=recording_slices)
+        noise_levels_chunks = np.stack(noise_levels_chunks)
+        noise_levels = np.mean(noise_levels_chunks, axis=0)
+
+        # set property
         recording.set_property(key, noise_levels)
 
     return noise_levels
+
 
 
 def get_chunk_with_margin(
