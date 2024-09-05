@@ -496,7 +496,11 @@ class BaseRecording(BaseRecordingSnippets):
             )
 
     def reset_times(self):
-        """Reset times in-memory for all segments that have a time vector."""
+        """
+        Reset times in-memory for all segments that have a time vector.
+        If the timestamps come from a file, the files won't be modified. but only the in-memory
+        attributes of the recording objects are deleted.
+        """
         for segment_index in range(self.get_num_segments()):
             if self.has_time_vector(segment_index):
                 rs = self._recording_segments[segment_index]
