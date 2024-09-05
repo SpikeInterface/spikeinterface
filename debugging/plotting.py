@@ -6,8 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.motion.motion_utils import \
-    make_2d_motion_histogram, make_3d_motion_histograms
+from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_histogram, make_3d_motion_histograms
 from scipy.optimize import minimize
 from pathlib import Path
 import alignment_utils  # TODO
@@ -120,7 +119,7 @@ class SessionAlignmentWidget(BaseWidget):
                     dp.peak_locations_list[i],
                     recording=dp.recordings_list[i],
                     ax=ax,
-                    **dp.drift_raster_map_kwargs
+                    **dp.drift_raster_map_kwargs,
                 )
                 ax.set_ylim((min_y, max_y))
         else:
@@ -141,7 +140,7 @@ class SessionAlignmentWidget(BaseWidget):
                     dp.peak_locations_list[i],
                     recording=dp.recordings_list[i],
                     ax=ax_top,
-                    **dp.drift_raster_map_kwargs
+                    **dp.drift_raster_map_kwargs,
                 )
                 ax_top.set_title(f"Session {i + 1}")
                 ax_top.set_xlabel(None)
@@ -152,12 +151,12 @@ class SessionAlignmentWidget(BaseWidget):
                     dp.corrected_peak_locations_list[i],
                     recording=dp.recordings_list[i],
                     ax=ax_bottom,
-                    **dp.drift_raster_map_kwargs
+                    **dp.drift_raster_map_kwargs,
                 )
                 ax_bottom.set_title(f"Corrected Session {i + 1}")
                 ax_bottom.set_ylim((min_y, max_y))
 
-    # TODO: then histograms.
+        # TODO: then histograms.
         num_sessions = len(dp.session_histogram_list)
 
         if "legend" not in dp.session_alignment_histogram_kwargs:
@@ -201,17 +200,16 @@ class SessionAlignmentWidget(BaseWidget):
 
 
 class SessionAlignmentHistogramWidget(BaseWidget):
-    """
+    """ """
 
-    """
     def __init__(
-            self,
-            session_histogram_list: list[np.ndarray],
-            spatial_bin_centers: list[np.ndarray] | np.ndarray | None,
-            legend: None | list[str] = None,
-            linewidths: None | list[float] = 2,
-            colors: None | list = None,
-            **backend_kwargs,
+        self,
+        session_histogram_list: list[np.ndarray],
+        spatial_bin_centers: list[np.ndarray] | np.ndarray | None,
+        legend: None | list[str] = None,
+        linewidths: None | list[float] = 2,
+        colors: None | list = None,
+        **backend_kwargs,
     ):
 
         plot_data = dict(
@@ -234,8 +232,7 @@ class SessionAlignmentHistogramWidget(BaseWidget):
         linewidths = dp.linewidths
         spatial_bin_centers = dp.spatial_bin_centers
 
-        assert backend_kwargs[
-                   "axes"] is None, "use `ax` to pass an axis to set."
+        assert backend_kwargs["axes"] is None, "use `ax` to pass an axis to set."
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
@@ -256,16 +253,11 @@ class SessionAlignmentHistogramWidget(BaseWidget):
             spatial_bin_centers = [spatial_bin_centers] * num_histograms
 
         for i in range(num_histograms):
-            self.ax.plot(
-                spatial_bin_centers[i],
-                dp.session_histogram_list[i],
-                color=colors[i],
-                linewidth=linewidths[i]
-            )
+            self.ax.plot(spatial_bin_centers[i], dp.session_histogram_list[i], color=colors[i], linewidth=linewidths[i])
 
         if legend is not None:
             self.ax.legend(legend)
 
         self.ax.set_xlabel("Spatial bins (um)")
         self.ax.set_ylabel("Firing rate (Hz)")  # TODO: this is an assumption based on the
-                                                # output of histogram estimation
+        # output of histogram estimation
