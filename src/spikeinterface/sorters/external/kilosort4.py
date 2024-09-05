@@ -57,15 +57,15 @@ class Kilosort4Sorter(BaseSorter):
         "cluster_pcs": 64,
         "x_centers": None,
         "duplicate_spike_ms": 0.25,
-        "do_correction": True,
-        "keep_good_only": False,
-        "save_extra_kwargs": False,
-        "skip_kilosort_preprocessing": False,
         "scaleproc": None,
         "save_preprocessed_copy": False,
         "torch_device": "auto",
         "bad_channels": None,
         "clear_cache": False,
+        "save_extra_vars": False,
+        "do_correction": True,
+        "keep_good_only": False,
+        "skip_kilosort_preprocessing": False,
         "use_binary_file": None,
         "delete_recording_dat": True,
     }
@@ -105,18 +105,19 @@ class Kilosort4Sorter(BaseSorter):
         "cluster_pcs": "Maximum number of spatiotemporal PC features used for clustering. Default value: 64.",
         "x_centers": "Number of x-positions to use when determining center points for template groupings. If None, this will be determined automatically by finding peaks in channel density. For 2D array type probes, we recommend specifying this so that centers are placed every few hundred microns.",
         "duplicate_spike_bins": "Number of bins for which subsequent spikes from the same cluster are assumed to be artifacts. A value of 0 disables this step. Default value: 7.",
-        "do_correction": "If True, drift correction is performed",
-        "save_extra_kwargs": "If True, additional kwargs are saved to the output",
-        "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing",
+        "save_extra_vars": "If True, additional kwargs are saved to the output",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
-        "save_preprocessed_copy": "save a pre-processed copy of the data (including drift correction) to temp_wh.dat in the results directory and format Phy output to use that copy of the data",
+        "save_preprocessed_copy": "Save a pre-processed copy of the data (including drift correction) to temp_wh.dat in the results directory and format Phy output to use that copy of the data",
         "torch_device": "Select the torch device auto/cuda/cpu",
         "bad_channels": "A list of channel indices (rows in the binary file) that should not be included in sorting. Listing channels here is equivalent to excluding them from the probe dictionary.",
         "clear_cache": "If True, force pytorch to free up memory reserved for its cache in between memory-intensive operations. Note that setting `clear_cache=True` is NOT recommended unless you encounter GPU out-of-memory errors, since this can result in slower sorting.",
+        "do_correction": "If True, drift correction is performed. Default is True. (spikeinterface parameter)",
+        "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing. (spikeinterface parameter)",
+        "keep_good_only": "If True, only the units labeled as 'good' by Kilosort are returned in the output. (spikeinterface parameter)",
         "use_binary_file": "If True then Kilosort is run using a binary file. In this case, if the input recording is not binary compatible, it is written to a binary file in the output folder. "
         "If False then Kilosort is run on the recording object directly using the RecordingExtractorAsArray object. If None, then if the recording is binary compatible, the sorter will use the binary file, otherwise the RecordingExtractorAsArray. "
-        "Default is None.",
-        "delete_recording_dat": "If True, if a temporary binary file is created, it is deleted after the sorting is done. Default is True.",
+        "Default is None. (spikeinterface parameter)",
+        "delete_recording_dat": "If True, if a temporary binary file is created, it is deleted after the sorting is done. Default is True. (spikeinterface parameter)",
     }
 
     sorter_description = """Kilosort4 is a Python package for spike sorting on GPUs with template matching.
@@ -264,7 +265,7 @@ class Kilosort4Sorter(BaseSorter):
 
         do_CAR = params["do_CAR"]
         invert_sign = params["invert_sign"]
-        save_extra_vars = params["save_extra_kwargs"]
+        save_extra_vars = params["save_extra_vars"]
         save_preprocessed_copy = params["save_preprocessed_copy"]
         progress_bar = None
         settings_ks = {k: v for k, v in params.items() if k in DEFAULT_SETTINGS}
