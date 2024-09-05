@@ -159,7 +159,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 self.set_property(key="original_cluster_id", values=cluster_info[prop_name])
             elif prop_name == "group":
                 # rename group property to 'quality'
-                self.set_property(key="quality", values=cluster_info[prop_name])
+                values = cluster_info[prop_name].values.astype("str")
+                self.set_property(key="quality", values=values)
             else:
                 if load_all_cluster_properties:
                     # pandas loads strings with empty values as objects with NaNs
