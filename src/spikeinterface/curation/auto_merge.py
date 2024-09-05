@@ -364,6 +364,9 @@ def get_potential_auto_merge(
     ind1, ind2 = np.nonzero(pair_mask)
     potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
 
+    # some methods return identities ie (1,1) which we can cleanup first.
+    potential_merges = [(ids[0], ids[1]) for ids in potential_merges if ids[0] != ids[1]]
+
     if resolve_graph:
         potential_merges = resolve_merging_graph(sorting, potential_merges)
 
