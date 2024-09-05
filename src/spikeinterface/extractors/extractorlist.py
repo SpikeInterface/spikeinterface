@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Type
 
 # most important extractor are in spikeinterface.core

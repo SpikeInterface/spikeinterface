@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from threadpoolctl import threadpool_limits
 import numpy as np
 

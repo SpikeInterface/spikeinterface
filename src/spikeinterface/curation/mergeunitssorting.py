@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Union
 import numpy as np
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment

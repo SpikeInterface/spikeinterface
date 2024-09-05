@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .metrics import MetricsBaseWidget
 from ..core.sortinganalyzer import SortingAnalyzer
 

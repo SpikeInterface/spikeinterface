@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 from tempfile import tempdir
 from packaging.version import parse

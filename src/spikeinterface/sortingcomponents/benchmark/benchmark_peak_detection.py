@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import GroundTruthComparison

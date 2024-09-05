@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel

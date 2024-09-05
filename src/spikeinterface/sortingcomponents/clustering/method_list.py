@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .dummy import DummyClustering
 from .position import PositionClustering
 from .sliding_hdbscan import SlidingHdbscanClustering

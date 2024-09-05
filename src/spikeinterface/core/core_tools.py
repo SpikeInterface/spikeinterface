@@ -1,4 +1,3 @@
-from __future__ import annotations
 from pathlib import Path, WindowsPath
 from typing import Union, Generator
 import os

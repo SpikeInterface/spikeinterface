@@ -1,8 +1,5 @@
 """Classes and functions for computing multiple quality metrics."""
 
-from __future__ import annotations
-
-
 import warnings
 from copy import deepcopy
 

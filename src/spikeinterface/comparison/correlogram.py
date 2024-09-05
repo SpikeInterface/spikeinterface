@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .paircomparisons import GroundTruthComparison
 from .groundtruthstudy import GroundTruthStudy
 from spikeinterface.postprocessing import compute_correlograms

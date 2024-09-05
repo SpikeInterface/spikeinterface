@@ -4,8 +4,6 @@
 It is useful when we do extractor.save(name="name").
 """
 
-from __future__ import annotations
-
 import tempfile
 from pathlib import Path
 from copy import deepcopy

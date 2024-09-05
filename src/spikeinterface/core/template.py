@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 import json
 from dataclasses import dataclass, field, astuple, replace

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Optional, Union, Dict, Any, List, Tuple
 import warnings
 from math import isclose

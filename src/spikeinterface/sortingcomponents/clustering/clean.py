@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from .tools import FeaturesLoader, compute_template_from_sparse

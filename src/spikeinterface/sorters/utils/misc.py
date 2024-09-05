@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 import subprocess  # TODO: decide best format for this
 from subprocess import check_output, CalledProcessError

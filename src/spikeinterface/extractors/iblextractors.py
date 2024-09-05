@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from io import StringIO
 from typing import List, Optional, Union
 from contextlib import redirect_stderr

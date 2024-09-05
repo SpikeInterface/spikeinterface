@@ -1,8 +1,5 @@
 """Lists of quality metrics."""
 
-from __future__ import annotations
-
-
 from .misc_metrics import (
     compute_num_spikes,
     compute_firing_rates,

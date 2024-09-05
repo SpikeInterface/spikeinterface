@@ -19,7 +19,6 @@ There are two ways for using theses "plugin nodes":
   * on a sorting object
 """
 
-from __future__ import annotations
 from typing import Optional, Type
 
 import struct

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 ### PREPROCESSORS ###
 from .resample import ResampleRecording, resample
 from .decimate import DecimateRecording, decimate

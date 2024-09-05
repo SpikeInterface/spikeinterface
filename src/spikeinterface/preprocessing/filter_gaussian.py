@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Iterable, Union
 
 import numpy as np
