@@ -1,0 +1,113 @@
+.. _release0.101.0:
+
+SpikeInterface 0.101.0 release notes
+------------------------------------
+
+6th September 2024
+
+Main changes:
+
+*
+
+core:
+
+* Add `BaseRecording.reset_times()` function (#3363)
+* Add `load_sorting_analyzer_or_waveforms` function (#3352)
+* Propagate storage_options to load_sorting_analyzer (#3351)
+* Fix zarr folder suffix handling (#3349)
+* Lazy loading of zarr timestamps (#3318)
+* Enable cloud-loading for analyzer Zarr (#3314)
+* Refactor `set_property` in base (#3287)
+* Job kwargs fix (#3259)
+* Add check for None in 'NoiseGeneratorRecordingSegment' get_traces(). (#3230)
+
+extractors:
+
+* "quality" property to be read as string instead of object in `BasePhyKilosortSortingExtractor` (#3365)
+* Test IBL skip when the setting up the one client fails (#3289)
+
+preprocessing:
+
+* Update doc handle drift  + better preset (#3232)
+* Add causal filtering to filter.py (#3172)
+
+sorters:
+
+* fix: download apptainer images without docker client (#3335)
+* Expose save preprocessing in ks4 (#3276)
+* Fix KS2/2.5/3 skip_kilosort_preprocessing (#3265)
+* added lowpass parameter, fixed verbose option (#3262)
+* Now exclusive support for HS v0.4 (Lightning) (#3210)
+* Add kilosort4 wrapper tests (#3085)
+
+postprocessing:
+
+* Protect median against nans in get_prototype_spike (#3270)
+* Fix docstring and error for spike_amplitudes (#3269)
+
+
+curation:
+
+* Clean-up identity merges in `get_potential_auto_merges` (#3346)
+* Fix sortingview curation no merge case  (#3309)
+* Start apply_curation() (#3208)
+
+widgets:
+
+* Fix widgets tests and add test on unit_table_properties (#3354)
+* Allow quality and template metrics in sortingview's unit table (#3299)
+* Fix #3236 (#3238)
+
+sortingcomponents:
+
+* Update doc handle drift  + better preset (#3232)
+
+motion correction:
+
+* Make InterpolateMotionRecording not JSON-serializable (#3341)
+
+documentation:
+
+* Clarify meaning of `delta_time` in  `compare_sorter_to_ground_truth` (#3360)
+* Added sphinxcontrib-jquery (#3307)
+* Adding return type annotations (#3304)
+* More docstring updates for multiple modules (#3298)
+* Fix sampling frequency repr (#3294)
+* Proposal for adding Examples to docstrings (#3279)
+* More numpydoc fixes (#3275)
+* Fix docstring and error for spike_amplitudes (#3269)
+* Fix postprocessing docs (#3268)
+* Fix name of principal_components ext in qm docs (take 2) (#3261)
+* Update doc handle drift  + better preset (#3232)
+* Add `int` type to `num_samples` on `InjectTemplatesRecording`. (#3229)
+
+continuous integration:
+
+* Fix streaming extractor condition in the CI (#3362)
+
+packaging:
+
+* Drop python 3.8 in pyproject.toml (#3267)
+
+testing:
+
+* Fix streaming extractor condition in the CI (#3362)
+* Test IBL skip when the setting up the one client fails (#3289)
+* Refactor `set_property` in base (#3287)
+* Add kilosort4 wrapper tests (#3085)
+
+Contributors:
+
+* @Djoels
+* @JoeZiminski
+* @JuanPimientoCaicedo
+* @alejoe91
+* @app/pre-commit-ci
+* @chrishalcrow
+* @h-mayorquin
+* @jonahpearl
+* @mhhennig
+* @rkim48
+* @samuelgarcia
+* @tabedzki
+* @zm711
