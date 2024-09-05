@@ -9,19 +9,19 @@ linear_shift_chan = -75
 num_units = 50
 unit_means = np.random.random_integers(0, 384, num_units)
 unit_stds = np.random.random_integers(1, 15, num_units)
-unit_firing_rates =np.random.random(num_units)
+unit_firing_rates = np.random.random(num_units)
 recording_time_s = 1000
 
 unit_spike_times_1 = []
 unit_spike_times_2 = []
 for i in range(num_units):
 
-    spikes = np.random.exponential(1/unit_firing_rates[i], 1000)  # figure this out
+    spikes = np.random.exponential(1 / unit_firing_rates[i], 1000)  # figure this out
     spike_times = np.cumsum(spikes)
     spike_times = spike_times[spike_times < recording_time_s]
     unit_spike_times_1.append(spike_times)
 
-    spikes = np.random.exponential(1/unit_firing_rates[i], 1000)  # figure this out
+    spikes = np.random.exponential(1 / unit_firing_rates[i], 1000)  # figure this out
     spike_times = np.cumsum(spikes)
     spike_times = spike_times[spike_times < recording_time_s]
     unit_spike_times_2.append(spike_times)
@@ -34,15 +34,9 @@ unit_spike_locations_1 = []
 unit_spike_locations_2 = []
 for i in range(num_units):
 
-    spike_locs_1 = np.random.normal(unit_means[i],
-                                    unit_stds[i],
-                                    size=len(unit_spike_times_1[i])
-                                    )
+    spike_locs_1 = np.random.normal(unit_means[i], unit_stds[i], size=len(unit_spike_times_1[i]))
 
-    spike_locs_2 = np.random.normal(unit_means[i] + linear_shift_chan,
-                                    unit_stds[i],
-                                    size=len(unit_spike_times_2[i])
-                                    )
+    spike_locs_2 = np.random.normal(unit_means[i] + linear_shift_chan, unit_stds[i], size=len(unit_spike_times_2[i]))
 
     unit_spike_locations_1.append(spike_locs_1)
     unit_spike_locations_2.append(spike_locs_2)
@@ -88,17 +82,15 @@ for i in range(384):
     xmax = np.argmax(xcorr)
 
     half_bin = len(all_hist_1[i]) / 2
-    estimated_shift[i] = half_bin - xmax # TODO: check this lol, do it better
-
-    print(estimated_shift[i])
+    estimated_shift[i] = half_bin - xmax  # TODO: check this lol, do it better
 
     if False:
         if i in (100, 200, 300):
-            plt.bar(edges_1[i], all_hist_1[i], width=384/(i+1))
+            plt.bar(edges_1[i], all_hist_1[i], width=384 / (i + 1))
             plt.xlim(0, 384)  # handle this for correlation
             plt.show()
             assert np.array_equal(edges_1[i], edges_2[i])
-            plt.bar(edges_2[i], all_hist_2[i], width=384/(i+1), color="orange")
+            plt.bar(edges_2[i], all_hist_2[i], width=384 / (i + 1), color="orange")
             plt.xlim(0, 384)  # handle this for correlation
             plt.show()
 

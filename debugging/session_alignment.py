@@ -8,80 +8,109 @@ import alignment_utils
 from spikeinterface.preprocessing.motion import run_peak_detection_pipeline_node
 import copy
 
-# TODO: IMPORTANT! do the non-rigid shift only as wide as the rigid shift
-# for that window..
-
+# TODO: update based on the issue
 # -----------------------------------------------------------------------------
-# Get Histograms
+# Default Settings
 # -----------------------------------------------------------------------------
 
-# TODO: ask about best way to chunk, as ofc the peak detection takes
-# recording as inputs so cannot use get traces with chunks function as planned.
-# TODO: expose trimmed versions, robust xcorr
 
-# 4) check all inputs, write checking functions
-# 5) write a list of things I'd like to do but dont have time to do now. Finish the generation function.
+def get_estimate_histogram_kwargs():
+    return {
+        "bin_um": 2,
+        "method": "chunked_mean",
+        "chunked_bin_size_s": "estimate",
+        "log_scale": False,
+        "non_rigid_window_kwargs": {
+                "win_shape": "gaussian",
+                "win_step_um": 50.0,
+                "win_scale_um": 150.0,
+                "win_margin_um": None,
+                "zero_threshold": None,
+            },
+        }
 
-# TODO: all of the nonrigid methods (and even rigid) could be having some strange affects on AP
-# waveforms. definately needs looking into!
 
-# TODO: add a lot of confidence checks, e.g. that all sessions have the same contact positions.
-"""
-accepted_methods = ["entire_session", "chunked_mean", "chunked_median", "chunked_supremum", "chunked_poisson"]
-assert method in ["entire_session", "chunked_mean", "chunked_median", "chunked_supremum", "chunked_poisson"], (
-    f"`method` option must be one of: {accepted_methods}"
-)
-also
-assert alignment_method in ["kilosort_like", "mean_crosscorr"], "TODO"
-if peaks_list None, check peak_locations_list is none, etc, all same length etch
-"""
-"""
-TODO: in this case, it is not necessary to run peak detection across
-      the entire recording, would probably be sufficient to
-      take a few chunks, of size determined by firing frequency of
-      the neurons in the recording (or just take user defined size).
-      For now, run on the entire recording and discuss the best way to
-      run on chunked sections with Sam.
-"""
-# TOOD: add alignemnt method: "to_session_x"
-# check if use_existing_spatial_bins that all are interpolate motion and all are the same bins
+def get_alignment_method_kwargs():
+    return {
+        "num_shifts_block": 5,
+        "interpolate": False,
+        "interp_factor": 10,
+        "kriging_sigma": 1,
+        "kriging_p": 2,
+        "kriging_d": 2,
+        "smoothing_sigma_bin": 0.5,
+        "smoothing_sigma_window": 0.5,
+        "akima_interp_nonrigid": False,
+    }
 
-#    if not peaks_list:  TODO: expose as convenience function,arguments becomming overloaded
-#        peaks_list, peak_locations_list = compute_peaks_and_locations_list(
-#           recordings_list, "memory", {"method": "locally_exclusive"}, {"method": "monopolar_triangulation"}
-#        )
+
+def get_interpolate_motion_kwargs():
+    return {
+        "border_mode": "remove_channels",
+        "spatial_interpolation_method": "kriging",
+        "sigma_um": 20.0,
+        "p": 2
+    }
+
+# -----------------------------------------------------------------------------
+# Public Entry Level Functions
+# -----------------------------------------------------------------------------
 
 
 def align_sessions(
         recordings_list,
         peaks_list,
         peak_locations_list,
-        bin_um=2,
-        histogram_estimation_method="chunked_mean",
-        alignment_method="mean_crosscorr",
-        alignment_order="to_middle",
-        chunked_bin_size_s="estimate",
-        log_scale=True,
-        rigid=True,
-        update_recordings_list=False,  # TODO: name too long
-        non_rigid_window_kwargs={},  # TODO: dict
+        alignment_order,
+        rigid,
+        akima_interp_nonrigid=False,
+        estimate_histogram_kwargs=None,
+        alignment_method_kwargs=None,
+        interpolate_motion_kwargs=None,
 ):
     """
+    print what happens with the update! it is automaticlally added
+    to existing motion if it exists.
     """
-    motion_estimates_list, session_histogram_list, bins, histogram_info = estimate_inter_session_displacement(
-        recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method, chunked_bin_size_s, log_scale, rigid, non_rigid_window_kwargs, alignment_order
+    if estimate_histogram_kwargs is None:
+        estimate_histogram_kwargs = get_estimate_histogram_kwargs()
+
+    if alignment_method_kwargs is None:
+        alignment_method_kwargs = get_alignment_method_kwargs()
+
+    if interpolate_motion_kwargs is None:
+        interpolate_motion_kwargs = get_interpolate_motion_kwargs()
+
+    session_histogram_list, bins, histogram_info = _compute_session_histograms(
+        recordings_list, peaks_list, peak_locations_list, rigid, **estimate_histogram_kwargs
     )
 
+    # Estimate the displacement from the session histograms
+    if rigid:
+        shifts_array = _compute_rigid_alignment(
+            np.array(session_histogram_list), alignment_order, alignment_method_kwargs
+        )
+    else:
+        shifts_array, bins["non_rigid_window_centers"] = _compute_nonrigid_alignment(
+            np.array(session_histogram_list), bins, alignment_order, alignment_method_kwargs, akima_interp_nonrigid
+        )
+    shifts_array *= estimate_histogram_kwargs["bin_um"]
+
+    # Apply the motion correct, either generating new recordings or applying to
+    # existing recording if InterpolateMotionRecording
     corrected_recordings_list, motion_objects_list = _create_motion_recordings(
-        recordings_list, motion_estimates_list, bins, update_recordings_list
+        recordings_list, shifts_array, bins, interpolate_motion_kwargs
     )
 
+    # Finally,  create corrected peak locations and histogram for assessment.
     corrected_peak_locations_list, corrected_session_histogram_list = _correct_session_displacement(
-        corrected_recordings_list, peaks_list, peak_locations_list, bins["spatial_bin_edges"], log_scale
+        corrected_recordings_list, peaks_list, peak_locations_list,
+        bins["spatial_bin_edges"],
+        estimate_histogram_kwargs["log_scale"],
     )
 
     extra_outputs_dict = {
-        "motion_estimates_list": motion_estimates_list,
+        "shifts_array": shifts_array,
         "session_histogram_list": session_histogram_list,
         "bins": bins,
         "histogram_info": histogram_info,
@@ -90,45 +119,34 @@ def align_sessions(
             "corrected_session_histogram_list": corrected_session_histogram_list,
         }
     }
-
     return corrected_recordings_list, motion_objects_list, extra_outputs_dict
 
 
-def align_sessions_after_motion_correction(recordings_list, motion_info_list, rigid, override_nonrigid_window_kwargs=False, **align_sessions_kwargs):
-    """
+def align_sessions_after_motion_correction(
+        recordings_list, motion_info_list, rigid, **align_sessions_kwargs
+):
     """
     # if both are nonrigid, but override is provided, error
     # if rigid is False but the orig recording is nonrigid, error
     # TOOD: assert the kwargs are all the same for all motion_info
-    if "non_rigid_window_kwargs" in align_sessions_kwargs:
-        raise ValueError("explain")
-
-    if "update_recordings_list" in align_sessions_kwargs:
-        if align_sessions_kwargs["update_recordings_list"] is False:
-            raise ValueError("Explain")
-
-        align_sessions_kwargs.pop("update_recordings_list")
-
-    if override_nonrigid_window_kwargs:
-        non_rigid_window_kwargs = override_nonrigid_window_kwargs
-    else:
-        non_rigid_window_kwargs = motion_info_list[0]["parameters"]["estimate_motion_kwargs"]
-        non_rigid_window_kwargs.pop("method")
-        non_rigid_window_kwargs.pop("rigid")
-        assert non_rigid_window_kwargs.pop("direction") == "y"
+    """
+    non_rigid_window_kwargs = motion_info_list[0]["parameters"]["estimate_motion_kwargs"]
+    non_rigid_window_kwargs.pop("method")
+    non_rigid_window_kwargs.pop("rigid")
+    assert non_rigid_window_kwargs.pop("direction") == "y"
 
     return align_sessions(
         recordings_list,
         [info["peaks"] for info in motion_info_list],
         [info["peak_locations"] for info in motion_info_list],
         rigid=rigid,
-        non_rigid_window_kwargs=non_rigid_window_kwargs,
-        update_recordings_list=True,
         **align_sessions_kwargs
     )
 
 
-def compute_peaks_for_session_alignment(recording_list, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs):  # TODO: handle empty
+def compute_peaks_for_session_alignment(
+    recording_list, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs
+):
     """
     """
     peaks_list = []
@@ -144,13 +162,25 @@ def compute_peaks_for_session_alignment(recording_list, gather_mode, detect_kwar
     return peaks_list, peak_locations_list
 
 
-def estimate_inter_session_displacement(
-    recordings_list, peaks_list, peak_locations_list, bin_um, histogram_estimation_method, alignment_method, chunked_bin_size_s, log_scale, rigid, non_rigid_window_kwargs, alignment_order
+# -----------------------------------------------------------------------------
+# Private Functions
+# -----------------------------------------------------------------------------
+
+
+
+
+def _compute_session_histograms(
+    recordings_list,
+    peaks_list,
+    peak_locations_list,
+    rigid,
+    non_rigid_window_kwargs,
+    bin_um,
+    method,
+    chunked_bin_size_s,
+    log_scale,
 ):
     """
-    # Next, estimate the alignment based on the activity histograms
-    # TODO: "kilosort_like" does not work well in this context, can
-    # probably remove after some benchmarking.
     """
     # Get spatial windows and estimate the session histograms
     bins = {"temporal_bin_centers_list": []}
@@ -171,29 +201,21 @@ def estimate_inter_session_displacement(
     for recording, peaks, peak_locations in zip(recordings_list, peaks_list, peak_locations_list):
 
         session_hist, temporal_bin_centers, histogram_info = _get_single_session_activity_histogram(
-            recording, peaks, peak_locations, histogram_estimation_method,
-            bins["spatial_bin_edges"], log_scale, chunked_bin_size_s,
+            recording, peaks, peak_locations, bins["spatial_bin_edges"],
+            method, log_scale, chunked_bin_size_s,
         )
         bins["temporal_bin_centers_list"].append(temporal_bin_centers)
         session_histogram_list.append(session_hist)
         histogram_info_list.append(histogram_info)
 
-    # Estimate the displacement from the session histograms
-    if alignment_method == "kilosort_like":
-        motion_arrays_list = alignment_utils.run_kilosort_like_rigid_registration(
-            session_histogram_list, bins["non_rigid_windows"]
-        ) * bin_um
-    else:
-        motion_arrays_list, non_rigid_window_centers = alignment_utils.run_alignment_estimation(
-            session_histogram_list, bins, alignment_order
-        )
-        motion_arrays_list *= bin_um
-
-    return motion_arrays_list, session_histogram_list, bins, histogram_info_list
+    return session_histogram_list, bins, histogram_info_list
 
 
-def _get_single_session_activity_histogram(recording, peaks, peak_locations, method, spatial_bin_edges, log_scale, chunked_bin_size_s):
+def _get_single_session_activity_histogram(
+        recording, peaks, peak_locations, spatial_bin_edges, method, log_scale, chunked_bin_size_s
+):
     """
+    TODO: fix this, just estimate from some chunks? hmmm
     """
     times = recording.get_times()
     temporal_bin_centers = np.atleast_1d((times[-1] + times[0]) / 2)
@@ -243,15 +265,15 @@ def _get_single_session_activity_histogram(recording, peaks, peak_locations, met
     return session_histogram, temporal_bin_centers, histogram_info
 
 
-def _create_motion_recordings(all_recordings, motion_array, bins, update_recordings_list):
+def _create_motion_recordings(all_recordings, motion_array, bins, interpolate_motion_kwargs):
     """
     # assert motion object is only 1 segment
     # TODO: need to handle the number of bins not being the same!
     # TODO: add an annotation to the corrected recording
     """
-    interpolate_motion_kwargs = dict(
-        border_mode="remove_channels", spatial_interpolation_method="kriging", sigma_um=20.0, p=2  # TODO: expose
-    )
+    # assert ses_displacement.shape[0] == 1, "time dimension should be 1 for session displacement"  # TODO own checking function
+    # assert recording.get_num_segments() == 1, "TOOD: only support 1 segment"
+
     corrected_recordings_list = []
     all_motions = []
     for i in range(len(all_recordings)):
@@ -259,19 +281,12 @@ def _create_motion_recordings(all_recordings, motion_array, bins, update_recordi
         recording = all_recordings[i]
         ses_displacement = motion_array[i][np.newaxis, :]
 
-        assert ses_displacement.shape[0] == 1, "time dimension should be 1 for session displacement"  # TODO
-        assert recording.get_num_segments() == 1, "TOOD: only support 1 segment"
-
-        if update_recordings_list:
-
-            if not isinstance(recording, InterpolateMotionRecording):
-                raise ValueError("Explain") # TODO
+        if isinstance(recording, InterpolateMotionRecording):
 
             corrected_recording = _add_displacement_to_interpolate_recording(
                 recording, ses_displacement, bins["non_rigid_window_centers"]
             )
             all_motions.append(None)
-            corrected_recordings_list.append(corrected_recording)
         else:
             motion = Motion(
                 [ses_displacement],
@@ -279,55 +294,57 @@ def _create_motion_recordings(all_recordings, motion_array, bins, update_recordi
                 bins["non_rigid_window_centers"],
                 direction="y"
             )
-
-            all_motions.append(motion)
-
             corrected_recording = InterpolateMotionRecording(
                 recording, motion, **interpolate_motion_kwargs
             )
-            corrected_recordings_list.append(corrected_recording)
+            all_motions.append(motion)
+
+        corrected_recordings_list.append(corrected_recording)
 
     return corrected_recordings_list, all_motions
 
 
-# TODO: this could probably go in motion_utils.py
 def _add_displacement_to_interpolate_recording(recording, new_displacement, new_non_rigid_window_centers):
     """
+    # TODO: check + ask Sam if any other fields need to be chagned. This is a little
+    # hairy (4 possible combinations of new and
+    # old displacement shapes, rigid or nonrigid, so test thoroughly.
     """
+    # Everything is done in place, so keep a short variable
+    # name reference to the new recordings `motion` object
+    # and update it.okay
     corrected_recording = copy.deepcopy(recording)
 
-    corrected_recording_motion = corrected_recording._recording_segments[0].motion
-    recording_bins = corrected_recording_motion.displacement[0].shape[1]
+    motion_ref = corrected_recording._recording_segments[0].motion
+    recording_bins = motion_ref.displacement[0].shape[1]
 
     # If the new displacement is a scalar (i.e. rigid),
     # just add it to the existing displacements
     if new_displacement.shape[1] == 1:
-        corrected_recording_motion.displacement[0] += new_displacement[0, 0]
+        motion_ref.displacement[0] += new_displacement[0, 0]
 
     else:
         if recording_bins == 1:
             # If the new displacement is nonrigid (multiple windows) but the motion
             # recording is rigid, we update the displacement at all time bins
             # with the new, nonrigid displacement added to the old, rigid displacement.
-            # TODO: check + ask Sam if any other fields need to be chagned. This is a little
-            # hairy so test thoroughly.
-            num_time_bins = corrected_recording_motion.displacement[0].shape[0]
+            num_time_bins = motion_ref.displacement[0].shape[0]
             tiled_nonrigid_displacement = np.repeat(new_displacement, num_time_bins, axis=0)
-            new_displacement = tiled_nonrigid_displacement + corrected_recording_motion.displacement
+            new_displacement = tiled_nonrigid_displacement + motion_ref.displacement
 
-            corrected_recording_motion.displacement = new_displacement
-            corrected_recording_motion.spatial_bins_um = new_non_rigid_window_centers
+            motion_ref.displacement = new_displacement
+            motion_ref.spatial_bins_um = new_non_rigid_window_centers
         else:
             # Otherwise, if both the motion and new displacement are
             # nonrigid, we need to make sure the nonrigid windows
             # match exactly.
             assert np.array_equal(
-                corrected_recording_motion.spatial_bins_um,
+                motion_ref.spatial_bins_um,
                 new_non_rigid_window_centers
             )
-            assert corrected_recording_motion.displacement[0].shape[1] == new_displacement.shape[1]
+            assert motion_ref.displacement[0].shape[1] == new_displacement.shape[1]
 
-            corrected_recording_motion.displacement[0] += new_displacement
+            motion_ref.displacement[0] += new_displacement
 
     return corrected_recording
 
@@ -342,8 +359,6 @@ def _correct_session_displacement(
     # Correct the peak locations
     corrected_peak_locations_list = []
     for ses_idx in range(num_sessions):
-
-        assert recordings_list[ses_idx].get_num_segments() == 1, "TODO"
 
         corrected_peaks = correct_motion_on_peaks(
             peaks_list[ses_idx],
@@ -365,8 +380,125 @@ def _correct_session_displacement(
             log_scale,
             bin_s=None,
         )[0]
+
         corrected_session_histogram_list.append(
             corrected_histogram.squeeze()
         )
 
     return corrected_peak_locations_list, corrected_session_histogram_list
+
+
+def _compute_rigid_alignment(
+    session_histogram_array,
+    alignment_order,
+    alignment_method_kwargs,
+):
+    """
+    # TODO: this interpolate, smooth for both rigid and non-rigid. Check this is ok
+    # maybe we only want to apply the smoothings etc for nonrigid like KS motion correction
+    """
+    alignment_method_kwargs = copy.deepcopy(alignment_method_kwargs)
+    alignment_method_kwargs["num_shifts_block"] = False
+
+    rigid_window = np.ones_like(session_histogram_array[0, :])[np.newaxis, :]
+
+    rigid_session_offsets_matrix = alignment_utils.compute_histogram_crosscorrelation(
+        session_histogram_array,
+        rigid_window,
+        **alignment_method_kwargs,
+    )
+    optimal_shift_indices = _get_shifts_from_session_matrix(
+        alignment_order, rigid_session_offsets_matrix
+    )
+    return optimal_shift_indices
+
+
+def _compute_nonrigid_alignment(
+    session_histogram_array,
+    bins,
+    alignment_order,
+    alignment_method_kwargs,
+    akima_interp_nonrigid,
+):
+    """ """
+    rigid_shifts = _compute_rigid_alignment(
+        session_histogram_array,
+        alignment_order,
+        alignment_method_kwargs,
+    )
+
+    # For non-rigid, first shift the histograms according to the rigid shift
+    shifted_histograms = np.zeros_like(session_histogram_array)
+    for ses_idx in range(session_histogram_array.shape[0]):
+
+        shifted_histogram = alignment_utils.shift_array_fill_zeros(
+            array=session_histogram_array[ses_idx, :],
+            shift=int(rigid_shifts[ses_idx, 0])
+        )
+        shifted_histograms[ses_idx, :] = shifted_histogram
+
+    # Then compute the nonrigid shifts
+    nonrigid_session_offsets_matrix = alignment_utils.compute_histogram_crosscorrelation(
+        shifted_histograms,
+        bins["non_rigid_windows"],
+        **alignment_method_kwargs
+    )
+    non_rigid_shifts = _get_shifts_from_session_matrix(
+        alignment_order, nonrigid_session_offsets_matrix
+    )
+
+    # Interpolate the nonrigid bins if required.
+    if akima_interp_nonrigid:
+        interp_nonrigid_shifts = _akima_interpolate_nonrigid_shifts(
+            non_rigid_shifts, bins["non_rigid_window_centers"], bins["spatial_bin_centers"]
+        )
+        shifts = rigid_shifts + interp_nonrigid_shifts
+        non_rigid_window_centers = bins["spatial_bin_centers"]
+    else:
+        shifts = rigid_shifts + non_rigid_shifts
+        non_rigid_window_centers = bins["non_rigid_window_centers"]
+
+    return shifts, non_rigid_window_centers
+
+# TODO: tidy this up
+def _akima_interpolate_nonrigid_shifts(non_rigid_shifts, non_rigid_window_centers, spatial_bin_centers):
+    """
+    TODO: requires scipy 14
+    """
+    from scipy.interpolate import Akima1DInterpolator
+
+    x = non_rigid_window_centers
+    xs = spatial_bin_centers
+
+    num_sessions = non_rigid_shifts.shape[0]
+    num_bins = spatial_bin_centers.shape[0]
+
+    interp_nonrigid_shifts = np.zeros((num_sessions, num_bins))
+    for ses_idx in range(num_sessions):
+
+        y = non_rigid_shifts[ses_idx]
+        y_new = Akima1DInterpolator(x, y, method="akima", extrapolate=True)(xs)
+        interp_nonrigid_shifts[ses_idx, :] = y_new
+
+    return interp_nonrigid_shifts
+
+
+def _get_shifts_from_session_matrix(alignment_order, session_offsets_matrix):  # TODO: rename
+    """
+    # TODO: this doesn't do the right thing!!!
+    # optimal_shift_indices = -np.mean(session_offsets_matrix, axis=0)  # TODO: these are not symmetrical because of interpolation?
+    # TODO: carefully check this! this puts to the center of all points.
+    # Maybe we want to optimise such that all shifts are similar or closed form...
+    To middle is pretty rough here, can think of more ways to weight the center
+    chosen (i.e. middle between min / max, mean position etc). ALso to be
+    # robust in the true estimation of differences.
+    """
+    if alignment_order == "to_middle":  # TODO: do a lot of arg checks
+        optimal_shift_indices = -np.mean(
+            session_offsets_matrix, axis=0
+        )  # TOOD: pretty sure this is not correct, go back and figure out what is optimal
+    else:
+        ses_idx = int(alignment_order.split("_")[-1]) - 1
+        optimal_shift_indices = -session_offsets_matrix[ses_idx, :, :]
+
+    return optimal_shift_indices
