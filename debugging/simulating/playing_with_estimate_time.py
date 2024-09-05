@@ -5,7 +5,7 @@ lambda_ = 100
 
 c = 0.1
 n_sd = 1
-n_draws = (n_sd**2 * lambda_ / c**2)
+n_draws = n_sd**2 * lambda_ / c**2
 
 t = n_draws  # * lambda_  # TODO: check this
 
@@ -21,8 +21,7 @@ plt.hist(estimates)
 plt.show()
 
 print(np.std(estimates))
-print(np.sum(np.logical_and(estimates >= lambda_ - c,
-                            estimates <= lambda_ + c) / estimates.size))
+print(np.sum(np.logical_and(estimates >= lambda_ - c, estimates <= lambda_ + c) / estimates.size))
 
 
 if False:
@@ -33,7 +32,7 @@ if False:
     n_sd = 1
 
     n = n_sd**2 / (c**2 * rate**2)
-    t = n/rate
+    t = n / rate
 
     print("c", c)
 
@@ -46,11 +45,11 @@ if False:
     estimates = np.zeros(MC)
     for i in range(MC):
 
-        exp = np.random.exponential(1/rate, int(n))
+        exp = np.random.exponential(1 / rate, int(n))
         estimates[i] = np.mean(exp)
 
     plt.hist(estimates)
     plt.show()
 
     print(np.std(estimates))
-    print(np.sum(np.logical_and(estimates >= (1/rate) - c, estimates <= (1/rate) + c) / estimates.size))
+    print(np.sum(np.logical_and(estimates >= (1 / rate) - c, estimates <= (1 / rate) + c) / estimates.size))
