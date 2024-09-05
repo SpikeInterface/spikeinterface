@@ -1220,6 +1220,12 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         end_frame: int | None = None,
         channel_indices: list | None = None,
     ) -> np.ndarray:
+
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = self.get_num_samples()
+
         start_frame_within_block = start_frame % self.noise_block_size
         end_frame_within_block = end_frame % self.noise_block_size
         num_samples = end_frame - start_frame
