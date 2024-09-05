@@ -368,6 +368,30 @@ class TestKilosort4Long:
             with pytest.raises(AssertionError):
                 check_sortings_equal(default_kilosort_sorting, sorting_si)
 
+    def test_clear_cache(self,recording_and_paths, tmp_path):
+        """
+        Test clear_cache parameter in kilosort4.run_kilosort
+        """
+        recording, paths = recording_and_paths
+
+        spikeinterface_output_dir = tmp_path / "spikeinterface_output_clear"
+        sorting_si_clear = si.run_sorter(
+            "kilosort4",
+            recording,
+            remove_existing_folder=True,
+            folder=spikeinterface_output_dir,
+            clear_cache=True
+        )
+        spikeinterface_output_dir = tmp_path / "spikeinterface_output_no_clear"
+        sorting_si_no_clear = si.run_sorter(
+            "kilosort4",
+            recording,
+            remove_existing_folder=True,
+            folder=spikeinterface_output_dir,
+            clear_cache=False
+        )
+        check_sortings_equal(sorting_si_clear, sorting_si_no_clear)
+
     def test_kilosort4_no_correction(self, recording_and_paths, tmp_path):
         """
         Test the SpikeInterface wrappers `do_correction` argument. We set

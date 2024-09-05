@@ -65,6 +65,7 @@ class Kilosort4Sorter(BaseSorter):
         "save_preprocessed_copy": False,
         "torch_device": "auto",
         "bad_channels": None,
+        "clear_cache": False,
         "use_binary_file": None,
         "delete_recording_dat": True,
     }
@@ -111,6 +112,7 @@ class Kilosort4Sorter(BaseSorter):
         "save_preprocessed_copy": "save a pre-processed copy of the data (including drift correction) to temp_wh.dat in the results directory and format Phy output to use that copy of the data",
         "torch_device": "Select the torch device auto/cuda/cpu",
         "bad_channels": "A list of channel indices (rows in the binary file) that should not be included in sorting. Listing channels here is equivalent to excluding them from the probe dictionary.",
+        "clear_cache": "If True, force pytorch to free up memory reserved for its cache in between memory-intensive operations. Note that setting `clear_cache=True` is NOT recommended unless you encounter GPU out-of-memory errors, since this can result in slower sorting.",
         "use_binary_file": "If True then Kilosort is run using a binary file. In this case, if the input recording is not binary compatible, it is written to a binary file in the output folder. "
         "If False then Kilosort is run on the recording object directly using the RecordingExtractorAsArray object. If None, then if the recording is binary compatible, the sorter will use the binary file, otherwise the RecordingExtractorAsArray. "
         "Default is None.",
@@ -284,6 +286,7 @@ class Kilosort4Sorter(BaseSorter):
         data_dir = ""
         results_dir = sorter_output_folder
         bad_channels = params["bad_channels"]
+        clear_cache = params["clear_cache"]
 
         filename, data_dir, results_dir, probe = set_files(
             settings=settings,
@@ -347,17 +350,31 @@ class Kilosort4Sorter(BaseSorter):
 
         # this function applies both preprocessing and drift correction
         ops, bfile, st0 = compute_drift_correction(
-            ops=ops, device=device, tic0=tic0, progress_bar=progress_bar, file_object=file_object
+            ops=ops,
+            device=device,
+            tic0=tic0,
+            progress_bar=progress_bar,
+            file_object=file_object,
+            clear_cache=clear_cache,
         )
 
         if save_preprocessed_copy:
             save_preprocessing(results_dir / "temp_wh.dat", ops, bfile)
 
         # Sort spikes and save results
-        st, tF, _, _ = detect_spikes(ops=ops, device=device, bfile=bfile, tic0=tic0, progress_bar=progress_bar)
+        st, tF, _, _ = detect_spikes(
+            ops=ops, device=device, bfile=bfile, tic0=tic0, progress_bar=progress_bar, clear_cache=clear_cache
+        )
 
         clu, Wall = cluster_spikes(
-            st=st, tF=tF, ops=ops, device=device, bfile=bfile, tic0=tic0, progress_bar=progress_bar
+            st=st,
+            tF=tF,
+            ops=ops,
+            device=device,
+            bfile=bfile,
+            tic0=tic0,
+            progress_bar=progress_bar,
+            clear_cache=clear_cache,
         )
 
         if params["skip_kilosort_preprocessing"]:
