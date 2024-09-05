@@ -153,7 +153,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         self.extra_requirements.append("pandas")
 
         for prop_name in cluster_info.columns:
-            if prop_name in ["chan_grp", "ch_group"]:
+            if prop_name in ["chan_grp", "ch_group", "channel_group"]:
                 self.set_property(key="group", values=cluster_info[prop_name])
             elif prop_name == "cluster_id":
                 self.set_property(key="original_cluster_id", values=cluster_info[prop_name])
