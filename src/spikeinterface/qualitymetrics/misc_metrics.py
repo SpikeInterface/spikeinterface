@@ -117,7 +117,7 @@ def compute_presence_ratios(sorting_analyzer, bin_duration_s=60.0, mean_fr_ratio
 
     Returns
     -------
-    presence_ratio : dict of flaots
+    presence_ratio : dict of floats
         The presence ratio for each unit ID.
 
     Notes
@@ -529,7 +529,7 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
 
     Returns
     -------
-    synchrony_counts : dict
+    synchrony_counts : np.ndarray
         The synchrony counts for the synchrony sizes.
 
     References

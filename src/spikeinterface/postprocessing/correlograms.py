@@ -137,7 +137,7 @@ def compute_correlograms(
 compute_correlograms.__doc__ = compute_correlograms_sorting_analyzer.__doc__
 
 
-def _make_bins(sorting, window_ms, bin_ms):
+def _make_bins(sorting, window_ms, bin_ms) -> tuple[np.ndarray, int, int]:
     """
     Create the bins for the correlogram, in samples.
 

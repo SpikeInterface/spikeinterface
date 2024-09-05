@@ -515,7 +515,7 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     return correlograms_smoothed
 
 
-def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
+def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float) -> int:
     """
     Computes an adaptive window to correlogram (basically corresponds to the first peak).
     Based on a minimum threshold and minimum of second derivative.
@@ -757,7 +757,7 @@ def compute_presence_distance(sorting, pair_mask, num_samples=None, **presence_d
 
     Returns
     -------
-    potential_merges : list
+    potential_merges : NDArray
         The list of potential merges
 
     """

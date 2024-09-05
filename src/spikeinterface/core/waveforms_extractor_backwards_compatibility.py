@@ -373,7 +373,7 @@ def load_waveforms(
     with_recording: bool = True,
     sorting: Optional[BaseSorting] = None,
     output="MockWaveformExtractor",
-):
+) -> MockWaveformExtractor | SortingAnalyzer:
     """
     This read an old WaveformsExtactor folder (folder or zarr) and convert it into a SortingAnalyzer or MockWaveformExtractor.
 

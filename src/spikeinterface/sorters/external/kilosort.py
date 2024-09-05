@@ -131,7 +131,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         return p
 
     @classmethod
-    def _get_specific_options(cls, ops, params):
+    def _get_specific_options(cls, ops, params) -> dict:
         """
         Adds specific options for Kilosort in the ops dict and returns the final dict
 
