@@ -86,7 +86,7 @@ def test_sparsify_waveforms():
         num_active_channels = len(non_zero_indices)
         assert waveforms_sparse.shape == (num_units, num_samples, num_active_channels)
 
-        # Test round-trip (note that this is loosy)
+        # Test round-trip (note that this is lossy)
         unit_id = unit_ids[unit_id]
         non_zero_indices = sparsity.unit_id_to_channel_indices[unit_id]
         waveforms_dense2 = sparsity.densify_waveforms(waveforms_sparse, unit_id=unit_id)
@@ -194,6 +194,33 @@ def test_estimate_sparsity():
         n_jobs=1,
     )
     assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
+
+    # ptp : just run it
+    sparsity = estimate_sparsity(
+        sorting,
+        recording,
+        num_spikes_for_sparsity=50,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="ptp",
+        threshold=3,
+        progress_bar=True,
+        n_jobs=1,
+    )
+
+    # by_property : just run it
+    sparsity = estimate_sparsity(
+        sorting,
+        recording,
+        num_spikes_for_sparsity=50,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="by_property",
+        by_property="group",
+        progress_bar=True,
+        n_jobs=1,
+    )
+    assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 5)
 
 
 def test_compute_sparsity():

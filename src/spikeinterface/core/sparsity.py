@@ -338,7 +338,7 @@ class ChannelSparsity:
             noise_levels = ext.data["noise_levels"]
             return_scaled = templates_or_sorting_analyzer.return_scaled
         elif isinstance(templates_or_sorting_analyzer, Templates):
-            assert noise_levels is not None
+            assert noise_levels is not None, "To compute sparsity from snr you need to provide noise_levels"
             return_scaled = templates_or_sorting_analyzer.is_scaled
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
@@ -353,17 +353,17 @@ class ChannelSparsity:
         return cls(mask, unit_ids, channel_ids)
 
     @classmethod
-    def from_ptp(cls, templates_or_sorting_analyzer, threshold, noise_levels=None):
+    def from_ptp(cls, templates_or_sorting_analyzer, threshold):
         """
         Construct sparsity from a thresholds based on template peak-to-peak values.
-        Use the "threshold" argument to specify the SNR threshold.
+        Use the "threshold" argument to specify the peak-to-peak threshold.
         """
 
         assert (
             templates_or_sorting_analyzer.sparsity is None
         ), "To compute sparsity you need a dense SortingAnalyzer or Templates"
 
-        from .template_tools import get_template_amplitudes
+        from .template_tools import get_dense_templates_array
         from .sortinganalyzer import SortingAnalyzer
         from .template import Templates
 
@@ -371,15 +371,9 @@ class ChannelSparsity:
         channel_ids = templates_or_sorting_analyzer.channel_ids
 
         if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-            ext = templates_or_sorting_analyzer.get_extension("noise_levels")
-            assert ext is not None, "To compute sparsity from snr you need to compute 'noise_levels' first"
-            noise_levels = ext.data["noise_levels"]
             return_scaled = templates_or_sorting_analyzer.return_scaled
         elif isinstance(templates_or_sorting_analyzer, Templates):
-            assert noise_levels is not None
             return_scaled = templates_or_sorting_analyzer.is_scaled
-
-        from .template_tools import get_dense_templates_array
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
@@ -387,7 +381,7 @@ class ChannelSparsity:
         templates_ptps = np.ptp(templates_array, axis=1)
 
         for unit_ind, unit_id in enumerate(unit_ids):
-            chan_inds = np.nonzero(templates_ptps[unit_ind] / noise_levels >= threshold)
+            chan_inds = np.nonzero(templates_ptps[unit_ind] >= threshold)
             mask[unit_ind, chan_inds] = True
         return cls(mask, unit_ids, channel_ids)
 
@@ -455,15 +449,15 @@ class ChannelSparsity:
 
 
 def compute_sparsity(
-    templates_or_sorting_analyzer,
-    noise_levels=None,
-    method="radius",
-    peak_sign="neg",
-    num_channels=5,
-    radius_um=100.0,
-    threshold=5,
-    by_property=None,
-):
+    templates_or_sorting_analyzer: Union[Templates, SortingAnalyzer],
+    noise_levels: np.ndarray | None = None,
+    method: "radius" | "best_channels" | "snr" | "ptp" | "energy" | "by_property" = "radius",
+    peak_sign: "neg" | "pos" | "both" = "neg",
+    num_channels: int | None = 5,
+    radius_um: float | None = 100.0,
+    threshold: float | None = 5,
+    by_property: str | None = None,
+) -> ChannelSparsity:
     """
     Get channel sparsity (subset of channels) for each template with several methods.
 
@@ -500,11 +494,6 @@ def compute_sparsity(
             templates_or_sorting_analyzer, SortingAnalyzer
         ), f"compute_sparsity(method='{method}') need SortingAnalyzer"
 
-    if method in ("snr", "ptp") and isinstance(templates_or_sorting_analyzer, Templates):
-        assert (
-            noise_levels is not None
-        ), f"compute_sparsity(..., method='{method}') with Templates need noise_levels as input"
-
     if method == "best_channels":
         assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"
         sparsity = ChannelSparsity.from_best_channels(templates_or_sorting_analyzer, num_channels, peak_sign=peak_sign)
@@ -521,7 +510,6 @@ def compute_sparsity(
         sparsity = ChannelSparsity.from_ptp(
             templates_or_sorting_analyzer,
             threshold,
-            noise_levels=noise_levels,
         )
     elif method == "energy":
         assert threshold is not None, "For the 'energy' method, 'threshold' needs to be given"
@@ -544,10 +532,12 @@ def estimate_sparsity(
     num_spikes_for_sparsity: int = 100,
     ms_before: float = 1.0,
     ms_after: float = 2.5,
-    method: "radius" | "best_channels" = "radius",
-    peak_sign: str = "neg",
+    method: "radius" | "best_channels" | "ptp" | "by_property" = "radius",
+    peak_sign: "neg" | "pos" | "both" = "neg",
     radius_um: float = 100.0,
     num_channels: int = 5,
+    threshold: float | None = 5,
+    by_property: str | None = None,
     **job_kwargs,
 ):
     """
@@ -567,16 +557,15 @@ def estimate_sparsity(
         The sorting
     recording : BaseRecording
         The recording
-
     num_spikes_for_sparsity : int, default: 100
         How many spikes per units to compute the sparsity
     ms_before : float, default: 1.0
         Cut out in ms before spike time
     ms_after : float, default: 2.5
         Cut out in ms after spike time
-    method : "radius" | "best_channels", default: "radius"
+    method : "radius" | "best_channels" | "ptp" | "by_property", default: "radius"
         Sparsity method propagated to the `compute_sparsity()` function.
-        Only "radius" or "best_channels" are implemented
+        "snr" and "energy" are not available here, because they require noise levels.
     peak_sign : "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
     radius_um : float, default: 100.0
@@ -594,7 +583,10 @@ def estimate_sparsity(
     # Can't be done at module because this is a cyclic import, too bad
     from .template import Templates
 
-    assert method in ("radius", "best_channels"), "estimate_sparsity() handle only method='radius' or 'best_channel'"
+    assert method in ("radius", "best_channels", "ptp", "by_property"), (
+        f"method={method} is not available for `estimate_sparsity()`. "
+        "Available methods are 'radius', 'best_channels', 'ptp', 'by_property'"
+    )
 
     if recording.get_probes() == 1:
         # standard case
@@ -605,43 +597,54 @@ def estimate_sparsity(
         chan_locs = recording.get_channel_locations()
         probe = recording.create_dummy_probe_from_locations(chan_locs)
 
-    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+    if method != "by_property":
+        nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+        nafter = int(ms_after * recording.sampling_frequency / 1000.0)
 
-    num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
-    random_spikes_indices = random_spikes_selection(
-        sorting,
-        num_samples,
-        method="uniform",
-        max_spikes_per_unit=num_spikes_for_sparsity,
-        margin_size=max(nbefore, nafter),
-        seed=2205,
-    )
-    spikes = sorting.to_spike_vector()
-    spikes = spikes[random_spikes_indices]
+        num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
+        random_spikes_indices = random_spikes_selection(
+            sorting,
+            num_samples,
+            method="uniform",
+            max_spikes_per_unit=num_spikes_for_sparsity,
+            margin_size=max(nbefore, nafter),
+            seed=2205,
+        )
+        spikes = sorting.to_spike_vector()
+        spikes = spikes[random_spikes_indices]
 
-    templates_array = estimate_templates_with_accumulator(
-        recording,
-        spikes,
-        sorting.unit_ids,
-        nbefore,
-        nafter,
-        return_scaled=False,
-        job_name="estimate_sparsity",
-        **job_kwargs,
-    )
-    templates = Templates(
-        templates_array=templates_array,
-        sampling_frequency=recording.sampling_frequency,
-        nbefore=nbefore,
-        sparsity_mask=None,
-        channel_ids=recording.channel_ids,
-        unit_ids=sorting.unit_ids,
-        probe=probe,
-    )
+        templates_array = estimate_templates_with_accumulator(
+            recording,
+            spikes,
+            sorting.unit_ids,
+            nbefore,
+            nafter,
+            return_scaled=False,
+            job_name="estimate_sparsity",
+            **job_kwargs,
+        )
+        templates = Templates(
+            templates_array=templates_array,
+            sampling_frequency=recording.sampling_frequency,
+            nbefore=nbefore,
+            sparsity_mask=None,
+            channel_ids=recording.channel_ids,
+            unit_ids=sorting.unit_ids,
+            probe=probe,
+        )
+        templates_or_analyzer = templates
+    else:
+        from .sortinganalyzer import create_sorting_analyzer
 
+        templates_or_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, sparse=False)
     sparsity = compute_sparsity(
-        templates, method=method, peak_sign=peak_sign, num_channels=num_channels, radius_um=radius_um
+        templates_or_analyzer,
+        method=method,
+        peak_sign=peak_sign,
+        num_channels=num_channels,
+        radius_um=radius_um,
+        threshold=threshold,
+        by_property=by_property,
     )
 
     return sparsity
