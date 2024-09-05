@@ -1,6 +1,6 @@
-.. _release0.101.0:
+.. _release0.101.1:
 
-SpikeInterface 0.101.0 release notes
+SpikeInterface 0.101.1 release notes
 ------------------------------------
 
 6th September 2024
