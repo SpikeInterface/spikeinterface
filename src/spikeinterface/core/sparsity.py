@@ -353,10 +353,10 @@ class ChannelSparsity:
         return cls(mask, unit_ids, channel_ids)
 
     @classmethod
-    def from_ptp(cls, templates_or_sorting_analyzer, threshold):
+    def from_ptp(cls, templates_or_sorting_analyzer, threshold, noise_levels=None):
         """
-        Construct sparsity from a thresholds based on template peak-to-peak values.
-        Use the "threshold" argument to specify the peak-to-peak threshold.
+        Construct sparsity from a thresholds based on template peak-to-peak relative values.
+        Use the "threshold" argument to specify the peak-to-peak threshold (with respect to noise_levels).
         """
 
         assert (
@@ -371,8 +371,12 @@ class ChannelSparsity:
         channel_ids = templates_or_sorting_analyzer.channel_ids
 
         if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+            ext = templates_or_sorting_analyzer.get_extension("noise_levels")
+            assert ext is not None, "To compute sparsity from ptp you need to compute 'noise_levels' first"
+            noise_levels = ext.data["noise_levels"]
             return_scaled = templates_or_sorting_analyzer.return_scaled
         elif isinstance(templates_or_sorting_analyzer, Templates):
+            assert noise_levels is not None, "To compute sparsity from ptp you need to provide noise_levels"
             return_scaled = templates_or_sorting_analyzer.is_scaled
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
@@ -381,7 +385,7 @@ class ChannelSparsity:
         templates_ptps = np.ptp(templates_array, axis=1)
 
         for unit_ind, unit_id in enumerate(unit_ids):
-            chan_inds = np.nonzero(templates_ptps[unit_ind] >= threshold)
+            chan_inds = np.nonzero(templates_ptps[unit_ind] / noise_levels >= threshold)
             mask[unit_ind, chan_inds] = True
         return cls(mask, unit_ids, channel_ids)
 
@@ -397,7 +401,7 @@ class ChannelSparsity:
 
         # noise_levels
         ext = sorting_analyzer.get_extension("noise_levels")
-        assert ext is not None, "To compute sparsity from ptp you need to compute 'noise_levels' first"
+        assert ext is not None, "To compute sparsity from energy you need to compute 'noise_levels' first"
         noise_levels = ext.data["noise_levels"]
 
         # waveforms
@@ -532,7 +536,7 @@ def estimate_sparsity(
     num_spikes_for_sparsity: int = 100,
     ms_before: float = 1.0,
     ms_after: float = 2.5,
-    method: "radius" | "best_channels" | "ptp" | "by_property" = "radius",
+    method: "radius" | "best_channels" | "by_property" = "radius",
     peak_sign: "neg" | "pos" | "both" = "neg",
     radius_um: float = 100.0,
     num_channels: int = 5,
@@ -563,9 +567,9 @@ def estimate_sparsity(
         Cut out in ms before spike time
     ms_after : float, default: 2.5
         Cut out in ms after spike time
-    method : "radius" | "best_channels" | "ptp" | "by_property", default: "radius"
+    method : "radius" | "best_channels" | "by_property", default: "radius"
         Sparsity method propagated to the `compute_sparsity()` function.
-        "snr" and "energy" are not available here, because they require noise levels.
+        "snr", "ptp", and "energy" are not available here because they require noise levels.
     peak_sign : "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
     radius_um : float, default: 100.0
@@ -583,9 +587,9 @@ def estimate_sparsity(
     # Can't be done at module because this is a cyclic import, too bad
     from .template import Templates
 
-    assert method in ("radius", "best_channels", "ptp", "by_property"), (
+    assert method in ("radius", "best_channels", "by_property"), (
         f"method={method} is not available for `estimate_sparsity()`. "
-        "Available methods are 'radius', 'best_channels', 'ptp', 'by_property'"
+        "Available methods are 'radius', 'best_channels', 'by_property'"
     )
 
     if recording.get_probes() == 1:

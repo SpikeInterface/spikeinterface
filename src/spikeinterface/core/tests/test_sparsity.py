@@ -195,19 +195,6 @@ def test_estimate_sparsity():
     )
     assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
 
-    # ptp : just run it
-    sparsity = estimate_sparsity(
-        sorting,
-        recording,
-        num_spikes_for_sparsity=50,
-        ms_before=1.0,
-        ms_after=2.0,
-        method="ptp",
-        threshold=3,
-        progress_bar=True,
-        n_jobs=1,
-    )
-
     # by_property : just run it
     sparsity = estimate_sparsity(
         sorting,
