@@ -64,8 +64,8 @@ def align_sessions(
         recordings_list,
         peaks_list,
         peak_locations_list,
-        alignment_order,
-        rigid,
+        alignment_order="to_middle",
+        rigid=True,
         akima_interp_nonrigid=False,
         estimate_histogram_kwargs=None,
         alignment_method_kwargs=None,
@@ -108,9 +108,10 @@ def align_sessions(
     # Finally, create corrected peak locations and histogram for assessment.
     corrected_peak_locations_list, corrected_session_histogram_list = _correct_session_displacement(  # TODO: we need to estimate the histogram in the same way here!!
         corrected_recordings_list, peaks_list, peak_locations_list,
-        bins["spatial_bin_edges"],
-        estimate_histogram_kwargs["log_scale"],
-        estimate_histogram_kwargs["smooth_um"]
+       rigid, estimate_histogram_kwargs
+       # bins["spatial_bin_edges"],
+        # estimate_histogram_kwargs["log_scale"],
+        # estimate_histogram_kwargs["smooth_um"]
     )
 
     extra_outputs_dict = {
@@ -353,7 +354,7 @@ def _add_displacement_to_interpolate_recording(recording, new_displacement, new_
 
 
 def _correct_session_displacement(
-        recordings_list, peaks_list, peak_locations_list, spatial_bin_edges, log_scale, smooth_um
+        recordings_list, peaks_list, peak_locations_list, rigid, estimate_histogram_kwargs, #  spatial_bin_edges, log_scale, smooth_um
 ):
     """
     """
@@ -363,31 +364,18 @@ def _correct_session_displacement(
     corrected_peak_locations_list = []
     for ses_idx in range(num_sessions):
 
-        corrected_peaks = correct_motion_on_peaks(
+        corrected_peak_locs = correct_motion_on_peaks(
             peaks_list[ses_idx],
             peak_locations_list[ses_idx],
             recordings_list[ses_idx]._recording_segments[0].motion,
             recordings_list[ses_idx],
         )
-        corrected_peak_locations_list.append(corrected_peaks)
+        corrected_peak_locations_list.append(corrected_peak_locs)
 
-    # Create a corrected histogram based on corrected peak locations
-    corrected_session_histogram_list = []
-    for ses_idx in range(num_sessions):
-
-        corrected_histogram = alignment_utils.get_activity_histogram(
-            recordings_list[ses_idx],
-            peaks_list[ses_idx],
-            corrected_peak_locations_list[ses_idx],
-            spatial_bin_edges,
-            log_scale,
-            bin_s=None,
-            smooth_um=smooth_um,
-        )[0]
-
-        corrected_session_histogram_list.append(
-            corrected_histogram.squeeze()
-        )
+    corrected_session_histogram_list, bins, histogram_info = _compute_session_histograms(
+        recordings_list, peaks_list, corrected_peak_locations_list, rigid,
+        **estimate_histogram_kwargs
+    )
 
     return corrected_peak_locations_list, corrected_session_histogram_list
 
