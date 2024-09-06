@@ -76,6 +76,9 @@ def create_sorting_analyzer(
     return_scaled : bool, default: True
         All extensions that play with traces will use this global return_scaled : "waveforms", "noise_levels", "templates".
         This prevent return_scaled being differents from different extensions and having wrong snr for instance.
+    overwrite: bool, default: False
+        If True, overwrite the folder if it already exists.
+
 
     Returns
     -------
@@ -563,11 +566,13 @@ class SortingAnalyzer:
 
         recording_info = zarr_root.create_group("extensions")
 
+        zarr.consolidate_metadata(zarr_root.store)
+
     @classmethod
     def load_from_zarr(cls, folder, recording=None, storage_options=None):
         import zarr
 
-        zarr_root = zarr.open(str(folder), mode="r", storage_options=storage_options)
+        zarr_root = zarr.open_consolidated(str(folder), mode="r", storage_options=storage_options)
 
         # load internal sorting in memory
         sorting = NumpySorting.from_sorting(
@@ -2002,7 +2007,7 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-
+            import zarr
             import numcodecs
 
             extension_group = self._get_zarr_extension_group(mode="r+")
@@ -2036,6 +2041,8 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
                     extension_group[ext_data_name].attrs["object"] = True
+            # we need to re-consolidate
+            zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
     def _reset_extension_folder(self):
         """
@@ -2051,7 +2058,7 @@ class AnalyzerExtension:
             import zarr
 
             zarr_root = zarr.open(self.folder, mode="r+")
-            extension_group = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
+            _ = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
 
     def reset(self):
         """
