@@ -470,6 +470,7 @@ class CurationModelTrainer:
 
     def _save(self):
         from skops.io import dump
+        import sklearn
 
         # Dump to skops if output_folder is provided
         dump(self.best_pipeline, os.path.join(self.output_folder, f"best_model.skops"))
@@ -478,8 +479,9 @@ class CurationModelTrainer:
         model_info = {}
         model_info["metric_params"] = self.metrics_params
 
-        model_info["spikeinterface_info"] = {}
-        model_info["spikeinterface_info"]["version"] = spikeinterface.__version__
+        model_info["requirements"] = {}
+        model_info["requirements"]["scikit-learn"] = sklearn.__version__
+        model_info["requirements"]["spikeinterface"] = spikeinterface.__version__
 
         model_info["label_conversion"] = self.label_conversion
 
