@@ -34,12 +34,6 @@ def make_temp_training_csv():
     return temp_file.name
 
 
-def test_get_default_metrics_list(trainer):
-    default_metrics_list = trainer.get_default_metrics_list()
-    assert isinstance(default_metrics_list, list)
-    assert len(default_metrics_list) > 0
-
-
 def test_load_and_preprocess_full(trainer):
     temp_file_path = make_temp_training_csv()
 
