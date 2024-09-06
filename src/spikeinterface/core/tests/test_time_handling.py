@@ -280,7 +280,6 @@ class TestTimeHandling:
         """
         _, times_recording, _ = time_vector_recording
 
-        durations = [times_recording.get_duration(s) for s in range(times_recording.get_num_segments())]
         sorting = si.generate_sorting(
             durations=[times_recording.get_duration(s) for s in range(times_recording.get_num_segments())]
         )
