@@ -497,6 +497,7 @@ def run_node_pipeline(
     folder=None,
     names=None,
     verbose=False,
+    skip_after_n_peaks=None,
 ):
     """
     Common function to run pipeline with peak detector or already detected peak.
@@ -507,6 +508,11 @@ def run_node_pipeline(
     job_kwargs = fix_job_kwargs(job_kwargs)
     assert all(isinstance(node, PipelineNode) for node in nodes)
 
+    if skip_after_n_peaks is not None:
+        skip_after_n_peaks_per_worker = skip_after_n_peaks / job_kwargs["n_jobs"]
+    else:
+        skip_after_n_peaks_per_worker = None
+
     if gather_mode == "memory":
         gather_func = GatherToMemory()
     elif gather_mode == "npy":
@@ -514,7 +520,7 @@ def run_node_pipeline(
     else:
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
-    init_args = (recording, nodes)
+    init_args = (recording, nodes, skip_after_n_peaks_per_worker)
 
     processor = ChunkRecordingExecutor(
         recording,
@@ -533,12 +539,14 @@ def run_node_pipeline(
     return outs
 
 
-def _init_peak_pipeline(recording, nodes):
+def _init_peak_pipeline(recording, nodes, skip_after_n_peaks_per_worker):
     # create a local dict per worker
     worker_ctx = {}
     worker_ctx["recording"] = recording
     worker_ctx["nodes"] = nodes
     worker_ctx["max_margin"] = max(node.get_trace_margin() for node in nodes)
+    worker_ctx["skip_after_n_peaks_per_worker"] = skip_after_n_peaks_per_worker
+    worker_ctx["num_peaks"] = 0
     return worker_ctx
 
 
@@ -546,6 +554,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     recording = worker_ctx["recording"]
     max_margin = worker_ctx["max_margin"]
     nodes = worker_ctx["nodes"]
+    skip_after_n_peaks_per_worker = worker_ctx["skip_after_n_peaks_per_worker"]
 
     recording_segment = recording._recording_segments[segment_index]
     node0 = nodes[0]
@@ -557,7 +566,11 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     else:
         # PeakDetector always need traces
         load_trace_and_compute = True
-    
+
+    if skip_after_n_peaks_per_worker is not None:
+        if worker_ctx["num_peaks"] > skip_after_n_peaks_per_worker:
+            load_trace_and_compute = False
+
     if load_trace_and_compute:
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
@@ -589,6 +602,9 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
                 # TODO later when in master: change the signature of all nodes (or maybe not!)
                 node_output = node.compute(traces_chunk, *node_input_args)
             pipeline_outputs[node] = node_output
+
+            if skip_after_n_peaks_per_worker is not None and isinstance(node, PeakSource):
+                worker_ctx["num_peaks"] += node_output[0].size
 
         # propagate the output
         pipeline_outputs_tuple = tuple()
