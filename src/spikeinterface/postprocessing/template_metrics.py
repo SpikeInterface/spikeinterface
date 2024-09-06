@@ -276,12 +276,16 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                     sampling_frequency_up = sampling_frequency
 
                 func = _metric_name_to_func[metric_name]
-                value = func(
-                    template_upsampled,
-                    channel_locations=channel_locations_sparse,
-                    sampling_frequency=sampling_frequency_up,
-                    **self.params["metrics_kwargs"],
-                )
+                try:
+                    value = func(
+                        template_upsampled,
+                        channel_locations=channel_locations_sparse,
+                        sampling_frequency=sampling_frequency_up,
+                        **self.params["metrics_kwargs"],
+                    )
+                except Exception as e:
+                    warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
+                    value = np.nan
                 template_metrics.at[index, metric_name] = value
         return template_metrics
 
