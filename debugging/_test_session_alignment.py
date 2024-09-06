@@ -79,16 +79,19 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 # TODO: try forcing all unit locations to actually
 # be within the probe. Add some notes on this because it is confusing.
 
+# 1) write argument checks
+# 2) go through with a fine tooth comb, fix all outstanding issues, tidy up,
+#    plot everything to make sure it is working prior to writing tests.
+
+# 4) to an optimisation shift and scale instead of the current xcorr method.
+# 5) finalise estimation of chunk size (skip for now, try a new alignment method)
+#    and optimal bin size.
+# 6) make some presets? should estimate a lot of parameters based on the data, especially for nonrigid.
+#    these are all basically based on probe geometry.
+
+
 # Note, shifting can move a unit closer to the channel e.g. if separated
 # by 20 um which can increase the signal and make shift estimation harder.
-
-# 1) write argument checks
-# 2) investigate bad kwargs for non-rigid, seems to be some regression somewhere...
-# 3) investigate when changing the below to rigid, shifting creates new units...
-# 4) investigate the best way to do 'to middle'
-# 5) finalise estimation of chunk size
-# 6) make some presets? should estimate a lot of parameters based on the data, especially for nonrigid
-# 7) to an optimisation shift and scale instead of the current xcorr method.
 
 # go through everything and plot to check before writing tests.
 # there is a relationship between bin size and nonrigid bins. If bins are
@@ -101,10 +104,18 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 # smoothing of the histgram. An optimaisation method may also
 # serve to help reduce the number of parameters to choose.
 
+# what you really want is for the window size to adapt to how
+# busy the histogram is.
+
+# problem with current:
+# - xcorr is not the best for large shifts due to lower num overlapping samples
+# -
+
+
 MOTION = False  # True
-SAVE = False # lse
+SAVE = False
 PLOT = False
-BIN_UM = 0.1  # 0.1 actually works really well!
+BIN_UM = 5
 
 
 if SAVE:
@@ -206,14 +217,14 @@ if MOTION:
 else:
     estimate_histogram_kwargs = {
         "bin_um": BIN_UM,
-        "method": "chunked_mean",
+        "method": "chunked_supremum",  # TODO: double check scaling
         "chunked_bin_size_s": "estimate",
         "log_scale": False,
-        "smooth_um": 5,
+        "smooth_um": 10,
         "non_rigid_window_kwargs": {
-            "win_shape": "gaussian",
-            "win_step_um": 75,
-            "win_scale_um": 75, # 150.0,  TOOD: fixture this out, what was it before?
+            "win_shape": "rect",
+            "win_step_um": 100,
+            "win_scale_um": 100,
             "win_margin_um": None,
             "zero_threshold": None,
         },
@@ -225,8 +236,8 @@ else:
         "kriging_sigma": 1,
         "kriging_p": 2,
         "kriging_d": 2,
-        "smoothing_sigma_bin": False, # 0.5,
-        "smoothing_sigma_window": False, # 0.5,
+        "smoothing_sigma_bin": False,  # 0.5,
+        "smoothing_sigma_window": False,  # 0.5,
     }
 
     corrected_recordings_list, motion_objects_list, extra_info = session_alignment.align_sessions(
@@ -238,8 +249,7 @@ else:
         estimate_histogram_kwargs=estimate_histogram_kwargs,
         alignment_method_kwargs=alignment_method_kwargs,
     )
-    # TODO: check firing rate, completely different for corrected data! This is just
-    # shifting the positions so must be a scaling error
+
 plotting.SessionAlignmentWidget(
     recordings_list,
     peaks_list,
