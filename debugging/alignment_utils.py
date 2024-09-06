@@ -181,6 +181,9 @@ def compute_histogram_crosscorrelation(
 
     # Note that due to interpolation, ij vs ji are not exact duplicates.
     # dont improve for now.
+
+    Note that kilosort method does not work because creating a
+    mean does not make sense over sessions.
     """
     num_sessions = len(session_histogram_list)
     num_bins = session_histogram_list[0].size  # all hists are same length
