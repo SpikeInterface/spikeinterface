@@ -791,7 +791,7 @@ def estimate_templates_with_accumulator(
     return_std: bool = False,
     verbose: bool = False,
     **job_kwargs,
-):
+) -> np.ndarray:
     """
     This is a fast implementation to compute template averages and standard deviations.
     This is useful to estimate sparsity without the need to allocate large waveform buffers.

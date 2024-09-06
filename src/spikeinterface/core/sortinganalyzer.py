@@ -44,7 +44,7 @@ def create_sorting_analyzer(
     return_scaled=True,
     overwrite=False,
     **sparsity_kwargs,
-):
+) -> "SortingAnalyzer":
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
 
@@ -145,7 +145,7 @@ def create_sorting_analyzer(
     return sorting_analyzer
 
 
-def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
+def load_sorting_analyzer(folder, load_extensions=True, format="auto", storage_options=None) -> "SortingAnalyzer":
     """
     Load a SortingAnalyzer object from disk.
 
@@ -157,6 +157,9 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
         Load all extensions or not.
     format : "auto" | "binary_folder" | "zarr"
         The format of the folder.
+    storage_options : dict | None, default: None
+        The storage options to specify credentials to remote zarr bucket.
+        For open buckets, it doesn't need to be specified.
 
     Returns
     -------
@@ -164,9 +167,7 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
         The loaded SortingAnalyzer
 
     """
-    if format == "zarr":
-        folder = clean_zarr_folder_name(folder)
-    return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format)
+    return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format, storage_options=storage_options)
 
 
 class SortingAnalyzer:
@@ -1122,7 +1123,7 @@ class SortingAnalyzer:
         return self.sorting.get_num_units()
 
     ## extensions zone
-    def compute(self, input, save=True, extension_params=None, verbose=False, **kwargs):
+    def compute(self, input, save=True, extension_params=None, verbose=False, **kwargs) -> "AnalyzerExtension | None":
         """
         Compute one extension or several extensiosn.
         Internally calls compute_one_extension() or compute_several_extensions() depending on the input type.
@@ -1189,7 +1190,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         else:
             raise ValueError("SortingAnalyzer.compute() need str, dict or list")
 
-    def compute_one_extension(self, extension_name, save=True, verbose=False, **kwargs):
+    def compute_one_extension(self, extension_name, save=True, verbose=False, **kwargs) -> "AnalyzerExtension":
         """
         Compute one extension.
 

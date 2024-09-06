@@ -33,7 +33,7 @@ def generate_recording(
     set_probe: bool | None = True,
     ndim: int | None = 2,
     seed: int | None = None,
-) -> BaseRecording:
+) -> NumpySorting:
     """
     Generate a lazy recording object.
     Useful for testing API and algos.
@@ -42,13 +42,14 @@ def generate_recording(
     ----------
     num_channels : int, default: 2
         The number of channels in the recording.
-    sampling_frequency : float, default: 30000.0
-        The sampling frequency of the recording in Hz
+    sampling_frequency : float, default: 30000. (in Hz)
+        The sampling frequency of the recording, default: 30000.
     durations : list[float], default: [5.0, 2.5]
-        The duration in seconds of each segment in the recording, default: [5.0, 2.5].
-        Note that the number of segments is determined by the length of this list.
-    set_probe : bool | None, default: True
-    ndim : int | None, default: 2
+        The duration in seconds of each segment in the recording.
+        The number of segments is determined by the length of this list.
+    set_probe : bool, default: True
+        If true, attaches probe to the returned `Recording`
+    ndim : int, default: 2
         The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probe.
     seed : int | None, default: None
         A seed for the np.ramdom.default_rng function
@@ -623,6 +624,13 @@ def generate_snippets(
         The number of units.
     empty_units : list | None, default: None
         A list of units that will have no spikes.
+    durations : List[float], default: [10.325, 3.5]
+        The duration in seconds of each segment in the recording.
+        The number of segments is determined by the length of this list.
+    set_probe : bool, default: True
+        If true, attaches probe to the returned snippets object
+    **job_kwargs : dict, default: None
+        Job keyword arguments for `snippets_from_sorting`
 
     Returns
     -------
@@ -801,9 +809,9 @@ def synthesize_random_firings(
         Sampling rate in Hz.
     duration : float, default: 60
         Duration of the segment in seconds.
-    refractory_period_ms : float, default: 4.0
+    refractory_period_ms : float
         Refractory period in ms.
-    firing_rates : float or list[float], default: 3.0
+    firing_rates : float or list[float]
         The firing rate of each unit (in Hz).
         If float, all units will have the same firing rate.
     add_shift_shuffle : bool, default: False
@@ -907,8 +915,8 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
         range of the shift in sample.
     ratio : float | None, default: None
         Proportion of original spike in the injected units.
-    seed : int, default: None
-        Seed for the generator.
+    seed : int | None, default: None
+        Random seed for creating unit peak shifts.
 
     Returns
     -------
@@ -1212,6 +1220,12 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         end_frame: int | None = None,
         channel_indices: list | None = None,
     ) -> np.ndarray:
+
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = self.get_num_samples()
+
         start_frame_within_block = start_frame % self.noise_block_size
         end_frame_within_block = end_frame % self.noise_block_size
         num_samples = end_frame - start_frame
@@ -1564,6 +1578,10 @@ def generate_templates(
         Ellipsoid injects some anisotropy dependent on unit shape, sphere is equivalent
         to Euclidean distance.
 
+    mode : "sphere" | "ellipsoid", default: "ellipsoid"
+        Mode for how to calculate distances
+
+
     Returns
     -------
     templates: np.array
@@ -1708,6 +1726,8 @@ class InjectTemplatesRecording(BaseRecording):
     upsample_vector : np.array | None, default: None.
         When templates is 4d we can simulate a jitter.
         Optional the upsample_vector is the jitter index with a number per spike in range 0-templates.shape[3].
+    check_borders : bool, default: False
+        Checks if the border of the templates are zero.
 
     Returns
     -------
@@ -2074,7 +2094,7 @@ def generate_ground_truth_recording(
             * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce jitter.
     ms_before : float, default: 1.5
         Cut out in ms before spike peak.
-    ms_after : float, default: 3
+    ms_after : float, default: 3.0
         Cut out in ms after spike peak.
     upsample_factor : None | int, default: None
         A upsampling factor used only when templates are not provided.

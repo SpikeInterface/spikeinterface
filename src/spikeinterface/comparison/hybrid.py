@@ -48,6 +48,8 @@ class HybridUnitsRecording(InjectTemplatesRecording):
     injected_sorting_folder : str | Path | None
         If given, the injected sorting is saved to this folder.
         It must be specified if injected_sorting is None or not serialisable to file.
+    seed : int, default: None
+        Random seed for amplitude_factor
 
     Returns
     -------

@@ -25,21 +25,21 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    n_components: int, default: 5
+    n_components : int, default: 5
         Number of components fo PCA
-    mode: "by_channel_local" | "by_channel_global" | "concatenated", default: "by_channel_local"
+    mode : "by_channel_local" | "by_channel_global" | "concatenated", default: "by_channel_local"
         The PCA mode:
             - "by_channel_local": a local PCA is fitted for each channel (projection by channel)
             - "by_channel_global": a global PCA is fitted for all channels (projection by channel)
             - "concatenated": channels are concatenated and a global PCA is fitted
-    sparsity: ChannelSparsity or None, default: None
+    sparsity : ChannelSparsity or None, default: None
         The sparsity to apply to waveforms.
         If sorting_analyzer is already sparse, the default sparsity will be used
-    whiten: bool, default: True
+    whiten : bool, default: True
         If True, waveforms are pre-whitened
-    dtype: dtype, default: "float32"
+    dtype : dtype, default: "float32"
         Dtype of the pc scores
 
     Examples

@@ -17,7 +17,7 @@ class ComputeISIHistograms(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
     window_ms : float, default: 50
         The window in ms
