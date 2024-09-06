@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import weakref
 import warnings
 from copy import deepcopy
 
@@ -30,8 +29,10 @@ class ComputeQualityMetrics(AnalyzerExtension):
     qm_params : dict or None
         Dictionary with parameters for quality metrics calculation.
         Default parameters can be obtained with: `si.qualitymetrics.get_default_qm_params()`
-    skip_pc_metrics : bool
+    skip_pc_metrics : bool, default: False
         If True, PC metrics computation is skipped.
+    delete_existing_metrics : bool, default: False
+        If True, deletes any quality_metrics attached to the `sorting_analyzer`
 
     Returns
     -------
@@ -49,20 +50,16 @@ class ComputeQualityMetrics(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = True
 
-    def __init__(self, sorting_analyzer):
+    def _set_params(
+        self,
+        metric_names=None,
+        qm_params=None,
+        peak_sign=None,
+        seed=None,
+        skip_pc_metrics=False,
+        delete_existing_metrics=False,
+    ):
 
-        self._sorting_analyzer = weakref.ref(sorting_analyzer)
-
-        qm_class = sorting_analyzer.extensions.get("quality_metrics")
-
-        if qm_class:
-            self.params = qm_class.params
-            self.data = {"metrics": qm_class.get_data()}
-        else:
-            self.params = {}
-            self.data = {"metrics": None}
-
-    def _set_params(self, metric_names=None, qm_params=None, peak_sign=None, seed=None, skip_pc_metrics=False):
         if metric_names is None:
             metric_names = list(_misc_metric_name_to_func.keys())
             # if PC is available, PC metrics are automatically added to the list
@@ -84,15 +81,17 @@ class ComputeQualityMetrics(AnalyzerExtension):
             if "peak_sign" in qm_params_[k] and peak_sign is not None:
                 qm_params_[k]["peak_sign"] = peak_sign
 
-        metric_names_for_params = metric_names
+        all_metric_names = metric_names
         qm_extension = self.sorting_analyzer.get_extension("quality_metrics")
-        if qm_extension is not None:
-            existing_metric_names = qm_extension.params.get("metric_names")
-            if existing_metric_names is not None:
-                metric_names_for_params.extend(existing_metric_names)
+        if delete_existing_metrics is False and qm_extension is not None:
+            existing_params = qm_extension.params
+            for metric_name in existing_params["metric_names"]:
+                if metric_name not in metric_names:
+                    all_metric_names.append(metric_name)
+                    qm_params_[metric_name] = existing_params["qm_params"][metric_name]
 
         params = dict(
-            metric_names=[str(name) for name in np.unique(metric_names_for_params)],
+            metric_names=[str(name) for name in np.unique(all_metric_names)],
             peak_sign=peak_sign,
             seed=seed,
             qm_params=qm_params_,
@@ -152,7 +151,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
         import pandas as pd
 
-        metrics = self.data["metrics"]
+        metrics = self.data.get("metrics")
         if metrics is None:
             metrics = pd.DataFrame(index=sorting_analyzer.sorting.unit_ids)
 
@@ -204,10 +203,17 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
         return metrics
 
-    def _run(self, verbose=False, **job_kwargs):
+    def _run(self, verbose=False, delete_existing_metrics=False, **job_kwargs):
         self.data["metrics"] = self._compute_metrics(
             sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, **job_kwargs
         )
+
+        qm_extension = self.sorting_analyzer.get_extension("quality_metrics")
+        if delete_existing_metrics is False and qm_extension is not None:
+            existing_metrics = qm_extension.get_data()
+            for metric_name, metric_data in existing_metrics.items():
+                if metric_name not in self.data["metrics"]:
+                    self.data["metrics"][metric_name] = metric_data
 
     def _get_data(self):
         return self.data["metrics"]
