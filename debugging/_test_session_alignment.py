@@ -32,6 +32,12 @@ import pickle
 import session_alignment  # TODO
 from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 
+# TODO: all of the nonrigid methods (and even rigid) could be having some strange affects on AP
+# waveforms. definately needs looking into!
+
+# TODO: ask about best way to chunk, as ofc the peak detection takes
+# recording as inputs so cannot use get traces with chunks function as planned.
+# TODO: expose trimmed versions, robust xcorr
 
 # Note, the cross correlation is intrinsically limited because for large
 # shifts the value is too reduced by the reduction in number of points.
@@ -51,6 +57,16 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
         seed=42,
     )
 """
+
+"""
+TODO: in this case, it is not necessary to run peak detection across
+      the entire recording, would probably be sufficient to
+      take a few chunks, of size determined by firing frequency of
+      the neurons in the recording (or just take user defined size).
+      For now, run on the entire recording and discuss the best way to
+      run on chunked sections with Sam.
+"""
+
 # with nonrigid shift. This is less of a problem when restricting to a small
 # windwo for the nonrigid because even if it fails catistrophically the nonrigid
 # error will only be max(non rigid shifts). But its still not good.
@@ -75,6 +91,8 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 # TODO: think about the nonrigid alignment, it correlates
 # over the entire window. is this wise? try cutting it down a bit?
 
+# TODO: We this interpolate, smooth for xcorr in both rigid and non-rigid case. Think aboout this / check this is ok
+# maybe we only want to apply the smoothings etc for nonrigid like KS motion correction
 
 # TODO: try forcing all unit locations to actually
 # be within the probe. Add some notes on this because it is confusing.
@@ -107,27 +125,30 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 # what you really want is for the window size to adapt to how
 # busy the histogram is.
 
+# Suprisingly, the session that is aligned TO can have a
+#  major  affect.
+
 # problem with current:
 # - xcorr is not the best for large shifts due to lower num overlapping samples
 # -
 
 
 MOTION = False  # True
-SAVE = False
+SAVE = True
 PLOT = False
-BIN_UM = 5
+BIN_UM = 1
 
 
 if SAVE:
     scalings = [np.ones(25), np.r_[np.zeros(10), np.ones(15)]]
     recordings_list, _ = generate_session_displacement_recordings(
         non_rigid_gradient=0.05, # 0.05,  # 0.05, # 0.05,
-        num_units=25,
-        recording_durations=(100, 100), # , 100),
+        num_units=55,
+        recording_durations=(100, 100, 100), # , 100),
         recording_shifts=(
             (0, 0),
             (0, 75),
-#            (0, -150),
+            (0, -150),
         ),
         recording_amplitude_scalings=None,  # {"method": "by_amplitude_and_firing_rate", "scalings": scalings},
         generate_unit_locations_kwargs={"margin_um": 0, "minimum_z": 0, "maximum_z": 0},
@@ -219,17 +240,10 @@ else:
         "bin_um": BIN_UM,
         "method": "chunked_supremum",  # TODO: double check scaling
         "chunked_bin_size_s": "estimate",
-        "log_scale": False,
+        "log_scale": True,
         "smooth_um": 10,
-        "non_rigid_window_kwargs": {
-            "win_shape": "rect",
-            "win_step_um": 100,
-            "win_scale_um": 100,
-            "win_margin_um": None,
-            "zero_threshold": None,
-        },
     }
-    alignment_method_kwargs = {
+    compute_alignment_kwargs = {
         "num_shifts_block": None,  # TODO: can be in um so comaprable with window kwargs.
         "interpolate": False,
         "interp_factor": 10,
@@ -238,6 +252,15 @@ else:
         "kriging_d": 2,
         "smoothing_sigma_bin": False,  # 0.5,
         "smoothing_sigma_window": False,  # 0.5,
+        "akima_interp_nonrigid": False,
+
+        "non_rigid_window_kwargs": {
+            "win_shape": "gaussian",
+            "win_step_um": 100,
+            "win_scale_um": 100,
+            "win_margin_um": None,
+            "zero_threshold": None,
+         },
     }
 
     corrected_recordings_list, motion_objects_list, extra_info = session_alignment.align_sessions(
@@ -247,7 +270,7 @@ else:
         alignment_order="to_session_1",
         rigid=False,
         estimate_histogram_kwargs=estimate_histogram_kwargs,
-        alignment_method_kwargs=alignment_method_kwargs,
+        compute_alignment_kwargs=compute_alignment_kwargs,
     )
 
 plotting.SessionAlignmentWidget(
@@ -256,7 +279,7 @@ plotting.SessionAlignmentWidget(
     peak_locations_list,
     extra_info["session_histogram_list"],
     **extra_info["corrected"],
-    spatial_bin_centers=extra_info["bins"]["spatial_bin_centers"],
+    spatial_bin_centers=extra_info["spatial_bin_centers"],
     drift_raster_map_kwargs={"clim":(-250, 0)}  # TODO: option to fix this across recordings.
 )
 
