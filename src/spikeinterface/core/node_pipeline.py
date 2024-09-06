@@ -1,22 +1,6 @@
 """
-Pipeline on spikes/peaks/detected peaks
 
-Functions that can be chained:
-  * after peak detection
-  * already detected peaks
-  * spikes (labeled peaks)
-to compute some additional features on-the-fly:
-  * peak localization
-  * peak-to-peak
-  * pca
-  * amplitude
-  * amplitude scaling
-  * ...
 
-There are two ways for using theses "plugin nodes":
-  * during `peak_detect()`
-  * when peaks are already detected and reduced with `select_peaks()`
-  * on a sorting object
 """
 
 from __future__ import annotations
@@ -490,7 +474,7 @@ def run_node_pipeline(
     nodes,
     job_kwargs,
     job_name="pipeline",
-    mp_context=None,
+    #mp_context=None,
     gather_mode="memory",
     gather_kwargs={},
     squeeze_output=True,
@@ -500,7 +484,61 @@ def run_node_pipeline(
     skip_after_n_peaks=None,
 ):
     """
-    Common function to run pipeline with peak detector or already detected peak.
+    Machinery to compute in paralell operations on peaks and traces.
+
+    This usefull in several use cases:
+    * in sortingcomponents : detect peaks and make some computation on then (localize, pca, ...)
+    * in sortingcomponents : replay some peaks and make some computation on then (localize, pca, ...)
+    * postprocessing : replay some spikes and make some computation on then (localize, pca, ...)
+
+    Here a "peak" is a spike without any labels just a "detected".
+    Here a "spike" is a spike with any a label so already sorted.
+
+    The main idea is to have a graph of nodes.
+    Every node is doing a computaion of some peaks and related traces.
+    The first node is PeakSource so either a peak detector PeakDetector or peak/spike replay (PeakRetriever/SpikeRetriever)
+
+    Every can have one or several output that can be directed to other nodes (aka nodes have parents).
+
+    Every node can optionaly have an global output that will be globaly gather by the main process.
+    This is controlled by return_output = True.
+
+    The gather consists of concatenating features related to peaks (localization, pca, scaling, ...) into a single big vector.
+    Theses vector can be in "memory" or in file ("npy")
+
+    
+    Parameters
+    ----------
+
+    recording: Recording
+
+    nodes: a list of PipelineNode
+
+    job_kwargs: dict
+        The classical job_kwargs
+    job_name : str
+        The name of the pipeline used for the progress_bar
+    gather_mode : "memory" | "npz"
+
+    gather_kwargs : dict
+        OPtions to control the "gather engine". See GatherToMemory or GatherToNpy.
+    squeeze_output : bool, default True
+        If only one output node, the, squeeze the tuple
+    folder : str | Path | None
+        Used for gather_mode="npz"
+    names : list of str
+        Names of outputs.
+    verbose : bool, default False
+        Verbosity.
+    skip_after_n_peaks : None | int
+        Skip the computaion after n_peaks.
+        This is not an exact because internally this skip is done per worker in average.
+    
+    Returns
+    -------
+    outputs: tuple of np.array | np.array
+        a tuple of vector for the output of nodes having return_output=True.
+        If squeeze_output=True and only one output then directly np.array.
     """
 
     check_graph(nodes)
