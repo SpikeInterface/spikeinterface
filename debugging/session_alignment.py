@@ -15,15 +15,18 @@ import copy
 
 
 def get_estimate_histogram_kwargs():
+
+    win_step_um = 50
     return {
         "bin_um": 2,
         "method": "chunked_mean",
         "chunked_bin_size_s": "estimate",
         "log_scale": False,
+        "smooth_um": None,
         "non_rigid_window_kwargs": {
                 "win_shape": "gaussian",
-                "win_step_um": 50.0,
-                "win_scale_um": 150.0,
+                "win_step_um": win_step_um,
+                "win_scale_um": win_step_um,
                 "win_margin_um": None,
                 "zero_threshold": None,
             },
@@ -87,11 +90,11 @@ def align_sessions(
 
     # Estimate the displacement from the session histograms
     if rigid:
-        shifts_array = _compute_rigid_alignment(
+        shifts_array = _estimate_rigid_alignment(
             np.array(session_histogram_list), alignment_order, alignment_method_kwargs
         )
     else:
-        shifts_array, bins["non_rigid_window_centers"] = _compute_nonrigid_alignment(
+        shifts_array, bins["non_rigid_window_centers"] = _estimate_nonrigid_alignment(
             np.array(session_histogram_list), bins, alignment_order, alignment_method_kwargs, akima_interp_nonrigid
         )
     shifts_array *= estimate_histogram_kwargs["bin_um"]
@@ -102,11 +105,12 @@ def align_sessions(
         recordings_list, shifts_array, bins, interpolate_motion_kwargs
     )
 
-    # Finally,  create corrected peak locations and histogram for assessment.
-    corrected_peak_locations_list, corrected_session_histogram_list = _correct_session_displacement(
+    # Finally, create corrected peak locations and histogram for assessment.
+    corrected_peak_locations_list, corrected_session_histogram_list = _correct_session_displacement(  # TODO: we need to estimate the histogram in the same way here!!
         corrected_recordings_list, peaks_list, peak_locations_list,
         bins["spatial_bin_edges"],
         estimate_histogram_kwargs["log_scale"],
+        estimate_histogram_kwargs["smooth_um"]
     )
 
     extra_outputs_dict = {
@@ -167,8 +171,6 @@ def compute_peaks_for_session_alignment(
 # -----------------------------------------------------------------------------
 
 
-
-
 def _compute_session_histograms(
     recordings_list,
     peaks_list,
@@ -178,6 +180,7 @@ def _compute_session_histograms(
     bin_um,
     method,
     chunked_bin_size_s,
+    smooth_um,
     log_scale,
 ):
     """
@@ -202,7 +205,7 @@ def _compute_session_histograms(
 
         session_hist, temporal_bin_centers, histogram_info = _get_single_session_activity_histogram(
             recording, peaks, peak_locations, bins["spatial_bin_edges"],
-            method, log_scale, chunked_bin_size_s,
+            method, log_scale, chunked_bin_size_s, smooth_um,
         )
         bins["temporal_bin_centers_list"].append(temporal_bin_centers)
         session_histogram_list.append(session_hist)
@@ -212,7 +215,7 @@ def _compute_session_histograms(
 
 
 def _get_single_session_activity_histogram(
-        recording, peaks, peak_locations, spatial_bin_edges, method, log_scale, chunked_bin_size_s
+        recording, peaks, peak_locations, spatial_bin_edges, method, log_scale, chunked_bin_size_s, smooth_um
 ):
     """
     TODO: fix this, just estimate from some chunks? hmmm
@@ -224,7 +227,7 @@ def _get_single_session_activity_histogram(
 
         one_bin_histogram, _, _ = alignment_utils.get_activity_histogram(
             recording, peaks, peak_locations, spatial_bin_edges,
-            log_scale=False, bin_s=None
+            log_scale=False, bin_s=None, smooth_um=smooth_um
         )
         if method == "entire_session":
             if log_scale:
@@ -239,7 +242,7 @@ def _get_single_session_activity_histogram(
         )
 
     chunked_histograms, chunked_temporal_bin_centers, _ = alignment_utils.get_activity_histogram(
-        recording, peaks, peak_locations, spatial_bin_edges, log_scale, bin_s=chunked_bin_size_s,
+        recording, peaks, peak_locations, spatial_bin_edges, log_scale, bin_s=chunked_bin_size_s, smooth_um=smooth_um,
     )
     session_std = np.sum(np.std(chunked_histograms, axis=0)) / chunked_histograms.shape[1]
 
@@ -350,7 +353,7 @@ def _add_displacement_to_interpolate_recording(recording, new_displacement, new_
 
 
 def _correct_session_displacement(
-        recordings_list, peaks_list, peak_locations_list, spatial_bin_edges, log_scale
+        recordings_list, peaks_list, peak_locations_list, spatial_bin_edges, log_scale, smooth_um
 ):
     """
     """
@@ -379,6 +382,7 @@ def _correct_session_displacement(
             spatial_bin_edges,
             log_scale,
             bin_s=None,
+            smooth_um=smooth_um,
         )[0]
 
         corrected_session_histogram_list.append(
@@ -388,7 +392,7 @@ def _correct_session_displacement(
     return corrected_peak_locations_list, corrected_session_histogram_list
 
 
-def _compute_rigid_alignment(
+def _estimate_rigid_alignment(
     session_histogram_array,
     alignment_order,
     alignment_method_kwargs,
@@ -413,7 +417,7 @@ def _compute_rigid_alignment(
     return optimal_shift_indices
 
 
-def _compute_nonrigid_alignment(
+def _estimate_nonrigid_alignment(
     session_histogram_array,
     bins,
     alignment_order,
@@ -421,7 +425,7 @@ def _compute_nonrigid_alignment(
     akima_interp_nonrigid,
 ):
     """ """
-    rigid_shifts = _compute_rigid_alignment(
+    rigid_shifts = _estimate_rigid_alignment(
         session_histogram_array,
         alignment_order,
         alignment_method_kwargs,
@@ -446,6 +450,7 @@ def _compute_nonrigid_alignment(
     non_rigid_shifts = _get_shifts_from_session_matrix(
         alignment_order, nonrigid_session_offsets_matrix
     )
+
 
     # Interpolate the nonrigid bins if required.
     if akima_interp_nonrigid:
