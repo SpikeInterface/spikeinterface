@@ -98,6 +98,7 @@ def get_potential_auto_merge(
         * | "feature_neighbors": focused on finding unit pairs whose spikes are close in the feature space using kNN.
           | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_locations",
           | "knn", "quality_score"
+
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
     resolve_graph : bool, default: False
         If True, the function resolves the potential unit pairs to be merged into multiple-unit merges.
@@ -145,6 +146,8 @@ def get_potential_auto_merge(
         Pontential steps : "num_spikes", "snr", "remove_contaminated", "unit_locations", "correlogram",
         "template_similarity", "presence_distance", "cross_contamination", "knn", "quality_score"
         Please check steps explanations above!
+    presence_distance_kwargs : None|dict, default: None
+        A dictionary of kwargs to be passed to compute_presence_distance().
 
     Returns
     -------
@@ -361,6 +364,9 @@ def get_potential_auto_merge(
     ind1, ind2 = np.nonzero(pair_mask)
     potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
 
+    # some methods return identities ie (1,1) which we can cleanup first.
+    potential_merges = [(ids[0], ids[1]) for ids in potential_merges if ids[0] != ids[1]]
+
     if resolve_graph:
         potential_merges = resolve_merging_graph(sorting, potential_merges)
 
@@ -512,7 +518,7 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     return correlograms_smoothed
 
 
-def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
+def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float) -> int:
     """
     Computes an adaptive window to correlogram (basically corresponds to the first peak).
     Based on a minimum threshold and minimum of second derivative.
@@ -754,7 +760,7 @@ def compute_presence_distance(sorting, pair_mask, num_samples=None, **presence_d
 
     Returns
     -------
-    potential_merges : list
+    potential_merges : NDArray
         The list of potential merges
 
     """
