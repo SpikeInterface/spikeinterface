@@ -506,6 +506,7 @@ class BaseRecording(BaseRecordingSnippets):
                 rs = self._recording_segments[segment_index]
                 rs.t_start = None
                 rs.time_vector = None
+                rs.sampling_frequency = self.sampling_frequency
 
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
