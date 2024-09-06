@@ -79,6 +79,9 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 # TODO: try forcing all unit locations to actually
 # be within the probe. Add some notes on this because it is confusing.
 
+# Note, shifting can move a unit closer to the channel e.g. if separated
+# by 20 um which can increase the signal and make shift estimation harder.
+
 # 1) write argument checks
 # 2) investigate bad kwargs for non-rigid, seems to be some regression somewhere...
 # 3) investigate when changing the below to rigid, shifting creates new units...
@@ -87,25 +90,45 @@ from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 # 6) make some presets? should estimate a lot of parameters based on the data, especially for nonrigid
 # 7) to an optimisation shift and scale instead of the current xcorr method.
 
+# go through everything and plot to check before writing tests.
+# there is a relationship between bin size and nonrigid bins. If bins are
+# too small then nonrigid is very unstable. So either choosing a bigger bin
+# size or smoothing over the histogram in relation to the number
+# of nonrigid bins may make sense.
+
+# the results for nonrigid are very dependent on chosen parameters,
+# in particular the number of nonrigid windows, gaussian scale,
+# smoothing of the histgram. An optimaisation method may also
+# serve to help reduce the number of parameters to choose.
+
 MOTION = False  # True
-SAVE = True # lse
+SAVE = False # lse
 PLOT = False
-BIN_UM = 3  # 0.1 actually works really well!
+BIN_UM = 0.1  # 0.1 actually works really well!
 
 
 if SAVE:
     scalings = [np.ones(25), np.r_[np.zeros(10), np.ones(15)]]
     recordings_list, _ = generate_session_displacement_recordings(
-        non_rigid_gradient=0.05,  # 0.05, # 0.05,
-        num_units=8,
-        recording_durations=(100, 100),
+        non_rigid_gradient=0.05, # 0.05,  # 0.05, # 0.05,
+        num_units=25,
+        recording_durations=(100, 100), # , 100),
         recording_shifts=(
             (0, 0),
             (0, 75),
-    #        (0, -150),
+#            (0, -150),
         ),
         recording_amplitude_scalings=None,  # {"method": "by_amplitude_and_firing_rate", "scalings": scalings},
         generate_unit_locations_kwargs={"margin_um": 0, "minimum_z": 0, "maximum_z": 0},
+        generate_templates_kwargs=dict(
+            ms_before=1.5,
+            ms_after=3.0,
+            mode="sphere",  # this is key to maintaining consistent unit positions with shift
+            unit_params=dict(
+                alpha=(150.0, 500.0),
+                spatial_decay=(10, 45),
+            ),
+        ),
         seed=42,
     )
 
@@ -185,17 +208,18 @@ else:
         "bin_um": BIN_UM,
         "method": "chunked_mean",
         "chunked_bin_size_s": "estimate",
-        "log_scale": True,
+        "log_scale": False,
+        "smooth_um": 5,
         "non_rigid_window_kwargs": {
             "win_shape": "gaussian",
-            "win_step_um": 25,
-            "win_scale_um": 150.0,
+            "win_step_um": 75,
+            "win_scale_um": 75, # 150.0,  TOOD: fixture this out, what was it before?
             "win_margin_um": None,
             "zero_threshold": None,
         },
     }
     alignment_method_kwargs = {
-        "num_shifts_block": False,
+        "num_shifts_block": None,  # TODO: can be in um so comaprable with window kwargs.
         "interpolate": False,
         "interp_factor": 10,
         "kriging_sigma": 1,
@@ -209,7 +233,7 @@ else:
         recordings_list,
         peaks_list,
         peak_locations_list,
-        alignment_order="to_middle",
+        alignment_order="to_session_1",
         rigid=False,
         estimate_histogram_kwargs=estimate_histogram_kwargs,
         alignment_method_kwargs=alignment_method_kwargs,
@@ -227,3 +251,7 @@ plotting.SessionAlignmentWidget(
 )
 
 plt.show()
+
+# No, even two sessions is a mess
+# TODO: working assumptions, maybe after rigid, make a template for nonrigid alignment
+# as at the moment all nonrigid to eachother is a mess

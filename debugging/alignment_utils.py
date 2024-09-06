@@ -20,7 +20,7 @@ from spikeinterface.sortingcomponents.motion.iterative_template import kriging_k
 
 
 def get_activity_histogram(
-    recording, peaks, peak_locations, spatial_bin_edges, log_scale, bin_s, smooth_um=None
+    recording, peaks, peak_locations, spatial_bin_edges, log_scale, bin_s, smooth_um
 ):
     """
     TODO: assumes 1-segment recording
@@ -209,10 +209,11 @@ def compute_histogram_crosscorrelation(
                     mask = np.zeros_like(xcorr)
                     mask[window_indices] = 1
                     xcorr *= mask
+
                 xcorr_matrix[win_idx, :] = xcorr
 
             # Smooth the cross-correlations across the bins
-            if smoothing_sigma_bin is not None:
+            if smoothing_sigma_bin:
                 xcorr_matrix = gaussian_filter(xcorr_matrix, smoothing_sigma_bin, axes=1)
 
             # Smooth the cross-correlations across the windows
