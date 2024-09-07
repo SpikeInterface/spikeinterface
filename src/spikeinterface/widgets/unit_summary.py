@@ -33,11 +33,11 @@ class UnitSummaryWidget(BaseWidget):
         If SortingAnalyzer is already sparse, the argument is ignored
     widget_params : dict or None, default: None
         Parameters for the subwidgets in a nested dictionary
-            unitlocations_params: UnitLocationsWidget (see UnitLocationsWidget for details)
-            unitwaveforms_params: UnitWaveformsWidget (see UnitWaveformsWidget for details)
-            unitwaveformdensitymap_params : UnitWaveformDensityMapWidget (see UnitWaveformDensityMapWidget for details)
-            autocorrelograms_params : AutoCorrelogramsWidget (see AutoCorrelogramsWidget for details)
-            amplitudes_params : AmplitudesWidget (see AmplitudesWidget for details)
+            unit_locations: UnitLocationsWidget (see UnitLocationsWidget for details)
+            unit_waveforms: UnitWaveformsWidget (see UnitWaveformsWidget for details)
+            unit_waveform_density_map: UnitWaveformDensityMapWidget (see UnitWaveformDensityMapWidget for details)
+            autocorrelograms: AutoCorrelogramsWidget (see AutoCorrelogramsWidget for details)
+            amplitudes: AmplitudesWidget (see AmplitudesWidget for details)
     """
 
     # possible_backends = {}
@@ -82,11 +82,11 @@ class UnitSummaryWidget(BaseWidget):
         sparsity = dp.sparsity
 
         widget_params = defaultdict(lambda: dict(), dp.widget_params)
-        unitlocationswidget_params = widget_params["unitlocations_params"]
-        unitwaveformswidget_params = widget_params["unitwaveforms_params"]
-        unitwaveformdensitymapwidget_params = widget_params["unitwaveformdensitymap_params"]
-        autocorrelogramswidget_params = widget_params["autocorrelograms_params"]
-        amplitudeswidget_params = widget_params["amplitudes_params"]
+        unitlocationswidget_params = widget_params["unit_locations"]
+        unitwaveformswidget_params = widget_params["unit_waveforms"]
+        unitwaveformdensitymapwidget_params = widget_params["unit_waveform_density_map"]
+        autocorrelogramswidget_params = widget_params["autocorrelograms"]
+        amplitudeswidget_params = widget_params["amplitudes"]
 
         # force the figure without axes
         if "figsize" not in backend_kwargs:
