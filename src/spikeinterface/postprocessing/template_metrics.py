@@ -144,7 +144,6 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         else:
             metrics_kwargs_ = _default_function_kwargs.copy()
             metrics_kwargs_.update(metrics_kwargs)
-            print(metrics_kwargs_)
 
         all_metric_names = metric_names
         tm_extension = self.sorting_analyzer.get_extension("template_metrics")
@@ -160,6 +159,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                 self.sorting_analyzer.get_extension("template_metrics").data["metrics"] = pd.DataFrame(
                     index=self.sorting_analyzer.unit_ids
                 )
+                self.sorting_analyzer.get_extension("template_metrics").params["metric_names"] = []
                 existing_metric_names = []
 
             for metric_name in existing_metric_names:
@@ -315,9 +315,11 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
         tm_extension = self.sorting_analyzer.get_extension("template_metrics")
         if delete_existing_metrics is False and tm_extension is not None:
-            existing_metrics = tm_extension.get_data()
-            for metric_name, metric_data in existing_metrics.items():
+            existing_metrics = tm_extension.params["metric_names"]
+
+            for metric_name in existing_metrics:
                 if metric_name not in self.data["metrics"]:
+                    metric_data = tm_extension.get_data()[metric_name]
                     self.data["metrics"][metric_name] = metric_data
 
     def _get_data(self):
