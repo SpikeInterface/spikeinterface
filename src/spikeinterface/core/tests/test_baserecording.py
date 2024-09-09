@@ -292,7 +292,11 @@ def test_BaseRecording(create_cache_folder):
     # reset times
     rec.reset_times()
     for segm in range(num_seg):
+        time_info = rec.get_time_info(segment_index=segm)
         assert not rec.has_time_vector(segment_index=segm)
+        assert time_info["t_start"] is None
+        assert time_info["time_vector"] is None
+        assert time_info["sampling_frequency"] == rec.sampling_frequency
 
     # test 3d probe
     rec_3d = generate_recording(ndim=3, num_channels=30)
