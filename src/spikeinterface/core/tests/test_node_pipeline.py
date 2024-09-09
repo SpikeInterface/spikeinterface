@@ -219,7 +219,7 @@ def test_skip_after_n_peaks():
 
 
 
-
+# the following is for testing locally with python or ipython. It is not used in ci or with pytest.
 if __name__ == "__main__":
     # folder = Path("./cache_folder/core")
     # test_run_node_pipeline(folder)

@@ -484,9 +484,9 @@ def run_node_pipeline(
     skip_after_n_peaks=None,
 ):
     """
-    Machinery to compute in paralell operations on peaks and traces.
+    Machinery to compute in parallel operations on peaks and traces.
 
-    This usefull in several use cases:
+    This useful in several use cases:
     * in sortingcomponents : detect peaks and make some computation on then (localize, pca, ...)
     * in sortingcomponents : replay some peaks and make some computation on then (localize, pca, ...)
     * postprocessing : replay some spikes and make some computation on then (localize, pca, ...)
@@ -498,13 +498,13 @@ def run_node_pipeline(
     Every node is doing a computaion of some peaks and related traces.
     The first node is PeakSource so either a peak detector PeakDetector or peak/spike replay (PeakRetriever/SpikeRetriever)
 
-    Every can have one or several output that can be directed to other nodes (aka nodes have parents).
+    Every node can have one or several output that can be directed to other nodes (aka nodes have parents).
 
-    Every node can optionaly have an global output that will be globaly gather by the main process.
+    Every node can optionally have a global output that will be gathered by the main process.
     This is controlled by return_output = True.
 
     The gather consists of concatenating features related to peaks (localization, pca, scaling, ...) into a single big vector.
-    Theses vector can be in "memory" or in file ("npy")
+    These vectors can be in "memory" or in files ("npy")
 
     
     Parameters
@@ -523,7 +523,7 @@ def run_node_pipeline(
     gather_kwargs : dict
         OPtions to control the "gather engine". See GatherToMemory or GatherToNpy.
     squeeze_output : bool, default True
-        If only one output node, the, squeeze the tuple
+        If only one output node then squeeze the tuple
     folder : str | Path | None
         Used for gather_mode="npz"
     names : list of str
@@ -531,7 +531,7 @@ def run_node_pipeline(
     verbose : bool, default False
         Verbosity.
     skip_after_n_peaks : None | int
-        Skip the computaion after n_peaks.
+        Skip the computation after n_peaks.
         This is not an exact because internally this skip is done per worker in average.
     
     Returns
