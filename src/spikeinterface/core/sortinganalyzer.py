@@ -488,7 +488,11 @@ class SortingAnalyzer:
 
         if is_path_remote(str(self.folder)):
             mode = "r"
-        zarr_root = zarr.open(self.folder, mode=mode, storage_options=self.storage_options)
+        # we open_consolidated only if we are in read mode
+        if mode in ("r+", "a"):
+            zarr_root = zarr.open(str(self.folder), mode=mode, storage_options=self.storage_options)
+        else:
+            zarr_root = zarr.open_consolidated(self.folder, mode=mode, storage_options=self.storage_options)
         return zarr_root
 
     @classmethod
@@ -2057,8 +2061,9 @@ class AnalyzerExtension:
         elif self.format == "zarr":
             import zarr
 
-            zarr_root = zarr.open(self.folder, mode="r+")
+            zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
             _ = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
+            zarr.consolidate_metadata(zarr_root.store)
 
     def reset(self):
         """
@@ -2074,7 +2079,7 @@ class AnalyzerExtension:
         Set parameters for the extension and
         make it persistent in json.
         """
-        # this ensure data is also deleted and corresponf to params
+        # this ensure data is also deleted and corresponds to params
         # this also ensure the group is created
         self._reset_extension_folder()
 
