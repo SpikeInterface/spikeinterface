@@ -212,6 +212,8 @@ class ModelBasedClassification:
 def auto_label_units(
     sorting_analyzer: SortingAnalyzer,
     model_folder_path=None,
+    model_name=None,
+    repo_id=None,
     label_conversion=None,
     export_to_phy=False,
 ):
@@ -226,6 +228,10 @@ def auto_label_units(
         The sorting analyzer object containing the spike sorting results.
     model_folder_path : str or Path, defualt: None
         The path to the folder containing the model
+    repo_id : str | Path, default: None
+        Hugging face repo id which contains the model e.g. 'username/model'
+    model_name: str | Path, default: None
+        Filename of model e.g. 'my_model.skops'. If None, uses first model found.
     label_conversion : dic | None, default: None
         A dictionary for converting the predicted labels (which are integers) to custom labels. If None,
         tries to extract from `pipeline_info.json` file. The dictionary should have the format {old_label: new_label}.
@@ -245,7 +251,7 @@ def auto_label_units(
     """
     from sklearn.pipeline import Pipeline
 
-    pipeline, pipeline_info = _load_model_from_folder(folder=model_folder_path)
+    pipeline, pipeline_info = load_model(model_folder_path=model_folder_path, repo_id=repo_id, model_name=model_name)
 
     if not isinstance(pipeline, Pipeline):
         raise ValueError("The pipeline must be an instance of sklearn.pipeline.Pipeline")
@@ -257,6 +263,56 @@ def auto_label_units(
     )
 
     return classified_units
+
+
+def load_model(model_folder_path=None, repo_id=None, model_name=None):
+    """
+    Loads a model and model_info from a folder or a huggingface repo
+
+    Parameters
+    ----------
+    model_folder_path : str | Path, default: None
+        Path to the folder containing the model
+    repo_id : str | Path, default: None
+        Hugging face repo id e.g. 'username/model'
+    model_name: str | Path, default: None
+        Filename of model e.g. 'my_model.skops'. If None, uses first model found.
+
+    Returns
+    -------
+    model, model_info
+        A model and metadata about the model
+    """
+
+    if model_folder_path is None and repo_id is None:
+        raise ValueError("Please provide a 'model_folder_path' or a 'repo_id'.")
+    elif model_folder_path is not None and repo_id is not None:
+        raise ValueError("Please only provide one of 'model_folder_path' or 'repo_id'.")
+    elif model_folder_path is not None:
+        model, model_info = _load_model_from_folder(model_folder_path=model_folder_path, model_name=model_name)
+    else:
+        model, model_info = _load_model_from_huggingface(repo_id=repo_id, model_name=model_name)
+
+    return model, model_info
+
+
+def _load_model_from_huggingface(repo_id=None, model_name=None):
+
+    from huggingface_hub import list_repo_files
+    from huggingface_hub import hf_hub_download
+
+    # get repo filenames
+    repo_filenames = list_repo_files(repo_id=repo_id)
+
+    # download all skops and json files to temp directory
+    for filename in repo_filenames:
+        if Path(filename).suffix in [".skops", ".json"]:
+            full_path = hf_hub_download(repo_id=repo_id, filename=filename)
+            model_folder_path = Path(full_path).parent
+
+    model, model_info = _load_model_from_folder(model_folder_path=model_folder_path, model_name=model_name)
+
+    return model, model_info
 
 
 def _load_model_from_folder(model_folder_path=None, model_name=None):
