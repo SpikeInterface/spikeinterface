@@ -2,6 +2,7 @@ import numpy as np
 from pathlib import Path
 import json
 import warnings
+import skops
 
 from spikeinterface.core import SortingAnalyzer
 from spikeinterface.curation.train_manual_curation import try_to_get_metrics_from_analyzer
@@ -47,15 +48,15 @@ class ModelBasedClassification:
         self.pipeline = pipeline
         self.required_metrics = pipeline.feature_names_in_
 
-    def predict_labels(self, label_conversion=None, input_data=None, export_to_phy=False, pipeline_info_path=None):
+    def predict_labels(self, label_conversion=None, input_data=None, export_to_phy=False, pipeline_info=None):
         """
         Predicts the labels for the spike sorting data using the trained model.
         Populates the sorting object with the predicted labels and probabilities as unit properties
 
         Parameters
         ----------
-        pipeline_info_path : str or Path, default: None
-            Path to pipeline info, used to check metric parameters used to train Pipeline.
+        pipeline_info : dict or None, default: None
+            Pipeline info, generated with model, used to check metric parameters used to train Pipeline.
         label_conversion : dict, default: None
             A dictionary for converting the predicted labels (which are integers) to custom labels. If None,
             tries to find in `pipeline_info` file. The dictionary should have the format {old_label: new_label}.
@@ -78,13 +79,6 @@ class ModelBasedClassification:
         else:
             if not isinstance(input_data, pd.DataFrame):
                 raise ValueError("Input data must be a pandas DataFrame")
-
-        pipeline_info = None
-        try:
-            with open(pipeline_info_path) as fd:
-                pipeline_info = json.load(fd)
-        except:
-            warnings.warn("Could not open `pipeline_info.json` file.")
 
         if pipeline_info is not None:
             self._check_params_for_classification(pipeline_info=pipeline_info)
@@ -218,8 +212,7 @@ class ModelBasedClassification:
 
 def auto_label_units(
     sorting_analyzer: SortingAnalyzer,
-    pipeline,
-    pipeline_info_path=None,
+    model_folder_path=None,
     label_conversion=None,
     export_to_phy=False,
 ):
@@ -232,10 +225,8 @@ def auto_label_units(
     ----------
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object containing the spike sorting results.
-    pipeline : Pipeline
-        The scikit-learn pipeline object containing the model-based classification pipeline.
-    pipeline_info_path : str | Path | None, default: None
-        Path to pipeline information json file, created when a pipeline is trained.
+    model_folder_path : str or Path, defualt: None
+        The path to the folder containing the model
     label_conversion : dic | None, default: None
         A dictionary for converting the predicted labels (which are integers) to custom labels. If None,
         tries to extract from `pipeline_info.json` file. The dictionary should have the format {old_label: new_label}.
@@ -255,13 +246,63 @@ def auto_label_units(
     """
     from sklearn.pipeline import Pipeline
 
+    pipeline, pipeline_info = _load_model_from_folder(folder=model_folder_path)
+
     if not isinstance(pipeline, Pipeline):
         raise ValueError("The pipeline must be an instance of sklearn.pipeline.Pipeline")
 
     model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline)
 
     classified_units = model_based_classification.predict_labels(
-        label_conversion=label_conversion, export_to_phy=export_to_phy, pipeline_info_path=pipeline_info_path
+        label_conversion=label_conversion, export_to_phy=export_to_phy, pipeline_info=pipeline_info
     )
 
     return classified_units
+
+
+def _load_model_from_folder(model_folder_path=None, model_name=None):
+    """
+    Loads a model and model_info from a folder
+
+    Parameters
+    ----------
+    model_folder_path : str | Path, default: None
+        Path to the folder or HuggingFace directory containing the model
+    model_name: str | Path, default: None
+        Filename of model e.g. 'my_model.skops'. If None, uses first model found in directory
+
+    Returns
+    -------
+    model, model_info
+        A model and metadata about the model
+    """
+
+    import skops.io as skio
+
+    folder = Path(model_folder_path)
+    assert folder.is_dir(), f"The folder {folder}, does not exist."
+
+    if model_name is not None:
+        skops_file = Path(model_folder_path) / Path(model_name)
+        assert skops_file.is_file(), f"Model file {skops_file} not found."
+    else:
+        # look for any .skops files
+        skops_files = list(folder.glob("*.skops"))
+        assert skops_files != [], f"There are no '.skops' files in the folder {folder}"
+        if len(skops_files) > 1:
+            warnings.warn(
+                "There are more than 1 '.skops' file in folder {folder}. Selecting {skops_file}. You can specify the file using the 'model_name' argument."
+            )
+
+        skops_file = skops_files[0]
+
+    model = skio.load(skops_file, trusted="numpy.dtype")
+
+    model_info_path = folder / "model_info.json"
+    if not model_info_path.is_file():
+        warnings.warn("No 'model_info.json' file found in folder. No metadata can be checked.")
+        model_info = None
+    else:
+        model_info = json.load(open(model_info_path))
+
+    return model, model_info
