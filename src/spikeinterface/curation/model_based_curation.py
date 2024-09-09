@@ -41,24 +41,24 @@ class ModelBasedClassification:
         from sklearn.pipeline import Pipeline
 
         if not isinstance(pipeline, Pipeline):
-            raise ValueError("The pipeline must be an instance of sklearn.pipeline.Pipeline")
+            raise ValueError("The `pipeline` must be an instance of sklearn.pipeline.Pipeline")
 
         self.sorting_analyzer = sorting_analyzer
         self.pipeline = pipeline
         self.required_metrics = pipeline.feature_names_in_
 
-    def predict_labels(self, label_conversion=None, input_data=None, export_to_phy=False, pipeline_info=None):
+    def predict_labels(self, label_conversion=None, input_data=None, export_to_phy=False, model_info=None):
         """
         Predicts the labels for the spike sorting data using the trained model.
         Populates the sorting object with the predicted labels and probabilities as unit properties
 
         Parameters
         ----------
-        pipeline_info : dict or None, default: None
-            Pipeline info, generated with model, used to check metric parameters used to train Pipeline.
+        model_info : dict or None, default: None
+            Model info, generated with model, used to check metric parameters used to train it.
         label_conversion : dict, default: None
             A dictionary for converting the predicted labels (which are integers) to custom labels. If None,
-            tries to find in `pipeline_info` file. The dictionary should have the format {old_label: new_label}.
+            tries to find in `model_info` file. The dictionary should have the format {old_label: new_label}.
         input_data : pandas.DataFrame, optional
             The input data for classification. If not provided, the method will extract metrics stored in the sorting analyzer.
         export_to_phy : bool, optional
@@ -79,18 +79,18 @@ class ModelBasedClassification:
             if not isinstance(input_data, pd.DataFrame):
                 raise ValueError("Input data must be a pandas DataFrame")
 
-        if pipeline_info is not None:
-            self._check_params_for_classification(pipeline_info=pipeline_info)
+        if model_info is not None:
+            self._check_params_for_classification(model_info=model_info)
 
-        if pipeline_info is not None and label_conversion is None:
+        if model_info is not None and label_conversion is None:
             try:
-                string_label_conversion = pipeline_info["label_conversion"]
+                string_label_conversion = model_info["label_conversion"]
                 # json keys are strings; we convert these to ints
                 label_conversion = {}
                 for key, value in string_label_conversion.items():
                     label_conversion[int(key)] = value
             except:
-                warnings.warn("Could not find `label_conversion` key in `pipeline_info.json` file")
+                warnings.warn("Could not find `label_conversion` key in `model_info.json` file")
 
         # Prepare input data
         input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
@@ -152,14 +152,14 @@ class ModelBasedClassification:
 
         return input_data
 
-    def _check_params_for_classification(self, pipeline_info=None):
+    def _check_params_for_classification(self, model_info=None):
         """
         Check that quality and template metrics parameters match those used to train the model
 
         Parameters
         ----------
-        pipeline_info_path : str or Path, default: None
-            Path to pipeline_info.json provenance file
+        model_info_path : str or Path, default: None
+            Path to model_info.json provenance file
         """
 
         quality_metrics_extension = self.sorting_analyzer.get_extension("quality_metrics")
@@ -167,27 +167,27 @@ class ModelBasedClassification:
 
         if quality_metrics_extension is not None:
 
-            pipeline_quality_metrics_params = pipeline_info["metric_params"]["analyzer_0"]["quality_metric_params"][
+            model_quality_metrics_params = model_info["metric_params"]["analyzer_0"]["quality_metric_params"][
                 "qm_params"
             ]
             quality_metrics_params = quality_metrics_extension.params["qm_params"]
 
             # need to make sure both dicts are in json format, so that lists are equal
-            if json.dumps(quality_metrics_params) != json.dumps(pipeline_quality_metrics_params):
+            if json.dumps(quality_metrics_params) != json.dumps(model_quality_metrics_params):
                 warnings.warn(
-                    "Quality metrics params do not match those used to train pipeline. Check these in the 'pipeline_info.json' file."
+                    "Quality metrics params do not match those used to train model. Check these in the 'model_info.json' file."
                 )
 
         if template_metrics_extension is not None:
 
-            pipeline_template_metrics_params = pipeline_info["metric_params"]["analyzer_0"]["template_metric_params"][
+            model_template_metrics_params = model_info["metric_params"]["analyzer_0"]["template_metric_params"][
                 "metrics_kwargs"
             ]
             template_metrics_params = template_metrics_extension.params["metrics_kwargs"]
 
-            if template_metrics_params != pipeline_template_metrics_params:
+            if template_metrics_params != model_template_metrics_params:
                 warnings.warn(
-                    "Template metrics metrics params do not match those used to train pipeline. Check these in the 'model_info.json' file."
+                    "Template metrics metrics params do not match those used to train model. Check these in the 'model_info.json' file."
                 )
 
     def _export_to_phy(self, classified_units):
@@ -234,7 +234,7 @@ def auto_label_units(
         Filename of model e.g. 'my_model.skops'. If None, uses first model found.
     label_conversion : dic | None, default: None
         A dictionary for converting the predicted labels (which are integers) to custom labels. If None,
-        tries to extract from `pipeline_info.json` file. The dictionary should have the format {old_label: new_label}.
+        tries to extract from `model_info.json` file. The dictionary should have the format {old_label: new_label}.
     export_to_phy : bool, default: False
         Whether to export the results to Phy format. Default is False.
 
@@ -251,15 +251,15 @@ def auto_label_units(
     """
     from sklearn.pipeline import Pipeline
 
-    pipeline, pipeline_info = load_model(model_folder_path=model_folder_path, repo_id=repo_id, model_name=model_name)
+    model, model_info = load_model(model_folder_path=model_folder_path, repo_id=repo_id, model_name=model_name)
 
-    if not isinstance(pipeline, Pipeline):
-        raise ValueError("The pipeline must be an instance of sklearn.pipeline.Pipeline")
+    if not isinstance(model, Pipeline):
+        raise ValueError("The model must be an instance of sklearn.pipeline.Pipeline")
 
-    model_based_classification = ModelBasedClassification(sorting_analyzer, pipeline)
+    model_based_classification = ModelBasedClassification(sorting_analyzer, model)
 
     classified_units = model_based_classification.predict_labels(
-        label_conversion=label_conversion, export_to_phy=export_to_phy, pipeline_info=pipeline_info
+        label_conversion=label_conversion, export_to_phy=export_to_phy, model_info=model_info
     )
 
     return classified_units

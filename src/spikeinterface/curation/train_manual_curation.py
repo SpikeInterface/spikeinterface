@@ -36,8 +36,8 @@ class CurationModelTrainer:
     ----------
     output_folder : str
         The folder where outputs such as models and evaluation metrics will be saved. Requires the skops library.
-    labels : list, default: None
-        List of curated labels for each unit; must be in the same order as the metrics data.
+    labels : list of lists, default: None
+        List of curated labels for each `sorting_analyzer` and each unit; must be in the same order as the metrics data.
     imputation_strategies : list of str
         The list of imputation strategies to apply.
     scaling_techniques : list of str
@@ -129,6 +129,8 @@ class CurationModelTrainer:
 
         self.X = None
         self.testing_metrics = None
+
+        self.requirements = {"spikeinterface": spikeinterface.__version__}
 
         import pandas as pd
 
@@ -288,23 +290,30 @@ class CurationModelTrainer:
         # Check lightgbm package install
         if classifier_name == "LGBMClassifier":
             try:
-                from lightgbm import LGBMClassifier
+                import lightgbm
 
-                classifier_mapping["LGBMClassifier"] = LGBMClassifier(random_state=self.seed, verbose=-1)
+                self.requirements["lightgbm"] = lightgbm.__version__
+                classifier_mapping["LGBMClassifier"] = lightgbm.LGBMClassifier(random_state=self.seed, verbose=-1)
             except ImportError:
                 raise ImportError("Please install lightgbm package to use LGBMClassifier")
         elif classifier_name == "CatBoostClassifier":
             try:
-                from catboost import CatBoostClassifier
+                import catboost
 
-                classifier_mapping["CatBoostClassifier"] = CatBoostClassifier(silent=True, random_state=self.seed)
+                self.requirements["catboost"] = catboost.__version__
+                classifier_mapping["CatBoostClassifier"] = catboost.CatBoostClassifier(
+                    silent=True, random_state=self.seed
+                )
             except ImportError:
                 raise ImportError("Please install catboost package to use CatBoostClassifier")
         elif classifier_name == "XGBClassifier":
             try:
-                from xgboost import XGBClassifier
+                import xgboost
 
-                classifier_mapping["XGBClassifier"] = XGBClassifier(use_label_encoder=False, random_state=self.seed)
+                self.requirements["xgboost"] = xgboost.__version__
+                classifier_mapping["XGBClassifier"] = xgboost.XGBClassifier(
+                    use_label_encoder=False, random_state=self.seed
+                )
             except ImportError:
                 raise ImportError("Please install xgboost package to use XGBClassifier")
 
@@ -472,6 +481,8 @@ class CurationModelTrainer:
         from skops.io import dump
         import sklearn
 
+        self.requirements["scikit-learn"] = sklearn.__version__
+
         # Dump to skops if output_folder is provided
         dump(self.best_pipeline, os.path.join(self.output_folder, f"best_model.skops"))
         self.test_accuracies_df.to_csv(os.path.join(self.output_folder, f"model_accuracies.csv"), float_format="%.4f")
@@ -479,13 +490,11 @@ class CurationModelTrainer:
         model_info = {}
         model_info["metric_params"] = self.metrics_params
 
-        model_info["requirements"] = {}
-        model_info["requirements"]["scikit-learn"] = sklearn.__version__
-        model_info["requirements"]["spikeinterface"] = spikeinterface.__version__
+        model_info["requirements"] = self.requirements
 
         model_info["label_conversion"] = self.label_conversion
 
-        param_file = self.output_folder + "/pipeline_info.json"
+        param_file = self.output_folder + "/model_info.json"
         Path(param_file).write_text(json.dumps(model_info, indent=4), encoding="utf8")
 
     def _train_and_evaluate(self, imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, model_id):
