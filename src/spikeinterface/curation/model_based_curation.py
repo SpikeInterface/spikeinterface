@@ -2,7 +2,6 @@ import numpy as np
 from pathlib import Path
 import json
 import warnings
-import skops
 
 from spikeinterface.core import SortingAnalyzer
 from spikeinterface.curation.train_manual_curation import try_to_get_metrics_from_analyzer
