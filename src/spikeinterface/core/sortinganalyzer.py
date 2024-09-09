@@ -23,7 +23,8 @@ from .basesorting import BaseSorting
 
 from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
-from .core_tools import check_json, retrieve_importing_provenance
+from .core_tools import check_json, retrieve_importing_provenance, is_path_remote, clean_zarr_folder_name
+from .sorting_tools import generate_unit_ids_for_merge_group, _get_ids_after_merging
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
@@ -43,7 +44,7 @@ def create_sorting_analyzer(
     return_scaled=True,
     overwrite=False,
     **sparsity_kwargs,
-):
+) -> "SortingAnalyzer":
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
 
@@ -110,6 +111,8 @@ def create_sorting_analyzer(
     sparsity off (or give external sparsity) like this.
     """
     if format != "memory":
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
         if Path(folder).is_dir():
             if not overwrite:
                 raise ValueError(f"Folder already exists {folder}! Use overwrite=True to overwrite it.")
@@ -127,7 +130,7 @@ def create_sorting_analyzer(
             recording.channel_ids, sparsity.channel_ids
         ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
     elif sparse:
-        sparsity = estimate_sparsity(recording, sorting, **sparsity_kwargs)
+        sparsity = estimate_sparsity(sorting, recording, **sparsity_kwargs)
     else:
         sparsity = None
 
@@ -142,7 +145,7 @@ def create_sorting_analyzer(
     return sorting_analyzer
 
 
-def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
+def load_sorting_analyzer(folder, load_extensions=True, format="auto", storage_options=None) -> "SortingAnalyzer":
     """
     Load a SortingAnalyzer object from disk.
 
@@ -154,6 +157,9 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
         Load all extensions or not.
     format : "auto" | "binary_folder" | "zarr"
         The format of the folder.
+    storage_options : dict | None, default: None
+        The storage options to specify credentials to remote zarr bucket.
+        For open buckets, it doesn't need to be specified.
 
     Returns
     -------
@@ -161,7 +167,7 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto"):
         The loaded SortingAnalyzer
 
     """
-    return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format)
+    return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format, storage_options=storage_options)
 
 
 class SortingAnalyzer:
@@ -194,6 +200,7 @@ class SortingAnalyzer:
         format=None,
         sparsity=None,
         return_scaled=True,
+        storage_options=None,
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
@@ -203,6 +210,7 @@ class SortingAnalyzer:
         self.format = format
         self.sparsity = sparsity
         self.return_scaled = return_scaled
+        self.storage_options = storage_options
         # this is used to store temporary recording
         self._temporary_recording = None
 
@@ -266,6 +274,8 @@ class SortingAnalyzer:
             sorting_analyzer = cls.load_from_binary_folder(folder, recording=recording)
             sorting_analyzer.folder = Path(folder)
         elif format == "zarr":
+            assert folder is not None, "For format='zarr' folder must be provided"
+            folder = clean_zarr_folder_name(folder)
             cls.create_zarr(folder, sorting, recording, sparsity, return_scaled, rec_attributes=None)
             sorting_analyzer = cls.load_from_zarr(folder, recording=recording)
             sorting_analyzer.folder = Path(folder)
@@ -275,17 +285,15 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     @classmethod
-    def load(cls, folder, recording=None, load_extensions=True, format="auto"):
+    def load(cls, folder, recording=None, load_extensions=True, format="auto", storage_options=None):
         """
         Load folder or zarr.
         The recording can be given if the recording location has changed.
         Otherwise the recording is loaded when possible.
         """
-        folder = Path(folder)
-        assert folder.is_dir(), "Waveform folder does not exists"
         if format == "auto":
             # make better assumption and check for auto guess format
-            if folder.suffix == ".zarr":
+            if Path(folder).suffix == ".zarr":
                 format = "zarr"
             else:
                 format = "binary_folder"
@@ -293,12 +301,18 @@ class SortingAnalyzer:
         if format == "binary_folder":
             sorting_analyzer = SortingAnalyzer.load_from_binary_folder(folder, recording=recording)
         elif format == "zarr":
-            sorting_analyzer = SortingAnalyzer.load_from_zarr(folder, recording=recording)
+            sorting_analyzer = SortingAnalyzer.load_from_zarr(
+                folder, recording=recording, storage_options=storage_options
+            )
 
-        sorting_analyzer.folder = folder
+        if is_path_remote(str(folder)):
+            sorting_analyzer.folder = folder
+            # in this case we only load extensions when needed
+        else:
+            sorting_analyzer.folder = Path(folder)
 
-        if load_extensions:
-            sorting_analyzer.load_all_saved_extension()
+            if load_extensions:
+                sorting_analyzer.load_all_saved_extension()
 
         return sorting_analyzer
 
@@ -469,7 +483,9 @@ class SortingAnalyzer:
     def _get_zarr_root(self, mode="r+"):
         import zarr
 
-        zarr_root = zarr.open(self.folder, mode=mode)
+        if is_path_remote(str(self.folder)):
+            mode = "r"
+        zarr_root = zarr.open(self.folder, mode=mode, storage_options=self.storage_options)
         return zarr_root
 
     @classmethod
@@ -478,10 +494,7 @@ class SortingAnalyzer:
         import zarr
         import numcodecs
 
-        folder = Path(folder)
-        # force zarr sufix
-        if folder.suffix != ".zarr":
-            folder = folder.parent / f"{folder.stem}.zarr"
+        folder = clean_zarr_folder_name(folder)
 
         if folder.is_dir():
             raise ValueError(f"Folder already exists {folder}")
@@ -551,25 +564,22 @@ class SortingAnalyzer:
         recording_info = zarr_root.create_group("extensions")
 
     @classmethod
-    def load_from_zarr(cls, folder, recording=None):
+    def load_from_zarr(cls, folder, recording=None, storage_options=None):
         import zarr
 
-        folder = Path(folder)
-        assert folder.is_dir(), f"This folder does not exist {folder}"
-
-        zarr_root = zarr.open(folder, mode="r")
+        zarr_root = zarr.open(str(folder), mode="r", storage_options=storage_options)
 
         # load internal sorting in memory
-        # TODO propagate storage_options
         sorting = NumpySorting.from_sorting(
-            ZarrSortingExtractor(folder, zarr_group="sorting"), with_metadata=True, copy_spike_vector=True
+            ZarrSortingExtractor(folder, zarr_group="sorting", storage_options=storage_options),
+            with_metadata=True,
+            copy_spike_vector=True,
         )
 
         # load recording if possible
         if recording is None:
             rec_dict = zarr_root["recording"][0]
             try:
-
                 recording = load_extractor(rec_dict, base_folder=folder)
             except:
                 recording = None
@@ -607,7 +617,7 @@ class SortingAnalyzer:
 
         return sorting_analyzer
 
-    def set_temporary_recording(self, recording: BaseRecording):
+    def set_temporary_recording(self, recording: BaseRecording, check_dtype: bool = True):
         """
         Sets a temporary recording object. This function can be useful to temporarily set
         a "cached" recording object that is not saved in the SortingAnalyzer object to speed up
@@ -619,21 +629,69 @@ class SortingAnalyzer:
         ----------
         recording : BaseRecording
             The recording object to set as temporary recording.
+        check_dtype : bool, default: True
+            If True, check that the dtype of the temporary recording is the same as the original recording.
         """
         # check that recording is compatible
-        assert do_recording_attributes_match(recording, self.rec_attributes), "Recording attributes do not match."
-        assert np.array_equal(
-            recording.get_channel_locations(), self.get_channel_locations()
-        ), "Recording channel locations do not match."
+        attributes_match, exception_str = do_recording_attributes_match(
+            recording, self.rec_attributes, check_dtype=check_dtype
+        )
+        if not attributes_match:
+            raise ValueError(exception_str)
+        if not np.array_equal(recording.get_channel_locations(), self.get_channel_locations()):
+            raise ValueError("Recording channel locations do not match.")
         if self._recording is not None:
             warnings.warn("SortingAnalyzer recording is already set. The current recording is temporarily replaced.")
         self._temporary_recording = recording
 
-    def _save_or_select(self, format="binary_folder", folder=None, unit_ids=None) -> "SortingAnalyzer":
+    def _save_or_select_or_merge(
+        self,
+        format="binary_folder",
+        folder=None,
+        unit_ids=None,
+        merge_unit_groups=None,
+        censor_ms=None,
+        merging_mode="soft",
+        sparsity_overlap=0.75,
+        verbose=False,
+        new_unit_ids=None,
+        **job_kwargs,
+    ) -> "SortingAnalyzer":
         """
-        Internal used by both save_as(), copy() and select_units() which are more or less the same.
-        """
+        Internal method used by both `save_as()`, `copy()`, `select_units()`, and `merge_units()`.
 
+        Parameters
+        ----------
+        format : "memory" | "binary_folder" | "zarr", default: "binary_folder"
+            The format to save the SortingAnalyzer object
+        folder : str | Path | None, default: None
+            The folder where the SortingAnalyzer object will be saved
+        unit_ids : list or None, default: None
+            The unit ids to keep in the new SortingAnalyzer object. If `merge_unit_groups` is not None,
+            `unit_ids` must be given it must contain all unit_ids.
+        merge_unit_groups : list/tuple of lists/tuples or None, default: None
+            A list of lists for every merge group. Each element needs to have at least two elements
+            (two units to merge). If `merge_unit_groups` is not None, `new_unit_ids` must be given.
+        censor_ms : None or float, default: None
+            When merging units, any spikes violating this refractory period will be discarded.
+        merging_mode : "soft" | "hard", default: "soft"
+            How merges are performed. In the "soft" mode, merges will be approximated, with no smart merging
+            of the extension data.
+        sparsity_overlap : float, default 0.75
+            The percentage of overlap that units should share in order to accept merges. If this criteria is not
+            achieved, soft merging will not be performed.
+        new_unit_ids : list or None, default: None
+            The new unit ids for merged units. Required if `merge_unit_groups` is not None.
+        verbose : bool, default: False
+            If True, output is verbose.
+        job_kwargs : dict
+            Keyword arguments for parallelization.
+
+        Returns
+        -------
+        new_sorting_analyzer : SortingAnalyzer
+            The newly created SortingAnalyzer object.
+        """
         if self.has_recording():
             recording = self._recording
         elif self.has_temporary_recording():
@@ -641,24 +699,65 @@ class SortingAnalyzer:
         else:
             recording = None
 
-        if self.sparsity is not None and unit_ids is None:
+        if self.sparsity is not None and unit_ids is None and merge_unit_groups is None:
             sparsity = self.sparsity
-        elif self.sparsity is not None and unit_ids is not None:
+        elif self.sparsity is not None and unit_ids is not None and merge_unit_groups is None:
             sparsity_mask = self.sparsity.mask[np.isin(self.unit_ids, unit_ids), :]
             sparsity = ChannelSparsity(sparsity_mask, unit_ids, self.channel_ids)
+        elif self.sparsity is not None and merge_unit_groups is not None:
+            all_unit_ids = unit_ids
+            sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
+            for unit_index, unit_id in enumerate(all_unit_ids):
+                if unit_id in new_unit_ids:
+                    # This is a new unit, and the sparsity mask will be the intersection of the
+                    # ones of all merges
+                    current_merge_group = merge_unit_groups[list(new_unit_ids).index(unit_id)]
+                    merge_unit_indices = self.sorting.ids_to_indices(current_merge_group)
+                    union_mask = np.sum(self.sparsity.mask[merge_unit_indices], axis=0) > 0
+                    if merging_mode == "soft":
+                        intersection_mask = np.prod(self.sparsity.mask[merge_unit_indices], axis=0) > 0
+                        thr = np.sum(intersection_mask) / np.sum(union_mask)
+                        assert thr > sparsity_overlap, (
+                            f"The sparsities of {current_merge_group} do not overlap enough for a soft merge using "
+                            f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
+                            "a hard merge."
+                        )
+                        sparsity_mask[unit_index] = intersection_mask
+                    elif merging_mode == "hard":
+                        sparsity_mask[unit_index] = union_mask
+                else:
+                    # This means that the unit is already in the previous sorting
+                    index = self.sorting.id_to_index(unit_id)
+                    sparsity_mask[unit_index] = self.sparsity.mask[index]
+            sparsity = ChannelSparsity(sparsity_mask, list(all_unit_ids), self.channel_ids)
         else:
             sparsity = None
 
         # Note that the sorting is a copy we need to go back to the orginal sorting (if available)
         sorting_provenance = self.get_sorting_provenance()
         if sorting_provenance is None:
-            # if the original sorting objetc is not available anymore (kilosort folder deleted, ....), take the copy
+            # if the original sorting object is not available anymore (kilosort folder deleted, ....), take the copy
             sorting_provenance = self.sorting
 
-        if unit_ids is not None:
+        if merge_unit_groups is None:
             # when only some unit_ids then the sorting must be sliced
             # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
             sorting_provenance = sorting_provenance.select_units(unit_ids)
+        else:
+            from spikeinterface.core.sorting_tools import apply_merges_to_sorting
+
+            sorting_provenance, keep_mask, _ = apply_merges_to_sorting(
+                sorting=sorting_provenance,
+                merge_unit_groups=merge_unit_groups,
+                new_unit_ids=new_unit_ids,
+                censor_ms=censor_ms,
+                return_extra=True,
+            )
+            if censor_ms is None:
+                # in this case having keep_mask None is faster instead of having a vector of ones
+                keep_mask = None
+            # TODO: sam/pierre would create a curation field / curation.json with the applied merges.
+            # What do you think?
 
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
@@ -678,9 +777,7 @@ class SortingAnalyzer:
 
         elif format == "zarr":
             assert folder is not None, "For format='zarr' folder must be provided"
-            folder = Path(folder)
-            if folder.suffix != ".zarr":
-                folder = folder.parent / f"{folder.stem}.zarr"
+            folder = clean_zarr_folder_name(folder)
             SortingAnalyzer.create_zarr(
                 folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes
             )
@@ -691,10 +788,35 @@ class SortingAnalyzer:
 
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
-        for extension_name, extension in self.extensions.items():
-            new_ext = new_sorting_analyzer.extensions[extension_name] = extension.copy(
-                new_sorting_analyzer, unit_ids=unit_ids
-            )
+        sorted_extensions = _sort_extensions_by_dependency(self.extensions)
+        # hack: quality metrics are computed at last
+        qm_extension_params = sorted_extensions.pop("quality_metrics", None)
+        if qm_extension_params is not None:
+            sorted_extensions["quality_metrics"] = qm_extension_params
+        recompute_dict = {}
+
+        for extension_name, extension in sorted_extensions.items():
+            if merge_unit_groups is None:
+                # copy full or select
+                new_sorting_analyzer.extensions[extension_name] = extension.copy(
+                    new_sorting_analyzer, unit_ids=unit_ids
+                )
+            else:
+                # merge
+                if merging_mode == "soft":
+                    new_sorting_analyzer.extensions[extension_name] = extension.merge(
+                        new_sorting_analyzer,
+                        merge_unit_groups=merge_unit_groups,
+                        new_unit_ids=new_unit_ids,
+                        keep_mask=keep_mask,
+                        verbose=verbose,
+                        **job_kwargs,
+                    )
+                elif merging_mode == "hard":
+                    recompute_dict[extension_name] = extension.params
+
+        if merge_unit_groups is not None and merging_mode == "hard" and len(recompute_dict) > 0:
+            new_sorting_analyzer.compute_several_extensions(recompute_dict, save=True, verbose=verbose, **job_kwargs)
 
         return new_sorting_analyzer
 
@@ -709,16 +831,18 @@ class SortingAnalyzer:
 
         Parameters
         ----------
-        folder : str or Path
-            The output waveform folder
-        format : "binary_folder" | "zarr", default: "binary_folder"
-            The backend to use for saving the waveforms
+        folder : str | Path | None, default: None
+            The output folder if `format` is "zarr" or "binary_folder"
+        format : "memory" | "binary_folder" | "zarr", default: "memory"
+            The new backend format to use
         """
-        return self._save_or_select(format=format, folder=folder, unit_ids=None)
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
+        return self._save_or_select_or_merge(format=format, folder=folder)
 
     def select_units(self, unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
         """
-        This method is equivalent to `save_as()`but with a subset of units.
+        This method is equivalent to `save_as()` but with a subset of units.
         Filters units by creating a new sorting analyzer object in a new folder.
 
         Extensions are also updated to filter the selected unit ids.
@@ -727,23 +851,152 @@ class SortingAnalyzer:
         ----------
         unit_ids : list or array
             The unit ids to keep in the new SortingAnalyzer object
-        folder : Path or None
-            The new folder where selected waveforms are copied
-        format:
-        a
+        format : "memory" | "binary_folder" | "zarr" , default: "memory"
+            The format of the returned SortingAnalyzer.
+        folder : Path | None, deafult: None
+            The new folder where the analyzer with selected units is copied if `format` is
+            "binary_folder" or "zarr"
+
         Returns
         -------
-        we :  SortingAnalyzer
+        analyzer :  SortingAnalyzer
             The newly create sorting_analyzer with the selected units
         """
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
-        return self._save_or_select(format=format, folder=folder, unit_ids=unit_ids)
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
+        return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
+
+    def remove_units(self, remove_unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
+        """
+        This method is equivalent to `save_as()` but with removal of a subset of units.
+        Filters units by creating a new sorting analyzer object in a new folder.
+
+        Extensions are also updated to remove the unit ids.
+
+        Parameters
+        ----------
+        remove_unit_ids : list or array
+            The unit ids to remove in the new SortingAnalyzer object.
+        format : "memory" | "binary_folder" | "zarr" , default: "memory"
+            The format of the returned SortingAnalyzer.
+        folder : Path or None, default: None
+            The new folder where the analyzer without removed units is copied if `format`
+            is "binary_folder" or "zarr"
+
+        Returns
+        -------
+        analyzer :  SortingAnalyzer
+            The newly create sorting_analyzer with the selected units
+        """
+        # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
+        unit_ids = self.unit_ids[~np.isin(self.unit_ids, remove_unit_ids)]
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
+        return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
+
+    def merge_units(
+        self,
+        merge_unit_groups,
+        new_unit_ids=None,
+        censor_ms=None,
+        merging_mode="soft",
+        sparsity_overlap=0.75,
+        new_id_strategy="append",
+        return_new_unit_ids=False,
+        format="memory",
+        folder=None,
+        verbose=False,
+        **job_kwargs,
+    ) -> "SortingAnalyzer":
+        """
+        This method is equivalent to `save_as()`but with a list of merges that have to be achieved.
+        Merges units by creating a new SortingAnalyzer object with the appropriate merges
+
+        Extensions are also updated to display the merged `unit_ids`.
+
+        Parameters
+        ----------
+        merge_unit_groups : list/tuple of lists/tuples
+            A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
+            but it can also have more (merge multiple units at once).
+        new_unit_ids : None | list, default: None
+            A new unit_ids for merged units. If given, it needs to have the same length as `merge_unit_groups`. If None,
+            merged units will have the first unit_id of every lists of merges
+        censor_ms : None | float, default: None
+            When merging units, any spikes violating this refractory period will be discarded. If None all units are kept
+        merging_mode : ["soft", "hard"], default: "soft"
+            How merges are performed. If the `merge_mode` is "soft" , merges will be approximated, with no reloading of the
+            waveforms. This will lead to approximations. If `merge_mode` is "hard", recomputations are accurately performed,
+            reloading waveforms if needed
+        sparsity_overlap : float, default 0.75
+            The percentage of overlap that units should share in order to accept merges. If this criteria is not
+            achieved, soft merging will not be possible and an error will be raised
+        new_id_strategy : "append" | "take_first", default: "append"
+            The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+                * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
+                * "take_first" : new_unit_ids will be the first unit_id of every list of merges
+        return_new_unit_ids : bool, default False
+            Alse return new_unit_ids which are the ids of the new units.
+        folder : Path | None, default: None
+            The new folder where the analyzer with merged units is copied for `format` "binary_folder" or "zarr"
+        format : "memory" | "binary_folder" | "zarr", default: "memory"
+            The format of SortingAnalyzer
+        verbose : bool, default: False
+            Whether to display calculations (such as sparsity estimation)
+
+        Returns
+        -------
+        analyzer :  SortingAnalyzer
+            The newly create `SortingAnalyzer` with the selected units
+        """
+
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
+
+        assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
+
+        if len(merge_unit_groups) == 0:
+            # TODO I think we should raise an error or at least make a copy and not return itself
+            return self
+
+        for units in merge_unit_groups:
+            # TODO more checks like one units is only in one group
+            if len(units) < 2:
+                raise ValueError("Merging requires at least two units to merge")
+
+        # TODO : no this function did not exists before
+        if not isinstance(merge_unit_groups[0], (list, tuple)):
+            # keep backward compatibility : the previous behavior was only one merge
+            merge_unit_groups = [merge_unit_groups]
+
+        new_unit_ids = generate_unit_ids_for_merge_group(
+            self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy
+        )
+        all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
+
+        new_analyzer = self._save_or_select_or_merge(
+            format=format,
+            folder=folder,
+            merge_unit_groups=merge_unit_groups,
+            unit_ids=all_unit_ids,
+            censor_ms=censor_ms,
+            merging_mode=merging_mode,
+            sparsity_overlap=sparsity_overlap,
+            verbose=verbose,
+            new_unit_ids=new_unit_ids,
+            **job_kwargs,
+        )
+        if return_new_unit_ids:
+            return new_analyzer, new_unit_ids
+        else:
+            return new_analyzer
 
     def copy(self):
         """
         Create a a copy of SortingAnalyzer with format "memory".
         """
-        return self._save_or_select(format="memory", folder=None, unit_ids=None)
+        return self._save_or_select_or_merge(format="memory", folder=None)
 
     def is_read_only(self) -> bool:
         if self.format == "memory":
@@ -778,6 +1031,9 @@ class SortingAnalyzer:
 
     def is_sparse(self) -> bool:
         return self.sparsity is not None
+
+    def is_filtered(self) -> bool:
+        return self.rec_attributes["is_filtered"]
 
     def get_sorting_provenance(self):
         """
@@ -821,7 +1077,10 @@ class SortingAnalyzer:
         return s
 
     def get_total_duration(self) -> float:
-        duration = self.get_total_samples() / self.sampling_frequency
+        if self.has_recording() or self.has_temporary_recording():
+            duration = self.recording.get_total_duration()
+        else:
+            duration = self.get_total_samples() / self.sampling_frequency
         return duration
 
     def get_num_channels(self) -> int:
@@ -864,7 +1123,7 @@ class SortingAnalyzer:
         return self.sorting.get_num_units()
 
     ## extensions zone
-    def compute(self, input, save=True, extension_params=None, verbose=False, **kwargs):
+    def compute(self, input, save=True, extension_params=None, verbose=False, **kwargs) -> "AnalyzerExtension | None":
         """
         Compute one extension or several extensiosn.
         Internally calls compute_one_extension() or compute_several_extensions() depending on the input type.
@@ -873,11 +1132,10 @@ class SortingAnalyzer:
         ----------
         input : str or dict or list
             The extensions to compute, which can be passed as:
-
             * a string: compute one extension. Additional parameters can be passed as key word arguments.
-            * a dict: compute several extensions. The keys are the extension names and the values are dictiopnaries with the extension parameters.
+            * a dict: compute several extensions. The keys are the extension names and the values are dictionaries with the extension parameters.
             * a list: compute several extensions. The list contains the extension names. Additional parameters can be passed with the extension_params
-              argument.
+            argument.
         save : bool, default: True
             If True the extension is saved to disk (only if sorting analyzer format is not "memory")
         extension_params : dict or None, default: None
@@ -906,10 +1164,11 @@ class SortingAnalyzer:
 
         Compute two extensions with an input list specifying custom parameters for one
         (the other will use default parameters):
-        >>> analyzer.compute(
-            ["random_spikes", "waveforms"],
-            extension_params={"waveforms":{"ms_before":1.5, "ms_after", "2.5"}}
-        )
+        >>> analyzer.compute(\
+["random_spikes", "waveforms"],\
+extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
+)
+
         """
         if isinstance(input, str):
             return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)
@@ -931,7 +1190,7 @@ class SortingAnalyzer:
         else:
             raise ValueError("SortingAnalyzer.compute() need str, dict or list")
 
-    def compute_one_extension(self, extension_name, save=True, verbose=False, **kwargs):
+    def compute_one_extension(self, extension_name, save=True, verbose=False, **kwargs) -> "AnalyzerExtension":
         """
         Compute one extension.
 
@@ -970,17 +1229,17 @@ class SortingAnalyzer:
         extension_class = get_extension_class(extension_name)
 
         for child in _get_children_dependencies(extension_name):
-            self.delete_extension(child)
+            if self.has_extension(child):
+                print(f"Deleting {child}")
+                self.delete_extension(child)
 
-        if extension_class.need_job_kwargs:
-            params, job_kwargs = split_job_kwargs(kwargs)
-        else:
-            params = kwargs
-            job_kwargs = {}
+        params, job_kwargs = split_job_kwargs(kwargs)
 
         # check dependencies
         if extension_class.need_recording:
-            assert self.has_recording(), f"Extension {extension_name} requires the recording"
+            assert (
+                self.has_recording() or self.has_temporary_recording()
+            ), f"Extension {extension_name} requires the recording"
         for dependency_name in extension_class.depend_on:
             if "|" in dependency_name:
                 ok = any(self.get_extension(name) is not None for name in dependency_name.split("|"))
@@ -996,7 +1255,6 @@ class SortingAnalyzer:
             extension_instance.run(save=save, verbose=verbose)
 
         self.extensions[extension_name] = extension_instance
-
         return extension_instance
 
     def compute_several_extensions(self, extensions, save=True, verbose=False, **job_kwargs):
@@ -1175,9 +1433,7 @@ class SortingAnalyzer:
 
         extension_class = get_extension_class(extension_name)
 
-        extension_instance = extension_class(self)
-        extension_instance.load_params()
-        extension_instance.load_data()
+        extension_instance = extension_class.load(self)
 
         self.extensions[extension_name] = extension_instance
 
@@ -1457,6 +1713,7 @@ class AnalyzerExtension:
       * _set_params()
       * _run()
       * _select_extension_data()
+      * _merge_extension_data()
       * _get_data()
 
     The subclass must also set an `extension_name` class attribute which is not None by default.
@@ -1475,6 +1732,7 @@ class AnalyzerExtension:
     use_nodepipeline = False
     nodepipeline_variables = None
     need_job_kwargs = False
+    need_backward_compatibility_on_load = False
 
     def __init__(self, sorting_analyzer):
         self._sorting_analyzer = weakref.ref(sorting_analyzer)
@@ -1499,6 +1757,12 @@ class AnalyzerExtension:
         # must be implemented in subclass
         raise NotImplementedError
 
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=False, **job_kwargs
+    ):
+        # must be implemented in subclass
+        raise NotImplementedError
+
     def _get_pipeline_nodes(self):
         # must be implemented in subclass only if use_nodepipeline=True
         raise NotImplementedError
@@ -1507,8 +1771,9 @@ class AnalyzerExtension:
         # must be implemented in subclass
         raise NotImplementedError
 
-    #
-    #######
+    def _handle_backward_compatibility_on_load(self):
+        # must be implemented in subclass only if need_backward_compatibility_on_load=True
+        raise NotImplementedError
 
     @classmethod
     def function_factory(cls):
@@ -1587,6 +1852,9 @@ class AnalyzerExtension:
         ext = cls(sorting_analyzer)
         ext.load_params()
         ext.load_data()
+        if cls.need_backward_compatibility_on_load:
+            ext._handle_backward_compatibility_on_load()
+
         return ext
 
     def load_params(self):
@@ -1659,6 +1927,23 @@ class AnalyzerExtension:
             new_extension.data = self.data
         else:
             new_extension.data = self._select_extension_data(unit_ids)
+        new_extension.save()
+        return new_extension
+
+    def merge(
+        self,
+        new_sorting_analyzer,
+        merge_unit_groups,
+        new_unit_ids,
+        keep_mask=None,
+        verbose=False,
+        **job_kwargs,
+    ):
+        new_extension = self.__class__(new_sorting_analyzer)
+        new_extension.params = self.params.copy()
+        new_extension.data = self._merge_extension_data(
+            merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=verbose, **job_kwargs
+        )
         new_extension.save()
         return new_extension
 

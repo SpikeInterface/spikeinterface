@@ -28,7 +28,7 @@ def get_neo_streams(extractor_name, *args, **kwargs):
     return neo_extractor.get_streams(*args, **kwargs)
 
 
-def get_neo_num_blocks(extractor_name, *args, **kwargs):
+def get_neo_num_blocks(extractor_name, *args, **kwargs) -> int:
     """Returns the number of NEO blocks.
     For multi-block datasets, the `block_index` argument can be used to select
     which bloack to read with the `read_**extractor_name**()` function.

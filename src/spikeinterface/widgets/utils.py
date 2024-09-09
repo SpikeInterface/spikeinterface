@@ -151,6 +151,7 @@ def array_to_image(
     output_image : 3D numpy array
 
     """
+    import matplotlib.pyplot as plt
 
     from scipy.ndimage import zoom
 

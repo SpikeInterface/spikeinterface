@@ -36,10 +36,6 @@ class MdaRecordingExtractor(BaseRecording):
         The loaded data.
     """
 
-    extractor_name = "MdaRecording"
-    mode = "folder"
-    name = "mda"
-
     def __init__(self, folder_path, raw_fname="raw.mda", params_fname="params.json", geom_fname="geom.csv"):
         folder_path = Path(folder_path)
         self._folder_path = folder_path
@@ -192,10 +188,6 @@ class MdaSortingExtractor(BaseSorting):
     extractor : MdaRecordingExtractor
         The loaded data.
     """
-
-    extractor_name = "MdaSorting"
-    mode = "file"
-    name = "mda"
 
     def __init__(self, file_path, sampling_frequency):
         firings = readmda(str(Path(file_path).absolute()))

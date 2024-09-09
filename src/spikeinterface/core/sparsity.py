@@ -539,8 +539,8 @@ compute_sparsity.__doc__ = compute_sparsity.__doc__.format(_sparsity_doc)
 
 
 def estimate_sparsity(
-    recording: BaseRecording,
     sorting: BaseSorting,
+    recording: BaseRecording,
     num_spikes_for_sparsity: int = 100,
     ms_before: float = 1.0,
     ms_after: float = 2.5,
@@ -563,10 +563,11 @@ def estimate_sparsity(
 
     Parameters
     ----------
-    recording : BaseRecording
-        The recording
     sorting : BaseSorting
         The sorting
+    recording : BaseRecording
+        The recording
+
     num_spikes_for_sparsity : int, default: 100
         How many spikes per units to compute the sparsity
     ms_before : float, default: 1.0

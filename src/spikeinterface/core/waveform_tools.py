@@ -679,16 +679,16 @@ def split_waveforms_by_units(unit_ids, spikes, all_waveforms, sparsity_mask=None
     return waveforms_by_units
 
 
-def has_exceeding_spikes(recording, sorting) -> bool:
+def has_exceeding_spikes(sorting, recording) -> bool:
     """
     Check if the sorting objects has spikes exceeding the recording number of samples, for all segments
 
     Parameters
     ----------
-    recording : BaseRecording
-        The recording object
     sorting : BaseSorting
         The sorting object
+    recording : BaseRecording
+        The recording object
 
     Returns
     -------
@@ -791,7 +791,7 @@ def estimate_templates_with_accumulator(
     return_std: bool = False,
     verbose: bool = False,
     **job_kwargs,
-):
+) -> np.ndarray:
     """
     This is a fast implementation to compute template averages and standard deviations.
     This is useful to estimate sparsity without the need to allocate large waveform buffers.

@@ -1,52 +1,8 @@
 **/cache_folder/**
 
-spikeinterface/core/tests/*.raw
-spikeinterface/core/tests/*.json
-spikeinterface/core/tests/*.pkl
-spikeinterface/core/tests/*.npz
-
-spikeinterface/core/tests/*/*.json
-spikeinterface/core/tests/*/*.raw
-spikeinterface/core/tests/*/*.npy
-
-spikeinterface/core/tests/*/*/*.json
-spikeinterface/core/tests/*/*/*.raw
-spikeinterface/core/tests/*/*/*.npy
-
-
-spikeinterface/extractors/tests/*/*/*.json
-spikeinterface/extractors/tests/*/*/*.raw
-spikeinterface/extractors/tests/*.npz
-spikeinterface/extractors/tests/*.npy
-spikeinterface/extractors/tests/extractor_testing_files/*
-
-spikeinterface/toolkit/*/tests/*/*.json
-spikeinterface/toolkit/*/tests/*/*.raw
-spikeinterface/toolkit/*/tests/*/*.npy
-spikeinterface/toolkit/*/tests/*/*.npz
-spikeinterface/toolkit/*/tests/*/*/*.json
-spikeinterface/toolkit/*/tests/*/*/*.raw
-spikeinterface/toolkit/*/tests/*/*/*.npy
-spikeinterface/toolkit/*/tests/*/*/*.npz
-
-spikeinterface/toolkit/*/tests/*_output/*
-
-spikeinterface/exporters/tests/*/*
-
-spikeinterface/sorters/tests/*/*
-
-
 spikeinterface/widgets/tests/mearec_test/*
 
-examples/modules_gallery/**/*.raw
-examples/modules_gallery/**/*.npy
-examples/modules_gallery/**/*.json
-examples/modules_gallery/**/*.pkl
-examples/modules_gallery/**/*.npz
-examples/modules_gallery/**/*.csv
-examples/modules_gallery/**/*.zarr
-
-
+# Vscode
 .vscode/*
 
 # MauroToro: My absolute mess of envs
@@ -107,21 +63,6 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
 
 # PyBuilder
 target/
@@ -135,11 +76,7 @@ target/
 # pyenv
 .python-version
 
-# celery beat schedule file
-celerybeat-schedule
 
-# SageMath parsed files
-*.sage.py
 
 # Environments
 .env
@@ -180,6 +117,7 @@ examples/tutorials/*.svg
 doc/_build/*
 doc/tutorials/*
 doc/sources/*
+*sg_execution_times.rst
 
 examples/getting_started/tmp_*
 examples/getting_started/phy
@@ -191,8 +129,14 @@ examples/modules/extractors/firings_true.mda
 examples/modules/extractors/circular_layout.csv
 examples/modules/comparison/tmp_*
 examples/modules/comparison/a_study_folder/*
-examples/modules/toolkit/phy/*
-examples/modules/toolkit/tmp_*
+
+examples/modules_gallery/**/*.raw
+examples/modules_gallery/**/*.npy
+examples/modules_gallery/**/*.json
+examples/modules_gallery/**/*.pkl
+examples/modules_gallery/**/*.npz
+examples/modules_gallery/**/*.csv
+examples/modules_gallery/**/*.zarr
 
 # Files and folders generated during tests
 test_folder/

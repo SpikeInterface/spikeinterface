@@ -18,7 +18,7 @@ class CurationSorting:
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The sorting object
     properties_policy : "keep" | "remove", default: "keep"
         Policy used to propagate properties after split and merge operation. If "keep" the properties will be
@@ -26,6 +26,7 @@ class CurationSorting:
         an empty value for all the properties
     make_graph : bool
         True to keep a Networkx graph instance with the curation history
+
     Returns
     -------
     sorting : Sorting

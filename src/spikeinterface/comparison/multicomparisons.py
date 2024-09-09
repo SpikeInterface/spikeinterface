@@ -43,7 +43,9 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             - "intersection" : spike trains are the intersection between the spike trains of the
                best matching two sorters
     verbose : bool, default: False
-        if True, output is verbose
+        If True, output is verbose
+    do_matching : bool, default: True
+        If True, the comparison is done when the `MultiSortingComparison` is initialized
 
     Returns
     -------
@@ -186,7 +188,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         warnings.warn(
             "save_to_folder() is deprecated. "
             "You should save and load the multi sorting comparison object using pickle."
-            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb')))))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
+            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb'))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -218,7 +220,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         warnings.warn(
             "load_from_folder() is deprecated. "
             "You should save and load the multi sorting comparison object using pickle."
-            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb')))))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
+            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb'))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -318,7 +320,15 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
     chance_score : float, default: 0.3
         Minimum agreement score to for a possible match
     verbose : bool, default: False
-        if True, output is verbose
+        If True, output is verbose
+    do_matching : bool, default: True
+        If True, the comparison is done when the `MultiSortingComparison` is initialized
+    support : "dense" | "union" | "intersection", default: "union"
+        The support to compute the similarity matrix.
+    num_shifts : int, default: 0
+        Number of shifts to use to shift templates to maximize similarity.
+    similarity_method : "cosine" | "l1" | "l2", default: "cosine"
+        Method for the similarity matrix.
 
     Returns
     -------
@@ -333,8 +343,9 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
         match_score=0.8,
         chance_score=0.3,
         verbose=False,
-        similarity_method="cosine_similarity",
-        sparsity_dict=None,
+        similarity_method="cosine",
+        support="union",
+        num_shifts=0,
         do_matching=True,
     ):
         if name_list is None:
@@ -347,7 +358,9 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
             chance_score=chance_score,
             verbose=verbose,
         )
-        MixinTemplateComparison.__init__(self, similarity_method=similarity_method, sparsity_dict=sparsity_dict)
+        MixinTemplateComparison.__init__(
+            self, similarity_method=similarity_method, support=support, num_shifts=num_shifts
+        )
 
         if do_matching:
             self._compute_all()

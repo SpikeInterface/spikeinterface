@@ -27,7 +27,7 @@ sorters to retrieve installation instructions for other operating systems.
 We use **pip** to install packages, but **conda** should also work in many cases.
 
 Some novel spike sorting algorithms are implemented directly in SpikeInterface using the
-:py:mod:`spikeinterface.sortingcomponents` module. Checkout the :ref:`SpikeInterface-based spike sorters` section of this page
+:py:mod:`spikeinterface.sortingcomponents` module. Checkout the :ref:`get_started/install_sorters:SpikeInterface-based spike sorters` section of this page
 for more information!
 
 If you experience installation problems please directly contact the authors of these tools or write on the
@@ -43,9 +43,10 @@ Herdingspikes2
 
 * Python + C++
 * Url: https://github.com/mhhennig/hs2
-* Authors: Matthias Hennig, Jano Horvath,Cole Hurwitz, Oliver Muthmann, Albert Puente Encinas, Martino Sorbaro, Cesar Juarez Ramirez, Raimon Wintzer: GUI and visualisation
+* Authors: Matthias Hennig, Jano Horvath, Cole Hurwitz, Rickey K. Liang, Oliver Muthmann, Albert Puente Encinas, Martino Sorbaro, Cesar Juarez Ramirez, Raimon Wintzer
 * Installation::
 
+    pip install cython numpy
     pip install herdingspikes
 
 

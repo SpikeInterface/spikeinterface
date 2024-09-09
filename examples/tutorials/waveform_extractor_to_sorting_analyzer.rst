@@ -349,6 +349,9 @@ looks slightly different. Let's calculate these extensions, and also add a param
             )
 
 Note that if a parent is recomputed, all its children are deleted to maintain data consistency.
+Also note that the ``load_if_exists`` semantic that was found in the ``WaveformExtractor`` has
+been removed from the ``SortingAnalyzer``. This means that each call to ``compute`` will recompute
+and overwrite the previous results. Adjust your scripts according to account for this new behavior.
 Read more about this, the extensions and their keyword arguments in the
 `postprocessing module documentation <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_
 

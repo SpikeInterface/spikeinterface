@@ -24,8 +24,11 @@ from spikeinterface.core import get_channel_distances
 from ..postprocessing.unit_locations import (
     dtype_localize_by_method,
     possible_localization_methods,
-    solve_monopolar_triangulation,
+)
+
+from ..postprocessing.localization_tools import (
     make_radial_order_parents,
+    solve_monopolar_triangulation,
     enforce_decrease_shells_data,
     get_grid_convolution_templates_and_weights,
 )
@@ -41,6 +44,8 @@ def get_localization_pipeline_nodes(
         method in possible_localization_methods
     ), f"Method {method} is not supported. Choose from {possible_localization_methods}"
 
+    # TODO : this is a bad idea becaise it trigger warning when n_jobs is not set globally
+    # because the job_kwargs is never transmitted until here
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
     if method == "center_of_mass":
@@ -66,6 +71,8 @@ def get_localization_pipeline_nodes(
     elif method == "grid_convolution":
         if "prototype" not in method_kwargs:
             assert isinstance(peak_source, (PeakRetriever, SpikeRetriever))
+            # extract prototypes silently
+            job_kwargs["progress_bar"] = False
             method_kwargs["prototype"] = get_prototype_spike(
                 recording, peak_source.peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
             )
@@ -81,7 +88,7 @@ def get_localization_pipeline_nodes(
     return pipeline_nodes
 
 
-def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs):
+def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs) -> np.ndarray:
     """Localize peak (spike) in 2D or 3D depending the method.
 
     When a probe is 2D then:
@@ -91,10 +98,14 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object.
-    peaks: array
+    peaks : array
         Peaks array, as returned by detect_peaks() in "compact_numpy" way.
+    ms_before : float
+        The number of milliseconds to include before the peak of the spike
+    ms_after : float
+        The number of milliseconds to include after the peak of the spike
 
     {method_doc}
 

@@ -22,7 +22,7 @@ from spikeinterface import (
 
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
-from spikeinterface.preprocessing import scale
+from spikeinterface.preprocessing import scale, correct_motion
 
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
@@ -55,6 +55,14 @@ class TestWidgets(unittest.TestCase):
         # cls.sorting = sorting.save(folder=cache_folder / "sorting")
         cls.recording = recording
         cls.sorting = sorting
+
+        # estimate motion for motion widgets
+        _, cls.motion_info = correct_motion(
+            recording,
+            preset="kilosort_like",
+            output_motion_info=True,
+            estimate_motion_kwargs={"win_step_um": 50, "win_scale_um": 100},
+        )
 
         cls.num_units = len(cls.sorting.get_unit_ids())
 
@@ -187,8 +195,16 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                # test "larger" sparsity
-                with self.assertRaises(AssertionError):
+                # channel ids
+                sw.plot_unit_waveforms(
+                    self.sorting_analyzer_sparse,
+                    channel_ids=self.sorting_analyzer_sparse.channel_ids[::3],
+                    unit_ids=unit_ids,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                # test warning with "larger" sparsity
+                with self.assertWarns(UserWarning):
                     sw.plot_unit_waveforms(
                         self.sorting_analyzer_sparse,
                         sparsity=self.sparsity_large,
@@ -202,10 +218,10 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 print(f"Testing backend {backend}")
-                print("Dense")
+                # dense
                 sw.plot_unit_templates(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
                 unit_ids = self.sorting.unit_ids[:6]
-                print("Dense + radius")
+                # dense + radius
                 sw.plot_unit_templates(
                     self.sorting_analyzer_dense,
                     sparsity=self.sparsity_radius,
@@ -213,7 +229,7 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                print("Dense + best")
+                # dense + best
                 sw.plot_unit_templates(
                     self.sorting_analyzer_dense,
                     sparsity=self.sparsity_best,
@@ -222,7 +238,6 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
                 # test different shadings
-                print("Sparse")
                 sw.plot_unit_templates(
                     self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
@@ -230,7 +245,6 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                print("Sparse2")
                 sw.plot_unit_templates(
                     self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
@@ -239,8 +253,6 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                # test different shadings
-                print("Sparse3")
                 sw.plot_unit_templates(
                     self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
@@ -249,7 +261,6 @@ class TestWidgets(unittest.TestCase):
                     shade_templates=False,
                     **self.backend_kwargs[backend],
                 )
-                print("Sparse4")
                 sw.plot_unit_templates(
                     self.sorting_analyzer_sparse,
                     unit_ids=unit_ids,
@@ -257,7 +268,7 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                print("Extra sparsity")
+                # extra sparsity
                 sw.plot_unit_templates(
                     self.sorting_analyzer_sparse,
                     sparsity=self.sparsity_strict,
@@ -266,8 +277,18 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
+                # channel ids
+                sw.plot_unit_templates(
+                    self.sorting_analyzer_sparse,
+                    channel_ids=self.sorting_analyzer_sparse.channel_ids[::3],
+                    unit_ids=unit_ids,
+                    templates_percentile_shading=[1, 10, 90, 99],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+
                 # test "larger" sparsity
-                with self.assertRaises(AssertionError):
+                with self.assertWarns(UserWarning):
                     sw.plot_unit_templates(
                         self.sorting_analyzer_sparse,
                         sparsity=self.sparsity_large,
@@ -518,6 +539,21 @@ class TestWidgets(unittest.TestCase):
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
+                # add unit_properties
+                sw.plot_sorting_summary(
+                    self.sorting_analyzer_sparse,
+                    unit_table_properties=["firing_rate", "snr"],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                # adding a missing property should raise a warning
+                with self.assertWarns(UserWarning):
+                    sw.plot_sorting_summary(
+                        self.sorting_analyzer_sparse,
+                        unit_table_properties=["missing_property"],
+                        backend=backend,
+                        **self.backend_kwargs[backend],
+                    )
 
     def test_plot_agreement_matrix(self):
         possible_backends = list(sw.AgreementMatrixWidget.get_possible_backends())
@@ -581,9 +617,7 @@ class TestWidgets(unittest.TestCase):
                 sw.plot_multicomparison_agreement_by_sorter(mcmp, axes=axes)
 
     def test_plot_motion(self):
-        from spikeinterface.sortingcomponents.tests.test_motion_utils import make_fake_motion
-
-        motion = make_fake_motion()
+        motion = self.motion_info["motion"]
 
         possible_backends = list(sw.MotionWidget.get_possible_backends())
         for backend in possible_backends:
@@ -591,22 +625,31 @@ class TestWidgets(unittest.TestCase):
                 sw.plot_motion(motion, backend=backend, mode="line")
                 sw.plot_motion(motion, backend=backend, mode="map")
 
+    def test_drift_raster_map(self):
+        peaks = self.motion_info["peaks"]
+        recording = self.recording
+        peak_locations = self.motion_info["peak_locations"]
+        analyzer = self.sorting_analyzer_sparse
+
+        possible_backends = list(sw.MotionWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                # with recording
+                sw.plot_drift_raster_map(
+                    peaks=peaks, peak_locations=peak_locations, recording=recording, color_amplitude=True
+                )
+                # without recording
+                sw.plot_drift_raster_map(
+                    peaks=peaks,
+                    peak_locations=peak_locations,
+                    sampling_frequency=recording.sampling_frequency,
+                    color_amplitude=False,
+                )
+                # with analyzer
+                sw.plot_drift_raster_map(sorting_analyzer=analyzer, color_amplitude=True, scatter_decimate=2)
+
     def test_plot_motion_info(self):
-        from spikeinterface.sortingcomponents.tests.test_motion_utils import make_fake_motion
-
-        motion = make_fake_motion()
-        rng = np.random.default_rng(seed=2205)
-        peak_locations = np.zeros(self.peaks.size, dtype=[("x", "float64"), ("y", "float64")])
-        peak_locations["y"] = rng.uniform(motion.spatial_bins_um[0], motion.spatial_bins_um[-1], size=self.peaks.size)
-
-        motion_info = dict(
-            motion=motion,
-            parameters=dict(sampling_frequency=30000.0),
-            run_times=dict(),
-            peaks=self.peaks,
-            peak_locations=peak_locations,
-        )
-
+        motion_info = self.motion_info
         possible_backends = list(sw.MotionWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:

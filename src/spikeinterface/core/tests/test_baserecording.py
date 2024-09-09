@@ -289,6 +289,11 @@ def test_BaseRecording(create_cache_folder):
     rec3 = load_extractor(folder)
     assert np.allclose(times1, rec3.get_times(1))
 
+    # reset times
+    rec.reset_times()
+    for segm in range(num_seg):
+        assert not rec.has_time_vector(segment_index=segm)
+
     # test 3d probe
     rec_3d = generate_recording(ndim=3, num_channels=30)
     locations_3d = rec_3d.get_property("location")

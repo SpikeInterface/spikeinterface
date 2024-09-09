@@ -63,9 +63,9 @@ class BaseMultiComparison(BaseComparison):
         Computes subgraphs of connected components.
         Returns
         -------
-        sg_object_names: list
+        sg_object_names : list
             List of sorter names for each node in the connected component subgraph
-        sg_units: list
+        sg_units : list
             List of unit ids for each node in the connected component subgraph
         """
         if self.clean_graph is not None:
@@ -313,9 +313,11 @@ class MixinTemplateComparison:
     """
     Mixin for template comparisons to define:
        * similarity method
-       * sparsity
+       * support
+       * num_shifts
     """
 
-    def __init__(self, similarity_method="cosine_similarity", sparsity_dict=None):
+    def __init__(self, similarity_method="cosine", support="union", num_shifts=0):
         self.similarity_method = similarity_method
-        self.sparsity_dict = sparsity_dict
+        self.support = support
+        self.num_shifts = num_shifts

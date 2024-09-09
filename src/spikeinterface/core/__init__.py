@@ -101,7 +101,7 @@ from .recording_tools import (
     get_chunk_with_margin,
     order_channels_by_depth,
 )
-from .sorting_tools import spike_vector_to_spike_trains, random_spikes_selection
+from .sorting_tools import spike_vector_to_spike_trains, random_spikes_selection, apply_merges_to_sorting
 
 from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_with_accumulator
 from .snippets_tools import snippets_from_sorting
@@ -166,4 +166,8 @@ from .analyzer_extension_core import (
 
 # Important not for compatibility!!
 # This wil be uncommented after 0.100
-from .waveforms_extractor_backwards_compatibility import extract_waveforms, load_waveforms
+from .waveforms_extractor_backwards_compatibility import (
+    extract_waveforms,
+    load_waveforms,
+    load_sorting_analyzer_or_waveforms,
+)

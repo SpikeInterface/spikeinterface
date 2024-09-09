@@ -68,8 +68,6 @@ class NormalizeByQuantileRecording(BasePreprocessor):
         The rescaled traces recording extractor object
     """
 
-    name = "normalize_by_quantile"
-
     def __init__(
         self,
         recording,
@@ -145,8 +143,6 @@ class ScaleRecording(BasePreprocessor):
         The transformed traces recording extractor object
     """
 
-    name = "scale"
-
     def __init__(self, recording, gain=1.0, offset=0.0, dtype="float32"):
         if dtype is None:
             dtype = recording.get_dtype()
@@ -204,8 +200,6 @@ class CenterRecording(BasePreprocessor):
         The centered traces recording extractor object
     """
 
-    name = "center"
-
     def __init__(self, recording, mode="median", dtype="float32", **random_chunk_kwargs):
         assert mode in ("median", "mean")
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
@@ -260,8 +254,6 @@ class ZScoreRecording(BasePreprocessor):
     centered_traces : ScaleRecording
         The centered traces recording extractor object
     """
-
-    name = "zscore"
 
     def __init__(
         self,

@@ -23,7 +23,7 @@ from spikeinterface.core.node_pipeline import (
     base_peak_dtype,
 )
 
-from spikeinterface.postprocessing.unit_locations import get_convolution_weights
+from spikeinterface.postprocessing.localization_tools import get_convolution_weights
 
 from .tools import make_multi_method_doc
 
@@ -50,7 +50,7 @@ TODO:
 
 
 def detect_peaks(
-    recording, method="by_channel", pipeline_nodes=None, gather_mode="memory", folder=None, names=None, **kwargs
+    recording, method="locally_exclusive", pipeline_nodes=None, gather_mode="memory", folder=None, names=None, **kwargs
 ):
     """Peak detection based on threshold crossing in term of k x MAD.
 
@@ -59,19 +59,19 @@ def detect_peaks(
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object.
-    pipeline_nodes: None or list[PipelineNode]
+    pipeline_nodes : None or list[PipelineNode]
         Optional additional PipelineNode need to computed just after detection time.
         This avoid reading the recording multiple times.
-    gather_mode: str
+    gather_mode : str
         How to gather the results:
         * "memory": results are returned as in-memory numpy arrays
         * "npy": results are stored to .npy files in `folder`
 
-    folder: str or Path
+    folder : str or Path
         If gather_mode is "npy", the folder where the files are created.
-    names: list
+    names : list
         List of strings with file stems associated with returns.
 
     {method_doc}

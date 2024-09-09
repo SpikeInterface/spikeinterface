@@ -20,7 +20,7 @@ def fetch_template_object_from_database(dataset="test_templates.zarr") -> Templa
     Returns
     -------
     Templates
-        _description_
+        The templates object.
     """
     s3_path = f"s3://spikeinterface-template-database/{dataset}/"
     zarr_group = zarr.open_consolidated(s3_path, storage_options={"anon": True})
@@ -71,6 +71,8 @@ def query_templates_from_database(template_df: "pandas.DataFrame", verbose: bool
     ----------
     template_df : pd.DataFrame
         Dataframe containing the template information, obtained by slicing/querying the output of fetch_templates_info.
+    verbose : bool, default: False
+        if True, output is verbose
 
     Returns
     -------

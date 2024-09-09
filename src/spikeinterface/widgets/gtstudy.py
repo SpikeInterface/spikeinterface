@@ -30,9 +30,7 @@ class StudyRunTimesWidget(BaseWidget):
             case_keys = list(study.cases.keys())
 
         plot_data = dict(
-            study=study,
-            run_times=study.get_run_times(case_keys),
-            case_keys=case_keys,
+            study=study, run_times=study.get_run_times(case_keys), case_keys=case_keys, colors=study.get_colors()
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -48,8 +46,8 @@ class StudyRunTimesWidget(BaseWidget):
         for i, key in enumerate(dp.case_keys):
             label = dp.study.cases[key]["label"]
             rt = dp.run_times.loc[key]
-            self.ax.bar(i, rt, width=0.8, label=label)
-
+            self.ax.bar(i, rt, width=0.8, label=label, facecolor=dp.colors[key])
+        self.ax.set_ylabel("run time (s)")
         self.ax.legend()
 
 
@@ -167,6 +165,8 @@ class StudyPerformances(BaseWidget):
             case_keys=case_keys,
         )
 
+        self.colors = study.get_colors()
+
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
@@ -192,7 +192,7 @@ class StudyPerformances(BaseWidget):
                     label = study.cases[key]["label"]
                     val = perfs.xs(key).loc[:, performance_name].values
                     val = np.sort(val)[::-1]
-                    ax.plot(val, label=label)
+                    ax.plot(val, label=label, c=self.colors[key])
                 ax.set_title(performance_name)
                 if count == len(dp.performance_names) - 1:
                     ax.legend(bbox_to_anchor=(0.05, 0.05), loc="lower left", framealpha=0.8)
@@ -207,7 +207,7 @@ class StudyPerformances(BaseWidget):
                     x = study.get_metrics(key).loc[:, metric_name].values
                     y = perfs.xs(key).loc[:, performance_name].values
                     label = study.cases[key]["label"]
-                    ax.scatter(x, y, s=10, label=label)
+                    ax.scatter(x, y, s=10, label=label, color=self.colors[key])
                     max_metric = max(max_metric, np.max(x))
                 ax.set_title(performance_name)
                 ax.set_xlim(0, max_metric * 1.05)

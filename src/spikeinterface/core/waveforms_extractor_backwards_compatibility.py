@@ -6,7 +6,8 @@ This backwards compatibility module aims to:
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+import warnings
+from typing import Optional
 
 from pathlib import Path
 
@@ -342,12 +343,37 @@ class MockWaveformExtractor:
         return templates[0]
 
 
+def load_sorting_analyzer_or_waveforms(folder, sorting=None):
+    """
+    Load a SortingAnalyzer from either a newly saved SortingAnalyzer folder or an old WaveformExtractor folder.
+
+    Parameters
+    ----------
+    folder: str | Path
+        The folder to the sorting analyzer or waveform extractor
+    sorting: BaseSorting | None, default: None
+        The sorting object to instantiate with the SortingAnalyzer (only used for old WaveformExtractor)
+
+    Returns
+    -------
+    sorting_analyzer: SortingAnalyzer
+        The returned SortingAnalyzer.
+    """
+    folder = Path(folder)
+    if folder.suffix == ".zarr":
+        return load_sorting_analyzer(folder)
+    elif (folder / "spikeinterface_info.json").exists():
+        return load_sorting_analyzer(folder)
+    else:
+        return load_waveforms(folder, sorting=sorting, output="SortingAnalyzer")
+
+
 def load_waveforms(
     folder,
     with_recording: bool = True,
     sorting: Optional[BaseSorting] = None,
     output="MockWaveformExtractor",
-):
+) -> MockWaveformExtractor | SortingAnalyzer:
     """
     This read an old WaveformsExtactor folder (folder or zarr) and convert it into a SortingAnalyzer or MockWaveformExtractor.
 
@@ -530,7 +556,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
             templates[mode] = np.load(template_file)
     if len(templates) > 0:
         ext = ComputeTemplates(sorting_analyzer)
-        ext.params = dict(nbefore=nbefore, nafter=nafter, operators=list(templates.keys()))
+        ext.params = dict(ms_before=params["ms_before"], ms_after=params["ms_after"], operators=list(templates.keys()))
         for mode, arr in templates.items():
             ext.data[mode] = arr
         sorting_analyzer.extensions["templates"] = ext
@@ -543,7 +569,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         ext = new_class(sorting_analyzer)
         with open(ext_folder / "params.json", "r") as f:
             params = json.load(f)
-        ext.params = params
+
         if new_name == "spike_amplitudes":
             amplitudes = []
             for segment_index in range(sorting.get_num_segments()):
@@ -599,9 +625,30 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
                     pc_all[mask, ...] = pc_one
                 ext.data["pca_projection"] = pc_all
 
+        # update params
+        new_params = ext._set_params()
+        updated_params = make_ext_params_up_to_date(ext, params, new_params)
+        ext.set_params(**updated_params, save=False)
+        if ext.need_backward_compatibility_on_load:
+            ext._handle_backward_compatibility_on_load()
+
         sorting_analyzer.extensions[new_name] = ext
 
     return sorting_analyzer
+
+
+def make_ext_params_up_to_date(ext, old_params, new_params):
+    # adjust params
+    old_name = ext.extension_name
+    updated_params = old_params.copy()
+    for p, values in old_params.items():
+        if p not in new_params:
+            warnings.warn(f"Removing legacy parameter {p} from {old_name} extension")
+            updated_params.pop(p)
+        elif isinstance(values, dict):
+            new_values = new_params.get(p, {})
+            updated_params[p] = make_ext_params_up_to_date(ext, values, new_values)
+    return updated_params
 
 
 # this was never used, let's comment it out
