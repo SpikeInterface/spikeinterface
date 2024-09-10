@@ -8,11 +8,9 @@ from __future__ import annotations
 
 import numpy as np
 import warnings
-from typing import Optional
 from copy import deepcopy
 
 from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from ..core import ChannelSparsity
 from ..core.template_tools import get_template_extremum_channel
 from ..core.template_tools import get_dense_templates_array
 
@@ -50,7 +48,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object
     metric_names : list or None, default: None
         List of metrics to compute (see si.postprocessing.get_template_metric_names())
@@ -58,13 +56,13 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         Whether to use the positive ("pos") or negative ("neg") peaks to estimate extremum channels.
     upsampling_factor : int, default: 10
         The upsampling factor to upsample the templates
-    sparsity: ChannelSparsity or None, default: None
+    sparsity : ChannelSparsity or None, default: None
         If None, template metrics are computed on the extremum channel only.
         If sparsity is given, template metrics are computed on all sparse channels of each unit.
         For more on generating a ChannelSparsity, see the `~spikeinterface.compute_sparsity()` function.
-    include_multi_channel_metrics: bool, default: False
+    include_multi_channel_metrics : bool, default: False
         Whether to compute multi-channel metrics
-    metrics_kwargs: dict
+    metrics_kwargs : dict
         Additional arguments to pass to the metric functions. Including:
             * recovery_window_ms: the window in ms after the peak to compute the recovery_slope, default: 0.7
             * peak_relative_threshold: the relative threshold to detect positive and negative peaks, default: 0.2
@@ -77,9 +75,9 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             * spread_threshold: the threshold to compute the spread, default: 0.2
             * spread_smooth_um: the smoothing in um to compute the spread, default: 20
             * column_range: the range in um in the horizontal direction to consider channels for velocity, default: None
-                        - If None, all channels all channels are considered
-                        - If 0 or 1, only the "column" that includes the max channel is considered
-                        - If > 1, only channels within range (+/-) um from the max channel horizontal position are used
+                - If None, all channels all channels are considered
+                - If 0 or 1, only the "column" that includes the max channel is considered
+                - If > 1, only channels within range (+/-) um from the max channel horizontal position are used
 
     Returns
     -------
@@ -238,13 +236,17 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
                 for metric_name in metrics_single_channel:
                     func = _metric_name_to_func[metric_name]
-                    value = func(
-                        template_upsampled,
-                        sampling_frequency=sampling_frequency_up,
-                        trough_idx=trough_idx,
-                        peak_idx=peak_idx,
-                        **self.params["metrics_kwargs"],
-                    )
+                    try:
+                        value = func(
+                            template_upsampled,
+                            sampling_frequency=sampling_frequency_up,
+                            trough_idx=trough_idx,
+                            peak_idx=peak_idx,
+                            **self.params["metrics_kwargs"],
+                        )
+                    except Exception as e:
+                        warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
+                        value = np.nan
                     template_metrics.at[index, metric_name] = value
 
             # compute metrics multi_channel
@@ -274,12 +276,16 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                     sampling_frequency_up = sampling_frequency
 
                 func = _metric_name_to_func[metric_name]
-                value = func(
-                    template_upsampled,
-                    channel_locations=channel_locations_sparse,
-                    sampling_frequency=sampling_frequency_up,
-                    **self.params["metrics_kwargs"],
-                )
+                try:
+                    value = func(
+                        template_upsampled,
+                        channel_locations=channel_locations_sparse,
+                        sampling_frequency=sampling_frequency_up,
+                        **self.params["metrics_kwargs"],
+                    )
+                except Exception as e:
+                    warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
+                    value = np.nan
                 template_metrics.at[index, metric_name] = value
         return template_metrics
 
@@ -337,7 +343,7 @@ def get_trough_and_peak_idx(template):
 
 #########################################################################################
 # Single-channel metrics
-def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs):
+def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs) -> float:
     """
     Return the peak to valley duration in seconds of input waveforms.
 
@@ -363,7 +369,7 @@ def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, pea
     return ptv
 
 
-def get_peak_trough_ratio(template_single, sampling_frequency=None, trough_idx=None, peak_idx=None, **kwargs):
+def get_peak_trough_ratio(template_single, sampling_frequency=None, trough_idx=None, peak_idx=None, **kwargs) -> float:
     """
     Return the peak to trough ratio of input waveforms.
 
@@ -389,7 +395,7 @@ def get_peak_trough_ratio(template_single, sampling_frequency=None, trough_idx=N
     return ptratio
 
 
-def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs):
+def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs) -> float:
     """
     Return the half width of input waveforms in seconds.
 
@@ -889,7 +895,7 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
     return exp_decay_value
 
 
-def get_spread(template, channel_locations, sampling_frequency, **kwargs):
+def get_spread(template, channel_locations, sampling_frequency, **kwargs) -> float:
     """
     Compute the spread of the template amplitude over distance in units um/s.
 
