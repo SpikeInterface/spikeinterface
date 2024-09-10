@@ -65,9 +65,13 @@ class BinaryRecordingExtractor(BaseRecording):
         gain_to_uV=None,
         offset_to_uV=None,
         is_filtered=None,
+        num_chan=None,
     ):
-
+        # This assigns num_channels if num_channels is not None, otherwise num_chan is assigned
+        num_channels = num_channels or num_chan
         assert num_channels is not None, "You must provide num_channels or num_chan"
+        if num_chan is not None:
+            warnings.warn("`num_chan` is to be deprecated in version 0.100, please use `num_channels` instead")
 
         if channel_ids is None:
             channel_ids = list(range(num_channels))
