@@ -283,9 +283,9 @@ def load_model(model_folder=None, repo_id=None, model_name=None, trusted=None):
     elif model_folder is not None and repo_id is not None:
         raise ValueError("Please only provide one of 'model_folder' or 'repo_id'.")
     elif model_folder is not None:
-        model, model_info = _load_model_from_folder(model_folder=model_folder, model_name=model_name)
+        model, model_info = _load_model_from_folder(model_folder=model_folder, model_name=model_name, trusted=trusted)
     else:
-        model, model_info = _load_model_from_huggingface(repo_id=repo_id, model_name=model_name)
+        model, model_info = _load_model_from_huggingface(repo_id=repo_id, model_name=model_name, trusted=trusted)
 
     return model, model_info
 
