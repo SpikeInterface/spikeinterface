@@ -361,7 +361,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
                 sorted_probe_idx = np.argsort(probes_channel_indices)
                 sorted_positions_idx = np.searchsorted(probes_channel_indices[sorted_probe_idx], channel_indices)
-                
+
                 positions = all_positions[sorted_probe_idx[sorted_positions_idx]]
             return select_axes(positions, axes)
         else:
