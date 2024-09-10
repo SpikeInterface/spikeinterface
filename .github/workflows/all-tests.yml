@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           changed_files="${{ steps.changed-files.outputs.all_changed_files }}"
-          python .github/determine_testing_environment.py $changed_files
+          python .github/scripts/determine_testing_environment.py $changed_files
 
       - name: Display testing environment
         shell: bash

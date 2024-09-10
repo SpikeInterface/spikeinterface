@@ -10,111 +10,101 @@ of the tests are:
   changes when skipping KS4 preprocessing is true, because this takes a slightly
   different path through the kilosort4.py wrapper logic.
   This also checks that changing the parameter changes the test output from default
-  on our test case (otherwise, the test could not detect a failure). This is possible
-  for nearly all parameters, see `_check_test_parameters_are_changing_the_output()`.
+  on our test case (otherwise, the test could not detect a failure).
 
 - Test that kilosort functions called from `kilosort4.py` wrapper have the expected
   input signatures
 
 - Do some tests to check all KS4 parameters are tested against.
 """
+
+import pytest
 import copy
 from typing import Any
-import spikeinterface.full as si
+from inspect import signature
+
 import numpy as np
 import torch
-import kilosort
-from kilosort.io import load_probe
-import pandas as pd
+
+import spikeinterface.full as si
+from spikeinterface.core.testing import check_sortings_equal
 from spikeinterface.sorters.external.kilosort4 import Kilosort4Sorter
-import pytest
 from probeinterface.io import write_prb
+
+import kilosort
 from kilosort.parameters import DEFAULT_SETTINGS
-from packaging.version import parse
-from importlib.metadata import version
-from inspect import signature
-from kilosort.run_kilosort import (set_files, initialize_ops,
-                                   compute_preprocessing,
-                                   compute_drift_correction, detect_spikes,
-                                   cluster_spikes, save_sorting,
-                                   get_run_parameters, )
+from kilosort.run_kilosort import (
+    set_files,
+    initialize_ops,
+    compute_preprocessing,
+    compute_drift_correction,
+    detect_spikes,
+    cluster_spikes,
+    save_sorting,
+    get_run_parameters,
+)
 from kilosort.io import load_probe, RecordingExtractorAsArray, BinaryFiltered
-from kilosort.parameters import DEFAULT_SETTINGS
-from kilosort import preprocessing as ks_preprocessing
+
 
 RUN_KILOSORT_ARGS = ["do_CAR", "invert_sign", "save_preprocessed_copy"]
 # "device", "progress_bar", "save_extra_vars" are not tested. "save_extra_vars" could be.
 
 # Setup Params to test ####
-PARAMS_TO_TEST = [
-    # Not tested
-    # ("torch_device", "auto")
+PARAMS_TO_TEST_DICT = {
+    "nblocks": 0,
+    "do_CAR": False,
+    "batch_size": 42743,
+    "Th_universal": 12,
+    "Th_learned": 14,
+    "invert_sign": True,
+    "nt": 93,
+    "nskip": 1,
+    "whitening_range": 16,
+    "highpass_cutoff": 200,
+    "sig_interp": 5,
+    "nt0min": 25,
+    "dmin": 15,
+    "dminx": 16,
+    "min_template_size": 15,
+    "template_sizes": 10,
+    "nearest_chans": 8,
+    "nearest_templates": 35,
+    "max_channel_distance": 5,
+    "templates_from_data": False,
+    "n_templates": 10,
+    "n_pcs": 3,
+    "Th_single_ch": 4,
+    "x_centers": 5,
+    "binning_depth": 1,
+    "drift_smoothing": [250, 250, 250],
+    "artifact_threshold": 200,
+    "ccg_threshold": 1e12,
+    "acg_threshold": 1e12,
+    "cluster_downsampling": 2,
+    "duplicate_spike_ms": 0.3,
+}
 
-    # Stable across KS version 4.0.01 - 4.0.12
-    ("change_nothing", None),
-    ("nblocks", 0),
-    ("do_CAR", False),
-    ("batch_size", 42743),
-    ("Th_universal", 12),
-    ("Th_learned", 14),
-    ("invert_sign", True),
-    ("nt", 93),
-    ("nskip", 1),
-    ("whitening_range", 16),
-    ("sig_interp", 5),
-    ("nt0min", 25),
-    ("dmin", 15),
-    ("dminx", 16),
-    ("min_template_size", 15),
-    ("template_sizes", 10),
-    ("nearest_chans", 8),
-    ("nearest_templates", 35),
-    ("max_channel_distance", 5),
-    ("templates_from_data", False),
-    ("n_templates", 10),
-    ("n_pcs", 3),
-    ("Th_single_ch", 4),
-    ("x_centers", 5),
-    ("binning_depth", 1),
-    # Note: These don't change the results from
-    # default when applied to the test case.
-    ("artifact_threshold", 200),
-    ("ccg_threshold", 1e12),
-    ("acg_threshold", 1e12),
-    ("cluster_downsampling", 2),
-    ("duplicate_spike_bins", 5),
+PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
+
+PARAMETERS_NOT_AFFECTING_RESULTS = [
+    "artifact_threshold",
+    "ccg_threshold",
+    "acg_threshold",
+    "cluster_downsampling",
+    "cluster_pcs",
+    "duplicate_spike_ms",  # this is because ground-truth spikes don't have violations
 ]
 
-if parse(version("kilosort")) >= parse("4.0.11"):
-    PARAMS_TO_TEST.extend(
-        [
-            ("shift", 1e9),
-            ("scale", -1e9),
-        ]
-    )
-if parse(version("kilosort")) == parse("4.0.9"):
-    # bug in 4.0.9 for "nblocks=0"
-    PARAMS_TO_TEST = [param for param in PARAMS_TO_TEST if param[0] != "nblocks"]
-
-if parse(version("kilosort")) >= parse("4.0.8"):
-    PARAMS_TO_TEST.extend(
-        [
-            ("drift_smoothing", [250, 250, 250]),
-        ]
-    )
-if parse(version("kilosort")) <= parse("4.0.6"):
-    # AFAIK this parameter was always unused in KS (that's why it was removed)
-    PARAMS_TO_TEST.extend(
-        [
-            ("cluster_pcs", 1e9),
-        ]
-    )
-if parse(version("kilosort")) <= parse("4.0.3"):
-    PARAMS_TO_TEST = [param for param in PARAMS_TO_TEST if param[0] not in ["x_centers", "max_channel_distance"]]
+# THIS IS A PLACEHOLDER FOR FUTURE PARAMS TO TEST
+# if parse(version("kilosort")) >= parse("4.0.X"):
+#     PARAMS_TO_TEST_DICT.update(
+#         [
+#             {"new_param": new_value},
+#         ]
+#     )
 
 
 class TestKilosort4Long:
-
     # Fixtures ######
     @pytest.fixture(scope="session")
     def recording_and_paths(self, tmp_path_factory):
@@ -132,7 +122,7 @@ class TestKilosort4Long:
         return (recording, paths)
 
     @pytest.fixture(scope="session")
-    def default_results(self, recording_and_paths):
+    def default_kilosort_sorting(self, recording_and_paths):
         """
         Because we check each parameter at a time and check the
         KS4 and SpikeInterface versions match, if changing the parameter
@@ -143,7 +133,7 @@ class TestKilosort4Long:
         """
         recording, paths = recording_and_paths
 
-        settings, _, ks_format_probe = self._get_kilosort_native_settings(recording, paths, "change_nothing", None)
+        settings, _, ks_format_probe = self._get_kilosort_native_settings(recording, paths, None, None)
 
         defaults_ks_output_dir = paths["session_scope_tmp_path"] / "default_ks_output"
 
@@ -154,9 +144,7 @@ class TestKilosort4Long:
             results_dir=defaults_ks_output_dir,
         )
 
-        default_results = self._get_sorting_output(defaults_ks_output_dir)
-
-        return default_results
+        return si.read_kilosort(defaults_ks_output_dir)
 
     def _get_ground_truth_recording(self):
         """
@@ -195,19 +183,16 @@ class TestKilosort4Long:
     # Tests ######
     def test_params_to_test(self):
         """
-        Test that all values in PARAMS_TO_TEST are
+        Test that all values in PARAMS_TO_TEST_DICT are
         different to the default values used in Kilosort,
         otherwise there is no point to the test.
         """
-        for parameter in PARAMS_TO_TEST:
-
-            param_key, param_value = parameter
-
-            if param_key == "change_nothing":
-                continue
-
+        for param_key, param_value in PARAMS_TO_TEST_DICT.items():
             if param_key not in RUN_KILOSORT_ARGS:
-                assert DEFAULT_SETTINGS[param_key] != param_value, f"{param_key} values should be different in test."
+                assert DEFAULT_SETTINGS[param_key] != param_value, (
+                    f"{param_key} values should be different in test: "
+                    f"{param_value} vs. {DEFAULT_SETTINGS[param_key]}"
+                )
 
     def test_default_settings_all_represented(self):
         """
@@ -215,13 +200,12 @@ class TestKilosort4Long:
         PARAMS_TO_TEST, otherwise we are missing settings added
         on the KS side.
         """
-        tested_keys = [entry[0] for entry in PARAMS_TO_TEST]
+        tested_keys = PARAMS_TO_TEST
+        additional_non_tested_keys = ["shift", "scale", "save_preprocessed_copy"]
+        tested_keys += additional_non_tested_keys
 
         for param_key in DEFAULT_SETTINGS:
-
             if param_key not in ["n_chan_bin", "fs", "tmin", "tmax"]:
-                if parse(version("kilosort")) == parse("4.0.9") and param_key == "nblocks":
-                    continue
                 assert param_key in tested_keys, f"param: {param_key} in DEFAULT SETTINGS but not tested."
 
     def test_spikeinterface_defaults_against_kilsort(self):
@@ -242,15 +226,19 @@ class TestKilosort4Long:
     # Testing Arguments ###
     def test_set_files_arguments(self):
         self._check_arguments(
-            set_files,
-            ["settings", "filename", "probe", "probe_name", "data_dir", "results_dir"]
+            set_files, ["settings", "filename", "probe", "probe_name", "data_dir", "results_dir", "bad_channels"]
         )
 
     def test_initialize_ops_arguments(self):
-        expected_arguments = ["settings", "probe", "data_dtype", "do_CAR", "invert_sign", "device"]
-
-        if parse(version("kilosort")) >= parse("4.0.12"):
-            expected_arguments.append("save_preprocesed_copy")
+        expected_arguments = [
+            "settings",
+            "probe",
+            "data_dtype",
+            "do_CAR",
+            "invert_sign",
+            "device",
+            "save_preprocessed_copy",
+        ]
 
         self._check_arguments(
             initialize_ops,
@@ -258,79 +246,67 @@ class TestKilosort4Long:
         )
 
     def test_compute_preprocessing_arguments(self):
-        self._check_arguments(
-            compute_preprocessing,
-                ["ops", "device", "tic0", "file_object"]
-        )
+        self._check_arguments(compute_preprocessing, ["ops", "device", "tic0", "file_object"])
 
     def test_compute_drift_location_arguments(self):
         self._check_arguments(
-            compute_drift_correction,
-                ["ops", "device", "tic0", "progress_bar", "file_object"]
+            compute_drift_correction, ["ops", "device", "tic0", "progress_bar", "file_object", "clear_cache"]
         )
 
     def test_detect_spikes_arguments(self):
-        self._check_arguments(
-            detect_spikes,
-                ["ops", "device", "bfile", "tic0", "progress_bar"]
-        )
+        self._check_arguments(detect_spikes, ["ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"])
 
     def test_cluster_spikes_arguments(self):
         self._check_arguments(
-            cluster_spikes,
-                ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar"]
+            cluster_spikes, ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
         )
 
     def test_save_sorting_arguments(self):
         expected_arguments = ["ops", "results_dir", "st", "clu", "tF", "Wall", "imin", "tic0", "save_extra_vars"]
 
-        if parse(version("kilosort")) > parse("4.0.11"):
-            expected_arguments.append("save_preprocessed_copy")
+        expected_arguments.append("save_preprocessed_copy")
 
-        self._check_arguments(
-            save_sorting,
-                expected_arguments
-        )
+        self._check_arguments(save_sorting, expected_arguments)
 
     def test_get_run_parameters(self):
-        self._check_arguments(
-            get_run_parameters,
-                ["ops"]
-        )
+        self._check_arguments(get_run_parameters, ["ops"])
 
     def test_load_probe_parameters(self):
-        self._check_arguments(
-            load_probe,
-                ["probe_path"]
-        )
+        self._check_arguments(load_probe, ["probe_path"])
 
     def test_recording_extractor_as_array_arguments(self):
-        self._check_arguments(
-            RecordingExtractorAsArray,
-                ["recording_extractor"]
-        )
+        self._check_arguments(RecordingExtractorAsArray, ["recording_extractor"])
 
     def test_binary_filtered_arguments(self):
         expected_arguments = [
-            "filename", "n_chan_bin", "fs", "NT", "nt", "nt0min",
-            "chan_map", "hp_filter", "whiten_mat", "dshift",
-            "device", "do_CAR", "artifact_threshold", "invert_sign",
-            "dtype", "tmin", "tmax", "file_object"
+            "filename",
+            "n_chan_bin",
+            "fs",
+            "NT",
+            "nt",
+            "nt0min",
+            "chan_map",
+            "hp_filter",
+            "whiten_mat",
+            "dshift",
+            "device",
+            "do_CAR",
+            "artifact_threshold",
+            "invert_sign",
+            "dtype",
+            "tmin",
+            "tmax",
+            "shift",
+            "scale",
+            "file_object",
         ]
 
-        if parse(version("kilosort")) >= parse("4.0.11"):
-            expected_arguments.pop(-1)
-            expected_arguments.extend(["shift", "scale", "file_object"])
-
-        self._check_arguments(
-            BinaryFiltered,
-            expected_arguments
-        )
+        self._check_arguments(BinaryFiltered, expected_arguments)
 
     def _check_arguments(self, object_, expected_arguments):
         """
         Check that the argument signature of  `object_` is as expected
-        (i..e has not changed across kilosort versions).
+        (i.e. has not changed across kilosort versions).
         """
         sig = signature(object_)
         obj_arguments = list(sig.parameters.keys())
@@ -338,7 +314,7 @@ class TestKilosort4Long:
 
     # Full Test ####
     @pytest.mark.parametrize("parameter", PARAMS_TO_TEST)
-    def test_kilosort4_main(self, recording_and_paths, default_results, tmp_path, parameter):
+    def test_kilosort4_main(self, recording_and_paths, default_kilosort_sorting, tmp_path, parameter):
         """
         Given a recording, paths to raw data, and a parameter to change,
         run KS4 natively and within the SpikeInterface wrapper with the
@@ -346,13 +322,16 @@ class TestKilosort4Long:
         check the outputs are the same.
         """
         recording, paths = recording_and_paths
-        param_key, param_value = parameter
+        param_key = parameter
+        param_value = PARAMS_TO_TEST_DICT[param_key]
 
         # Setup parameters for KS4 and run it natively
         kilosort_output_dir = tmp_path / "kilosort_output_dir"
         spikeinterface_output_dir = tmp_path / "spikeinterface_output_dir"
 
-        settings, run_kilosort_kwargs, ks_format_probe = self._get_kilosort_native_settings(recording, paths, param_key, param_value)
+        settings, run_kilosort_kwargs, ks_format_probe = self._get_kilosort_native_settings(
+            recording, paths, param_key, param_value
+        )
 
         kilosort.run_kilosort(
             settings=settings,
@@ -361,11 +340,12 @@ class TestKilosort4Long:
             results_dir=kilosort_output_dir,
             **run_kilosort_kwargs,
         )
+        sorting_ks4 = si.read_kilosort(kilosort_output_dir)
 
         # Setup Parameters for SI and KS4 through SI
         spikeinterface_settings = self._get_spikeinterface_settings(param_key, param_value)
 
-        si.run_sorter(
+        sorting_si = si.run_sorter(
             "kilosort4",
             recording,
             remove_existing_folder=True,
@@ -374,27 +354,44 @@ class TestKilosort4Long:
         )
 
         # Get the results and check they match
-        results = self._get_sorting_output(kilosort_output_dir, spikeinterface_output_dir)
-
-        assert np.array_equal(results["ks"]["st"], results["si"]["st"]), f"{param_key} spike times different"
-        assert np.array_equal(results["ks"]["clus"], results["si"]["clus"]), f"{param_key} cluster assignment different"
+        check_sortings_equal(sorting_ks4, sorting_si)
 
         # Check the ops file in KS4 output is as expected. This is saved on the
         # SI side so not an extremely robust addition, but it can't hurt.
-        if param_key != "change_nothing":
-            ops = np.load(spikeinterface_output_dir / "sorter_output" / "ops.npy", allow_pickle=True)
-            ops = ops.tolist()  # strangely this makes a dict
-            assert ops[param_key] == param_value
+        ops = np.load(spikeinterface_output_dir / "sorter_output" / "ops.npy", allow_pickle=True)
+        ops = ops.tolist()  # strangely this makes a dict
+        assert ops[param_key] == param_value
 
         # Finally, check out test parameters actually change the output of
-        # KS4, ensuring our tests are actually doing something. This is not
-        # done prior to 4.0.4 because a number of parameters seem to stop
-        # having an effect. This is probably due to small changes in their
-        # behaviour, and the test file chosen here.
-        if parse(version("kilosort")) > parse("4.0.4"):
-            self._check_test_parameters_are_changing_the_output(results, default_results, param_key)
+        # KS4, ensuring our tests are actually doing something (exxcept for some params).
+        if param_key not in PARAMETERS_NOT_AFFECTING_RESULTS:
+            with pytest.raises(AssertionError):
+                check_sortings_equal(default_kilosort_sorting, sorting_si)
 
-    @pytest.mark.skipif(parse(version("kilosort")) == parse("4.0.9"), reason="nblock=0 fails on KS4=4.0.9")
+    def test_clear_cache(self,recording_and_paths, tmp_path):
+        """
+        Test clear_cache parameter in kilosort4.run_kilosort
+        """
+        recording, paths = recording_and_paths
+
+        spikeinterface_output_dir = tmp_path / "spikeinterface_output_clear"
+        sorting_si_clear = si.run_sorter(
+            "kilosort4",
+            recording,
+            remove_existing_folder=True,
+            folder=spikeinterface_output_dir,
+            clear_cache=True
+        )
+        spikeinterface_output_dir = tmp_path / "spikeinterface_output_no_clear"
+        sorting_si_no_clear = si.run_sorter(
+            "kilosort4",
+            recording,
+            remove_existing_folder=True,
+            folder=spikeinterface_output_dir,
+            clear_cache=False
+        )
+        check_sortings_equal(sorting_si_clear, sorting_si_no_clear)
+
     def test_kilosort4_no_correction(self, recording_and_paths, tmp_path):
         """
         Test the SpikeInterface wrappers `do_correction` argument. We set
@@ -417,9 +414,10 @@ class TestKilosort4Long:
             results_dir=kilosort_output_dir,
             do_CAR=True,
         )
+        sorting_ks = si.read_kilosort(kilosort_output_dir)
 
         spikeinterface_settings = self._get_spikeinterface_settings("nblocks", 1)
-        si.run_sorter(
+        sorting_si = si.run_sorter(
             "kilosort4",
             recording,
             remove_existing_folder=True,
@@ -427,22 +425,72 @@ class TestKilosort4Long:
             do_correction=False,
             **spikeinterface_settings,
         )
+        check_sortings_equal(sorting_ks, sorting_si)
 
-        results = self._get_sorting_output(kilosort_output_dir, spikeinterface_output_dir)
+    def test_use_binary_file(self, tmp_path):
+        """
+        Test that the SpikeInterface wrapper can run KS4 using a binary file as input or directly
+        from the recording.
+        """
+        recording = self._get_ground_truth_recording()
+        recording_bin = recording.save()
 
-        assert np.array_equal(results["ks"]["st"], results["si"]["st"])
-        assert np.array_equal(results["ks"]["clus"], results["si"]["clus"])
+        # run with SI wrapper
+        sorting_ks4 = si.run_sorter(
+            "kilosort4",
+            recording,
+            folder=tmp_path / "ks4_output_si_wrapper_default",
+            use_binary_file=None,
+            remove_existing_folder=True,
+        )
+        sorting_ks4_bin = si.run_sorter(
+            "kilosort4",
+            recording_bin,
+            folder=tmp_path / "ks4_output_bin_default",
+            use_binary_file=None,
+            remove_existing_folder=True,
+        )
+        sorting_ks4_force_binary = si.run_sorter(
+            "kilosort4",
+            recording,
+            folder=tmp_path / "ks4_output_force_bin",
+            use_binary_file=True,
+            remove_existing_folder=True,
+        )
+        assert not (tmp_path / "ks4_output_force_bin" / "sorter_output" / "recording.dat").exists()
+        sorting_ks4_force_non_binary = si.run_sorter(
+            "kilosort4",
+            recording_bin,
+            folder=tmp_path / "ks4_output_force_wrapper",
+            use_binary_file=False,
+            remove_existing_folder=True,
+        )
+        # test deleting recording.dat
+        sorting_ks4_force_binary_keep = si.run_sorter(
+            "kilosort4",
+            recording,
+            folder=tmp_path / "ks4_output_force_bin_keep",
+            use_binary_file=True,
+            delete_recording_dat=False,
+            remove_existing_folder=True,
+        )
+        assert (tmp_path / "ks4_output_force_bin_keep" / "sorter_output" / "recording.dat").exists()
 
-    @pytest.mark.skipif(parse(version("kilosort")) == parse("4.0.9"), reason="nblock=0 fails on KS4=4.0.9")
-    @pytest.mark.parametrize("param_to_test", [
-        ("change_nothing", None),
-        ("do_CAR", False),
-        ("batch_size", 42743),
-        ("Th_learned", 14),
-        ("dmin", 15),
-        ("max_channel_distance", 5),
-        ("n_pcs", 3),
-    ])
+        check_sortings_equal(sorting_ks4, sorting_ks4_bin)
+        check_sortings_equal(sorting_ks4, sorting_ks4_force_binary)
+        check_sortings_equal(sorting_ks4, sorting_ks4_force_non_binary)
+
+    @pytest.mark.parametrize(
+        "param_to_test",
+        [
+            ("do_CAR", False),
+            ("batch_size", 42743),
+            ("Th_learned", 14),
+            ("dmin", 15),
+            ("max_channel_distance", 5),
+            ("n_pcs", 3),
+        ],
+    )
     def test_kilosort4_skip_preprocessing_correction(self, tmp_path, monkeypatch, param_to_test):
         """
         Test that skipping KS4 preprocessing works as expected. Run
@@ -498,8 +546,7 @@ class TestKilosort4Long:
                 pass
             return X
 
-        monkeypatch.setattr("kilosort.io.BinaryFiltered.filter",
-                            monkeypatch_filter_function)
+        monkeypatch.setattr("kilosort.io.BinaryFiltered.filter", monkeypatch_filter_function)
 
         ks_settings, _, ks_format_probe = self._get_kilosort_native_settings(recording, paths, param_key, param_value)
         ks_settings["nblocks"] = 0
@@ -516,6 +563,7 @@ class TestKilosort4Long:
         )
 
         monkeypatch.undo()
+        si.read_kilosort(kilosort_output_dir)
 
         # Now, run kilosort through spikeinterface with the same options.
         spikeinterface_settings = self._get_spikeinterface_settings(param_key, param_value)
@@ -537,33 +585,17 @@ class TestKilosort4Long:
         # memory file. Because in this test recordings are preprocessed, there are
         # some filter edge effects that depend on the chunking in `get_traces()`.
         # These are all extremely close (usually just 1 spike, 1 idx different).
-        results = self._get_sorting_output(kilosort_output_dir, spikeinterface_output_dir)
+        results = {}
+        results["ks"] = {}
+        results["ks"]["st"] = np.load(kilosort_output_dir / "spike_times.npy")
+        results["ks"]["clus"] = np.load(kilosort_output_dir / "spike_clusters.npy")
+        results["si"] = {}
+        results["si"]["st"] = np.load(spikeinterface_output_dir / "sorter_output" / "spike_times.npy")
+        results["si"]["clus"] = np.load(spikeinterface_output_dir / "sorter_output" / "spike_clusters.npy")
         assert np.allclose(results["ks"]["st"], results["si"]["st"], rtol=0, atol=1)
+        assert np.array_equal(results["ks"]["clus"], results["si"]["clus"])
 
-    # Helpers ######
-    def _check_test_parameters_are_changing_the_output(self, results, default_results, param_key):
-        """
-        If nothing is changed, default vs. results outputs are identical.
-        Otherwise, check they are not the same. Can't figure out how to get
-        the skipped three parameters below to change the results on this
-        small test file.
-        """
-        if param_key in ["acg_threshold", "ccg_threshold", "artifact_threshold", "cluster_downsampling", "cluster_pcs"]:
-            return
-
-        if param_key == "change_nothing":
-            assert all(
-                default_results["ks"]["st"] == results["ks"]["st"]
-            ) and all(
-                default_results["ks"]["clus"] == results["ks"]["clus"]
-            ), f"{param_key} changed somehow!."
-        else:
-            assert not (
-                    default_results["ks"]["st"].size == results["ks"]["st"].size
-            ) or not all(
-                default_results["ks"]["clus"] == results["ks"]["clus"]
-            ), f"{param_key} results did not change with parameter change."
-
+    ##### Helpers ######
     def _get_kilosort_native_settings(self, recording, paths, param_key, param_value):
         """
         Function to generate the settings and function inputs to run kilosort.
@@ -578,16 +610,17 @@ class TestKilosort4Long:
             "n_chan_bin": recording.get_num_channels(),
             "fs": recording.get_sampling_frequency(),
         }
+        run_kilosort_kwargs = {}
 
-        if param_key == "binning_depth":
-            settings.update({"nblocks": 5})
+        if param_key is not None:
+            if param_key == "binning_depth":
+                settings.update({"nblocks": 5})
 
-        if param_key in RUN_KILOSORT_ARGS:
-            run_kilosort_kwargs = {param_key: param_value}
-        else:
-            if param_key != "change_nothing":
+            if param_key in RUN_KILOSORT_ARGS:
+                run_kilosort_kwargs = {param_key: param_value}
+            else:
                 settings.update({param_key: param_value})
-            run_kilosort_kwargs = {}
+                run_kilosort_kwargs = {}
 
         ks_format_probe = load_probe(paths["probe_path"])
 
@@ -598,33 +631,14 @@ class TestKilosort4Long:
         Generate settings kwargs for running KS4 in SpikeInterface.
         See `_get_kilosort_native_settings()` for some details.
         """
-        settings = {} # copy.deepcopy(DEFAULT_SETTINGS)
-
-        if param_key != "change_nothing":
-            settings.update({param_key: param_value})
+        settings = {}  # copy.deepcopy(DEFAULT_SETTINGS)
 
         if param_key == "binning_depth":
             settings.update({"nblocks": 5})
 
-       # for name in ["n_chan_bin", "fs", "tmin", "tmax"]:
+        settings.update({param_key: param_value})
+
+        # for name in ["n_chan_bin", "fs", "tmin", "tmax"]:
         #    settings.pop(name)
 
         return settings
-
-    def _get_sorting_output(self, kilosort_output_dir=None, spikeinterface_output_dir=None) -> dict[str, Any]:
-        """
-        Load the results of sorting into a dict for easy comparison.
-        """
-        results = {
-            "si": {},
-            "ks": {},
-        }
-        if kilosort_output_dir:
-            results["ks"]["st"] = np.load(kilosort_output_dir / "spike_times.npy")
-            results["ks"]["clus"] = np.load(kilosort_output_dir / "spike_clusters.npy")
-
-        if spikeinterface_output_dir:
-            results["si"]["st"] = np.load(spikeinterface_output_dir / "sorter_output" / "spike_times.npy")
-            results["si"]["clus"] = np.load(spikeinterface_output_dir / "sorter_output" / "spike_clusters.npy")
-
-        return results
