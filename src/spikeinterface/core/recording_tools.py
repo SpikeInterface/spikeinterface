@@ -69,7 +69,7 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsi
 def write_binary_recording(
     recording: "BaseRecording",
     file_paths: list[Path | str] | Path | str,
-    dtype: np.dtype = None,
+    dtype: np.typing.DTypeLike = None,
     add_file_extension: bool = True,
     byte_offset: int = 0,
     auto_cast_uint: bool = True,
