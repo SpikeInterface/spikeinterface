@@ -503,8 +503,8 @@ class BaseRecording(BaseRecordingSnippets):
         segment's sampling frequency is set to the recording's sampling frequency.
         """
         for segment_index in range(self.get_num_segments()):
+            rs = self._recording_segments[segment_index]
             if self.has_time_vector(segment_index):
-                rs = self._recording_segments[segment_index]
                 rs.time_vector = None
             rs.t_start = None
             rs.sampling_frequency = self.sampling_frequency
