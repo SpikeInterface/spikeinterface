@@ -1349,12 +1349,13 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             )
             t_end = perf_counter()
             # for pipeline node extensions we can only track the runtime of the run_node_pipeline
-            runtime_s = np.round(t_end - t_start, 1)
+            runtime_s = t_end - t_start
 
             for r, result in enumerate(results):
                 extension_name, variable_name = result_routage[r]
                 extension_instances[extension_name].data[variable_name] = result
                 extension_instances[extension_name].run_info["runtime_s"] = runtime_s
+                extension_instances[extension_name].run_info["run_completed"] = True
 
             for extension_name, extension_instance in extension_instances.items():
                 self.extensions[extension_name] = extension_instance
@@ -2008,7 +2009,7 @@ class AnalyzerExtension:
         t_start = perf_counter()
         self._run(**kwargs)
         t_end = perf_counter()
-        self.run_info["runtime_s"] = np.round(t_end - t_start, 1)
+        self.run_info["runtime_s"] = t_end - t_start
 
         if save and not self.sorting_analyzer.is_read_only():
             self._save_data(**kwargs)
@@ -2020,7 +2021,6 @@ class AnalyzerExtension:
         self._save_params()
         self._save_importing_provenance()
         self._save_data(**kwargs)
-        self.run_info["run_completed"] = True
         self._save_run_info()
 
     def _save_data(self, **kwargs):
