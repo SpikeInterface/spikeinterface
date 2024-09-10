@@ -1934,7 +1934,6 @@ class AnalyzerExtension:
                     # and have a link to the old buffer on windows then it fails
                     # ext_data = np.load(ext_data_file, mmap_mode="r")
                     # so we go back to full loading
-                    print(f"{ext_data_file} is numpy!")
                     ext_data = np.load(ext_data_file)
                 elif ext_data_file.suffix == ".csv":
                     import pandas as pd
