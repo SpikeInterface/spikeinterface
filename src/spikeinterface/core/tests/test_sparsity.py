@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 import json
 
-from spikeinterface.core import ChannelSparsity, estimate_sparsity, compute_sparsity, Templates
+from spikeinterface.core import ChannelSparsity, estimate_sparsity, compute_sparsity, get_noise_levels
 from spikeinterface.core.core_tools import check_json
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer
@@ -223,6 +223,36 @@ def test_estimate_sparsity():
         n_jobs=1,
     )
 
+    # snr: fails without noise levels
+    with pytest.raises(AssertionError):
+        sparsity = estimate_sparsity(
+            sorting,
+            recording,
+            num_spikes_for_sparsity=50,
+            ms_before=1.0,
+            ms_after=2.0,
+            method="snr",
+            threshold=5,
+            chunk_duration="1s",
+            progress_bar=True,
+            n_jobs=1,
+        )
+    # snr: works with noise levels
+    noise_levels = get_noise_levels(recording)
+    sparsity = estimate_sparsity(
+        sorting,
+        recording,
+        num_spikes_for_sparsity=50,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="snr",
+        threshold=5,
+        noise_levels=noise_levels,
+        chunk_duration="1s",
+        progress_bar=True,
+        n_jobs=1,
+    )
+
 
 def test_compute_sparsity():
     recording, sorting = get_dataset()
@@ -241,7 +271,7 @@ def test_compute_sparsity():
     sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=50.0, peak_sign="neg")
     sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=5, peak_sign="neg")
     sparsity = compute_sparsity(
-        sorting_analyzer, method="snr", threshold=5, peak_sign="neg", snr_amplitude_mode="peak_to_peak"
+        sorting_analyzer, method="snr", threshold=5, peak_sign="neg", amplitude_mode="peak_to_peak"
     )
     sparsity = compute_sparsity(sorting_analyzer, method="ptp", threshold=5)
     sparsity = compute_sparsity(sorting_analyzer, method="energy", threshold=5)
