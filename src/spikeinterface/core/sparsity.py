@@ -661,7 +661,8 @@ def estimate_sparsity(
     """
     Estimate the sparsity without needing a SortingAnalyzer or Templates object.
     In case the sparsity method needs templates, they are computed on-the-fly.
-    The same is done for noise levels, if needed by the method ("snr").
+    For the "snr" method, `noise_levels` must passed with the `noise_levels` argument.
+    These can be computed with the `get_noise_levels()` function.
 
     Contrary to the previous implementation:
       * all units are computed in one read of recording
