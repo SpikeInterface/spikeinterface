@@ -357,7 +357,12 @@ class BaseRecordingSnippets(BaseExtractor):
                 # check that multiple probes are non-overlapping
                 check_probe_do_not_overlap(all_probes)
                 all_positions = np.vstack([probe.contact_positions for probe in all_probes])
-                positions = all_positions[channel_indices]
+                probes_channel_indices = np.concatenate([probe.device_channel_indices for probe in all_probes])
+
+                sorted_probe_idx = np.argsort(probes_channel_indices)
+                sorted_positions_idx = np.searchsorted(probes_channel_indices[sorted_probe_idx], channel_indices)
+                
+                positions = all_positions[sorted_probe_idx[sorted_positions_idx]]
             return select_axes(positions, axes)
         else:
             locations = self.get_property("location")
