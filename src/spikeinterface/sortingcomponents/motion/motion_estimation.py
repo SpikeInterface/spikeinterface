@@ -30,10 +30,8 @@ def estimate_motion(
     verbose=False,
     margin_um=None,
     **method_kwargs,
-):
+) -> Motion | tuple[Motion, dict]:
     """
-
-
     Estimate motion with several possible methods.
 
     Most of methods except dredge_lfp needs peaks and after their localization.
@@ -43,20 +41,18 @@ def estimate_motion(
 
     Parameters
     ----------
-    recording: BaseRecording
+    recording : BaseRecording
         The recording extractor
-    peaks: numpy array
+    peaks : numpy array
         Peak vector (complex dtype).
         Needed for decentralized and iterative_template methods.
-    peak_locations: numpy array
+    peak_locations : numpy array
         Complex dtype with "x", "y", "z" fields
         Needed for decentralized and iterative_template methods.
-    direction: "x" | "y" | "z", default: "y"
+    direction : "x" | "y" | "z", default: "y"
         Dimension on which the motion is estimated. "y" is depth along the probe.
 
     {method_doc}
-
-    **non-rigid section**
 
     rigid : bool, default: False
         Compute rigid (one motion for the entire probe) or non rigid motion
@@ -76,14 +72,14 @@ def estimate_motion(
         See win_shape
     win_margin_um : None | float, default: None
         See win_shape
-    extra_outputs: bool, default: False
+    extra_outputs : bool, default: False
         If True then return an extra dict that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
-    progress_bar: bool, default: False
+    progress_bar : bool, default: False
         Display progress bar or not
-    verbose: bool, default: False
+    verbose : bool, default: False
         If True, output is verbose
-
+    **method_kwargs :
 
     Returns
     -------

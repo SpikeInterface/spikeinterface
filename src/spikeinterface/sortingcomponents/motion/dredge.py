@@ -1141,7 +1141,7 @@ def normxcorr1d(
     normalized=True,
     padding="same",
     conv_engine="torch",
-):
+) -> "torch.Tensor | np.ndarray":
     """
     normxcorr1d: Normalized cross-correlation, optionally weighted
 

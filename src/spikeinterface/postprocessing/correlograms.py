@@ -20,8 +20,8 @@ class ComputeCorrelograms(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer_or_sorting : SortingAnalyzer | Sorting
+        A SortingAnalyzer or Sorting object
     window_ms : float, default: 50.0
         The window around the spike to compute the correlation in ms. For example,
          if 50 ms, the correlations will be computed at lags -25 ms ... 25 ms.
@@ -137,7 +137,7 @@ def compute_correlograms(
 compute_correlograms.__doc__ = compute_correlograms_sorting_analyzer.__doc__
 
 
-def _make_bins(sorting, window_ms, bin_ms):
+def _make_bins(sorting, window_ms, bin_ms) -> tuple[np.ndarray, int, int]:
     """
     Create the bins for the correlogram, in samples.
 

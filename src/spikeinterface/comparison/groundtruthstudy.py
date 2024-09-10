@@ -42,6 +42,11 @@ class GroundTruthStudy:
 
     This GroundTruthStudy have been refactor in version 0.100 to be more flexible than previous versions.
     Note that the underlying folder structure is not backward compatible!
+
+    Parameters
+    ----------
+    study_folder : str | Path
+        Path to folder containing `GroundTruthStudy`
     """
 
     def __init__(self, study_folder):
@@ -370,7 +375,6 @@ class GroundTruthStudy:
         return metrics
 
     def get_units_snr(self, key):
-        """ """
         return self.get_metrics(key)["snr"]
 
     def get_performance_by_unit(self, case_keys=None):

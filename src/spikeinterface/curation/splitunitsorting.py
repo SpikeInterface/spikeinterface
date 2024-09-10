@@ -15,7 +15,7 @@ class SplitUnitSorting(BaseSorting):
     ----------
     sorting : BaseSorting
         The sorting object
-    parent_unit_id : int
+    split_unit_id : int
         Unit id of the unit to split
     indices_list : list or np.array
         A list of index arrays selecting the spikes to split in each segment.
@@ -28,6 +28,7 @@ class SplitUnitSorting(BaseSorting):
         Policy used to propagate properties. If "keep" the properties will be passed to the new units
          (if the units_to_merge have the same value). If "remove" the new units will have an empty
          value for all the properties of the new unit
+
     Returns
     -------
     sorting : Sorting
