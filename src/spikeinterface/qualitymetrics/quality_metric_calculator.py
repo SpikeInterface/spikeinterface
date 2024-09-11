@@ -63,6 +63,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         seed=None,
         skip_pc_metrics=False,
         delete_existing_metrics=False,
+        metrics_to_compute=None,
     ):
 
         if metric_names is None:
@@ -118,6 +119,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
     ):
         import pandas as pd
 
+        metric_names = self.params["metric_names"]
         old_metrics = self.data["metrics"]
 
         all_unit_ids = new_sorting_analyzer.unit_ids
@@ -126,7 +128,9 @@ class ComputeQualityMetrics(AnalyzerExtension):
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
-        metrics.loc[new_unit_ids, :] = self._compute_metrics(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
+        metrics.loc[new_unit_ids, :] = self._compute_metrics(
+            new_sorting_analyzer, new_unit_ids, verbose, metric_names, **job_kwargs
+        )
 
         new_data = dict(metrics=metrics)
         return new_data
