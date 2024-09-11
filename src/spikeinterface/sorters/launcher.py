@@ -66,7 +66,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
         * "loop" : a simple loop. This engine is
     engine_kwargs : dict
         In the case of engine="slum", possible kwargs are:
-        - tmp_script_folder: str, default None
+        - tmp_script_folder : str, default: None
             the folder in which the job scripts are created. Default: directory created by
             the `tempfile` library
         - sbatch_args: dict
