@@ -145,6 +145,11 @@ class BaseRecordingSnippets(BaseExtractor):
         else:
             raise ValueError("must give Probe or ProbeGroup or list of Probe")
 
+        # check that the probe do not overlap
+        num_probes = len(probegroup.probes)
+        if num_probes > 1:
+            check_probe_do_not_overlap(probegroup.probes)
+
         # handle not connected channels
         assert all(
             probe.device_channel_indices is not None for probe in probegroup.probes
@@ -350,13 +355,6 @@ class BaseRecordingSnippets(BaseExtractor):
         channel_indices = self.ids_to_indices(channel_ids)
         contact_vector = self.get_property("contact_vector")
         if contact_vector is not None:
-            # to avoid the get_probes() when only one probe do check unique probe_id
-            num_probes = np.unique(contact_vector["probe_index"]).size
-            if num_probes > 1:
-                # get_probes() is called only when several probes check_overlaps
-                # TODO make this check_probe_do_not_overlap() use only the contact_vector instead of constructing the probe
-                check_probe_do_not_overlap(self.get_probes())
-
             # here we bypass the probe reconstruction so this works both for probe and probegroup
             ndim = len(axes)
             all_positions = np.zeros((contact_vector.size, ndim), dtype="float64")
