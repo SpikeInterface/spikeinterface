@@ -125,8 +125,10 @@ class TracesWidget(BaseWidget):
 
         if not rec0.has_time_vector(segment_index=segment_index):
             times = None
-            t_start = 0
-            t_end = rec0.get_duration(segment_index=segment_index)
+            t_start = rec0.sample_index_to_time(0, segment_index=segment_index)
+            t_end = rec0.sample_index_to_time(
+                rec0.get_num_samples(segment_index=segment_index), segment_index=segment_index
+            )
         else:
             times = rec0.get_times(segment_index=segment_index)
             t_start = times[0]
@@ -673,13 +675,17 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_s
         assert all(
             rec.has_scaleable_traces() for rec in recordings.values()
         ), "Some recording layers do not have scaled traces. Use `return_scaled=False`"
+    frame_range = np.array(
+        [
+            rec0.time_to_sample_index(time_range[0], segment_index=segment_index),
+            rec0.time_to_sample_index(time_range[1], segment_index=segment_index),
+        ]
+    )
     if times is not None:
-        frame_range = np.searchsorted(times, time_range)
         times = times[frame_range[0] : frame_range[1]]
     else:
-        frame_range = (time_range * fs).astype("int64", copy=False)
-        a_max = rec0.get_num_frames(segment_index=segment_index)
-        frame_range = np.clip(frame_range, 0, a_max)
+        num_samples = rec0.get_num_samples(segment_index=segment_index)
+        frame_range = np.clip(frame_range, 0, num_samples)
         time_range = frame_range / fs
         times = np.arange(frame_range[0], frame_range[1]) / fs
 
