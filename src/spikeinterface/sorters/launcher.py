@@ -76,7 +76,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
 
     return_output : bool, default: False
         Return a sortings or None.
-        This also overwrite kwargs in run_sorter(with_sorting=True/False)
+        This also overwrites kwargs in run_sorter(with_sorting=True/False)
 
     Returns
     -------
