@@ -6,16 +6,9 @@ from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.comparison.comparisontools import make_matching_events
 from spikeinterface.core import get_noise_levels
 
-import time
-import string, random
-import pylab as plt
-import os
 import numpy as np
 
-from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
-from spikeinterface.core.basesorting import minimum_spike_dtype
-from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-
+from .benchmark_base import Benchmark, BenchmarkStudy
 
 class PeakSelectionBenchmark(Benchmark):
 

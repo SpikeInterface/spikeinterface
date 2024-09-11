@@ -9,11 +9,8 @@ from spikeinterface.widgets import (
 )
 
 import numpy as np
-from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
+from .benchmark_base import Benchmark, BenchmarkStudy
 from spikeinterface.core.basesorting import minimum_spike_dtype
-from spikeinterface.sortingcomponents.tools import remove_empty_templates
-from spikeinterface.core.recording_tools import get_noise_levels
-from spikeinterface.core.sparsity import compute_sparsity
 
 
 class MatchingBenchmark(Benchmark):

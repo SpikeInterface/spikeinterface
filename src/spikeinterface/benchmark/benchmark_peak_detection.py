@@ -12,10 +12,9 @@ from spikeinterface.core import get_noise_levels
 
 import numpy as np
 
-from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
+from .benchmark_base import Benchmark, BenchmarkStudy
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-from spikeinterface.core.template_tools import get_template_extremum_channel
 
 
 class PeakDetectionBenchmark(Benchmark):

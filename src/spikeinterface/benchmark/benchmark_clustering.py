@@ -11,8 +11,7 @@ from spikeinterface.widgets import (
 
 import numpy as np
 
-
-from .benchmark_tools import BenchmarkStudy, Benchmark
+from .benchmark_base import Benchmark, BenchmarkStudy
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
