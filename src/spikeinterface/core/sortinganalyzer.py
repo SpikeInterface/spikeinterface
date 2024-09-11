@@ -1103,7 +1103,6 @@ class SortingAnalyzer:
         # this give all channel locations, so no kwargs like channel_ids and axes
         probegroup = self.get_probegroup()
         probe_as_numpy_array = probegroup.to_numpy()
-        # duplicate positions to "locations" property
         ndim = probegroup.ndim
         locations = np.zeros((probe_as_numpy_array.size, ndim), dtype="float64")
         for i, dim in enumerate(["x", "y", "z"][:ndim]):
