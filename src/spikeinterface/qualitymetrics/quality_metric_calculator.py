@@ -11,7 +11,12 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 
-from .quality_metric_list import compute_pc_metrics, _misc_metric_name_to_func, _possible_pc_metric_names
+from .quality_metric_list import (
+    compute_pc_metrics,
+    _misc_metric_name_to_func,
+    _possible_pc_metric_names,
+    compute_name_to_column_names,
+)
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
 
@@ -32,7 +37,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
     skip_pc_metrics : bool, default: False
         If True, PC metrics computation is skipped.
     delete_existing_metrics : bool, default: False
-        If True, deletes any quality_metrics attached to the `sorting_analyzer`
+        If True, any quality metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept.
 
     Returns
     -------
@@ -81,21 +86,24 @@ class ComputeQualityMetrics(AnalyzerExtension):
             if "peak_sign" in qm_params_[k] and peak_sign is not None:
                 qm_params_[k]["peak_sign"] = peak_sign
 
-        all_metric_names = metric_names
+        metrics_to_compute = metric_names
         qm_extension = self.sorting_analyzer.get_extension("quality_metrics")
         if delete_existing_metrics is False and qm_extension is not None:
-            existing_params = qm_extension.params
-            for metric_name in existing_params["metric_names"]:
-                if metric_name not in metric_names:
-                    all_metric_names.append(metric_name)
-                    qm_params_[metric_name] = existing_params["qm_params"][metric_name]
+
+            existing_metric_names = qm_extension.params["metric_names"]
+            existing_metric_names_propogated = [
+                metric_name for metric_name in existing_metric_names if metric_name not in metrics_to_compute
+            ]
+            metric_names = metrics_to_compute + existing_metric_names_propogated
 
         params = dict(
-            metric_names=[str(name) for name in np.unique(all_metric_names)],
+            metric_names=metric_names,
             peak_sign=peak_sign,
             seed=seed,
             qm_params=qm_params_,
             skip_pc_metrics=skip_pc_metrics,
+            delete_existing_metrics=delete_existing_metrics,
+            metrics_to_compute=metrics_to_compute,
         )
 
         return params
@@ -123,11 +131,11 @@ class ComputeQualityMetrics(AnalyzerExtension):
         new_data = dict(metrics=metrics)
         return new_data
 
-    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, **job_kwargs):
+    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, metric_names=None, **job_kwargs):
         """
         Compute quality metrics.
         """
-        metric_names = self.params["metric_names"]
+
         qm_params = self.params["qm_params"]
         # sparsity = self.params["sparsity"]
         seed = self.params["seed"]
@@ -203,17 +211,35 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
         return metrics
 
-    def _run(self, verbose=False, delete_existing_metrics=False, **job_kwargs):
-        self.data["metrics"] = self._compute_metrics(
-            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, **job_kwargs
+    def _run(self, verbose=False, **job_kwargs):
+
+        metrics_to_compute = self.params["metrics_to_compute"]
+        delete_existing_metrics = self.params["delete_existing_metrics"]
+
+        computed_metrics = self._compute_metrics(
+            sorting_analyzer=self.sorting_analyzer,
+            unit_ids=None,
+            verbose=verbose,
+            metric_names=metrics_to_compute,
+            **job_kwargs,
         )
 
+        existing_metrics = []
         qm_extension = self.sorting_analyzer.get_extension("quality_metrics")
-        if delete_existing_metrics is False and qm_extension is not None:
-            existing_metrics = qm_extension.get_data()
-            for metric_name, metric_data in existing_metrics.items():
-                if metric_name not in self.data["metrics"]:
-                    self.data["metrics"][metric_name] = metric_data
+        if (
+            delete_existing_metrics is False
+            and qm_extension is not None
+            and qm_extension.data.get("metrics") is not None
+        ):
+            existing_metrics = qm_extension.params["metric_names"]
+
+        # append the metrics which were previously computed
+        for metric_name in set(existing_metrics).difference(metrics_to_compute):
+            # some metrics names produce data columns with other names. This deals with that.
+            for column_name in compute_name_to_column_names[metric_name]:
+                computed_metrics[column_name] = qm_extension.data["metrics"][column_name]
+
+        self.data["metrics"] = computed_metrics
 
     def _get_data(self):
         return self.data["metrics"]

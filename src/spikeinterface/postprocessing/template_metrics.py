@@ -136,9 +136,6 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         if include_multi_channel_metrics:
             metric_names += get_multi_channel_template_metric_names()
 
-        # `run` cannot take parameters, so need to find another way to pass this
-        metric_names_to_compute = metric_names
-
         if metrics_kwargs is None:
             metrics_kwargs_ = _default_function_kwargs.copy()
             if len(other_kwargs) > 0:
@@ -149,6 +146,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             metrics_kwargs_ = _default_function_kwargs.copy()
             metrics_kwargs_.update(metrics_kwargs)
 
+        metrics_to_compute = metric_names
         tm_extension = self.sorting_analyzer.get_extension("template_metrics")
         if delete_existing_metrics is False and tm_extension is not None:
 
@@ -164,9 +162,9 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                 existing_metric_names = tm_extension.params["metric_names"]
 
             existing_metric_names_propogated = [
-                metric_name for metric_name in existing_metric_names if metric_name not in metric_names_to_compute
+                metric_name for metric_name in existing_metric_names if metric_name not in metrics_to_compute
             ]
-            metric_names = metric_names_to_compute + existing_metric_names_propogated
+            metric_names = metrics_to_compute + existing_metric_names_propogated
 
         params = dict(
             metric_names=metric_names,
@@ -175,7 +173,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             upsampling_factor=int(upsampling_factor),
             metrics_kwargs=metrics_kwargs_,
             delete_existing_metrics=delete_existing_metrics,
-            metric_names_to_compute=metric_names_to_compute,
+            metrics_to_compute=metrics_to_compute,
         )
 
         return params
@@ -317,7 +315,12 @@ class ComputeTemplateMetrics(AnalyzerExtension):
     def _run(self, verbose=False):
 
         delete_existing_metrics = self.params["delete_existing_metrics"]
-        metric_names_to_compute = self.params["metric_names_to_compute"]
+        metrics_to_compute = self.params["metrics_to_compute"]
+
+        # compute the metrics which have been specified by the user
+        computed_metrics = self._compute_metrics(
+            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, metric_names=metrics_to_compute
+        )
 
         existing_metrics = []
         tm_extension = self.sorting_analyzer.get_extension("template_metrics")
@@ -328,13 +331,8 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         ):
             existing_metrics = tm_extension.params["metric_names"]
 
-        # compute the metrics which have been specified by the user
-        computed_metrics = self._compute_metrics(
-            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, metric_names=metric_names_to_compute
-        )
-
         # append the metrics which were previously computed
-        for metric_name in set(existing_metrics).difference(metric_names_to_compute):
+        for metric_name in set(existing_metrics).difference(metrics_to_compute):
             computed_metrics[metric_name] = tm_extension.data["metrics"][metric_name]
 
         self.data["metrics"] = computed_metrics

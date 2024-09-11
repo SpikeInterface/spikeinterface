@@ -2,6 +2,7 @@ import pytest
 from pathlib import Path
 import numpy as np
 from copy import deepcopy
+import csv
 from spikeinterface.core import (
     NumpySorting,
     synthetize_spike_train_bad_isi,
@@ -42,6 +43,7 @@ from spikeinterface.qualitymetrics import (
     compute_quality_metrics,
 )
 
+
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
 
@@ -60,6 +62,12 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
         "firing_range": {"bin_size_s": 1},
     }
 
+    small_sorting_analyzer.compute({"quality_metrics": {"metric_names": ["snr"]}})
+    qm_extension = small_sorting_analyzer.get_extension("quality_metrics")
+    calculated_metrics = list(qm_extension.get_data().keys())
+
+    assert calculated_metrics == ["snr"]
+
     small_sorting_analyzer.compute(
         {"quality_metrics": {"metric_names": list(qm_params.keys()), "qm_params": qm_params}}
     )
@@ -68,18 +76,22 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
     quality_metric_extension = small_sorting_analyzer.get_extension("quality_metrics")
 
     # Check old metrics are not deleted and the new one is added to the data and metadata
-    assert list(quality_metric_extension.get_data().keys()) == [
-        "amplitude_cutoff",
-        "firing_range",
-        "presence_ratio",
-        "snr",
-    ]
-    assert list(quality_metric_extension.params.get("metric_names")) == [
-        "amplitude_cutoff",
-        "firing_range",
-        "presence_ratio",
-        "snr",
-    ]
+    assert set(list(quality_metric_extension.get_data().keys())) == set(
+        [
+            "amplitude_cutoff",
+            "firing_range",
+            "presence_ratio",
+            "snr",
+        ]
+    )
+    assert set(list(quality_metric_extension.params.get("metric_names"))) == set(
+        [
+            "amplitude_cutoff",
+            "firing_range",
+            "presence_ratio",
+            "snr",
+        ]
+    )
 
     # check that, when parameters are changed, the data and metadata are updated
     old_snr_data = deepcopy(quality_metric_extension.get_data()["snr"].values)
@@ -104,6 +116,92 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
     small_sorting_analyzer.compute(extensions_to_compute)
 
     assert small_sorting_analyzer.get_extension("quality_metrics") is None
+
+
+def test_metric_names_in_same_order(small_sorting_analyzer):
+    """
+    Computes sepecified quality metrics and checks order is propogated.
+    """
+    specified_metric_names = ["firing_range", "snr", "amplitude_cutoff"]
+    small_sorting_analyzer.compute("quality_metrics", metric_names=specified_metric_names)
+    qm_keys = small_sorting_analyzer.get_extension("quality_metrics").get_data().keys()
+    for i in range(3):
+        assert specified_metric_names[i] == qm_keys[i]
+
+
+def test_save_quality_metrics(small_sorting_analyzer, create_cache_folder):
+    """
+    Computes quality metrics in binary folder format. Then computes subsets of quality
+    metrics and checks if they are saved correctly.
+    """
+
+    # can't use _misc_metric_name_to_func as some functions compute several qms
+    # e.g. isi_violation and synchrony
+    quality_metrics = [
+        "num_spikes",
+        "firing_rate",
+        "presence_ratio",
+        "snr",
+        "isi_violations_ratio",
+        "isi_violations_count",
+        "rp_contamination",
+        "rp_violations",
+        "sliding_rp_violation",
+        "amplitude_cutoff",
+        "amplitude_median",
+        "amplitude_cv_median",
+        "amplitude_cv_range",
+        "sync_spike_2",
+        "sync_spike_4",
+        "sync_spike_8",
+        "firing_range",
+        "drift_ptp",
+        "drift_std",
+        "drift_mad",
+        "sd_ratio",
+        "isolation_distance",
+        "l_ratio",
+        "d_prime",
+        "silhouette",
+        "nn_hit_rate",
+        "nn_miss_rate",
+    ]
+
+    small_sorting_analyzer.compute("quality_metrics")
+
+    cache_folder = create_cache_folder
+    output_folder = cache_folder / "sorting_analyzer"
+
+    folder_analyzer = small_sorting_analyzer.save_as(format="binary_folder", folder=output_folder)
+    quality_metrics_filename = output_folder / "extensions" / "quality_metrics" / "metrics.csv"
+
+    with open(quality_metrics_filename) as metrics_file:
+        saved_metrics = csv.reader(metrics_file)
+        metric_names = next(saved_metrics)
+
+    for metric_name in quality_metrics:
+        assert metric_name in metric_names
+
+    folder_analyzer.compute("quality_metrics", metric_names=["snr"], delete_existing_metrics=False)
+
+    with open(quality_metrics_filename) as metrics_file:
+        saved_metrics = csv.reader(metrics_file)
+        metric_names = next(saved_metrics)
+
+    for metric_name in quality_metrics:
+        assert metric_name in metric_names
+
+    folder_analyzer.compute("quality_metrics", metric_names=["snr"], delete_existing_metrics=True)
+
+    with open(quality_metrics_filename) as metrics_file:
+        saved_metrics = csv.reader(metrics_file)
+        metric_names = next(saved_metrics)
+
+    for metric_name in quality_metrics:
+        if metric_name == "snr":
+            assert metric_name in metric_names
+        else:
+            assert metric_name not in metric_names
 
 
 def test_unit_structure_in_output(small_sorting_analyzer):
