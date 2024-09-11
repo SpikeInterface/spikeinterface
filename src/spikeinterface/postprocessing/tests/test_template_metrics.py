@@ -51,6 +51,17 @@ def test_compute_new_template_metrics(small_sorting_analyzer):
     )
 
 
+def test_metric_names_in_same_order(small_sorting_analyzer):
+    """
+    Computes sepecified template metrics and checks order is propogated.
+    """
+    specified_metric_names = ["peak_trough_ratio", "num_negative_peaks", "half_width"]
+    small_sorting_analyzer.compute("template_metrics", metric_names=specified_metric_names)
+    tm_keys = small_sorting_analyzer.get_extension("template_metrics").get_data().keys()
+    for i in range(3):
+        assert specified_metric_names[i] == tm_keys[i]
+
+
 def test_save_template_metrics(small_sorting_analyzer, create_cache_folder):
     """
     Computes template metrics in binary folder format. Then computes subsets of template

@@ -137,8 +137,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             metric_names += get_multi_channel_template_metric_names()
 
         # `run` cannot take parameters, so need to find another way to pass this
-        self.delete_existing_metrics = delete_existing_metrics
-        self.metric_names = metric_names
+        metric_names_to_compute = metric_names
 
         if metrics_kwargs is None:
             metrics_kwargs_ = _default_function_kwargs.copy()
@@ -164,7 +163,10 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             else:
                 existing_metric_names = tm_extension.params["metric_names"]
 
-            metric_names = list(set(existing_metric_names + metric_names))
+            existing_metric_names_propogated = [
+                metric_name for metric_name in existing_metric_names if metric_name not in metric_names_to_compute
+            ]
+            metric_names = metric_names_to_compute + existing_metric_names_propogated
 
         params = dict(
             metric_names=metric_names,
@@ -172,6 +174,8 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             peak_sign=peak_sign,
             upsampling_factor=int(upsampling_factor),
             metrics_kwargs=metrics_kwargs_,
+            delete_existing_metrics=delete_existing_metrics,
+            metric_names_to_compute=metric_names_to_compute,
         )
 
         return params
@@ -312,8 +316,8 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
     def _run(self, verbose=False):
 
-        delete_existing_metrics = self.delete_existing_metrics
-        metric_names = self.metric_names
+        delete_existing_metrics = self.params["delete_existing_metrics"]
+        metric_names_to_compute = self.params["metric_names_to_compute"]
 
         existing_metrics = []
         tm_extension = self.sorting_analyzer.get_extension("template_metrics")
@@ -326,11 +330,11 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
         # compute the metrics which have been specified by the user
         computed_metrics = self._compute_metrics(
-            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, metric_names=metric_names
+            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, metric_names=metric_names_to_compute
         )
 
         # append the metrics which were previously computed
-        for metric_name in set(existing_metrics).difference(metric_names):
+        for metric_name in set(existing_metrics).difference(metric_names_to_compute):
             computed_metrics[metric_name] = tm_extension.data["metrics"][metric_name]
 
         self.data["metrics"] = computed_metrics
