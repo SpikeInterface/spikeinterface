@@ -25,13 +25,15 @@ _default_engine_kwargs = dict(
     joblib=dict(n_jobs=-1, backend="loky"),
     processpoolexecutor=dict(max_workers=2, mp_context=None),
     dask=dict(client=None),
-    slurm={"tmp_script_folder": None, "sbatch_args": {"cpus-per-task": 1, "mem": "1G"}},
+    slurm={"tmp_script_folder": None},
 )
+
+_default_slurm_kwargs = {'cpus-per-task': 1, 'mem': '1G'}
 
 _implemented_engine = list(_default_engine_kwargs.keys())
 
 
-def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=False):
+def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, slurm_kwargs=None, return_output=False):
     """
     Run several :py:func:`run_sorter()` sequentially or in parallel given a list of jobs.
 
@@ -63,16 +65,20 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
         A list a dict that are propagated to run_sorter(...)
     engine : str "loop", "joblib", "dask", "slurm"
         The engine to run the list.
-        * "loop" : a simple loop. This engine is
     engine_kwargs : dict
-        In the case of engine="slum", possible kwargs are:
-        - tmp_script_folder : str, default: None
-            the folder in which the job scripts are created. Default: directory created by
-            the `tempfile` library
-        - sbatch_args: dict
-          arguments to be passed to sbatch. They will be automatically prefixed with --.
-          Arguments must be in the format slurm specify, see the
-          [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html) for a list of possible arguments
+        Parameters to be passed to the underlying engine.
+        Defaults are:
+        * loop : None
+        * joblib : n_jobs=1, backend="loky"
+        * multiprocessing : max_workers=2, mp_context=None
+        * dask : client=None
+        * slurm : tmp_script_folder=None
+    slurm_kwargs: dict
+        Exclusively for engine="slum", ignored for all other engines.
+        This dictionary contains arguments to be passed to sbatch.
+        They will be automatically prefixed with --.
+        Arguments must be in the format slurm specify, see the
+        [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html) for a list of possible arguments
 
     return_output : bool, default: False
         Return a sortings or None.
@@ -155,7 +161,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
         if "cpus_per_task" in engine_kwargs:
             raise ValueError(
                 "keyword argument cpus_per_task is no longer supported for slurm engine, "
-                "please use cpus-per-task instead."
+                "please use cpus-per-task in `slurm_kwarg` instead."
             )
         # generate python script for slurm
         tmp_script_folder = engine_kwargs["tmp_script_folder"]
@@ -191,7 +197,9 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
                 os.fchmod(f.fileno(), mode=stat.S_IRWXU)
 
             progr = ["sbatch"]
-            for k, v in engine_kwargs["sbatch_args"].items():
+            if slurm_kwargs is None:
+                slurm_kwargs = _default_slurm_kwargs
+            for k, v in slurm_kwargs.items():
                 progr.append(f"--{k}")
                 progr.append(f"{v}")
             progr.append(str(script_name.absolute()))
@@ -220,18 +228,18 @@ run_sorter(**kwargs)
 
 
 def run_sorter_by_property(
-    sorter_name,
-    recording,
-    grouping_property,
-    folder,
-    mode_if_folder_exists=None,
-    engine="loop",
-    engine_kwargs={},
-    verbose=False,
-    docker_image=None,
-    singularity_image=None,
-    working_folder: None = None,
-    **sorter_params,
+        sorter_name,
+        recording,
+        grouping_property,
+        folder,
+        mode_if_folder_exists=None,
+        engine="loop",
+        engine_kwargs={},
+        verbose=False,
+        docker_image=None,
+        singularity_image=None,
+        working_folder: None = None,
+        **sorter_params,
 ):
     """
     Generic function to run a sorter on a recording after splitting by a "grouping_property" (e.g. "group").
