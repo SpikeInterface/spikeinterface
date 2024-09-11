@@ -286,10 +286,10 @@ def test_unit_id_order_independence(small_sorting_analyzer):
         small_sorting_analyzer_2, metric_names=get_quality_metric_list(), qm_params=qm_params
     )
 
-    for metric, metric_1_data in quality_metrics_1.items():
-        assert quality_metrics_2[metric][2] == metric_1_data["#3"]
-        assert quality_metrics_2[metric][7] == metric_1_data["#9"]
-        assert quality_metrics_2[metric][1] == metric_1_data["#4"]
+    for metric, metric_2_data in quality_metrics_2.items():
+        assert quality_metrics_1[metric]["#3"] == metric_2_data[2]
+        assert quality_metrics_1[metric]["#9"] == metric_2_data[7]
+        assert quality_metrics_1[metric]["#4"] == metric_2_data[1]
 
 
 def _sorting_analyzer_simple():

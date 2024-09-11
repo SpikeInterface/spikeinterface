@@ -165,7 +165,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
         import pandas as pd
 
-        metrics = pd.DataFrame(index=sorting_analyzer.sorting.unit_ids)
+        metrics = pd.DataFrame(index=sorting_analyzer.unit_ids)
 
         # simple metrics not based on PCs
         for metric_name in metric_names:
