@@ -86,5 +86,5 @@ def test_SorterStudy(setup_module):
 
 if __name__ == "__main__":
     study_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_SorterStudy"
-    # create_a_study(study_folder)
+    create_a_study(study_folder)
     test_SorterStudy(study_folder)

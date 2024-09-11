@@ -77,6 +77,7 @@ class MatchingStudy(BenchmarkStudy):
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
+        import matplotlib.pyplot as plt
         fig, axs = plt.subplots(ncols=1, nrows=len(metrics), figsize=figsize, squeeze=False)
 
         for count, k in enumerate(metrics):
