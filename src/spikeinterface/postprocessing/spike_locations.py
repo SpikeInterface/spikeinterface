@@ -17,13 +17,13 @@ class ComputeSpikeLocations(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
     ms_before : float, default: 0.5
         The left window, before a peak, in milliseconds
     ms_after : float, default: 0.5
         The right window, after a peak, in milliseconds
-    spike_retriver_kwargs: dict
+    spike_retriver_kwargs : dict
         A dictionary to control the behavior for getting the maximum channel for each spike
         This dictionary contains:
 

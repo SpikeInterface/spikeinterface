@@ -96,14 +96,18 @@ class BaseRecording(BaseRecordingSnippets):
     def _repr_header(self):
         num_segments = self.get_num_segments()
         num_channels = self.get_num_channels()
-        sf_hz = self.get_sampling_frequency()
-        sf_khz = sf_hz / 1000
         dtype = self.get_dtype()
 
         total_samples = self.get_total_samples()
         total_duration = self.get_total_duration()
         total_memory_size = self.get_total_memory_size()
-        sampling_frequency_repr = f"{sf_khz:0.1f}kHz" if sf_hz > 10_000.0 else f"{sf_hz:0.1f}Hz"
+
+        sf_hz = self.get_sampling_frequency()
+        if not sf_hz.is_integer():
+            sampling_frequency_repr = f"{sf_hz:f} Hz"
+        else:
+            # Khz for high sampling rate and Hz for LFP
+            sampling_frequency_repr = f"{(sf_hz/1000.0):0.1f}kHz" if sf_hz > 10_000.0 else f"{sf_hz:0.1f}Hz"
 
         txt = (
             f"{self.name}: "
@@ -301,7 +305,7 @@ class BaseRecording(BaseRecordingSnippets):
         order: "C" | "F" | None = None,
         return_scaled: bool = False,
         cast_unsigned: bool = False,
-    ):
+    ) -> np.ndarray:
         """Returns traces from recording.
 
         Parameters
@@ -422,7 +426,7 @@ class BaseRecording(BaseRecordingSnippets):
 
         return time_kwargs
 
-    def get_times(self, segment_index=None):
+    def get_times(self, segment_index=None) -> np.ndarray:
         """Get time vector for a recording segment.
 
         If the segment has a time_vector, then it is returned. Otherwise
@@ -491,6 +495,20 @@ class BaseRecording(BaseRecordingSnippets):
                 "Use this carefully!"
             )
 
+    def reset_times(self):
+        """
+        Reset time information in-memory for all segments that have a time vector.
+        If the timestamps come from a file, the files won't be modified. but only the in-memory
+        attributes of the recording objects are deleted. Also `t_start` is set to None and the
+        segment's sampling frequency is set to the recording's sampling frequency.
+        """
+        for segment_index in range(self.get_num_segments()):
+            rs = self._recording_segments[segment_index]
+            if self.has_time_vector(segment_index):
+                rs.time_vector = None
+            rs.t_start = None
+            rs.sampling_frequency = self.sampling_frequency
+
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
         Transform sample index into time in seconds
@@ -549,6 +567,7 @@ class BaseRecording(BaseRecordingSnippets):
                 channel_ids=self.get_channel_ids(),
                 time_axis=0,
                 file_offset=0,
+                is_filtered=self.is_filtered(),
                 gain_to_uV=self.get_channel_gains(),
                 offset_to_uV=self.get_channel_offsets(),
             )
@@ -809,12 +828,10 @@ class BaseRecordingSegment(BaseSegment):
 
         BaseSegment.__init__(self)
 
-    def get_times(self):
+    def get_times(self) -> np.ndarray:
         if self.time_vector is not None:
-            if isinstance(self.time_vector, np.ndarray):
-                return self.time_vector
-            else:
-                return np.array(self.time_vector)
+            self.time_vector = np.asarray(self.time_vector)
+            return self.time_vector
         else:
             time_vector = np.arange(self.get_num_samples(), dtype="float64")
             time_vector /= self.sampling_frequency

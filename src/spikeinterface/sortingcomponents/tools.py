@@ -20,14 +20,14 @@ from spikeinterface.core.job_tools import split_job_kwargs
 def make_multi_method_doc(methods, ident="    "):
     doc = ""
 
-    doc += "method: " + ", ".join(f"'{method.name}'" for method in methods) + "\n"
+    doc += "method : " + ", ".join(f"'{method.name}'" for method in methods) + "\n"
     doc += ident + "    Method to use.\n"
 
     for method in methods:
         doc += "\n"
-        doc += ident + f"arguments for method='{method.name}'"
+        doc += ident + ident + f"arguments for method='{method.name}'"
         for line in method.params_doc.splitlines():
-            doc += ident + line + "\n"
+            doc += ident + ident + line + "\n"
 
     return doc
 
@@ -70,10 +70,10 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
 
 
 def get_prototype_spike(recording, peaks, ms_before=0.5, ms_after=0.5, nb_peaks=1000, **job_kwargs):
+    from spikeinterface.sortingcomponents.peak_selection import select_peaks
+
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
     nafter = int(ms_after * recording.sampling_frequency / 1000.0)
-
-    from spikeinterface.sortingcomponents.peak_selection import select_peaks
 
     few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=nb_peaks, margin=(nbefore, nafter))
 
@@ -81,7 +81,7 @@ def get_prototype_spike(recording, peaks, ms_before=0.5, ms_after=0.5, nb_peaks=
         recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
     )
     with np.errstate(divide="ignore", invalid="ignore"):
-        prototype = np.median(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
+        prototype = np.nanmedian(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
     return prototype
 
 

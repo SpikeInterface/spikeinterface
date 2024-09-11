@@ -47,7 +47,7 @@ jobs:
           source ${{ github.workspace }}/test_env/bin/activate
           pytest -m "not sorters_external" --cov=./ --cov-report xml:./coverage.xml -vv -ra --durations=0 | tee report_full.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of full tests" >> $GITHUB_STEP_SUMMARY
-          python ./.github/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY
+          python ./.github/scripts/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY
           cat $GITHUB_STEP_SUMMARY
           rm report_full.txt
       - uses: codecov/codecov-action@v4

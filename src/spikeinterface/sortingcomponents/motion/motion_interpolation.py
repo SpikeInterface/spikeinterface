@@ -7,7 +7,7 @@ from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, Base
 from spikeinterface.preprocessing.filter import fix_dtype
 
 
-def correct_motion_on_peaks(peaks, peak_locations, motion, recording):
+def correct_motion_on_peaks(peaks, peak_locations, motion, recording) -> np.ndarray:
     """
     Given the output of estimate_motion(), apply inverse motion on peak locations.
 
@@ -69,23 +69,25 @@ def interpolate_motion_on_traces(
         Trace snippet (num_samples, num_channels)
     times : np.array
         Sample times in seconds for the frames of the traces snippet
-    channel_location: np.array 2d
+    channel_locations : np.array 2d
         Channel location with shape (n, 2) or (n, 3)
-    motion: Motion
+    motion : Motion
         The motion object.
-    segment_index: int or None
+    segment_index : int or None
         The segment index.
-    channel_inds: None or list
+    channel_inds : None or list
         If not None, interpolate only a subset of channels.
     interpolation_time_bin_centers_s : None or np.array
         Manually specify the time bins which the interpolation happens
         in for this segment. If None, these are the motion estimate's time bins.
-    spatial_interpolation_method: "idw" | "kriging", default: "kriging"
+    spatial_interpolation_method : "idw" | "kriging", default: "kriging"
         The spatial interpolation method used to interpolate the channel locations:
             * idw : Inverse Distance Weighing
             * kriging : kilosort2.5 like
-    spatial_interpolation_kwargs:
-        * specific option for the interpolation method
+    spatial_interpolation_kwargs : dict
+        specific option for the interpolation method
+    dtype : np.dtype, default: None
+        The dtype of the traces. If None, interhits from traces snippet
 
     Returns
     -------
@@ -237,11 +239,11 @@ class InterpolateMotionRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: Recording
+    recording : Recording
         The parent recording.
-    motion: Motion
+    motion : Motion
         The motion object
-    spatial_interpolation_method: "kriging" | "idw" | "nearest", default: "kriging"
+    spatial_interpolation_method : "kriging" | "idw" | "nearest", default: "kriging"
         The spatial interpolation method used to interpolate the channel locations.
         See `spikeinterface.preprocessing.get_spatial_interpolation_kernel()` for more details.
         Choice of the method:
@@ -249,23 +251,24 @@ class InterpolateMotionRecording(BasePreprocessor):
             * "kriging" : the same one used in kilosort
             * "idw" : inverse  distance weighted
             * "nearest" : use neareast channel
-    sigma_um: float, default: 20.0
+
+    sigma_um : float, default: 20.0
         Used in the "kriging" formula
-    p: int, default: 1
+    p : int, default: 1
         Used in the "kriging" formula
-    num_closest: int, default: 3
+    num_closest : int, default: 3
         Number of closest channels used by "idw" method for interpolation.
-    border_mode: "remove_channels" | "force_extrapolate" | "force_zeros", default: "remove_channels"
+    border_mode : "remove_channels" | "force_extrapolate" | "force_zeros", default: "remove_channels"
         Control how channels are handled on border:
         * "remove_channels": remove channels on the border, the recording has less channels
         * "force_extrapolate": keep all channel and force extrapolation (can lead to strange signal)
         * "force_zeros": keep all channel but set zeros when outside (force_extrapolate=False)
-    interpolation_time_bin_centers_s: np.array or list of np.array, optional
+    interpolation_time_bin_centers_s : np.array or list of np.array, optional
         Spatially interpolate each frame according to the displacement estimate at its closest
         bin center in this array. If not supplied, this is set to the motion estimate's time bin
         centers. If it's supplied, the motion estimate is interpolated to these bin centers.
         If you have a multi-segment recording, pass a list of these, one per segment.
-    interpolation_time_bin_size_s: float, optional
+    interpolation_time_bin_size_s : float, optional
         Similar to the previous argument: interpolation_time_bin_centers_s will be constructed
         by bins spaced by interpolation_time_bin_size_s. This is ignored if interpolation_time_bin_centers_s
         is supplied.
@@ -273,6 +276,8 @@ class InterpolateMotionRecording(BasePreprocessor):
         Interpolation needs to convert to a floating dtype. If dtype is supplied, that will be used.
         If the input recording is already floating and dtype=None, then its dtype is used by default.
         If the input recording is integer, then float32 is used by default.
+    **spatial_interpolation_kwargs : dict
+        Spatial interpolation kwargs for `interpolate_motion_on_traces`.
 
     Returns
     -------
@@ -385,6 +390,10 @@ class InterpolateMotionRecording(BasePreprocessor):
                 dtype=dtype_,
             )
             self.add_recording_segment(rec_segment)
+
+        # this object is currently not JSON-serializable because the Motion obejct cannot be reloaded properly
+        # see issue #3313
+        self._serializability["json"] = False
 
         self._kwargs = dict(
             recording=recording,
