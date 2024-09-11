@@ -85,6 +85,7 @@ class UnitSummaryWidget(BaseWidget):
         unit_colors = dp.unit_colors
         sparsity = dp.sparsity
 
+        # defaultdict returns empty dict if key not found in subwidget_kwargs
         subwidget_kwargs = defaultdict(lambda: dict(), dp.subwidget_kwargs)
         unitlocationswidget_kwargs = subwidget_kwargs["unit_locations"]
         unitwaveformswidget_kwargs = subwidget_kwargs["unit_waveforms"]
