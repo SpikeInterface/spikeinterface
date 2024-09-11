@@ -62,7 +62,9 @@ class UnitSummaryWidget(BaseWidget):
             subwidget_kwargs = dict()
         for kwargs in subwidget_kwargs.values():
             if "unit_colors" in kwargs:
-                raise ValueError("unit_colors should not be set in subwidget_kwargs, but directly as a parameter of plot_unit_summary")
+                raise ValueError(
+                    "unit_colors should not be set in subwidget_kwargs, but directly as a parameter of plot_unit_summary"
+                )
 
         plot_data = dict(
             sorting_analyzer=sorting_analyzer,
