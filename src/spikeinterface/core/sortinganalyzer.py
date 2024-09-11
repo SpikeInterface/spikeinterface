@@ -11,6 +11,7 @@ import weakref
 import shutil
 import warnings
 import importlib
+from time import perf_counter
 
 import numpy as np
 
@@ -1346,6 +1347,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
             job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
 
+            t_start = perf_counter()
             results = run_node_pipeline(
                 self.recording,
                 all_nodes,
@@ -1355,10 +1357,15 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 squeeze_output=False,
                 verbose=verbose,
             )
+            t_end = perf_counter()
+            # for pipeline node extensions we can only track the runtime of the run_node_pipeline
+            runtime_s = t_end - t_start
 
             for r, result in enumerate(results):
                 extension_name, variable_name = result_routage[r]
                 extension_instances[extension_name].data[variable_name] = result
+                extension_instances[extension_name].run_info["runtime_s"] = runtime_s
+                extension_instances[extension_name].run_info["run_completed"] = True
 
             for extension_name, extension_instance in extension_instances.items():
                 self.extensions[extension_name] = extension_instance
@@ -1748,7 +1755,11 @@ class AnalyzerExtension:
         self._sorting_analyzer = weakref.ref(sorting_analyzer)
 
         self.params = None
+        self.run_info = self._default_run_info_dict()
         self.data = dict()
+
+    def _default_run_info_dict(self):
+        return dict(run_completed=False, runtime_s=None)
 
     #######
     # This 3 methods must be implemented in the subclass!!!
@@ -1861,11 +1872,42 @@ class AnalyzerExtension:
     def load(cls, sorting_analyzer):
         ext = cls(sorting_analyzer)
         ext.load_params()
-        ext.load_data()
-        if cls.need_backward_compatibility_on_load:
-            ext._handle_backward_compatibility_on_load()
+        ext.load_run_info()
+        if ext.run_info is not None:
+            if ext.run_info["run_completed"]:
+                ext.load_data()
+                if cls.need_backward_compatibility_on_load:
+                    ext._handle_backward_compatibility_on_load()
+                if len(ext.data) > 0:
+                    return ext
+        else:
+            # this is for back-compatibility of old analyzers
+            ext.load_data()
+            if cls.need_backward_compatibility_on_load:
+                ext._handle_backward_compatibility_on_load()
+            if len(ext.data) > 0:
+                return ext
+        # If extension run not completed, or data has gone missing,
+        # return None to indicate that the extension should be (re)computed.
+        return None
 
-        return ext
+    def load_run_info(self):
+        if self.format == "binary_folder":
+            extension_folder = self._get_binary_extension_folder()
+            run_info_file = extension_folder / "run_info.json"
+            if run_info_file.is_file():
+                with open(str(run_info_file), "r") as f:
+                    run_info = json.load(f)
+            else:
+                warnings.warn(f"Found no run_info file for {self.extension_name}, extension should be re-computed.")
+                run_info = None
+
+        elif self.format == "zarr":
+            extension_group = self._get_zarr_extension_group(mode="r")
+            run_info = extension_group.attrs.get("run_info", None)
+        if run_info is None:
+            warnings.warn(f"Found no run_info file for {self.extension_name}, extension should be re-computed.")
+        self.run_info = run_info
 
     def load_params(self):
         if self.format == "binary_folder":
@@ -1883,12 +1925,17 @@ class AnalyzerExtension:
         self.params = params
 
     def load_data(self):
+        ext_data = None
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             for ext_data_file in extension_folder.iterdir():
                 # patch for https://github.com/SpikeInterface/spikeinterface/issues/3041
                 # maybe add a check for version number from the info.json during loading only
-                if ext_data_file.name == "params.json" or ext_data_file.name == "info.json":
+                if (
+                    ext_data_file.name == "params.json"
+                    or ext_data_file.name == "info.json"
+                    or ext_data_file.name == "run_info.json"
+                ):
                     continue
                 ext_data_name = ext_data_file.stem
                 if ext_data_file.suffix == ".json":
@@ -1929,6 +1976,9 @@ class AnalyzerExtension:
                     ext_data = np.array(ext_data_)
                 self.data[ext_data_name] = ext_data
 
+        if len(self.data) == 0:
+            warnings.warn(f"Found no data for {self.extension_name}, extension should be re-computed.")
+
     def copy(self, new_sorting_analyzer, unit_ids=None):
         # alessio : please note that this also replace the old select_units!!!
         new_extension = self.__class__(new_sorting_analyzer)
@@ -1937,6 +1987,7 @@ class AnalyzerExtension:
             new_extension.data = self.data
         else:
             new_extension.data = self._select_extension_data(unit_ids)
+        new_extension.run_info = self.run_info.copy()
         new_extension.save()
         return new_extension
 
@@ -1954,24 +2005,33 @@ class AnalyzerExtension:
         new_extension.data = self._merge_extension_data(
             merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=verbose, **job_kwargs
         )
+        new_extension.run_info = self.run_info.copy()
         new_extension.save()
         return new_extension
 
     def run(self, save=True, **kwargs):
         if save and not self.sorting_analyzer.is_read_only():
-            # this also reset the folder or zarr group
+            # NB: this call to _save_params() also resets the folder or zarr group
             self._save_params()
             self._save_importing_provenance()
+            self._save_run_info()
 
+        t_start = perf_counter()
         self._run(**kwargs)
+        t_end = perf_counter()
+        self.run_info["runtime_s"] = t_end - t_start
 
         if save and not self.sorting_analyzer.is_read_only():
             self._save_data(**kwargs)
+
+        self.run_info["run_completed"] = True
+        self._save_run_info()
 
     def save(self, **kwargs):
         self._save_params()
         self._save_importing_provenance()
         self._save_data(**kwargs)
+        self._save_run_info()
 
     def _save_data(self, **kwargs):
         if self.format == "memory":
@@ -2073,6 +2133,7 @@ class AnalyzerExtension:
         """
         self._reset_extension_folder()
         self.params = None
+        self.run_info = self._default_run_info_dict()
         self.data = dict()
 
     def set_params(self, save=True, **params):
@@ -2093,6 +2154,7 @@ class AnalyzerExtension:
         if save:
             self._save_params()
             self._save_importing_provenance()
+            self._save_run_info()
 
     def _save_params(self):
         params_to_save = self.params.copy()
@@ -2130,6 +2192,17 @@ class AnalyzerExtension:
             extension_group = self._get_zarr_extension_group(mode="r+")
             extension_group.attrs["info"] = info
 
+    def _save_run_info(self):
+        run_info = self.run_info.copy()
+
+        if self.format == "binary_folder":
+            extension_folder = self._get_binary_extension_folder()
+            run_info_file = extension_folder / "run_info.json"
+            run_info_file.write_text(json.dumps(run_info, indent=4), encoding="utf8")
+        elif self.format == "zarr":
+            extension_group = self._get_zarr_extension_group(mode="r+")
+            extension_group.attrs["run_info"] = run_info
+
     def get_pipeline_nodes(self):
         assert (
             self.use_nodepipeline
@@ -2137,7 +2210,10 @@ class AnalyzerExtension:
         return self._get_pipeline_nodes()
 
     def get_data(self, *args, **kwargs):
-        assert len(self.data) > 0, f"You must run the extension {self.extension_name} before retrieving data"
+        assert self.run_info[
+            "run_completed"
+        ], f"You must run the extension {self.extension_name} before retrieving data"
+        assert len(self.data) > 0, "Extension has been run but no data found."
         return self._get_data(*args, **kwargs)
 
 

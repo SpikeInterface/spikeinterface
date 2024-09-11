@@ -157,7 +157,7 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
         self.parent_segments = parent_segments
         self.all_length = [rec_seg.get_num_samples() for rec_seg in self.parent_segments]
         self.cumsum_length = [0] + [sum(self.all_length[: i + 1]) for i in range(len(self.all_length))]
-        self.total_length = int(np.sum(self.all_length))
+        self.total_length = int(sum(self.all_length))
 
     def get_num_samples(self):
         return self.total_length
@@ -450,7 +450,7 @@ class ProxyConcatenateSortingSegment(BaseSortingSegment):
         self.parent_segments = parent_segments
         self.parent_num_samples = parent_num_samples
         self.cumsum_length = np.cumsum([0] + self.parent_num_samples)
-        self.total_num_samples = np.sum(self.parent_num_samples)
+        self.total_num_samples = int(sum(self.parent_num_samples))
 
     def get_num_samples(self):
         return self.total_num_samples
