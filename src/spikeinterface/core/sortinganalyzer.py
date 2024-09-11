@@ -622,7 +622,7 @@ class SortingAnalyzer:
             format="zarr",
             sparsity=sparsity,
             return_scaled=return_scaled,
-            storage_options=storage_options
+            storage_options=storage_options,
         )
 
         return sorting_analyzer
