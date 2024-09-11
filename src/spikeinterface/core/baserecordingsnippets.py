@@ -348,17 +348,22 @@ class BaseRecordingSnippets(BaseExtractor):
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
-        if self.get_property("contact_vector") is not None:
-            if len(self.get_probes()) == 1:
-                probe = self.get_probe()
-                positions = probe.contact_positions[channel_indices]
-            else:
-                all_probes = self.get_probes()
-                # check that multiple probes are non-overlapping
-                check_probe_do_not_overlap(all_probes)
-                all_positions = np.vstack([probe.contact_positions for probe in all_probes])
-                positions = all_positions[channel_indices]
-            return select_axes(positions, axes)
+        contact_vector = self.get_property("contact_vector")
+        if contact_vector is not None:
+            # to avoid the get_probes() when only one probe do check unique probe_id
+            num_probes = np.unique(contact_vector["probe_index"]).size
+            if num_probes > 1:
+                # get_probes() is called only when several probes check_overlaps
+                # TODO make this check_probe_do_not_overlap() use only the contact_vector instead of constructing the probe
+                check_probe_do_not_overlap(self.get_probes())
+
+            # here we bypass the probe reconstruction so this works both for probe and probegroup
+            ndim = len(axes)
+            all_positions = np.zeros((contact_vector.size, ndim), dtype="float64")
+            for i, dim in enumerate(axes):
+                all_positions[:, i] = contact_vector[dim]
+            positions = all_positions[channel_indices]
+            return positions
         else:
             locations = self.get_property("location")
             if locations is None:
