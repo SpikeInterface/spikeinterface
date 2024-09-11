@@ -8,11 +8,9 @@ from __future__ import annotations
 
 import numpy as np
 import warnings
-from typing import Optional
 from copy import deepcopy
 
 from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from ..core import ChannelSparsity
 from ..core.template_tools import get_template_extremum_channel
 from ..core.template_tools import get_dense_templates_array
 
@@ -267,13 +265,17 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
                 for metric_name in metrics_single_channel:
                     func = _metric_name_to_func[metric_name]
-                    value = func(
-                        template_upsampled,
-                        sampling_frequency=sampling_frequency_up,
-                        trough_idx=trough_idx,
-                        peak_idx=peak_idx,
-                        **self.params["metrics_kwargs"],
-                    )
+                    try:
+                        value = func(
+                            template_upsampled,
+                            sampling_frequency=sampling_frequency_up,
+                            trough_idx=trough_idx,
+                            peak_idx=peak_idx,
+                            **self.params["metrics_kwargs"],
+                        )
+                    except Exception as e:
+                        warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
+                        value = np.nan
                     template_metrics.at[index, metric_name] = value
 
             # compute metrics multi_channel
@@ -303,12 +305,16 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                     sampling_frequency_up = sampling_frequency
 
                 func = _metric_name_to_func[metric_name]
-                value = func(
-                    template_upsampled,
-                    channel_locations=channel_locations_sparse,
-                    sampling_frequency=sampling_frequency_up,
-                    **self.params["metrics_kwargs"],
-                )
+                try:
+                    value = func(
+                        template_upsampled,
+                        channel_locations=channel_locations_sparse,
+                        sampling_frequency=sampling_frequency_up,
+                        **self.params["metrics_kwargs"],
+                    )
+                except Exception as e:
+                    warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
+                    value = np.nan
                 template_metrics.at[index, metric_name] = value
         return template_metrics
 
