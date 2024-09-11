@@ -17,6 +17,8 @@ from spikeinterface.core.recording_tools import (
     get_channel_distances,
     get_noise_levels,
     order_channels_by_depth,
+    do_recording_attributes_match,
+    get_rec_attributes,
 )
 
 
@@ -298,6 +300,35 @@ def test_order_channels_by_depth():
     assert np.array_equal(locations, locations_copy[order_2d])
     assert np.array_equal(locations_copy, locations_copy[order_2d][order_r2d])
     assert np.array_equal(order_2d[::-1], order_2d_fliped)
+
+
+def test_do_recording_attributes_match():
+    recording = NoiseGeneratorRecording(
+        num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
+    )
+    rec_attributes = get_rec_attributes(recording)
+    do_match, _ = do_recording_attributes_match(recording, rec_attributes)
+    assert do_match
+
+    rec_attributes = get_rec_attributes(recording)
+    rec_attributes["sampling_frequency"] = 1.0
+    do_match, exc = do_recording_attributes_match(recording, rec_attributes)
+    assert not do_match
+    assert "sampling_frequency" in exc
+
+    # check dtype options
+    rec_attributes = get_rec_attributes(recording)
+    rec_attributes["dtype"] = "int16"
+    do_match, exc = do_recording_attributes_match(recording, rec_attributes)
+    assert not do_match
+    assert "dtype" in exc
+    do_match, exc = do_recording_attributes_match(recording, rec_attributes, check_dtype=False)
+    assert do_match
+
+    # check missing dtype
+    rec_attributes.pop("dtype")
+    do_match, exc = do_recording_attributes_match(recording, rec_attributes)
+    assert do_match
 
 
 if __name__ == "__main__":

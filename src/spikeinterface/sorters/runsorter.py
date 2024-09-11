@@ -96,23 +96,6 @@ _common_param_doc = """
         If True, the output Sorting is returned as a Sorting
     delete_container_files : bool, default: True
         If True, the container temporary files are deleted after the sorting is done
-    extra_requirements : list, default: None
-        List of extra requirements to install in the container
-    installation_mode : "auto" | "pypi" | "github" | "folder" | "dev" | "no-install", default: "auto"
-        How spikeinterface is installed in the container:
-          * "auto" : if host installation is a pip release then use "github" with tag
-                    if host installation is DEV_MODE=True then use "dev"
-          * "pypi" : use pypi with pip install spikeinterface
-          * "github" : use github with `pip install git+https`
-          * "folder" : mount a folder in container and install from this one.
-                      So the version in the container is a different spikeinterface version from host, useful for
-                      cross checks
-          * "dev" : same as "folder", but the folder is the spikeinterface.__file__ to ensure same version as host
-          * "no-install" : do not install spikeinterface in the container because it is already installed
-    spikeinterface_version : str, default: None
-        The spikeinterface version to install in the container. If None, the current version is used
-    spikeinterface_folder_source : Path or None, default: None
-        In case of installation_mode="folder", the spikeinterface folder source to use to install in the container
     output_folder : None, default: None
         Do not use. Deprecated output function to be removed in 0.103.
     **sorter_params : keyword args
@@ -272,7 +255,9 @@ def run_sorter_local(
     # only classmethod call not instance (stateless at instance level but state is in folder)
     folder = SorterClass.initialize_folder(recording, folder, verbose, remove_existing_folder)
     SorterClass.set_params_to_folder(recording, folder, sorter_params, verbose)
+    # This writes parameters and recording to binary and could ideally happen in the host
     SorterClass.setup_recording(recording, folder, verbose=verbose)
+    # This NEEDS to happen in the docker because of dependencies
     SorterClass.run_from_folder(folder, raise_error, verbose)
     if with_output:
         sorting = SorterClass.get_result_from_folder(folder, register_recording=True, sorting_info=True)
@@ -691,7 +676,9 @@ def read_sorter_folder(folder, register_recording=True, sorting_info=True, raise
     register_recording : bool, default: True
         Attach recording (when json or pickle) to the sorting
     sorting_info : bool, default: True
-        Attach sorting info to the sorting.
+        Attach sorting info to the sorting
+    raise_error : bool, detault: True
+        Raise an error if the spike sorting failed
     """
     folder = Path(folder)
     log_file = folder / "spikeinterface_log.json"

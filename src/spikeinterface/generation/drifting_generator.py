@@ -194,6 +194,8 @@ def generate_displacement_vector(
     motion_list : list of dict
         List of dicts containing individual motion vector parameters.
         len(motion_list) == displacement_vectors.shape[2]
+    seed : None | seed, default: None
+        Random seed for `make_one_displacement_vector`
 
     Returns
     -------

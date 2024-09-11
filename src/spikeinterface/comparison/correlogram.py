@@ -15,6 +15,21 @@ class CorrelogramGTComparison(GroundTruthComparison):
 
     This class needs maintenance and need a bit of refactoring.
 
+    Parameters
+    ----------
+    gt_sorting : SortingExtractor
+        The first sorting for the comparison
+    tested_sorting : SortingExtractor
+        The second sorting for the comparison
+    bin_ms : float, default: 1.0
+        Size of bin for correlograms
+    window_ms : float, default: 100.0
+        The window around the spike to compute the correlation in ms.
+    well_detected_score : float, default: 0.8
+        Agreement score above which units are well detected
+    **kwargs : dict
+        Keyword arguments for `GroundTruthComparison`
+
     """
 
     def __init__(self, gt_sorting, tested_sorting, window_ms=100.0, bin_ms=1.0, well_detected_score=0.8, **kwargs):
