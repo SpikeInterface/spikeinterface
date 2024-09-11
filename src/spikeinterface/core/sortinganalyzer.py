@@ -1472,7 +1472,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         if self.format != "memory" and self.has_extension(extension_name):
             # need a reload to reset the folder
             ext = self.load_extension(extension_name)
-            ext.reset()
+            ext.delete()
 
         # remove from dict
         self.extensions.pop(extension_name, None)
@@ -2014,18 +2014,16 @@ class AnalyzerExtension:
             # NB: this call to _save_params() also resets the folder or zarr group
             self._save_params()
             self._save_importing_provenance()
-            self._save_run_info()
 
         t_start = perf_counter()
         self._run(**kwargs)
         t_end = perf_counter()
         self.run_info["runtime_s"] = t_end - t_start
+        self.run_info["run_completed"] = True
 
         if save and not self.sorting_analyzer.is_read_only():
+            self._save_run_info()
             self._save_data(**kwargs)
-
-        self.run_info["run_completed"] = True
-        self._save_run_info()
 
     def save(self, **kwargs):
         self._save_params()
@@ -2126,6 +2124,32 @@ class AnalyzerExtension:
             _ = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
             zarr.consolidate_metadata(zarr_root.store)
 
+    def _delete_extension_folder(self):
+        """
+        Delete the extension in a folder (binary or zarr).
+        """
+        if self.format == "binary_folder":
+            extension_folder = self._get_binary_extension_folder()
+            if extension_folder.is_dir():
+                shutil.rmtree(extension_folder)
+
+        elif self.format == "zarr":
+            import zarr
+
+            zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
+            if self.extension_name in zarr_root["extensions"]:
+                del zarr_root["extensions"][self.extension_name]
+                zarr.consolidate_metadata(zarr_root.store)
+
+    def delete(self):
+        """
+        Delete the extension from the folder or zarr and from the dict.
+        """
+        self._delete_extension_folder()
+        self.params = None
+        self.run_info = self._default_run_info_dict()
+        self.data = dict()
+
     def reset(self):
         """
         Reset the waveform extension.
@@ -2154,7 +2178,6 @@ class AnalyzerExtension:
         if save:
             self._save_params()
             self._save_importing_provenance()
-            self._save_run_info()
 
     def _save_params(self):
         params_to_save = self.params.copy()
