@@ -28,7 +28,7 @@ _default_engine_kwargs = dict(
     slurm={"tmp_script_folder": None},
 )
 
-_default_slurm_kwargs = {'cpus-per-task': 1, 'mem': '1G'}
+_default_slurm_kwargs = {"cpus-per-task": 1, "mem": "1G"}
 
 _implemented_engine = list(_default_engine_kwargs.keys())
 
@@ -228,18 +228,18 @@ run_sorter(**kwargs)
 
 
 def run_sorter_by_property(
-        sorter_name,
-        recording,
-        grouping_property,
-        folder,
-        mode_if_folder_exists=None,
-        engine="loop",
-        engine_kwargs={},
-        verbose=False,
-        docker_image=None,
-        singularity_image=None,
-        working_folder: None = None,
-        **sorter_params,
+    sorter_name,
+    recording,
+    grouping_property,
+    folder,
+    mode_if_folder_exists=None,
+    engine="loop",
+    engine_kwargs={},
+    verbose=False,
+    docker_image=None,
+    singularity_image=None,
+    working_folder: None = None,
+    **sorter_params,
 ):
     """
     Generic function to run a sorter on a recording after splitting by a "grouping_property" (e.g. "group").
