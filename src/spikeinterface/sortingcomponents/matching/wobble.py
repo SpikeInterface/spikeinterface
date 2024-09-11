@@ -553,7 +553,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
     # TODO: Replace this method with equivalent from spikeinterface
     @classmethod
-    def find_peaks(cls, objective, objective_normalized, spike_trains, params, template_data, template_meta):
+    def find_peaks(
+        cls, objective, objective_normalized, spike_trains, params, template_data, template_meta
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Find new peaks in the objective and update spike train accordingly.
 
         Parameters
@@ -634,7 +636,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
     @classmethod
     def subtract_spike_train(
         cls, spike_train, scalings, template_data, objective, objective_normalized, params, template_meta, sparsity
-    ):
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Subtract spike train of templates from the objective directly.
 
         Parameters
@@ -693,7 +695,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         template_data,
         params,
         template_meta,
-    ):
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Determines optimal shifts when super-resolution, scaled templates are used.
 
         Parameters
@@ -777,7 +779,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         return template_shift, time_shift, non_refractory_indices, scalings
 
     @classmethod
-    def enforce_refractory(cls, spike_train, objective, objective_normalized, params, template_meta):
+    def enforce_refractory(
+        cls, spike_train, objective, objective_normalized, params, template_meta
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Enforcing the refractory period for each unit by setting the objective to -infinity.
 
         Parameters
@@ -846,7 +850,7 @@ def compute_template_norm(visible_channels, templates):
     return norm_squared
 
 
-def compress_templates(templates, approx_rank):
+def compress_templates(templates, approx_rank) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Compress templates using singular value decomposition.
 
     Parameters
@@ -967,7 +971,7 @@ def convolve_templates(compressed_templates, jitter_factor, approx_rank, jittere
     return pairwise_convolution
 
 
-def compute_objective(traces, template_data, device=None):
+def compute_objective(traces, template_data, approx_rank, device=None) -> np.ndarray:
     """Compute objective by convolving templates with voltage traces.
 
     Parameters
@@ -1011,7 +1015,9 @@ def compute_objective(traces, template_data, device=None):
     return objective
 
 
-def compute_scale_amplitudes(high_resolution_conv, norm_peaks, scale_min, scale_max, amplitude_variance):
+def compute_scale_amplitudes(
+    high_resolution_conv, norm_peaks, scale_min, scale_max, amplitude_variance
+) -> tuple[np.ndarray, np.ndarray]:
     """Compute optimal amplitude scaling and the high-resolution objective resulting from scaled spikes.
 
     Without hard clipping, the objective can be obtained via

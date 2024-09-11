@@ -29,7 +29,9 @@ except ImportError:
 from .main import BaseTemplateMatchingEngine
 
 
-def compress_templates(templates_array, approx_rank, remove_mean=True, return_new_templates=True):
+def compress_templates(
+    templates_array, approx_rank, remove_mean=True, return_new_templates=True
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray | None]:
     """Compress templates using singular value decomposition.
 
     Parameters

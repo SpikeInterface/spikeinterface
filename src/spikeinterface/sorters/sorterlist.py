@@ -76,7 +76,7 @@ def print_sorter_versions():
     print(txt)
 
 
-def get_default_sorter_params(sorter_name_or_class):
+def get_default_sorter_params(sorter_name_or_class) -> dict:
     """Returns default parameters for the specified sorter.
 
     Parameters
@@ -100,7 +100,7 @@ def get_default_sorter_params(sorter_name_or_class):
     return SorterClass.default_params()
 
 
-def get_sorter_params_description(sorter_name_or_class):
+def get_sorter_params_description(sorter_name_or_class) -> dict:
     """Returns a description of the parameters for the specified sorter.
 
     Parameters
@@ -124,7 +124,7 @@ def get_sorter_params_description(sorter_name_or_class):
     return SorterClass.params_description()
 
 
-def get_sorter_description(sorter_name_or_class):
+def get_sorter_description(sorter_name_or_class) -> dict:
     """Returns a brief description for the specified sorter.
 
     Parameters

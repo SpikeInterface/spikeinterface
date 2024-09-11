@@ -17,6 +17,7 @@ import numpy as np
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import (
     check_json,
+    clean_zarr_folder_name,
     is_dict_extractor,
     SIJsonEncoder,
     make_paths_relative,
@@ -164,7 +165,7 @@ class BaseExtractor:
     def annotate(self, **new_annotations) -> None:
         self._annotations.update(new_annotations)
 
-    def set_annotation(self, annotation_key, value: Any, overwrite=False) -> None:
+    def set_annotation(self, annotation_key: str, value: Any, overwrite=False) -> None:
         """This function adds an entry to the annotations dictionary.
 
         Parameters
@@ -192,7 +193,7 @@ class BaseExtractor:
         """
         return self._preferred_mp_context
 
-    def get_annotation(self, key, copy: bool = True) -> Any:
+    def get_annotation(self, key: str, copy: bool = True) -> Any:
         """
         Get a annotation.
         Return a copy by default
@@ -205,7 +206,13 @@ class BaseExtractor:
     def get_annotation_keys(self) -> List:
         return list(self._annotations.keys())
 
-    def set_property(self, key, values: Sequence, ids: Optional[Sequence] = None, missing_value: Any = None) -> None:
+    def set_property(
+        self,
+        key,
+        values: list | np.ndarray | tuple,
+        ids: list | np.ndarray | tuple | None = None,
+        missing_value: Any = None,
+    ) -> None:
         """
         Set property vector for main ids.
 
@@ -223,6 +230,7 @@ class BaseExtractor:
             Array of values for the property
         ids : list/np.array, default: None
             List of subset of ids to set the values, default: None
+            if None which is the default all the ids are set or changed
         missing_value : object, default: None
             In case the property is set on a subset of values ("ids" not None),
             it specifies the how the missing values should be filled.
@@ -240,23 +248,26 @@ class BaseExtractor:
         dtype_kind = dtype.kind
 
         if ids is None:
-            assert values.shape[0] == size
+            assert (
+                values.shape[0] == size
+            ), f"Values must have the same size as the main ids: {size} but got array of size {values.shape[0]}"
             self._properties[key] = values
         else:
             ids = np.array(ids)
-            assert np.unique(ids).size == ids.size, "'ids' are not unique!"
+            unique_ids = np.unique(ids)
+            if unique_ids.size != ids.size:
+                non_unique_ids = [id for id in ids if np.count_nonzero(ids == id) > 1]
+                raise ValueError(f"IDs are not unique: {non_unique_ids}")
 
+            # Not clear where this branch is used, perhaps on aggregation of extractors?
             if ids.size < size:
                 if key not in self._properties:
-                    # create the property with nan or empty
-                    shape = (size,) + values.shape[1:]
 
                     if missing_value is None:
                         if dtype_kind not in self.default_missing_property_values.keys():
-                            raise Exception(
-                                "For values dtypes other than float, string, object or unicode, the missing value "
-                                "cannot be automatically inferred. Please specify it with the 'missing_value' "
-                                "argument."
+                            raise ValueError(
+                                f"Can't infer a natural missing value for dtype {dtype_kind}. "
+                                "Please provide it with the `missing_value` argument"
                             )
                         else:
                             missing_value = self.default_missing_property_values[dtype_kind]
@@ -268,15 +279,18 @@ class BaseExtractor:
                             "as the values."
                         )
 
+                    # create the property with nan or empty
+                    shape = (size,) + values.shape[1:]
                     empty_values = np.zeros(shape, dtype=dtype)
                     empty_values[:] = missing_value
                     self._properties[key] = empty_values
                     if ids.size == 0:
                         return
                 else:
-                    assert dtype_kind == self._properties[key].dtype.kind, (
-                        "Mismatch between existing property dtype " "values dtype."
-                    )
+                    existing_property = self._properties[key].dtype
+                    assert (
+                        dtype_kind == existing_property.kind
+                    ), f"Mismatch between existing property dtype {existing_property.kind} and provided values dtype {dtype_kind}."
 
                 indices = self.ids_to_indices(ids)
                 self._properties[key][indices] = values
@@ -285,7 +299,7 @@ class BaseExtractor:
                 self._properties[key] = np.zeros_like(values, dtype=values.dtype)
                 self._properties[key][indices] = values
 
-    def get_property(self, key, ids: Optional[Iterable] = None) -> np.ndarray:
+    def get_property(self, key: str, ids: Optional[Iterable] = None) -> np.ndarray:
         values = self._properties.get(key, None)
         if ids is not None and values is not None:
             inds = self.ids_to_indices(ids)
@@ -1048,9 +1062,7 @@ class BaseExtractor:
                         print(f"Use zarr_path={zarr_path}")
         else:
             if storage_options is None:
-                folder = Path(folder)
-                if folder.suffix != ".zarr":
-                    folder = folder.parent / f"{folder.stem}.zarr"
+                folder = clean_zarr_folder_name(folder)
                 if folder.is_dir() and overwrite:
                     shutil.rmtree(folder)
                 zarr_path = folder

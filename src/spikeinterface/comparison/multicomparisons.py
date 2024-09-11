@@ -43,7 +43,9 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             - "intersection" : spike trains are the intersection between the spike trains of the
                best matching two sorters
     verbose : bool, default: False
-        if True, output is verbose
+        If True, output is verbose
+    do_matching : bool, default: True
+        If True, the comparison is done when the `MultiSortingComparison` is initialized
 
     Returns
     -------
@@ -318,7 +320,15 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
     chance_score : float, default: 0.3
         Minimum agreement score to for a possible match
     verbose : bool, default: False
-        if True, output is verbose
+        If True, output is verbose
+    do_matching : bool, default: True
+        If True, the comparison is done when the `MultiSortingComparison` is initialized
+    support : "dense" | "union" | "intersection", default: "union"
+        The support to compute the similarity matrix.
+    num_shifts : int, default: 0
+        Number of shifts to use to shift templates to maximize similarity.
+    similarity_method : "cosine" | "l1" | "l2", default: "cosine"
+        Method for the similarity matrix.
 
     Returns
     -------

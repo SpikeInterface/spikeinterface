@@ -49,19 +49,14 @@ class TestTimeHandling:
         spaced timeseries data. Return the original recording,
         recoridng with time vectors added and list including the added time vectors.
         """
-        times_recording = copy.deepcopy(raw_recording)
+        times_recording = raw_recording.clone()
         all_time_vectors = []
         for segment_index in range(raw_recording.get_num_segments()):
 
             t_start = segment_index + 1 * 100
+            t_stop = t_start + raw_recording.get_duration(segment_index) + segment_index + 1
 
-            some_small_increasing_numbers = np.arange(times_recording.get_num_samples(segment_index)) * (
-                1 / times_recording.get_sampling_frequency()
-            )
-
-            offsets = np.cumsum(some_small_increasing_numbers)
-            time_vector = t_start + times_recording.get_times(segment_index) + offsets
-
+            time_vector = np.linspace(t_start, t_stop, raw_recording.get_num_samples(segment_index))
             all_time_vectors.append(time_vector)
             times_recording.set_times(times=time_vector, segment_index=segment_index)
 

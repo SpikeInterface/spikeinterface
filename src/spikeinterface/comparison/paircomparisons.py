@@ -224,7 +224,9 @@ class GroundTruthComparison(BasePairSorterComparison):
     tested_name : : str, default: None
         The name of sorter 2
     delta_time : float, default: 0.4
-        Number of ms to consider coincident spikes
+        Number of ms to consider coincident spikes.
+        This means that two spikes are considered simultaneous if they are within `delta_time` of each other or
+        mathematically abs(spike1_time - spike2_time) <= delta_time.
     match_score : float, default: 0.5
         Minimum agreement score to match units
     chance_score : float, default: 0.1
@@ -263,7 +265,6 @@ class GroundTruthComparison(BasePairSorterComparison):
         gt_name=None,
         tested_name=None,
         delta_time=0.4,
-        sampling_frequency=None,
         match_score=0.5,
         well_detected_score=0.8,
         redundant_score=0.2,
@@ -425,6 +426,11 @@ class GroundTruthComparison(BasePairSorterComparison):
     def print_performance(self, method="pooled_with_average"):
         """
         Print performance with the selected method
+
+        Parameters
+        ----------
+        method : "by_unit" | "pooled_with_average", default: "pooled_with_average"
+            The method to compute performance
         """
 
         template_txt_performance = _template_txt_performance
@@ -449,6 +455,19 @@ class GroundTruthComparison(BasePairSorterComparison):
           * how many gt units (one or several)
 
         This summary mix several performance metrics.
+
+        Parameters
+        ----------
+        well_detected_score : float, default: None
+            The agreement score above which tested units
+            are counted as "well detected".
+        redundant_score : float, default: None
+            The agreement score below which tested units
+            are counted as "false positive"" (and not "redundant").
+        overmerged_score : float, default: None
+            Tested units with 2 or more agreement scores above "overmerged_score"
+            are counted as "overmerged".
+
         """
         txt = _template_summary_part1
 
@@ -456,12 +475,12 @@ class GroundTruthComparison(BasePairSorterComparison):
             num_gt=len(self.unit1_ids),
             num_tested=len(self.unit2_ids),
             num_well_detected=self.count_well_detected_units(well_detected_score),
-            num_redundant=self.count_redundant_units(redundant_score),
-            num_overmerged=self.count_overmerged_units(overmerged_score),
         )
 
         if self.exhaustive_gt:
             txt = txt + _template_summary_part2
+            d["num_redundant"] = self.count_redundant_units(redundant_score)
+            d["num_overmerged"] = self.count_overmerged_units(overmerged_score)
             d["num_false_positive_units"] = self.count_false_positive_units()
             d["num_bad"] = self.count_bad_units()
 
@@ -500,6 +519,12 @@ class GroundTruthComparison(BasePairSorterComparison):
         """
         Count how many well detected units.
         kwargs are the same as get_well_detected_units.
+
+        Parameters
+        ----------
+        well_detected_score : float, default: None
+            The agreement score above which tested units
+            are counted as "well detected".
         """
         return len(self.get_well_detected_units(well_detected_score=well_detected_score))
 
@@ -540,6 +565,12 @@ class GroundTruthComparison(BasePairSorterComparison):
     def count_false_positive_units(self, redundant_score=None):
         """
         See get_false_positive_units().
+
+        Parameters
+        ----------
+        redundant_score : float | None, default: None
+            The agreement score below which tested units
+            are counted as "false positive"" (and not "redundant").
         """
         return len(self.get_false_positive_units(redundant_score))
 
@@ -554,7 +585,7 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Parameters
         ----------
-        redundant_score=None : float, default: None
+        redundant_score : float, default: None
             The agreement score above which tested units
             are counted as "redundant" (and not "false positive" ).
         """
@@ -577,6 +608,12 @@ class GroundTruthComparison(BasePairSorterComparison):
     def count_redundant_units(self, redundant_score=None):
         """
         See get_redundant_units().
+
+         Parameters
+         ----------
+         redundant_score : float, default: None
+             The agreement score below which tested units
+             are counted as "false positive"" (and not "redundant").
         """
         return len(self.get_redundant_units(redundant_score=redundant_score))
 
@@ -609,6 +646,12 @@ class GroundTruthComparison(BasePairSorterComparison):
     def count_overmerged_units(self, overmerged_score=None):
         """
         See get_overmerged_units().
+
+        Parameters
+        ----------
+        overmerged_score : float, default: None
+            Tested units with 2 or more agreement scores above "overmerged_score"
+            are counted as "overmerged".
         """
         return len(self.get_overmerged_units(overmerged_score=overmerged_score))
 
@@ -676,11 +719,11 @@ _template_summary_part1 = """SUMMARY
 GT num_units: {num_gt}
 TESTED num_units: {num_tested}
 num_well_detected: {num_well_detected}
-num_redundant: {num_redundant}
-num_overmerged: {num_overmerged}
 """
 
-_template_summary_part2 = """num_false_positive_units {num_false_positive_units}
+_template_summary_part2 = """num_redundant: {num_redundant}
+num_overmerged: {num_overmerged}
+num_false_positive_units {num_false_positive_units}
 num_bad: {num_bad}
 """
 
@@ -704,6 +747,10 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         List of units from sorting_analyzer_1 to compare.
     unit_ids2 : list, default: None
         List of units from sorting_analyzer_2 to compare.
+    name1 : str, default: "sess1"
+        Name of first session.
+    name2 : str, default: "sess2"
+        Name of second session.
     similarity_method : "cosine" | "l1" | "l2", default: "cosine"
         Method for the similarity matrix.
     support : "dense" | "union" | "intersection", default: "union"
@@ -712,6 +759,11 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         Number of shifts to use to shift templates to maximize similarity.
     verbose : bool, default: False
         If True, output is verbose.
+    chance_score : float, default: 0.3
+         Minimum agreement score to for a possible match
+    match_score : float, default: 0.7
+        Minimum agreement score to match units
+
 
     Returns
     -------

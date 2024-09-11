@@ -125,6 +125,39 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     )
 
 
+def test_load_without_runtime_info(tmp_path, dataset):
+    recording, sorting = dataset
+
+    folder = tmp_path / "test_SortingAnalyzer_run_info"
+
+    extensions = ["random_spikes", "templates"]
+    # binary_folder
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="binary_folder", folder=folder, sparse=False, sparsity=None
+    )
+    sorting_analyzer.compute(extensions)
+    # remove run_info.json to mimic a previous version of spikeinterface
+    for ext in extensions:
+        (folder / "extensions" / ext / "run_info.json").unlink()
+    # should raise a warning for missing run_info
+    with pytest.warns(UserWarning):
+        sorting_analyzer = load_sorting_analyzer(folder, format="auto")
+
+    # zarr
+    folder = tmp_path / "test_SortingAnalyzer_run_info.zarr"
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
+    )
+    sorting_analyzer.compute(extensions)
+    # remove run_info from attrs to mimic a previous version of spikeinterface
+    root = sorting_analyzer._get_zarr_root(mode="r+")
+    for ext in extensions:
+        del root["extensions"][ext].attrs["run_info"]
+    # should raise a warning for missing run_info
+    with pytest.warns(UserWarning):
+        sorting_analyzer = load_sorting_analyzer(folder, format="auto")
+
+
 def test_SortingAnalyzer_tmp_recording(dataset):
     recording, sorting = dataset
     recording_cached = recording.save(mode="memory")
@@ -141,7 +174,7 @@ def test_SortingAnalyzer_tmp_recording(dataset):
     recording_sliced = recording.channel_slice(recording.channel_ids[:-1])
 
     # wrong channels
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         sorting_analyzer.set_temporary_recording(recording_sliced)
 
 
