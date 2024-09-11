@@ -547,7 +547,7 @@ if __name__ == "__main__":
 
     # test_calculate_firing_rate_num_spikes(sorting_analyzer)
 
-    test_calculate_snrs(sorting_analyzer)
+    # test_calculate_snrs(sorting_analyzer)
     # test_calculate_amplitude_cutoff(sorting_analyzer)
     # test_calculate_presence_ratio(sorting_analyzer)
     # test_calculate_amplitude_median(sorting_analyzer)
