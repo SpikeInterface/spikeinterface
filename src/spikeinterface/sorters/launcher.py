@@ -74,7 +74,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
           Arguments must be in the format slurm specify, see the
           [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html) for a list of possible arguments
 
-    return_output : bool, default False
+    return_output : bool, default: False
         Return a sortings or None.
         This also overwrite kwargs in run_sorter(with_sorting=True/False)
 
