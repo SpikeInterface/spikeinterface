@@ -1101,9 +1101,14 @@ class SortingAnalyzer:
     def get_channel_locations(self) -> np.ndarray:
         # important note : contrary to recording
         # this give all channel locations, so no kwargs like channel_ids and axes
-        all_probes = self.get_probegroup().probes
-        all_positions = np.vstack([probe.contact_positions for probe in all_probes])
-        return all_positions
+        probegroup = self.get_probegroup()
+        probe_as_numpy_array = probegroup.to_numpy()
+        # duplicate positions to "locations" property
+        ndim = probegroup.ndim
+        locations = np.zeros((probe_as_numpy_array.size, ndim), dtype="float64")
+        for i, dim in enumerate(["x", "y", "z"][:ndim]):
+            locations[:, i] = probe_as_numpy_array[dim]
+        return locations
 
     def channel_ids_to_indices(self, channel_ids) -> np.ndarray:
         all_channel_ids = list(self.rec_attributes["channel_ids"])
