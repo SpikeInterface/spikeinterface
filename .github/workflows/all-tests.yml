@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           changed_files="${{ steps.changed-files.outputs.all_changed_files }}"
-          python .github/determine_testing_environment.py $changed_files
+          python .github/scripts/determine_testing_environment.py $changed_files
 
       - name: Display testing environment
         shell: bash
@@ -139,7 +139,7 @@ jobs:
 
       - name: Test streaming extractors
         shell: bash
-        if: env.RUN_STREAMING_EXTRACTORS_TESTS
+        if: env.RUN_STREAMING_EXTRACTORS_TESTS == 'true'
         run: |
           pip install -e .[streaming_extractors,test_extractors]
           ./.github/run_tests.sh "streaming_extractors" --no-virtual-env
@@ -202,7 +202,7 @@ jobs:
         shell: bash
         if: env.RUN_WIDGETS_TESTS == 'true'
         run: |
-          pip install -e .[full]
+          pip install -e .[full,widgets]
           ./.github/run_tests.sh widgets --no-virtual-env
 
       - name: Test exporters

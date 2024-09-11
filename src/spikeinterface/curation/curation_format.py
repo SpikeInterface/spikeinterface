@@ -92,13 +92,17 @@ def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_fo
     """
 
     assert destination_format == "1"
-
+    if "mergeGroups" not in sortingview_dict.keys():
+        sortingview_dict["mergeGroups"] = []
     merge_groups = sortingview_dict["mergeGroups"]
     merged_units = sum(merge_groups, [])
-    if len(merged_units) > 0:
-        unit_id_type = int if isinstance(merged_units[0], int) else str
+
+    first_unit_id = next(iter(sortingview_dict["labelsByUnit"].keys()))
+    if str.isdigit(first_unit_id):
+        unit_id_type = int
     else:
         unit_id_type = str
+
     all_units = []
     all_labels = []
     manual_labels = []
@@ -289,7 +293,7 @@ def apply_curation(
         The Sorting object to apply merges.
     curation_dict : dict
         The curation dict.
-    censor_ms: float | None, default: None
+    censor_ms : float | None, default: None
         When applying the merges, any consecutive spikes within the `censor_ms` are removed. This can be thought of
         as the desired refractory period. If `censor_ms=None`, no spikes are discarded.
     new_id_strategy : "append" | "take_first", default: "append"
@@ -297,17 +301,17 @@ def apply_curation(
 
             * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
             * "take_first" : new_unit_ids will be the first unit_id of every list of merges
-    merging_mode  : "soft" | "hard", default: "soft"
+    merging_mode : "soft" | "hard", default: "soft"
         How merges are performed for SortingAnalyzer. If the `merge_mode` is "soft" , merges will be approximated, with no reloading of
         the waveforms. This will lead to approximations. If `merge_mode` is "hard", recomputations are accurately
         performed, reloading waveforms if needed
     sparsity_overlap : float, default 0.75
-            The percentage of overlap that units should share in order to accept merges. If this criteria is not
-            achieved, soft merging will not be possible and an error will be raised. This is for use with a SortingAnalyzer input.
-
-    verbose:
-
-    **job_kwargs
+        The percentage of overlap that units should share in order to accept merges. If this criteria is not
+        achieved, soft merging will not be possible and an error will be raised. This is for use with a SortingAnalyzer input.
+    verbose : bool, default: False
+        If True, output is verbose
+    **job_kwargs : dict
+        Job keyword arguments for `merge_units`
 
     Returns
     -------

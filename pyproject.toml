@@ -7,7 +7,7 @@ authors = [
 ]
 description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
 readme = "README.md"
-requires-python = ">=3.8,<4.0"
+requires-python = ">=3.9,<4.0"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "License :: OSI Approved :: MIT License",
@@ -184,11 +184,12 @@ test = [
 
 docs = [
     "Sphinx",
-    "sphinx_rtd_theme",
+    "sphinx_rtd_theme>=1.2",
     "sphinx-gallery",
     "sphinx-design",
     "numpydoc",
     "ipython",
+    "sphinxcontrib-jquery",
 
     # for notebooks in the gallery
     "MEArec", # Use as an example

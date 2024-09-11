@@ -56,7 +56,7 @@ def compute_pc_metrics(
     seed=None,
     n_jobs=1,
     progress_bar=False,
-):
+) -> dict:
     """
     Calculate principal component derived metrics.
 
@@ -295,7 +295,7 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
     return isolation_distance, l_ratio
 
 
-def lda_metrics(all_pcs, all_labels, this_unit_id):
+def lda_metrics(all_pcs, all_labels, this_unit_id) -> float:
     """
     Calculate d-prime based on Linear Discriminant Analysis.
 

@@ -456,7 +456,7 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
 
     Returns
     -------
-    collision_spikes_dict: np.array
+    collision_spikes_dict: dict
         A dictionary with collisions. The key is the index of the spike with collision, the value is an
         array of overlapping spikes, including the spike itself at position 0.
     """

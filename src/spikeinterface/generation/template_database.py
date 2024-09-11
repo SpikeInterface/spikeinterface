@@ -71,6 +71,8 @@ def query_templates_from_database(template_df: "pandas.DataFrame", verbose: bool
     ----------
     template_df : pd.DataFrame
         Dataframe containing the template information, obtained by slicing/querying the output of fetch_templates_info.
+    verbose : bool, default: False
+        if True, output is verbose
 
     Returns
     -------
