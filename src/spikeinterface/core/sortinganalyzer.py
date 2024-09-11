@@ -1105,7 +1105,6 @@ class SortingAnalyzer:
         probe_as_numpy_array = probegroup.to_numpy()
         # we need to sort by device_channel_indices to ensure the order of locations is correct
         probe_as_numpy_array = probe_as_numpy_array[np.argsort(probe_as_numpy_array["device_channel_indices"])]
-        # duplicate positions to "locations" property
         ndim = probegroup.ndim
         locations = np.zeros((probe_as_numpy_array.size, ndim), dtype="float64")
         for i, dim in enumerate(["x", "y", "z"][:ndim]):
