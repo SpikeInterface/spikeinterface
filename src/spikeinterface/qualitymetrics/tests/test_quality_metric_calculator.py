@@ -19,7 +19,6 @@ job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 def test_compute_quality_metrics(sorting_analyzer_simple):
     sorting_analyzer = sorting_analyzer_simple
-    print(sorting_analyzer)
 
     # without PCs
     metrics = compute_quality_metrics(
@@ -245,3 +244,12 @@ def test_empty_units(sorting_analyzer_simple):
 #         for metric_name in metrics.columns:
 #             # NaNs are skipped
 #             assert np.allclose(metrics[metric_name].dropna(), metrics_par[metric_name].dropna())
+
+if __name__ == "__main__":
+
+    sorting_analyzer = get_sorting_analyzer()
+    print(sorting_analyzer)
+
+    test_compute_quality_metrics(sorting_analyzer)
+    test_compute_quality_metrics_recordingless(sorting_analyzer)
+    test_empty_units(sorting_analyzer)
