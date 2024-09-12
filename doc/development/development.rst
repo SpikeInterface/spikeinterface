@@ -194,9 +194,12 @@ Miscelleaneous Stylistic Conventions
 #. We use file_path and folder_path (instead of file_name and folder_name) for clarity.
 #. For creating headers to divide sections of code we use the following convention (see issue `#3019 <https://github.com/SpikeInterface/spikeinterface/issues/3019>`_):
 
-#########################################
-# A header
-#########################################
+
+.. code:: python
+
+    #########################################
+    # A header
+    #########################################
 
 
 How to build the documentation
