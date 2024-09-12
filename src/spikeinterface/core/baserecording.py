@@ -759,7 +759,7 @@ class BaseRecording(BaseRecordingSnippets):
         channel_ids : array-like, optional
             The IDs of the channels for which to retrieve locations. If None, retrieves locations
             for all available channels. Default is None.
-        axes : str, optional
+        axes : "xy" | "yz" | "xz" | "xyz", default: "xy"
             The spatial axes to return, specified as a string (e.g., "xy", "xyz"). Default is "xy".
 
         Returns
