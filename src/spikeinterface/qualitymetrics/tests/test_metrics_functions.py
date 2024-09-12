@@ -135,36 +135,6 @@ def test_unit_id_order_independence(small_sorting_analyzer):
         assert quality_metrics_2[metric][1] == metric_1_data["#4"]
 
 
-def _sorting_analyzer_simple():
-    recording, sorting = generate_ground_truth_recording(
-        durations=[
-            50.0,
-        ],
-        sampling_frequency=30_000.0,
-        num_channels=6,
-        num_units=10,
-        generate_sorting_kwargs=dict(firing_rates=6.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
-        seed=2205,
-    )
-
-    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
-
-    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=300, seed=2205)
-    sorting_analyzer.compute("noise_levels")
-    sorting_analyzer.compute("waveforms", **job_kwargs)
-    sorting_analyzer.compute("templates")
-    sorting_analyzer.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
-    sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
-
-    return sorting_analyzer
-
-
-@pytest.fixture(scope="module")
-def sorting_analyzer_simple():
-    return _sorting_analyzer_simple()
-
-
 def _sorting_violation():
     max_time = 100.0
     sampling_frequency = 30000
@@ -576,6 +546,7 @@ if __name__ == "__main__":
     test_unit_structure_in_output(_small_sorting_analyzer())
 
     # test_calculate_firing_rate_num_spikes(sorting_analyzer)
+
     # test_calculate_snrs(sorting_analyzer)
     # test_calculate_amplitude_cutoff(sorting_analyzer)
     # test_calculate_presence_ratio(sorting_analyzer)
