@@ -1,6 +1,6 @@
-.. _release0.101.1:
+.. _release0.102.0:
 
-SpikeInterface 0.101.1 release notes
+SpikeInterface 0.102.0 release notes
 ------------------------------------
 
 13th September 2024
@@ -10,6 +10,7 @@ Main changes:
 * Enabled support for consolidated Zarr-backend for `SortingAnalyzer`, including cloud support (#3314, #3318, #3349, #3351)
 * Improved support for Kilosort4 **ONLY VERSIONS >= 4.0.16** (#3339, #3276)
 * Skip recomputation of quality and template metrics if already computed (#3292)
+* Modified and improved `estimate_sparsity` and refactored `from_ptp` option (#3369)
 * Dropped support for Python<3.9 (#3267)
 
 core:
@@ -17,7 +18,7 @@ core:
 * Fix proposal for channel location when probegroup (#3392)
 * Fix time handling test memory (#3379)
 * Add `BaseRecording.reset_times()` function (#3363, #3380, #3391)
-* Extend `estimate_sparsity` methods and fix from_ptp (#3369)
+* Extend `estimate_sparsity` methods and update `from_ptp`` (#3369)
 * Add `load_sorting_analyzer_or_waveforms` function (#3352)
 * Fix zarr folder suffix handling (#3349)
 * Analyzer extension exit status (#3347)
