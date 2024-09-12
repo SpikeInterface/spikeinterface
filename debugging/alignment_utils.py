@@ -20,7 +20,7 @@ from spikeinterface.sortingcomponents.motion.iterative_template import kriging_k
 
 
 def get_activity_histogram(
-    recording, peaks, peak_locations, spatial_bin_edges, log_scale, bin_s, smooth_um
+    recording, peaks, peak_locations, spatial_bin_edges, log_scale, bin_s, depth_smooth_um
 ):
     """
     TODO: assumes 1-segment recording
@@ -35,7 +35,7 @@ def get_activity_histogram(
         bin_um=None,
         hist_margin_um=None,
         spatial_bin_edges=spatial_bin_edges,
-        depth_smooth_um=smooth_um,
+        depth_depth_smooth_um=depth_smooth_um,
     )
     assert np.array_equal(generated_spatial_bin_edges, spatial_bin_edges), "TODO: remove soon after testing"
 
