@@ -28,6 +28,10 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
             ids: ["source3.1" , "source3.2", "source3.3", "source3.4"]
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    readding_attemps : int, default: 25
+        Number of attempts to read the file before raising an error
+        This opening process is somewhat unreliable and might fail occasionally. Adjust this higher
+        if you encounter problems in opening the file.
 
     Examples
     --------
@@ -37,7 +41,15 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
 
     NeoRawIOClass = "Plexon2RawIO"
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, use_names_as_ids=True, all_annotations=False):
+    def __init__(
+        self,
+        file_path,
+        stream_id=None,
+        stream_name=None,
+        use_names_as_ids=True,
+        all_annotations=False,
+        readding_attemps: int = 25,
+    ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(
             self,
@@ -45,6 +57,7 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
             stream_name=stream_name,
             all_annotations=all_annotations,
             use_names_as_ids=use_names_as_ids,
+            readding_attemps=readding_attemps,
             **neo_kwargs,
         )
         self._kwargs.update({"file_path": str(file_path)})
