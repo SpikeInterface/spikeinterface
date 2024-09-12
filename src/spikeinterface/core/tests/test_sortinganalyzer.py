@@ -126,6 +126,8 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
 
 
 def test_load_without_runtime_info(tmp_path, dataset):
+    import zarr
+
     recording, sorting = dataset
 
     folder = tmp_path / "test_SortingAnalyzer_run_info"
@@ -153,6 +155,7 @@ def test_load_without_runtime_info(tmp_path, dataset):
     root = sorting_analyzer._get_zarr_root(mode="r+")
     for ext in extensions:
         del root["extensions"][ext].attrs["run_info"]
+        zarr.consolidate_metadata(root.store)
     # should raise a warning for missing run_info
     with pytest.warns(UserWarning):
         sorting_analyzer = load_sorting_analyzer(folder, format="auto")
