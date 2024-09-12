@@ -4,36 +4,29 @@ Utils functions to launch several sorter on several recording in parallel or not
 
 from __future__ import annotations
 
-from pathlib import Path
-import shutil
-import numpy as np
-import tempfile
 import os
 import stat
 import subprocess
 import sys
+import tempfile
 import warnings
-
+import numpy as np
+from pathlib import Path
 from spikeinterface.core import aggregate_units
-
-from .sorterlist import sorter_dict
 from .runsorter import run_sorter
-from .basesorter import is_log_ok
 
 _default_engine_kwargs = dict(
     loop=dict(),
     joblib=dict(n_jobs=-1, backend="loky"),
     processpoolexecutor=dict(max_workers=2, mp_context=None),
     dask=dict(client=None),
-    slurm={"tmp_script_folder": None},
+    slurm={"tmp_script_folder": None, "sbatch_args": {"cpus-per-task": 1, "mem": "1G"}},
 )
-
-_default_slurm_kwargs = {"cpus-per-task": 1, "mem": "1G"}
 
 _implemented_engine = list(_default_engine_kwargs.keys())
 
 
-def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, slurm_kwargs=None, return_output=False):
+def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=False):
     """
     Run several :py:func:`run_sorter()` sequentially or in parallel given a list of jobs.
 
@@ -67,18 +60,27 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, slurm_kwargs=No
         The engine to run the list.
     engine_kwargs : dict
         Parameters to be passed to the underlying engine.
-        Defaults are:
         * loop : None
-        * joblib : n_jobs=1, backend="loky"
-        * multiprocessing : max_workers=2, mp_context=None
-        * dask : client=None
-        * slurm : tmp_script_folder=None
-    slurm_kwargs: dict
-        Exclusively for engine="slum", ignored for all other engines.
-        This dictionary contains arguments to be passed to sbatch.
-        They will be automatically prefixed with --.
-        Arguments must be in the format slurm specify, see the
-        [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html) for a list of possible arguments
+        * joblib :
+            - n_jobs : int
+                The maximum number of concurrently running jobs (default=-1, tries to use all CPUs)
+            - backend : str
+                Specify the parallelization backend implementation (default="loky")
+        * multiprocessing :
+            - max_workers : int
+                maximum number of processes (default=2)
+            - mp_context : str
+                multiprocessing context (default=None)
+        * dask :
+            - client : dask.distributed.Client
+                Dask client to connect to (required)
+        * slurm :
+            - tmp_script_folder : str,Path
+                the folder in which the job scripts are created (default=None, create a random temporary directory)
+            - sbatch_args: dict
+                dictionary of arguments to be passed to the sbatch command. They will be automatically prefixed with --.
+                Arguments must be in the format slurm specify, see the [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html)
+                for a list of possible arguments (default={"cpus-per-task": 1, "mem": "1G"})
 
     return_output : bool, default: False
         Return a sortings or None.
@@ -161,7 +163,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, slurm_kwargs=No
         if "cpus_per_task" in engine_kwargs:
             raise ValueError(
                 "keyword argument cpus_per_task is no longer supported for slurm engine, "
-                "please use cpus-per-task in `slurm_kwarg` instead."
+                "please use cpus-per-task instead."
             )
         # generate python script for slurm
         tmp_script_folder = engine_kwargs["tmp_script_folder"]
@@ -197,12 +199,11 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, slurm_kwargs=No
                 os.fchmod(f.fileno(), mode=stat.S_IRWXU)
 
             progr = ["sbatch"]
-            if slurm_kwargs is None:
-                slurm_kwargs = _default_slurm_kwargs
-            for k, v in slurm_kwargs.items():
+            for k, v in engine_kwargs["sbatch_args"].items():
                 progr.append(f"--{k}")
                 progr.append(f"{v}")
             progr.append(str(script_name.absolute()))
+            print(f"subprocess called with command {' '.join(progr)}")
             p = subprocess.run(progr, capture_output=True, text=True)
             print(p.stdout)
             if len(p.stderr) > 0:
@@ -234,7 +235,7 @@ def run_sorter_by_property(
     folder,
     mode_if_folder_exists=None,
     engine="loop",
-    engine_kwargs={},
+    engine_kwargs=None,
     verbose=False,
     docker_image=None,
     singularity_image=None,
@@ -264,13 +265,11 @@ def run_sorter_by_property(
         Must be None. This is deprecated.
         If not None then a warning is raise.
         Will be removed in next release.
-    engine : "loop" | "joblib" | "dask", default: "loop"
+    engine : "loop" | "joblib" | "dask" | "slurm", default: "loop"
         Which engine to use to run sorter.
     engine_kwargs : dict
-        This contains kwargs specific to the launcher engine:
-            * "loop" : no kwargs
-            * "joblib" : {"n_jobs" : } number of processes
-            * "dask" : {"client":} the dask client for submitting task
+        This contains kwargs specific to the launcher engine.
+        See the documentation for :py:func:`~spikeinterface.sorters.launcher.run_sorter_jobs()` for more details.
     verbose : bool, default: False
         Controls sorter verboseness
     docker_image : None or str, default: None
