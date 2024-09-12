@@ -47,7 +47,12 @@ Release notes
 Version 0.101.1
 ===============
 
+Minor release with bug fixes and minor improvements:
 
+* Enabled support for consolidated Zarr-backend for `SortingAnalyzer`, including cloud support (#3314, #3318, #3349, #3351)
+* Improved support for Kilosort4 **ONLY VERSIONS >= 4.0.16** (#3339, #3276)
+* Skip recomputation of quality and template metrics if already computed (#3292)
+* Dropped support for Python<3.9 (#3267)
 
 
 Version 0.101.0
