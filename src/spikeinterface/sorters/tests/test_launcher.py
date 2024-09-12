@@ -126,7 +126,7 @@ def test_run_sorter_jobs_slurm(job_list, create_cache_folder):
     )
 
 
-@pytest.mark.skipif(system() != 'Linux', reason="Assumes we are on Linux to run SLURM")
+@pytest.mark.skipif(system() != "Linux", reason="Assumes we are on Linux to run SLURM")
 def test_run_sorter_jobs_slurm_kwargs(mocker, tmp_path, job_list):
     """
     Mock `subprocess.run()` to check that engine_kwargs are
@@ -147,13 +147,10 @@ def test_run_sorter_jobs_slurm_kwargs(mocker, tmp_path, job_list):
             "mem": "32G",
             "gres": "gpu:1",
             "any_random_kwarg": 12322,
-        })
-
-    run_sorter_jobs(
-        job_list,
-        engine="slurm",
-        engine_kwargs=engine_kwargs
+        },
     )
+
+    run_sorter_jobs(job_list, engine="slurm", engine_kwargs=engine_kwargs)
 
     script_0_path = f"{tmp_script_folder}/si_script_0.py"
     script_1_path = f"{tmp_script_folder}/si_script_1.py"
