@@ -67,6 +67,5 @@ def sorting_analyzer_simple():
     sorting_analyzer.compute("waveforms", **job_kwargs)
     sorting_analyzer.compute("templates")
     sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
-    sorting_analyzer.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
 
     return sorting_analyzer
