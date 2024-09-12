@@ -34,7 +34,7 @@ jobs:
           echo "## OS: ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "### Import times when only installing only core dependencies " >> $GITHUB_STEP_SUMMARY
-          python ./.github/import_test.py >> $GITHUB_STEP_SUMMARY
+          python ./.github/scripts/import_test.py >> $GITHUB_STEP_SUMMARY
         shell: bash  # Necessary for pipeline to work on windows
       - name: Install in full mode
         run: |
@@ -44,5 +44,5 @@ jobs:
           # Add a header to separate the two profiles
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "### Import times when installing full dependencies in " >> $GITHUB_STEP_SUMMARY
-          python ./.github/import_test.py >> $GITHUB_STEP_SUMMARY
+          python ./.github/scripts/import_test.py >> $GITHUB_STEP_SUMMARY
         shell: bash  # Necessary for pipeline to work on windows

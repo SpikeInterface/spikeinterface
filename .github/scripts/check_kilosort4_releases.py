@@ -16,13 +16,8 @@ def get_pypi_versions(package_name):
     response.raise_for_status()
     data = response.json()
     versions = list(sorted(data["releases"].keys()))
-
-    assert parse(spikeinterface.__version__) < parse("0.101.1"), (
-        "Kilosort 4.0.5-12 are supported in SpikeInterface < 0.101.1."
-        "At version 0.101.1, this should be updated to support newer"
-        "kilosort verrsions."
-    )
-    versions = [ver for ver in versions if parse("4.0.12") >= parse(ver) >= parse("4.0.5")]
+    # Filter out versions that are less than 4.0.16
+    versions = [ver for ver in versions if parse(ver) >= parse("4.0.16")]
     return versions
 
 
