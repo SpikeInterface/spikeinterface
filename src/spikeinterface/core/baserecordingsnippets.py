@@ -344,7 +344,7 @@ class BaseRecordingSnippets(BaseExtractor):
             raise ValueError("set_channel_locations(..) destroys the probe description, prefer _set_probes(..)")
         self.set_property("location", locations, ids=channel_ids)
 
-    def get_channel_locations(self, channel_ids=None, axes: str = "xy"):
+    def get_channel_locations(self, channel_ids=None, axes: str = "xy") -> np.ndarray:
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
