@@ -192,7 +192,7 @@ def test_SortingAnalyzer_interleaved_probegroup(dataset):
     probegroup.add_probe(probe2)
     probegroup.set_global_device_channel_indices(np.random.permutation(num_channels))
 
-    recording.set_probegroup(probegroup)
+    recording = recording.set_probegroup(probegroup)
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
     # check that locations are correct
