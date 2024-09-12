@@ -77,6 +77,9 @@ def create_sorting_analyzer(
     return_scaled : bool, default: True
         All extensions that play with traces will use this global return_scaled : "waveforms", "noise_levels", "templates".
         This prevent return_scaled being differents from different extensions and having wrong snr for instance.
+    overwrite: bool, default: False
+        If True, overwrite the folder if it already exists.
+
 
     Returns
     -------
@@ -486,7 +489,11 @@ class SortingAnalyzer:
 
         if is_path_remote(str(self.folder)):
             mode = "r"
-        zarr_root = zarr.open(self.folder, mode=mode, storage_options=self.storage_options)
+        # we open_consolidated only if we are in read mode
+        if mode in ("r+", "a"):
+            zarr_root = zarr.open(str(self.folder), mode=mode, storage_options=self.storage_options)
+        else:
+            zarr_root = zarr.open_consolidated(self.folder, mode=mode, storage_options=self.storage_options)
         return zarr_root
 
     @classmethod
@@ -564,11 +571,13 @@ class SortingAnalyzer:
 
         recording_info = zarr_root.create_group("extensions")
 
+        zarr.consolidate_metadata(zarr_root.store)
+
     @classmethod
     def load_from_zarr(cls, folder, recording=None, storage_options=None):
         import zarr
 
-        zarr_root = zarr.open(str(folder), mode="r", storage_options=storage_options)
+        zarr_root = zarr.open_consolidated(str(folder), mode="r", storage_options=storage_options)
 
         # load internal sorting in memory
         sorting = NumpySorting.from_sorting(
@@ -614,6 +623,7 @@ class SortingAnalyzer:
             format="zarr",
             sparsity=sparsity,
             return_scaled=return_scaled,
+            storage_options=storage_options,
         )
 
         return sorting_analyzer
@@ -1462,7 +1472,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         if self.format != "memory" and self.has_extension(extension_name):
             # need a reload to reset the folder
             ext = self.load_extension(extension_name)
-            ext.reset()
+            ext.delete()
 
         # remove from dict
         self.extensions.pop(extension_name, None)
@@ -2004,18 +2014,16 @@ class AnalyzerExtension:
             # NB: this call to _save_params() also resets the folder or zarr group
             self._save_params()
             self._save_importing_provenance()
-            self._save_run_info()
 
         t_start = perf_counter()
         self._run(**kwargs)
         t_end = perf_counter()
         self.run_info["runtime_s"] = t_end - t_start
+        self.run_info["run_completed"] = True
 
         if save and not self.sorting_analyzer.is_read_only():
+            self._save_run_info()
             self._save_data(**kwargs)
-
-        self.run_info["run_completed"] = True
-        self._save_run_info()
 
     def save(self, **kwargs):
         self._save_params()
@@ -2062,7 +2070,7 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-
+            import zarr
             import numcodecs
 
             extension_group = self._get_zarr_extension_group(mode="r+")
@@ -2096,6 +2104,8 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
                     extension_group[ext_data_name].attrs["object"] = True
+            # we need to re-consolidate
+            zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
     def _reset_extension_folder(self):
         """
@@ -2110,8 +2120,35 @@ class AnalyzerExtension:
         elif self.format == "zarr":
             import zarr
 
-            zarr_root = zarr.open(self.folder, mode="r+")
-            extension_group = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
+            zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
+            _ = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
+            zarr.consolidate_metadata(zarr_root.store)
+
+    def _delete_extension_folder(self):
+        """
+        Delete the extension in a folder (binary or zarr).
+        """
+        if self.format == "binary_folder":
+            extension_folder = self._get_binary_extension_folder()
+            if extension_folder.is_dir():
+                shutil.rmtree(extension_folder)
+
+        elif self.format == "zarr":
+            import zarr
+
+            zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
+            if self.extension_name in zarr_root["extensions"]:
+                del zarr_root["extensions"][self.extension_name]
+                zarr.consolidate_metadata(zarr_root.store)
+
+    def delete(self):
+        """
+        Delete the extension from the folder or zarr and from the dict.
+        """
+        self._delete_extension_folder()
+        self.params = None
+        self.run_info = self._default_run_info_dict()
+        self.data = dict()
 
     def reset(self):
         """
@@ -2128,7 +2165,7 @@ class AnalyzerExtension:
         Set parameters for the extension and
         make it persistent in json.
         """
-        # this ensure data is also deleted and corresponf to params
+        # this ensure data is also deleted and corresponds to params
         # this also ensure the group is created
         self._reset_extension_folder()
 
@@ -2141,7 +2178,6 @@ class AnalyzerExtension:
         if save:
             self._save_params()
             self._save_importing_provenance()
-            self._save_run_info()
 
     def _save_params(self):
         params_to_save = self.params.copy()
