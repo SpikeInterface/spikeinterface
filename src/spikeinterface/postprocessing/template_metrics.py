@@ -152,7 +152,9 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             # checks that existing metrics were calculated using the same params
             if existing_params != metrics_kwargs_:
                 warnings.warn(
-                    "The parameters used to calculate the previous template metrics are different than those used now. Deleting previous template metrics..."
+                    f"The parameters used to calculate the previous template metrics are different"
+                    f"than those used now.\nPrevious parameters: {existing_params}\nCurrent "
+                    f"parameters:  {metrics_kwargs_}\nDeleting previous template metrics..."
                 )
                 tm_extension.params["metric_names"] = []
                 existing_metric_names = []
