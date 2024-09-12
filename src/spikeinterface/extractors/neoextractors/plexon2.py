@@ -48,23 +48,32 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
         stream_name=None,
         use_names_as_ids=True,
         all_annotations=False,
-        readding_attemps: int = 25,
+        reading_attempts: int = 25,
     ):
-        neo_kwargs = self.map_to_neo_kwargs(file_path)
+        neo_kwargs = self.map_to_neo_kwargs(file_path, reading_attempts=reading_attempts)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
             stream_name=stream_name,
             all_annotations=all_annotations,
             use_names_as_ids=use_names_as_ids,
-            readding_attemps=readding_attemps,
             **neo_kwargs,
         )
         self._kwargs.update({"file_path": str(file_path)})
 
     @classmethod
-    def map_to_neo_kwargs(cls, file_path):
+    def map_to_neo_kwargs(cls, file_path, reading_attempts: int = 25):
+
         neo_kwargs = {"filename": str(file_path)}
+
+        from packaging.version import Version
+        import neo
+
+        neo_version = Version(neo.__version__)
+
+        if neo_version > Version("0.13.3"):
+            neo_kwargs["reading_attempts"] = reading_attempts
+
         return neo_kwargs
 
 
