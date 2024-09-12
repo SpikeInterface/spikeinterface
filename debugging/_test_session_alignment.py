@@ -241,7 +241,7 @@ else:
         "method": "chunked_supremum",  # TODO: double check scaling
         "chunked_bin_size_s": "estimate",
         "log_scale": True,
-        "smooth_um": 10,
+        "depth_smooth_um": 10,
     }
     compute_alignment_kwargs = {
         "num_shifts_block": None,  # TODO: can be in um so comaprable with window kwargs.

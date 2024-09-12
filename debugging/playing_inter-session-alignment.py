@@ -31,7 +31,7 @@ estimate_histogram_kwargs = {
     "method": "chunked_median",  # TODO: double check scaling
     "chunked_bin_size_s": "estimate",
     "log_scale": False,
-    "smooth_um": 5,
+    "depth_smooth_um": 5,
 }
 compute_alignment_kwargs = {
     "num_shifts_block": None,  # TODO: can be in um so comaprable with window kwargs.
