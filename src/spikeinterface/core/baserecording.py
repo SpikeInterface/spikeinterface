@@ -749,7 +749,7 @@ class BaseRecording(BaseRecordingSnippets):
     def get_channel_locations(
         self,
         channel_ids: list | np.ndarray | tuple | None = None,
-        axes: "xy" | "yz" | "xz" = "xy",
+        axes: "xy" | "yz" | "xz" | "xyz" = "xy",
     ) -> np.ndarray:
         """
         Get the physical locations of specified channels.
