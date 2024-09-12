@@ -497,15 +497,17 @@ class BaseRecording(BaseRecordingSnippets):
 
     def reset_times(self):
         """
-        Reset times in-memory for all segments that have a time vector.
+        Reset time information in-memory for all segments that have a time vector.
         If the timestamps come from a file, the files won't be modified. but only the in-memory
-        attributes of the recording objects are deleted.
+        attributes of the recording objects are deleted. Also `t_start` is set to None and the
+        segment's sampling frequency is set to the recording's sampling frequency.
         """
         for segment_index in range(self.get_num_segments()):
+            rs = self._recording_segments[segment_index]
             if self.has_time_vector(segment_index):
-                rs = self._recording_segments[segment_index]
-                rs.t_start = None
                 rs.time_vector = None
+            rs.t_start = None
+            rs.sampling_frequency = self.sampling_frequency
 
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
@@ -565,6 +567,7 @@ class BaseRecording(BaseRecordingSnippets):
                 channel_ids=self.get_channel_ids(),
                 time_axis=0,
                 file_offset=0,
+                is_filtered=self.is_filtered(),
                 gain_to_uV=self.get_channel_gains(),
                 offset_to_uV=self.get_channel_offsets(),
             )

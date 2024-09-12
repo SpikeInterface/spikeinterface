@@ -164,7 +164,10 @@ class ComputeQualityMetrics(AnalyzerExtension):
         pc_metric_names = [k for k in metric_names if k in _possible_pc_metric_names]
         if len(pc_metric_names) > 0 and not self.params["skip_pc_metrics"]:
             if not sorting_analyzer.has_extension("principal_components"):
-                raise ValueError("waveform_principal_component must be provied")
+                raise ValueError(
+                    "To compute principal components base metrics, the principal components "
+                    "extension must be computed first."
+                )
             pc_metrics = compute_pc_metrics(
                 sorting_analyzer,
                 unit_ids=non_empty_unit_ids,
