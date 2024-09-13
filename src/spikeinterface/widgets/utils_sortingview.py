@@ -141,12 +141,13 @@ def generate_unit_table_view(
                 elif prop_name in tm_props:
                     property_values = tm_data[prop_name].values
 
-                # Check for NaN values
+                # Check for NaN values and round floats
                 val0 = np.array(property_values[0])
                 if val0.dtype.kind == "f":
                     if np.isnan(property_values[ui]):
                         continue
-                values[prop_name] = np.format_float_positional(property_values[ui], precision=4, fractional=False)
+                    property_values[ui] = np.format_float_positional(property_values[ui], precision=4, fractional=False)
+                values[prop_name] = property_values[ui]
             ut_rows.append(vv.UnitsTableRow(unit_id=unit, values=check_json(values)))
 
     v_units_table = vv.UnitsTable(rows=ut_rows, columns=ut_columns, similarity_scores=similarity_scores)
