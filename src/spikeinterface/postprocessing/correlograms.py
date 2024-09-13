@@ -435,12 +435,7 @@ def _compute_correlograms_numba(sorting, window_size, bin_size):
 
 if HAVE_NUMBA:
 
-    @numba.jit(
-        nopython=True,
-        nogil=True,
-        cache=False,
-        parallel=True
-    )
+    @numba.jit(nopython=True, nogil=True, cache=False, parallel=True)
     def _compute_correlograms_one_segment_numba(
         correlograms, spike_times, spike_unit_indices, window_size, bin_size, num_half_bins
     ):

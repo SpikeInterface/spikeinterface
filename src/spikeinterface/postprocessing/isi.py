@@ -182,12 +182,7 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
 
 if HAVE_NUMBA:
 
-    @numba.jit(
-        nopython=True,
-        nogil=True,
-        cache=False,
-        parallel=True
-    )
+    @numba.jit(nopython=True, nogil=True, cache=False, parallel=True)
     def _compute_isi_histograms_numba(ISIs, spike_trains, spike_clusters, bins):
         n_units = ISIs.shape[0]
 

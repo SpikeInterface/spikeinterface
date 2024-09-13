@@ -157,9 +157,7 @@ compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 if HAVE_NUMBA:
 
     @numba.jit(nopython=True, parallel=True, fastmath=True, nogil=True)
-    def _compute_similarity_matrix(
-        templates_array, other_templates_array, num_shifts, mask, method 
-    ):
+    def _compute_similarity_matrix(templates_array, other_templates_array, num_shifts, mask, method):
         num_templates = templates_array.shape[0]
         num_samples = templates_array.shape[1]
         other_num_templates = other_templates_array.shape[0]
@@ -176,7 +174,7 @@ if HAVE_NUMBA:
             shift_loop = range(-num_shifts, 1)
         else:
             shift_loop = range(-num_shifts, num_shifts + 1)
-        
+
         for count, shift in enumerate(shift_loop):
             src_sliced_templates = templates_array[:, num_shifts : num_samples - num_shifts]
             tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
@@ -202,25 +200,25 @@ if HAVE_NUMBA:
                             norm_j += abs(tgt[k])
                             distances[count, i, j] += abs(src[k] - tgt[k])
                         elif method == "l2":
-                            norm_i += src[k]**2
-                            norm_j += tgt[k]**2
-                            distances[count, i, j] += (src[k] - tgt[k])**2
+                            norm_i += src[k] ** 2
+                            norm_j += tgt[k] ** 2
+                            distances[count, i, j] += (src[k] - tgt[k]) ** 2
                         elif method == "cosine":
-                            distances[count, i, j] += src[k]*tgt[k]
-                            norm_i += src[k]**2
-                            norm_j += tgt[k]**2
+                            distances[count, i, j] += src[k] * tgt[k]
+                            norm_i += src[k] ** 2
+                            norm_j += tgt[k] ** 2
 
                     if method == "l1":
-                        distances[count, i, j] /= (norm_i + norm_j)
+                        distances[count, i, j] /= norm_i + norm_j
                     elif method == "l2":
                         norm_i = np.sqrt(norm_i)
                         norm_j = np.sqrt(norm_j)
                         distances[count, i, j] = np.sqrt(distances[count, i, j])
-                        distances[count, i, j] /= (norm_i + norm_j)
+                        distances[count, i, j] /= norm_i + norm_j
                     elif method == "cosine":
                         norm_i = np.sqrt(norm_i)
                         norm_j = np.sqrt(norm_j)
-                        distances[count, i, j] /= (norm_i*norm_j)
+                        distances[count, i, j] /= norm_i * norm_j
                         distances[count, i, j] = 1 - distances[count, i, j]
 
                     if same_array:
@@ -231,9 +229,8 @@ if HAVE_NUMBA:
         return distances
 
 else:
-    def _compute_similarity_matrix(
-        templates_array, other_templates_array, num_shifts, mask, method 
-    ):
+
+    def _compute_similarity_matrix(templates_array, other_templates_array, num_shifts, mask, method):
 
         num_templates = templates_array.shape[0]
         num_samples = templates_array.shape[1]
@@ -280,7 +277,7 @@ else:
                     elif method == "cosine":
                         norm_i = np.linalg.norm(src, ord=2)
                         norm_j = np.linalg.norm(tgt, ord=2)
-                        distances[count, i, j] = np.sum(src*tgt)
+                        distances[count, i, j] = np.sum(src * tgt)
                         distances[count, i, j] /= norm_i * norm_j
                         distances[count, i, j] = 1 - distances[count, i, j]
 
@@ -292,11 +289,9 @@ else:
         return distances
 
 
-
 def compute_similarity_with_templates_array(
     templates_array, other_templates_array, method, support="union", num_shifts=0, sparsity=None, other_sparsity=None
 ):
-    
 
     if method == "cosine_similarity":
         method = "cosine"
@@ -327,14 +322,9 @@ def compute_similarity_with_templates_array(
             units_overlaps = np.sum(mask, axis=2) > 0
             mask = np.logical_or(sparsity.mask[:, np.newaxis, :], other_sparsity.mask[np.newaxis, :, :])
             mask[~units_overlaps] = False
-        
 
     assert num_shifts < num_samples, "max_lag is too large"
-    distances = _compute_similarity_matrix(templates_array, 
-                                           other_templates_array, 
-                                           num_shifts, 
-                                           mask, 
-                                           method)
+    distances = _compute_similarity_matrix(templates_array, other_templates_array, num_shifts, mask, method)
 
     distances = np.min(distances, axis=0)
     similarity = 1 - distances
