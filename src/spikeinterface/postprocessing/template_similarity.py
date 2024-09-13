@@ -10,7 +10,7 @@ from ..core.sparsity import ChannelSparsity
 try:
     import numba
 
-    HAVE_NUMBA = True
+    HAVE_NUMBA = False
 except ImportError:
     HAVE_NUMBA = False
 
@@ -156,7 +156,7 @@ compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
 if HAVE_NUMBA:
 
-    @numba.jit(nopython=True, parallel=True, fastmath=True, cache=True, nogil=True)
+    @numba.jit(nopython=True, parallel=True, fastmath=True, nogil=True)
     def _compute_similarity_matrix(
         templates_array, other_templates_array, num_shifts, mask, method 
     ):
@@ -234,7 +234,7 @@ else:
     def _compute_similarity_matrix(
         templates_array, other_templates_array, num_shifts, mask, method 
     ):
-        import sklearn.metrics.pairwise
+
         num_templates = templates_array.shape[0]
         num_samples = templates_array.shape[1]
         other_num_templates = other_templates_array.shape[0]
@@ -270,17 +270,19 @@ else:
                     if method == "l1":
                         norm_i = np.sum(np.abs(src))
                         norm_j = np.sum(np.abs(tgt))
-                        distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l1").item()
+                        distances[count, i, j] = np.sum(np.abs(src - tgt))
                         distances[count, i, j] /= norm_i + norm_j
                     elif method == "l2":
                         norm_i = np.linalg.norm(src, ord=2)
                         norm_j = np.linalg.norm(tgt, ord=2)
-                        distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l2").item()
+                        distances[count, i, j] = np.linalg.norm(src - tgt, ord=2)
                         distances[count, i, j] /= norm_i + norm_j
                     elif method == "cosine":
-                        distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(
-                            src, tgt, metric="cosine"
-                        ).item()
+                        norm_i = np.linalg.norm(src, ord=2)
+                        norm_j = np.linalg.norm(tgt, ord=2)
+                        distances[count, i, j] = np.sum(src*tgt)
+                        distances[count, i, j] /= norm_i * norm_j
+                        distances[count, i, j] = 1 - distances[count, i, j]
 
                     if same_array:
                         distances[count, j, i] = distances[count, i, j]
