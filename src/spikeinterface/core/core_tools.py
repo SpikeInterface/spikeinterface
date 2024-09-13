@@ -201,7 +201,7 @@ def is_dict_extractor(d: dict) -> bool:
 extractor_dict_element = namedtuple(typename="extractor_dict_element", field_names=["value", "name", "access_path"])
 
 
-def extractor_dict_iterator(extractor_dict: dict) -> Generator[extractor_dict_element]:
+def extractor_dict_iterator(extractor_dict: dict) -> Generator[extractor_dict_element, None, None]:
     """
     Iterator for recursive traversal of a dictionary.
     This function explores the dictionary recursively and yields the path to each value along with the value itself.

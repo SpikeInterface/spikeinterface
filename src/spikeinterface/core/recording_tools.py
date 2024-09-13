@@ -69,7 +69,7 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsi
 def write_binary_recording(
     recording: "BaseRecording",
     file_paths: list[Path | str] | Path | str,
-    dtype: np.ndtype = None,
+    dtype: np.typing.DTypeLike = None,
     add_file_extension: bool = True,
     byte_offset: int = 0,
     auto_cast_uint: bool = True,
@@ -888,11 +888,10 @@ def check_probe_do_not_overlap(probes):
 
         for j in range(i + 1, len(probes)):
             probe_j = probes[j]
-
             if np.any(
                 np.array(
                     [
-                        x_bounds_i[0] < cp[0] < x_bounds_i[1] and y_bounds_i[0] < cp[1] < y_bounds_i[1]
+                        x_bounds_i[0] <= cp[0] <= x_bounds_i[1] and y_bounds_i[0] <= cp[1] <= y_bounds_i[1]
                         for cp in probe_j.contact_positions
                     ]
                 )
