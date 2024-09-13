@@ -439,6 +439,9 @@ def correct_motion(
 
 
 def run_peak_detection_pipeline_node(recording, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs):
+    """
+    TODO: add docstring
+    """
     from spikeinterface.sortingcomponents.peak_detection import detect_peak_methods
     from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
     from spikeinterface.sortingcomponents.peak_localization import localize_peak_methods

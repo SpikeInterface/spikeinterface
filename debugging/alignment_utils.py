@@ -35,7 +35,7 @@ def get_activity_histogram(
         bin_um=None,
         hist_margin_um=None,
         spatial_bin_edges=spatial_bin_edges,
-        depth_depth_smooth_um=depth_smooth_um,
+        depth_smooth_um=depth_smooth_um,
     )
     assert np.array_equal(generated_spatial_bin_edges, spatial_bin_edges), "TODO: remove soon after testing"
 
