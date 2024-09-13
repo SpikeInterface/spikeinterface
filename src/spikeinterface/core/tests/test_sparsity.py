@@ -209,15 +209,16 @@ def test_estimate_sparsity():
     )
     assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 5)
 
-    # ptp: just run it
+    # amplitude
     sparsity = estimate_sparsity(
         sorting,
         recording,
         num_spikes_for_sparsity=50,
         ms_before=1.0,
         ms_after=2.0,
-        method="ptp",
+        method="amplitude",
         threshold=5,
+        amplitude_mode="peak_to_peak",
         chunk_duration="1s",
         progress_bar=True,
         n_jobs=1,
@@ -252,6 +253,23 @@ def test_estimate_sparsity():
         progress_bar=True,
         n_jobs=1,
     )
+    # ptp: just run it
+    print(noise_levels)
+
+    with pytest.warns(DeprecationWarning):
+        sparsity = estimate_sparsity(
+            sorting,
+            recording,
+            num_spikes_for_sparsity=50,
+            ms_before=1.0,
+            ms_after=2.0,
+            method="ptp",
+            threshold=5,
+            noise_levels=noise_levels,
+            chunk_duration="1s",
+            progress_bar=True,
+            n_jobs=1,
+        )
 
 
 def test_compute_sparsity():
@@ -273,9 +291,11 @@ def test_compute_sparsity():
     sparsity = compute_sparsity(
         sorting_analyzer, method="snr", threshold=5, peak_sign="neg", amplitude_mode="peak_to_peak"
     )
-    sparsity = compute_sparsity(sorting_analyzer, method="ptp", threshold=5)
+    sparsity = compute_sparsity(sorting_analyzer, method="amplitude", threshold=5, amplitude_mode="peak_to_peak")
     sparsity = compute_sparsity(sorting_analyzer, method="energy", threshold=5)
     sparsity = compute_sparsity(sorting_analyzer, method="by_property", by_property="group")
+    with pytest.warns(DeprecationWarning):
+        sparsity = compute_sparsity(sorting_analyzer, method="ptp", threshold=5)
 
     # using object Templates
     templates = sorting_analyzer.get_extension("templates").get_data(outputs="Templates")
@@ -283,7 +303,10 @@ def test_compute_sparsity():
     sparsity = compute_sparsity(templates, method="best_channels", num_channels=2, peak_sign="neg")
     sparsity = compute_sparsity(templates, method="radius", radius_um=50.0, peak_sign="neg")
     sparsity = compute_sparsity(templates, method="snr", noise_levels=noise_levels, threshold=5, peak_sign="neg")
-    sparsity = compute_sparsity(templates, method="ptp", noise_levels=noise_levels, threshold=5)
+    sparsity = compute_sparsity(templates, method="amplitude", threshold=5, amplitude_mode="peak_to_peak")
+
+    with pytest.warns(DeprecationWarning):
+        sparsity = compute_sparsity(templates, method="ptp", noise_levels=noise_levels, threshold=5)
 
 
 if __name__ == "__main__":

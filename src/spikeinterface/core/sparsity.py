@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import warnings
 
 
 from .basesorting import BaseSorting
@@ -18,14 +19,16 @@ _sparsity_doc = """
         * "snr" : threshold based on template signal-to-noise ratio. Use the "threshold" argument
                  to specify the SNR threshold (in units of noise levels) and the "amplitude_mode" argument
                  to specify the mode to compute the amplitude of the templates.
-        * "ptp" : threshold based on the peak-to-peak values on every channels. Use the "threshold" argument
-                 to specify the ptp threshold (in units of amplitude).
+        * "amplitude" : threshold based on the amplitude values on every channels. Use the "threshold" argument
+                     to specify the ptp threshold (in units of amplitude) and the "amplitude_mode" argument
+                     to specify the mode to compute the amplitude of the templates.
         * "energy" : threshold based on the expected energy that should be present on the channels,
                     given their noise levels. Use the "threshold" argument to specify the energy threshold
                     (in units of noise levels)
         * "by_property" : sparsity is given by a property of the recording and sorting (e.g. "group").
                          In this case the sparsity for each unit is given by the channels that have the same property
                          value as the unit. Use the "by_property" argument to specify the property name.
+        * "ptp: : deprecated, use the 'snr' method with the 'peak_to_peak' amplitude mode instead.
 
     peak_sign : "neg" | "pos" | "both"
         Sign of the template to compute best channels.
@@ -37,7 +40,7 @@ _sparsity_doc = """
         Threshold for "snr", "energy" (in units of noise levels) and "ptp" methods (in units of amplitude).
         For the "snr" method, the template amplitude mode is controlled by the "amplitude_mode" argument.
     amplitude_mode : "extremum" | "at_index" | "peak_to_peak"
-        Mode to compute the amplitude of the templates for the "snr" and "best_channels" methods.
+        Mode to compute the amplitude of the templates for the "snr", "amplitude", and "best_channels" methods.
     by_property : object
         Property name for "by_property" method.
 """
@@ -417,7 +420,7 @@ class ChannelSparsity:
         return cls(mask, unit_ids, channel_ids)
 
     @classmethod
-    def from_ptp(cls, templates_or_sorting_analyzer, threshold):
+    def from_ptp(cls, templates_or_sorting_analyzer, threshold, noise_levels=None):
         """
         Construct sparsity from a thresholds based on template peak-to-peak values.
         Use the "threshold" argument to specify the peak-to-peak threshold.
@@ -434,30 +437,67 @@ class ChannelSparsity:
         sparsity : ChannelSparsity
             The estimated sparsity.
         """
+        warnings.warn(
+            "The 'ptp' method is deprecated and will be removed in version 0.103.0. "
+            "Please use the 'snr' method with the 'peak_to_peak' amplitude mode instead.",
+            DeprecationWarning,
+        )
+        return cls.from_snr(
+            templates_or_sorting_analyzer, threshold, amplitude_mode="peak_to_peak", noise_levels=noise_levels
+        )
+
+    @classmethod
+    def from_amplitude(cls, templates_or_sorting_analyzer, threshold, amplitude_mode="extremum", peak_sign="neg"):
+        """
+        Construct sparsity from a threshold based on template amplitude.
+        The amplitude is computed with the specified amplitude mode and it is assumed
+        that the amplitude is in uV. The input `Templates` or `SortingAnalyzer` object must
+        have scaled templates.
+
+        Parameters
+        ----------
+        templates_or_sorting_analyzer : Templates | SortingAnalyzer
+            A Templates or a SortingAnalyzer object.
+        threshold : float
+            Threshold for "amplitude" method (in uV).
+        amplitude_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
+            Mode to compute the amplitude of the templates.
+
+        Returns
+        -------
+        sparsity : ChannelSparsity
+            The estimated sparsity.
+        """
+        from .template_tools import get_template_amplitudes
+        from .sortinganalyzer import SortingAnalyzer
+        from .template import Templates
 
         assert (
             templates_or_sorting_analyzer.sparsity is None
         ), "To compute sparsity you need a dense SortingAnalyzer or Templates"
 
-        from .template_tools import get_dense_templates_array
-        from .sortinganalyzer import SortingAnalyzer
-        from .template import Templates
-
         unit_ids = templates_or_sorting_analyzer.unit_ids
         channel_ids = templates_or_sorting_analyzer.channel_ids
 
         if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-            return_scaled = templates_or_sorting_analyzer.return_scaled
+            assert templates_or_sorting_analyzer.return_scaled, (
+                "To compute sparsity from amplitude you need to have scaled templates. "
+                "You can set `return_scaled=True` when computing the templates."
+            )
         elif isinstance(templates_or_sorting_analyzer, Templates):
-            return_scaled = templates_or_sorting_analyzer.is_scaled
+            assert templates_or_sorting_analyzer.is_scaled, (
+                "To compute sparsity from amplitude you need to have scaled templates. "
+                "You can set `is_scaled=True` when creating the Templates object."
+            )
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
-        templates_array = get_dense_templates_array(templates_or_sorting_analyzer, return_scaled=return_scaled)
-        templates_ptps = np.ptp(templates_array, axis=1)
+        peak_values = get_template_amplitudes(
+            templates_or_sorting_analyzer, peak_sign=peak_sign, mode=amplitude_mode, return_scaled=True
+        )
 
         for unit_ind, unit_id in enumerate(unit_ids):
-            chan_inds = np.nonzero(templates_ptps[unit_ind] >= threshold)
+            chan_inds = np.nonzero((np.abs(peak_values[unit_id])) >= threshold)
             mask[unit_ind, chan_inds] = True
         return cls(mask, unit_ids, channel_ids)
 
@@ -560,7 +600,7 @@ class ChannelSparsity:
 def compute_sparsity(
     templates_or_sorting_analyzer: "Templates | SortingAnalyzer",
     noise_levels: np.ndarray | None = None,
-    method: "radius" | "best_channels" | "snr" | "ptp" | "energy" | "by_property" = "radius",
+    method: "radius" | "best_channels" | "snr" | "amplitude" | "energy" | "by_property" | "ptp" = "radius",
     peak_sign: "neg" | "pos" | "both" = "neg",
     num_channels: int | None = 5,
     radius_um: float | None = 100.0,
@@ -595,7 +635,7 @@ def compute_sparsity(
         # to keep backward compatibility
         templates_or_sorting_analyzer = templates_or_sorting_analyzer.sorting_analyzer
 
-    if method in ("best_channels", "radius", "snr", "ptp"):
+    if method in ("best_channels", "radius", "snr", "amplitude", "ptp"):
         assert isinstance(
             templates_or_sorting_analyzer, (Templates, SortingAnalyzer)
         ), f"compute_sparsity(method='{method}') need Templates or SortingAnalyzer"
@@ -619,11 +659,13 @@ def compute_sparsity(
             peak_sign=peak_sign,
             amplitude_mode=amplitude_mode,
         )
-    elif method == "ptp":
-        assert threshold is not None, "For the 'ptp' method, 'threshold' needs to be given"
-        sparsity = ChannelSparsity.from_ptp(
+    elif method == "amplitude":
+        assert threshold is not None, "For the 'amplitude' method, 'threshold' needs to be given"
+        sparsity = ChannelSparsity.from_amplitude(
             templates_or_sorting_analyzer,
             threshold,
+            amplitude_mode=amplitude_mode,
+            peak_sign=peak_sign,
         )
     elif method == "energy":
         assert threshold is not None, "For the 'energy' method, 'threshold' needs to be given"
@@ -632,6 +674,14 @@ def compute_sparsity(
         assert by_property is not None, "For the 'by_property' method, 'by_property' needs to be given"
         sparsity = ChannelSparsity.from_property(
             templates_or_sorting_analyzer.sorting, templates_or_sorting_analyzer.recording, by_property
+        )
+    elif method == "ptp":
+        # TODO: remove after deprecation
+        assert threshold is not None, "For the 'ptp' method, 'threshold' needs to be given"
+        sparsity = ChannelSparsity.from_ptp(
+            templates_or_sorting_analyzer,
+            threshold,
+            noise_levels=noise_levels,
         )
     else:
         raise ValueError(f"compute_sparsity() method={method} does not exists")
@@ -648,7 +698,7 @@ def estimate_sparsity(
     num_spikes_for_sparsity: int = 100,
     ms_before: float = 1.0,
     ms_after: float = 2.5,
-    method: "radius" | "best_channels" | "ptp" | "snr" | "by_property" = "radius",
+    method: "radius" | "best_channels" | "amplitude" | "snr" | "by_property" | "ptp" = "radius",
     peak_sign: "neg" | "pos" | "both" = "neg",
     radius_um: float = 100.0,
     num_channels: int = 5,
@@ -697,9 +747,9 @@ def estimate_sparsity(
     # Can't be done at module because this is a cyclic import, too bad
     from .template import Templates
 
-    assert method in ("radius", "best_channels", "ptp", "snr", "by_property"), (
+    assert method in ("radius", "best_channels", "snr", "amplitude", "by_property", "ptp"), (
         f"method={method} is not available for `estimate_sparsity()`. "
-        "Available methods are 'radius', 'best_channels', 'ptp', 'snr', 'energy', 'by_property'"
+        "Available methods are 'radius', 'best_channels', 'snr', 'amplitude', 'by_property', 'ptp' (deprecated)"
     )
 
     if recording.get_probes() == 1:
@@ -768,12 +818,19 @@ def estimate_sparsity(
                 peak_sign=peak_sign,
                 amplitude_mode=amplitude_mode,
             )
-        elif method == "ptp":
-            assert threshold is not None, "For the 'ptp' method, 'threshold' needs to be given"
-            sparsity = ChannelSparsity.from_ptp(
-                templates,
-                threshold,
+        elif method == "amplitude":
+            assert threshold is not None, "For the 'amplitude' method, 'threshold' needs to be given"
+            sparsity = ChannelSparsity.from_amplitude(
+                templates, threshold, amplitude_mode=amplitude_mode, peak_sign=peak_sign
             )
+        elif method == "ptp":
+            # TODO: remove after deprecation
+            assert threshold is not None, "For the 'ptp' method, 'threshold' needs to be given"
+            assert noise_levels is not None, (
+                "For the 'snr' method, 'noise_levels' needs to be given. You can use the "
+                "`get_noise_levels()` function to compute them."
+            )
+            sparsity = ChannelSparsity.from_ptp(templates, threshold, noise_levels=noise_levels)
         else:
             raise ValueError(f"compute_sparsity() method={method} does not exists")
     else:
