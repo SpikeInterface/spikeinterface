@@ -10,7 +10,7 @@ from ..core.sparsity import ChannelSparsity
 try:
     import numba
 
-    HAVE_NUMBA = False
+    HAVE_NUMBA = True
 except ImportError:
     HAVE_NUMBA = False
 
@@ -317,7 +317,8 @@ def compute_similarity_with_templates_array(
     num_channels = templates_array.shape[2]
     other_num_templates = other_templates_array.shape[0]
 
-    mask = None
+    mask = np.ones((num_templates, other_num_templates, num_channels), dtype=bool)
+
     if sparsity is not None and other_sparsity is not None:
         if support == "intersection":
             mask = np.logical_and(sparsity.mask[:, np.newaxis, :], other_sparsity.mask[np.newaxis, :, :])
@@ -326,9 +327,7 @@ def compute_similarity_with_templates_array(
             units_overlaps = np.sum(mask, axis=2) > 0
             mask = np.logical_or(sparsity.mask[:, np.newaxis, :], other_sparsity.mask[np.newaxis, :, :])
             mask[~units_overlaps] = False
-    else:
-        # here we make a dense mask and overlapping templates
-        mask = np.ones((num_templates, other_num_templates, num_channels), dtype=bool)
+        
 
     assert num_shifts < num_samples, "max_lag is too large"
     distances = _compute_similarity_matrix(templates_array, 
