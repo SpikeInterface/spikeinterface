@@ -662,7 +662,7 @@ def run_node_pipeline(
     Here a "spike" is a spike with any a label so already sorted.
 
     The main idea is to have a graph of nodes.
-    Every node is doing a computaion of some peaks and related traces.
+    Every node is doing a computation of some peaks and related traces.
     The first node is PeakSource so either a peak detector PeakDetector or peak/spike replay (PeakRetriever/SpikeRetriever)
 
     Every node can have one or several output that can be directed to other nodes (aka nodes have parents).

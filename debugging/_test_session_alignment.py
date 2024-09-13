@@ -133,8 +133,8 @@ TODO: in this case, it is not necessary to run peak detection across
 # -
 
 
-MOTION = False  # True
-SAVE = True
+MOTION = True  # True
+SAVE = False
 PLOT = False
 BIN_UM = 1
 
@@ -195,10 +195,10 @@ if SAVE:
                 recordings_list[i],
                 output_motion_info=True,
                 estimate_motion_kwargs={
-                    "rigid": True,
-                    #     "win_shape": "gaussian",
-                    #    "win_step_um": 50,
-                    #   "win_margin_um": 0,
+                    "rigid": False,
+                    "win_shape": "gaussian",
+                    "win_step_um": 50,
+                    "win_margin_um": 0,
                 },
             )
             recordings_list_new.append(new_recording)
@@ -217,53 +217,51 @@ else:
 
 # TODO: need docs to be super clear from  estimate from existing motion,
 # as will use motion correction nonrigid bins even if it is suboptimal.
+
+estimate_histogram_kwargs = {
+    "bin_um": BIN_UM,
+    "method": "chunked_supremum",  # TODO: double check scaling
+    "chunked_bin_size_s": "estimate",
+    "log_scale": True,
+    "depth_smooth_um": 10,
+}
+compute_alignment_kwargs = {
+    "num_shifts_block": None,  # TODO: can be in um so comaprable with window kwargs.
+    "interpolate": False,
+    "interp_factor": 10,
+    "kriging_sigma": 1,
+    "kriging_p": 2,
+    "kriging_d": 2,
+    "smoothing_sigma_bin": False,  # 0.5,
+    "smoothing_sigma_window": False,  # 0.5,
+    "akima_interp_nonrigid": False,
+}
+non_rigid_window_kwargs = {
+    "rigid": False,
+    "win_shape": "gaussian",
+    "win_step_um": 250,
+    "win_scale_um": 250,
+    "win_margin_um": None,
+    "zero_threshold": None,
+}
+
 if MOTION:
     from session_alignment import align_sessions_after_motion_correction
 
-    non_rigid_window_kwargs = {
-        "win_shape": "gaussian",
-        "win_step_um": 50,
-        "win_margin_um": 0,
-    }
-    corrected_recordings_list, motion_objects_list, extra_info = align_sessions_after_motion_correction(
+    corrected_recordings_list, extra_info = align_sessions_after_motion_correction(
         recordings_list,
         motion_info_list,
-        rigid=False,
-        override_nonrigid_window_kwargs=non_rigid_window_kwargs,
-        chunked_bin_size_s="estimate",
-        bin_um=BIN_UM,  # non_rigid_window_kwargs
+        align_sessions_kwargs={
+            "alignment_order": "to_middle",
+            "estimate_histogram_kwargs": estimate_histogram_kwargs,
+            "compute_alignment_kwargs": compute_alignment_kwargs,
+            "non_rigid_window_kwargs": non_rigid_window_kwargs,
+        }
     )
     peaks_list = [info["peaks"] for info in motion_info_list]
     peak_locations_list = [info["peak_locations"] for info in motion_info_list]
 else:
-    estimate_histogram_kwargs = {
-        "bin_um": BIN_UM,
-        "method": "chunked_supremum",  # TODO: double check scaling
-        "chunked_bin_size_s": "estimate",
-        "log_scale": True,
-        "depth_smooth_um": 10,
-    }
-    compute_alignment_kwargs = {
-        "num_shifts_block": None,  # TODO: can be in um so comaprable with window kwargs.
-        "interpolate": False,
-        "interp_factor": 10,
-        "kriging_sigma": 1,
-        "kriging_p": 2,
-        "kriging_d": 2,
-        "smoothing_sigma_bin": False,  # 0.5,
-        "smoothing_sigma_window": False,  # 0.5,
-        "akima_interp_nonrigid": False,
-
-        "non_rigid_window_kwargs": {
-            "win_shape": "gaussian",
-            "win_step_um": 100,
-            "win_scale_um": 100,
-            "win_margin_um": None,
-            "zero_threshold": None,
-         },
-    }
-
-    corrected_recordings_list, motion_objects_list, extra_info = session_alignment.align_sessions(
+    corrected_recordings_list, extra_info = session_alignment.align_sessions(
         recordings_list,
         peaks_list,
         peak_locations_list,
