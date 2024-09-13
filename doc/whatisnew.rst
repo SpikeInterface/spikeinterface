@@ -8,7 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
-  releases/0.102.0.rst
+  releases/0.101.1.rst
   releases/0.101.0.rst
   releases/0.100.8.rst
   releases/0.100.7.rst
@@ -44,14 +44,13 @@ Release notes
   releases/0.9.1.rst
 
 
-Version 0.102.0
+Version 0.101.1
 ===============
-
 
 * Enabled support for consolidated Zarr-backend for `SortingAnalyzer`, including cloud support (#3314, #3318, #3349, #3351)
 * Improved support for Kilosort4 **ONLY VERSIONS >= 4.0.16** (#3339, #3276)
 * Skip recomputation of quality and template metrics if already computed (#3292)
-* Modified and improved `estimate_sparsity` and refactored `from_ptp` option (#3369)
+* Improved `estimate_sparsity` with new `amplitude` method and and deprecated `from_ptp` option (#3369)
 * Dropped support for Python<3.9 (#3267)
 
 

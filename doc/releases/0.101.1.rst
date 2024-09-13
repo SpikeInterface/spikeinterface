@@ -1,6 +1,6 @@
-.. _release0.102.0:
+.. _release0.101.1:
 
-SpikeInterface 0.102.0 release notes
+SpikeInterface 0.101.1 release notes
 ------------------------------------
 
 13th September 2024
@@ -10,7 +10,7 @@ Main changes:
 * Enabled support for consolidated Zarr-backend for `SortingAnalyzer`, including cloud support (#3314, #3318, #3349, #3351)
 * Improved support for Kilosort4 **ONLY VERSIONS >= 4.0.16** (#3339, #3276)
 * Skip recomputation of quality and template metrics if already computed (#3292)
-* Modified and improved `estimate_sparsity` and refactored `from_ptp` option (#3369)
+* Improved `estimate_sparsity` with new `amplitude` method and and deprecated `from_ptp` option (#3369)
 * Dropped support for Python<3.9 (#3267)
 
 core:
@@ -47,7 +47,6 @@ sorters:
 * Fix KS2/2.5/3 skip_kilosort_preprocessing (#3265)
 * HS: Added lowpass parameter, fixed verbose option (#3262)
 * Now exclusive support for HS v0.4 (Lightning) (#3210)
-* Add kilosort4 wrapper tests (#3085)
 
 postprocessing:
 
@@ -69,6 +68,7 @@ curation:
 
 widgets:
 
+* Sortingview: only round float properties (#3406)
 * Fix widgets tests and add test on unit_table_properties (#3354)
 * Allow quality and template metrics in sortingview's unit table (#3299)
 * Add subwidget parameters for UnitSummaryWidget (#3242)
@@ -116,7 +116,7 @@ testing:
 * Refactor quality metrics tests to use fixture (#3249)
 * Add kilosort4 wrapper tests (#3085)
 * Test IBL skip when the setting up the one client fails (#3289)
-
+* Add kilosort4 wrapper tests (#3085)
 
 Contributors:
 
