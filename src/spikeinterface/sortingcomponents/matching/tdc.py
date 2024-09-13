@@ -348,7 +348,7 @@ def _tdc_find_spikes(traces, d, level=0):
 
 if HAVE_NUMBA:
 
-    @jit(nopython=True, parallel=True)
+    @jit(nopython=True)
     def numba_sparse_dist(wf, templates, union_channels, possible_clusters):
         """
         numba implementation that compute distance from template with sparsity
