@@ -221,6 +221,7 @@ if HAVE_NUMBA:
                         norm_i = np.sqrt(norm_i)
                         norm_j = np.sqrt(norm_j)
                         distances[count, i, j] /= (norm_i*norm_j)
+                        distances[count, i, j] = 1 - distances[count, i, j]
 
                     if same_array:
                         distances[count, j, i] = distances[count, i, j]
