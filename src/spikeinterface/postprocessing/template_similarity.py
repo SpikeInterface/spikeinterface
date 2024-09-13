@@ -155,9 +155,6 @@ compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
 
 if HAVE_NUMBA:
-    
-    from numba import prange
-
 
     @numba.jit(nopython=True, parallel=True, fastmath=True, cache=True, nogil=True)
     def _compute_similarity_matrix(
@@ -183,7 +180,7 @@ if HAVE_NUMBA:
         for count, shift in enumerate(shift_loop):
             src_sliced_templates = templates_array[:, num_shifts : num_samples - num_shifts]
             tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
-            for i in prange(num_templates):
+            for i in numba.prange(num_templates):
                 src_template = src_sliced_templates[i]
                 overlapping_templates = np.flatnonzero(np.sum(mask[i], 1))
                 tgt_templates = tgt_sliced_templates[overlapping_templates]

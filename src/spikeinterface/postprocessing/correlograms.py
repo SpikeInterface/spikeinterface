@@ -439,6 +439,7 @@ if HAVE_NUMBA:
         nopython=True,
         nogil=True,
         cache=False,
+        parallel=True
     )
     def _compute_correlograms_one_segment_numba(
         correlograms, spike_times, spike_unit_indices, window_size, bin_size, num_half_bins
@@ -472,7 +473,7 @@ if HAVE_NUMBA:
             The size of which to bin lags, in samples.
         """
         start_j = 0
-        for i in range(spike_times.size):
+        for i in numba.prange(spike_times.size):
             for j in range(start_j, spike_times.size):
 
                 if i == j:
