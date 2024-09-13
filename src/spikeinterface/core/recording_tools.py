@@ -131,8 +131,10 @@ def write_binary_recording(
         data_size_bytes = dtype_size_bytes * num_frames * num_channels
         file_size_bytes = data_size_bytes + byte_offset
 
+        # create a file with file_size_bytes
         file = open(file_path, "wb+")
-        file.truncate(file_size_bytes)
+        file.seek(file_size_bytes - 1)
+        file.write(b'\0')
         file.close()
         assert Path(file_path).is_file()
 
