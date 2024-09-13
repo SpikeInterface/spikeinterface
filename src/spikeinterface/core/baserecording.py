@@ -768,7 +768,13 @@ class BaseRecording(BaseRecordingSnippets):
             raise NotImplementedError
 
     def binary_compatible_with(
-        self, dtype=None, time_axis=None, file_paths_lenght=None, file_offset=None, file_suffix=None
+        self,
+        dtype=None,
+        time_axis=None,
+        file_paths_length=None,
+        file_offset=None,
+        file_suffix=None,
+        file_paths_lenght=None,
     ):
         """
         Check is the recording is binary compatible with some constrain on
@@ -779,6 +785,15 @@ class BaseRecording(BaseRecordingSnippets):
           * file_offset
           * file_suffix
         """
+
+        # spelling typo need to fix
+        if file_paths_lenght is not None:
+            warnings.warn(
+                "`file_paths_lenght` is deprecated and will be removed in 0.103.0 please use `file_paths_length`"
+            )
+            if file_paths_length is None:
+                file_paths_length = file_paths_lenght
+
         if not self.is_binary_compatible():
             return False
 
@@ -790,7 +805,7 @@ class BaseRecording(BaseRecordingSnippets):
         if time_axis is not None and time_axis != d["time_axis"]:
             return False
 
-        if file_paths_lenght is not None and file_paths_lenght != len(d["file_paths"]):
+        if file_paths_length is not None and file_paths_length != len(d["file_paths"]):
             return False
 
         if file_offset is not None and file_offset != d["file_offset"]:
