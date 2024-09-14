@@ -133,7 +133,11 @@ def write_binary_recording(
 
         # create a file with file_size_bytes
         file = open(file_path, "wb+")
-        file.seek(file_size_bytes - 1)
+        if platform.system() == 'Windows':
+            file.seek(file_size_bytes - 1)
+            file.write(b"\0")
+        else:
+            file.truncate(file_size_bytes)
         file.write(b"\0")
         file.close()
         assert Path(file_path).is_file()
