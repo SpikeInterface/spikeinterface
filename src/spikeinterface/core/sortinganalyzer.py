@@ -1970,12 +1970,14 @@ class AnalyzerExtension:
                 if "dict" in ext_data_.attrs:
                     ext_data = ext_data_[0]
                 elif "dataframe" in ext_data_.attrs:
-                    import xarray
+                    import pandas as pd
 
-                    ext_data = xarray.open_zarr(
-                        ext_data_.store, group=f"{extension_group.name}/{ext_data_name}"
-                    ).to_pandas()
-                    ext_data.index.rename("", inplace=True)
+                    index = ext_data_["index"]
+                    ext_data = pd.DataFrame(index=index)
+                    for col in ext_data_.keys():
+                        if col != "index":
+                            ext_data.loc[:, col] = ext_data_[col][:]
+                    ext_data = ext_data.convert_dtypes()
                 elif "object" in ext_data_.attrs:
                     ext_data = ext_data_[0]
                 else:
@@ -2031,12 +2033,21 @@ class AnalyzerExtension:
         if save and not self.sorting_analyzer.is_read_only():
             self._save_run_info()
             self._save_data(**kwargs)
+            if self.format == "zarr":
+                import zarr
+
+                zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
     def save(self, **kwargs):
         self._save_params()
         self._save_importing_provenance()
-        self._save_data(**kwargs)
         self._save_run_info()
+        self._save_data(**kwargs)
+
+        if self.format == "zarr":
+            import zarr
+
+            zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
     def _save_data(self, **kwargs):
         if self.format == "memory":
@@ -2096,12 +2107,12 @@ class AnalyzerExtension:
                 elif isinstance(ext_data, np.ndarray):
                     extension_group.create_dataset(name=ext_data_name, data=ext_data, compressor=compressor)
                 elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
-                    ext_data.to_xarray().to_zarr(
-                        store=extension_group.store,
-                        group=f"{extension_group.name}/{ext_data_name}",
-                        mode="a",
-                    )
-                    extension_group[ext_data_name].attrs["dataframe"] = True
+                    df_group = extension_group.create_group(ext_data_name)
+                    # first we save the index
+                    df_group.create_dataset(name="index", data=ext_data.index.to_numpy())
+                    for col in ext_data.columns:
+                        df_group.create_dataset(name=col, data=ext_data[col].to_numpy())
+                    df_group.attrs["dataframe"] = True
                 else:
                     # any object
                     try:
@@ -2111,8 +2122,6 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
                     extension_group[ext_data_name].attrs["object"] = True
-            # we need to re-consolidate
-            zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
     def _reset_extension_folder(self):
         """

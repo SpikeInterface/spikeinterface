@@ -3,9 +3,10 @@ from __future__ import annotations
 import pytest
 import shutil
 import numpy as np
+import pandas as pd
 
 from spikeinterface.core import generate_ground_truth_recording
-from spikeinterface.core import create_sorting_analyzer
+from spikeinterface.core import create_sorting_analyzer, load_sorting_analyzer
 from spikeinterface.core import estimate_sparsity
 
 
@@ -137,6 +138,26 @@ class AnalyzerExtensionCommonTestSuite:
         num_units_after_merge = len(sorting_analyzer.unit_ids) - 1
         merged = sorting_analyzer.merge_units(some_merges, format="memory", merging_mode="soft", sparsity_overlap=0.0)
         assert len(merged.unit_ids) == num_units_after_merge
+
+        # test roundtrip
+        if sorting_analyzer.format in ("binary_folder", "zarr"):
+            sorting_analyzer_loaded = load_sorting_analyzer(sorting_analyzer.folder)
+            ext_loaded = sorting_analyzer_loaded.get_extension(extension_class.extension_name)
+            for ext_data_name, ext_data_loaded in ext_loaded.data.items():
+                if isinstance(ext_data_loaded, np.ndarray):
+                    assert np.array_equal(ext.data[ext_data_name], ext_data_loaded)
+                elif isinstance(ext_data_loaded, pd.DataFrame):
+                    # skip nan values
+                    for col in ext_data_loaded.columns:
+                        np.testing.assert_array_almost_equal(
+                            ext.data[ext_data_name][col].dropna().to_numpy(),
+                            ext_data_loaded[col].dropna().to_numpy(),
+                            decimal=5,
+                        )
+                elif isinstance(ext_data_loaded, dict):
+                    assert ext.data[ext_data_name] == ext_data_loaded
+                else:
+                    continue
 
     def run_extension_tests(self, extension_class, params):
         """

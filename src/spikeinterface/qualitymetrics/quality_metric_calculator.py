@@ -185,7 +185,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         if len(empty_unit_ids) > 0:
             metrics.loc[empty_unit_ids] = np.nan
 
-        return metrics
+        return metrics.convert_dtypes()
 
     def _run(self, verbose=False, **job_kwargs):
         self.data["metrics"] = self._compute_metrics(

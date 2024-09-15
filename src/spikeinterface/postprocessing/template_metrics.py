@@ -287,7 +287,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                     warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
                     value = np.nan
                 template_metrics.at[index, metric_name] = value
-        return template_metrics
+        return template_metrics.convert_dtypes()
 
     def _run(self, verbose=False):
         self.data["metrics"] = self._compute_metrics(
