@@ -11,6 +11,7 @@ import weakref
 import shutil
 import warnings
 import importlib
+from packaging.version import parse
 from time import perf_counter
 
 import numpy as np
@@ -578,6 +579,20 @@ class SortingAnalyzer:
         import zarr
 
         zarr_root = zarr.open_consolidated(str(folder), mode="r", storage_options=storage_options)
+
+        si_info = zarr_root.attrs["spikeinterface_info"]
+        if parse(si_info["version"]) < parse("0.101.1"):
+            # v0.101.0 did not have a consolidate metadata step after computing extensions.
+            # Here we try to consolidate the metadata and throw a warning if it fails.
+            try:
+                zarr_root_a = zarr.open(str(folder), mode="a", storage_options=storage_options)
+                zarr.consolidate_metadata(zarr_root_a.store)
+            except Exception as e:
+                warnings.warn(
+                    "The zarr store was not properly consolidated prior to v0.101.1. "
+                    "This may lead to unexpected behavior in loading extensions. "
+                    "Please consider re-saving the SortingAnalyzer object."
+                )
 
         # load internal sorting in memory
         sorting = NumpySorting.from_sorting(
