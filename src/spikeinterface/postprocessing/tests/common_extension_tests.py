@@ -3,7 +3,6 @@ from __future__ import annotations
 import pytest
 import shutil
 import numpy as np
-import pandas as pd
 
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer, load_sorting_analyzer
@@ -117,6 +116,8 @@ class AnalyzerExtensionCommonTestSuite:
         with the passed parameters, and check the output is not empty, the extension
         exists and `select_units()` method works.
         """
+        import pandas as pd
+
         if extension_class.need_job_kwargs:
             job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
         else:
