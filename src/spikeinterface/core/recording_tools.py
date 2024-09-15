@@ -132,13 +132,11 @@ def write_binary_recording(
         file_size_bytes = data_size_bytes + byte_offset
 
         # Create an empty file with file_size_bytes
-        file = open(file_path, "wb+")
+        with open(file_path, "wb+") as file:
+            # The previous implementation `file.truncate(file_size_bytes)` was slow on Windows (#3408)
+            file.seek(file_size_bytes - 1)
+            file.write(b"\0")
 
-        # The previous implementation `file.truncate(file_size_bytes)` was slow on Windows (#3408)
-        file.seek(file_size_bytes - 1)
-        file.write(b"\0")
-
-        file.close()
         assert Path(file_path).is_file()
 
     # use executor (loop or workers)
