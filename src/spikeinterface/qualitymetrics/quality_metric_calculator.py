@@ -141,7 +141,6 @@ class ComputeQualityMetrics(AnalyzerExtension):
         """
         import pandas as pd
 
-        metric_names = self.params["metric_names"]
         qm_params = self.params["qm_params"]
         # sparsity = self.params["sparsity"]
         seed = self.params["seed"]
