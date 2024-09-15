@@ -62,6 +62,8 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         For more on generating a ChannelSparsity, see the `~spikeinterface.compute_sparsity()` function.
     include_multi_channel_metrics : bool, default: False
         Whether to compute multi-channel metrics
+    delete_existing_metrics : bool, default: False
+        If True, any template metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept, provided the `metrics_kwargs` are unchanged.
     metrics_kwargs : dict
         Additional arguments to pass to the metric functions. Including:
             * recovery_window_ms: the window in ms after the peak to compute the recovery_slope, default: 0.7
@@ -109,8 +111,11 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         sparsity=None,
         metrics_kwargs=None,
         include_multi_channel_metrics=False,
+        delete_existing_metrics=False,
         **other_kwargs,
     ):
+
+        import pandas as pd
 
         # TODO alessio can you check this : this used to be in the function but now we have ComputeTemplateMetrics.function_factory()
         if include_multi_channel_metrics or (
@@ -139,12 +144,36 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             metrics_kwargs_ = _default_function_kwargs.copy()
             metrics_kwargs_.update(metrics_kwargs)
 
+        metrics_to_compute = metric_names
+        tm_extension = self.sorting_analyzer.get_extension("template_metrics")
+        if delete_existing_metrics is False and tm_extension is not None:
+
+            existing_params = tm_extension.params["metrics_kwargs"]
+            # checks that existing metrics were calculated using the same params
+            if existing_params != metrics_kwargs_:
+                warnings.warn(
+                    f"The parameters used to calculate the previous template metrics are different"
+                    f"than those used now.\nPrevious parameters: {existing_params}\nCurrent "
+                    f"parameters:  {metrics_kwargs_}\nDeleting previous template metrics..."
+                )
+                tm_extension.params["metric_names"] = []
+                existing_metric_names = []
+            else:
+                existing_metric_names = tm_extension.params["metric_names"]
+
+            existing_metric_names_propogated = [
+                metric_name for metric_name in existing_metric_names if metric_name not in metrics_to_compute
+            ]
+            metric_names = metrics_to_compute + existing_metric_names_propogated
+
         params = dict(
-            metric_names=[str(name) for name in np.unique(metric_names)],
+            metric_names=metric_names,
             sparsity=sparsity,
             peak_sign=peak_sign,
             upsampling_factor=int(upsampling_factor),
             metrics_kwargs=metrics_kwargs_,
+            delete_existing_metrics=delete_existing_metrics,
+            metrics_to_compute=metrics_to_compute,
         )
 
         return params
@@ -158,6 +187,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
     ):
         import pandas as pd
 
+        metric_names = self.params["metric_names"]
         old_metrics = self.data["metrics"]
 
         all_unit_ids = new_sorting_analyzer.unit_ids
@@ -166,19 +196,20 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
-        metrics.loc[new_unit_ids, :] = self._compute_metrics(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
+        metrics.loc[new_unit_ids, :] = self._compute_metrics(
+            new_sorting_analyzer, new_unit_ids, verbose, metric_names, **job_kwargs
+        )
 
         new_data = dict(metrics=metrics)
         return new_data
 
-    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, **job_kwargs):
+    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, metric_names=None, **job_kwargs):
         """
         Compute template metrics.
         """
         import pandas as pd
         from scipy.signal import resample_poly
 
-        metric_names = self.params["metric_names"]
         sparsity = self.params["sparsity"]
         peak_sign = self.params["peak_sign"]
         upsampling_factor = self.params["upsampling_factor"]
@@ -290,9 +321,29 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         return template_metrics
 
     def _run(self, verbose=False):
-        self.data["metrics"] = self._compute_metrics(
-            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose
+
+        delete_existing_metrics = self.params["delete_existing_metrics"]
+        metrics_to_compute = self.params["metrics_to_compute"]
+
+        # compute the metrics which have been specified by the user
+        computed_metrics = self._compute_metrics(
+            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, metric_names=metrics_to_compute
         )
+
+        existing_metrics = []
+        tm_extension = self.sorting_analyzer.get_extension("template_metrics")
+        if (
+            delete_existing_metrics is False
+            and tm_extension is not None
+            and tm_extension.data.get("metrics") is not None
+        ):
+            existing_metrics = tm_extension.params["metric_names"]
+
+        # append the metrics which were previously computed
+        for metric_name in set(existing_metrics).difference(metrics_to_compute):
+            computed_metrics[metric_name] = tm_extension.data["metrics"][metric_name]
+
+        self.data["metrics"] = computed_metrics
 
     def _get_data(self):
         return self.data["metrics"]
