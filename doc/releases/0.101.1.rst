@@ -72,6 +72,7 @@ curation:
 
 widgets:
 
+* Fix metrics widgets for convert_dtypes (#3417)
 * Fix plot motion for multi-segment (#3414)
 * Sortingview: only round float properties (#3406)
 * Fix widgets tests and add test on unit_table_properties (#3354)
