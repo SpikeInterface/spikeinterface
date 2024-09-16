@@ -71,6 +71,7 @@ curation:
 
 widgets:
 
+* Fix plot motion for multi-segment (#3414)
 * Sortingview: only round float properties (#3406)
 * Fix widgets tests and add test on unit_table_properties (#3354)
 * Allow quality and template metrics in sortingview's unit table (#3299)
