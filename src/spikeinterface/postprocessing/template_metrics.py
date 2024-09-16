@@ -318,6 +318,10 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                     warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
                     value = np.nan
                 template_metrics.at[index, metric_name] = value
+
+        # we use the convert_dtypes to convert the columns to the most appropriate dtype and avoid object columns
+        # (in case of NaN values)
+        template_metrics = template_metrics.convert_dtypes()
         return template_metrics
 
     def _run(self, verbose=False):
