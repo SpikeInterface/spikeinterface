@@ -1994,6 +1994,53 @@ def generate_unit_locations(
     distance_strict=False,
     seed=None,
 ):
+    """
+    Generate random 3D unit locations based on channel locations and distance constraints.
+
+    This function generates random 3D coordinates for a specified number of units,
+    ensuring  the following:
+
+    1) the x, y and z coordinates of the units are within a specified range:
+        * x and y coordinates are within the minimum and maximum x and y coordinates of the channel_locations
+        plus `margin_um`.
+        * z coordinates are within a specified range `(minimum_z, maximum_z)`
+    2) the distance between any two units is greater than a specified minimum value
+
+    If the minimum distance constraint cannot be met within the allowed number of iterations,
+    the function can either raise an exception or issue a warning based on the `distance_strict` flag.
+
+    Parameters
+    ----------
+    num_units : int
+        Number of units to generate locations for.
+    channel_locations : numpy.ndarray
+        A 2D array of shape (num_channels, 2), where each row represents the (x, y) coordinates
+        of a channel.
+    margin_um : float, default 20.0
+        The margin to add around the minimum and maximum x and y channel coordinates when
+        generating unit locations
+    minimum_z : float, default 5.0
+        The minimum z-coordinate value for generated unit locations.
+    maximum_z : float, default 40.0
+        The maximum z-coordinate value for generated unit locations.
+    minimum_distance : float, default 20.0
+        The minimum allowable distance in micrometers between any two units
+    max_iteration : int, default 100
+        The maximum number of iterations to attempt generating unit locations that meet
+        the minimum distance constraint (default is 100).
+    distance_strict : bool, optionaldefault False
+        If True, the function will raise an exception if a solution meeting the distance
+        constraint cannot be found within the maximum number of iterations. If False, a warning
+        will be issued (default is False).
+    seed : int or None, optional
+        Random seed for reproducibility. If None, the seed is not set
+
+    Returns
+    -------
+    units_locations : numpy.ndarray
+        A 2D array of shape (num_units, 3), where each row represents the (x, y, z) coordinates
+        of a generated unit location.
+    """
     rng = np.random.default_rng(seed=seed)
     units_locations = np.zeros((num_units, 3), dtype="float32")
 
