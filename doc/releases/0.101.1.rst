@@ -39,6 +39,7 @@ extractors:
 
 preprocessing:
 
+* Auto-cast recording to float prior to interpolation (#3415)
 * Update doc handle drift  + better preset (#3232)
 * Add causal filtering to filter.py (#3172)
 
