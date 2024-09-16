@@ -591,7 +591,7 @@ class SortingAnalyzer:
                 warnings.warn(
                     "The zarr store was not properly consolidated prior to v0.101.1. "
                     "This may lead to unexpected behavior in loading extensions. "
-                    "Please consider re-saving the SortingAnalyzer object."
+                    "Please consider re-generating the SortingAnalyzer object."
                 )
 
         # load internal sorting in memory
