@@ -139,6 +139,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         """
         Compute quality metrics.
         """
+        import pandas as pd
 
         qm_params = self.params["qm_params"]
         # sparsity = self.params["sparsity"]
@@ -162,8 +163,6 @@ class ComputeQualityMetrics(AnalyzerExtension):
         else:
             non_empty_unit_ids = unit_ids
             empty_unit_ids = []
-
-        import pandas as pd
 
         metrics = pd.DataFrame(index=unit_ids)
 
@@ -216,6 +215,9 @@ class ComputeQualityMetrics(AnalyzerExtension):
         if len(empty_unit_ids) > 0:
             metrics.loc[empty_unit_ids] = np.nan
 
+        # we use the convert_dtypes to convert the columns to the most appropriate dtype and avoid object columns
+        # (in case of NaN values)
+        metrics = metrics.convert_dtypes()
         return metrics
 
     def _run(self, verbose=False, **job_kwargs):
