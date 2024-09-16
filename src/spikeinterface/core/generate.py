@@ -2016,22 +2016,22 @@ def generate_unit_locations(
     channel_locations : numpy.ndarray
         A 2D array of shape (num_channels, 2), where each row represents the (x, y) coordinates
         of a channel.
-    margin_um : float, default 20.0
+    margin_um : float, default: 20.0
         The margin to add around the minimum and maximum x and y channel coordinates when
         generating unit locations
-    minimum_z : float, default 5.0
+    minimum_z : float, default: 5.0
         The minimum z-coordinate value for generated unit locations.
-    maximum_z : float, default 40.0
+    maximum_z : float, default: 40.0
         The maximum z-coordinate value for generated unit locations.
-    minimum_distance : float, default 20.0
+    minimum_distance : float, default: 20.0
         The minimum allowable distance in micrometers between any two units
-    max_iteration : int, default 100
+    max_iteration : int, default: 100
         The maximum number of iterations to attempt generating unit locations that meet
-        the minimum distance constraint (default is 100).
-    distance_strict : bool, optionaldefault False
+        the minimum distance constraint.
+    distance_strict : bool, default: False
         If True, the function will raise an exception if a solution meeting the distance
         constraint cannot be found within the maximum number of iterations. If False, a warning
-        will be issued (default is False).
+        will be issued.
     seed : int or None, optional
         Random seed for reproducibility. If None, the seed is not set
 
