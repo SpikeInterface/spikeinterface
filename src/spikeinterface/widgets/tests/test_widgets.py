@@ -73,7 +73,7 @@ class TestWidgets(unittest.TestCase):
             spike_amplitudes=dict(),
             unit_locations=dict(),
             spike_locations=dict(),
-            quality_metrics=dict(metric_names=["snr", "isi_violation", "num_spikes"]),
+            quality_metrics=dict(metric_names=["snr", "isi_violation", "num_spikes", "amplitude_cutoff"]),
             template_metrics=dict(),
             correlograms=dict(),
             template_similarity=dict(),
