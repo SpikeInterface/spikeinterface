@@ -129,7 +129,6 @@ Contributors:
 * @JoeZiminski
 * @JuanPimientoCaicedo
 * @alejoe91
-* @app/pre-commit-ci
 * @chrishalcrow
 * @cwindolf
 * @florian6973
