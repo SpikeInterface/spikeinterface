@@ -145,6 +145,11 @@ class BaseRecordingSnippets(BaseExtractor):
         else:
             raise ValueError("must give Probe or ProbeGroup or list of Probe")
 
+        # check that the probe do not overlap
+        num_probes = len(probegroup.probes)
+        if num_probes > 1:
+            check_probe_do_not_overlap(probegroup.probes)
+
         # handle not connected channels
         assert all(
             probe.device_channel_indices is not None for probe in probegroup.probes
@@ -234,7 +239,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
         warning_msg = (
             "`set_probes` is now a private function and the public function will be "
-            "removed in 0.103.0. Please use `set_probe` or `set_probegroups` instead"
+            "removed in 0.103.0. Please use `set_probe` or `set_probegroup` instead"
         )
 
         warn(warning_msg, category=DeprecationWarning, stacklevel=2)
@@ -348,17 +353,15 @@ class BaseRecordingSnippets(BaseExtractor):
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
-        if self.get_property("contact_vector") is not None:
-            if len(self.get_probes()) == 1:
-                probe = self.get_probe()
-                positions = probe.contact_positions[channel_indices]
-            else:
-                all_probes = self.get_probes()
-                # check that multiple probes are non-overlapping
-                check_probe_do_not_overlap(all_probes)
-                all_positions = np.vstack([probe.contact_positions for probe in all_probes])
-                positions = all_positions[channel_indices]
-            return select_axes(positions, axes)
+        contact_vector = self.get_property("contact_vector")
+        if contact_vector is not None:
+            # here we bypass the probe reconstruction so this works both for probe and probegroup
+            ndim = len(axes)
+            all_positions = np.zeros((contact_vector.size, ndim), dtype="float64")
+            for i, dim in enumerate(axes):
+                all_positions[:, i] = contact_vector[dim]
+            positions = all_positions[channel_indices]
+            return positions
         else:
             locations = self.get_property("location")
             if locations is None:

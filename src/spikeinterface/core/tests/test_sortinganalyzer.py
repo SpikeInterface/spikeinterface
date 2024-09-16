@@ -181,6 +181,27 @@ def test_SortingAnalyzer_tmp_recording(dataset):
         sorting_analyzer.set_temporary_recording(recording_sliced)
 
 
+def test_SortingAnalyzer_interleaved_probegroup(dataset):
+    from probeinterface import generate_linear_probe, ProbeGroup
+
+    recording, sorting = dataset
+    num_channels = recording.get_num_channels()
+    probe1 = generate_linear_probe(num_elec=num_channels // 2, ypitch=20.0)
+    probe2 = probe1.copy()
+    probe2.move([100.0, 100.0])
+
+    probegroup = ProbeGroup()
+    probegroup.add_probe(probe1)
+    probegroup.add_probe(probe2)
+    probegroup.set_global_device_channel_indices(np.random.permutation(num_channels))
+
+    recording = recording.set_probegroup(probegroup)
+
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    # check that locations are correct
+    assert np.array_equal(recording.get_channel_locations(), sorting_analyzer.get_channel_locations())
+
+
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
     register_result_extension(DummyAnalyzerExtension)

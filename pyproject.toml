@@ -94,7 +94,6 @@ preprocessing = [
 full = [
     "h5py",
     "pandas",
-    "xarray",
     "scipy",
     "scikit-learn",
     "networkx",
@@ -148,7 +147,6 @@ test = [
     "pytest-dependency",
     "pytest-cov",
 
-    "xarray",
     "huggingface_hub",
 
     # preprocessing
@@ -193,7 +191,6 @@ docs = [
     "pandas", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
-    "xarray", # For use of SortingAnalyzer zarr format
     "networkx",
     # Download data
     "pooch>=1.8.2",
