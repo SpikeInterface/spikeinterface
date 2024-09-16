@@ -340,8 +340,11 @@ class MotionInfoWidget(BaseWidget):
                 raise ValueError(
                     "plot drift map : the Motion object is multi-segment you must provide segment_index=XX"
                 )
+        assert recording.get_num_segments() == len(
+            motion.displacement
+        ), "The number of segments in the recording must be the same as the number of segments in the motion object"
 
-        times = recording.get_times() if recording is not None else None
+        times = recording.get_times(segment_index=segment_index) if recording is not None else None
 
         plot_data = dict(
             sampling_frequency=motion_info["parameters"]["sampling_frequency"],
