@@ -690,7 +690,7 @@ if __name__ == "__main__":
     # mytest.test_plot_multicomparison()
     # mytest.test_plot_sorting_summary()
     # mytest.test_plot_motion()
-    mytest.test_plot_motion_info()
+    # mytest.test_plot_motion_info()
     plt.show()
 
     # TestWidgets.tearDownClass()
