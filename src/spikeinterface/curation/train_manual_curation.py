@@ -225,8 +225,8 @@ class CurationModelTrainer:
             print("metrics_list contains invalid metric names")
             raise e
         self.X = self.testing_metrics.reindex(columns=self.metric_names)
+        self.X = self.X.applymap(lambda x: np.nan if np.isinf(x) else x)
         self.X = self.X.astype("float32")
-        self.X = self.X.map(lambda x: np.nan if np.isinf(x) else x)
         self.X.fillna(0, inplace=True)
 
     def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_val, y_train, y_val):
