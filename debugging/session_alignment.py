@@ -380,8 +380,26 @@ def _compute_session_histograms(
     Returns
     -------
 
+    session_histogram_list : list[np.ndarray]
+        A list of activity histograms (1 x n_bins), one per session.
+        This is the histogram which summarises all chunked histograms.
 
+    temporal_bin_centers_list : list[np.ndarray]
+        A list of temporal bin centers, one per session. We have one
+        histogram per session, the temporal bin has 1 entry, the
+        mid-time point of the session.
 
+    spatial_bin_centers : np.ndarray
+        A list of spatial bin centers corresponding to the session
+        activity histograms.
+
+    spatial_bin_edges : np.ndarray
+        The corresponding spatial bin edges
+
+    histogram_info_list : list[dict]
+        A list of extra information on the histograms generation
+        (e.g. chunked histograms). One per session. See
+        `_get_single_session_activity_histogram()` for details.
     """
     # Get spatial windows and estimate the session histograms
     temporal_bin_centers_list = []
@@ -407,15 +425,15 @@ def _compute_session_histograms(
 
 
 def _get_single_session_activity_histogram(
-    recording,
-    peaks,
-    peak_locations,
-    spatial_bin_edges,
-    method,
-    log_scale,
-    chunked_bin_size_s,
-    depth_smooth_um
-):
+    recording: BaseRecording,
+    peaks: np.ndarray,
+    peak_locations: np.ndarray,
+    spatial_bin_edges: np.ndarray,
+    method: str,
+    log_scale: bool,
+    chunked_bin_size_s: float,
+    depth_smooth_um: float
+) -> tuple[np.ndarray, np.ndarray, dict]:
     """
     Compute an activity histogram for a single session.
     The recording is chunked into time segments, histograms
@@ -435,6 +453,24 @@ def _get_single_session_activity_histogram(
         session histograms must share bin edges.
 
     see `_compute_session_histograms()` for all other keyword arguments.
+
+    Returns
+    -------
+    session_histogram : np.ndarray
+        Summary acitivity histogram for the session.
+    temporal_bin_centers : np.ndarray
+        Temporal bin center (session mid-point as we only have
+        one time point) for the session.
+    histogram_info : dict
+        A dict of additional info including:
+            "chunked_histograms" : The chunked histograms over which
+                the summary histogram was calculated.
+            "chunked_temporal_bin_centers" : The temporal vin centers
+                for the chunked histograms, with length num_chunks.
+            "session_std" : The mean across bin-wise standard deviation
+                of the chunked histograms.
+            "chunked_bin_size_s" : time of each chunk used to  TODO
+                calculate the chunked histogram.
     """
     times = recording.get_times()
     temporal_bin_centers = np.atleast_1d((times[-1] + times[0]) / 2)
@@ -484,53 +520,100 @@ def _get_single_session_activity_histogram(
         "session_std": session_std,
         "chunked_bin_size_s": chunked_bin_size_s,
     }
-
     return session_histogram, temporal_bin_centers, histogram_info
 
 
 def _create_motion_recordings(
-        all_recordings, motion_array, temporal_bin_centers_list, non_rigid_window_centers, interpolate_motion_kwargs
-):
+    recordings_list: list[BaseRecording],
+    shifts_array: np.ndarray,
+    temporal_bin_centers_list: list[np.ndarray],
+    non_rigid_window_centers: np.ndarray,
+    interpolate_motion_kwargs: dict,
+) -> tuple[list[BaseRecording], list[Motion]]:
     """
-    # TODO: add an annotation to the corrected recording
+    Given a set of recordings, motion shifts and bin information per-recording,
+    generate an InterpolateMotionRecording. If the recording is already an
+    InterpolateMotionRecording, then the shifts will be added to a copy
+    of it. Copies of the Recordings are made, nothing is changed in-place.
+
+    Parameters
+    ----------
+    shifts_array : num_sessions x num_nonrigid bins
+
+    Returns
+    -------
+    corrected_recordings_list : list[BaseRecording]
+        A list of InterpolateMotionRecording recordings of shift-
+        corrected recordings coressponding to `recordings_list`.
+
+    motion_objects_list : list[Motion]
+        A list of Motion objects. If the recording in `recordings_list`
+        is already an InterpolateMotionRecording, this will be `None`, as
+        no motion object is created (the existing motion object is added to)
     """
-    assert all(array.ndim == 1 for array in motion_array), (
+    assert all(array.ndim == 1 for array in shifts_array), (
         "time dimension should be 1 for session displacement"
     )
 
     corrected_recordings_list = []
-    all_motions = []
-    for i in range(len(all_recordings)):
+    motion_objects_list = []
+    for ses_idx, recording in enumerate(recordings_list):
 
-        recording = all_recordings[i]
-        ses_displacement = motion_array[i][np.newaxis, :]
+        session_shift = shifts_array[ses_idx][np.newaxis, :]
 
         if isinstance(recording, InterpolateMotionRecording):
 
             corrected_recording = _add_displacement_to_interpolate_recording(
-                recording, ses_displacement, non_rigid_window_centers
+                recording, session_shift, non_rigid_window_centers
             )
-            all_motions.append(None)
+            motion_objects_list.append(None)
         else:
             motion = Motion(
-                [ses_displacement],
-                [temporal_bin_centers_list[i]],
+                [session_shift],
+                [temporal_bin_centers_list[ses_idx]],
                 non_rigid_window_centers,
                 direction="y"
             )
             corrected_recording = InterpolateMotionRecording(
                 recording, motion, **interpolate_motion_kwargs
             )
-            all_motions.append(motion)
+            motion_objects_list.append(motion)
 
         corrected_recordings_list.append(corrected_recording)
 
-    return corrected_recordings_list, all_motions
+    return corrected_recordings_list, motion_objects_list
 
 
-def _add_displacement_to_interpolate_recording(recording, new_displacement, new_non_rigid_window_centers):
+def _add_displacement_to_interpolate_recording(
+        recording: BaseRecording,
+        shifts_to_add: np.ndarray,
+        new_non_rigid_window_centers: np.ndarray,
+):
     """
-    # TODO: check + ask Sam if any other fields need to be chagned. This is a little
+    This function adds a shift to an InterpolateMotionRecording.
+
+    There are four cases:
+    - The original recording is rigid and new shift is rigid (shifts are added).
+    - The original recording is rigid and new shifts are non-rigid (sets the
+      non-rigid shifts onto the recording, then adds back the original shifts).
+    - The original recording is nonrigid and the new shifts are rigid (rigid
+      shift added to all nonlinear shifts)
+    - The original recording is nonrigid and the new shifts are nonrigid
+      (respective non-rigid shifts are added, must have same number of
+      non-rigid windows).
+
+    Parameters
+    ----------
+    see `_create_motion_recordings()`
+
+    Returns
+    -------
+    corrected_recording : InterpolateMotionRecording
+        A copy of the `recording` with new shifts added.
+
+    TODO
+    ----
+    Check + ask Sam if any other fields need to be chagned. This is a little
     # hairy (4 possible combinations of new and
     # old displacement shapes, rigid or nonrigid, so test thoroughly.
     """
@@ -544,8 +627,8 @@ def _add_displacement_to_interpolate_recording(recording, new_displacement, new_
 
     # If the new displacement is a scalar (i.e. rigid),
     # just add it to the existing displacements
-    if new_displacement.shape[1] == 1:
-        motion_ref.displacement[0] += new_displacement[0, 0]
+    if shifts_to_add.shape[1] == 1:
+        motion_ref.displacement[0] += shifts_to_add[0, 0]
 
     else:
         if recording_bins == 1:
@@ -553,10 +636,10 @@ def _add_displacement_to_interpolate_recording(recording, new_displacement, new_
             # recording is rigid, we update the displacement at all time bins
             # with the new, nonrigid displacement added to the old, rigid displacement.
             num_time_bins = motion_ref.displacement[0].shape[0]
-            tiled_nonrigid_displacement = np.repeat(new_displacement, num_time_bins, axis=0)
-            new_displacement = tiled_nonrigid_displacement + motion_ref.displacement
+            tiled_nonrigid_displacement = np.repeat(shifts_to_add, num_time_bins, axis=0)
+            shifts_to_add = tiled_nonrigid_displacement + motion_ref.displacement
 
-            motion_ref.displacement = new_displacement
+            motion_ref.displacement = shifts_to_add
             motion_ref.spatial_bins_um = new_non_rigid_window_centers
         else:
             # Otherwise, if both the motion and new displacement are
@@ -566,17 +649,35 @@ def _add_displacement_to_interpolate_recording(recording, new_displacement, new_
                 motion_ref.spatial_bins_um,
                 new_non_rigid_window_centers
             )
-            assert motion_ref.displacement[0].shape[1] == new_displacement.shape[1]
+            assert motion_ref.displacement[0].shape[1] == shifts_to_add.shape[1]
 
-            motion_ref.displacement[0] += new_displacement
+            motion_ref.displacement[0] += shifts_to_add
 
     return corrected_recording
 
 
 def _correct_session_displacement(
-        recordings_list, peaks_list, peak_locations_list, spatial_bin_edges, estimate_histogram_kwargs,
+    recordings_list: list[BaseRecording],
+    peaks_list: list[np.ndarray],
+    peak_locations_list: list[np.ndarray],
+    spatial_bin_edges: np.ndarray,
+    estimate_histogram_kwargs: dict,
 ):
     """
+    Internal function to apply the correction from `align_sessions`
+    to build a corrected histogram for comparison. First,
+
+    Parameters
+    ----------
+    see `align_sessions()` for parameters.  TODO: can add motion shifts if we need.
+
+    Returns
+    -------
+    corrected_peak_locations_list : list[np.ndarray]
+        A list of peak locations corrected by the inter-session
+        shifts (one entry per session).
+    corrected_session_histogram_list : list[np.ndarray]
+        A list of histograms calculated from the corrected peaks (one per session).
     """
     # Correct the peak locations
     corrected_peak_locations_list = []
@@ -586,7 +687,8 @@ def _correct_session_displacement(
         corrected_peak_locs = correct_motion_on_peaks(
             peaks,
             peak_locations,
-            recording._recording_segments[0].motion,
+            recording._recording_segments[0].motion,  # TODO: this is wrong, if the previous recording was a motion correction
+            # then this will add the original motion correct and the new one. We need to pass just the new shifts
             recording,
         )
         corrected_peak_locations_list.append(corrected_peak_locs)
@@ -612,8 +714,39 @@ def _correct_session_displacement(
 
 
 def _compute_session_alignment(
-    session_histogram_list, contact_depths, spatial_bin_centers, alignment_order, non_rigid_window_kwargs, compute_alignment_kwargs,
-):
+    session_histogram_list: list[np.ndarray],
+    contact_depths: np.ndarray,
+    spatial_bin_centers: np.ndarray,
+    alignment_order: str,
+    non_rigid_window_kwargs: dict,
+    compute_alignment_kwargs: dict,
+) -> tuple[np.ndarray, ...]:
+    """
+    Given a list of activity histograms (one per session) compute
+    rigid or non-rigid set of shifts (one per session) that will bring
+    all sessions into alignment.
+
+    For rigid shifts, a cross-correlation between activity
+    histograms is performed. For non-rigid shifts, the probe
+    is split into segments, and linear estimation of shift
+    performed for each segment.
+
+    Parameters
+    ----------
+    See `align_sessions()` for parameters
+
+    Returns
+    -------
+    shifts : np.ndarray
+        A (num_sessions x num_rigid_windows) array of shifts to bring
+        the histograms in `session_histogram_list` into alignment.
+    non_rigid_windows : np.ndarray
+        An array (num_non_rigid_windows x num_spatial_bins) of weightings
+        for each bin in each window. For rect, these are in the range [0, 1],
+        for Gaussian these are gaussian etc.
+    non_rigid_window_centers : np.ndarray
+        The centers (spatial, in um) of each non-rigid window.
+    """
     session_histogram_array = np.array(session_histogram_list)
 
     akima_interp_nonrigid = compute_alignment_kwargs.pop("akima_interp_nonrigid")
@@ -635,10 +768,10 @@ def _compute_session_alignment(
 
     # For non-rigid, first shift the histograms according to the rigid shift
     shifted_histograms = np.zeros_like(session_histogram_array)
-    for ses_idx in range(session_histogram_array.shape[0]):
+    for ses_idx, orig_histogram in enumerate(session_histogram_array):
 
         shifted_histogram = alignment_utils.shift_array_fill_zeros(
-            array=session_histogram_array[ses_idx, :],
+            array=orig_histogram,
             shift=int(rigid_shifts[ses_idx, 0])
         )
         shifted_histograms[ses_idx, :] = shifted_histogram
@@ -662,17 +795,35 @@ def _compute_session_alignment(
         non_rigid_window_centers = spatial_bin_centers
     else:
         shifts = rigid_shifts + non_rigid_shifts
-        non_rigid_window_centers = non_rigid_window_centers
 
+    breakpoint()
     return shifts, non_rigid_windows, non_rigid_window_centers
 
 
 def _estimate_rigid_alignment(
-    session_histogram_array,
-    alignment_order,
-    compute_alignment_kwargs,
+    session_histogram_array: np.ndarray,
+    alignment_order: str,
+    compute_alignment_kwargs: dict,
 ):
     """
+    Estimate the rigid alignment from a set of activity
+    histograms, using simple cross-correlation.
+
+    Parameters
+    ----------
+    session_histogram_array : np.ndarray
+        A (num_sessions x num_spatial_bins)  array of activity
+        histograms to align
+    alignment_order : str
+        Align "to_middle" or "to_session_N" (where "N" is the session number)
+    compute_alignment_kwargs : dict
+        See `get_compute_alignment_kwargs()`.
+
+    Returns
+    -------
+    optimal_shift_indices : np.ndarray
+        An array (num_sessions x 1) of shifts to bring all
+        session histograms into alignment.
     """
     compute_alignment_kwargs = copy.deepcopy(compute_alignment_kwargs)
     compute_alignment_kwargs["num_shifts_block"] = False
@@ -690,9 +841,32 @@ def _estimate_rigid_alignment(
     return optimal_shift_indices
 
 
-def _akima_interpolate_nonrigid_shifts(non_rigid_shifts, non_rigid_window_centers, spatial_bin_centers):
+def _akima_interpolate_nonrigid_shifts(
+    non_rigid_shifts: np.ndarray,
+    non_rigid_window_centers: np.ndarray,
+    spatial_bin_centers: np.ndarray,
+):
     """
-    TODO: requires scipy 14
+    Perform Akima spline interpolation on a set of non-rigid shifts.
+    The non-rigid shifts are per segment of the probe, each segment
+    containing a number of channels. Interpolating these non-rigid
+    shifts to the spatial bin centers gives a more accurate shift
+    per channel.
+
+    Parameters
+    ----------
+    non_rigid_shifts : np.ndarray
+    non_rigid_window_centers : np.ndarray
+    spatial_bin_centers : np.ndarray
+
+    Returns
+    -------
+    interp_nonrigid_shifts : np.ndarray
+        An array (length num_spatial_bins) of shifts
+        interpolated from the non-rigid shifts.
+
+    ----
+    requires scipy 14
     """
     from scipy.interpolate import Akima1DInterpolator
 
@@ -712,8 +886,29 @@ def _akima_interpolate_nonrigid_shifts(non_rigid_shifts, non_rigid_window_center
     return interp_nonrigid_shifts
 
 
-def _get_shifts_from_session_matrix(alignment_order, session_offsets_matrix):
+def _get_shifts_from_session_matrix(
+    alignment_order: str,
+    session_offsets_matrix: np.ndarray
+):
     """
+    Given a matrix of displacements between all sessions, find the
+    shifts (one per session) to bring the sessions into alignment.
+
+    Parameters
+    ----------
+    alignment_order : "to_middle" or "to_session_X" where
+        "N" is the number of the session to align to.
+    session_offsets_matri : np.ndarray
+        The num_sessions x num_sessions symmetric matrix
+        of displacements between all sessions, generated by
+        `_compute_session_alignment()`.
+
+    Returns
+    -------
+    optimal_shift_indices : np.ndarray
+        A 1 x num_sessions array of shifts to apply to
+        each session in order to bring all sessions into
+        alignment.
     """
     if alignment_order == "to_middle":
         optimal_shift_indices = -np.mean(
@@ -731,9 +926,15 @@ def _get_shifts_from_session_matrix(alignment_order, session_offsets_matrix):
 # -----------------------------------------------------------------------------
 
 def _check_align_sesssions_inpus(
-        recordings_list, peaks_list, peak_locations_list, alignment_order, estimate_histogram_kwargs
+    recordings_list: list[BaseRecording],
+    peaks_list: list[np.ndarray],
+    peak_locations_list: list[np.ndarray],
+    alignment_order: str,
+    estimate_histogram_kwargs: dict
 ):
-    """"""
+    """
+    Perform checks on the input of `align_sessions()`
+    """
     num_sessions = len(recordings_list)
 
     if len(peaks_list) != num_sessions or len(peak_locations_list) != num_sessions:
