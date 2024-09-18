@@ -217,3 +217,31 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None):
             ax.set_yticks([])
         ax.set_xticks([])
 
+
+def plot_performances_vs_snr(study, case_keys=None, figsize=None, metrics=["accuracy", "recall", "precision"]):
+    import matplotlib.pyplot as plt
+
+    if case_keys is None:
+        case_keys = list(study.cases.keys())
+
+    fig, axs = plt.subplots(ncols=1, nrows=len(metrics), figsize=figsize, squeeze=False)
+
+    for count, k in enumerate(metrics):
+
+        ax = axs[count, 0]
+        for key in case_keys:
+            label = study.cases[key]["label"]
+
+            analyzer = study.get_sorting_analyzer(key)
+            metrics = analyzer.get_extension("quality_metrics").get_data()
+            x = metrics["snr"].values
+            y = study.get_result(key)["gt_comparison"].get_performance()[k].values
+            ax.scatter(x, y, marker=".", label=label)
+            ax.set_title(k)
+        
+        ax.set_ylim(0, 1.05)
+        
+        if count == 2:
+            ax.legend()
+
+    return fig

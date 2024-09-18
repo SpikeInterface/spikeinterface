@@ -123,3 +123,18 @@ class SorterStudy(BenchmarkStudy):
 
         return count_units
 
+    # plotting as methods
+    def plot_unit_counts(self, **kwargs):
+        from .benchmark_plot_tools import plot_unit_counts
+        return plot_unit_counts(self, **kwargs)
+
+    def plot_performances(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances
+        return plot_performances(self, **kwargs)
+
+    def plot_agreement_matrix(self, **kwargs):
+        from .benchmark_plot_tools import plot_agreement_matrix
+        return plot_agreement_matrix(self, **kwargs)
+
+
+
