@@ -100,7 +100,7 @@ run_exporters_test = run_everything or run_widgets_test or exporters_changed
 run_sorters_test = run_everything or sorters_changed
 run_internal_sorters_test = run_everything or run_sortingcomponents_tests or sorters_internal_changed
 
-run_streaming_extractors_test = stream_extractors_changed
+run_streaming_extractors_test = stream_extractors_changed or github_actions_changed
 
 install_plexon_dependencies = plexon2_changed
 
