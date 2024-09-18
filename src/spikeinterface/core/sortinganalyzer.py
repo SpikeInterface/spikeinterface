@@ -11,6 +11,7 @@ import weakref
 import shutil
 import warnings
 import importlib
+from packaging.version import parse
 from time import perf_counter
 
 import numpy as np
@@ -77,6 +78,9 @@ def create_sorting_analyzer(
     return_scaled : bool, default: True
         All extensions that play with traces will use this global return_scaled : "waveforms", "noise_levels", "templates".
         This prevent return_scaled being differents from different extensions and having wrong snr for instance.
+    overwrite: bool, default: False
+        If True, overwrite the folder if it already exists.
+
 
     Returns
     -------
@@ -486,7 +490,11 @@ class SortingAnalyzer:
 
         if is_path_remote(str(self.folder)):
             mode = "r"
-        zarr_root = zarr.open(self.folder, mode=mode, storage_options=self.storage_options)
+        # we open_consolidated only if we are in read mode
+        if mode in ("r+", "a"):
+            zarr_root = zarr.open(str(self.folder), mode=mode, storage_options=self.storage_options)
+        else:
+            zarr_root = zarr.open_consolidated(self.folder, mode=mode, storage_options=self.storage_options)
         return zarr_root
 
     @classmethod
@@ -564,11 +572,27 @@ class SortingAnalyzer:
 
         recording_info = zarr_root.create_group("extensions")
 
+        zarr.consolidate_metadata(zarr_root.store)
+
     @classmethod
     def load_from_zarr(cls, folder, recording=None, storage_options=None):
         import zarr
 
-        zarr_root = zarr.open(str(folder), mode="r", storage_options=storage_options)
+        zarr_root = zarr.open_consolidated(str(folder), mode="r", storage_options=storage_options)
+
+        si_info = zarr_root.attrs["spikeinterface_info"]
+        if parse(si_info["version"]) < parse("0.101.1"):
+            # v0.101.0 did not have a consolidate metadata step after computing extensions.
+            # Here we try to consolidate the metadata and throw a warning if it fails.
+            try:
+                zarr_root_a = zarr.open(str(folder), mode="a", storage_options=storage_options)
+                zarr.consolidate_metadata(zarr_root_a.store)
+            except Exception as e:
+                warnings.warn(
+                    "The zarr store was not properly consolidated prior to v0.101.1. "
+                    "This may lead to unexpected behavior in loading extensions. "
+                    "Please consider re-generating the SortingAnalyzer object."
+                )
 
         # load internal sorting in memory
         sorting = NumpySorting.from_sorting(
@@ -614,6 +638,7 @@ class SortingAnalyzer:
             format="zarr",
             sparsity=sparsity,
             return_scaled=return_scaled,
+            storage_options=storage_options,
         )
 
         return sorting_analyzer
@@ -1101,9 +1126,16 @@ class SortingAnalyzer:
     def get_channel_locations(self) -> np.ndarray:
         # important note : contrary to recording
         # this give all channel locations, so no kwargs like channel_ids and axes
-        all_probes = self.get_probegroup().probes
-        all_positions = np.vstack([probe.contact_positions for probe in all_probes])
-        return all_positions
+        probegroup = self.get_probegroup()
+        probe_as_numpy_array = probegroup.to_numpy(complete=True)
+        # we need to sort by device_channel_indices to ensure the order of locations is correct
+        probe_as_numpy_array = probe_as_numpy_array[np.argsort(probe_as_numpy_array["device_channel_indices"])]
+        ndim = probegroup.ndim
+        locations = np.zeros((probe_as_numpy_array.size, ndim), dtype="float64")
+        # here we only loop through xy because only 2d locations are supported
+        for i, dim in enumerate(["x", "y"][:ndim]):
+            locations[:, i] = probe_as_numpy_array[dim]
+        return locations
 
     def channel_ids_to_indices(self, channel_ids) -> np.ndarray:
         all_channel_ids = list(self.rec_attributes["channel_ids"])
@@ -1462,7 +1494,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         if self.format != "memory" and self.has_extension(extension_name):
             # need a reload to reset the folder
             ext = self.load_extension(extension_name)
-            ext.reset()
+            ext.delete()
 
         # remove from dict
         self.extensions.pop(extension_name, None)
@@ -1953,12 +1985,14 @@ class AnalyzerExtension:
                 if "dict" in ext_data_.attrs:
                     ext_data = ext_data_[0]
                 elif "dataframe" in ext_data_.attrs:
-                    import xarray
+                    import pandas as pd
 
-                    ext_data = xarray.open_zarr(
-                        ext_data_.store, group=f"{extension_group.name}/{ext_data_name}"
-                    ).to_pandas()
-                    ext_data.index.rename("", inplace=True)
+                    index = ext_data_["index"]
+                    ext_data = pd.DataFrame(index=index)
+                    for col in ext_data_.keys():
+                        if col != "index":
+                            ext_data.loc[:, col] = ext_data_[col][:]
+                    ext_data = ext_data.convert_dtypes()
                 elif "object" in ext_data_.attrs:
                     ext_data = ext_data_[0]
                 else:
@@ -2004,24 +2038,31 @@ class AnalyzerExtension:
             # NB: this call to _save_params() also resets the folder or zarr group
             self._save_params()
             self._save_importing_provenance()
-            self._save_run_info()
 
         t_start = perf_counter()
         self._run(**kwargs)
         t_end = perf_counter()
         self.run_info["runtime_s"] = t_end - t_start
+        self.run_info["run_completed"] = True
 
         if save and not self.sorting_analyzer.is_read_only():
+            self._save_run_info()
             self._save_data(**kwargs)
+            if self.format == "zarr":
+                import zarr
 
-        self.run_info["run_completed"] = True
-        self._save_run_info()
+                zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
     def save(self, **kwargs):
         self._save_params()
         self._save_importing_provenance()
-        self._save_data(**kwargs)
         self._save_run_info()
+        self._save_data(**kwargs)
+
+        if self.format == "zarr":
+            import zarr
+
+            zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
     def _save_data(self, **kwargs):
         if self.format == "memory":
@@ -2062,7 +2103,7 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-
+            import zarr
             import numcodecs
 
             extension_group = self._get_zarr_extension_group(mode="r+")
@@ -2081,12 +2122,12 @@ class AnalyzerExtension:
                 elif isinstance(ext_data, np.ndarray):
                     extension_group.create_dataset(name=ext_data_name, data=ext_data, compressor=compressor)
                 elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
-                    ext_data.to_xarray().to_zarr(
-                        store=extension_group.store,
-                        group=f"{extension_group.name}/{ext_data_name}",
-                        mode="a",
-                    )
-                    extension_group[ext_data_name].attrs["dataframe"] = True
+                    df_group = extension_group.create_group(ext_data_name)
+                    # first we save the index
+                    df_group.create_dataset(name="index", data=ext_data.index.to_numpy())
+                    for col in ext_data.columns:
+                        df_group.create_dataset(name=col, data=ext_data[col].to_numpy())
+                    df_group.attrs["dataframe"] = True
                 else:
                     # any object
                     try:
@@ -2110,8 +2151,35 @@ class AnalyzerExtension:
         elif self.format == "zarr":
             import zarr
 
-            zarr_root = zarr.open(self.folder, mode="r+")
-            extension_group = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
+            zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
+            _ = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
+            zarr.consolidate_metadata(zarr_root.store)
+
+    def _delete_extension_folder(self):
+        """
+        Delete the extension in a folder (binary or zarr).
+        """
+        if self.format == "binary_folder":
+            extension_folder = self._get_binary_extension_folder()
+            if extension_folder.is_dir():
+                shutil.rmtree(extension_folder)
+
+        elif self.format == "zarr":
+            import zarr
+
+            zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
+            if self.extension_name in zarr_root["extensions"]:
+                del zarr_root["extensions"][self.extension_name]
+                zarr.consolidate_metadata(zarr_root.store)
+
+    def delete(self):
+        """
+        Delete the extension from the folder or zarr and from the dict.
+        """
+        self._delete_extension_folder()
+        self.params = None
+        self.run_info = self._default_run_info_dict()
+        self.data = dict()
 
     def reset(self):
         """
@@ -2128,7 +2196,7 @@ class AnalyzerExtension:
         Set parameters for the extension and
         make it persistent in json.
         """
-        # this ensure data is also deleted and corresponf to params
+        # this ensure data is also deleted and corresponds to params
         # this also ensure the group is created
         self._reset_extension_folder()
 
@@ -2141,7 +2209,6 @@ class AnalyzerExtension:
         if save:
             self._save_params()
             self._save_importing_provenance()
-            self._save_run_info()
 
     def _save_params(self):
         params_to_save = self.params.copy()
@@ -2197,9 +2264,10 @@ class AnalyzerExtension:
         return self._get_pipeline_nodes()
 
     def get_data(self, *args, **kwargs):
-        assert self.run_info[
-            "run_completed"
-        ], f"You must run the extension {self.extension_name} before retrieving data"
+        if self.run_info is not None:
+            assert self.run_info[
+                "run_completed"
+            ], f"You must run the extension {self.extension_name} before retrieving data"
         assert len(self.data) > 0, "Extension has been run but no data found."
         return self._get_data(*args, **kwargs)
 

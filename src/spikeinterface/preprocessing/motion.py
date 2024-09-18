@@ -13,6 +13,7 @@ from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.core_tools import SIJsonEncoder
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 
+
 motion_options_preset = {
     # dredge
     "dredge": {
@@ -277,10 +278,11 @@ def correct_motion(
 
     This function depends on several modular components of :py:mod:`spikeinterface.sortingcomponents`.
 
-    If select_kwargs is None then all peak are used for localized.
+    If `select_kwargs` is None then all peak are used for localized.
 
     The recording must be preprocessed (filter and denoised at least), and we recommend to not use whithening before motion
     estimation.
+    Since the motion interpolation requires a "float" recording, the recording is casted to float32 if necessary.
 
     Parameters for each step are handled as separate dictionaries.
     For more information please check the documentation of the following functions:
@@ -435,6 +437,8 @@ def correct_motion(
     t1 = time.perf_counter()
     run_times["estimate_motion"] = t1 - t0
 
+    if recording.get_dtype().kind != "f":
+        recording = recording.astype("float32")
     recording_corrected = InterpolateMotionRecording(recording, motion, **interpolate_motion_kwargs)
 
     motion_info = dict(
