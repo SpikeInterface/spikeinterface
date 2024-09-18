@@ -136,11 +136,8 @@ def divide_segment_into_chunks(num_frames, chunk_size):
     else:
         n = num_frames // chunk_size
 
-        frame_starts = np.arange(n) * chunk_size
-        frame_stops = frame_starts + chunk_size
-
-        frame_starts = frame_starts.tolist()
-        frame_stops = frame_stops.tolist()
+        frame_starts = [i * chunk_size for i in range(n)]
+        frame_stops = [(i+1) * chunk_size for i in range(n)]
 
         if (num_frames % chunk_size) > 0:
             frame_starts.append(n * chunk_size)
