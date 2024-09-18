@@ -31,6 +31,7 @@ exporters_changed = False
 sortingcomponents_changed = False
 generation_changed = False
 stream_extractors_changed = False
+github_actions_changed = False
 
 
 for changed_file in changed_files_in_the_pull_request_paths:
@@ -78,9 +79,12 @@ for changed_file in changed_files_in_the_pull_request_paths:
             sorters_internal_changed = True
         else:
             sorters_changed = True
+    elif ".github" in changed_file.parts:
+        if "workflows" in changed_file.parts:
+            github_actions_changed = True
 
 
-run_everything = core_changed or pyproject_toml_changed or neobaseextractor_changed
+run_everything = core_changed or pyproject_toml_changed or neobaseextractor_changed or github_actions_changed
 run_generation_tests = run_everything or generation_changed
 run_extractor_tests = run_everything or extractors_changed or plexon2_changed
 run_preprocessing_tests = run_everything or preprocessing_changed
