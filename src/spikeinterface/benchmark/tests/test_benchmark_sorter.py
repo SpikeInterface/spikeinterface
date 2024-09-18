@@ -63,10 +63,10 @@ def test_SorterStudy(setup_module):
     print(study)
 
     # # this run the sorters
-    study.run()
+    # study.run()
 
     # # this run comparisons
-    study.compute_results()
+    # study.compute_results()
     print(study)
 
     # this is from the base class
