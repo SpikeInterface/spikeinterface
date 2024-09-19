@@ -201,7 +201,7 @@ docs = [
     "xarray", # For use of SortingAnalyzer zarr format
     "networkx",
     "skops", # For auotmated curation
-    "sklearn", # For auotmated curation
+    "scikit-learn", # For auotmated curation
     # Download data
     "pooch>=1.8.2",
     "datalad>=1.0.2",
