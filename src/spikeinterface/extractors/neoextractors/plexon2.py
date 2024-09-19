@@ -28,7 +28,7 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
             ids: ["source3.1" , "source3.2", "source3.3", "source3.4"]
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
-    readding_attemps : int, default: 25
+    reading_attempts : int, default: 25
         Number of attempts to read the file before raising an error
         This opening process is somewhat unreliable and might fail occasionally. Adjust this higher
         if you encounter problems in opening the file.
