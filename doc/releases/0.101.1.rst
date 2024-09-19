@@ -15,6 +15,7 @@ Main changes:
 
 core:
 
+* Update the method of creating an empty file with right size when saving binary files (#3408)
 * Refactor pandas save load and convert dtypes (#3412)
 * Check run info completed only if it exists (back-compatibility) (#3407)
 * Fix argument spelling in check for binary compatibility (#3409)
@@ -72,6 +73,7 @@ curation:
 
 widgets:
 
+* Fix metrics widgets for convert_dtypes (#3417)
 * Fix plot motion for multi-segment (#3414)
 * Sortingview: only round float properties (#3406)
 * Fix widgets tests and add test on unit_table_properties (#3354)
