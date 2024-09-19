@@ -7,7 +7,6 @@ This notebook provides a step-by-step guide on how to use a machine learning cla
 
 import warnings
 warnings.filterwarnings("ignore")
-from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -97,7 +96,6 @@ human_labels = ['bad', 'good', 'good', 'bad', 'good', 'bad', 'good', 'bad', 'goo
 # human_labels = sorting_analyzer.sorting.get_property('quality')
 
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score
-import seaborn as sns
 
 label_conversion = model_info['label_conversion']
 predictions = [ labels[a][0] for a in range(10) ]
@@ -107,7 +105,9 @@ conf_matrix = confusion_matrix(human_labels, predictions)
 # Calculate balanced accuracy for the confusion matrix
 balanced_accuracy = balanced_accuracy_score(human_labels, predictions)
 
-sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='viridis')
+plt.imshow(conf_matrix)
+for (index, value) in np.ndenumerate(conf_matrix):
+    plt.annotate( str(value), xy=index, color="white", fontsize="15")
 plt.xlabel('Predicted Label')
 plt.ylabel('Human Label')
 plt.xticks(ticks = [0.5, 1.5], labels = list(label_conversion.values()))
