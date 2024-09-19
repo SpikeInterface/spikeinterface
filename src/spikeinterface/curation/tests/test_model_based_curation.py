@@ -46,13 +46,13 @@ def test_model_based_classification_get_metrics_for_classification(
         model_based_classification._get_metrics_for_classification()
 
     # Compute some (but not all) of the required metrics in sorting_analyzer
-    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=required_metrics[0])
+    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=[required_metrics[0]])
     with pytest.raises(ValueError):
         model_based_classification._get_metrics_for_classification()
 
     # Compute all of the required metrics in sorting_analyzer
-    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=required_metrics[0])
-    sorting_analyzer_for_curation.compute("template_metrics", metric_names=required_metrics[1])
+    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=[required_metrics[0]])
+    sorting_analyzer_for_curation.compute("template_metrics", metric_names=[required_metrics[1]])
     # Check that the metrics data is returned as a pandas DataFrame
     metrics_data = model_based_classification._get_metrics_for_classification()
     assert metrics_data.shape[0] == len(sorting_analyzer_for_curation.sorting.get_unit_ids())
@@ -69,8 +69,8 @@ def test_model_based_classification_check_params_for_classification(
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline)
 
     # Check that function runs without error when required_metrics are computed
-    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=required_metrics[0])
-    sorting_analyzer_for_curation.compute("template_metrics", metric_names=required_metrics[1])
+    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=[required_metrics[0]])
+    sorting_analyzer_for_curation.compute("template_metrics", metric_names=[required_metrics[1]])
 
     model_info = {"metric_params": {"analyzer_0": {}}}
     model_info["metric_params"]["analyzer_0"]["quality_metric_params"] = sorting_analyzer_for_curation.get_extension(
