@@ -115,8 +115,8 @@ class ModelBasedClassification:
         }
 
         # Set predictions and probability as sorting properties
-        self.sorting_analyzer.sorting.set_property("label_prediction", predictions)
-        self.sorting_analyzer.sorting.set_property("label_confidence", probabilities)
+        self.sorting_analyzer.sorting.set_property("classifier_label", predictions)
+        self.sorting_analyzer.sorting.set_property("classifier_probability", probabilities)
 
         if export_to_phy:
             self._export_to_phy(classified_units)
