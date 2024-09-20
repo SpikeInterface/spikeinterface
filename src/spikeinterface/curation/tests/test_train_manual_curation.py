@@ -114,5 +114,6 @@ def test_train_model():
         imputation_strategies=["median"],
         scaling_techniques=["standard_scaler"],
         classifiers=["LogisticRegression"],
+        overwrite=True,
     )
     assert isinstance(trainer, CurationModelTrainer)

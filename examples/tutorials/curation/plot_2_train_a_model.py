@@ -77,6 +77,7 @@ trainer = si.train_model(
     imputation_strategies = ["median"], # Defaults to all
     scaling_techniques = ["standard_scaler"], # Defaults to all
     classifiers = None, # Default to Random Forest only. Other classifiers you can try [ "AdaBoostClassifier","GradientBoostingClassifier","LogisticRegression","MLPClassifier"]
+    overwrite = True, # Whether or not to overwrite `output_folder` if it already exists. Default is False.
 )
 
 best_model = trainer.best_pipeline

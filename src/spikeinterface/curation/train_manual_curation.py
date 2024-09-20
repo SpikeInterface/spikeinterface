@@ -480,6 +480,11 @@ class CurationModelTrainer:
     def _save(self):
         from skops.io import dump
         import sklearn
+        import pandas as pd
+
+        # export training data and labels
+        pd.DataFrame(self.X).to_csv(os.path.join(self.output_folder, f"training_data.csv"), index_label="unit_id")
+        pd.DataFrame(self.y).to_csv(os.path.join(self.output_folder, f"labels.csv"), index_label="unit_index")
 
         self.requirements["scikit-learn"] = sklearn.__version__
 
@@ -550,6 +555,7 @@ def train_model(
     imputation_strategies=None,
     scaling_techniques=None,
     classifiers=None,
+    overwrite=False,
     seed=None,
     **job_kwargs,
 ):
@@ -580,6 +586,8 @@ def train_model(
         A list of scaling techniques to apply. If None, default techniques will be used.
     classifiers : list of str | dict | None, default: None
         A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_default_classifier_search_spaces` method for the default search spaces & format for custom spaces.
+    overwrite : bool, default: False
+        Overwrites the `output_folder` if it already exists
     seed : int | None, default: None
         Random seed for reproducibility. If None, a random seed will be generated.
 
@@ -593,6 +601,11 @@ def train_model(
     This function handles the entire workflow of initializing the trainer, loading and preprocessing the data,
     and evaluating the models. The evaluation results are saved to the specified output folder.
     """
+
+    if overwrite is False:
+        assert not Path(
+            output_folder
+        ).exists(), f"folder {output_folder} already exists, choose another name or use overwrite=True"
 
     if labels is None:
         raise Exception("You must supply a list of curated labels using `labels = ...`")

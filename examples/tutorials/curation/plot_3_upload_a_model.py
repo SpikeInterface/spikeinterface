@@ -22,60 +22,16 @@ Upload a pipeline to Hugging Face Hub
 #         metadata.json
 #
 # SpikeInterface doesn't require you to keep this folder structure, we just advise it as
-# best practice. So: let's make these files!
+# best practice.
 #
 # If you've used SpikeInterface to train your model, you have already created such a folder,
-# containing ``my_model_name.skops`` and ``model_info.json``.
-#
-# We'll now export the training data. If we trained the model using the function...
-#
-# .. code-block::
-#
-#     my_model = train_model(
-#         labels=list_of_labels,
-#         analyzers=[sorting_analyzer_1, sorting_analyzer_2],
-#         output_folder = "my_model_folder"
-#     )
-#
-# ...then the training data is contained in your metric extensions. If you've calculated both
-# ``quality_metrics`` and ``template_metrics`` for two `sorting_analyzer`s, you can extract
-# and export the training data as follows
-#
-# .. code-block::
-#
-#     import pandas as pd
-#
-#     training_data_1 = pd.concat([
-#         sorting_analyzer_1.get_extension("quality_metrics").get_data(),
-#         sorting_analyzer_1.get_extension("template_metrics").get_data()
-#     ],axis=1)
-#
-#     training_data_2 = pd.concat([
-#         sorting_analyzer_2.get_extension("quality_metrics").get_data(),
-#         sorting_analyzer_2.get_extension("template_metrics").get_data()
-#     ],axis=1)
-#
-#     training_data = pd.concat([
-#         training_data_1,
-#         training_data_2
-#     ])
-#
-#     training_data.to_csv("my_model_folder/training_data.csv")
-#
-# If you have used different metrics, or use a `.csv` files you will need to modify this code.
-#
-# Similarly, we can save the curated labels we used:
-#
-# .. code-block::
-#
-#     list_of_labels.to_csv("my_model_folder/labels.csv")
-#
-# Finally, we suggest adding any information which shows when a model is applicable
-# (and when it is *not*). Taking a model trained on mouse data and applying it to a primate is
-# likely a bad idea. And a model trained in tetrode data will have limited application on a silcone
-# high density probe. Hence we suggest the following dictionary as a minimal amount of information
-# needed. Note that we format the metadata so that the information in common with the NWB data
-# format is consistent with it,
+# containing everything except the ``metadata.json`` file. In this file, we suggest saving
+# any information which shows when a model is applicable (and when it is *not*). Taking
+# a model trained on mouse data and applying it to a primate is likely a bad idea (or a
+# great research paper!). And a model trained in tetrode data will have limited application
+# on a silconehigh density probe. Hence we suggest the following dictionary as a minimal
+# amount of information needed. Note that we format the metadata so that the information
+# in common with the NWB data format is consistent with it,
 #
 # .. code-block::
 #
