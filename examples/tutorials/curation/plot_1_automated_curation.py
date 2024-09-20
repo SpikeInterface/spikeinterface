@@ -2,7 +2,9 @@
 Model Based Curation Tutorial
 =============================
 
-This notebook provides a step-by-step guide on how to use a machine learning classifier for curating spike sorted output. We'll download a toy model from `HuggingFace` and use it to label our sorted data by using Spikeinterface. We start by importing some packages
+This notebook provides a step-by-step guide on how to use a machine learning classifier for
+curating spike sorted output. We'll download a toy model and use it to label our sorted data by using
+Spikeinterface. We start by importing some packages
 """
 
 import warnings
@@ -19,10 +21,10 @@ import spikeinterface.full as si
 # Download a pretrained model
 # ---------------------------
 #
-# We can download a pretrained model from `Hugging Face <https://huggingface.co/>`_, and use this
-# to label sorted data. The `load_model` function allows us to download a specific model from
-# Hugging Face (or a local folder). The function downloads the model and saves it in a temporary
-# folder and returns a model and some metadata about the model.
+# Let's download a pretrained model from `Hugging Face <https://huggingface.co/>`_ (HF). The
+# ``load_model`` function allows us to download directly from HF, or use a model in a local
+# folder. The function downloads the model and saves it in a temporary folder and returns a
+# model and some metadata about the model.
 
 model, model_info = si.load_model(
     repo_id = "SpikeInterface/toy_tetrode_model",
@@ -37,8 +39,8 @@ model, model_info = si.load_model(
 model
 
 ##############################################################################
-# The repo contains information about which metrics were used to compute it. We can access it
-# from the model, or from the model_info
+# The model object (an sklearn Pipeline) contains information about which metrics
+# were used to compute the model. We can access it from the model (or from the model_info)
 
 print(model.feature_names_in_)
 
@@ -53,7 +55,7 @@ sorting_analyzer = si.create_sorting_analyzer(sorting=sorting, recording=recordi
 sorting_analyzer.compute(['noise_levels','random_spikes','waveforms','templates','spike_locations','spike_amplitudes','correlograms','principal_components','quality_metrics','template_metrics'])
 
 ##############################################################################
-# This sorting_analyzer now contains the required quality metrics and template metrics computed.
+# This sorting_analyzer now contains the required quality metrics and template metrics.
 # We can check that this is true by accessing the extension data.
 
 all_metric_names = list(sorting_analyzer.get_extension('quality_metrics').get_data().keys()) + list(sorting_analyzer.get_extension('template_metrics').get_data().keys())
@@ -62,7 +64,8 @@ print(np.all(all_metric_names == model.feature_names_in_))
 ##############################################################################
 # Great! We can now use the model to predict labels. You can either pass a HuggingFace repo, or a
 # local folder containing the model file and the ``model_info.json`` file. Here, we'll pass
-# a repo. The function returns a dictionary containing a label and a confidence for each unit.
+# a repo. The function returns a dictionary containing a label and a confidence for each unit
+# contained in the ``sorting_analyzer``.
 
 labels = si.auto_label_units(
     sorting_analyzer = sorting_analyzer,
@@ -74,13 +77,13 @@ labels
 
 
 ##############################################################################
-# The model has labelled one unit as bad. Let's look at that one and the 'good' unit with the highest
-# confidence of being good:
+# The model has labelled one unit as bad. Let's look at that one, and the 'good' unit with the highest
+# confidence of being 'good'.
 
 si.plot_unit_templates(sorting_analyzer, unit_ids=[7,9])
 
 ##############################################################################
-# Nice - we can see that unit 9 does look a lot more spikey than unit 7. You might think that unit
+# Nice - we see that unit 9 does look a lot more spikey than unit 7. You might think that unit
 # 7 is a real unit. If so, this model isn't good for you.
 #
 # Assess the model performance
@@ -88,7 +91,7 @@ si.plot_unit_templates(sorting_analyzer, unit_ids=[7,9])
 #
 # To assess the performance of the model relative to human labels, we can load or generate some
 # human labels, and plot a confusion matrix of predicted vs human labels for all clusters. Here
-# we're being a conservative human, who has labelled several units with small amplitudes as 'bad'.
+# we'll be a conservative human, who has labelled several units with small amplitudes as 'bad'.
 
 human_labels = ['bad', 'good', 'good', 'bad', 'good', 'bad', 'good', 'bad', 'good', 'good']
 
@@ -110,8 +113,8 @@ for (index, value) in np.ndenumerate(conf_matrix):
     plt.annotate( str(value), xy=index, color="white", fontsize="15")
 plt.xlabel('Predicted Label')
 plt.ylabel('Human Label')
-plt.xticks(ticks = [0.5, 1.5], labels = list(label_conversion.values()))
-plt.yticks(ticks = [0.5, 1.5], labels = list(label_conversion.values()))
+plt.xticks(ticks = [0, 1], labels = list(label_conversion.values()))
+plt.yticks(ticks = [0, 1], labels = list(label_conversion.values()))
 plt.title('Predicted vs Human Label')
 plt.suptitle(f"Balanced Accuracy: {balanced_accuracy}")
 plt.show()
@@ -123,8 +126,8 @@ plt.show()
 # Next, we can also see how the model's confidence relates to the probability that the model
 # label matches the human label
 #
-# This could be used to set a threshold above which you might accept the model's classification,
-# and only manually curate those which it is less sure of
+# This could be used to set a threshold above which you accept the model's classification,
+# and only manually curate those which it is less sure of.
 
 
 def calculate_moving_avg(label_df, confidence_label, window_size):
@@ -141,7 +144,7 @@ def calculate_moving_avg(label_df, confidence_label, window_size):
 
     return label_df_sorted[confidence_label], p_label_moving_avg
 
-confidences = sorting_analyzer.sorting.get_property('label_confidence')
+confidences = sorting_analyzer.sorting.get_property('classifier_probability')
 
 # Make dataframe of human label, model label, and confidence
 label_df = pd.DataFrame(data = {
@@ -170,14 +173,15 @@ plt.legend(); plt.grid(True); plt.show()
 # A more realistic example
 # ------------------------
 #
-# Here, we used a toy model trained on generated data. There are also models on HuggingFace
+# Above, we used a toy model trained on generated data. There are also models on HuggingFace
 # trained on real data.
 #
 # For example, the following classifier is trained on Neuropixels data from 11 mice recorded in
 # V1,SC and ALM: https://huggingface.co/AnoushkaJain3/curation_machine_learning_models
 #
-# Go to that page, and take a look at the `Files`. The models are contained in the `skops files <https://skops.readthedocs.io/en/stable/>`_
-# and there are _two_ in this repo. We can choose which to load in the `load_model` function as follows:
+# Go to that page, and take a look at the ``Files``. The models are contained in the
+# `skops files <https://skops.readthedocs.io/en/stable/>`_ and there are *two* in this repo.
+# We can choose which to load in the ``load_model`` function as follows:
 #
 # .. code-block::
 #
@@ -192,15 +196,17 @@ plt.legend(); plt.grid(True); plt.show()
 #
 #     UntrustedTypesFoundException: Untrusted types found in the file: ['sklearn.metrics._classification.balanced_accuracy_score', 'sklearn.metrics._scorer._Scorer', 'sklearn.model_selection._search_successive_halving.HalvingGridSearchCV', 'sklearn.model_selection._split.StratifiedKFold']
 #
-# This is a security warning. Sharing models, with are Python objects, is a complicated problem.
-# We have chosen to use the `skops format <https://skops.readthedocs.io/en/stable/>`_, instead of the common but insecure ``.pkl`` format
-# (read about ``pickle`` security issues `here <https://lwn.net/Articles/964392/>`_). While unpacking the ``.skops`` file, each function
+# This is a security warning. Sharing models, with are Python objects, is complicated.
+# We have chosen to use the `skops format <https://skops.readthedocs.io/en/stable/>`_, instead
+# of the common but insecure ``.pkl`` format (read about ``pickle`` security issues
+# `here <https://lwn.net/Articles/964392/>`_). While unpacking the ``.skops`` file, each function
 # is checked. Ideally, skops should recognise all `sklearn`, `numpy` and `scipy` functions and
-# allows the object to be loaded. But when it's not sure, it raises an error. Here, ``skops``
-# doesn't recognise ``['sklearn.metrics._classification.balanced_accuracy_score',
-# 'sklearn.metrics._scorer._Scorer', 'sklearn.model_selection._search_successive_halving.HalvingGridSearchCV',
+# allow the object to be loaded if it only contains these (and no unkown malicious code). But
+# when ``skops`` it's not sure, it raises an error. Here, it doesn't recognise
+# ``['sklearn.metrics._classification.balanced_accuracy_score', 'sklearn.metrics._scorer._Scorer',
+# 'sklearn.model_selection._search_successive_halving.HalvingGridSearchCV',
 # 'sklearn.model_selection._split.StratifiedKFold']``. Taking a look, these are all functions
-# from `sklearn`, and we can happily add them to the ``trusted`` functions.
+# from `sklearn`, and we can happily add them to the ``trusted`` functions to load:
 #
 # .. code-block::
 #
@@ -210,8 +216,26 @@ plt.legend(); plt.grid(True); plt.show()
 #         trusted = ['sklearn.metrics._classification.balanced_accuracy_score', 'sklearn.metrics._scorer._Scorer', 'sklearn.model_selection._search_successive_halving.HalvingGridSearchCV', 'sklearn.model_selection._split.StratifiedKFold']
 #     )
 #
-# As `skops` continues to be developed, we hope more of these functions will be :code:`trusted`
+# As ``skops`` continues to be developed, we hope more of these functions will be :code:`trusted`
 # by default.
 #
-# In general, you should be cautious when downloading `.skops` files and `.pkl` files from repos,
+# In general, you should be cautious when downloading ``.skops`` files and ``.pkl`` files from repos,
 # especially from unknown sources.
+#
+#
+# Directly applying a sklearn Pipeline
+# ------------------------------------
+#
+# Instead of using ``HuggingFace`` and ``skops``, you might have another way of receiving a sklearn
+# pipeline, and want to apply it to your sorted data.
+
+from spikeinterface.curation.model_based_curation import ModelBasedClassification
+
+model_based_classification = ModelBasedClassification(sorting_analyzer, model)
+labels = model_based_classification.predict_labels()
+labels
+
+##############################################################################
+# Using this, you lose the advantages of the model metadata: the quality metric parameters
+# are not checked and the labels are not converted their original human readable names (like
+# 'good' and 'bad'). Hence we advise using the methods discussed above, when possible.

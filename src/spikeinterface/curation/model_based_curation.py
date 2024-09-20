@@ -272,6 +272,18 @@ def load_model(model_folder=None, repo_id=None, model_name=None, trusted=None):
     """
     Loads a model and model_info from a folder or a huggingface repo
 
+    Parameters
+    ----------
+    model_folder : str or Path, defualt: None
+        The path to the folder containing the model
+    repo_id : str | Path, default: None
+        Hugging face repo id which contains the model e.g. 'username/model'
+    model_name: str | Path, default: None
+        Filename of model e.g. 'my_model.skops'. If None, uses first model found.
+    trusted : list of str, default: None
+        Passed to skops.load. The object will be loaded only if there are only trusted objects and objects of types listed in trusted in the dumped file.
+
+
     Returns
     -------
     model, model_info

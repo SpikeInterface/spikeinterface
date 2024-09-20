@@ -19,16 +19,14 @@ import matplotlib.pyplot as plt
 # Step 1: Generate and label data
 # -------------------------------
 #
-# We supply pretrained machine learning classifiers for predicting spike-sorted clusters with
-# arbitrary labels, in this example single-unit activity ('good'), or noise. This particular
-# approach works as follows:
-#
-# For the tutorial, we will use simulated data to create :code:`recording` and :code:`sorting` objects. We'll
+# For this tutorial, we will use simulated data to create ``recording`` ``sorting`` objects. We'll
 # create two sorting objects: :code:`sorting_1` is coupled to the real recording, so will contain good
-# units, :code:`sorting_2` is uncoupled, so should be pure noise. We'll combine the two into one sorting
+# units; :code:`sorting_2` is uncoupled, so should produce noise. We'll combine the two into one sorting
 # object using :code:`si.aggregate_units`.
 #
-# You should `load your own recording <https://spikeinterface.readthedocs.io/en/latest/modules/extractors.html>`_ and `do a sorting <https://spikeinterface.readthedocs.io/en/latest/modules/sorters.html>`_ on your data.
+# (When making your own model, you should
+# `load your own recording <https://spikeinterface.readthedocs.io/en/latest/modules/extractors.html>`_
+# and `do a sorting <https://spikeinterface.readthedocs.io/en/latest/modules/sorters.html>`_ on your data.)
 
 recording, sorting_1 = si.generate_ground_truth_recording(num_channels=4, seed=1, num_units=5)
 _, sorting_2 =si.generate_ground_truth_recording(num_channels=4, seed=2, num_units=5)
@@ -36,15 +34,17 @@ _, sorting_2 =si.generate_ground_truth_recording(num_channels=4, seed=2, num_uni
 both_sortings = si.aggregate_units([sorting_1, sorting_2])
 
 ##############################################################################
-# Our model is based on :code:`quality_metrics`, which are computed using a :code:`sorting_analyzer`. So we'll
-# now create a sorting analyzer and compute all the extensions needed to get the quality metrics.
+# The models are based on `quality metrics <https://spikeinterface.readthedocs.io/en/latest/modules/qualitymetrics.html>`_
+# and `template metrics <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html#template-metrics>`_,
+# which are computed using a :code:`sorting_analyzer`. So we'll now create a sorting
+# analyzer and compute the extensions needed to get the metrics.
 
 analyzer = si.create_sorting_analyzer(sorting = both_sortings, recording=recording)
 analyzer.compute(['noise_levels','random_spikes','waveforms','templates','spike_locations','spike_amplitudes','correlograms','principal_components','quality_metrics','template_metrics'])
 
 ##############################################################################
-# Let's plot the templates for the first and fifth units. The first (unit id 0) belonged to
-# :code:`sorting_1` so should look like a real unit; the sixth (unit id 5) belonged to :code:`sorting_2`
+# Let's plot the templates for the first and fifth units. The first (unit id 0) belongs to
+# :code:`sorting_1` so should look like a real unit; the sixth (unit id 5) belongs to :code:`sorting_2`
 # so should look like noise.
 
 si.plot_unit_templates(analyzer, unit_ids=[0,5])
@@ -58,8 +58,8 @@ labels = ['good', 'good', 'good', 'good', 'good', 'bad', 'bad', 'bad', 'bad', 'b
 ##############################################################################
 # Step 2: Train our model
 # -----------------------
-
-# With our labelled data in hand, we can train the model using the :code:`train_model` function.
+#
+# With the labelled data, we can train the model using the :code:`train_model` function.
 # Here, the idea is that the trainer will try several classifiers, imputation strategies and
 # scaling techniques then save the most accurate. To save time, we'll only try one classifier
 # (Random Forest), imputation strategy (median) and scaling technique (standard scaler).
@@ -82,23 +82,24 @@ trainer = si.train_model(
 best_model = trainer.best_pipeline
 
 ##############################################################################
+# The above code saves the model in ``my_model/model.skops``, some metadata in
+# ``my_model/model_info.json`` and the model accuracies in ``model_accuracies.csv``
+# in the specified ``output_folder``.
 #
-# The above code saves the model in :code:`model.skops`, some metadata in :code:`model_info.json` and
-# the model accuracies in :code:`model_accuracies.csv` in the specified :code:`output_folder`.
+# ``skops`` is a file format: you can think of it as a more-secture pkl file. `Read more <https://skops.readthedocs.io/en/stable/index.html>`_.
 #
-# :code:`skops` is a file format; you can think of it as a more-secture pkl file. `Read more <https://skops.readthedocs.io/en/stable/index.html>`_.
-#
-# The :code:`model_accuracies.csv` file contains the accuracy, precision and recall of the tested models.
-# Let's take a look
+# The ``model_accuracies.csv`` file contains the accuracy, precision and recall of the
+# tested models. Let's take a look
 
 accuracies = pd.read_csv(Path(output_folder) / "model_accuracies.csv", index_col = 0)
 accuracies.head()
 
-# Our model is perfect!! This is because the task was _very_ easy. We had 10 units; where
+##############################################################################
+# Our model is perfect!! This is because the task was *very* easy. We had 10 units; where
 # half were pure noise and half were not.
 #
 # The model also contains some more information, such as which features are importantly.
-# We can plot these as follows:
+# We can plot these:
 
 # Plot feature importances
 importances = best_model.named_steps['classifier'].feature_importances_
@@ -112,3 +113,8 @@ plt.bar(range(n_features), importances[indices], align="center")
 plt.xticks(range(n_features), features, rotation=90)
 plt.xlim([-1, n_features])
 plt.show()
+
+##############################################################################
+# Now that you have a model, you can `apply it to another sorting
+# <https://spikeinterface.readthedocs.io/en/latest/tutorials/curation/plot_1_automated_curation.html>`_
+# or upload it to `HuggingFaceHub <https://huggingface.co/>`_.

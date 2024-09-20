@@ -3,15 +3,16 @@ Upload a pipeline to Hugging Face Hub
 =====================================
 """
 ##############################################################################
-# In this tutorial we will upload a pipeline, trained in spikeinterface, to the Hugging Face Hub (HFH).
-# To do this, you need a HFH account. If you do not want to make an account, you can simply share the
-# model folder with colleagues. There are also several ways to interaction with HFH: the way we
-# proposed here doesn't use many of the tools ``skops`` and hugging face have developed such as
-# ``Card``s and ``hub_utils``. Feel free to check those out `here <https://skops.readthedocs.io/en/stable/examples.html>`_.
+# In this tutorial we will upload a pipeline, trained in SpikeInterface, to the
+# `Hugging Face Hub <https://huggingface.co/>`_ (HFH). To do this, you need a HFH account.
+# If you do not want to make an account, you can simply share the model folder with colleagues.
+# There are also several ways to interaction with HFH: the way we propose here doesn't use
+# many of the tools ``skops`` and hugging face have developed such as the ``Card`` and
+# ``hub_utils``. Feel free to check those out `here <https://skops.readthedocs.io/en/stable/examples.html>`_.
 #
-# The plan is to make a folder with the following file structure:
+# The plan is to make a folder with the following file structure
 #
-# .. code-block:
+# .. code-block::
 #
 #     my_model_folder/
 #         my_model_name.skops
@@ -20,11 +21,10 @@ Upload a pipeline to Hugging Face Hub
 #         labels.csv
 #         metadata.json
 #
-# SpikeInterface doesn't require you to keep this folder structure, we just advise it as best practice.
+# SpikeInterface doesn't require you to keep this folder structure, we just advise it as
+# best practice. So: let's make these files!
 #
-# So: let's make these files!
-#
-# If you've used spikeinterface to train your model, you have already created such a folder,
+# If you've used SpikeInterface to train your model, you have already created such a folder,
 # containing ``my_model_name.skops`` and ``model_info.json``.
 #
 # We'll now export the training data. If we trained the model using the function...
@@ -71,11 +71,11 @@ Upload a pipeline to Hugging Face Hub
 #     list_of_labels.to_csv("my_model_folder/labels.csv")
 #
 # Finally, we suggest adding any information which shows when a model is applicable
-# (and when it is _not_). Taking a model trained on mouse data and applying it to a primate is
+# (and when it is *not*). Taking a model trained on mouse data and applying it to a primate is
 # likely a bad idea. And a model trained in tetrode data will have limited application on a silcone
 # high density probe. Hence we suggest the following dictionary as a minimal amount of information
 # needed. Note that we format the metadata so that the information in common with the NWB data
-# format is consistent with it:
+# format is consistent with it,
 #
 # .. code-block::
 #
@@ -93,11 +93,14 @@ Upload a pipeline to Hugging Face Hub
 #     with open("my_model_folder/metadata.json", "w") as file:
 #         json.dump(model_metadata, file)
 #
-# You could now share this folder with a colleague, or upload it to github.
+# You could now share this folder with a colleague, or upload it to github. Or if you'd
+# like to upload the model to Hugging Face Hub, keep reading. We'll use the
+# HFH web interface.
 #
-# If you'd like to upload the model to Hugging Face Hub, continue the tutorial. We could use the `hub_utils` from `skops`, but we find it easier to use the HFH web interface.
-#
-# First, go to https://huggingface.co/ and make an account. Press ``+`` then ``New model`` or find ``+ New Model`` in the user menu. You will be asked to enter a model name, to choose a license for the model and whether the model should be public or private. After you have made these choices, press ``Create Model``.
+# First, go to https://huggingface.co/ and make an account. Once you've logged in, press
+# ``+`` then ``New model`` or find ``+ New Model`` in the user menu. You will be asked
+# to enter a model name, to choose a license for the model and whether the model should
+#  be public or private. After you have made these choices, press ``Create Model``.
 #
 # You should be on your model's landing page, whose header looks something like
 #
@@ -115,10 +118,9 @@ Upload a pipeline to Hugging Face Hub
 #     :align: center
 #     :alt: The file list for a model HuggingFaceHub.
 #
-# Let's add some information about the model. Click on ``Model card`` then ``Edit model card``. The model card is what a user sees when they go to your model on the hugging face website. The basic syntax is
-#
-# You can edit this model card to help users who find your model. For a model based on
-# generated tetrode data, the model card looks like
+# Let's add some information about the model for users to see when they go on your model's
+# page. Click on ``Model card`` then ``Edit model card``. Here is a sample model card for
+# For a model based on synthetically generated tetrode data,
 #
 # .. code-block::
 #
