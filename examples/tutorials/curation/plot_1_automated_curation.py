@@ -170,8 +170,8 @@ plt.legend(); plt.grid(True); plt.show()
 ##############################################################################
 # In this case, you might decide to only trust labels which had confidence over above 0.86.
 #
-# A more realistic example
-# ------------------------
+# A more realistic example: Neuropixels data
+# ------------------------------------------
 #
 # Above, we used a toy model trained on generated data. There are also models on HuggingFace
 # trained on real data.
