@@ -189,7 +189,7 @@ Mountainsort4
 * Authors: 	Jeremy Magland, Alex Barnett, Jason Chung, Loren Frank, Leslie Greengard
 * Installation::
 
-      pip install mountainsort4
+      pip install mountainsort4 requests
 
 Mountainsort5
 ^^^^^^^^^^^^^
