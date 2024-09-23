@@ -230,8 +230,10 @@ class SortingAnalyzer:
         txt = f"{clsname}: {nchan} channels - {nunits} units - {nseg} segments - {self.format}"
         if self.is_sparse():
             txt += " - sparse"
-        if self.has_recording() or self.has_temporary_recording():
+        if self.has_recording():
             txt += " - has recording"
+        if self.has_temporary_recording():
+            txt += " - has temporary recording"
         ext_txt = f"Loaded {len(self.extensions)} extensions: " + ", ".join(self.extensions.keys())
         txt += "\n" + ext_txt
         return txt
@@ -350,7 +352,7 @@ class SortingAnalyzer:
     def create_binary_folder(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes):
         # used by create and save_as
 
-        assert recording is not None, "To create a SortingAnalyzer you need recording not None"
+        assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
 
         folder = Path(folder)
         if folder.is_dir():
@@ -1221,7 +1223,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                     extensions[ext_name] = ext_params
             self.compute_several_extensions(extensions=extensions, save=save, verbose=verbose, **job_kwargs)
         else:
-            raise ValueError("SortingAnalyzer.compute() need str, dict or list")
+            raise ValueError("SortingAnalyzer.compute() needs a str, dict or list")
 
     def compute_one_extension(self, extension_name, save=True, verbose=False, **kwargs) -> "AnalyzerExtension":
         """
@@ -1357,7 +1359,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 extension_class = get_extension_class(extension_name)
                 assert (
                     self.has_recording() or self.has_temporary_recording()
-                ), f"Extension {extension_name} need the recording"
+                ), f"Extension {extension_name} requires the recording"
 
                 for variable_name in extension_class.nodepipeline_variables:
                     result_routage.append((extension_name, variable_name))
@@ -1605,17 +1607,17 @@ _extension_children = {}
 def _get_children_dependencies(extension_name):
     """
     Extension classes have a `depend_on` attribute to declare on which class they
-    depend. For instance "templates" depend on "waveforms". "waveforms depends on "random_spikes".
+    depend on. For instance "templates" depends on "waveforms". "waveforms" depends on "random_spikes".
 
-    This function is making the reverse way : get all children that depend of a
+    This function is going the opposite way: it finds all children that depend on a
     particular extension.
 
-    This is recursive so this includes : children and so grand children and great grand children
+    The implementation is recursive so that the output includes children, grand children, great grand children, etc.
 
-    This function is usefull for deleting on recompute.
-    For instance recompute the "waveforms" need to delete "template"
-    This make sens if "ms_before" is change in "waveforms" because the template also depends
-    on this parameters.
+    This function is useful for deleting existing extensions on recompute.
+    For instance, recomputing the "waveforms" needs to delete the "templates", since the latter depends on the former.
+    For this particular example, if we change the "ms_before" parameter of the "waveforms", also the "templates" will
+    require recomputation as this parameter is inherited.
     """
     names = []
     children = _extension_children[extension_name]
