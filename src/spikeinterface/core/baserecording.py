@@ -608,11 +608,11 @@ class BaseRecording(BaseRecordingSnippets):
             probegroup = self.get_probegroup()
             cached.set_probegroup(probegroup)
 
-        time_vectors = self._get_time_vectors()
-        if time_vectors is not None:
-            for segment_index, time_vector in enumerate(time_vectors):
-                if time_vector is not None:
-                    cached.set_times(time_vector, segment_index=segment_index)
+        for segment_index in range(self.get_num_segments()):
+            if self.has_time_vector(segment_index):
+                # the use of get_times is preferred since timestamps are converted to array
+                time_vector = self.get_times(segment_index=segment_index)
+                cached.set_times(time_vector, segment_index=segment_index)
 
         return cached
 
