@@ -363,12 +363,12 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         job_kwargs = fix_job_kwargs(job_kwargs)
         p = self.params
-        we = self.sorting_analyzer
-        sorting = we.sorting
+        sorting_analyzer = self.sorting_analyzer
+        sorting = sorting_analyzer.sorting
         assert (
-            we.has_recording()
-        ), "To compute PCA projections for all spikes, the waveform extractor needs the recording"
-        recording = we.recording
+            sorting_analyzer.has_recording() or sorting_analyzer.has_temporary_recording()
+        ), "To compute PCA projections for all spikes, the sorting analyzer needs the recording"
+        recording = sorting_analyzer.recording
 
         # assert sorting.get_num_segments() == 1
         assert p["mode"] in ("by_channel_local", "by_channel_global")
@@ -378,8 +378,9 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         sparsity = self.sorting_analyzer.sparsity
         if sparsity is None:
-            sparse_channels_indices = {unit_id: np.arange(we.get_num_channels()) for unit_id in we.unit_ids}
-            max_channels_per_template = we.get_num_channels()
+            num_channels = recording.get_num_channels()
+            sparse_channels_indices = {unit_id: np.arange(num_channels) for unit_id in sorting_analyzer.unit_ids}
+            max_channels_per_template = num_channels
         else:
             sparse_channels_indices = sparsity.unit_id_to_channel_indices
             max_channels_per_template = max([chan_inds.size for chan_inds in sparse_channels_indices.values()])
@@ -462,9 +463,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         return pca_models
 
     def _fit_by_channel_global(self, progress_bar):
-        # we = self.sorting_analyzer
         p = self.params
-        # unit_ids = we.unit_ids
         unit_ids = self.sorting_analyzer.unit_ids
 
         # there is one unique PCA accross channels
