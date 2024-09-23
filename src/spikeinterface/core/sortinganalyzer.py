@@ -230,7 +230,7 @@ class SortingAnalyzer:
         txt = f"{clsname}: {nchan} channels - {nunits} units - {nseg} segments - {self.format}"
         if self.is_sparse():
             txt += " - sparse"
-        if self.has_recording():
+        if self.has_recording() or self.has_temporary_recording():
             txt += " - has recording"
         ext_txt = f"Loaded {len(self.extensions)} extensions: " + ", ".join(self.extensions.keys())
         txt += "\n" + ext_txt
@@ -1355,7 +1355,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
             for extension_name, extension_params in extensions_with_pipeline.items():
                 extension_class = get_extension_class(extension_name)
-                assert self.has_recording(), f"Extension {extension_name} need the recording"
+                assert (
+                    self.has_recording() or self.has_temporary_recording()
+                ), f"Extension {extension_name} need the recording"
 
                 for variable_name in extension_class.nodepipeline_variables:
                     result_routage.append((extension_name, variable_name))
