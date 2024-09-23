@@ -25,7 +25,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         sorting_analyzer = self._prepare_sorting_analyzer(
             format="memory", sparse=False, extension_class=ComputePrincipalComponents
         )
-        sorting_analyzer.compute("principal_components", mode="by_channel_local", n_jobs=2, mp_context="fork")
+        sorting_analyzer.compute("principal_components", mode="by_channel_local", n_jobs=2)
         sorting_analyzer.compute(
             "principal_components", mode="by_channel_local", n_jobs=2, max_threads_per_process=4, mp_context="spawn"
         )

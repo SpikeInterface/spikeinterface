@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+import platform
 from pathlib import Path
 from tqdm.auto import tqdm
 
@@ -417,6 +418,11 @@ class ComputePrincipalComponents(AnalyzerExtension):
         from sklearn.decomposition import IncrementalPCA
 
         p = self.params
+
+        if mp_context is not None and platform.system() == "Windows":
+            assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+        elif mp_context == "fork" and platform.system() == "Darwin":
+            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
 
         unit_ids = self.sorting_analyzer.unit_ids
         channel_ids = self.sorting_analyzer.channel_ids
