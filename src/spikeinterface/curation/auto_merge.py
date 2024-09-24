@@ -12,8 +12,6 @@ except ImportError:
     HAVE_NUMBA = False
 
 from ..core import SortingAnalyzer, Templates
-from ..core.template_tools import get_template_extremum_channel
-from ..postprocessing import compute_correlograms
 from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
 
 from .mergeunitssorting import MergeUnitsSorting
@@ -25,9 +23,346 @@ _possible_presets = ["similarity_correlograms", "x_contaminations", "temporal_sp
 _required_extensions = {
     "unit_locations": ["unit_locations"],
     "correlogram": ["correlograms"],
+    "min_snr": ["noise_levels", "templates"],
     "template_similarity": ["template_similarity"],
     "knn": ["spike_locations", "spike_amplitudes"],
 }
+
+_templates_needed = ["unit_locations", "min_snr", "template_similarity", "spike_locations", "spike_amplitudes"]
+
+
+def auto_merges(
+    sorting_analyzer: SortingAnalyzer,
+    preset: str | None = "similarity_correlograms",
+    resolve_graph: bool = False,
+    num_spikes_kwargs={"min_spikes": 100},
+    snr_kwargs={"min_snr": 2},
+    remove_contaminated_kwargs={"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+    unit_locations_kwargs={"max_distance_um": 50},
+    correlogram_kwargs={
+        "corr_diff_thresh": 0.16,
+        "censor_correlograms_ms": 0.3,
+        "sigma_smooth_ms": 0.6,
+        "adaptative_window_thresh": 0.5,
+    },
+    template_similarity_kwargs={"template_diff_thresh": 0.25},
+    presence_distance_kwargs={"presence_distance_thresh": 100},
+    knn_kwargs={"k_nn": 10},
+    cross_contamination_kwargs={
+        "cc_thresh": 0.1,
+        "p_value": 0.2,
+        "refractory_period_ms": 1.0,
+        "censored_period_ms": 0.3,
+    },
+    quality_score_kwargs={"firing_contamination_balance": 2.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+    compute_needed_extensions: bool = True,
+    extra_outputs: bool = False,
+    steps: list[str] | None = None,
+    force_copy: bool = True,
+    **job_kwargs,
+) -> list[tuple[int | str, int | str]] | Tuple[tuple[int | str, int | str], dict]:
+    """
+    Algorithm to find and check potential merges between units.
+
+    The merges are proposed based on a series of steps with different criteria:
+
+        * "num_spikes": enough spikes are found in each unit for computing the correlogram (`min_spikes`)
+        * "snr": the SNR of the units is above a threshold (`min_snr`)
+        * "remove_contaminated": each unit is not contaminated (by checking auto-correlogram - `contamination_thresh`)
+        * "unit_locations": estimated unit locations are close enough (`max_distance_um`)
+        * "correlogram": the cross-correlograms of the two units are similar to each auto-corrleogram (`corr_diff_thresh`)
+        * "template_similarity": the templates of the two units are similar (`template_diff_thresh`)
+        * "presence_distance": the presence of the units is complementary in time (`presence_distance_thresh`)
+        * "cross_contamination": the cross-contamination is not significant (`cc_thresh` and `p_value`)
+        * "knn": the two units are close in the feature space
+        * "quality_score": the unit "quality score" is increased after the merge
+
+    The "quality score" factors in the increase in firing rate (**f**) due to the merge and a possible increase in
+    contamination (**C**), wheighted by a factor **k** (`firing_contamination_balance`).
+
+    .. math::
+
+        Q = f(1 - (k + 1)C)
+
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer
+    preset : "similarity_correlograms" | "x_contaminations" | "temporal_splits" | "feature_neighbors" | None, default: "similarity_correlograms"
+        The preset to use for the auto-merge. Presets combine different steps into a recipe and focus on:
+
+        * | "similarity_correlograms": mainly focused on template similarity and correlograms.
+          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_locations",
+          | "template_similarity", "correlogram", "quality_score"
+        * | "x_contaminations": similar to "similarity_correlograms", but checks for cross-contamination instead of correlograms.
+          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_locations",
+          | "template_similarity", "cross_contamination", "quality_score"
+        * | "temporal_splits": focused on finding temporal splits using presence distance.
+          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_locations",
+          | "template_similarity", "presence_distance", "quality_score"
+        * | "feature_neighbors": focused on finding unit pairs whose spikes are close in the feature space using kNN.
+          | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_locations",
+          | "knn", "quality_score"
+        If `preset` is None, you can specify the steps manually with the `steps` parameter.
+    resolve_graph : bool, default: False
+        If True, the function resolves the potential unit pairs to be merged into multiple-unit merges.
+    compute_needed_extensions : bool, default : True
+        Should we force the computation of needed extensions?
+    extra_outputs : bool, default: False
+        If True, an additional dictionary (`outs`) with processed data is returned.
+    steps : None or list of str, default: None
+        Which steps to run, if no preset is used.
+        Pontential steps : "num_spikes", "snr", "remove_contaminated", "unit_locations", "correlogram",
+        "template_similarity", "presence_distance", "cross_contamination", "knn", "quality_score"
+        Please check steps explanations above!$
+    force_copy : boolean, default: True
+        When new extensions are computed, the default is to make a copy of the analyzer, to avoid overwriting
+        already computed extensions. False if you want to overwrite
+
+    Returns
+    -------
+    potential_merges:
+        A list of tuples of 2 elements (if `resolve_graph`if false) or 2+ elements (if `resolve_graph` is true).
+        List of pairs that could be merged.
+    outs:
+        Returned only when extra_outputs=True
+        A dictionary that contains data for debugging and plotting.
+
+    References
+    ----------
+    This function is inspired and built upon similar functions from Lussac [Llobet]_,
+    done by Aurelien Wyngaard and Victor Llobet.
+    https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
+    """
+    import scipy
+
+    sorting = sorting_analyzer.sorting
+    unit_ids = sorting.unit_ids
+
+    # to get fast computation we will not analyse pairs when:
+    #    * not enough spikes for one of theses
+    #    * auto correlogram is contaminated
+    #    * to far away one from each other
+
+    all_steps = [
+        "num_spikes",
+        "snr",
+        "remove_contaminated",
+        "unit_locations",
+        "correlogram",
+        "template_similarity",
+        "presence_distance",
+        "knn",
+        "cross_contamination",
+        "quality_score",
+    ]
+
+    if preset is not None and preset not in _possible_presets:
+        raise ValueError(f"preset must be one of {_possible_presets}")
+
+    if steps is None:
+        if preset is None:
+            if steps is None:
+                raise ValueError("You need to specify a preset or steps for the auto-merge function")
+        elif preset == "similarity_correlograms":
+            steps = [
+                "num_spikes",
+                "remove_contaminated",
+                "unit_locations",
+                "template_similarity",
+                "correlogram",
+                "quality_score",
+            ]
+        elif preset == "temporal_splits":
+            steps = [
+                "num_spikes",
+                "remove_contaminated",
+                "unit_locations",
+                "template_similarity",
+                "presence_distance",
+                "quality_score",
+            ]
+        elif preset == "x_contaminations":
+            steps = [
+                "num_spikes",
+                "remove_contaminated",
+                "unit_locations",
+                "template_similarity",
+                "cross_contamination",
+                "quality_score",
+            ]
+        elif preset == "feature_neighbors":
+            steps = [
+                "num_spikes",
+                "snr",
+                "remove_contaminated",
+                "unit_locations",
+                "knn",
+                "quality_score",
+            ]
+    if force_copy and compute_needed_extensions:
+        # To avoid erasing the extensions of the user
+        sorting_analyzer = sorting_analyzer.copy()
+
+    for step in steps:
+        if step in _required_extensions:
+            for ext in _required_extensions[step]:
+                if compute_needed_extensions:
+                    if step in _templates_needed:
+                        template_ext = sorting_analyzer.get_extension("templates")
+                        if template_ext is None:
+                            sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
+                    params = eval(f"{step}_kwargs")
+                    params = params.get(ext, dict())
+                    sorting_analyzer.compute(ext, **params, **job_kwargs)
+                else:
+                    if not sorting_analyzer.has_extension(ext):
+                        raise ValueError(f"{step} requires {ext} extension")
+
+    n = unit_ids.size
+    pair_mask = np.triu(np.arange(n)) > 0
+    outs = dict()
+
+    for step in steps:
+
+        assert step in all_steps, f"{step} is not a valid step"
+
+        # STEP : remove units with too few spikes
+        if step == "num_spikes":
+            num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
+            to_remove = num_spikes < num_spikes_kwargs["min_spikes"]
+            pair_mask[to_remove, :] = False
+            pair_mask[:, to_remove] = False
+            outs["num_spikes"] = to_remove
+
+        # STEP : remove units with too small SNR
+        elif step == "snr":
+            qm_ext = sorting_analyzer.get_extension("quality_metrics")
+            if qm_ext is None:
+                sorting_analyzer.compute(["noise_levels"], **job_kwargs)
+                sorting_analyzer.compute("quality_metrics", metric_names=["snr"], **job_kwargs)
+                qm_ext = sorting_analyzer.get_extension("quality_metrics")
+
+            snrs = qm_ext.get_data()["snr"].values
+            to_remove = snrs < snr_kwargs["min_snr"]
+            pair_mask[to_remove, :] = False
+            pair_mask[:, to_remove] = False
+            outs["snr"] = to_remove
+
+        # STEP : remove contaminated auto corr
+        elif step == "remove_contaminated":
+            contaminations, nb_violations = compute_refrac_period_violations(
+                sorting_analyzer,
+                refractory_period_ms=remove_contaminated_kwargs["refractory_period_ms"],
+                censored_period_ms=remove_contaminated_kwargs["censored_period_ms"],
+            )
+            nb_violations = np.array(list(nb_violations.values()))
+            contaminations = np.array(list(contaminations.values()))
+            to_remove = contaminations > remove_contaminated_kwargs["contamination_thresh"]
+            pair_mask[to_remove, :] = False
+            pair_mask[:, to_remove] = False
+            outs["remove_contaminated"] = to_remove
+
+        # STEP : unit positions are estimated roughly with channel
+        elif step == "unit_locations" in steps:
+            location_ext = sorting_analyzer.get_extension("unit_locations")
+            unit_locations = location_ext.get_data()[:, :2]
+
+            unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
+            pair_mask = pair_mask & (unit_distances <= unit_locations_kwargs["max_distance_um"])
+            outs["unit_distances"] = unit_distances
+
+        # STEP : potential auto merge by correlogram
+        elif step == "correlogram" in steps:
+            correlograms_ext = sorting_analyzer.get_extension("correlograms")
+            correlograms, bins = correlograms_ext.get_data()
+            censor_ms = correlogram_kwargs["censor_correlograms_ms"]
+            sigma_smooth_ms = correlogram_kwargs["sigma_smooth_ms"]
+            mask = (bins[:-1] >= -censor_ms) & (bins[:-1] < censor_ms)
+            correlograms[:, :, mask] = 0
+            correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
+            # find correlogram window for each units
+            win_sizes = np.zeros(n, dtype=int)
+            for unit_ind in range(n):
+                auto_corr = correlograms_smoothed[unit_ind, unit_ind, :]
+                thresh = np.max(auto_corr) * correlogram_kwargs["adaptative_window_thresh"]
+                win_size = get_unit_adaptive_window(auto_corr, thresh)
+                win_sizes[unit_ind] = win_size
+            correlogram_diff = compute_correlogram_diff(
+                sorting,
+                correlograms_smoothed,
+                win_sizes,
+                pair_mask=pair_mask,
+            )
+            # print(correlogram_diff)
+            pair_mask = pair_mask & (correlogram_diff < correlogram_kwargs["corr_diff_thresh"])
+            outs["correlograms"] = correlograms
+            outs["bins"] = bins
+            outs["correlograms_smoothed"] = correlograms_smoothed
+            outs["correlogram_diff"] = correlogram_diff
+            outs["win_sizes"] = win_sizes
+
+        # STEP : check if potential merge with CC also have template similarity
+        elif step == "template_similarity" in steps:
+            template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
+            templates_similarity = template_similarity_ext.get_data()
+            templates_diff = 1 - templates_similarity
+            pair_mask = pair_mask & (templates_diff < template_similarity_kwargs["template_diff_thresh"])
+            outs["templates_diff"] = templates_diff
+
+        # STEP : check the vicinity of the spikes
+        elif step == "knn" in steps:
+            pair_mask = get_pairs_via_nntree(sorting_analyzer, **knn_kwargs, pair_mask=pair_mask)
+
+        # STEP : check how the rates overlap in times
+        elif step == "presence_distance" in steps:
+            presence_distance_kwargs = presence_distance_kwargs.copy()
+            presence_distance_thresh = presence_distance_kwargs.pop("presence_distance_thresh")
+            num_samples = [
+                sorting_analyzer.get_num_samples(segment_index) for segment_index in range(sorting.get_num_segments())
+            ]
+            presence_distances = compute_presence_distance(
+                sorting, pair_mask, num_samples=num_samples, **presence_distance_kwargs
+            )
+            pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
+            outs["presence_distances"] = presence_distances
+
+        # STEP : check if the cross contamination is significant
+        elif step == "cross_contamination" in steps:
+            refractory = (
+                cross_contamination_kwargs["censored_period_ms"],
+                cross_contamination_kwargs["refractory_period_ms"],
+            )
+            CC, p_values = compute_cross_contaminations(
+                sorting_analyzer, pair_mask, cross_contamination_kwargs["cc_thresh"], refractory, contaminations
+            )
+            pair_mask = pair_mask & (p_values > cross_contamination_kwargs["p_value"])
+            outs["cross_contaminations"] = CC, p_values
+
+        # STEP : validate the potential merges with CC increase the contamination quality metrics
+        elif step == "quality_score" in steps:
+            pair_mask, pairs_decreased_score = check_improve_contaminations_score(
+                sorting_analyzer,
+                pair_mask,
+                contaminations,
+                quality_score_kwargs["firing_contamination_balance"],
+                quality_score_kwargs["refractory_period_ms"],
+                quality_score_kwargs["censored_period_ms"],
+            )
+            outs["pairs_decreased_score"] = pairs_decreased_score
+
+    # FINAL STEP : create the final list from pair_mask boolean matrix
+    ind1, ind2 = np.nonzero(pair_mask)
+    potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
+
+    if resolve_graph:
+        potential_merges = resolve_merging_graph(sorting, potential_merges)
+
+    if extra_outputs:
+        return potential_merges, outs
+    else:
+        return potential_merges
 
 
 def get_potential_auto_merge(
@@ -164,216 +499,44 @@ def get_potential_auto_merge(
     done by Aurelien Wyngaard and Victor Llobet.
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
     """
-    import scipy
-
-    sorting = sorting_analyzer.sorting
-    unit_ids = sorting.unit_ids
-
-    # to get fast computation we will not analyse pairs when:
-    #    * not enough spikes for one of theses
-    #    * auto correlogram is contaminated
-    #    * to far away one from each other
-
-    all_steps = [
-        "num_spikes",
-        "snr",
-        "remove_contaminated",
-        "unit_locations",
-        "correlogram",
-        "template_similarity",
-        "presence_distance",
-        "knn",
-        "cross_contamination",
-        "quality_score",
-    ]
-
-    if preset is not None and preset not in _possible_presets:
-        raise ValueError(f"preset must be one of {_possible_presets}")
-
-    if steps is None:
-        if preset is None:
-            if steps is None:
-                raise ValueError("You need to specify a preset or steps for the auto-merge function")
-        elif preset == "similarity_correlograms":
-            steps = [
-                "num_spikes",
-                "remove_contaminated",
-                "unit_locations",
-                "template_similarity",
-                "correlogram",
-                "quality_score",
-            ]
-        elif preset == "temporal_splits":
-            steps = [
-                "num_spikes",
-                "remove_contaminated",
-                "unit_locations",
-                "template_similarity",
-                "presence_distance",
-                "quality_score",
-            ]
-        elif preset == "x_contaminations":
-            steps = [
-                "num_spikes",
-                "remove_contaminated",
-                "unit_locations",
-                "template_similarity",
-                "cross_contamination",
-                "quality_score",
-            ]
-        elif preset == "feature_neighbors":
-            steps = [
-                "num_spikes",
-                "snr",
-                "remove_contaminated",
-                "unit_locations",
-                "knn",
-                "quality_score",
-            ]
-
-    for step in steps:
-        if step in _required_extensions:
-            for ext in _required_extensions[step]:
-                if not sorting_analyzer.has_extension(ext):
-                    raise ValueError(f"{step} requires {ext} extension")
-
-    n = unit_ids.size
-    pair_mask = np.triu(np.arange(n)) > 0
-    outs = dict()
-
-    for step in steps:
-
-        assert step in all_steps, f"{step} is not a valid step"
-
-        # STEP : remove units with too few spikes
-        if step == "num_spikes":
-            num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
-            to_remove = num_spikes < min_spikes
-            pair_mask[to_remove, :] = False
-            pair_mask[:, to_remove] = False
-
-        # STEP : remove units with too small SNR
-        elif step == "snr":
-            qm_ext = sorting_analyzer.get_extension("quality_metrics")
-            if qm_ext is None:
-                sorting_analyzer.compute("noise_levels")
-                sorting_analyzer.compute("quality_metrics", metric_names=["snr"])
-                qm_ext = sorting_analyzer.get_extension("quality_metrics")
-
-            snrs = qm_ext.get_data()["snr"].values
-            to_remove = snrs < min_snr
-            pair_mask[to_remove, :] = False
-            pair_mask[:, to_remove] = False
-
-        # STEP : remove contaminated auto corr
-        elif step == "remove_contaminated":
-            contaminations, nb_violations = compute_refrac_period_violations(
-                sorting_analyzer, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
-            )
-            nb_violations = np.array(list(nb_violations.values()))
-            contaminations = np.array(list(contaminations.values()))
-            to_remove = contaminations > contamination_thresh
-            pair_mask[to_remove, :] = False
-            pair_mask[:, to_remove] = False
-
-        # STEP : unit positions are estimated roughly with channel
-        elif step == "unit_locations" in steps:
-            location_ext = sorting_analyzer.get_extension("unit_locations")
-            unit_locations = location_ext.get_data()[:, :2]
-
-            unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
-            pair_mask = pair_mask & (unit_distances <= max_distance_um)
-            outs["unit_distances"] = unit_distances
-
-        # STEP : potential auto merge by correlogram
-        elif step == "correlogram" in steps:
-            correlograms_ext = sorting_analyzer.get_extension("correlograms")
-            correlograms, bins = correlograms_ext.get_data()
-            mask = (bins[:-1] >= -censor_correlograms_ms) & (bins[:-1] < censor_correlograms_ms)
-            correlograms[:, :, mask] = 0
-            correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
-            # find correlogram window for each units
-            win_sizes = np.zeros(n, dtype=int)
-            for unit_ind in range(n):
-                auto_corr = correlograms_smoothed[unit_ind, unit_ind, :]
-                thresh = np.max(auto_corr) * adaptative_window_thresh
-                win_size = get_unit_adaptive_window(auto_corr, thresh)
-                win_sizes[unit_ind] = win_size
-            correlogram_diff = compute_correlogram_diff(
-                sorting,
-                correlograms_smoothed,
-                win_sizes,
-                pair_mask=pair_mask,
-            )
-            # print(correlogram_diff)
-            pair_mask = pair_mask & (correlogram_diff < corr_diff_thresh)
-            outs["correlograms"] = correlograms
-            outs["bins"] = bins
-            outs["correlograms_smoothed"] = correlograms_smoothed
-            outs["correlogram_diff"] = correlogram_diff
-            outs["win_sizes"] = win_sizes
-
-        # STEP : check if potential merge with CC also have template similarity
-        elif step == "template_similarity" in steps:
-            template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
-            templates_similarity = template_similarity_ext.get_data()
-            templates_diff = 1 - templates_similarity
-            pair_mask = pair_mask & (templates_diff < template_diff_thresh)
-            outs["templates_diff"] = templates_diff
-
-        # STEP : check the vicinity of the spikes
-        elif step == "knn" in steps:
-            if knn_kwargs is None:
-                knn_kwargs = dict()
-            pair_mask = get_pairs_via_nntree(sorting_analyzer, k_nn, pair_mask, **knn_kwargs)
-
-        # STEP : check how the rates overlap in times
-        elif step == "presence_distance" in steps:
-            presence_distance_kwargs = presence_distance_kwargs or dict()
-            num_samples = [
-                sorting_analyzer.get_num_samples(segment_index) for segment_index in range(sorting.get_num_segments())
-            ]
-            presence_distances = compute_presence_distance(
-                sorting, pair_mask, num_samples=num_samples, **presence_distance_kwargs
-            )
-            pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
-            outs["presence_distances"] = presence_distances
-
-        # STEP : check if the cross contamination is significant
-        elif step == "cross_contamination" in steps:
-            refractory = (censored_period_ms, refractory_period_ms)
-            CC, p_values = compute_cross_contaminations(
-                sorting_analyzer, pair_mask, cc_thresh, refractory, contaminations
-            )
-            pair_mask = pair_mask & (p_values > p_value)
-            outs["cross_contaminations"] = CC, p_values
-
-        # STEP : validate the potential merges with CC increase the contamination quality metrics
-        elif step == "quality_score" in steps:
-            pair_mask, pairs_decreased_score = check_improve_contaminations_score(
-                sorting_analyzer,
-                pair_mask,
-                contaminations,
-                firing_contamination_balance,
-                refractory_period_ms,
-                censored_period_ms,
-            )
-            outs["pairs_decreased_score"] = pairs_decreased_score
-
-    # FINAL STEP : create the final list from pair_mask boolean matrix
-    ind1, ind2 = np.nonzero(pair_mask)
-    potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
-
-    # some methods return identities ie (1,1) which we can cleanup first.
-    potential_merges = [(ids[0], ids[1]) for ids in potential_merges if ids[0] != ids[1]]
-
-    if resolve_graph:
-        potential_merges = resolve_merging_graph(sorting, potential_merges)
-
-    if extra_outputs:
-        return potential_merges, outs
-    else:
-        return potential_merges
+    presence_distance_kwargs = presence_distance_kwargs or dict()
+    knn_kwargs = knn_kwargs or dict()
+    return auto_merges(
+        sorting_analyzer,
+        preset,
+        resolve_graph,
+        num_spikes_kwargs={"min_spikes": min_spikes},
+        snr_kwargs={"min_snr": min_snr},
+        remove_contaminated_kwargs={
+            "contamination_thresh": contamination_thresh,
+            "refractory_period_ms": refractory_period_ms,
+            "censored_period_ms": censored_period_ms,
+        },
+        unit_locations_kwargs={"max_distance_um": max_distance_um},
+        correlogram_kwargs={
+            "corr_diff_thresh": corr_diff_thresh,
+            "censor_correlograms_ms": censor_correlograms_ms,
+            "sigma_smooth_ms": sigma_smooth_ms,
+            "adaptative_window_thresh": adaptative_window_thresh,
+        },
+        template_similarity_kwargs={"template_diff_thresh": template_diff_thresh},
+        presence_distance_kwargs={"presence_distance_thresh": presence_distance_thresh, **presence_distance_kwargs},
+        knn_kwargs={"k_nn": k_nn, **knn_kwargs},
+        cross_contamination_kwargs={
+            "cc_thresh": cc_thresh,
+            "p_value": p_value,
+            "refractory_period_ms": refractory_period_ms,
+            "censored_period_ms": censored_period_ms,
+        },
+        quality_score_kwargs={
+            "firing_contamination_balance": firing_contamination_balance,
+            "refractory_period_ms": refractory_period_ms,
+            "censored_period_ms": censored_period_ms,
+        },
+        compute_needed_extensions=False,
+        extra_outputs=extra_outputs,
+        steps=steps,
+    )
 
 
 def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs):
