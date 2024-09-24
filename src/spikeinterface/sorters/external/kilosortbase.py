@@ -127,7 +127,7 @@ class KilosortBase:
         skip_kilosort_preprocessing = params.get("skip_kilosort_preprocessing", False)
 
         if (
-            recording.binary_compatible_with(dtype="int16", time_axis=0, file_paths_lenght=1)
+            recording.binary_compatible_with(dtype="int16", time_axis=0, file_paths_length=1)
             and not skip_kilosort_preprocessing
         ):
             # no copy

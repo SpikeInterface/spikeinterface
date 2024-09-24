@@ -69,7 +69,7 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsi
 def write_binary_recording(
     recording: "BaseRecording",
     file_paths: list[Path | str] | Path | str,
-    dtype: np.ndtype = None,
+    dtype: np.typing.DTypeLike = None,
     add_file_extension: bool = True,
     byte_offset: int = 0,
     auto_cast_uint: bool = True,
@@ -131,9 +131,12 @@ def write_binary_recording(
         data_size_bytes = dtype_size_bytes * num_frames * num_channels
         file_size_bytes = data_size_bytes + byte_offset
 
-        file = open(file_path, "wb+")
-        file.truncate(file_size_bytes)
-        file.close()
+        # Create an empty file with file_size_bytes
+        with open(file_path, "wb+") as file:
+            # The previous implementation `file.truncate(file_size_bytes)` was slow on Windows (#3408)
+            file.seek(file_size_bytes - 1)
+            file.write(b"\0")
+
         assert Path(file_path).is_file()
 
     # use executor (loop or workers)
@@ -640,7 +643,7 @@ def get_noise_levels(
     method: Literal["mad", "std"] = "mad",
     force_recompute: bool = False,
     **random_chunk_kwargs,
-):
+) -> np.ndarray:
     """
     Estimate noise for each channel using MAD methods.
     You can use standard deviation with `method="std"`
@@ -888,11 +891,10 @@ def check_probe_do_not_overlap(probes):
 
         for j in range(i + 1, len(probes)):
             probe_j = probes[j]
-
             if np.any(
                 np.array(
                     [
-                        x_bounds_i[0] < cp[0] < x_bounds_i[1] and y_bounds_i[0] < cp[1] < y_bounds_i[1]
+                        x_bounds_i[0] <= cp[0] <= x_bounds_i[1] and y_bounds_i[0] <= cp[1] <= y_bounds_i[1]
                         for cp in probe_j.contact_positions
                     ]
                 )
@@ -929,7 +931,9 @@ def get_rec_attributes(recording):
     return rec_attributes
 
 
-def do_recording_attributes_match(recording1, recording2_attributes) -> bool:
+def do_recording_attributes_match(
+    recording1: "BaseRecording", recording2_attributes: bool, check_dtype: bool = True
+) -> tuple[bool, str]:
     """
     Check if two recordings have the same attributes
 
@@ -939,22 +943,43 @@ def do_recording_attributes_match(recording1, recording2_attributes) -> bool:
         The first recording object
     recording2_attributes : dict
         The recording attributes to test against
+    check_dtype : bool, default: True
+        If True, check if the recordings have the same dtype
 
     Returns
     -------
     bool
         True if the recordings have the same attributes
+    str
+        A string with the exception message with the attributes that do not match
     """
     recording1_attributes = get_rec_attributes(recording1)
     recording2_attributes = deepcopy(recording2_attributes)
     recording1_attributes.pop("properties")
     recording2_attributes.pop("properties")
 
-    return (
-        np.array_equal(recording1_attributes["channel_ids"], recording2_attributes["channel_ids"])
-        and recording1_attributes["sampling_frequency"] == recording2_attributes["sampling_frequency"]
-        and recording1_attributes["num_channels"] == recording2_attributes["num_channels"]
-        and recording1_attributes["num_samples"] == recording2_attributes["num_samples"]
-        and recording1_attributes["is_filtered"] == recording2_attributes["is_filtered"]
-        and recording1_attributes["dtype"] == recording2_attributes["dtype"]
-    )
+    attributes_match = True
+    non_matching_attrs = []
+
+    if not np.array_equal(recording1_attributes["channel_ids"], recording2_attributes["channel_ids"]):
+        non_matching_attrs.append("channel_ids")
+    if not recording1_attributes["sampling_frequency"] == recording2_attributes["sampling_frequency"]:
+        non_matching_attrs.append("sampling_frequency")
+    if not recording1_attributes["num_channels"] == recording2_attributes["num_channels"]:
+        non_matching_attrs.append("num_channels")
+    if not recording1_attributes["num_samples"] == recording2_attributes["num_samples"]:
+        non_matching_attrs.append("num_samples")
+    # dtype is optional
+    if "dtype" in recording1_attributes and "dtype" in recording2_attributes:
+        if check_dtype:
+            if not recording1_attributes["dtype"] == recording2_attributes["dtype"]:
+                non_matching_attrs.append("dtype")
+
+    if len(non_matching_attrs) > 0:
+        attributes_match = False
+        exception_str = f"Recordings do not match in the following attributes: {non_matching_attrs}"
+    else:
+        attributes_match = True
+        exception_str = ""
+
+    return attributes_match, exception_str

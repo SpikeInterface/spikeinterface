@@ -235,6 +235,9 @@ class MetricsBaseWidget(BaseWidget):
             values = check_json(metrics.loc[unit_id].to_dict())
             values_skip_nans = {}
             for k, v in values.items():
+                # convert_dypes returns NaN as None or np.nan (for float)
+                if v is None:
+                    continue
                 if np.isnan(v):
                     continue
                 values_skip_nans[k] = v

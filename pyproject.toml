@@ -7,7 +7,7 @@ authors = [
 ]
 description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
 readme = "README.md"
-requires-python = ">=3.8,<4.0"
+requires-python = ">=3.9,<4.0"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "License :: OSI Approved :: MIT License",
@@ -94,7 +94,6 @@ preprocessing = [
 full = [
     "h5py",
     "pandas",
-    "xarray",
     "scipy",
     "scikit-learn",
     "networkx",
@@ -125,16 +124,16 @@ test_core = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test_extractors = [
     # Functions to download data in neo test suite
     "pooch>=1.8.2",
     "datalad>=1.0.2",
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test_preprocessing = [
@@ -148,7 +147,6 @@ test = [
     "pytest-dependency",
     "pytest-cov",
 
-    "xarray",
     "huggingface_hub",
 
     # preprocessing
@@ -175,32 +173,32 @@ test = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 docs = [
     "Sphinx",
-    "sphinx_rtd_theme",
+    "sphinx_rtd_theme>=1.2",
     "sphinx-gallery",
     "sphinx-design",
     "numpydoc",
     "ipython",
+    "sphinxcontrib-jquery",
 
     # for notebooks in the gallery
     "MEArec", # Use as an example
     "pandas", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
-    "xarray", # For use of SortingAnalyzer zarr format
     "networkx",
     # Download data
     "pooch>=1.8.2",
     "datalad>=1.0.2",
 
     # for release we need pypi, so this needs to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 
 ]
 

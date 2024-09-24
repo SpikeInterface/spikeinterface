@@ -40,9 +40,13 @@ def interpolate_templates(templates_array, source_locations, dest_locations, int
     source_locations = np.asarray(source_locations)
     dest_locations = np.asarray(dest_locations)
     if dest_locations.ndim == 2:
-        new_shape = templates_array.shape
+        new_shape = (*templates_array.shape[:2], len(dest_locations))
     elif dest_locations.ndim == 3:
-        new_shape = (dest_locations.shape[0],) + templates_array.shape
+        new_shape = (
+            dest_locations.shape[0],
+            *templates_array.shape[:2],
+            dest_locations.shape[1],
+        )
     else:
         raise ValueError(f"Incorrect dimensions for dest_locations: {dest_locations.ndim}. Dimensions can be 2 or 3. ")
 
@@ -116,6 +120,16 @@ class DriftingTemplates(Templates):
       * move every templates on-the-fly, this lead to one interpolation per spike
       * precompute some displacements for all templates and use a discreate interpolation, for instance by step of 1um
         This is the same strategy used by MEArec.
+
+    Parameters
+    ----------
+    templates_array_moved : np.array
+        Shape is (num_displacement, num_templates, num_samples, num_channels)
+    displacements : np.array
+        Displacement vector
+        shape : (num_displacement, 2)
+    **static_kwargs : dict
+        Keyword arguments for `Templates`
     """
 
     def __init__(self, templates_array_moved=None, displacements=None, **static_kwargs):
@@ -306,6 +320,8 @@ class InjectDriftingTemplatesRecording(BaseRecording):
         If None, no amplitude scaling is applied.
         If scalar all spikes have the same factor (certainly useless).
         If vector, it must have the same size as the spike vector.
+    mode : str, default: "precompute"
+        Mode for how to compute templates.
 
     Returns
     -------

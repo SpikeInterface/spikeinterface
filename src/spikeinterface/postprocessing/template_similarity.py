@@ -13,24 +13,21 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 
     Similarity is defined as 1 - distance(T_1, T_2) for two templates T_1, T_2
 
-
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object
-    method : str, default: "cosine"
-        The method to compute the similarity. Can be in ["cosine", "l2", "l1"]
+    method : "cosine" | "l1" | "l2", default: "cosine"
+        The method to compute the similarity.
+        In case of "l1" or "l2", the formula used is:
+        - similarity = 1 - norm(T_1 - T_2)/(norm(T_1) + norm(T_2)).
+        In case of cosine it is:
+        - similarity = 1 - sum(T_1.T_2)/(norm(T_1)norm(T_2)).
     max_lag_ms : float, default: 0
         If specified, the best distance for all given lag within max_lag_ms is kept, for every template
     support : "dense" | "union" | "intersection", default: "union"
         Support that should be considered to compute the distances between the templates, given their sparsities.
         Can be either ["dense", "union", "intersection"]
-
-    In case of "l1" or "l2", the formula used is:
-        similarity = 1 - norm(T_1 - T_2)/(norm(T_1) + norm(T_2))
-
-    In case of cosine this is:
-        similarity = 1 - sum(T_1.T_2)/(norm(T_1)norm(T_2))
 
     Returns
     -------
@@ -153,7 +150,6 @@ compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 def compute_similarity_with_templates_array(
     templates_array, other_templates_array, method, support="union", num_shifts=0, sparsity=None, other_sparsity=None
 ):
-
     import sklearn.metrics.pairwise
 
     if method == "cosine_similarity":
@@ -226,15 +222,17 @@ def compute_similarity_with_templates_array(
                 if method == "l1":
                     norm_i = np.sum(np.abs(src))
                     norm_j = np.sum(np.abs(tgt))
-                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l1")
+                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l1").item()
                     distances[count, i, j] /= norm_i + norm_j
                 elif method == "l2":
                     norm_i = np.linalg.norm(src, ord=2)
                     norm_j = np.linalg.norm(tgt, ord=2)
-                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l2")
+                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l2").item()
                     distances[count, i, j] /= norm_i + norm_j
                 else:
-                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="cosine")
+                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(
+                        src, tgt, metric="cosine"
+                    ).item()
 
                 if same_array:
                     distances[count, j, i] = distances[count, i, j]

@@ -250,6 +250,8 @@ def run_sorter_by_property(
         Controls sorter verboseness
     docker_image : None or str, default: None
         If str run the sorter inside a container (docker) using the docker package
+    singularity_image : None or str, default: None
+        If str run the sorter inside a container (singularity) using the docker package
     **sorter_params : keyword args
         Spike sorter specific arguments (they can be retrieved with `get_default_sorter_params(sorter_name_or_class)`)
 
