@@ -263,6 +263,7 @@ if HAVE_NUMBA:
 
                     norm_i = 0
                     norm_j = 0
+                    distances[count, i, j] = 0
 
                     for k in range(len(src)):
                         if metric == 0:
