@@ -536,6 +536,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         ext = ComputeRandomSpikes(sorting_analyzer)
         ext.params = dict()
         ext.data = dict(random_spikes_indices=random_spikes_indices)
+        ext.run_info = None
         sorting_analyzer.extensions["random_spikes"] = ext
 
         ext = ComputeWaveforms(sorting_analyzer)
@@ -545,6 +546,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
             dtype=params["dtype"],
         )
         ext.data["waveforms"] = waveforms
+        ext.run_info = None
         sorting_analyzer.extensions["waveforms"] = ext
 
     # templates saved dense
@@ -559,6 +561,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         ext.params = dict(ms_before=params["ms_before"], ms_after=params["ms_after"], operators=list(templates.keys()))
         for mode, arr in templates.items():
             ext.data[mode] = arr
+        ext.run_info = None
         sorting_analyzer.extensions["templates"] = ext
 
     for old_name, new_name in old_extension_to_new_class_map.items():
@@ -631,6 +634,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         ext.set_params(**updated_params, save=False)
         if ext.need_backward_compatibility_on_load:
             ext._handle_backward_compatibility_on_load()
+        ext.run_info = None
 
         sorting_analyzer.extensions[new_name] = ext
 
