@@ -69,7 +69,7 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsi
 def write_binary_recording(
     recording: "BaseRecording",
     file_paths: list[Path | str] | Path | str,
-    dtype: np.ndtype = None,
+    dtype: np.typing.DTypeLike = None,
     add_file_extension: bool = True,
     byte_offset: int = 0,
     auto_cast_uint: bool = True,
@@ -131,9 +131,12 @@ def write_binary_recording(
         data_size_bytes = dtype_size_bytes * num_frames * num_channels
         file_size_bytes = data_size_bytes + byte_offset
 
-        file = open(file_path, "wb+")
-        file.truncate(file_size_bytes)
-        file.close()
+        # Create an empty file with file_size_bytes
+        with open(file_path, "wb+") as file:
+            # The previous implementation `file.truncate(file_size_bytes)` was slow on Windows (#3408)
+            file.seek(file_size_bytes - 1)
+            file.write(b"\0")
+
         assert Path(file_path).is_file()
 
     # use executor (loop or workers)
@@ -888,11 +891,10 @@ def check_probe_do_not_overlap(probes):
 
         for j in range(i + 1, len(probes)):
             probe_j = probes[j]
-
             if np.any(
                 np.array(
                     [
-                        x_bounds_i[0] < cp[0] < x_bounds_i[1] and y_bounds_i[0] < cp[1] < y_bounds_i[1]
+                        x_bounds_i[0] <= cp[0] <= x_bounds_i[1] and y_bounds_i[0] <= cp[1] <= y_bounds_i[1]
                         for cp in probe_j.contact_positions
                     ]
                 )

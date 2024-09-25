@@ -179,7 +179,7 @@ class Kilosort4Sorter(BaseSorter):
         write_prb(probe_filename, pg)
 
         if params["use_binary_file"]:
-            if not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
+            if not recording.binary_compatible_with(time_axis=0, file_paths_length=1):
                 # local copy needed
                 binary_file_path = sorter_output_folder / "recording.dat"
                 write_binary_recording(
@@ -235,7 +235,7 @@ class Kilosort4Sorter(BaseSorter):
         probe_name = ""
 
         if params["use_binary_file"] is None:
-            if recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
+            if recording.binary_compatible_with(time_axis=0, file_paths_length=1):
                 # no copy
                 binary_description = recording.get_binary_description()
                 filename = str(binary_description["file_paths"][0])
@@ -247,7 +247,7 @@ class Kilosort4Sorter(BaseSorter):
                 file_object = RecordingExtractorAsArray(recording_extractor=recording)
         elif params["use_binary_file"]:
             # here we force the use of a binary file
-            if recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
+            if recording.binary_compatible_with(time_axis=0, file_paths_length=1):
                 # no copy
                 binary_description = recording.get_binary_description()
                 filename = str(binary_description["file_paths"][0])

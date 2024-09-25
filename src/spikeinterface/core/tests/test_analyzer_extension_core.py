@@ -79,15 +79,20 @@ def _check_result_extension(sorting_analyzer, extension_name, cache_folder):
 )
 def test_ComputeRandomSpikes(format, sparse, create_cache_folder):
     cache_folder = create_cache_folder
+    print("Creating analyzer")
     sorting_analyzer = get_sorting_analyzer(cache_folder, format=format, sparse=sparse)
 
+    print("Computing random spikes")
     ext = sorting_analyzer.compute("random_spikes", max_spikes_per_unit=10, seed=2205)
     indices = ext.data["random_spikes_indices"]
     assert indices.size == 10 * sorting_analyzer.sorting.unit_ids.size
 
+    print("Checking results")
     _check_result_extension(sorting_analyzer, "random_spikes", cache_folder)
+    print("Delering extension")
     sorting_analyzer.delete_extension("random_spikes")
 
+    print("Re-computing random spikes")
     ext = sorting_analyzer.compute("random_spikes", method="all")
     indices = ext.data["random_spikes_indices"]
     assert indices.size == len(sorting_analyzer.sorting.to_spike_vector())
