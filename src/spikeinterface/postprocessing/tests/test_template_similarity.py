@@ -9,7 +9,6 @@ from spikeinterface.postprocessing.tests.common_extension_tests import (
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap, ComputeTemplateSimilarity
 from spikeinterface.postprocessing.template_similarity import (
     compute_similarity_with_templates_array,
-    _compute_similarity_matrix_numba,
     _compute_similarity_matrix_numpy,
 )
 
@@ -17,6 +16,7 @@ try:
     import numba
 
     HAVE_NUMBA = True
+    from spikeinterface.postprocessing.template_similarity import _compute_similarity_matrix_numba
 except ModuleNotFoundError as err:
     HAVE_NUMBA = False
 
