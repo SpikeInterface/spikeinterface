@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 import warnings
 from copy import deepcopy
 
@@ -12,7 +11,12 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 
-from .quality_metric_list import compute_pc_metrics, _misc_metric_name_to_func, _possible_pc_metric_names
+from .quality_metric_list import (
+    compute_pc_metrics,
+    _misc_metric_name_to_func,
+    _possible_pc_metric_names,
+    compute_name_to_column_names,
+)
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
 
@@ -30,8 +34,10 @@ class ComputeQualityMetrics(AnalyzerExtension):
     qm_params : dict or None
         Dictionary with parameters for quality metrics calculation.
         Default parameters can be obtained with: `si.qualitymetrics.get_default_qm_params()`
-    skip_pc_metrics : bool
+    skip_pc_metrics : bool, default: False
         If True, PC metrics computation is skipped.
+    delete_existing_metrics : bool, default: False
+        If True, any quality metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept.
 
     Returns
     -------
@@ -49,7 +55,17 @@ class ComputeQualityMetrics(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = True
 
-    def _set_params(self, metric_names=None, qm_params=None, peak_sign=None, seed=None, skip_pc_metrics=False):
+    def _set_params(
+        self,
+        metric_names=None,
+        qm_params=None,
+        peak_sign=None,
+        seed=None,
+        skip_pc_metrics=False,
+        delete_existing_metrics=False,
+        metrics_to_compute=None,
+    ):
+
         if metric_names is None:
             metric_names = list(_misc_metric_name_to_func.keys())
             # if PC is available, PC metrics are automatically added to the list
@@ -71,12 +87,24 @@ class ComputeQualityMetrics(AnalyzerExtension):
             if "peak_sign" in qm_params_[k] and peak_sign is not None:
                 qm_params_[k]["peak_sign"] = peak_sign
 
+        metrics_to_compute = metric_names
+        qm_extension = self.sorting_analyzer.get_extension("quality_metrics")
+        if delete_existing_metrics is False and qm_extension is not None:
+
+            existing_metric_names = qm_extension.params["metric_names"]
+            existing_metric_names_propogated = [
+                metric_name for metric_name in existing_metric_names if metric_name not in metrics_to_compute
+            ]
+            metric_names = metrics_to_compute + existing_metric_names_propogated
+
         params = dict(
-            metric_names=[str(name) for name in np.unique(metric_names)],
+            metric_names=metric_names,
             peak_sign=peak_sign,
             seed=seed,
             qm_params=qm_params_,
             skip_pc_metrics=skip_pc_metrics,
+            delete_existing_metrics=delete_existing_metrics,
+            metrics_to_compute=metrics_to_compute,
         )
 
         return params
@@ -91,6 +119,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
     ):
         import pandas as pd
 
+        metric_names = self.params["metric_names"]
         old_metrics = self.data["metrics"]
 
         all_unit_ids = new_sorting_analyzer.unit_ids
@@ -99,16 +128,19 @@ class ComputeQualityMetrics(AnalyzerExtension):
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
-        metrics.loc[new_unit_ids, :] = self._compute_metrics(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
+        metrics.loc[new_unit_ids, :] = self._compute_metrics(
+            new_sorting_analyzer, new_unit_ids, verbose, metric_names, **job_kwargs
+        )
 
         new_data = dict(metrics=metrics)
         return new_data
 
-    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, **job_kwargs):
+    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, metric_names=None, **job_kwargs):
         """
         Compute quality metrics.
         """
-        metric_names = self.params["metric_names"]
+        import pandas as pd
+
         qm_params = self.params["qm_params"]
         # sparsity = self.params["sparsity"]
         seed = self.params["seed"]
@@ -131,8 +163,6 @@ class ComputeQualityMetrics(AnalyzerExtension):
         else:
             non_empty_unit_ids = unit_ids
             empty_unit_ids = []
-
-        import pandas as pd
 
         metrics = pd.DataFrame(index=unit_ids)
 
@@ -164,7 +194,10 @@ class ComputeQualityMetrics(AnalyzerExtension):
         pc_metric_names = [k for k in metric_names if k in _possible_pc_metric_names]
         if len(pc_metric_names) > 0 and not self.params["skip_pc_metrics"]:
             if not sorting_analyzer.has_extension("principal_components"):
-                raise ValueError("waveform_principal_component must be provied")
+                raise ValueError(
+                    "To compute principal components base metrics, the principal components "
+                    "extension must be computed first."
+                )
             pc_metrics = compute_pc_metrics(
                 sorting_analyzer,
                 unit_ids=non_empty_unit_ids,
@@ -182,12 +215,40 @@ class ComputeQualityMetrics(AnalyzerExtension):
         if len(empty_unit_ids) > 0:
             metrics.loc[empty_unit_ids] = np.nan
 
+        # we use the convert_dtypes to convert the columns to the most appropriate dtype and avoid object columns
+        # (in case of NaN values)
+        metrics = metrics.convert_dtypes()
         return metrics
 
     def _run(self, verbose=False, **job_kwargs):
-        self.data["metrics"] = self._compute_metrics(
-            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, **job_kwargs
+
+        metrics_to_compute = self.params["metrics_to_compute"]
+        delete_existing_metrics = self.params["delete_existing_metrics"]
+
+        computed_metrics = self._compute_metrics(
+            sorting_analyzer=self.sorting_analyzer,
+            unit_ids=None,
+            verbose=verbose,
+            metric_names=metrics_to_compute,
+            **job_kwargs,
         )
+
+        existing_metrics = []
+        qm_extension = self.sorting_analyzer.get_extension("quality_metrics")
+        if (
+            delete_existing_metrics is False
+            and qm_extension is not None
+            and qm_extension.data.get("metrics") is not None
+        ):
+            existing_metrics = qm_extension.params["metric_names"]
+
+        # append the metrics which were previously computed
+        for metric_name in set(existing_metrics).difference(metrics_to_compute):
+            # some metrics names produce data columns with other names. This deals with that.
+            for column_name in compute_name_to_column_names[metric_name]:
+                computed_metrics[column_name] = qm_extension.data["metrics"][column_name]
+
+        self.data["metrics"] = computed_metrics
 
     def _get_data(self):
         return self.data["metrics"]

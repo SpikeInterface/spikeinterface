@@ -12,6 +12,7 @@ on:
 env:
   KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
   KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+  KACHERY_ZONE: ${{ secrets.KACHERY_ZONE }}
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.12"]  # Lower and higher versions we support
-        os: [macos-13, windows-latest, ubuntu-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python ${{ matrix.python-version }}

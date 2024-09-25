@@ -69,6 +69,9 @@ def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
     return num_spikes
 
 
+_default_params["num_spikes"] = {}
+
+
 def compute_firing_rates(sorting_analyzer, unit_ids=None):
     """
     Compute the firing rate across segments.
@@ -96,6 +99,9 @@ def compute_firing_rates(sorting_analyzer, unit_ids=None):
     for unit_id in unit_ids:
         firing_rates[unit_id] = num_spikes[unit_id] / total_duration
     return firing_rates
+
+
+_default_params["firing_rate"] = {}
 
 
 def compute_presence_ratios(sorting_analyzer, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0, unit_ids=None):
@@ -1550,3 +1556,10 @@ def compute_sd_ratio(
             sd_ratio[unit_id] = unit_std / std_noise
 
     return sd_ratio
+
+
+_default_params["sd_ratio"] = dict(
+    censored_period_ms=4.0,
+    correct_for_drift=True,
+    correct_for_template_itself=True,
+)

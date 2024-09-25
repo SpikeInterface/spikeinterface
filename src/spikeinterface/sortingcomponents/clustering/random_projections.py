@@ -45,7 +45,7 @@ class RandomProjectionClustering:
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
-        "sparsity": {"method": "ptp", "threshold": 0.25},
+        "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "radius_um": 30,
         "nb_projections": 10,
         "feature": "energy",
