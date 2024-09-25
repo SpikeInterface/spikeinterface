@@ -352,8 +352,6 @@ class SortingAnalyzer:
     def create_binary_folder(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes):
         # used by create and save_as
 
-        assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
-
         folder = Path(folder)
         if folder.is_dir():
             raise ValueError(f"Folder already exists {folder}")
@@ -372,11 +370,17 @@ class SortingAnalyzer:
         # NumpyFolderSorting.write_sorting(sorting, folder / "sorting")
         sorting.save(folder=folder / "sorting")
 
-        # save recording and sorting provenance
-        if recording.check_serializability("json"):
-            recording.dump(folder / "recording.json", relative_to=folder)
-        elif recording.check_serializability("pickle"):
-            recording.dump(folder / "recording.pickle", relative_to=folder)
+        if recording is not None:
+            # save recording and sorting provenance
+            if recording.check_serializability("json"):
+                recording.dump(folder / "recording.json", relative_to=folder)
+            elif recording.check_serializability("pickle"):
+                recording.dump(folder / "recording.pickle", relative_to=folder)
+        else:
+            assert rec_attributes is not None, "recording or rec_attributes must be provided"
+            # write an empty recording.json
+            with open(folder / "recording.json", mode="w") as f:
+                json.dump({}, f, indent=4)
 
         if sorting.check_serializability("json"):
             sorting.dump(folder / "sorting_provenance.json", relative_to=folder)
@@ -519,20 +523,24 @@ class SortingAnalyzer:
         zarr_root.attrs["settings"] = check_json(settings)
 
         # the recording
-        rec_dict = recording.to_dict(relative_to=folder, recursive=True)
-
-        if recording.check_serializability("json"):
-            # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.JSON())
-            zarr_rec = np.array([check_json(rec_dict)], dtype=object)
-            zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.JSON())
-        elif recording.check_serializability("pickle"):
-            # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.Pickle())
-            zarr_rec = np.array([rec_dict], dtype=object)
-            zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
+        if recording is not None:
+            rec_dict = recording.to_dict(relative_to=folder, recursive=True)
+            if recording.check_serializability("json"):
+                # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.JSON())
+                zarr_rec = np.array([check_json(rec_dict)], dtype=object)
+                zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.JSON())
+            elif recording.check_serializability("pickle"):
+                # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.Pickle())
+                zarr_rec = np.array([rec_dict], dtype=object)
+                zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
+            else:
+                warnings.warn(
+                    "SortingAnalyzer with zarr : the Recording is not json serializable, the recording link will be lost for future load"
+                )
         else:
-            warnings.warn(
-                "SortingAnalyzer with zarr : the Recording is not json serializable, the recording link will be lost for future load"
-            )
+            assert rec_attributes is not None, "recording or rec_attributes must be provided"
+            zarr_rec = np.array([{}], dtype=object)
+            zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.JSON())
 
         # sorting provenance
         sort_dict = sorting.to_dict(relative_to=folder, recursive=True)
