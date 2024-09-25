@@ -7,7 +7,11 @@ from spikeinterface.postprocessing.tests.common_extension_tests import (
 )
 
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap, ComputeTemplateSimilarity
-from spikeinterface.postprocessing.template_similarity import compute_similarity_with_templates_array, _compute_similarity_matrix_numba, _compute_similarity_matrix_numpy
+from spikeinterface.postprocessing.template_similarity import (
+    compute_similarity_with_templates_array,
+    _compute_similarity_matrix_numba,
+    _compute_similarity_matrix_numpy,
+)
 
 try:
     import numba
@@ -83,7 +87,10 @@ def test_compute_similarity_with_templates_array(params):
     similarity = compute_similarity_with_templates_array(templates_array, other_templates_array, **params)
     print(similarity.shape)
 
+
 pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
+
+
 @pytest.mark.parametrize(
     "params",
     [
@@ -108,8 +115,6 @@ def test_equal_results_numba(params):
     result_numba = _compute_similarity_matrix_numpy(templates_array, other_templates_array, mask=mask, **params)
 
     assert np.allclose(result_numpy, result_numba, 1e-3)
-
-
 
 
 if __name__ == "__main__":
