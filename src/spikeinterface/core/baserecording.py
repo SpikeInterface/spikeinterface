@@ -608,11 +608,11 @@ class BaseRecording(BaseRecordingSnippets):
             probegroup = self.get_probegroup()
             cached.set_probegroup(probegroup)
 
-        time_vectors = self._get_time_vectors()
-        if time_vectors is not None:
-            for segment_index, time_vector in enumerate(time_vectors):
-                if time_vector is not None:
-                    cached.set_times(time_vector, segment_index=segment_index)
+        for segment_index in range(self.get_num_segments()):
+            if self.has_time_vector(segment_index):
+                # the use of get_times is preferred since timestamps are converted to array
+                time_vector = self.get_times(segment_index=segment_index)
+                cached.set_times(time_vector, segment_index=segment_index)
 
         return cached
 
@@ -745,6 +745,30 @@ class BaseRecording(BaseRecordingSnippets):
         from .segmentutils import SelectSegmentRecording
 
         return SelectSegmentRecording(self, segment_indices=segment_indices)
+
+    def get_channel_locations(
+        self,
+        channel_ids: list | np.ndarray | tuple | None = None,
+        axes: "xy" | "yz" | "xz" | "xyz" = "xy",
+    ) -> np.ndarray:
+        """
+        Get the physical locations of specified channels.
+
+        Parameters
+        ----------
+        channel_ids : array-like, optional
+            The IDs of the channels for which to retrieve locations. If None, retrieves locations
+            for all available channels. Default is None.
+        axes : "xy" | "yz" | "xz" | "xyz", default: "xy"
+            The spatial axes to return, specified as a string (e.g., "xy", "xyz"). Default is "xy".
+
+        Returns
+        -------
+        np.ndarray
+            A 2D or 3D array of shape (n_channels, n_dimensions) containing the locations of the channels.
+            The number of dimensions depends on the `axes` argument (e.g., 2 for "xy", 3 for "xyz").
+        """
+        return super().get_channel_locations(channel_ids=channel_ids, axes=axes)
 
     def is_binary_compatible(self) -> bool:
         """
