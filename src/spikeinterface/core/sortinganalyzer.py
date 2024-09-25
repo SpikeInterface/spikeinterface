@@ -2023,7 +2023,10 @@ class AnalyzerExtension:
             new_extension.data = self.data
         else:
             new_extension.data = self._select_extension_data(unit_ids)
-        new_extension.run_info = self.run_info.copy()
+        if self.run_info is not None:
+            new_extension.run_info = self.run_info.copy()
+        else:
+            new_extension.run_info = None
         new_extension.save()
         return new_extension
 
