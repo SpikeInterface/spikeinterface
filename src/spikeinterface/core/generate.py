@@ -1216,7 +1216,7 @@ class SortingGeneratorSegment(BaseSortingSegment):
             start_index = 0
 
         if end_frame is not None:
-            end_index = np.searchsorted(spike_frames[start_index:], end_frame, side="right")
+            end_index = np.searchsorted(spike_frames[start_index:], end_frame, side="left")
         else:
             end_index = int(self.duration * self.sampling_frequency)
 
