@@ -31,10 +31,6 @@ class ModelBasedClassification:
     -------
     predict_labels()
         Predicts the labels for the spike sorting data using the trained model.
-    _get_metrics_for_classification()
-        Retrieves the metrics data required for classification.
-    _check_params_for_classification()
-        Checks if the parameters for classification match the training parameters.
     """
 
     def __init__(self, sorting_analyzer: SortingAnalyzer, pipeline):
@@ -56,12 +52,12 @@ class ModelBasedClassification:
         ----------
         model_info : dict or None, default: None
             Model info, generated with model, used to check metric parameters used to train it.
-        label_conversion : dict, default: None
+        label_conversion : dict or None, default: None
             A dictionary for converting the predicted labels (which are integers) to custom labels. If None,
             tries to find in `model_info` file. The dictionary should have the format {old_label: new_label}.
-        input_data : pandas.DataFrame, optional
+        input_data : pandas.DataFrame or None, default: None
             The input data for classification. If not provided, the method will extract metrics stored in the sorting analyzer.
-        export_to_phy : bool, optional
+        export_to_phy : bool, default: False.
             Whether to export the classified units to Phy format. Default is False.
 
         Returns
@@ -219,9 +215,12 @@ def auto_label_units(
     export_to_phy=False,
 ):
     """
-    Automatically labels units based on a model-based classification.
+    Automatically labels units based on a model-based classification, either from a model
+    hosted on HuggingFaceHub or one available in a local folder.
 
-    This function populates the sorting object with the predicted labels and probabilities as unit properties.
+    This function returns the predicted labels and the prediction probabilities, and populates
+    the sorting object with the predicted labels and probabilities in the 'classifier_label' and
+    'classifier_probability' properties.
 
     Parameters
     ----------
@@ -270,7 +269,7 @@ def auto_label_units(
 
 def load_model(model_folder=None, repo_id=None, model_name=None, trusted=None):
     """
-    Loads a model and model_info from a folder or a huggingface repo
+    Loads a model and model_info from a HuggingFaceHub repo or a local folder.
 
     Parameters
     ----------

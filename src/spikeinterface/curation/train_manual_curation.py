@@ -8,10 +8,58 @@ from spikeinterface.qualitymetrics import get_quality_metric_list, get_quality_p
 from spikeinterface.postprocessing import get_template_metric_names
 from pathlib import Path
 
+default_classifier_search_spaces = {
+    "RandomForestClassifier": {
+        "n_estimators": [100, 150],
+        "criterion": ["gini", "entropy"],
+        "min_samples_split": [2, 4],
+        "min_samples_leaf": [2, 4],
+        "class_weight": ["balanced", "balanced_subsample"],
+    },
+    "AdaBoostClassifier": {
+        "learning_rate": [1, 2],
+        "n_estimators": [50, 100],
+        "algorithm": ["SAMME", "SAMME.R"],
+    },
+    "GradientBoostingClassifier": {
+        "learning_rate": [0.05, 0.1],
+        "n_estimators": [100, 150],
+        "max_depth": [2, 4],
+        "min_samples_split": [2, 4],
+        "min_samples_leaf": [2, 4],
+    },
+    "SVC": {
+        "C": [0.001, 10.0],
+        "kernel": ["sigmoid", "rbf"],
+        "gamma": [0.001, 10.0],
+        "probability": [True],
+    },
+    "LogisticRegression": {
+        "C": [0.001, 10.0],
+        "solver": ["newton-cg", "lbfgs", "liblinear", "sag", "saga"],
+        "max_iter": [100, 500],
+    },
+    "XGBClassifier": {
+        "max_depth": [2, 4],
+        "eta": [0.2, 0.5],
+        "sampling_method": ["uniform"],
+        "grow_policy": ["depthwise", "lossguide"],
+    },
+    "CatBoostClassifier": {"depth": [2, 4], "learning_rate": [0.05, 0.15], "n_estimators": [100, 150]},
+    "LGBMClassifier": {"learning_rate": [0.05, 0.15], "n_estimators": [100, 150]},
+    "MLPClassifier": {
+        "activation": ["tanh", "relu"],
+        "solver": ["adam"],
+        "alpha": [1e-7, 1e-1],
+        "learning_rate": ["constant", "adaptive"],
+        "n_iter_no_change": [32],
+    },
+}
+
 
 class CurationModelTrainer:
     """
-    A class used to train and evaluate machine learning models for spike sorting curation.
+    Used to train and evaluate machine learning models for spike sorting curation.
 
     Parameters
     ----------
@@ -79,12 +127,6 @@ class CurationModelTrainer:
         Returns the default search spaces for hyperparameter tuning for the classifiers.
     evaluate_model_config(imputation_strategies, scaling_techniques, classifiers)
         Evaluates the model configurations with the given imputation strategies, scaling techniques, and classifiers.
-    _evaluate(imputation_strategies, scaling_techniques, classifiers, X_train, X_test, y_train, y_test)
-        Internal method to perform evaluation with parallel processing.
-    _train_and_evaluate(imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, model_id)
-        Internal method to train and evaluate a single model configuration.
-    _save()
-        Saves the best model and evaluation metrics to the output folder using the skops library.
     """
 
     def __init__(
@@ -192,7 +234,7 @@ class CurationModelTrainer:
         """
         Processes the test data for classification.
 
-        This method extracts the target variable and features from the loaded dataset.
+        Extracts the target variable and features from the loaded dataset.
         It handles string labels by converting them to integer codes and reindexes the
         feature matrix to match the specified metrics list. Infinite values in the features
         are replaced with NaN, and any remaining NaN values are filled with zeros.
@@ -252,7 +294,9 @@ class CurationModelTrainer:
         elif scaling_technique == "robust_scaler":
             scaler = RobustScaler()
         else:
-            raise ValueError(f"Unknown scaling technique: {scaling_technique}")
+            raise ValueError(
+                f"Unknown scaling technique: {scaling_technique}. Supported scaling techniques are 'standard_scaler', 'min_max_scaler' and 'robust_scaler."
+            )
 
         y_train = y_train.astype(int)
         y_val = y_val.astype(int)
@@ -318,72 +362,25 @@ class CurationModelTrainer:
                 raise ImportError("Please install xgboost package to use XGBClassifier")
 
         if classifier_name not in classifier_mapping:
-            raise ValueError(f"Unknown classifier: {classifier_name}")
+            raise ValueError(
+                f"Unknown classifier: {classifier_name}. To see list of supported classifiers run\n\t>>> from spikeinterface.curation import default_classifier_search_spaces\n\t>>> print(default_classifier_search_spaces.keys())"
+            )
 
         return classifier_mapping[classifier_name]
 
     def get_classifier_search_space(self, classifier_name):
-        param_space_mapping = self.get_default_classifier_search_spaces()
 
-        if classifier_name not in param_space_mapping:
-            raise ValueError(f"Unknown classifier: {classifier_name}")
+        if classifier_name not in default_classifier_search_spaces:
+            raise ValueError(
+                f"Unknown classifier: {classifier_name}. To see list of supported classifiers run\n\t>>> from spikeinterface.curation import default_classifier_search_spaces\n\t>>> print(default_classifier_search_spaces.keys())"
+            )
 
         model = self.get_classifier_instance(classifier_name)
         if self.classifier_search_space is not None:
             param_space = self.classifier_search_space[classifier_name]
         else:
-            param_space = param_space_mapping[classifier_name]
+            param_space = default_classifier_search_spaces[classifier_name]
         return model, param_space
-
-    def get_default_classifier_search_spaces(self):
-        param_space_mapping = {
-            "RandomForestClassifier": {
-                "n_estimators": [100, 150],
-                "criterion": ["gini", "entropy"],
-                "min_samples_split": [2, 4],
-                "min_samples_leaf": [2, 4],
-                "class_weight": ["balanced", "balanced_subsample"],
-            },
-            "AdaBoostClassifier": {
-                "learning_rate": [1, 2],
-                "n_estimators": [50, 100],
-                "algorithm": ["SAMME", "SAMME.R"],
-            },
-            "GradientBoostingClassifier": {
-                "learning_rate": [0.05, 0.1],
-                "n_estimators": [100, 150],
-                "max_depth": [2, 4],
-                "min_samples_split": [2, 4],
-                "min_samples_leaf": [2, 4],
-            },
-            "SVC": {
-                "C": [0.001, 10.0],
-                "kernel": ["sigmoid", "rbf"],
-                "gamma": [0.001, 10.0],
-                "probability": [True],
-            },
-            "LogisticRegression": {
-                "C": [0.001, 10.0],
-                "solver": ["newton-cg", "lbfgs", "liblinear", "sag", "saga"],
-                "max_iter": [100, 500],
-            },
-            "XGBClassifier": {
-                "max_depth": [2, 4],
-                "eta": [0.2, 0.5],
-                "sampling_method": ["uniform"],
-                "grow_policy": ["depthwise", "lossguide"],
-            },
-            "CatBoostClassifier": {"depth": [2, 4], "learning_rate": [0.05, 0.15], "n_estimators": [100, 150]},
-            "LGBMClassifier": {"learning_rate": [0.05, 0.15], "n_estimators": [100, 150]},
-            "MLPClassifier": {
-                "activation": ["tanh", "relu"],
-                "solver": ["adam"],
-                "alpha": [1e-7, 1e-1],
-                "learning_rate": ["constant", "adaptive"],
-                "n_iter_no_change": [32],
-            },
-        }
-        return param_space_mapping
 
     def evaluate_model_config(self):
         """
@@ -608,7 +605,7 @@ def train_model(
         ).exists(), f"folder {output_folder} already exists, choose another name or use overwrite=True"
 
     if labels is None:
-        raise Exception("You must supply a list of curated labels using `labels = ...`")
+        raise Exception("You must supply a list of lists of curated labels using `labels = [[...],[...],...]`")
 
     if mode not in ["analyzers", "csv"]:
         raise Exception("`mode` must be equal to 'analyzers' or 'csv'.")

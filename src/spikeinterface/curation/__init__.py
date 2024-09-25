@@ -18,4 +18,4 @@ from .sortingview_curation import apply_sortingview_curation
 
 # automated curation
 from .model_based_curation import auto_label_units, load_model
-from .train_manual_curation import train_model
+from .train_manual_curation import train_model, default_classifier_search_spaces
