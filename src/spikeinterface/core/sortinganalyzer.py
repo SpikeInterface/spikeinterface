@@ -2262,15 +2262,16 @@ class AnalyzerExtension:
             extension_group.attrs["info"] = info
 
     def _save_run_info(self):
-        run_info = self.run_info.copy()
+        if self.run_info is not None:
+            run_info = self.run_info.copy()
 
-        if self.format == "binary_folder":
-            extension_folder = self._get_binary_extension_folder()
-            run_info_file = extension_folder / "run_info.json"
-            run_info_file.write_text(json.dumps(run_info, indent=4), encoding="utf8")
-        elif self.format == "zarr":
-            extension_group = self._get_zarr_extension_group(mode="r+")
-            extension_group.attrs["run_info"] = run_info
+            if self.format == "binary_folder":
+                extension_folder = self._get_binary_extension_folder()
+                run_info_file = extension_folder / "run_info.json"
+                run_info_file.write_text(json.dumps(run_info, indent=4), encoding="utf8")
+            elif self.format == "zarr":
+                extension_group = self._get_zarr_extension_group(mode="r+")
+                extension_group.attrs["run_info"] = run_info
 
     def get_pipeline_nodes(self):
         assert (
