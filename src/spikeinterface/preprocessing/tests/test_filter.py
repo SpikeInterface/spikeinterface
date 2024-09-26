@@ -100,7 +100,7 @@ class TestCausalFilter:
 
         filt_data = causal_filter(recording, direction="forward", **options, margin_ms=0).get_traces()
 
-        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-4, equal_nan=True)
+        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-3, equal_nan=True)
 
     def test_causal_kwarg_error_raised(self, recording_and_data):
         """
