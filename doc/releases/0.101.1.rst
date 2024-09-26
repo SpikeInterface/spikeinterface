@@ -1,0 +1,144 @@
+.. _release0.101.1:
+
+SpikeInterface 0.101.1 release notes
+------------------------------------
+
+16th September 2024
+
+Main changes:
+
+* Enabled support for consolidated Zarr-backend for `SortingAnalyzer`, including cloud support (#3314, #3318, #3349, #3351)
+* Improved support for Kilosort4 **ONLY VERSIONS >= 4.0.16** (#3339, #3276)
+* Skip recomputation of quality and template metrics if already computed (#3292)
+* Improved `estimate_sparsity` with new `amplitude` method and deprecated `from_ptp` option (#3369)
+* Dropped support for Python<3.9 (#3267)
+
+core:
+
+* Update the method of creating an empty file with right size when saving binary files (#3408)
+* Refactor pandas save load and convert dtypes (#3412)
+* Check run info completed only if it exists (back-compatibility) (#3407)
+* Fix argument spelling in check for binary compatibility (#3409)
+* Fix proposal for channel location when probegroup (#3392)
+* Fix time handling test memory (#3379)
+* Add `BaseRecording.reset_times()` function (#3363, #3380, #3391)
+* Extend `estimate_sparsity` methods and update `from_ptp`` (#3369)
+* Add `load_sorting_analyzer_or_waveforms` function (#3352)
+* Fix zarr folder suffix handling (#3349)
+* Analyzer extension exit status (#3347)
+* Lazy loading of zarr timestamps (#3318)
+* Enable cloud-loading for analyzer Zarr (#3314, #3351, #3378)
+* Refactor `set_property` in base (#3287)
+* Job kwargs fix (#3259)
+* Add `is_filtered` to annotations in `binary.json` (#3245)
+* Add check for None in `NoiseGeneratorRecordingSegment`` get_traces() (#3230)
+
+extractors:
+
+* Load phy channel_group as group (#3368)
+* "quality" property to be read as string instead of object in `BasePhyKilosortSortingExtractor` (#3365)
+
+preprocessing:
+
+* Auto-cast recording to float prior to interpolation (#3415)
+* Update doc handle drift  + better preset (#3232)
+* Add causal filtering to filter.py (#3172)
+
+sorters:
+
+* Updates to kilosort 4: version >= 4.0.16, `bad_channels`, `clear_cache`, `use_binary_file` (#3339)
+* Download apptainer images without docker client (#3335)
+* Expose save preprocessing in ks4 (#3276)
+* Fix KS2/2.5/3 skip_kilosort_preprocessing (#3265)
+* HS: Added lowpass parameter, fixed verbose option (#3262)
+* Now exclusive support for HS v0.4 (Lightning) (#3210)
+
+postprocessing:
+
+* Add extra protection for template metrics (#3364)
+* Protect median against nans in get_prototype_spike (#3270)
+* Fix docstring and error for spike_amplitudes (#3269)
+
+qualitymetrics:
+
+* Do not delete quality and template metrics on recompute (#3292)
+* Refactor quality metrics tests to use fixture (#3249)
+
+
+curation:
+
+* Clean-up identity merges in `get_potential_auto_merges` (#3346)
+* Fix sortingview curation no merge case  (#3309)
+* Start apply_curation() (#3208)
+
+widgets:
+
+* Fix metrics widgets for convert_dtypes (#3417)
+* Fix plot motion for multi-segment (#3414)
+* Sortingview: only round float properties (#3406)
+* Fix widgets tests and add test on unit_table_properties (#3354)
+* Allow quality and template metrics in sortingview's unit table (#3299)
+* Add subwidget parameters for UnitSummaryWidget (#3242)
+* Fix `ipympl`/`widget` backend check (#3238)
+
+generators:
+
+* Handle case where channel count changes from probeA to probeB (#3237)
+
+sortingcomponents:
+
+* Update doc handle drift  + better preset (#3232)
+* Make `InterpolateMotionRecording`` not JSON-serializable (#3341)
+
+documentation:
+
+* Clarify meaning of `delta_time` in  `compare_sorter_to_ground_truth` (#3360)
+* Added sphinxcontrib-jquery (#3307)
+* Adding return type annotations (#3304)
+* More docstring updates for multiple modules (#3298)
+* Fix sampling frequency repr (#3294)
+* Proposal for adding Examples to docstrings (#3279)
+* More numpydoc fixes (#3275)
+* Fix docstring and error for spike_amplitudes (#3269)
+* Fix postprocessing docs (#3268)
+* Fix name of principal_components ext in qm docs (take 2) (#3261)
+* Update doc handle drift  + better preset (#3232)
+* Add `int` type to `num_samples` on `InjectTemplatesRecording`. (#3229)
+
+continuous integration:
+
+* Fix streaming extractor condition in the CI (#3362)
+
+packaging:
+
+* Minor typing fixes (#3374)
+* Drop python 3.8 in pyproject.toml (#3267)
+
+testing:
+
+* Fix time handling test memory (#3379)
+* Fix streaming extractor condition in the CI (#3362)
+* Test IBL skip when the setting up the one client fails (#3289)
+* Refactor `set_property` in base (#3287)
+* Refactor quality metrics tests to use fixture (#3249)
+* Add kilosort4 wrapper tests (#3085)
+* Test IBL skip when the setting up the one client fails (#3289)
+* Add kilosort4 wrapper tests (#3085)
+
+Contributors:
+
+* @Djoels
+* @JoeZiminski
+* @JuanPimientoCaicedo
+* @alejoe91
+* @chrishalcrow
+* @cwindolf
+* @florian6973
+* @h-mayorquin
+* @jiumao2
+* @jonahpearl
+* @mhhennig
+* @rkim48
+* @samuelgarcia
+* @tabedzki
+* @zm711
