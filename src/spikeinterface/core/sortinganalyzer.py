@@ -11,6 +11,7 @@ import weakref
 import shutil
 import warnings
 import importlib
+from copy import copy
 from packaging.version import parse
 from time import perf_counter
 
@@ -2023,10 +2024,7 @@ class AnalyzerExtension:
             new_extension.data = self.data
         else:
             new_extension.data = self._select_extension_data(unit_ids)
-        if self.run_info is not None:
-            new_extension.run_info = self.run_info.copy()
-        else:
-            new_extension.run_info = None
+        new_extension.run_info = copy(self.run_info)
         new_extension.save()
         return new_extension
 
@@ -2044,10 +2042,7 @@ class AnalyzerExtension:
         new_extension.data = self._merge_extension_data(
             merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=verbose, **job_kwargs
         )
-        if self.run_info is not None:
-            new_extension.run_info = self.run_info.copy()
-        else:
-            new_extension.run_info = None
+        new_extension.run_info = copy(self.run_info)
         new_extension.save()
         return new_extension
 
