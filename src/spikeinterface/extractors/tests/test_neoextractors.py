@@ -181,7 +181,7 @@ class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ]
 
 
-class NeuronexusRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+class NeuroNexusRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroNexusRecordingExtractor
     downloads = ["neuronexus"]
     entities = [
