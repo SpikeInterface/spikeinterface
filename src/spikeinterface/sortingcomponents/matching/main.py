@@ -56,7 +56,7 @@ def find_spikes_from_templates(
     elif gather_mode == "npy":
         gather_func = GatherToNpy(folder, names, **gather_kwargs)
     else:
-        raise ValueError(f"wrong gather_mode : {gather_mode}")
+        raise ValueError(f"wrong gather_mode : {gather_mode}. Please choose either 'memory' or 'npy'")
 
     method_class = matching_methods[method]
 
