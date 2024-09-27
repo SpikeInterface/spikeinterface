@@ -4,7 +4,8 @@ import numpy as np
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
-from .main import BaseTemplateMatchingEngine
+# from .main import BaseTemplateMatchingEngine
+from .base import BaseTemplateMatching, _base_matching_dtype
 from spikeinterface.core.template import Templates
 
 
@@ -197,8 +198,9 @@ class TemplateMetadata:
         return template_meta
 
 
+# important : this is differents from the spikeinterface.core.Sparsity
 @dataclass
-class Sparsity:
+class _Sparsity:
     """Variables that describe channel sparsity.
 
     Parameters
@@ -226,7 +228,7 @@ class Sparsity:
 
         Returns
         -------
-        sparsity : Sparsity
+        sparsity : _Sparsity
             Dataclass object for aggregating channel sparsity variables together.
         """
         visible_channels = np.ptp(templates, axis=1) > params.visibility_threshold
@@ -250,7 +252,7 @@ class Sparsity:
 
         Returns
         -------
-        sparsity : Sparsity
+        sparsity : _Sparsity
             Dataclass object for aggregating channel sparsity variables together.
         """
         visible_channels = templates.sparsity.mask
@@ -297,7 +299,7 @@ class TemplateData:
         self.temporal, self.singular, self.spatial, self.temporal_jittered = self.compressed_templates
 
 
-class WobbleMatch(BaseTemplateMatchingEngine):
+class WobbleMatch(BaseTemplateMatching):
     """Template matching method from the Paninski lab.
 
     Templates are jittered or "wobbled" in time and amplitude to capture variability in spike amplitude and
@@ -331,53 +333,26 @@ class WobbleMatch(BaseTemplateMatchingEngine):
     - "peaks" are considered spikes if their amplitude clears the threshold parameter
     """
 
-    default_params = {
-        "templates": None,
-    }
-    spike_dtype = [
-        ("sample_index", "int64"),
-        ("channel_index", "int64"),
-        ("cluster_index", "int64"),
-        ("amplitude", "float64"),
-        ("segment_index", "int64"),
-    ]
+    # default_params = {
+    #     "templates": None,
+    # }
 
-    @classmethod
-    def initialize_and_check_kwargs(cls, recording, kwargs):
-        """Initialize the objective and precompute various useful objects.
+    def __init__(self, recording, return_output=True, parents=None,
+        templates=None,
+        parameters={},
+        ):
 
-        Parameters
-        ----------
-        recording : RecordingExtractor
-            The recording extractor object.
-        kwargs : dict
-            Keyword arguments for matching method.
+        BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
 
-        Returns
-        -------
-        d : dict
-            Updated Keyword arguments.
-        """
-        d = cls.default_params.copy()
-
-        required_kwargs_keys = ["templates"]
-        for required_key in required_kwargs_keys:
-            assert required_key in kwargs, f"`{required_key}` is a required key in the kwargs"
-
-        parameters = kwargs.get("parameters", {})
-        templates = kwargs["templates"]
-        assert isinstance(templates, Templates), (
-            f"The templates supplied is of type {type(d['templates'])} " f"and must be a Templates"
-        )
         templates_array = templates.get_dense_templates().astype(np.float32, casting="safe")
 
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
         template_meta = TemplateMetadata.from_parameters_and_templates(params, templates_array)
         if not templates.are_templates_sparse():
-            sparsity = Sparsity.from_parameters_and_templates(params, templates_array)
+            sparsity = _Sparsity.from_parameters_and_templates(params, templates_array)
         else:
-            sparsity = Sparsity.from_templates(params, templates)
+            sparsity = _Sparsity.from_templates(params, templates)
 
         # Perform initial computations on templates necessary for computing the objective
         sparse_templates = np.where(sparsity.visible_channels[:, np.newaxis, :], templates_array, 0)
@@ -394,84 +369,42 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             norm_squared=norm_squared,
         )
 
-        # Pack initial data into kwargs
-        kwargs["params"] = params
-        kwargs["template_meta"] = template_meta
-        kwargs["sparsity"] = sparsity
-        kwargs["template_data"] = template_data
-        kwargs["nbefore"] = templates.nbefore
-        kwargs["nafter"] = templates.nafter
-        d.update(kwargs)
-        return d
+        self.params = params
+        self.template_meta = template_meta
+        self.sparsity = sparsity
+        self.template_data = template_data
+        self.nbefore = templates.nbefore
+        self.nafter = templates.nafter
 
-    @classmethod
-    def serialize_method_kwargs(cls, kwargs):
-        # This function does nothing without a waveform extractor -- candidate for refactor
-        kwargs = dict(kwargs)
-        return kwargs
+        # buffer_ms = 10
+        # self.margin = int(buffer_ms*1e-3 * recording.sampling_frequency)
+        self.margin = 300  # To ensure equivalence with spike-psvae version of the algorithm
 
-    @classmethod
-    def unserialize_in_worker(cls, kwargs):
-        # This function does nothing without a waveform extractor -- candidate for refactor
-        return kwargs
+    def get_trace_margin(self):
+        return self.margin
 
-    @classmethod
-    def get_margin(cls, recording, kwargs):
-        """Get margin for chunking recording.
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, *args):
 
-        Parameters
-        ----------
-        recording : RecordingExtractor
-            The recording extractor object.
-        kwargs : dict
-            Keyword arguments for matching method.
-
-        Returns
-        -------
-        margin : int
-            Buffer in samples on each side of a chunk.
-        """
-        buffer_ms = 10
-        # margin = int(buffer_ms*1e-3 * recording.sampling_frequency)
-        margin = 300  # To ensure equivalence with spike-psvae version of the algorithm
-        return margin
-
-    @classmethod
-    def main_function(cls, traces, method_kwargs):
-        """Detect spikes in traces using the template matching algorithm.
-
-        Parameters
-        ----------
-        traces : ndarray (chunk_len + 2*margin, num_channels)
-            Voltage traces for a chunk of the recording.
-        method_kwargs : dict
-            Keyword arguments for matching method.
-
-        Returns
-        -------
-        spikes : ndarray (num_spikes,)
-            Resulting spike train.
-        """
         # Unpack method_kwargs
-        nbefore, nafter = method_kwargs["nbefore"], method_kwargs["nafter"]
-        template_meta = method_kwargs["template_meta"]
-        params = method_kwargs["params"]
-        sparsity = method_kwargs["sparsity"]
-        template_data = method_kwargs["template_data"]
+        # nbefore, nafter = method_kwargs["nbefore"], method_kwargs["nafter"]
+        # template_meta = method_kwargs["template_meta"]
+        # params = method_kwargs["params"]
+        # sparsity = method_kwargs["sparsity"]
+        # template_data = method_kwargs["template_data"]
 
         # Check traces
         assert traces.dtype == np.float32, "traces must be specified as np.float32"
 
         # Compute objective
-        objective = compute_objective(traces, template_data, params.approx_rank)
-        objective_normalized = 2 * objective - template_data.norm_squared[:, np.newaxis]
+        objective = compute_objective(traces, self.template_data, self.params.approx_rank)
+        objective_normalized = 2 * objective - self.template_data.norm_squared[:, np.newaxis]
 
         # Compute spike train
         spike_trains, scalings, distance_metrics = [], [], []
-        for i in range(params.max_iter):
+        for i in range(self.params.max_iter):
             # find peaks
-            spike_train, scaling, distance_metric = cls.find_peaks(
-                objective, objective_normalized, np.array(spike_trains), params, template_data, template_meta
+            spike_train, scaling, distance_metric = self.find_peaks(
+                objective, objective_normalized, np.array(spike_trains), self.params, self.template_data, self.template_meta
             )
             if len(spike_train) == 0:
                 break
@@ -482,15 +415,15 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             distance_metrics.extend(list(distance_metric))
 
             # subtract newly detected spike train from traces (via the objective)
-            objective, objective_normalized = cls.subtract_spike_train(
-                spike_train, scaling, template_data, objective, objective_normalized, params, template_meta, sparsity
+            objective, objective_normalized = self.subtract_spike_train(
+                spike_train, scaling, self.template_data, objective, objective_normalized, self.params, self.template_meta, self.sparsity
             )
 
         spike_train = np.array(spike_trains)
         scalings = np.array(scalings)
         distance_metric = np.array(distance_metrics)
         if len(spike_train) == 0:  # no spikes found
-            return np.zeros(0, dtype=cls.spike_dtype)
+            return np.zeros(0, dtype=_base_matching_dtype)
 
         # order spike times
         index = np.argsort(spike_train[:, 0])
@@ -499,8 +432,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         distance_metric = distance_metric[index]
 
         # adjust spike_train
-        spike_train[:, 0] += nbefore  # beginning of template --> center of template
-        spike_train[:, 1] //= params.jitter_factor  # jittered_index --> template_index
+        spike_train[:, 0] += self.nbefore  # beginning of template --> center of template
+        spike_train[:, 1] //= self.params.jitter_factor  # jittered_index --> template_index
 
         # TODO : Benchmark spike amplitudes
         # Find spike amplitudes / channels
@@ -512,7 +445,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             channel_inds.append(best_ch)
 
         # assign result to spikes array
-        spikes = np.zeros(spike_train.shape[0], dtype=cls.spike_dtype)
+        spikes = np.zeros(spike_train.shape[0], dtype=_base_matching_dtype)
         spikes["sample_index"] = spike_train[:, 0]
         spikes["cluster_index"] = spike_train[:, 1]
         spikes["channel_index"] = channel_inds
@@ -622,7 +555,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Dataclass object for aggregating the parameters together.
         template_meta : TemplateMetadata
             Dataclass object for aggregating template metadata together.
-        sparsity : Sparsity
+        sparsity : _Sparsity
             Dataclass object for aggregating channel sparsity variables together.
 
         Returns
@@ -795,6 +728,505 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         if params.scale_amplitudes:  # template_convolution is only used with amplitude scaling
             objective[spike_unit_indices[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
         return objective, objective_normalized
+
+# class WobbleMatch(BaseTemplateMatchingEngine):
+#     """Template matching method from the Paninski lab.
+
+#     Templates are jittered or "wobbled" in time and amplitude to capture variability in spike amplitude and
+#     super-resolution jitter in spike timing.
+
+#     Algorithm
+#     ---------
+#     At initialization:
+#         1. Compute channel sparsity to determine which units are "visible" to each other
+#         2. Compress Templates using Singular Value Decomposition into rank approx_rank
+#         3. Upsample the temporal component of compressed templates and re-index to obtain many super-resolution-jittered
+#             temporal components for each template
+#         3. Convolve each pair of jittered compressed templates together (subject to channel sparsity)
+#     For each chunk of traces:
+#         1. Compute the "objective function" to be minimized by convolving each true template with the traces
+#         2. Normalize the objective relative to the magnitude of each true template
+#         3. Detect spikes by indexing peaks in the objective corresponding to "matches" between the spike and a template
+#         4. Determine which super-resolution-jittered template best matches each spike and scale the amplitude to match
+#         5. Subtract scaled pairwise convolved jittered templates from the objective(s) to account for the effect of
+#             removing detected spikes from the traces
+#         6. Enforce a refractory period around each spike by setting the objective to -inf
+#         7. Repeat Steps 3-6 until no more spikes are detected above the threshold OR max_iter is reached
+
+#     Notes
+#     -----
+#     For consistency, throughout this module
+#     - a "unit" refers to a putative neuron which may have one or more "templates" of its spike waveform
+#     - Each "template" may have many upsampled "jittered_templates" depending on the "jitter_factor"
+#     - "peaks" refer to relative maxima in the convolution of the templates with the voltage trace
+#     - "spikes" refer to putative extracellular action potentials (EAPs)
+#     - "peaks" are considered spikes if their amplitude clears the threshold parameter
+#     """
+
+#     default_params = {
+#         "templates": None,
+#     }
+#     spike_dtype = [
+#         ("sample_index", "int64"),
+#         ("channel_index", "int64"),
+#         ("cluster_index", "int64"),
+#         ("amplitude", "float64"),
+#         ("segment_index", "int64"),
+#     ]
+
+#     @classmethod
+#     def initialize_and_check_kwargs(cls, recording, kwargs):
+#         """Initialize the objective and precompute various useful objects.
+
+#         Parameters
+#         ----------
+#         recording : RecordingExtractor
+#             The recording extractor object.
+#         kwargs : dict
+#             Keyword arguments for matching method.
+
+#         Returns
+#         -------
+#         d : dict
+#             Updated Keyword arguments.
+#         """
+#         d = cls.default_params.copy()
+
+#         required_kwargs_keys = ["templates"]
+#         for required_key in required_kwargs_keys:
+#             assert required_key in kwargs, f"`{required_key}` is a required key in the kwargs"
+
+#         parameters = kwargs.get("parameters", {})
+#         templates = kwargs["templates"]
+#         assert isinstance(templates, Templates), (
+#             f"The templates supplied is of type {type(d['templates'])} " f"and must be a Templates"
+#         )
+#         templates_array = templates.get_dense_templates().astype(np.float32, casting="safe")
+
+#         # Aggregate useful parameters/variables for handy access in downstream functions
+#         params = WobbleParameters(**parameters)
+#         template_meta = TemplateMetadata.from_parameters_and_templates(params, templates_array)
+#         if not templates.are_templates_sparse():
+#             sparsity = Sparsity.from_parameters_and_templates(params, templates_array)
+#         else:
+#             sparsity = Sparsity.from_templates(params, templates)
+
+#         # Perform initial computations on templates necessary for computing the objective
+#         sparse_templates = np.where(sparsity.visible_channels[:, np.newaxis, :], templates_array, 0)
+#         temporal, singular, spatial = compress_templates(sparse_templates, params.approx_rank)
+#         temporal_jittered = upsample_and_jitter(temporal, params.jitter_factor, template_meta.num_samples)
+#         compressed_templates = (temporal, singular, spatial, temporal_jittered)
+#         pairwise_convolution = convolve_templates(
+#             compressed_templates, params.jitter_factor, params.approx_rank, template_meta.jittered_indices, sparsity
+#         )
+#         norm_squared = compute_template_norm(sparsity.visible_channels, templates_array)
+#         template_data = TemplateData(
+#             compressed_templates=compressed_templates,
+#             pairwise_convolution=pairwise_convolution,
+#             norm_squared=norm_squared,
+#         )
+
+#         # Pack initial data into kwargs
+#         kwargs["params"] = params
+#         kwargs["template_meta"] = template_meta
+#         kwargs["sparsity"] = sparsity
+#         kwargs["template_data"] = template_data
+#         kwargs["nbefore"] = templates.nbefore
+#         kwargs["nafter"] = templates.nafter
+#         d.update(kwargs)
+#         return d
+
+#     @classmethod
+#     def serialize_method_kwargs(cls, kwargs):
+#         # This function does nothing without a waveform extractor -- candidate for refactor
+#         kwargs = dict(kwargs)
+#         return kwargs
+
+#     @classmethod
+#     def unserialize_in_worker(cls, kwargs):
+#         # This function does nothing without a waveform extractor -- candidate for refactor
+#         return kwargs
+
+#     @classmethod
+#     def get_margin(cls, recording, kwargs):
+#         """Get margin for chunking recording.
+
+#         Parameters
+#         ----------
+#         recording : RecordingExtractor
+#             The recording extractor object.
+#         kwargs : dict
+#             Keyword arguments for matching method.
+
+#         Returns
+#         -------
+#         margin : int
+#             Buffer in samples on each side of a chunk.
+#         """
+#         buffer_ms = 10
+#         # margin = int(buffer_ms*1e-3 * recording.sampling_frequency)
+#         margin = 300  # To ensure equivalence with spike-psvae version of the algorithm
+#         return margin
+
+#     @classmethod
+#     def main_function(cls, traces, method_kwargs):
+#         """Detect spikes in traces using the template matching algorithm.
+
+#         Parameters
+#         ----------
+#         traces : ndarray (chunk_len + 2*margin, num_channels)
+#             Voltage traces for a chunk of the recording.
+#         method_kwargs : dict
+#             Keyword arguments for matching method.
+
+#         Returns
+#         -------
+#         spikes : ndarray (num_spikes,)
+#             Resulting spike train.
+#         """
+#         # Unpack method_kwargs
+#         nbefore, nafter = method_kwargs["nbefore"], method_kwargs["nafter"]
+#         template_meta = method_kwargs["template_meta"]
+#         params = method_kwargs["params"]
+#         sparsity = method_kwargs["sparsity"]
+#         template_data = method_kwargs["template_data"]
+
+#         # Check traces
+#         assert traces.dtype == np.float32, "traces must be specified as np.float32"
+
+#         # Compute objective
+#         objective = compute_objective(traces, template_data, params.approx_rank)
+#         objective_normalized = 2 * objective - template_data.norm_squared[:, np.newaxis]
+
+#         # Compute spike train
+#         spike_trains, scalings, distance_metrics = [], [], []
+#         for i in range(params.max_iter):
+#             # find peaks
+#             spike_train, scaling, distance_metric = cls.find_peaks(
+#                 objective, objective_normalized, np.array(spike_trains), params, template_data, template_meta
+#             )
+#             if len(spike_train) == 0:
+#                 break
+
+#             # update spike_train, scaling, distance metrics with new values
+#             spike_trains.extend(list(spike_train))
+#             scalings.extend(list(scaling))
+#             distance_metrics.extend(list(distance_metric))
+
+#             # subtract newly detected spike train from traces (via the objective)
+#             objective, objective_normalized = cls.subtract_spike_train(
+#                 spike_train, scaling, template_data, objective, objective_normalized, params, template_meta, sparsity
+#             )
+
+#         spike_train = np.array(spike_trains)
+#         scalings = np.array(scalings)
+#         distance_metric = np.array(distance_metrics)
+#         if len(spike_train) == 0:  # no spikes found
+#             return np.zeros(0, dtype=cls.spike_dtype)
+
+#         # order spike times
+#         index = np.argsort(spike_train[:, 0])
+#         spike_train = spike_train[index]
+#         scalings = scalings[index]
+#         distance_metric = distance_metric[index]
+
+#         # adjust spike_train
+#         spike_train[:, 0] += nbefore  # beginning of template --> center of template
+#         spike_train[:, 1] //= params.jitter_factor  # jittered_index --> template_index
+
+#         # TODO : Benchmark spike amplitudes
+#         # Find spike amplitudes / channels
+#         amplitudes, channel_inds = [], []
+#         for i, spike_index in enumerate(spike_train[:, 0]):
+#             best_ch = np.argmax(np.abs(traces[spike_index, :]))
+#             amp = np.abs(traces[spike_index, best_ch])
+#             amplitudes.append(amp)
+#             channel_inds.append(best_ch)
+
+#         # assign result to spikes array
+#         spikes = np.zeros(spike_train.shape[0], dtype=cls.spike_dtype)
+#         spikes["sample_index"] = spike_train[:, 0]
+#         spikes["cluster_index"] = spike_train[:, 1]
+#         spikes["channel_index"] = channel_inds
+#         spikes["amplitude"] = amplitudes
+
+#         return spikes
+
+#     # TODO: Replace this method with equivalent from spikeinterface
+#     @classmethod
+#     def find_peaks(
+#         cls, objective, objective_normalized, spike_trains, params, template_data, template_meta
+#     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+#         """Find new peaks in the objective and update spike train accordingly.
+
+#         Parameters
+#         ----------
+#         objective : ndarray (num_templates, traces.shape[0]+template_meta.num_samples-1)
+#             Template matching objective for each template.
+#         objective_normalized : ndarray (num_templates, traces.shape[0]+template_meta.num_samples-1)
+#             Template matching objective normalized by the magnitude of each template.
+#         spike_trains : ndarray (n_spikes, 2)
+#             Spike train from template matching.
+#         params : WobbleParameters
+#             Dataclass object for aggregating the parameters together.
+#         template_meta : TemplateMetadata
+#             Dataclass object for aggregating template metadata together.
+
+#         Returns
+#         -------
+#         new_spike_train : ndarray (num_spikes, 2)
+#             Spike train from template matching with newly detected spikes added.
+#         scalings : ndarray (num_spikes,)
+#             Amplitude scaling used for each spike.
+#         distance_metric : ndarray (num_spikes)
+#             A metric that describes how good of a "fit" each spike is to its corresponding template
+
+#         Notes
+#         -----
+#         This function first identifies spike times (indices) using peaks in the objective that correspond to matches
+#         between a template and a spike. Then, it finds the best upsampled/jittered template corresponding to each spike.
+#         Finally, it generates a new spike train from the spike times, and returns it along with additional metrics about
+#         each spike.
+#         """
+#         from scipy import signal
+
+#         # Get spike times (indices) using peaks in the objective
+#         objective_template_max = np.max(objective_normalized, axis=0)
+#         spike_window = (template_meta.num_samples - 1, objective_normalized.shape[1] - template_meta.num_samples)
+#         objective_windowed = objective_template_max[spike_window[0] : spike_window[1]]
+#         spike_time_indices = signal.argrelmax(objective_windowed, order=template_meta.num_samples - 1)[0]
+#         spike_time_indices += template_meta.num_samples - 1
+#         objective_spikes = objective_template_max[spike_time_indices]
+#         spike_time_indices = spike_time_indices[objective_spikes > params.threshold]
+
+#         if len(spike_time_indices) == 0:  # No new spikes found
+#             return np.zeros((0, 2), dtype=np.int32), np.zeros(0), np.zeros(0)
+
+#         # Extract metrics using spike times (indices)
+#         distance_metric = objective_template_max[spike_time_indices]
+#         scalings = np.ones(len(spike_time_indices), dtype=objective_normalized.dtype)
+
+#         # Find the best upsampled template
+#         spike_template_indices = np.argmax(objective_normalized[:, spike_time_indices], axis=0)
+#         high_res_shifts = cls.calculate_high_res_shift(
+#             spike_time_indices,
+#             spike_template_indices,
+#             objective,
+#             objective_normalized,
+#             template_data,
+#             params,
+#             template_meta,
+#         )
+#         template_shift, time_shift, non_refractory_indices, scaling = high_res_shifts
+
+#         # Update unit_indices, spike_times, and scalings
+#         spike_jittered_indices = spike_template_indices * params.jitter_factor
+#         at_least_one_spike = bool(len(non_refractory_indices))
+#         if at_least_one_spike:
+#             spike_jittered_indices[non_refractory_indices] += template_shift
+#             spike_time_indices[non_refractory_indices] += time_shift
+#             scalings[non_refractory_indices] = scaling
+
+#         # Generate new spike train from spike times (indices)
+#         convolution_correction = -1 * (template_meta.num_samples - 1)  # convolution indices --> raw_indices
+#         spike_time_indices += convolution_correction
+#         new_spike_train = np.array([spike_time_indices, spike_jittered_indices]).T
+
+#         return new_spike_train, scalings, distance_metric
+
+#     @classmethod
+#     def subtract_spike_train(
+#         cls, spike_train, scalings, template_data, objective, objective_normalized, params, template_meta, sparsity
+#     ) -> tuple[np.ndarray, np.ndarray]:
+#         """Subtract spike train of templates from the objective directly.
+
+#         Parameters
+#         ----------
+#         spike_train : ndarray (num_spikes, 2)
+#             Spike train from template matching.
+#         scalings : ndarray (num_spikes,)
+#             Amplitude scaling used for each spike.
+#         objective : ndarray (num_templates, traces.shape[0]+num_samples-1)
+#             Template matching objective for each template.
+#         objective_normalized : ndarray (num_templates, traces.shape[0]+num_samples-1)
+#             Template matching objective normalized by the magnitude of each template.
+#         params : WobbleParameters
+#             Dataclass object for aggregating the parameters together.
+#         template_meta : TemplateMetadata
+#             Dataclass object for aggregating template metadata together.
+#         sparsity : Sparsity
+#             Dataclass object for aggregating channel sparsity variables together.
+
+#         Returns
+#         -------
+#         objective : ndarray (template_meta.num_templates, traces.shape[0]+template_meta.num_samples-1)
+#             Template matching objective for each template.
+#         objective_normalized : ndarray (num_templates, traces.shape[0]+template_meta.num_samples-1)
+#             Template matching objective normalized by the magnitude of each template.
+#         """
+#         present_jittered_indices = np.unique(spike_train[:, 1])
+#         convolution_resolution_len = get_convolution_len(template_meta.num_samples, template_meta.num_samples)
+#         for jittered_index in present_jittered_indices:
+#             id_mask = spike_train[:, 1] == jittered_index
+#             id_spiketrain = spike_train[id_mask, 0]
+#             id_scaling = scalings[id_mask]
+#             overlapping_templates = sparsity.unit_overlap[jittered_index]
+#             # Note: pairwise_conv only has overlapping template convolutions already
+#             pconv = template_data.pairwise_convolution[jittered_index]
+#             # TODO: If optimizing for speed -- check this loop
+#             for spike_start_index, spike_scaling in zip(id_spiketrain, id_scaling):
+#                 spike_stop_index = spike_start_index + convolution_resolution_len
+#                 objective_normalized[overlapping_templates, spike_start_index:spike_stop_index] -= 2 * pconv
+#                 if params.scale_amplitudes:
+#                     pconv_scaled = pconv * spike_scaling
+#                     objective[overlapping_templates, spike_start_index:spike_stop_index] -= pconv_scaled
+
+#             objective, objective_normalized = cls.enforce_refractory(
+#                 spike_train, objective, objective_normalized, params, template_meta
+#             )
+#         return objective, objective_normalized
+
+#     @classmethod
+#     def calculate_high_res_shift(
+#         cls,
+#         spike_time_indices,
+#         spike_unit_indices,
+#         objective,
+#         objective_normalized,
+#         template_data,
+#         params,
+#         template_meta,
+#     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+#         """Determines optimal shifts when super-resolution, scaled templates are used.
+
+#         Parameters
+#         ----------
+#         spike_time_indices : ndarray (num_spikes,)
+#             Indices in the voltage traces corresponding to the time of each spike.
+#         spike_unit_indices : ndarray (num_spikes)
+#             Units corresponding to each spike.
+#         objective : ndarray (num_templates, traces.shape[0]+num_samples-1)
+#             Template matching objective for each template.
+#         objective_normalized : ndarray (num_templates, traces.shape[0]+num_samples-1)
+#             Template matching objective normalized by the magnitude of each template.
+#         template_data : TemplateData
+#             Dataclass object for aggregating template data together.
+#         params : WobbleParameters
+#             Dataclass object for aggregating the parameters together.
+#         template_meta : TemplateMetadata
+#             Dataclass object for aggregating template metadata together.
+
+#         Returns
+#         -------
+#         template_shift : ndarray (num_spikes,)
+#             Indices to shift each spike template_index to the correct jittered_index.
+#         time_shift : ndarray (num_spikes,)
+#             Indices to shift each spike time index to the adjusted time index.
+#         non_refractory_indices : ndarray
+#             Indices of the spike train that correspond to non-refractory spikes.
+#         scalings : ndarray (num_spikes,)
+#             Amplitude scaling used for each spike.
+#         """
+#         # Return identities if no high-resolution templates are necessary
+#         not_high_res = params.jitter_factor == 1 and not params.scale_amplitudes
+#         at_least_one_spike = bool(len(spike_time_indices))
+#         if not_high_res or not at_least_one_spike:
+#             template_shift = np.zeros_like(spike_time_indices)
+#             time_shift = np.zeros_like(spike_time_indices)
+#             non_refractory_indices = range(len(spike_time_indices))
+#             scalings = np.ones_like(spike_time_indices)
+#             return template_shift, time_shift, non_refractory_indices, scalings
+
+#         peak_indices = spike_time_indices + template_meta.peak_window[:, np.newaxis]
+#         objective_peaks = objective_normalized[spike_unit_indices, peak_indices]
+
+#         # Omit refractory spikes
+#         peak_is_refractory = np.logical_or(np.isinf(objective_peaks[0, :]), np.isinf(objective_peaks[-1, :]))
+#         refractory_before_spike = np.arange(-template_meta.overlapping_spike_buffer, 1)[:, np.newaxis]
+#         refractory_indices = spike_time_indices[peak_is_refractory] + refractory_before_spike
+#         objective_normalized[spike_unit_indices[peak_is_refractory], refractory_indices] = -1 * np.inf
+#         non_refractory_indices = np.flatnonzero(np.logical_not(peak_is_refractory))
+#         objective_peaks = objective_peaks[:, non_refractory_indices]
+#         if objective_peaks.shape[1] == 0:  # no non-refractory peaks --> exit function
+#             return np.array([]), np.array([]), np.array([]), np.array([])
+
+#         # Upsample and compute optimal template shift
+#         window_len_upsampled = template_meta.peak_window_len * params.jitter_factor
+#         from scipy import signal
+
+#         if not params.scale_amplitudes:
+#             # Perform simple upsampling using scipy.signal.resample
+#             high_resolution_peaks = signal.resample(objective_peaks, window_len_upsampled, axis=0)
+#             jitter = np.argmax(high_resolution_peaks[template_meta.jitter_window, :], axis=0)
+#             scalings = np.ones(len(non_refractory_indices))
+#         else:
+#             # upsampled the convolution for the detected peaks only
+#             objective_peaks_high_res = objective[spike_unit_indices, peak_indices]
+#             objective_peaks_high_res = objective_peaks_high_res[:, non_refractory_indices]
+#             high_resolution_conv = signal.resample(objective_peaks_high_res, window_len_upsampled, axis=0)
+
+#             # Find template norms for detected peaks only
+#             norm_peaks = template_data.norm_squared[spike_unit_indices[non_refractory_indices]]
+
+#             high_res_objective, scalings = compute_scale_amplitudes(
+#                 high_resolution_conv, norm_peaks, params.scale_min, params.scale_max, params.amplitude_variance
+#             )
+#             jitter = np.argmax(high_res_objective[template_meta.jitter_window, :], axis=0)
+#             scalings = scalings[jitter, np.arange(len(non_refractory_indices))]
+
+#         # Extract outputs from jitter
+#         template_shift = template_meta.jitter2template_shift[jitter]
+#         time_shift = template_meta.jitter2spike_time_shift[jitter]
+#         return template_shift, time_shift, non_refractory_indices, scalings
+
+#     @classmethod
+#     def enforce_refractory(
+#         cls, spike_train, objective, objective_normalized, params, template_meta
+#     ) -> tuple[np.ndarray, np.ndarray]:
+#         """Enforcing the refractory period for each unit by setting the objective to -infinity.
+
+#         Parameters
+#         ----------
+#         spike_train : ndarray (num_spikes, 2)
+#             Spike train from template matching.
+#         objective : ndarray (num_templates, traces.shape[0]+num_samples-1)
+#             Template matching objective for each template.
+#         objective_normalized : ndarray (num_templates, traces.shape[0]+num_samples-1)
+#             Template matching objective normalized by the magnitude of each template.
+#         params : WobbleParameters
+#             Dataclass object for aggregating the parameters together.
+#         template_meta : TemplateMetadata
+#             Dataclass object for aggregating template metadata together.
+
+#         Returns
+#         -------
+#         objective : ndarray (template_meta.num_templates, traces.shape[0]+template_meta.num_samples-1)
+#             Template matching objective for each template.
+#         objective_normalized : ndarray (num_templates, traces.shape[0]+template_meta.num_samples-1)
+#             Template matching objective normalized by the magnitude of each template.
+#         """
+#         window = np.arange(-params.refractory_period_frames, params.refractory_period_frames + 1)
+
+#         # Adjust cluster IDs so that they match original templates
+#         spike_times = spike_train[:, 0]
+#         spike_template_indices = spike_train[:, 1] // params.jitter_factor
+
+#         # We want to enforce refractory conditions on unit_indices rather than template_indices for units with many templates
+#         spike_unit_indices = spike_template_indices.copy()
+#         for template_index in set(spike_template_indices):
+#             unit_index = template_meta.template_indices2unit_indices[
+#                 template_index
+#             ]  # unit_index corresponding to this template
+#             spike_unit_indices[spike_template_indices == template_index] = unit_index
+
+#         # Get the samples (time indices) that correspond to the waveform for each spike
+#         waveform_samples = get_convolution_len(spike_times[:, np.newaxis], template_meta.num_samples) + window
+
+#         # Enforce refractory by setting objective to negative infinity in invalid regions
+#         objective_normalized[spike_unit_indices[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
+#         if params.scale_amplitudes:  # template_convolution is only used with amplitude scaling
+#             objective[spike_unit_indices[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
+#         return objective, objective_normalized
 
 
 def compute_template_norm(visible_channels, templates):
@@ -1017,3 +1449,4 @@ def compute_scale_amplitudes(
     scalings = np.clip(b / a, scale_min, scale_max)
     high_res_objective = (2 * scalings * b) - (np.square(scalings) * a) - (1 / amplitude_variance)
     return high_res_objective, scalings
+
