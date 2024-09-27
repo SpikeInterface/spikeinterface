@@ -219,6 +219,9 @@ class SortingAnalyzer:
         # this is used to store temporary recording
         self._temporary_recording = None
 
+        # for zarr format, we store the kwargs to create zarr datasets (e.g., compression)
+        self._zarr_kwargs = {}
+
         # extensions are not loaded at init
         self.extensions = dict()
 
@@ -500,7 +503,7 @@ class SortingAnalyzer:
         return zarr_root
 
     @classmethod
-    def create_zarr(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes):
+    def create_zarr(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes, **zarr_kwargs):
         # used by create and save_as
         import zarr
         import numcodecs
@@ -531,7 +534,8 @@ class SortingAnalyzer:
             zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
         else:
             warnings.warn(
-                "SortingAnalyzer with zarr : the Recording is not json serializable, the recording link will be lost for future load"
+                "SortingAnalyzer with zarr : the Recording is not json serializable, "
+                "the recording link will be lost for future load"
             )
 
         # sorting provenance
@@ -569,7 +573,6 @@ class SortingAnalyzer:
 
         # Alessio : we need to find a way to propagate compressor for all steps.
         # kwargs = dict(compressor=...)
-        zarr_kwargs = dict()
         add_sorting_to_zarr_group(sorting, zarr_root.create_group("sorting"), **zarr_kwargs)
 
         recording_info = zarr_root.create_group("extensions")
@@ -645,6 +648,18 @@ class SortingAnalyzer:
 
         return sorting_analyzer
 
+    def set_zarr_kwargs(self, **zarr_kwargs):
+        """
+        Set the zarr kwargs for the zarr datasets. This can be used to specify custom compressors or filters.
+        Note that currently the zarr kwargs will be used for all zarr datasets.
+
+        Parameters
+        ----------
+        zarr_kwargs : keyword arguments
+            The zarr kwargs to set.
+        """
+        self._zarr_kwargs = zarr_kwargs
+
     def set_temporary_recording(self, recording: BaseRecording, check_dtype: bool = True):
         """
         Sets a temporary recording object. This function can be useful to temporarily set
@@ -683,7 +698,7 @@ class SortingAnalyzer:
         sparsity_overlap=0.75,
         verbose=False,
         new_unit_ids=None,
-        **job_kwargs,
+        **kwargs,
     ) -> "SortingAnalyzer":
         """
         Internal method used by both `save_as()`, `copy()`, `select_units()`, and `merge_units()`.
@@ -712,8 +727,8 @@ class SortingAnalyzer:
             The new unit ids for merged units. Required if `merge_unit_groups` is not None.
         verbose : bool, default: False
             If True, output is verbose.
-        job_kwargs : dict
-            Keyword arguments for parallelization.
+        kwargs : keyword arguments
+            Keyword arguments including job_kwargs and zarr_kwargs.
 
         Returns
         -------
@@ -726,6 +741,8 @@ class SortingAnalyzer:
             recording = self._temporary_recording
         else:
             recording = None
+
+        zarr_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
         if self.sparsity is not None and unit_ids is None and merge_unit_groups is None:
             sparsity = self.sparsity
@@ -807,10 +824,11 @@ class SortingAnalyzer:
             assert folder is not None, "For format='zarr' folder must be provided"
             folder = clean_zarr_folder_name(folder)
             SortingAnalyzer.create_zarr(
-                folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes
+                folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes, **zarr_kwargs
             )
             new_sorting_analyzer = SortingAnalyzer.load_from_zarr(folder, recording=recording)
             new_sorting_analyzer.folder = folder
+            new_sorting_analyzer._zarr_kwargs = zarr_kwargs
         else:
             raise ValueError(f"SortingAnalyzer.save: unsupported format: {format}")
 
@@ -848,7 +866,7 @@ class SortingAnalyzer:
 
         return new_sorting_analyzer
 
-    def save_as(self, format="memory", folder=None) -> "SortingAnalyzer":
+    def save_as(self, format="memory", folder=None, **zarr_kwargs) -> "SortingAnalyzer":
         """
         Save SortingAnalyzer object into another format.
         Uselful for memory to zarr or memory to binary.
@@ -863,10 +881,11 @@ class SortingAnalyzer:
             The output folder if `format` is "zarr" or "binary_folder"
         format : "memory" | "binary_folder" | "zarr", default: "memory"
             The new backend format to use
+        zarr_kwargs : keyword arguments for zarr format
         """
         if format == "zarr":
             folder = clean_zarr_folder_name(folder)
-        return self._save_or_select_or_merge(format=format, folder=folder)
+        return self._save_or_select_or_merge(format=format, folder=folder, **zarr_kwargs)
 
     def select_units(self, unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
         """
@@ -2051,24 +2070,24 @@ class AnalyzerExtension:
 
         if save and not self.sorting_analyzer.is_read_only():
             self._save_run_info()
-            self._save_data(**kwargs)
+            self._save_data()
             if self.format == "zarr":
                 import zarr
 
                 zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
-    def save(self, **kwargs):
+    def save(self):
         self._save_params()
         self._save_importing_provenance()
         self._save_run_info()
-        self._save_data(**kwargs)
+        self._save_data()
 
         if self.format == "zarr":
             import zarr
 
             zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
-    def _save_data(self, **kwargs):
+    def _save_data(self):
         if self.format == "memory":
             return
 
@@ -2107,14 +2126,14 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-            import zarr
             import numcodecs
 
+            zarr_kwargs = self.sorting_analyzer._zarr_kwargs
             extension_group = self._get_zarr_extension_group(mode="r+")
 
-            compressor = kwargs.get("compressor", None)
-            if compressor is None:
-                compressor = get_default_zarr_compressor()
+            # if compression is not externally given, we use the default
+            if "compressor" not in zarr_kwargs:
+                zarr_kwargs["compressor"] = get_default_zarr_compressor()
 
             for ext_data_name, ext_data in self.data.items():
                 if ext_data_name in extension_group:
@@ -2124,7 +2143,7 @@ class AnalyzerExtension:
                         name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.JSON()
                     )
                 elif isinstance(ext_data, np.ndarray):
-                    extension_group.create_dataset(name=ext_data_name, data=ext_data, compressor=compressor)
+                    extension_group.create_dataset(name=ext_data_name, data=ext_data, **zarr_kwargs)
                 elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
                     df_group = extension_group.create_group(ext_data_name)
                     # first we save the index

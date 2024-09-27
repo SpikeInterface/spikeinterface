@@ -329,8 +329,7 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
     zarr_group.attrs["num_segments"] = int(num_segments)
     zarr_group.create_dataset(name="unit_ids", data=sorting.unit_ids, compressor=None)
 
-    if "compressor" not in kwargs:
-        compressor = get_default_zarr_compressor()
+    compressor = kwargs.get("compressor", get_default_zarr_compressor())
 
     # save sub fields
     spikes_group = zarr_group.create_group(name="spikes")
