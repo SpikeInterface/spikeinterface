@@ -828,7 +828,7 @@ class SortingAnalyzer:
             )
             new_sorting_analyzer = SortingAnalyzer.load_from_zarr(folder, recording=recording)
             new_sorting_analyzer.folder = folder
-            new_sorting_analyzer._zarr_kwargs = zarr_kwargs
+            new_sorting_analyzer.set_zarr_kwargs(zarr_kwargs)
         else:
             raise ValueError(f"SortingAnalyzer.save: unsupported format: {format}")
 
