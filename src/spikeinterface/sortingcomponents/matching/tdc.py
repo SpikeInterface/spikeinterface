@@ -11,15 +11,17 @@ from spikeinterface.core import (
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 from spikeinterface.core.template import Templates
 
-spike_dtype = [
-    ("sample_index", "int64"),
-    ("channel_index", "int64"),
-    ("cluster_index", "int64"),
-    ("amplitude", "float64"),
-    ("segment_index", "int64"),
-]
+from .base import BaseTemplateMatching, _base_matching_dtype
 
-from .main import BaseTemplateMatchingEngine
+# spike_dtype = [
+#     ("sample_index", "int64"),
+#     ("channel_index", "int64"),
+#     ("cluster_index", "int64"),
+#     ("amplitude", "float64"),
+#     ("segment_index", "int64"),
+# ]
+
+# from .main import BaseTemplateMatchingEngine
 
 try:
     import numba
@@ -30,7 +32,7 @@ except ImportError:
     HAVE_NUMBA = False
 
 
-class TridesclousPeeler(BaseTemplateMatchingEngine):
+class TridesclousPeeler(BaseTemplateMatching):
     """
     Template-matching ported from Tridesclous sorter.
 
@@ -44,66 +46,55 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
     This method is quite fast but don't give exelent results to resolve
     spike collision when templates have high similarity.
     """
+    def __init__(self, recording, return_output=True, parents=None,
+        templates=None,
+        peak_shift_ms=0.2,
+        detect_threshold=5,
+        noise_levels=None,
+        radius_um=100.,
+        num_closest=5,
+        sample_shift=3,
+        ms_before=0.8,
+        ms_after=1.2,
+        num_peeler_loop=2,
+        num_template_try=1,
+        ):
 
-    default_params = {
-        "templates": None,
-        "peak_sign": "neg",
-        "peak_shift_ms": 0.2,
-        "detect_threshold": 5,
-        "noise_levels": None,
-        "radius_um": 100,
-        "num_closest": 5,
-        "sample_shift": 3,
-        "ms_before": 0.8,
-        "ms_after": 1.2,
-        "num_peeler_loop": 2,
-        "num_template_try": 1,
-    }
+        BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
 
-    @classmethod
-    def initialize_and_check_kwargs(cls, recording, kwargs):
-        assert HAVE_NUMBA, "TridesclousPeeler needs numba to be installed"
+        # maybe in base? 
+        self.templates_array = templates.get_dense_templates()
 
-        d = cls.default_params.copy()
-        d.update(kwargs)
-
-        assert isinstance(d["templates"], Templates), (
-            f"The templates supplied is of type {type(d['templates'])} " f"and must be a Templates"
-        )
-
-        templates = d["templates"]
         unit_ids = templates.unit_ids
-        channel_ids = templates.channel_ids
+        channel_ids = recording.channel_ids
 
-        sr = templates.sampling_frequency
+        sr = recording.sampling_frequency
 
-        d["nbefore"] = templates.nbefore
-        d["nafter"] = templates.nafter
-        templates_array = templates.get_dense_templates()
+        self.nbefore = templates.nbefore
+        self.nafter = templates.nafter
+        
 
-        nbefore_short = int(d["ms_before"] * sr / 1000.0)
-        nafter_short = int(d["ms_before"] * sr / 1000.0)
+        nbefore_short = int(ms_before * sr / 1000.0)
+        nafter_short = int(ms_before * sr / 1000.0)
         assert nbefore_short <= templates.nbefore
         assert nafter_short <= templates.nafter
-        d["nbefore_short"] = nbefore_short
-        d["nafter_short"] = nafter_short
+        self.nbefore_short = nbefore_short
+        self.nafter_short = nafter_short
         s0 = templates.nbefore - nbefore_short
         s1 = -(templates.nafter - nafter_short)
         if s1 == 0:
             s1 = None
-        templates_short = templates_array[:, slice(s0, s1), :].copy()
-        d["templates_short"] = templates_short
+        # TODO check with out copy
+        self.templates_short = self.templates_array[:, slice(s0, s1), :].copy()
 
-        d["peak_shift"] = int(d["peak_shift_ms"] / 1000 * sr)
+        self.peak_shift = int(peak_shift_ms / 1000 * sr)
 
-        if d["noise_levels"] is None:
-            print("TridesclousPeeler : noise should be computed outside")
-            d["noise_levels"] = get_noise_levels(recording)
+        assert noise_levels is not None, "TridesclousPeeler : noise should be computed outside"
 
-        d["abs_thresholds"] = d["noise_levels"] * d["detect_threshold"]
+        self.abs_thresholds = noise_levels * detect_threshold
 
         channel_distance = get_channel_distances(recording)
-        d["neighbours_mask"] = channel_distance < d["radius_um"]
+        self.neighbours_mask = channel_distance < radius_um
 
         sparsity = compute_sparsity(
             templates, method="best_channels"
@@ -214,6 +205,193 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
             all_spikes = np.zeros(0, dtype=spike_dtype)
 
         return all_spikes
+
+
+
+# class TridesclousPeeler(BaseTemplateMatchingEngine):
+#     """
+#     Template-matching ported from Tridesclous sorter.
+
+#     The idea of this peeler is pretty simple.
+#     1. Find peaks
+#     2. order by best amplitues
+#     3. find nearest template
+#     4. remove it from traces.
+#     5. in the residual find peaks again
+
+#     This method is quite fast but don't give exelent results to resolve
+#     spike collision when templates have high similarity.
+#     """
+
+#     default_params = {
+#         "templates": None,
+#         "peak_sign": "neg",
+#         "peak_shift_ms": 0.2,
+#         "detect_threshold": 5,
+#         "noise_levels": None,
+#         "radius_um": 100,
+#         "num_closest": 5,
+#         "sample_shift": 3,
+#         "ms_before": 0.8,
+#         "ms_after": 1.2,
+#         "num_peeler_loop": 2,
+#         "num_template_try": 1,
+#     }
+
+#     @classmethod
+#     def initialize_and_check_kwargs(cls, recording, kwargs):
+#         assert HAVE_NUMBA, "TridesclousPeeler needs numba to be installed"
+
+#         d = cls.default_params.copy()
+#         d.update(kwargs)
+
+#         assert isinstance(d["templates"], Templates), (
+#             f"The templates supplied is of type {type(d['templates'])} " f"and must be a Templates"
+#         )
+
+#         templates = d["templates"]
+#         unit_ids = templates.unit_ids
+#         channel_ids = templates.channel_ids
+
+#         sr = templates.sampling_frequency
+
+#         d["nbefore"] = templates.nbefore
+#         d["nafter"] = templates.nafter
+#         templates_array = templates.get_dense_templates()
+
+#         nbefore_short = int(d["ms_before"] * sr / 1000.0)
+#         nafter_short = int(d["ms_before"] * sr / 1000.0)
+#         assert nbefore_short <= templates.nbefore
+#         assert nafter_short <= templates.nafter
+#         d["nbefore_short"] = nbefore_short
+#         d["nafter_short"] = nafter_short
+#         s0 = templates.nbefore - nbefore_short
+#         s1 = -(templates.nafter - nafter_short)
+#         if s1 == 0:
+#             s1 = None
+#         templates_short = templates_array[:, slice(s0, s1), :].copy()
+#         d["templates_short"] = templates_short
+
+#         d["peak_shift"] = int(d["peak_shift_ms"] / 1000 * sr)
+
+#         if d["noise_levels"] is None:
+#             print("TridesclousPeeler : noise should be computed outside")
+#             d["noise_levels"] = get_noise_levels(recording)
+
+#         d["abs_thresholds"] = d["noise_levels"] * d["detect_threshold"]
+
+#         channel_distance = get_channel_distances(recording)
+#         d["neighbours_mask"] = channel_distance < d["radius_um"]
+
+#         sparsity = compute_sparsity(
+#             templates, method="best_channels"
+#         )  # , peak_sign=d["peak_sign"], threshold=d["detect_threshold"])
+#         template_sparsity_inds = sparsity.unit_id_to_channel_indices
+#         template_sparsity = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
+#         for unit_index, unit_id in enumerate(unit_ids):
+#             chan_inds = template_sparsity_inds[unit_id]
+#             template_sparsity[unit_index, chan_inds] = True
+
+#         d["template_sparsity"] = template_sparsity
+
+#         extremum_channel = get_template_extremum_channel(templates, peak_sign=d["peak_sign"], outputs="index")
+#         # as numpy vector
+#         extremum_channel = np.array([extremum_channel[unit_id] for unit_id in unit_ids], dtype="int64")
+#         d["extremum_channel"] = extremum_channel
+
+#         channel_locations = templates.probe.contact_positions
+
+#         # TODO try it with real locaion
+#         unit_locations = channel_locations[extremum_channel]
+#         # ~ print(unit_locations)
+
+#         # distance between units
+#         import scipy
+
+#         unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
+
+#         # seach for closet units and unitary discriminant vector
+#         closest_units = []
+#         for unit_ind, unit_id in enumerate(unit_ids):
+#             order = np.argsort(unit_distances[unit_ind, :])
+#             closest_u = np.arange(unit_ids.size)[order].tolist()
+#             closest_u.remove(unit_ind)
+#             closest_u = np.array(closest_u[: d["num_closest"]])
+
+#             # compute unitary discriminent vector
+#             (chans,) = np.nonzero(d["template_sparsity"][unit_ind, :])
+#             template_sparse = templates_array[unit_ind, :, :][:, chans]
+#             closest_vec = []
+#             # against N closets
+#             for u in closest_u:
+#                 vec = templates_array[u, :, :][:, chans] - template_sparse
+#                 vec /= np.sum(vec**2)
+#                 closest_vec.append((u, vec))
+#             # against noise
+#             closest_vec.append((None, -template_sparse / np.sum(template_sparse**2)))
+
+#             closest_units.append(closest_vec)
+
+#         d["closest_units"] = closest_units
+
+#         # distance channel from unit
+#         import scipy
+
+#         distances = scipy.spatial.distance.cdist(channel_locations, unit_locations, metric="euclidean")
+#         near_cluster_mask = distances < d["radius_um"]
+
+#         # nearby cluster for each channel
+#         possible_clusters_by_channel = []
+#         for channel_index in range(distances.shape[0]):
+#             (cluster_inds,) = np.nonzero(near_cluster_mask[channel_index, :])
+#             possible_clusters_by_channel.append(cluster_inds)
+
+#         d["possible_clusters_by_channel"] = possible_clusters_by_channel
+#         d["possible_shifts"] = np.arange(-d["sample_shift"], d["sample_shift"] + 1, dtype="int64")
+
+#         return d
+
+#     @classmethod
+#     def serialize_method_kwargs(cls, kwargs):
+#         kwargs = dict(kwargs)
+#         return kwargs
+
+#     @classmethod
+#     def unserialize_in_worker(cls, kwargs):
+#         return kwargs
+
+#     @classmethod
+#     def get_margin(cls, recording, kwargs):
+#         margin = 2 * (kwargs["nbefore"] + kwargs["nafter"])
+#         return margin
+
+#     @classmethod
+#     def main_function(cls, traces, d):
+#         traces = traces.copy()
+
+#         all_spikes = []
+#         level = 0
+#         while True:
+#             spikes = _tdc_find_spikes(traces, d, level=level)
+#             keep = spikes["cluster_index"] >= 0
+
+#             if not np.any(keep):
+#                 break
+#             all_spikes.append(spikes[keep])
+
+#             level += 1
+
+#             if level == d["num_peeler_loop"]:
+#                 break
+
+#         if len(all_spikes) > 0:
+#             all_spikes = np.concatenate(all_spikes)
+#             order = np.argsort(all_spikes["sample_index"])
+#             all_spikes = all_spikes[order]
+#         else:
+#             all_spikes = np.zeros(0, dtype=spike_dtype)
+
+#         return all_spikes
 
 
 def _tdc_find_spikes(traces, d, level=0):
@@ -388,3 +566,6 @@ if HAVE_NUMBA:
             distances_shift[i] = sum_dist
 
         return distances_shift
+
+
+

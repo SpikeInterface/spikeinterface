@@ -96,7 +96,7 @@ class PipelineNode:
 
 
 class PeakSource(PipelineNode):
-    # base class for peak detector
+    # base class for peak detector or template matching
     def get_trace_margin(self):
         raise NotImplementedError
 
