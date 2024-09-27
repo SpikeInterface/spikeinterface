@@ -15,8 +15,8 @@ class BaseTemplateMatching(PeakSource):
         # TODO make a sharedmem of template here
         # TODO maybe check that channel_id are the same with recording
 
-        assert isinstance(d["templates"], Templates), (
-            f"The templates supplied is of type {type(d['templates'])} " f"and must be a Templates"
+        assert isinstance(templates, Templates), (
+            f"The templates supplied is of type {type(templates)} and must be a Templates"
         )
         self.templates = templates
         PeakSource.__init__(self, recording, return_output=return_output, parents=parents)

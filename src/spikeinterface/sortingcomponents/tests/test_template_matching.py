@@ -9,7 +9,8 @@ from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 
-job_kwargs = dict(n_jobs=-1, chunk_duration="500ms", progress_bar=True)
+# job_kwargs = dict(n_jobs=-1, chunk_duration="500ms", progress_bar=True)
+job_kwargs = dict(n_jobs=1, chunk_duration="500ms", progress_bar=True)
 
 
 def get_sorting_analyzer():
@@ -40,8 +41,11 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
     # sorting_analyzer
-    method_kwargs_all = {"templates": templates, "noise_levels": noise_levels}
+    method_kwargs_all = {"templates": templates, }
     method_kwargs = {}
+    if method in ("naive", "tdc-peeler", "circus"):
+        method_kwargs["noise_levels"] = noise_levels
+    
     # method_kwargs["wobble"] = {
     #     "templates": waveform_extractor.get_all_templates(),
     #     "nbefore": waveform_extractor.nbefore,
@@ -79,8 +83,8 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
 if __name__ == "__main__":
     sorting_analyzer = get_sorting_analyzer()
     # method = "naive"
-    method = "tdc-peeler"
+    # method = "tdc-peeler"
     # method =  "circus"
-    # method = "circus-omp-svd"
+    method = "circus-omp-svd"
     # method = "wobble"
     test_find_spikes_from_templates(method, sorting_analyzer)
