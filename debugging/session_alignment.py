@@ -190,6 +190,7 @@ def align_sessions(
         a list of corrected `peak_locations` and activity
         histogram generated after correction.
     """
+    non_rigid_window_kwargs = copy.deepcopy(non_rigid_window_kwargs)
     estimate_histogram_kwargs = copy.deepcopy(estimate_histogram_kwargs)
     compute_alignment_kwargs = copy.deepcopy(compute_alignment_kwargs)
     interpolate_motion_kwargs = copy.deepcopy(interpolate_motion_kwargs)
@@ -457,7 +458,7 @@ def _get_single_session_activity_histogram(
     Returns
     -------
     session_histogram : np.ndarray
-        Summary acitivity histogram for the session.
+        Summary activity histogram for the session.
     temporal_bin_centers : np.ndarray
         Temporal bin center (session mid-point as we only have
         one time point) for the session.
@@ -469,7 +470,7 @@ def _get_single_session_activity_histogram(
                 for the chunked histograms, with length num_chunks.
             "session_std" : The mean across bin-wise standard deviation
                 of the chunked histograms.
-            "chunked_bin_size_s" : time of each chunk used to  TODO
+            "chunked_bin_size_s" : time of each chunk used to
                 calculate the chunked histogram.
     """
     times = recording.get_times()
@@ -543,8 +544,8 @@ def _create_motion_recordings(
     Returns
     -------
     corrected_recordings_list : list[BaseRecording]
-        A list of InterpolateMotionRecording recordings of shift-
-        corrected recordings coressponding to `recordings_list`.
+        A list of InterpolateMotionRecording recordings of shift-corrected
+        recordings corresponding to `recordings_list`.
 
     motion_objects_list : list[Motion]
         A list of Motion objects. If the recording in `recordings_list`
@@ -613,9 +614,9 @@ def _add_displacement_to_interpolate_recording(
 
     TODO
     ----
-    Check + ask Sam if any other fields need to be chagned. This is a little
-    # hairy (4 possible combinations of new and
-    # old displacement shapes, rigid or nonrigid, so test thoroughly.
+    Check + ask Sam if any other fields need to be changed. This is a little
+    hairy (4 possible combinations of new and old displacement shapes,
+    rigid or nonrigid, so test thoroughly.
     """
     # Everything is done in place, so keep a short variable
     # name reference to the new recordings `motion` object
@@ -665,11 +666,13 @@ def _correct_session_displacement(
 ):
     """
     Internal function to apply the correction from `align_sessions`
-    to build a corrected histogram for comparison. First,
+    to build a corrected histogram for comparison. First, create
+    new shifted peak locations. Then, create a new 'corrected'
+    activity histogram from the new peak locations.
 
     Parameters
     ----------
-    see `align_sessions()` for parameters.  TODO: can add motion shifts if we need.
+    see `align_sessions()` for parameters.
 
     Returns
     -------
@@ -796,7 +799,6 @@ def _compute_session_alignment(
     else:
         shifts = rigid_shifts + non_rigid_shifts
 
-    breakpoint()
     return shifts, non_rigid_windows, non_rigid_window_centers
 
 
@@ -865,6 +867,7 @@ def _akima_interpolate_nonrigid_shifts(
         An array (length num_spatial_bins) of shifts
         interpolated from the non-rigid shifts.
 
+    TODO
     ----
     requires scipy 14
     """
