@@ -9,7 +9,7 @@ from .maxwell import MaxwellRecordingExtractor, MaxwellEventExtractor, read_maxw
 from .mearec import MEArecRecordingExtractor, MEArecSortingExtractor, read_mearec
 from .mcsraw import MCSRawRecordingExtractor, read_mcsraw
 from .neuralynx import NeuralynxRecordingExtractor, NeuralynxSortingExtractor, read_neuralynx, read_neuralynx_sorting
-from .neuronexus import NeuronNexusRecordingExtractor, read_neuronexus
+from .neuronexus import NeuroNexusRecordingExtractor, read_neuronexus
 from .neuroscope import (
     NeuroScopeRecordingExtractor,
     NeuroScopeSortingExtractor,
