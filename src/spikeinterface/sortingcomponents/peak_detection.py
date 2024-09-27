@@ -639,7 +639,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
             assert prototype[idx] > 0, "Prototype should have a positive peak"
 
         self.peak_sign = peak_sign
-        self.prototype = np.flip(prototype)/np.linalg.norm(prototype)
+        self.prototype = np.flip(prototype) / np.linalg.norm(prototype)
         self.nbefore = int(ms_before * recording.sampling_frequency / 1000)
         contact_locations = recording.get_channel_locations()
         dist = np.linalg.norm(contact_locations[:, np.newaxis] - contact_locations[np.newaxis, :], axis=2)
