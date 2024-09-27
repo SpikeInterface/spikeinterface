@@ -1,3 +1,8 @@
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from spikeinterface import BaseRecording
+
 import numpy as np
 import matplotlib.pyplot as plt
 import spikeinterface.full as si
@@ -14,16 +19,50 @@ from spikeinterface.sortingcomponents.motion.motion_interpolation import correct
 from scipy.ndimage import gaussian_filter
 from spikeinterface.sortingcomponents.motion.iterative_template import kriging_kernel
 
-# -----------------------------------------------------------------------------
+# #############################################################################
 # Get Histograms
-# -----------------------------------------------------------------------------
+# #############################################################################
 
 
 def get_activity_histogram(
-    recording, peaks, peak_locations, spatial_bin_edges, log_scale, bin_s, depth_smooth_um
+    recording: BaseRecording,
+    peaks: np.ndarray,
+    peak_locations: np.ndarray,
+    spatial_bin_edges: np.ndarray,
+    log_scale: bool,
+    bin_s: float| None,
+    depth_smooth_um: float | None,
 ):
     """
-    TODO: assumes 1-segment recording
+    Generate a 2D activity histogram for the session. Wraps the underlying
+    spikeinterface function with some adjustments for scaling to time and
+    log transform.
+
+    Parameters
+    ----------
+
+    recording: BaseRecording,
+        A SpikeInterface recording object.
+    peaks: np.ndarray,
+        A SpikeInterface `peaks` array.
+    peak_locations: np.ndarray,
+        A SpikeInterface `peak_locations` array.
+    spatial_bin_edges: np.ndarray,
+        A (1 x n_bins + 1) array of spatial (probe y dimension) bin edges.
+    log_scale: bool,
+        If `True`, histogram is log scaled.
+    bin_s | None: float,
+        If `None`, a single histogram will be generated from all session
+        peaks. Otherwise, multiple histograms will be generated, one for
+        each time bin.
+    depth_smooth_um: float | None
+        If not `None`, smooth the histogram across the spatial
+        axis. see `make_2d_motion_histogram()` for details.
+
+    TODO
+    ----
+    - assumes 1-segment recording
+    - ask Sam whether it makes sense to integrate this function with `make_2d_motion_histogram`.
     """
     activity_histogram, temporal_bin_edges, generated_spatial_bin_edges = make_2d_motion_histogram(
         recording,
@@ -55,11 +94,6 @@ def get_activity_histogram(
     return activity_histogram, temporal_bin_centers, spatial_bin_centers
 
 
-# -----------------------------------------------------------------------------
-# Utils
-# -----------------------------------------------------------------------------
-
-
 def get_bin_centers(bin_edges):
     return (bin_edges[1:] + bin_edges[:-1]) / 2
 
@@ -71,6 +105,10 @@ def estimate_chunk_size(scaled_activity_histogram):
     estimated within 10% 99% of the time,
     corrected based on assumption
     of Poisson firing (based on CLT).
+
+    TODO
+    ----
+    - make the details available.
     """
     firing_rate = np.percentile(scaled_activity_histogram, 98)
 
@@ -84,32 +122,39 @@ def estimate_chunk_size(scaled_activity_histogram):
     return t, lambda_
 
 
-# -----------------------------------------------------------------------------
+# #############################################################################
 # Chunked Histogram estimation methods
-# -----------------------------------------------------------------------------
-
+# #############################################################################
+# Given a set off chunked_session_histograms (num time chunks x num spatial bins)
+# take the summary statistic over the time axis.
 
 def get_chunked_hist_mean(chunked_session_histograms):
-    """ """
+
     mean_hist = np.mean(chunked_session_histograms, axis=0)
     return mean_hist
 
 
 def get_chunked_hist_median(chunked_session_histograms):
-    """ """
+
     median_hist = np.median(chunked_session_histograms, axis=0)
     return median_hist
 
 
 def get_chunked_hist_supremum(chunked_session_histograms):
-    """ """
+
     max_hist = np.max(chunked_session_histograms, axis=0)
     return max_hist
 
 
 def get_chunked_hist_poisson_estimate(chunked_session_histograms):
-    """ """
+    """
+    Make a MLE estimate of the most likely value for each bin
+    given the assumption of Poisson firing. Turns out this is
+    basically identical to the mean :'D.
 
+    Keeping for now as opportunity to add prior or do some outlier
+    removal per bin. But if not useful, deprecate in future.
+    """
     def obj_fun(lambda_, m, sum_k):
         return -(sum_k * np.log(lambda_) - m * lambda_)
 
@@ -123,17 +168,19 @@ def get_chunked_hist_poisson_estimate(chunked_session_histograms):
         m = ks.shape
         sum_k = np.sum(ks)
 
-        # lol, this is painfully close to the mean, no meaningful
-        # prior comes to mind to extend the method with.
-        poisson_estimate[i] = minimize(obj_fun, 0.5, (m, sum_k), bounds=((1e-10, np.inf),)).x
+        poisson_estimate[i] = minimize(
+            obj_fun, 0.5, (m, sum_k), bounds=((1e-10, np.inf),)
+        ).x
+
     return poisson_estimate
 
 
-# TODO: currently deprecated due to scaling issues between
-# sessions. A much better (?) way will to make PCA from all
-# sessions, then align based on projection
-def get_chunked_hist_eigenvector(chunked_session_histograms):
-    """ """
+def DEPRECATE_get_chunked_hist_eigenvector(chunked_session_histograms):
+    """
+    TODO: currently deprecated due to scaling issues between
+    sessions. A much better (?) way will to make PCA from all
+    sessions, then align based on projection
+    """
     if chunked_session_histograms.shape[0] == 1:  # TODO: handle elsewhere
         return chunked_session_histograms.squeeze()
 
@@ -150,9 +197,9 @@ def get_chunked_hist_eigenvector(chunked_session_histograms):
     return first_eigenvector
 
 
-# -----------------------------------------------------------------------------
+# #############################################################################
 # TODO: MOVE creating recordings
-# -----------------------------------------------------------------------------
+# #############################################################################
 
 
 def compute_histogram_crosscorrelation(
@@ -168,6 +215,10 @@ def compute_histogram_crosscorrelation(
     smoothing_sigma_window,
 ):
     """
+
+
+
+
     # TODO: what happens when this bigger than thing. Also rename about shifts
     # TODO: this is kind of wasteful, no optimisations made against redundant
     # session computation, but these in generate very fast.
