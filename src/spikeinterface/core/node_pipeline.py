@@ -96,7 +96,7 @@ class PipelineNode:
 
 
 class PeakSource(PipelineNode):
-    # base class for peak detector or template matching
+    
     def get_trace_margin(self):
         raise NotImplementedError
 
@@ -106,6 +106,7 @@ class PeakSource(PipelineNode):
 
 # this is used in sorting components
 class PeakDetector(PeakSource):
+    # base class for peak detector or template matching
     pass
 
 

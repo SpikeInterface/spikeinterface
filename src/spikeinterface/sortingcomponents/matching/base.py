@@ -1,6 +1,6 @@
 import numpy as np
 from spikeinterface.core import Templates
-from spikeinterface.core.node_pipeline import PeakSource
+from spikeinterface.core.node_pipeline import PeakDetector
 
 _base_matching_dtype = [
     ("sample_index", "int64"),
@@ -10,7 +10,7 @@ _base_matching_dtype = [
     ("segment_index", "int64"),
 ]
 
-class BaseTemplateMatching(PeakSource):
+class BaseTemplateMatching(PeakDetector):
     def __init__(self, recording, templates, return_output=True, parents=None):
         # TODO make a sharedmem of template here
         # TODO maybe check that channel_id are the same with recording
@@ -19,7 +19,7 @@ class BaseTemplateMatching(PeakSource):
             f"The templates supplied is of type {type(templates)} and must be a Templates"
         )
         self.templates = templates
-        PeakSource.__init__(self, recording, return_output=return_output, parents=parents)
+        PeakDetector.__init__(self, recording, return_output=return_output, parents=parents)
 
     def get_dtype(self):
         return np.dtype(_base_matching_dtype)
