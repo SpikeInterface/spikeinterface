@@ -131,7 +131,7 @@ class BenchmarkStudy:
 
         return cls(study_folder)
 
-    def create_benchmark(self):
+    def create_benchmark(self, key):
         raise NotImplementedError
 
     def scan_folder(self):
@@ -258,25 +258,8 @@ class BenchmarkStudy:
         return df
 
     def plot_run_times(self, case_keys=None):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-        run_times = self.get_run_times(case_keys=case_keys)
-
-        colors = self.get_colors()
-        import matplotlib.pyplot as plt
-
-        fig, ax = plt.subplots()
-        labels = []
-        for i, key in enumerate(case_keys):
-            labels.append(self.cases[key]["label"])
-            rt = run_times.at[key, "run_times"]
-            ax.bar(i, rt, width=0.8, color=colors[key])
-        ax.set_xticks(np.arange(len(case_keys)))
-        ax.set_xticklabels(labels, rotation=45.0)
-        return fig
-
-        # ax = run_times.plot(kind="bar")
-        # return ax.figure
+        from .benchmark_plot_tools import plot_run_times
+        return plot_run_times(self, case_keys=case_keys)
 
     def compute_results(self, case_keys=None, verbose=False, **result_params):
         if case_keys is None:
@@ -463,9 +446,3 @@ class Benchmark:
         # run becnhmark result
         raise NotImplementedError
 
-
-def _simpleaxis(ax):
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.get_xaxis().tick_bottom()
-    ax.get_yaxis().tick_left()

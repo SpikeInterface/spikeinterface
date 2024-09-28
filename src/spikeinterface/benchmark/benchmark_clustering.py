@@ -11,8 +11,7 @@ from spikeinterface.widgets import (
 
 import numpy as np
 
-
-from .benchmark_tools import BenchmarkStudy, Benchmark
+from .benchmark_base import Benchmark, BenchmarkStudy
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
@@ -161,49 +160,19 @@ class ClusteringStudy(BenchmarkStudy):
 
         return count_units
 
-    def plot_unit_counts(self, case_keys=None, figsize=None, **extra_kwargs):
-        from spikeinterface.widgets.widget_list import plot_study_unit_counts
+    # plotting by methods
+    def plot_unit_counts(self, **kwargs):
+        from .benchmark_plot_tools import plot_unit_counts
+        return plot_unit_counts(self, **kwargs)
 
-        plot_study_unit_counts(self, case_keys, figsize=figsize, **extra_kwargs)
+    def plot_agreement_matrix(self, **kwargs):
+        from .benchmark_plot_tools import plot_agreement_matrix
+        return plot_agreement_matrix(self, **kwargs)
 
-    def plot_agreements(self, case_keys=None, figsize=(15, 15)):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-        import pylab as plt
+    def plot_performances_vs_snr(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_snr
+        return plot_performances_vs_snr(self, **kwargs)
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
-
-        for count, key in enumerate(case_keys):
-            ax = axs[0, count]
-            ax.set_title(self.cases[key]["label"])
-            plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
-
-        return fig
-
-    def plot_performances_vs_snr(self, case_keys=None, figsize=(15, 15)):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-        import pylab as plt
-
-        fig, axes = plt.subplots(ncols=1, nrows=3, figsize=figsize)
-
-        for count, k in enumerate(("accuracy", "recall", "precision")):
-
-            ax = axes[count]
-            for key in case_keys:
-                label = self.cases[key]["label"]
-
-                analyzer = self.get_sorting_analyzer(key)
-                metrics = analyzer.get_extension("quality_metrics").get_data()
-                x = metrics["snr"].values
-                y = self.get_result(key)["gt_comparison"].get_performance()[k].values
-                ax.scatter(x, y, marker=".", label=label)
-                ax.set_title(k)
-
-            if count == 2:
-                ax.legend()
-
-        return fig
 
     def plot_error_metrics(self, metric="cosine", case_keys=None, figsize=(15, 5)):
 
