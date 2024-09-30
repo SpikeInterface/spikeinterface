@@ -274,7 +274,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
     def get_trace_margin(self):
         return self.margin    
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, *args):
+    def compute_matching(self, traces, start_frame, end_frame, segment_index):
         import scipy.spatial
         import scipy
 
@@ -478,8 +478,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         order = np.argsort(spikes["sample_index"])
         spikes = spikes[order]
         
-        spikes["segment_index"] = segment_index
-
         return spikes
 
 
@@ -1024,7 +1022,7 @@ class CircusPeeler(BaseTemplateMatching):
         return self.margin
 
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, *args):
+    def compute_matching(self, traces, start_frame, end_frame, segment_index):
 
         neighbor_window = self.num_samples - 1
 
@@ -1107,8 +1105,6 @@ class CircusPeeler(BaseTemplateMatching):
         order = np.argsort(spikes["sample_index"])
         spikes = spikes[order]
 
-        spikes["segment_index"] = segment_index
-        
         return spikes
 
 

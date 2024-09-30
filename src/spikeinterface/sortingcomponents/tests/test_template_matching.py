@@ -77,7 +77,7 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     #     comp = si.compare_sorter_to_ground_truth(gt_sorting, sorting)
     #     si.plot_agreement_matrix(comp, ax=ax)
     #     ax.set_title(method)
-    #     plt.show()
+        plt.show()
 
 
 if __name__ == "__main__":

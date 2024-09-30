@@ -27,7 +27,18 @@ class BaseTemplateMatching(PeakDetector):
     def get_trace_margin(self):
         raise NotImplementedError  
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, *args):
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+        spikes = self.compute_matching(traces, start_frame, end_frame, segment_index)
+        spikes["segment_index"] = segment_index
+
+        margin = self.get_trace_margin()
+        if margin > 0:
+            keep = (spikes["sample_index"] >= margin) & (spikes["sample_index"] < (traces.shape[0] - margin))
+            spikes = spikes[keep]
+
+        return spikes
+
+    def compute_matching(self, traces, start_frame, end_frame, segment_index):
         raise NotImplementedError
     
     def get_extra_outputs(self):
