@@ -1,18 +1,7 @@
 import itertools
 
-import spikeinterface.full as si
-from spikeinterface.generation.session_displacement_generator import generate_session_displacement_recordings
-import matplotlib.pyplot as plt
+from spikeinterface.core import BaseRecording
 import numpy as np
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_histogram, make_3d_motion_histograms
-from scipy.optimize import minimize
-from pathlib import Path
-import alignment_utils  # TODO
-import pickle
-import session_alignment  # TODO
-from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 from spikeinterface.widgets.base import BaseWidget
 from spikeinterface.widgets.base import to_attr
 from spikeinterface.widgets.motion import DriftRasterMapWidget
@@ -23,17 +12,58 @@ from spikeinterface.widgets.motion import DriftRasterMapWidget
 class SessionAlignmentWidget(BaseWidget):
     def __init__(
         self,
-        recordings_list,
-        peaks_list,
-        peak_locations_list,
-        session_histogram_list,
-        spatial_bin_centers=None,
-        corrected_peak_locations_list=None,
-        corrected_session_histogram_list=None,
-        drift_raster_map_kwargs=None,
-        session_alignment_histogram_kwargs=None,  # TODO: rename, the widget too.
+        recordings_list: list[BaseRecording],
+        peaks_list: list[np.ndarray],
+        peak_locations_list: list[np.ndarray],
+        session_histogram_list: list[np.ndarray],
+        spatial_bin_centers: np.ndarray | None = None,
+        corrected_peak_locations_list: list[np.ndarray] | None = None,
+        corrected_session_histogram_list: list[np.ndarray] = None,
+        drift_raster_map_kwargs : dict | None = None,
+        session_alignment_histogram_kwargs: dict | None = None,
         **backend_kwargs,
     ):
+
+        """
+        Widget to display the output of inter-session alignment.
+        In the top section, `DriftRasterMapWidget`s are used to display
+        the raster maps for each session, before and after alignment.
+        The order of all lists should correspond to the same recording.
+
+        If histograms are provided, `SessionAlignmentHistogramWidget`
+        are used to  show the activity histograms, before and after alignment.
+        See `align_sessions` for context.
+
+        Corrected and uncorrected activity histograms are generated
+        as part of the `align_sessions` step.
+
+        Parameters
+        ----------
+
+        recordings_list : list[BaseRecording]
+            List of recordings to plot.
+        peaks_list : list[np.ndarray]
+            List of detected  peaks for each session.
+        peak_locations_list : list[np.ndarray]
+            List of detected peak locations for each session.
+        session_histogram_list : np.ndarray | None
+            A list of activity histograms as output from `align_sessions`.
+            If `None`, no histograms will be displayed.
+        spatial_bin_centers=None : np.ndarray | None
+            Spatial bin centers for the histogram (each session activity
+             histogram will have the same spatial bin centers).
+        corrected_peak_locations_list : list[np.ndarray] | None
+            A list of corrected peak locations. If provided, the corrected
+            raster plots will be displayed.
+        corrected_session_histogram_list : list[np.ndarray]
+            A list of corrected session activity histograms, as
+            output from `align_sessions`.
+        drift_raster_map_kwargs : dict | None
+            Kwargs to be passed to `DriftRasterMapWidget`.
+        session_alignment_histogram_kwargs : dict | None
+            Kwargs to be passed to `SessionAlignmentHistogramWidget`.
+        **backend_kwargs
+        """
 
         # TODO: check all lengths more carefully e.g. histogram vs. peaks.
 
@@ -49,7 +79,6 @@ class SessionAlignmentWidget(BaseWidget):
                     "version of `session_histogram_list`."
                 )
         if corrected_peak_locations_list is not None:
-            # TODO: this is almost identical to the above.
             if not len(corrected_peak_locations_list) == len(peak_locations_list):
                 raise ValueError(
                     "`corrected_peak_locations_list` must be the same length as `peak_locations_list`. "
@@ -83,7 +112,9 @@ class SessionAlignmentWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend="matplotlib", **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-
+        """
+        Create the `SessionAlignmentWidget` for matplotlib.
+        """
         from spikeinterface.widgets.utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
@@ -101,8 +132,7 @@ class SessionAlignmentWidget(BaseWidget):
         max_y = np.max(np.hstack([locs["y"] for locs in dp.peak_locations_list]))
 
         if dp.corrected_peak_locations_list is None:
-
-            # Own function
+            # TODO: Own function
             num_cols = np.min([4, len(dp.peak_locations_list)])
             num_rows = 1 if num_cols <= 4 else 2
 
@@ -200,8 +230,9 @@ class SessionAlignmentWidget(BaseWidget):
 
 
 class SessionAlignmentHistogramWidget(BaseWidget):
-    """ """
+    """
 
+    """
     def __init__(
         self,
         session_histogram_list: list[np.ndarray],
