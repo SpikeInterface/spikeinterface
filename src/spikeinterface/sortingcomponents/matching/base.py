@@ -28,4 +28,8 @@ class BaseTemplateMatching(PeakDetector):
         raise NotImplementedError  
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin, *args):
-        raise NotImplementedError    
+        raise NotImplementedError
+    
+    def get_extra_outputs(self):
+        # can be overwritten if need to ouput some variables with a dict
+        return None

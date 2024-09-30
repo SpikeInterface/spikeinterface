@@ -25,7 +25,7 @@ def find_spikes_from_templates(
     method_kwargs : dict, optional
         Keyword arguments for the chosen method
     extra_outputs : bool
-        If True then method_kwargs is also returned
+        If True then a dict is also returned is also returned
     **job_kwargs : dict
         Parameters for ChunkRecordingExecutor
     verbose : Bool, default: False
@@ -35,9 +35,8 @@ def find_spikes_from_templates(
     -------
     spikes : ndarray
         Spikes found from templates.
-    method_kwargs:
+    outputs:
         Optionaly returns for debug purpose.
-
     """
     from .method_list import matching_methods
 
@@ -58,9 +57,8 @@ def find_spikes_from_templates(
         squeeze_output=True,
     )
     if extra_outputs:
-        # TODO deprecated extra_outputs
-        method_kwargs = {}
-        return spikes, method_kwargs
+        outputs = node0.get_extra_outputs()
+        return spikes, outputs
     else:
         return spikes
 

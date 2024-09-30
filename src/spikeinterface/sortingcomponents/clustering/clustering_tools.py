@@ -602,21 +602,11 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
 
             sub_recording = recording.frame_slice(t_start, t_stop)
             local_params.update({"ignore_inds": ignore_inds + [i]})
-            spikes, computed = find_spikes_from_templates(
+            
+            spikes, more_outputs = find_spikes_from_templates(
                 sub_recording, method="circus-omp-svd", method_kwargs=local_params, extra_outputs=True, **job_kwargs
             )
-            local_params.update(
-                {
-                    "overlaps": computed["overlaps"],
-                    "normed_templates": computed["normed_templates"],
-                    "norms": computed["norms"],
-                    "temporal": computed["temporal"],
-                    "spatial": computed["spatial"],
-                    "singular": computed["singular"],
-                    "units_overlaps": computed["units_overlaps"],
-                    "unit_overlaps_indices": computed["unit_overlaps_indices"],
-                }
-            )
+            local_params["precomputed"] = more_outputs
             valid = (spikes["sample_index"] >= 0) * (spikes["sample_index"] < duration + 2 * margin)
 
             if np.sum(valid) > 0:

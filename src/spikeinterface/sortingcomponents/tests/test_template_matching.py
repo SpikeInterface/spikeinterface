@@ -53,7 +53,10 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     # }
 
     method_kwargs.update(method_kwargs_all)
-    spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs, **job_kwargs)
+    spikes, info = find_spikes_from_templates(recording, method=method, 
+                                              method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs)
+
+    # print(info)
 
     # DEBUG = True
 
@@ -66,7 +69,7 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
 
     #     gt_sorting = sorting_analyzer.sorting
 
-    #     sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], sampling_frequency)
+    #     sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], recording.sampling_frequency)
 
     #     ##metrics = si.compute_quality_metrics(sorting_analyzer, metric_names=["snr"])
 
@@ -81,7 +84,7 @@ if __name__ == "__main__":
     sorting_analyzer = get_sorting_analyzer()
     # method = "naive"
     # method = "tdc-peeler"
-    method =  "circus"
-    # method = "circus-omp-svd"
+    # method =  "circus"
+    method = "circus-omp-svd"
     # method = "wobble"
     test_find_spikes_from_templates(method, sorting_analyzer)

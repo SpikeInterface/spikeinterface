@@ -120,6 +120,17 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         of template temporal width)
     -----
     """
+
+    _more_output_keys = [
+                "norms",
+                "temporal",
+                "spatial",
+                "singular",
+                "units_overlaps",
+                "unit_overlaps_indices",
+                "normed_templates",
+            ]
+
     def __init__(self, recording, return_output=True, parents=None,
         templates=None,
         amplitudes=[0.6, np.inf],
@@ -130,6 +141,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         rank=5,
         ignore_inds=[],
         vicinity=3,
+        precomputed=None,
         ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
@@ -162,7 +174,12 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         #         "unit_overlaps_indices",
         #     ]:
         #         assert d[key] is not None, "If templates are provided, %d should also be there" % key
-        self._prepare_templates()
+        if precomputed is None:
+            self._prepare_templates()
+        else:
+            for key in self._more_output_keys:
+                assert precomputed[key] is not None, "If templates are provided, %d should also be there" % key
+                setattr(self, key, precomputed[key])
 
         
         self.ignore_inds = np.array(ignore_inds)
@@ -244,6 +261,14 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         self.spatial = np.moveaxis(self.spatial, [0, 1, 2], [1, 0, 2])
         self.temporal = np.moveaxis(self.temporal, [0, 1, 2], [1, 2, 0])
         self.singular = self.singular.T[:, :, np.newaxis]
+
+    def get_extra_outputs(self):
+        output = {}
+        for key in self._more_output_keys:
+            output[key] = getattr(self, key)
+        return output
+
+
 
 
     def get_trace_margin(self):
