@@ -135,7 +135,9 @@ def reset_global_job_kwargs():
     Reset the global job kwargs.
     """
     global global_job_kwargs
-    global_job_kwargs = dict(n_jobs=1, chunk_duration="1s", progress_bar=True)
+    global_job_kwargs = dict(
+        n_jobs=1, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_process=1
+    )
 
 
 def is_set_global_job_kwargs_set() -> bool:
