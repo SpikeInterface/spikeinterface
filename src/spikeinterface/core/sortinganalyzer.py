@@ -219,8 +219,9 @@ class SortingAnalyzer:
         # this is used to store temporary recording
         self._temporary_recording = None
 
-        # for zarr format, we store the kwargs to create zarr datasets (e.g., compression)
-        self._zarr_kwargs = {}
+        # backend-specific kwargs for different formats, which can be used to
+        # set some parameters for saving (e.g., compression)
+        self._backend_kwargs = {"binary_folder": {}, "zarr": {}}
 
         # extensions are not loaded at init
         self.extensions = dict()
@@ -352,7 +353,9 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     @classmethod
-    def create_binary_folder(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes):
+    def create_binary_folder(
+        cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes, **binary_format_kwargs
+    ):
         # used by create and save_as
 
         assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
@@ -571,8 +574,6 @@ class SortingAnalyzer:
         # write sorting copy
         from .zarrextractors import add_sorting_to_zarr_group
 
-        # Alessio : we need to find a way to propagate compressor for all steps.
-        # kwargs = dict(compressor=...)
         add_sorting_to_zarr_group(sorting, zarr_root.create_group("sorting"), **zarr_kwargs)
 
         recording_info = zarr_root.create_group("extensions")
@@ -648,17 +649,27 @@ class SortingAnalyzer:
 
         return sorting_analyzer
 
-    def set_zarr_kwargs(self, **zarr_kwargs):
+    @property
+    def backend_kwargs(self):
         """
-        Set the zarr kwargs for the zarr datasets. This can be used to specify custom compressors or filters.
-        Note that currently the zarr kwargs will be used for all zarr datasets.
+        Returns the backend kwargs for the analyzer.
+        """
+        return self._backend_kwargs.copy()
+
+    @backend_kwargs.setter
+    def backend_kwargs(self, backend_kwargs):
+        """
+        Sets the backend kwargs for the analyzer. If the backend kwargs are not set, the default backend kwargs are used.
 
         Parameters
         ----------
-        zarr_kwargs : keyword arguments
+        backend_kwargs : keyword arguments
             The zarr kwargs to set.
         """
-        self._zarr_kwargs = zarr_kwargs
+        for key in backend_kwargs:
+            if key not in ("zarr", "binary_folder"):
+                raise ValueError(f"Unknown backend key: {key}. Available keys are 'zarr' and 'binary_folder'.")
+            self._backend_kwargs[key] = backend_kwargs[key]
 
     def set_temporary_recording(self, recording: BaseRecording, check_dtype: bool = True):
         """
@@ -698,7 +709,8 @@ class SortingAnalyzer:
         sparsity_overlap=0.75,
         verbose=False,
         new_unit_ids=None,
-        **kwargs,
+        backend_kwargs=None,
+        **job_kwargs,
     ) -> "SortingAnalyzer":
         """
         Internal method used by both `save_as()`, `copy()`, `select_units()`, and `merge_units()`.
@@ -727,8 +739,10 @@ class SortingAnalyzer:
             The new unit ids for merged units. Required if `merge_unit_groups` is not None.
         verbose : bool, default: False
             If True, output is verbose.
-        kwargs : keyword arguments
-            Keyword arguments including job_kwargs and zarr_kwargs.
+        backend_kwargs : dict | None, default: None
+            Keyword arguments for the backend specified by format.
+        job_kwargs : keyword arguments
+            Keyword arguments for the job parallelization.
 
         Returns
         -------
@@ -741,8 +755,6 @@ class SortingAnalyzer:
             recording = self._temporary_recording
         else:
             recording = None
-
-        zarr_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
         if self.sparsity is not None and unit_ids is None and merge_unit_groups is None:
             sparsity = self.sparsity
@@ -804,6 +816,8 @@ class SortingAnalyzer:
             # TODO: sam/pierre would create a curation field / curation.json with the applied merges.
             # What do you think?
 
+        backend_kwargs = {} if backend_kwargs is None else backend_kwargs
+
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
             new_sorting_analyzer = SortingAnalyzer.create_memory(
@@ -814,8 +828,15 @@ class SortingAnalyzer:
             # create  a new folder
             assert folder is not None, "For format='binary_folder' folder must be provided"
             folder = Path(folder)
+            binary_format_kwargs = backend_kwargs
             SortingAnalyzer.create_binary_folder(
-                folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes
+                folder,
+                sorting_provenance,
+                recording,
+                sparsity,
+                self.return_scaled,
+                self.rec_attributes,
+                **binary_format_kwargs,
             )
             new_sorting_analyzer = SortingAnalyzer.load_from_binary_folder(folder, recording=recording)
             new_sorting_analyzer.folder = folder
@@ -823,14 +844,17 @@ class SortingAnalyzer:
         elif format == "zarr":
             assert folder is not None, "For format='zarr' folder must be provided"
             folder = clean_zarr_folder_name(folder)
+            zarr_kwargs = backend_kwargs
             SortingAnalyzer.create_zarr(
                 folder, sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes, **zarr_kwargs
             )
             new_sorting_analyzer = SortingAnalyzer.load_from_zarr(folder, recording=recording)
             new_sorting_analyzer.folder = folder
-            new_sorting_analyzer.set_zarr_kwargs(**zarr_kwargs)
         else:
             raise ValueError(f"SortingAnalyzer.save: unsupported format: {format}")
+
+        if format != "memory":
+            new_sorting_analyzer.backend_kwargs = {format: backend_kwargs}
 
         # make a copy of extensions
         # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
@@ -866,7 +890,7 @@ class SortingAnalyzer:
 
         return new_sorting_analyzer
 
-    def save_as(self, format="memory", folder=None, **zarr_kwargs) -> "SortingAnalyzer":
+    def save_as(self, format="memory", folder=None, backend_kwargs=None) -> "SortingAnalyzer":
         """
         Save SortingAnalyzer object into another format.
         Uselful for memory to zarr or memory to binary.
@@ -881,11 +905,13 @@ class SortingAnalyzer:
             The output folder if `format` is "zarr" or "binary_folder"
         format : "memory" | "binary_folder" | "zarr", default: "memory"
             The new backend format to use
-        zarr_kwargs : keyword arguments for zarr format
+        backend_kwargs : dict | None, default: None
+            Backend-specific kwargs for the specified format, which can be used to set some parameters for saving.
+            For example, if `format` is "zarr", one can set the compressor for the zarr datasets with `backend_kwargs={"compressor": some_compressor}`.
         """
         if format == "zarr":
             folder = clean_zarr_folder_name(folder)
-        return self._save_or_select_or_merge(format=format, folder=folder, **zarr_kwargs)
+        return self._save_or_select_or_merge(format=format, folder=folder, backend_kwargs=backend_kwargs)
 
     def select_units(self, unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
         """
@@ -2128,7 +2154,7 @@ class AnalyzerExtension:
         elif self.format == "zarr":
             import numcodecs
 
-            zarr_kwargs = self.sorting_analyzer._zarr_kwargs
+            zarr_kwargs = self.sorting_analyzer.backend_kwargs.get("zarr", {})
             extension_group = self._get_zarr_extension_group(mode="r+")
 
             # if compression is not externally given, we use the default

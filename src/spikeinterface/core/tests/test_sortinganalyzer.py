@@ -138,7 +138,7 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
         return_scaled=False,
         overwrite=True,
     )
-    sorting_analyzer_no_compression.set_zarr_kwargs(compressor=None)
+    sorting_analyzer_no_compression.backend_kwargs = {"zarr": dict(compressor=None)}
     sorting_analyzer_no_compression.compute(["random_spikes", "templates"])
     assert (
         sorting_analyzer_no_compression._get_zarr_root()["extensions"]["random_spikes"][
@@ -154,7 +154,7 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     lzma_compressor = LZMA()
     folder = tmp_path / "test_SortingAnalyzer_zarr_lzma.zarr"
     sorting_analyzer_lzma = sorting_analyzer_no_compression.save_as(
-        format="zarr", folder=folder, compressor=lzma_compressor
+        format="zarr", folder=folder, backend_kwargs=dict(compressor=lzma_compressor)
     )
     assert (
         sorting_analyzer_lzma._get_zarr_root()["extensions"]["random_spikes"][
