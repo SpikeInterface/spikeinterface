@@ -9,25 +9,27 @@ from spikeinterface.core import get_chunk_with_margin
 
 def find_spikes_from_templates(
     recording, method="naive", method_kwargs={}, extra_outputs=False, verbose=False, **job_kwargs
-):
+) -> np.ndarray | tuple[np.ndarray, dict]:
     """Find spike from a recording from given templates.
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object
-    method: "naive" | "tridesclous" | "circus" | "circus-omp" | "wobble"
+    method : "naive" | "tridesclous" | "circus" | "circus-omp" | "wobble", default: "naive"
         Which method to use for template matching
-    method_kwargs: dict, optional
+    method_kwargs : dict, optional
         Keyword arguments for the chosen method
-    extra_outputs: bool
+    extra_outputs : bool
         If True then method_kwargs is also returned
-    job_kwargs: dict
+    **job_kwargs : dict
         Parameters for ChunkRecordingExecutor
+    verbose : Bool, default: False
+        If True, output is verbose
 
     Returns
     -------
-    spikes: ndarray
+    spikes : ndarray
         Spikes found from templates.
     method_kwargs:
         Optionaly returns for debug purpose.

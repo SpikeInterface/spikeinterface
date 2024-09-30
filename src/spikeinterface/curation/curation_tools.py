@@ -106,18 +106,18 @@ def find_duplicated_spikes(
 
     Parameters
     ----------
-    spike_train: np.ndarray
+    spike_train : np.ndarray
         The spike train on which to look for duplicated spikes.
-    censored_period: int
+    censored_period : int
         The censored period for duplicates (in sample time).
-    method: "keep_first" |"keep_last" | "keep_first_iterative" | "keep_last_iterative" |random", default: "random"
+    method : "keep_first" |"keep_last" | "keep_first_iterative" | "keep_last_iterative" |random", default: "random"
         Method used to remove the duplicated spikes.
-    seed: int | None
+    seed : int | None
         The seed to use if method="random".
 
     Returns
     -------
-    indices_of_duplicates: np.ndarray
+    indices_of_duplicates : np.ndarray
         The indices of spikes considered to be duplicates.
     """
 
