@@ -1,36 +1,16 @@
 from __future__ import annotations
 
-import spikeinterface.full as si
 from spikeinterface.generation.session_displacement_generator import generate_session_displacement_recordings
 import matplotlib.pyplot as plt
 import numpy as np
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_histogram, make_3d_motion_histograms
-from scipy.optimize import minimize
-from pathlib import Path
 import alignment_utils  # TODO
 import pickle
 import session_alignment  # TODO
-from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
-from spikeinterface.widgets.motion import DriftRasterMapWidget
-from spikeinterface.widgets.base import BaseWidget
 import plotting
-
-
-import spikeinterface.full as si
-from spikeinterface.generation.session_displacement_generator import generate_session_displacement_recordings
-import matplotlib.pyplot as plt
-import numpy as np
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_histogram, make_3d_motion_histograms
-from scipy.optimize import minimize
-from pathlib import Path
-import alignment_utils  # TODO
-import pickle
-import session_alignment  # TODO
-from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
+import spikeinterface.full as si
+
 
 # TODO: all of the nonrigid methods (and even rigid) could be having some strange affects on AP
 # waveforms. definately needs looking into!
@@ -132,6 +112,25 @@ TODO: in this case, it is not necessary to run peak detection across
 # - xcorr is not the best for large shifts due to lower num overlapping samples
 # -
 
+def _prep_recording(recording, plot=False):
+    """
+    :param recording:
+    :return:
+    """
+    peaks = detect_peaks(recording, method="locally_exclusive")
+
+    peak_locations = localize_peaks(recording, peaks, method="grid_convolution")
+
+    if plot:
+        si.plot_drift_raster_map(
+            peaks=peaks,
+            peak_locations=peak_locations,
+            recording=recording,
+            clim=(-300, 0),  # fix clim for comparability across plots
+        )
+        plt.show()
+
+    return peaks, peak_locations
 
 MOTION = True  # True
 SAVE = False
