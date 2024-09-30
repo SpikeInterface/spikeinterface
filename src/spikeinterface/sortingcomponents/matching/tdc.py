@@ -186,6 +186,8 @@ class TridesclousPeeler(BaseTemplateMatching):
         else:
             all_spikes = np.zeros(0, dtype=_base_matching_dtype)
 
+        all_spikes["segment_index"] = segment_index
+
         return all_spikes
 
     def _find_spikes_one_level(self, traces, level=0):
@@ -307,7 +309,7 @@ class TridesclousPeeler(BaseTemplateMatching):
 
             spikes["cluster_index"][i] = cluster_index
             spikes["amplitude"][i] = amplitude
-
+        
         return spikes
 
 

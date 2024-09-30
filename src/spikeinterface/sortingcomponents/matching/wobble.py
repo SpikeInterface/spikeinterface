@@ -450,7 +450,8 @@ class WobbleMatch(BaseTemplateMatching):
         spikes["cluster_index"] = spike_train[:, 1]
         spikes["channel_index"] = channel_inds
         spikes["amplitude"] = amplitudes
-
+        spikes["segment_index"] = segment_index
+        
         return spikes
 
     # TODO: Replace this method with equivalent from spikeinterface

@@ -78,6 +78,8 @@ class NaiveMatching(BaseTemplateMatching):
             spikes["cluster_index"][i] = cluster_index
             spikes["amplitude"][i] = 0.0
 
+        spikes["segment_index"] = segment_index
+        
         return spikes
     
         

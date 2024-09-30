@@ -477,6 +477,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         spikes = spikes[:num_spikes]
         order = np.argsort(spikes["sample_index"])
         spikes = spikes[order]
+        
+        spikes["segment_index"] = segment_index
 
         return spikes
 
@@ -1105,6 +1107,8 @@ class CircusPeeler(BaseTemplateMatching):
         order = np.argsort(spikes["sample_index"])
         spikes = spikes[order]
 
+        spikes["segment_index"] = segment_index
+        
         return spikes
 
 
