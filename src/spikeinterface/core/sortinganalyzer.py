@@ -397,7 +397,6 @@ class SortingAnalyzer:
         rec_attributes_file = folder / "recording_info" / "recording_attributes.json"
         rec_attributes_file.parent.mkdir()
         if rec_attributes is None:
-            assert recording is not None
             rec_attributes = get_rec_attributes(recording)
             rec_attributes_file.write_text(json.dumps(check_json(rec_attributes), indent=4), encoding="utf8")
             probegroup = recording.get_probegroup()
@@ -560,7 +559,6 @@ class SortingAnalyzer:
         recording_info = zarr_root.create_group("recording_info")
 
         if rec_attributes is None:
-            assert recording is not None
             rec_attributes = get_rec_attributes(recording)
             probegroup = recording.get_probegroup()
         else:
