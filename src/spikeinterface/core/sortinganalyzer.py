@@ -255,6 +255,7 @@ class SortingAnalyzer:
         sparsity=None,
         return_scaled=True,
     ):
+        assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
         # some checks
         if sorting.sampling_frequency != recording.sampling_frequency:
             if math.isclose(sorting.sampling_frequency, recording.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5):
@@ -368,7 +369,6 @@ class SortingAnalyzer:
             json.dump(check_json(info), f, indent=4)
 
         # save a copy of the sorting
-        # NumpyFolderSorting.write_sorting(sorting, folder / "sorting")
         sorting.save(folder=folder / "sorting")
 
         if recording is not None:
@@ -377,16 +377,20 @@ class SortingAnalyzer:
                 recording.dump(folder / "recording.json", relative_to=folder)
             elif recording.check_serializability("pickle"):
                 recording.dump(folder / "recording.pickle", relative_to=folder)
+            else:
+                warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
         else:
             assert rec_attributes is not None, "recording or rec_attributes must be provided"
-            # write an empty recording.json
-            with open(folder / "recording.json", mode="w") as f:
-                json.dump({}, f, indent=4)
+            warnings.warn("Recording not provided, instntiating SortingAnalyzer in recordingless mode.")
 
         if sorting.check_serializability("json"):
             sorting.dump(folder / "sorting_provenance.json", relative_to=folder)
         elif sorting.check_serializability("pickle"):
             sorting.dump(folder / "sorting_provenance.pickle", relative_to=folder)
+        else:
+            warnings.warn(
+                "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
+            )
 
         # dump recording attributes
         probegroup = None
@@ -535,13 +539,10 @@ class SortingAnalyzer:
                 zarr_rec = np.array([rec_dict], dtype=object)
                 zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
             else:
-                warnings.warn(
-                    "SortingAnalyzer with zarr : the Recording is not json serializable, the recording link will be lost for future load"
-                )
+                warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
         else:
             assert rec_attributes is not None, "recording or rec_attributes must be provided"
-            zarr_rec = np.array([{}], dtype=object)
-            zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.JSON())
+            warnings.warn("Recording not provided, instntiating SortingAnalyzer in recordingless mode.")
 
         # sorting provenance
         sort_dict = sorting.to_dict(relative_to=folder, recursive=True)
@@ -551,9 +552,10 @@ class SortingAnalyzer:
         elif sorting.check_serializability("pickle"):
             zarr_sort = np.array([sort_dict], dtype=object)
             zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.Pickle())
-
-        # else:
-        #     warnings.warn("SortingAnalyzer with zarr : the sorting provenance is not json serializable, the sorting provenance link will be lost for futur load")
+        else:
+            warnings.warn(
+                "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
+            )
 
         recording_info = zarr_root.create_group("recording_info")
 
@@ -614,11 +616,13 @@ class SortingAnalyzer:
 
         # load recording if possible
         if recording is None:
-            rec_dict = zarr_root["recording"][0]
-            try:
-                recording = load_extractor(rec_dict, base_folder=folder)
-            except:
-                recording = None
+            rec_field = zarr_root.get("recording")
+            if rec_field is not None:
+                rec_dict = rec_field[0]
+                try:
+                    recording = load_extractor(rec_dict, base_folder=folder)
+                except:
+                    recording = None
         else:
             # TODO maybe maybe not??? : do we need to check  attributes match internal rec_attributes
             # Note this will make the loading too slow
