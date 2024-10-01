@@ -11,6 +11,7 @@ import weakref
 import shutil
 import warnings
 import importlib
+from copy import copy
 from packaging.version import parse
 from time import perf_counter
 
@@ -254,6 +255,7 @@ class SortingAnalyzer:
         sparsity=None,
         return_scaled=True,
     ):
+        assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
         # some checks
         if sorting.sampling_frequency != recording.sampling_frequency:
             if math.isclose(sorting.sampling_frequency, recording.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5):
@@ -352,8 +354,6 @@ class SortingAnalyzer:
     def create_binary_folder(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes):
         # used by create and save_as
 
-        assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
-
         folder = Path(folder)
         if folder.is_dir():
             raise ValueError(f"Folder already exists {folder}")
@@ -369,26 +369,34 @@ class SortingAnalyzer:
             json.dump(check_json(info), f, indent=4)
 
         # save a copy of the sorting
-        # NumpyFolderSorting.write_sorting(sorting, folder / "sorting")
         sorting.save(folder=folder / "sorting")
 
-        # save recording and sorting provenance
-        if recording.check_serializability("json"):
-            recording.dump(folder / "recording.json", relative_to=folder)
-        elif recording.check_serializability("pickle"):
-            recording.dump(folder / "recording.pickle", relative_to=folder)
+        if recording is not None:
+            # save recording and sorting provenance
+            if recording.check_serializability("json"):
+                recording.dump(folder / "recording.json", relative_to=folder)
+            elif recording.check_serializability("pickle"):
+                recording.dump(folder / "recording.pickle", relative_to=folder)
+            else:
+                warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
+        else:
+            assert rec_attributes is not None, "recording or rec_attributes must be provided"
+            warnings.warn("Recording not provided, instntiating SortingAnalyzer in recordingless mode.")
 
         if sorting.check_serializability("json"):
             sorting.dump(folder / "sorting_provenance.json", relative_to=folder)
         elif sorting.check_serializability("pickle"):
             sorting.dump(folder / "sorting_provenance.pickle", relative_to=folder)
+        else:
+            warnings.warn(
+                "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
+            )
 
         # dump recording attributes
         probegroup = None
         rec_attributes_file = folder / "recording_info" / "recording_attributes.json"
         rec_attributes_file.parent.mkdir()
         if rec_attributes is None:
-            assert recording is not None
             rec_attributes = get_rec_attributes(recording)
             rec_attributes_file.write_text(json.dumps(check_json(rec_attributes), indent=4), encoding="utf8")
             probegroup = recording.get_probegroup()
@@ -519,20 +527,21 @@ class SortingAnalyzer:
         zarr_root.attrs["settings"] = check_json(settings)
 
         # the recording
-        rec_dict = recording.to_dict(relative_to=folder, recursive=True)
-
-        if recording.check_serializability("json"):
-            # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.JSON())
-            zarr_rec = np.array([check_json(rec_dict)], dtype=object)
-            zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.JSON())
-        elif recording.check_serializability("pickle"):
-            # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.Pickle())
-            zarr_rec = np.array([rec_dict], dtype=object)
-            zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
+        if recording is not None:
+            rec_dict = recording.to_dict(relative_to=folder, recursive=True)
+            if recording.check_serializability("json"):
+                # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.JSON())
+                zarr_rec = np.array([check_json(rec_dict)], dtype=object)
+                zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.JSON())
+            elif recording.check_serializability("pickle"):
+                # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.Pickle())
+                zarr_rec = np.array([rec_dict], dtype=object)
+                zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
+            else:
+                warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
         else:
-            warnings.warn(
-                "SortingAnalyzer with zarr : the Recording is not json serializable, the recording link will be lost for future load"
-            )
+            assert rec_attributes is not None, "recording or rec_attributes must be provided"
+            warnings.warn("Recording not provided, instntiating SortingAnalyzer in recordingless mode.")
 
         # sorting provenance
         sort_dict = sorting.to_dict(relative_to=folder, recursive=True)
@@ -542,14 +551,14 @@ class SortingAnalyzer:
         elif sorting.check_serializability("pickle"):
             zarr_sort = np.array([sort_dict], dtype=object)
             zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.Pickle())
-
-        # else:
-        #     warnings.warn("SortingAnalyzer with zarr : the sorting provenance is not json serializable, the sorting provenance link will be lost for futur load")
+        else:
+            warnings.warn(
+                "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
+            )
 
         recording_info = zarr_root.create_group("recording_info")
 
         if rec_attributes is None:
-            assert recording is not None
             rec_attributes = get_rec_attributes(recording)
             probegroup = recording.get_probegroup()
         else:
@@ -605,11 +614,13 @@ class SortingAnalyzer:
 
         # load recording if possible
         if recording is None:
-            rec_dict = zarr_root["recording"][0]
-            try:
-                recording = load_extractor(rec_dict, base_folder=folder)
-            except:
-                recording = None
+            rec_field = zarr_root.get("recording")
+            if rec_field is not None:
+                rec_dict = rec_field[0]
+                try:
+                    recording = load_extractor(rec_dict, base_folder=folder)
+                except:
+                    recording = None
         else:
             # TODO maybe maybe not??? : do we need to check  attributes match internal rec_attributes
             # Note this will make the loading too slow
@@ -2015,7 +2026,7 @@ class AnalyzerExtension:
             new_extension.data = self.data
         else:
             new_extension.data = self._select_extension_data(unit_ids)
-        new_extension.run_info = self.run_info.copy()
+        new_extension.run_info = copy(self.run_info)
         new_extension.save()
         return new_extension
 
@@ -2033,7 +2044,7 @@ class AnalyzerExtension:
         new_extension.data = self._merge_extension_data(
             merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=verbose, **job_kwargs
         )
-        new_extension.run_info = self.run_info.copy()
+        new_extension.run_info = copy(self.run_info)
         new_extension.save()
         return new_extension
 
@@ -2251,15 +2262,16 @@ class AnalyzerExtension:
             extension_group.attrs["info"] = info
 
     def _save_run_info(self):
-        run_info = self.run_info.copy()
+        if self.run_info is not None:
+            run_info = self.run_info.copy()
 
-        if self.format == "binary_folder":
-            extension_folder = self._get_binary_extension_folder()
-            run_info_file = extension_folder / "run_info.json"
-            run_info_file.write_text(json.dumps(run_info, indent=4), encoding="utf8")
-        elif self.format == "zarr":
-            extension_group = self._get_zarr_extension_group(mode="r+")
-            extension_group.attrs["run_info"] = run_info
+            if self.format == "binary_folder":
+                extension_folder = self._get_binary_extension_folder()
+                run_info_file = extension_folder / "run_info.json"
+                run_info_file.write_text(json.dumps(run_info, indent=4), encoding="utf8")
+            elif self.format == "zarr":
+                extension_group = self._get_zarr_extension_group(mode="r+")
+                extension_group.attrs["run_info"] = run_info
 
     def get_pipeline_nodes(self):
         assert (
