@@ -124,12 +124,14 @@ def create_sorting_analyzer(
     """
     if format != "memory":
         if format == "zarr":
-            folder = clean_zarr_folder_name(folder)
-        if Path(folder).is_dir():
-            if not overwrite:
-                raise ValueError(f"Folder already exists {folder}! Use overwrite=True to overwrite it.")
-            else:
-                shutil.rmtree(folder)
+            if not is_path_remote(folder):
+                folder = clean_zarr_folder_name(folder)
+        if not is_path_remote(folder):
+            if Path(folder).is_dir():
+                if not overwrite:
+                    raise ValueError(f"Folder already exists {folder}! Use overwrite=True to overwrite it.")
+                else:
+                    shutil.rmtree(folder)
 
     # handle sparsity
     if sparsity is not None:
@@ -249,6 +251,9 @@ class SortingAnalyzer:
         nchan = self.get_num_channels()
         nunits = self.get_num_units()
         txt = f"{clsname}: {nchan} channels - {nunits} units - {nseg} segments - {self.format}"
+        if self.format != "memory":
+            if is_path_remote(str(self.folder)):
+                txt += f" (remote)"
         if self.is_sparse():
             txt += " - sparse"
         if self.has_recording():
@@ -311,7 +316,8 @@ class SortingAnalyzer:
             )
         elif format == "zarr":
             assert folder is not None, "For format='zarr' folder must be provided"
-            folder = clean_zarr_folder_name(folder)
+            if not is_path_remote(folder):
+                folder = clean_zarr_folder_name(folder)
             sorting_analyzer = cls.create_zarr(
                 folder,
                 sorting,
@@ -349,12 +355,7 @@ class SortingAnalyzer:
                 folder, recording=recording, backend_options=backend_options
             )
 
-        if is_path_remote(str(folder)):
-            sorting_analyzer.folder = folder
-            # in this case we only load extensions when needed
-        else:
-            sorting_analyzer.folder = Path(folder)
-
+        if not is_path_remote(str(folder)):
             if load_extensions:
                 sorting_analyzer.load_all_saved_extension()
 
@@ -537,12 +538,16 @@ class SortingAnalyzer:
     def _get_zarr_root(self, mode="r+"):
         import zarr
 
-        # if is_path_remote(str(self.folder)):
-        #     mode = "r"
+        assert mode in ("r+", "a", "r"), "mode must be 'r+', 'a' or 'r'"
+
         storage_options = self._backend_options.get("storage_options", {})
         # we open_consolidated only if we are in read mode
         if mode in ("r+", "a"):
-            zarr_root = zarr.open(str(self.folder), mode=mode, storage_options=storage_options)
+            try:
+                zarr_root = zarr.open(str(self.folder), mode=mode, storage_options=storage_options)
+            except Exception as e:
+                # this could happen in remote mode, and it's a way to check if the folder is still there
+                zarr_root = zarr.open_consolidated(self.folder, mode=mode, storage_options=storage_options)
         else:
             zarr_root = zarr.open_consolidated(self.folder, mode=mode, storage_options=storage_options)
         return zarr_root
@@ -554,10 +559,14 @@ class SortingAnalyzer:
         import numcodecs
         from .zarrextractors import add_sorting_to_zarr_group
 
-        folder = clean_zarr_folder_name(folder)
-
-        if folder.is_dir():
-            raise ValueError(f"Folder already exists {folder}")
+        if is_path_remote(folder):
+            remote = True
+        else:
+            remote = False
+        if not remote:
+            folder = clean_zarr_folder_name(folder)
+            if folder.is_dir():
+                raise ValueError(f"Folder already exists {folder}")
 
         backend_options = {} if backend_options is None else backend_options
         storage_options = backend_options.get("storage_options", {})
@@ -572,8 +581,9 @@ class SortingAnalyzer:
         zarr_root.attrs["settings"] = check_json(settings)
 
         # the recording
+        relative_to = folder if not remote else None
         if recording is not None:
-            rec_dict = recording.to_dict(relative_to=folder, recursive=True)
+            rec_dict = recording.to_dict(relative_to=relative_to, recursive=True)
             if recording.check_serializability("json"):
                 # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.JSON())
                 zarr_rec = np.array([check_json(rec_dict)], dtype=object)
@@ -589,7 +599,7 @@ class SortingAnalyzer:
             warnings.warn("Recording not provided, instntiating SortingAnalyzer in recordingless mode.")
 
         # sorting provenance
-        sort_dict = sorting.to_dict(relative_to=folder, recursive=True)
+        sort_dict = sorting.to_dict(relative_to=relative_to, recursive=True)
         if sorting.check_serializability("json"):
             zarr_sort = np.array([check_json(sort_dict)], dtype=object)
             zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.JSON())
@@ -1106,7 +1116,15 @@ class SortingAnalyzer:
     def is_read_only(self) -> bool:
         if self.format == "memory":
             return False
-        return not os.access(self.folder, os.W_OK)
+        elif self.format == "binary_folder":
+            return not os.access(self.folder, os.W_OK)
+        else:
+            if not is_path_remote(str(self.folder)):
+                return not os.access(self.folder, os.W_OK)
+            else:
+                # in this case we don't know if the file is read only so an error
+                # will be raised if we try to save/append
+                return False
 
     ## map attribute and property zone
 
