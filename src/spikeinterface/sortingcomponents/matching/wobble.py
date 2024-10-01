@@ -383,7 +383,7 @@ class WobbleMatch(BaseTemplateMatching):
     def get_trace_margin(self):
         return self.margin
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, *args):
+    def compute_matching(self, traces, start_frame, end_frame, segment_index):
 
         # Unpack method_kwargs
         # nbefore, nafter = method_kwargs["nbefore"], method_kwargs["nafter"]

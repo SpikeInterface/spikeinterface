@@ -51,7 +51,7 @@ class NaiveMatching(BaseTemplateMatching):
         return self.margin
 
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, *args):
+    def compute_matching(self, traces, start_frame, end_frame, segment_index):
 
         if self.margin > 0:
             peak_traces = traces[self.margin:-self.margin, :]

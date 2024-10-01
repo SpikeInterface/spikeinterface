@@ -160,7 +160,7 @@ class TridesclousPeeler(BaseTemplateMatching):
     def get_trace_margin(self):
         return self.margin
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, *args):
+    def compute_matching(self, traces, start_frame, end_frame, segment_index):
         traces = traces.copy()
 
         all_spikes = []
@@ -307,7 +307,7 @@ class TridesclousPeeler(BaseTemplateMatching):
 
             spikes["cluster_index"][i] = cluster_index
             spikes["amplitude"][i] = amplitude
-
+        
         return spikes
 
 
