@@ -207,7 +207,9 @@ def random_spikes_selection(
                 inds_in_seg = spike_indices[segment_index][unit_id]
                 if margin_size is not None:
                     local_spikes = spikes[segment_index][inds_in_seg]
-                    mask = (local_spikes["sample_index"] >= margin_size) & (local_spikes["sample_index"] < (num_samples[segment_index] - margin_size))
+                    mask = (local_spikes["sample_index"] >= margin_size) & (
+                        local_spikes["sample_index"] < (num_samples[segment_index] - margin_size)
+                    )
                     inds_in_seg = inds_in_seg[mask]
                 # go back to absolut index
                 inds_in_seg_abs = inds_in_seg + cum_sizes[segment_index]
