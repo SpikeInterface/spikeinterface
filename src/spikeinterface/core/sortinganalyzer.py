@@ -260,7 +260,9 @@ class SortingAnalyzer:
             txt += " - has recording"
         if self.has_temporary_recording():
             txt += " - has temporary recording"
-        ext_txt = f"Loaded {len(self.extensions)} extensions: " + ", ".join(self.extensions.keys())
+        ext_txt = f"Loaded {len(self.extensions)} extensions"
+        if len(self.extensions) > 0:
+            ext_txt += f": {', '.join(self.extensions.keys())}"
         txt += "\n" + ext_txt
         return txt
 
@@ -2297,7 +2299,8 @@ class AnalyzerExtension:
         """
         # this ensure data is also deleted and corresponds to params
         # this also ensure the group is created
-        self._reset_extension_folder()
+        if save:
+            self._reset_extension_folder()
 
         params = self._set_params(**params)
         self.params = params
