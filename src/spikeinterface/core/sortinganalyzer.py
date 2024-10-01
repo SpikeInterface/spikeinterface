@@ -1976,7 +1976,8 @@ class AnalyzerExtension:
                     continue
                 ext_data_name = ext_data_file.stem
                 if ext_data_file.suffix == ".json":
-                    ext_data = json.load(ext_data_file.open("r"))
+                    with ext_data_file.open("r") as f:
+                        ext_data = json.load(f)
                 elif ext_data_file.suffix == ".npy":
                     # The lazy loading of an extension is complicated because if we compute again
                     # and have a link to the old buffer on windows then it fails
@@ -1988,7 +1989,8 @@ class AnalyzerExtension:
 
                     ext_data = pd.read_csv(ext_data_file, index_col=0)
                 elif ext_data_file.suffix == ".pkl":
-                    ext_data = pickle.load(ext_data_file.open("rb"))
+                    with ext_data_file.open("rb") as f:
+                        ext_data = pickle.load(f)
                 else:
                     continue
                 self.data[ext_data_name] = ext_data
