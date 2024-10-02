@@ -9,8 +9,8 @@ from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 
-job_kwargs = dict(n_jobs=-1, chunk_duration="500ms", progress_bar=True)
-# job_kwargs = dict(n_jobs=1, chunk_duration="500ms", progress_bar=True)
+# job_kwargs = dict(n_jobs=-1, chunk_duration="500ms", progress_bar=True)
+job_kwargs = dict(n_jobs=1, chunk_duration="500ms", progress_bar=True)
 
 
 def get_sorting_analyzer():
@@ -43,7 +43,7 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     # sorting_analyzer
     method_kwargs_all = {"templates": templates, }
     method_kwargs = {}
-    if method in ("naive", "tdc-peeler", "circus"):
+    if method in ("naive", "tdc-peeler", "circus", "tdc-peeler2"):
         method_kwargs["noise_levels"] = noise_levels
     
     # method_kwargs["wobble"] = {
@@ -58,25 +58,25 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
 
     # print(info)
 
-    # DEBUG = True
+    DEBUG = True
 
-    # if DEBUG:
-    #     import matplotlib.pyplot as plt
-    #     import spikeinterface.full as si
+    if DEBUG:
+        import matplotlib.pyplot as plt
+        import spikeinterface.full as si
 
-    #     sorting_analyzer.compute("waveforms")
-    #     sorting_analyzer.compute("templates")
+        sorting_analyzer.compute("waveforms")
+        sorting_analyzer.compute("templates")
 
-    #     gt_sorting = sorting_analyzer.sorting
+        gt_sorting = sorting_analyzer.sorting
 
-    #     sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], recording.sampling_frequency)
+        sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], recording.sampling_frequency)
 
-    #     ##metrics = si.compute_quality_metrics(sorting_analyzer, metric_names=["snr"])
+        ##metrics = si.compute_quality_metrics(sorting_analyzer, metric_names=["snr"])
 
-    #     fig, ax = plt.subplots()
-    #     comp = si.compare_sorter_to_ground_truth(gt_sorting, sorting)
-    #     si.plot_agreement_matrix(comp, ax=ax)
-    #     ax.set_title(method)
+        fig, ax = plt.subplots()
+        comp = si.compare_sorter_to_ground_truth(gt_sorting, sorting)
+        si.plot_agreement_matrix(comp, ax=ax)
+        ax.set_title(method)
         plt.show()
 
 
@@ -84,7 +84,8 @@ if __name__ == "__main__":
     sorting_analyzer = get_sorting_analyzer()
     # method = "naive"
     # method = "tdc-peeler"
+    method = "tdc-peeler2"
     # method =  "circus"
-    method = "circus-omp-svd"
+    # method = "circus-omp-svd"
     # method = "wobble"
     test_find_spikes_from_templates(method, sorting_analyzer)
