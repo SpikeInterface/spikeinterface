@@ -631,16 +631,16 @@ class DetectPeakMatchedFiltering(PeakDetector):
         self.conv_margin = prototype.shape[0]
 
         assert peak_sign in ("both", "neg", "pos")
-        idx = np.argmax(np.abs(prototype))
+        self.nbefore = int(ms_before * recording.sampling_frequency / 1000)
         if peak_sign == "neg":
-            assert prototype[idx] < 0, "Prototype should have a negative peak"
+            assert prototype[self.nbefore] < 0, "Prototype should have a negative peak"
             peak_sign = "pos"
         elif peak_sign == "pos":
-            assert prototype[idx] > 0, "Prototype should have a positive peak"
+            assert prototype[self.nbefore] > 0, "Prototype should have a positive peak"
 
         self.peak_sign = peak_sign
         self.prototype = np.flip(prototype) / np.linalg.norm(prototype)
-        self.nbefore = int(ms_before * recording.sampling_frequency / 1000)
+        
         contact_locations = recording.get_channel_locations()
         dist = np.linalg.norm(contact_locations[:, np.newaxis] - contact_locations[np.newaxis, :], axis=2)
         self.weights, self.z_factors = get_convolution_weights(dist, **weight_method)
