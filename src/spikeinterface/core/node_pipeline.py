@@ -477,6 +477,7 @@ def run_node_pipeline(
 ):
     """
     Common function to run pipeline with peak detector or already detected peak.
+    TODO: can we get a docstring here
     """
 
     check_graph(nodes)

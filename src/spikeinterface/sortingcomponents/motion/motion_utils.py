@@ -149,6 +149,12 @@ class Motion:
         # reshape to grid domain shape if necessary
         displacement = displacement.reshape(out_shape)
 
+        # TODO: hacky
+        if self.temporal_bins_s[segment_index].size == 1 and self.spatial_bins_um.size == 1:
+            assert np.all(np.isnan(displacement))
+            assert self.displacement[segment_index].size == 1
+            displacement[:] = self.displacement[segment_index]
+
         return displacement
 
     def to_dict(self):
@@ -397,6 +403,18 @@ def get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um):
     spatial_bins = np.arange(min_, max_ + bin_um, bin_um)
 
     return spatial_bins
+
+
+def get_spatial_bins(recording, direction, hist_margin_um, bin_um):
+    # TODO: could this be merged with the above function?
+    dim = ["x", "y", "z"].index(direction)
+    contact_depths = recording.get_channel_locations()[:, dim]
+
+    # spatial histogram bins
+    spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
+    spatial_bin_centers = 0.5 * (spatial_bin_edges[1:] + spatial_bin_edges[:-1])
+
+    return spatial_bin_centers, spatial_bin_edges, contact_depths
 
 
 def make_2d_motion_histogram(
