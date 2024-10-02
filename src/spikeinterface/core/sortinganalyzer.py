@@ -65,18 +65,18 @@ def create_sorting_analyzer(
     recording : Recording
         The recording object
     folder : str or Path or None, default: None
-        The folder where waveforms are cached
+        The folder where analyzer is cached
     format : "memory | "binary_folder" | "zarr", default: "memory"
-        The mode to store waveforms. If "folder", waveforms are stored on disk in the specified folder.
+        The mode to store analyzer. If "folder", the analyzer is stored on disk in the specified folder.
         The "folder" argument must be specified in case of mode "folder".
-        If "memory" is used, the waveforms are stored in RAM. Use this option carefully!
+        If "memory" is used, the analyzer is stored in RAM. Use this option carefully!
     sparse : bool, default: True
         If True, then a sparsity mask is computed using the `estimate_sparsity()` function using
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object.
         Then, the sparsity will be propagated to all ResultExtention that handle sparsity (like wavforms, pca, ...)
         You can control `estimate_sparsity()` : all extra arguments are propagated to it (included job_kwargs)
     sparsity : ChannelSparsity or None, default: None
-        The sparsity used to compute waveforms. If this is given, `sparse` is ignored.
+        The sparsity used to compute exensions. If this is given, `sparse` is ignored.
     return_scaled : bool, default: True
         All extensions that play with traces will use this global return_scaled : "waveforms", "noise_levels", "templates".
         This prevent return_scaled being differents from different extensions and having wrong snr for instance.
@@ -98,7 +98,7 @@ def create_sorting_analyzer(
     --------
     >>> import spikeinterface as si
 
-    >>> # Extract dense waveforms and save to disk with binary_folder format.
+    >>> # Create dense analyzer and save to disk with binary_folder format.
     >>> sorting_analyzer = si.create_sorting_analyzer(sorting, recording, format="binary_folder", folder="/path/to_my/result")
 
     >>> # Can be reload
@@ -172,14 +172,19 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto", backend_o
     Parameters
     ----------
     folder : str or Path
-        The folder / zarr folder where the waveform extractor is stored
+        The folder / zarr folder where the analyzer is stored. If the folder is a remote path stored in the cloud,
+        the backend_options can be used to specify credentials. If the remote path is not accessible,
+        and backend_options is not provided, the function will try to load the object in anonymous mode (anon=True),
+        which enables to load data from open buckets.
     load_extensions : bool, default: True
         Load all extensions or not.
     format : "auto" | "binary_folder" | "zarr"
         The format of the folder.
-    storage_options : dict | None, default: None
-        The storage options to specify credentials to remote zarr bucket.
-        For open buckets, it doesn't need to be specified.
+    backend_options : dict | None, default: None
+        The backend options for the backend.
+        The dictionary can contain the following keys:
+        - storage_options: dict | None (fsspec storage options)
+        - saving_options: dict | None (additional saving options for creating and saving datasets)
 
     Returns
     -------
@@ -187,7 +192,20 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto", backend_o
         The loaded SortingAnalyzer
 
     """
-    return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format, backend_options=backend_options)
+    if is_path_remote(folder) and backend_options is None:
+        try:
+            return SortingAnalyzer.load(
+                folder, load_extensions=load_extensions, format=format, backend_options=backend_options
+            )
+        except Exception as e:
+            backend_options = dict(storage_options=dict(anon=True))
+            return SortingAnalyzer.load(
+                folder, load_extensions=load_extensions, format=format, backend_options=backend_options
+            )
+    else:
+        return SortingAnalyzer.load(
+            folder, load_extensions=load_extensions, format=format, backend_options=backend_options
+        )
 
 
 class SortingAnalyzer:
@@ -2286,7 +2304,7 @@ class AnalyzerExtension:
 
     def reset(self):
         """
-        Reset the waveform extension.
+        Reset the extension.
         Delete the sub folder and create a new empty one.
         """
         self._reset_extension_folder()

@@ -12,6 +12,7 @@ from .basesorting import BaseSorting, SpikeVectorSortingSegment, minimum_spike_d
 from .core_tools import define_function_from_class, check_json
 from .job_tools import split_job_kwargs
 from .recording_tools import determine_cast_unsigned
+from .core_tools import is_path_remote
 
 
 class ZarrRecordingExtractor(BaseRecording):
@@ -21,7 +22,11 @@ class ZarrRecordingExtractor(BaseRecording):
     Parameters
     ----------
     folder_path : str or Path
-        Path to the zarr root folder
+        Path to the zarr root folder. This can be a local path or a remote path (s3:// or gcs://).
+        If the path is a remote path, the storage_options can be provided to specify credentials.
+        If the remote path is not accessible and backend_options is not provided,
+        the function will try to load the object in anonymous mode (anon=True),
+        which enables to load data from open buckets.
     storage_options : dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
 
@@ -35,7 +40,14 @@ class ZarrRecordingExtractor(BaseRecording):
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
-        self._root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+        if is_path_remote(str(folder_path)) and storage_options is None:
+            try:
+                self._root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+            except Exception as e:
+                storage_options = {"anon": True}
+                self._root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+        else:
+            self._root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
 
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
@@ -150,7 +162,11 @@ class ZarrSortingExtractor(BaseSorting):
     Parameters
     ----------
     folder_path : str or Path
-        Path to the zarr root file
+        Path to the zarr root file. This can be a local path or a remote path (s3:// or gcs://).
+        If the path is a remote path, the storage_options can be provided to specify credentials.
+        If the remote path is not accessible and backend_options is not provided,
+        the function will try to load the object in anonymous mode (anon=True),
+        which enables to load data from open buckets.
     storage_options : dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
     zarr_group : str or None, default: None
@@ -165,7 +181,15 @@ class ZarrSortingExtractor(BaseSorting):
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
-        zarr_root = self._root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+        if is_path_remote(str(folder_path)) and storage_options is None:
+            try:
+                zarr_root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+            except Exception as e:
+                storage_options = {"anon": True}
+                zarr_root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+        else:
+            zarr_root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+
         if zarr_group is None:
             self._root = zarr_root
         else:
