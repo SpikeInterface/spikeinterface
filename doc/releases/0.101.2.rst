@@ -9,6 +9,8 @@ Minor release with bug fixes
 
 core:
 
+* Fix `random_spikes_selection()` (#3456)
+* Expose `backend_options` at the analyzer level to set `storage_options` and `saving_options` (#3446)
 * Avoid warnings in `SortingAnalyzer` (#3455)
 * Fix `reset_global_job_kwargs` (#3452)
 * Allow to save recordingless analyzer as (#3443)
@@ -18,6 +20,7 @@ core:
 * Fix integer overflow in parallel computing (#3426)
 * Refactor `pandas` save load and `convert_dtypes` (#3412)
 * Add spike-train based lazy `SortingGenerator` (#2227)
+
 
 extractors:
 
