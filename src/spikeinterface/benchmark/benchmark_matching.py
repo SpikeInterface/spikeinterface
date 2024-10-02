@@ -33,8 +33,9 @@ class MatchingBenchmark(Benchmark):
         sorting["unit_index"] = spikes["cluster_index"]
         sorting["segment_index"] = spikes["segment_index"]
         sorting = NumpySorting(sorting, self.recording.sampling_frequency, unit_ids)
-        self.result = {"sorting": sorting}
+        self.result = {"sorting": sorting, "spikes" : spikes}
         self.result["templates"] = self.templates
+        
 
     def compute_result(self, with_collision=False, **result_params):
         sorting = self.result["sorting"]
@@ -45,6 +46,7 @@ class MatchingBenchmark(Benchmark):
 
     _run_key_saved = [
         ("sorting", "sorting"),
+        ("spikes", "npy"),
         ("templates", "zarr_templates"),
     ]
     _result_key_saved = [("gt_collision", "pickle"), ("gt_comparison", "pickle")]

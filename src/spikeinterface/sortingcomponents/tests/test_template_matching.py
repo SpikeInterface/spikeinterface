@@ -69,7 +69,8 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
 
         gt_sorting = sorting_analyzer.sorting
 
-        sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], recording.sampling_frequency)
+        sorting = NumpySorting.from_times_labels(spikes["sample_index"],
+                                                 spikes["cluster_index"], recording.sampling_frequency)
 
         ##metrics = si.compute_quality_metrics(sorting_analyzer, metric_names=["snr"])
 
