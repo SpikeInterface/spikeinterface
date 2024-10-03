@@ -211,6 +211,7 @@ def auto_label_units(
     model_name=None,
     repo_id=None,
     label_conversion=None,
+    trust_model=False,
     trusted=None,
     export_to_phy=False,
 ):
@@ -237,6 +238,9 @@ def auto_label_units(
         tries to extract from `model_info.json` file. The dictionary should have the format {old_label: new_label}.
     export_to_phy : bool, default: False
         Whether to export the results to Phy format. Default is False.
+    trust_model : bool, default: False
+        Whether to trust the model. If True, the `trusted` parameter that is passed to `skops.load` to load the model will be
+        automatically inferred. If False, the `trusted` parameter must be provided to indicate the trusted objects.
     trusted : list of str, default: None
         Passed to skops.load. The object will be loaded only if there are only trusted objects and objects of types listed in trusted in the dumped file.
 
@@ -253,7 +257,9 @@ def auto_label_units(
     """
     from sklearn.pipeline import Pipeline
 
-    model, model_info = load_model(model_folder=model_folder, repo_id=repo_id, model_name=model_name, trusted=trusted)
+    model, model_info = load_model(
+        model_folder=model_folder, repo_id=repo_id, model_name=model_name, trust_model=trust_model, trusted=trusted
+    )
 
     if not isinstance(model, Pipeline):
         raise ValueError("The model must be an instance of sklearn.pipeline.Pipeline")
@@ -267,7 +273,7 @@ def auto_label_units(
     return classified_units
 
 
-def load_model(model_folder=None, repo_id=None, model_name=None, trusted=None):
+def load_model(model_folder=None, repo_id=None, model_name=None, trust_model=False, trusted=None):
     """
     Loads a model and model_info from a HuggingFaceHub repo or a local folder.
 
@@ -279,6 +285,9 @@ def load_model(model_folder=None, repo_id=None, model_name=None, trusted=None):
         Hugging face repo id which contains the model e.g. 'username/model'
     model_name: str | Path, default: None
         Filename of model e.g. 'my_model.skops'. If None, uses first model found.
+    trust_model : bool, default: False
+        Whether to trust the model. If True, the `trusted` parameter that is passed to `skops.load` to load the model will be
+        automatically inferred. If False, the `trusted` parameter must be provided to indicate the trusted objects.
     trusted : list of str, default: None
         Passed to skops.load. The object will be loaded only if there are only trusted objects and objects of types listed in trusted in the dumped file.
 
@@ -294,14 +303,18 @@ def load_model(model_folder=None, repo_id=None, model_name=None, trusted=None):
     elif model_folder is not None and repo_id is not None:
         raise ValueError("Please only provide one of 'model_folder' or 'repo_id'.")
     elif model_folder is not None:
-        model, model_info = _load_model_from_folder(model_folder=model_folder, model_name=model_name, trusted=trusted)
+        model, model_info = _load_model_from_folder(
+            model_folder=model_folder, model_name=model_name, trust_model=trust_model, trusted=trusted
+        )
     else:
-        model, model_info = _load_model_from_huggingface(repo_id=repo_id, model_name=model_name, trusted=trusted)
+        model, model_info = _load_model_from_huggingface(
+            repo_id=repo_id, model_name=model_name, trust_model=trust_model, trusted=trusted
+        )
 
     return model, model_info
 
 
-def _load_model_from_huggingface(repo_id=None, model_name=None, trusted=None):
+def _load_model_from_huggingface(repo_id=None, model_name=None, trust_model=False, trusted=None):
     """
     Loads a model from a huggingface repo
 
@@ -323,12 +336,14 @@ def _load_model_from_huggingface(repo_id=None, model_name=None, trusted=None):
             full_path = hf_hub_download(repo_id=repo_id, filename=filename)
             model_folder = Path(full_path).parent
 
-    model, model_info = _load_model_from_folder(model_folder=model_folder, model_name=model_name, trusted=trusted)
+    model, model_info = _load_model_from_folder(
+        model_folder=model_folder, model_name=model_name, trust_model=trust_model, trusted=trusted
+    )
 
     return model, model_info
 
 
-def _load_model_from_folder(model_folder=None, model_name=None, trusted=None):
+def _load_model_from_folder(model_folder=None, model_name=None, trust_model=False, trusted=None):
     """
     Loads a model and model_info from a folder
 
@@ -339,24 +354,35 @@ def _load_model_from_folder(model_folder=None, model_name=None, trusted=None):
     """
 
     import skops.io as skio
+    from skops.io.exceptions import UntrustedTypesFoundException
 
     folder = Path(model_folder)
     assert folder.is_dir(), f"The folder {folder}, does not exist."
 
-    if model_name is not None:
-        skops_file = Path(model_folder) / Path(model_name)
-        assert skops_file.is_file(), f"Model file {skops_file} not found."
-    else:
-        # look for any .skops files
-        skops_files = list(folder.glob("*.skops"))
-        assert skops_files != [], f"There are no '.skops' files in the folder {folder}"
-        if len(skops_files) > 1:
-            warnings.warn(
-                "There are more than 1 '.skops' file in folder {folder}. Selecting {skops_file}. You can specify the file using the 'model_name' argument."
-            )
+    # look for any .skops files
+    skops_files = list(folder.glob("*.skops"))
+    assert len(skops_files) > 0, f"There are no '.skops' files in the folder {folder}"
 
+    if len(skops_files) > 1:
+        if model_name is None:
+            model_names = [f.name for f in skops_files]
+            raise ValueError(
+                f"There are more than 1 '.skops' file in folder {folder}. You have to specify "
+                f"the file using the 'model_name' argument. Available files:\n{model_names}"
+            )
+        else:
+            skops_file = folder / Path(model_name)
+            assert skops_file.is_file(), f"Model file {skops_file} not found."
+    elif len(skops_files) == 1:
         skops_file = skops_files[0]
 
+    if trust_model and trusted is None:
+        try:
+            model = skio.load(skops_file)
+        except UntrustedTypesFoundException as e:
+            exception_msg = str(e)
+            # the exception message contains the list of untrusted objects after a colon and enswith a period
+            trusted = eval(exception_msg.split(":")[1][:-1])
     model = skio.load(skops_file, trusted=trusted)
 
     model_info_path = folder / "model_info.json"
