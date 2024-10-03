@@ -189,9 +189,17 @@ so that the user knows what the options are.
 Miscelleaneous Stylistic Conventions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-#. Avoid using abreviations in variable names (e.g., use :code:`recording` instead of :code:`rec`). It is especially important to avoid single letter variables.
+#. Avoid using abbreviations in variable names (e.g. use :code:`recording` instead of :code:`rec`). It is especially important to avoid single letter variables.
 #. Use index as singular and indices for plural following the NumPy convention. Avoid idx or indexes. Plus, id and ids are reserved for identifiers (i.e. channel_ids)
 #. We use file_path and folder_path (instead of file_name and folder_name) for clarity.
+#. For creating headers to divide sections of code we use the following convention (see issue `#3019 <https://github.com/SpikeInterface/spikeinterface/issues/3019>`_):
+
+
+.. code:: python
+
+    #########################################
+    # A header
+    #########################################
 
 
 How to build the documentation

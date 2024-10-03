@@ -73,6 +73,19 @@ Low-level
 
     .. autoclass:: ChunkRecordingExecutor
 
+
+Back-compatibility with ``WaveformExtractor`` (version < 0.101.0)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: spikeinterface.core
+    :noindex:
+
+    .. autofunction:: extract_waveforms
+    .. autofunction:: load_waveforms
+    .. autofunction:: load_sorting_analyzer_or_waveforms
+
+
+
 spikeinterface.extractors
 -------------------------
 

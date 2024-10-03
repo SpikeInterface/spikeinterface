@@ -13,9 +13,19 @@ class CollisionGTComparison(GroundTruthComparison):
 
     This class needs maintenance and need a bit of refactoring.
 
-
-    collision_lag : float
+    Parameters
+    ----------
+    gt_sorting : SortingExtractor
+        The first sorting for the comparison
+    collision_lag : float, default 2.0
         Collision lag in ms.
+    tested_sorting : SortingExtractor
+        The second sorting for the comparison
+    nbins : int, default : 11
+        Number of collision bins
+    **kwargs : dict
+        Keyword arguments for `GroundTruthComparison`
+
 
     """
 
