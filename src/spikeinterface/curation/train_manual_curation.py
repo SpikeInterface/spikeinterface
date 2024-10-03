@@ -184,8 +184,8 @@ class CurationModelTrainer:
 
         self.metric_names = metric_names
 
-        if folder is not None and not folder.is_dir():
-            folder.mkdir(parents=True, exist_ok=True)
+        if self.folder is not None and not self.folder.is_dir():
+            self.folder.mkdir(parents=True, exist_ok=True)
 
         # update job_kwargs with global ones
         job_kwargs = fix_job_kwargs(job_kwargs)
