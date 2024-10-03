@@ -65,7 +65,7 @@ class CurationModelTrainer:
     ----------
     labels : list of lists, default: None
         List of curated labels for each unit; must be in the same order as the metrics data.
-    output_folder : str, default: None
+    folder : str, default: None
         The folder where outputs such as models and evaluation metrics will be saved, if specified. Requires the skops library. If None, output will not be saved on file system.
     metric_names : list of str, default: None
         A list of metrics to use for training. If None, default metrics will be used.
@@ -82,7 +82,7 @@ class CurationModelTrainer:
 
     Attributes
     ----------
-    output_folder : str
+    folder : str
         The folder where outputs such as models and evaluation metrics will be saved. Requires the skops library.
     labels : list of lists, default: None
         List of curated labels for each `sorting_analyzer` and each unit; must be in the same order as the metrics data.
@@ -132,7 +132,7 @@ class CurationModelTrainer:
     def __init__(
         self,
         labels=None,
-        output_folder=None,
+        folder=None,
         metric_names=None,
         imputation_strategies=None,
         scaling_techniques=None,
@@ -161,7 +161,7 @@ class CurationModelTrainer:
         else:
             raise ValueError("classifiers must be a list or dictionary")
 
-        self.output_folder = output_folder if output_folder is not None else None
+        self.folder = Path(folder) if folder is not None else None
         self.imputation_strategies = imputation_strategies
         self.scaling_techniques = scaling_techniques
         self.seed = seed if seed is not None else np.random.default_rng(seed=None).integers(0, 2**31)
@@ -184,8 +184,8 @@ class CurationModelTrainer:
 
         self.metric_names = metric_names
 
-        if output_folder is not None and not os.path.exists(output_folder):
-            os.makedirs(output_folder)
+        if folder is not None and not folder.is_dir():
+            folder.mkdir(parents=True, exist_ok=True)
 
         # update job_kwargs with global ones
         job_kwargs = fix_job_kwargs(job_kwargs)
@@ -471,7 +471,7 @@ class CurationModelTrainer:
 
         self.best_pipeline = best_pipeline
 
-        if self.output_folder is not None:
+        if self.folder is not None:
             self._save()
 
     def _save(self):
@@ -480,14 +480,14 @@ class CurationModelTrainer:
         import pandas as pd
 
         # export training data and labels
-        pd.DataFrame(self.X).to_csv(os.path.join(self.output_folder, f"training_data.csv"), index_label="unit_id")
-        pd.DataFrame(self.y).to_csv(os.path.join(self.output_folder, f"labels.csv"), index_label="unit_index")
+        pd.DataFrame(self.X).to_csv(self.folder / f"training_data.csv", index_label="unit_id")
+        pd.DataFrame(self.y).to_csv(self.folder / f"labels.csv", index_label="unit_index")
 
         self.requirements["scikit-learn"] = sklearn.__version__
 
-        # Dump to skops if output_folder is provided
-        dump(self.best_pipeline, os.path.join(self.output_folder, f"best_model.skops"))
-        self.test_accuracies_df.to_csv(os.path.join(self.output_folder, f"model_accuracies.csv"), float_format="%.4f")
+        # Dump to skops if folder is provided
+        dump(self.best_pipeline, self.folder / f"best_model.skops")
+        self.test_accuracies_df.to_csv(self.folder / f"model_accuracies.csv", float_format="%.4f")
 
         model_info = {}
         model_info["metric_params"] = self.metrics_params
@@ -496,7 +496,7 @@ class CurationModelTrainer:
 
         model_info["label_conversion"] = self.label_conversion
 
-        param_file = self.output_folder + "/model_info.json"
+        param_file = self.folder / "model_info.json"
         Path(param_file).write_text(json.dumps(model_info, indent=4), encoding="utf8")
 
     def _train_and_evaluate(self, imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, model_id):
@@ -547,7 +547,7 @@ def train_model(
     labels=None,
     analyzers=None,
     metrics_path=None,
-    output_folder=None,
+    folder=None,
     metric_names=None,
     imputation_strategies=None,
     scaling_techniques=None,
@@ -573,7 +573,7 @@ def train_model(
         List of curated labels for each unit; must be in the same order as the metrics data.
     metrics_path : str or None, default: None
         The path to the CSV file containing the metrics data if using 'csv' mode.
-    output_folder : str | None, default: None
+    folder : str | None, default: None
         The folder where outputs such as models and evaluation metrics will be saved.
     metric_names : list of str | None, default: None
         A list of metrics to use for training. If None, default metrics will be used.
@@ -584,7 +584,7 @@ def train_model(
     classifiers : list of str | dict | None, default: None
         A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_default_classifier_search_spaces` method for the default search spaces & format for custom spaces.
     overwrite : bool, default: False
-        Overwrites the `output_folder` if it already exists
+        Overwrites the `folder` if it already exists
     seed : int | None, default: None
         Random seed for reproducibility. If None, a random seed will be generated.
 
@@ -600,9 +600,7 @@ def train_model(
     """
 
     if overwrite is False:
-        assert not Path(
-            output_folder
-        ).exists(), f"folder {output_folder} already exists, choose another name or use overwrite=True"
+        assert not Path(folder).is_dir(), f"folder {folder} already exists, choose another name or use overwrite=True"
 
     if labels is None:
         raise Exception("You must supply a list of lists of curated labels using `labels = [[...],[...],...]`")
@@ -612,7 +610,7 @@ def train_model(
 
     trainer = CurationModelTrainer(
         labels=labels,
-        output_folder=output_folder,
+        folder=folder,
         metric_names=metric_names,
         imputation_strategies=imputation_strategies,
         scaling_techniques=scaling_techniques,
@@ -626,7 +624,7 @@ def train_model(
         trainer.load_and_preprocess_analyzers(analyzers)
 
     elif mode == "csv":
-        assert os.path.exists(metrics_path), "Valid metrics path must be provided for mode 'csv'"
+        assert Path(metrics_path).is_file(), "Valid metrics path must be provided for mode 'csv'"
         trainer.load_and_preprocess_csv(metrics_path)
 
     trainer.evaluate_model_config()

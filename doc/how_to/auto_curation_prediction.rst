@@ -36,5 +36,5 @@ are also saved as a property of your ``sorting_analyzer`` and can be accessed li
 
 .. code::
 
-    labels = sorting_analyzer.get_property("classifier_label")
-    probabilities = sorting_analyzer.get_property("classifier_probability")
+    labels = sorting_analyzer.sorting.get_property("classifier_label")
+    probabilities = sorting_analyzer.sorting.get_property("classifier_probability")

@@ -1,5 +1,5 @@
 """
-Model Based Curation Tutorial
+Model-based curation tutorial
 =============================
 
 This notebook provides a step-by-step guide on how to use a machine learning classifier for

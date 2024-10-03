@@ -1,21 +1,22 @@
 import pytest
-import os
 import numpy as np
-from spikeinterface.curation.train_manual_curation import CurationModelTrainer, train_model
 import tempfile, csv
+from pathlib import Path
+
+from spikeinterface.curation.train_manual_curation import CurationModelTrainer, train_model
 
 
 @pytest.fixture
 def trainer():
 
-    output_folder = tempfile.mkdtemp()  # Create a temporary output folder
+    folder = tempfile.mkdtemp()  # Create a temporary output folder
     imputation_strategies = ["median"]
     scaling_techniques = ["standard_scaler"]
     classifiers = ["LogisticRegression"]
     metric_names = ["metric1", "metric2", "metric3"]
     return CurationModelTrainer(
         labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1]],
-        output_folder=output_folder,
+        folder=folder,
         metric_names=metric_names,
         imputation_strategies=imputation_strategies,
         scaling_techniques=scaling_techniques,
@@ -94,21 +95,22 @@ def test_evaluate_model_config(trainer):
     trainer.y = np.append(np.ones(5), np.zeros(5))
 
     trainer.evaluate_model_config()
-    assert os.path.exists(trainer.output_folder)
-    assert os.path.exists(os.path.join(trainer.output_folder, "best_model.skops"))
-    assert os.path.exists(os.path.join(trainer.output_folder, "model_accuracies.csv"))
-    assert os.path.exists(os.path.join(trainer.output_folder, "model_info.json"))
+    trainer_folder = Path(trainer.folder)
+    assert trainer_folder.is_dir()
+    assert (trainer_folder / "best_model.skops").is_file()
+    assert (trainer_folder / "model_accuracies.csv").is_file()
+    assert (trainer_folder / "model_info.json").is_file()
 
 
 def test_train_model():
 
     metrics_path = make_temp_training_csv()
-    output_folder = tempfile.mkdtemp()
+    folder = tempfile.mkdtemp()
     metric_names = ["metric1", "metric2", "metric3"]
     trainer = train_model(
         mode="csv",
         metrics_path=metrics_path,
-        output_folder=output_folder,
+        folder=folder,
         labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1]],
         metric_names=metric_names,
         imputation_strategies=["median"],
