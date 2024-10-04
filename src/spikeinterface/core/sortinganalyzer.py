@@ -2245,9 +2245,15 @@ class AnalyzerExtension:
                 elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
                     df_group = extension_group.create_group(ext_data_name)
                     # first we save the index
-                    df_group.create_dataset(name="index", data=ext_data.index.to_numpy())
+                    indices = ext_data.index.to_numpy()
+                    if indices.dtype.kind == "O":
+                        indices = indices.astype(str)
+                    df_group.create_dataset(name="index", data=indices)
                     for col in ext_data.columns:
-                        df_group.create_dataset(name=col, data=ext_data[col].to_numpy())
+                        col_data = ext_data[col].to_numpy()
+                        if col_data.dtype.kind == "O":
+                            col_data = col_data.astype(str)
+                        df_group.create_dataset(name=col, data=col_data)
                     df_group.attrs["dataframe"] = True
                 else:
                     # any object
