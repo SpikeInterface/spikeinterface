@@ -7,10 +7,14 @@ If the pretrained models do not give satisfactory performance on your data, it i
 import warnings
 warnings.filterwarnings("ignore")
 from pathlib import Path
-import spikeinterface.full as si
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+import spikeinterface.core as si
+import spikeinterface.curation as sc
+import spikeinterface.widgets as sw
+
 
 # Note, you can set the number of cores you use using e.g.
 # si.set_global_job_kwargs(n_jobs = 8)
@@ -47,7 +51,7 @@ analyzer.compute(['noise_levels','random_spikes','waveforms','templates','spike_
 # :code:`sorting_1` so should look like a real unit; the sixth (unit id 5) belongs to :code:`sorting_2`
 # so should look like noise.
 
-si.plot_unit_templates(analyzer, unit_ids=[0,5])
+sw.plot_unit_templates(analyzer, unit_ids=[0,5])
 
 ##############################################################################
 # This is as expected: great! Find out more about plotting using widgets `here <https://spikeinterface.readthedocs.io/en/latest/modules/widgets.html>`_. The labels
@@ -64,20 +68,20 @@ labels = ['good', 'good', 'good', 'good', 'good', 'bad', 'bad', 'bad', 'bad', 'b
 # scaling techniques then save the most accurate. To save time, we'll only try one classifier
 # (Random Forest), imputation strategy (median) and scaling technique (standard scaler).
 
-output_folder = "my_model"
+folder = "my_model"
 
 # We will use a list of one analyzer here, we would strongly advise using more than one to
 # improve model performance
-trainer = si.train_model(
+trainer = sc.train_model(
     mode = "analyzers", # You can supply a labelled csv file instead of an analyzer
     labels = [labels],
     analyzers = [analyzer],
-    output_folder = output_folder, # Where to save the model and model_info.json file
+    folder = folder, # Where to save the model and model_info.json file
     metric_names = None, # Specify which metrics to use for training: by default uses those already calculted
     imputation_strategies = ["median"], # Defaults to all
     scaling_techniques = ["standard_scaler"], # Defaults to all
     classifiers = None, # Default to Random Forest only. Other classifiers you can try [ "AdaBoostClassifier","GradientBoostingClassifier","LogisticRegression","MLPClassifier"]
-    overwrite = True, # Whether or not to overwrite `output_folder` if it already exists. Default is False.
+    overwrite = True, # Whether or not to overwrite `folder` if it already exists. Default is False.
 )
 
 best_model = trainer.best_pipeline
@@ -85,14 +89,14 @@ best_model = trainer.best_pipeline
 ##############################################################################
 # The above code saves the model in ``my_model/model.skops``, some metadata in
 # ``my_model/model_info.json`` and the model accuracies in ``model_accuracies.csv``
-# in the specified ``output_folder``.
+# in the specified ``folder``.
 #
 # ``skops`` is a file format: you can think of it as a more-secture pkl file. `Read more <https://skops.readthedocs.io/en/stable/index.html>`_.
 #
 # The ``model_accuracies.csv`` file contains the accuracy, precision and recall of the
 # tested models. Let's take a look
 
-accuracies = pd.read_csv(Path(output_folder) / "model_accuracies.csv", index_col = 0)
+accuracies = pd.read_csv(Path(folder) / "model_accuracies.csv", index_col = 0)
 accuracies.head()
 
 ##############################################################################

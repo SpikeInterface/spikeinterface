@@ -12,7 +12,11 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import spikeinterface.full as si
+
+import spikeinterface.core as si
+import spikeinterface.curation as sc
+import spikeinterface.widgets as sw
+
 
 # note: you can use more cores using e.g.
 # si.set_global_jobs_kwargs(n_jobs = 8)
@@ -26,7 +30,7 @@ import spikeinterface.full as si
 # folder. The function downloads the model and saves it in a temporary folder and returns a
 # model and some metadata about the model.
 
-model, model_info = si.load_model(
+model, model_info = sc.load_model(
     repo_id = "SpikeInterface/toy_tetrode_model",
     trusted = ['numpy.dtype']
 )
@@ -67,7 +71,7 @@ print(np.all(all_metric_names == model.feature_names_in_))
 # a repo. The function returns a dictionary containing a label and a confidence for each unit
 # contained in the ``sorting_analyzer``.
 
-labels = si.auto_label_units(
+labels = sc.auto_label_units(
     sorting_analyzer = sorting_analyzer,
     repo_id = "SpikeInterface/toy_tetrode_model",
     trusted = ['numpy.dtype']
@@ -80,7 +84,7 @@ labels
 # The model has labelled one unit as bad. Let's look at that one, and the 'good' unit with the highest
 # confidence of being 'good'.
 
-si.plot_unit_templates(sorting_analyzer, unit_ids=[7,9])
+sw.plot_unit_templates(sorting_analyzer, unit_ids=[7,9])
 
 ##############################################################################
 # Nice - we see that unit 9 does look a lot more spikey than unit 7. You might think that unit
@@ -184,8 +188,8 @@ plt.legend(); plt.grid(True); plt.show()
 # We can choose which to load in the ``load_model`` function as follows:
 #
 # .. code-block::
-#
-#    model, model_info = si.load_model(
+#    import spikeinterface.curation as sc
+#    model, model_info = sc.load_model(
 #        repo_id = "AnoushkaJain3/curation_machine_learning_models",
 #        model_name= 'noise_neuron_model.skops',
 #    )
@@ -210,7 +214,7 @@ plt.legend(); plt.grid(True); plt.show()
 #
 # .. code-block::
 #
-#     model, model_info = si.load_model(
+#     model, model_info = sc.load_model(
 #         model_name = 'noise_neuron_model.skops',
 #         repo_id = "AnoushkaJain3/curation_machine_learning_models",
 #         trusted = ['sklearn.metrics._classification.balanced_accuracy_score', 'sklearn.metrics._scorer._Scorer', 'sklearn.model_selection._search_successive_halving.HalvingGridSearchCV', 'sklearn.model_selection._split.StratifiedKFold']

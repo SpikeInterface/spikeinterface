@@ -69,10 +69,13 @@ class CurationModelTrainer:
         The folder where outputs such as models and evaluation metrics will be saved, if specified. Requires the skops library. If None, output will not be saved on file system.
     metric_names : list of str, default: None
         A list of metrics to use for training. If None, default metrics will be used.
-    imputation_strategies : list of str, default: None
-        A list of imputation strategies to apply. If None, default strategies will be used.
-    scaling_techniques : list of str, default: None
-        A list of scaling techniques to apply. If None, default techniques will be used.
+    imputation_strategies : list of str | None, default: None
+        A list of imputation strategies to try. Can be "knn”, "iterative" or any allowed
+        strategy passable to the sklearn `SimpleImputer`. If None, the default strategies
+        `["median", "most_frequent", "knn", "iterative"]` will be used.
+    scaling_techniques : list of str | None, default: None
+        A list of scaling techniques to try. Can be "standard_scaler", "min_max_scaler",
+        or "robust_scaler", If None, all techniques will be used.
     classifiers : list of str or dict, default: None
         A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_default_classifier_search_spaces` method for the default search spaces & format for custom spaces.
     seed : int, default: None
@@ -86,10 +89,13 @@ class CurationModelTrainer:
         The folder where outputs such as models and evaluation metrics will be saved. Requires the skops library.
     labels : list of lists, default: None
         List of curated labels for each `sorting_analyzer` and each unit; must be in the same order as the metrics data.
-    imputation_strategies : list of str
-        The list of imputation strategies to apply.
-    scaling_techniques : list of str
-        The list of scaling techniques to apply.
+    imputation_strategies : list of str | None, default: None
+        A list of imputation strategies to try. Can be "knn”, "iterative" or any allowed
+        strategy passable to the sklearn `SimpleImputer`. If None, the default strategies
+        `["median", "most_frequent", "knn", "iterative"]` will be used.
+    scaling_techniques : list of str | None, default: None
+        A list of scaling techniques to try. Can be "standard_scaler", "min_max_scaler",
+        or "robust_scaler", If None, all techniques will be used.
     classifiers : list of str
         The list of classifiers to evaluate.
     classifier_search_space : dict or None
@@ -578,9 +584,12 @@ def train_model(
     metric_names : list of str | None, default: None
         A list of metrics to use for training. If None, default metrics will be used.
     imputation_strategies : list of str | None, default: None
-        A list of imputation strategies to apply. If None, default strategies will be used.
+        A list of imputation strategies to try. Can be "knn”, "iterative" or any allowed
+        strategy passable to the sklearn `SimpleImputer`. If None, the default strategies
+        `["median", "most_frequent", "knn", "iterative"]` will be used.
     scaling_techniques : list of str | None, default: None
-        A list of scaling techniques to apply. If None, default techniques will be used.
+        A list of scaling techniques to try. Can be "standard_scaler", "min_max_scaler",
+        or "robust_scaler", If None, all techniques will be used.
     classifiers : list of str | dict | None, default: None
         A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_default_classifier_search_spaces` method for the default search spaces & format for custom spaces.
     overwrite : bool, default: False
