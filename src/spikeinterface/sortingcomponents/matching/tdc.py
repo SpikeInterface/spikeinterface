@@ -879,13 +879,15 @@ class TridesclousPeeler2(BaseTemplateMatching):
                     distances_shift,
                     chan_sparsity_mask,
                 )
+                
                 ind_shift = np.argmin(distances_shift)
                 shift = self.possible_shifts[ind_shift]
 
-                
                 template_sparse = self.dense_templates_array[cluster_index, :, :][:, chan_sparsity_mask]
 
+                # TODO DEBUG shift later
                 spikes["sample_index"][i] += shift
+
                 spikes["cluster_index"][i] = cluster_index
             else:
                 spikes["cluster_index"][i] = -1
@@ -895,32 +897,20 @@ class TridesclousPeeler2(BaseTemplateMatching):
         spikes = spikes[keep]
 
         delta_sample = self.nbefore + self.nafter
-        # TODO benchmark this
-        # delta_sample = self.nbefore_short + self.nafter_short
-        neighbors_spikes = get_neighbors_spikes(spikes["sample_index"], spikes["channel_index"], delta_sample, self.near_chan_mask)
+        # TODO benchmark this and make this faster
+        neighbors_spikes_inds = get_neighbors_spikes(spikes["sample_index"], spikes["channel_index"], delta_sample, self.near_chan_mask)
         for i in range(spikes.size):
-            if len(neighbors_spikes[i]) == 0:
-                # TODO find someting better
-                spikes["amplitude"][i] = 1.0
-            else:
-                local_inds = [i] + neighbors_spikes[i]
-                local_spikes = spikes[local_inds]
-
-                # TODO make the clip shorter
-                start, stop = np.min(spikes["sample_index"]) - self.nbefore, np.max(spikes["sample_index"]) + self.nafter
-                sparse_templates_array = self.templates.templates_array
-                cluster_index = spikes["cluster_index"][i]
-                chan_sparsity_mask = self.sparsity_mask[cluster_index, :]
-                local_amplitudes = fit_sevral_amplitudes(local_spikes, traces, start, stop, self.sparsity_mask,
-                                                         sparse_templates_array, self.nbefore, chan_sparsity_mask)
-                amp0 = local_amplitudes[0]
-                spikes["amplitude"][i] = amp0
+            amp = fit_one_amplitude_with_neighbors(spikes[i], spikes[neighbors_spikes_inds[i]],  traces, 
+                                             self.sparsity_mask, self.templates.templates_array, self.nbefore, self.nafter)
+            spikes["amplitude"][i] = amp
 
         keep = (spikes["amplitude"] >= 0.7) & (spikes["amplitude"] <= 1.4)
         spikes = spikes[keep]
 
         sparse_templates_array = self.templates.templates_array
-        construct_prediction_sparse(spikes, traces, sparse_templates_array, self.sparsity_mask, self.nbefore, additive=False)
+        wanted_channel_mask = np.ones(traces.shape[1], dtype=bool)
+        assert np.sum(wanted_channel_mask) == traces.shape[1] # TODO remove this DEBUG later
+        construct_prediction_sparse(spikes, traces, sparse_templates_array, self.sparsity_mask, wanted_channel_mask, self.nbefore, additive=False)
 
 
         return spikes
@@ -928,7 +918,7 @@ class TridesclousPeeler2(BaseTemplateMatching):
 
 def get_neighbors_spikes(sample_inds, chan_inds, delta_sample, near_chan_mask):
 
-    neighbors_spikes = []
+    neighbors_spikes_inds = []
     for i in range(sample_inds.size):
 
         inds = np.flatnonzero(np.abs(sample_inds - sample_inds[i]) < delta_sample)
@@ -936,67 +926,132 @@ def get_neighbors_spikes(sample_inds, chan_inds, delta_sample, near_chan_mask):
         for ind in inds:
             if near_chan_mask[chan_inds[i], chan_inds[ind]] and i != ind:
                 neighb.append(ind)
-        neighbors_spikes.append(neighb)
+        neighbors_spikes_inds.append(neighb)
 
-    return neighbors_spikes
+    return neighbors_spikes_inds
 
-def fit_sevral_amplitudes(spikes, traces, start, stop, sparsity_mask, sparse_templates_array, nbefore, chan_sparsity_mask):
+
+def fit_one_amplitude_with_neighbors(spike, neighbors_spikes,  traces, 
+                                     template_sparsity_mask, sparse_templates_array, nbefore, nafter):
+    """
+    Fit amplitude one spike of one spike with/without neighbors
+    
+    """
+
+
     import scipy.linalg
 
-    # import time
+    cluster_index = spike["cluster_index"]
+    sample_index = spike["sample_index"]
+    chan_sparsity_mask = template_sparsity_mask[cluster_index, :]
+    num_chans = np.sum(chan_sparsity_mask)
+    if num_chans == 0:
+        # protect against empty template because too sparse
+        return 0.
+    start, stop = sample_index - nbefore, sample_index + nafter
+    if neighbors_spikes is None or (neighbors_spikes.size == 0):
+        template = sparse_templates_array[cluster_index, :, :num_chans]
+        wf = traces[start: stop, :][:, chan_sparsity_mask]
+        # TODO precompute template norms
+        amplitude = np.sum(template.flatten() * wf.flatten()) / np.sum(template.flatten()**2)
+    else:
+        
 
-    # t0 = time.perf_counter()
-    local_traces = traces[start:stop, :][:, chan_sparsity_mask]
+        lim0 = min(start, np.min(neighbors_spikes["sample_index"]) - nbefore)
+        lim1 = max(stop, np.max(neighbors_spikes["sample_index"]) + nafter)
 
-    local_spikes = spikes.copy()
-    local_spikes["sample_index"] -= start
-    local_spikes["amplitude"][:] = 1.0
+        local_traces = traces[lim0:lim1, :][:, chan_sparsity_mask]
+        mask_not_fitted =neighbors_spikes["amplitude"] == 0.
+        local_spike = spike.copy()
+        local_spike["sample_index"] -= lim0
+        local_spike["amplitude"] = 1.0
 
-    num_spikes = spikes.size
-    local_chans = np.flatnonzero(chan_sparsity_mask)
-    local_sparsity_mask = sparsity_mask[:, local_chans]
-    x = np.zeros((stop - start, local_chans.size, num_spikes), dtype="float32")
-    for i in range(num_spikes):
-        construct_prediction_sparse(local_spikes[i:i+1], x[:, :, i], sparse_templates_array, local_sparsity_mask, nbefore, True)
-    
-    x = x.reshape(-1, num_spikes)
-    y = local_traces.flatten()
-    
-    # t1 = time.perf_counter()
-    res = scipy.linalg.lstsq(x, y, cond=None, lapack_driver="gelsd")
-    amplitudes = res[0]
-    # t2 = time.perf_counter()
-    # print(t1-t0, t2-t1)
+        local_neighbors_spikes = neighbors_spikes.copy()
+        local_neighbors_spikes["sample_index"] -= lim0
+        local_neighbors_spikes["amplitude"][:] = 1.0
 
-    # import matplotlib.pyplot as plt
-    # num_chans = local_chans.size
-    # x_plot = x.reshape((stop - start, num_chans, num_spikes)).swapaxes(0, 1).reshape(-1, num_spikes)
-    # pred = x @ amplitudes
-    # pred_plot = pred.reshape(-1, num_chans).T.flatten()
-    # y_plot = y.reshape(-1, num_chans).T.flatten()
-    # fig, ax = plt.subplots()
-    # ax.plot(x_plot, color='b')
-    # print(x_plot.shape, y_plot.shape)
-    # ax.plot(y_plot, color='g')
-    # ax.plot(pred_plot , color='r')
-    # ax.set_title(f"{amplitudes}")
-    # plt.show()
+        # already_fitted = neighbors_spikes[~mask]
+        # not_fitted = neighbors_spikes[~mask]
+        
 
-    return amplitudes
+        num_spikes_to_fit = 1 + np.sum(mask_not_fitted)
+        # print()
+        # print('num_spikes_to_fit', num_spikes_to_fit)
+        x = np.zeros((lim1 - lim0, num_chans, num_spikes_to_fit), dtype="float32")
+        # print(mask_not_fitted, num_spikes_to_fit)
+        # print(np.array([local_spike]))
+        # print(chan_sparsity_mask)
+        # print(x[:, :, 0].shape)
+        
+        # TODO refactor this
+        wanted_channel_mask = chan_sparsity_mask
+
+        assert np.sum(wanted_channel_mask) == x.shape[1] # TODO remove this DEBUG later
+        construct_prediction_sparse(np.array([local_spike]), x[:, :, 0], sparse_templates_array, template_sparsity_mask, wanted_channel_mask, nbefore, True)
+
+        j = 1
+        for i in range(neighbors_spikes.size):
+            if mask_not_fitted[i]:
+                # add to regressor
+                # print("not fitted", i, j, local_neighbors_spikes[i:i+1])
+                assert np.sum(wanted_channel_mask) == x.shape[1] # TODO remove this DEBUG later
+                construct_prediction_sparse(local_neighbors_spikes[i:i+1], x[:, :, j], sparse_templates_array, template_sparsity_mask, wanted_channel_mask, nbefore, True)
+                j += 1
+            else:
+                # remove from traces
+                # print("already fitted", i, j, local_neighbors_spikes[i:i+1])
+                assert np.sum(wanted_channel_mask) == local_traces.shape[1] # TODO remove this DEBUG later
+                construct_prediction_sparse(local_neighbors_spikes[i:i+1], local_traces, sparse_templates_array, template_sparsity_mask, wanted_channel_mask, nbefore, False)
+        
+        x = x.reshape(-1, num_spikes_to_fit)
+        y = local_traces.flatten()
+        
+        res = scipy.linalg.lstsq(x, y, cond=None, lapack_driver="gelsd")
+        amplitudes = res[0]
+        amplitude = amplitudes[0]
+
+
+        # import matplotlib.pyplot as plt
+        # x_plot = x.reshape((lim1 - lim0, num_chans, num_spikes_to_fit)).swapaxes(0, 1).reshape(-1, num_spikes_to_fit)
+        # pred = x @ amplitudes
+        # pred_plot = pred.reshape(-1, num_chans).T.flatten()
+        # y_plot = y.reshape(-1, num_chans).T.flatten()
+        # fig, ax = plt.subplots()
+        # ax.plot(x_plot, color='b')
+        # print(x_plot.shape, y_plot.shape)
+        # ax.plot(y_plot, color='g')
+        # ax.plot(pred_plot , color='r')
+        # ax.set_title(f"{amplitudes}")
+        # # ax.set_title(f"{amplitudes} {amp_dot}")
+        # plt.show()
+
+    return amplitude
+
 
 
 if HAVE_NUMBA:
     @jit(nopython=True)
-    def construct_prediction_sparse(spikes, traces, sparse_templates_array, sparsity_mask, nbefore, additive):
+    def construct_prediction_sparse(spikes, traces, sparse_templates_array, template_sparsity_mask, wanted_channel_mask, nbefore, additive):
+        #  must have np.sum(wanted_channel_mask) == traces.shape[0]
+        total_chans = wanted_channel_mask.shape[0]
         for spike in spikes:
             ind0 = spike["sample_index"] - nbefore
             ind1 = ind0 + sparse_templates_array.shape[1]
-            unit_index = spike["cluster_index"]
-            i = 0
-            for chan in range(traces.shape[1]):
-                if sparsity_mask[unit_index, chan]:
-                    if additive:
-                        traces[ind0:ind1, chan] += sparse_templates_array[spike["cluster_index"], :, i] * spike["amplitude"]
-                    else:
-                        traces[ind0:ind1, chan] -= sparse_templates_array[spike["cluster_index"], :, i] * spike["amplitude"]
-                    i += 1
+            cluster_index = spike["cluster_index"]
+            amplitude = spike["amplitude"]
+            chan_in_template = 0
+            chan_in_trace = 0
+            for chan in range(total_chans):
+                if wanted_channel_mask[chan]:
+                    if template_sparsity_mask[cluster_index, chan]:
+                        if additive:
+                            traces[ind0:ind1, chan_in_trace] += sparse_templates_array[cluster_index, :, chan_in_template] * amplitude
+                        else:
+                            traces[ind0:ind1, chan_in_trace] -= sparse_templates_array[cluster_index, :, chan_in_template] * amplitude
+                        chan_in_template += 1
+                    chan_in_trace += 1
+                else:
+                    if template_sparsity_mask[cluster_index, chan]:
+                        chan_in_template += 1
+                
+
