@@ -688,17 +688,14 @@ class TridesclousPeeler2(BaseTemplateMatching):
         detect_threshold=5,
         noise_levels=None,
         radius_um=100.,
-        num_closest=5,
-        sample_shift=3,
+        sample_shift=2,
         ms_before=0.8,
         ms_after=1.2,
-        num_peeler_loop=2,
-        num_template_try=1,
+        max_peeler_loop=3,
+        amplitude_limits=(0.7, 1.4),
         ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
-
-        # self.dense_templates_array = templates.get_dense_templates()
 
         unit_ids = templates.unit_ids
         channel_ids = recording.channel_ids
@@ -748,33 +745,6 @@ class TridesclousPeeler2(BaseTemplateMatching):
 
         # distance between units
         import scipy
-        unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
-
-        # # seach for closet units and unitary discriminant vector
-        # closest_units = []
-        # for unit_ind, unit_id in enumerate(unit_ids):
-        #     order = np.argsort(unit_distances[unit_ind, :])
-        #     closest_u = np.arange(unit_ids.size)[order].tolist()
-        #     closest_u.remove(unit_ind)
-        #     closest_u = np.array(closest_u[: num_closest])
-
-        #     # compute unitary discriminent vector
-        #     (chans,) = np.nonzero(self.sparsity_mask[unit_ind, :])
-        #     template_sparse = self.templates_array[unit_ind, :, :][:, chans]
-        #     closest_vec = []
-        #     # against N closets
-        #     for u in closest_u:
-        #         vec = self.templates_array[u, :, :][:, chans] - template_sparse
-        #         vec /= np.sum(vec**2)
-        #         closest_vec.append((u, vec))
-        #     # against noise
-        #     closest_vec.append((None, -template_sparse / np.sum(template_sparse**2)))
-
-        #     closest_units.append(closest_vec)
-
-        # self.closest_units = closest_units
-
-        # distance channel from unit
 
         # nearby cluster for each channel
         distances = scipy.spatial.distance.cdist(channel_locations, unit_locations, metric="euclidean")
@@ -788,11 +758,10 @@ class TridesclousPeeler2(BaseTemplateMatching):
         distances = scipy.spatial.distance.cdist(channel_locations, channel_locations, metric="euclidean")
         self.near_chan_mask = distances <= radius_um
 
-
         self.possible_shifts = np.arange(-sample_shift, sample_shift + 1, dtype="int64")
 
-        self.num_peeler_loop = num_peeler_loop
-        self.num_template_try = num_template_try
+        self.max_peeler_loop = max_peeler_loop
+        self.amplitude_limits = amplitude_limits
 
         self.margin = max(self.nbefore, self.nafter) * 2
 
@@ -807,17 +776,14 @@ class TridesclousPeeler2(BaseTemplateMatching):
         all_spikes = []
         level = 0
         while True:
-            # spikes = _tdc_find_spikes(traces, d, level=level)
             spikes = self._find_spikes_one_level(traces, level=level)
-            keep = spikes["cluster_index"] >= 0
-
-            if not np.any(keep):
+            if not np.any(spikes.size):
                 break
-            all_spikes.append(spikes[keep])
+            all_spikes.append(spikes)
 
             level += 1
 
-            if level == self.num_peeler_loop:
+            if level == self.max_peeler_loop:
                 break
 
         if len(all_spikes) > 0:
@@ -846,7 +812,6 @@ class TridesclousPeeler2(BaseTemplateMatching):
         spikes["sample_index"] = peak_sample_ind
         spikes["channel_index"] = peak_chan_ind
 
-        # possible_shifts = self.possible_shifts
         distances_shift = np.zeros(self.possible_shifts.size)
 
         delta_sample = max(self.nbefore, self.nafter) #  TODO check this maybe add margin
@@ -897,15 +862,29 @@ class TridesclousPeeler2(BaseTemplateMatching):
                                                 self.sparsity_mask, self.templates.templates_array,
                                                 self.nbefore, self.nafter)
                 
-                if ( 0.7<amp<1.4):
+                low_lim, up_lim = self.amplitude_limits
+                if ( low_lim <= amp <= up_lim):
                     spikes["amplitude"][i] = amp    
                     wanted_channel_mask = np.ones(traces.shape[1], dtype=bool) # TODO move this before the loop
                     construct_prediction_sparse(spikes[i:i+1], traces, self.templates.templates_array,
                                                 self.sparsity_mask, wanted_channel_mask,
                                                 self.nbefore, additive=False)
-                else:
+                elif low_lim > amp:
                     # print("bad amp", amp)
                     spikes["cluster_index"][i] = -1
+                else:
+                    # amp > up_lim
+                    # TODO should try other cluster for the fit!!
+                    spikes["cluster_index"][i] = -1
+
+                    # import matplotlib.pyplot as plt
+                    # fig, ax = plt.subplots()
+                    # sample_ind = spikes["sample_index"][i]
+                    # wf = traces[sample_ind - self.nbefore : sample_ind + self.nafter][:, chan_sparsity_mask]
+                    # ax.plot(wf.T.flatten())
+                    # ax.set_title(f"amp{amp}")
+                    # plt.show()
+                
 
             else:
                 spikes["cluster_index"][i] = -1
