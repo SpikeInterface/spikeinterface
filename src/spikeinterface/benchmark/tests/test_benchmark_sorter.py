@@ -15,6 +15,7 @@ def setup_module(tmp_path_factory):
     create_a_study(study_folder)
     return study_folder
 
+
 def simple_preprocess(rec):
     return bandpass_filter(rec)
 
@@ -75,13 +76,10 @@ def test_SorterStudy(setup_module):
     # import matplotlib.pyplot as plt
     # plt.show()
 
-
     perf_by_unit = study.get_performance_by_unit()
     # print(perf_by_unit)
     count_units = study.get_count_units()
     # print(count_units)
-
-    
 
 
 if __name__ == "__main__":

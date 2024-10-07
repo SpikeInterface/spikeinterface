@@ -1,5 +1,3 @@
-
-
 _txt_error_message = """
 GroundTruthStudy has been replaced by SorterStudy with similar API but not back compatible folder loading.
 You can do:
@@ -12,6 +10,7 @@ study.plot_agreements()
 study.plot_performances_vs_snr()
 ...
 """
+
 
 class GroundTruthStudy:
     def __init__(self, study_folder):

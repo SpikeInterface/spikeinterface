@@ -171,6 +171,7 @@ class CollisionGTComparison(GroundTruthComparison):
 
         return similarities, recall_scores, pair_names
 
+
 # This is removed at the moment.
 # We need to move this maybe one day in benchmark.
 # please do not delete this
