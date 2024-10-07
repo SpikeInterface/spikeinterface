@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from threadpoolctl import threadpool_limits
 import numpy as np
-from spikeinterface.core.node_pipeline import GatherToMemory, GatherToNpy
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs
 from spikeinterface.core import get_chunk_with_margin
