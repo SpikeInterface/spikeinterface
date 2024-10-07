@@ -50,7 +50,7 @@ TODO:
 
 
 def detect_peaks(
-    recording, method="locally_exclusive", pipeline_nodes=None, gather_mode="memory", folder=None, names=None, **kwargs
+    recording, method="locally_exclusive", pipeline_nodes=None, gather_mode="memory", folder=None, names=None, skip_after_n_peaks=None,  **kwargs
 ):
     """Peak detection based on threshold crossing in term of k x MAD.
 
@@ -73,6 +73,9 @@ def detect_peaks(
         If gather_mode is "npy", the folder where the files are created.
     names : list
         List of strings with file stems associated with returns.
+    skip_after_n_peaks : None | int
+        Skip the computation after n_peaks.
+        This is not an exact because internally this skip is done per worker in average.
 
     {method_doc}
     {job_doc}
@@ -124,6 +127,7 @@ def detect_peaks(
         squeeze_output=squeeze_output,
         folder=folder,
         names=names,
+        skip_after_n_peaks=skip_after_n_peaks
     )
     return outs
 
