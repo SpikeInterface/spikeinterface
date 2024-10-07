@@ -32,11 +32,12 @@ class BaseTemplateMatching(PeakDetector):
         spikes["segment_index"] = segment_index
 
         margin = self.get_trace_margin()
-        if margin > 0:
+        if margin > 0 and spikes.size > 0:
             keep = (spikes["sample_index"] >= margin) & (spikes["sample_index"] < (traces.shape[0] - margin))
             spikes = spikes[keep]
 
-        return spikes
+        # node pipeline need to return a tuple
+        return (spikes, )
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
         raise NotImplementedError
