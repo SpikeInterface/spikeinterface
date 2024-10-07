@@ -163,16 +163,18 @@ class ClusteringStudy(BenchmarkStudy):
     # plotting by methods
     def plot_unit_counts(self, **kwargs):
         from .benchmark_plot_tools import plot_unit_counts
+
         return plot_unit_counts(self, **kwargs)
 
     def plot_agreement_matrix(self, **kwargs):
         from .benchmark_plot_tools import plot_agreement_matrix
+
         return plot_agreement_matrix(self, **kwargs)
 
     def plot_performances_vs_snr(self, **kwargs):
         from .benchmark_plot_tools import plot_performances_vs_snr
-        return plot_performances_vs_snr(self, **kwargs)
 
+        return plot_performances_vs_snr(self, **kwargs)
 
     def plot_error_metrics(self, metric="cosine", case_keys=None, figsize=(15, 5)):
 

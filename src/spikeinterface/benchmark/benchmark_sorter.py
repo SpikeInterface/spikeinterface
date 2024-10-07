@@ -2,20 +2,14 @@
 This replace the previous `GroundTruthStudy`
 """
 
-
 import numpy as np
 from ..core import NumpySorting
 from .benchmark_base import Benchmark, BenchmarkStudy
 from ..sorters import run_sorter
 from spikeinterface.comparison import compare_sorter_to_ground_truth
 
-# from spikeinterface.widgets import (
-#     plot_agreement_matrix,
-#     plot_comparison_collision_by_similarity,
-# )
 
-
-
+# TODO later integrate CollisionGTComparison optionally in this class.
 
 
 class SorterBenchmark(Benchmark):
@@ -44,6 +38,7 @@ class SorterBenchmark(Benchmark):
     _result_key_saved = [
         ("gt_comparison", "pickle"),
     ]
+
 
 class SorterStudy(BenchmarkStudy):
     """
@@ -126,15 +121,15 @@ class SorterStudy(BenchmarkStudy):
     # plotting as methods
     def plot_unit_counts(self, **kwargs):
         from .benchmark_plot_tools import plot_unit_counts
+
         return plot_unit_counts(self, **kwargs)
 
     def plot_performances(self, **kwargs):
         from .benchmark_plot_tools import plot_performances
+
         return plot_performances(self, **kwargs)
 
     def plot_agreement_matrix(self, **kwargs):
         from .benchmark_plot_tools import plot_agreement_matrix
+
         return plot_agreement_matrix(self, **kwargs)
-
-
-

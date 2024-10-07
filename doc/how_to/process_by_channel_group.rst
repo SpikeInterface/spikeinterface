@@ -1,4 +1,4 @@
-Process a Recording by Channel Group
+Process a recording by channel group
 ====================================
 
 In this tutorial, we will walk through how to preprocess and sort a recording

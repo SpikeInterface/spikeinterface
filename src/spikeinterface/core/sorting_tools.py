@@ -197,17 +197,23 @@ def random_spikes_selection(
         cum_sizes = np.cumsum([0] + [s.size for s in spikes])
 
         # this fast when numba
-        spike_indices = spike_vector_to_indices(spikes, sorting.unit_ids)
+        spike_indices = spike_vector_to_indices(spikes, sorting.unit_ids, absolute_index=False)
 
         random_spikes_indices = []
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             all_unit_indices = []
             for segment_index in range(sorting.get_num_segments()):
-                inds_in_seg = spike_indices[segment_index][unit_id] + cum_sizes[segment_index]
+                # this is local index
+                inds_in_seg = spike_indices[segment_index][unit_id]
                 if margin_size is not None:
-                    inds_in_seg = inds_in_seg[inds_in_seg >= margin_size]
-                    inds_in_seg = inds_in_seg[inds_in_seg < (num_samples[segment_index] - margin_size)]
-                all_unit_indices.append(inds_in_seg)
+                    local_spikes = spikes[segment_index][inds_in_seg]
+                    mask = (local_spikes["sample_index"] >= margin_size) & (
+                        local_spikes["sample_index"] < (num_samples[segment_index] - margin_size)
+                    )
+                    inds_in_seg = inds_in_seg[mask]
+                # go back to absolut index
+                inds_in_seg_abs = inds_in_seg + cum_sizes[segment_index]
+                all_unit_indices.append(inds_in_seg_abs)
             all_unit_indices = np.concatenate(all_unit_indices)
             selected_unit_indices = rng.choice(
                 all_unit_indices, size=min(max_spikes_per_unit, all_unit_indices.size), replace=False, shuffle=False

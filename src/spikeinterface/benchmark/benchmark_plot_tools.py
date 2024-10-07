@@ -1,7 +1,6 @@
 import numpy as np
 
 
-
 def _simpleaxis(ax):
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -28,7 +27,6 @@ def plot_run_times(study, case_keys=None):
     run_times = study.get_run_times(case_keys=case_keys)
 
     colors = study.get_colors()
-    
 
     fig, ax = plt.subplots()
     labels = []
@@ -57,7 +55,6 @@ def plot_unit_counts(study, case_keys=None):
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
-
 
     count_units = study.get_count_units(case_keys=case_keys)
 
@@ -95,6 +92,7 @@ def plot_unit_counts(study, case_keys=None):
 
     return fig
 
+
 def plot_performances(study, mode="ordered", performance_names=("accuracy", "precision", "recall"), case_keys=None):
     """
     Plot performances over case for a study.
@@ -121,9 +119,8 @@ def plot_performances(study, mode="ordered", performance_names=("accuracy", "pre
     if case_keys is None:
         case_keys = list(study.cases.keys())
 
-    perfs=study.get_performance_by_unit(case_keys=case_keys)
+    perfs = study.get_performance_by_unit(case_keys=case_keys)
     colors = study.get_colors()
-
 
     if mode in ("ordered", "snr"):
         num_axes = len(performance_names)
@@ -195,7 +192,6 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None):
     if case_keys is None:
         case_keys = list(study.cases.keys())
 
-
     num_axes = len(case_keys)
     fig, axs = plt.subplots(ncols=num_axes)
 
@@ -238,9 +234,9 @@ def plot_performances_vs_snr(study, case_keys=None, figsize=None, metrics=["accu
             y = study.get_result(key)["gt_comparison"].get_performance()[k].values
             ax.scatter(x, y, marker=".", label=label)
             ax.set_title(k)
-        
+
         ax.set_ylim(0, 1.05)
-        
+
         if count == 2:
             ax.legend()
 

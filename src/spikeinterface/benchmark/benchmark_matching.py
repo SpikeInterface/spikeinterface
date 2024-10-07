@@ -65,12 +65,13 @@ class MatchingStudy(BenchmarkStudy):
 
     def plot_agreement_matrix(self, **kwargs):
         from .benchmark_plot_tools import plot_agreement_matrix
+
         return plot_agreement_matrix(self, **kwargs)
 
     def plot_performances_vs_snr(self, **kwargs):
         from .benchmark_plot_tools import plot_performances_vs_snr
-        return plot_performances_vs_snr(self, **kwargs)
 
+        return plot_performances_vs_snr(self, **kwargs)
 
     def plot_collisions(self, case_keys=None, figsize=None):
         if case_keys is None:
