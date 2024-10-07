@@ -50,7 +50,14 @@ TODO:
 
 
 def detect_peaks(
-    recording, method="locally_exclusive", pipeline_nodes=None, gather_mode="memory", folder=None, names=None, skip_after_n_peaks=None,  **kwargs
+    recording,
+    method="locally_exclusive",
+    pipeline_nodes=None,
+    gather_mode="memory",
+    folder=None,
+    names=None,
+    skip_after_n_peaks=None,
+    **kwargs,
 ):
     """Peak detection based on threshold crossing in term of k x MAD.
 
@@ -127,7 +134,7 @@ def detect_peaks(
         squeeze_output=squeeze_output,
         folder=folder,
         names=names,
-        skip_after_n_peaks=skip_after_n_peaks
+        skip_after_n_peaks=skip_after_n_peaks,
     )
     return outs
 

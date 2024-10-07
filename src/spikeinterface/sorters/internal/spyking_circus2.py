@@ -182,7 +182,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, skip_after_n_peaks=1000)
             prototype = get_prototype_spike(recording_w, peaks, ms_before, ms_after, **job_kwargs)
             detection_params["prototype"] = prototype
-            detection_params["ms_before"] = ms_before   
+            detection_params["ms_before"] = ms_before
 
             for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
                 if value in detection_params:
