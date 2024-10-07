@@ -9,11 +9,6 @@ from .benchmark_base import Benchmark, BenchmarkStudy
 from ..sorters import run_sorter
 from spikeinterface.comparison import compare_sorter_to_ground_truth
 
-# from spikeinterface.widgets import (
-#     plot_agreement_matrix,
-#     plot_comparison_collision_by_similarity,
-# )
-
 
 # TODO later integrate CollisionGTComparison optionally in this class.
 
