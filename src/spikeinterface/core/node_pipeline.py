@@ -87,9 +87,15 @@ class PeakSource(PipelineNode):
     def get_dtype(self):
         return base_peak_dtype
 
-    def get_peak_slice(self, segment_index, start_frame, end_frame, ):
+    def get_peak_slice(
+        self,
+        segment_index,
+        start_frame,
+        end_frame,
+    ):
         # not needed for PeakDetector
         raise NotImplementedError
+
 
 # this is used in sorting components
 class PeakDetector(PeakSource):
@@ -474,7 +480,7 @@ def run_node_pipeline(
     nodes,
     job_kwargs,
     job_name="pipeline",
-    #mp_context=None,
+    # mp_context=None,
     gather_mode="memory",
     gather_kwargs={},
     squeeze_output=True,
@@ -506,7 +512,7 @@ def run_node_pipeline(
     The gather consists of concatenating features related to peaks (localization, pca, scaling, ...) into a single big vector.
     These vectors can be in "memory" or in files ("npy")
 
-    
+
     Parameters
     ----------
 
@@ -533,7 +539,7 @@ def run_node_pipeline(
     skip_after_n_peaks : None | int
         Skip the computation after n_peaks.
         This is not an exact because internally this skip is done per worker in average.
-    
+
     Returns
     -------
     outputs: tuple of np.array | np.array
@@ -596,7 +602,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
 
     recording_segment = recording._recording_segments[segment_index]
     node0 = nodes[0]
-    
+
     if isinstance(node0, (SpikeRetriever, PeakRetriever)):
         # in this case PeakSource could have no peaks and so no need to load traces just skip
         peak_slice = i0, i1 = node0.get_peak_slice(segment_index, start_frame, end_frame, max_margin)
@@ -674,7 +680,6 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     else:
         # the gather will skip this output and not concatenate it
         return
-
 
 
 class GatherToMemory:

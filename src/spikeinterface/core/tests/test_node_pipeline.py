@@ -87,7 +87,7 @@ def test_run_node_pipeline(cache_folder_creation):
 
     peak_retriever = PeakRetriever(recording, peaks)
     # this test when no spikes in last chunks
-    peak_retriever_few = PeakRetriever(recording, peaks[:peaks.size//2])
+    peak_retriever_few = PeakRetriever(recording, peaks[: peaks.size // 2])
 
     # channel index is from template
     spike_retriever_T = SpikeRetriever(
@@ -212,11 +212,12 @@ def test_skip_after_n_peaks():
     nodes = [node0, node1]
 
     skip_after_n_peaks = 30
-    some_amplitudes = run_node_pipeline(recording, nodes, job_kwargs, gather_mode="memory", skip_after_n_peaks=skip_after_n_peaks)
+    some_amplitudes = run_node_pipeline(
+        recording, nodes, job_kwargs, gather_mode="memory", skip_after_n_peaks=skip_after_n_peaks
+    )
 
     assert some_amplitudes.size >= skip_after_n_peaks
     assert some_amplitudes.size < spikes.size
-
 
 
 # the following is for testing locally with python or ipython. It is not used in ci or with pytest.
