@@ -200,7 +200,7 @@ class TemplateMetadata:
 
 # important : this is differents from the spikeinterface.core.Sparsity
 @dataclass
-class _Sparsity:
+class WobbleSparsity:
     """Variables that describe channel sparsity.
 
     Parameters
@@ -228,7 +228,7 @@ class _Sparsity:
 
         Returns
         -------
-        sparsity : _Sparsity
+        sparsity : WobbleSparsity
             Dataclass object for aggregating channel sparsity variables together.
         """
         visible_channels = np.ptp(templates, axis=1) > params.visibility_threshold
@@ -252,7 +252,7 @@ class _Sparsity:
 
         Returns
         -------
-        sparsity : _Sparsity
+        sparsity : WobbleSparsity
             Dataclass object for aggregating channel sparsity variables together.
         """
         visible_channels = templates.sparsity.mask
@@ -350,9 +350,9 @@ class WobbleMatch(BaseTemplateMatching):
         params = WobbleParameters(**parameters)
         template_meta = TemplateMetadata.from_parameters_and_templates(params, templates_array)
         if not templates.are_templates_sparse():
-            sparsity = _Sparsity.from_parameters_and_templates(params, templates_array)
+            sparsity = WobbleSparsity.from_parameters_and_templates(params, templates_array)
         else:
-            sparsity = _Sparsity.from_templates(params, templates)
+            sparsity = WobbleSparsity.from_templates(params, templates)
 
         # Perform initial computations on templates necessary for computing the objective
         sparse_templates = np.where(sparsity.visible_channels[:, np.newaxis, :], templates_array, 0)
@@ -555,7 +555,7 @@ class WobbleMatch(BaseTemplateMatching):
             Dataclass object for aggregating the parameters together.
         template_meta : TemplateMetadata
             Dataclass object for aggregating template metadata together.
-        sparsity : _Sparsity
+        sparsity : WobbleSparsity
             Dataclass object for aggregating channel sparsity variables together.
 
         Returns
