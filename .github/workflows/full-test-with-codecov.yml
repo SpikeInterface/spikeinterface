@@ -8,6 +8,7 @@ on:
 env:
   KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
   KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+  KACHERY_ZONE: ${{ secrets.KACHERY_ZONE }}
 
 jobs:
   full-tests-with-codecov:

@@ -162,8 +162,8 @@ def test_generate_unit_ids_for_merge_group():
 if __name__ == "__main__":
     # test_spike_vector_to_spike_trains()
     # test_spike_vector_to_indices()
-    # test_random_spikes_selection()
+    test_random_spikes_selection()
 
-    test_apply_merges_to_sorting()
-    test_get_ids_after_merging()
+    # test_apply_merges_to_sorting()
+    # test_get_ids_after_merging()
     # test_generate_unit_ids_for_merge_group()
