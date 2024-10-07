@@ -10,7 +10,6 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.node_pipeline import run_node_pipeline
 
 
-
 def find_spikes_from_templates(
     recording, method="naive", method_kwargs={}, extra_outputs=False, verbose=False, **job_kwargs
 ) -> np.ndarray | tuple[np.ndarray, dict]:

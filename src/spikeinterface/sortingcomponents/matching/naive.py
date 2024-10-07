@@ -8,19 +8,23 @@ from spikeinterface.core import get_noise_levels, get_channel_distances
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
 
-
 from .base import BaseTemplateMatching, _base_matching_dtype
 
+
 class NaiveMatching(BaseTemplateMatching):
-    def __init__(self, recording, return_output=True, parents=None,
+    def __init__(
+        self,
+        recording,
+        return_output=True,
+        parents=None,
         templates=None,
         peak_sign="neg",
         exclude_sweep_ms=0.1,
         detect_threshold=5,
         noise_levels=None,
-        radius_um=100.,
+        radius_um=100.0,
         random_chunk_kwargs={},
-        ):
+    ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
 
@@ -37,15 +41,13 @@ class NaiveMatching(BaseTemplateMatching):
         self.nafter = self.templates.nafter
         self.margin = max(self.nbefore, self.nafter)
 
-
     def get_trace_margin(self):
         return self.margin
-
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
 
         if self.margin > 0:
-            peak_traces = traces[self.margin:-self.margin, :]
+            peak_traces = traces[self.margin : -self.margin, :]
         else:
             peak_traces = traces
         peak_sample_ind, peak_chan_ind = DetectPeakLocallyExclusive.detect_peaks(
@@ -70,4 +72,3 @@ class NaiveMatching(BaseTemplateMatching):
             spikes["amplitude"][i] = 0.0
 
         return spikes
-    
