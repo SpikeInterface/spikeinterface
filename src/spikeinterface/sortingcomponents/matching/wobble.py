@@ -337,10 +337,14 @@ class WobbleMatch(BaseTemplateMatching):
     #     "templates": None,
     # }
 
-    def __init__(self, recording, return_output=True, parents=None,
+    def __init__(
+        self,
+        recording,
+        return_output=True,
+        parents=None,
         templates=None,
         parameters={},
-        ):
+    ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
 
@@ -404,7 +408,12 @@ class WobbleMatch(BaseTemplateMatching):
         for i in range(self.params.max_iter):
             # find peaks
             spike_train, scaling, distance_metric = self.find_peaks(
-                objective, objective_normalized, np.array(spike_trains), self.params, self.template_data, self.template_meta
+                objective,
+                objective_normalized,
+                np.array(spike_trains),
+                self.params,
+                self.template_data,
+                self.template_meta,
             )
             if len(spike_train) == 0:
                 break
@@ -416,7 +425,14 @@ class WobbleMatch(BaseTemplateMatching):
 
             # subtract newly detected spike train from traces (via the objective)
             objective, objective_normalized = self.subtract_spike_train(
-                spike_train, scaling, self.template_data, objective, objective_normalized, self.params, self.template_meta, self.sparsity
+                spike_train,
+                scaling,
+                self.template_data,
+                objective,
+                objective_normalized,
+                self.params,
+                self.template_meta,
+                self.sparsity,
             )
 
         spike_train = np.array(spike_trains)
@@ -950,4 +966,3 @@ def compute_scale_amplitudes(
     scalings = np.clip(b / a, scale_min, scale_max)
     high_res_objective = (2 * scalings * b) - (np.square(scalings) * a) - (1 / amplitude_variance)
     return high_res_objective, scalings
-

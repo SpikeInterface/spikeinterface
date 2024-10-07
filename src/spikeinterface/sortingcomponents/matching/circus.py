@@ -88,6 +88,7 @@ def compute_overlaps(templates, num_samples, num_channels, sparsities):
 
     return new_overlaps
 
+
 class CircusOMPSVDPeeler(BaseTemplateMatching):
     """
     Orthogonal Matching Pursuit inspired from Spyking Circus sorter
@@ -121,17 +122,21 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
     """
 
     _more_output_keys = [
-                "norms",
-                "temporal",
-                "spatial",
-                "singular",
-                "units_overlaps",
-                "unit_overlaps_indices",
-                "normed_templates",
-                "overlaps",
-            ]
+        "norms",
+        "temporal",
+        "spatial",
+        "singular",
+        "units_overlaps",
+        "unit_overlaps_indices",
+        "normed_templates",
+        "overlaps",
+    ]
 
-    def __init__(self, recording, return_output=True, parents=None,
+    def __init__(
+        self,
+        recording,
+        return_output=True,
+        parents=None,
         templates=None,
         amplitudes=[0.6, np.inf],
         stop_criteria="max_failures",
@@ -142,7 +147,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         ignore_inds=[],
         vicinity=3,
         precomputed=None,
-        ):
+    ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
 
@@ -169,7 +174,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                 assert precomputed[key] is not None, "If templates are provided, %d should also be there" % key
                 setattr(self, key, precomputed[key])
 
-        
         self.ignore_inds = np.array(ignore_inds)
 
         self.unit_overlaps_tables = {}
@@ -181,7 +185,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             self.margin = self.vicinity
         else:
             self.margin = 2 * self.num_samples
-
 
     def _prepare_templates(self):
 
@@ -256,11 +259,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             output[key] = getattr(self, key)
         return output
 
-
-
-
     def get_trace_margin(self):
-        return self.margin    
+        return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
         import scipy.spatial
@@ -468,10 +468,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         if spikes.size > 0:
             order = np.argsort(spikes["sample_index"])
             spikes = spikes[order]
-        
+
         return spikes
-
-
 
 
 class CircusPeeler(BaseTemplateMatching):
@@ -519,19 +517,23 @@ class CircusPeeler(BaseTemplateMatching):
 
 
     """
-    def __init__(self, recording, return_output=True, parents=None,
-  
-            templates=None,
-            peak_sign="neg",
-            exclude_sweep_ms=0.1,
-            jitter_ms=0.1,
-            detect_threshold=5,
-            noise_levels=None,
-            random_chunk_kwargs={},
-            max_amplitude=1.5,
-            min_amplitude=0.5,
-            use_sparse_matrix_threshold=0.25,
-        ):
+
+    def __init__(
+        self,
+        recording,
+        return_output=True,
+        parents=None,
+        templates=None,
+        peak_sign="neg",
+        exclude_sweep_ms=0.1,
+        jitter_ms=0.1,
+        detect_threshold=5,
+        noise_levels=None,
+        random_chunk_kwargs={},
+        max_amplitude=1.5,
+        min_amplitude=0.5,
+        use_sparse_matrix_threshold=0.25,
+    ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
 
@@ -544,7 +546,9 @@ class CircusPeeler(BaseTemplateMatching):
 
         assert HAVE_SKLEARN, "CircusPeeler needs sklearn to work"
 
-        assert (use_sparse_matrix_threshold >= 0) and (use_sparse_matrix_threshold <= 1), f"use_sparse_matrix_threshold should be in [0, 1]"
+        assert (use_sparse_matrix_threshold >= 0) and (
+            use_sparse_matrix_threshold <= 1
+        ), f"use_sparse_matrix_threshold should be in [0, 1]"
 
         self.num_channels = recording.get_num_channels()
         self.num_samples = templates.num_samples
@@ -580,8 +584,6 @@ class CircusPeeler(BaseTemplateMatching):
         self.margin = max(self.nbefore, self.nafter) * 2
         self.peak_sign = peak_sign
 
-
-
     def _prepare_templates(self):
         import scipy.spatial
         import scipy
@@ -616,7 +618,6 @@ class CircusPeeler(BaseTemplateMatching):
 
     def get_trace_margin(self):
         return self.margin
-
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
 
@@ -702,4 +703,3 @@ class CircusPeeler(BaseTemplateMatching):
         spikes = spikes[order]
 
         return spikes
-

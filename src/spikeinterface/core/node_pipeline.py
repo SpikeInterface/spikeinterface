@@ -80,7 +80,7 @@ class PipelineNode:
 
 
 class PeakSource(PipelineNode):
-    
+
     def get_trace_margin(self):
         raise NotImplementedError
 

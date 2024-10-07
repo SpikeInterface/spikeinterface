@@ -10,14 +10,15 @@ _base_matching_dtype = [
     ("segment_index", "int64"),
 ]
 
+
 class BaseTemplateMatching(PeakDetector):
     def __init__(self, recording, templates, return_output=True, parents=None):
         # TODO make a sharedmem of template here
         # TODO maybe check that channel_id are the same with recording
 
-        assert isinstance(templates, Templates), (
-            f"The templates supplied is of type {type(templates)} and must be a Templates"
-        )
+        assert isinstance(
+            templates, Templates
+        ), f"The templates supplied is of type {type(templates)} and must be a Templates"
         self.templates = templates
         PeakDetector.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -25,7 +26,7 @@ class BaseTemplateMatching(PeakDetector):
         return np.dtype(_base_matching_dtype)
 
     def get_trace_margin(self):
-        raise NotImplementedError  
+        raise NotImplementedError
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         spikes = self.compute_matching(traces, start_frame, end_frame, segment_index)
@@ -37,11 +38,11 @@ class BaseTemplateMatching(PeakDetector):
             spikes = spikes[keep]
 
         # node pipeline need to return a tuple
-        return (spikes, )
+        return (spikes,)
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
         raise NotImplementedError
-    
+
     def get_extra_outputs(self):
         # can be overwritten if need to ouput some variables with a dict
         return None

@@ -602,7 +602,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
 
             sub_recording = recording.frame_slice(t_start, t_stop)
             local_params.update({"ignore_inds": ignore_inds + [i]})
-            
+
             spikes, more_outputs = find_spikes_from_templates(
                 sub_recording, method="circus-omp-svd", method_kwargs=local_params, extra_outputs=True, **job_kwargs
             )

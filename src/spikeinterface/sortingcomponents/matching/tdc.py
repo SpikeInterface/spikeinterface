@@ -37,24 +37,29 @@ class TridesclousPeeler(BaseTemplateMatching):
     This method is quite fast but don't give exelent results to resolve
     spike collision when templates have high similarity.
     """
-    def __init__(self, recording, return_output=True, parents=None,
+
+    def __init__(
+        self,
+        recording,
+        return_output=True,
+        parents=None,
         templates=None,
         peak_sign="neg",
         peak_shift_ms=0.2,
         detect_threshold=5,
         noise_levels=None,
-        radius_um=100.,
+        radius_um=100.0,
         num_closest=5,
         sample_shift=3,
         ms_before=0.8,
         ms_after=1.2,
         num_peeler_loop=2,
         num_template_try=1,
-        ):
+    ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
 
-        # maybe in base? 
+        # maybe in base?
         self.templates_array = templates.get_dense_templates()
 
         unit_ids = templates.unit_ids
@@ -64,7 +69,7 @@ class TridesclousPeeler(BaseTemplateMatching):
 
         self.nbefore = templates.nbefore
         self.nafter = templates.nafter
-        
+
         self.peak_sign = peak_sign
 
         nbefore_short = int(ms_before * sr / 1000.0)
@@ -103,6 +108,7 @@ class TridesclousPeeler(BaseTemplateMatching):
 
         # distance between units
         import scipy
+
         unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
 
         # seach for closet units and unitary discriminant vector
@@ -111,7 +117,7 @@ class TridesclousPeeler(BaseTemplateMatching):
             order = np.argsort(unit_distances[unit_ind, :])
             closest_u = np.arange(unit_ids.size)[order].tolist()
             closest_u.remove(unit_ind)
-            closest_u = np.array(closest_u[: num_closest])
+            closest_u = np.array(closest_u[:num_closest])
 
             # compute unitary discriminent vector
             (chans,) = np.nonzero(self.template_sparsity[unit_ind, :])
@@ -298,10 +304,8 @@ class TridesclousPeeler(BaseTemplateMatching):
 
             spikes["cluster_index"][i] = cluster_index
             spikes["amplitude"][i] = amplitude
-        
+
         return spikes
-
-
 
 
 if HAVE_NUMBA:
@@ -346,6 +350,3 @@ if HAVE_NUMBA:
             distances_shift[i] = sum_dist
 
         return distances_shift
-
-
-

@@ -41,11 +41,13 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
     # sorting_analyzer
-    method_kwargs_all = {"templates": templates, }
+    method_kwargs_all = {
+        "templates": templates,
+    }
     method_kwargs = {}
     if method in ("naive", "tdc-peeler", "circus"):
         method_kwargs["noise_levels"] = noise_levels
-    
+
     # method_kwargs["wobble"] = {
     #     "templates": waveform_extractor.get_all_templates(),
     #     "nbefore": waveform_extractor.nbefore,
@@ -53,8 +55,9 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     # }
 
     method_kwargs.update(method_kwargs_all)
-    spikes, info = find_spikes_from_templates(recording, method=method, 
-                                              method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs)
+    spikes, info = find_spikes_from_templates(
+        recording, method=method, method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
+    )
 
     # print(info)
 
@@ -77,7 +80,7 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     #     comp = si.compare_sorter_to_ground_truth(gt_sorting, sorting)
     #     si.plot_agreement_matrix(comp, ax=ax)
     #     ax.set_title(method)
-        # plt.show()
+    # plt.show()
 
 
 if __name__ == "__main__":
