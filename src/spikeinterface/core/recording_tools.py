@@ -529,18 +529,19 @@ def get_random_recording_slices(recording,
     ----------
     recording : BaseRecording
         The recording to get random chunks from
-    methid : "legacy"
-        The method used.
+    method : "legacy"
+        The method used to get random slices.
+          * "legacy" : the one used until version 0.101.0, there is no constrain on slices
+            and they can overlap.
     num_chunks_per_segment : int, default: 20
         Number of chunks per segment
     chunk_duration : str | float | None, default "500ms"
         The duration of each chunk in 's' or 'ms'
     chunk_size : int | None
-        Size of a chunk in number of frames
-    
+        Size of a chunk in number of frames. This is ued only if chunk_duration is None.
     concatenated : bool, default: True
         If True chunk are concatenated along time axis
-    seed : int, default: 0
+    seed : int, default: None
         Random seed
     margin_frames : int, default: 0
         Margin in number of frames to avoid edge effects
@@ -596,15 +597,14 @@ def get_random_data_chunks(
     recording,
     return_scaled=False,
     num_chunks_per_segment=20,
-    chunk_size=10000,
+    chunk_duration="500ms",
+    chunk_size=None,
     concatenated=True,
     seed=0,
     margin_frames=0,
 ):
     """
     Extract random chunks across segments
-
-    This is used for instance in get_noise_levels() to estimate noise on traces.
 
     Parameters
     ----------
@@ -614,8 +614,10 @@ def get_random_data_chunks(
         If True, returned chunks are scaled to uV
     num_chunks_per_segment : int, default: 20
         Number of chunks per segment
-    chunk_size : int, default: 10000
-        Size of a chunk in number of frames
+    chunk_duration : str | float | None, default "500ms"
+        The duration of each chunk in 's' or 'ms'
+    chunk_size : int | None
+        Size of a chunk in number of frames. This is ued only if chunk_duration is None.
     concatenated : bool, default: True
         If True chunk are concatenated along time axis
     seed : int, default: 0
@@ -628,51 +630,19 @@ def get_random_data_chunks(
     chunk_list : np.array
         Array of concatenate chunks per segment
     """
-    # # check chunk size
-    # num_segments = recording.get_num_segments()
-    # for segment_index in range(num_segments):
-    #     chunk_size_limit = recording.get_num_frames(segment_index) - 2 * margin_frames
-    #     if chunk_size > chunk_size_limit:
-    #         chunk_size = chunk_size_limit - 1
-    #         warnings.warn(
-    #             f"chunk_size is greater than the number "
-    #             f"of samples for segment index {segment_index}. "
-    #             f"Using {chunk_size}."
-    #         )
-
-    # rng = np.random.default_rng(seed)
-    # chunk_list = []
-    # low = margin_frames
-    # size = num_chunks_per_segment
-    # for segment_index in range(num_segments):
-    #     num_frames = recording.get_num_frames(segment_index)
-    #     high = num_frames - chunk_size - margin_frames
-    #     random_starts = rng.integers(low=low, high=high, size=size)
-    #     segment_trace_chunk = [
-    #         recording.get_traces(
-    #             start_frame=start_frame,
-    #             end_frame=(start_frame + chunk_size),
-    #             segment_index=segment_index,
-    #             return_scaled=return_scaled,
-    #         )
-    #         for start_frame in random_starts
-    #     ]
-
-    #     chunk_list.extend(segment_trace_chunk)
-
     recording_slices = get_random_recording_slices(recording,
                                 method="legacy",
                                 num_chunks_per_segment=num_chunks_per_segment,
+                                chunk_duration=chunk_duration,
                                 chunk_size=chunk_size,
-                                # chunk_duration=chunk_duration,
                                 margin_frames=margin_frames,
                                 seed=seed)
 
     chunk_list = []
-    for segment_index, start_frame, stop_frame in recording_slices:
+    for segment_index, start_frame, end_frame in recording_slices:
         traces_chunk = recording.get_traces(
             start_frame=start_frame,
-            end_frame=(start_frame + chunk_size),
+            end_frame=end_frame,
             segment_index=segment_index,
             return_scaled=return_scaled,
         )
@@ -773,7 +743,11 @@ def get_noise_levels(
     You can use standard deviation with `method="std"`
 
     Internally it samples some chunk across segment.
-    And then, it use MAD estimator (more robust than STD)
+    And then, it use MAD estimator (more robust than STD) ot the STD on each chunk.
+    Finally the average on all MAD is performed.
+
+    The result is cached in a property of the recording.
+    Next call on the same recording will use the cache unless force_recompute=True.
 
     Parameters
     ----------
@@ -803,15 +777,6 @@ def get_noise_levels(
     if key in recording.get_property_keys() and not force_recompute:
         noise_levels = recording.get_property(key=key)
     else:
-        # random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
-
-        # if method == "mad":
-        #     med = np.median(random_chunks, axis=0, keepdims=True)
-        #     # hard-coded so that core doesn't depend on scipy
-        #     noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
-        # elif method == "std":
-        #     noise_levels = np.std(random_chunks, axis=0)
-
         random_slices_kwargs, job_kwargs = split_job_kwargs(kwargs)
         recording_slices = get_random_recording_slices(recording,**random_slices_kwargs)
 
