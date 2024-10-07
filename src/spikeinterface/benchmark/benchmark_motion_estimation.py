@@ -8,7 +8,8 @@ import time
 import numpy as np
 
 from spikeinterface.core import get_noise_levels
-from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
+from .benchmark_base import Benchmark, BenchmarkStudy
+from .benchmark_plot_tools import _simpleaxis
 from spikeinterface.sortingcomponents.motion import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
