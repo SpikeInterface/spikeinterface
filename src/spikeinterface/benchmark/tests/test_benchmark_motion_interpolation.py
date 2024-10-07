@@ -4,14 +4,14 @@ import pytest
 import numpy as np
 
 import shutil
+from pathlib import Path
 
-
-from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import (
+from spikeinterface.benchmark.tests.common_benchmark_testing import (
     make_drifting_dataset,
 )
 
-from spikeinterface.sortingcomponents.benchmark.benchmark_motion_interpolation import MotionInterpolationStudy
-from spikeinterface.sortingcomponents.benchmark.benchmark_motion_estimation import (
+from spikeinterface.benchmark.benchmark_motion_interpolation import MotionInterpolationStudy
+from spikeinterface.benchmark.benchmark_motion_estimation import (
     # get_unit_displacement,
     get_gt_motion_from_unit_displacement,
 )
@@ -139,4 +139,5 @@ def test_benchmark_motion_interpolation(create_cache_folder):
 
 
 if __name__ == "__main__":
-    test_benchmark_motion_interpolation()
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks"
+    test_benchmark_motion_interpolation(cache_folder)
