@@ -9,16 +9,7 @@ from spikeinterface.core import get_chunk_with_margin
 
 
 def find_spikes_from_templates(
-    recording,
-    method="naive",
-    method_kwargs={},
-    extra_outputs=False,
-    verbose=False,
-    gather_mode="memory",
-    gather_kwargs={},
-    folder=None,
-    names=None,
-    **job_kwargs,
+    recording, method="naive", method_kwargs={}, extra_outputs=False, verbose=False, **job_kwargs
 ) -> np.ndarray | tuple[np.ndarray, dict]:
     """Find spike from a recording from given templates.
 
@@ -51,13 +42,6 @@ def find_spikes_from_templates(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    if gather_mode == "memory":
-        gather_func = GatherToMemory()
-    elif gather_mode == "npy":
-        gather_func = GatherToNpy(folder, names, **gather_kwargs)
-    else:
-        raise ValueError(f"wrong gather_mode : {gather_mode}")
-
     method_class = matching_methods[method]
 
     # initialize
@@ -79,7 +63,6 @@ def find_spikes_from_templates(
         init_func,
         init_args,
         handle_returns=True,
-        gather_func=gather_func,
         job_name=f"find spikes ({method})",
         verbose=verbose,
         **job_kwargs,
