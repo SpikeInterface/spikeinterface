@@ -11,6 +11,7 @@ from .base import BaseWidget
 
 import warnings
 
+
 class StudyRunTimesWidget(BaseWidget):
     """
     Plot sorter run times for a SorterStudy.
@@ -25,12 +26,15 @@ class StudyRunTimesWidget(BaseWidget):
     """
 
     def __init__(self, study, case_keys=None, backend=None, **backend_kwargs):
-        warnings.warn("plot_study_run_times is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead.")
+        warnings.warn(
+            "plot_study_run_times is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead."
+        )
         plot_data = dict(study=study, case_keys=case_keys)
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         from spikeinterface.benchmark.benchmark_plot_tools import plot_run_times
+
         plot_run_times(data_plot["study"], case_keys=data_plot["case_keys"])
 
 
@@ -48,12 +52,15 @@ class StudyUnitCountsWidget(BaseWidget):
     """
 
     def __init__(self, study, case_keys=None, backend=None, **backend_kwargs):
-        warnings.warn("plot_study_unit_counts is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead.")
+        warnings.warn(
+            "plot_study_unit_counts is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead."
+        )
         plot_data = dict(study=study, case_keys=case_keys)
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         from spikeinterface.benchmark.benchmark_plot_tools import plot_unit_counts
+
         plot_unit_counts(data_plot["study"], case_keys=data_plot["case_keys"])
 
 
@@ -87,7 +94,9 @@ class StudyPerformances(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        warnings.warn("plot_study_performances is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead.")
+        warnings.warn(
+            "plot_study_performances is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead."
+        )
         plot_data = dict(
             study=study,
             mode=mode,
@@ -98,12 +107,14 @@ class StudyPerformances(BaseWidget):
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         from spikeinterface.benchmark.benchmark_plot_tools import plot_performances
+
         plot_performances(
             data_plot["study"],
             mode=data_plot["mode"],
             performance_names=data_plot["performance_names"],
-            case_keys=data_plot["case_keys"]
+            case_keys=data_plot["case_keys"],
         )
+
 
 class StudyAgreementMatrix(BaseWidget):
     """
@@ -128,7 +139,9 @@ class StudyAgreementMatrix(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        warnings.warn("plot_study_agreement_matrix is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead.")
+        warnings.warn(
+            "plot_study_agreement_matrix is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead."
+        )
         plot_data = dict(
             study=study,
             case_keys=case_keys,
@@ -139,11 +152,8 @@ class StudyAgreementMatrix(BaseWidget):
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         from spikeinterface.benchmark.benchmark_plot_tools import plot_agreement_matrix
-        plot_agreement_matrix(
-            data_plot["study"],
-            ordered=data_plot["ordered"],
-            case_keys=data_plot["case_keys"]
-        )
+
+        plot_agreement_matrix(data_plot["study"], ordered=data_plot["ordered"], case_keys=data_plot["case_keys"])
 
 
 class StudySummary(BaseWidget):
@@ -171,8 +181,10 @@ class StudySummary(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        
-        warnings.warn("plot_study_summary is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead.")
+
+        warnings.warn(
+            "plot_study_summary is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead."
+        )
         plot_data = dict(study=study, case_keys=case_keys)
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
@@ -180,7 +192,12 @@ class StudySummary(BaseWidget):
         study = data_plot["study"]
         case_keys = data_plot["case_keys"]
 
-        from spikeinterface.benchmark.benchmark_plot_tools import plot_agreement_matrix, plot_performances, plot_unit_counts, plot_run_times
+        from spikeinterface.benchmark.benchmark_plot_tools import (
+            plot_agreement_matrix,
+            plot_performances,
+            plot_unit_counts,
+            plot_run_times,
+        )
 
         plot_performances(study=study, case_keys=case_keys, mode="ordered")
         plot_performances(study=study, case_keys=case_keys, mode="snr")

@@ -103,7 +103,7 @@ The all mechanism is based on an intrinsic organization into a "study_folder" wi
         # some plots
         m = comp.get_confusion_matrix()
         w_comp = sw.plot_agreement_matrix(sorting_comparison=comp)
-    
+
     # Collect synthetic dataframes and display
     # As shown previously, the performance is returned as a pandas dataframe.
     # The spikeinterface.comparison.get_performance_by_unit() function,

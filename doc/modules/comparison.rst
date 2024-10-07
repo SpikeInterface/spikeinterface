@@ -412,7 +412,3 @@ sorting analyzers from day 1 (:code:`analyzer_day1`) to day 5 (:code:`analyzer_d
     # match all
     m_tcmp = sc.compare_multiple_templates(waveform_list=analyzer_list,
                                            name_list=["D1", "D2", "D3", "D4", "D5"])
-
-
-
-

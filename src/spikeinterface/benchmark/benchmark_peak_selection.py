@@ -10,6 +10,7 @@ import numpy as np
 
 from .benchmark_base import Benchmark, BenchmarkStudy
 
+
 class PeakSelectionBenchmark(Benchmark):
 
     def __init__(self, recording, gt_sorting, params, indices, exhaustive_gt=True):

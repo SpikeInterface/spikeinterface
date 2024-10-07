@@ -2,7 +2,6 @@
 This replace the previous `GroundTruthStudy`
 """
 
-
 import numpy as np
 from ..core import NumpySorting
 from .benchmark_base import Benchmark, BenchmarkStudy
@@ -44,6 +43,7 @@ class SorterBenchmark(Benchmark):
     _result_key_saved = [
         ("gt_comparison", "pickle"),
     ]
+
 
 class SorterStudy(BenchmarkStudy):
     """
@@ -126,15 +126,15 @@ class SorterStudy(BenchmarkStudy):
     # plotting as methods
     def plot_unit_counts(self, **kwargs):
         from .benchmark_plot_tools import plot_unit_counts
+
         return plot_unit_counts(self, **kwargs)
 
     def plot_performances(self, **kwargs):
         from .benchmark_plot_tools import plot_performances
+
         return plot_performances(self, **kwargs)
 
     def plot_agreement_matrix(self, **kwargs):
         from .benchmark_plot_tools import plot_agreement_matrix
+
         return plot_agreement_matrix(self, **kwargs)
-
-
-

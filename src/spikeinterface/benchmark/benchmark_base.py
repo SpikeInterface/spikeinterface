@@ -259,6 +259,7 @@ class BenchmarkStudy:
 
     def plot_run_times(self, case_keys=None):
         from .benchmark_plot_tools import plot_run_times
+
         return plot_run_times(self, case_keys=case_keys)
 
     def compute_results(self, case_keys=None, verbose=False, **result_params):
@@ -445,4 +446,3 @@ class Benchmark:
     def compute_result(self):
         # run becnhmark result
         raise NotImplementedError
-
