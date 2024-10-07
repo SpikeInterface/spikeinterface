@@ -1,10 +1,10 @@
 import pytest
 
 import shutil
+from pathlib import Path
 
-
-from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset
-from spikeinterface.sortingcomponents.benchmark.benchmark_peak_detection import PeakDetectionStudy
+from spikeinterface.benchmark.tests.common_benchmark_testing import make_dataset
+from spikeinterface.benchmark.benchmark_peak_detection import PeakDetectionStudy
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
@@ -69,5 +69,5 @@ def test_benchmark_peak_detection(create_cache_folder):
 
 
 if __name__ == "__main__":
-    # test_benchmark_peak_localization()
-    test_benchmark_peak_detection()
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks"
+    test_benchmark_peak_detection(cache_folder)

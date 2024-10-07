@@ -1,4 +1,4 @@
-Combine Recordings in SpikeInterface
+Combine recordings in SpikeInterface
 ====================================
 
 In this tutorial we will walk through combining multiple recording objects. Sometimes this occurs due to hardware
