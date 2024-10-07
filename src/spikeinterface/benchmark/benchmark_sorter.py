@@ -15,7 +15,7 @@ from spikeinterface.comparison import compare_sorter_to_ground_truth
 # )
 
 
-
+# TODO later integrate CollisionGTComparison optionally in this class.
 
 
 class SorterBenchmark(Benchmark):
