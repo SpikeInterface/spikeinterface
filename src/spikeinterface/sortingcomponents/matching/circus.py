@@ -181,10 +181,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             self.unit_overlaps_tables[i] = np.zeros(self.num_templates, dtype=int)
             self.unit_overlaps_tables[i][self.unit_overlaps_indices[i]] = np.arange(len(self.unit_overlaps_indices[i]))
 
-        if self.vicinity > 0:
-            self.margin = self.vicinity
-        else:
-            self.margin = 2 * self.num_samples
+        self.margin = 2 * self.num_samples
 
     def _prepare_templates(self):
 
@@ -400,21 +397,23 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             res_sps = full_sps[selection[0], selection[1]]
 
             if self.vicinity == 0:
-                all_amplitudes, _ = potrs(M[:num_selection, :num_selection], res_sps, lower=True, overwrite_b=False)
-                all_amplitudes /= self.norms[selection[0]]
+                new_amplitudes, _ = potrs(M[:num_selection, :num_selection], res_sps, lower=True, overwrite_b=False)
+                sub_selection = selection
+                new_amplitudes /= self.norms[sub_selection[0]]
             else:
                 is_in_vicinity = np.append(is_in_vicinity, num_selection - 1)
                 all_amplitudes = np.append(all_amplitudes, np.float32(1))
                 L = M[is_in_vicinity, :][:, is_in_vicinity]
-                all_amplitudes[is_in_vicinity], _ = potrs(L, res_sps[is_in_vicinity], lower=True, overwrite_b=False)
-                all_amplitudes[is_in_vicinity] /= self.norms[selection[0][is_in_vicinity]]
-
-            diff_amplitudes = all_amplitudes - final_amplitudes[selection[0], selection[1]]
+                new_amplitudes, _ = potrs(L, res_sps[is_in_vicinity], lower=True, overwrite_b=False)
+                sub_selection = selection[:, is_in_vicinity]
+                new_amplitudes /= self.norms[sub_selection[0]]
+                
+            diff_amplitudes = new_amplitudes - final_amplitudes[sub_selection[0], sub_selection[1]]
             modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
-            final_amplitudes[selection[0], selection[1]] = all_amplitudes
+            final_amplitudes[sub_selection[0], sub_selection[1]] = new_amplitudes
 
             for i in modified:
-                tmp_best, tmp_peak = selection[:, i]
+                tmp_best, tmp_peak = sub_selection[:, i]
                 diff_amp = diff_amplitudes[i] * self.norms[tmp_best]
 
                 local_overlaps = overlaps_array[tmp_best]
@@ -462,12 +461,9 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         spikes["cluster_index"][:num_spikes] = valid_indices[0]
         spikes["amplitude"][:num_spikes] = final_amplitudes[valid_indices[0], valid_indices[1]]
 
-        print("yep0", spikes.size, num_spikes, spikes.shape, spikes.dtype)
         spikes = spikes[:num_spikes]
-        print("yep1", spikes.size, spikes.shape, spikes.dtype)
-        if spikes.size > 0:
-            order = np.argsort(spikes["sample_index"])
-            spikes = spikes[order]
+        order = np.argsort(spikes["sample_index"])
+        spikes = spikes[order]
 
         return spikes
 
