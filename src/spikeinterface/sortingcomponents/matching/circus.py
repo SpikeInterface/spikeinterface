@@ -313,8 +313,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
 
         full_sps = scalar_products.copy()
 
-        neighbors = {}
-
         all_amplitudes = np.zeros(0, dtype=np.float32)
         is_in_vicinity = np.zeros(0, dtype=np.int32)
 
@@ -415,18 +413,11 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             for i in modified:
                 tmp_best, tmp_peak = sub_selection[:, i]
                 diff_amp = diff_amplitudes[i] * self.norms[tmp_best]
-
                 local_overlaps = overlaps_array[tmp_best]
                 overlapping_templates = self.units_overlaps[tmp_best]
-
-                if not tmp_peak in neighbors.keys():
-                    idx = [max(0, tmp_peak - neighbor_window), min(num_peaks, tmp_peak + num_samples)]
-                    tdx = [neighbor_window + idx[0] - tmp_peak, num_samples + idx[1] - tmp_peak - 1]
-                    neighbors[tmp_peak] = {"idx": idx, "tdx": tdx}
-
-                idx = neighbors[tmp_peak]["idx"]
-                tdx = neighbors[tmp_peak]["tdx"]
-
+                tmp = tmp_peak - neighbor_window
+                idx = [max(0, tmp), min(num_peaks, tmp_peak + num_samples)]
+                tdx = [idx[0] - tmp, idx[1] - tmp]
                 to_add = diff_amp * local_overlaps[:, tdx[0] : tdx[1]]
                 scalar_products[overlapping_templates, idx[0] : idx[1]] -= to_add
 
