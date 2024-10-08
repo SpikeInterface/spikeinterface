@@ -128,8 +128,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
     vicinity : int
         Size of the area surrounding a spike to perform modification (expressed in terms
         of template temporal width)
-    device : string or torch.device
-        Controls torch device
+    engine : string in ["numpy", "torch", "auto"]. Default "auto"
+        The engine to use for the convolutions
+    torch_device : string in ["cpu", "cuda", "auto"]. Default "cpu"
+        Controls torch device if the torch engine is selected
     -----
     """
 
@@ -144,7 +146,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         "ignore_inds": [],
         "vicinity": 3,
         "engine" : "auto",
-        "torch_device" : "auto"
+        "torch_device" : "cpu"
 
     }
 

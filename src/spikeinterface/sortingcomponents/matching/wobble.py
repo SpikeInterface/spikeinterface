@@ -50,8 +50,10 @@ class WobbleParameters:
         Maximum value for ampltiude scaling of templates.
     scale_amplitudes : bool
         If True, scale amplitudes of templates to match spikes.
-    device : string or torch.device
-        Controls torch device
+    engine : string in ["numpy", "torch", "auto"]. Default "auto"
+        The engine to use for the convolutions
+    torch_device : string in ["cpu", "cuda", "auto"]. Default "cpu"
+        Controls torch device if the torch engine is selected
 
     Notes
     -----
@@ -73,8 +75,8 @@ class WobbleParameters:
     scale_min: float = 0
     scale_max: float = np.inf
     scale_amplitudes: bool = False
-    engine: str = "numpy"
-    torch_device: str = "auto"
+    engine: str = "auto"
+    torch_device: str = "cpu"
 
     def __post_init__(self):
         assert self.amplitude_variance >= 0, "amplitude_variance must be a non-negative scalar"
@@ -357,8 +359,8 @@ class WobbleMatch(BaseTemplateMatching):
         parents=None,
         templates=None,
         parameters={},
-        engine="numpy",
-        torch_device="auto"
+        engine="auto",
+        torch_device="cpu"
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
@@ -408,10 +410,10 @@ class WobbleMatch(BaseTemplateMatching):
         temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
         singular = singular.T[:, :, np.newaxis]
 
-        if HAVE_TORCH and self.device is not None:
-            spatial = torch.as_tensor(spatial, device=self.device)
-            singular = torch.as_tensor(singular, device=self.device)
-            temporal = torch.as_tensor(temporal.copy(), device=self.device).swapaxes(0, 1)
+        if self.engine == "torch":
+            spatial = torch.as_tensor(spatial, device=self.torch_device)
+            singular = torch.as_tensor(singular, device=self.torch_device)
+            temporal = torch.as_tensor(temporal.copy(), device=self.torch_device).swapaxes(0, 1)
             temporal = torch.flip(temporal, (2,))
             template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
         else:
