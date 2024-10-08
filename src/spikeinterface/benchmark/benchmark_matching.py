@@ -69,33 +69,7 @@ class MatchingStudy(BenchmarkStudy):
     def plot_performances_vs_snr(self, **kwargs):
         from .benchmark_plot_tools import plot_performances_vs_snr
 
-<<<<<<< HEAD:src/spikeinterface/sortingcomponents/benchmark/benchmark_matching.py
-    def plot_performances_vs_snr(self, case_keys=None, figsize=None, metrics=["accuracy", "recall", "precision"]):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-        import pylab as plt
-        fig, axs = plt.subplots(ncols=1, nrows=len(metrics), figsize=figsize, squeeze=False)
-
-        for count, k in enumerate(metrics):
-
-            ax = axs[count, 0]
-            for key in case_keys:
-                label = self.cases[key]["label"]
-
-                analyzer = self.get_sorting_analyzer(key)
-                metrics = analyzer.get_extension("quality_metrics").get_data()
-                x = metrics["snr"].values
-                y = self.get_result(key)["gt_comparison"].get_performance()[k].values
-                ax.scatter(x, y, marker=".", label=label)
-                ax.set_title(k)
-
-            if count == 2:
-                ax.legend()
-
-        return fig
-=======
         return plot_performances_vs_snr(self, **kwargs)
->>>>>>> main:src/spikeinterface/benchmark/benchmark_matching.py
 
     def plot_collisions(self, case_keys=None, figsize=None):
         if case_keys is None:
