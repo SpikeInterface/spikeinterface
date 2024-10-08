@@ -35,31 +35,28 @@ def auto_merges(
     sorting_analyzer: SortingAnalyzer,
     preset: str | None = "similarity_correlograms",
     resolve_graph: bool = False,
-    steps_params: dict = {"num_spikes" : {"min_spikes": 100},
-                    "snr" : {"min_snr": 2},
-                    "remove_contaminated" : {"contamination_thresh": 0.2, 
-                                             "refractory_period_ms": 1.0, 
-                                             "censored_period_ms": 0.3},
-                    "unit_locations" : {"max_distance_um": 50},
-                    "correlogram" : {
-                            "corr_diff_thresh": 0.16,
-                            "censor_correlograms_ms": 0.3,
-                            "sigma_smooth_ms": 0.6,
-                            "adaptative_window_thresh": 0.5,
-                        },
-                    "template_similarity" : {"template_diff_thresh": 0.25},
-                    "presence_distance" : {"presence_distance_thresh": 100},
-                    "knn" : {"k_nn": 10},
-                    "cross_contamination" : {
-                        "cc_thresh": 0.1,
-                        "p_value": 0.2,
-                        "refractory_period_ms": 1.0,
-                        "censored_period_ms": 0.3,
-                    },
-                    "quality_score" : {"firing_contamination_balance": 2.5, 
-                                       "refractory_period_ms": 1.0, 
-                                       "censored_period_ms": 0.3},
-                },
+    steps_params: dict = {
+        "num_spikes": {"min_spikes": 100},
+        "snr": {"min_snr": 2},
+        "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+        "unit_locations": {"max_distance_um": 50},
+        "correlogram": {
+            "corr_diff_thresh": 0.16,
+            "censor_correlograms_ms": 0.3,
+            "sigma_smooth_ms": 0.6,
+            "adaptative_window_thresh": 0.5,
+        },
+        "template_similarity": {"template_diff_thresh": 0.25},
+        "presence_distance": {"presence_distance_thresh": 100},
+        "knn": {"k_nn": 10},
+        "cross_contamination": {
+            "cc_thresh": 0.1,
+            "p_value": 0.2,
+            "refractory_period_ms": 1.0,
+            "censored_period_ms": 0.3,
+        },
+        "quality_score": {"firing_contamination_balance": 2.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+    },
     compute_needed_extensions: bool = True,
     extra_outputs: bool = False,
     steps: list[str] | None = None,
@@ -232,7 +229,7 @@ def auto_merges(
 
         # STEP : remove units with too few spikes
         if step == "num_spikes":
-            
+
             num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
             to_remove = num_spikes < params["min_spikes"]
             pair_mask[to_remove, :] = False
@@ -508,34 +505,36 @@ def get_potential_auto_merge(
         sorting_analyzer,
         preset,
         resolve_graph,
-        step_params={"num_spikes" : {"min_spikes": min_spikes},
-                    "snr_kwargs" : {"min_snr": min_snr},
-                    "remove_contaminated_kwargs" : {
-                        "contamination_thresh": contamination_thresh,
-                        "refractory_period_ms": refractory_period_ms,
-                        "censored_period_ms": censored_period_ms,
-                    },
-                    "unit_locations" : {"max_distance_um": max_distance_um},
-                    "correlogram" : {
-                        "corr_diff_thresh": corr_diff_thresh,
-                        "censor_correlograms_ms": censor_correlograms_ms,
-                        "sigma_smooth_ms": sigma_smooth_ms,
-                        "adaptative_window_thresh": adaptative_window_thresh,
-                    },
-                    "template_similarity":  {"template_diff_thresh": template_diff_thresh},
-                    "presence_distance" : {"presence_distance_thresh": presence_distance_thresh, **presence_distance_kwargs},
-                    "knn" : {"k_nn": k_nn, **knn_kwargs},
-                    "cross_contamination" : {
-                        "cc_thresh": cc_thresh,
-                        "p_value": p_value,
-                        "refractory_period_ms": refractory_period_ms,
-                        "censored_period_ms": censored_period_ms,
-                    },
-                    "quality_score" : {
-                        "firing_contamination_balance": firing_contamination_balance,
-                        "refractory_period_ms": refractory_period_ms,
-                        "censored_period_ms": censored_period_ms,
-                    }},
+        step_params={
+            "num_spikes": {"min_spikes": min_spikes},
+            "snr_kwargs": {"min_snr": min_snr},
+            "remove_contaminated_kwargs": {
+                "contamination_thresh": contamination_thresh,
+                "refractory_period_ms": refractory_period_ms,
+                "censored_period_ms": censored_period_ms,
+            },
+            "unit_locations": {"max_distance_um": max_distance_um},
+            "correlogram": {
+                "corr_diff_thresh": corr_diff_thresh,
+                "censor_correlograms_ms": censor_correlograms_ms,
+                "sigma_smooth_ms": sigma_smooth_ms,
+                "adaptative_window_thresh": adaptative_window_thresh,
+            },
+            "template_similarity": {"template_diff_thresh": template_diff_thresh},
+            "presence_distance": {"presence_distance_thresh": presence_distance_thresh, **presence_distance_kwargs},
+            "knn": {"k_nn": k_nn, **knn_kwargs},
+            "cross_contamination": {
+                "cc_thresh": cc_thresh,
+                "p_value": p_value,
+                "refractory_period_ms": refractory_period_ms,
+                "censored_period_ms": censored_period_ms,
+            },
+            "quality_score": {
+                "firing_contamination_balance": firing_contamination_balance,
+                "refractory_period_ms": refractory_period_ms,
+                "censored_period_ms": censored_period_ms,
+            },
+        },
         compute_needed_extensions=False,
         extra_outputs=extra_outputs,
         steps=steps,
