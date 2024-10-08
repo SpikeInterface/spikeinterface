@@ -408,10 +408,10 @@ class WobbleMatch(BaseTemplateMatching):
         temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
         singular = singular.T[:, :, np.newaxis]
 
-        if HAVE_TORCH and self.device is not None:
-            spatial = torch.as_tensor(spatial, device=self.device)
-            singular = torch.as_tensor(singular, device=self.device)
-            temporal = torch.as_tensor(temporal.copy(), device=self.device).swapaxes(0, 1)
+        if self.engine == "torch":
+            spatial = torch.as_tensor(spatial, device=self.torch_device)
+            singular = torch.as_tensor(singular, device=self.torch_device)
+            temporal = torch.as_tensor(temporal.copy(), device=self.torch_device).swapaxes(0, 1)
             temporal = torch.flip(temporal, (2,))
             template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
         else:
