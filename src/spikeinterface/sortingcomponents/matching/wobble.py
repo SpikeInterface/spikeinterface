@@ -358,7 +358,7 @@ class WobbleMatch(BaseTemplateMatching):
         templates=None,
         parameters={},
         engine="numpy",
-        torch_device="auto"
+        torch_device="auto",
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
@@ -368,7 +368,7 @@ class WobbleMatch(BaseTemplateMatching):
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
 
-        assert engine in ['numpy', 'torch', 'auto'], "engine should be numpy, torch or auto"
+        assert engine in ["numpy", "torch", "auto"], "engine should be numpy, torch or auto"
         if engine == "auto":
             if HAVE_TORCH:
                 self.engine = "torch"
@@ -379,7 +379,7 @@ class WobbleMatch(BaseTemplateMatching):
                 assert HAVE_TORCH, "please install torch to use the torch engine"
             self.engine = engine
 
-        assert torch_device in ['cuda', 'cpu', 'auto']
+        assert torch_device in ["cuda", "cpu", "auto"]
         self.torch_device = torch_device
 
         template_meta = TemplateMetadata.from_parameters_and_templates(params, templates_array)
@@ -403,7 +403,7 @@ class WobbleMatch(BaseTemplateMatching):
             pairwise_convolution=pairwise_convolution,
             norm_squared=norm_squared,
         )
-        
+
         spatial = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
         temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
         singular = singular.T[:, :, np.newaxis]
@@ -416,7 +416,7 @@ class WobbleMatch(BaseTemplateMatching):
             template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
         else:
             template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
-    
+
         self.params = params
         self.template_meta = template_meta
         self.sparsity = sparsity
@@ -444,7 +444,9 @@ class WobbleMatch(BaseTemplateMatching):
         assert traces.dtype == np.float32, "traces must be specified as np.float32"
 
         # Compute objective
-        objective = compute_objective(traces, self.template_data, self.params.approx_rank, self.engine, self.torch_device)
+        objective = compute_objective(
+            traces, self.template_data, self.params.approx_rank, self.engine, self.torch_device
+        )
         objective_normalized = 2 * objective - self.template_data.norm_squared[:, np.newaxis]
 
         # Compute spike train
@@ -959,11 +961,11 @@ def compute_objective(traces, template_data, approx_rank, engine="numpy", torch_
         num_timesteps = torch_traces.shape[2]
         spatially_filtered_data = torch.matmul(spatial, torch_traces)
         scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1)
-        scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, num_timesteps)
-        objective = conv1d(scaled_filtered_data_, temporal, groups=num_templates, padding='valid')
+        scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates * num_channels, num_timesteps)
+        objective = conv1d(scaled_filtered_data_, temporal, groups=num_templates, padding="valid")
         objective = objective.cpu().numpy()[0, :, :]
     elif engine == "numpy":
-        num_channels, num_templates  = temporal.shape[0], temporal.shape[1]
+        num_channels, num_templates = temporal.shape[0], temporal.shape[1]
         num_timesteps = temporal.shape[2]
         objective_len = get_convolution_len(traces.shape[0], num_timesteps)
         conv_shape = (num_templates, objective_len)
@@ -972,6 +974,7 @@ def compute_objective(traces, template_data, approx_rank, engine="numpy", torch_
         spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
         scaled_filtered_data = spatially_filtered_data * singular
         from scipy import signal
+
         objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="full")
         objective += np.sum(objective_by_rank, axis=0)
     return objective
