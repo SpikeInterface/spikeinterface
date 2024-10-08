@@ -75,6 +75,7 @@ class MatchingStudy(BenchmarkStudy):
         if case_keys is None:
             case_keys = list(self.cases.keys())
         import pylab as plt
+
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
