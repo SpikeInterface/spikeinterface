@@ -360,7 +360,7 @@ class WobbleMatch(BaseTemplateMatching):
         templates=None,
         parameters={},
         engine="auto",
-        torch_device="cpu"
+        torch_device="cpu",
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
