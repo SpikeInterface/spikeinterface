@@ -356,6 +356,7 @@ class WobbleMatch(BaseTemplateMatching):
         parents=None,
         templates=None,
         parameters={},
+        device=None
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
@@ -365,7 +366,7 @@ class WobbleMatch(BaseTemplateMatching):
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
 
-        kwargs['device'] = params.device
+        self.device = device
         template_meta = TemplateMetadata.from_parameters_and_templates(params, templates_array)
         if not templates.are_templates_sparse():
             sparsity = WobbleSparsity.from_parameters_and_templates(params, templates_array)
@@ -392,34 +393,21 @@ class WobbleMatch(BaseTemplateMatching):
         temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
         singular = singular.T[:, :, np.newaxis]
 
-<<<<<<< HEAD
-        if HAVE_TORCH and params.device is not None:
-            spatial = torch.as_tensor(spatial, device=kwargs['device'])
-            singular = torch.as_tensor(singular, device=kwargs['device'])
-            temporal = torch.as_tensor(temporal.copy(), device=kwargs['device']).swapaxes(0, 1)
+        if HAVE_TORCH and self.device is not None:
+            spatial = torch.as_tensor(spatial, device=self.device)
+            singular = torch.as_tensor(singular, device=self.device)
+            temporal = torch.as_tensor(temporal.copy(), device=self.device).swapaxes(0, 1)
             temporal = torch.flip(temporal, (2,))
             template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
         else:
             template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
     
-        # Pack initial data into kwargs
-        kwargs["params"] = params
-        kwargs["template_meta"] = template_meta
-        kwargs["sparsity"] = sparsity
-        kwargs["template_data"] = template_data
-        kwargs["nbefore"] = templates.nbefore
-        kwargs["nafter"] = templates.nafter
-
-        d.update(kwargs)
-        return d
-=======
         self.params = params
         self.template_meta = template_meta
         self.sparsity = sparsity
         self.template_data = template_data
         self.nbefore = templates.nbefore
         self.nafter = templates.nafter
->>>>>>> main
 
         # buffer_ms = 10
         # self.margin = int(buffer_ms*1e-3 * recording.sampling_frequency)
@@ -431,33 +419,18 @@ class WobbleMatch(BaseTemplateMatching):
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
 
         # Unpack method_kwargs
-<<<<<<< HEAD
-        nbefore, nafter = method_kwargs["nbefore"], method_kwargs["nafter"]
-        template_meta = method_kwargs["template_meta"]
-        params = method_kwargs["params"]
-        sparsity = method_kwargs["sparsity"]
-        template_data = method_kwargs["template_data"]
-        device = method_kwargs['device']
-=======
         # nbefore, nafter = method_kwargs["nbefore"], method_kwargs["nafter"]
         # template_meta = method_kwargs["template_meta"]
         # params = method_kwargs["params"]
         # sparsity = method_kwargs["sparsity"]
         # template_data = method_kwargs["template_data"]
->>>>>>> main
 
         # Check traces
         assert traces.dtype == np.float32, "traces must be specified as np.float32"
 
         # Compute objective
-<<<<<<< HEAD
-
-        objective = compute_objective(traces, template_data, device)
-        objective_normalized = 2 * objective - template_data.norm_squared[:, np.newaxis]
-=======
-        objective = compute_objective(traces, self.template_data, self.params.approx_rank)
+        objective = compute_objective(traces, self.template_data, self.params.approx_rank, self.device)
         objective_normalized = 2 * objective - self.template_data.norm_squared[:, np.newaxis]
->>>>>>> main
 
         # Compute spike train
         spike_trains, scalings, distance_metrics = [], [], []

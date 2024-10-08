@@ -26,7 +26,7 @@ try:
 except ImportError:
     HAVE_TORCH = False
 
-from .main import BaseTemplateMatchingEngine
+from .base import BaseTemplateMatching
 
 
 def compress_templates(
@@ -160,6 +160,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         ignore_inds=[],
         vicinity=3,
         precomputed=None,
+        device=None
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
@@ -170,6 +171,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         self.nafter = templates.nafter
         self.sampling_frequency = recording.get_sampling_frequency()
         self.vicinity = vicinity * self.num_samples
+        self.device = device
 
         self.amplitudes = amplitudes
         self.stop_criteria = stop_criteria
@@ -203,7 +205,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
 
         assert self.stop_criteria in ["max_failures", "omp_min_sps", "relative_error"]
 
-        sparsity = self.templates.sparsity.mask
+        if self.templates.sparsity is None:
+            sparsity = np.ones((self.num_templates, self.num_channels), dtype=bool)
+        else:
+            sparsity = self.templates.sparsity.mask
 
         units_overlaps = np.sum(np.logical_and(sparsity[:, np.newaxis, :], sparsity[np.newaxis, :, :]), axis=2)
         self.units_overlaps = units_overlaps > 0
@@ -272,8 +277,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             self.temporal = torch.as_tensor(self.temporal.copy(), device=self.device).swapaxes(0, 1)
             self.temporal = torch.flip(self.temporal, (2,))
 
-        return d
-
     def get_extra_outputs(self):
         output = {}
         for key in self._more_output_keys:
@@ -306,10 +309,11 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             blank = np.zeros((nt, self.num_channels), dtype=np.float32)
             traces = np.vstack((blank, traces, blank))
             torch_traces = torch.as_tensor(traces.T[None, :, :], device=self.device)
+            num_templates, num_channels = self.temporal.shape[0], self.temporal.shape[1]
             num_timesteps = torch_traces.shape[2]
             spatially_filtered_data = torch.matmul(self.spatial, torch_traces)
             scaled_filtered_data = (spatially_filtered_data * self.singular).swapaxes(0, 1)
-            scaled_filtered_data_ = scaled_filtered_data.reshape(1, self.num_templates*self.num_channels, num_timesteps)
+            scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, num_timesteps)
             scalar_products = conv1d(scaled_filtered_data_, self.temporal, groups=num_templates, padding='valid')
             scalar_products = scalar_products.cpu().numpy()[0, :, :]
         else:
@@ -370,7 +374,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                 myline = neighbor_window + delta_t[idx]
                 myindices = selection[0, idx]
 
-                local_overlaps = overlaps_array[best_cluster_ind]
+                local_overlaps = self.overlaps[best_cluster_ind]
                 overlapping_templates = self.unit_overlaps_indices[best_cluster_ind]
                 table = self.unit_overlaps_tables[best_cluster_ind]
 
@@ -442,7 +446,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                 tmp_best, tmp_peak = selection[:, i]
                 diff_amp = diff_amplitudes[i] * self.norms[tmp_best]
 
-                local_overlaps = overlaps_array[tmp_best]
+                local_overlaps = self.overlaps[tmp_best]
                 overlapping_templates = self.units_overlaps[tmp_best]
 
                 if not tmp_peak in neighbors.keys():
