@@ -145,9 +145,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         "rank": 5,
         "ignore_inds": [],
         "vicinity": 3,
-        "engine" : "auto",
-        "torch_device" : "cpu"
-
+        "engine": "auto",
+        "torch_device": "cpu",
     }
 
     def __init__(
