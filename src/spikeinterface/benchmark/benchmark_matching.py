@@ -72,6 +72,12 @@ class MatchingStudy(BenchmarkStudy):
         from .benchmark_plot_tools import plot_performances_vs_snr
 
         return plot_performances_vs_snr(self, **kwargs)
+    
+    def plot_performances_comparison(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_comparison
+
+        return plot_performances_comparison(self, **kwargs)        
+        
 
     def plot_collisions(self, case_keys=None, figsize=None):
         if case_keys is None:
@@ -89,70 +95,6 @@ class MatchingStudy(BenchmarkStudy):
                 mode="lines",
                 good_only=False,
             )
-
-        return fig
-
-    def plot_comparison_matching(
-        self,
-        case_keys=None,
-        performance_names=["accuracy", "recall", "precision"],
-        colors=["g", "b", "r"],
-        ylim=(-0.1, 1.1),
-        figsize=None,
-    ):
-
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-
-        num_methods = len(case_keys)
-        import pylab as plt
-
-        fig, axs = plt.subplots(ncols=num_methods, nrows=num_methods, figsize=(10, 10))
-        for i, key1 in enumerate(case_keys):
-            for j, key2 in enumerate(case_keys):
-                if len(axs.shape) > 1:
-                    ax = axs[i, j]
-                else:
-                    ax = axs[j]
-                comp1 = self.get_result(key1)["gt_comparison"]
-                comp2 = self.get_result(key2)["gt_comparison"]
-                if i <= j:
-                    for performance, color in zip(performance_names, colors):
-                        perf1 = comp1.get_performance()[performance]
-                        perf2 = comp2.get_performance()[performance]
-                        ax.plot(perf2, perf1, ".", label=performance, color=color)
-
-                    ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
-                    ax.set_ylim(ylim)
-                    ax.set_xlim(ylim)
-                    ax.spines[["right", "top"]].set_visible(False)
-                    ax.set_aspect("equal")
-
-                    label1 = self.cases[key1]["label"]
-                    label2 = self.cases[key2]["label"]
-                    if j == i:
-                        ax.set_ylabel(f"{label1}")
-                    else:
-                        ax.set_yticks([])
-                    if i == j:
-                        ax.set_xlabel(f"{label2}")
-                    else:
-                        ax.set_xticks([])
-                    if i == num_methods - 1 and j == num_methods - 1:
-                        patches = []
-                        import matplotlib.patches as mpatches
-
-                        for color, name in zip(colors, performance_names):
-                            patches.append(mpatches.Patch(color=color, label=name))
-                        ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
-                else:
-                    ax.spines["bottom"].set_visible(False)
-                    ax.spines["left"].set_visible(False)
-                    ax.spines["top"].set_visible(False)
-                    ax.spines["right"].set_visible(False)
-                    ax.set_xticks([])
-                    ax.set_yticks([])
-        plt.tight_layout(h_pad=0, w_pad=0)
 
         return fig
 

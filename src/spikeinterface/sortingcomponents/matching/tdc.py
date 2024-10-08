@@ -354,6 +354,12 @@ if HAVE_NUMBA:
 
 
 
+# TODO:
+#   * precompute template norm
+#   * several radius : detection, peeler
+#   * distance sparse loop
+
+
 class TridesclousPeeler2(BaseTemplateMatching):
     """
     Template-matching used by Tridesclous sorter.
@@ -367,8 +373,8 @@ class TridesclousPeeler2(BaseTemplateMatching):
         noise_levels=None,
         radius_um=100.,
         sample_shift=2,
-        ms_before=0.8,
-        ms_after=1.2,
+        ms_before=0.5,
+        ms_after=0.8,
         max_peeler_loop=3,
         amplitude_limits=(0.7, 1.4),
         ):
@@ -377,6 +383,8 @@ class TridesclousPeeler2(BaseTemplateMatching):
 
         unit_ids = templates.unit_ids
         channel_ids = recording.channel_ids
+
+        num_templates = unit_ids.size
 
         sr = recording.sampling_frequency
 
@@ -397,8 +405,9 @@ class TridesclousPeeler2(BaseTemplateMatching):
             s1 = None
 
         # TODO check with out copy
-        self.dense_templates_array = templates.get_dense_templates()
-        self.dense_templates_array_short = self.dense_templates_array[:, slice(s0, s1), :].copy()
+        # self.dense_templates_array = templates.get_dense_templates()
+        # self.dense_templates_array_short = self.dense_templates_array[:, slice(s0, s1), :].copy()
+        self.sparse_templates_array_short = templates.templates_array[:, slice(s0, s1), :].copy()
 
         self.peak_shift = int(peak_shift_ms / 1000 * sr)
 
@@ -431,6 +440,20 @@ class TridesclousPeeler2(BaseTemplateMatching):
         for channel_index in range(distances.shape[0]):
             (cluster_inds,) = np.nonzero(near_cluster_mask[channel_index, :])
             self.possible_clusters_by_channel.append(cluster_inds)
+
+
+        self.template_norms = np.zeros(num_templates, dtype="float32")
+        for i in range(unit_ids.size):
+            chan_mask = self.sparsity_mask[i, :]
+            n = np.sum(chan_mask)
+            template = templates.templates_array[i, :, :n]
+            self.template_norms[i] = np.sum(template ** 2)
+
+        # template = sparse_templates_array[cluster_index, :, :num_chans]
+        # wf = traces[start: stop, :][:, chan_sparsity_mask]
+        # # TODO precompute template norms
+        # amplitude = np.sum(template.flatten() * wf.flatten()) / np.sum(template.flatten()**2)
+    
 
         # 
         distances = scipy.spatial.distance.cdist(channel_locations, channel_locations, metric="euclidean")
@@ -515,16 +538,16 @@ class TridesclousPeeler2(BaseTemplateMatching):
             possible_clusters = self.possible_clusters_by_channel[chan_ind]
 
             if possible_clusters.size > 0:
-                cluster_index = get_most_probable_cluster(traces, self.dense_templates_array_short, possible_clusters,
+                cluster_index = get_most_probable_cluster(traces, self.sparse_templates_array_short, possible_clusters,
                                           sample_index, chan_ind, self.nbefore_short, self.nafter_short, self.sparsity_mask)
-
+                
 
                 chan_sparsity_mask = self.sparsity_mask[cluster_index, :]
 
                 # find best shift
-                numba_best_shift(
+                numba_best_shift_sparse(
                     traces,
-                    self.dense_templates_array_short[cluster_index, :, :],
+                    self.sparse_templates_array_short[cluster_index, :, :],
                     sample_index,
                     self.nbefore_short,
                     self.possible_shifts,
@@ -556,13 +579,14 @@ class TridesclousPeeler2(BaseTemplateMatching):
                     inner_neighbors_inds = [ ind for ind in neighbors_spikes_inds[i] if (ind>i and ind < spikes.size)]
                     for b in inner_neighbors_inds:
                         spikes["cluster_index"][b] = get_most_probable_cluster(
-                            traces, self.dense_templates_array_short, possible_clusters,
+                            traces, self.sparse_templates_array_short, possible_clusters,
                             spikes["sample_index"][b], spikes["channel_index"][b], self.nbefore_short,
                             self.nafter_short, self.sparsity_mask
                         )
 
                     amp = fit_one_amplitude_with_neighbors(spikes[i], spikes[inner_neighbors_inds],  traces, 
                                                     self.sparsity_mask, self.templates.templates_array,
+                                                    self.template_norms,
                                                     self.nbefore, self.nafter)
                     
                     low_lim, up_lim = self.amplitude_limits
@@ -616,7 +640,7 @@ class TridesclousPeeler2(BaseTemplateMatching):
         # keep = (spikes["amplitude"] >= 0.7) & (spikes["amplitude"] <= 1.4)
         # spikes = spikes[keep]
 
-        sparse_templates_array = self.templates.templates_array
+        # sparse_templates_array = self.templates.templates_array
         # wanted_channel_mask = np.ones(traces.shape[1], dtype=bool)
         # assert np.sum(wanted_channel_mask) == traces.shape[1] # TODO remove this DEBUG later
         # construct_prediction_sparse(spikes, traces, sparse_templates_array, self.sparsity_mask, wanted_channel_mask, self.nbefore, additive=False)
@@ -626,15 +650,17 @@ class TridesclousPeeler2(BaseTemplateMatching):
 
 
 
-def get_most_probable_cluster(traces, dense_templates_array_short, possible_clusters,
-                              sample_index, chan_ind, nbefore_short, nafter_short, sparsity_mask):
+def get_most_probable_cluster(traces, sparse_templates_array, possible_clusters,
+                              sample_index, chan_ind, nbefore_short, nafter_short, template_sparsity_mask):
     s0 = sample_index - nbefore_short
     s1 = sample_index + nafter_short
     wf_short = traces[s0:s1, :]
 
     ## numba with cluster+channel spasity
-    union_channels = np.any(sparsity_mask[possible_clusters, :], axis=0)
-    distances = numba_sparse_dist(wf_short, dense_templates_array_short, union_channels, possible_clusters)
+    union_channels = np.any(template_sparsity_mask[possible_clusters, :], axis=0)
+    distances = numba_sparse_distance(wf_short,
+                                      sparse_templates_array, template_sparsity_mask,
+                                      union_channels, possible_clusters)
 
     ind = np.argmin(distances)
     cluster_index = possible_clusters[ind]
@@ -658,7 +684,9 @@ def get_neighbors_spikes(sample_inds, chan_inds, delta_sample, near_chan_mask):
 
 
 def fit_one_amplitude_with_neighbors(spike, neighbors_spikes,  traces, 
-                                     template_sparsity_mask, sparse_templates_array, nbefore, nafter):
+                                     template_sparsity_mask, sparse_templates_array,
+                                     template_norms,
+                                     nbefore, nafter):
     """
     Fit amplitude one spike of one spike with/without neighbors
     
@@ -679,7 +707,7 @@ def fit_one_amplitude_with_neighbors(spike, neighbors_spikes,  traces,
         template = sparse_templates_array[cluster_index, :, :num_chans]
         wf = traces[start: stop, :][:, chan_sparsity_mask]
         # TODO precompute template norms
-        amplitude = np.sum(template.flatten() * wf.flatten()) / np.sum(template.flatten()**2)
+        amplitude = np.sum(template.flatten() * wf.flatten()) / template_norms[cluster_index]
     else:
         
 
@@ -764,3 +792,65 @@ if HAVE_NUMBA:
                 else:
                     if template_sparsity_mask[cluster_index, chan]:
                         chan_in_template += 1
+
+
+    @jit(nopython=True)
+    def numba_sparse_distance(wf, sparse_templates_array, template_sparsity_mask, wanted_channel_mask, possible_clusters):
+        """
+        numba implementation that compute distance from template with sparsity
+
+        wf is dense
+        sparse_templates_array is sparse with the template_sparsity_mask
+        """
+        width, total_chans = wf.shape
+        num_cluster = possible_clusters.shape[0]
+        distances = np.zeros((num_cluster,), dtype=np.float32)
+        for i in prange(num_cluster):
+            cluster_index = possible_clusters[i]
+            sum_dist = 0.0
+            chan_in_template = 0
+            for chan in range(total_chans):
+                if wanted_channel_mask[chan]:
+                    if template_sparsity_mask[cluster_index, chan]:
+                        for s in range(width):
+                            v = wf[s, chan]
+                            t = sparse_templates_array[cluster_index, s, chan_in_template]
+                            sum_dist += (v - t) ** 2
+                        chan_in_template += 1
+                    else:
+                        for s in range(width):
+                            v = wf[s, chan]
+                            t = 0
+                            sum_dist += (v - t) ** 2
+                else:
+                    if template_sparsity_mask[cluster_index, chan]:
+                        chan_in_template += 1
+            distances[i] = sum_dist
+        return distances
+
+
+    @jit(nopython=True)
+    def numba_best_shift_sparse(traces, sparse_template, 
+                         sample_index, nbefore, possible_shifts, distances_shift, chan_sparsity):
+        """
+        numba implementation to compute several sample shift before template substraction
+        """
+        width = sparse_template.shape[0]
+        total_chans = traces.shape[1]
+        n_shift = possible_shifts.size
+        for i in range(n_shift):
+            shift = possible_shifts[i]
+            sum_dist = 0.0
+            chan_in_template = 0
+            for chan in range(total_chans):
+                if chan_sparsity[chan]:
+                    for s in range(width):
+                        v = traces[sample_index - nbefore + s + shift, chan]
+                        t = sparse_template[s, chan_in_template]
+                        sum_dist += (v - t) ** 2
+                    chan_in_template += 1
+            distances_shift[i] = sum_dist
+
+        return distances_shift
+
+

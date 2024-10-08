@@ -241,3 +241,63 @@ def plot_performances_vs_snr(study, case_keys=None, figsize=None, metrics=["accu
             ax.legend()
 
     return fig
+
+
+def plot_performances_comparison(study, case_keys=None, figsize=None, 
+        metrics=["accuracy", "recall", "precision"],
+        colors=["g", "b", "r"],
+        ylim=(-0.1, 1.1),
+    ):
+    import matplotlib.pyplot as plt
+
+    if case_keys is None:
+        case_keys = list(study.cases.keys())
+
+    num_methods = len(case_keys)
+    assert num_methods >= 2, "plot_performances_comparison need at least 2 cases!"
+    
+    fig, axs = plt.subplots(ncols=num_methods - 1, nrows=num_methods - 1, figsize=(10, 10), squeeze=False)
+    for i, key1 in enumerate(case_keys):
+        for j, key2 in enumerate(case_keys):
+            
+            if i < j:
+                ax = axs[i, j-1]
+
+                comp1 = study.get_result(key1)["gt_comparison"]
+                comp2 = study.get_result(key2)["gt_comparison"]
+
+                for performance, color in zip(metrics, colors):
+                    perf1 = comp1.get_performance()[performance]
+                    perf2 = comp2.get_performance()[performance]
+                    ax.scatter(perf2, perf1, marker=".",
+                               label=performance, color=color)
+
+                ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
+                ax.set_ylim(ylim)
+                ax.set_xlim(ylim)
+                ax.spines[["right", "top"]].set_visible(False)
+                ax.set_aspect("equal")
+
+                label1 = study.cases[key1]["label"]
+                label2 = study.cases[key2]["label"]
+
+                ax.set_xlabel(label2)
+                ax.set_ylabel(label1)
+
+            else:
+                if j>=1 and i < num_methods - 1:
+                    ax = axs[i, j-1]
+                    ax.spines[["right", "top", "left", "bottom"]].set_visible(False)
+                    ax.set_xticks([])
+                    ax.set_yticks([])
+
+
+    ax = axs[num_methods - 2, 0]
+    patches = []
+    from matplotlib.patches import Patch
+    for color, name in zip(colors, metrics):
+        patches.append(Patch(color=color, label=name))
+    ax.legend(handles=patches)
+
+    return fig
+
