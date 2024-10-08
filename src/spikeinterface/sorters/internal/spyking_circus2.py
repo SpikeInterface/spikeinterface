@@ -14,10 +14,6 @@ from spikeinterface.preprocessing import common_reference, whiten, bandpass_filt
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-from spikeinterface.curation.auto_merge import get_potential_auto_merge
-from spikeinterface.core.analyzer_extension_core import ComputeTemplates
-from spikeinterface.core.sparsity import ChannelSparsity
 
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
@@ -36,15 +32,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             "seed": 42,
         },
         "apply_motion_correction": True,
-        "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
-        "merging": {
-            "similarity_kwargs": {"method": "cosine", "support": "union", "max_lag_ms": 0.2},
-            "correlograms_kwargs": {},
-            "auto_merge": {
-                "min_spikes": 10,
-                "corr_diff_thresh": 0.25,
-            },
-        },
+        "motion_correction": {"preset": "dredge_fast"},
+        "merging": {"method": "lussac"},
         "clustering": {"legacy": True},
         "matching": {"method": "wobble"},
         "apply_preprocessing": True,
@@ -105,13 +94,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
+        from spikeinterface.sortingcomponents.merging import merge_spikes
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.sortingcomponents.tools import get_prototype_spike, check_probe_for_drift_correction
-        from spikeinterface.sortingcomponents.tools import get_prototype_spike
+        from spikeinterface.core.globals import set_global_job_kwargs, get_global_job_kwargs
 
-        job_kwargs = params["job_kwargs"]
+        job_kwargs_before = get_global_job_kwargs().copy()
+        job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
-        job_kwargs.update({"progress_bar": verbose})
+        set_global_job_kwargs(**job_kwargs)
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -142,7 +133,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 if verbose:
                     print("Motion correction activated (probe geometry compatible)")
                 motion_folder = sorter_output_folder / "motion"
-                params["motion_correction"].update({"folder": motion_folder})
+                params["motion_correction"].update({"folder": motion_folder, "overwrite": True})
                 recording_f = correct_motion(recording_f, **params["motion_correction"])
         else:
             motion_folder = None
@@ -218,6 +209,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["ms_before"] = exclude_sweep_ms
             clustering_params["ms_after"] = exclude_sweep_ms
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
+            clustering_params["verbose"] = verbose
 
             legacy = clustering_params.get("legacy", True)
 
@@ -310,17 +302,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             shutil.rmtree(sorting_folder)
 
         merging_params = params["merging"].copy()
+        merging_method = merging_params.get("method", None)
 
-        if len(merging_params) > 0:
-            if params["motion_correction"] and motion_folder is not None:
-                from spikeinterface.preprocessing.motion import load_motion_info
-
-                motion_info = load_motion_info(motion_folder)
-                motion = motion_info["motion"]
-                max_motion = max(
-                    np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
-                )
-                merging_params["max_distance_um"] = max(50, 2 * max_motion)
+        if merging_method is not None:
 
             # peak_sign = params['detection'].get('peak_sign', 'neg')
             # best_amplitudes = get_template_extremum_amplitude(templates, peak_sign=peak_sign)
@@ -336,7 +320,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting.save(folder=curation_folder)
                 # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
-            sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params)
+            sorting = merge_spikes(recording_w, sorting, templates=templates, verbose=verbose, **merging_params)
 
             if verbose:
                 print(f"Final merging, keeping {len(sorting.unit_ids)} units")
@@ -353,44 +337,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             shutil.rmtree(folder_to_delete)
 
         sorting = sorting.save(folder=sorting_folder)
+        set_global_job_kwargs(**job_kwargs_before)
 
         return sorting
-
-
-def create_sorting_analyzer_with_templates(sorting, recording, templates, remove_empty=True):
-    sparsity = templates.sparsity
-    templates_array = templates.get_dense_templates().copy()
-
-    if remove_empty:
-        non_empty_unit_ids = sorting.get_non_empty_unit_ids()
-        non_empty_sorting = sorting.remove_empty_units()
-        non_empty_unit_indices = sorting.ids_to_indices(non_empty_unit_ids)
-        templates_array = templates_array[non_empty_unit_indices]
-        sparsity_mask = sparsity.mask[non_empty_unit_indices, :]
-        sparsity = ChannelSparsity(sparsity_mask, non_empty_unit_ids, sparsity.channel_ids)
-    else:
-        non_empty_sorting = sorting
-
-    sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
-    sa.extensions["templates"] = ComputeTemplates(sa)
-    sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
-    sa.extensions["templates"].data["average"] = templates_array
-    return sa
-
-
-def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
-
-    from spikeinterface.core.sorting_tools import apply_merges_to_sorting
-
-    sa = create_sorting_analyzer_with_templates(sorting, recording, templates)
-
-    sa.compute("unit_locations", method="monopolar_triangulation")
-    similarity_kwargs = merging_kwargs.pop("similarity_kwargs", {})
-    sa.compute("template_similarity", **similarity_kwargs)
-    correlograms_kwargs = merging_kwargs.pop("correlograms_kwargs", {})
-    sa.compute("correlograms", **correlograms_kwargs)
-    auto_merge_kwargs = merging_kwargs.pop("auto_merge", {})
-    merges = get_potential_auto_merge(sa, resolve_graph=True, **auto_merge_kwargs)
-    sorting = apply_merges_to_sorting(sa.sorting, merges)
-
-    return sorting
