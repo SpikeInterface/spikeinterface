@@ -135,19 +135,16 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
     -----
     """
 
-    _default_params = {
-        "amplitudes": [0.6, np.inf],
-        "stop_criteria": "max_failures",
-        "max_failures": 10,
-        "omp_min_sps": 0.1,
-        "relative_error": 5e-5,
-        "templates": None,
-        "rank": 5,
-        "ignore_inds": [],
-        "vicinity": 3,
-        "engine": "auto",
-        "torch_device": "cpu",
-    }
+    _more_output_keys = [
+        "norms",
+        "temporal",
+        "spatial",
+        "singular",
+        "units_overlaps",
+        "unit_overlaps_indices",
+        "normed_templates",
+        "overlaps",
+    ]
 
     def __init__(
         self,
