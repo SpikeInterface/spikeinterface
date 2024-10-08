@@ -9,11 +9,8 @@ from spikeinterface.widgets import (
 )
 
 import numpy as np
-from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
+from .benchmark_base import Benchmark, BenchmarkStudy
 from spikeinterface.core.basesorting import minimum_spike_dtype
-from spikeinterface.sortingcomponents.tools import remove_empty_templates
-from spikeinterface.core.recording_tools import get_noise_levels
-from spikeinterface.core.sparsity import compute_sparsity
 
 
 class MatchingBenchmark(Benchmark):
@@ -64,18 +61,15 @@ class MatchingStudy(BenchmarkStudy):
         benchmark = MatchingBenchmark(recording, gt_sorting, params)
         return benchmark
 
-    def plot_agreements(self, case_keys=None, figsize=None):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-        import pylab as plt
+    def plot_agreement_matrix(self, **kwargs):
+        from .benchmark_plot_tools import plot_agreement_matrix
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+        return plot_agreement_matrix(self, **kwargs)
 
-        for count, key in enumerate(case_keys):
-            ax = axs[0, count]
-            ax.set_title(self.cases[key]["label"])
-            plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
+    def plot_performances_vs_snr(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_snr
 
+<<<<<<< HEAD:src/spikeinterface/sortingcomponents/benchmark/benchmark_matching.py
     def plot_performances_vs_snr(self, case_keys=None, figsize=None, metrics=["accuracy", "recall", "precision"]):
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -99,6 +93,9 @@ class MatchingStudy(BenchmarkStudy):
                 ax.legend()
 
         return fig
+=======
+        return plot_performances_vs_snr(self, **kwargs)
+>>>>>>> main:src/spikeinterface/benchmark/benchmark_matching.py
 
     def plot_collisions(self, case_keys=None, figsize=None):
         if case_keys is None:
