@@ -83,8 +83,12 @@ def test_run_node_pipeline(cache_folder_creation):
     extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="index")
 
     peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
+    # print(peaks.size)
 
     peak_retriever = PeakRetriever(recording, peaks)
+    # this test when no spikes in last chunks
+    peak_retriever_few = PeakRetriever(recording, peaks[: peaks.size // 2])
+
     # channel index is from template
     spike_retriever_T = SpikeRetriever(
         sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
@@ -100,7 +104,7 @@ def test_run_node_pipeline(cache_folder_creation):
     )
 
     # test with 3 differents first nodes
-    for loop, peak_source in enumerate((peak_retriever, spike_retriever_T, spike_retriever_S)):
+    for loop, peak_source in enumerate((peak_retriever, peak_retriever_few, spike_retriever_T, spike_retriever_S)):
         # one step only : squeeze output
         nodes = [
             peak_source,
@@ -139,10 +143,12 @@ def test_run_node_pipeline(cache_folder_creation):
 
         num_peaks = peaks.shape[0]
         num_channels = recording.get_num_channels()
-        assert waveforms_rms.shape[0] == num_peaks
+        if peak_source != peak_retriever_few:
+            assert waveforms_rms.shape[0] == num_peaks
         assert waveforms_rms.shape[1] == num_channels
 
-        assert waveforms_rms.shape[0] == num_peaks
+        if peak_source != peak_retriever_few:
+            assert waveforms_rms.shape[0] == num_peaks
         assert waveforms_rms.shape[1] == num_channels
 
         # gather npy mode
@@ -185,5 +191,38 @@ def test_run_node_pipeline(cache_folder_creation):
             unpickled_node = pickle.loads(pickled_node)
 
 
+def test_skip_after_n_peaks():
+    recording, sorting = generate_ground_truth_recording(num_channels=10, num_units=10, durations=[10.0])
+
+    # job_kwargs = dict(chunk_duration="0.5s", n_jobs=2, progress_bar=False)
+    job_kwargs = dict(chunk_duration="0.5s", n_jobs=1, progress_bar=False)
+
+    spikes = sorting.to_spike_vector()
+
+    # create peaks from spikes
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
+    sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
+    extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="index")
+
+    peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
+    # print(peaks.size)
+
+    node0 = PeakRetriever(recording, peaks)
+    node1 = AmplitudeExtractionNode(recording, parents=[node0], param0=6.6, return_output=True)
+    nodes = [node0, node1]
+
+    skip_after_n_peaks = 30
+    some_amplitudes = run_node_pipeline(
+        recording, nodes, job_kwargs, gather_mode="memory", skip_after_n_peaks=skip_after_n_peaks
+    )
+
+    assert some_amplitudes.size >= skip_after_n_peaks
+    assert some_amplitudes.size < spikes.size
+
+
+# the following is for testing locally with python or ipython. It is not used in ci or with pytest.
 if __name__ == "__main__":
-    test_run_node_pipeline()
+    # folder = Path("./cache_folder/core")
+    # test_run_node_pipeline(folder)
+
+    test_skip_after_n_peaks()
