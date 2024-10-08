@@ -38,6 +38,7 @@ try:
     import torch
     import torch.nn.functional as F
     from torch.nn.functional import conv1d
+
     HAVE_TORCH = True
 except ImportError:
     HAVE_TORCH = False
@@ -49,7 +50,8 @@ TODO:
 """
 
 
-torch_keys = ("device", )
+torch_keys = ("device",)
+
 
 def split_torch_kwargs(mixed_kwargs):
     """
@@ -127,7 +129,7 @@ def detect_peaks(
     if device is not None and device != "cpu":
         job_kwargs["mp_context"] = "spawn"
     else:
-        job_kwargs["mp_context"] = job_kwargs.get('mp_context', None)
+        job_kwargs["mp_context"] = job_kwargs.get("mp_context", None)
 
     node0 = method_class(recording, **method_kwargs)
     nodes = [node0]
@@ -692,7 +694,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         medians = medians[:, None]
         noise_levels = np.median(np.abs(conv_random_data - medians), axis=1) / 0.6744897501960817
         self.abs_thresholds = noise_levels * detect_threshold
-        
+
         self._dtype = np.dtype(base_peak_dtype + [("z", "float32")])
 
     def get_dtype(self):
@@ -1303,7 +1305,7 @@ _methods_list = [
     DetectPeakLocallyExclusiveOpenCL,
     DetectPeakByChannelTorch,
     DetectPeakLocallyExclusiveTorch,
-    DetectPeakMatchedFiltering
+    DetectPeakMatchedFiltering,
 ]
 detect_peak_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)

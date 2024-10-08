@@ -166,7 +166,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         vicinity=2,
         precomputed=None,
         engine="numpy",
-        torch_device="auto"
+        torch_device="auto",
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
@@ -177,7 +177,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         self.nafter = templates.nafter
         self.sampling_frequency = recording.get_sampling_frequency()
         self.vicinity = vicinity * self.num_samples
-        assert engine in ['numpy', 'torch', 'auto'], "engine should be numpy, torch or auto"
+        assert engine in ["numpy", "torch", "auto"], "engine should be numpy, torch or auto"
         if engine == "auto":
             if HAVE_TORCH:
                 self.engine = "torch"
@@ -188,7 +188,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                 assert HAVE_TORCH, "please install torch to use the torch engine"
             self.engine = engine
 
-        assert torch_device in ['cuda', 'cpu', 'auto']
+        assert torch_device in ["cuda", "cpu", "auto"]
         self.torch_device = torch_device
 
         self.amplitudes = amplitudes
@@ -246,7 +246,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
 
         self.temporal /= self.norms[:, np.newaxis, np.newaxis]
         self.temporal = np.flip(self.temporal, axis=1)
-            
+
         self.overlaps = []
         self.max_similarity = np.zeros((self.num_templates, self.num_templates), dtype=np.float32)
         for i in range(self.num_templates):
@@ -286,7 +286,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         self.temporal = np.moveaxis(self.temporal, [0, 1, 2], [1, 2, 0])
         self.singular = self.singular.T[:, :, np.newaxis]
 
-        if HAVE_TORCH and self.engine == 'torch':
+        if HAVE_TORCH and self.engine == "torch":
             self.spatial = torch.as_tensor(self.spatial, device=self.torch_device)
             self.singular = torch.as_tensor(self.singular, device=self.torch_device)
             self.temporal = torch.as_tensor(self.temporal.copy(), device=self.torch_device).swapaxes(0, 1)
@@ -327,8 +327,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             num_timesteps = torch_traces.shape[2]
             spatially_filtered_data = torch.matmul(self.spatial, torch_traces)
             scaled_filtered_data = (spatially_filtered_data * self.singular).swapaxes(0, 1)
-            scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, num_timesteps)
-            scalar_products = conv1d(scaled_filtered_data_, self.temporal, groups=num_templates, padding='valid')
+            scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates * num_channels, num_timesteps)
+            scalar_products = conv1d(scaled_filtered_data_, self.temporal, groups=num_templates, padding="valid")
             scalar_products = scalar_products.cpu().numpy()[0, :, :]
         else:
             objective_len = traces.shape[0] + self.num_samples - 1
@@ -338,6 +338,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             spatially_filtered_data = np.matmul(self.spatial, traces.T[np.newaxis, :, :])
             scaled_filtered_data = spatially_filtered_data * self.singular
             from scipy import signal
+
             objective_by_rank = signal.oaconvolve(scaled_filtered_data, self.temporal, axes=2, mode="full")
             scalar_products += np.sum(objective_by_rank, axis=0)
         num_peaks = scalar_products.shape[1]
