@@ -335,17 +335,17 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
 
             best_cluster_inds = np.argmax(scalar_products, axis=0, keepdims=True)
             products = np.take_along_axis(scalar_products, best_cluster_inds, axis=0)
-            
-            result = ndimage.maximum_filter(products[0], size=self.vicinity, mode='constant', cval=0)
-            cond_1 = products[0]/self.norms[best_cluster_inds[0]] > 0.25
+
+            result = ndimage.maximum_filter(products[0], size=self.vicinity, mode="constant", cval=0)
+            cond_1 = products[0] / self.norms[best_cluster_inds[0]] > 0.25
             cond_2 = np.abs(products[0] - result) < 1e-9
-            peak_indices = np.where(cond_1*cond_2)[0]
+            peak_indices = np.where(cond_1 * cond_2)[0]
 
             if len(peak_indices) == 0:
                 break
 
             for peak_index in peak_indices:
-                
+
                 best_cluster_ind = best_cluster_inds[0, peak_index]
 
                 if num_selection > 0:
@@ -389,7 +389,12 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                             L = M[is_in_vicinity, :][:, is_in_vicinity]
 
                             M[num_selection, is_in_vicinity] = scipy.linalg.solve_triangular(
-                                L, M[num_selection, is_in_vicinity], trans=0, lower=1, overwrite_b=True, check_finite=False
+                                L,
+                                M[num_selection, is_in_vicinity],
+                                trans=0,
+                                lower=1,
+                                overwrite_b=True,
+                                check_finite=False,
                             )
 
                             v = nrm2(M[num_selection, is_in_vicinity]) ** 2
