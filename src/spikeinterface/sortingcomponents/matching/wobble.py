@@ -73,7 +73,8 @@ class WobbleParameters:
     scale_min: float = 0
     scale_max: float = np.inf
     scale_amplitudes: bool = False
-    device: str = None
+    engine: str = "numpy"
+    torch_device: str = "auto"
 
     def __post_init__(self):
         assert self.amplitude_variance >= 0, "amplitude_variance must be a non-negative scalar"
@@ -356,7 +357,8 @@ class WobbleMatch(BaseTemplateMatching):
         parents=None,
         templates=None,
         parameters={},
-        device=None
+        engine="numpy",
+        torch_device="auto"
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
@@ -366,7 +368,20 @@ class WobbleMatch(BaseTemplateMatching):
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
 
-        self.device = device
+        assert engine in ['numpy', 'torch', 'auto'], "engine should be numpy, torch or auto"
+        if engine == "auto":
+            if HAVE_TORCH:
+                self.engine = "torch"
+            else:
+                self.engine = "numpy"
+        else:
+            if engine == "torch":
+                assert HAVE_TORCH, "please install torch to use the torch engine"
+            self.engine = engine
+
+        assert torch_device in ['cuda', 'cpu', 'auto']
+        self.torch_device = torch_device
+
         template_meta = TemplateMetadata.from_parameters_and_templates(params, templates_array)
         if not templates.are_templates_sparse():
             sparsity = WobbleSparsity.from_parameters_and_templates(params, templates_array)
@@ -429,7 +444,7 @@ class WobbleMatch(BaseTemplateMatching):
         assert traces.dtype == np.float32, "traces must be specified as np.float32"
 
         # Compute objective
-        objective = compute_objective(traces, self.template_data, self.params.approx_rank, self.device)
+        objective = compute_objective(traces, self.template_data, self.params.approx_rank, self.engine, self.torch_device)
         objective_normalized = 2 * objective - self.template_data.norm_squared[:, np.newaxis]
 
         # Compute spike train
@@ -918,7 +933,7 @@ def convolve_templates(compressed_templates, jitter_factor, approx_rank, jittere
     return pairwise_convolution
 
 
-def compute_objective(traces, template_data, approx_rank, device=None) -> np.ndarray:
+def compute_objective(traces, template_data, approx_rank, engine="numpy", torch_device=None) -> np.ndarray:
     """Compute objective by convolving templates with voltage traces.
 
     Parameters
@@ -934,12 +949,12 @@ def compute_objective(traces, template_data, approx_rank, device=None) -> np.nda
             Template matching objective for each template.
     """
     temporal, singular, spatial, _ = template_data.compressed_templates
-    if HAVE_TORCH and device is not None:
+    if engine == "torch":
         nt = temporal.shape[2] - 1
         num_channels = traces.shape[1]
         blank = np.zeros((nt, num_channels), dtype=np.float32)
         traces = np.vstack((blank, traces, blank))
-        torch_traces = torch.as_tensor(traces.T[None, :, :], device=device)
+        torch_traces = torch.as_tensor(traces.T[None, :, :], device=torch_device)
         num_templates, num_channels = temporal.shape[0], temporal.shape[1]
         num_timesteps = torch_traces.shape[2]
         spatially_filtered_data = torch.matmul(spatial, torch_traces)
@@ -947,7 +962,7 @@ def compute_objective(traces, template_data, approx_rank, device=None) -> np.nda
         scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates*num_channels, num_timesteps)
         objective = conv1d(scaled_filtered_data_, temporal, groups=num_templates, padding='valid')
         objective = objective.cpu().numpy()[0, :, :]
-    else:
+    elif engine == "numpy":
         num_channels, num_templates  = temporal.shape[0], temporal.shape[1]
         num_timesteps = temporal.shape[2]
         objective_len = get_convolution_len(traces.shape[0], num_timesteps)

@@ -24,10 +24,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
     _default_params = {
-        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
+        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 75},
         "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2},
-        "whitening": {"mode" : "local", "regularize" : False},
+        "whitening": {"mode": "local", "regularize": True},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
             "method": "uniform",
@@ -47,13 +47,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             },
         },
         "clustering": {"legacy": True},
-        "matching": {"method": "wobble"},
+        "matching": {"method": "circus-omp-svd", "torch_engine" : "cpu"},
         "apply_preprocessing": True,
         "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
-        "torch_kwargs" : {"device" : "cpu"},
         "debug": False,
     }
 
@@ -129,7 +128,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
         radius_um = params["general"].get("radius_um", 75)
-        torch_device = params["torch_kwargs"].get('device', None)
         exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after) / 2)
 
         ## First, we are filtering the data
@@ -187,23 +185,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         nbefore = int(ms_before * fs / 1000.0)
         nafter = int(ms_after * fs / 1000.0)
 
-        peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params)
-
         if params["matched_filtering"]:
+            peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, skip_after_n_peaks=5000)
             prototype = get_prototype_spike(recording_w, peaks, ms_before, ms_after, **job_kwargs)
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
-
-            for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-                if value in detection_params:
-                    detection_params.pop(value)
-
-            detection_params["chunk_duration"] = "100ms"
-            
-            if torch_device is None:
-                peaks = detect_peaks(recording_w, "matched_filtering", **detection_params)
-            else:
-                peaks = detect_peaks(recording_w, "matched_filtering_torch", **detection_params, **params["torch_kwargs"])
+            peaks = detect_peaks(recording_w, "matched_filtering", **detection_params)
+        else:
+            peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params)
 
         if verbose:
             print("We found %d peaks in total" % len(peaks))
@@ -299,15 +288,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_job_params = job_kwargs.copy()
 
             if matching_method is not None:
-                for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-                    if value in matching_job_params:
-                        matching_job_params[value] = None
-                matching_job_params["chunk_duration"] = "100ms"
-                if torch_device is not None and torch_device != "cpu":
-                    matching_job_params["mp_context"] = "spawn"
-                else:
-                    matching_job_params["mp_context"] = job_kwargs.get('mp_context', None)
-
                 spikes = find_spikes_from_templates(
                     recording_w, matching_method, method_kwargs=matching_params, **matching_job_params
                 )
