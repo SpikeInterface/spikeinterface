@@ -281,8 +281,9 @@ def plot_performances_comparison(study, case_keys=None, figsize=None,
                 label1 = study.cases[key1]["label"]
                 label2 = study.cases[key2]["label"]
 
-                ax.set_xlabel(label2)
-                ax.set_ylabel(label1)
+                if i == j -1:
+                    ax.set_xlabel(label2)
+                    ax.set_ylabel(label1)
 
             else:
                 if j>=1 and i < num_methods - 1:
@@ -298,6 +299,6 @@ def plot_performances_comparison(study, case_keys=None, figsize=None,
     for color, name in zip(colors, metrics):
         patches.append(Patch(color=color, label=name))
     ax.legend(handles=patches)
-
+    fig.tight_layout()
     return fig
 

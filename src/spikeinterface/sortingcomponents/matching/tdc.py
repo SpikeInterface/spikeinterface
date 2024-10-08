@@ -8,7 +8,7 @@ from spikeinterface.core import (
     get_template_extremum_channel,
 )
 
-from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
+from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive, DetectPeakMatchedFiltering
 from spikeinterface.core.template import Templates
 
 from .base import BaseTemplateMatching, _base_matching_dtype
@@ -354,12 +354,6 @@ if HAVE_NUMBA:
 
 
 
-# TODO:
-#   * precompute template norm
-#   * several radius : detection, peeler
-#   * distance sparse loop
-
-
 class TridesclousPeeler2(BaseTemplateMatching):
     """
     Template-matching used by Tridesclous sorter.
@@ -368,10 +362,15 @@ class TridesclousPeeler2(BaseTemplateMatching):
     def __init__(self, recording, return_output=True, parents=None,
         templates=None,
         peak_sign="neg",
+        exclude_sweep_ms=0.5,
         peak_shift_ms=0.2,
         detect_threshold=5,
         noise_levels=None,
-        radius_um=100.,
+        # TODO optimize theses radius
+        detection_radius_um=100.,
+        cluster_radius_um=150.,
+        amplitude_radius_um=200.,
+
         sample_shift=2,
         ms_before=0.5,
         ms_after=0.8,
@@ -416,7 +415,7 @@ class TridesclousPeeler2(BaseTemplateMatching):
         self.abs_thresholds = noise_levels * detect_threshold
 
         channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = channel_distance <= radius_um
+        self.neighbours_mask = channel_distance <= detection_radius_um
 
         if templates.sparsity is not None:
             self.sparsity_mask = templates.sparsity.mask
@@ -435,7 +434,7 @@ class TridesclousPeeler2(BaseTemplateMatching):
 
         # nearby cluster for each channel
         distances = scipy.spatial.distance.cdist(channel_locations, unit_locations, metric="euclidean")
-        near_cluster_mask = distances <= radius_um
+        near_cluster_mask = distances <= cluster_radius_um
         self.possible_clusters_by_channel = []
         for channel_index in range(distances.shape[0]):
             (cluster_inds,) = np.nonzero(near_cluster_mask[channel_index, :])
@@ -457,14 +456,58 @@ class TridesclousPeeler2(BaseTemplateMatching):
 
         # 
         distances = scipy.spatial.distance.cdist(channel_locations, channel_locations, metric="euclidean")
-        self.near_chan_mask = distances <= radius_um
+        self.near_chan_mask = distances <= amplitude_radius_um
 
         self.possible_shifts = np.arange(-sample_shift, sample_shift + 1, dtype="int64")
 
         self.max_peeler_loop = max_peeler_loop
         self.amplitude_limits = amplitude_limits
 
-        self.margin = max(self.nbefore, self.nafter) * 2
+        
+
+
+        self.peak_detector_level0 = DetectPeakLocallyExclusive(
+            recording=recording,
+            peak_sign=peak_sign,
+            detect_threshold=detect_threshold,
+            exclude_sweep_ms=exclude_sweep_ms,
+            radius_um=detection_radius_um,
+            noise_levels=noise_levels,
+        )
+        
+        ##get prototype from best channel of each template
+        prototype = np.zeros(self.nbefore+self.nafter, dtype='float32')
+        for i in range(num_templates):
+            template = templates.templates_array[i, :, :]
+            chan_ind = np.argmax(np.abs(template[self.nbefore, :]))
+            if template[self.nbefore, chan_ind] != 0:
+                prototype += template[:, chan_ind] / np.abs(template[self.nbefore, chan_ind])
+        prototype /= np.abs(prototype[self.nbefore])
+
+        # import matplotlib.pyplot as plt
+        # fig,ax = plt.subplots()
+        # ax.plot(prototype)    
+        # plt.show()
+        
+        self.peak_detector_level1 = DetectPeakMatchedFiltering(
+            recording=recording,
+            prototype=prototype,
+            ms_before=templates.nbefore / sr * 1000.,
+            peak_sign="neg",
+            detect_threshold=detect_threshold,
+            exclude_sweep_ms=exclude_sweep_ms,
+            radius_um=detection_radius_um,
+            rank=1,
+            noise_levels=noise_levels,
+        )
+        
+        # TODO max maargin detector
+        self.detector_margin0 = self.peak_detector_level0.get_trace_margin()
+        self.detector_margin1 = self.peak_detector_level1.get_trace_margin()
+        self.peeler_margin = max(self.nbefore, self.nafter) * 2
+        self.margin = max(self.peeler_margin,  self.detector_margin0, self.detector_margin1)
+
+
 
     def get_trace_margin(self):
         return self.margin
@@ -478,6 +521,7 @@ class TridesclousPeeler2(BaseTemplateMatching):
         level = 0
         spikes_prev_loop = np.zeros(0, dtype=_base_matching_dtype)
         while True:
+            # print('level', level)
             spikes = self._find_spikes_one_level(traces, spikes_prev_loop, level=level)
             if not np.any(spikes.size):
                 break
@@ -502,11 +546,34 @@ class TridesclousPeeler2(BaseTemplateMatching):
     def _find_spikes_one_level(self, traces, spikes_prev_loop, level=0):
 
         # TODO change the threhold dynaically depending the level
-        peak_traces = traces[self.margin // 2 : -self.margin // 2, :]
-        peak_sample_ind, peak_chan_ind = DetectPeakLocallyExclusive.detect_peaks(
-            peak_traces, self.peak_sign, self.abs_thresholds, self.peak_shift, self.neighbours_mask
-        )
-        peak_sample_ind += self.margin // 2
+        # peak_traces = traces[self.detector_margin : -self.detector_margin, :]
+        
+        # peak_sample_ind, peak_chan_ind = DetectPeakLocallyExclusive.detect_peaks(
+        #     peak_traces, self.peak_sign, self.abs_thresholds, self.peak_shift, self.neighbours_mask
+        # )
+
+        
+        if level == 0:
+            peak_detector = self.peak_detector_level0
+        else:
+            peak_detector = self.peak_detector_level1
+
+        detector_margin = peak_detector.get_trace_margin()
+        if self.peeler_margin > detector_margin:
+            margin_shift = self.peeler_margin - detector_margin
+            sl = slice(margin_shift, -margin_shift)
+        else:
+            sl = slice(None)
+            margin_shift = 0
+        peak_traces = traces[sl, :]
+        peaks, = peak_detector.compute(peak_traces, None, None, 0, self.margin)
+        peak_sample_ind = peaks["sample_index"]
+        peak_chan_ind = peaks["channel_index"]
+        peak_sample_ind += margin_shift
+
+
+
+
 
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
         order = np.argsort(np.abs(peak_amplitude))[::-1]
@@ -528,8 +595,6 @@ class TridesclousPeeler2(BaseTemplateMatching):
             np.concatenate([spikes["channel_index"], spikes_prev_loop["channel_index"]]),
             delta_sample, self.near_chan_mask)
 
-
-        spikes_prev_loop
 
         for i in range(spikes.size):
             sample_index = peak_sample_ind[i]
