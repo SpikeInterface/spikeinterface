@@ -234,7 +234,8 @@ class ComputeQualityMetrics(AnalyzerExtension):
         )
 
         existing_metrics = []
-        qm_extension = self.sorting_analyzer.get_extension("quality_metrics")
+        # here we get in the loaded via the dict only (to avoid full loading from disk after params reset)
+        qm_extension = self.sorting_analyzer.extensions.get("quality_metrics", None)
         if (
             delete_existing_metrics is False
             and qm_extension is not None
