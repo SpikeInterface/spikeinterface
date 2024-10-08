@@ -405,7 +405,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                 new_amplitudes, _ = potrs(L, res_sps[is_in_vicinity], lower=True, overwrite_b=False)
                 sub_selection = selection[:, is_in_vicinity]
                 new_amplitudes /= self.norms[sub_selection[0]]
-                
+
             diff_amplitudes = new_amplitudes - final_amplitudes[sub_selection[0], sub_selection[1]]
             modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
             final_amplitudes[sub_selection[0], sub_selection[1]] = new_amplitudes
