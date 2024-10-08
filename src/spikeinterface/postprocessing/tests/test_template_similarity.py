@@ -7,7 +7,23 @@ from spikeinterface.postprocessing.tests.common_extension_tests import (
 )
 
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap, ComputeTemplateSimilarity
-from spikeinterface.postprocessing.template_similarity import compute_similarity_with_templates_array
+from spikeinterface.postprocessing.template_similarity import (
+    compute_similarity_with_templates_array,
+    _compute_similarity_matrix_numpy,
+)
+
+try:
+    import numba
+
+    HAVE_NUMBA = True
+    from spikeinterface.postprocessing.template_similarity import _compute_similarity_matrix_numba
+except ModuleNotFoundError as err:
+    HAVE_NUMBA = False
+
+import pytest
+from pytest import param
+
+SKIP_NUMBA = pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
 
 
 class TestSimilarityExtension(AnalyzerExtensionCommonTestSuite):
@@ -70,6 +86,35 @@ def test_compute_similarity_with_templates_array(params):
 
     similarity = compute_similarity_with_templates_array(templates_array, other_templates_array, **params)
     print(similarity.shape)
+
+
+pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        dict(method="cosine", num_shifts=8),
+        dict(method="l1", num_shifts=0),
+        dict(method="l2", num_shifts=0),
+        dict(method="cosine", num_shifts=0),
+    ],
+)
+def test_equal_results_numba(params):
+    """
+    Test that the 2 methods have same results with some varied time bins
+    that are not tested in other tests.
+    """
+
+    rng = np.random.default_rng(seed=2205)
+    templates_array = rng.random(size=(4, 20, 5), dtype=np.float32)
+    other_templates_array = rng.random(size=(2, 20, 5), dtype=np.float32)
+    mask = np.ones((4, 2, 5), dtype=bool)
+
+    result_numpy = _compute_similarity_matrix_numba(templates_array, other_templates_array, mask=mask, **params)
+    result_numba = _compute_similarity_matrix_numpy(templates_array, other_templates_array, mask=mask, **params)
+
+    assert np.allclose(result_numpy, result_numba, 1e-3)
 
 
 if __name__ == "__main__":

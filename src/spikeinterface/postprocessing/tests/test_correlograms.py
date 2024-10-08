@@ -93,7 +93,6 @@ def test_equal_results_correlograms(window_and_bin_ms):
     )
 
     assert np.array_equal(result_numpy, result_numba)
-    assert np.array_equal(result_numpy, result_numba)
 
 
 @pytest.mark.parametrize("method", ["numpy", param("numba", marks=SKIP_NUMBA)])
