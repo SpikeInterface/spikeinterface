@@ -1,5 +1,5 @@
-Load Your Own Data into a Sorting
-=================================
+Load your own data into a Sorting object
+========================================
 
 Why make a :code:`Sorting`?
 

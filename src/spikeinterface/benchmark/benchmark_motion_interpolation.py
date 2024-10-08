@@ -10,7 +10,7 @@ from spikeinterface.sortingcomponents.motion.motion_interpolation import Interpo
 from spikeinterface.curation import MergeUnitsSorting
 
 
-from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy, _simpleaxis
+from .benchmark_base import Benchmark, BenchmarkStudy
 
 
 class MotionInterpolationBenchmark(Benchmark):
