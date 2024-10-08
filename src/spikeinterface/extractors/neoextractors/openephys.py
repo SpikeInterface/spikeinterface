@@ -8,6 +8,9 @@ See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html
 for more info.
 """
 
+from __future__ import annotations
+
+
 from pathlib import Path
 
 import numpy as np
@@ -46,23 +49,25 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
         The folder path to load the recordings from
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load
-    block_index: int, default: None
+    block_index : int, default: None
         If there are several blocks (experiments), specify the block index you want to load
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotation from neo
-    ignore_timestamps_errors: bool, default: False
-        Ignore the discontinuous timestamps errors in neo
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
+    ignore_timestamps_errors : None
+        Deprecated keyword argument. This is now ignored.
+        neo.OpenEphysRawIO is now handling gaps directly but makes the read slower.
     """
 
-    mode = "folder"
     NeoRawIOClass = "OpenEphysRawIO"
-    name = "openephyslegacy"
 
     def __init__(
         self,
@@ -70,23 +75,31 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         stream_id=None,
         stream_name=None,
         block_index=None,
-        all_annotations=False,
-        ignore_timestamps_errors=False,
+        all_annotations: bool = False,
+        use_names_as_ids: bool = False,
+        ignore_timestamps_errors: bool = None,
     ):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path, ignore_timestamps_errors)
+        if ignore_timestamps_errors is not None:
+            warnings.warn(
+                "OpenEphysLegacyRecordingExtractor: ignore_timestamps_errors is deprecated and is ignored",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
             stream_name=stream_name,
             block_index=block_index,
             all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
             **neo_kwargs,
         )
         self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute())))
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path, ignore_timestamps_errors=False):
-        neo_kwargs = {"dirname": str(folder_path), "ignore_timestamps_errors": ignore_timestamps_errors}
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {"dirname": str(folder_path)}
         neo_kwargs = drop_invalid_neo_arguments_for_version_0_12_0(neo_kwargs)
         return neo_kwargs
 
@@ -104,7 +117,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
         The folder path to the root folder (containing the record node folders)
     load_sync_channel : bool, default: False
         If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded
@@ -113,24 +126,22 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         If True, the synchronized_timestamps are loaded and set as times to the recording.
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
         to be uniform and linearly increasing
-    experiment_names: str, list, or None, default: None
+    experiment_names : str, list, or None, default: None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
         E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load
-    block_index: int, default: None
+    block_index : int, default: None
         If there are several blocks (experiments), specify the block index you want to load
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotation from neo
 
     """
 
-    mode = "folder"
     NeoRawIOClass = "OpenEphysBinaryRawIO"
-    name = "openephys"
 
     def __init__(
         self,
@@ -170,6 +181,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             exp_id = exp_ids[0]
         else:
             exp_id = exp_ids[block_index]
+        rec_ids = sorted(
+            list(self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["recordings"].keys())
+        )
 
         # do not load probe for NIDQ stream or if load_sync_channel is True
         if "NI-DAQmx" not in stream_name and not load_sync_channel:
@@ -217,12 +231,12 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 self.set_property("inter_sample_shift", sample_shifts)
 
         # load synchronized timestamps and set_times to recording
-        if load_sync_timestamps:
-            recording_folder = Path(folder_path) / record_node
-            for segment_index in range(self.get_num_segments()):
-                stream_folder = (
-                    recording_folder / f"experiment{exp_id}" / f"recording{segment_index+1}" / "continuous" / oe_stream
-                )
+        recording_folder = Path(folder_path) / record_node
+        stream_folders = []
+        for segment_index, rec_id in enumerate(rec_ids):
+            stream_folder = recording_folder / f"experiment{exp_id}" / f"recording{rec_id}" / "continuous" / oe_stream
+            stream_folders.append(stream_folder)
+            if load_sync_timestamps:
                 if (stream_folder / "sample_numbers.npy").is_file():
                     # OE version>=v0.6
                     sync_times = np.load(stream_folder / "timestamps.npy")
@@ -233,8 +247,10 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     sync_times = None
                 try:
                     self.set_times(times=sync_times, segment_index=segment_index, with_warning=False)
-                except AssertionError:
+                except:
                     warnings.warn(f"Could not load synchronized timestamps for {stream_name}")
+
+        self._stream_folders = stream_folders
 
         self._kwargs.update(
             dict(
@@ -268,13 +284,11 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
 
     """
 
-    mode = "folder"
     NeoRawIOClass = "OpenEphysBinaryRawIO"
-    name = "openephys"
 
     def __init__(self, folder_path, block_index=None):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
@@ -292,15 +306,15 @@ def read_openephys(folder_path, **kwargs):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to openephys folder
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load
-    block_index: int, default: None
+    block_index : int, default: None
         If there are several blocks (experiments), specify the block index you want to load
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotation from neo
     load_sync_channel : bool, default: False
         If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
@@ -311,24 +325,24 @@ def read_openephys(folder_path, **kwargs):
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
         to be uniform and linearly increasing.
         For open ephsy binary format only
-    experiment_names: str, list, or None, default: None
+    experiment_names : str, list, or None, default: None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
         E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
         For open ephsy binary format only
-    ignore_timestamps_errors: bool, default: False
+    ignore_timestamps_errors : bool, default: False
         Ignore the discontinuous timestamps errors in neo
         For open ephsy legacy format only
 
 
     Returns
     -------
-    recording: OpenEphysLegacyRecordingExtractor or OpenEphysBinaryExtractor
+    recording : OpenEphysLegacyRecordingExtractor or OpenEphysBinaryExtractor
     """
     # auto guess format
-    files = [str(f) for f in Path(folder_path).iterdir()]
-    if np.any([f.endswith("continuous") for f in files]):
-        #  format = 'legacy'
+    files = [f for f in Path(folder_path).iterdir()]
+    if np.any([".continuous" in f.name and f.is_file() for f in files]):
+        # format = 'legacy'
         recording = OpenEphysLegacyRecordingExtractor(folder_path, **kwargs)
     else:
         # format = 'binary'
@@ -342,14 +356,14 @@ def read_openephys_event(folder_path, block_index=None):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to openephys folder
-    block_index: int, default: None
+    block_index : int, default: None
         If there are several blocks (experiments), specify the block index you want to load.
 
     Returns
     -------
-    event: OpenEphysBinaryEventExtractor
+    event : OpenEphysBinaryEventExtractor
     """
     # auto guess format
     files = [str(f) for f in Path(folder_path).iterdir()]

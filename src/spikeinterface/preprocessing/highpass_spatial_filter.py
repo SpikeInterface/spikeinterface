@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from .filter import fix_dtype
 from ..core import order_channels_by_depth, get_chunk_with_margin
 from ..core.core_tools import define_function_from_class
 
@@ -45,6 +48,8 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         Order of spatial butterworth filter
     highpass_butter_wn : float, default: 0.01
         Critical frequency (with respect to Nyquist) of spatial butterworth filter
+    dtype : dtype, default: None
+        The dtype of the output traces. If None, the dtype is the same as the input traces
 
     Returns
     -------
@@ -59,8 +64,6 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     https://www.internationalbrainlab.com/repro-ephys
     """
 
-    name = "highpass_spatial_filter"
-
     def __init__(
         self,
         recording,
@@ -71,6 +74,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         agc_window_length_s=0.1,
         highpass_butter_order=3,
         highpass_butter_wn=0.01,
+        dtype=None,
     ):
         BasePreprocessor.__init__(self, recording)
 
@@ -115,6 +119,8 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         butter_kwargs = dict(btype="highpass", N=highpass_butter_order, Wn=highpass_butter_wn)
         sos_filter = scipy.signal.butter(**butter_kwargs, output="sos")
 
+        dtype = fix_dtype(recording, dtype)
+
         for parent_segment in recording._recording_segments:
             rec_segment = HighPassSpatialFilterSegment(
                 parent_segment,
@@ -126,6 +132,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                 sos_filter,
                 order_f,
                 order_r,
+                dtype=dtype,
             )
             self.add_recording_segment(rec_segment)
 
@@ -153,6 +160,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         sos_filter,
         order_f,
         order_r,
+        dtype,
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.parent_recording_segment = parent_recording_segment
@@ -176,6 +184,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         self.order_r = order_r
         # get filter params
         self.sos_filter = sos_filter
+        self.dtype = dtype
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
@@ -232,7 +241,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             traces = traces[left_margin:-right_margin, channel_indices]
         else:
             traces = traces[left_margin:, channel_indices]
-        return traces
+        return traces.astype(self.dtype, copy=False)
 
 
 # function for API

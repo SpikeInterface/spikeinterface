@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import scipy.signal
 
@@ -36,8 +38,6 @@ class FilterOpenCLRecording(BasePreprocessor):
     margin: margin in second on border to avoid border effect
 
     """
-
-    name = "filter"
 
     def __init__(
         self,

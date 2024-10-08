@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import subprocess
 import tempfile
 import shutil
@@ -84,15 +86,15 @@ class ShellScript:
         if self._verbose:
             print("RUNNING SHELL SCRIPT: " + cmd)
         self._start_time = time.time()
+        encoding = sys.getdefaultencoding()
         self._process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, universal_newlines=True
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, universal_newlines=True, encoding=encoding
         )
         with open(script_log_path, "w+") as script_log_file:
             for line in self._process.stdout:
                 script_log_file.write(line)
-                if (
-                    self._verbose
-                ):  # Print onto console depending on the verbose property passed on from the sorter class
+                if self._verbose:
+                    # Print onto console depending on the verbose property passed on from the sorter class
                     print(line)
 
     def wait(self, timeout=None) -> Optional[int]:
@@ -110,6 +112,12 @@ class ShellScript:
             return
         for dirpath in self._dirs_to_remove:
             _rmdir_with_retries(str(dirpath), num_retries=5)
+        if self._process is not None:
+            if self._process.stdout:
+                self._process.stdout.close()
+            if self._process.stderr:
+                self._process.stderr.close()
+            self._process.kill()
 
     def stop(self) -> None:
         if not self.isRunning():

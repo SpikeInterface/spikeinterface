@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import json
 import struct
@@ -10,7 +12,7 @@ import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core.core_tools import write_binary_recording
+from spikeinterface.core import write_binary_recording
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 
@@ -21,11 +23,11 @@ class MdaRecordingExtractor(BaseRecording):
     ----------
     folder_path : str or Path
         Path to the MDA folder.
-    raw_fname: str, default: "raw.mda"
+    raw_fname : str, default: "raw.mda"
         File name of raw file
-    params_fname: str, default: "params.json"
+    params_fname : str, default: "params.json"
         File name of params file
-    geom_fname: str, default: "geom.csv"
+    geom_fname : str, default: "geom.csv"
         File name of geom file
 
     Returns
@@ -33,10 +35,6 @@ class MdaRecordingExtractor(BaseRecording):
     extractor : MdaRecordingExtractor
         The loaded data.
     """
-
-    extractor_name = "MdaRecording"
-    mode = "folder"
-    name = "mda"
 
     def __init__(self, folder_path, raw_fname="raw.mda", params_fname="params.json", geom_fname="geom.csv"):
         folder_path = Path(folder_path)
@@ -80,20 +78,20 @@ class MdaRecordingExtractor(BaseRecording):
 
         Parameters
         ----------
-        recording: RecordingExtractor
+        recording : RecordingExtractor
             The recording extractor to be saved.
-        save_path: str or Path
+        save_path : str or Path
             The folder to save the Mda files.
-        params: dictionary
+        params : dictionary
             Dictionary with optional parameters to save metadata.
             Sampling frequency is appended to this dictionary.
-        raw_fname: str, default: "raw.mda"
+        raw_fname : str, default: "raw.mda"
             File name of raw file
-        params_fname: str, default: "params.json"
+        params_fname : str, default: "params.json"
             File name of params file
-        geom_fname: str, default: "geom.csv"
+        geom_fname : str, default: "geom.csv"
             File name of geom file
-        dtype: dtype or None, default: None
+        dtype : dtype or None, default: None
             Data type to be used. If None dtype is same as recording traces.
         **job_kwargs:
             Use by job_tools modules to set:
@@ -154,7 +152,7 @@ class MdaRecordingSegment(BaseRecordingSegment):
         """Returns the number of samples in this signal block
 
         Returns:
-            SampleIndex: Number of samples in the signal block
+            SampleIndex : Number of samples in the signal block
         """
         return self._num_samples
 
@@ -190,10 +188,6 @@ class MdaSortingExtractor(BaseSorting):
     extractor : MdaRecordingExtractor
         The loaded data.
     """
-
-    extractor_name = "MdaSorting"
-    mode = "file"
-    name = "mda"
 
     def __init__(self, file_path, sampling_frequency):
         firings = readmda(str(Path(file_path).absolute()))
@@ -442,17 +436,21 @@ def is_url(path):
 
 
 def _download_bytes_to_tmpfile(url, start, end):
-    try:
-        import requests
-    except:
-        raise Exception("Unable to import module: requests")
-    headers = {"Range": "bytes={}-{}".format(start, end - 1)}
-    r = requests.get(url, headers=headers, stream=True)
-    fd, tmp_fname = tempfile.mkstemp()
-    with open(tmp_fname, "wb") as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk:
-                f.write(chunk)
+    import requests
+
+    headers = {"Range": f"bytes={start}-{end - 1}"}
+
+    with requests.get(url, headers=headers, stream=True) as r:
+        r.raise_for_status()  # Exposes HTTPError if one occurred
+
+        with tempfile.NamedTemporaryFile(delete=False, mode="wb") as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+
+            # Store the temp file name for return
+            tmp_fname = f.name
+
     return tmp_fname
 
 

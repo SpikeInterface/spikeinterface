@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import re
 import numpy as np
@@ -26,9 +28,6 @@ class MClustSortingExtractor(BaseSorting):
     extractor : MClustSortingExtractor
         Loaded data.
     """
-
-    extractor_name = "MClustSortingExtractor"
-    name = "mclust"
 
     def __init__(self, folder_path, sampling_frequency, sampling_frequency_raw=None):
         end_header_str = "%%ENDHEADER"

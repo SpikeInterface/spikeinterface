@@ -1,4 +1,4 @@
-from typing import List, Union
+from __future__ import annotations
 import warnings
 import numpy as np
 
@@ -34,7 +34,21 @@ class UnitsAggregationSorting(BaseSorting):
             )
             unit_ids = list(renamed_unit_ids)
         else:
-            unit_ids = list(np.arange(num_all_units))
+            unit_ids_dtypes = [sort.get_unit_ids().dtype for sort in sorting_list]
+            all_ids_are_same_type = np.unique(unit_ids_dtypes).size == 1
+            all_units_ids_are_unique = False
+            if all_ids_are_same_type:
+                combined_ids = np.concatenate([sort.get_unit_ids() for sort in sorting_list])
+                all_units_ids_are_unique = np.unique(combined_ids).size == num_all_units
+
+            if all_ids_are_same_type and all_units_ids_are_unique:
+                unit_ids = combined_ids
+            else:
+                default_unit_ids = [str(i) for i in range(num_all_units)]
+                if all_ids_are_same_type and np.issubdtype(unit_ids_dtypes[0], np.integer):
+                    unit_ids = np.arange(num_all_units, dtype=np.uint64)
+                else:
+                    unit_ids = default_unit_ids
 
         # unit map maps unit ids that are used to get spike trains
         u_id = 0
@@ -124,8 +138,8 @@ class UnitsAggregationSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         sorting_id = self._unit_map[unit_id]["sorting_id"]
         unit_id_sorting = self._unit_map[unit_id]["unit_id"]

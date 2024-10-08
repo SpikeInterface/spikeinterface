@@ -1,20 +1,16 @@
 import pytest
 import numpy as np
-from pathlib import Path
 
 from spikeinterface.core import aggregate_units
 
 from spikeinterface.core import NpzSortingExtractor
 from spikeinterface.core import create_sorting_npz
+from spikeinterface.core import generate_sorting
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
+def test_unitsaggregationsorting(create_cache_folder):
+    cache_folder = create_cache_folder
 
-
-def test_unitsaggregationsorting():
     num_seg = 2
     file_path = cache_folder / "test_BaseSorting.npz"
 
@@ -95,6 +91,43 @@ def test_unitsaggregationsorting():
     assert "quality" not in sorting_agg_prop.get_property_keys()
     assert "rand" in sorting_agg_prop.get_property_keys()
     print(sorting_agg_prop.get_property("brain_area"))
+
+
+def test_unit_aggregation_preserve_ids():
+
+    sorting1 = generate_sorting(num_units=3)
+    sorting1 = sorting1.rename_units(new_unit_ids=["unit1", "unit2", "unit3"])
+
+    sorting2 = generate_sorting(num_units=3)
+    sorting2 = sorting2.rename_units(new_unit_ids=["unit4", "unit5", "unit6"])
+
+    aggregated_sorting = aggregate_units([sorting1, sorting2])
+    assert aggregated_sorting.get_num_units() == 6
+    assert list(aggregated_sorting.get_unit_ids()) == ["unit1", "unit2", "unit3", "unit4", "unit5", "unit6"]
+
+
+def test_unit_aggregation_does_not_preserve_ids_if_not_unique():
+    sorting1 = generate_sorting(num_units=3)
+    sorting1 = sorting1.rename_units(new_unit_ids=["unit1", "unit2", "unit3"])
+
+    sorting2 = generate_sorting(num_units=3)
+    sorting2 = sorting2.rename_units(new_unit_ids=["unit1", "unit2", "unit3"])
+
+    aggregated_sorting = aggregate_units([sorting1, sorting2])
+    assert aggregated_sorting.get_num_units() == 6
+    assert list(aggregated_sorting.get_unit_ids()) == ["0", "1", "2", "3", "4", "5"]
+
+
+def test_unit_aggregation_does_not_preserve_ids_not_the_same_type():
+    sorting1 = generate_sorting(num_units=3)
+    sorting1 = sorting1.rename_units(new_unit_ids=["unit1", "unit2", "unit3"])
+
+    sorting2 = generate_sorting(num_units=2)
+    sorting2 = sorting2.rename_units(new_unit_ids=[1, 2])
+
+    aggregated_sorting = aggregate_units([sorting1, sorting2])
+    assert aggregated_sorting.get_num_units() == 5
+    assert list(aggregated_sorting.get_unit_ids()) == ["0", "1", "2", "3", "4"]
 
 
 if __name__ == "__main__":

@@ -8,8 +8,8 @@ Overview
 --------
 
 Mechanical drift, often observed in recordings, is currently a major issue for spike sorting. This is especially striking
-with the new generation of high-density devices used for in-vivo electrophyisology such as the neuropixel electrodes.
-The first sorter that has introduced motion/drift correction as a prepossessing step was Kilosort2.5 (see [Steinmetz2021]_ [SteinmetzDataset]_)
+with the new generation of high-density devices used for in-vivo electrophysiology such as the neuropixel electrodes.
+The first sorter that introduced motion/drift correction as a prepossessing step was Kilosort2.5 (see [Steinmetz2021]_ [SteinmetzDataset]_)
 
 Long story short, the main idea is the same as the one used for non-rigid image registration, for example with calcium
 imaging. However, because with extracellular recording we do not have a proper image to use as a reference, the main idea
@@ -18,7 +18,7 @@ activity profile should be kept constant over time, the motion can be estimated,
 (i.e. depth) so that we can interpolate the traces to compensate for this estimated motion.
 Users with a need to handle drift were currently forced to stick to the use of Kilosort2.5 or pyKilosort (see [Pachitariu2023]_). Recently, the Paninski
 group from Columbia University introduced a possibly more accurate method to estimate the drift (see [Varol2021]_
-and [Windolf2023]_), but this new method was not properly integrated into any sorter.
+and [Windolf2023]_), but this new method has not yet been integrated into any sorter.
 
 Because motion registration is a hard topic, with numerous hypotheses and/or implementations details that might have a large
 impact on the spike sorting performances (see [Garcia2023]_), in SpikeInterface, we developed a full motion estimation
@@ -28,7 +28,7 @@ then used for any sorter!** In short, the motion correction is decoupled from th
 
 This gives the user an incredible flexibility to check/test and correct the drift before the sorting process.
 
-Here is an overview of the motion correction as a preprocessing:
+Here is an overview of motion correction as part of preprocessing a recording:
 
 .. image:: ../images/motion_correction_overview.png
   :align: center
@@ -39,7 +39,7 @@ The motion correction process can be split into 3 steps:
   2. **motion inference**: estimate the drift motion (by spatial blocks for non-rigid motion)
   3. **motion interpolation**: interpolate traces using the estimated motion
 
-For every steps, we implemented several methods. The combination of the yellow boxes should give more or less what
+For each step, we have implemented several methods. The combination of the yellow boxes should give more or less what
 Kilosort2.5/3 is doing. Similarly, the combination of the green boxes gives the method developed by the Paninski group.
 Of course the end user can combine any of these methods to get the best motion correction possible.
 This also makes an incredible framework for testing new ideas.
@@ -70,7 +70,7 @@ We currently have 3 presets:
                       Note that, in this case the drift is considered as "rigid" over the electrode.
   * **"kilosort_like"**: It consists of *grid convolution + iterative_template + kriging*, to mimic what is done in Kilosort (see [Pachitariu2023]_).
                          Note that this is not exactly 100% what Kilosort is doing, because the peak detection is done with a template matching
-                         in Kilosort, while in SpikeInterface we used a threshold-based method. However, this "preset" gives similar
+                         in Kilosort, while in SpikeInterface we use a threshold-based method. However, this "preset" gives similar
                          results to Kilosort2.5.
 
 
@@ -117,7 +117,7 @@ Optionally any parameter from the preset can be overwritten:
                                    )
 
 Importantly, all the result and intermediate computations can be saved into a folder for further loading
-and checking. The folder will contain the motion vector itself of course but also detected peaks, peak location, and more.
+and verification. The folder will contain the motion vector itself of course but also detected peaks, peak location, and more.
 
 
 .. code-block:: python
@@ -151,8 +151,7 @@ The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-    from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-    from spikeinterface.sortingcomponents.motion_interpolation import interpolate_motion
+    from spikeinterface.sortingcomponents.motion import estimate_motion, interpolate_motion
 
     job_kwargs = dict(chunk_duration="1s", n_jobs=20, progress_bar=True)
     # Step 1 : activity profile
@@ -163,21 +162,19 @@ The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
                                     max_distance_um=150.0, **job_kwargs)
 
     # Step 2: motion inference
-    motion, temporal_bins, spatial_bins = estimate_motion(recording=rec,
-                                                          peaks=peaks,
-                                                          peak_locations=peak_locations,
-                                                          method="decentralized",
-                                                          direction="y",
-                                                          bin_duration_s=2.0,
-                                                          bin_um=5.0,
-                                                          win_step_um=50.0,
-                                                          win_sigma_um=150.0)
+    motion = estimate_motion(recording=rec,
+                             peaks=peaks,
+                             peak_locations=peak_locations,
+                             method="decentralized",
+                             direction="y",
+                             bin_duration_s=2.0,
+                             bin_um=5.0,
+                             win_step_um=50.0,
+                             win_sigma_um=150.0)
 
     # Step 3: motion interpolation
     # this step is lazy
     rec_corrected = interpolate_motion(recording=rec, motion=motion,
-                                       temporal_bins=temporal_bins,
-                                       spatial_bins=spatial_bins,
                                        border_mode="remove_channels",
                                        spatial_interpolation_method="kriging",
                                        sigma_um=30.)
@@ -220,8 +217,6 @@ different preprocessing chains: one for motion correction and one for spike sort
     rec_corrected2 = interpolate_motion(
                       recording=rec2,
                       motion=motion_info['motion'],
-                      temporal_bins=motion_info['temporal_bins'],
-                      spatial_bins=motion_info['spatial_bins'],
                       **motion_info['parameters']['interpolate_motion_kwargs'])
 
     sorting = run_sorter(sorter_name="montainsort5", recording=rec_corrected2)

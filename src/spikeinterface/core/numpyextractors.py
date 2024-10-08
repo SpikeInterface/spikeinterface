@@ -5,7 +5,7 @@ from spikeinterface.core import (
     BaseRecording,
     BaseSorting,
     BaseRecordingSegment,
-    BaseSortingSegment,
+    SpikeVectorSortingSegment,
     BaseEvent,
     BaseEventSegment,
     BaseSnippets,
@@ -13,8 +13,9 @@ from spikeinterface.core import (
 )
 from .basesorting import minimum_spike_dtype
 from .core_tools import make_shared_array
-
+from .recording_tools import write_memory_recording
 from multiprocessing.shared_memory import SharedMemory
+
 
 from typing import Union
 
@@ -26,19 +27,15 @@ class NumpyRecording(BaseRecording):
 
     Parameters
     ----------
-    traces_list:  list of array or array (if mono segment)
+    traces_list :  list of array or array (if mono segment)
         The traces to instantiate a mono or multisegment Recording
-    sampling_frequency: float
+    sampling_frequency : float
         The sampling frequency in Hz
-    t_starts: None or list of float
+    t_starts : None or list of float
         Times in seconds of the first sample for each segment
-    channel_ids: list
+    channel_ids : list
         An optional list of channel_ids. If None, linear channels are assumed
     """
-
-    extractor_name = "Numpy"
-    mode = "memory"
-    name = "numpy"
 
     def __init__(self, traces_list, sampling_frequency, t_starts=None, channel_ids=None):
         if isinstance(traces_list, list):
@@ -66,8 +63,8 @@ class NumpyRecording(BaseRecording):
             assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
             t_starts = [float(t_start) for t_start in t_starts]
 
-        self._serializablility["json"] = False
-        self._serializablility["pickle"] = False
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
 
         for i, traces in enumerate(traces_list):
             if t_starts is None:
@@ -83,6 +80,29 @@ class NumpyRecording(BaseRecording):
             "sampling_frequency": sampling_frequency,
         }
 
+    @staticmethod
+    def from_recording(source_recording, **job_kwargs):
+        traces_list, shms = write_memory_recording(source_recording, dtype=None, **job_kwargs)
+
+        t_starts = source_recording._get_t_starts()
+
+        if shms[0] is not None:
+            # if the computation was done in parallel then traces_list is shared array
+            # this can lead to problem
+            # we need to copy back to a standard numpy array and unlink the shared buffer
+            traces_list = [np.array(traces, copy=True) for traces in traces_list]
+            for shm in shms:
+                shm.close()
+                shm.unlink()
+
+        recording = NumpyRecording(
+            traces_list,
+            source_recording.get_sampling_frequency(),
+            t_starts=t_starts,
+            channel_ids=source_recording.channel_ids,
+        )
+        return recording
+
 
 class NumpyRecordingSegment(BaseRecordingSegment):
     def __init__(self, traces, sampling_frequency, t_start):
@@ -90,7 +110,7 @@ class NumpyRecordingSegment(BaseRecordingSegment):
         self._traces = traces
         self.num_samples = traces.shape[0]
 
-    def get_num_samples(self):
+    def get_num_samples(self) -> int:
         return self.num_samples
 
     def get_traces(self, start_frame, end_frame, channel_indices):
@@ -99,6 +119,113 @@ class NumpyRecordingSegment(BaseRecordingSegment):
             traces = traces[:, channel_indices]
 
         return traces
+
+
+class SharedMemoryRecording(BaseRecording):
+    """
+    In memory recording with shared memmory buffer.
+
+    Parameters
+    ----------
+    shm_names : list
+        List of sharedmem names for each segment
+    shape_list : list
+        List of shape of sharedmem buffer for each segment
+        The first dimension is the number of samples, the second is the number of channels.
+        Note that the number of channels must be the same for all segments
+    sampling_frequency : float
+        The sampling frequency in Hz
+    t_starts : None or list of float
+        Times in seconds of the first sample for each segment
+    channel_ids : list
+        An optional list of channel_ids. If None, linear channels are assumed
+    main_shm_owner : bool, default: True
+        If True, the main instance will unlink the sharedmem buffer when deleted
+    """
+
+    def __init__(
+        self, shm_names, shape_list, dtype, sampling_frequency, channel_ids=None, t_starts=None, main_shm_owner=True
+    ):
+        assert len(shape_list) == len(shm_names), "Each shm_name in `shm_names` must have a shape in `shape_list`"
+        assert all(shape_list[0][1] == shape[1] for shape in shape_list)
+
+        # create traces from sharedmem names
+        self.shms = []
+        traces_list = []
+        for shm_name, shape in zip(shm_names, shape_list):
+            shm = SharedMemory(shm_name, create=False)
+            self.shms.append(shm)
+            traces = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+            traces_list.append(traces)
+
+        if channel_ids is None:
+            channel_ids = np.arange(traces_list[0].shape[1])
+        else:
+            channel_ids = np.asarray(channel_ids)
+            assert channel_ids.size == traces_list[0].shape[1]
+        BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
+
+        if t_starts is not None:
+            assert len(t_starts) == len(traces_list), "t_starts must be a list of same size as traces_list"
+            t_starts = [float(t_start) for t_start in t_starts]
+
+        self._serializability["memory"] = True
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
+
+        # this is important so that the main owner can unlink the share mem buffer :
+        self.main_shm_owner = main_shm_owner
+
+        for (
+            i,
+            traces,
+        ) in enumerate(traces_list):
+            if t_starts is None:
+                t_start = None
+            else:
+                t_start = t_starts[i]
+            rec_segment = NumpyRecordingSegment(traces, sampling_frequency, t_start)
+
+            self.add_recording_segment(rec_segment)
+
+        self._kwargs = {
+            "shm_names": shm_names,
+            "shape_list": shape_list,
+            "dtype": dtype,
+            "sampling_frequency": sampling_frequency,
+            "channel_ids": channel_ids,
+            "t_starts": t_starts,
+            # this is important so that clone of this will not try to unlink the share mem buffer :
+            "main_shm_owner": False,
+        }
+
+    def __del__(self):
+        self._recording_segments = []
+        for shm in self.shms:
+            shm.close()
+            if self.main_shm_owner:
+                shm.unlink()
+
+    @staticmethod
+    def from_recording(source_recording, **job_kwargs):
+        traces_list, shms = write_memory_recording(source_recording, buffer_type="sharedmem", **job_kwargs)
+
+        t_starts = source_recording._get_t_starts()
+
+        recording = SharedMemoryRecording(
+            shm_names=[shm.name for shm in shms],
+            shape_list=[traces.shape for traces in traces_list],
+            dtype=source_recording.dtype,
+            sampling_frequency=source_recording.sampling_frequency,
+            channel_ids=source_recording.channel_ids,
+            t_starts=t_starts,
+            main_shm_owner=True,
+        )
+
+        for shm in shms:
+            # the sharedmem are handle by the new SharedMemoryRecording
+            shm.close()
+        return recording
 
 
 class NumpySorting(BaseSorting):
@@ -115,24 +242,22 @@ class NumpySorting(BaseSorting):
 
     Parameters
     ----------
-    spikes:  numpy.array
+    spikes :  numpy.array
         A numpy vector, the one given by Sorting.to_spike_vector().
-    sampling_frequency: float
+    sampling_frequency : float
         The sampling frequency in Hz
-    channel_ids: list
+    channel_ids : list
         A list of unit_ids.
     """
-
-    name = "numpy"
 
     def __init__(self, spikes, sampling_frequency, unit_ids):
         """ """
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self._serializablility["memory"] = True
-        self._serializablility["json"] = False
+        self._serializability["memory"] = True
+        self._serializability["json"] = False
         # theorically this should be False but for simplicity make generators simples we still need this.
-        self._serializablility["pickle"] = True
+        self._serializability["pickle"] = True
 
         if spikes.size == 0:
             nseg = 1
@@ -140,7 +265,7 @@ class NumpySorting(BaseSorting):
             nseg = spikes[-1]["segment_index"] + 1
 
         for segment_index in range(nseg):
-            self.add_sorting_segment(NumpySortingSegment(spikes, segment_index, unit_ids))
+            self.add_sorting_segment(SpikeVectorSortingSegment(spikes, segment_index, unit_ids))
 
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = spikes
@@ -148,16 +273,17 @@ class NumpySorting(BaseSorting):
         self._kwargs = dict(spikes=spikes, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
     @staticmethod
-    def from_sorting(source_sorting: BaseSorting, with_metadata=False) -> "NumpySorting":
+    def from_sorting(source_sorting: BaseSorting, with_metadata=False, copy_spike_vector=False) -> "NumpySorting":
         """
         Create a numpy sorting from another sorting extractor
         """
 
-        sorting = NumpySorting(
-            source_sorting.to_spike_vector(), source_sorting.get_sampling_frequency(), source_sorting.unit_ids
-        )
+        spike_vector = source_sorting.to_spike_vector()
+        if copy_spike_vector:
+            spike_vector = spike_vector.copy()
+        sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids.copy())
         if with_metadata:
-            sorting.copy_metadata(source_sorting)
+            source_sorting.copy_metadata(sorting)
         return sorting
 
     @staticmethod
@@ -170,11 +296,11 @@ class NumpySorting(BaseSorting):
 
         Parameters
         ----------
-        times_list: list of array (or array)
+        times_list : list of array (or array)
             An array of spike times (in frames)
-        labels_list: list of array (or array)
+        labels_list : list of array (or array)
             An array of spike labels corresponding to the given times
-        unit_ids: list or None, default: None
+        unit_ids : list or None, default: None
             The explicit list of unit_ids that should be extracted from labels_list
             If None, then it will be np.unique(labels_list)
         """
@@ -220,7 +346,7 @@ class NumpySorting(BaseSorting):
 
         Parameters
         ----------
-        dict_list: list of dict
+        dict_list : list of dict
         """
         if isinstance(units_dict_list, dict):
             units_dict_list = [units_dict_list]
@@ -293,7 +419,7 @@ class NumpySorting(BaseSorting):
             units_dict = {}
             for u, unit_id in enumerate(unit_ids):
                 st = neo_spiketrains[seg_index][u]
-                units_dict[unit_id] = (st.rescale("s").magnitude * sampling_frequency).astype("int64")
+                units_dict[unit_id] = (st.rescale("s").magnitude * sampling_frequency).astype("int64", copy=False)
             units_dict_list.append(units_dict)
 
         sorting = NumpySorting.from_unit_dict(units_dict_list, sampling_frequency)
@@ -301,7 +427,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_peaks(peaks, sampling_frequency, unit_ids=None) -> "NumpySorting":
+    def from_peaks(peaks, sampling_frequency, unit_ids) -> "NumpySorting":
         """
         Construct a sorting from peaks returned by 'detect_peaks()' function.
         The unit ids correspond to the recording channel ids and spike trains are the
@@ -313,6 +439,8 @@ class NumpySorting(BaseSorting):
             Peaks array as returned by the 'detect_peaks()' function
         sampling_frequency : float
             the sampling frequency in Hz
+        unit_ids : np.array
+            The unit_ids vector which is generally the channel_ids but can be different.
 
         Returns
         -------
@@ -323,38 +451,11 @@ class NumpySorting(BaseSorting):
         spikes["sample_index"] = peaks["sample_index"]
         spikes["unit_index"] = peaks["channel_index"]
         spikes["segment_index"] = peaks["segment_index"]
-
-        if unit_ids is None:
-            unit_ids = np.unique(peaks["channel_index"])
-
+        order = np.lexsort((spikes["sample_index"], spikes["segment_index"]))
+        spikes = spikes[order]
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
         return sorting
-
-
-class NumpySortingSegment(BaseSortingSegment):
-    def __init__(self, spikes, segment_index, unit_ids):
-        BaseSortingSegment.__init__(self)
-        self.spikes = spikes
-        self.segment_index = segment_index
-        self.unit_ids = list(unit_ids)
-        self.spikes_in_seg = None
-
-    def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        if self.spikes_in_seg is None:
-            # the slicing of segment is done only once the first time
-            # this fasten the constructor a lot
-            s0, s1 = np.searchsorted(self.spikes["segment_index"], [self.segment_index, self.segment_index + 1])
-            self.spikes_in_seg = self.spikes[s0:s1]
-
-        unit_index = self.unit_ids.index(unit_id)
-        times = self.spikes_in_seg[self.spikes_in_seg["unit_index"] == unit_index]["sample_index"]
-
-        if start_frame is not None:
-            times = times[times >= start_frame]
-        if end_frame is not None:
-            times = times[times < end_frame]
-        return times
 
 
 class SharedMemorySorting(BaseSorting):
@@ -364,16 +465,16 @@ class SharedMemorySorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self._serializablility["memory"] = True
-        self._serializablility["json"] = False
-        self._serializablility["pickle"] = False
+        self._serializability["memory"] = True
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
 
         self.shm = SharedMemory(shm_name, create=False)
         self.shm_spikes = np.ndarray(shape=shape, dtype=dtype, buffer=self.shm.buf)
 
         nseg = self.shm_spikes[-1]["segment_index"] + 1
         for segment_index in range(nseg):
-            self.add_sorting_segment(NumpySortingSegment(self.shm_spikes, segment_index, unit_ids))
+            self.add_sorting_segment(SpikeVectorSortingSegment(self.shm_spikes, segment_index, unit_ids))
 
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.shm_spikes
@@ -398,7 +499,7 @@ class SharedMemorySorting(BaseSorting):
             self.shm.unlink()
 
     @staticmethod
-    def from_sorting(source_sorting):
+    def from_sorting(source_sorting, with_metadata=False):
         spikes = source_sorting.to_spike_vector()
         shm_spikes, shm = make_shared_array(spikes.shape, spikes.dtype)
         shm_spikes[:] = spikes
@@ -411,6 +512,8 @@ class SharedMemorySorting(BaseSorting):
             main_shm_owner=True,
         )
         shm.close()
+        if with_metadata:
+            source_sorting.copy_metadata(sorting)
         return sorting
 
 
@@ -484,14 +587,14 @@ class NumpySnippets(BaseSnippets):
 
     Parameters
     ----------
-    snippets_list:  list of array or array (if mono segment)
+    snippets_list :  list of array or array (if mono segment)
         The snippets to instantiate a mono or multisegment basesnippet
-    spikesframes_list: list of array or array (if mono segment)
+    spikesframes_list : list of array or array (if mono segment)
         Frame of each snippet
-    sampling_frequency: float
+    sampling_frequency : float
         The sampling frequency in Hz
 
-    channel_ids: list
+    channel_ids : list
         An optional list of channel_ids. If None, linear channels are assumed
     """
 
@@ -524,9 +627,9 @@ class NumpySnippets(BaseSnippets):
             dtype=dtype,
         )
 
-        self._serializablility["memory"] = False
-        self._serializablility["json"] = False
-        self._serializablility["pickle"] = False
+        self._serializability["memory"] = False
+        self._serializability["json"] = False
+        self._serializability["pickle"] = False
 
         for snippets, spikesframes in zip(snippets_list, spikesframes_list):
             snp_segment = NumpySnippetsSegment(snippets, spikesframes)
@@ -557,14 +660,14 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
 
         Parameters
         ----------
-        indices: list[int]
+        indices : list[int]
             Indices of the snippets to return
-        channel_indices: Union[list, None], default: None
+        channel_indices : Union[list, None], default: None
             Indices of channels to return, or all channels if None
 
         Returns
         -------
-        snippets: np.ndarray
+        snippets : np.ndarray
             Array of snippets, num_snippets x num_samples x num_channels
         """
         if indices is None:
@@ -580,13 +683,13 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
 
         Parameters
         ----------
-        start_frame: Union[int, None], default: None
+        start_frame : Union[int, None], default: None
             start sample index, or zero if None
-        end_frame: Union[int, None], default: None
+        end_frame : Union[int, None], default: None
             end_sample, or number of samples if None
         Returns
         -------
-        snippets: slice
+        snippets : slice
             slice of selected snippets
         """
         # must be implemented in subclass
@@ -604,7 +707,7 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         """Returns the frames of the snippets in this segment
 
         Returns:
-            SampleIndex: Number of samples in the segment
+            SampleIndex : Number of samples in the segment
         """
         if indices is None:
             return self._spikestimes

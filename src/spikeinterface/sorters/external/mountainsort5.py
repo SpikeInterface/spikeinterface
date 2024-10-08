@@ -1,17 +1,18 @@
+from __future__ import annotations
+
 from pathlib import Path
-from tempfile import tempdir
 from packaging.version import parse
+
+import shutil
+import numpy as np
+from warnings import warn
 
 from spikeinterface.preprocessing import bandpass_filter, whiten
 
 from spikeinterface.core.baserecording import BaseRecording
-from ..basesorter import BaseSorter
-from spikeinterface.core.old_api_utils import NewToOldRecording
-from spikeinterface.core import load_extractor
+from ..basesorter import BaseSorter, get_job_kwargs
 
-from spikeinterface.extractors import NpzSortingExtractor, NumpySorting
-
-from packaging.version import parse
+from spikeinterface.extractors import NpzSortingExtractor
 
 
 class Mountainsort5Sorter(BaseSorter):
@@ -20,6 +21,7 @@ class Mountainsort5Sorter(BaseSorter):
     sorter_name = "mountainsort5"
     requires_locations = False
     compatible_with_parallel = {"loky": False, "multiprocessing": False, "threading": False}
+    requires_binary_data = True
 
     _default_params = {
         "scheme": "2",  # '1', '2', '3'
@@ -42,6 +44,7 @@ class Mountainsort5Sorter(BaseSorter):
         "freq_max": 6000,
         "filter": True,
         "whiten": True,  # Important to do whitening
+        "delete_temporary_recording": True,
     }
 
     _params_description = {
@@ -65,6 +68,7 @@ class Mountainsort5Sorter(BaseSorter):
         "freq_max": "Low-pass filter cutoff frequency",
         "filter": "Enable or disable filter",
         "whiten": "Enable or disable whitening",
+        "delete_temporary_recording": "If True, the temporary recording file is deleted after sorting (this may fail on Windows requiring the end-user to delete the file themselves later)",
     }
 
     sorter_description = "MountainSort5 uses Isosplit clustering. It is an updated version of MountainSort4. See https://doi.org/10.1016/j.neuron.2017.08.030"
@@ -84,8 +88,10 @@ class Mountainsort5Sorter(BaseSorter):
             HAVE_MS5 = True
         except ImportError:
             HAVE_MS5 = False
+            mountainsort5 = None
 
         if HAVE_MS5:
+            assert mountainsort5
             vv = parse(mountainsort5.__version__)
             if vv < parse("0.3"):
                 print(
@@ -116,6 +122,12 @@ class Mountainsort5Sorter(BaseSorter):
         import mountainsort5 as ms5
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
+        if recording is None:
+            raise Exception("Unable to load recording from folder.")
+        if not isinstance(recording, BaseRecording):
+            raise TypeError(
+                f"Unexpected: recording extracted from folder is not a BaseRecording, but is of type: {type(recording)}"
+            )
 
         # alias to params
         p = params
@@ -124,7 +136,10 @@ class Mountainsort5Sorter(BaseSorter):
         if p["filter"] and p["freq_min"] is not None and p["freq_max"] is not None:
             if verbose:
                 print("filtering")
-            recording = bandpass_filter(recording=recording, freq_min=p["freq_min"], freq_max=p["freq_max"])
+            # important to use dtype=float here
+            recording = bandpass_filter(
+                recording=recording, freq_min=p["freq_min"], freq_max=p["freq_max"], dtype=np.float32
+            )
 
         # Whiten
         if p["whiten"]:
@@ -132,7 +147,7 @@ class Mountainsort5Sorter(BaseSorter):
                 print("whitening")
             recording = whiten(recording=recording, dtype="float32")
         else:
-            print("WARNING: Not whitening (MountainSort5 expects whitened data)")
+            warn("Not whitening (MountainSort5 expects whitened data)")
 
         scheme1_sorting_parameters = ms5.Scheme1SortingParameters(
             detect_threshold=p["detect_threshold"],
@@ -169,13 +184,26 @@ class Mountainsort5Sorter(BaseSorter):
             block_sorting_parameters=scheme2_sorting_parameters, block_duration_sec=p["scheme3_block_duration_sec"]
         )
 
-        scheme = p["scheme"]
-        if scheme == "1":
-            sorting = ms5.sorting_scheme1(recording=recording, sorting_parameters=scheme1_sorting_parameters)
+        if not recording.is_binary_compatible():
+            recording_cached = recording.save(folder=sorter_output_folder / "recording", **get_job_kwargs(p, verbose))
+        else:
+            recording_cached = recording
+
+        if p["scheme"] == "1":
+            sorting = ms5.sorting_scheme1(recording=recording_cached, sorting_parameters=scheme1_sorting_parameters)
         elif p["scheme"] == "2":
-            sorting = ms5.sorting_scheme2(recording=recording, sorting_parameters=scheme2_sorting_parameters)
+            sorting = ms5.sorting_scheme2(recording=recording_cached, sorting_parameters=scheme2_sorting_parameters)
         elif p["scheme"] == "3":
-            sorting = ms5.sorting_scheme3(recording=recording, sorting_parameters=scheme3_sorting_parameters)
+            sorting = ms5.sorting_scheme3(recording=recording_cached, sorting_parameters=scheme3_sorting_parameters)
+        else:
+            raise ValueError(f"Invalid scheme: {p['scheme']} given. scheme must be one of '1', '2' or '3'")
+
+        if p["delete_temporary_recording"]:
+            if not recording.is_binary_compatible():
+                del recording_cached
+                shutil.rmtree(sorter_output_folder / "recording", ignore_errors=True)
+                if Path(sorter_output_folder / "recording").is_dir():
+                    warn("cleanup failed, please remove file yourself if desired")
 
         NpzSortingExtractor.write_sorting(sorting, str(sorter_output_folder / "firings.npz"))
 

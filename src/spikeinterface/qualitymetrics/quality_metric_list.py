@@ -1,5 +1,8 @@
 """Lists of quality metrics."""
 
+from __future__ import annotations
+
+
 from .misc_metrics import (
     compute_num_spikes,
     compute_firing_rates,
@@ -14,10 +17,12 @@ from .misc_metrics import (
     compute_synchrony_metrics,
     compute_firing_ranges,
     compute_amplitude_cv_metrics,
+    compute_sd_ratio,
 )
 
 from .pca_metrics import (
-    calculate_pc_metrics,
+    compute_pc_metrics,
+    calculate_pc_metrics,  # remove after 0.103.0
     mahalanobis_metrics,
     lda_metrics,
     nearest_neighbors_metrics,
@@ -46,4 +51,31 @@ _misc_metric_name_to_func = {
     "synchrony": compute_synchrony_metrics,
     "firing_range": compute_firing_ranges,
     "drift": compute_drift_metrics,
+    "sd_ratio": compute_sd_ratio,
+}
+
+# a dict converting the name of the metric for computation to the output of that computation
+compute_name_to_column_names = {
+    "num_spikes": ["num_spikes"],
+    "firing_rate": ["firing_rate"],
+    "presence_ratio": ["presence_ratio"],
+    "snr": ["snr"],
+    "isi_violation": ["isi_violations_ratio", "isi_violations_count"],
+    "rp_violation": ["rp_violations", "rp_contamination"],
+    "sliding_rp_violation": ["sliding_rp_violation"],
+    "amplitude_cutoff": ["amplitude_cutoff"],
+    "amplitude_median": ["amplitude_median"],
+    "amplitude_cv": ["amplitude_cv_median", "amplitude_cv_range"],
+    "synchrony": ["sync_spike_2", "sync_spike_4", "sync_spike_8"],
+    "firing_range": ["firing_range"],
+    "drift": ["drift_ptp", "drift_std", "drift_mad"],
+    "sd_ratio": ["sd_ratio"],
+    "isolation_distance": ["isolation_distance"],
+    "l_ratio": ["l_ratio"],
+    "d_prime": ["d_prime"],
+    "nearest_neighbor": ["nn_hit_rate", "nn_miss_rate"],
+    "nn_isolation": ["nn_isolation", "nn_unit_id"],
+    "nn_noise_overlap": ["nn_noise_overlap"],
+    "silhouette": ["silhouette"],
+    "silhouette_full": ["silhouette_full"],
 }

@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import numpy as np
 
-import neo
 import probeinterface
 
 from .nwbextractors import read_nwb
@@ -45,6 +46,8 @@ def read_bids(folder_path):
             recordings.append(rec)
 
         elif file_path.suffix == ".nix":
+            import neo
+
             neo_reader = neo.rawio.NIXRawIO(file_path)
             neo_reader.parse_header()
             stream_ids = neo_reader.header["signal_streams"]["id"]

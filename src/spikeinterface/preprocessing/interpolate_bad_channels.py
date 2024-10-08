@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -19,7 +21,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: BaseRecording
+    recording : BaseRecording
         The parent recording
     bad_channel_ids : list or 1d np.array
         Channel ids of the bad channels to interpolate.
@@ -35,11 +37,9 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
 
     Returns
     -------
-    interpolated_recording: InterpolateBadChannelsRecording
+    interpolated_recording : InterpolateBadChannelsRecording
         The recording object with interpolated bad channels
     """
-
-    name = "interpolate_bad_channels"
 
     def __init__(self, recording, bad_channel_ids, sigma_um=None, p=1.3, weights=None):
         BasePreprocessor.__init__(self, recording)
@@ -75,7 +75,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
         if bad_channel_ids.ndim != 1:
             raise TypeError("'bad_channel_ids' must be a 1d array or list.")
 
-        if recording.get_property("contact_vector") is None:
+        if not recording.has_channel_location():
             raise ValueError("A probe must be attached to use bad channel interpolation. Use set_probe(...)")
 
         if recording.get_probe().si_units != "um":

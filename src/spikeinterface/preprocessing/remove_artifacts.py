@@ -1,9 +1,13 @@
+from __future__ import annotations
+
+import warnings
+
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from spikeinterface.core import NumpySorting, extract_waveforms
+from spikeinterface.core import NumpySorting, estimate_templates
 
 
 class RemoveArtifactsRecording(BasePreprocessor):
@@ -18,21 +22,21 @@ class RemoveArtifactsRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to remove artifacts from
-    list_triggers: list of lists/arrays
+    list_triggers : list of lists/arrays
         One list per segment of int with the stimulation trigger frames
-    ms_before: float or None, default: 0.5
+    ms_before : float or None, default: 0.5
         Time interval in ms to remove before the trigger events.
         If None, then also ms_after must be None and a single sample is removed
-    ms_after: float or None, default: 3.0
+    ms_after : float or None, default: 3.0
         Time interval in ms to remove after the trigger events.
         If None, then also ms_before must be None and a single sample is removed
-    list_labels: list of lists/arrays or None
+    list_labels : list of lists/arrays or None
         One list per segment of labels with the stimulation labels for the given
-        artefacs. labels should be strings, for JSON serialization.
+        artifacts. labels should be strings, for JSON serialization.
         Required for "median" and "average" modes.
-    mode: "zeros", "linear", "cubic", "average", "median", default: "zeros"
+    mode : "zeros", "linear", "cubic", "average", "median", default: "zeros"
         Determines what artifacts are replaced by. Can be one of the following:
 
         - "zeros": Artifacts are replaced by zeros.
@@ -59,38 +63,33 @@ class RemoveArtifactsRecording(BasePreprocessor):
            continuation of the trace.
            If the trace starts or ends with an artifact, the gap is filled with
            the closest available value before or after the artifact.
-    fit_sample_spacing: float, default: 1.0
+    fit_sample_spacing : float, default: 1.0
         Determines the spacing (in ms) of reference points for the cubic spline
-        fit if mode = "cubic". Note: The actual fit samples are
+        fit if mode = "cubic". Note : The actual fit samples are
         the median of the 5 data points around the time of each sample point to
         avoid excessive influence from hyper-local fluctuations.
-    artifacts: dict or None, default: None
+    artifacts : dict or None, default: None
         If provided (when mode is "median" or "average") then it must be a dict with
         keys that are the labels of the artifacts, and values the artifacts themselves,
         on all channels (and thus bypassing ms_before and ms_after)
-    sparsity: dict or None, default: None
+    sparsity : dict or None, default: None
         If provided (when mode is "median" or "average") then it must be a dict with
         keys that are the labels of the artifacts, and values that are boolean mask of
         the channels where the artifacts should be considered (for subtraction/scaling)
-    scale_amplitude: False, default: False
+    scale_amplitude : False, default: False
         If true, then for mode "median" or "average" the amplitude of the template
         will be scaled in amplitude at each time occurence to minimize residuals
-    time_jitter: float, default: 0
+    time_jitter : float, default: 0
         If non 0, then for mode "median" or "average", a time jitter in ms
         can be allowed to minimize the residuals
-    waveforms_kwargs: dict or None, default: None
-        The arguments passed to the WaveformExtractor object when extracting the
-        artifacts, for mode "median" or "average".
-        By default, the global job kwargs are used, in addition to {"allow_unfiltered" : True, "mode":"memory"}.
-        To estimate sparse artifact
+    waveforms_kwargs : None
+        Deprecated and ignored
 
     Returns
     -------
-    removed_recording: RemoveArtifactsRecording
+    removed_recording : RemoveArtifactsRecording
         The recording extractor after artifact removal
     """
-
-    name = "remove_artifacts"
 
     def __init__(
         self,
@@ -105,8 +104,11 @@ class RemoveArtifactsRecording(BasePreprocessor):
         sparsity=None,
         scale_amplitude=False,
         time_jitter=0,
-        waveforms_kwargs={"allow_unfiltered": True, "mode": "memory"},
+        waveforms_kwargs=None,
     ):
+        if waveforms_kwargs is not None:
+            warnings("remove_artifacts() waveforms_kwargs is deprecated and ignored")
+
         available_modes = ("zeros", "linear", "cubic", "average", "median")
         num_seg = recording.get_num_segments()
 
@@ -167,19 +169,22 @@ class RemoveArtifactsRecording(BasePreprocessor):
                     ms_before is not None and ms_after is not None
                 ), f"ms_before/after should not be None for mode {mode}"
                 sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
-                sorting = sorting.save()
-                waveforms_kwargs.update({"ms_before": ms_before, "ms_after": ms_after})
-                w = extract_waveforms(recording, sorting, None, **waveforms_kwargs)
 
+                nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+                nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+
+                templates = estimate_templates(
+                    recording=recording,
+                    spikes=sorting.to_spike_vector(),
+                    unit_ids=sorting.unit_ids,
+                    nbefore=nbefore,
+                    nafter=nafter,
+                    operator=mode,
+                    return_scaled=False,
+                )
                 artifacts = {}
-                sparsity = {}
-                for label in w.sorting.unit_ids:
-                    artifacts[label] = w.get_template(label, mode=mode).astype(recording.dtype)
-                    if w.is_sparse():
-                        unit_ind = w.sorting.id_to_index(label)
-                        sparsity[label] = w.sparsity.mask[unit_ind]
-                    else:
-                        sparsity = None
+                for i, label in enumerate(sorting.unit_ids):
+                    artifacts[label] = templates[i, :, :]
 
             if sparsity is not None:
                 labels = []
@@ -255,11 +260,6 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         else:
             traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
-
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
 
         mask = (self.triggers >= start_frame) & (self.triggers < end_frame)
         triggers = self.triggers[mask] - start_frame

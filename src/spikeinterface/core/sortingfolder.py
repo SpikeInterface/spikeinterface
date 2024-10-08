@@ -1,13 +1,12 @@
+from __future__ import annotations
 from pathlib import Path
 import json
 
 import numpy as np
 
-from .base import _make_paths_absolute
-from .basesorting import BaseSorting, BaseSortingSegment
+from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .npzsortingextractor import NpzSortingExtractor
-from .core_tools import define_function_from_class
-from .numpyextractors import NumpySortingSegment
+from .core_tools import define_function_from_class, make_paths_absolute
 
 
 class NumpyFolderSorting(BaseSorting):
@@ -23,7 +22,6 @@ class NumpyFolderSorting(BaseSorting):
 
     """
 
-    extractor_name = "NumpyFolderSorting"
     mode = "folder"
     name = "NumpyFolder"
 
@@ -42,7 +40,7 @@ class NumpyFolderSorting(BaseSorting):
         self.spikes = np.load(folder_path / "spikes.npy", mmap_mode="r")
 
         for segment_index in range(num_segments):
-            self.add_sorting_segment(NumpySortingSegment(self.spikes, segment_index, unit_ids))
+            self.add_sorting_segment(SpikeVectorSortingSegment(self.spikes, segment_index, unit_ids))
 
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.spikes
@@ -84,15 +82,14 @@ class NpzFolderSorting(NpzSortingExtractor):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
 
     Returns
     -------
-    sorting: NpzFolderSorting
+    sorting : NpzFolderSorting
         The sorting
     """
 
-    extractor_name = "NpzFolder"
     mode = "folder"
     name = "npzfolder"
 
@@ -107,7 +104,7 @@ class NpzFolderSorting(NpzSortingExtractor):
 
         assert d["relative_paths"]
 
-        d = _make_paths_absolute(d, folder_path)
+        d = make_paths_absolute(d, folder_path)
 
         NpzSortingExtractor.__init__(self, **d["kwargs"])
 

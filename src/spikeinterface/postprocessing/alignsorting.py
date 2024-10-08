@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from typing import Optional
 
@@ -13,16 +15,16 @@ class AlignSortingExtractor(BaseSorting):
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The sorting to align.
-    unit_peak_shifts: dict
+    unit_peak_shifts : dict
         Dictionary mapping the unit_id to the unit's shift (in number of samples).
         A positive shift means the spike train is shifted back in time, while
         a negative shift means the spike train is shifted forward.
 
     Returns
     -------
-    aligned_sorting: AlignSortingExtractor
+    aligned_sorting : AlignSortingExtractor
         The aligned sorting.
     """
 
@@ -33,6 +35,7 @@ class AlignSortingExtractor(BaseSorting):
             self.add_sorting_segment(AlignSortingSegment(segment, unit_peak_shifts))
 
         sorting.copy_metadata(self, only_main=False)
+        self._parent = sorting
         if sorting.has_recording():
             self.register_recording(sorting._recording)
 

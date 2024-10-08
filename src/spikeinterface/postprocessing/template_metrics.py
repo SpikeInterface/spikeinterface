@@ -3,17 +3,16 @@ Functions based on
 https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/mean_waveforms/waveform_metrics.py
 22/04/2020
 """
+
 from __future__ import annotations
 
 import numpy as np
 import warnings
-from typing import Optional
 from copy import deepcopy
 
-from ..core import WaveformExtractor, ChannelSparsity
+from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from ..core.template_tools import get_template_extremum_channel
-from ..core.waveform_extractor import BaseWaveformExtractorExtension
-
+from ..core.template_tools import get_dense_templates_array
 
 # DEBUG = False
 
@@ -30,20 +29,79 @@ def get_template_metric_names():
     return get_single_channel_template_metric_names() + get_multi_channel_template_metric_names()
 
 
-class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
-    """Class to compute template metrics of waveform shapes.
+class ComputeTemplateMetrics(AnalyzerExtension):
+    """
+    Compute template metrics including:
+        * peak_to_valley
+        * peak_trough_ratio
+        * halfwidth
+        * repolarization_slope
+        * recovery_slope
+        * num_positive_peaks
+        * num_negative_peaks
+
+    Optionally, the following multi-channel metrics can be computed (when include_multi_channel_metrics=True):
+        * velocity_above
+        * velocity_below
+        * exp_decay
+        * spread
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor object
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer object
+    metric_names : list or None, default: None
+        List of metrics to compute (see si.postprocessing.get_template_metric_names())
+    peak_sign : {"neg", "pos"}, default: "neg"
+        Whether to use the positive ("pos") or negative ("neg") peaks to estimate extremum channels.
+    upsampling_factor : int, default: 10
+        The upsampling factor to upsample the templates
+    sparsity : ChannelSparsity or None, default: None
+        If None, template metrics are computed on the extremum channel only.
+        If sparsity is given, template metrics are computed on all sparse channels of each unit.
+        For more on generating a ChannelSparsity, see the `~spikeinterface.compute_sparsity()` function.
+    include_multi_channel_metrics : bool, default: False
+        Whether to compute multi-channel metrics
+    delete_existing_metrics : bool, default: False
+        If True, any template metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept, provided the `metrics_kwargs` are unchanged.
+    metrics_kwargs : dict
+        Additional arguments to pass to the metric functions. Including:
+            * recovery_window_ms: the window in ms after the peak to compute the recovery_slope, default: 0.7
+            * peak_relative_threshold: the relative threshold to detect positive and negative peaks, default: 0.2
+            * peak_width_ms: the width in samples to detect peaks, default: 0.2
+            * depth_direction: the direction to compute velocity above and below, default: "y" (see notes)
+            * min_channels_for_velocity: the minimum number of channels above or below to compute velocity, default: 5
+            * min_r2_velocity: the minimum r2 to accept the velocity fit, default: 0.7
+            * exp_peak_function: the function to use to compute the peak amplitude for the exp decay, default: "ptp"
+            * min_r2_exp_decay: the minimum r2 to accept the exp decay fit, default: 0.5
+            * spread_threshold: the threshold to compute the spread, default: 0.2
+            * spread_smooth_um: the smoothing in um to compute the spread, default: 20
+            * column_range: the range in um in the horizontal direction to consider channels for velocity, default: None
+                - If None, all channels all channels are considered
+                - If 0 or 1, only the "column" that includes the max channel is considered
+                - If > 1, only channels within range (+/-) um from the max channel horizontal position are used
+
+    Returns
+    -------
+    template_metrics : pd.DataFrame
+        Dataframe with the computed template metrics.
+        If "sparsity" is None, the index is the unit_id.
+        If "sparsity" is given, the index is a multi-index (unit_id, channel_id)
+
+    Notes
+    -----
+    If any multi-channel metric is in the metric_names or include_multi_channel_metrics is True, sparsity must be None,
+    so that one metric value will be computed per unit.
+    For multi-channel metrics, 3D channel locations are not supported. By default, the depth direction is "y".
     """
 
     extension_name = "template_metrics"
-    min_channels_for_multi_channel_warning = 10
+    depend_on = ["templates"]
+    need_recording = True
+    use_nodepipeline = False
+    need_job_kwargs = False
 
-    def __init__(self, waveform_extractor: WaveformExtractor):
-        BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
+    min_channels_for_multi_channel_warning = 10
 
     def _set_params(
         self,
@@ -53,45 +111,117 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
         sparsity=None,
         metrics_kwargs=None,
         include_multi_channel_metrics=False,
+        delete_existing_metrics=False,
+        **other_kwargs,
     ):
+
+        import pandas as pd
+
+        # TODO alessio can you check this : this used to be in the function but now we have ComputeTemplateMetrics.function_factory()
+        if include_multi_channel_metrics or (
+            metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
+        ):
+            assert sparsity is None, (
+                "If multi-channel metrics are computed, sparsity must be None, "
+                "so that each unit will correspond to 1 row of the output dataframe."
+            )
+            assert (
+                self.sorting_analyzer.get_channel_locations().shape[1] == 2
+            ), "If multi-channel metrics are computed, channel locations must be 2D."
+
         if metric_names is None:
             metric_names = get_single_channel_template_metric_names()
         if include_multi_channel_metrics:
             metric_names += get_multi_channel_template_metric_names()
-        metrics_kwargs = metrics_kwargs or dict()
+
+        if metrics_kwargs is None:
+            metrics_kwargs_ = _default_function_kwargs.copy()
+            if len(other_kwargs) > 0:
+                for m in other_kwargs:
+                    if m in metrics_kwargs_:
+                        metrics_kwargs_[m] = other_kwargs[m]
+        else:
+            metrics_kwargs_ = _default_function_kwargs.copy()
+            metrics_kwargs_.update(metrics_kwargs)
+
+        metrics_to_compute = metric_names
+        tm_extension = self.sorting_analyzer.get_extension("template_metrics")
+        if delete_existing_metrics is False and tm_extension is not None:
+
+            existing_params = tm_extension.params["metrics_kwargs"]
+            # checks that existing metrics were calculated using the same params
+            if existing_params != metrics_kwargs_:
+                warnings.warn(
+                    f"The parameters used to calculate the previous template metrics are different"
+                    f"than those used now.\nPrevious parameters: {existing_params}\nCurrent "
+                    f"parameters:  {metrics_kwargs_}\nDeleting previous template metrics..."
+                )
+                tm_extension.params["metric_names"] = []
+                existing_metric_names = []
+            else:
+                existing_metric_names = tm_extension.params["metric_names"]
+
+            existing_metric_names_propogated = [
+                metric_name for metric_name in existing_metric_names if metric_name not in metrics_to_compute
+            ]
+            metric_names = metrics_to_compute + existing_metric_names_propogated
+
         params = dict(
-            metric_names=[str(name) for name in metric_names],
+            metric_names=metric_names,
             sparsity=sparsity,
             peak_sign=peak_sign,
             upsampling_factor=int(upsampling_factor),
-            metrics_kwargs=metrics_kwargs,
+            metrics_kwargs=metrics_kwargs_,
+            delete_existing_metrics=delete_existing_metrics,
+            metrics_to_compute=metrics_to_compute,
         )
 
         return params
 
     def _select_extension_data(self, unit_ids):
-        # filter metrics dataframe
-        new_metrics = self._extension_data["metrics"].loc[np.array(unit_ids)]
+        new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
         return dict(metrics=new_metrics)
 
-    def _run(self):
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    ):
+        import pandas as pd
+
+        metric_names = self.params["metric_names"]
+        old_metrics = self.data["metrics"]
+
+        all_unit_ids = new_sorting_analyzer.unit_ids
+        not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
+
+        metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
+
+        metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
+        metrics.loc[new_unit_ids, :] = self._compute_metrics(
+            new_sorting_analyzer, new_unit_ids, verbose, metric_names, **job_kwargs
+        )
+
+        new_data = dict(metrics=metrics)
+        return new_data
+
+    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, metric_names=None, **job_kwargs):
+        """
+        Compute template metrics.
+        """
         import pandas as pd
         from scipy.signal import resample_poly
 
-        metric_names = self._params["metric_names"]
-        sparsity = self._params["sparsity"]
-        peak_sign = self._params["peak_sign"]
-        upsampling_factor = self._params["upsampling_factor"]
-        unit_ids = self.waveform_extractor.sorting.unit_ids
-        sampling_frequency = self.waveform_extractor.sampling_frequency
+        sparsity = self.params["sparsity"]
+        peak_sign = self.params["peak_sign"]
+        upsampling_factor = self.params["upsampling_factor"]
+        if unit_ids is None:
+            unit_ids = sorting_analyzer.unit_ids
+        sampling_frequency = sorting_analyzer.sampling_frequency
 
         metrics_single_channel = [m for m in metric_names if m in get_single_channel_template_metric_names()]
         metrics_multi_channel = [m for m in metric_names if m in get_multi_channel_template_metric_names()]
 
         if sparsity is None:
-            extremum_channels_ids = get_template_extremum_channel(
-                self.waveform_extractor, peak_sign=peak_sign, outputs="id"
-            )
+            extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="id")
 
             template_metrics = pd.DataFrame(index=unit_ids, columns=metric_names)
         else:
@@ -106,15 +236,17 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
             )
             template_metrics = pd.DataFrame(index=multi_index, columns=metric_names)
 
-        all_templates = self.waveform_extractor.get_all_templates()
-        channel_locations = self.waveform_extractor.get_channel_locations()
+        all_templates = get_dense_templates_array(sorting_analyzer, return_scaled=True)
 
-        for unit_index, unit_id in enumerate(unit_ids):
+        channel_locations = sorting_analyzer.get_channel_locations()
+
+        for unit_id in unit_ids:
+            unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
             template_all_chans = all_templates[unit_index]
             chan_ids = np.array(extremum_channels_ids[unit_id])
             if chan_ids.ndim == 0:
                 chan_ids = [chan_ids]
-            chan_ind = self.waveform_extractor.channel_ids_to_indices(chan_ids)
+            chan_ind = sorting_analyzer.channel_ids_to_indices(chan_ids)
             template = template_all_chans[:, chan_ind]
 
             # compute single_channel metrics
@@ -135,27 +267,34 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
 
                 for metric_name in metrics_single_channel:
                     func = _metric_name_to_func[metric_name]
-                    value = func(
-                        template_upsampled,
-                        sampling_frequency=sampling_frequency_up,
-                        trough_idx=trough_idx,
-                        peak_idx=peak_idx,
-                        **self._params["metrics_kwargs"],
-                    )
+                    try:
+                        value = func(
+                            template_upsampled,
+                            sampling_frequency=sampling_frequency_up,
+                            trough_idx=trough_idx,
+                            peak_idx=peak_idx,
+                            **self.params["metrics_kwargs"],
+                        )
+                    except Exception as e:
+                        warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
+                        value = np.nan
                     template_metrics.at[index, metric_name] = value
 
             # compute metrics multi_channel
             for metric_name in metrics_multi_channel:
                 # retrieve template (with sparsity if waveform extractor is sparse)
-                template = self.waveform_extractor.get_template(unit_id=unit_id)
+                template = all_templates[unit_index, :, :]
+                if sorting_analyzer.is_sparse():
+                    mask = sorting_analyzer.sparsity.mask[unit_index, :]
+                    template = template[:, mask]
 
                 if template.shape[1] < self.min_channels_for_multi_channel_warning:
                     warnings.warn(
                         f"With less than {self.min_channels_for_multi_channel_warning} channels, "
                         "multi-channel metrics might not be reliable."
                     )
-                if self.waveform_extractor.is_sparse():
-                    channel_locations_sparse = channel_locations[self.waveform_extractor.sparsity.mask[unit_index]]
+                if sorting_analyzer.is_sparse():
+                    channel_locations_sparse = channel_locations[sorting_analyzer.sparsity.mask[unit_index]]
                 else:
                     channel_locations_sparse = channel_locations
 
@@ -168,34 +307,54 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
                     sampling_frequency_up = sampling_frequency
 
                 func = _metric_name_to_func[metric_name]
-                value = func(
-                    template_upsampled,
-                    channel_locations=channel_locations_sparse,
-                    sampling_frequency=sampling_frequency_up,
-                    **self._params["metrics_kwargs"],
-                )
+                try:
+                    value = func(
+                        template_upsampled,
+                        channel_locations=channel_locations_sparse,
+                        sampling_frequency=sampling_frequency_up,
+                        **self.params["metrics_kwargs"],
+                    )
+                except Exception as e:
+                    warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
+                    value = np.nan
                 template_metrics.at[index, metric_name] = value
-        self._extension_data["metrics"] = template_metrics
 
-    def get_data(self):
-        """
-        Get the computed metrics.
+        # we use the convert_dtypes to convert the columns to the most appropriate dtype and avoid object columns
+        # (in case of NaN values)
+        template_metrics = template_metrics.convert_dtypes()
+        return template_metrics
 
-        Returns
-        -------
-        metrics : pd.DataFrame
-            Dataframe with template metrics
-        """
-        msg = "Template metrics are not computed. Use the 'run()' function."
-        assert self._extension_data["metrics"] is not None, msg
-        return self._extension_data["metrics"]
+    def _run(self, verbose=False):
 
-    @staticmethod
-    def get_extension_function():
-        return compute_template_metrics
+        delete_existing_metrics = self.params["delete_existing_metrics"]
+        metrics_to_compute = self.params["metrics_to_compute"]
+
+        # compute the metrics which have been specified by the user
+        computed_metrics = self._compute_metrics(
+            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, metric_names=metrics_to_compute
+        )
+
+        existing_metrics = []
+        tm_extension = self.sorting_analyzer.get_extension("template_metrics")
+        if (
+            delete_existing_metrics is False
+            and tm_extension is not None
+            and tm_extension.data.get("metrics") is not None
+        ):
+            existing_metrics = tm_extension.params["metric_names"]
+
+        # append the metrics which were previously computed
+        for metric_name in set(existing_metrics).difference(metrics_to_compute):
+            computed_metrics[metric_name] = tm_extension.data["metrics"][metric_name]
+
+        self.data["metrics"] = computed_metrics
+
+    def _get_data(self):
+        return self.data["metrics"]
 
 
-WaveformExtractor.register_extension(TemplateMetricsCalculator)
+register_result_extension(ComputeTemplateMetrics)
+compute_template_metrics = ComputeTemplateMetrics.function_factory()
 
 
 _default_function_kwargs = dict(
@@ -211,116 +370,6 @@ _default_function_kwargs = dict(
     spread_smooth_um=20,
     column_range=None,
 )
-
-
-def compute_template_metrics(
-    waveform_extractor,
-    load_if_exists: bool = False,
-    metric_names: Optional[list[str]] = None,
-    peak_sign: Optional[str] = "neg",
-    upsampling_factor: int = 10,
-    sparsity: Optional[ChannelSparsity] = None,
-    include_multi_channel_metrics: bool = False,
-    metrics_kwargs: dict = None,
-):
-    """
-    Compute template metrics including:
-        * peak_to_valley
-        * peak_trough_ratio
-        * halfwidth
-        * repolarization_slope
-        * recovery_slope
-        * num_positive_peaks
-        * num_negative_peaks
-
-    Optionally, the following multi-channel metrics can be computed (when include_multi_channel_metrics=True):
-        * velocity_above
-        * velocity_below
-        * exp_decay
-        * spread
-
-    Parameters
-    ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor used to compute template metrics
-    load_if_exists : bool, default: False
-        Whether to load precomputed template metrics, if they already exist.
-    metric_names : list or None, default: None
-        List of metrics to compute (see si.postprocessing.get_template_metric_names())
-    peak_sign : {"neg", "pos"}, default: "neg"
-        Whether to use the positive ("pos") or negative ("neg") peaks to estimate extremum channels.
-    upsampling_factor : int, default: 10
-        The upsampling factor to upsample the templates
-    sparsity: ChannelSparsity or None, default: None
-        If None, template metrics are computed on the extremum channel only.
-        If sparsity is given, template metrics are computed on all sparse channels of each unit.
-        For more on generating a ChannelSparsity, see the `~spikeinterface.compute_sparsity()` function.
-    include_multi_channel_metrics: bool, default: False
-        Whether to compute multi-channel metrics
-    metrics_kwargs: dict
-        Additional arguments to pass to the metric functions. Including:
-            * recovery_window_ms: the window in ms after the peak to compute the recovery_slope, default: 0.7
-            * peak_relative_threshold: the relative threshold to detect positive and negative peaks, default: 0.2
-            * peak_width_ms: the width in samples to detect peaks, default: 0.2
-            * depth_direction: the direction to compute velocity above and below, default: "y" (see notes)
-            * min_channels_for_velocity: the minimum number of channels above or below to compute velocity, default: 5
-            * min_r2_velocity: the minimum r2 to accept the velocity fit, default: 0.7
-            * exp_peak_function: the function to use to compute the peak amplitude for the exp decay, default: "ptp"
-            * min_r2_exp_decay: the minimum r2 to accept the exp decay fit, default: 0.5
-            * spread_threshold: the threshold to compute the spread, default: 0.2
-            * spread_smooth_um: the smoothing in um to compute the spread, default: 20
-            * column_range: the range in um in the horizontal direction to consider channels for velocity, default: None
-                        - If None, all channels all channels are considered
-                        - If 0 or 1, only the "column" that includes the max channel is considered
-                        - If > 1, only channels within range (+/-) um from the max channel horizontal position are used
-
-    Returns
-    -------
-    template_metrics : pd.DataFrame
-        Dataframe with the computed template metrics.
-        If "sparsity" is None, the index is the unit_id.
-        If "sparsity" is given, the index is a multi-index (unit_id, channel_id)
-
-    Notes
-    -----
-    If any multi-channel metric is in the metric_names or include_multi_channel_metrics is True, sparsity must be None,
-    so that one metric value will be computed per unit.
-    For multi-channel metrics, 3D channel locations are not supported. By default, the depth direction is "y".
-    """
-    if load_if_exists and waveform_extractor.is_extension(TemplateMetricsCalculator.extension_name):
-        tmc = waveform_extractor.load_extension(TemplateMetricsCalculator.extension_name)
-    else:
-        tmc = TemplateMetricsCalculator(waveform_extractor)
-        # For 2D metrics, external sparsity must be None, so that one metric value will be computed per unit.
-        if include_multi_channel_metrics or (
-            metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
-        ):
-            assert sparsity is None, (
-                "If multi-channel metrics are computed, sparsity must be None, "
-                "so that each unit will correspond to 1 row of the output dataframe."
-            )
-            assert (
-                waveform_extractor.get_channel_locations().shape[1] == 2
-            ), "If multi-channel metrics are computed, channel locations must be 2D."
-        default_kwargs = _default_function_kwargs.copy()
-        if metrics_kwargs is None:
-            metrics_kwargs = default_kwargs
-        else:
-            default_kwargs.update(metrics_kwargs)
-            metrics_kwargs = default_kwargs
-        tmc.set_params(
-            metric_names=metric_names,
-            peak_sign=peak_sign,
-            upsampling_factor=upsampling_factor,
-            sparsity=sparsity,
-            include_multi_channel_metrics=include_multi_channel_metrics,
-            metrics_kwargs=metrics_kwargs,
-        )
-        tmc.run()
-
-    metrics = tmc.get_data()
-
-    return metrics
 
 
 def get_trough_and_peak_idx(template):
@@ -349,7 +398,7 @@ def get_trough_and_peak_idx(template):
 
 #########################################################################################
 # Single-channel metrics
-def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs):
+def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs) -> float:
     """
     Return the peak to valley duration in seconds of input waveforms.
 
@@ -375,7 +424,7 @@ def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, pea
     return ptv
 
 
-def get_peak_trough_ratio(template_single, sampling_frequency=None, trough_idx=None, peak_idx=None, **kwargs):
+def get_peak_trough_ratio(template_single, sampling_frequency=None, trough_idx=None, peak_idx=None, **kwargs) -> float:
     """
     Return the peak to trough ratio of input waveforms.
 
@@ -401,7 +450,7 @@ def get_peak_trough_ratio(template_single, sampling_frequency=None, trough_idx=N
     return ptratio
 
 
-def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs):
+def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs) -> float:
     """
     Return the half width of input waveforms in seconds.
 
@@ -428,7 +477,7 @@ def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_id
         return np.nan
 
     trough_val = template_single[trough_idx]
-    # threshold is half of peak heigth (assuming baseline is 0)
+    # threshold is half of peak height (assuming baseline is 0)
     threshold = 0.5 * trough_val
 
     (cpre_idx,) = np.where(template_single[:trough_idx] < threshold)
@@ -451,12 +500,12 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     """
     Return slope of repolarization period between trough and baseline
 
-    After reaching it's maxumum polarization, the neuron potential will
+    After reaching it's maximum polarization, the neuron potential will
     recover. The repolarization slope is defined as the dV/dT of the action potential
-    between trough and baseline.
-
-    Optionally the function returns also the indices per waveform where the
-    potential crosses baseline.
+    between trough and baseline. The returned slope is in units of (unit of template)
+    per second. By default traces are scaled to units of uV, controlled
+    by `sorting_analyzer.return_scaled`. In this case this function returns the slope
+    in uV/s.
 
     Parameters
     ----------
@@ -466,9 +515,14 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
         The sampling frequency of the template
     trough_idx: int, default: None
         The index of the trough
+
+    Returns
+    -------
+    slope: float
+        The repolarization slope
     """
     if trough_idx is None:
-        trough_idx = get_trough_and_peak_idx(template_single)
+        trough_idx, _ = get_trough_and_peak_idx(template_single)
 
     times = np.arange(template_single.shape[0]) / sampling_frequency
 
@@ -478,7 +532,7 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     (rtrn_idx,) = np.nonzero(template_single[trough_idx:] >= 0)
     if len(rtrn_idx) == 0:
         return np.nan
-    # first time after  trough, where template is at baseline
+    # first time after trough, where template is at baseline
     return_to_base_idx = rtrn_idx[0] + trough_idx
 
     if return_to_base_idx - trough_idx < 3:
@@ -493,13 +547,12 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
 def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwargs):
     """
     Return the recovery slope of input waveforms. After repolarization,
-    the neuron hyperpolarizes untill it peaks. The recovery slope is the
-    slope of the actiopotential after the peak, returning to the baseline
-    in dV/dT. The slope is computed within a user-defined window after
-    the peak.
-
-    Takes a numpy array of waveforms and returns an array with
-    recovery slopes per waveform.
+    the neuron hyperpolarizes until it peaks. The recovery slope is the
+    slope of the action potential after the peak, returning to the baseline
+    in dV/dT. The returned slope is in units of (unit of template)
+    per second. By default traces are scaled to units of uV, controlled
+    by `sorting_analyzer.return_scaled`. In this case this function returns the slope
+    in uV/s. The slope is computed within a user-defined window after the peak.
 
     Parameters
     ----------
@@ -511,6 +564,11 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
         The index of the peak
     **kwargs: Required kwargs:
         - recovery_window_ms: the window in ms after the peak to compute the recovery_slope
+
+    Returns
+    -------
+    res.slope: float
+        The recovery slope
     """
     import scipy.stats
 
@@ -543,6 +601,11 @@ def get_num_positive_peaks(template_single, sampling_frequency, **kwargs):
     **kwargs: Required kwargs:
         - peak_relative_threshold: the relative threshold to detect positive and negative peaks
         - peak_width_ms: the width in samples to detect peaks
+
+    Returns
+    -------
+    number_positive_peaks: int
+        the number of positive peaks
     """
     from scipy.signal import find_peaks
 
@@ -571,6 +634,11 @@ def get_num_negative_peaks(template_single, sampling_frequency, **kwargs):
     **kwargs: Required kwargs:
         - peak_relative_threshold: the relative threshold to detect positive and negative peaks
         - peak_width_ms: the width in samples to detect peaks
+
+    Returns
+    -------
+    num_negative_peaks: int
+        the number of negative peaks
     """
     from scipy.signal import find_peaks
 
@@ -603,7 +671,7 @@ _single_channel_metric_name_to_func = {
 
 def transform_column_range(template, channel_locations, column_range, depth_direction="y"):
     """
-    Transform template anch channel locations based on column range.
+    Transform template and channel locations based on column range.
     """
     column_dim = 0 if depth_direction == "y" else 1
     if column_range is None:
@@ -628,7 +696,7 @@ def sort_template_and_locations(template, channel_locations, depth_direction="y"
 
 def fit_velocity(peak_times, channel_dist):
     """
-    Fit velocity from peak times and channel distances using ribust Theilsen estimator.
+    Fit velocity from peak times and channel distances using robust Theilsen estimator.
     """
     # from scipy.stats import linregress
     # slope, intercept, _, _, _ = linregress(peak_times, channel_dist)
@@ -645,7 +713,7 @@ def fit_velocity(peak_times, channel_dist):
 
 def get_velocity_above(template, channel_locations, sampling_frequency, **kwargs):
     """
-    Compute the velocity above the max channel of the template.
+    Compute the velocity above the max channel of the template in units um/s.
 
     Parameters
     ----------
@@ -682,15 +750,20 @@ def get_velocity_above(template, channel_locations, sampling_frequency, **kwargs
 
     channels_above = channel_locations[:, depth_dim] >= max_channel_location[depth_dim]
 
-    # we only consider samples forward in time with respect to the max channel
-    # TODO: not sure
-    # template_above = template[max_sample_idx:, channels_above]
+    # if not enough channels return NaN
+    if np.sum(channels_above) < min_channels_for_velocity:
+        return np.nan
+
     template_above = template[:, channels_above]
     channel_locations_above = channel_locations[channels_above]
 
     peak_times_ms_above = np.argmin(template_above, 0) / sampling_frequency * 1000 - max_peak_time
     distances_um_above = np.array([np.linalg.norm(cl - max_channel_location) for cl in channel_locations_above])
     velocity_above, intercept, score = fit_velocity(peak_times_ms_above, distances_um_above)
+
+    # if r2 score is to low return NaN
+    if score < min_r2_velocity:
+        return np.nan
 
     # if DEBUG:
     #     import matplotlib.pyplot as plt
@@ -713,15 +786,12 @@ def get_velocity_above(template, channel_locations, sampling_frequency, **kwargs
     #     )
     #     plt.show()
 
-    if np.sum(channels_above) < min_channels_for_velocity or score < min_r2_velocity:
-        velocity_above = np.nan
-
     return velocity_above
 
 
 def get_velocity_below(template, channel_locations, sampling_frequency, **kwargs):
     """
-    Compute the velocity below the max channel of the template.
+    Compute the velocity below the max channel of the template in units um/s.
 
     Parameters
     ----------
@@ -758,14 +828,20 @@ def get_velocity_below(template, channel_locations, sampling_frequency, **kwargs
 
     channels_below = channel_locations[:, depth_dim] <= max_channel_location[depth_dim]
 
-    # we only consider samples forward in time with respect to the max channel
-    # template_below = template[max_sample_idx:, channels_below]
+    # if not enough channels return NaN
+    if np.sum(channels_below) < min_channels_for_velocity:
+        return np.nan
+
     template_below = template[:, channels_below]
     channel_locations_below = channel_locations[channels_below]
 
     peak_times_ms_below = np.argmin(template_below, 0) / sampling_frequency * 1000 - max_peak_time
     distances_um_below = np.array([np.linalg.norm(cl - max_channel_location) for cl in channel_locations_below])
     velocity_below, intercept, score = fit_velocity(peak_times_ms_below, distances_um_below)
+
+    # if r2 score is to low return NaN
+    if score < min_r2_velocity:
+        return np.nan
 
     # if DEBUG:
     #     import matplotlib.pyplot as plt
@@ -788,15 +864,12 @@ def get_velocity_below(template, channel_locations, sampling_frequency, **kwargs
     #     )
     #     plt.show()
 
-    if np.sum(channels_below) < min_channels_for_velocity or score < min_r2_velocity:
-        velocity_below = np.nan
-
     return velocity_below
 
 
 def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs):
     """
-    Compute the exponential decay of the template amplitude over distance.
+    Compute the exponential decay of the template amplitude over distance in units um/s.
 
     Parameters
     ----------
@@ -809,6 +882,11 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
     **kwargs: Required kwargs:
         - exp_peak_function: the function to use to compute the peak amplitude for the exp decay ("ptp" or "min")
         - min_r2_exp_decay: the minimum r2 to accept the exp decay fit
+
+    Returns
+    -------
+    exp_decay_value : float
+        The exponential decay of the template amplitude
     """
     from scipy.optimize import curve_fit
     from sklearn.metrics import r2_score
@@ -829,9 +907,11 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
     max_channel_location = channel_locations[np.argmax(peak_amplitudes)]
     channel_distances = np.array([np.linalg.norm(cl - max_channel_location) for cl in channel_locations])
     distances_sort_indices = np.argsort(channel_distances)
-    # np.float128 avoids overflow error
-    channel_distances_sorted = channel_distances[distances_sort_indices].astype(np.float128)
-    peak_amplitudes_sorted = peak_amplitudes[distances_sort_indices].astype(np.float128)
+
+    # longdouble is float128 when the platform supports it, otherwise it is float64
+    channel_distances_sorted = channel_distances[distances_sort_indices].astype(np.longdouble)
+    peak_amplitudes_sorted = peak_amplitudes[distances_sort_indices].astype(np.longdouble)
+
     try:
         amp0 = peak_amplitudes_sorted[0]
         offset0 = np.min(peak_amplitudes_sorted)
@@ -870,9 +950,9 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
     return exp_decay_value
 
 
-def get_spread(template, channel_locations, sampling_frequency, **kwargs):
+def get_spread(template, channel_locations, sampling_frequency, **kwargs) -> float:
     """
-    Compute the spread of the template amplitude over distance.
+    Compute the spread of the template amplitude over distance in units um/s.
 
     Parameters
     ----------
@@ -886,6 +966,11 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs):
         - depth_direction: the direction to compute velocity above and below ("x", "y", or "z")
         - spread_threshold: the threshold to compute the spread
         - column_range: the range in um in the x-direction to consider channels for velocity
+
+    Returns
+    -------
+    spread : float
+        Spread of the template amplitude
     """
     assert "depth_direction" in kwargs, "depth_direction must be given as kwarg"
     depth_direction = kwargs["depth_direction"]
@@ -901,7 +986,6 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs):
     template, channel_locations = sort_template_and_locations(template, channel_locations, depth_direction)
 
     MM = np.ptp(template, 0)
-    MM = MM / np.max(MM)
     channel_depths = channel_locations[:, depth_dim]
 
     if spread_smooth_um is not None and spread_smooth_um > 0:
@@ -910,9 +994,12 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs):
         spread_sigma = spread_smooth_um / np.median(np.diff(np.unique(channel_depths)))
         MM = gaussian_filter1d(MM, spread_sigma)
 
-    channel_locations_above_theshold = channel_locations[MM > spread_threshold]
-    channel_depth_above_theshold = channel_locations_above_theshold[:, depth_dim]
-    spread = np.ptp(channel_depth_above_theshold)
+    MM = MM / np.max(MM)
+
+    channel_locations_above_threshold = channel_locations[MM > spread_threshold]
+    channel_depth_above_threshold = channel_locations_above_threshold[:, depth_dim]
+
+    spread = np.ptp(channel_depth_above_threshold)
 
     # if DEBUG:
     #     import matplotlib.pyplot as plt

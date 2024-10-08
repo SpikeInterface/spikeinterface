@@ -2,6 +2,7 @@
 test for BaseSorting are done with NpzSortingExtractor.
 but check only for BaseRecording general methods.
 """
+
 import shutil
 from pathlib import Path
 
@@ -22,14 +23,11 @@ from spikeinterface.core import (
 )
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
+from spikeinterface.core.generate import generate_sorting
 
 
-def test_BaseSorting():
+def test_BaseSorting(create_cache_folder):
+    cache_folder = create_cache_folder
     num_seg = 2
     file_path = cache_folder / "test_BaseSorting.npz"
     file_path.parent.mkdir(exist_ok=True)
@@ -104,7 +102,8 @@ def test_BaseSorting():
     spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1: 5, 2: 18})
     # print(spikes)
 
-    num_spikes_per_unit = sorting.count_num_spikes_per_unit()
+    num_spikes_per_unit = sorting.count_num_spikes_per_unit(outputs="dict")
+    num_spikes_per_unit = sorting.count_num_spikes_per_unit(outputs="array")
     total_spikes = sorting.count_total_num_spikes()
 
     # select units
@@ -127,6 +126,17 @@ def test_BaseSorting():
     assert isinstance(sorting6, SharedMemorySorting)
     del sorting6
     del sorting5
+
+    # test save to zarr
+    # compressor = get_default_zarr_compressor()
+    sorting_zarr = sorting.save(format="zarr", folder=cache_folder / "sorting")
+    sorting_zarr_loaded = load_extractor(cache_folder / "sorting.zarr")
+    # annotations is False because Zarr adds compression ratios
+    check_sortings_equal(sorting, sorting_zarr, check_annotations=False, check_properties=True)
+    check_sortings_equal(sorting_zarr, sorting_zarr_loaded, check_annotations=False, check_properties=True)
+    for annotation_name in sorting.get_annotation_keys():
+        assert sorting.get_annotation(annotation_name) == sorting_zarr.get_annotation(annotation_name)
+        assert sorting.get_annotation(annotation_name) == sorting_zarr_loaded.get_annotation(annotation_name)
 
 
 def test_npy_sorting():
@@ -167,6 +177,18 @@ def test_npy_sorting():
     seg_nframes = [9, 5, 10]
     rec = NumpyRecording([np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq)
     assert_raises(Exception, sorting.register_recording, rec)
+
+
+def test_rename_units_method():
+    num_units = 2
+    durations = [1.0, 1.0]
+
+    sorting = generate_sorting(num_units=num_units, durations=durations)
+
+    new_unit_ids = ["a", "b"]
+    new_sorting = sorting.rename_units(new_unit_ids=new_unit_ids)
+
+    assert np.array_equal(new_sorting.get_unit_ids(), new_unit_ids)
 
 
 def test_empty_sorting():

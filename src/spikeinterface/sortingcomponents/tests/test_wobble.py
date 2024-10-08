@@ -143,7 +143,7 @@ def test_convolve_templates():
         )
         unit_overlap = unit_overlap > 0
         unit_overlap = np.repeat(unit_overlap, jitter_factor, axis=0)
-        sparsity = wobble.Sparsity(visible_channels, unit_overlap)
+        sparsity = wobble.WobbleSparsity(visible_channels, unit_overlap)
 
         # Act: run convolve_templates
         pairwise_convolution = wobble.convolve_templates(

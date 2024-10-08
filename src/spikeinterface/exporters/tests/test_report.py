@@ -1,38 +1,27 @@
-from pathlib import Path
+import shutil
 
-import pytest
-
-from spikeinterface import extract_waveforms, download_dataset
-import spikeinterface.extractors as se
 from spikeinterface.exporters import export_report
 
-# from spikeinterface.postprocessing import compute_spike_amplitudes
-# from spikeinterface.qualitymetrics import compute_quality_metrics
+from spikeinterface.exporters.tests.common import (
+    make_sorting_analyzer,
+    sorting_analyzer_dense_for_export,
+    sorting_analyzer_sparse_for_export,
+    sorting_analyzer_with_group_for_export,
+)
 
 
-def test_export_report(tmp_path):
-    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-    remote_path = "mearec/mearec_test_10s.h5"
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    recording, sorting = se.read_mearec(local_path)
+def test_export_report(sorting_analyzer_sparse_for_export, create_cache_folder):
+    cache_folder = create_cache_folder
+    report_folder = cache_folder / "report"
+    if report_folder.exists():
+        shutil.rmtree(report_folder)
 
-    waveform_folder = tmp_path / "waveforms"
-    output_folder = tmp_path / "mearec_GT_report"
-
-    waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
-
-    # compute_spike_amplitudes(waveform_extractor)
-    # compute_quality_metrics(waveform_extractor)
+    sorting_analyzer = sorting_analyzer_sparse_for_export
 
     job_kwargs = dict(n_jobs=1, chunk_size=30000, progress_bar=True)
-
-    export_report(waveform_extractor, output_folder, force_computation=True, **job_kwargs)
+    export_report(sorting_analyzer, report_folder, force_computation=True, **job_kwargs)
 
 
 if __name__ == "__main__":
-    # Create a temporary folder using the standard library
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        tmp_path = Path(tmpdirname)
-        test_export_report(tmp_path)
+    sorting_analyzer = make_sorting_analyzer(sparse=True)
+    test_export_report(sorting_analyzer)

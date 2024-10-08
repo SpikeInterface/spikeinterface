@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from copy import deepcopy
 from typing import OrderedDict
 import numpy as np
@@ -61,9 +63,9 @@ class BaseMultiComparison(BaseComparison):
         Computes subgraphs of connected components.
         Returns
         -------
-        sg_object_names: list
+        sg_object_names : list
             List of sorter names for each node in the connected component subgraph
-        sg_units: list
+        sg_units : list
             List of unit ids for each node in the connected component subgraph
         """
         if self.clean_graph is not None:
@@ -91,7 +93,7 @@ class BaseMultiComparison(BaseComparison):
     ):
         # do pairwise matching
         if self._verbose:
-            print("Multicomaprison step 1: pairwise comparison")
+            print("Multicomparison step 1: pairwise comparison")
 
         self.comparisons = {}
         for i in range(len(self.object_list)):
@@ -133,7 +135,7 @@ class BaseMultiComparison(BaseComparison):
 
     def _clean_graph(self):
         if self._verbose:
-            print("Multicomaprison step 3: clean graph")
+            print("Multicomparison step 3: clean graph")
         clean_graph = self.graph.copy()
         import networkx as nx
 
@@ -311,9 +313,11 @@ class MixinTemplateComparison:
     """
     Mixin for template comparisons to define:
        * similarity method
-       * sparsity
+       * support
+       * num_shifts
     """
 
-    def __init__(self, similarity_method="cosine_similarity", sparsity_dict=None):
+    def __init__(self, similarity_method="cosine", support="union", num_shifts=0):
         self.similarity_method = similarity_method
-        self.sparsity_dict = sparsity_dict
+        self.support = support
+        self.num_shifts = num_shifts

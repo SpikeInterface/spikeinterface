@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 from typing import Union
 
 from .base import BaseWidget, to_attr
-from ..core.waveform_extractor import WaveformExtractor
+from ..core.sortinganalyzer import SortingAnalyzer
 from ..core.basesorting import BaseSorting
 from ..postprocessing import compute_correlograms
 
@@ -13,24 +15,30 @@ class CrossCorrelogramsWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
+    sorting_analyzer_or_sorting : SortingAnalyzer or BaseSorting
         The object to compute/get crosscorrelograms from
     unit_ids  list or None, default: None
         List of unit ids
+    min_similarity_for_correlograms : float, default: 0.2
+        For sortingview backend. Threshold for computing pair-wise cross-correlograms.
+        If template similarity between two units is below this threshold, the cross-correlogram is not displayed
     window_ms : float, default: 100.0
-        Window for CCGs in ms
+        Window for CCGs in ms. If correlograms are already computed (e.g. with SortingAnalyzer),
+        this argument is ignored
     bin_ms : float, default: 1.0
-        Bin size in ms
+        Bin size in ms. If correlograms are already computed (e.g. with SortingAnalyzer),
+        this argument is ignored
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
-    unit_colors: dict or None, default: None
+    unit_colors : dict or None, default: None
         If given, a dictionary with unit ids as keys and colors as values
     """
 
     def __init__(
         self,
-        waveform_or_sorting_extractor: Union[WaveformExtractor, BaseSorting],
+        sorting_analyzer_or_sorting: Union[SortingAnalyzer, BaseSorting],
         unit_ids=None,
+        min_similarity_for_correlograms=0.2,
         window_ms=100.0,
         bin_ms=1.0,
         hide_unit_selector=False,
@@ -38,13 +46,23 @@ class CrossCorrelogramsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
-            sorting = waveform_or_sorting_extractor.sorting
-            self.check_extensions(waveform_or_sorting_extractor, "correlograms")
-            ccc = waveform_or_sorting_extractor.load_extension("correlograms")
+
+        if not isinstance(sorting_analyzer_or_sorting, BaseSorting):
+            sorting_analyzer_or_sorting = self.ensure_sorting_analyzer(sorting_analyzer_or_sorting)
+
+        if min_similarity_for_correlograms is None:
+            min_similarity_for_correlograms = 0
+        similarity = None
+        if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
+            sorting = sorting_analyzer_or_sorting.sorting
+            self.check_extensions(sorting_analyzer_or_sorting, "correlograms")
+            ccc = sorting_analyzer_or_sorting.get_extension("correlograms")
             ccgs, bins = ccc.get_data()
+            if min_similarity_for_correlograms > 0:
+                self.check_extensions(sorting_analyzer_or_sorting, "template_similarity")
+                similarity = sorting_analyzer_or_sorting.get_extension("template_similarity").get_data()
         else:
-            sorting = waveform_or_sorting_extractor
+            sorting = sorting_analyzer_or_sorting
             ccgs, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms)
 
         if unit_ids is None:
@@ -53,10 +71,14 @@ class CrossCorrelogramsWidget(BaseWidget):
         else:
             unit_indices = sorting.ids_to_indices(unit_ids)
             correlograms = ccgs[unit_indices][:, unit_indices]
+            if similarity is not None:
+                similarity = similarity[unit_indices][:, unit_indices]
 
         plot_data = dict(
             correlograms=correlograms,
             bins=bins,
+            similarity=similarity,
+            min_similarity_for_correlograms=min_similarity_for_correlograms,
             unit_ids=unit_ids,
             hide_unit_selector=hide_unit_selector,
             unit_colors=unit_colors,
@@ -100,23 +122,29 @@ class CrossCorrelogramsWidget(BaseWidget):
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
-        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
+        from .utils_sortingview import make_serializable, handle_display_and_url
 
         dp = to_attr(data_plot)
 
         unit_ids = make_serializable(dp.unit_ids)
 
+        if dp.similarity is not None:
+            similarity = dp.similarity
+        else:
+            similarity = np.ones((len(unit_ids), len(unit_ids)))
+
         cc_items = []
         for i in range(len(unit_ids)):
             for j in range(i, len(unit_ids)):
-                cc_items.append(
-                    vv.CrossCorrelogramItem(
-                        unit_id1=unit_ids[i],
-                        unit_id2=unit_ids[j],
-                        bin_edges_sec=(dp.bins / 1000.0).astype("float32"),
-                        bin_counts=dp.correlograms[i, j].astype("int32"),
+                if similarity[i, j] >= dp.min_similarity_for_correlograms:
+                    cc_items.append(
+                        vv.CrossCorrelogramItem(
+                            unit_id1=unit_ids[i],
+                            unit_id2=unit_ids[j],
+                            bin_edges_sec=(dp.bins / 1000.0).astype("float32"),
+                            bin_counts=dp.correlograms[i, j].astype("int32"),
+                        )
                     )
-                )
 
         self.view = vv.CrossCorrelograms(cross_correlograms=cc_items, hide_unit_selector=dp.hide_unit_selector)
 

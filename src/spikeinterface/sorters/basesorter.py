@@ -1,6 +1,10 @@
 """
 base class for sorters implementation.
 """
+
+from __future__ import annotations
+
+
 import time
 import copy
 from pathlib import Path
@@ -11,17 +15,16 @@ import shutil
 import warnings
 
 
-from spikeinterface.core import load_extractor, BaseRecordingSnippets
+from spikeinterface.core import load_extractor, BaseRecordingSnippets, BaseRecording
 from spikeinterface.core.core_tools import check_json
+from spikeinterface.core.globals import get_global_job_kwargs
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .utils import SpikeSortingError, ShellScript
 
 
-default_job_kwargs = {"n_jobs": -1}
-
 default_job_kwargs_description = {
-    "n_jobs": "Number of jobs (when saving ti binary) - default -1 (all cores)",
-    "chunk_size": "Number of samples per chunk (when saving ti binary) - default global",
+    "n_jobs": "Number of jobs (when saving to binary) - default global",
+    "chunk_size": "Number of samples per chunk (when saving to binary) - default global",
     "chunk_memory": "Memory usage for each job (e.g. '100M', '1G') (when saving to binary) - default global",
     "total_memory": "Total memory usage (e.g. '500M', '2G') (when saving to binary) - default global",
     "chunk_duration": "Chunk duration in s if float or with units if str (e.g. '1s', '500ms') (when saving to binary)"
@@ -99,7 +102,7 @@ class BaseSorter:
         # installed ?
         if not cls.is_installed():
             raise Exception(
-                f"The sorter {cls.sorter_name} is not installed." f"Please install it with:  \n{cls.installation_mesg} "
+                f"The sorter {cls.sorter_name} is not installed. Please install it with:\n{cls.installation_mesg}"
             )
 
         if not isinstance(recording, BaseRecordingSnippets):
@@ -137,9 +140,9 @@ class BaseSorter:
                 )
 
         rec_file = output_folder / "spikeinterface_recording.json"
-        if recording.check_serializablility("json"):
-            recording.dump(rec_file, relative_to=output_folder)
-        elif recording.check_serializablility("pickle"):
+        if recording.check_serializability("json"):
+            recording.dump(rec_file)
+        elif recording.check_serializability("pickle"):
             recording.dump(output_folder / "spikeinterface_recording.pickle", relative_to=output_folder)
         else:
             # TODO: deprecate and finally remove this after 0.100
@@ -152,7 +155,7 @@ class BaseSorter:
     def default_params(cls):
         p = copy.deepcopy(cls._default_params)
         if cls.requires_binary_data:
-            job_kwargs = fix_job_kwargs(default_job_kwargs)
+            job_kwargs = get_global_job_kwargs()
             p.update(job_kwargs)
         return p
 
@@ -164,23 +167,27 @@ class BaseSorter:
         return p
 
     @classmethod
-    def set_params_to_folder(cls, recording, output_folder, new_params, verbose):
+    def set_params_to_folder(
+        cls,
+        recording: BaseRecording,
+        output_folder: str | Path,
+        new_params: dict,
+        verbose: bool,
+    ) -> dict:
         params = cls.default_params()
+        valid_parameters = params.keys()
+        invalid_parameters = [k for k in new_params.keys() if k not in valid_parameters]
 
-        # verify params are in list
-        bad_params = []
-        for p in new_params.keys():
-            if p not in params.keys():
-                bad_params.append(p)
-        if len(bad_params) > 0:
-            raise AttributeError("Bad parameters: " + str(bad_params))
+        if invalid_parameters:
+            error_msg = f"Invalid parameters: {invalid_parameters} \n" f"Valid parameters are: {valid_parameters}"
+            raise ValueError(error_msg)
 
         params.update(new_params)
 
         # custom check params
         params = cls._check_params(recording, output_folder, params)
         # common check : filter warning
-        if recording.is_filtered and cls._check_apply_filter_in_params(params) and verbose:
+        if recording.is_filtered() and cls._check_apply_filter_in_params(params) and verbose:
             print(f"Warning! The recording is already filtered, but {cls.sorter_name} filter is enabled")
 
         # dump parameters inside the folder with json
@@ -259,7 +266,12 @@ class BaseSorter:
             has_error = True
             run_time = None
             log["error"] = True
-            log["error_trace"] = traceback.format_exc()
+            error_log_to_display = traceback.format_exc()
+            trace_lines = error_log_to_display.strip().split("\n")
+            error_to_json = ["Traceback (most recent call last):"] + [
+                f"  {line}" if not line.startswith(" ") else line for line in trace_lines[1:]
+            ]
+            log["error_trace"] = error_to_json
 
         log["error"] = has_error
         log["run_time"] = run_time
@@ -287,7 +299,7 @@ class BaseSorter:
 
         if has_error and raise_error:
             raise SpikeSortingError(
-                f"Spike sorting error trace:\n{log['error_trace']}\n"
+                f"Spike sorting error trace:\n{error_log_to_display}\n"
                 f"Spike sorting failed. You can inspect the runtime trace in {output_folder}/spikeinterface_log.json."
             )
 
@@ -340,13 +352,13 @@ class BaseSorter:
         return sorting
 
     @classmethod
-    def check_compiled(cls):
+    def check_compiled(cls) -> bool:
         """
         Checks if the sorter is running inside an image with matlab-compiled version
 
         Returns
         -------
-        is_compiled: bool
+        is_compiled : bool
             Boolean indicating if a bash command for cls.compiled_name exists or not
         """
         if cls.compiled_name is None:
@@ -361,14 +373,13 @@ class BaseSorter:
         """
         shell_script = ShellScript(shell_cmd)
         shell_script.start()
-        shell_script.wait()
         retcode = shell_script.wait()
         if retcode != 0:
             return False
         return True
 
     @classmethod
-    def use_gpu(cls, params):
+    def use_gpu(cls, params) -> bool:
         return cls.gpu_capability != "not-supported"
 
     #############################################
@@ -434,7 +445,7 @@ def get_job_kwargs(params, verbose):
     return job_kwargs
 
 
-def is_log_ok(output_folder):
+def is_log_ok(output_folder) -> bool:
     # log is OK when run_time is not None
     if (output_folder / "spikeinterface_log.json").is_file():
         with open(output_folder / "spikeinterface_log.json", mode="r", encoding="utf8") as logfile:

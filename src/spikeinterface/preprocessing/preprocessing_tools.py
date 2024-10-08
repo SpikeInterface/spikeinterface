@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 
@@ -7,7 +9,7 @@ def get_spatial_interpolation_kernel(
     method="kriging",
     sigma_um=20.0,
     p=1,
-    num_closest=3,
+    num_closest=4,
     sparse_thresh=None,
     dtype="float32",
     force_extrapolate=False,
@@ -38,7 +40,7 @@ def get_spatial_interpolation_kernel(
         Used in the "kriging" formula
     sparse_thresh: None or float, default: None
         If not None for "kriging" force small value to be zeros to get a sparse matrix.
-    num_closest: int, default: 3
+    num_closest: int, default: 4
         Used for "idw"
     force_extrapolate: bool, default: False
         How to handle when target location are outside source location.
@@ -78,7 +80,7 @@ def get_spatial_interpolation_kernel(
 
     elif method == "idw":
         distances = scipy.spatial.distance.cdist(source_location, target_location, metric="euclidean")
-        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype="float64")
+        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype=dtype)
         for c in range(target_location.shape[0]):
             ind_sorted = np.argsort(distances[:, c])
             chan_closest = ind_sorted[:num_closest]
@@ -95,7 +97,7 @@ def get_spatial_interpolation_kernel(
 
     elif method == "nearest":
         distances = scipy.spatial.distance.cdist(source_location, target_location, metric="euclidean")
-        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype="float64")
+        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype=dtype)
         for c in range(target_location.shape[0]):
             ind_closest = np.argmin(distances[:, c])
             interpolation_kernel[ind_closest, c] = 1.0

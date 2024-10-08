@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 ### PREPROCESSORS ###
 from .resample import ResampleRecording, resample
+from .decimate import DecimateRecording, decimate
 from .filter import (
     FilterRecording,
     filter,
@@ -9,8 +12,9 @@ from .filter import (
     notch_filter,
     HighpassFilterRecording,
     highpass_filter,
+    causal_filter,
 )
-from .filter_gaussian import GaussianBandpassFilterRecording, gaussian_bandpass_filter
+from .filter_gaussian import GaussianFilterRecording, gaussian_filter
 from .normalize_scale import (
     NormalizeByQuantileRecording,
     normalize_by_quantile,
@@ -21,6 +25,8 @@ from .normalize_scale import (
     CenterRecording,
     center,
 )
+from .scale import scale_to_uV
+
 from .whiten import WhitenRecording, whiten, compute_whitening_matrix
 from .rectify import RectifyRecording, rectify
 from .clip import BlankSaturationRecording, blank_staturation, ClipRecording, clip
@@ -45,7 +51,7 @@ preprocessers_full_list = [
     BandpassFilterRecording,
     HighpassFilterRecording,
     NotchFilterRecording,
-    GaussianBandpassFilterRecording,
+    GaussianFilterRecording,
     # gain offset stuff
     NormalizeByQuantileRecording,
     ScaleRecording,
@@ -65,6 +71,7 @@ preprocessers_full_list = [
     ZeroChannelPaddedRecording,
     DeepInterpolatedRecording,
     ResampleRecording,
+    DecimateRecording,
     HighpassSpatialFilterRecording,
     InterpolateBadChannelsRecording,
     DepthOrderRecording,
@@ -74,5 +81,4 @@ preprocessers_full_list = [
     UnsignedToSignedRecording,
 ]
 
-installed_preprocessers_list = [pp for pp in preprocessers_full_list if pp.installed]
 preprocesser_dict = {pp_class.name: pp_class for pp_class in preprocessers_full_list}

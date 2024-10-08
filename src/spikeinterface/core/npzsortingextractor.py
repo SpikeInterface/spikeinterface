@@ -1,8 +1,9 @@
-from .basesorting import BaseSorting, BaseSortingSegment
+from __future__ import annotations
 
 from pathlib import Path
 import numpy as np
 
+from .basesorting import BaseSorting, BaseSortingSegment
 from .core_tools import define_function_from_class
 
 
@@ -14,10 +15,6 @@ class NpzSortingExtractor(BaseSorting):
     It is in fact an archive of several .npy format.
     All spike are store in two columns maner index+labels
     """
-
-    extractor_name = "NpzSortingExtractor"
-    mode = "file"
-    name = "npz"
 
     def __init__(self, file_path):
         self.npz_filename = file_path

@@ -1,25 +1,10 @@
 """
-Pipeline on spikes/peaks/detected peaks
 
-Functions that can be chained:
-  * after peak detection
-  * already detected peaks
-  * spikes (labeled peaks)
-to compute some additional features on-the-fly:
-  * peak localization
-  * peak-to-peak
-  * pca
-  * amplitude
-  * amplitude scaling
-  * ...
 
-There are two ways for using theses "plugin nodes":
-  * during `peak_detect()`
-  * when peaks are already detected and reduced with `select_peaks()`
-  * on a sorting object
 """
 
-from typing import Optional, List, Type
+from __future__ import annotations
+from typing import Optional, Type
 
 import struct
 
@@ -41,9 +26,17 @@ base_peak_dtype = [
 ]
 
 
+spike_peak_dtype = base_peak_dtype + [
+    ("unit_index", "int64"),
+]
+
+
 class PipelineNode:
     def __init__(
-        self, recording: BaseRecording, return_output: bool = True, parents: Optional[List[Type["PipelineNode"]]] = None
+        self,
+        recording: BaseRecording,
+        return_output: bool | tuple[bool] = True,
+        parents: Optional[list[Type["PipelineNode"]]] = None,
     ):
         """
         This is a generic object that will make some computation on peaks given a buffer of traces.
@@ -55,13 +48,11 @@ class PipelineNode:
         ----------
         recording : BaseRecording
             The recording object.
-        parents : Optional[List[PipelineNode]], default: None
-            Pass parents nodes to perform a previous computation
-        return_output : bool or tuple of bool, default: True
+        return_output : bool or tuple[bool], default: True
             Whether or not the output of the node is returned by the pipeline.
-            When a Node have several toutputs then this can be a tuple of bool.
-
-
+            When a Node have several toutputs then this can be a tuple of bool
+        parents : Optional[list[PipelineNode]], default: None
+            Pass parents nodes to perform a previous computation.
         """
 
         self.recording = recording
@@ -89,16 +80,26 @@ class PipelineNode:
 
 
 class PeakSource(PipelineNode):
-    # base class for peak detector
+
     def get_trace_margin(self):
         raise NotImplementedError
 
     def get_dtype(self):
         return base_peak_dtype
 
+    def get_peak_slice(
+        self,
+        segment_index,
+        start_frame,
+        end_frame,
+    ):
+        # not needed for PeakDetector
+        raise NotImplementedError
+
 
 # this is used in sorting components
 class PeakDetector(PeakSource):
+    # base class for peak detector or template matching
     pass
 
 
@@ -120,11 +121,18 @@ class PeakRetriever(PeakSource):
     def get_dtype(self):
         return base_peak_dtype
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
-        # get local peaks
+    def get_peak_slice(self, segment_index, start_frame, end_frame, max_margin):
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
         i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        return i0, i1
+
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
+        # get local peaks
+        sl = self.segment_slices[segment_index]
+        peaks_in_segment = self.peaks[sl]
+        # i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        i0, i1 = peak_slice
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
@@ -145,25 +153,34 @@ class SpikeRetriever(PeakSource):
       * compute_spike_amplitudes()
       * compute_principal_components()
 
+    sorting : BaseSorting
+        The sorting object.
     recording : BaseRecording
         The recording object.
-    sorting: BaseSorting
-        The sorting object.
-    channel_from_template: bool, default: True
+    channel_from_template : bool, default: True
         If True, then the channel_index is inferred from the template and `extremum_channel_inds` must be provided.
         If False, the max channel is computed for each spike given a radius around the template max channel.
-    extremum_channel_inds: dict of int
+    extremum_channel_inds : dict of int | None, default: None
         The extremum channel index dict given from template.
-    radius_um: float, default: 50
+    radius_um : float, default: 50
         The radius to find the real max channel.
         Used only when channel_from_template=False
-    peak_sign: str, default: "neg"
+    peak_sign : "neg" | "pos", default: "neg"
         Peak sign to find the max channel.
         Used only when channel_from_template=False
+    include_spikes_in_margin : bool, default False
+        If not None then spikes in margin are added and an extra filed in dtype is added
     """
 
     def __init__(
-        self, recording, sorting, channel_from_template=True, extremum_channel_inds=None, radius_um=50, peak_sign="neg"
+        self,
+        sorting,
+        recording,
+        channel_from_template=True,
+        extremum_channel_inds=None,
+        radius_um=50,
+        peak_sign="neg",
+        include_spikes_in_margin=False,
     ):
         PipelineNode.__init__(self, recording, return_output=False)
 
@@ -171,11 +188,17 @@ class SpikeRetriever(PeakSource):
 
         assert extremum_channel_inds is not None, "SpikeRetriever needs the extremum_channel_inds dictionary"
 
-        self.peaks = sorting_to_peaks(sorting, extremum_channel_inds)
+        self._dtype = spike_peak_dtype
+
+        self.include_spikes_in_margin = include_spikes_in_margin
+        if include_spikes_in_margin is not None:
+            self._dtype = spike_peak_dtype + [("in_margin", "bool")]
+
+        self.peaks = sorting_to_peaks(sorting, extremum_channel_inds, self._dtype)
 
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
-            self.neighbours_mask = channel_distance < radius_um
+            self.neighbours_mask = channel_distance <= radius_um
             self.peak_sign = peak_sign
 
         # precompute segment slice
@@ -188,18 +211,44 @@ class SpikeRetriever(PeakSource):
         return 0
 
     def get_dtype(self):
-        return base_peak_dtype
+        return self._dtype
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+    def get_peak_slice(self, segment_index, start_frame, end_frame, max_margin):
+        sl = self.segment_slices[segment_index]
+        peaks_in_segment = self.peaks[sl]
+        if self.include_spikes_in_margin:
+            i0, i1 = np.searchsorted(
+                peaks_in_segment["sample_index"], [start_frame - max_margin, end_frame + max_margin]
+            )
+        else:
+            i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        return i0, i1
+
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        # if self.include_spikes_in_margin:
+        #     i0, i1 = np.searchsorted(
+        #         peaks_in_segment["sample_index"], [start_frame - max_margin, end_frame + max_margin]
+        #     )
+        # else:
+        #     i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        i0, i1 = peak_slice
+
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
         local_peaks = local_peaks.copy()
         local_peaks["sample_index"] -= start_frame - max_margin
+
+        # handle flag for margin
+        if self.include_spikes_in_margin:
+            local_peaks["in_margin"][:] = False
+            mask = local_peaks["sample_index"] < max_margin
+            local_peaks["in_margin"][mask] = True
+            mask = local_peaks["sample_index"] >= traces.shape[0] - max_margin
+            local_peaks["in_margin"][mask] = True
 
         if not self.channel_from_template:
             # handle channel spike per spike
@@ -220,14 +269,15 @@ class SpikeRetriever(PeakSource):
         return (local_peaks,)
 
 
-def sorting_to_peaks(sorting, extremum_channel_inds):
+def sorting_to_peaks(sorting, extremum_channel_inds, dtype=spike_peak_dtype):
     spikes = sorting.to_spike_vector()
-    peaks = np.zeros(spikes.size, dtype=base_peak_dtype)
+    peaks = np.zeros(spikes.size, dtype=dtype)
     peaks["sample_index"] = spikes["sample_index"]
     extremum_channel_inds_ = np.array([extremum_channel_inds[unit_id] for unit_id in sorting.unit_ids])
     peaks["channel_index"] = extremum_channel_inds_[spikes["unit_index"]]
     peaks["amplitude"] = 0.0
     peaks["segment_index"] = spikes["segment_index"]
+    peaks["unit_index"] = spikes["unit_index"]
     return peaks
 
 
@@ -245,7 +295,7 @@ class WaveformsNode(PipelineNode):
         recording: BaseRecording,
         ms_before: float,
         ms_after: float,
-        parents: Optional[List[PipelineNode]] = None,
+        parents: Optional[list[PipelineNode]] = None,
         return_output: bool = False,
     ):
         """
@@ -260,7 +310,7 @@ class WaveformsNode(PipelineNode):
             The number of milliseconds to include before the peak of the spike
         ms_after : float
             The number of milliseconds to include after the peak of the spike
-        parents : Optional[List[PipelineNode]], default: None
+        parents : Optional[list[PipelineNode]], default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline
@@ -279,7 +329,7 @@ class ExtractDenseWaveforms(WaveformsNode):
         recording: BaseRecording,
         ms_before: float,
         ms_after: float,
-        parents: Optional[List[PipelineNode]] = None,
+        parents: Optional[list[PipelineNode]] = None,
         return_output: bool = False,
     ):
         """
@@ -295,7 +345,7 @@ class ExtractDenseWaveforms(WaveformsNode):
             The number of milliseconds to include before the peak of the spike
         ms_after : float
             The number of milliseconds to include after the peak of the spike
-        parents : Optional[List[PipelineNode]], default: None
+        parents : Optional[list[PipelineNode]], default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline
@@ -327,7 +377,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         recording: BaseRecording,
         ms_before: float,
         ms_after: float,
-        parents: Optional[List[PipelineNode]] = None,
+        parents: Optional[list[PipelineNode]] = None,
         return_output: bool = False,
         radius_um: float = 100.0,
     ):
@@ -350,7 +400,7 @@ class ExtractSparseWaveforms(WaveformsNode):
             The number of milliseconds to include before the peak of the spike
         ms_after : float
             The number of milliseconds to include after the peak of the spike
-        parents : Optional[List[PipelineNode]], default: None
+        parents : Optional[list[PipelineNode]], default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline
@@ -367,7 +417,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
 
     def get_trace_margin(self):
@@ -431,21 +481,82 @@ def run_node_pipeline(
     nodes,
     job_kwargs,
     job_name="pipeline",
-    mp_context=None,
+    # mp_context=None,
     gather_mode="memory",
     gather_kwargs={},
     squeeze_output=True,
     folder=None,
     names=None,
+    verbose=False,
+    skip_after_n_peaks=None,
 ):
     """
-    Common function to run pipeline with peak detector or already detected peak.
+    Machinery to compute in parallel operations on peaks and traces.
+
+    This useful in several use cases:
+    * in sortingcomponents : detect peaks and make some computation on then (localize, pca, ...)
+    * in sortingcomponents : replay some peaks and make some computation on then (localize, pca, ...)
+    * postprocessing : replay some spikes and make some computation on then (localize, pca, ...)
+
+    Here a "peak" is a spike without any labels just a "detected".
+    Here a "spike" is a spike with any a label so already sorted.
+
+    The main idea is to have a graph of nodes.
+    Every node is doing a computaion of some peaks and related traces.
+    The first node is PeakSource so either a peak detector PeakDetector or peak/spike replay (PeakRetriever/SpikeRetriever)
+
+    Every node can have one or several output that can be directed to other nodes (aka nodes have parents).
+
+    Every node can optionally have a global output that will be gathered by the main process.
+    This is controlled by return_output = True.
+
+    The gather consists of concatenating features related to peaks (localization, pca, scaling, ...) into a single big vector.
+    These vectors can be in "memory" or in files ("npy")
+
+
+    Parameters
+    ----------
+
+    recording: Recording
+
+    nodes: a list of PipelineNode
+
+    job_kwargs: dict
+        The classical job_kwargs
+    job_name : str
+        The name of the pipeline used for the progress_bar
+    gather_mode : "memory" | "npz"
+
+    gather_kwargs : dict
+        OPtions to control the "gather engine". See GatherToMemory or GatherToNpy.
+    squeeze_output : bool, default True
+        If only one output node then squeeze the tuple
+    folder : str | Path | None
+        Used for gather_mode="npz"
+    names : list of str
+        Names of outputs.
+    verbose : bool, default False
+        Verbosity.
+    skip_after_n_peaks : None | int
+        Skip the computation after n_peaks.
+        This is not an exact because internally this skip is done per worker in average.
+
+    Returns
+    -------
+    outputs: tuple of np.array | np.array
+        a tuple of vector for the output of nodes having return_output=True.
+        If squeeze_output=True and only one output then directly np.array.
     """
 
     check_graph(nodes)
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     assert all(isinstance(node, PipelineNode) for node in nodes)
+
+    if skip_after_n_peaks is not None:
+        skip_after_n_peaks_per_worker = skip_after_n_peaks / job_kwargs["n_jobs"]
+    else:
+        skip_after_n_peaks_per_worker = None
 
     if gather_mode == "memory":
         gather_func = GatherToMemory()
@@ -454,7 +565,7 @@ def run_node_pipeline(
     else:
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
-    init_args = (recording, nodes)
+    init_args = (recording, nodes, skip_after_n_peaks_per_worker)
 
     processor = ChunkRecordingExecutor(
         recording,
@@ -463,6 +574,7 @@ def run_node_pipeline(
         init_args,
         gather_func=gather_func,
         job_name=job_name,
+        verbose=verbose,
         **job_kwargs,
     )
 
@@ -472,13 +584,14 @@ def run_node_pipeline(
     return outs
 
 
-def _init_peak_pipeline(recording, nodes):
+def _init_peak_pipeline(recording, nodes, skip_after_n_peaks_per_worker):
     # create a local dict per worker
     worker_ctx = {}
     worker_ctx["recording"] = recording
     worker_ctx["nodes"] = nodes
     worker_ctx["max_margin"] = max(node.get_trace_margin() for node in nodes)
-
+    worker_ctx["skip_after_n_peaks_per_worker"] = skip_after_n_peaks_per_worker
+    worker_ctx["num_peaks"] = 0
     return worker_ctx
 
 
@@ -486,66 +599,88 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     recording = worker_ctx["recording"]
     max_margin = worker_ctx["max_margin"]
     nodes = worker_ctx["nodes"]
+    skip_after_n_peaks_per_worker = worker_ctx["skip_after_n_peaks_per_worker"]
 
     recording_segment = recording._recording_segments[segment_index]
-    traces_chunk, left_margin, right_margin = get_chunk_with_margin(
-        recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
-    )
+    node0 = nodes[0]
 
-    # compute the graph
-    pipeline_outputs = {}
-    for node in nodes:
-        node_parents = node.parents if node.parents else list()
-        node_input_args = tuple()
-        for parent in node_parents:
-            parent_output = pipeline_outputs[parent]
-            parent_outputs_tuple = parent_output if isinstance(parent_output, tuple) else (parent_output,)
-            node_input_args += parent_outputs_tuple
-        if isinstance(node, PeakDetector):
-            # to handle compatibility peak detector is a special case
-            # with specific margin
-            #  TODO later when in master: change this later
-            extra_margin = max_margin - node.get_trace_margin()
-            if extra_margin:
-                trace_detection = traces_chunk[extra_margin:-extra_margin]
+    if isinstance(node0, (SpikeRetriever, PeakRetriever)):
+        # in this case PeakSource could have no peaks and so no need to load traces just skip
+        peak_slice = i0, i1 = node0.get_peak_slice(segment_index, start_frame, end_frame, max_margin)
+        load_trace_and_compute = i0 < i1
+    else:
+        # PeakDetector always need traces
+        load_trace_and_compute = True
+
+    if skip_after_n_peaks_per_worker is not None:
+        if worker_ctx["num_peaks"] > skip_after_n_peaks_per_worker:
+            load_trace_and_compute = False
+
+    if load_trace_and_compute:
+        traces_chunk, left_margin, right_margin = get_chunk_with_margin(
+            recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
+        )
+        # compute the graph
+        pipeline_outputs = {}
+        for node in nodes:
+            node_parents = node.parents if node.parents else list()
+            node_input_args = tuple()
+            for parent in node_parents:
+                parent_output = pipeline_outputs[parent]
+                parent_outputs_tuple = parent_output if isinstance(parent_output, tuple) else (parent_output,)
+                node_input_args += parent_outputs_tuple
+            if isinstance(node, PeakDetector):
+                # to handle compatibility peak detector is a special case
+                # with specific margin
+                #  TODO later when in master: change this later
+                extra_margin = max_margin - node.get_trace_margin()
+                if extra_margin:
+                    trace_detection = traces_chunk[extra_margin:-extra_margin]
+                else:
+                    trace_detection = traces_chunk
+                node_output = node.compute(trace_detection, start_frame, end_frame, segment_index, max_margin)
+                # set sample index to local
+                node_output[0]["sample_index"] += extra_margin
+            elif isinstance(node, PeakSource):
+                node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, peak_slice)
             else:
-                trace_detection = traces_chunk
-            node_output = node.compute(trace_detection, start_frame, end_frame, segment_index, max_margin)
-            # set sample index to local
-            node_output[0]["sample_index"] += extra_margin
-        elif isinstance(node, PeakSource):
-            node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
-        else:
-            # TODO later when in master: change the signature of all nodes (or maybe not!)
-            node_output = node.compute(traces_chunk, *node_input_args)
-        pipeline_outputs[node] = node_output
+                # TODO later when in master: change the signature of all nodes (or maybe not!)
+                node_output = node.compute(traces_chunk, *node_input_args)
+            pipeline_outputs[node] = node_output
 
-    # propagate the output
-    pipeline_outputs_tuple = tuple()
-    for node in nodes:
-        # handle which buffer are given to the output
-        # this is controlled by node.return_output being a bool or tuple of bool
-        out = pipeline_outputs[node]
-        if isinstance(out, tuple):
-            if isinstance(node.return_output, bool) and node.return_output:
-                pipeline_outputs_tuple += out
-            elif isinstance(node.return_output, tuple):
-                for flag, e in zip(node.return_output, out):
-                    if flag:
-                        pipeline_outputs_tuple += (e,)
-        else:
-            if isinstance(node.return_output, bool) and node.return_output:
-                pipeline_outputs_tuple += (out,)
-            elif isinstance(node.return_output, tuple):
-                # this should not apppend : maybe a checker somewhere before ?
-                pass
+            if skip_after_n_peaks_per_worker is not None and isinstance(node, PeakSource):
+                worker_ctx["num_peaks"] += node_output[0].size
 
-    if isinstance(nodes[0], PeakDetector):
-        # the first out element is the peak vector
-        # we need to go back to absolut sample index
-        pipeline_outputs_tuple[0]["sample_index"] += start_frame - left_margin
+        # propagate the output
+        pipeline_outputs_tuple = tuple()
+        for node in nodes:
+            # handle which buffer are given to the output
+            # this is controlled by node.return_output being a bool or tuple of bool
+            out = pipeline_outputs[node]
+            if isinstance(out, tuple):
+                if isinstance(node.return_output, bool) and node.return_output:
+                    pipeline_outputs_tuple += out
+                elif isinstance(node.return_output, tuple):
+                    for flag, e in zip(node.return_output, out):
+                        if flag:
+                            pipeline_outputs_tuple += (e,)
+            else:
+                if isinstance(node.return_output, bool) and node.return_output:
+                    pipeline_outputs_tuple += (out,)
+                elif isinstance(node.return_output, tuple):
+                    # this should not apppend : maybe a checker somewhere before ?
+                    pass
 
-    return pipeline_outputs_tuple
+        if isinstance(nodes[0], PeakDetector):
+            # the first out element is the peak vector
+            # we need to go back to absolut sample index
+            pipeline_outputs_tuple[0]["sample_index"] += start_frame - left_margin
+
+        return pipeline_outputs_tuple
+
+    else:
+        # the gather will skip this output and not concatenate it
+        return
 
 
 class GatherToMemory:
@@ -558,6 +693,9 @@ class GatherToMemory:
         self.tuple_mode = None
 
     def __call__(self, res):
+        if res is None:
+            return
+
         if self.tuple_mode is None:
             # first loop only
             self.tuple_mode = isinstance(res, tuple)
@@ -609,7 +747,7 @@ class GatherToNpy:
         self.shapes0 = []
         self.final_shapes = []
         for name in names:
-            filename = folder / (name + ".npy")
+            filename = self.folder / (name + ".npy")
             f = open(filename, "wb+")
             f.seek(npy_header_size)
             self.files.append(f)
@@ -618,6 +756,9 @@ class GatherToNpy:
             self.final_shapes.append(None)
 
     def __call__(self, res):
+        if res is None:
+            return
+
         if self.tuple_mode is None:
             # first loop only
             self.tuple_mode = isinstance(res, tuple)

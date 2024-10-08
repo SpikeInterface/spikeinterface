@@ -5,8 +5,8 @@ import json
 import numpy as np
 
 import spikeinterface as si
+from spikeinterface.core import generate_sorting
 import spikeinterface.extractors as se
-from spikeinterface.extractors import read_mearec
 from spikeinterface import set_global_tmp_folder
 from spikeinterface.postprocessing import (
     compute_correlograms,
@@ -16,38 +16,31 @@ from spikeinterface.postprocessing import (
 )
 from spikeinterface.curation import apply_sortingview_curation
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "curation"
-else:
-    cache_folder = Path("cache_folder") / "curation"
-
 parent_folder = Path(__file__).parent
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
 
 
-set_global_tmp_folder(cache_folder)
+# this needs to be run only once: if we want to regenerate we need to start with sorting result
+# TODO : regenerate the
+# def generate_sortingview_curation_dataset():
+#     import spikeinterface.widgets as sw
 
 
-# this needs to be run only once
-def generate_sortingview_curation_dataset():
-    import spikeinterface.widgets as sw
+#     sorting_analyzer = si.create_sorting_analyzer(sorting, recording, format="memory")
+#     sorting_analyzer.compute("random_spikes")
+#     sorting_analyzer.compute("waveforms")
+#     sorting_analyzer.compute("templates")
+#     sorting_analyzer.compute("noise_levels")
+#     sorting_analyzer.compute("spike_amplitudes")
+#     sorting_analyzer.compute("template_similarity")
+#     sorting_analyzer.compute("unit_locations")
 
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-    recording, sorting = read_mearec(local_path)
+#     # plot_sorting_summary with curation
+#     w = sw.plot_sorting_summary(sorting_analyzer, curation=True, backend="sortingview")
 
-    we = si.extract_waveforms(recording, sorting, folder=None, mode="memory")
-
-    _ = compute_spike_amplitudes(we)
-    _ = compute_correlograms(we)
-    _ = compute_template_similarity(we)
-    _ = compute_unit_locations(we)
-
-    # plot_sorting_summary with curation
-    w = sw.plot_sorting_summary(we, curation=True, backend="sortingview")
-
-    # curation_link:
-    # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary
+#     # curation_link:
+#     # https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://058ab901610aa9d29df565595a3cc2a81a1b08e5
 
 
 @pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
@@ -55,15 +48,14 @@ def test_gh_curation():
     """
     Test curation using GitHub URI.
     """
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-    _, sorting = read_mearec(local_path)
+    sorting = generate_sorting(num_units=10)
     # curated link:
-    # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22gh://alejoe91/spikeinterface/fix-codecov/spikeinterface/curation/tests/sv-sorting-curation.json%22}
+    # https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://058ab901610aa9d29df565595a3cc2a81a1b08e5
     gh_uri = "gh://SpikeInterface/spikeinterface/main/src/spikeinterface/curation/tests/sv-sorting-curation.json"
-    sorting_curated_gh = apply_sortingview_curation(sorting, uri_or_json=gh_uri, verbose=True)
+    sorting_curated_gh = apply_sortingview_curation(sorting, uri_or_json=gh_uri)
 
     assert len(sorting_curated_gh.unit_ids) == 9
-    assert "#8-#9" in sorting_curated_gh.unit_ids
+    assert 1, 2 in sorting_curated_gh.unit_ids
     assert "accept" in sorting_curated_gh.get_property_keys()
     assert "mua" in sorting_curated_gh.get_property_keys()
     assert "artifact" in sorting_curated_gh.get_property_keys()
@@ -83,18 +75,17 @@ def test_sha1_curation():
     """
     Test curation using SHA1 URI.
     """
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-    _, sorting = read_mearec(local_path)
+    sorting = generate_sorting(num_units=10)
 
     # from SHA1
     # curated link:
-    # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22sha1://1182ba19671fcc7d3f8e0501b0f8c07fb9736c22%22}
-    sha1_uri = "sha1://1182ba19671fcc7d3f8e0501b0f8c07fb9736c22"
-    sorting_curated_sha1 = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, verbose=True)
+    # https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://058ab901610aa9d29df565595a3cc2a81a1b08e5
+    sha1_uri = "sha1://449a428e8824eef9ad9bcc3241e45a2cee02d381"
+    sorting_curated_sha1 = apply_sortingview_curation(sorting, uri_or_json=sha1_uri)
     # print(f"From SHA: {sorting_curated_sha1}")
 
     assert len(sorting_curated_sha1.unit_ids) == 9
-    assert "#8-#9" in sorting_curated_sha1.unit_ids
+    assert 1, 2 in sorting_curated_sha1.unit_ids
     assert "accept" in sorting_curated_sha1.get_property_keys()
     assert "mua" in sorting_curated_sha1.get_property_keys()
     assert "artifact" in sorting_curated_sha1.get_property_keys()
@@ -113,16 +104,15 @@ def test_json_curation():
     """
     Test curation using a JSON file.
     """
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-    _, sorting = read_mearec(local_path)
+    sorting = generate_sorting(num_units=10)
 
     # from curation.json
     json_file = parent_folder / "sv-sorting-curation.json"
     # print(f"Sorting: {sorting.get_unit_ids()}")
-    sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
+    sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file)
 
     assert len(sorting_curated_json.unit_ids) == 9
-    assert "#8-#9" in sorting_curated_json.unit_ids
+    assert 1, 2 in sorting_curated_json.unit_ids
     assert "accept" in sorting_curated_json.get_property_keys()
     assert "mua" in sorting_curated_json.get_property_keys()
     assert "artifact" in sorting_curated_json.get_property_keys()
@@ -156,7 +146,7 @@ def test_false_positive_curation():
     # print("Sorting: {}".format(sorting.get_unit_ids()))
 
     json_file = parent_folder / "sv-sorting-curation-false-positive.json"
-    sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
+    sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file)
     # print("Curated:", sorting_curated_json.get_unit_ids())
 
     # Assertions
@@ -200,17 +190,13 @@ def test_label_inheritance_int():
     assert not sorting_merge.get_unit_property(unit_id=10, key="noise")
     assert sorting_merge.get_unit_property(unit_id=10, key="accept")
 
-    # Assertions for exclude_labels
+    # Assertions for exclude_labels should all be False
     sorting_exclude_noise = apply_sortingview_curation(sorting, uri_or_json=json_file, exclude_labels=["noise"])
-    # print(f"Exclude noise: {sorting_exclude_noise.get_unit_ids()}")
-    assert 9 not in sorting_exclude_noise.get_unit_ids()
+    assert np.all(~sorting_exclude_noise.get_property("noise"))
 
     # Assertions for include_labels
     sorting_include_accept = apply_sortingview_curation(sorting, uri_or_json=json_file, include_labels=["accept"])
-    # print(f"Include accept: {sorting_include_accept.get_unit_ids()}")
-    assert 8 not in sorting_include_accept.get_unit_ids()
-    assert 9 not in sorting_include_accept.get_unit_ids()
-    assert 10 in sorting_include_accept.get_unit_ids()
+    assert np.all(sorting_include_accept.get_property("accept"))
 
 
 def test_label_inheritance_str():
@@ -229,7 +215,7 @@ def test_label_inheritance_str():
 
     # Apply curation
     json_file = parent_folder / "sv-sorting-curation-str.json"
-    sorting_merge = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
+    sorting_merge = apply_sortingview_curation(sorting, uri_or_json=json_file)
 
     # Assertions for merged units
     # print(f"Merge only: {sorting_merge.get_unit_ids()}")
@@ -248,24 +234,32 @@ def test_label_inheritance_str():
     assert not sorting_merge.get_unit_property(unit_id="e-f", key="noise")
     assert sorting_merge.get_unit_property(unit_id="e-f", key="accept")
 
-    # Assertions for exclude_labels
+    # Assertions for exclude_labels should all be False
     sorting_exclude_noise = apply_sortingview_curation(sorting, uri_or_json=json_file, exclude_labels=["noise"])
-    # print(f"Exclude noise: {sorting_exclude_noise.get_unit_ids()}")
-    assert "c-d" not in sorting_exclude_noise.get_unit_ids()
+    assert np.all(~sorting_exclude_noise.get_property("noise"))
 
     # Assertions for include_labels
     sorting_include_accept = apply_sortingview_curation(sorting, uri_or_json=json_file, include_labels=["accept"])
-    # print(f"Include accept: {sorting_include_accept.get_unit_ids()}")
-    assert "a-b" not in sorting_include_accept.get_unit_ids()
-    assert "c-d" not in sorting_include_accept.get_unit_ids()
-    assert "e-f" in sorting_include_accept.get_unit_ids()
+    assert np.all(sorting_include_accept.get_property("accept"))
+
+
+def test_json_no_merge_curation():
+    """
+    Test curation with no merges using a JSON file.
+    """
+    sorting = generate_sorting(num_units=10)
+
+    json_file = parent_folder / "sv-sorting-curation-no-merge.json"
+    sorting_curated = apply_sortingview_curation(sorting, uri_or_json=json_file)
 
 
 if __name__ == "__main__":
     # generate_sortingview_curation_dataset()
-    test_sha1_curation()
+    # test_sha1_curation()
+
     test_gh_curation()
     test_json_curation()
     test_false_positive_curation()
     test_label_inheritance_int()
     test_label_inheritance_str()
+    test_json_no_merge_curation()

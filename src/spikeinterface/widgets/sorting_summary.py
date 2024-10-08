@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -9,60 +11,74 @@ from .unit_locations import UnitLocationsWidget
 from .unit_templates import UnitTemplatesWidget
 
 
-from ..core import WaveformExtractor
+from ..core import SortingAnalyzer
 
 
 class SortingSummaryWidget(BaseWidget):
     """
-    Plots spike sorting summary
+    Plots spike sorting summary.
+    This is the main viewer to visualize the final result with several sub view.
+    This use sortingview (in a web browser) or spikeinterface-gui (with Qt).
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer object
     unit_ids : list or None, default: None
         List of unit ids
     sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply
-        If WaveformExtractor is already sparse, the argument is ignored
+        If SortingAnalyzer is already sparse, the argument is ignored
     max_amplitudes_per_unit : int or None, default: None
         Maximum number of spikes per unit for plotting amplitudes.
         If None, all spikes are plotted
+    min_similarity_for_correlograms : float, default: 0.2
+        Threshold for computing pair-wise cross-correlograms. If template similarity between two units
+        is below this threshold, the cross-correlogram is not computed
+        (sortingview backend)
     curation : bool, default: False
         If True, manual curation is enabled
         (sortingview backend)
-    unit_table_properties : list or None, default: None
-        List of properties to be added to the unit table
     label_choices : list or None, default: None
         List of labels to be added to the curation table
+        (sortingview backend)
     unit_table_properties : list or None, default: None
-        List of properties to be added to the unit table
+        List of properties to be added to the unit table.
+        These may be drawn from the sorting extractor, and, if available,
+        the quality_metrics and template_metrics extensions of the SortingAnalyzer.
+        See all properties available with sorting.get_property_keys(), and, if available,
+        analyzer.get_extension("quality_metrics").get_data().columns and
+        analyzer.get_extension("template_metrics").get_data().columns.
         (sortingview backend)
     """
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
+        sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         sparsity=None,
         max_amplitudes_per_unit=None,
+        min_similarity_for_correlograms=0.2,
         curation=False,
         unit_table_properties=None,
         label_choices=None,
         backend=None,
         **backend_kwargs,
     ):
-        self.check_extensions(waveform_extractor, ["correlograms", "spike_amplitudes", "unit_locations", "similarity"])
-        we = waveform_extractor
-        sorting = we.sorting
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        self.check_extensions(
+            sorting_analyzer, ["correlograms", "spike_amplitudes", "unit_locations", "template_similarity"]
+        )
+        sorting = sorting_analyzer.sorting
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
 
         plot_data = dict(
-            waveform_extractor=waveform_extractor,
+            sorting_analyzer=sorting_analyzer,
             unit_ids=unit_ids,
             sparsity=sparsity,
+            min_similarity_for_correlograms=min_similarity_for_correlograms,
             unit_table_properties=unit_table_properties,
             curation=curation,
             label_choices=label_choices,
@@ -76,14 +92,15 @@ class SortingSummaryWidget(BaseWidget):
         from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
 
         dp = to_attr(data_plot)
-        we = dp.waveform_extractor
+        sorting_analyzer = dp.sorting_analyzer
         unit_ids = dp.unit_ids
         sparsity = dp.sparsity
+        min_similarity_for_correlograms = dp.min_similarity_for_correlograms
 
         unit_ids = make_serializable(dp.unit_ids)
 
         v_spike_amplitudes = AmplitudesWidget(
-            we,
+            sorting_analyzer,
             unit_ids=unit_ids,
             max_spikes_per_unit=dp.max_amplitudes_per_unit,
             hide_unit_selector=True,
@@ -92,7 +109,7 @@ class SortingSummaryWidget(BaseWidget):
             backend="sortingview",
         ).view
         v_average_waveforms = UnitTemplatesWidget(
-            we,
+            sorting_analyzer,
             unit_ids=unit_ids,
             sparsity=sparsity,
             hide_unit_selector=True,
@@ -101,15 +118,31 @@ class SortingSummaryWidget(BaseWidget):
             backend="sortingview",
         ).view
         v_cross_correlograms = CrossCorrelogramsWidget(
-            we, unit_ids=unit_ids, hide_unit_selector=True, generate_url=False, display=False, backend="sortingview"
+            sorting_analyzer,
+            unit_ids=unit_ids,
+            min_similarity_for_correlograms=min_similarity_for_correlograms,
+            hide_unit_selector=True,
+            generate_url=False,
+            display=False,
+            backend="sortingview",
         ).view
 
         v_unit_locations = UnitLocationsWidget(
-            we, unit_ids=unit_ids, hide_unit_selector=True, generate_url=False, display=False, backend="sortingview"
+            sorting_analyzer,
+            unit_ids=unit_ids,
+            hide_unit_selector=True,
+            generate_url=False,
+            display=False,
+            backend="sortingview",
         ).view
 
         w = TemplateSimilarityWidget(
-            we, unit_ids=unit_ids, immediate_plot=False, generate_url=False, display=False, backend="sortingview"
+            sorting_analyzer,
+            unit_ids=unit_ids,
+            immediate_plot=False,
+            generate_url=False,
+            display=False,
+            backend="sortingview",
         )
         similarity = w.data_plot["similarity"]
 
@@ -123,7 +156,7 @@ class SortingSummaryWidget(BaseWidget):
 
         # unit ids
         v_units_table = generate_unit_table_view(
-            dp.waveform_extractor.sorting, dp.unit_table_properties, similarity_scores=similarity_scores
+            dp.sorting_analyzer, dp.unit_table_properties, similarity_scores=similarity_scores
         )
 
         if dp.curation:
@@ -153,3 +186,13 @@ class SortingSummaryWidget(BaseWidget):
         self.view = vv.Splitter(direction="horizontal", item1=vv.LayoutItem(v1), item2=vv.LayoutItem(v2))
 
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)
+
+    def plot_spikeinterface_gui(self, data_plot, **backend_kwargs):
+        sorting_analyzer = data_plot["sorting_analyzer"]
+
+        import spikeinterface_gui
+
+        app = spikeinterface_gui.mkQApp()
+        win = spikeinterface_gui.MainWindow(sorting_analyzer, curation=data_plot["curation"])
+        win.show()
+        app.exec_()

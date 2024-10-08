@@ -1,11 +1,9 @@
-import numpy as np
-from typing import Union
+from __future__ import annotations
 
-from probeinterface import ProbeGroup
+import numpy as np
+
 
 from .base import BaseWidget, to_attr
-from .utils import get_unit_colors
-from ..core.waveform_extractor import WaveformExtractor
 
 
 class PeakActivityMapWidget(BaseWidget):
@@ -16,21 +14,21 @@ class PeakActivityMapWidget(BaseWidget):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object.
-    peaks: None or numpy array
+    peaks : None or numpy array
         Optionally can give already detected peaks
         to avoid multiple computation.
-    detect_peaks_kwargs: None or dict, default: None
+    detect_peaks_kwargs : None or dict, default: None
         If peaks is None here the kwargs for detect_peak function.
-    bin_duration_s: None or float, default: None
+    bin_duration_s : None or float, default: None
         If None then static image
         If not None then it is an animation per bin.
-    with_contact_color: bool, default: True
+    with_contact_color : bool, default: True
         Plot rates with contact colors
-    with_interpolated_map: bool, default: True
+    with_interpolated_map : bool, default: True
         Plot rates with interpolated map
-    with_channel_ids: bool, default: False
+    with_channel_ids : bool, default: False
         Add channel ids text on the probe
 
 

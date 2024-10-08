@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import os
 from typing import Union
@@ -167,7 +169,7 @@ class WaveClusSorter(BaseSorter):
                     time_axis=0,
                     single_axis=True,
                     chunk_memory=params["chunk_memory"],
-                    return_scaled=rec_sliced.has_scaled(),
+                    return_scaled=rec_sliced.has_scaleable_traces(),
                 )
 
         if verbose:

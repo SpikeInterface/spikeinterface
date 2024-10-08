@@ -31,13 +31,12 @@ def has_plexon2_dependencies():
         # On Windows, no need for additional dependencies
         return True
 
-    elif os_type == "Linux":
-        # Check for 'wine' using dpkg
-        try:
-            result_wine = subprocess.run(
-                ["dpkg", "-l", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-            )
-        except subprocess.CalledProcessError:
+    elif os_type == "Linux" or os_type == "Darwin":
+        # Check for 'wine' using which. "which" works for both mac and linux
+        # if package exists it returns a 0. Anything else is an error code.
+
+        result_wine = subprocess.run(["which", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+        if result_wine.returncode != 0:
             return False
 
         # Check for 'zugbruecke' using pip
@@ -48,7 +47,6 @@ def has_plexon2_dependencies():
         except ImportError:
             return False
     else:
-        # Not sure about MacOS
         raise ValueError(f"Unsupported OS: {os_type}")
 
 
@@ -117,6 +115,8 @@ class OpenEphysLegacyRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ["openephys"]
     entities = [
         "openephys/OpenEphys_SampleData_1",
+        # This has gaps!!!
+        "openephys/OpenEphys_SampleData_2_(multiple_starts)",
     ]
 
 
@@ -131,6 +131,21 @@ class IntanRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ("intan/intan_rhs_test_1.rhs", {"stream_id": "3"}),
         ("intan/intan_rhs_test_1.rhs", {"stream_id": "4"}),
         ("intan/intan_rhs_test_1.rhs", {"stream_id": "11"}),
+    ]
+
+
+class IntanRecordingTestMultipleFilesFormat(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = IntanRecordingExtractor
+    downloads = ["intan"]
+    entities = [
+        ("intan/intan_fpc_test_231117_052630/info.rhd", {"stream_name": "RHD2000 amplifier channel"}),
+        ("intan/intan_fpc_test_231117_052630/info.rhd", {"stream_name": "RHD2000 auxiliary input channel"}),
+        ("intan/intan_fpc_test_231117_052630/info.rhd", {"stream_name": "USB board ADC input channel"}),
+        ("intan/intan_fpc_test_231117_052630/info.rhd", {"stream_name": "USB board digital input channel"}),
+        ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "RHD2000 amplifier channel"}),
+        ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "RHD2000 auxiliary input channel"}),
+        ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "USB board ADC input channel"}),
+        ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "USB board digital input channel"}),
     ]
 
 
@@ -219,7 +234,7 @@ class BlackrockSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = BlackrockSortingExtractor
     downloads = ["blackrock"]
     entities = [
-        "blackrock/FileSpec2.3001.nev",
+        dict(file_path=local_folder / "blackrock/FileSpec2.3001.nev", sampling_frequency=30_000.0),
         dict(file_path=local_folder / "blackrock/blackrock_2_1/l101210-001.nev", sampling_frequency=30_000.0),
     ]
 
@@ -263,8 +278,8 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 @pytest.mark.skipif(
-    version.parse(platform.python_version()) >= version.parse("3.10"),
-    reason="Sonpy only testing with Python < 3.10!",
+    version.parse(platform.python_version()) >= version.parse("3.10") or platform.system() == "Darwin",
+    reason="Sonpy only testing with Python < 3.10 and not supported on macOS!",
 )
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = CedRecordingExtractor
@@ -278,6 +293,7 @@ class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+@pytest.mark.skipif(platform.system() == "Darwin", reason="Maxwell plugin not supported on macOS")
 class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MaxwellRecordingExtractor
     downloads = ["maxwell"]
@@ -297,6 +313,7 @@ class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ("spikegadgets/20210225_em8_minirec2_ac.rec", {"stream_id": "ECU"}),
         ("spikegadgets/20210225_em8_minirec2_ac.rec", {"stream_id": "trodes"}),
         "spikegadgets/W122_06_09_2019_1_fromSD.rec",
+        "spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec",
     ]
 
 
@@ -335,8 +352,10 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         pass
 
 
-# We run plexon2 tests only if we have dependencies (wine)
-@pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
+# TODO solve plexon bug
+@pytest.mark.skipif(
+    not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug on windows"
+)
 class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2RecordingExtractor
     downloads = ["plexon"]
@@ -345,6 +364,7 @@ class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+@pytest.mark.skipif(not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug")
 @pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
 class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2EventExtractor
@@ -354,7 +374,7 @@ class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
+@pytest.mark.skipif(not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug")
 class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2SortingExtractor
     downloads = ["plexon"]

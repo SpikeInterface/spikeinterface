@@ -3,37 +3,32 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.10
-  - pip>=21.0
+  - python=3.11
+  - pip
   - numpy
+  - scipy
   - joblib
   - tqdm
   - matplotlib
   - h5py
   - pandas
+  - xarray
+  - zarr
   - scikit-learn
+  - hdbscan
   - networkx
   - pybind11
   - loky
-  - hdbscan
   - numba
-#  - jupyter
-  - mpi
-  - mpi4py
-  - compilers
+  - jupyter
   - pyqt=5
   - pyqtgraph
   - ipywidgets
   - ipympl
   - pip:
-#    - PyQt5
     - ephyviewer
-    - neo>=0.12
-    - probeinterface>=0.2.11
-    - MEArec>=1.8
-    - spikeinterface[full, widgets]
+    - MEArec
+    - spikeinterface[full,widgets]
     - spikeinterface-gui
-    - tridesclous>=1.6.8
+    - tridesclous
     # - phy==2.0b5
-    # - mountainsort4>=1.0.0 isosplit5 fails on pip install for mac
-    # - mountainsort5>=0.3.0

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .method_list import *
 
 from spikeinterface.core.job_tools import fix_job_kwargs, _shared_job_kwargs_doc
@@ -10,21 +12,21 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object
-    peaks: WaveformExtractor
-        The waveform extractor
-    method: str
+    peaks : numpy.array
+        The peak vector
+    method : str
         Which method to use ("stupid" | "XXXX")
-    method_kwargs: dict, default: dict()
+    method_kwargs : dict, default: dict()
         Keyword arguments for the chosen method
-    extra_outputs: bool, default: False
+    extra_outputs : bool, default: False
         If True then debug is also return
     {}
 
     Returns
     -------
-    labels: ndarray of int
+    labels_set: ndarray of int
         possible clusters list
     peak_labels: array of int
         peak_labels.shape[0] == peaks.shape[0]
@@ -39,12 +41,15 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
     params = method_class._default_params.copy()
     params.update(**method_kwargs)
 
-    labels, peak_labels = method_class.main_function(recording, peaks, params)
+    outputs = method_class.main_function(recording, peaks, params)
 
     if extra_outputs:
-        raise NotImplementedError
-
-    return labels, peak_labels
+        return outputs
+    else:
+        if len(outputs) > 2:
+            outputs = outputs[:2]
+        labels_set, peak_labels = outputs
+        return labels_set, peak_labels
 
 
 find_cluster_from_peaks.__doc__ = find_cluster_from_peaks.__doc__.format(_shared_job_kwargs_doc)

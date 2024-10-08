@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 
 
 class BasePreprocessor(BaseRecording):
-    installed = True  # check at class level if installed or not
     installation_mesg = ""  # err
 
     def __init__(self, recording, sampling_frequency=None, channel_ids=None, dtype=None):
@@ -21,6 +22,7 @@ class BasePreprocessor(BaseRecording):
 
         BaseRecording.__init__(self, sampling_frequency, _channel_ids, dtype)
         recording.copy_metadata(self, only_main=False, ids=channel_ids)
+        self._parent = recording
 
         # self._kwargs have to be handled in subclass
 
