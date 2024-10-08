@@ -47,7 +47,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             },
         },
         "clustering": {"legacy": True},
-        "matching": {"method": "wobble"},
+        "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
         "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
@@ -179,17 +179,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         nafter = int(ms_after * fs / 1000.0)
 
         if params["matched_filtering"]:
-            peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, skip_after_n_peaks=1000)
+            peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, skip_after_n_peaks=5000)
             prototype = get_prototype_spike(recording_w, peaks, ms_before, ms_after, **job_kwargs)
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
-
-            for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-                if value in detection_params:
-                    detection_params.pop(value)
-
-            detection_params["chunk_duration"] = "100ms"
-
             peaks = detect_peaks(recording_w, "matched_filtering", **detection_params)
         else:
             peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params)
@@ -288,12 +281,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_job_params = job_kwargs.copy()
 
             if matching_method is not None:
-                if matching_method == "circus-omp-svd":
-                    for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-                        if value in matching_job_params:
-                            matching_job_params[value] = None
-                    matching_job_params["chunk_duration"] = "100ms"
-
                 spikes = find_spikes_from_templates(
                     recording_w, matching_method, method_kwargs=matching_params, **matching_job_params
                 )

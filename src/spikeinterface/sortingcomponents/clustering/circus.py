@@ -261,13 +261,8 @@ class CircusClustering:
             print("We found %d raw clusters, starting to clean with matching..." % (len(templates.unit_ids)))
 
         cleaning_matching_params = params["job_kwargs"].copy()
-        for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-            if value in cleaning_matching_params:
-                cleaning_matching_params.pop(value)
-        cleaning_matching_params["chunk_duration"] = "100ms"
         cleaning_matching_params["n_jobs"] = 1
         cleaning_matching_params["progress_bar"] = False
-
         cleaning_params = params["cleaning_kwargs"].copy()
 
         labels, peak_labels = remove_duplicates_via_matching(
