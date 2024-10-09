@@ -161,7 +161,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         ignore_inds=[],
         vicinity=2,
         precomputed=None,
-        engine="numpy",
+        engine="torch",
         torch_device="cpu",
     ):
 
@@ -324,22 +324,20 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             scaled_filtered_data = (spatially_filtered_data * self.singular).swapaxes(0, 1)
             scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates * num_channels, num_timesteps)
             scalar_products = conv1d(scaled_filtered_data_, self.temporal, groups=num_templates, padding="valid")
-            scalar_products = scalar_products.cpu().numpy()[0, :, :]
+            scalar_products = scalar_products.cpu().numpy()[0, :, self.num_samples-1:-neighbor_window]
         else:
             num_timesteps = traces.shape[0]
-            num_peaks = num_timesteps + neighbor_window
+            num_peaks = num_timesteps - neighbor_window
             conv_shape = (self.num_templates, num_peaks)
             scalar_products = np.zeros(conv_shape, dtype=np.float32)
             # Filter using overlap-and-add convolution
             spatially_filtered_data = np.matmul(self.spatial, traces.T[np.newaxis, :, :])
             scaled_filtered_data = spatially_filtered_data * self.singular
             from scipy import signal
-            objective_by_rank = signal.oaconvolve(scaled_filtered_data, self.temporal, axes=2, mode="full")
+            objective_by_rank = signal.oaconvolve(scaled_filtered_data, self.temporal, axes=2, mode="valid")
             scalar_products += np.sum(objective_by_rank, axis=0)
 
         num_peaks = scalar_products.shape[1]
-        scalar_products[:, :self.num_samples] = 0
-        scalar_products[:, -self.num_samples:] = 0
 
         # Filter using overlap-and-add convolution
         if len(self.ignore_inds) > 0:
