@@ -976,6 +976,7 @@ def compute_objective(traces, template_data, approx_rank, engine="numpy", torch_
         spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
         scaled_filtered_data = spatially_filtered_data * singular
         from scipy import signal
+
         objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="full")
         objective += np.sum(objective_by_rank, axis=0)
     return objective
