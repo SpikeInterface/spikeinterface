@@ -52,7 +52,7 @@ class WobbleParameters:
         If True, scale amplitudes of templates to match spikes.
     engine : string in ["numpy", "torch", "auto"]. Default "auto"
         The engine to use for the convolutions
-    torch_device : string in ["cpu", "cuda", "auto"]. Default "cpu"
+    torch_device : string in ["cpu", "cuda", None]. Default "cpu"
         Controls torch device if the torch engine is selected
 
     Notes
@@ -359,7 +359,7 @@ class WobbleMatch(BaseTemplateMatching):
         parents=None,
         templates=None,
         parameters={},
-        engine="numpy",
+        engine="auto",
         torch_device="cpu",
     ):
 

@@ -37,7 +37,6 @@ except ImportError:
 try:
     import torch
     import torch.nn.functional as F
-    from torch.nn.functional import conv1d
 
     HAVE_TORCH = True
 except ImportError:
@@ -48,25 +47,6 @@ except ImportError:
 TODO:
     * remove the wrapper class and move  all implementation to instance
 """
-
-
-torch_keys = ("device",)
-
-
-def split_torch_kwargs(mixed_kwargs):
-    """
-    This function splits mixed kwargs into torch_kwargs and specific_kwargs.
-    This can be useful for some function with generic signature
-    mixing specific and job kwargs.
-    """
-    torch_kwargs = {}
-    specific_kwargs = {}
-    for k, v in mixed_kwargs.items():
-        if k in torch_keys:
-            torch_kwargs[k] = v
-        else:
-            specific_kwargs[k] = v
-    return specific_kwargs, torch_kwargs
 
 
 def detect_peaks(
@@ -123,13 +103,7 @@ def detect_peaks(
     method_class = detect_peak_methods[method]
 
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
-    _, torch_kwargs = split_job_kwargs(method_kwargs)
-
-    device = torch_kwargs.get("device", None)
-    if device is not None and device != "cpu":
-        job_kwargs["mp_context"] = "spawn"
-    else:
-        job_kwargs["mp_context"] = job_kwargs.get("mp_context", None)
+    job_kwargs["mp_context"] = method_class.preferred_mp_context
 
     node0 = method_class(recording, **method_kwargs)
     nodes = [node0]
@@ -547,7 +521,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
 
     name = "locally_exclusive"
     engine = "numba"
-
+    preferred_mp_context = None
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
@@ -623,16 +597,17 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
     name = "matched_filtering"
     engine = "numba"
+    preferred_mp_context = None
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
-    radius_um: float
+    radius_um : float
         The radius to use to select neighbour channels for locally exclusive detection.
-    prototype: array
+    prototype : array
         The canonical waveform of action potentials
-    rank : int (default 1)
-        The rank for SVD convolution of spatiotemporal templates with the traces
-    weight_method: dict
+    ms_before : float
+        The time in ms before the maximial value of the absolute prototype
+    weight_method : dict
         Parameter that should be provided to the get_convolution_weights() function
         in order to know how to estimate the positions. One argument is mode that could
         be either gaussian_2d (KS like) or exponential_3d (default)
@@ -648,7 +623,6 @@ class DetectPeakMatchedFiltering(PeakDetector):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        rank=1,
         noise_levels=None,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
@@ -769,6 +743,7 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
 
     name = "locally_exclusive_torch"
     engine = "torch"
+    preferred_mp_context = "spawn"
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
@@ -1054,6 +1029,7 @@ if HAVE_TORCH:
 class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
     name = "locally_exclusive_cl"
     engine = "opencl"
+    preferred_mp_context = None
     params_doc = (
         DetectPeakLocallyExclusive.params_doc
         + """

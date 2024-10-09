@@ -130,7 +130,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         of template temporal width)
     engine : string in ["numpy", "torch", "auto"]. Default "auto"
         The engine to use for the convolutions
-    torch_device : string in ["cpu", "cuda", "auto"]. Default "cpu"
+    torch_device : string in ["cpu", "cuda", None]. Default "cpu"
         Controls torch device if the torch engine is selected
     -----
     """
@@ -161,7 +161,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         ignore_inds=[],
         vicinity=2,
         precomputed=None,
-        engine="numpy",
+        engine="auto",
         torch_device="cpu",
     ):
 
