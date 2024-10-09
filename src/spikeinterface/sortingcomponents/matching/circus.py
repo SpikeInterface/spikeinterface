@@ -324,7 +324,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             scaled_filtered_data = (spatially_filtered_data * self.singular).swapaxes(0, 1)
             scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates * num_channels, num_timesteps)
             scalar_products = conv1d(scaled_filtered_data_, self.temporal, groups=num_templates, padding="valid")
-            scalar_products = scalar_products.cpu().numpy()[0, :, self.num_samples-1:-neighbor_window]
+            scalar_products = scalar_products.cpu().numpy()[0, :, self.num_samples - 1 : -neighbor_window]
         else:
             num_timesteps = traces.shape[0]
             num_peaks = num_timesteps - neighbor_window
@@ -334,6 +334,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             spatially_filtered_data = np.matmul(self.spatial, traces.T[np.newaxis, :, :])
             scaled_filtered_data = spatially_filtered_data * self.singular
             from scipy import signal
+
             objective_by_rank = signal.oaconvolve(scaled_filtered_data, self.temporal, axes=2, mode="valid")
             scalar_products += np.sum(objective_by_rank, axis=0)
 
