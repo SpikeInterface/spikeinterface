@@ -15,7 +15,7 @@ class NeuroNexusRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path : str
+    file_path : str | Path
         The file path to the metadata .xdat.json file of an Allego session
     stream_id : str | None, default: None
         If there are several streams, specify the stream id you want to load.
