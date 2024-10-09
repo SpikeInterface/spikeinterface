@@ -28,6 +28,10 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
             ids: ["source3.1" , "source3.2", "source3.3", "source3.4"]
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    reading_attempts : int, default: 25
+        Number of attempts to read the file before raising an error
+        This opening process is somewhat unreliable and might fail occasionally. Adjust this higher
+        if you encounter problems in opening the file.
 
     Examples
     --------
@@ -37,8 +41,16 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
 
     NeoRawIOClass = "Plexon2RawIO"
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, use_names_as_ids=True, all_annotations=False):
-        neo_kwargs = self.map_to_neo_kwargs(file_path)
+    def __init__(
+        self,
+        file_path,
+        stream_id=None,
+        stream_name=None,
+        use_names_as_ids=True,
+        all_annotations=False,
+        reading_attempts: int = 25,
+    ):
+        neo_kwargs = self.map_to_neo_kwargs(file_path, reading_attempts=reading_attempts)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -50,8 +62,18 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs.update({"file_path": str(file_path)})
 
     @classmethod
-    def map_to_neo_kwargs(cls, file_path):
+    def map_to_neo_kwargs(cls, file_path, reading_attempts: int = 25):
+
         neo_kwargs = {"filename": str(file_path)}
+
+        from packaging.version import Version
+        import neo
+
+        neo_version = Version(neo.__version__)
+
+        if neo_version > Version("0.13.3"):
+            neo_kwargs["reading_attempts"] = reading_attempts
+
         return neo_kwargs
 
 
