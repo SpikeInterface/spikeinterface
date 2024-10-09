@@ -136,6 +136,7 @@ class CircusClustering:
         pipeline_nodes = [node0, node1, node2]
 
         if len(params["recursive_kwargs"]) == 0:
+            from sklearn.decomposition import PCA
 
             all_pc_data = run_node_pipeline(
                 recording,
@@ -152,9 +153,9 @@ class CircusClustering:
                 sub_data = sub_data.reshape(len(sub_data), -1)
 
                 if all_pc_data.shape[1] > params["n_svd"][1]:
-                    tsvd = TruncatedSVD(params["n_svd"][1])
+                    tsvd = PCA(params["n_svd"][1], whiten=True)
                 else:
-                    tsvd = TruncatedSVD(all_pc_data.shape[1])
+                    tsvd = PCA(all_pc_data.shape[1], whiten=True)
 
                 hdbscan_data = tsvd.fit_transform(sub_data)
                 try:
@@ -184,13 +185,15 @@ class CircusClustering:
             )
 
             sparse_mask = node1.neighbours_mask
-            neighbours_mask = get_channel_distances(recording) < radius_um
+            neighbours_mask = get_channel_distances(recording) <= radius_um
 
             # np.save(features_folder / "sparse_mask.npy", sparse_mask)
             np.save(features_folder / "peaks.npy", peaks)
 
             original_labels = peaks["channel_index"]
             from spikeinterface.sortingcomponents.clustering.split import split_clusters
+
+            min_size = params["hdbscan_kwargs"].get("min_cluster_size", 50)
 
             peak_labels, _ = split_clusters(
                 original_labels,
@@ -202,7 +205,7 @@ class CircusClustering:
                     feature_name="sparse_tsvd",
                     neighbours_mask=neighbours_mask,
                     waveforms_sparse_mask=sparse_mask,
-                    min_size_split=50,
+                    min_size_split=min_size,
                     clusterer_kwargs=d["hdbscan_kwargs"],
                     n_pca_features=params["n_svd"][1],
                     scale_n_pca_by_depth=True,
@@ -233,7 +236,7 @@ class CircusClustering:
         if d["rank"] is not None:
             from spikeinterface.sortingcomponents.matching.circus import compress_templates
 
-            _, _, _, templates_array = compress_templates(templates_array, 5)
+            _, _, _, templates_array = compress_templates(templates_array, d["rank"])
 
         templates = Templates(
             templates_array=templates_array,
@@ -258,13 +261,8 @@ class CircusClustering:
             print("We found %d raw clusters, starting to clean with matching..." % (len(templates.unit_ids)))
 
         cleaning_matching_params = params["job_kwargs"].copy()
-        for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-            if value in cleaning_matching_params:
-                cleaning_matching_params.pop(value)
-        cleaning_matching_params["chunk_duration"] = "100ms"
         cleaning_matching_params["n_jobs"] = 1
         cleaning_matching_params["progress_bar"] = False
-
         cleaning_params = params["cleaning_kwargs"].copy()
 
         labels, peak_labels = remove_duplicates_via_matching(
