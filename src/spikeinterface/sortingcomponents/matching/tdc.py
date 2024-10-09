@@ -677,6 +677,20 @@ class TridesclousPeeler2(BaseTemplateMatching):
                     elif low_lim > amp:
                         # print("bad amp", amp)
                         spikes["cluster_index"][i] = -1
+
+                        
+                        # import matplotlib.pyplot as plt
+                        # fig, ax = plt.subplots()
+                        # sample_ind = spikes["sample_index"][i]
+                        # print(chan_sparsity_mask)
+                        # wf = traces[sample_ind - self.nbefore : sample_ind + self.nafter][:, chan_sparsity_mask]
+                        # dense_templates_array = self.templates.get_dense_templates()
+                        # template = dense_templates_array[cluster_index, :, :][:, chan_sparsity_mask]
+                        # ax.plot(wf.T.flatten())
+                        # ax.plot(template.T.flatten())
+                        # ax.plot(template.T.flatten() * amp)
+                        # ax.set_title(f"amp{amp}")
+                        # plt.show()                        
                     else:
                         # amp > up_lim
                         # TODO should try other cluster for the fit!!
@@ -690,9 +704,11 @@ class TridesclousPeeler2(BaseTemplateMatching):
                         # fig, ax = plt.subplots()
                         # sample_ind = spikes["sample_index"][i]
                         # wf = traces[sample_ind - self.nbefore : sample_ind + self.nafter][:, chan_sparsity_mask]
-                        # template = self.dense_templates_array[cluster_index, :, :][:, chan_sparsity_mask]
+                        # dense_templates_array = self.templates.get_dense_templates()
+                        # template = dense_templates_array[cluster_index, :, :][:, chan_sparsity_mask]
                         # ax.plot(wf.T.flatten())
                         # ax.plot(template.T.flatten())
+                        # ax.plot(template.T.flatten() * amp)
                         # ax.set_title(f"amp{amp}")
                         # plt.show()
                 else:
@@ -700,6 +716,7 @@ class TridesclousPeeler2(BaseTemplateMatching):
                     spikes["cluster_index"][i] = -1
 
             else:
+                # no possible cluster in neighborhood for this channel
                 spikes["cluster_index"][i] = -1
             
         
