@@ -374,7 +374,7 @@ class TridesclousPeeler2(BaseTemplateMatching):
         sample_shift=2,
         ms_before=0.5,
         ms_after=0.8,
-        max_peeler_loop=3,
+        max_peeler_loop=2,
         amplitude_limits=(0.7, 1.4),
         ):
 
@@ -498,7 +498,7 @@ class TridesclousPeeler2(BaseTemplateMatching):
             exclude_sweep_ms=exclude_sweep_ms,
             radius_um=detection_radius_um,
             rank=1,
-            noise_levels=noise_levels,
+            noise_levels=None,
         )
         
         # TODO max maargin detector
@@ -515,22 +515,33 @@ class TridesclousPeeler2(BaseTemplateMatching):
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
         
         # TODO check if this is usefull
-        traces = traces.copy()
+        residuals = traces.copy()
 
         all_spikes = []
         level = 0
         spikes_prev_loop = np.zeros(0, dtype=_base_matching_dtype)
+        use_fine_detector = False
         while True:
             # print('level', level)
-            spikes = self._find_spikes_one_level(traces, spikes_prev_loop, level=level)
+            spikes = self._find_spikes_one_level(residuals, spikes_prev_loop, use_fine_detector, level)
             if not np.any(spikes.size):
-                break
+                if use_fine_detector:
+                    break
+                else:
+                    use_fine_detector = True
+                    level = 0
+                    continue
             all_spikes.append(spikes)
 
             level += 1
 
             if level == self.max_peeler_loop:
-                break
+                if use_fine_detector:
+                    break
+                else:
+                    use_fine_detector = True
+                    level = 0
+                    continue
         
             spikes_prev_loop = spikes
 
@@ -543,7 +554,9 @@ class TridesclousPeeler2(BaseTemplateMatching):
 
         return all_spikes
 
-    def _find_spikes_one_level(self, traces, spikes_prev_loop, level=0):
+    def _find_spikes_one_level(self, traces, spikes_prev_loop, use_fine_detector, level):
+
+        # print(use_fine_detector, level)
 
         # TODO change the threhold dynaically depending the level
         # peak_traces = traces[self.detector_margin : -self.detector_margin, :]
