@@ -75,7 +75,7 @@ class WobbleParameters:
     scale_min: float = 0
     scale_max: float = np.inf
     scale_amplitudes: bool = False
-    engine: str = "auto"
+    engine: str = "numpy"
     torch_device: str = "cpu"
 
     def __post_init__(self):
@@ -359,7 +359,7 @@ class WobbleMatch(BaseTemplateMatching):
         parents=None,
         templates=None,
         parameters={},
-        engine="numpy",
+        engine="torch",
         torch_device="cpu",
     ):
 
@@ -381,7 +381,7 @@ class WobbleMatch(BaseTemplateMatching):
                 assert HAVE_TORCH, "please install torch to use the torch engine"
             self.engine = engine
 
-        assert torch_device in ["cuda", "cpu", "auto"]
+        assert torch_device in ["cuda", "cpu", None]
         self.torch_device = torch_device
 
         template_meta = TemplateMetadata.from_parameters_and_templates(params, templates_array)
@@ -976,7 +976,6 @@ def compute_objective(traces, template_data, approx_rank, engine="numpy", torch_
         spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
         scaled_filtered_data = spatially_filtered_data * singular
         from scipy import signal
-
         objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="full")
         objective += np.sum(objective_by_rank, axis=0)
     return objective

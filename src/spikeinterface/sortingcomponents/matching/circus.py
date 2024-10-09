@@ -162,7 +162,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         vicinity=2,
         precomputed=None,
         engine="numpy",
-        torch_device="auto",
+        torch_device="cpu",
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
@@ -184,7 +184,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                 assert HAVE_TORCH, "please install torch to use the torch engine"
             self.engine = engine
 
-        assert torch_device in ["cuda", "cpu", "auto"]
+        assert torch_device in ["cuda", "cpu", None]
         self.torch_device = torch_device
 
         self.amplitudes = amplitudes
@@ -305,8 +305,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         (nrm2,) = scipy.linalg.get_blas_funcs(("nrm2",), dtype=np.float32)
 
         omp_tol = np.finfo(np.float32).eps
-        num_samples = self.nafter + self.nbefore
-        neighbor_window = num_samples - 1
+        neighbor_window = self.num_samples - 1
+
         if isinstance(self.amplitudes, list):
             min_amplitude, max_amplitude = self.amplitudes
         else:
@@ -315,29 +315,31 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             max_amplitude = max_amplitude[:, np.newaxis]
 
         if self.engine == "torch":
-            nt = self.temporal.shape[2] - 1
-            blank = np.zeros((nt, self.num_channels), dtype=np.float32)
+            blank = np.zeros((neighbor_window, self.num_channels), dtype=np.float32)
             traces = np.vstack((blank, traces, blank))
-            torch_traces = torch.as_tensor(traces.T[None, :, :], device=self.torch_device)
+            num_timesteps = traces.shape[0]
+            torch_traces = torch.as_tensor(traces.T[np.newaxis, :, :], device=self.torch_device)
             num_templates, num_channels = self.temporal.shape[0], self.temporal.shape[1]
-            num_timesteps = torch_traces.shape[2]
             spatially_filtered_data = torch.matmul(self.spatial, torch_traces)
             scaled_filtered_data = (spatially_filtered_data * self.singular).swapaxes(0, 1)
             scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates * num_channels, num_timesteps)
             scalar_products = conv1d(scaled_filtered_data_, self.temporal, groups=num_templates, padding="valid")
             scalar_products = scalar_products.cpu().numpy()[0, :, :]
         else:
-            objective_len = traces.shape[0] + self.num_samples - 1
-            conv_shape = (self.num_templates, objective_len)
+            num_timesteps = traces.shape[0]
+            num_peaks = num_timesteps + neighbor_window
+            conv_shape = (self.num_templates, num_peaks)
             scalar_products = np.zeros(conv_shape, dtype=np.float32)
             # Filter using overlap-and-add convolution
             spatially_filtered_data = np.matmul(self.spatial, traces.T[np.newaxis, :, :])
             scaled_filtered_data = spatially_filtered_data * self.singular
             from scipy import signal
-
             objective_by_rank = signal.oaconvolve(scaled_filtered_data, self.temporal, axes=2, mode="full")
             scalar_products += np.sum(objective_by_rank, axis=0)
+
         num_peaks = scalar_products.shape[1]
+        scalar_products[:, :self.num_samples] = 0
+        scalar_products[:, -self.num_samples:] = 0
 
         # Filter using overlap-and-add convolution
         if len(self.ignore_inds) > 0:
@@ -360,7 +362,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         is_in_vicinity = np.zeros(0, dtype=np.int32)
 
         if self.stop_criteria == "omp_min_sps":
-            stop_criteria = self.omp_min_sps * np.maximum(self.norms, np.sqrt(self.num_channels * num_samples))
+            stop_criteria = self.omp_min_sps * np.maximum(self.norms, np.sqrt(self.num_channels * self.num_samples))
         elif self.stop_criteria == "max_failures":
             num_valids = 0
             nb_failures = self.max_failures
@@ -392,7 +394,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
 
                 if num_selection > 0:
                     delta_t = selection[1] - peak_index
-                    idx = np.where((delta_t < num_samples) & (delta_t > -num_samples))[0]
+                    idx = np.where((delta_t < self.num_samples) & (delta_t > -self.num_samples))[0]
                     myline = neighbor_window + delta_t[idx]
                     myindices = selection[0, idx]
 
@@ -477,7 +479,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                     local_overlaps = self.overlaps[tmp_best]
                     overlapping_templates = self.units_overlaps[tmp_best]
                     tmp = tmp_peak - neighbor_window
-                    idx = [max(0, tmp), min(num_peaks, tmp_peak + num_samples)]
+                    idx = [max(0, tmp), min(num_peaks, tmp_peak + self.num_samples)]
                     tdx = [idx[0] - tmp, idx[1] - tmp]
                     to_add = diff_amp * local_overlaps[:, tdx[0] : tdx[1]]
                     scalar_products[overlapping_templates, idx[0] : idx[1]] -= to_add
