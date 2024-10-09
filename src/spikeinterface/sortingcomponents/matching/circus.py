@@ -8,7 +8,7 @@ import numpy as np
 from spikeinterface.core import get_noise_levels
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakByChannel
 from spikeinterface.core.template import Templates
-from scipy import ndimage
+
 
 spike_dtype = [
     ("sample_index", "int64"),
@@ -266,6 +266,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
         import scipy.spatial
         import scipy
+        from scipy import ndimage
 
         (potrs,) = scipy.linalg.get_lapack_funcs(("potrs",), dtype=np.float32)
 
@@ -342,7 +343,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             result = ndimage.maximum_filter(products[0], size=self.vicinity, mode="constant", cval=0)
             cond_1 = products[0] / self.norms[best_cluster_inds[0]] > 0.25
             cond_2 = np.abs(products[0] - result) < 1e-9
-            peak_indices = np.where(cond_1 * cond_2)[0]
+            peak_indices = np.flatnonzero(cond_1 * cond_2)
 
             if len(peak_indices) == 0:
                 break
@@ -353,7 +354,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
 
                 if num_selection > 0:
                     delta_t = selection[1] - peak_index
-                    idx = np.where((delta_t < num_samples) & (delta_t > -num_samples))[0]
+                    idx = np.flatnonzero((delta_t < num_samples) & (delta_t > -num_samples))
                     myline = neighbor_window + delta_t[idx]
                     myindices = selection[0, idx]
 
@@ -386,7 +387,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                             break
                         M[num_selection, num_selection] = np.sqrt(Lkk)
                     else:
-                        is_in_vicinity = np.where(np.abs(delta_t) < self.vicinity)[0]
+                        is_in_vicinity = np.flatnonzero(np.abs(delta_t) < self.vicinity)
 
                         if len(is_in_vicinity) > 0:
                             L = M[is_in_vicinity, :][:, is_in_vicinity]
@@ -429,7 +430,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                     new_amplitudes /= self.norms[sub_selection[0]]
 
                 diff_amplitudes = new_amplitudes - final_amplitudes[sub_selection[0], sub_selection[1]]
-                modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
+                modified = np.flatnonzero(np.abs(diff_amplitudes) > omp_tol)
                 final_amplitudes[sub_selection[0], sub_selection[1]] = new_amplitudes
 
                 for i in modified:
