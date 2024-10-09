@@ -334,12 +334,13 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             spatially_filtered_data = np.matmul(self.spatial, traces.T[np.newaxis, :, :])
             scaled_filtered_data = spatially_filtered_data * self.singular
             from scipy import signal
+
             objective_by_rank = signal.oaconvolve(scaled_filtered_data, self.temporal, axes=2, mode="full")
             scalar_products += np.sum(objective_by_rank, axis=0)
 
         num_peaks = scalar_products.shape[1]
-        scalar_products[:, :self.num_samples] = 0
-        scalar_products[:, -self.num_samples:] = 0
+        scalar_products[:, : self.num_samples] = 0
+        scalar_products[:, -self.num_samples :] = 0
 
         # Filter using overlap-and-add convolution
         if len(self.ignore_inds) > 0:
