@@ -40,9 +40,9 @@ class KiloSortPeeler(BaseTemplateMatching):
         engine="torch",
         torch_device="cpu",
     ):
-        
 
         import scipy
+
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
         self.templates_array = self.templates.get_dense_templates()
         self.spatial_components = spatial_components
