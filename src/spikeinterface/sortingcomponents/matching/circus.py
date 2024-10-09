@@ -8,7 +8,7 @@ import numpy as np
 from spikeinterface.core import get_noise_levels
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakByChannel
 from spikeinterface.core.template import Templates
-from scipy import ndimage
+
 
 spike_dtype = [
     ("sample_index", "int64"),
@@ -161,7 +161,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         ignore_inds=[],
         vicinity=2,
         precomputed=None,
-        engine="auto",
+        engine="numpy",
         torch_device="cpu",
     ):
 
@@ -300,6 +300,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
         import scipy.spatial
         import scipy
+        from scipy import ndimage
 
         (potrs,) = scipy.linalg.get_lapack_funcs(("potrs",), dtype=np.float32)
         (nrm2,) = scipy.linalg.get_blas_funcs(("nrm2",), dtype=np.float32)
