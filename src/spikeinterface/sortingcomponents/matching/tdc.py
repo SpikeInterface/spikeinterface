@@ -466,7 +466,7 @@ class TridesclousPeeler2(BaseTemplateMatching):
         
 
 
-        self.peak_detector_level0 = DetectPeakLocallyExclusive(
+        self.fast_spike_detector = DetectPeakLocallyExclusive(
             recording=recording,
             peak_sign=peak_sign,
             detect_threshold=detect_threshold,
@@ -489,7 +489,7 @@ class TridesclousPeeler2(BaseTemplateMatching):
         # ax.plot(prototype)    
         # plt.show()
         
-        self.peak_detector_level1 = DetectPeakMatchedFiltering(
+        self.fine_spike_detector = DetectPeakMatchedFiltering(
             recording=recording,
             prototype=prototype,
             ms_before=templates.nbefore / sr * 1000.,
@@ -497,13 +497,17 @@ class TridesclousPeeler2(BaseTemplateMatching):
             detect_threshold=detect_threshold,
             exclude_sweep_ms=exclude_sweep_ms,
             radius_um=detection_radius_um,
-            rank=1,
+            weight_method=dict(
+                z_list_um=np.array([50.]),
+                sigma_3d=2.5,
+                mode="exponential_3d",                
+            ),
             noise_levels=None,
         )
         
         # TODO max maargin detector
-        self.detector_margin0 = self.peak_detector_level0.get_trace_margin()
-        self.detector_margin1 = self.peak_detector_level1.get_trace_margin()
+        self.detector_margin0 = self.fast_spike_detector.get_trace_margin()
+        self.detector_margin1 = self.fine_spike_detector.get_trace_margin()
         self.peeler_margin = max(self.nbefore, self.nafter) * 2
         self.margin = max(self.peeler_margin,  self.detector_margin0, self.detector_margin1)
 
@@ -529,7 +533,7 @@ class TridesclousPeeler2(BaseTemplateMatching):
                     break
                 else:
                     use_fine_detector = True
-                    level = 0
+                    level = self.max_peeler_loop - 1
                     continue
             all_spikes.append(spikes)
 
@@ -540,9 +544,10 @@ class TridesclousPeeler2(BaseTemplateMatching):
                     break
                 else:
                     use_fine_detector = True
-                    level = 0
+                    level = self.max_peeler_loop - 1
                     continue
-        
+            
+            # TODO concatenate all spikes for this instead of prev loop
             spikes_prev_loop = spikes
 
         if len(all_spikes) > 0:
@@ -566,10 +571,11 @@ class TridesclousPeeler2(BaseTemplateMatching):
         # )
 
         
-        if level == 0:
-            peak_detector = self.peak_detector_level0
+        if use_fine_detector:
+            peak_detector = self.fine_spike_detector
         else:
-            peak_detector = self.peak_detector_level1
+            peak_detector = self.fast_spike_detector
+            
 
         detector_margin = peak_detector.get_trace_margin()
         if self.peeler_margin > detector_margin:
@@ -618,7 +624,22 @@ class TridesclousPeeler2(BaseTemplateMatching):
             if possible_clusters.size > 0:
                 cluster_index = get_most_probable_cluster(traces, self.sparse_templates_array_short, possible_clusters,
                                           sample_index, chan_ind, self.nbefore_short, self.nafter_short, self.sparsity_mask)
-                
+
+
+                # import matplotlib.pyplot as plt
+                # fig, ax = plt.subplots()
+                # chans = np.any(self.sparsity_mask[possible_clusters, :], axis=0)
+                # wf = traces[sample_index - self.nbefore : sample_index + self.nafter][:, chans]
+                # ax.plot(wf.T.flatten(), color='k')
+                # dense_templates_array = self.templates.get_dense_templates()
+                # for c_ind in possible_clusters:
+                #     template = dense_templates_array[c_ind, :, :][:, chans]
+                #     ax.plot(template.T.flatten())
+                #     if c_ind == cluster_index:
+                #         ax.plot(template.T.flatten(), color='m', ls='--')
+                #     ax.set_title(f"use_fine_detector{use_fine_detector} level{level}")
+                # plt.show()
+
 
                 chan_sparsity_mask = self.sparsity_mask[cluster_index, :]
 
@@ -689,7 +710,7 @@ class TridesclousPeeler2(BaseTemplateMatching):
                         # ax.plot(wf.T.flatten())
                         # ax.plot(template.T.flatten())
                         # ax.plot(template.T.flatten() * amp)
-                        # ax.set_title(f"amp{amp}")
+                        # ax.set_title(f"amp{amp} use_fine_detector{use_fine_detector} level{level}")
                         # plt.show()                        
                     else:
                         # amp > up_lim
@@ -709,8 +730,25 @@ class TridesclousPeeler2(BaseTemplateMatching):
                         # ax.plot(wf.T.flatten())
                         # ax.plot(template.T.flatten())
                         # ax.plot(template.T.flatten() * amp)
-                        # ax.set_title(f"amp{amp}")
+                        # ax.set_title(f"amp{amp} use_fine_detector{use_fine_detector} level{level}")
                         # plt.show()
+
+                        # import matplotlib.pyplot as plt
+                        # fig, ax = plt.subplots()
+                        # chans = np.any(self.sparsity_mask[possible_clusters, :], axis=0)
+                        # wf = traces[sample_index - self.nbefore : sample_index + self.nafter][:, chans]
+                        # ax.plot(wf.T.flatten(), color='k')
+                        # dense_templates_array = self.templates.get_dense_templates()
+                        # for c_ind in possible_clusters:
+                        #     template = dense_templates_array[c_ind, :, :][:, chans]
+                        #     ax.plot(template.T.flatten())
+                        #     if c_ind == cluster_index:
+                        #         ax.plot(template.T.flatten(), color='m', ls='--')
+                        #     ax.set_title(f"use_fine_detector{use_fine_detector} level{level}")
+                        # plt.show()
+
+
+
                 else:
                     # not valid because already detected
                     spikes["cluster_index"][i] = -1

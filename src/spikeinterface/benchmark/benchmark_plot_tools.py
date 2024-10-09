@@ -235,7 +235,7 @@ def plot_performances_vs_snr(study, case_keys=None, figsize=None, metrics=["accu
             ax.scatter(x, y, marker=".", label=label)
             ax.set_title(k)
 
-        ax.set_ylim(0, 1.05)
+        ax.set_ylim(-0.05, 1.05)
 
         if count == 2:
             ax.legend()
