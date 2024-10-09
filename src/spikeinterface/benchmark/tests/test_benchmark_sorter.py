@@ -64,10 +64,10 @@ def test_SorterStudy(setup_module):
     print(study)
 
     # # this run the sorters
-    # study.run()
+    study.run()
 
     # # this run comparisons
-    # study.compute_results()
+    study.compute_results()
     print(study)
 
     # this is from the base class
@@ -84,5 +84,7 @@ def test_SorterStudy(setup_module):
 
 if __name__ == "__main__":
     study_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_SorterStudy"
+    if study_folder.exists():
+        shutil.rmtree(study_folder)
     create_a_study(study_folder)
     test_SorterStudy(study_folder)
