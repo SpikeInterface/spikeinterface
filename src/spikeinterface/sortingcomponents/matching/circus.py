@@ -247,7 +247,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         self.max_similarity = np.zeros((self.num_templates, self.num_templates), dtype=np.float32)
         for i in range(self.num_templates):
             num_overlaps = np.sum(self.units_overlaps[i])
-            overlapping_units = np.where(self.units_overlaps[i])[0]
+            overlapping_units = np.flatnonzero(self.units_overlaps[i])
 
             # Reconstruct unit template from SVD Matrices
             data = self.temporal[i] * self.singular[i][np.newaxis, :]
