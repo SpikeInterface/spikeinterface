@@ -69,7 +69,7 @@ def split_clusters(
 
     original_labels = peak_labels
     peak_labels = peak_labels.copy()
-    split_count = np.ones(peak_labels.size, dtype=int)
+    split_count = np.zeros(peak_labels.size, dtype=int)
 
     Executor = get_poolexecutor(n_jobs)
 
@@ -186,7 +186,7 @@ class LocalFeatureClustering:
         min_size_split=25,
         n_pca_features=2,
         scale_n_pca_by_depth=False,
-        sparsity_overlap_ratio=0.25,
+        minimum_overlap_ratio=0.25,
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
@@ -204,7 +204,7 @@ class LocalFeatureClustering:
         num_union = len(target_union_channels)
 
         # TODO fix this a better way, this when cluster have too few overlapping channels
-        if (num_intersection / num_union) < sparsity_overlap_ratio:
+        if (num_intersection / num_union) < minimum_overlap_ratio:
             return False, None
 
         aligned_wfs, dont_have_channels = aggregate_sparse_features(
