@@ -961,6 +961,7 @@ def compute_objective(traces, template_data, approx_rank, engine="numpy", torch_
         torch_traces = torch.as_tensor(traces.T[None, :, :], device=torch_device)
         num_templates, num_channels = temporal.shape[0], temporal.shape[1]
         num_timesteps = torch_traces.shape[2]
+        print(torch_traces, spatial)
         spatially_filtered_data = torch.matmul(spatial, torch_traces)
         scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1)
         scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates * num_channels, num_timesteps)

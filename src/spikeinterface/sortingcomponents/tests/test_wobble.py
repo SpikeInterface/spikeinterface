@@ -50,6 +50,7 @@ def test_compress_templates():
 
         # Act: run compress_templates
         temporal, singular, spatial = wobble.compress_templates(templates, approx_rank)
+        temporal = np.flip(temporal, axis=1)
         temporal_full, singular_full, spatial_full = wobble.compress_templates(templates, full_rank)
         temporal_full = np.flip(temporal_full, axis=1)
 
@@ -211,18 +212,28 @@ def test_compute_objective():
     approx_rank = rng.integers(1, num_samples)
     num_channels = rng.integers(1, 100)
     chunk_len = rng.integers(num_samples * 2, num_samples * 10)
-    traces = rng.random((chunk_len, num_channels))
+    traces = rng.random((chunk_len, num_channels), dtype=np.float32)
     temporal = rng.random((num_templates, num_samples, approx_rank))
     singular = rng.random((num_templates, approx_rank))
     spatial = rng.random((num_templates, approx_rank, num_channels))
-    compressed_templates = (temporal, singular, spatial, temporal)
+
+    spatial_transformed = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
+    temporal_transformed = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
+    singular_transformed = singular.T[:, :, np.newaxis]
+
+    compressed_templates_transformed = (temporal_transformed, singular_transformed, spatial_transformed, temporal_transformed)
     norm_squared = np.random.rand(num_templates)
+
+    template_data_transformed = wobble.TemplateData(
+        compressed_templates=compressed_templates_transformed, pairwise_convolution=[], norm_squared=norm_squared
+    )
+    # Act: run compute_objective
+    objective = wobble.compute_objective(traces, template_data_transformed, approx_rank, engine='numpy')
+
+    compressed_templates = (temporal, singular, spatial, temporal)
     template_data = wobble.TemplateData(
         compressed_templates=compressed_templates, pairwise_convolution=[], norm_squared=norm_squared
     )
-
-    # Act: run compute_objective
-    objective = wobble.compute_objective(traces, template_data, approx_rank)
     expected_objective = compute_objective_loopy(traces, template_data, approx_rank)
 
     # Assert: check shape and equivalence to expected_objective

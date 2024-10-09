@@ -133,7 +133,11 @@ class KiloSortPeeler(BaseTemplateMatching):
                 spikes[k:k+nsp]['sample_index'] = iX[:, 0].cpu()
                 spikes[k:k+nsp]['cluster_index'] = iY[:, 0].cpu()
                 amp = (B[iY, iX] / self.nm[iY])
-                B[:, iX + self.trange] -= amp * self.ctc[:, iY[:, 0], :]
+                
+                n = 2
+                for j in range(n):
+                    B[:, iX[j::n] + self.trange] -= amp[j::n] * self.ctc[:, iY[j::n, 0], :]
+                
                 spikes[k:k+nsp]['amplitude'] = amp[:, 0].cpu()
                 k += nsp
 
