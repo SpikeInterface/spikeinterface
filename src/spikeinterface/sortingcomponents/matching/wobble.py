@@ -359,7 +359,7 @@ class WobbleMatch(BaseTemplateMatching):
         parents=None,
         templates=None,
         parameters={},
-        engine="torch",
+        engine="numpy",
         torch_device="cpu",
     ):
 

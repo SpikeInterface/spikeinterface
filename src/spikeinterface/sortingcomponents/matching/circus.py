@@ -161,7 +161,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         ignore_inds=[],
         vicinity=2,
         precomputed=None,
-        engine="torch",
+        engine="numpy",
         torch_device="cpu",
     ):
 
