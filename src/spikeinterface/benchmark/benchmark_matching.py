@@ -74,7 +74,7 @@ class MatchingStudy(BenchmarkStudy):
     def plot_collisions(self, case_keys=None, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
