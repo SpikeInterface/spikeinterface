@@ -514,6 +514,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         spikes["channel_index"][:num_spikes] = 0
         spikes["cluster_index"][:num_spikes] = valid_indices[0]
         spikes["amplitude"][:num_spikes] = final_amplitudes[valid_indices[0], valid_indices[1]]
+
         spikes = spikes[:num_spikes]
         order = np.argsort(spikes["sample_index"])
         spikes = spikes[order]
