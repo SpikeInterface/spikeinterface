@@ -44,7 +44,7 @@ def test_compress_templates():
         elif test_case == "num_channels == num_samples":
             num_channels = rng.integers(1, 100)
             num_samples = num_channels
-        templates = rng.random((num_templates, num_samples, num_channels))
+        templates = rng.random((num_templates, num_samples, num_channels), dtype=np.float32)
         full_rank = np.minimum(num_samples, num_channels)
         approx_rank = rng.integers(1, full_rank)
 
