@@ -92,7 +92,7 @@ class CircusClustering:
         # SVD for time compression
         few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=10000, margin=(nbefore, nafter))
         few_wfs = extract_waveform_at_max_channel(
-            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **params["job_kwargs"]
+            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
         )
 
         wfs = few_wfs[:, :, 0]
@@ -141,7 +141,7 @@ class CircusClustering:
             all_pc_data = run_node_pipeline(
                 recording,
                 pipeline_nodes,
-                params["job_kwargs"],
+                job_kwargs,
                 job_name="extracting features",
             )
 
@@ -176,7 +176,7 @@ class CircusClustering:
             _ = run_node_pipeline(
                 recording,
                 pipeline_nodes,
-                params["job_kwargs"],
+                job_kwargs,
                 job_name="extracting features",
                 gather_mode="npy",
                 gather_kwargs=dict(exist_ok=True),
