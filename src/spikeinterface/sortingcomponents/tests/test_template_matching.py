@@ -77,18 +77,18 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
 
         ##metrics = si.compute_quality_metrics(sorting_analyzer, metric_names=["snr"])
 
-        fig, ax = plt.subplots()
-        comp = si.compare_sorter_to_ground_truth(gt_sorting, sorting)
-        si.plot_agreement_matrix(comp, ax=ax)
-        ax.set_title(method)
-        plt.show()
+        # fig, ax = plt.subplots()
+        # comp = si.compare_sorter_to_ground_truth(gt_sorting, sorting)
+        # si.plot_agreement_matrix(comp, ax=ax)
+        # ax.set_title(method)
+        # plt.show()
 
 
 if __name__ == "__main__":
     sorting_analyzer = get_sorting_analyzer()
     # method = "naive"
-    method = "tdc-peeler"
+    # method = "tdc-peeler"
     # method =  "circus"
     # method = "circus-omp-svd"
-    # method = "wobble"
+    method = "wobble"
     test_find_spikes_from_templates(method, sorting_analyzer)
