@@ -87,8 +87,7 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
 if __name__ == "__main__":
     sorting_analyzer = get_sorting_analyzer()
     # method = "naive"
-    # method = "tdc-peeler"
-    method = "tdc-peeler2"
+    method = "tdc-peeler"
     # method =  "circus"
     # method = "circus-omp-svd"
     # method = "wobble"
