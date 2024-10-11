@@ -283,7 +283,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         self.singular = self.singular.T[:, :, np.newaxis]
         self.is_pushed = False
 
-    def _push_to_gpu(self):
+    def _push_to_torch(self):
         if self.engine == "torch":
             self.spatial = torch.as_tensor(self.spatial, device=self.torch_device)
             self.singular = torch.as_tensor(self.singular, device=self.torch_device)
@@ -306,7 +306,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         from scipy import ndimage
 
         if not self.is_pushed:
-            self._push_to_gpu()
+            self._push_to_torch()
 
         (potrs,) = scipy.linalg.get_lapack_funcs(("potrs",), dtype=np.float32)
         (nrm2,) = scipy.linalg.get_blas_funcs(("nrm2",), dtype=np.float32)

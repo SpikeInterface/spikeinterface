@@ -359,8 +359,8 @@ class WobbleMatch(BaseTemplateMatching):
         parents=None,
         templates=None,
         parameters={},
-        engine="numpy",
-        torch_device="cpu",
+        engine="torch",
+        torch_device="cuda",
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
@@ -400,25 +400,19 @@ class WobbleMatch(BaseTemplateMatching):
         )
 
         norm_squared = compute_template_norm(sparsity.visible_channels, templates_array)
+        
+        spatial = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
+        temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
+        singular = singular.T[:, :, np.newaxis]
+
+        compressed_templates = (temporal, singular, spatial, temporal_jittered)
         template_data = TemplateData(
             compressed_templates=compressed_templates,
             pairwise_convolution=pairwise_convolution,
             norm_squared=norm_squared,
         )
 
-        spatial = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
-        temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
-        singular = singular.T[:, :, np.newaxis]
-
-        if self.engine == "torch":
-            spatial = torch.as_tensor(spatial, device=self.torch_device)
-            singular = torch.as_tensor(singular, device=self.torch_device)
-            temporal = torch.as_tensor(temporal.copy(), device=self.torch_device).swapaxes(0, 1)
-            temporal = torch.flip(temporal, (2,))
-            template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
-        else:
-            template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
-
+        self.is_pushed = False
         self.params = params
         self.template_meta = template_meta
         self.sparsity = sparsity
@@ -430,10 +424,23 @@ class WobbleMatch(BaseTemplateMatching):
         # self.margin = int(buffer_ms*1e-3 * recording.sampling_frequency)
         self.margin = 300  # To ensure equivalence with spike-psvae version of the algorithm
 
+    def _push_to_torch(self):
+        if self.engine == "torch":
+            temporal, singular, spatial, temporal_jittered = self.template_data.compressed_templates
+            spatial = torch.as_tensor(spatial, device=self.torch_device)
+            singular = torch.as_tensor(singular, device=self.torch_device)
+            temporal = torch.as_tensor(temporal.copy(), device=self.torch_device).swapaxes(0, 1)
+            temporal = torch.flip(temporal, (2,))
+            self.template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
+        self.is_pushed = True
+
     def get_trace_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
+
+        if not self.is_pushed:
+            self._push_to_torch()
 
         # Unpack method_kwargs
         # nbefore, nafter = method_kwargs["nbefore"], method_kwargs["nafter"]
@@ -961,7 +968,6 @@ def compute_objective(traces, template_data, approx_rank, engine="numpy", torch_
         torch_traces = torch.as_tensor(traces.T[None, :, :], device=torch_device)
         num_templates, num_channels = temporal.shape[0], temporal.shape[1]
         num_timesteps = torch_traces.shape[2]
-        print(torch_traces, spatial)
         spatially_filtered_data = torch.matmul(spatial, torch_traces)
         scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1)
         scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates * num_channels, num_timesteps)
