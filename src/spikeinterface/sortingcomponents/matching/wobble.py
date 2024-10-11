@@ -359,8 +359,8 @@ class WobbleMatch(BaseTemplateMatching):
         parents=None,
         templates=None,
         parameters={},
-        engine="torch",
-        torch_device="cuda",
+        engine="numpy",
+        torch_device="cpu",
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
