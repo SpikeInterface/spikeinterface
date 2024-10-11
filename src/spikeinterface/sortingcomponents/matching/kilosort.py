@@ -132,7 +132,7 @@ class KiloSortPeeler(BaseTemplateMatching):
             for t in range(self.max_iter):
                 Cf = torch.relu(B) ** 2 / self.nm.unsqueeze(-1)
                 Cf[:, : self.margin] = 0
-                Cf[:, -self.margin:] = 0
+                Cf[:, -self.margin :] = 0
 
                 Cfmax, imax = torch.max(Cf, 0)
                 Cmax = max_pool1d(
@@ -162,13 +162,13 @@ class KiloSortPeeler(BaseTemplateMatching):
 
             spikes = spikes[:k]
             spikes["channel_index"] = 0
-            spikes["sample_index"] += (self.nbefore-self.nafter)//2
+            spikes["sample_index"] += (self.nbefore - self.nafter) // 2
             order = np.argsort(spikes["sample_index"])
             spikes = spikes[order]
 
         else:
-            #B = scipy.signal.oaconvolve(traces.T[np.newaxis, :, :], self.W[:, None, ::-1], mode="full", axes=2)
-            #B = np.einsum("ijk, kjl -> il", self.U, B)
-            raise NotImplementedError('Not implemented yet')
+            # B = scipy.signal.oaconvolve(traces.T[np.newaxis, :, :], self.W[:, None, ::-1], mode="full", axes=2)
+            # B = np.einsum("ijk, kjl -> il", self.U, B)
+            raise NotImplementedError("Not implemented yet")
 
         return spikes
