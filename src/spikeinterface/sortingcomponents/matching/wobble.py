@@ -365,7 +365,7 @@ class WobbleMatch(BaseTemplateMatching):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
 
-        templates_array = templates.get_dense_templates().astype(np.float32, casting="safe")
+        templates_array = templates.get_dense_templates().astype(np.float32)
 
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
