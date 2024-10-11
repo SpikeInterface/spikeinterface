@@ -79,7 +79,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                          memory_limit will control how much RAM can be used. In case of folder or zarr, delete_cache controls if cache is cleaned after sorting",
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
-        "torch_kwargs": "A dictionary to specify which device to use if torch is present",
         "debug": "Boolean to specify if internal data structures made during the sorting should be kept for debugging",
     }
 
