@@ -66,12 +66,28 @@ def test_compress_templates():
         assert np.all(singular_full >= 0)
         # check that svd matrices are orthonormal if applicable
         if num_channels > num_samples:
-            assert np.allclose(np.matmul(temporal_full, temporal_full.transpose(0, 2, 1)), np.eye(num_samples, dtype=np.float32), atol=1e-3)
+            assert np.allclose(
+                np.matmul(temporal_full, temporal_full.transpose(0, 2, 1)),
+                np.eye(num_samples, dtype=np.float32),
+                atol=1e-3,
+            )
         elif num_samples > num_channels:
-            assert np.allclose(np.matmul(spatial_full, spatial_full.transpose(0, 2, 1)), np.eye(num_channels, dtype=np.float32), atol=1e-3)
+            assert np.allclose(
+                np.matmul(spatial_full, spatial_full.transpose(0, 2, 1)),
+                np.eye(num_channels, dtype=np.float32),
+                atol=1e-3,
+            )
         elif num_channels == num_samples:
-            assert np.allclose(np.matmul(temporal_full, temporal_full.transpose(0, 2, 1)), np.eye(num_samples, dtype=np.float32), atol=1e-3)
-            assert np.allclose(np.matmul(spatial_full, spatial_full.transpose(0, 2, 1)), np.eye(num_channels, dtype=np.float32), atol=1e-3)
+            assert np.allclose(
+                np.matmul(temporal_full, temporal_full.transpose(0, 2, 1)),
+                np.eye(num_samples, dtype=np.float32),
+                atol=1e-3,
+            )
+            assert np.allclose(
+                np.matmul(spatial_full, spatial_full.transpose(0, 2, 1)),
+                np.eye(num_channels, dtype=np.float32),
+                atol=1e-3,
+            )
             # check that the full rank svd matrices reconstruct the original templates
             reconstructed_templates = np.matmul(temporal_full * singular_full[:, np.newaxis, :], spatial_full)
             assert np.allclose(reconstructed_templates, templates, atol=1e-3)
