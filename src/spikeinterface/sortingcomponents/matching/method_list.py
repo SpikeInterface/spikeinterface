@@ -11,5 +11,4 @@ matching_methods = {
     "circus": CircusPeeler,
     "circus-omp-svd": CircusOMPSVDPeeler,
     "wobble": WobbleMatch,
-
 }
