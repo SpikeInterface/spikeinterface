@@ -131,8 +131,8 @@ class KiloSortPeeler(BaseTemplateMatching):
 
             for t in range(self.max_iter):
                 Cf = torch.relu(B) ** 2 / self.nm.unsqueeze(-1)
-                Cf[:, : self.num_samples] = 0
-                Cf[:, -self.num_samples :] = 0
+                Cf[:, : self.margin] = 0
+                Cf[:, -self.margin:] = 0
 
                 Cfmax, imax = torch.max(Cf, 0)
                 Cmax = max_pool1d(
@@ -162,7 +162,7 @@ class KiloSortPeeler(BaseTemplateMatching):
 
             spikes = spikes[:k]
             spikes["channel_index"] = 0
-            spikes["sample_index"] += self.nbefore
+            spikes["sample_index"] += (self.nbefore-self.nafter)//2
             order = np.argsort(spikes["sample_index"])
             spikes = spikes[order]
 

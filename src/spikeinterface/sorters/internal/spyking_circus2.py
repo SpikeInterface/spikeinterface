@@ -105,8 +105,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             import torch
         except ImportError:
             HAVE_TORCH = False
-            print("spykingcircus2 could benefit from using torch")
-            params.update("torch_kwargs", {"device": None})
+            print("spykingcircus2 could benefit from using torch. Consider installing it")
 
         assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
