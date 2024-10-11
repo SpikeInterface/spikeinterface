@@ -117,6 +117,7 @@ examples/tutorials/*.svg
 doc/_build/*
 doc/tutorials/*
 doc/sources/*
+doc/how_to_new/*
 *sg_execution_times.rst
 
 examples/getting_started/tmp_*
