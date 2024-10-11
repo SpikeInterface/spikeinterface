@@ -281,12 +281,15 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         self.spatial = np.moveaxis(self.spatial, [0, 1, 2], [1, 0, 2])
         self.temporal = np.moveaxis(self.temporal, [0, 1, 2], [1, 2, 0])
         self.singular = self.singular.T[:, :, np.newaxis]
+        self.is_pushed = False
 
-        if HAVE_TORCH and self.engine == "torch":
+    def _push_to_gpu(self):
+        if self.engine == "torch":
             self.spatial = torch.as_tensor(self.spatial, device=self.torch_device)
             self.singular = torch.as_tensor(self.singular, device=self.torch_device)
             self.temporal = torch.as_tensor(self.temporal.copy(), device=self.torch_device).swapaxes(0, 1)
             self.temporal = torch.flip(self.temporal, (2,))
+        self.is_pushed = True
 
     def get_extra_outputs(self):
         output = {}
@@ -301,6 +304,9 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         import scipy.spatial
         import scipy
         from scipy import ndimage
+
+        if not self.is_pushed:
+            self._push_to_gpu()
 
         (potrs,) = scipy.linalg.get_lapack_funcs(("potrs",), dtype=np.float32)
         (nrm2,) = scipy.linalg.get_blas_funcs(("nrm2",), dtype=np.float32)
