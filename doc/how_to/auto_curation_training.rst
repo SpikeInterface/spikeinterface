@@ -45,14 +45,14 @@ We can also access the model, which is an sklearn ``Pipeline``, from the trainer
 
 
 The training function can also be run in “csv” mode, if you prefer to
-store metrics in a single .csv file. If the target labels are stored as a column in
+store metrics in as .csv files. If the target labels are stored as a column in
 the file, you can point to these with the ``target_label`` parameter
 
 .. code::
 
     trainer = train_model(
         mode="csv",
-        metrics_path = "/path/to/csv",
+        metrics_paths = ["/path/to/csv_file_1", "/path/to/csv_file_2"],
         target_label = "my_label",
         output_folder=output_folder,
     )

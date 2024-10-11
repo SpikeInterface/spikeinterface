@@ -39,7 +39,7 @@ def test_load_and_preprocess_full(trainer):
     temp_file_path = make_temp_training_csv()
 
     # Load and preprocess the data from the temporary CSV file
-    trainer.load_and_preprocess_csv(temp_file_path)
+    trainer.load_and_preprocess_csv([temp_file_path])
 
     # Assert that the data is loaded and preprocessed correctly
     assert trainer.X is not None
@@ -102,6 +102,28 @@ def test_evaluate_model_config(trainer):
     assert (trainer_folder / "model_info.json").is_file()
 
 
+def test_train_model_using_two_csvs():
+
+    metrics_path_1 = make_temp_training_csv()
+    metrics_path_2 = make_temp_training_csv()
+
+    folder = tempfile.mkdtemp()
+    metric_names = ["metric1", "metric2", "metric3"]
+
+    trainer = train_model(
+        mode="csv",
+        metrics_paths=[metrics_path_1, metrics_path_2],
+        folder=folder,
+        labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1], [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]],
+        metric_names=metric_names,
+        imputation_strategies=["median"],
+        scaling_techniques=["standard_scaler"],
+        classifiers=["LogisticRegression"],
+        overwrite=True,
+    )
+    assert isinstance(trainer, CurationModelTrainer)
+
+
 def test_train_model():
 
     metrics_path = make_temp_training_csv()
@@ -109,7 +131,7 @@ def test_train_model():
     metric_names = ["metric1", "metric2", "metric3"]
     trainer = train_model(
         mode="csv",
-        metrics_path=metrics_path,
+        metrics_paths=[metrics_path],
         folder=folder,
         labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1]],
         metric_names=metric_names,

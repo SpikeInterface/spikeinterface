@@ -232,8 +232,8 @@ class CurationModelTrainer:
                     "same parameters for each sorting_analyzer."
                 )
 
-    def load_and_preprocess_csv(self, path):
-        self._load_data_file(path)
+    def load_and_preprocess_csv(self, paths):
+        self._load_data_files(paths)
         self.process_test_data_for_classification()
 
     def process_test_data_for_classification(self):
@@ -443,10 +443,10 @@ class CurationModelTrainer:
 
         return calculated_metrics
 
-    def _load_data_file(self, path):
+    def _load_data_files(self, paths):
         import pandas as pd
 
-        self.testing_metrics = pd.read_csv(path, index_col=0)
+        self.testing_metrics = pd.concat([pd.read_csv(path, index_col=0) for path in paths], axis=0)
 
     def _evaluate(self, imputation_strategies, scaling_techniques, classifiers, X_train, X_test, y_train, y_test):
         from joblib import Parallel, delayed
@@ -552,7 +552,7 @@ def train_model(
     mode="analyzers",
     labels=None,
     analyzers=None,
-    metrics_path=None,
+    metrics_paths=None,
     folder=None,
     metric_names=None,
     imputation_strategies=None,
@@ -577,8 +577,8 @@ def train_model(
          List of SortingAnalyzer objects containing the quality metrics and labels to use for training, if using 'analyzers' mode.
     labels : list of list | None, default: None
         List of curated labels for each unit; must be in the same order as the metrics data.
-    metrics_path : str or None, default: None
-        The path to the CSV file containing the metrics data if using 'csv' mode.
+    metrics_paths : list of str or None, default: None
+        List of paths to the CSV files containing the metrics data if using 'csv' mode.
     folder : str | None, default: None
         The folder where outputs such as models and evaluation metrics will be saved.
     metric_names : list of str | None, default: None
@@ -633,8 +633,9 @@ def train_model(
         trainer.load_and_preprocess_analyzers(analyzers)
 
     elif mode == "csv":
-        assert Path(metrics_path).is_file(), "Valid metrics path must be provided for mode 'csv'"
-        trainer.load_and_preprocess_csv(metrics_path)
+        for metrics_path in metrics_paths:
+            assert Path(metrics_path).is_file(), f"{metrics_path} is not a file."
+        trainer.load_and_preprocess_csv(metrics_paths)
 
     trainer.evaluate_model_config()
     return trainer
