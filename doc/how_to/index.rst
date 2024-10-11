@@ -14,4 +14,5 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     load_your_data_into_sorting
     benchmark_with_hybrid_recordings
     drift_with_lfp
-    ../how_to_new/combine_recordings
+    combine_recordings
+    ../how_to_new/plot_combine_recordings

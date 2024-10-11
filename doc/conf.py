@@ -120,8 +120,8 @@ from sphinx_gallery.sorting import FileNameSortKey
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
     'only_warn_on_example_error': True,
-    'examples_dirs': ['../examples/tutorials'],
-    'gallery_dirs': ['tutorials' ],  # path where to save gallery generated examples
+    'examples_dirs': ['../examples/tutorials', '../examples/how_to_new'],
+    'gallery_dirs': ['tutorials', 'how_to_new'],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
                                        '../examples/tutorials/core',
                                        '../examples/tutorials/extractors',
