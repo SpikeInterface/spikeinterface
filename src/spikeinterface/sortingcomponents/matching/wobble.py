@@ -400,7 +400,7 @@ class WobbleMatch(BaseTemplateMatching):
         )
 
         norm_squared = compute_template_norm(sparsity.visible_channels, templates_array)
-        
+
         spatial = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
         temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
         singular = singular.T[:, :, np.newaxis]
