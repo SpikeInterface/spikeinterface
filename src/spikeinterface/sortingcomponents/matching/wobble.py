@@ -4,7 +4,8 @@ import numpy as np
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
-from .main import BaseTemplateMatchingEngine
+
+from .base import BaseTemplateMatching, _base_matching_dtype
 from spikeinterface.core.template import Templates
 
 
@@ -197,8 +198,9 @@ class TemplateMetadata:
         return template_meta
 
 
+# important : this is differents from the spikeinterface.core.Sparsity
 @dataclass
-class Sparsity:
+class WobbleSparsity:
     """Variables that describe channel sparsity.
 
     Parameters
@@ -226,7 +228,7 @@ class Sparsity:
 
         Returns
         -------
-        sparsity : Sparsity
+        sparsity : WobbleSparsity
             Dataclass object for aggregating channel sparsity variables together.
         """
         visible_channels = np.ptp(templates, axis=1) > params.visibility_threshold
@@ -250,7 +252,7 @@ class Sparsity:
 
         Returns
         -------
-        sparsity : Sparsity
+        sparsity : WobbleSparsity
             Dataclass object for aggregating channel sparsity variables together.
         """
         visible_channels = templates.sparsity.mask
@@ -297,7 +299,7 @@ class TemplateData:
         self.temporal, self.singular, self.spatial, self.temporal_jittered = self.compressed_templates
 
 
-class WobbleMatch(BaseTemplateMatchingEngine):
+class WobbleMatch(BaseTemplateMatching):
     """Template matching method from the Paninski lab.
 
     Templates are jittered or "wobbled" in time and amplitude to capture variability in spike amplitude and
@@ -331,53 +333,30 @@ class WobbleMatch(BaseTemplateMatchingEngine):
     - "peaks" are considered spikes if their amplitude clears the threshold parameter
     """
 
-    default_params = {
-        "templates": None,
-    }
-    spike_dtype = [
-        ("sample_index", "int64"),
-        ("channel_index", "int64"),
-        ("cluster_index", "int64"),
-        ("amplitude", "float64"),
-        ("segment_index", "int64"),
-    ]
+    # default_params = {
+    #     "templates": None,
+    # }
 
-    @classmethod
-    def initialize_and_check_kwargs(cls, recording, kwargs):
-        """Initialize the objective and precompute various useful objects.
+    def __init__(
+        self,
+        recording,
+        return_output=True,
+        parents=None,
+        templates=None,
+        parameters={},
+    ):
 
-        Parameters
-        ----------
-        recording : RecordingExtractor
-            The recording extractor object.
-        kwargs : dict
-            Keyword arguments for matching method.
+        BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
 
-        Returns
-        -------
-        d : dict
-            Updated Keyword arguments.
-        """
-        d = cls.default_params.copy()
-
-        required_kwargs_keys = ["templates"]
-        for required_key in required_kwargs_keys:
-            assert required_key in kwargs, f"`{required_key}` is a required key in the kwargs"
-
-        parameters = kwargs.get("parameters", {})
-        templates = kwargs["templates"]
-        assert isinstance(templates, Templates), (
-            f"The templates supplied is of type {type(d['templates'])} " f"and must be a Templates"
-        )
-        templates_array = templates.get_dense_templates().astype(np.float32, casting="safe")
+        templates_array = templates.get_dense_templates().astype(np.float32)
 
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
         template_meta = TemplateMetadata.from_parameters_and_templates(params, templates_array)
         if not templates.are_templates_sparse():
-            sparsity = Sparsity.from_parameters_and_templates(params, templates_array)
+            sparsity = WobbleSparsity.from_parameters_and_templates(params, templates_array)
         else:
-            sparsity = Sparsity.from_templates(params, templates)
+            sparsity = WobbleSparsity.from_templates(params, templates)
 
         # Perform initial computations on templates necessary for computing the objective
         sparse_templates = np.where(sparsity.visible_channels[:, np.newaxis, :], templates_array, 0)
@@ -394,84 +373,47 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             norm_squared=norm_squared,
         )
 
-        # Pack initial data into kwargs
-        kwargs["params"] = params
-        kwargs["template_meta"] = template_meta
-        kwargs["sparsity"] = sparsity
-        kwargs["template_data"] = template_data
-        kwargs["nbefore"] = templates.nbefore
-        kwargs["nafter"] = templates.nafter
-        d.update(kwargs)
-        return d
+        self.params = params
+        self.template_meta = template_meta
+        self.sparsity = sparsity
+        self.template_data = template_data
+        self.nbefore = templates.nbefore
+        self.nafter = templates.nafter
 
-    @classmethod
-    def serialize_method_kwargs(cls, kwargs):
-        # This function does nothing without a waveform extractor -- candidate for refactor
-        kwargs = dict(kwargs)
-        return kwargs
+        # buffer_ms = 10
+        # self.margin = int(buffer_ms*1e-3 * recording.sampling_frequency)
+        self.margin = 300  # To ensure equivalence with spike-psvae version of the algorithm
 
-    @classmethod
-    def unserialize_in_worker(cls, kwargs):
-        # This function does nothing without a waveform extractor -- candidate for refactor
-        return kwargs
+    def get_trace_margin(self):
+        return self.margin
 
-    @classmethod
-    def get_margin(cls, recording, kwargs):
-        """Get margin for chunking recording.
+    def compute_matching(self, traces, start_frame, end_frame, segment_index):
 
-        Parameters
-        ----------
-        recording : RecordingExtractor
-            The recording extractor object.
-        kwargs : dict
-            Keyword arguments for matching method.
-
-        Returns
-        -------
-        margin : int
-            Buffer in samples on each side of a chunk.
-        """
-        buffer_ms = 10
-        # margin = int(buffer_ms*1e-3 * recording.sampling_frequency)
-        margin = 300  # To ensure equivalence with spike-psvae version of the algorithm
-        return margin
-
-    @classmethod
-    def main_function(cls, traces, method_kwargs):
-        """Detect spikes in traces using the template matching algorithm.
-
-        Parameters
-        ----------
-        traces : ndarray (chunk_len + 2*margin, num_channels)
-            Voltage traces for a chunk of the recording.
-        method_kwargs : dict
-            Keyword arguments for matching method.
-
-        Returns
-        -------
-        spikes : ndarray (num_spikes,)
-            Resulting spike train.
-        """
         # Unpack method_kwargs
-        nbefore, nafter = method_kwargs["nbefore"], method_kwargs["nafter"]
-        template_meta = method_kwargs["template_meta"]
-        params = method_kwargs["params"]
-        sparsity = method_kwargs["sparsity"]
-        template_data = method_kwargs["template_data"]
+        # nbefore, nafter = method_kwargs["nbefore"], method_kwargs["nafter"]
+        # template_meta = method_kwargs["template_meta"]
+        # params = method_kwargs["params"]
+        # sparsity = method_kwargs["sparsity"]
+        # template_data = method_kwargs["template_data"]
 
         # Check traces
         assert traces.dtype == np.float32, "traces must be specified as np.float32"
 
         # Compute objective
-        objective = compute_objective(traces, template_data, params.approx_rank)
-        objective_normalized = 2 * objective - template_data.norm_squared[:, np.newaxis]
+        objective = compute_objective(traces, self.template_data, self.params.approx_rank)
+        objective_normalized = 2 * objective - self.template_data.norm_squared[:, np.newaxis]
 
         # Compute spike train
         spike_trains, scalings, distance_metrics = [], [], []
-        for i in range(params.max_iter):
+        for i in range(self.params.max_iter):
             # find peaks
-            spike_train, scaling, distance_metric = cls.find_peaks(
-                objective, objective_normalized, np.array(spike_trains), params, template_data, template_meta
+            spike_train, scaling, distance_metric = self.find_peaks(
+                objective,
+                objective_normalized,
+                np.array(spike_trains),
+                self.params,
+                self.template_data,
+                self.template_meta,
             )
             if len(spike_train) == 0:
                 break
@@ -482,15 +424,22 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             distance_metrics.extend(list(distance_metric))
 
             # subtract newly detected spike train from traces (via the objective)
-            objective, objective_normalized = cls.subtract_spike_train(
-                spike_train, scaling, template_data, objective, objective_normalized, params, template_meta, sparsity
+            objective, objective_normalized = self.subtract_spike_train(
+                spike_train,
+                scaling,
+                self.template_data,
+                objective,
+                objective_normalized,
+                self.params,
+                self.template_meta,
+                self.sparsity,
             )
 
         spike_train = np.array(spike_trains)
         scalings = np.array(scalings)
         distance_metric = np.array(distance_metrics)
         if len(spike_train) == 0:  # no spikes found
-            return np.zeros(0, dtype=cls.spike_dtype)
+            return np.zeros(0, dtype=_base_matching_dtype)
 
         # order spike times
         index = np.argsort(spike_train[:, 0])
@@ -499,8 +448,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         distance_metric = distance_metric[index]
 
         # adjust spike_train
-        spike_train[:, 0] += nbefore  # beginning of template --> center of template
-        spike_train[:, 1] //= params.jitter_factor  # jittered_index --> template_index
+        spike_train[:, 0] += self.nbefore  # beginning of template --> center of template
+        spike_train[:, 1] //= self.params.jitter_factor  # jittered_index --> template_index
 
         # TODO : Benchmark spike amplitudes
         # Find spike amplitudes / channels
@@ -512,7 +461,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             channel_inds.append(best_ch)
 
         # assign result to spikes array
-        spikes = np.zeros(spike_train.shape[0], dtype=cls.spike_dtype)
+        spikes = np.zeros(spike_train.shape[0], dtype=_base_matching_dtype)
         spikes["sample_index"] = spike_train[:, 0]
         spikes["cluster_index"] = spike_train[:, 1]
         spikes["channel_index"] = channel_inds
@@ -622,7 +571,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Dataclass object for aggregating the parameters together.
         template_meta : TemplateMetadata
             Dataclass object for aggregating template metadata together.
-        sparsity : Sparsity
+        sparsity : WobbleSparsity
             Dataclass object for aggregating channel sparsity variables together.
 
         Returns
