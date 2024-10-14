@@ -736,6 +736,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
     def get_convolved_traces(self, traces):
         from scipy.signal import oaconvolve
+
         tmp = oaconvolve(self.prototype[None, :], traces.T, axes=1, mode="valid")
         scalar_products = self.weights.dot(tmp)
         return scalar_products
