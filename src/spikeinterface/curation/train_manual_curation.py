@@ -528,7 +528,7 @@ class CurationModelTrainer:
     ):
         from sklearn.metrics import balanced_accuracy_score, precision_score, recall_score
 
-        set_default_search_kwargs(search_kwargs)
+        search_kwargs = set_default_search_kwargs(search_kwargs)
 
         X_train_scaled, X_test_scaled, y_train, y_test, imputer, scaler = self.apply_scaling_imputation(
             imputation_strategy, scaler, X_train, X_test, y_train, y_test
