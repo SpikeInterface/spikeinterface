@@ -211,6 +211,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             self.unit_overlaps_tables[i][self.unit_overlaps_indices[i]] = np.arange(len(self.unit_overlaps_indices[i]))
 
         self.margin = 2 * self.num_samples
+        self.is_pushed = False
 
     def _prepare_templates(self):
 
@@ -281,7 +282,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         self.spatial = np.moveaxis(self.spatial, [0, 1, 2], [1, 0, 2])
         self.temporal = np.moveaxis(self.temporal, [0, 1, 2], [1, 2, 0])
         self.singular = self.singular.T[:, :, np.newaxis]
-        self.is_pushed = False
 
     def _push_to_torch(self):
         if self.engine == "torch":
