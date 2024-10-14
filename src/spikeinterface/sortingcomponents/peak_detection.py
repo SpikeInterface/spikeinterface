@@ -632,6 +632,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
     ):
         PeakDetector.__init__(self, recording, return_output=True)
         import scipy
+
         if not HAVE_NUMBA:
             raise ModuleNotFoundError('matched_filtering" needs numba which is not installed')
 
