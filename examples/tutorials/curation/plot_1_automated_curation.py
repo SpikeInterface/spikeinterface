@@ -223,6 +223,9 @@ plt.legend(); plt.grid(True); plt.show()
 # As ``skops`` continues to be developed, we hope more of these functions will be :code:`trusted`
 # by default.
 #
+# If you unequivocally trust the model (e.g. if you have created it), you can bypass this security
+# step by passing ``trust_model = True`` to the ``load_model`` function.
+#
 # In general, you should be cautious when downloading ``.skops`` files and ``.pkl`` files from repos,
 # especially from unknown sources.
 #

@@ -82,6 +82,11 @@ class CurationModelTrainer:
         Random seed for reproducibility. If None, a random seed will be generated.
     smote : bool, default: False
         Whether to apply SMOTE for class imbalance. Default is False. Requires imbalanced-learn package.
+    verbose : bool, default: True
+        If True, useful information is printed during training.
+    search_kwargs : dict or None, default: None
+        Keyword arguments passed to `BayesSearchCV` or `RandomizedSearchCV` from `sklearn`. If None, use
+        `search_kwargs = {'cv': 3, 'scoring': 'balanced_accuracy', 'n_iter': 25}`.
 
     Attributes
     ----------
@@ -145,6 +150,8 @@ class CurationModelTrainer:
         classifiers=None,
         seed=None,
         smote=False,
+        verbose=True,
+        search_kwargs=None,
         **job_kwargs,
     ):
         if imputation_strategies is None:
@@ -174,6 +181,8 @@ class CurationModelTrainer:
         self.metrics_params = {}
         self.smote = smote
         self.label_conversion = None
+        self.verbose = verbose
+        self.search_kwargs = search_kwargs
 
         self.X = None
         self.testing_metrics = None
@@ -264,7 +273,7 @@ class CurationModelTrainer:
 
         # Extract features
         try:
-            if set(self.metric_names) - set(self.testing_metrics.columns) != set():
+            if (set(self.metric_names) - set(self.testing_metrics.columns) != set()) and self.verbose is True:
                 print(
                     f"Dropped metrics (calculated but not included in metric_names): {set(self.testing_metrics.columns) - set(self.metric_names)}"
                 )
@@ -273,7 +282,7 @@ class CurationModelTrainer:
             print("metrics_list contains invalid metric names")
             raise e
         self.X = self.testing_metrics.reindex(columns=self.metric_names)
-        self.X = self.X.applymap(lambda x: np.nan if np.isinf(x) else x)
+        self.X = self.X.map(lambda x: np.nan if np.isinf(x) else x)
         self.X = self.X.astype("float32")
         self.X.fillna(0, inplace=True)
 
@@ -413,7 +422,14 @@ class CurationModelTrainer:
         )
         classifier_instances = [self.get_classifier_instance(clf) for clf in self.classifiers]
         self._evaluate(
-            self.imputation_strategies, self.scaling_techniques, classifier_instances, X_train, X_test, y_train, y_test
+            self.imputation_strategies,
+            self.scaling_techniques,
+            classifier_instances,
+            X_train,
+            X_test,
+            y_train,
+            y_test,
+            self.search_kwargs,
         )
 
     def _get_metrics_for_classification(self, analyzer, analyzer_index):
@@ -448,14 +464,16 @@ class CurationModelTrainer:
 
         self.testing_metrics = pd.concat([pd.read_csv(path, index_col=0) for path in paths], axis=0)
 
-    def _evaluate(self, imputation_strategies, scaling_techniques, classifiers, X_train, X_test, y_train, y_test):
+    def _evaluate(
+        self, imputation_strategies, scaling_techniques, classifiers, X_train, X_test, y_train, y_test, search_kwargs
+    ):
         from joblib import Parallel, delayed
         from sklearn.pipeline import Pipeline
         import pandas as pd
 
         results = Parallel(n_jobs=self.n_jobs)(
             delayed(self._train_and_evaluate)(
-                imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, idx
+                imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, idx, search_kwargs
             )
             for idx, (imputation_strategy, scaler, classifier) in enumerate(
                 (imputation_strategy, scaler, classifier)
@@ -505,13 +523,18 @@ class CurationModelTrainer:
         param_file = self.folder / "model_info.json"
         Path(param_file).write_text(json.dumps(model_info, indent=4), encoding="utf8")
 
-    def _train_and_evaluate(self, imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, model_id):
+    def _train_and_evaluate(
+        self, imputation_strategy, scaler, classifier, X_train, X_test, y_train, y_test, model_id, search_kwargs
+    ):
         from sklearn.metrics import balanced_accuracy_score, precision_score, recall_score
+
+        set_default_search_kwargs(search_kwargs)
 
         X_train_scaled, X_test_scaled, y_train, y_test, imputer, scaler = self.apply_scaling_imputation(
             imputation_strategy, scaler, X_train, X_test, y_train, y_test
         )
-        print(f"Running {classifier.__class__.__name__} with imputation {imputation_strategy} and scaling {scaler}")
+        if self.verbose is True:
+            print(f"Running {classifier.__class__.__name__} with imputation {imputation_strategy} and scaling {scaler}")
         model, param_space = self.get_classifier_search_space(classifier.__class__.__name__)
         try:
             from skopt import BayesSearchCV
@@ -519,17 +542,16 @@ class CurationModelTrainer:
             model = BayesSearchCV(
                 model,
                 param_space,
-                cv=3,
-                scoring="balanced_accuracy",
-                n_iter=25,
                 random_state=self.seed,
                 n_jobs=self.n_jobs,
+                **search_kwargs,
             )
         except:
-            print("BayesSearchCV from scikit-optimize not available, using GridSearchCV")
+            if self.verbose is True:
+                print("BayesSearchCV from scikit-optimize not available, using GridSearchCV")
             from sklearn.model_selection import RandomizedSearchCV
 
-            model = RandomizedSearchCV(model, param_space, cv=3, scoring="balanced_accuracy", n_jobs=self.n_jobs)
+            model = RandomizedSearchCV(model, param_space, n_jobs=self.n_jobs, **search_kwargs)
 
         model.fit(X_train_scaled, y_train)
         y_pred = model.predict(X_test_scaled)
@@ -560,6 +582,8 @@ def train_model(
     classifiers=None,
     overwrite=False,
     seed=None,
+    search_kwargs=None,
+    verbose=True,
     **job_kwargs,
 ):
     """
@@ -596,6 +620,12 @@ def train_model(
         Overwrites the `folder` if it already exists
     seed : int | None, default: None
         Random seed for reproducibility. If None, a random seed will be generated.
+    search_kwargs : dict or None, default: None
+        Keyword arguments passed to `BayesSearchCV` or `RandomizedSearchCV` from `sklearn`. If None, use
+        `search_kwargs = {'cv': 3, 'scoring': 'balanced_accuracy', 'n_iter': 25}`.
+    verbose : bool, default: True
+        If True, useful information is printed during training.
+
 
     Returns
     -------
@@ -625,6 +655,8 @@ def train_model(
         scaling_techniques=scaling_techniques,
         classifiers=classifiers,
         seed=seed,
+        verbose=verbose,
+        search_kwargs=search_kwargs,
         **job_kwargs,
     )
 
@@ -665,3 +697,18 @@ def try_to_get_metrics_from_analyzer(sorting_analyzer):
         )
 
     return quality_metrics, template_metrics
+
+
+def set_default_search_kwargs(search_kwargs):
+
+    if search_kwargs is None:
+        search_kwargs = {}
+
+    if search_kwargs.get("cv") is None:
+        search_kwargs["cv"] = 3
+    if search_kwargs.get("scoring") is None:
+        search_kwargs["scoring"] = "balanced_accuracy"
+    if search_kwargs.get("n_iter") is None:
+        search_kwargs["n_iter"] = 25
+
+    return search_kwargs
