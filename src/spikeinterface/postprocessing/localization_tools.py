@@ -76,7 +76,7 @@ def compute_monopolar_triangulation(
     assert feature in ["ptp", "energy", "peak_voltage"], f"{feature} is not a valid feature"
 
     contact_locations = sorting_analyzer_or_templates.get_channel_locations()
-    
+
     if sorting_analyzer_or_templates.sparsity is None:
         sparsity = compute_sparsity(sorting_analyzer_or_templates, method="radius", radius_um=radius_um)
     else:
@@ -167,7 +167,7 @@ def compute_center_of_mass(
         )
     else:
         sparsity = sorting_analyzer_or_templates.sparsity
-    
+
     templates = get_dense_templates_array(
         sorting_analyzer_or_templates, return_scaled=get_return_scaled(sorting_analyzer_or_templates)
     )
@@ -658,7 +658,6 @@ if HAVE_NUMBA:
     enforce_decrease_shells = numba.jit(enforce_decrease_shells_data, nopython=True)
 
 
-
 def compute_location_max_channel(
     templates_or_sorting_analyzer: SortingAnalyzer | Templates,
     unit_ids=None,
@@ -691,10 +690,7 @@ def compute_location_max_channel(
         2d
     """
     extremum_channels_index = get_template_extremum_channel(
-        templates_or_sorting_analyzer,
-        peak_sign=peak_sign,
-        mode=mode,
-        outputs="index"
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, outputs="index"
     )
     contact_locations = templates_or_sorting_analyzer.get_channel_locations()
     if unit_ids is None:
