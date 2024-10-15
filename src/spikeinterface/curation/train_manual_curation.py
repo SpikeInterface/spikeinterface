@@ -78,6 +78,8 @@ class CurationModelTrainer:
         or "robust_scaler", If None, all techniques will be used.
     classifiers : list of str or dict, default: None
         A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_default_classifier_search_spaces` method for the default search spaces & format for custom spaces.
+    test_size : float, default: 0.2
+        Proportion of the dataset to include in the test split, passed to `train_test_split` from `sklear`.
     seed : int, default: None
         Random seed for reproducibility. If None, a random seed will be generated.
     smote : bool, default: False
@@ -148,6 +150,7 @@ class CurationModelTrainer:
         imputation_strategies=None,
         scaling_techniques=None,
         classifiers=None,
+        test_size=0.2,
         seed=None,
         smote=False,
         verbose=True,
@@ -177,6 +180,7 @@ class CurationModelTrainer:
         self.folder = Path(folder) if folder is not None else None
         self.imputation_strategies = imputation_strategies
         self.scaling_techniques = scaling_techniques
+        self.test_size = test_size
         self.seed = seed if seed is not None else np.random.default_rng(seed=None).integers(0, 2**31)
         self.metrics_params = {}
         self.smote = smote
@@ -418,7 +422,7 @@ class CurationModelTrainer:
         from sklearn.model_selection import train_test_split
 
         X_train, X_test, y_train, y_test = train_test_split(
-            self.X, self.y, test_size=0.2, random_state=self.seed, stratify=self.y
+            self.X, self.y, test_size=self.test_size, random_state=self.seed, stratify=self.y
         )
         classifier_instances = [self.get_classifier_instance(clf) for clf in self.classifiers]
         self._evaluate(
@@ -580,6 +584,7 @@ def train_model(
     imputation_strategies=None,
     scaling_techniques=None,
     classifiers=None,
+    test_size=0.2,
     overwrite=False,
     seed=None,
     search_kwargs=None,
@@ -616,6 +621,8 @@ def train_model(
         or "robust_scaler", If None, all techniques will be used.
     classifiers : list of str | dict | None, default: None
         A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_default_classifier_search_spaces` method for the default search spaces & format for custom spaces.
+    test_size : float, default: 0.2
+        Proportion of the dataset to include in the test split, passed to `train_test_split` from `sklear`.
     overwrite : bool, default: False
         Overwrites the `folder` if it already exists
     seed : int | None, default: None
@@ -647,6 +654,9 @@ def train_model(
     if mode not in ["analyzers", "csv"]:
         raise Exception("`mode` must be equal to 'analyzers' or 'csv'.")
 
+    if (test_size > 1.0) or (0.0 > test_size):
+        raise Exception("`test_size` must be between 0.0 and 1.0")
+
     trainer = CurationModelTrainer(
         labels=labels,
         folder=folder,
@@ -654,6 +664,7 @@ def train_model(
         imputation_strategies=imputation_strategies,
         scaling_techniques=scaling_techniques,
         classifiers=classifiers,
+        test_size=test_size,
         seed=seed,
         verbose=verbose,
         search_kwargs=search_kwargs,
