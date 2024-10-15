@@ -23,12 +23,12 @@ _possible_presets = ["similarity_correlograms", "x_contaminations", "temporal_sp
 _required_extensions = {
     "unit_locations": ["unit_locations"],
     "correlogram": ["correlograms"],
-    "min_snr": ["noise_levels", "templates"],
+    "snr": ["noise_levels", "templates"],
     "template_similarity": ["template_similarity"],
     "knn": ["spike_locations", "spike_amplitudes"],
 }
 
-_templates_needed = ["unit_locations", "min_snr", "template_similarity", "spike_locations", "spike_amplitudes"]
+_templates_needed = ["unit_locations", "snr", "template_similarity", "knn", "spike_amplitudes"]
 
 
 def auto_merges(
@@ -242,7 +242,6 @@ def auto_merges(
         elif step == "snr":
             qm_ext = sorting_analyzer.get_extension("quality_metrics")
             if qm_ext is None:
-                sorting_analyzer.compute("noise_levels", **job_kwargs)
                 sorting_analyzer.compute("quality_metrics", metric_names=["snr"], **job_kwargs)
                 qm_ext = sorting_analyzer.get_extension("quality_metrics")
 
@@ -537,7 +536,7 @@ def get_potential_auto_merge(
                 "censored_period_ms": censored_period_ms,
             },
         },
-        compute_needed_extensions=False,
+        compute_needed_extensions=True,
         extra_outputs=extra_outputs,
         steps=steps,
     )
