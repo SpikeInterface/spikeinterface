@@ -38,9 +38,7 @@ def auto_merges(
     steps_params: dict = {
         "num_spikes": {"min_spikes": 100},
         "snr": {"min_snr": 2},
-        "remove_contaminated": {"contamination_thresh": 0.2, 
-                                "refractory_period_ms": 1.0, 
-                                "censored_period_ms": 0.3},
+        "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
         "unit_locations": {"max_distance_um": 50},
         "correlogram": {
             "corr_diff_thresh": 0.16,
@@ -57,9 +55,7 @@ def auto_merges(
             "refractory_period_ms": 1.0,
             "censored_period_ms": 0.3,
         },
-        "quality_score": {"firing_contamination_balance": 2.5, 
-                          "refractory_period_ms": 1.0, 
-                          "censored_period_ms": 0.3},
+        "quality_score": {"firing_contamination_balance": 2.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
     },
     compute_needed_extensions: bool = True,
     extra_outputs: bool = False,
@@ -225,7 +221,6 @@ def auto_merges(
                     sorting_analyzer.compute(ext, **job_kwargs)
                 elif not compute_needed_extensions and not sorting_analyzer.has_extension(ext):
                     raise ValueError(f"{step} requires {ext} extension")
-
 
         params = steps_params.get(step, dict())
 
