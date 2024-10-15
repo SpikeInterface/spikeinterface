@@ -603,13 +603,13 @@ class DetectPeakMatchedFiltering(PeakDetector):
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
-    radius_um: float
+    radius_um : float
         The radius to use to select neighbour channels for locally exclusive detection.
-    prototype: array
+    prototype : array
         The canonical waveform of action potentials
-    rank : int (default 1)
-        The rank for SVD convolution of spatiotemporal templates with the traces
-    weight_method: dict
+    ms_before : float
+        The time in ms before the maximial value of the absolute prototype
+    weight_method : dict
         Parameter that should be provided to the get_convolution_weights() function
         in order to know how to estimate the positions. One argument is mode that could
         be either gaussian_2d (KS like) or exponential_3d (default)
@@ -625,7 +625,6 @@ class DetectPeakMatchedFiltering(PeakDetector):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        rank=1,
         noise_levels=None,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
