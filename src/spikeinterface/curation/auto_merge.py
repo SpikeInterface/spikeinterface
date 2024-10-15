@@ -38,7 +38,9 @@ def auto_merges(
     steps_params: dict = {
         "num_spikes": {"min_spikes": 100},
         "snr": {"min_snr": 2},
-        "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+        "remove_contaminated": {"contamination_thresh": 0.2, 
+                                "refractory_period_ms": 1.0, 
+                                "censored_period_ms": 0.3},
         "unit_locations": {"max_distance_um": 50},
         "correlogram": {
             "corr_diff_thresh": 0.16,
@@ -55,7 +57,9 @@ def auto_merges(
             "refractory_period_ms": 1.0,
             "censored_period_ms": 0.3,
         },
-        "quality_score": {"firing_contamination_balance": 2.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+        "quality_score": {"firing_contamination_balance": 2.5, 
+                          "refractory_period_ms": 1.0, 
+                          "censored_period_ms": 0.3},
     },
     compute_needed_extensions: bool = True,
     extra_outputs: bool = False,
@@ -203,21 +207,6 @@ def auto_merges(
         # To avoid erasing the extensions of the user
         sorting_analyzer = sorting_analyzer.copy()
 
-    for step in steps:
-        if step in _required_extensions:
-            for ext in _required_extensions[step]:
-                if compute_needed_extensions:
-                    if step in _templates_needed:
-                        template_ext = sorting_analyzer.get_extension("templates")
-                        if template_ext is None:
-                            sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
-                    params = eval(f"{step}_kwargs")
-                    params = params.get(ext, dict())
-                    sorting_analyzer.compute(ext, **params, **job_kwargs)
-                else:
-                    if not sorting_analyzer.has_extension(ext):
-                        raise ValueError(f"{step} requires {ext} extension")
-
     n = unit_ids.size
     pair_mask = np.triu(np.arange(n)) > 0
     outs = dict()
@@ -225,7 +214,20 @@ def auto_merges(
     for step in steps:
 
         assert step in all_steps, f"{step} is not a valid step"
-        params = steps_params.get(step, {})
+
+        if step in _required_extensions:
+            for ext in _required_extensions[step]:
+                if compute_needed_extensions and step in _templates_needed:
+                    template_ext = sorting_analyzer.get_extension("templates")
+                    if template_ext is None:
+                        sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
+                    print(f"Extension {ext} is computed with default params")
+                    sorting_analyzer.compute(ext, **job_kwargs)
+                elif not compute_needed_extensions and not sorting_analyzer.has_extension(ext):
+                    raise ValueError(f"{step} requires {ext} extension")
+
+
+        params = steps_params.get(step, dict())
 
         # STEP : remove units with too few spikes
         if step == "num_spikes":
@@ -240,7 +242,7 @@ def auto_merges(
         elif step == "snr":
             qm_ext = sorting_analyzer.get_extension("quality_metrics")
             if qm_ext is None:
-                sorting_analyzer.compute(["noise_levels"], **job_kwargs)
+                sorting_analyzer.compute("noise_levels", **job_kwargs)
                 sorting_analyzer.compute("quality_metrics", metric_names=["snr"], **job_kwargs)
                 qm_ext = sorting_analyzer.get_extension("quality_metrics")
 
@@ -505,10 +507,10 @@ def get_potential_auto_merge(
         sorting_analyzer,
         preset,
         resolve_graph,
-        step_params={
+        steps_params={
             "num_spikes": {"min_spikes": min_spikes},
-            "snr_kwargs": {"min_snr": min_snr},
-            "remove_contaminated_kwargs": {
+            "snr": {"min_snr": min_snr},
+            "remove_contaminated": {
                 "contamination_thresh": contamination_thresh,
                 "refractory_period_ms": refractory_period_ms,
                 "censored_period_ms": censored_period_ms,
