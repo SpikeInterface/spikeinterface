@@ -45,7 +45,6 @@ class KiloSortPeeler(BaseTemplateMatching):
     To build these spatial and temporal components, one should access spikes from the 
     recording, with the following code:
 
-    from spikeinterface.sortingcomponents.peak_selection import select_peaks
     from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
