@@ -15,7 +15,7 @@ from .hybrid_tools import (
 )
 from .noise_tools import generate_noise
 
-from splitting_tools import split_sorting_by_amplitudes, split_sorting_by_times
+from .splitting_tools import split_sorting_by_amplitudes, split_sorting_by_times
 
 from .drifting_generator import (
     make_one_displacement_vector,

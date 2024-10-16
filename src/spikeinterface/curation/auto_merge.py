@@ -225,7 +225,7 @@ def auto_merges(
         params = steps_params.get(step, dict())
 
         # STEP : remove units with too few spikes
-        if step == "num_spikes":
+        if step == "min_spikes":
 
             num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
             to_remove = num_spikes < params["min_spikes"]
