@@ -27,6 +27,25 @@ spike_dtype = [
 
 class KiloSortPeeler(BaseTemplateMatching):
 
+    """
+    This code is an adaptation from the code hosted on
+
+    https://github.com/MouseLand/Kilosort/blob/main/kilosort/template_matching.py
+    
+    and implementing the KiloSort4 spike sorting algorithm, published here
+    
+    https://www.nature.com/articles/s41592-024-02232-7
+
+    by Marius Patchitariu and collaborators
+
+    This is a torch implementation of a Matching Pursuit Algorithm, with precomputing
+    of all pairwise interactions between the templates in a dense manner. To speed up
+    the computations of the convolutions, templates are described via a common predefined
+    set of temporal components. This allow to compute only once the temporal convolutions
+    for these components, and to reconstruct via spatial components the full convolutions.
+    
+    """
+
     def __init__(
         self,
         recording,
