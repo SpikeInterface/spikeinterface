@@ -43,7 +43,34 @@ class KiloSortPeeler(BaseTemplateMatching):
     the computations of the convolutions, templates are described via a common predefined
     set of temporal components. This allow to compute only once the temporal convolutions
     for these components, and to reconstruct via spatial components the full convolutions.
-    
+    To build these spatial and temporal components, one should access spikes from the 
+    recording, with the following code:
+
+    from spikeinterface.sortingcomponents.peak_selection import select_peaks
+    from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
+    from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+
+    peaks = detect_peaks(sorting_analyzer.recording, method="locally_exclusive", skip_after_n_peaks=5000)
+    few_wfs = extract_waveform_at_max_channel(sorting_analyzer.recording, peaks, ms_before=1, ms_after=2)
+    wfs = few_wfs[:, :, 0]
+    import numpy as np
+
+    n_components = 5
+    from sklearn.cluster import KMeans
+
+    wfs /= np.linalg.norm(wfs, axis=1)[:, None]
+    model = KMeans(n_clusters=n_components, n_init=10).fit(wfs)
+    temporal_components = model.cluster_centers_
+    temporal_components = temporal_components / np.linalg.norm(temporal_components[:, None])
+    temporal_components = temporal_components.astype(np.float32)
+    from sklearn.decomposition import TruncatedSVD
+
+    model = TruncatedSVD(n_components=n_components).fit(wfs)
+    spatial_components = model.components_.astype(np.float32)
+    method_kwargs["spatial_components"] = spatial_components
+    method_kwargs["temporal_components"] = temporal_components
+
+
     """
 
     def __init__(
