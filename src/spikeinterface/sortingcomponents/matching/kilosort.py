@@ -42,7 +42,7 @@ class KiloSortPeeler(BaseTemplateMatching):
     the computations of the convolutions, templates are described via a common predefined
     set of temporal components. This allow to compute only once the temporal convolutions
     for these components, and to reconstruct via spatial components the full convolutions.
-    To build these spatial and temporal components, one should access spikes from the 
+    To build these spatial and temporal components, one should access spikes from the
     recording, with the following code:
 
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
