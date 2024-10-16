@@ -26,14 +26,13 @@ spike_dtype = [
 
 
 class KiloSortPeeler(BaseTemplateMatching):
-
     """
     This code is an adaptation from the code hosted on
 
     https://github.com/MouseLand/Kilosort/blob/main/kilosort/template_matching.py
-    
+
     and implementing the KiloSort4 spike sorting algorithm, published here
-    
+
     https://www.nature.com/articles/s41592-024-02232-7
 
     by Marius Patchitariu and collaborators
@@ -67,10 +66,6 @@ class KiloSortPeeler(BaseTemplateMatching):
 
     model = TruncatedSVD(n_components=n_components).fit(wfs)
     spatial_components = model.components_.astype(np.float32)
-    method_kwargs["spatial_components"] = spatial_components
-    method_kwargs["temporal_components"] = temporal_components
-
-
     """
 
     def __init__(
