@@ -31,11 +31,7 @@ _required_extensions = {
 _templates_needed = ["unit_locations", "snr", "template_similarity", "knn", "spike_amplitudes"]
 
 
-def auto_merges(
-    sorting_analyzer: SortingAnalyzer,
-    preset: str | None = "similarity_correlograms",
-    resolve_graph: bool = False,
-    steps_params: dict = {
+_default_step_params = {
         "num_spikes": {"min_spikes": 100},
         "snr": {"min_snr": 2},
         "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
@@ -56,7 +52,14 @@ def auto_merges(
             "censored_period_ms": 0.3,
         },
         "quality_score": {"firing_contamination_balance": 2.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    },
+    }
+
+
+def auto_merges(
+    sorting_analyzer: SortingAnalyzer,
+    preset: str | None = "similarity_correlograms",
+    resolve_graph: bool = False,
+    steps_params: dict = None,
     compute_needed_extensions: bool = True,
     extra_outputs: bool = False,
     steps: list[str] | None = None,
@@ -222,7 +225,9 @@ def auto_merges(
                 elif not compute_needed_extensions and not sorting_analyzer.has_extension(ext):
                     raise ValueError(f"{step} requires {ext} extension")
 
-        params = steps_params.get(step, dict())
+        params = _default_step_params.get(step).copy()
+        if step in steps_params:
+            params.update(steps_params[step])
 
         # STEP : remove units with too few spikes
         if step == "min_spikes":
