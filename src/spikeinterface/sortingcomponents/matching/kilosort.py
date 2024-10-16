@@ -26,14 +26,13 @@ spike_dtype = [
 
 
 class KiloSortPeeler(BaseTemplateMatching):
-
     """
     This code is an adaptation from the code hosted on
 
     https://github.com/MouseLand/Kilosort/blob/main/kilosort/template_matching.py
-    
+
     and implementing the KiloSort4 spike sorting algorithm, published here
-    
+
     https://www.nature.com/articles/s41592-024-02232-7
 
     by Marius Patchitariu and collaborators
@@ -43,7 +42,7 @@ class KiloSortPeeler(BaseTemplateMatching):
     the computations of the convolutions, templates are described via a common predefined
     set of temporal components. This allow to compute only once the temporal convolutions
     for these components, and to reconstruct via spatial components the full convolutions.
-    
+
     """
 
     def __init__(
