@@ -603,13 +603,13 @@ class DetectPeakMatchedFiltering(PeakDetector):
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
-    radius_um: float
+    radius_um : float
         The radius to use to select neighbour channels for locally exclusive detection.
-    prototype: array
+    prototype : array
         The canonical waveform of action potentials
-    rank : int (default 1)
-        The rank for SVD convolution of spatiotemporal templates with the traces
-    weight_method: dict
+    ms_before : float
+        The time in ms before the maximial value of the absolute prototype
+    weight_method : dict
         Parameter that should be provided to the get_convolution_weights() function
         in order to know how to estimate the positions. One argument is mode that could
         be either gaussian_2d (KS like) or exponential_3d (default)
@@ -625,12 +625,12 @@ class DetectPeakMatchedFiltering(PeakDetector):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        rank=1,
         noise_levels=None,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
     ):
         PeakDetector.__init__(self, recording, return_output=True)
+        from scipy.sparse import csr_matrix
 
         if not HAVE_NUMBA:
             raise ModuleNotFoundError('matched_filtering" needs numba which is not installed')
@@ -664,7 +664,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
             self.num_templates *= 2
 
         self.weights = self.weights.reshape(self.num_templates * self.num_z_factors, -1)
-
+        self.weights = csr_matrix(self.weights)
         random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
         conv_random_data = self.get_convolved_traces(random_data)
         medians = np.median(conv_random_data, axis=1)
@@ -734,10 +734,10 @@ class DetectPeakMatchedFiltering(PeakDetector):
         return (local_peaks,)
 
     def get_convolved_traces(self, traces):
-        import scipy.signal
+        from scipy.signal import oaconvolve
 
-        tmp = scipy.signal.oaconvolve(self.prototype[None, :], traces.T, axes=1, mode="valid")
-        scalar_products = np.dot(self.weights, tmp)
+        tmp = oaconvolve(self.prototype[None, :], traces.T, axes=1, mode="valid")
+        scalar_products = self.weights.dot(tmp)
         return scalar_products
 
 
