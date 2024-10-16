@@ -32,27 +32,27 @@ _templates_needed = ["unit_locations", "snr", "template_similarity", "knn", "spi
 
 
 _default_step_params = {
-        "num_spikes": {"min_spikes": 100},
-        "snr": {"min_snr": 2},
-        "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-        "unit_locations": {"max_distance_um": 50},
-        "correlogram": {
-            "corr_diff_thresh": 0.16,
-            "censor_correlograms_ms": 0.3,
-            "sigma_smooth_ms": 0.6,
-            "adaptative_window_thresh": 0.5,
-        },
-        "template_similarity": {"template_diff_thresh": 0.25},
-        "presence_distance": {"presence_distance_thresh": 100},
-        "knn": {"k_nn": 10},
-        "cross_contamination": {
-            "cc_thresh": 0.1,
-            "p_value": 0.2,
-            "refractory_period_ms": 1.0,
-            "censored_period_ms": 0.3,
-        },
-        "quality_score": {"firing_contamination_balance": 2.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    }
+    "num_spikes": {"min_spikes": 100},
+    "snr": {"min_snr": 2},
+    "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+    "unit_locations": {"max_distance_um": 50},
+    "correlogram": {
+        "corr_diff_thresh": 0.16,
+        "censor_correlograms_ms": 0.3,
+        "sigma_smooth_ms": 0.6,
+        "adaptative_window_thresh": 0.5,
+    },
+    "template_similarity": {"template_diff_thresh": 0.25},
+    "presence_distance": {"presence_distance_thresh": 100},
+    "knn": {"k_nn": 10},
+    "cross_contamination": {
+        "cc_thresh": 0.1,
+        "p_value": 0.2,
+        "refractory_period_ms": 1.0,
+        "censored_period_ms": 0.3,
+    },
+    "quality_score": {"firing_contamination_balance": 2.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+}
 
 
 def auto_merges(
@@ -216,12 +216,15 @@ def auto_merges(
 
         if step in _required_extensions:
             for ext in _required_extensions[step]:
-                if compute_needed_extensions and step in _templates_needed:
-                    template_ext = sorting_analyzer.get_extension("templates")
-                    if template_ext is None:
-                        sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
-                    print(f"Extension {ext} is computed with default params")
-                    sorting_analyzer.compute(ext, **job_kwargs)
+                if compute_needed_extensions:
+                    if step in _templates_needed:
+                        template_ext = sorting_analyzer.get_extension("templates")
+                        if template_ext is None:
+                            sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
+                    res_ext = sorting_analyzer.get_extension(step)
+                    if res_ext is None:
+                        print(f"Extension {ext} is computed with default params. Precompute it with custom params if needed")
+                        sorting_analyzer.compute(ext, **job_kwargs)
                 elif not compute_needed_extensions and not sorting_analyzer.has_extension(ext):
                     raise ValueError(f"{step} requires {ext} extension")
 
