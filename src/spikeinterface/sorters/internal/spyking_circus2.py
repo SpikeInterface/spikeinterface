@@ -382,7 +382,6 @@ def create_sorting_analyzer_with_templates(sorting, recording, templates, remove
 def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
 
     sa = create_sorting_analyzer_with_templates(sorting, recording, templates)
-
     sa.compute("unit_locations", method="monopolar_triangulation")
     similarity_kwargs = merging_kwargs.pop("similarity_kwargs", {})
     sa.compute("template_similarity", **similarity_kwargs)
@@ -390,11 +389,8 @@ def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
     sa.compute("correlograms", **correlograms_kwargs)
     
     from spikeinterface.curation.auto_merge import iterative_merges
-
     template_diff_thresh = np.arange(0.05, 0.5, 0.05)
     presets_params = [{'template_similarity' : {'template_diff_thresh' : i}} for i in template_diff_thresh]
     presets = ['x_contaminations'] * len(template_diff_thresh)
-    print(presets_params, presets)
     final_sa = iterative_merges(sa, presets=presets, presets_params=presets_params)
-
     return final_sa.sorting
