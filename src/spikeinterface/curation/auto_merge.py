@@ -216,12 +216,15 @@ def auto_merges(
 
         if step in _required_extensions:
             for ext in _required_extensions[step]:
-                if compute_needed_extensions and step in _templates_needed:
-                    template_ext = sorting_analyzer.get_extension("templates")
-                    if template_ext is None:
-                        sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
-                    print(f"Extension {ext} is computed with default params")
-                    sorting_analyzer.compute(ext, **job_kwargs)
+                if compute_needed_extensions:
+                    if step in _templates_needed:
+                        template_ext = sorting_analyzer.get_extension("templates")
+                        if template_ext is None:
+                            sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
+                    res_ext = sorting_analyzer.get_extension(step)
+                    if res_ext is None:
+                        print(f"Extension {ext} is computed with default params. Precompute it with custom params if needed")
+                        sorting_analyzer.compute(ext, **job_kwargs)
                 elif not compute_needed_extensions and not sorting_analyzer.has_extension(ext):
                     raise ValueError(f"{step} requires {ext} extension")
 
