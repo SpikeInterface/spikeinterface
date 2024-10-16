@@ -45,40 +45,43 @@ from .astype import AstypeRecording, astype
 from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
 
 
-preprocessers_full_list = [
+pp_function_to_class = {
     # filter stuff
-    FilterRecording,
-    BandpassFilterRecording,
-    HighpassFilterRecording,
-    NotchFilterRecording,
-    GaussianFilterRecording,
+    "filter": FilterRecording,
+    "bandpass_filter": BandpassFilterRecording,
+    "notch_filter": NotchFilterRecording,
+    "highpass_filter": HighpassFilterRecording,
+    "gaussian_filter": GaussianFilterRecording,
     # gain offset stuff
-    NormalizeByQuantileRecording,
-    ScaleRecording,
-    CenterRecording,
-    ZScoreRecording,
+    "normalize_by_quantile": NormalizeByQuantileRecording,
+    "scale": ScaleRecording,
+    "zscore": ZScoreRecording,
+    "center": CenterRecording,
     # decorrelation stuff
-    WhitenRecording,
+    "whiten": WhitenRecording,
     # re-reference
-    CommonReferenceRecording,
-    PhaseShiftRecording,
+    "common_reference": CommonReferenceRecording,
+    "phase_shift": PhaseShiftRecording,
     # misc
-    RectifyRecording,
-    ClipRecording,
-    BlankSaturationRecording,
-    SilencedPeriodsRecording,
-    RemoveArtifactsRecording,
-    ZeroChannelPaddedRecording,
-    DeepInterpolatedRecording,
-    ResampleRecording,
-    DecimateRecording,
-    HighpassSpatialFilterRecording,
-    InterpolateBadChannelsRecording,
-    DepthOrderRecording,
-    AverageAcrossDirectionRecording,
-    DirectionalDerivativeRecording,
-    AstypeRecording,
-    UnsignedToSignedRecording,
-]
+    "rectify": RectifyRecording,
+    "clip": ClipRecording,
+    "blank_staturation": BlankSaturationRecording,
+    "silence_periods": SilencedPeriodsRecording,
+    "remove_artifacts": RemoveArtifactsRecording,
+    "zero_channel_pad": ZeroChannelPaddedRecording,
+    "deepinterpolate": DeepInterpolatedRecording,
+    "resample": ResampleRecording,
+    "decimate": DecimateRecording,
+    "highpass_spatial_filter": HighpassSpatialFilterRecording,
+    "interpolate_bad_channels": InterpolateBadChannelsRecording,
+    "depth_order": DepthOrderRecording,
+    "average_across_direction": AverageAcrossDirectionRecording,
+    "directional_derivative": DirectionalDerivativeRecording,
+    "astype": AstypeRecording,
+    "unsigned_to_signed": UnsignedToSignedRecording,
+}
 
-preprocesser_dict = {pp_class.name: pp_class for pp_class in preprocessers_full_list}
+
+preprocessers_full_list = pp_function_to_class.values()
+
+preprocesser_dict = {pp_class.__name__: pp_class for pp_class in preprocessers_full_list}
