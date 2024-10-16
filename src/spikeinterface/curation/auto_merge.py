@@ -537,6 +537,107 @@ def get_potential_auto_merge(
     )
 
 
+def iterative_merges(
+    sorting_analyzer,
+    presets,
+    presets_params=None,
+    merging_kwargs={"merging_mode": "soft", "sparsity_overlap": 0.5, "censor_ms": 3},
+    compute_needed_extensions=True,
+    verbose=False,
+    extra_outputs=False,
+    **job_kwargs,
+):
+    """
+    Wrapper to conveniently be able to launch several presets for auto_merges in a row, as a list. Merges
+    are applied sequentially, one preset at a time, and extensions are not recomputed thanks to the merging units
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer
+    presets : list of presets for the auto_merges() functions. Presets can be in
+            "similarity_correlograms" | "x_contaminations" | "temporal_splits" | "feature_neighbors"
+            (see auto_merge for more details)
+    params : list of params that should be given to all presets. Should have the same length as presets
+    merging_kwargs : dict, the paramaters that should be used while merging units after each preset
+    compute_needed_extensions  : bool, default True
+            During the preset, boolean to specify is extensions needed by the steps should be recomputed,
+            or used as they are if already present in the sorting_analyzer
+    extra_outputs : bool, default: False
+        If True, additional list of merges applied at every preset, and dictionary (`outs`) with processed data are returned.
+    Returns
+    -------
+    sorting_analyzer:
+        The new sorting analyzer where all the merges from all the presets have been applied
+    merges, outs:
+        Returned only when extra_outputs=True
+        A list with all the merges performed at every steps, and dictionaries that contains data for debugging and plotting.
+    """
+
+    if presets_params is None:
+        presets_params = [dict()] * len(presets)
+
+    assert len(presets) == len(presets_params)
+    n_units = max(sorting_analyzer.unit_ids) + 1
+
+    if compute_needed_extensions:
+        sorting_analyzer = sorting_analyzer.copy()
+
+    if extra_outputs:
+        all_merges = []
+        all_outs = []
+
+    for i in range(len(presets)):
+        if extra_outputs:
+            merges, outs = auto_merges(
+                sorting_analyzer,
+                preset=presets[i],
+                resolve_graph=True,
+                compute_needed_extensions=bool(compute_needed_extensions * (i == 0)),
+                extra_outputs=extra_outputs,
+                force_copy=False,
+                steps_params=presets_params[i],
+                **job_kwargs,
+            )
+
+            all_merges += [merges]
+            all_outs += [outs]
+        else:
+            merges = auto_merges(
+                sorting_analyzer,
+                preset=presets[i],
+                resolve_graph=True,
+                compute_needed_extensions=compute_needed_extensions * (i == 0),
+                extra_outputs=extra_outputs,
+                force_copy=False,
+                steps_params=presets_params[i],
+                **job_kwargs,
+            )
+
+        if verbose:
+            n_merges = int(np.sum([len(i) for i in merges]))
+            print(f"{n_merges} merges have been made during pass", presets[i])
+
+        sorting_analyzer = sorting_analyzer.merge_units(merges, **merging_kwargs, **job_kwargs)
+
+    if extra_outputs:
+
+        final_merges = {}
+        for merge in all_merges:
+            for count, m in enumerate(merge):
+                new_list = m
+                for k in m:
+                    if k in final_merges:
+                        new_list.remove(k)
+                        new_list += final_merges[k]
+                final_merges[count + n_units] = new_list
+            if len(final_merges.keys()) > 0:
+                n_units = max(final_merges.keys()) + 1
+
+        return sorting_analyzer, list(final_merges.values()), all_outs
+    else:
+        return sorting_analyzer
+
+
 def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs):
 
     sorting = sorting_analyzer.sorting
