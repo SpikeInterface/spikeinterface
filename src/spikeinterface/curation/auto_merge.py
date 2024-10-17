@@ -637,7 +637,7 @@ def iterative_merges(
 
         if verbose:
             n_merges = int(np.sum([len(i) for i in merges]))
-            print(f"{n_merges} merges have been made during pass", presets[i])
+            print(f"{n_merges} merges have been made during pass", presets[preset_number])
 
         if greedy_merges:
             if n_merges == 0:
