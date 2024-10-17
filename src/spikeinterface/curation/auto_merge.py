@@ -661,9 +661,9 @@ def iterative_merges(
             if len(final_merges.keys()) > 0:
                 n_units = max(final_merges.keys()) + 1
 
-        return sorting_analyzer, list(final_merges.values()), all_outs
+        return sorting_analyzer.sorting, list(final_merges.values()), all_outs
     else:
-        return sorting_analyzer
+        return sorting_analyzer.sorting
 
 
 def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs):
