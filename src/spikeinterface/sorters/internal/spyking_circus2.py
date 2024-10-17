@@ -39,12 +39,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {
-            "similarity_kwargs": {"method": "cosine", "support": "union", "max_lag_ms": 0.1},
-            "correlograms_kwargs": {},
-            "auto_merge": {
-                "min_spikes": 10,
-                "corr_diff_thresh": 0.25,
-            },
+            "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.1},            
         },
         "clustering": {"legacy": True},
         "matching": {"method": "circus-omp-svd"},
@@ -95,18 +90,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         try:
             import hdbscan
-
             HAVE_HDBSCAN = True
         except:
             HAVE_HDBSCAN = False
+
+        assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
         try:
             import torch
         except ImportError:
             HAVE_TORCH = False
             print("spykingcircus2 could benefit from using torch. Consider installing it")
-
-        assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
         # this is importanted only on demand because numba import are too heavy
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -322,13 +316,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
                 )
                 merging_params["max_distance_um"] = max(50, 2 * max_motion)
-
-            # peak_sign = params['detection'].get('peak_sign', 'neg')
-            # best_amplitudes = get_template_extremum_amplitude(templates, peak_sign=peak_sign)
-            # guessed_amplitudes = spikes['amplitude'].copy()
-            # for ind in unit_ids:
-            #     mask = spikes['cluster_index'] == ind
-            #     guessed_amplitudes[mask] *= best_amplitudes[ind]
 
             if params["debug"]:
                 curation_folder = sorter_output_folder / "curation"

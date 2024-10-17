@@ -552,12 +552,15 @@ def iterative_merges(
     merging_kwargs={"merging_mode": "soft", "sparsity_overlap": 0.5, "censor_ms": 3},
     compute_needed_extensions=True,
     verbose=False,
+    greedy_merges=False,
     extra_outputs=False,
     **job_kwargs,
 ):
     """
     Wrapper to conveniently be able to launch several presets for auto_merges in a row, as a list. Merges
-    are applied sequentially, one preset at a time, and extensions are not recomputed thanks to the merging units
+    are applied sequentially or until no more merges are done, one preset at a time, and extensions are 
+    not recomputed thanks to the merging units.
+    
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
@@ -570,6 +573,9 @@ def iterative_merges(
     compute_needed_extensions  : bool, default True
             During the preset, boolean to specify is extensions needed by the steps should be recomputed,
             or used as they are if already present in the sorting_analyzer
+    greedy_merges : bool, default: False
+            If True, then each presets of the list is applied until no further merges can be done, before trying
+            the next one
     extra_outputs : bool, default: False
         If True, additional list of merges applied at every preset, and dictionary (`outs`) with processed data are returned.
     Returns
@@ -594,16 +600,24 @@ def iterative_merges(
         all_merges = []
         all_outs = []
 
-    for i in range(len(presets)):
+    preset_number = 0
+
+    while True:
+
+        if preset_number == len(presets_params):
+            break
+
+        should_compute_extensions = bool(compute_needed_extensions * (preset_number == 0))
+
         if extra_outputs:
             merges, outs = auto_merges(
                 sorting_analyzer,
-                preset=presets[i],
+                preset=presets[preset_number],
                 resolve_graph=True,
-                compute_needed_extensions=bool(compute_needed_extensions * (i == 0)),
+                compute_needed_extensions=should_compute_extensions,
                 extra_outputs=extra_outputs,
                 force_copy=False,
-                steps_params=presets_params[i],
+                steps_params=presets_params[preset_number],
                 **job_kwargs,
             )
 
@@ -612,18 +626,24 @@ def iterative_merges(
         else:
             merges = auto_merges(
                 sorting_analyzer,
-                preset=presets[i],
+                preset=presets[preset_number],
                 resolve_graph=True,
-                compute_needed_extensions=compute_needed_extensions * (i == 0),
+                compute_needed_extensions=should_compute_extensions,
                 extra_outputs=extra_outputs,
                 force_copy=False,
-                steps_params=presets_params[i],
+                steps_params=presets_params[preset_number],
                 **job_kwargs,
             )
 
         if verbose:
             n_merges = int(np.sum([len(i) for i in merges]))
             print(f"{n_merges} merges have been made during pass", presets[i])
+
+        if greedy_merges:
+            if n_merges == 0:
+                preset_number += 1
+        else:
+            preset_number += 1
 
         sorting_analyzer = sorting_analyzer.merge_units(merges, **merging_kwargs, **job_kwargs)
 
