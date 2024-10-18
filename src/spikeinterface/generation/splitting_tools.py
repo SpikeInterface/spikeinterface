@@ -125,7 +125,7 @@ def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5, par
     splitted_pairs = []
     for unit_id in to_split_ids:
         ind_mask = spikes["unit_index"] == sa.sorting.id_to_index(unit_id)
-        thresh = amplitudes[ind_mask].mean() - 2*amplitudes[ind_mask].std()
+        thresh = np.median(amplitudes[ind_mask])
         amplitude_mask = amplitudes > thresh
         mask = amplitude_mask & (rng.rand(len(ind_mask)) <= partial_split_prob).astype(bool) & ind_mask
         new_spikes["unit_index"][mask] = max_index + 1
