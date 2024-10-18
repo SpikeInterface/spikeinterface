@@ -5,11 +5,10 @@ import numpy as np
 import shutil
 
 from spikeinterface.benchmark.benchmark_merging import MergingStudy
-from spikeinterface.benchmark.tests.common_benchmark_testing import (
-    make_dataset
-)
+from spikeinterface.benchmark.tests.common_benchmark_testing import make_dataset
 
 from spikeinterface.generation.splitting_tools import split_sorting_by_amplitudes, split_sorting_by_times
+
 
 @pytest.mark.skip()
 def test_benchmark_merging(create_cache_folder):

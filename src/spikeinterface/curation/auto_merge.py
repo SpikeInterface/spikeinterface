@@ -223,7 +223,9 @@ def auto_merges(
                             sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
                     res_ext = sorting_analyzer.get_extension(step)
                     if res_ext is None:
-                        print(f"Extension {ext} is computed with default params. Precompute it with custom params if needed")
+                        print(
+                            f"Extension {ext} is computed with default params. Precompute it with custom params if needed"
+                        )
                         sorting_analyzer.compute(ext, **job_kwargs)
                 elif not compute_needed_extensions and not sorting_analyzer.has_extension(ext):
                     raise ValueError(f"{step} requires {ext} extension")
@@ -558,9 +560,9 @@ def iterative_merges(
 ):
     """
     Wrapper to conveniently be able to launch several presets for auto_merges in a row, as a list. Merges
-    are applied sequentially or until no more merges are done, one preset at a time, and extensions are 
+    are applied sequentially or until no more merges are done, one preset at a time, and extensions are
     not recomputed thanks to the merging units.
-    
+
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer

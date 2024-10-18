@@ -63,12 +63,14 @@ def split_sorting_by_times(
         new_unit_ids += [max_index + 1]
         splitted_pairs += [(unit_id, new_unit_ids[-1])]
         max_index += 1
-    
+
     new_sorting = NumpySorting(new_spikes, sampling_frequency=sa.sampling_frequency, unit_ids=new_unit_ids)
     return new_sorting, splitted_pairs
 
 
-def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95, unit_ids=None, min_snr=None, seed=None):
+def split_sorting_by_amplitudes(
+    sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95, unit_ids=None, min_snr=None, seed=None
+):
     """
     Fonction used to split a sorting based on the amplitudes of the units. This
     might be used for benchmarking meta merging step (see components)
