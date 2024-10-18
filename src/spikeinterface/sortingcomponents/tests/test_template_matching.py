@@ -45,9 +45,13 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
         "templates": templates,
     }
     method_kwargs = {}
-    if method in ("naive", "tdc-peeler", "circus",):
+    if method in (
+        "naive",
+        "tdc-peeler",
+        "circus",
+    ):
         method_kwargs["noise_levels"] = noise_levels
-    
+
     if method == "kilosort-matching":
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
@@ -73,7 +77,6 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
         spatial_components = model.components_.astype(np.float32)
         method_kwargs["spatial_components"] = spatial_components
         method_kwargs["temporal_components"] = temporal_components
-
 
     # method_kwargs["wobble"] = {
     #     "templates": waveform_extractor.get_all_templates(),
@@ -118,7 +121,7 @@ if __name__ == "__main__":
     # method = "tdc-peeler"
     # method =  "circus"
     # method = "circus-omp-svd"
-    # method = "wobble"
+    # method = "wobble"
     method = "kilosort-matching"
 
     test_find_spikes_from_templates(method, sorting_analyzer)
