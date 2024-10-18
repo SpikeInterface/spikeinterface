@@ -91,7 +91,7 @@ def merge_spikes(
         from spikeinterface.curation.auto_merge import get_potential_auto_merge
         merges = get_potential_auto_merge(sorting_analyzer, **method_kwargs, resolve_graph=True)
         new_sa = sorting_analyzer.copy()
-        new_sa = new_sa.merge_units(merges, **job_kwargs)
+        new_sa = new_sa.merge_units(merges, merging_mode="soft", sparsity_overlap=0.5, censor_ms=3, **job_kwargs)
         sorting = new_sa.sorting
         if extra_outputs:   
             return sorting, merges, []

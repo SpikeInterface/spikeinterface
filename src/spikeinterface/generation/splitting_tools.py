@@ -3,7 +3,7 @@ from spikeinterface.core.numpyextractors import NumpySorting
 
 
 def split_sorting_by_times(
-    sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.8, unit_ids=None, min_snr=None, seed=None
+    sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95, unit_ids=None, min_snr=None, seed=None
 ):
     """
     Fonction used to split a sorting based on the times of the units. This
@@ -57,18 +57,18 @@ def split_sorting_by_times(
     for unit_id in to_split_ids:
         ind_mask = spikes["unit_index"] == sa.sorting.id_to_index(unit_id)
         m = np.median(spikes[ind_mask]["sample_index"])
-        time_mask = spikes[ind_mask]["sample_index"] > m
-        mask = time_mask & (rng.rand(np.sum(ind_mask)) > partial_split_prob).astype(bool)
-        new_spikes[ind_mask]["unit_index"][mask] = max_index + 1
-        max_index += 1
-        new_unit_ids += [max(new_unit_ids) + 1]
+        time_mask = spikes["sample_index"] > m
+        mask = time_mask & (rng.rand(len(ind_mask)) <= partial_split_prob).astype(bool) & ind_mask
+        new_spikes["unit_index"][mask] = max_index + 1
+        new_unit_ids += [max_index + 1]
         splitted_pairs += [(unit_id, new_unit_ids[-1])]
-
+        max_index += 1
+    
     new_sorting = NumpySorting(new_spikes, sampling_frequency=sa.sampling_frequency, unit_ids=new_unit_ids)
     return new_sorting, splitted_pairs
 
 
-def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.8, unit_ids=None, min_snr=None, seed=None):
+def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95, unit_ids=None, min_snr=None, seed=None):
     """
     Fonction used to split a sorting based on the amplitudes of the units. This
     might be used for benchmarking meta merging step (see components)
@@ -125,13 +125,13 @@ def split_sorting_by_amplitudes(sorting_analyzer, splitting_probability=0.5, par
     splitted_pairs = []
     for unit_id in to_split_ids:
         ind_mask = spikes["unit_index"] == sa.sorting.id_to_index(unit_id)
-        m = amplitudes[ind_mask].mean()
-        amplitude_mask = amplitudes[ind_mask] > m
-        mask = amplitude_mask & (rng.rand(np.sum(ind_mask)) > partial_split_prob).astype(bool)
-        new_spikes[ind_mask]["unit_index"][mask] = max_index + 1
-        max_index += 1
-        new_unit_ids += [max(new_unit_ids) + 1]
+        thresh = amplitudes[ind_mask].mean() - 2*amplitudes[ind_mask].std()
+        amplitude_mask = amplitudes > thresh
+        mask = amplitude_mask & (rng.rand(len(ind_mask)) <= partial_split_prob).astype(bool) & ind_mask
+        new_spikes["unit_index"][mask] = max_index + 1
+        new_unit_ids += [max_index + 1]
         splitted_pairs += [(unit_id, new_unit_ids[-1])]
+        max_index += 1
 
     new_sorting = NumpySorting(new_spikes, sampling_frequency=sa.sampling_frequency, unit_ids=new_unit_ids)
     return new_sorting, splitted_pairs
