@@ -2,34 +2,21 @@
 
 from __future__ import annotations
 
-
+import warnings
 from copy import deepcopy
+import platform
+from tqdm.auto import tqdm
 
 import numpy as np
-from tqdm.auto import tqdm
+
+import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
-
-try:
-    import scipy.stats
-    import scipy.spatial.distance
-    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-    from sklearn.neighbors import NearestNeighbors
-    from sklearn.decomposition import IncrementalPCA
-except:
-    pass
-
-from ..core import get_random_data_chunks, compute_sparsity, WaveformExtractor
-from ..core.template_tools import get_template_extremum_channel
-
-from ..postprocessing import WaveformPrincipalComponent
-import warnings
+from threadpoolctl import threadpool_limits
 
 from .misc_metrics import compute_num_spikes, compute_firing_rates
 
-from ..core import get_random_data_chunks, load_waveforms, compute_sparsity, WaveformExtractor
+from ..core import get_random_data_chunks, compute_sparsity
 from ..core.template_tools import get_template_extremum_channel
-from ..postprocessing import WaveformPrincipalComponent
-
 
 _possible_pc_metric_names = [
     "isolation_distance",
@@ -62,22 +49,27 @@ def get_quality_pca_metric_list():
     return deepcopy(_possible_pc_metric_names)
 
 
-def calculate_pc_metrics(
-    pca, metric_names=None, sparsity=None, qm_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
-):
-    """Calculate principal component derived metrics.
+def compute_pc_metrics(
+    sorting_analyzer,
+    metric_names=None,
+    qm_params=None,
+    unit_ids=None,
+    seed=None,
+    n_jobs=1,
+    progress_bar=False,
+    mp_context=None,
+    max_threads_per_process=None,
+) -> dict:
+    """
+    Calculate principal component derived metrics.
 
     Parameters
     ----------
-    pca : WaveformPrincipalComponent
-        Waveform object with principal components computed.
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     metric_names : list of str, default: None
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
-    sparsity: ChannelSparsity or None, default: None
-        The sparsity object. This is used also to identify neighbor
-        units and speed up computations. If None all channels and all units are used
-        for each unit.
     qm_params : dict or None
         Dictionary with parameters for each PC metric function.
     unit_ids : list of int or None
@@ -94,18 +86,21 @@ def calculate_pc_metrics(
     pc_metrics : dict
         The computed PC metrics.
     """
+    pca_ext = sorting_analyzer.get_extension("principal_components")
+    assert pca_ext is not None, "calculate_pc_metrics() need extension 'principal_components'"
+
+    sorting = sorting_analyzer.sorting
+
     if metric_names is None:
-        metric_names = _possible_pc_metric_names
+        metric_names = _possible_pc_metric_names.copy()
     if qm_params is None:
         qm_params = _default_params
 
-    assert isinstance(pca, WaveformPrincipalComponent)
-    we = pca.waveform_extractor
-    extremum_channels = get_template_extremum_channel(we)
+    extremum_channels = get_template_extremum_channel(sorting_analyzer)
 
     if unit_ids is None:
-        unit_ids = we.unit_ids
-    channel_ids = we.channel_ids
+        unit_ids = sorting_analyzer.unit_ids
+    channel_ids = sorting_analyzer.channel_ids
 
     # create output dict of dict  pc_metrics['metric_name'][unit_id]
     pc_metrics = {k: {} for k in metric_names}
@@ -117,75 +112,124 @@ def calculate_pc_metrics(
     if "nn_isolation" in metric_names:
         pc_metrics["nn_unit_id"] = {}
 
+    possible_nn_metrics = ["nn_isolation", "nn_noise_overlap"]
+
+    nn_metrics = list(set(metric_names).intersection(possible_nn_metrics))
+    non_nn_metrics = list(set(metric_names).difference(possible_nn_metrics))
+
     # Compute nspikes and firing rate outside of main loop for speed
-    if any([n in metric_names for n in ["nn_isolation", "nn_noise_overlap"]]):
-        n_spikes_all_units = compute_num_spikes(we, unit_ids=unit_ids)
-        fr_all_units = compute_firing_rates(we, unit_ids=unit_ids)
+    if nn_metrics:
+        n_spikes_all_units = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
+        fr_all_units = compute_firing_rates(sorting_analyzer, unit_ids=unit_ids)
     else:
         n_spikes_all_units = None
         fr_all_units = None
 
     run_in_parallel = n_jobs > 1
 
-    units_loop = enumerate(unit_ids)
-    if progress_bar and not run_in_parallel:
-        units_loop = tqdm(units_loop, desc="Computing PCA metrics", total=len(unit_ids))
-
-    if run_in_parallel:
-        parallel_functions = []
-
-    all_labels, all_pcs = pca.get_all_projections()
+    # this get dense projection for selected unit_ids
+    dense_projections, spike_unit_indices = pca_ext.get_some_projections(channel_ids=None, unit_ids=unit_ids)
+    all_labels = sorting.unit_ids[spike_unit_indices]
 
     items = []
     for unit_id in unit_ids:
-        if we.is_sparse():
-            neighbor_channel_ids = we.sparsity.unit_id_to_channel_ids[unit_id]
-            neighbor_unit_ids = [
-                other_unit for other_unit in unit_ids if extremum_channels[other_unit] in neighbor_channel_ids
-            ]
-        elif sparsity is not None:
-            neighbor_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
+        if sorting_analyzer.is_sparse():
+            neighbor_channel_ids = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
             neighbor_unit_ids = [
                 other_unit for other_unit in unit_ids if extremum_channels[other_unit] in neighbor_channel_ids
             ]
         else:
             neighbor_channel_ids = channel_ids
             neighbor_unit_ids = unit_ids
-        neighbor_channel_indices = we.channel_ids_to_indices(neighbor_channel_ids)
+        neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
 
         labels = all_labels[np.isin(all_labels, neighbor_unit_ids)]
-        pcs = all_pcs[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
+        pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
 
-        func_args = (
-            pcs_flat,
-            labels,
-            metric_names,
-            unit_id,
-            unit_ids,
-            qm_params,
-            seed,
-            we.folder,
-            n_spikes_all_units,
-            fr_all_units,
-        )
+        func_args = (pcs_flat, labels, non_nn_metrics, unit_id, unit_ids, qm_params, max_threads_per_process)
         items.append(func_args)
 
-    if not run_in_parallel:
-        for unit_ind, unit_id in units_loop:
-            pca_metrics_unit = pca_metrics_one_unit(items[unit_ind])
+    if not run_in_parallel and non_nn_metrics:
+        units_loop = enumerate(unit_ids)
+        if progress_bar:
+            units_loop = tqdm(units_loop, desc="calculate pc_metrics", total=len(unit_ids))
+
+        for i, unit_id in units_loop:
+            pca_metrics_unit = pca_metrics_one_unit(items[i])
             for metric_name, metric in pca_metrics_unit.items():
                 pc_metrics[metric_name][unit_id] = metric
-    else:
-        with ProcessPoolExecutor(n_jobs) as executor:
+    elif run_in_parallel and non_nn_metrics:
+        if mp_context is not None and platform.system() == "Windows":
+            assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+        elif mp_context == "fork" and platform.system() == "Darwin":
+            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
+
+        with ProcessPoolExecutor(
+            max_workers=n_jobs,
+            mp_context=mp.get_context(mp_context),
+        ) as executor:
             results = executor.map(pca_metrics_one_unit, items)
             if progress_bar:
-                results = tqdm(results, total=len(unit_ids))
+                results = tqdm(results, total=len(unit_ids), desc="calculate_pc_metrics")
 
             for ui, pca_metrics_unit in enumerate(results):
                 unit_id = unit_ids[ui]
                 for metric_name, metric in pca_metrics_unit.items():
                     pc_metrics[metric_name][unit_id] = metric
+
+    for metric_name in nn_metrics:
+        units_loop = enumerate(unit_ids)
+        if progress_bar:
+            units_loop = tqdm(units_loop, desc=f"calculate {metric_name} metric", total=len(unit_ids))
+
+        func = _nn_metric_name_to_func[metric_name]
+        metric_params = qm_params[metric_name] if metric_name in qm_params else {}
+
+        for _, unit_id in units_loop:
+            try:
+                res = func(
+                    sorting_analyzer,
+                    unit_id,
+                    seed=seed,
+                    n_spikes_all_units=n_spikes_all_units,
+                    fr_all_units=fr_all_units,
+                    **metric_params,
+                )
+            except:
+                if metric_name == "nn_isolation":
+                    res = (np.nan, np.nan)
+                elif metric_name == "nn_noise_overlap":
+                    res = np.nan
+
+            if metric_name == "nn_isolation":
+                nn_isolation, nn_unit_id = res
+                pc_metrics["nn_isolation"][unit_id] = nn_isolation
+                pc_metrics["nn_unit_id"][unit_id] = nn_unit_id
+            elif metric_name == "nn_noise_overlap":
+                pc_metrics["nn_noise_overlap"][unit_id] = res
+
+    return pc_metrics
+
+
+def calculate_pc_metrics(
+    sorting_analyzer, metric_names=None, qm_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
+):
+    warnings.warn(
+        "The `calculate_pc_metrics` function is deprecated and will be removed in 0.103.0. Please use compute_pc_metrics instead",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
+
+    pc_metrics = compute_pc_metrics(
+        sorting_analyzer,
+        metric_names=metric_names,
+        qm_params=qm_params,
+        unit_ids=unit_ids,
+        seed=seed,
+        n_jobs=n_jobs,
+        progress_bar=progress_bar,
+    )
 
     return pc_metrics
 
@@ -195,7 +239,8 @@ def calculate_pc_metrics(
 
 
 def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
-    """Calculates isolation distance and L-ratio (metrics computed from Mahalanobis distance)
+    """
+    Calculate isolation distance and L-ratio (metrics computed from Mahalanobis distance).
 
     Parameters
     ----------
@@ -217,6 +262,8 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
     ----------
     Based on metrics described in [Schmitzer-Torbert]_
     """
+    import scipy.stats
+    import scipy.spatial.distance
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
     pcs_for_other_units = all_pcs[all_labels != this_unit_id, :]
@@ -249,8 +296,9 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
     return isolation_distance, l_ratio
 
 
-def lda_metrics(all_pcs, all_labels, this_unit_id):
-    """Calculates d-prime based on Linear Discriminant Analysis.
+def lda_metrics(all_pcs, all_labels, this_unit_id) -> float:
+    """
+    Calculate d-prime based on Linear Discriminant Analysis.
 
     Parameters
     ----------
@@ -270,6 +318,7 @@ def lda_metrics(all_pcs, all_labels, this_unit_id):
     ----------
     Based on metric described in [Hill]_
     """
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
     X = all_pcs
 
@@ -292,7 +341,7 @@ def lda_metrics(all_pcs, all_labels, this_unit_id):
 
 def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_neighbors):
     """
-    Calculates unit contamination based on NearestNeighbors search in PCA space.
+    Calculate unit contamination based on NearestNeighbors search in PCA space.
 
     Parameters
     ----------
@@ -327,6 +376,7 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
     ----------
     Based on metrics described in [Chung]_
     """
+    from sklearn.neighbors import NearestNeighbors
 
     total_spikes = all_pcs.shape[0]
     ratio = max_spikes / total_spikes
@@ -361,8 +411,8 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
 
 
 def nearest_neighbors_isolation(
-    waveform_extractor: WaveformExtractor,
-    this_unit_id: int,
+    sorting_analyzer,
+    this_unit_id: int | str,
     n_spikes_all_units: dict = None,
     fr_all_units: dict = None,
     max_spikes: int = 1000,
@@ -375,18 +425,19 @@ def nearest_neighbors_isolation(
     min_spatial_overlap: float = 0.5,
     seed=None,
 ):
-    """Calculates unit isolation based on NearestNeighbors search in PCA space.
+    """
+    Calculate unit isolation based on NearestNeighbors search in PCA space.
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
-    this_unit_id : int
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
+    this_unit_id : int | str
         The ID for the unit to calculate these metrics for.
-    n_spikes_all_units: dict, default: None
+    n_spikes_all_units : dict, default: None
         Dictionary of the form ``{<unit_id>: <n_spikes>}`` for the waveform extractor.
         Recomputed if None.
-    fr_all_units: dict, default: None
+    fr_all_units : dict, default: None
         Dictionary of the form ``{<unit_id>: <firing_rate>}`` for the waveform extractor.
         Recomputed if None.
     max_spikes : int, default: 1000
@@ -405,12 +456,12 @@ def nearest_neighbors_isolation(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: "neg" | "pos" | "both", default: "neg"
-        The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor
+    peak_sign : "neg" | "pos" | "both", default: "neg"
+        The peak_sign used to compute sparsity and neighbor units. Used if sorting_analyzer
         is not sparse already.
     min_spatial_overlap : float, default: 100
-        In case waveform_extractor is sparse, other units are selected if they share at least
-        `min_spatial_overlap` times `n_target_unit_channels` with the target unit
+        In case sorting_analyzer is sparse, other units are selected if they share at least
+        `min_spatial_overlap` times `n_target_unit_channels` with the target unit.
     seed : int, default: None
         Seed for random subsampling of spikes.
 
@@ -420,7 +471,7 @@ def nearest_neighbors_isolation(
         The calculation nearest neighbor isolation metric for `this_unit_id`.
         If the unit has fewer than `min_spikes`, returns numpy.NaN instead.
     nn_unit_id : np.int16
-        Id of the "nearest neighbor" unit (unit with lowest isolation score from `this_unit_id`)
+        Id of the "nearest neighbor" unit (unit with lowest isolation score from `this_unit_id`).
 
     Notes
     -----
@@ -452,14 +503,19 @@ def nearest_neighbors_isolation(
     ----------
     Based on isolation metric described in [Chung]_
     """
+    from sklearn.decomposition import IncrementalPCA
+
     rng = np.random.default_rng(seed=seed)
 
-    sorting = waveform_extractor.sorting
+    waveforms_ext = sorting_analyzer.get_extension("waveforms")
+    assert waveforms_ext is not None, "nearest_neighbors_isolation() need extension 'waveforms'"
+
+    sorting = sorting_analyzer.sorting
     all_units_ids = sorting.get_unit_ids()
     if n_spikes_all_units is None:
-        n_spikes_all_units = compute_num_spikes(waveform_extractor)
+        n_spikes_all_units = compute_num_spikes(sorting_analyzer)
     if fr_all_units is None:
-        fr_all_units = compute_firing_rates(waveform_extractor)
+        fr_all_units = compute_firing_rates(sorting_analyzer)
 
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
@@ -489,15 +545,17 @@ def nearest_neighbors_isolation(
         other_units_ids = np.setdiff1d(all_units_ids, this_unit_id)
 
         # get waveforms of target unit
-        waveforms_target_unit = waveform_extractor.get_waveforms(unit_id=this_unit_id)
+        # waveforms_target_unit = sorting_analyzer.get_waveforms(unit_id=this_unit_id)
+        waveforms_target_unit = waveforms_ext.get_waveforms_one_unit(unit_id=this_unit_id, force_dense=False)
+
         n_spikes_target_unit = waveforms_target_unit.shape[0]
 
         # find units whose signal channels (i.e. channels inside some radius around
         # the channel with largest amplitude) overlap with signal channels of the target unit
-        if waveform_extractor.is_sparse():
-            sparsity = waveform_extractor.sparsity
+        if sorting_analyzer.is_sparse():
+            sparsity = sorting_analyzer.sparsity
         else:
-            sparsity = compute_sparsity(waveform_extractor, method="radius", peak_sign=peak_sign, radius_um=radius_um)
+            sparsity = compute_sparsity(sorting_analyzer, method="radius", peak_sign=peak_sign, radius_um=radius_um)
         closest_chans_target_unit = sparsity.unit_id_to_channel_indices[this_unit_id]
         n_channels_target_unit = len(closest_chans_target_unit)
         # select other units that have a minimum spatial overlap with target unit
@@ -518,7 +576,9 @@ def nearest_neighbors_isolation(
                 len(other_units_ids),
             )
             for other_unit_id in other_units_ids:
-                waveforms_other_unit = waveform_extractor.get_waveforms(unit_id=other_unit_id)
+                # waveforms_other_unit = sorting_analyzer.get_waveforms(unit_id=other_unit_id)
+                waveforms_other_unit = waveforms_ext.get_waveforms_one_unit(unit_id=other_unit_id, force_dense=False)
+
                 n_spikes_other_unit = waveforms_other_unit.shape[0]
                 closest_chans_other_unit = sparsity.unit_id_to_channel_indices[other_unit_id]
                 n_snippets = np.min([n_spikes_target_unit, n_spikes_other_unit, max_spikes])
@@ -531,7 +591,7 @@ def nearest_neighbors_isolation(
 
                 # project this unit and other unit waveforms on common subspace
                 common_channel_idxs = np.intersect1d(closest_chans_target_unit, closest_chans_other_unit)
-                if waveform_extractor.is_sparse():
+                if sorting_analyzer.is_sparse():
                     # in this case, waveforms are sparse so we need to do some smart indexing
                     waveforms_target_unit_sampled = waveforms_target_unit_sampled[
                         :, :, np.isin(closest_chans_target_unit, common_channel_idxs)
@@ -568,8 +628,8 @@ def nearest_neighbors_isolation(
 
 
 def nearest_neighbors_noise_overlap(
-    waveform_extractor: WaveformExtractor,
-    this_unit_id: int,
+    sorting_analyzer,
+    this_unit_id: int | str,
     n_spikes_all_units: dict = None,
     fr_all_units: dict = None,
     max_spikes: int = 1000,
@@ -581,18 +641,19 @@ def nearest_neighbors_noise_overlap(
     peak_sign: str = "neg",
     seed=None,
 ):
-    """Calculates unit noise overlap based on NearestNeighbors search in PCA space.
+    """
+    Calculate unit noise overlap based on NearestNeighbors search in PCA space.
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
-    this_unit_id : int
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
+    this_unit_id : int | str
         The ID of the unit to calculate this metric on.
-    n_spikes_all_units: dict, default: None
+    n_spikes_all_units : dict, default: None
         Dictionary of the form ``{<unit_id>: <n_spikes>}`` for the waveform extractor.
         Recomputed if None.
-    fr_all_units: dict, default: None
+    fr_all_units : dict, default: None
         Dictionary of the form ``{<unit_id>: <firing_rate>}`` for the waveform extractor.
         Recomputed if None.
     max_spikes : int, default: 1000
@@ -609,8 +670,8 @@ def nearest_neighbors_noise_overlap(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: "neg" | "pos" | "both", default: "neg"
-        The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor
+    peak_sign : "neg" | "pos" | "both", default: "neg"
+        The peak_sign used to compute sparsity and neighbor units. Used if sorting_analyzer
         is not sparse already.
     seed : int, default: 0
         Random seed for subsampling spikes.
@@ -639,12 +700,28 @@ def nearest_neighbors_noise_overlap(
     ----------
     Based on noise overlap metric described in [Chung]_
     """
+    from sklearn.decomposition import IncrementalPCA
+
     rng = np.random.default_rng(seed=seed)
 
+    waveforms_ext = sorting_analyzer.get_extension("waveforms")
+    assert waveforms_ext is not None, "nearest_neighbors_isolation() need extension 'waveforms'"
+
+    templates_ext = sorting_analyzer.get_extension("templates")
+    assert templates_ext is not None, "nearest_neighbors_isolation() need extension 'templates'"
+
+    try:
+        sorting_analyzer.get_extension("templates").get_data(operator="median")
+    except KeyError:
+        warnings.warn(
+            "nearest_neighbors_isolation() need extension 'templates' calculated with the 'median' operator."
+            "You can run sorting_analyzer.compute('templates', operators=['average', 'median']) to calculate templates based on both average and median modes."
+        )
+
     if n_spikes_all_units is None:
-        n_spikes_all_units = compute_num_spikes(waveform_extractor)
+        n_spikes_all_units = compute_num_spikes(sorting_analyzer)
     if fr_all_units is None:
-        fr_all_units = compute_firing_rates(waveform_extractor)
+        fr_all_units = compute_firing_rates(sorting_analyzer)
 
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
@@ -661,18 +738,20 @@ def nearest_neighbors_noise_overlap(
         return np.nan
     else:
         # get random snippets from the recording to create a noise cluster
-        recording = waveform_extractor.recording
+        nsamples = waveforms_ext.nbefore + waveforms_ext.nafter
+        recording = sorting_analyzer.recording
         noise_cluster = get_random_data_chunks(
             recording,
-            return_scaled=waveform_extractor.return_scaled,
+            return_scaled=sorting_analyzer.return_scaled,
             num_chunks_per_segment=max_spikes,
-            chunk_size=waveform_extractor.nsamples,
+            chunk_size=nsamples,
             seed=seed,
         )
-        noise_cluster = np.reshape(noise_cluster, (max_spikes, waveform_extractor.nsamples, -1))
+        noise_cluster = np.reshape(noise_cluster, (max_spikes, nsamples, -1))
 
         # get waveforms for target cluster
-        waveforms = waveform_extractor.get_waveforms(unit_id=this_unit_id).copy()
+        # waveforms = sorting_analyzer.get_waveforms(unit_id=this_unit_id).copy()
+        waveforms = waveforms_ext.get_waveforms_one_unit(unit_id=this_unit_id, force_dense=False).copy()
 
         # adjust the size of the target and noise clusters to be equal
         if waveforms.shape[0] > max_spikes:
@@ -687,17 +766,21 @@ def nearest_neighbors_noise_overlap(
             n_snippets = max_spikes
 
         # restrict to channels with significant signal
-        if waveform_extractor.is_sparse():
-            sparsity = waveform_extractor.sparsity
+        if sorting_analyzer.is_sparse():
+            sparsity = sorting_analyzer.sparsity
         else:
-            sparsity = compute_sparsity(waveform_extractor, method="radius", peak_sign=peak_sign, radius_um=radius_um)
+            sparsity = compute_sparsity(sorting_analyzer, method="radius", peak_sign=peak_sign, radius_um=radius_um)
         noise_cluster = noise_cluster[:, :, sparsity.unit_id_to_channel_indices[this_unit_id]]
 
         # compute weighted noise snippet (Z)
-        median_waveform = waveform_extractor.get_template(unit_id=this_unit_id, mode="median")
+        # median_waveform = sorting_analyzer.get_template(unit_id=this_unit_id, mode="median")
+        all_templates = templates_ext.get_data(operator="median")
+        this_unit_index = sorting_analyzer.sorting.id_to_index(this_unit_id)
+        median_waveform = all_templates[this_unit_index, :, :]
 
-        # in case waveform_extractor is sparse, waveforms and templates are already sparse
-        if not waveform_extractor.is_sparse():
+        # in case sorting_analyzer is sparse, waveforms and templates are already sparse
+        if not sorting_analyzer.is_sparse():
+            # @alessio : this next line is suspicious because the waveforms is already sparse no ? Am i wrong ?
             waveforms = waveforms[:, :, sparsity.unit_id_to_channel_indices[this_unit_id]]
             median_waveform = median_waveform[:, sparsity.unit_id_to_channel_indices[this_unit_id]]
 
@@ -731,7 +814,8 @@ def nearest_neighbors_noise_overlap(
 
 
 def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
-    """Calculates the simplified silhouette score for each cluster. The value ranges
+    """
+    Calculate the simplified silhouette score for each cluster. The value ranges
     from -1 (bad clustering) to 1 (good clustering). The simplified silhoutte score
     utilizes the centroids for distance calculations rather than pairwise calculations.
 
@@ -747,12 +831,13 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
     Returns
     -------
     unit_silhouette_score : float
-        Simplified Silhouette Score for this unit
+        Simplified Silhouette Score for this unit.
 
     References
     ----------
     Based on simplified silhouette score suggested by [Hruschka]_
     """
+    import scipy.spatial.distance
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
     centroid_for_this_unit = np.expand_dims(np.mean(pcs_for_this_unit, 0), 0)
@@ -780,7 +865,8 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
 
 
 def silhouette_score(all_pcs, all_labels, this_unit_id):
-    """Calculates the silhouette score which is a marker of cluster quality ranging from
+    """
+    Calculate the silhouette score which is a marker of cluster quality ranging from
     -1 (bad clustering) to 1 (good clustering). Distances are all calculated as pairwise
     comparisons of all data points.
 
@@ -796,12 +882,13 @@ def silhouette_score(all_pcs, all_labels, this_unit_id):
     Returns
     -------
     unit_silhouette_score : float
-        Silhouette Score for this unit
+        Silhouette Score for this unit.
 
     References
     ----------
     Based on [Rousseeuw]_
     """
+    import scipy.spatial.distance
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
     distances_for_this_unit = scipy.spatial.distance.cdist(pcs_for_this_unit, pcs_for_this_unit)
@@ -836,7 +923,7 @@ def _subtract_clip_component(clip1, component):
 
 def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
     """
-    Computes the isolation score used for nn_isolation and nn_noise_overlap
+    Compute the isolation score used for nn_isolation and nn_noise_overlap.
 
     Parameters
     ----------
@@ -861,6 +948,7 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
         (1) ranges from 0 to 1; and
         (2) is symmetric, i.e. Isolation(A, B) = Isolation(B, A)
     """
+    from sklearn.neighbors import NearestNeighbors
 
     # get lengths
     n_spikes_target = pcs_target_unit.shape[0]
@@ -889,22 +977,16 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
 
 
 def pca_metrics_one_unit(args):
-    (
-        pcs_flat,
-        labels,
-        metric_names,
-        unit_id,
-        unit_ids,
-        qm_params,
-        seed,
-        we_folder,
-        n_spikes_all_units,
-        fr_all_units,
-    ) = args
+    (pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params, max_threads_per_process) = args
 
-    if "nn_isolation" in metric_names or "nn_noise_overlap" in metric_names:
-        we = load_waveforms(we_folder)
+    if max_threads_per_process is None:
+        return _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params)
+    else:
+        with threadpool_limits(limits=int(max_threads_per_process)):
+            return _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params)
 
+
+def _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params):
     pc_metrics = {}
     # metrics
     if "isolation_distance" in metric_names or "l_ratio" in metric_names:
@@ -913,6 +995,7 @@ def pca_metrics_one_unit(args):
         except:
             isolation_distance = np.nan
             l_ratio = np.nan
+
         if "isolation_distance" in metric_names:
             pc_metrics["isolation_distance"] = isolation_distance
         if "l_ratio" in metric_names:
@@ -926,6 +1009,7 @@ def pca_metrics_one_unit(args):
                 d_prime = lda_metrics(pcs_flat, labels, unit_id)
             except:
                 d_prime = np.nan
+
         pc_metrics["d_prime"] = d_prime
 
     if "nearest_neighbor" in metric_names:
@@ -938,36 +1022,6 @@ def pca_metrics_one_unit(args):
             nn_miss_rate = np.nan
         pc_metrics["nn_hit_rate"] = nn_hit_rate
         pc_metrics["nn_miss_rate"] = nn_miss_rate
-
-    if "nn_isolation" in metric_names:
-        try:
-            nn_isolation, nn_unit_id = nearest_neighbors_isolation(
-                we,
-                unit_id,
-                seed=seed,
-                n_spikes_all_units=n_spikes_all_units,
-                fr_all_units=fr_all_units,
-                **qm_params["nn_isolation"],
-            )
-        except:
-            nn_isolation = np.nan
-            nn_unit_id = np.nan
-        pc_metrics["nn_isolation"] = nn_isolation
-        pc_metrics["nn_unit_id"] = nn_unit_id
-
-    if "nn_noise_overlap" in metric_names:
-        try:
-            nn_noise_overlap = nearest_neighbors_noise_overlap(
-                we,
-                unit_id,
-                n_spikes_all_units=n_spikes_all_units,
-                fr_all_units=fr_all_units,
-                seed=seed,
-                **qm_params["nn_noise_overlap"],
-            )
-        except:
-            nn_noise_overlap = np.nan
-        pc_metrics["nn_noise_overlap"] = nn_noise_overlap
 
     if "silhouette" in metric_names:
         silhouette_method = qm_params["silhouette"]["method"]
@@ -985,3 +1039,9 @@ def pca_metrics_one_unit(args):
             pc_metrics["silhouette_full"] = unit_silhouette_score
 
     return pc_metrics
+
+
+_nn_metric_name_to_func = {
+    "nn_isolation": nearest_neighbors_isolation,
+    "nn_noise_overlap": nearest_neighbors_noise_overlap,
+}

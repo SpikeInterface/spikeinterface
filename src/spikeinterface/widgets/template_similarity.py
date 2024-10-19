@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from .base import BaseWidget, to_attr
-from ..core.waveform_extractor import WaveformExtractor
+from ..core.sortinganalyzer import SortingAnalyzer
 
 
 class TemplateSimilarityWidget(BaseWidget):
@@ -12,8 +12,8 @@ class TemplateSimilarityWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The object to compute/get template similarity from
+    sorting_analyzer : SortingAnalyzer
+        The object to get template similarity from
     unit_ids : list or None, default: None
         List of unit ids default: None
     display_diagonal_values : bool, default: False
@@ -29,7 +29,7 @@ class TemplateSimilarityWidget(BaseWidget):
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
+        sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         cmap="viridis",
         display_diagonal_values=False,
@@ -38,11 +38,13 @@ class TemplateSimilarityWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        self.check_extensions(waveform_extractor, "similarity")
-        tsc = waveform_extractor.load_extension("similarity")
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        self.check_extensions(sorting_analyzer, "template_similarity")
+
+        tsc = sorting_analyzer.get_extension("template_similarity")
         similarity = tsc.get_data().copy()
 
-        sorting = waveform_extractor.sorting
+        sorting = sorting_analyzer.sorting
         if unit_ids is None:
             unit_ids = sorting.unit_ids
         else:

@@ -36,6 +36,12 @@ For instance, the :code:`Kilosort2_5Sorter` will handle:
 From the user's point of view all of this is in the background and it happens automatically when using the
 :py:func:`~spikeinterface.sorters.run_sorter` function.
 
+.. note::
+  Because SpikeInterface needs to interact with other programs (e.g. Matlab) it uses shell scripts to load the scripts
+  that it generates. This means that the appropriate shell must be used. Although for macOS and Linux most shells work
+  without any issues, currently only the :code:`Command Prompt` shell for Windows works. This means that using the
+  :code:`PowerShell` or :code:`Windows Terminal` as your default shell may lead to errors while running sorters. Please
+  see Windows documentation for changing your default shell.
 
 
 Running different spike sorters
@@ -467,6 +473,8 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **HDSort** :code:`run_sorter(sorter_name='hdsort')`
 * **YASS** :code:`run_sorter(sorter_name='yass')`
 
+Internal Sorters
+----------------
 
 Here a list of internal sorter based on `spikeinterface.sortingcomponents`; they are totally
 experimental for now:

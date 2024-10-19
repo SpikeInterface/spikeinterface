@@ -10,7 +10,7 @@ import pytest
 import numpy as np
 from numpy.testing import assert_raises
 
-from probeinterface import Probe
+from probeinterface import Probe, ProbeGroup, generate_linear_probe
 
 from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor, get_default_zarr_compressor
 from spikeinterface.core.base import BaseExtractor
@@ -18,14 +18,9 @@ from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.core import generate_recording
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
-    cache_folder.mkdir(exist_ok=True, parents=True)
 
-
-def test_BaseRecording():
+def test_BaseRecording(create_cache_folder):
+    cache_folder = create_cache_folder
     num_seg = 2
     num_chan = 3
     num_samples = 30
@@ -294,6 +289,18 @@ def test_BaseRecording():
     rec3 = load_extractor(folder)
     assert np.allclose(times1, rec3.get_times(1))
 
+    # reset times
+    rec.reset_times()
+    for segm in range(num_seg):
+        time_info = rec.get_time_info(segment_index=segm)
+        assert not rec.has_time_vector(segment_index=segm)
+        assert time_info["t_start"] is None
+        assert time_info["time_vector"] is None
+        assert time_info["sampling_frequency"] == rec.sampling_frequency
+
+    # resetting time again should be ok
+    rec.reset_times()
+
     # test 3d probe
     rec_3d = generate_recording(ndim=3, num_channels=30)
     locations_3d = rec_3d.get_property("location")
@@ -351,6 +358,34 @@ def test_BaseRecording():
     assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
 
 
+def test_interleaved_probegroups():
+    recording = generate_recording(durations=[1.0], num_channels=16)
+
+    probe1 = generate_linear_probe(num_elec=8, ypitch=20.0)
+    probe2_overlap = probe1.copy()
+
+    probegroup_overlap = ProbeGroup()
+    probegroup_overlap.add_probe(probe1)
+    probegroup_overlap.add_probe(probe2_overlap)
+    probegroup_overlap.set_global_device_channel_indices(np.arange(16))
+
+    # setting overlapping probes should raise an error
+    with pytest.raises(Exception):
+        recording.set_probegroup(probegroup_overlap)
+
+    probe2 = probe1.copy()
+    probe2.move([100.0, 100.0])
+    probegroup = ProbeGroup()
+    probegroup.add_probe(probe1)
+    probegroup.add_probe(probe2)
+    probegroup.set_global_device_channel_indices(np.random.permutation(16))
+
+    recording.set_probegroup(probegroup)
+    probegroup_set = recording.get_probegroup()
+    # check that the probe group is correctly set, by sorting the device channel indices
+    assert np.array_equal(probegroup_set.get_global_device_channel_indices()["device_channel_indices"], np.arange(16))
+
+
 def test_rename_channels():
     recording = generate_recording(durations=[1.0], num_channels=3)
     renamed_recording = recording.rename_channels(new_channel_ids=["a", "b", "c"])
@@ -358,5 +393,39 @@ def test_rename_channels():
     assert np.array_equal(renamed_channel_ids, ["a", "b", "c"])
 
 
+def test_select_channels():
+    recording = generate_recording(durations=[1.0], num_channels=3)
+    renamed_recording = recording.rename_channels(new_channel_ids=["a", "b", "c"])
+    selected_recording = renamed_recording.select_channels(channel_ids=["a", "c"])
+    selected_channel_ids = selected_recording.get_channel_ids()
+    assert np.array_equal(selected_channel_ids, ["a", "c"])
+
+
+def test_time_slice():
+    # Case with sampling frequency
+    sampling_frequency = 10_000.0
+    recording = generate_recording(durations=[1.0], num_channels=3, sampling_frequency=sampling_frequency)
+
+    sliced_recording_times = recording.time_slice(start_time=0.1, end_time=0.8)
+    sliced_recording_frames = recording.frame_slice(start_frame=1000, end_frame=8000)
+
+    assert np.allclose(sliced_recording_times.get_traces(), sliced_recording_frames.get_traces())
+
+
+def test_time_slice_with_time_vector():
+
+    # Case with time vector
+    sampling_frequency = 10_000.0
+    recording = generate_recording(durations=[1.0], num_channels=3, sampling_frequency=sampling_frequency)
+    times = 1 + np.arange(0, 10_000) / sampling_frequency
+    recording.set_times(times=times, segment_index=0, with_warning=False)
+
+    sliced_recording_times = recording.time_slice(start_time=1.1, end_time=1.8)
+    sliced_recording_frames = recording.frame_slice(start_frame=1000, end_frame=8000)
+
+    assert np.allclose(sliced_recording_times.get_traces(), sliced_recording_frames.get_traces())
+
+
 if __name__ == "__main__":
-    test_BaseRecording()
+    # test_BaseRecording()
+    test_interleaved_probegroups()

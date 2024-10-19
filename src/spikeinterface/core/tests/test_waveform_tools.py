@@ -11,13 +11,8 @@ from spikeinterface.core.waveform_tools import (
     extract_waveforms_to_single_buffer,
     split_waveforms_by_units,
     estimate_templates,
+    estimate_templates_with_accumulator,
 )
-
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
 
 
 def _check_all_wf_equal(list_wfs_arrays):
@@ -34,13 +29,14 @@ def get_dataset():
         num_channels=4,
         num_units=7,
         generate_sorting_kwargs=dict(firing_rates=5.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_level=1.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=1.0, strategy="tile_pregenerated"),
         seed=2205,
     )
     return recording, sorting
 
 
-def test_waveform_tools():
+def test_waveform_tools(create_cache_folder):
+    cache_folder = create_cache_folder
     # durations = [30, 40]
     # sampling_frequency = 30000.0
 
@@ -162,7 +158,7 @@ def test_waveform_tools():
     _check_all_wf_equal(list_wfs_sparse)
 
 
-def test_estimate_templates():
+def test_estimate_templates_with_accumulator():
     recording, sorting = get_dataset()
 
     ms_before = 1.0
@@ -177,7 +173,7 @@ def test_estimate_templates():
 
     job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
-    templates = estimate_templates(
+    templates = estimate_templates_with_accumulator(
         recording, spikes, sorting.unit_ids, nbefore, nafter, return_scaled=True, **job_kwargs
     )
     print(templates.shape)
@@ -194,6 +190,41 @@ def test_estimate_templates():
     # plt.show()
 
 
+def test_estimate_templates():
+    recording, sorting = get_dataset()
+
+    ms_before = 1.0
+    ms_after = 1.5
+
+    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+
+    spikes = sorting.to_spike_vector()
+    # take one spikes every 10
+    spikes = spikes[::10]
+
+    job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
+
+    for operator in ("average", "median"):
+        templates = estimate_templates(
+            recording, spikes, sorting.unit_ids, nbefore, nafter, operator=operator, return_scaled=True, **job_kwargs
+        )
+        # print(templates.shape)
+        assert templates.shape[0] == sorting.unit_ids.size
+        assert templates.shape[1] == nbefore + nafter
+        assert templates.shape[2] == recording.get_num_channels()
+
+        assert np.any(templates != 0)
+
+    #     import matplotlib.pyplot as plt
+    #     fig, ax = plt.subplots()
+    #     for unit_index, unit_id in enumerate(sorting.unit_ids):
+    #         ax.plot(templates[unit_index, :, :].T.flatten())
+
+    # plt.show()
+
+
 if __name__ == "__main__":
-    # test_waveform_tools()
+    test_waveform_tools()
+    test_estimate_templates_with_accumulator()
     test_estimate_templates()

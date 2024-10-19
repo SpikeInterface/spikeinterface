@@ -7,7 +7,7 @@ from probeinterface import ProbeGroup
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
-from ..core.waveform_extractor import WaveformExtractor
+from ..core.sortinganalyzer import SortingAnalyzer
 
 
 class UnitLocationsWidget(BaseWidget):
@@ -16,8 +16,8 @@ class UnitLocationsWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The object to compute/get unit locations from
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer that must contains  "unit_locations" extension
     unit_ids : list or None, default: None
         List of unit ids
     with_channel_ids : bool, default: False
@@ -37,7 +37,7 @@ class UnitLocationsWidget(BaseWidget):
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
+        sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         with_channel_ids=False,
         unit_colors=None,
@@ -48,15 +48,17 @@ class UnitLocationsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        self.check_extensions(waveform_extractor, "unit_locations")
-        ulc = waveform_extractor.load_extension("unit_locations")
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+
+        self.check_extensions(sorting_analyzer, "unit_locations")
+        ulc = sorting_analyzer.get_extension("unit_locations")
         unit_locations = ulc.get_data(outputs="by_unit")
 
-        sorting = waveform_extractor.sorting
+        sorting = sorting_analyzer.sorting
 
-        channel_ids = waveform_extractor.channel_ids
-        channel_locations = waveform_extractor.get_channel_locations()
-        probegroup = waveform_extractor.get_probegroup()
+        channel_ids = sorting_analyzer.channel_ids
+        channel_locations = sorting_analyzer.get_channel_locations()
+        probegroup = sorting_analyzer.get_probegroup()
 
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
@@ -127,11 +129,11 @@ class UnitLocationsWidget(BaseWidget):
         if dp.plot_all_units:
             unit_colors = {}
             unit_ids = dp.all_unit_ids
-            for unit in dp.all_unit_ids:
-                if unit not in dp.unit_ids:
-                    unit_colors[unit] = "gray"
+            for unit_id in dp.all_unit_ids:
+                if unit_id not in dp.unit_ids:
+                    unit_colors[unit_id] = "gray"
                 else:
-                    unit_colors[unit] = dp.unit_colors[unit]
+                    unit_colors[unit_id] = dp.unit_colors[unit_id]
         else:
             unit_ids = dp.unit_ids
             unit_colors = dp.unit_colors
@@ -139,13 +141,13 @@ class UnitLocationsWidget(BaseWidget):
 
         patches = [
             Ellipse(
-                (unit_locations[unit]),
-                color=unit_colors[unit],
-                zorder=5 if unit in dp.unit_ids else 3,
-                alpha=0.9 if unit in dp.unit_ids else 0.5,
+                (unit_locations[unit_id]),
+                color=unit_colors[unit_id],
+                zorder=5 if unit_id in dp.unit_ids else 3,
+                alpha=0.9 if unit_id in dp.unit_ids else 0.5,
                 **ellipse_kwargs,
             )
-            for i, unit in enumerate(unit_ids)
+            for unit_ind, unit_id in enumerate(unit_ids)
         ]
         for p in patches:
             self.ax.add_patch(p)

@@ -179,6 +179,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             If True, include all annotations in the extracted data.
         use_names_as_ids : Optional[bool], default: None
             If True, use channel names as IDs. Otherwise, use default IDs.
+            In NEO the ids are guaranteed to be unique. Names are user defined and can be duplicated.
         neo_kwargs : Dict[str, Any]
             Additional keyword arguments to pass to the NeoBaseExtractor for initialization.
 
@@ -205,8 +206,8 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         if stream_id is None and stream_name is None:
             if stream_channels.size > 1:
                 raise ValueError(
-                    f"This reader have several streams: \nNames: {stream_names}\nIDs: {stream_ids}. "
-                    f"Specify it with the 'stream_name' or 'stream_id' arguments"
+                    f"This reader have several streams: \nNames: {stream_names}\nIDs: {stream_ids}. \n"
+                    f"Specify it from the options above with the 'stream_name' or 'stream_id' arguments"
                 )
             else:
                 stream_id = stream_ids[0]
@@ -240,13 +241,21 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             chan_ids = signal_channels["id"]
 
         sampling_frequency = self.neo_reader.get_signal_sampling_rate(stream_index=self.stream_index)
-        dtype = signal_channels["dtype"][0]
+        dtype = np.dtype(signal_channels["dtype"][0])
         BaseRecording.__init__(self, sampling_frequency, chan_ids, dtype)
         self.extra_requirements.append("neo")
 
         # find the gain to uV
         gains = signal_channels["gain"]
         offsets = signal_channels["offset"]
+
+        if dtype.kind == "i" and np.all(gains < 0) and np.all(offsets == 0):
+            # special hack when all channel have negative gain: we put back the gain positive
+            # this help the end user experience
+            self.inverted_gain = True
+            gains = -gains
+        else:
+            self.inverted_gain = False
 
         units = signal_channels["units"]
 
@@ -268,7 +277,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         self.set_property("gain_to_uV", final_gains)
         self.set_property("offset_to_uV", final_offsets)
         if not use_names_as_ids:
-            self.set_property("channel_name", signal_channels["name"])
+            self.set_property("channel_names", signal_channels["name"])
 
         if all_annotations:
             block_ann = self.neo_reader.raw_annotations["blocks"][self.block_index]
@@ -278,17 +287,32 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             seg_ann = block_ann["segments"][0]
             sig_ann = seg_ann["signals"][self.stream_index]
 
-            # scalar annotations
-            for k, v in sig_ann.items():
-                if not k.startswith("__"):
-                    self.set_annotation(k, v)
+            scalar_annotations = {name: value for name, value in sig_ann.items() if not name.startswith("__")}
+
+            # name in neo corresponds to stream name
+            # We don't propagate the name as an annotation because that has a differnt meaning on spikeinterface
+            stream_name = scalar_annotations.pop("name", None)
+            if stream_name:
+                self.set_annotation(annotation_key="stream_name", value=stream_name)
+            for annotation_key, value in scalar_annotations.items():
+                self.set_annotation(annotation_key=annotation_key, value=value)
+
+            array_annotations = sig_ann["__array_annotations__"]
+            # We do not add this because is confusing for the user to have this repeated
+            array_annotations.pop("channel_ids", None)
+            # This is duplicated when using channel_names as ids
+            if use_names_as_ids:
+                array_annotations.pop("channel_names", None)
+
             # vector array_annotations are channel properties
-            for k, values in sig_ann["__array_annotations__"].items():
-                self.set_property(k, values)
+            for key, values in array_annotations.items():
+                self.set_property(key=key, values=values)
 
         nseg = self.neo_reader.segment_count(block_index=self.block_index)
         for segment_index in range(nseg):
-            rec_segment = NeoRecordingSegment(self.neo_reader, self.block_index, segment_index, self.stream_index)
+            rec_segment = NeoRecordingSegment(
+                self.neo_reader, self.block_index, segment_index, self.stream_index, self.inverted_gain
+            )
             self.add_recording_segment(rec_segment)
 
         self._kwargs.update(kwargs)
@@ -301,7 +325,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
 
 class NeoRecordingSegment(BaseRecordingSegment):
-    def __init__(self, neo_reader, block_index, segment_index, stream_index):
+    def __init__(self, neo_reader, block_index, segment_index, stream_index, inverted_gain):
         sampling_frequency = neo_reader.get_signal_sampling_rate(stream_index=stream_index)
         t_start = neo_reader.get_signal_t_start(block_index, segment_index, stream_index=stream_index)
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
@@ -309,6 +333,7 @@ class NeoRecordingSegment(BaseRecordingSegment):
         self.segment_index = segment_index
         self.stream_index = stream_index
         self.block_index = block_index
+        self.inverted_gain = inverted_gain
 
     def get_num_samples(self):
         num_samples = self.neo_reader.get_signal_size(
@@ -331,6 +356,8 @@ class NeoRecordingSegment(BaseRecordingSegment):
             stream_index=self.stream_index,
             channel_indexes=channel_indices,
         )
+        if self.inverted_gain:
+            raw_traces = -raw_traces
         return raw_traces
 
 

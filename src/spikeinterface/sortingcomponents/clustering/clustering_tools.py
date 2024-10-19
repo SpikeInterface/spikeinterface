@@ -8,6 +8,7 @@ from __future__ import annotations
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap
+from spikeinterface.core import NumpySorting
 
 
 def _split_waveforms(
@@ -61,7 +62,7 @@ def _split_waveforms(
         local_feature_plot = local_feature
 
         unique_lab = np.unique(local_labels_with_noise)
-        cmap = plt.get_cmap("jet", unique_lab.size)
+        cmap = plt.colormaps["jet"].resampled(unique_lab.size)
         cmap = {k: cmap(l) for l, k in enumerate(unique_lab)}
         cmap[-1] = "k"
         active_ind = np.arange(local_feature.shape[0])
@@ -144,7 +145,7 @@ def _split_waveforms_nested(
             local_feature_plot = reducer.fit_transform(local_feature)
 
             unique_lab = np.unique(active_labels_with_noise)
-            cmap = plt.get_cmap("jet", unique_lab.size)
+            cmap = plt.colormaps["jet"].resampled(unique_lab.size)
             cmap = {k: cmap(l) for l, k in enumerate(unique_lab)}
             cmap[-1] = "k"
             cmap[-2] = "b"
@@ -275,7 +276,7 @@ def auto_split_clustering(
 
             fig, ax = plt.subplots()
             plot_labels_set = np.unique(local_labels_with_noise)
-            cmap = plt.get_cmap("jet", plot_labels_set.size)
+            cmap = plt.colormaps["jet"].resampled(plot_labels_set.size)
             cmap = {k: cmap(l) for l, k in enumerate(plot_labels_set)}
             cmap[-1] = "k"
             cmap[-2] = "b"
@@ -535,121 +536,130 @@ def remove_duplicates(
     return labels, new_labels
 
 
-def remove_duplicates_via_matching(
-    waveform_extractor,
-    peak_labels,
-    method_kwargs={},
-    job_kwargs={},
-    tmp_folder=None,
-    method="circus-omp-svd",
-):
+def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None, multiple_passes=False):
+
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
-    from spikeinterface.core import BinaryRecordingExtractor
-    from spikeinterface.core import NumpySorting
-    from spikeinterface.core import extract_waveforms
-    from spikeinterface.core import get_global_tmp_folder
-    import string, random, shutil, os
-    from pathlib import Path
+    from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, SharedMemoryRecording
+    import os
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    if waveform_extractor.is_sparse():
-        sparsity = waveform_extractor.sparsity.mask
+    templates_array = templates.get_dense_templates()
 
-    templates = waveform_extractor.get_all_templates(mode="median").copy()
-    nb_templates = len(templates)
-    duration = waveform_extractor.nbefore + waveform_extractor.nafter
+    nb_templates = len(templates_array)
+    duration = templates.nbefore + templates.nafter
 
-    fs = waveform_extractor.recording.get_sampling_frequency()
-    num_chans = waveform_extractor.recording.get_num_channels()
+    fs = templates.sampling_frequency
+    num_chans = len(templates.channel_ids)
+    norms = np.linalg.norm(templates_array, axis=(1, 2))
+    margin = max(templates.nbefore, templates.nafter)
+    tmp_filename = None
+    zdata = np.hstack(((templates_array, np.zeros((nb_templates, margin, num_chans)))))
+    zdata = zdata.reshape(nb_templates * (duration + margin), num_chans)
+    blank = np.zeros((margin, num_chans), dtype=zdata.dtype)
+    zdata = np.vstack((blank, zdata, blank))
 
-    if waveform_extractor.is_sparse():
-        for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
-            templates[count][:, ~sparsity[count]] = 0
+    if tmp_folder is not None:
+        tmp_folder.mkdir(parents=True, exist_ok=True)
+        tmp_filename = tmp_folder / "tmp.raw"
+        f = open(tmp_filename, "wb")
+        f.write(zdata.flatten())
+        f.close()
+        recording = BinaryRecordingExtractor(
+            tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype=zdata.dtype
+        )
+    else:
+        recording = NumpyRecording(zdata, sampling_frequency=fs)
+        recording = SharedMemoryRecording.from_recording(recording)
 
-    zdata = templates.reshape(nb_templates, -1)
-
-    padding = 2 * duration
-    blanck = np.zeros(padding * num_chans, dtype=np.float32)
-
-    if tmp_folder is None:
-        tmp_folder = get_global_tmp_folder()
-
-    tmp_folder.mkdir(parents=True, exist_ok=True)
-
-    tmp_filename = tmp_folder / "tmp.raw"
-
-    f = open(tmp_filename, "wb")
-    f.write(blanck)
-    f.write(zdata.flatten())
-    f.write(blanck)
-    f.close()
-
-    recording = BinaryRecordingExtractor(tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype="float32")
-    recording = recording.set_probe(waveform_extractor.recording.get_probe())
+    recording = recording.set_probe(templates.probe)
     recording.annotate(is_filtered=True)
 
-    margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
-    half_marging = margin // 2
-
-    chunk_size = duration + 3 * margin
-
     local_params = method_kwargs.copy()
+    amplitudes = [0.95, 1.05]
 
-    local_params.update(
-        {"waveform_extractor": waveform_extractor, "amplitudes": [0.975, 1.025], "optimize_amplitudes": False}
-    )
+    local_params.update({"templates": templates, "amplitudes": amplitudes})
 
-    spikes_per_units, counts = np.unique(waveform_extractor.sorting.to_spike_vector()["unit_index"], return_counts=True)
-    indices = np.argsort(counts)
+    unit_ids = templates.unit_ids
 
-    ignore_ids = []
+    ignore_inds = []
     similar_templates = [[], []]
 
-    for i in indices:
-        t_start = padding + i * duration
-        t_stop = padding + (i + 1) * duration
+    keep_searching = True
 
-        sub_recording = recording.frame_slice(t_start - half_marging, t_stop + half_marging)
-        local_params.update({"ignored_ids": ignore_ids + [i]})
-        spikes, computed = find_spikes_from_templates(
-            sub_recording, method=method, method_kwargs=local_params, extra_outputs=True, **job_kwargs
-        )
-        if method == "circus-omp-svd":
-            local_params.update(
-                {
-                    "overlaps": computed["overlaps"],
-                    "templates": computed["templates"],
-                    "norms": computed["norms"],
-                    "temporal": computed["temporal"],
-                    "spatial": computed["spatial"],
-                    "singular": computed["singular"],
-                    "units_overlaps": computed["units_overlaps"],
-                    "unit_overlaps_indices": computed["unit_overlaps_indices"],
-                    "sparsity_mask": computed["sparsity_mask"],
-                }
+    DEBUG = False
+    while keep_searching:
+
+        keep_searching = False
+
+        for i in list(set(range(nb_templates)).difference(ignore_inds)):
+
+            ## Could be speed up by only computing the values for templates that are
+            ## nearby
+
+            t_start = i * (duration + margin)
+            t_stop = margin + (i + 1) * (duration + margin)
+
+            sub_recording = recording.frame_slice(t_start, t_stop)
+            local_params.update({"ignore_inds": ignore_inds + [i]})
+
+            spikes, more_outputs = find_spikes_from_templates(
+                sub_recording, method="circus-omp-svd", method_kwargs=local_params, extra_outputs=True, **job_kwargs
             )
-        elif method == "circus-omp":
-            local_params.update(
-                {
-                    "overlaps": computed["overlaps"],
-                    "templates": computed["templates"],
-                    "norms": computed["norms"],
-                    "sparsities": computed["sparsities"],
-                }
-            )
-        valid = (spikes["sample_index"] >= half_marging) * (spikes["sample_index"] < duration + half_marging)
-        if np.sum(valid) > 0:
-            if np.sum(valid) == 1:
+            local_params["precomputed"] = more_outputs
+            valid = (spikes["sample_index"] >= 0) * (spikes["sample_index"] < duration + 2 * margin)
+
+            if np.sum(valid) > 0:
+                ref_norm = norms[i]
+
                 j = spikes[valid]["cluster_index"][0]
-                ignore_ids += [i]
-                similar_templates[1] += [i]
-                similar_templates[0] += [j]
-            elif np.sum(valid) > 1:
-                similar_templates[0] += [-1]
-                ignore_ids += [i]
-                similar_templates[1] += [i]
+                sum = templates_array[j]
+                for k in range(1, np.sum(valid)):
+                    j = spikes[valid]["cluster_index"][k]
+                    a = spikes[valid]["amplitude"][k]
+                    sum += a * templates_array[j]
 
+                tgt_norm = np.linalg.norm(sum)
+                ratio = tgt_norm / ref_norm
+                if (amplitudes[0] < ratio) and (ratio < amplitudes[1]):
+                    if multiple_passes:
+                        keep_searching = True
+                    if np.sum(valid) == 1:
+                        ignore_inds += [i]
+                        similar_templates[1] += [unit_ids[i]]
+                        similar_templates[0] += [unit_ids[j]]
+                    elif np.sum(valid) > 1:
+                        similar_templates[0] += [-1]
+                        ignore_inds += [i]
+                        similar_templates[1] += [unit_ids[i]]
+
+                    if DEBUG:
+                        import pylab as plt
+
+                        fig, axes = plt.subplots(1, 2)
+                        from spikeinterface.widgets import plot_traces
+
+                        # plot_traces(sub_recording, ax=axes[0])
+                        axes[1].plot(templates_array[i].flatten(), label=f"{ref_norm}")
+                        axes[1].plot(sum.flatten(), label=f"{tgt_norm}")
+                        axes[1].legend()
+                        plt.show()
+                        print(i, spikes[valid]["cluster_index"], spikes[valid]["amplitude"])
+
+    del recording, sub_recording, local_params, templates
+    if tmp_filename is not None:
+        os.remove(tmp_filename)
+
+    return similar_templates
+
+
+def remove_duplicates_via_matching(
+    templates, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None, multiple_passes=False
+):
+
+    similar_templates = detect_mixtures(
+        templates, method_kwargs, job_kwargs, tmp_folder=tmp_folder, multiple_passes=multiple_passes
+    )
     new_labels = peak_labels.copy()
 
     labels = np.unique(new_labels)
@@ -661,9 +671,6 @@ def remove_duplicates_via_matching(
 
     labels = np.unique(new_labels)
     labels = labels[labels >= 0]
-
-    del recording, sub_recording, local_params, waveform_extractor
-    os.remove(tmp_filename)
 
     return labels, new_labels
 

@@ -21,11 +21,14 @@ from .tools import make_multi_method_doc
 
 from spikeinterface.core import get_channel_distances
 
-from ..postprocessing.unit_localization import (
+from ..postprocessing.unit_locations import (
     dtype_localize_by_method,
     possible_localization_methods,
-    solve_monopolar_triangulation,
+)
+
+from ..postprocessing.localization_tools import (
     make_radial_order_parents,
+    solve_monopolar_triangulation,
     enforce_decrease_shells_data,
     get_grid_convolution_templates_and_weights,
 )
@@ -33,7 +36,7 @@ from ..postprocessing.unit_localization import (
 from .tools import get_prototype_spike
 
 
-def _run_localization_from_peak_source(
+def get_localization_pipeline_nodes(
     recording, peak_source, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs
 ):
     # use by localize_peaks() and compute_spike_locations()
@@ -41,6 +44,8 @@ def _run_localization_from_peak_source(
         method in possible_localization_methods
     ), f"Method {method} is not supported. Choose from {possible_localization_methods}"
 
+    # TODO : this is a bad idea becaise it trigger warning when n_jobs is not set globally
+    # because the job_kwargs is never transmitted until here
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
     if method == "center_of_mass":
@@ -66,6 +71,8 @@ def _run_localization_from_peak_source(
     elif method == "grid_convolution":
         if "prototype" not in method_kwargs:
             assert isinstance(peak_source, (PeakRetriever, SpikeRetriever))
+            # extract prototypes silently
+            job_kwargs["progress_bar"] = False
             method_kwargs["prototype"] = get_prototype_spike(
                 recording, peak_source.peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
             )
@@ -78,13 +85,10 @@ def _run_localization_from_peak_source(
             LocalizeGridConvolution(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs),
         ]
 
-    job_name = f"localize peaks using {method}"
-    peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
-
-    return peak_locations
+    return pipeline_nodes
 
 
-def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs):
+def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs) -> np.ndarray:
     """Localize peak (spike) in 2D or 3D depending the method.
 
     When a probe is 2D then:
@@ -94,10 +98,14 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object.
-    peaks: array
+    peaks : array
         Peaks array, as returned by detect_peaks() in "compact_numpy" way.
+    ms_before : float
+        The number of milliseconds to include before the peak of the spike
+    ms_after : float
+        The number of milliseconds to include after the peak of the spike
 
     {method_doc}
 
@@ -109,10 +117,14 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
         Array with estimated location for each spike.
         The dtype depends on the method. ("x", "y") or ("x", "y", "z", "alpha").
     """
+    _, job_kwargs = split_job_kwargs(kwargs)
     peak_retriever = PeakRetriever(recording, peaks)
-    peak_locations = _run_localization_from_peak_source(
+    pipeline_nodes = get_localization_pipeline_nodes(
         recording, peak_retriever, method=method, ms_before=ms_before, ms_after=ms_after, **kwargs
     )
+    job_name = f"localize peaks using {method}"
+    peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
+
     return peak_locations
 
 
@@ -123,7 +135,7 @@ class LocalizeBase(PipelineNode):
         self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
         self._kwargs["radius_um"] = radius_um
 
     def get_dtype(self):
@@ -162,7 +174,7 @@ class LocalizeCenterOfMass(LocalizeBase):
 
     Notes
     -----
-    See spikeinterface.postprocessing.unit_localization.
+    See spikeinterface.postprocessing.unit_locations.
     """
 
     need_waveforms = True
@@ -203,7 +215,7 @@ class LocalizeCenterOfMass(LocalizeBase):
             wf = waveforms[idx][:, :, chan_inds]
 
             if self.feature == "ptp":
-                wf_data = wf.ptp(axis=1)
+                wf_data = np.ptp(wf, axis=1)
             elif self.feature == "mean":
                 wf_data = wf.mean(axis=1)
             elif self.feature == "energy":
@@ -224,7 +236,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     Notes
     -----
     This method is from  Julien Boussard, Erdem Varol and Charlie Windolf
-    See spikeinterface.postprocessing.unit_localization.
+    See spikeinterface.postprocessing.unit_locations.
     """
 
     need_waveforms = False
@@ -292,7 +304,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
 
             wf = waveforms[i, :][:, chan_inds]
             if self.feature == "ptp":
-                wf_data = wf.ptp(axis=0)
+                wf_data = np.ptp(wf, axis=0)
             elif self.feature == "energy":
                 wf_data = np.linalg.norm(wf, axis=0)
             elif self.feature == "peak_voltage":
@@ -315,7 +327,7 @@ class LocalizeGridConvolution(PipelineNode):
 
     Notes
     -----
-    See spikeinterface.postprocessing.unit_localization.
+    See spikeinterface.postprocessing.unit_locations.
     """
 
     need_waveforms = True

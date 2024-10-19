@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .metrics import MetricsBaseWidget
-from ..core.waveform_extractor import WaveformExtractor
+from ..core.sortinganalyzer import SortingAnalyzer
 
 
 class TemplateMetricsWidget(MetricsBaseWidget):
@@ -10,8 +10,8 @@ class TemplateMetricsWidget(MetricsBaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The object to compute/get template metrics from
+    sorting_analyzer : SortingAnalyzer
+        The object to get quality metrics from
     unit_ids : list or None, default: None
         List of unit ids
     include_metrics : list or None, default: None
@@ -26,7 +26,7 @@ class TemplateMetricsWidget(MetricsBaseWidget):
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
+        sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         include_metrics=None,
         skip_metrics=None,
@@ -35,11 +35,11 @@ class TemplateMetricsWidget(MetricsBaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        self.check_extensions(waveform_extractor, "template_metrics")
-        tmc = waveform_extractor.load_extension("template_metrics")
-        template_metrics = tmc.get_data()
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        self.check_extensions(sorting_analyzer, "template_metrics")
+        template_metrics = sorting_analyzer.get_extension("template_metrics").get_data()
 
-        sorting = waveform_extractor.sorting
+        sorting = sorting_analyzer.sorting
 
         MetricsBaseWidget.__init__(
             self,

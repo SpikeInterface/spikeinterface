@@ -7,8 +7,6 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 
 class AverageAcrossDirectionRecording(BaseRecording):
-    name = "average_across_direction"
-    installed = True
 
     def __init__(
         self,
@@ -116,11 +114,6 @@ class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
         return self.parent_recording_segment.get_num_samples()
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
-
         parent_traces = self.parent_recording_segment.get_traces(
             start_frame=start_frame,
             end_frame=end_frame,

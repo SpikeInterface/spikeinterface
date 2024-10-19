@@ -7,6 +7,7 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 from ..core import get_random_data_chunks, get_channel_distances
 from .filter import fix_dtype
+from ..core.globals import get_global_job_kwargs
 
 
 class WhitenRecording(BasePreprocessor):
@@ -15,17 +16,17 @@ class WhitenRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be whitened.
-    dtype: None or dtype, default: None
+    dtype : None or dtype, default: None
         If None the the parent dtype is kept.
         For integer dtype a int_scale must be also given.
-    mode: "global" | "local", default: "global"
+    mode : "global" | "local", default: "global"
         "global" use the entire covariance matrix to compute the W matrix
         "local" use local covariance (by radius) to compute the W matrix
-    radius_um: None or float, default: None
+    radius_um : None or float, default: None
         Used for mode = "local" to get the neighborhood
-    apply_mean: bool, default: False
+    apply_mean : bool, default: False
         Substract or not the mean matrix M before the dot product with W.
     int_scale : None or float, default: None
         Apply a scaling factor to fit the integer range.
@@ -40,21 +41,27 @@ class WhitenRecording(BasePreprocessor):
     M : 1d np.array or None, default: None
         Pre-computed means.
         M can be None when previously computed with apply_mean=False
+    regularize : bool, default: False
+        Boolean to decide if we want to regularize the covariance matrix, using a chosen method
+        of sklearn, specified in regularize_kwargs. Default is GraphicalLassoCV
+    regularize_kwargs : {'method' : 'GraphicalLassoCV'}
+        Dictionary of the parameters that could be provided to the method of sklearn, if
+        the covariance matrix needs to be regularized.
     **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
     -------
-    whitened_recording: WhitenRecording
+    whitened_recording : WhitenRecording
         The whitened recording extractor
     """
-
-    name = "whiten"
 
     def __init__(
         self,
         recording,
         dtype=None,
         apply_mean=False,
+        regularize=False,
+        regularize_kwargs=None,
         mode="global",
         radius_um=100.0,
         int_scale=None,
@@ -75,7 +82,14 @@ class WhitenRecording(BasePreprocessor):
                 M = np.asarray(M)
         else:
             W, M = compute_whitening_matrix(
-                recording, mode, random_chunk_kwargs, apply_mean, radius_um=radius_um, eps=eps
+                recording,
+                mode,
+                random_chunk_kwargs,
+                apply_mean,
+                radius_um=radius_um,
+                eps=eps,
+                regularize=regularize,
+                regularize_kwargs=regularize_kwargs,
             )
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
@@ -90,6 +104,8 @@ class WhitenRecording(BasePreprocessor):
             mode=mode,
             radius_um=radius_um,
             apply_mean=apply_mean,
+            regularize=regularize,
+            regularize_kwargs=regularize_kwargs,
             int_scale=float(int_scale) if int_scale is not None else None,
             M=M.tolist() if M is not None else None,
             W=W.tolist(),
@@ -129,7 +145,9 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
 whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")
 
 
-def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=None):
+def compute_whitening_matrix(
+    recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=None, regularize=False, regularize_kwargs=None
+):
     """
     Compute whitening matrix
 
@@ -152,7 +170,12 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
     eps : float or None, default: None
         Small epsilon to regularize SVD. If None, the default is set to 1e-8, but if the data is float type and scaled
         down to very small values, eps is automatically set to a small fraction (1e-3) of the median of the squared data.
-
+    regularize : bool, default: False
+        Boolean to decide if we want to regularize the covariance matrix, using a chosen method
+        of sklearn, specified in regularize_kwargs. Default is GraphicalLassoCV
+    regularize_kwargs : {'method' : 'GraphicalLassoCV'}
+        Dictionary of the parameters that could be provided to the method of sklearn, if
+        the covariance matrix needs to be regularized.
     Returns
     -------
     W : 2D array
@@ -162,7 +185,8 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
 
     """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
-    random_data = random_data.astype("float32")
+
+    regularize_kwargs = regularize_kwargs if regularize_kwargs is not None else {"method": "GraphicalLassoCV"}
 
     if apply_mean:
         M = np.mean(random_data, axis=0)
@@ -172,8 +196,18 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
         M = None
         data = random_data
 
-    cov = data.T @ data
-    cov = cov / data.shape[0]
+    if not regularize:
+        cov = data.T @ data
+        cov = cov / data.shape[0]
+    else:
+        import sklearn.covariance
+
+        method = regularize_kwargs.pop("method")
+        regularize_kwargs["assume_centered"] = True
+        estimator_class = getattr(sklearn.covariance, method)
+        estimator = estimator_class(**regularize_kwargs)
+        estimator.fit(data)
+        cov = estimator.covariance_
 
     # Here we determine eps used below to avoid division by zero.
     # Typically we can assume that data is either unscaled integers or in units of

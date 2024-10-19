@@ -12,6 +12,17 @@ SpikeInterface is a Python module to analyze extracellular electrophysiology dat
 With a few lines of code, SpikeInterface enables you to load and pre-process the recording, run several
 state-of-the-art spike sorters, post-process and curate the output, compute quality metrics, and visualize the results.
 
+.. warning::
+
+    Version 0.101.0 introduces a major API improvement: the :code:`SortingAnalyzer`.
+    To read more about the motivations, checkout the
+    `enhancement proposal <https://github.com/SpikeInterface/spikeinterface/issues/2282>`_.
+    Learn how to :ref:`update your code here <tutorials/waveform_extractor_to_sorting_analyzer:From WaveformExtractor to SortingAnalyzer>`
+    and read more about the :code:`SortingAnalyzer`, please refer to the
+    :ref:`core <modules/core:SortingAnalyzer>` and :ref:`postprocessing <modules/postprocessing:Postprocessing module>` module
+    documentation.
+
+
 
 Overview of SpikeInterface modules
 ----------------------------------
@@ -39,17 +50,15 @@ SpikeInterface is made of several modules to deal with different aspects of the 
     :caption: Contents:
 
     overview
-    installation
-    import
-    modules/index
+    get_started/index
+    tutorials/index
     how_to/index
-    modules_gallery/index
-    install_sorters
-    viewers
-    development/development
+    modules/index
     api
+    development/development
     whatisnew
     authors
+    references
 
 
 Other resources

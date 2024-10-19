@@ -22,6 +22,7 @@ from .external.yass import YassSorter
 # based on spikeinertface.sortingcomponents
 from .internal.spyking_circus2 import Spykingcircus2Sorter
 from .internal.tridesclous2 import Tridesclous2Sorter
+from .internal.simplesorter import SimpleSorter
 
 sorter_full_list = [
     # external
@@ -46,6 +47,7 @@ sorter_full_list = [
     # internal
     Spykingcircus2Sorter,
     Tridesclous2Sorter,
+    SimpleSorter,
 ]
 
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}
@@ -74,17 +76,17 @@ def print_sorter_versions():
     print(txt)
 
 
-def get_default_sorter_params(sorter_name_or_class):
+def get_default_sorter_params(sorter_name_or_class) -> dict:
     """Returns default parameters for the specified sorter.
 
     Parameters
     ----------
-    sorter_name_or_class: str or SorterClass
+    sorter_name_or_class : str or SorterClass
         The sorter to retrieve default parameters from.
 
     Returns
     -------
-    default_params: dict
+    default_params : dict
         Dictionary with default params for the specified sorter.
     """
 
@@ -98,17 +100,17 @@ def get_default_sorter_params(sorter_name_or_class):
     return SorterClass.default_params()
 
 
-def get_sorter_params_description(sorter_name_or_class):
+def get_sorter_params_description(sorter_name_or_class) -> dict:
     """Returns a description of the parameters for the specified sorter.
 
     Parameters
     ----------
-    sorter_name_or_class: str or SorterClass
+    sorter_name_or_class : str or SorterClass
         The sorter to retrieve parameters description from.
 
     Returns
     -------
-    params_description: dict
+    params_description : dict
         Dictionary with parameter description
     """
 
@@ -122,17 +124,17 @@ def get_sorter_params_description(sorter_name_or_class):
     return SorterClass.params_description()
 
 
-def get_sorter_description(sorter_name_or_class):
+def get_sorter_description(sorter_name_or_class) -> dict:
     """Returns a brief description for the specified sorter.
 
     Parameters
     ----------
-    sorter_name_or_class: str or SorterClass
+    sorter_name_or_class : str or SorterClass
         The sorter to retrieve description from.
 
     Returns
     -------
-    params_description: dict
+    params_description : dict
         Dictionary with parameter description.
     """
 

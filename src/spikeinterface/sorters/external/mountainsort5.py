@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from packaging.version import parse
 
-
 import shutil
 import numpy as np
 from warnings import warn
@@ -22,6 +21,7 @@ class Mountainsort5Sorter(BaseSorter):
     sorter_name = "mountainsort5"
     requires_locations = False
     compatible_with_parallel = {"loky": False, "multiprocessing": False, "threading": False}
+    requires_binary_data = True
 
     _default_params = {
         "scheme": "2",  # '1', '2', '3'
@@ -120,7 +120,6 @@ class Mountainsort5Sorter(BaseSorter):
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         import mountainsort5 as ms5
-        from mountainsort5.util import create_cached_recording
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
         if recording is None:
@@ -148,7 +147,7 @@ class Mountainsort5Sorter(BaseSorter):
                 print("whitening")
             recording = whiten(recording=recording, dtype="float32")
         else:
-            print("WARNING: Not whitening (MountainSort5 expects whitened data)")
+            warn("Not whitening (MountainSort5 expects whitened data)")
 
         scheme1_sorting_parameters = ms5.Scheme1SortingParameters(
             detect_threshold=p["detect_threshold"],

@@ -3,7 +3,7 @@ from copy import deepcopy
 from typing import Literal
 import warnings
 from pathlib import Path
-import gc
+import os
 import mmap
 import tqdm
 
@@ -27,16 +27,16 @@ def read_binary_recording(file, num_channels, dtype, time_axis=0, offset=0):
 
     Parameters
     ----------
-    file: str
+    file : str
         File name
-    num_channels: int
+    num_channels : int
         Number of channels
-    dtype: dtype
+    dtype : dtype
         dtype of the file
-    time_axis: 0 or 1, default: 0
+    time_axis : 0 or 1, default: 0
         If 0 then traces are transposed to ensure (nb_sample, nb_channel) in the file.
         If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
-    offset: int, default: 0
+    offset : int, default: 0
         number of offset bytes
 
     """
@@ -67,12 +67,13 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsi
 
 
 def write_binary_recording(
-    recording,
-    file_paths,
-    dtype=None,
-    add_file_extension=True,
-    byte_offset=0,
-    auto_cast_uint=True,
+    recording: "BaseRecording",
+    file_paths: list[Path | str] | Path | str,
+    dtype: np.typing.DTypeLike = None,
+    add_file_extension: bool = True,
+    byte_offset: int = 0,
+    auto_cast_uint: bool = True,
+    verbose: bool = False,
     **job_kwargs,
 ):
     """
@@ -84,17 +85,22 @@ def write_binary_recording(
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object to be saved in .dat format
-    file_path: str or list[str]
+    file_path : str or list[str]
         The path to the file.
-    dtype: dtype or None, default: None
+    dtype : dtype or None, default: None
         Type of the saved data
-        If True, file the ".raw" file extension is added if the file name is not a "raw", "bin", or "dat"
-    byte_offset: int, default: 0
-        Offset in bytes for the binary file (e.g. to write a header)
-    auto_cast_uint: bool, default: True
+    add_file_extension, bool, default: True
+        If True, and  the file path does not end in "raw", "bin", or "dat" then "raw" is added as an extension.
+    byte_offset : int, default: 0
+        Offset in bytes for the binary file (e.g. to write a header). This is useful in case you want to append data
+        to an existing file where you wrote a header or other data before.
+    auto_cast_uint : bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
+        .. deprecated:: 0.103, use the `unsigned_to_signed` function instead.
+    verbose : bool
+        This is the verbosity of the ChunkRecordingExecutor
     {}
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
@@ -109,9 +115,12 @@ def write_binary_recording(
         file_path_list = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_path_list]
 
     dtype = dtype if dtype is not None else recording.get_dtype()
-    cast_unsigned = False
     if auto_cast_uint:
         cast_unsigned = determine_cast_unsigned(recording, dtype)
+        warning_message = (
+            "auto_cast_uint is deprecated and will be removed in 0.103. Use the `unsigned_to_signed` function instead."
+        )
+        warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
 
     dtype_size_bytes = np.dtype(dtype).itemsize
     num_channels = recording.get_num_channels()
@@ -122,9 +131,12 @@ def write_binary_recording(
         data_size_bytes = dtype_size_bytes * num_frames * num_channels
         file_size_bytes = data_size_bytes + byte_offset
 
-        file = open(file_path, "wb+")
-        file.truncate(file_size_bytes)
-        file.close()
+        # Create an empty file with file_size_bytes
+        with open(file_path, "wb+") as file:
+            # The previous implementation `file.truncate(file_size_bytes)` was slow on Windows (#3408)
+            file.seek(file_size_bytes - 1)
+            file.write(b"\0")
+
         assert Path(file_path).is_file()
 
     # use executor (loop or workers)
@@ -132,7 +144,7 @@ def write_binary_recording(
     init_func = _init_binary_worker
     init_args = (recording, file_path_dict, dtype, byte_offset, cast_unsigned)
     executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, job_name="write_binary_recording", **job_kwargs
+        recording, func, init_func, init_args, job_name="write_binary_recording", verbose=verbose, **job_kwargs
     )
     executor.run()
 
@@ -146,32 +158,39 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     cast_unsigned = worker_ctx["cast_unsigned"]
     file = worker_ctx["file_dict"][segment_index]
 
-    # Open the memmap
-    # What we need is the file_path
     num_channels = recording.get_num_channels()
-    num_frames = recording.get_num_frames(segment_index=segment_index)
-    shape = (num_frames, num_channels)
     dtype_size_bytes = np.dtype(dtype).itemsize
-    data_size_bytes = dtype_size_bytes * num_frames * num_channels
 
-    # Offset (The offset needs to be multiple of the page size)
-    # The mmap offset is associated to be as big as possible but still a multiple of the page size
-    # The array offset takes care of the reminder
-    mmap_offset, array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
-    mmmap_length = data_size_bytes + array_offset
-    memmap_obj = mmap.mmap(file.fileno(), length=mmmap_length, access=mmap.ACCESS_WRITE, offset=mmap_offset)
+    # Calculate byte offsets for the start and end frames relative to the entire recording
+    start_byte = byte_offset + start_frame * num_channels * dtype_size_bytes
+    end_byte = byte_offset + end_frame * num_channels * dtype_size_bytes
 
-    array = np.ndarray.__new__(np.ndarray, shape=shape, dtype=dtype, buffer=memmap_obj, order="C", offset=array_offset)
-    # apply function
+    # The mmap offset must be a multiple of mmap.ALLOCATIONGRANULARITY
+    memmap_offset, start_offset = divmod(start_byte, mmap.ALLOCATIONGRANULARITY)
+    memmap_offset *= mmap.ALLOCATIONGRANULARITY
+
+    # This maps in bytes the region of the memmap that corresponds to the chunk
+    length = (end_byte - start_byte) + start_offset
+    memmap_obj = mmap.mmap(file.fileno(), length=length, access=mmap.ACCESS_WRITE, offset=memmap_offset)
+
+    # To use numpy semantics we use the array interface of the memmap object
+    num_frames = end_frame - start_frame
+    shape = (num_frames, num_channels)
+    memmap_array = np.ndarray(shape=shape, dtype=dtype, buffer=memmap_obj, offset=start_offset)
+
+    # Extract the traces and store them in the memmap array
     traces = recording.get_traces(
         start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
     )
+
     if traces.dtype != dtype:
         traces = traces.astype(dtype, copy=False)
-    array[start_frame:end_frame, :] = traces
 
-    # Close the memmap
+    memmap_array[...] = traces
+
     memmap_obj.flush()
+
+    memmap_obj.close()
 
 
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
@@ -276,20 +295,20 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object to be saved in .dat format
-    dtype: dtype, default: None
+    dtype : dtype, default: None
         Type of the saved data
-    verbose: bool, default: False
+    verbose : bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool, default: True
+    auto_cast_uint : bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
-    buffer_type: "auto" | "numpy" | "sharedmem"
+    buffer_type : "auto" | "numpy" | "sharedmem"
     {}
 
     Returns
     ---------
-    arrays: one array per segment
+    arrays : one array per segment
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
@@ -366,32 +385,32 @@ def write_to_h5_dataset_format(
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object to be saved in .dat format
-    dataset_path: str
+    dataset_path : str
         Path to dataset in the h5 file (e.g. "/dataset")
-    segment_index: int
+    segment_index : int
         index of segment
-    save_path: str, default: None
+    save_path : str, default: None
         The path to the file.
-    file_handle: file handle, default: None
+    file_handle : file handle, default: None
         The file handle to dump data. This can be used to append data to an header. In case file_handle is given,
         the file is NOT closed after writing the binary data.
-    time_axis: 0 or 1, default: 0
+    time_axis : 0 or 1, default: 0
         If 0 then traces are transposed to ensure (nb_sample, nb_channel) in the file.
         If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
-    single_axis: bool, default: False
+    single_axis : bool, default: False
         If True, a single-channel recording is saved as a one dimensional array
-    dtype: dtype, default: None
+    dtype : dtype, default: None
         Type of the saved data
-    chunk_size: None or int, default: None
+    chunk_size : None or int, default: None
         Number of chunks to save the file in. This avoids too much memory consumption for big files.
         If None and "chunk_memory" is given, the file is saved in chunks of "chunk_memory" MB
-    chunk_memory: None or str, default: "500M"
+    chunk_memory : None or str, default: "500M"
         Chunk size in bytes must end with "k", "M" or "G"
-    verbose: bool, default: False
+    verbose : bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool, default: True
+    auto_cast_uint : bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
     return_scaled : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
@@ -509,24 +528,24 @@ def get_random_data_chunks(
 
     Parameters
     ----------
-    recording: BaseRecording
+    recording : BaseRecording
         The recording to get random chunks from
-    return_scaled: bool, default: False
+    return_scaled : bool, default: False
         If True, returned chunks are scaled to uV
-    num_chunks_per_segment: int, default: 20
+    num_chunks_per_segment : int, default: 20
         Number of chunks per segment
-    chunk_size: int, default: 10000
+    chunk_size : int, default: 10000
         Size of a chunk in number of frames
-    concatenated: bool, default: True
+    concatenated : bool, default: True
         If True chunk are concatenated along time axis
-    seed: int, default: 0
+    seed : int, default: 0
         Random seed
-    margin_frames: int, default: 0
+    margin_frames : int, default: 0
         Margin in number of frames to avoid edge effects
 
     Returns
     -------
-    chunk_list: np.array
+    chunk_list : np.array
         Array of concatenate chunks per segment
     """
     # TODO: if segment have differents length make another sampling that dependant on the length of the segment
@@ -586,18 +605,18 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to get closest channels
-    channel_ids: list
+    channel_ids : list
         List of channels ids to compute there near neighborhood
-    num_channels: int, default: None
+    num_channels : int, default: None
         Maximum number of neighborhood channels to return
 
     Returns
     -------
     closest_channels_inds : array (2d)
         Closest channel indices in ascending order for each channel id given in input
-    dists: array (2d)
+    dists : array (2d)
         Distance in ascending order for each channel id given in input
     """
     if channel_ids is None:
@@ -624,7 +643,7 @@ def get_noise_levels(
     method: Literal["mad", "std"] = "mad",
     force_recompute: bool = False,
     **random_chunk_kwargs,
-):
+) -> np.ndarray:
     """
     Estimate noise for each channel using MAD methods.
     You can use standard deviation with `method="std"`
@@ -635,20 +654,20 @@ def get_noise_levels(
     Parameters
     ----------
 
-    recording: BaseRecording
+    recording : BaseRecording
         The recording extractor to get noise levels
-    return_scaled: bool
+    return_scaled : bool
         If True, returned noise levels are scaled to uV
-    method: "mad" | "std", default: "mad"
+    method : "mad" | "std", default: "mad"
         The method to use to estimate noise levels
-    force_recompute: bool
+    force_recompute : bool
         If True, noise levels are recomputed even if they are already stored in the recording extractor
-    random_chunk_kwargs: dict
+    random_chunk_kwargs : dict
         Kwargs for get_random_data_chunks
 
     Returns
     -------
-    noise_levels: array
+    noise_levels : array
         Noise levels for each channel
     """
 
@@ -693,7 +712,7 @@ def get_chunk_with_margin(
     case zero padding is used, in the second case np.pad is called
     with mod="reflect".
     """
-    length = rec_segment.get_num_samples()
+    length = int(rec_segment.get_num_samples())
 
     if channel_indices is None:
         channel_indices = slice(None)
@@ -808,7 +827,7 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y"), 
         If str, it needs to be 'x', 'y', 'z'.
         If tuple or list, it sorts the locations in two dimensions using lexsort.
         This approach is recommended since there is less ambiguity
-    flip: bool, default: False
+    flip : bool, default: False
         If flip is False then the order is bottom first (starting from tip of the probe).
         If flip is True then the order is upper first.
 
@@ -846,7 +865,17 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y"), 
 def check_probe_do_not_overlap(probes):
     """
     When several probes this check that that they do not overlap in space
-    and so channel positions can be safly concatenated.
+    and so channel positions can be safely concatenated.
+
+    Raises
+    ------
+    Exception :
+        If probes are overlapping
+
+    Returns
+    -------
+    None : None
+        If the check is successful
     """
     for i in range(len(probes)):
         probe_i = probes[i]
@@ -862,11 +891,10 @@ def check_probe_do_not_overlap(probes):
 
         for j in range(i + 1, len(probes)):
             probe_j = probes[j]
-
             if np.any(
                 np.array(
                     [
-                        x_bounds_i[0] < cp[0] < x_bounds_i[1] and y_bounds_i[0] < cp[1] < y_bounds_i[1]
+                        x_bounds_i[0] <= cp[0] <= x_bounds_i[1] and y_bounds_i[0] <= cp[1] <= y_bounds_i[1]
                         for cp in probe_j.contact_positions
                     ]
                 )
@@ -898,5 +926,60 @@ def get_rec_attributes(recording):
         num_samples=[recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())],
         is_filtered=recording.is_filtered(),
         properties=properties_to_attrs,
+        dtype=recording.get_dtype(),
     )
     return rec_attributes
+
+
+def do_recording_attributes_match(
+    recording1: "BaseRecording", recording2_attributes: bool, check_dtype: bool = True
+) -> tuple[bool, str]:
+    """
+    Check if two recordings have the same attributes
+
+    Parameters
+    ----------
+    recording1 : BaseRecording
+        The first recording object
+    recording2_attributes : dict
+        The recording attributes to test against
+    check_dtype : bool, default: True
+        If True, check if the recordings have the same dtype
+
+    Returns
+    -------
+    bool
+        True if the recordings have the same attributes
+    str
+        A string with the exception message with the attributes that do not match
+    """
+    recording1_attributes = get_rec_attributes(recording1)
+    recording2_attributes = deepcopy(recording2_attributes)
+    recording1_attributes.pop("properties")
+    recording2_attributes.pop("properties")
+
+    attributes_match = True
+    non_matching_attrs = []
+
+    if not np.array_equal(recording1_attributes["channel_ids"], recording2_attributes["channel_ids"]):
+        non_matching_attrs.append("channel_ids")
+    if not recording1_attributes["sampling_frequency"] == recording2_attributes["sampling_frequency"]:
+        non_matching_attrs.append("sampling_frequency")
+    if not recording1_attributes["num_channels"] == recording2_attributes["num_channels"]:
+        non_matching_attrs.append("num_channels")
+    if not recording1_attributes["num_samples"] == recording2_attributes["num_samples"]:
+        non_matching_attrs.append("num_samples")
+    # dtype is optional
+    if "dtype" in recording1_attributes and "dtype" in recording2_attributes:
+        if check_dtype:
+            if not recording1_attributes["dtype"] == recording2_attributes["dtype"]:
+                non_matching_attrs.append("dtype")
+
+    if len(non_matching_attrs) > 0:
+        attributes_match = False
+        exception_str = f"Recordings do not match in the following attributes: {non_matching_attrs}"
+    else:
+        attributes_match = True
+        exception_str = ""
+
+    return attributes_match, exception_str
