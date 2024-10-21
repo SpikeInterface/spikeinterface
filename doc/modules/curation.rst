@@ -108,7 +108,9 @@ The function can act both on a ``BaseSorting`` or a ``SortingAnalyzer`` object.
         duplicate_threshold=0.9,
         remove_strategy="min_shift"
     )
-    # in order to have a sorter with only the non-redundant units do:
+    # in order to have a SortingAnalyer with only the non-redundant units one must
+    # select the designed units remembering to give format and folder if one wants
+    # a persistent SortingAnalyzer.
     clean_sorting_analyzer = sorting_analyzer.select_units(clean_sorting.unit_ids)
 
 We recommend using the ``SortingAnalyzer`` approach, since the ``min_shift`` strategy keeps
