@@ -305,7 +305,7 @@ class BaseRecording(BaseRecordingSnippets):
         order: "C" | "F" | None = None,
         return_scaled: bool = False,
         cast_unsigned: bool = False,
-    ):
+    ) -> np.ndarray:
         """Returns traces from recording.
 
         Parameters
@@ -495,6 +495,20 @@ class BaseRecording(BaseRecordingSnippets):
                 "Use this carefully!"
             )
 
+    def reset_times(self):
+        """
+        Reset time information in-memory for all segments that have a time vector.
+        If the timestamps come from a file, the files won't be modified. but only the in-memory
+        attributes of the recording objects are deleted. Also `t_start` is set to None and the
+        segment's sampling frequency is set to the recording's sampling frequency.
+        """
+        for segment_index in range(self.get_num_segments()):
+            rs = self._recording_segments[segment_index]
+            if self.has_time_vector(segment_index):
+                rs.time_vector = None
+            rs.t_start = None
+            rs.sampling_frequency = self.sampling_frequency
+
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
         Transform sample index into time in seconds
@@ -553,6 +567,7 @@ class BaseRecording(BaseRecordingSnippets):
                 channel_ids=self.get_channel_ids(),
                 time_axis=0,
                 file_offset=0,
+                is_filtered=self.is_filtered(),
                 gain_to_uV=self.get_channel_gains(),
                 offset_to_uV=self.get_channel_offsets(),
             )
@@ -593,11 +608,11 @@ class BaseRecording(BaseRecordingSnippets):
             probegroup = self.get_probegroup()
             cached.set_probegroup(probegroup)
 
-        time_vectors = self._get_time_vectors()
-        if time_vectors is not None:
-            for segment_index, time_vector in enumerate(time_vectors):
-                if time_vector is not None:
-                    cached.set_times(time_vector, segment_index=segment_index)
+        for segment_index in range(self.get_num_segments()):
+            if self.has_time_vector(segment_index):
+                # the use of get_times is preferred since timestamps are converted to array
+                time_vector = self.get_times(segment_index=segment_index)
+                cached.set_times(time_vector, segment_index=segment_index)
 
         return cached
 
@@ -731,6 +746,30 @@ class BaseRecording(BaseRecordingSnippets):
 
         return SelectSegmentRecording(self, segment_indices=segment_indices)
 
+    def get_channel_locations(
+        self,
+        channel_ids: list | np.ndarray | tuple | None = None,
+        axes: "xy" | "yz" | "xz" | "xyz" = "xy",
+    ) -> np.ndarray:
+        """
+        Get the physical locations of specified channels.
+
+        Parameters
+        ----------
+        channel_ids : array-like, optional
+            The IDs of the channels for which to retrieve locations. If None, retrieves locations
+            for all available channels. Default is None.
+        axes : "xy" | "yz" | "xz" | "xyz", default: "xy"
+            The spatial axes to return, specified as a string (e.g., "xy", "xyz"). Default is "xy".
+
+        Returns
+        -------
+        np.ndarray
+            A 2D or 3D array of shape (n_channels, n_dimensions) containing the locations of the channels.
+            The number of dimensions depends on the `axes` argument (e.g., 2 for "xy", 3 for "xyz").
+        """
+        return super().get_channel_locations(channel_ids=channel_ids, axes=axes)
+
     def is_binary_compatible(self) -> bool:
         """
         Checks if the recording is "binary" compatible.
@@ -753,7 +792,13 @@ class BaseRecording(BaseRecordingSnippets):
             raise NotImplementedError
 
     def binary_compatible_with(
-        self, dtype=None, time_axis=None, file_paths_lenght=None, file_offset=None, file_suffix=None
+        self,
+        dtype=None,
+        time_axis=None,
+        file_paths_length=None,
+        file_offset=None,
+        file_suffix=None,
+        file_paths_lenght=None,
     ):
         """
         Check is the recording is binary compatible with some constrain on
@@ -764,6 +809,15 @@ class BaseRecording(BaseRecordingSnippets):
           * file_offset
           * file_suffix
         """
+
+        # spelling typo need to fix
+        if file_paths_lenght is not None:
+            warnings.warn(
+                "`file_paths_lenght` is deprecated and will be removed in 0.103.0 please use `file_paths_length`"
+            )
+            if file_paths_length is None:
+                file_paths_length = file_paths_lenght
+
         if not self.is_binary_compatible():
             return False
 
@@ -775,7 +829,7 @@ class BaseRecording(BaseRecordingSnippets):
         if time_axis is not None and time_axis != d["time_axis"]:
             return False
 
-        if file_paths_lenght is not None and file_paths_lenght != len(d["file_paths"]):
+        if file_paths_length is not None and file_paths_length != len(d["file_paths"]):
             return False
 
         if file_offset is not None and file_offset != d["file_offset"]:

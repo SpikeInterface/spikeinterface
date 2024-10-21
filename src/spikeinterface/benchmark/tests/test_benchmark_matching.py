@@ -1,6 +1,7 @@
 import pytest
 
 import shutil
+from pathlib import Path
 
 
 from spikeinterface.core import (
@@ -8,11 +9,11 @@ from spikeinterface.core import (
     compute_sparsity,
 )
 
-from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import (
+from spikeinterface.benchmark.tests.common_benchmark_testing import (
     make_dataset,
     compute_gt_templates,
 )
-from spikeinterface.sortingcomponents.benchmark.benchmark_matching import MatchingStudy
+from spikeinterface.benchmark.benchmark_matching import MatchingStudy
 
 
 @pytest.mark.skip()
@@ -27,7 +28,7 @@ def test_benchmark_matching(create_cache_folder):
         recording, gt_sorting, ms_before=2.0, ms_after=3.0, return_scaled=False, **job_kwargs
     )
     noise_levels = get_noise_levels(recording)
-    sparsity = compute_sparsity(gt_templates, noise_levels, method="ptp", threshold=0.25)
+    sparsity = compute_sparsity(gt_templates, noise_levels, method="snr", amplitude_mode="peak_to_peak", threshold=0.25)
     gt_templates = gt_templates.to_sparse(sparsity)
 
     # create study
@@ -72,4 +73,5 @@ def test_benchmark_matching(create_cache_folder):
 
 
 if __name__ == "__main__":
-    test_benchmark_matching()
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks"
+    test_benchmark_matching(cache_folder)

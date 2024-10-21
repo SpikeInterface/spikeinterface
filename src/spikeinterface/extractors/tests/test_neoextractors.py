@@ -181,6 +181,14 @@ class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class NeuroNexusRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroNexusRecordingExtractor
+    downloads = ["neuronexus"]
+    entities = [
+        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "0"}),
+    ]
+
+
 class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = PlexonRecordingExtractor
     downloads = ["plexon"]
@@ -234,7 +242,7 @@ class BlackrockSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = BlackrockSortingExtractor
     downloads = ["blackrock"]
     entities = [
-        "blackrock/FileSpec2.3001.nev",
+        dict(file_path=local_folder / "blackrock/FileSpec2.3001.nev", sampling_frequency=30_000.0),
         dict(file_path=local_folder / "blackrock/blackrock_2_1/l101210-001.nev", sampling_frequency=30_000.0),
     ]
 
@@ -278,8 +286,8 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 @pytest.mark.skipif(
-    version.parse(platform.python_version()) >= version.parse("3.10"),
-    reason="Sonpy only testing with Python < 3.10!",
+    version.parse(platform.python_version()) >= version.parse("3.10") or platform.system() == "Darwin",
+    reason="Sonpy only testing with Python < 3.10 and not supported on macOS!",
 )
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = CedRecordingExtractor
@@ -293,6 +301,7 @@ class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+@pytest.mark.skipif(platform.system() == "Darwin", reason="Maxwell plugin not supported on macOS")
 class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MaxwellRecordingExtractor
     downloads = ["maxwell"]
@@ -359,7 +368,7 @@ class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2RecordingExtractor
     downloads = ["plexon"]
     entities = [
-        ("plexon/4chDemoPL2.pl2", {"stream_id": "3"}),
+        ("plexon/4chDemoPL2.pl2", {"stream_name": "WB-Wideband"}),
     ]
 
 

@@ -71,7 +71,7 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsi
 def write_binary_recording(
     recording: "BaseRecording",
     file_paths: list[Path | str] | Path | str,
-    dtype: np.ndtype = None,
+    dtype: np.typing.DTypeLike = None,
     add_file_extension: bool = True,
     byte_offset: int = 0,
     auto_cast_uint: bool = True,
@@ -133,9 +133,12 @@ def write_binary_recording(
         data_size_bytes = dtype_size_bytes * num_frames * num_channels
         file_size_bytes = data_size_bytes + byte_offset
 
-        file = open(file_path, "wb+")
-        file.truncate(file_size_bytes)
-        file.close()
+        # Create an empty file with file_size_bytes
+        with open(file_path, "wb+") as file:
+            # The previous implementation `file.truncate(file_size_bytes)` was slow on Windows (#3408)
+            file.seek(file_size_bytes - 1)
+            file.write(b"\0")
+
         assert Path(file_path).is_file()
 
     # use executor (loop or workers)
@@ -514,7 +517,7 @@ def determine_cast_unsigned(recording, dtype):
 
 
 def get_random_recording_slices(recording,
-                                method="legacy",
+                                method="full_random",
                                 num_chunks_per_segment=20,
                                 chunk_duration="500ms",
                                 chunk_size=None,
@@ -529,9 +532,9 @@ def get_random_recording_slices(recording,
     ----------
     recording : BaseRecording
         The recording to get random chunks from
-    method : "legacy"
+    method : "full_random"
         The method used to get random slices.
-          * "legacy" : the one used until version 0.101.0, there is no constrain on slices
+          * "full_random" : legacy method,  used until version 0.101.0, there is no constrain on slices
             and they can overlap.
     num_chunks_per_segment : int, default: 20
         Number of chunks per segment
@@ -539,6 +542,7 @@ def get_random_recording_slices(recording,
         The duration of each chunk in 's' or 'ms'
     chunk_size : int | None
         Size of a chunk in number of frames. This is ued only if chunk_duration is None.
+        This is kept for backward compatibility, you should prefer 'chunk_duration=500ms' instead.
     concatenated : bool, default: True
         If True chunk are concatenated along time axis
     seed : int, default: None
@@ -557,7 +561,7 @@ def get_random_recording_slices(recording,
     # Should be done by changing kwargs with total_num_chunks=XXX and total_duration=YYYY
     # And randomize the number of chunk per segment weighted by segment duration
 
-    if method == "legacy":
+    if method == "full_random":
         if chunk_size is None:
             if chunk_duration is not None:
                 chunk_size = chunk_duration_to_chunk_size(chunk_duration, recording)
@@ -596,12 +600,9 @@ def get_random_recording_slices(recording,
 def get_random_data_chunks(
     recording,
     return_scaled=False,
-    num_chunks_per_segment=20,
-    chunk_duration="500ms",
-    chunk_size=None,
     concatenated=True,
-    seed=0,
-    margin_frames=0,
+    random_slices_kwargs={},
+    **kwargs,
 ):
     """
     Extract random chunks across segments
@@ -614,29 +615,30 @@ def get_random_data_chunks(
         If True, returned chunks are scaled to uV
     num_chunks_per_segment : int, default: 20
         Number of chunks per segment
-    chunk_duration : str | float | None, default "500ms"
-        The duration of each chunk in 's' or 'ms'
-    chunk_size : int | None
-        Size of a chunk in number of frames. This is ued only if chunk_duration is None.
     concatenated : bool, default: True
         If True chunk are concatenated along time axis
-    seed : int, default: 0
-        Random seed
-    margin_frames : int, default: 0
-        Margin in number of frames to avoid edge effects
+    random_slices_kwargs : dict
+        Options transmited to  get_random_recording_slices(), please read documentation from this
+        function for more details.
 
     Returns
     -------
     chunk_list : np.array
         Array of concatenate chunks per segment
     """
-    recording_slices = get_random_recording_slices(recording,
-                                method="legacy",
-                                num_chunks_per_segment=num_chunks_per_segment,
-                                chunk_duration=chunk_duration,
-                                chunk_size=chunk_size,
-                                margin_frames=margin_frames,
-                                seed=seed)
+    if len(kwargs) > 0:
+        # This is to keep backward compatibility 
+        # lets keep for a while and remove this maybe in 0.103.0
+        msg = (
+            "get_random_data_chunks(recording, num_chunks_per_segment=20) is deprecated\n"
+            "Now, you need to use get_random_data_chunks(recording, random_slices_kwargs=dict(num_chunks_per_segment=20))\n"
+            "Please read get_random_recording_slices() documentation for more options."
+        )
+        assert len(random_slices_kwargs) ==0, msg
+        warnings.warn(msg)
+        random_slices_kwargs = kwargs
+
+    recording_slices = get_random_recording_slices(recording, **random_slices_kwargs)
 
     chunk_list = []
     for segment_index, start_frame, end_frame in recording_slices:
@@ -734,10 +736,9 @@ def get_noise_levels(
     return_scaled: bool = True,
     method: Literal["mad", "std"] = "mad",
     force_recompute: bool = False,
+    random_slices_kwargs : dict = {},
     **kwargs,
-    # **random_chunk_kwargs,
-    # **job_kwargs
-):
+) -> np.ndarray:
     """
     Estimate noise for each channel using MAD methods.
     You can use standard deviation with `method="std"`
@@ -760,9 +761,11 @@ def get_noise_levels(
         The method to use to estimate noise levels
     force_recompute : bool
         If True, noise levels are recomputed even if they are already stored in the recording extractor
-    random_chunk_kwargs : dict
-        Kwargs for get_random_data_chunks
-
+    random_slices_kwargs : dict
+        Options transmited to  get_random_recording_slices(), please read documentation from this
+        function for more details.
+    **job_kwargs: 
+        Job kwargs for parallel computing.
     Returns
     -------
     noise_levels : array
@@ -777,8 +780,24 @@ def get_noise_levels(
     if key in recording.get_property_keys() and not force_recompute:
         noise_levels = recording.get_property(key=key)
     else:
-        random_slices_kwargs, job_kwargs = split_job_kwargs(kwargs)
-        recording_slices = get_random_recording_slices(recording,**random_slices_kwargs)
+        # This is to keep backward compatibility 
+        # lets keep for a while and remove this maybe in 0.103.0
+        # chunk_size used to be in the signature and now is ambiguous
+        random_slices_kwargs_, job_kwargs = split_job_kwargs(kwargs)
+        if len(random_slices_kwargs_) > 0 or "chunk_size" in job_kwargs:
+            msg = (
+                "get_noise_levels(recording, num_chunks_per_segment=20) is deprecated\n"
+                "Now, you need to use get_noise_levels(recording, random_slices_kwargs=dict(num_chunks_per_segment=20, chunk_size=1000))\n"
+                "Please read get_random_recording_slices() documentation for more options."
+            )
+            # if the user use both the old and the new behavior then an error is raised
+            assert len(random_slices_kwargs) == 0, msg
+            warnings.warn(msg)
+            random_slices_kwargs = random_slices_kwargs_
+            if "chunk_size" in job_kwargs:
+                random_slices_kwargs["chunk_size"] = job_kwargs["chunk_size"]
+
+        recording_slices = get_random_recording_slices(recording, **random_slices_kwargs)
 
         noise_levels_chunks = []
         def append_noise_chunk(res):
@@ -1001,11 +1020,10 @@ def check_probe_do_not_overlap(probes):
 
         for j in range(i + 1, len(probes)):
             probe_j = probes[j]
-
             if np.any(
                 np.array(
                     [
-                        x_bounds_i[0] < cp[0] < x_bounds_i[1] and y_bounds_i[0] < cp[1] < y_bounds_i[1]
+                        x_bounds_i[0] <= cp[0] <= x_bounds_i[1] and y_bounds_i[0] <= cp[1] <= y_bounds_i[1]
                         for cp in probe_j.contact_positions
                     ]
                 )

@@ -10,7 +10,7 @@ import pytest
 import numpy as np
 from numpy.testing import assert_raises
 
-from probeinterface import Probe
+from probeinterface import Probe, ProbeGroup, generate_linear_probe
 
 from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor, get_default_zarr_compressor
 from spikeinterface.core.base import BaseExtractor
@@ -289,6 +289,18 @@ def test_BaseRecording(create_cache_folder):
     rec3 = load_extractor(folder)
     assert np.allclose(times1, rec3.get_times(1))
 
+    # reset times
+    rec.reset_times()
+    for segm in range(num_seg):
+        time_info = rec.get_time_info(segment_index=segm)
+        assert not rec.has_time_vector(segment_index=segm)
+        assert time_info["t_start"] is None
+        assert time_info["time_vector"] is None
+        assert time_info["sampling_frequency"] == rec.sampling_frequency
+
+    # resetting time again should be ok
+    rec.reset_times()
+
     # test 3d probe
     rec_3d = generate_recording(ndim=3, num_channels=30)
     locations_3d = rec_3d.get_property("location")
@@ -346,6 +358,34 @@ def test_BaseRecording(create_cache_folder):
     assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
 
 
+def test_interleaved_probegroups():
+    recording = generate_recording(durations=[1.0], num_channels=16)
+
+    probe1 = generate_linear_probe(num_elec=8, ypitch=20.0)
+    probe2_overlap = probe1.copy()
+
+    probegroup_overlap = ProbeGroup()
+    probegroup_overlap.add_probe(probe1)
+    probegroup_overlap.add_probe(probe2_overlap)
+    probegroup_overlap.set_global_device_channel_indices(np.arange(16))
+
+    # setting overlapping probes should raise an error
+    with pytest.raises(Exception):
+        recording.set_probegroup(probegroup_overlap)
+
+    probe2 = probe1.copy()
+    probe2.move([100.0, 100.0])
+    probegroup = ProbeGroup()
+    probegroup.add_probe(probe1)
+    probegroup.add_probe(probe2)
+    probegroup.set_global_device_channel_indices(np.random.permutation(16))
+
+    recording.set_probegroup(probegroup)
+    probegroup_set = recording.get_probegroup()
+    # check that the probe group is correctly set, by sorting the device channel indices
+    assert np.array_equal(probegroup_set.get_global_device_channel_indices()["device_channel_indices"], np.arange(16))
+
+
 def test_rename_channels():
     recording = generate_recording(durations=[1.0], num_channels=3)
     renamed_recording = recording.rename_channels(new_channel_ids=["a", "b", "c"])
@@ -387,4 +427,5 @@ def test_time_slice_with_time_vector():
 
 
 if __name__ == "__main__":
-    test_BaseRecording()
+    # test_BaseRecording()
+    test_interleaved_probegroups()

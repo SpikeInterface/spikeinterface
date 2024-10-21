@@ -17,6 +17,7 @@ class Motion:
         Motion estimate in um.
         List is the number of segment.
         For each semgent :
+
             * shape (temporal bins, spatial bins)
             * motion.shape[0] = temporal_bins.shape[0]
             * motion.shape[1] = 1 (rigid) or spatial_bins.shape[1] (non rigid)

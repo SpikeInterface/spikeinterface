@@ -44,7 +44,7 @@ def test_compress_templates():
         elif test_case == "num_channels == num_samples":
             num_channels = rng.integers(1, 100)
             num_samples = num_channels
-        templates = rng.random((num_templates, num_samples, num_channels))
+        templates = rng.random((num_templates, num_samples, num_channels), dtype=np.float32)
         full_rank = np.minimum(num_samples, num_channels)
         approx_rank = rng.integers(1, full_rank)
 
@@ -66,15 +66,31 @@ def test_compress_templates():
         assert np.all(singular_full >= 0)
         # check that svd matrices are orthonormal if applicable
         if num_channels > num_samples:
-            assert np.allclose(np.matmul(temporal_full, temporal_full.transpose(0, 2, 1)), np.eye(num_samples))
+            assert np.allclose(
+                np.matmul(temporal_full, temporal_full.transpose(0, 2, 1)),
+                np.eye(num_samples, dtype=np.float32),
+                atol=1e-3,
+            )
         elif num_samples > num_channels:
-            assert np.allclose(np.matmul(spatial_full, spatial_full.transpose(0, 2, 1)), np.eye(num_channels))
+            assert np.allclose(
+                np.matmul(spatial_full, spatial_full.transpose(0, 2, 1)),
+                np.eye(num_channels, dtype=np.float32),
+                atol=1e-3,
+            )
         elif num_channels == num_samples:
-            assert np.allclose(np.matmul(temporal_full, temporal_full.transpose(0, 2, 1)), np.eye(num_samples))
-            assert np.allclose(np.matmul(spatial_full, spatial_full.transpose(0, 2, 1)), np.eye(num_channels))
+            assert np.allclose(
+                np.matmul(temporal_full, temporal_full.transpose(0, 2, 1)),
+                np.eye(num_samples, dtype=np.float32),
+                atol=1e-3,
+            )
+            assert np.allclose(
+                np.matmul(spatial_full, spatial_full.transpose(0, 2, 1)),
+                np.eye(num_channels, dtype=np.float32),
+                atol=1e-3,
+            )
             # check that the full rank svd matrices reconstruct the original templates
             reconstructed_templates = np.matmul(temporal_full * singular_full[:, np.newaxis, :], spatial_full)
-            assert np.allclose(reconstructed_templates, templates)
+            assert np.allclose(reconstructed_templates, templates, atol=1e-3)
 
 
 def test_upsample_and_jitter():
@@ -143,7 +159,7 @@ def test_convolve_templates():
         )
         unit_overlap = unit_overlap > 0
         unit_overlap = np.repeat(unit_overlap, jitter_factor, axis=0)
-        sparsity = wobble.Sparsity(visible_channels, unit_overlap)
+        sparsity = wobble.WobbleSparsity(visible_channels, unit_overlap)
 
         # Act: run convolve_templates
         pairwise_convolution = wobble.convolve_templates(
@@ -211,18 +227,33 @@ def test_compute_objective():
     approx_rank = rng.integers(1, num_samples)
     num_channels = rng.integers(1, 100)
     chunk_len = rng.integers(num_samples * 2, num_samples * 10)
-    traces = rng.random((chunk_len, num_channels))
+    traces = rng.random((chunk_len, num_channels), dtype=np.float32)
     temporal = rng.random((num_templates, num_samples, approx_rank))
     singular = rng.random((num_templates, approx_rank))
     spatial = rng.random((num_templates, approx_rank, num_channels))
-    compressed_templates = (temporal, singular, spatial, temporal)
+
+    spatial_transformed = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
+    temporal_transformed = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
+    singular_transformed = singular.T[:, :, np.newaxis]
+
+    compressed_templates_transformed = (
+        temporal_transformed,
+        singular_transformed,
+        spatial_transformed,
+        temporal_transformed,
+    )
     norm_squared = np.random.rand(num_templates)
+
+    template_data_transformed = wobble.TemplateData(
+        compressed_templates=compressed_templates_transformed, pairwise_convolution=[], norm_squared=norm_squared
+    )
+    # Act: run compute_objective
+    objective = wobble.compute_objective(traces, template_data_transformed, approx_rank, engine="numpy")
+
+    compressed_templates = (temporal, singular, spatial, temporal)
     template_data = wobble.TemplateData(
         compressed_templates=compressed_templates, pairwise_convolution=[], norm_squared=norm_squared
     )
-
-    # Act: run compute_objective
-    objective = wobble.compute_objective(traces, template_data, approx_rank)
     expected_objective = compute_objective_loopy(traces, template_data, approx_rank)
 
     # Assert: check shape and equivalence to expected_objective
