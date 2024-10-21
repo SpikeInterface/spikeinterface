@@ -697,11 +697,11 @@ def compute_location_max_channel(
         unit_ids = templates_or_sorting_analyzer.unit_ids
     else:
         unit_ids = np.asarray(unit_ids)
-    unit_location = np.zeros((unit_ids.size, 2), dtype="float32")
+    unit_locations = np.zeros((unit_ids.size, 2), dtype="float32")
     for i, unit_id in enumerate(unit_ids):
-        unit_location[i, :] = contact_locations[extremum_channels_index[unit_id]]
+        unit_locations[i, :] = contact_locations[extremum_channels_index[unit_id]]
 
-    return unit_location
+    return unit_locations
 
 
 _unit_location_methods = {
