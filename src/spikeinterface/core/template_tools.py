@@ -31,7 +31,8 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_sc
             )
         ext = one_object.get_extension("templates")
         if ext is not None:
-            templates_array = ext.data["average"]
+            templates_array = ext.data.get("average") or ext.data.get("median")
+            assert templates_array is not None, "Average or median templates have not been computed."
         else:
             raise ValueError("SortingAnalyzer need extension 'templates' to be computed to retrieve templates")
     else:
