@@ -667,14 +667,14 @@ def compute_location_max_channel(
     """
     Localize a unit using max channel.
 
-    This use inetrnally get_template_extremum_channel()
+    This uses interrnally `get_template_extremum_channel()`
 
 
     Parameters
     ----------
     templates_or_sorting_analyzer : SortingAnalyzer | Templates
         A SortingAnalyzer or Templates object
-    unit_ids: str | int | None
+    unit_ids: list[str] | list[int] | None
         A list of unit_id to restrict the computation
     peak_sign :  "neg" | "pos" | "both"
         Sign of the template to find extremum channels
