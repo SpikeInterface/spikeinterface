@@ -667,7 +667,7 @@ def compute_location_max_channel(
     """
     Localize a unit using max channel.
 
-    This uses interrnally `get_template_extremum_channel()`
+    This uses internally `get_template_extremum_channel()`
 
 
     Parameters
