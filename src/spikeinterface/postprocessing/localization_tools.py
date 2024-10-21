@@ -684,7 +684,7 @@ def compute_location_max_channel(
         * "at_index" : take value at `nbefore` index
         * "peak_to_peak" : take the peak-to-peak amplitude
 
-            Returns
+    Returns
     -------
     unit_locations: np.ndarray
         2d
