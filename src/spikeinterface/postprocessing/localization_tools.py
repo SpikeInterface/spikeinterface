@@ -686,7 +686,7 @@ def compute_location_max_channel(
 
             Returns
     -------
-    unit_location: np.ndarray
+    unit_locations: np.ndarray
         2d
     """
     extremum_channels_index = get_template_extremum_channel(
