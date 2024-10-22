@@ -125,7 +125,13 @@ class ComputeQualityMetrics(AnalyzerExtension):
         all_unit_ids = new_sorting_analyzer.unit_ids
         not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
 
+        # this creates a new metrics dictionary, but the dtype for everything will be
+        # object
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
+        # we can iterate through the columns and convert them back to numbers with
+        # pandas.to_numeric. coerce allows us to keep the nan values.
+        for column in metrics.columns:
+            metrics[column] = pd.to_numeric(metrics[column], errors="coerce")
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
         metrics.loc[new_unit_ids, :] = self._compute_metrics(

@@ -48,6 +48,34 @@ def test_compute_quality_metrics(sorting_analyzer_simple):
     assert "isolation_distance" in metrics.columns
 
 
+def test_merging_quality_metrics(sorting_analyzer_simple):
+
+    sorting_analyzer = sorting_analyzer_simple
+
+    metrics = compute_quality_metrics(
+        sorting_analyzer,
+        metric_names=None,
+        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        skip_pc_metrics=False,
+        seed=2205,
+    )
+
+    # sorting_analyzer_simple has ten units
+    new_sorting_analyzer = sorting_analyzer.merge([0, 1])
+
+    new_metrics = new_sorting_analyzer.get_extension("quality_metrics").get_data()
+
+    # we should copy over the metrics after merge
+    for column in metrics.columns:
+        assert column in new_metrics.columns
+
+    # 10 units vs 9 units
+    assert len(metrics.index) > len(new_metrics.index)
+
+    # dtype should be fine after merge
+    assert metrics["snr"].dtype == new_metrics["snr"].dtype
+
+
 def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
 
     sorting_analyzer = sorting_analyzer_simple
