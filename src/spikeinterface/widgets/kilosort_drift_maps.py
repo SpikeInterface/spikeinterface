@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import matplotlib.axis
 import scipy.signal
 from spikeinterface.core import read_python
 import numpy as np
@@ -9,28 +10,56 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 
-# TODO: unit test localised spikes only
-# unit test and document _load_cluster_groups
-# unit test and document load_ks_dir
-# unit test and document _template_positions_amplitudes
-# load_ks_dir (    # TODO: .tsv suffix is untested.)
-# TODO: check carefully against matlab (output of 'load ks dir') (TODO: TEST NOISE!)
-# localised_spikes_only:
-#         # TODO: this section is not tested against matlab
-
-
 def plot_ks_drift_map(
     sorter_output: str | Path,
+    only_include_large_amplitude_spikes: bool = True,
+    decimate: None | int = None,
+    add_histogram_plot: bool = False,
+    add_histogram_peaks_and_boundaries: bool = True,
+    add_drift_events: bool = True,
+    weight_histogram_by_amplitude: bool = False,
     localised_spikes_only: bool = False,
-    only_include_large_amplitude_spikes=True,
-    decimate=False,
-    add_histogram_plot=True,
-    weight_histogram_by_amplitude=False,
-    add_histogram_peaks_and_boundaries=True,
-    add_drift_events=True,
-    gain: float | None = None,
     exclude_noise: bool = False,
-):
+    gain: float | None = None,
+) -> None:
+    """
+    Create a drift map plot in the kilosort style. This is ported from Nick Steinmetz's
+    `spikes` repository MATLAB code, https://github.com/cortex-lab/spikes.
+
+    By default, a raster plot is drawn with the y-axis is spike depth and
+    x-axis is time. Optionally, a corresponding 2D activity histogram can be
+    added as a subplot (spatial bins, spike counts) with optional
+    peak coloring and drift event detection (see below).
+
+    Parameters
+    ----------
+    sorter_output : str | Path,
+        Path to the kilosort output folder.
+    only_include_large_amplitude_spikes : bool
+        If `True`, only spikes with larger amplitudes are included. For
+        details, see `filter_large_amplitude_spikes()`.
+    decimate : bool | int
+        If an integer n, every nth spike is dropped from the plot. Useful for improving
+        performance when there are many spikes. If `None`, spikes will not be decimated.
+    add_histogram_plot : bool
+        If `True`, an activity histogram will be added to a new subplot to the
+        left of the drift map.
+    add_histogram_peaks_and_boundaries : bool
+        If `True`, activity histogram peaks are detected and colored rec
+        if isolated according to start/end boundaries of the peak.
+    add_drift_events : bool
+        If `True`, drift events will be plot on the raster map. Required
+        `add_histogram_plot` and `add_histogram_peaks_and_boundaries` to run.
+    weight_histogram_by_amplitude : bool
+        If `True`, histogram counts will be weighted by spike amplitude.
+    localised_spikes_only : bool
+        If `True`, only spatially isolated spikes will be included.
+    exclude_noise : bool
+        If `True`, units labelled as noise inthe `cluster_groups` file
+        will be excluded.
+    gain : float | None
+        If not `None`, amplitudes will be scaled by the supplied gain.
+    """
     spike_times, spike_amplitudes, spike_depths, _ = _compute_spike_amplitude_and_depth(
         sorter_output, localised_spikes_only, exclude_noise, gain
     )
@@ -96,79 +125,162 @@ def plot_ks_drift_map(
         if add_drift_events and np.any(drift_events):
             raster_axis.scatter(drift_events[:, 0], drift_events[:, 1], facecolors="r", edgecolors="none")
             for i, _ in enumerate(drift_events):
-                raster_axis.text(drift_events[i, 0] + 1, drift_events[i, 1], str(round(drift_events[i, 2])), color="r")
-
+                raster_axis.text(
+                    drift_events[i, 0] + 1, drift_events[i, 1], str(np.round(drift_events[i, 2])), color="r"
+                )
     plt.show()
 
 
-def plot_kilosort_drift_map_raster(spike_times, spike_amplitudes, spike_depths, amplitude_range, axis):
-    """ """
+def plot_kilosort_drift_map_raster(
+    spike_times: np.ndarray,
+    spike_amplitudes: np.ndarray,
+    spike_depths: np.ndarray,
+    amplitude_range: np.ndarray | tuple,
+    axis: matplotlib.axes.Axes,
+) -> None:
+    """
+    Plot a drift raster plot in the kilosort style.
+
+    This function was ported from Nick Steinmetz's `spikes` repository
+    MATLAB code, https://github.com/cortex-lab/spikes
+
+    Parameters
+    ----------
+    spike_times : np.ndarray
+        (num_spikes,) array of spike times.
+    spike_amplitudes : np.ndarray
+            (num_spikes,) array of corresponding spike amplitudes.
+    spike_depths : np.ndarray
+            (num_spikes,) array of corresponding spike depths.
+    amplitude_range : np.ndarray
+        (2,) array of min, max amplitude values for color binning.
+    axis : matplotlib.axes.Axes
+        Matplotlib axes object on which to plot the drift map.
+    """
     n_color_bins = 20
     marker_size = 0.5
 
     color_bins = np.linspace(amplitude_range[0], amplitude_range[1], n_color_bins)
 
-    # Create a grayscale colormap and reverse it
     colors = plt.get_cmap("gray")(np.linspace(0, 1, n_color_bins))[::-1]
 
-    # TODO: rewrite
-    for b in range(n_color_bins - 1):
-        these_spikes = (spike_amplitudes >= color_bins[b]) & (spike_amplitudes <= color_bins[b + 1])
+    for bin_idx in range(n_color_bins - 1):
 
+        spikes_in_amplitude_bin = np.logical_and(
+            spike_amplitudes >= color_bins[bin_idx], spike_amplitudes <= color_bins[bin_idx + 1]
+        )
         axis.scatter(
-            spike_times[these_spikes], spike_depths[these_spikes], color=colors[b], s=marker_size, antialiased=True
+            spike_times[spikes_in_amplitude_bin],
+            spike_depths[spikes_in_amplitude_bin],
+            color=colors[bin_idx],
+            s=marker_size,
+            antialiased=True,
         )
 
 
-def compute_activity_histogram(spike_depths, spike_amplitudes, weight_histogram_by_amplitude):
+def compute_activity_histogram(
+    spike_depths: np.ndarray, spike_amplitudes: np.ndarray, weight_histogram_by_amplitude: bool
+) -> tuple[np.ndarray, ...]:
     """
-    double check weight_histogram_by_amplitude but i think it's fine
+    Compute the activity histogram for the kilosort drift map left plot.
+
+    Parameters
+    ----------
+    spike_depths : np.ndarray
+        (num_spikes,) array of spike depths.
+    spike_amplitudes : np.ndarray
+        (num_spikes,) array of spike amplitudes
+    weight_histogram_by_amplitude : bool
+        If `True`, the spike amplitudes are taken into consideration when generating the
+        histogram. The amplitudes are scaled to the range [0, 1] then summed for each bin,
+        to generate the histogram values. If `False`, counts (i.e. num spikes per bin)
+        are used.
+
+    Returns
+    -------
+    bin_centers : np.ndarray
+        The spatial bin centers (i.e. probe depth) for the histogram.
+    values : np.ndarray
+        The histogram values. If `weight_histogram_by_amplitude` is `False`, these
+        are counts, otherwise they are counts weighted by amplitude.
     """
+    assert spike_amplitudes.dtype == np.float64, "`spike amplitudes should be high precision as many values are summed."
+
     bin_um = 2
     bins = np.arange(spike_depths.min() - bin_um, spike_depths.max() + bin_um, bin_um)
-    counts, bins = np.histogram(spike_depths, bins=bins)
+    values, bins = np.histogram(spike_depths, bins=bins)
     bin_centers = (bins[:-1] + bins[1:]) / 2
 
     if weight_histogram_by_amplitude:
         bin_indices = np.digitize(spike_depths, bins, right=True) - 1
-        counts = np.zeros(bin_indices.max() + 1)
-        spike_amplitudes /= spike_amplitudes.max()
-        np.add.at(counts, bin_indices, spike_amplitudes)
+        values = np.zeros(bin_indices.max() + 1, dtype=np.float64)
+        spike_amplitudes = (spike_amplitudes - spike_amplitudes.min()) / np.ptp(spike_amplitudes)
+        np.add.at(values, bin_indices, spike_amplitudes)
 
-    return bin_centers, counts
+    return bin_centers, values
 
 
-def color_histogram_peaks_and_detect_drift_events(spike_times, spike_depths, counts, bin_centers, hist_axis):
-    """ """
+def color_histogram_peaks_and_detect_drift_events(
+    spike_times: np.ndarray,
+    spike_depths: np.ndarray,
+    counts: np.ndarray,
+    bin_centers: np.ndarray,
+    hist_axis: matplotlib.axes.Axes,
+) -> np.ndarray:
+    """
+    Given an activity histogram, color the peaks red (isolated peak) or
+    blue (peak overlaps with other peaks) and compute spatial drift
+    events for isolated peaks across time bins.
+
+    This function was ported from Nick Steinmetz's `spikes` repository
+    MATLAB code, https://github.com/cortex-lab/spikes
+
+    Parameters
+    ----------
+    spike_times : np.ndarray
+        (num_spikes,) array of spike times.
+    spike_depths : np.ndarray
+        (num_spikes,) array of corresponding spike depths.
+    counts : np.ndarray
+        (num_bins,) array of histogram bin counts.
+    bin_centers : np.ndarray
+        (num_bins,) array of histogram bin centers.
+    hist_axis : matplotlib.axes.Axes
+        Axes on which the histogram is plot, to add peaks.
+
+    Returns
+    -------
+    drift_events : np.ndarray
+        A (num_drift_events, 3) array of drift events. The columns are
+        (time_position, spatial_position, drift_value). The drift
+        value is computed per time, spatial bin as the difference between
+        the median position of spikes in the bin, and the bin center.
+    """
     all_peak_indexes = scipy.signal.find_peaks(
         counts,
     )[0]
 
-    # new step to filter low-frequency peaks so they are not included in the
-    # step to determine whether peaks are overlapping.
-    filtered_peak_indexes = []
-    for peak_idx in all_peak_indexes:
-        if counts[peak_idx] > 0.25 * spike_times[-1]:
-            filtered_peak_indexes.append(peak_idx)
-    filtered_peak_indexes = np.array(filtered_peak_indexes)
+    # Filter low-frequency peaks, so they are not included in the
+    # step to determine whether peaks are overlapping (new step
+    # introduced in the port to python)
+    bin_above_freq_threshold = counts[all_peak_indexes] > 0.3 * spike_times[-1]
+    filtered_peak_indexes = all_peak_indexes[bin_above_freq_threshold]
 
     drift_events = []
     for idx, peak_index in enumerate(filtered_peak_indexes):
 
         peak_count = counts[peak_index]
 
-        #  we want the peaks to correspond to some minimal firing rate
-        #  (otherwise peaks by very few spikes will be considered as well...)
+        # Find the start and end of peak min/max bounds (5% of amplitude)
         start_position = np.where(counts[:peak_index] < peak_count * 0.05)[0].max()
         end_position = np.where(counts[peak_index:] < peak_count * 0.05)[0].min() + peak_index
 
-        if (
+        if (  # bounds include another, different histogram peak
             idx > 0
-            and start_position < filtered_peak_indexes[idx - 1]  # TODO: THINK
+            and start_position < filtered_peak_indexes[idx - 1]
             or idx < filtered_peak_indexes.size - 1
             and end_position > filtered_peak_indexes[idx + 1]
         ):
-
             hist_axis.scatter(peak_count, bin_centers[peak_index], facecolors="none", edgecolors="blue")
             continue
 
@@ -177,28 +289,30 @@ def color_histogram_peaks_and_detect_drift_events(spike_times, spike_depths, cou
                 hist_axis.axhline(bin_centers[position], 0, counts.max(), color="grey", linestyle="--")
             hist_axis.scatter(peak_count, bin_centers[peak_index], facecolors="none", edgecolors="red")
 
-            # detect drift events
-            I = np.logical_and(
+            # For isolated histogram peaks, detect the drift events, defined as
+            # difference between spatial bin center and median spike depth in the bin
+            # over 6 um (in time / spatial bins with at least 10 spikes).
+            depth_in_window = np.logical_and(
                 spike_depths > bin_centers[start_position],
                 spike_depths < bin_centers[end_position],
             )
-            current_spike_depths = spike_depths[I]
-            current_spike_times = spike_times[I]
+            current_spike_depths = spike_depths[depth_in_window]
+            current_spike_times = spike_times[depth_in_window]
 
             window_s = 10
 
-            num_bins = np.round(spike_times[-1] / window_s).astype(int)
+            all_time_bins = np.arange(0, np.ceil(spike_times[-1]).astype(int), window_s)
+            for time_bin in all_time_bins:
 
-            x = np.linspace(0, spike_times[-1], num_bins)  # TODO!
-            x = np.arange(0, np.ceil(spike_times[-1]).astype(int), 10)
-            for t in x:  # TODO: rename
-
-                I = np.logical_and(current_spike_times >= t, current_spike_times <= t + window_s)
-                drift_size = bin_centers[peak_index] - np.median(current_spike_depths[I])
+                spike_in_time_bin = np.logical_and(
+                    current_spike_times >= time_bin, current_spike_times <= time_bin + window_s
+                )
+                drift_size = bin_centers[peak_index] - np.median(current_spike_depths[spike_in_time_bin])
 
                 # 6 um is the hardcoded threshold for drift, and we want at least 10 spikes for the median calculation
-                if np.abs(drift_size) > 6 and I[I].size > 10:
-                    drift_events.append((t + 5, bin_centers[peak_index], drift_size))
+                bin_has_drift = np.abs(drift_size) > 6 and np.sum(spike_in_time_bin, dtype=np.int16) > 10
+                if bin_has_drift:
+                    drift_events.append((time_bin + window_s / 2, bin_centers[peak_index], drift_size))
 
     drift_events = np.array(drift_events)
 
@@ -210,6 +324,9 @@ def _compute_spike_amplitude_and_depth(
 ) -> tuple[np.ndarray, ...]:
     """
     Compute the amplitude and depth of all detected spikes from the kilosort output.
+
+    This function was ported from Nick Steinmetz's `spikes` repository
+    MATLAB code, https://github.com/cortex-lab/spikes
 
     Parameters
     ----------
@@ -234,13 +351,16 @@ def _compute_spike_amplitude_and_depth(
     Notes
     -----
     In `_template_positions_amplitudes` spike depths is calculated as simply the template
-    depth, for each spike (so it is the same for all spikes). Here we need to find the
-    depth of each individual spike, using its low-dimensional projection. `pc_features`
-    (num_spikes, num_PC, num_channels) holds the PC values for each spike.
+    depth, for each spike (so it is the same for all spikes in a cluster). Here we need
+    to find the depth of each individual spike, using its low-dimensional projection.
+    `pc_features` (num_spikes, num_PC, num_channels) holds the PC values for each spike.
     Taking the first component, the subset of 32 channels associated with this
     spike  are indexed to get the actual channel locations (in um). Then, the channel
-    locations are weighted by their values onto the 1st PC.
+    locations are weighted by their PC values.
     """
+    if isinstance(sorter_output, str):
+        sorter_output = Path(sorter_output)
+
     params = load_ks_dir(sorter_output, load_pcs=True, exclude_noise=exclude_noise)
 
     if localised_spikes_only:
@@ -251,7 +371,7 @@ def _compute_spike_amplitude_and_depth(
             channels_over_threshold = np.max(np.abs(params["templates"][idx, :, :]), axis=0) > 0.5 * max_channel
             channel_ids_over_threshold = np.where(channels_over_threshold)[0]
 
-            if np.max(channel_ids_over_threshold) - np.min(channel_ids_over_threshold) <= 20:
+            if np.ptp(channel_ids_over_threshold) <= 20:
                 localised_templates.append(idx)
 
         localised_template_by_spike = np.isin(params["spike_templates"], localised_templates)
@@ -306,7 +426,7 @@ def _compute_spike_amplitude_and_depth(
 
 def filter_large_amplitude_spikes(
     spike_times: np.ndarray, spike_depths: np.ndarray, spike_amplitudes: np.ndarray
-) -> tuple[np.ndarray]:
+) -> tuple[np.ndarray, ...]:
     """
     Return spike properties with only the largest-amplitude spikes included. The probe
     is split into 800 um segments, and within each segment the mean and std computed.
@@ -319,16 +439,18 @@ def filter_large_amplitude_spikes(
     spike_bool = np.zeros_like(spike_amplitudes, dtype=bool)
 
     segment_size_um = 800
-    probe_segments = np.arange(np.floor(spike_depths.max() / segment_size_um) + 1) * segment_size_um
+    probe_segments_left_edges = np.arange(np.floor(spike_depths.max() / segment_size_um) + 1) * segment_size_um
 
-    for segment_left_edge in probe_segments:
-        spikes_in_seg = np.where(
-            np.logical_and(spike_depths >= segment_left_edge, spike_depths < segment_left_edge + segment_size_um)
-        )[0]
-        spike_amps = spike_amplitudes[spikes_in_seg]
-        I = spike_amps > np.mean(spike_amps) + 1.5 * np.std(spike_amps, ddof=1)
+    for segment_left_edge in probe_segments_left_edges:
+        segment_right_edge = segment_left_edge + segment_size_um
 
-        spike_bool[spikes_in_seg] = I
+        spikes_in_seg = np.where(np.logical_and(spike_depths >= segment_left_edge, spike_depths < segment_right_edge))[
+            0
+        ]
+        spike_amps_in_seg = spike_amplitudes[spikes_in_seg]
+        is_high_amplitude = spike_amps_in_seg > np.mean(spike_amps_in_seg) + 1.5 * np.std(spike_amps_in_seg, ddof=1)
+
+        spike_bool[spikes_in_seg] = is_high_amplitude
 
     spike_times = spike_times[spike_bool]
     spike_depths = spike_depths[spike_bool]
@@ -547,7 +669,7 @@ def load_ks_dir(sorter_output: Path, exclude_noise: bool = True, load_pcs: bool 
     return params
 
 
-def _load_cluster_groups(cluster_path: Path) -> tuple[np.ndarray]:
+def _load_cluster_groups(cluster_path: Path) -> tuple[np.ndarray, ...]:
     """
     Load kilosort `cluster_groups` file, that contains a table of
     quality assignments, one per unit. These can be "noise", "mua", "good"
@@ -593,9 +715,9 @@ plot_ks_drift_map(
     "/Users/joeziminski/data/bombcelll/sorter_output",
     localised_spikes_only=False,
     weight_histogram_by_amplitude=False,
-    only_include_large_amplitude_spikes=False,
+    only_include_large_amplitude_spikes=True,
     add_histogram_peaks_and_boundaries=True,
     decimate=False,
-    add_histogram_plot=False,
+    add_histogram_plot=True,
     exclude_noise=True,
 )
