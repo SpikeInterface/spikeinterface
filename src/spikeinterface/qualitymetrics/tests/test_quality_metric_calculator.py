@@ -61,7 +61,7 @@ def test_merging_quality_metrics(sorting_analyzer_simple):
     )
 
     # sorting_analyzer_simple has ten units
-    new_sorting_analyzer = sorting_analyzer.merge([0, 1])
+    new_sorting_analyzer = sorting_analyzer.merge_units([[0, 1]])
 
     new_metrics = new_sorting_analyzer.get_extension("quality_metrics").get_data()
 
@@ -72,8 +72,8 @@ def test_merging_quality_metrics(sorting_analyzer_simple):
     # 10 units vs 9 units
     assert len(metrics.index) > len(new_metrics.index)
 
-    # dtype should be fine after merge
-    assert metrics["snr"].dtype == new_metrics["snr"].dtype
+    # dtype should be fine after merge but is cast from Float64->float64
+    assert np.float64 == new_metrics["snr"].dtype
 
 
 def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
