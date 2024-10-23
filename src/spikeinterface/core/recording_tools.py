@@ -601,11 +601,16 @@ def get_random_data_chunks(
     recording,
     return_scaled=False,
     concatenated=True,
-    random_slices_kwargs={},
-    **kwargs,
+    **random_slices_kwargs
 ):
     """
-    Extract random chunks across segments
+    Extract random chunks across segments.
+    
+    Internally, it uses `get_random_recording_slices()` and retrieves the traces chunk as a list
+    or a concatenated unique array.
+
+    Please read `get_random_recording_slices()` for more details on parameters.
+
 
     Parameters
     ----------
@@ -617,7 +622,7 @@ def get_random_data_chunks(
         Number of chunks per segment
     concatenated : bool, default: True
         If True chunk are concatenated along time axis
-    random_slices_kwargs : dict
+    **random_slices_kwargs : dict
         Options transmited to  get_random_recording_slices(), please read documentation from this
         function for more details.
 
@@ -626,18 +631,6 @@ def get_random_data_chunks(
     chunk_list : np.array
         Array of concatenate chunks per segment
     """
-    if len(kwargs) > 0:
-        # This is to keep backward compatibility 
-        # lets keep for a while and remove this maybe in 0.103.0
-        msg = (
-            "get_random_data_chunks(recording, num_chunks_per_segment=20) is deprecated\n"
-            "Now, you need to use get_random_data_chunks(recording, random_slices_kwargs=dict(num_chunks_per_segment=20))\n"
-            "Please read get_random_recording_slices() documentation for more options."
-        )
-        assert len(random_slices_kwargs) ==0, msg
-        warnings.warn(msg)
-        random_slices_kwargs = kwargs
-
     recording_slices = get_random_recording_slices(recording, **random_slices_kwargs)
 
     chunk_list = []
@@ -797,7 +790,7 @@ def get_noise_levels(
             if "chunk_size" in job_kwargs:
                 random_slices_kwargs["chunk_size"] = job_kwargs["chunk_size"]
 
-        recording_slices = get_random_recording_slices(recording, **random_slices_kwargs)
+        recording_slices = get_random_recording_slices(recording, random_slices_kwargs)
 
         noise_levels_chunks = []
         def append_noise_chunk(res):

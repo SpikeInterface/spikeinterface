@@ -71,8 +71,10 @@ class SilencedPeriodsRecording(BasePreprocessor):
 
         if mode in ["noise"]:
             if noise_levels is None:
+                random_chunk_kwargs = random_chunk_kwargs.copy()
+                random_chunk_kwargs["seed"] = seed
                 noise_levels = get_noise_levels(
-                    recording, return_scaled=False, concatenated=True, seed=seed, **random_chunk_kwargs
+                    recording, return_scaled=False, random_slices_kwargs=random_chunk_kwargs
                 )
             noise_generator = NoiseGeneratorRecording(
                 num_channels=recording.get_num_channels(),
