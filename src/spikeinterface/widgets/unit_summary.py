@@ -107,15 +107,18 @@ class UnitSummaryWidget(BaseWidget):
         # and use custum grid spec
         fig = self.figure
         nrows = 2
-        ncols = 3
+        ncols = 2
         if sorting_analyzer.has_extension("correlograms") or sorting_analyzer.has_extension("spike_amplitudes"):
+            ncols += 1
+        if sorting_analyzer.has_extension("waveforms"):
             ncols += 1
         if sorting_analyzer.has_extension("spike_amplitudes"):
             nrows += 1
         gs = fig.add_gridspec(nrows, ncols)
+        col_counter = 0
 
         if sorting_analyzer.has_extension("unit_locations"):
-            ax1 = fig.add_subplot(gs[:2, 0])
+            ax1 = fig.add_subplot(gs[:2, col_counter])
             # UnitLocationsPlotter().do_plot(dp.plot_data_unit_locations, ax=ax1)
             w = UnitLocationsWidget(
                 sorting_analyzer,
@@ -126,6 +129,7 @@ class UnitSummaryWidget(BaseWidget):
                 ax=ax1,
                 **unitlocationswidget_kwargs,
             )
+            col_counter = col_counter + 1
 
             unit_locations = sorting_analyzer.get_extension("unit_locations").get_data(outputs="by_unit")
             unit_location = unit_locations[unit_id]
@@ -136,12 +140,13 @@ class UnitSummaryWidget(BaseWidget):
             ax1.set_xlabel(None)
             ax1.set_ylabel(None)
 
-        ax2 = fig.add_subplot(gs[:2, 1])
+        ax2 = fig.add_subplot(gs[:2, col_counter])
         w = UnitWaveformsWidget(
             sorting_analyzer,
             unit_ids=[unit_id],
             unit_colors=unit_colors,
             plot_templates=True,
+            plot_waveforms=sorting_analyzer.has_extension("waveforms"),
             same_axis=True,
             plot_legend=False,
             sparsity=sparsity,
@@ -149,24 +154,27 @@ class UnitSummaryWidget(BaseWidget):
             ax=ax2,
             **unitwaveformswidget_kwargs,
         )
+        col_counter = col_counter + 1
 
         ax2.set_title(None)
 
-        ax3 = fig.add_subplot(gs[:2, 2])
-        UnitWaveformDensityMapWidget(
-            sorting_analyzer,
-            unit_ids=[unit_id],
-            unit_colors=unit_colors,
-            use_max_channel=True,
-            same_axis=False,
-            backend="matplotlib",
-            ax=ax3,
-            **unitwaveformdensitymapwidget_kwargs,
-        )
-        ax3.set_ylabel(None)
+        if sorting_analyzer.has_extension("waveforms"):
+            ax3 = fig.add_subplot(gs[:2, col_counter])
+            UnitWaveformDensityMapWidget(
+                sorting_analyzer,
+                unit_ids=[unit_id],
+                unit_colors=unit_colors,
+                use_max_channel=True,
+                same_axis=False,
+                backend="matplotlib",
+                ax=ax3,
+                **unitwaveformdensitymapwidget_kwargs,
+            )
+            ax3.set_ylabel(None)
+            col_counter = col_counter + 1
 
         if sorting_analyzer.has_extension("correlograms"):
-            ax4 = fig.add_subplot(gs[:2, 3])
+            ax4 = fig.add_subplot(gs[:2, col_counter])
             AutoCorrelogramsWidget(
                 sorting_analyzer,
                 unit_ids=[unit_id],
@@ -180,8 +188,8 @@ class UnitSummaryWidget(BaseWidget):
             ax4.set_yticks([])
 
         if sorting_analyzer.has_extension("spike_amplitudes"):
-            ax5 = fig.add_subplot(gs[2, :3])
-            ax6 = fig.add_subplot(gs[2, 3])
+            ax5 = fig.add_subplot(gs[2, :col_counter])
+            ax6 = fig.add_subplot(gs[2, col_counter])
             axes = np.array([ax5, ax6])
             AmplitudesWidget(
                 sorting_analyzer,
