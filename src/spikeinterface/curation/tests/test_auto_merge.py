@@ -63,7 +63,7 @@ def test_compute_merge_unit_groups(sorting_analyzer_for_curation, preset):
             # adaptative_window_thresh=0.5,
             # firing_contamination_balance=1.5,
             extra_outputs=True,
-            **job_kwargs
+            **job_kwargs,
         )
         if preset == "x_contaminations":
             assert len(merge_unit_groups) == num_unit_splited
@@ -75,9 +75,10 @@ def test_compute_merge_unit_groups(sorting_analyzer_for_curation, preset):
         with pytest.raises(ValueError):
             merge_unit_groups = compute_merge_unit_groups(sorting_analyzer, preset=preset)
         merge_unit_groups = compute_merge_unit_groups(
-            sorting_analyzer, preset=preset,
+            sorting_analyzer,
+            preset=preset,
             steps=["num_spikes", "snr", "remove_contaminated", "unit_locations"],
-            **job_kwargs
+            **job_kwargs,
         )
 
     # DEBUG

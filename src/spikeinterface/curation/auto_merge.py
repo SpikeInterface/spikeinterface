@@ -20,7 +20,7 @@ from .mergeunitssorting import MergeUnitsSorting
 from .curation_tools import resolve_merging_graph
 
 _compute_merge_persets = {
-    "similarity_correlograms":[
+    "similarity_correlograms": [
         "num_spikes",
         "remove_contaminated",
         "unit_locations",
@@ -28,7 +28,7 @@ _compute_merge_persets = {
         "correlogram",
         "quality_score",
     ],
-    "temporal_splits":[
+    "temporal_splits": [
         "num_spikes",
         "remove_contaminated",
         "unit_locations",
@@ -36,7 +36,7 @@ _compute_merge_persets = {
         "presence_distance",
         "quality_score",
     ],
-    "x_contaminations":[
+    "x_contaminations": [
         "num_spikes",
         "remove_contaminated",
         "unit_locations",
@@ -44,23 +44,23 @@ _compute_merge_persets = {
         "cross_contamination",
         "quality_score",
     ],
-    "feature_neighbors":[
+    "feature_neighbors": [
         "num_spikes",
         "snr",
         "remove_contaminated",
         "unit_locations",
         "knn",
         "quality_score",
-    ]
+    ],
 }
 
 _required_extensions = {
     "unit_locations": ["templates", "unit_locations"],
     "correlogram": ["correlograms"],
-    "snr": ["templates","noise_levels", "templates"],
+    "snr": ["templates", "noise_levels", "templates"],
     "template_similarity": ["templates", "template_similarity"],
     "knn": ["templates", "spike_locations", "spike_amplitudes"],
-    "spike_amplitudes" : ["templates"],
+    "spike_amplitudes": ["templates"],
 }
 
 
@@ -86,7 +86,6 @@ _default_step_params = {
     },
     "quality_score": {"firing_contamination_balance": 2.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
 }
-
 
 
 def compute_merge_unit_groups(
@@ -181,7 +180,6 @@ def compute_merge_unit_groups(
     sorting = sorting_analyzer.sorting
     unit_ids = sorting.unit_ids
 
-
     if preset is None and steps is None:
         raise ValueError("You need to specify a preset or steps for the auto-merge function")
     elif steps is not None:
@@ -210,7 +208,7 @@ def compute_merge_unit_groups(
                     continue
                 if not compute_needed_extensions:
                     raise ValueError(f"{step} requires {ext} extension")
-                
+
                 # special case for templates
                 if ext == "templates" and not sorting_analyzer.has_extension("random_spikes"):
                     sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
@@ -357,28 +355,20 @@ def compute_merge_unit_groups(
     else:
         return merge_unit_groups
 
+
 def auto_merge(
-        sorting_analyzer: SortingAnalyzer,
-        compute_merge_kwargs:dict = {},
-        apply_merge_kwargs: dict = {},
-        **job_kwargs
-        ) -> SortingAnalyzer:
+    sorting_analyzer: SortingAnalyzer, compute_merge_kwargs: dict = {}, apply_merge_kwargs: dict = {}, **job_kwargs
+) -> SortingAnalyzer:
     """
     Compute merge unit groups and apply it on a SortingAnalyzer.
     Internally uses `compute_merge_unit_groups()`
     """
     merge_unit_groups = compute_merge_unit_groups(
-        sorting_analyzer,
-        extra_outputs=False,
-        **compute_merge_kwargs,
-        **job_kwargs
+        sorting_analyzer, extra_outputs=False, **compute_merge_kwargs, **job_kwargs
     )
 
-    merged_analyzer = sorting_analyzer.merge_units(
-        merge_unit_groups, **apply_merge_kwargs, **job_kwargs
-    )
+    merged_analyzer = sorting_analyzer.merge_units(merge_unit_groups, **apply_merge_kwargs, **job_kwargs)
     return merged_analyzer
-
 
 
 def get_potential_auto_merge(
@@ -519,10 +509,10 @@ def get_potential_auto_merge(
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
     """
     warnings.warn(
-            "get_potential_auto_merge() is deprecated. Use compute_merge_unit_groups() instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+        "get_potential_auto_merge() is deprecated. Use compute_merge_unit_groups() instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     presence_distance_kwargs = presence_distance_kwargs or dict()
     knn_kwargs = knn_kwargs or dict()
