@@ -10,6 +10,7 @@ from .amplitudes import AmplitudesWidget
 from .autocorrelograms import AutoCorrelogramsWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
 from .isi_distribution import ISIDistributionWidget
+from .kilosort_drift_map import KilosortDriftMapWidget
 from .motion import DriftRasterMapWidget, MotionWidget, MotionInfoWidget
 from .multicomparison import MultiCompGraphWidget, MultiCompGlobalAgreementWidget, MultiCompAgreementBySorterWidget
 from .peak_activity import PeakActivityMapWidget
@@ -46,6 +47,7 @@ widget_list = [
     CrossCorrelogramsWidget,
     DriftRasterMapWidget,
     ISIDistributionWidget,
+    KilosortDriftMapWidget,
     MotionWidget,
     MotionInfoWidget,
     MultiCompGlobalAgreementWidget,
@@ -121,6 +123,7 @@ plot_comparison_collision_by_similarity = ComparisonCollisionBySimilarityWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_drift_raster_map = DriftRasterMapWidget
 plot_isi_distribution = ISIDistributionWidget
+plot_kilosort_drift_map = KilosortDriftMapWidget
 plot_motion = MotionWidget
 plot_motion_info = MotionInfoWidget
 plot_multicomparison_agreement = MultiCompGlobalAgreementWidget
