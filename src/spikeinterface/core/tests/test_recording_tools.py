@@ -182,7 +182,7 @@ def test_get_random_recording_slices():
 
 def test_get_random_data_chunks():
     rec = generate_recording(num_channels=1, sampling_frequency=1000.0, durations=[10.0, 20.0])
-    chunks = get_random_data_chunks(rec, random_slices_kwargs=dict(num_chunks_per_segment=50, chunk_size=500, seed=0))
+    chunks = get_random_data_chunks(rec, num_chunks_per_segment=50, chunk_size=500, seed=0)
     assert chunks.shape == (50000, 1)
 
 

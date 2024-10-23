@@ -628,7 +628,7 @@ def get_random_data_chunks(
 
     Returns
     -------
-    chunk_list : np.array
+    chunk_list : np.array | list of np.array
         Array of concatenate chunks per segment
     """
     recording_slices = get_random_recording_slices(recording, **random_slices_kwargs)
@@ -757,8 +757,9 @@ def get_noise_levels(
     random_slices_kwargs : dict
         Options transmited to  get_random_recording_slices(), please read documentation from this
         function for more details.
-    **job_kwargs: 
-        Job kwargs for parallel computing.
+
+    {}
+    
     Returns
     -------
     noise_levels : array
@@ -790,7 +791,7 @@ def get_noise_levels(
             if "chunk_size" in job_kwargs:
                 random_slices_kwargs["chunk_size"] = job_kwargs["chunk_size"]
 
-        recording_slices = get_random_recording_slices(recording, random_slices_kwargs)
+        recording_slices = get_random_recording_slices(recording, **random_slices_kwargs)
 
         noise_levels_chunks = []
         def append_noise_chunk(res):
@@ -812,6 +813,7 @@ def get_noise_levels(
 
     return noise_levels
 
+get_noise_levels.__doc__ = get_noise_levels.__doc__.format(_shared_job_kwargs_doc)
 
 
 def get_chunk_with_margin(
