@@ -744,11 +744,11 @@ def get_noise_levels(
     You can use standard deviation with `method="std"`
 
     Internally it samples some chunk across segment.
-    And then, it use MAD estimator (more robust than STD) ot the STD on each chunk.
-    Finally the average on all MAD is performed.
+    And then, it uses the MAD estimator (more robust than STD) or the STD on each chunk.
+    Finally the average of all MAD/STD values is performed.
 
-    The result is cached in a property of the recording.
-    Next call on the same recording will use the cache unless force_recompute=True.
+    The result is cached in a property of the recording, so that the next call on the same
+    recording will use the cached result unless `force_recompute=True`.
 
     Parameters
     ----------
