@@ -380,7 +380,12 @@ class ComputeTemplates(AnalyzerExtension):
         assert isinstance(operators, list)
         for operator in operators:
             if isinstance(operator, str):
-                assert operator in ("average", "std", "median", "mad")
+                if operator not in ("average", "std", "median", "mad"):
+                    error_msg = (
+                        f"You have entered an operator {operator} in your `operators` argument which is "
+                        f"not supported. Please use any of ['average', 'std', 'median', 'mad'] instead."
+                    )
+                    raise ValueError(error_msg)
             else:
                 assert isinstance(operator, (list, tuple))
                 assert len(operator) == 2
@@ -549,8 +554,16 @@ class ComputeTemplates(AnalyzerExtension):
         if operator != "percentile":
             key = operator
         else:
-            assert percentile is not None, "You must provide percentile=..."
+            assert percentile is not None, "You must provide percentile=... if `operator=percentile`"
             key = f"percentile_{percentile}"
+
+        if key not in self.data.keys():
+            error_msg = (
+                f"You have entered `operator={key}`, but the only operators calculated are "
+                f"{list(self.data.keys())}. Please use one of these as your `operator` in the "
+                f"`get_data` function."
+            )
+            raise ValueError(error_msg)
 
         templates_array = self.data[key]
 
