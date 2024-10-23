@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 from typing import Tuple
 import numpy as np
 import math
@@ -17,18 +19,49 @@ from ..qualitymetrics import compute_refrac_period_violations, compute_firing_ra
 from .mergeunitssorting import MergeUnitsSorting
 from .curation_tools import resolve_merging_graph
 
-
-_possible_presets = ["similarity_correlograms", "x_contaminations", "temporal_splits", "feature_neighbors"]
-
-_required_extensions = {
-    "unit_locations": ["unit_locations"],
-    "correlogram": ["correlograms"],
-    "snr": ["noise_levels", "templates"],
-    "template_similarity": ["template_similarity"],
-    "knn": ["spike_locations", "spike_amplitudes"],
+_compute_merge_persets = {
+    "similarity_correlograms":[
+        "num_spikes",
+        "remove_contaminated",
+        "unit_locations",
+        "template_similarity",
+        "correlogram",
+        "quality_score",
+    ],
+    "temporal_splits":[
+        "num_spikes",
+        "remove_contaminated",
+        "unit_locations",
+        "template_similarity",
+        "presence_distance",
+        "quality_score",
+    ],
+    "x_contaminations":[
+        "num_spikes",
+        "remove_contaminated",
+        "unit_locations",
+        "template_similarity",
+        "cross_contamination",
+        "quality_score",
+    ],
+    "feature_neighbors":[
+        "num_spikes",
+        "snr",
+        "remove_contaminated",
+        "unit_locations",
+        "knn",
+        "quality_score",
+    ]
 }
 
-_templates_needed = ["unit_locations", "snr", "template_similarity", "knn", "spike_amplitudes"]
+_required_extensions = {
+    "unit_locations": ["templates", "unit_locations"],
+    "correlogram": ["correlograms"],
+    "snr": ["templates","noise_levels", "templates"],
+    "template_similarity": ["templates", "template_similarity"],
+    "knn": ["templates", "spike_locations", "spike_amplitudes"],
+    "spike_amplitudes" : ["templates"],
+}
 
 
 _default_step_params = {
@@ -55,17 +88,18 @@ _default_step_params = {
 }
 
 
-def auto_merges(
+
+def compute_merge_unit_groups(
     sorting_analyzer: SortingAnalyzer,
     preset: str | None = "similarity_correlograms",
-    resolve_graph: bool = False,
+    resolve_graph: bool = True,
     steps_params: dict = None,
     compute_needed_extensions: bool = True,
     extra_outputs: bool = False,
     steps: list[str] | None = None,
     force_copy: bool = True,
     **job_kwargs,
-) -> list[tuple[int | str, int | str]] | Tuple[tuple[int | str, int | str], dict]:
+) -> list[tuple[int | str, int | str]] | Tuple[list[tuple[int | str, int | str]], dict]:
     """
     Algorithm to find and check potential merges between units.
 
@@ -110,7 +144,7 @@ def auto_merges(
           | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_locations",
           | "knn", "quality_score"
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
-    resolve_graph : bool, default: False
+    resolve_graph : bool, default: True
         If True, the function resolves the potential unit pairs to be merged into multiple-unit merges.
     compute_needed_extensions : bool, default : True
         Should we force the computation of needed extensions?
@@ -128,9 +162,10 @@ def auto_merges(
 
     Returns
     -------
-    potential_merges:
-        A list of tuples of 2 elements (if `resolve_graph`if false) or 2+ elements (if `resolve_graph` is true).
-        List of pairs that could be merged.
+    merge_unit_groups:
+        List of groups that need to be merge.
+        When `resolve_graph` is true (default) a list of tuples of 2+ elements
+        If `resolve_graph` is false then a list of tuple of 2 elements is returned instead.
     outs:
         Returned only when extra_outputs=True
         A dictionary that contains data for debugging and plotting.
@@ -146,62 +181,17 @@ def auto_merges(
     sorting = sorting_analyzer.sorting
     unit_ids = sorting.unit_ids
 
-    all_steps = [
-        "num_spikes",
-        "snr",
-        "remove_contaminated",
-        "unit_locations",
-        "correlogram",
-        "template_similarity",
-        "presence_distance",
-        "knn",
-        "cross_contamination",
-        "quality_score",
-    ]
 
-    if preset is not None and preset not in _possible_presets:
-        raise ValueError(f"preset must be one of {_possible_presets}")
+    if preset is None and steps is None:
+        raise ValueError("You need to specify a preset or steps for the auto-merge function")
+    elif steps is not None:
+        # steps has presendance on presets
+        pass
+    elif preset is not None:
+        if preset not in _compute_merge_persets:
+            raise ValueError(f"preset must be one of {list(_compute_merge_persets.keys())}")
+        steps = _compute_merge_persets[preset]
 
-    if steps is None:
-        if preset is None:
-            if steps is None:
-                raise ValueError("You need to specify a preset or steps for the auto-merge function")
-        elif preset == "similarity_correlograms":
-            steps = [
-                "num_spikes",
-                "remove_contaminated",
-                "unit_locations",
-                "template_similarity",
-                "correlogram",
-                "quality_score",
-            ]
-        elif preset == "temporal_splits":
-            steps = [
-                "num_spikes",
-                "remove_contaminated",
-                "unit_locations",
-                "template_similarity",
-                "presence_distance",
-                "quality_score",
-            ]
-        elif preset == "x_contaminations":
-            steps = [
-                "num_spikes",
-                "remove_contaminated",
-                "unit_locations",
-                "template_similarity",
-                "cross_contamination",
-                "quality_score",
-            ]
-        elif preset == "feature_neighbors":
-            steps = [
-                "num_spikes",
-                "snr",
-                "remove_contaminated",
-                "unit_locations",
-                "knn",
-                "quality_score",
-            ]
     if force_copy and compute_needed_extensions:
         # To avoid erasing the extensions of the user
         sorting_analyzer = sorting_analyzer.copy()
@@ -212,26 +202,23 @@ def auto_merges(
 
     for step in steps:
 
-        assert step in all_steps, f"{step} is not a valid step"
+        assert step in _default_step_params, f"{step} is not a valid step"
 
         if step in _required_extensions:
             for ext in _required_extensions[step]:
-                if compute_needed_extensions:
-                    if step in _templates_needed:
-                        template_ext = sorting_analyzer.get_extension("templates")
-                        if template_ext is None:
-                            sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
-                    res_ext = sorting_analyzer.get_extension(step)
-                    if res_ext is None:
-                        print(
-                            f"Extension {ext} is computed with default params. Precompute it with custom params if needed"
-                        )
-                        sorting_analyzer.compute(ext, **job_kwargs)
-                elif not compute_needed_extensions and not sorting_analyzer.has_extension(ext):
+                if sorting_analyzer.has_extension(ext):
+                    continue
+                if not compute_needed_extensions:
                     raise ValueError(f"{step} requires {ext} extension")
+                
+                # special case for templates
+                if ext == "templates" and not sorting_analyzer.has_extension("random_spikes"):
+                    sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
+                else:
+                    sorting_analyzer.compute(ext, **job_kwargs)
 
         params = _default_step_params.get(step).copy()
-        if step in steps_params:
+        if steps_params is not None and step in steps_params:
             params.update(steps_params[step])
 
         # STEP : remove units with too few spikes
@@ -360,15 +347,38 @@ def auto_merges(
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
-    potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
+    merge_unit_groups = list(zip(unit_ids[ind1], unit_ids[ind2]))
 
     if resolve_graph:
-        potential_merges = resolve_merging_graph(sorting, potential_merges)
+        merge_unit_groups = resolve_merging_graph(sorting, merge_unit_groups)
 
     if extra_outputs:
-        return potential_merges, outs
+        return merge_unit_groups, outs
     else:
-        return potential_merges
+        return merge_unit_groups
+
+def auto_merge(
+        sorting_analyzer: SortingAnalyzer,
+        compute_merge_kwargs:dict = {},
+        apply_merge_kwargs: dict = {},
+        **job_kwargs
+        ) -> SortingAnalyzer:
+    """
+    Compute merge unit groups and apply it on a SortingAnalyzer.
+    Internally uses `compute_merge_unit_groups()`
+    """
+    merge_unit_groups = compute_merge_unit_groups(
+        sorting_analyzer,
+        extra_outputs=False,
+        **compute_merge_kwargs,
+        **job_kwargs
+    )
+
+    merged_analyzer = sorting_analyzer.merge_units(
+        merge_unit_groups, **apply_merge_kwargs, **job_kwargs
+    )
+    return merged_analyzer
+
 
 
 def get_potential_auto_merge(
@@ -397,6 +407,9 @@ def get_potential_auto_merge(
     steps: list[str] | None = None,
 ) -> list[tuple[int | str, int | str]] | Tuple[tuple[int | str, int | str], dict]:
     """
+    This function is deprecated. Use compute_merge_unit_groups() instead.
+    This will be removed in 0.103.0
+
     Algorithm to find and check potential merges between units.
 
     The merges are proposed based on a series of steps with different criteria:
@@ -505,9 +518,15 @@ def get_potential_auto_merge(
     done by Aurelien Wyngaard and Victor Llobet.
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
     """
+    warnings.warn(
+            "get_potential_auto_merge() is deprecated. Use compute_merge_unit_groups() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     presence_distance_kwargs = presence_distance_kwargs or dict()
     knn_kwargs = knn_kwargs or dict()
-    return auto_merges(
+    return compute_merge_unit_groups(
         sorting_analyzer,
         preset,
         resolve_graph,
