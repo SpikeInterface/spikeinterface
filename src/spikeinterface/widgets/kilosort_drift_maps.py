@@ -21,6 +21,8 @@ def plot_ks_drift_map(
     localised_spikes_only: bool = False,
     exclude_noise: bool = False,
     gain: float | None = None,
+    large_amplitude_only_segment_size: float = 800.0,
+    localised_spikes_channel_cutoff: int = 20,
 ) -> None:
     """
     Create a drift map plot in the kilosort style. This is ported from Nick Steinmetz's
@@ -59,9 +61,17 @@ def plot_ks_drift_map(
         will be excluded.
     gain : float | None
         If not `None`, amplitudes will be scaled by the supplied gain.
+    large_amplitude_only_segment_size: float
+        If `only_include_large_amplitude_spikes` is `True`, the probe is split into
+        segments to compute mean and std used as threshold. This sets the size of the
+        segments in um.
+    localised_spikes_channel_cutoff: int
+        If `localised_spikes_only` is `True`, spikes that have more than half of the
+        maximum loading channel over a range of > n channels are removed.
+        This sets the number of channels.
     """
     spike_times, spike_amplitudes, spike_depths, _ = _compute_spike_amplitude_and_depth(
-        sorter_output, localised_spikes_only, exclude_noise, gain
+        sorter_output, localised_spikes_only, exclude_noise, gain, localised_spikes_channel_cutoff
     )
 
     # Calculate the amplitude range for plotting first, so the scale is always the
@@ -81,7 +91,7 @@ def plot_ks_drift_map(
 
     if only_include_large_amplitude_spikes:
         spike_times, spike_amplitudes, spike_depths = _filter_large_amplitude_spikes(
-            spike_times, spike_amplitudes, spike_depths
+            spike_times, spike_amplitudes, spike_depths, large_amplitude_only_segment_size
         )
 
     # Setup axis and plot the raster drift map
@@ -320,7 +330,11 @@ def _color_histogram_peaks_and_detect_drift_events(
 
 
 def _compute_spike_amplitude_and_depth(
-    sorter_output: str | Path, localised_spikes_only, exclude_noise, gain: float | None = None
+    sorter_output: str | Path,
+    localised_spikes_only,
+    exclude_noise,
+    gain: float | None,
+    localised_spikes_channel_cutoff: int,
 ) -> tuple[np.ndarray, ...]:
     """
     Compute the amplitude and depth of all detected spikes from the kilosort output.
@@ -338,6 +352,10 @@ def _compute_spike_amplitude_and_depth(
         the cluster are returned.
     gain: float | None
         If a float provided, the `spike_amplitudes` will be scaled by this gain.
+    localised_spikes_channel_cutoff : int
+        If `localised_spikes_only` is `True`, spikes that have less than half of the
+        maximum loading channel over a range of n channels are removed.
+        This sets the number of channels.
 
     Returns
     -------
@@ -371,7 +389,7 @@ def _compute_spike_amplitude_and_depth(
             channels_over_threshold = np.max(np.abs(params["templates"][idx, :, :]), axis=0) > 0.5 * max_channel
             channel_ids_over_threshold = np.where(channels_over_threshold)[0]
 
-            if np.ptp(channel_ids_over_threshold) <= 20:
+            if np.ptp(channel_ids_over_threshold) <= localised_spikes_channel_cutoff:
                 localised_templates.append(idx)
 
         localised_template_by_spike = np.isin(params["spike_templates"], localised_templates)
@@ -425,11 +443,11 @@ def _compute_spike_amplitude_and_depth(
 
 
 def _filter_large_amplitude_spikes(
-    spike_times: np.ndarray, spike_amplitudes: np.ndarray, spike_depths: np.ndarray
+    spike_times: np.ndarray, spike_amplitudes: np.ndarray, spike_depths: np.ndarray, large_amplitude_only_segment_size
 ) -> tuple[np.ndarray, ...]:
     """
     Return spike properties with only the largest-amplitude spikes included. The probe
-    is split into 800 um segments, and within each segment the mean and std computed.
+    is split into egments, and within each segment the mean and std computed.
     Any spike less than 1.5x the standard deviation in amplitude of it's segment is excluded
     Splitting the probe is only done for the exclusion step, the returned array are flat.
 
@@ -438,7 +456,7 @@ def _filter_large_amplitude_spikes(
     """
     spike_bool = np.zeros_like(spike_amplitudes, dtype=bool)
 
-    segment_size_um = 800
+    segment_size_um = large_amplitude_only_segment_size
     probe_segments_left_edges = np.arange(np.floor(spike_depths.max() / segment_size_um) + 1) * segment_size_um
 
     for segment_left_edge in probe_segments_left_edges:
@@ -713,11 +731,10 @@ def _load_cluster_groups(cluster_path: Path) -> tuple[np.ndarray, ...]:
 
 plot_ks_drift_map(
     "/Users/joeziminski/data/bombcelll/sorter_output",
-    localised_spikes_only=False,
-    weight_histogram_by_amplitude=False,
     only_include_large_amplitude_spikes=True,
     add_histogram_peaks_and_boundaries=True,
-    decimate=False,
     add_histogram_plot=True,
-    exclude_noise=True,
+    large_amplitude_only_segment_size=800,
+    localised_spikes_channel_cutoff=20,
+    localised_spikes_only=True,
 )
