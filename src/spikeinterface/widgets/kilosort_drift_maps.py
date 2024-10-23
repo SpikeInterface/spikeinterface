@@ -37,16 +37,16 @@ def plot_ks_drift_map(
         Path to the kilosort output folder.
     only_include_large_amplitude_spikes : bool
         If `True`, only spikes with larger amplitudes are included. For
-        details, see `filter_large_amplitude_spikes()`.
-    decimate : bool | int
-        If an integer n, every nth spike is dropped from the plot. Useful for improving
+        details, see `_filter_large_amplitude_spikes()`.
+    decimate : None | int
+        If an integer n, only every nth spike is kept from the plot. Useful for improving
         performance when there are many spikes. If `None`, spikes will not be decimated.
     add_histogram_plot : bool
         If `True`, an activity histogram will be added to a new subplot to the
         left of the drift map.
     add_histogram_peaks_and_boundaries : bool
-        If `True`, activity histogram peaks are detected and colored rec
-        if isolated according to start/end boundaries of the peak.
+        If `True`, activity histogram peaks are detected and colored red if
+        isolated according to start/end boundaries of the peak (blue otherwise).
     add_drift_events : bool
         If `True`, drift events will be plot on the raster map. Required
         `add_histogram_plot` and `add_histogram_peaks_and_boundaries` to run.
@@ -55,7 +55,7 @@ def plot_ks_drift_map(
     localised_spikes_only : bool
         If `True`, only spatially isolated spikes will be included.
     exclude_noise : bool
-        If `True`, units labelled as noise inthe `cluster_groups` file
+        If `True`, units labelled as noise in the `cluster_groups` file
         will be excluded.
     gain : float | None
         If not `None`, amplitudes will be scaled by the supplied gain.
@@ -80,8 +80,8 @@ def plot_ks_drift_map(
         spike_depths = spike_depths[::decimate]
 
     if only_include_large_amplitude_spikes:
-        spike_times, spike_depths, spike_amplitudes = filter_large_amplitude_spikes(
-            spike_times, spike_depths, spike_amplitudes
+        spike_times, spike_amplitudes, spike_depths = _filter_large_amplitude_spikes(
+            spike_times, spike_amplitudes, spike_depths
         )
 
     # Setup axis and plot the raster drift map
@@ -94,7 +94,7 @@ def plot_ks_drift_map(
     else:
         raster_axis = fig.add_subplot()
 
-    plot_kilosort_drift_map_raster(
+    _plot_kilosort_drift_map_raster(
         spike_times,
         spike_amplitudes,
         spike_depths,
@@ -114,11 +114,11 @@ def plot_ks_drift_map(
     raster_axis.set_xlabel("time")
     hist_axis.set_ylabel("y position")
 
-    bin_centers, counts = compute_activity_histogram(spike_depths, spike_amplitudes, weight_histogram_by_amplitude)
+    bin_centers, counts = _compute_activity_histogram(spike_amplitudes, spike_depths, weight_histogram_by_amplitude)
     hist_axis.plot(counts, bin_centers, color="black", linewidth=1)
 
     if add_histogram_peaks_and_boundaries:
-        drift_events = color_histogram_peaks_and_detect_drift_events(
+        drift_events = _color_histogram_peaks_and_detect_drift_events(
             spike_times, spike_depths, counts, bin_centers, hist_axis
         )
 
@@ -131,7 +131,7 @@ def plot_ks_drift_map(
     plt.show()
 
 
-def plot_kilosort_drift_map_raster(
+def _plot_kilosort_drift_map_raster(
     spike_times: np.ndarray,
     spike_amplitudes: np.ndarray,
     spike_depths: np.ndarray,
@@ -152,7 +152,7 @@ def plot_kilosort_drift_map_raster(
             (num_spikes,) array of corresponding spike amplitudes.
     spike_depths : np.ndarray
             (num_spikes,) array of corresponding spike depths.
-    amplitude_range : np.ndarray
+    amplitude_range : np.ndarray | tuple
         (2,) array of min, max amplitude values for color binning.
     axis : matplotlib.axes.Axes
         Matplotlib axes object on which to plot the drift map.
@@ -178,18 +178,18 @@ def plot_kilosort_drift_map_raster(
         )
 
 
-def compute_activity_histogram(
-    spike_depths: np.ndarray, spike_amplitudes: np.ndarray, weight_histogram_by_amplitude: bool
+def _compute_activity_histogram(
+    spike_amplitudes: np.ndarray, spike_depths: np.ndarray, weight_histogram_by_amplitude: bool
 ) -> tuple[np.ndarray, ...]:
     """
-    Compute the activity histogram for the kilosort drift map left plot.
+    Compute the activity histogram for the kilosort drift map's left-side plot.
 
     Parameters
     ----------
+    spike_amplitudes : np.ndarray
+        (num_spikes,) array of spike amplitudes.
     spike_depths : np.ndarray
         (num_spikes,) array of spike depths.
-    spike_amplitudes : np.ndarray
-        (num_spikes,) array of spike amplitudes
     weight_histogram_by_amplitude : bool
         If `True`, the spike amplitudes are taken into consideration when generating the
         histogram. The amplitudes are scaled to the range [0, 1] then summed for each bin,
@@ -199,10 +199,10 @@ def compute_activity_histogram(
     Returns
     -------
     bin_centers : np.ndarray
-        The spatial bin centers (i.e. probe depth) for the histogram.
+        The spatial bin centers (probe depth) for the histogram.
     values : np.ndarray
         The histogram values. If `weight_histogram_by_amplitude` is `False`, these
-        are counts, otherwise they are counts weighted by amplitude.
+        values represent are counts, otherwise they are counts weighted by amplitude.
     """
     assert spike_amplitudes.dtype == np.float64, "`spike amplitudes should be high precision as many values are summed."
 
@@ -220,7 +220,7 @@ def compute_activity_histogram(
     return bin_centers, values
 
 
-def color_histogram_peaks_and_detect_drift_events(
+def _color_histogram_peaks_and_detect_drift_events(
     spike_times: np.ndarray,
     spike_depths: np.ndarray,
     counts: np.ndarray,
@@ -335,7 +335,7 @@ def _compute_spike_amplitude_and_depth(
     localised_spikes_only : bool
         If `True`, only spikes with small spatial footprint (i.e. 20 channels within 1/2 of the
         amplitude of the maximum loading channel) and which are close to the average depth for
-        the unit are returned.
+        the cluster are returned.
     gain: float | None
         If a float provided, the `spike_amplitudes` will be scaled by this gain.
 
@@ -424,8 +424,8 @@ def _compute_spike_amplitude_and_depth(
     return params["spike_times"], spike_amplitudes, spike_depths, spike_sites
 
 
-def filter_large_amplitude_spikes(
-    spike_times: np.ndarray, spike_depths: np.ndarray, spike_amplitudes: np.ndarray
+def _filter_large_amplitude_spikes(
+    spike_times: np.ndarray, spike_amplitudes: np.ndarray, spike_depths: np.ndarray
 ) -> tuple[np.ndarray, ...]:
     """
     Return spike properties with only the largest-amplitude spikes included. The probe
@@ -453,10 +453,10 @@ def filter_large_amplitude_spikes(
         spike_bool[spikes_in_seg] = is_high_amplitude
 
     spike_times = spike_times[spike_bool]
-    spike_depths = spike_depths[spike_bool]
     spike_amplitudes = spike_amplitudes[spike_bool]
+    spike_depths = spike_depths[spike_bool]
 
-    return spike_times, spike_depths, spike_amplitudes
+    return spike_times, spike_amplitudes, spike_depths
 
 
 def _template_positions_amplitudes(
@@ -475,12 +475,12 @@ def _template_positions_amplitudes(
     Parameters
     ----------
     templates : np.ndarray
-        (num_clusters x num_samples x num_channels) array of templates.
+        (num_clusters, num_samples, num_channels) array of templates.
     inverse_whitening_matrix: np.ndarray
         Inverse of the whitening matrix used in KS preprocessing, used to
         unwhiten templates.
     ycoords : np.ndarray
-        (num_channels) array of the y-axis (depth) channel positions.
+        (num_channels,) array of the y-axis (depth) channel positions.
     spike_templates : np.ndarray
         (num_spikes,) array indicating the template associated with each spike.
     template_scaling_amplitudes : np.ndarray
@@ -502,7 +502,7 @@ def _template_positions_amplitudes(
     unwhite_templates : np.ndarray
         Unwhitened templates (num_clusters, num_samples, num_channels).
     trough_peak_durations : np.ndarray
-        (num_templates, ) Duration from trough to peak for the template waveform
+        (num_templates, ) array of durations from trough to peak for each template waveform
     waveforms : np.ndarray
         (num_templates, num_samples) Waveform of each template, taken as the signal on the maximum loading channel.
     """
@@ -595,7 +595,7 @@ def load_ks_dir(sorter_output: Path, exclude_noise: bool = True, load_pcs: bool 
     params : dict
         A dictionary of parameters combining both the kilosort `params.py`
         file as data loaded from `npy` files. The contents of the `npy`
-        files can be found on the Phy documentation.
+        files can be found in the Phy documentation.
 
     Notes
     -----
