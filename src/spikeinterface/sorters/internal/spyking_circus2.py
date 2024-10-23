@@ -39,12 +39,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {
-            "similarity_kwargs": {"method": "cosine", "support": "union", "max_lag_ms": 0.2},
-            "correlograms_kwargs": {},
-            "auto_merge": {
-                "min_spikes": 10,
-                "corr_diff_thresh": 0.25,
-            },
+            "similarity_kwargs": {"method": "l2", "support": "union", "max_lag_ms": 0.1},
         },
         "clustering": {"legacy": True},
         "matching": {"method": "circus-omp-svd"},
@@ -100,13 +95,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         except:
             HAVE_HDBSCAN = False
 
+        assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
+
         try:
             import torch
         except ImportError:
             HAVE_TORCH = False
             print("spykingcircus2 could benefit from using torch. Consider installing it")
-
-        assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
         # this is importanted only on demand because numba import are too heavy
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -323,13 +318,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 )
                 merging_params["max_distance_um"] = max(50, 2 * max_motion)
 
-            # peak_sign = params['detection'].get('peak_sign', 'neg')
-            # best_amplitudes = get_template_extremum_amplitude(templates, peak_sign=peak_sign)
-            # guessed_amplitudes = spikes['amplitude'].copy()
-            # for ind in unit_ids:
-            #     mask = spikes['cluster_index'] == ind
-            #     guessed_amplitudes[mask] *= best_amplitudes[ind]
-
             if params["debug"]:
                 curation_folder = sorter_output_folder / "curation"
                 if curation_folder.exists():
@@ -381,17 +369,17 @@ def create_sorting_analyzer_with_templates(sorting, recording, templates, remove
 
 def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
 
-    from spikeinterface.core.sorting_tools import apply_merges_to_sorting
-
     sa = create_sorting_analyzer_with_templates(sorting, recording, templates)
-
     sa.compute("unit_locations", method="monopolar_triangulation")
     similarity_kwargs = merging_kwargs.pop("similarity_kwargs", {})
     sa.compute("template_similarity", **similarity_kwargs)
     correlograms_kwargs = merging_kwargs.pop("correlograms_kwargs", {})
     sa.compute("correlograms", **correlograms_kwargs)
-    auto_merge_kwargs = merging_kwargs.pop("auto_merge", {})
-    merges = get_potential_auto_merge(sa, resolve_graph=True, **auto_merge_kwargs)
-    sorting = apply_merges_to_sorting(sa.sorting, merges)
 
-    return sorting
+    from spikeinterface.curation.auto_merge import iterative_merges
+
+    template_diff_thresh = np.arange(0.05, 0.25, 0.05)
+    presets_params = [{"template_similarity": {"template_diff_thresh": i}} for i in template_diff_thresh]
+    presets = ["x_contaminations"] * len(template_diff_thresh)
+    final_sa = iterative_merges(sa, presets=presets, presets_params=presets_params)
+    return final_sa.sorting
