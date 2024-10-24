@@ -40,7 +40,7 @@ These tutorials focus on the :py:mod:`spikeinterface.core` module.
       :link: sphx_glr_tutorials_core_plot_1_recording_extractor.py
       :img-top: /tutorials/core/images/thumb/sphx_glr_plot_1_recording_extractor_thumb.png
       :img-alt: Recording objects
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -52,7 +52,7 @@ These tutorials focus on the :py:mod:`spikeinterface.core` module.
       :link: sphx_glr_tutorials_core_plot_2_sorting_extractor.py
       :img-top: /tutorials/core/images/thumb/sphx_glr_plot_2_sorting_extractor_thumb.png
       :img-alt: Sorting objects
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -64,7 +64,7 @@ These tutorials focus on the :py:mod:`spikeinterface.core` module.
       :link: sphx_glr_tutorials_core_plot_3_handle_probe_info.py
       :img-top: /tutorials/core/images/thumb/sphx_glr_plot_3_handle_probe_info_thumb.png
       :img-alt: Handling probe information
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -76,7 +76,7 @@ These tutorials focus on the :py:mod:`spikeinterface.core` module.
       :link: sphx_glr_tutorials_core_plot_4_sorting_analyzer.py
       :img-top: /tutorials/core/images/thumb/sphx_glr_plot_4_sorting_analyzer_thumb.png
       :img-alt: SortingAnalyzer
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -88,7 +88,7 @@ These tutorials focus on the :py:mod:`spikeinterface.core` module.
       :link: sphx_glr_tutorials_core_plot_5_append_concatenate_segments.py
       :img-top: /tutorials/core/images/thumb/sphx_glr_plot_5_append_concatenate_segments_thumb.png
       :img-alt: Append/Concatenate segments
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -100,7 +100,7 @@ These tutorials focus on the :py:mod:`spikeinterface.core` module.
       :link: sphx_glr_tutorials_core_plot_6_handle_times.py
       :img-top: /tutorials/core/images/thumb/sphx_glr_plot_6_handle_times_thumb.png
       :img-alt: Handle time information
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -120,7 +120,7 @@ The :py:mod:`spikeinterface.extractors` module is designed to load and save reco
       :link: sphx_glr_tutorials_extractors_plot_1_read_various_formats.py
       :img-top: /tutorials/extractors/images/thumb/sphx_glr_plot_1_read_various_formats_thumb.png
       :img-alt: Read various formats
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -132,7 +132,7 @@ The :py:mod:`spikeinterface.extractors` module is designed to load and save reco
       :link: sphx_glr_tutorials_extractors_plot_2_working_with_unscaled_traces.py
       :img-top: /tutorials/extractors/images/thumb/sphx_glr_plot_2_working_with_unscaled_traces_thumb.png
       :img-alt: Unscaled traces
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -152,7 +152,7 @@ The :code:`spikeinterface.qualitymetrics` module allows users to compute various
       :link: sphx_glr_tutorials_qualitymetrics_plot_3_quality_mertics.py
       :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_3_quality_mertics_thumb.png
       :img-alt: Quality Metrics
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -164,7 +164,7 @@ The :code:`spikeinterface.qualitymetrics` module allows users to compute various
       :link: sphx_glr_tutorials_qualitymetrics_plot_4_curation.py
       :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_4_curation_thumb.png
       :img-alt: Curation Tutorial
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -184,7 +184,7 @@ The :code:`spikeinterface.comparison` module allows you to compare sorter output
       :link: sphx_glr_tutorials_comparison_plot_5_comparison_sorter_weaknesses.py
       :img-top: /tutorials/comparison/images/thumb/sphx_glr_plot_5_comparison_sorter_weaknesses_thumb.png
       :img-alt: Sorter Comparison
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -204,7 +204,7 @@ The :code:`widgets` module contains several plotting routines (widgets) for visu
       :link: sphx_glr_tutorials_widgets_plot_1_rec_gallery.py
       :img-top: /tutorials/widgets/images/thumb/sphx_glr_plot_1_rec_gallery_thumb.png
       :img-alt: Recording Widgets
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -216,7 +216,7 @@ The :code:`widgets` module contains several plotting routines (widgets) for visu
       :link: sphx_glr_tutorials_widgets_plot_2_sort_gallery.py
       :img-top: /tutorials/widgets/images/thumb/sphx_glr_plot_2_sort_gallery_thumb.png
       :img-alt: Sorting Widgets
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -228,7 +228,7 @@ The :code:`widgets` module contains several plotting routines (widgets) for visu
       :link: sphx_glr_tutorials_widgets_plot_3_waveforms_gallery.py
       :img-top: /tutorials/widgets/images/thumb/sphx_glr_plot_3_waveforms_gallery_thumb.png
       :img-alt: Waveforms Widgets
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 
@@ -240,7 +240,7 @@ The :code:`widgets` module contains several plotting routines (widgets) for visu
       :link: sphx_glr_tutorials_widgets_plot_4_peaks_gallery.py
       :img-top: /tutorials/widgets/images/thumb/sphx_glr_plot_4_peaks_gallery_thumb.png
       :img-alt: Peaks Widgets
-      :class-card: my-custom-card
+      :class-card: gallery-card
 
       .. raw:: html
 

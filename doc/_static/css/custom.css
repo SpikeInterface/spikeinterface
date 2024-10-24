@@ -1,20 +1,20 @@
 /* Center and make the title bold */
-.my-custom-card .grid-item-card-title {
+.gallery-card .grid-item-card-title {
     text-align: center;
     font-weight: bold;
 }
 
 /* Default style for hover content (hidden) */
-.my-custom-card .hover-content {
+.gallery-card .hover-content {
     display: none;
     text-align: center;
 }
 
 /* Show the hover content when hovering over the card */
-.my-custom-card:hover .default-title {
+.gallery-card:hover .default-title {
     display: none;
 }
 
-.my-custom-card:hover .hover-content {
+.gallery-card:hover .hover-content {
     display: block;
 }
