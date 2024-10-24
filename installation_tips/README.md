@@ -3,20 +3,20 @@
 If you are not (yet) an expert in Python installations, a main difficulty is choosing the installation procedure.
 The main ideas you need to know before starting:
  * python itself can be distributed and installed many many ways.
- * python itself do not contain so many features for scientifique computing you need to install "packages".
-   Numpy, scipy, matplotlib, spikeinterface, ... are python packages that have a complicated dependency graph between then. "uv"
- * installing package  can be distributed and installed several ways (pip, conda, uv, mamba, ...)
- * installing many packages at once is challenging (because of the depenency graph) so you need to do it in an "isolated environement"
-   to not destroy any previous installation. You need to see an "environement" as a sub installtion in dedicated folder.
+ * python itself does not contain so many features for scientific computing you need to install "packages".
+   numpy, scipy, matplotlib, spikeinterface, ... are python packages that have a complicated dependency graph between then. "uv"
+ * packages  can be distributed and installed in several ways (pip, conda, uv, mamba, ...)
+ * installing many packages at once is challenging (because of their dependency graphs) so you need to do it in an "isolated environement"
+   to not destroy any previous installation. You need to see an "environment" as a sub installation in a dedicated folder.
 
-Choosing the installator + a environement manager + a package installer is a nightmare for beginners.
+Choosing the installer + an environment manager + a package installer is a nightmare for beginners.
 The main options are:
-  * use "anaconda" that do everything. The most popular but bad idea because : ultra slow and agressive licensing (not free anymore)
+  * use "anaconda", which does everything. The most popular but bad idea because : ultra slow and aggressive licensing (not always free anymore)
   * use python from the system or python.org + venv + pip : good idea for linux users.
-  * use "uv" : a new, fast and simple. We recommand this for beginners on evry os.
+  * use "uv" : a new, fast and simple package manager. We recommend this for beginners on every os.
 
-Here we propose a steps by step recipe for beginers based on "uv".
-We used to propose here a solution based on anaconda. It is kept here for a while but we do not recommand it anymore.
+Here we propose a step by step recipe for beginers based on "uv".
+We used to recommend installing with anaconda. It will be kept here for a while but we do not recommend it anymore.
 
 
 This environment will install:
@@ -33,7 +33,7 @@ Kilosort, Ironclust and HDSort are MATLAB based and need to be installed from so
 1. On windows. Open a powershell and do
    `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
 2. exit session and log again.
-3. Download with right click + save this file corresponding in "Documents" folder:
+3. Download with right click and save this file corresponding in "Documents" folder:
     * [`requirements_stable.txt`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/requirements_stable.txt)
 4. open terminal or powershell
 5. `uv venv si_env --python 3.11`
@@ -47,7 +47,7 @@ More detail on [uv here](https://github.com/astral-sh/uv).
 
 Some tools in the spikeinteface ecosystem are getting regular bug fixes (spikeinterface, spikeinterface-gui, probeinterface, python-neo, sortingview).
 We are making releases 2 to 4 times a year. In between releases if you want to install from source you can use the `requirements_rolling.txt` file to create the environment. This will install the packages of the ecosystem from source.
-This is a good way to test if patch fix your issue.
+This is a good way to test if a patch fixes your issue.
 
 
 ### Check the installation
@@ -79,7 +79,7 @@ This script tests the following:
   * opening the spikeinterface-gui
   * exporting to Phy
 
-### Legacy installation using anaconda (not recomanded)
+### Legacy installation using anaconda (not recommended)
 
 Steps:
 
