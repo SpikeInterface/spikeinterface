@@ -25,3 +25,4 @@ from .comparison import *
 from .widgets import *
 from .exporters import *
 from .generation import *
+from .benchmark import *

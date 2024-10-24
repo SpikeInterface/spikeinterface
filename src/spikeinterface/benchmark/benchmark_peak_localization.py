@@ -6,7 +6,7 @@ from spikeinterface.postprocessing.localization_tools import (
     compute_grid_convolution,
 )
 import numpy as np
-from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
+from .benchmark_base import Benchmark, BenchmarkStudy
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 
 

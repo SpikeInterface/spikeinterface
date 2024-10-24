@@ -9,11 +9,8 @@ from spikeinterface.widgets import (
 )
 
 import numpy as np
-from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark, BenchmarkStudy
+from .benchmark_base import Benchmark, BenchmarkStudy
 from spikeinterface.core.basesorting import minimum_spike_dtype
-from spikeinterface.sortingcomponents.tools import remove_empty_templates
-from spikeinterface.core.recording_tools import get_noise_levels
-from spikeinterface.core.sparsity import compute_sparsity
 
 
 class MatchingBenchmark(Benchmark):
@@ -36,7 +33,7 @@ class MatchingBenchmark(Benchmark):
         sorting["unit_index"] = spikes["cluster_index"]
         sorting["segment_index"] = spikes["segment_index"]
         sorting = NumpySorting(sorting, self.recording.sampling_frequency, unit_ids)
-        self.result = {"sorting": sorting}
+        self.result = {"sorting": sorting, "spikes": spikes}
         self.result["templates"] = self.templates
 
     def compute_result(self, with_collision=False, **result_params):
@@ -48,6 +45,7 @@ class MatchingBenchmark(Benchmark):
 
     _run_key_saved = [
         ("sorting", "sorting"),
+        ("spikes", "npy"),
         ("templates", "zarr_templates"),
     ]
     _result_key_saved = [("gt_collision", "pickle"), ("gt_comparison", "pickle")]
@@ -64,45 +62,25 @@ class MatchingStudy(BenchmarkStudy):
         benchmark = MatchingBenchmark(recording, gt_sorting, params)
         return benchmark
 
-    def plot_agreements(self, case_keys=None, figsize=None):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-        import pylab as plt
+    def plot_agreement_matrix(self, **kwargs):
+        from .benchmark_plot_tools import plot_agreement_matrix
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+        return plot_agreement_matrix(self, **kwargs)
 
-        for count, key in enumerate(case_keys):
-            ax = axs[0, count]
-            ax.set_title(self.cases[key]["label"])
-            plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
+    def plot_performances_vs_snr(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_snr
 
-    def plot_performances_vs_snr(self, case_keys=None, figsize=None, metrics=["accuracy", "recall", "precision"]):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
+        return plot_performances_vs_snr(self, **kwargs)
 
-        fig, axs = plt.subplots(ncols=1, nrows=len(metrics), figsize=figsize, squeeze=False)
+    def plot_performances_comparison(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_comparison
 
-        for count, k in enumerate(metrics):
-
-            ax = axs[count, 0]
-            for key in case_keys:
-                label = self.cases[key]["label"]
-
-                analyzer = self.get_sorting_analyzer(key)
-                metrics = analyzer.get_extension("quality_metrics").get_data()
-                x = metrics["snr"].values
-                y = self.get_result(key)["gt_comparison"].get_performance()[k].values
-                ax.scatter(x, y, marker=".", label=label)
-                ax.set_title(k)
-
-            if count == 2:
-                ax.legend()
-
-        return fig
+        return plot_performances_comparison(self, **kwargs)
 
     def plot_collisions(self, case_keys=None, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -116,70 +94,6 @@ class MatchingStudy(BenchmarkStudy):
                 mode="lines",
                 good_only=False,
             )
-
-        return fig
-
-    def plot_comparison_matching(
-        self,
-        case_keys=None,
-        performance_names=["accuracy", "recall", "precision"],
-        colors=["g", "b", "r"],
-        ylim=(-0.1, 1.1),
-        figsize=None,
-    ):
-
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-
-        num_methods = len(case_keys)
-        import pylab as plt
-
-        fig, axs = plt.subplots(ncols=num_methods, nrows=num_methods, figsize=(10, 10))
-        for i, key1 in enumerate(case_keys):
-            for j, key2 in enumerate(case_keys):
-                if len(axs.shape) > 1:
-                    ax = axs[i, j]
-                else:
-                    ax = axs[j]
-                comp1 = self.get_result(key1)["gt_comparison"]
-                comp2 = self.get_result(key2)["gt_comparison"]
-                if i <= j:
-                    for performance, color in zip(performance_names, colors):
-                        perf1 = comp1.get_performance()[performance]
-                        perf2 = comp2.get_performance()[performance]
-                        ax.plot(perf2, perf1, ".", label=performance, color=color)
-
-                    ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
-                    ax.set_ylim(ylim)
-                    ax.set_xlim(ylim)
-                    ax.spines[["right", "top"]].set_visible(False)
-                    ax.set_aspect("equal")
-
-                    label1 = self.cases[key1]["label"]
-                    label2 = self.cases[key2]["label"]
-                    if j == i:
-                        ax.set_ylabel(f"{label1}")
-                    else:
-                        ax.set_yticks([])
-                    if i == j:
-                        ax.set_xlabel(f"{label2}")
-                    else:
-                        ax.set_xticks([])
-                    if i == num_methods - 1 and j == num_methods - 1:
-                        patches = []
-                        import matplotlib.patches as mpatches
-
-                        for color, name in zip(colors, performance_names):
-                            patches.append(mpatches.Patch(color=color, label=name))
-                        ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
-                else:
-                    ax.spines["bottom"].set_visible(False)
-                    ax.spines["left"].set_visible(False)
-                    ax.spines["top"].set_visible(False)
-                    ax.spines["right"].set_visible(False)
-                    ax.set_xticks([])
-                    ax.set_yticks([])
-        plt.tight_layout(h_pad=0, w_pad=0)
 
         return fig
 
@@ -225,6 +139,7 @@ class MatchingStudy(BenchmarkStudy):
         plot_study_unit_counts(self, case_keys, figsize=figsize)
 
     def plot_unit_losses(self, before, after, metric=["precision"], figsize=None):
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=1, nrows=len(metric), figsize=figsize, squeeze=False)
 

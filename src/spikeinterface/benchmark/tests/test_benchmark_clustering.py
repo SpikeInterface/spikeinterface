@@ -3,10 +3,12 @@ import numpy as np
 
 import shutil
 
-from spikeinterface.sortingcomponents.benchmark.tests.common_benchmark_testing import make_dataset
-from spikeinterface.sortingcomponents.benchmark.benchmark_clustering import ClusteringStudy
+from spikeinterface.benchmark.tests.common_benchmark_testing import make_dataset
+from spikeinterface.benchmark.benchmark_clustering import ClusteringStudy
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.template_tools import get_template_extremum_channel
+
+from pathlib import Path
 
 
 @pytest.mark.skip()
@@ -78,4 +80,5 @@ def test_benchmark_clustering(create_cache_folder):
 
 
 if __name__ == "__main__":
-    test_benchmark_clustering()
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks"
+    test_benchmark_clustering(cache_folder)
