@@ -165,7 +165,7 @@ class TracesWidget(BaseWidget):
         mode = mode
         cmap = cmap
 
-        times_in_range, list_traces, frame_range, channel_ids = _get_trace_list(
+        times_in_range, list_traces, sample_range, channel_ids = _get_trace_list(
             recordings, channel_ids, time_range, segment_index, return_scaled=return_scaled, times=times
         )
 
@@ -257,7 +257,7 @@ class TracesWidget(BaseWidget):
             channel_ids=channel_ids,
             channel_locations=channel_locations,
             time_range=time_range,
-            frame_range=frame_range,
+            sample_range=sample_range,
             times_in_range=times_in_range,
             layer_keys=layer_keys,
             list_traces=list_traces,
@@ -543,7 +543,7 @@ class TracesWidget(BaseWidget):
             time_range = np.array([times[start_frame], times[end_frame]])
 
         self._selected_recordings = {k: self.recordings[k] for k in self._get_layers()}
-        times_in_range, list_traces, frame_range, channel_ids = _get_trace_list(
+        times_in_range, list_traces, sample_range, channel_ids = _get_trace_list(
             self._selected_recordings,
             channel_ids,
             time_range,
@@ -556,7 +556,7 @@ class TracesWidget(BaseWidget):
         self._list_traces = list_traces
         self._times_in_range = times_in_range
         self._time_range = time_range
-        self._frame_range = (start_frame, end_frame)
+        self._sample_range = (start_frame, end_frame)
         self._segment_index = segment_index
 
         self._update_plot()
@@ -569,7 +569,7 @@ class TracesWidget(BaseWidget):
         layer_keys = self._get_layers()
 
         data_plot["mode"] = mode
-        data_plot["frame_range"] = self._frame_range
+        data_plot["sample_range"] = self._sample_range
         data_plot["time_range"] = self._time_range
         if self.colorbar.value:
             data_plot["with_colorbar"] = True
@@ -680,30 +680,29 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_s
         assert all(
             rec.has_scaleable_traces() for rec in recordings.values()
         ), "Some recording layers do not have scaled traces. Use `return_scaled=False`"
-    frame_range = np.array(
+    sample_range = np.array(
         [
             rec0.time_to_sample_index(time_range[0], segment_index=segment_index),
             rec0.time_to_sample_index(time_range[1], segment_index=segment_index),
         ]
     )
     if times is not None:
-        times = times[frame_range[0] : frame_range[1]]
+        times = times[sample_range[0] : sample_range[1]]
     else:
         num_samples = rec0.get_num_samples(segment_index=segment_index)
-        frame_range = np.clip(frame_range, 0, num_samples)
-        time_range = frame_range / fs
-        times = np.arange(frame_range[0], frame_range[1]) / fs
+        sample_range = np.clip(sample_range, 0, num_samples)
+        times = np.arange(sample_range[0], sample_range[1]) / fs
 
     list_traces = []
-    for rec_name, rec in recordings.items():
+    for _, rec in recordings.items():
         traces = rec.get_traces(
             segment_index=segment_index,
             channel_ids=channel_ids,
-            start_frame=frame_range[0],
-            end_frame=frame_range[1],
+            start_frame=sample_range[0],
+            end_frame=sample_range[1],
             return_scaled=return_scaled,
         )
 
         list_traces.append(traces)
 
-    return times, list_traces, frame_range, channel_ids
+    return times, list_traces, sample_range, channel_ids
