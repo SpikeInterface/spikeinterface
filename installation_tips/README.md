@@ -4,18 +4,21 @@ If you are not (yet) an expert in Python installations, a main difficulty is cho
 The main ideas you need to know before starting:
  * python itself can be distributed and installed many many ways.
  * python itself does not contain so many features for scientific computing you need to install "packages".
-   numpy, scipy, matplotlib, spikeinterface, ... are python packages that have a complicated dependency graph between then. "uv"
+   numpy, scipy, matplotlib, spikeinterface, ... are python packages that have a complicated dependency graph between then.
  * packages  can be distributed and installed in several ways (pip, conda, uv, mamba, ...)
  * installing many packages at once is challenging (because of their dependency graphs) so you need to do it in an "isolated environement"
    to not destroy any previous installation. You need to see an "environment" as a sub installation in a dedicated folder.
 
 Choosing the installer + an environment manager + a package installer is a nightmare for beginners.
 The main options are:
-  * use "anaconda", which does everything. The most popular but bad idea because : ultra slow and aggressive licensing (not always free anymore)
-  * use python from the system or python.org + venv + pip : good idea for linux users.
   * use "uv" : a new, fast and simple package manager. We recommend this for beginners on every os.
+  * use "anaconda", which does everything. The most popular but theses days it is becoming
+    a bad idea because : ultra slow by default and aggressive licensing by default (not always free anymore).
+    You need to play with "community channels" to make it free again, which is too complicated for beginners.
+    Do not go this way.
+  * use python from the system or python.org + venv + pip : good idea for linux users.
 
-Here we propose a step by step recipe for beginers based on "uv".
+Here we propose a step by step recipe for beginers based on **"uv"**.
 We used to recommend installing with anaconda. It will be kept here for a while but we do not recommend it anymore.
 
 
@@ -26,7 +29,7 @@ This environment will install:
 
 Kilosort, Ironclust and HDSort are MATLAB based and need to be installed from source.
 
-### Quick installation
+### Quick installation using "uv" (recommended)
 
 1. On macOS and Linux. Open a terminal and do
    `$ curl -LsSf https://astral.sh/uv/install.sh | sh`
@@ -37,7 +40,7 @@ Kilosort, Ironclust and HDSort are MATLAB based and need to be installed from so
     * [`requirements_stable.txt`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/requirements_stable.txt)
 4. open terminal or powershell
 5. `uv venv si_env --python 3.11`
-6. `source `source si_env/bin/activate` (you should have `(si_env)` in your terminal)
+6. `source si_env/bin/activate` (you should have `(si_env)` in your terminal)
 7. `uv pip install -r Documents/requirements_stable.txt`
 
 
@@ -57,29 +60,26 @@ If you want to test the spikeinterface install you can:
 
 1. Download with right click + save the file [`check_your_install.py`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/check_your_install.py)
     and put it into the "Documents" folder
-
-2. Open the Anaconda Command Prompt (Windows) or Terminal (Mac)
-3. If not in your "Documents" folder type `cd Documents`
-4. Run this:
-    ```
-    conda activate si_env
-    python check_your_install.py
-    ```
-5. If a windows user to clean-up you will also need to right click + save [`cleanup_for_windows.py`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/cleanup_for_windows.py)
+2. Open the CMD (Windows) or Terminal (Mac/Linux)
+3. Acticate your is_env : `source si_env/bin/activate`
+4. Go to your "Documents" folder with `cd Documents` or the place where you downloaded the `check_your_install.py`
+5. Run this:
+    `python check_your_install.py`
+6. If a windows user to clean-up you will also need to right click + save [`cleanup_for_windows.py`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/cleanup_for_windows.py)
 Then transfer `cleanup_for_windows.py` into your "Documents" folder. Finally run :
    ```
    python cleanup_for_windows.py
    ```
 
-This script tests the following:
+This script tests the following steps:
   * importing spikeinterface
-  * running tridesclous
-  * running spyking-circus (not on mac)
-  * running herdingspikes (not on windows)
+  * running tridesclous2
+  * running kilosort4
   * opening the spikeinterface-gui
   * exporting to Phy
 
-### Legacy installation using anaconda (not recommended)
+
+### Legacy installation using anaconda (not recommended anymore)
 
 Steps:
 
