@@ -514,15 +514,15 @@ def determine_cast_unsigned(recording, dtype):
     return cast_unsigned
 
 
-
-
-def get_random_recording_slices(recording,
-                                method="full_random",
-                                num_chunks_per_segment=20,
-                                chunk_duration="500ms",
-                                chunk_size=None,
-                                margin_frames=0,
-                                seed=None):
+def get_random_recording_slices(
+    recording,
+    method="full_random",
+    num_chunks_per_segment=20,
+    chunk_duration="500ms",
+    chunk_size=None,
+    margin_frames=0,
+    seed=None,
+):
     """
     Get random slice of a recording across segments.
 
@@ -593,19 +593,14 @@ def get_random_recording_slices(recording,
             ]
     else:
         raise ValueError(f"get_random_recording_slices : wrong method {method}")
-    
+
     return recording_slices
 
 
-def get_random_data_chunks(
-    recording,
-    return_scaled=False,
-    concatenated=True,
-    **random_slices_kwargs
-):
+def get_random_data_chunks(recording, return_scaled=False, concatenated=True, **random_slices_kwargs):
     """
     Extract random chunks across segments.
-    
+
     Internally, it uses `get_random_recording_slices()` and retrieves the traces chunk as a list
     or a concatenated unique array.
 
@@ -698,14 +693,13 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
 
 def _noise_level_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx["recording"]
-    
+
     one_chunk = recording.get_traces(
         start_frame=start_frame,
         end_frame=end_frame,
         segment_index=segment_index,
         return_scaled=worker_ctx["return_scaled"],
     )
-
 
     if worker_ctx["method"] == "mad":
         med = np.median(one_chunk, axis=0, keepdims=True)
@@ -724,12 +718,13 @@ def _noise_level_chunk_init(recording, return_scaled, method):
     worker_ctx["method"] = method
     return worker_ctx
 
+
 def get_noise_levels(
     recording: "BaseRecording",
     return_scaled: bool = True,
     method: Literal["mad", "std"] = "mad",
     force_recompute: bool = False,
-    random_slices_kwargs : dict = {},
+    random_slices_kwargs: dict = {},
     **kwargs,
 ) -> np.ndarray:
     """
@@ -759,7 +754,7 @@ def get_noise_levels(
         function for more details.
 
     {}
-    
+
     Returns
     -------
     noise_levels : array
@@ -774,7 +769,7 @@ def get_noise_levels(
     if key in recording.get_property_keys() and not force_recompute:
         noise_levels = recording.get_property(key=key)
     else:
-        # This is to keep backward compatibility 
+        # This is to keep backward compatibility
         # lets keep for a while and remove this maybe in 0.103.0
         # chunk_size used to be in the signature and now is ambiguous
         random_slices_kwargs_, job_kwargs = split_job_kwargs(kwargs)
@@ -794,6 +789,7 @@ def get_noise_levels(
         recording_slices = get_random_recording_slices(recording, **random_slices_kwargs)
 
         noise_levels_chunks = []
+
         def append_noise_chunk(res):
             noise_levels_chunks.append(res)
 
@@ -801,8 +797,14 @@ def get_noise_levels(
         init_func = _noise_level_chunk_init
         init_args = (recording, return_scaled, method)
         executor = ChunkRecordingExecutor(
-            recording, func, init_func, init_args, job_name="noise_level", verbose=False,
-            gather_func=append_noise_chunk, **job_kwargs
+            recording,
+            func,
+            init_func,
+            init_args,
+            job_name="noise_level",
+            verbose=False,
+            gather_func=append_noise_chunk,
+            **job_kwargs,
         )
         executor.run(all_chunks=recording_slices)
         noise_levels_chunks = np.stack(noise_levels_chunks)
@@ -812,6 +814,7 @@ def get_noise_levels(
         recording.set_property(key, noise_levels)
 
     return noise_levels
+
 
 get_noise_levels.__doc__ = get_noise_levels.__doc__.format(_shared_job_kwargs_doc)
 

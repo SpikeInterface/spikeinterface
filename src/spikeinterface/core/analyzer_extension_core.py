@@ -693,7 +693,6 @@ class ComputeNoiseLevels(AnalyzerExtension):
     need_job_kwargs = False
     need_backward_compatibility_on_load = True
 
-
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 

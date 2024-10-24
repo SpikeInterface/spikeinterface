@@ -184,6 +184,7 @@ def ensure_n_jobs(recording, n_jobs=1):
 
     return n_jobs
 
+
 def chunk_duration_to_chunk_size(chunk_duration, recording):
     if isinstance(chunk_duration, float):
         chunk_size = int(chunk_duration * recording.get_sampling_frequency())
@@ -196,7 +197,7 @@ def chunk_duration_to_chunk_size(chunk_duration, recording):
             raise ValueError("chunk_duration must ends with s or ms")
         chunk_size = int(chunk_duration * recording.get_sampling_frequency())
     else:
-        raise ValueError("chunk_duration must be str or float")    
+        raise ValueError("chunk_duration must be str or float")
     return chunk_size
 
 

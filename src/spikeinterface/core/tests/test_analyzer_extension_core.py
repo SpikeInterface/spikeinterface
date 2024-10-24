@@ -259,7 +259,7 @@ if __name__ == "__main__":
     # test_ComputeWaveforms(format="binary_folder", sparse=False, create_cache_folder=cache_folder)
     # test_ComputeWaveforms(format="zarr", sparse=True, create_cache_folder=cache_folder)
     # test_ComputeWaveforms(format="zarr", sparse=False, create_cache_folder=cache_folder)
-    #test_ComputeRandomSpikes(format="memory", sparse=True, create_cache_folder=cache_folder)
+    # test_ComputeRandomSpikes(format="memory", sparse=True, create_cache_folder=cache_folder)
     test_ComputeRandomSpikes(format="binary_folder", sparse=False, create_cache_folder=cache_folder)
     test_ComputeTemplates(format="memory", sparse=True, create_cache_folder=cache_folder)
     test_ComputeNoiseLevels(format="memory", sparse=False, create_cache_folder=cache_folder)

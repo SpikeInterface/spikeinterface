@@ -48,5 +48,5 @@ def test_silence(create_cache_folder):
 
 
 if __name__ == "__main__":
-    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" 
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder"
     test_silence(cache_folder)
