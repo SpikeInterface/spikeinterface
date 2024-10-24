@@ -172,8 +172,10 @@ class BaseRecordingSnippets(BaseExtractor):
         number_of_device_channel_indices = np.max(list(device_channel_indices) + [0])
         if number_of_device_channel_indices >= self.get_num_channels():
             error_msg = (
-                f"The given Probe have 'device_channel_indices' that do not match channel count \n"
-                f"{number_of_device_channel_indices} vs {self.get_num_channels()} \n"
+                f"The given Probe either has 'device_channel_indices' that does not match channel count \n"
+                f"{len(device_channel_indices)} vs {self.get_num_channels()} \n"
+                f"or it's max index {number_of_device_channel_indices} is the same as the number of channels {self.get_num_channels()} \n"
+                f"If using all channels remember that python is 0-indexed so max device_channel_index should be {self.get_num_channels() - 1} \n"
                 f"device_channel_indices are the following: {device_channel_indices} \n"
                 f"recording channels are the following: {self.get_channel_ids()} \n"
             )
