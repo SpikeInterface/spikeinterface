@@ -36,7 +36,7 @@ class FrameSliceRecording(BaseRecording):
         else:
             assert (
                 0 <= start_frame < parent_size
-            ), f"'start_frame' must be fewer than number of samples in parent: {parent_size}"
+            ), f"`start_frame` must be fewer than number of samples in parent: {parent_size}"
 
         if end_frame is None:
             end_frame = parent_size

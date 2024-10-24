@@ -152,9 +152,9 @@ class TracesWidget(BaseWidget):
             time_range[1] = t_end
 
         if time_range[0] < t_start or time_range[1] < t_start:
-            raise ValueError(f"All time_range values must be greater than {t_start}")
+            raise ValueError(f"All `time_range` values must be greater than {t_start}")
         if time_range[1] <= time_range[0]:
-            raise ValueError("time_range[1] must be greater than time_range[0]")
+            raise ValueError("`time_range[1]` must be greater than `time_range[0]`")
 
         assert mode in ("auto", "line", "map"), 'Mode must be one of "auto","line", "map"'
         if mode == "auto":
