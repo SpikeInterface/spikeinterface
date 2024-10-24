@@ -5,13 +5,15 @@ from spikeinterface.core import generate_recording
 
 from spikeinterface.preprocessing import whiten, scale, compute_whitening_matrix
 
+from pathlib import Path
+
 
 def test_whiten(create_cache_folder):
     cache_folder = create_cache_folder
     rec = generate_recording(num_channels=4, seed=2205)
 
     print(rec.get_channel_locations())
-    random_chunk_kwargs = {}
+    random_chunk_kwargs = {"seed": 2205}
     W1, M = compute_whitening_matrix(rec, "global", random_chunk_kwargs, apply_mean=False, radius_um=None)
     # print(W)
     # print(M)
@@ -47,4 +49,5 @@ def test_whiten(create_cache_folder):
 
 
 if __name__ == "__main__":
-    test_whiten()
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder"
+    test_whiten(cache_folder)

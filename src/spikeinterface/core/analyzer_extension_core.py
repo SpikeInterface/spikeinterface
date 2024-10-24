@@ -691,12 +691,13 @@ class ComputeNoiseLevels(AnalyzerExtension):
     need_recording = True
     use_nodepipeline = False
     need_job_kwargs = False
+    need_backward_compatibility_on_load = True
 
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, num_chunks_per_segment=20, chunk_size=10000, seed=None):
-        params = dict(num_chunks_per_segment=num_chunks_per_segment, chunk_size=chunk_size, seed=seed)
+    def _set_params(self, **noise_level_params):
+        params = noise_level_params.copy()
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -716,6 +717,15 @@ class ComputeNoiseLevels(AnalyzerExtension):
 
     def _get_data(self):
         return self.data["noise_levels"]
+
+    def _handle_backward_compatibility_on_load(self):
+        # The old parameters used to be params=dict(num_chunks_per_segment=20, chunk_size=10000, seed=None)
+        # now it is handle more explicitly using random_slices_kwargs=dict()
+        for key in ("num_chunks_per_segment", "chunk_size", "seed"):
+            if key in self.params:
+                if "random_slices_kwargs" not in self.params:
+                    self.params["random_slices_kwargs"] = dict()
+                self.params["random_slices_kwargs"][key] = self.params.pop(key)
 
 
 register_result_extension(ComputeNoiseLevels)
