@@ -4,6 +4,9 @@ import os
 import shutil
 import argparse
 
+
+job_kwargs = dict(n_jobs=-1, progress_bar=True, chunk_duration="1s")
+
 def check_import_si():
     import spikeinterface as si
 
@@ -13,15 +16,20 @@ def check_import_si_full():
 
 def _create_recording():
     import spikeinterface.full as si
-    rec, sorting = si.toy_example(num_segments=1, duration=200, seed=1, num_channels=16, num_columns=2)
-    rec.save(folder='./toy_example_recording')
+    rec, sorting = si.generate_ground_truth_recording(
+        durations=[200.],
+        sampling_frequency=30_000.,
+        num_channels=16,
+        num_units=10,
+        seed=2205
+    )
+    rec.save(folder='./toy_example_recording', **job_kwargs)
 
 
 def _run_one_sorter_and_analyzer(sorter_name):
-    job_kwargs = dict(n_jobs=-1, progress_bar=True, chunk_duration="1s")
     import spikeinterface.full as si
     recording = si.load_extractor('./toy_example_recording')
-    sorting = si.run_sorter(sorter_name, recording, output_folder=f'./sorter_with_{sorter_name}', verbose=False)
+    sorting = si.run_sorter(sorter_name, recording, folder=f'./sorter_with_{sorter_name}', verbose=False)
 
     sorting_analyzer = si.create_sorting_analyzer(sorting, recording,
                                                 format="binary_folder", folder=f"./analyzer_with_{sorter_name}",
@@ -36,11 +44,11 @@ def _run_one_sorter_and_analyzer(sorter_name):
     sorting_analyzer.compute("quality_metrics", metric_names=["snr", "firing_rate"])
 
 
-def run_tridesclous():
-    _run_one_sorter_and_analyzer('tridesclous')
-
 def run_tridesclous2():
     _run_one_sorter_and_analyzer('tridesclous2')
+
+def run_kilosort4():
+    _run_one_sorter_and_analyzer('kilosort4')
 
 
 
@@ -75,10 +83,10 @@ def _clean():
     # clean
     folders = [
         "./toy_example_recording",
-        "./sorter_with_tridesclous",
-        "./analyzer_with_tridesclous",
         "./sorter_with_tridesclous2",
         "./analyzer_with_tridesclous2",
+        "./sorter_with_kilosort4",
+        "./analyzer_with_kilosort4",
         "./phy_example"
     ]
     for folder in folders:
@@ -100,8 +108,8 @@ if __name__ == '__main__':
     steps = [
         ('Import spikeinterface', check_import_si),
         ('Import spikeinterface.full', check_import_si_full),
-        ('Run tridesclous', run_tridesclous),
         ('Run tridesclous2', run_tridesclous2),
+        ('Run kilosort4', run_kilosort4),
         ]
 
     # backwards logic because default is True for end-user
