@@ -19,6 +19,8 @@ class WhitenRecording(BasePreprocessor):
     recording : RecordingExtractor
         The recording extractor to be whitened.
     dtype : None or dtype, default: None
+        Datatype of the output recording (covariance matrix estimation
+        and whitening are performed in float64.
         If None the the parent dtype is kept.
         For integer dtype a int_scale must be also given.
     mode : "global" | "local", default: "global"
@@ -74,7 +76,8 @@ class WhitenRecording(BasePreprocessor):
         dtype_ = fix_dtype(recording, dtype)
 
         if dtype_.kind == "i":
-            assert int_scale is not None, "For recording with dtype=int you must set dtype=float32 OR set a int_scale"
+            assert int_scale is not None, ("For recording with dtype=int you must set the output dtype to float "
+                                           " OR set a int_scale")
 
         if W is not None:
             W = np.asarray(W)
