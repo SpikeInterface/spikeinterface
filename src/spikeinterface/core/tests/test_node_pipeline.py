@@ -229,10 +229,6 @@ def test_skip_after_n_peaks_and_recording_slices():
     assert some_amplitudes.size < (spikes.size // 4) * tolerance
 
 
-    
-
-
-
 # the following is for testing locally with python or ipython. It is not used in ci or with pytest.
 if __name__ == "__main__":
     # folder = Path("./cache_folder/core")
