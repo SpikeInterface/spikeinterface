@@ -28,7 +28,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
 
     This will be used by the `waveforms`/`templates` extensions.
 
-    This internally use `random_spikes_selection()` parameters.
+    This internally uses `random_spikes_selection()` parameters.
 
     Parameters
     ----------
@@ -106,7 +106,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
         return self._some_spikes
 
     def get_selected_indices_in_spike_train(self, unit_id, segment_index):
-        # useful for Waveforms extractor backwars compatibility
+        # useful for WaveformExtractor backwards compatibility
         # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) of list (segment_index) of indices of spikes in spiketrain
         sorting = self.sorting_analyzer.sorting
         random_spikes_indices = self.data["random_spikes_indices"]
