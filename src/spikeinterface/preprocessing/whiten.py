@@ -124,7 +124,7 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
         traces_dtype = traces.dtype
-        # if uint --> force int
+        # if uint --> force float
         if traces_dtype.kind == "u":
             traces = traces.astype("float32")
 
@@ -185,6 +185,7 @@ def compute_whitening_matrix(
 
     """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
+    random_data = random_data.astype(np.float64)
 
     regularize_kwargs = regularize_kwargs if regularize_kwargs is not None else {"method": "GraphicalLassoCV"}
 
