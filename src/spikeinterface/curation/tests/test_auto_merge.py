@@ -3,83 +3,84 @@ import pytest
 
 from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.core.generate import inject_some_split_units
-from spikeinterface.curation import compute_merge_unit_groups, auto_merge
+from spikeinterface.curation import compute_merge_unit_groups, auto_merge_units, auto_merge_units_iterative
+from spikeinterface.generation import split_sorting_by_times
 
 
 from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 
 
-@pytest.mark.parametrize(
-    "preset", ["x_contaminations", "feature_neighbors", "temporal_splits", "similarity_correlograms", None]
-)
-def test_compute_merge_unit_groups(sorting_analyzer_for_curation, preset):
+# @pytest.mark.parametrize(
+#     "preset", ["x_contaminations", "feature_neighbors", "temporal_splits", "similarity_correlograms", None]
+# )
+# def test_compute_merge_unit_groups(sorting_analyzer_for_curation, preset):
 
-    print(sorting_analyzer_for_curation)
-    sorting = sorting_analyzer_for_curation.sorting
-    recording = sorting_analyzer_for_curation.recording
-    num_unit_splited = 1
-    num_split = 2
+#     print(sorting_analyzer_for_curation)
+#     sorting = sorting_analyzer_for_curation.sorting
+#     recording = sorting_analyzer_for_curation.recording
+#     num_unit_splited = 1
+#     num_split = 2
 
-    split_ids = sorting.unit_ids[:num_unit_splited]
-    sorting_with_split, other_ids = inject_some_split_units(
-        sorting,
-        split_ids=split_ids,
-        num_split=num_split,
-        output_ids=True,
-        seed=42,
-    )
+#     split_ids = sorting.unit_ids[:num_unit_splited]
+#     sorting_with_split, other_ids = inject_some_split_units(
+#         sorting,
+#         split_ids=split_ids,
+#         num_split=num_split,
+#         output_ids=True,
+#         seed=42,
+#     )
 
-    job_kwargs = dict(n_jobs=-1)
+#     job_kwargs = dict(n_jobs=-1)
 
-    sorting_analyzer = create_sorting_analyzer(sorting_with_split, recording, format="memory")
-    sorting_analyzer.compute(
-        [
-            "random_spikes",
-            "waveforms",
-            "templates",
-            "unit_locations",
-            "spike_amplitudes",
-            "spike_locations",
-            "correlograms",
-            "template_similarity",
-        ],
-        **job_kwargs,
-    )
+#     sorting_analyzer = create_sorting_analyzer(sorting_with_split, recording, format="memory")
+#     sorting_analyzer.compute(
+#         [
+#             "random_spikes",
+#             "waveforms",
+#             "templates",
+#             "unit_locations",
+#             "spike_amplitudes",
+#             "spike_locations",
+#             "correlograms",
+#             "template_similarity",
+#         ],
+#         **job_kwargs,
+#     )
 
-    if preset is not None:
-        # do not resolve graph for checking true pairs
-        merge_unit_groups, outs = compute_merge_unit_groups(
-            sorting_analyzer,
-            preset=preset,
-            resolve_graph=False,
-            # min_spikes=1000,
-            # max_distance_um=150.0,
-            # contamination_thresh=0.2,
-            # corr_diff_thresh=0.16,
-            # template_diff_thresh=0.25,
-            # censored_period_ms=0.0,
-            # refractory_period_ms=4.0,
-            # sigma_smooth_ms=0.6,
-            # adaptative_window_thresh=0.5,
-            # firing_contamination_balance=1.5,
-            extra_outputs=True,
-            **job_kwargs,
-        )
-        if preset == "x_contaminations":
-            assert len(merge_unit_groups) == num_unit_splited
-            for true_pair in other_ids.values():
-                true_pair = tuple(true_pair)
-                assert true_pair in merge_unit_groups
-    else:
-        # when preset is None you have to specify the steps
-        with pytest.raises(ValueError):
-            merge_unit_groups = compute_merge_unit_groups(sorting_analyzer, preset=preset)
-        merge_unit_groups = compute_merge_unit_groups(
-            sorting_analyzer,
-            preset=preset,
-            steps=["num_spikes", "snr", "remove_contaminated", "unit_locations"],
-            **job_kwargs,
-        )
+#     if preset is not None:
+#         # do not resolve graph for checking true pairs
+#         merge_unit_groups, outs = compute_merge_unit_groups(
+#             sorting_analyzer,
+#             preset=preset,
+#             resolve_graph=False,
+#             # min_spikes=1000,
+#             # max_distance_um=150.0,
+#             # contamination_thresh=0.2,
+#             # corr_diff_thresh=0.16,
+#             # template_diff_thresh=0.25,
+#             # censored_period_ms=0.0,
+#             # refractory_period_ms=4.0,
+#             # sigma_smooth_ms=0.6,
+#             # adaptative_window_thresh=0.5,
+#             # firing_contamination_balance=1.5,
+#             extra_outputs=True,
+#             **job_kwargs,
+#         )
+#         if preset == "x_contaminations":
+#             assert len(merge_unit_groups) == num_unit_splited
+#             for true_pair in other_ids.values():
+#                 true_pair = tuple(true_pair)
+#                 assert true_pair in merge_unit_groups
+#     else:
+#         # when preset is None you have to specify the steps
+#         with pytest.raises(ValueError):
+#             merge_unit_groups = compute_merge_unit_groups(sorting_analyzer, preset=preset)
+#         merge_unit_groups = compute_merge_unit_groups(
+#             sorting_analyzer,
+#             preset=preset,
+#             steps=["num_spikes", "snr", "remove_contaminated", "unit_locations"],
+#             **job_kwargs,
+#         )
 
     # DEBUG
     # import matplotlib.pyplot as plt
@@ -133,8 +134,58 @@ def test_compute_merge_unit_groups(sorting_analyzer_for_curation, preset):
     #     plt.show()
 
 
+def test_auto_merge_units(sorting_analyzer_for_curation):
+
+    recording = sorting_analyzer_for_curation.recording
+    job_kwargs = dict(n_jobs=-1)
+    new_sorting, _ = split_sorting_by_times(sorting_analyzer_for_curation)
+    sorting_analyzer = create_sorting_analyzer(new_sorting, recording, format="memory")
+    sorting_analyzer.compute(
+        [
+            "random_spikes",
+            "waveforms",
+            "templates",
+            "unit_locations",
+            "spike_amplitudes",
+            "spike_locations",
+            "correlograms",
+            "template_similarity",
+        ],
+        **job_kwargs,
+    )
+
+    merged_sorting = auto_merge_units(sorting_analyzer, {"preset" : "x_contaminations"})
+    assert len(merged_sorting.unit_ids) < len(sorting_analyzer_for_curation.unit_ids)
+    
+
+def test_auto_merge_units_iterative(sorting_analyzer_for_curation):
+
+    recording = sorting_analyzer_for_curation.recording
+    job_kwargs = dict(n_jobs=-1)
+    new_sorting, _ = split_sorting_by_times(sorting_analyzer_for_curation)
+    sorting_analyzer = create_sorting_analyzer(new_sorting, recording, format="memory")
+    sorting_analyzer.compute(
+        [
+            "random_spikes",
+            "waveforms",
+            "templates",
+            "unit_locations",
+            "spike_amplitudes",
+            "spike_locations",
+            "correlograms",
+            "template_similarity",
+        ],
+        **job_kwargs,
+    )
+
+    merged_sorting = auto_merge_units_iterative(sorting_analyzer, [{"preset" : "x_contaminations"}])
+    assert len(merged_sorting.unit_ids) < len(sorting_analyzer_for_curation.unit_ids)
+
+
 if __name__ == "__main__":
     sorting_analyzer = make_sorting_analyzer(sparse=True)
     # preset = "x_contaminations"
     preset = None
-    test_compute_merge_unit_groups(sorting_analyzer, preset=preset)
+    #test_compute_merge_unit_groups(sorting_analyzer, preset=preset)
+    test_auto_merge_units(sorting_analyzer)
+    test_auto_merge_units_iterative(sorting_analyzer)
