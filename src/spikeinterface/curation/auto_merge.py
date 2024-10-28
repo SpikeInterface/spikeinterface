@@ -154,7 +154,8 @@ def compute_merge_unit_groups(
         Pontential steps : "num_spikes", "snr", "remove_contaminated", "unit_locations", "correlogram",
         "template_similarity", "presence_distance", "cross_contamination", "knn", "quality_score"
         Please check steps explanations above!
-    steps_params : A dictionary whose keys are the steps, and keys are steps parameters.
+    steps_params : dict
+        A dictionary whose keys are the steps, and keys are steps parameters.
     force_copy : boolean, default: True
         When new extensions are computed, the default is to make a copy of the analyzer, to avoid overwriting
         already computed extensions. False if you want to overwrite
