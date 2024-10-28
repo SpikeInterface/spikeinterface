@@ -593,7 +593,7 @@ def auto_merge_units_iterative(
     apply_merge_kwargs: dict = {},
     greedy_merge: bool = True,
     extra_outputs: bool = False,
-    verbose: bool = True,
+    verbose: bool = False,
     **job_kwargs,
 ) -> SortingAnalyzer:
     """
@@ -667,8 +667,8 @@ def auto_merge_units_iterative(
                 all_merging_groups += [merge_unit_groups]
                 all_outs += [outs]
 
+            n_merges = len(merged_analyzer.unit_ids) - n_before
             if verbose:
-                n_merges = len(merged_analyzer.unit_ids) - n_before
                 print(f"{n_merges} merges have been made during pass")
 
             if greedy_merge and n_merges == 0:

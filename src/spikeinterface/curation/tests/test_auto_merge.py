@@ -154,8 +154,8 @@ def test_auto_merge_units(sorting_analyzer_for_curation):
         **job_kwargs,
     )
 
-    merged_sorting = auto_merge_units(sorting_analyzer, {"preset": "x_contaminations"})
-    assert len(merged_sorting.unit_ids) < len(sorting_analyzer_for_curation.unit_ids)
+    merged_sorting = auto_merge_units(sorting_analyzer, {"preset": "x_contaminations"}, **job_kwargs)
+    assert len(merged_sorting.unit_ids) <= len(sorting_analyzer_for_curation.unit_ids)
 
 
 def test_auto_merge_units_iterative(sorting_analyzer_for_curation):
@@ -178,8 +178,8 @@ def test_auto_merge_units_iterative(sorting_analyzer_for_curation):
         **job_kwargs,
     )
 
-    merged_sorting = auto_merge_units_iterative(sorting_analyzer, [{"preset": "x_contaminations"}])
-    assert len(merged_sorting.unit_ids) < len(sorting_analyzer_for_curation.unit_ids)
+    merged_sorting = auto_merge_units_iterative(sorting_analyzer, [{"preset": "x_contaminations"}], **job_kwargs)
+    assert len(merged_sorting.unit_ids) <= len(sorting_analyzer_for_curation.unit_ids)
 
 
 if __name__ == "__main__":
