@@ -19,7 +19,7 @@ from ..qualitymetrics import compute_refrac_period_violations, compute_firing_ra
 from .mergeunitssorting import MergeUnitsSorting
 from .curation_tools import resolve_merging_graph
 
-_compute_merge_persets = {
+_compute_merge_presets = {
     "similarity_correlograms": [
         "num_spikes",
         "remove_contaminated",
@@ -146,7 +146,7 @@ def compute_merge_unit_groups(
     resolve_graph : bool, default: True
         If True, the function resolves the potential unit pairs to be merged into multiple-unit merges.
     compute_needed_extensions : bool, default : True
-        Should we force the computation of needed extensions?
+        Should we force the computation of needed extensions, if not already computed?
     extra_outputs : bool, default: False
         If True, an additional dictionary (`outs`) with processed data is returned.
     steps : None or list of str, default: None
@@ -172,9 +172,11 @@ def compute_merge_unit_groups(
 
     References
     ----------
-    This function is inspired and built upon similar functions from Lussac [Llobet]_,
+    This function used to be inspired and built upon similar functions from Lussac [Llobet]_,
     done by Aurelien Wyngaard and Victor Llobet.
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
+
+    However, it has been greatly consolidated and refined depending on the presets.
     """
     import scipy
 
@@ -187,11 +189,11 @@ def compute_merge_unit_groups(
         # steps has presendance on presets
         pass
     elif preset is not None:
-        if preset not in _compute_merge_persets:
-            raise ValueError(f"preset must be one of {list(_compute_merge_persets.keys())}")
-        steps = _compute_merge_persets[preset]
+        if preset not in _compute_merge_presets:
+            raise ValueError(f"preset must be one of {list(_compute_merge_presets.keys())}")
+        steps = _compute_merge_presets[preset]
 
-    if force_copy and compute_needed_extensions:
+    if force_copy:
         # To avoid erasing the extensions of the user
         sorting_analyzer = sorting_analyzer.copy()
 
@@ -357,7 +359,7 @@ def compute_merge_unit_groups(
         return merge_unit_groups
 
 
-def auto_merge(
+def auto_merge_units(
     sorting_analyzer: SortingAnalyzer, compute_merge_kwargs: dict = {}, apply_merge_kwargs: dict = {}, **job_kwargs
 ) -> SortingAnalyzer:
     """
