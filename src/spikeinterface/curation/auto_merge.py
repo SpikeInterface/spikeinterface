@@ -359,11 +359,11 @@ def compute_merge_unit_groups(
 
 
 def auto_merge_units(
-    sorting_analyzer: SortingAnalyzer, 
-    compute_merge_kwargs: dict = {}, 
+    sorting_analyzer: SortingAnalyzer,
+    compute_merge_kwargs: dict = {},
     apply_merge_kwargs: dict = {},
     extra_outputs: bool = False,
-    **job_kwargs
+    **job_kwargs,
 ) -> SortingAnalyzer:
     """
     Compute merge unit groups and apply it on a SortingAnalyzer.
@@ -377,7 +377,7 @@ def auto_merge_units(
     merging_kwargs : dict, the paramaters that should be used while merging units after each preset
     extra_outputs : bool, default: False
         If True, additional list of merges applied, and dictionary (`outs`) with processed data are returned.
-    
+
     Returns
     -------
     sorting_analyzer:
@@ -395,11 +395,11 @@ def auto_merge_units(
         merge_unit_groups, outs = merge_unit_groups
 
     merged_analyzer = sorting_analyzer.merge_units(merge_unit_groups, **apply_merge_kwargs, **job_kwargs)
-    
+
     if extra_outputs:
         return merged_analyzer, merge_unit_groups, outs
     else:
-        return merged_analyzer    
+        return merged_analyzer
 
 
 def get_potential_auto_merge(
@@ -588,17 +588,17 @@ def get_potential_auto_merge(
 
 
 def auto_merge_units_iterative(
-    sorting_analyzer: SortingAnalyzer, 
-    compute_merge_kwargs: None, 
-    apply_merge_kwargs: dict = {}, 
+    sorting_analyzer: SortingAnalyzer,
+    compute_merge_kwargs: None,
+    apply_merge_kwargs: dict = {},
     greedy_merge: bool = True,
     extra_outputs: bool = False,
     verbose: bool = True,
-    **job_kwargs
+    **job_kwargs,
 ) -> SortingAnalyzer:
     """
-    Wrapper to conveniently be able to launch several presets for auto_merge_units in a row, as a list. 
-    Merges are applied sequentially or until no more merges are done, one preset at a time, and extensions 
+    Wrapper to conveniently be able to launch several presets for auto_merge_units in a row, as a list.
+    Merges are applied sequentially or until no more merges are done, one preset at a time, and extensions
     are not recomputed thanks to the merging units.
 
     Parameters
@@ -612,7 +612,7 @@ def auto_merge_units_iterative(
             the next one
     extra_outputs : bool, default: False
         If True, additional list of merges applied at every preset, and dictionary (`outs`) with processed data are returned.
-    
+
     Returns
     -------
     sorting_analyzer:
@@ -621,18 +621,20 @@ def auto_merge_units_iterative(
         Returned only when extra_outputs=True
         A list with all the merges performed at every steps, and dictionaries that contains data for debugging and plotting.
     """
-    
+
     if compute_merge_kwargs is None:
         compute_merge_kwargs = {}
     if apply_merge_kwargs is None:
         apply_merge_kwargs = {}
-    
+
     if isinstance(compute_merge_kwargs, dict):
-        return auto_merge_units(sorting_analyzer, 
-                                compute_merge_kwargs, 
-                                apply_merge_kwargs=apply_merge_kwargs, 
-                                extra_outputs=extra_outputs,
-                                **job_kwargs)
+        return auto_merge_units(
+            sorting_analyzer,
+            compute_merge_kwargs,
+            apply_merge_kwargs=apply_merge_kwargs,
+            extra_outputs=extra_outputs,
+            **job_kwargs,
+        )
     elif isinstance(compute_merge_kwargs, list):
 
         merged_analyzer = sorting_analyzer.copy()
@@ -650,15 +652,15 @@ def auto_merge_units_iterative(
 
             if num_step == n_steps:
                 break
-            
+
             n_before = len(merged_analyzer.unit_ids)
             merged_analyzer = auto_merge_units(
-                    merged_analyzer,
-                    compute_merge_kwargs[num_step],
-                    apply_merge_kwargs=apply_merge_kwargs,
-                    extra_outputs=extra_outputs,
-                    **job_kwargs,
-                )
+                merged_analyzer,
+                compute_merge_kwargs[num_step],
+                apply_merge_kwargs=apply_merge_kwargs,
+                extra_outputs=extra_outputs,
+                **job_kwargs,
+            )
 
             if extra_outputs:
                 merged_analyzer, merge_unit_groups, outs = merged_analyzer
