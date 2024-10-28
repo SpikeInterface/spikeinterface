@@ -5,7 +5,7 @@ Extracellular electrophysiology commonly involves synchronisation of events
 across many timestreams. For example, an experiment may involve
 displaying a stimuli to an animal and recording the stimuli-evoked
 neuronal responses. It is critical that timings is represented in
-a clear way across data streams so they may be properly syncronised during
+a clear way across data streams so they may be properly synchronised during
 analysis.
 
 Below, we will explore the ways that SpikeInterface represents time
@@ -26,127 +26,147 @@ please see the below dropdown for a refresher.
     finite-memory computers, we must 'sample' the real-world continuous signals
     at discrete time points.
 
-    When sampling our signal the fundamental question we need to ask is - how fast?
-    A natural approach is to sample our signal every X seconds. For the sake of example,
-    let's say we decide to sample our signal 4 times per second. This is known as the
-    'sampling frequency' (sometimes denoted $f_s$) and is expressed in Hertz (Hz) i.e.
-    'samples-per-second'.
+    When sampling our signal the fundamental question we need to ask is - how fast should
+    we sample the continuous data? A natural approach is to sample our signal every $N$ seconds.
+    For example, let's say we decide to sample our signal 4 times per second.
+    This is known as the 'sampling frequency' (sometimes denoted $f_s$) and is expressed
+    in Hertz (Hz) i.e. 'samples-per-second'.
 
     Another way of thinking about the same idea is to ask - how often are we
     sampling our signal? In our example, we are sampling the signal once every 0.25 seconds.
     This is known as the 'sampling step' (sometimes denoted $t_s$) and is the inverse of
     the sampling frequency.
 
-    [PICTURE]
+    .. image:: handle-times-sampling-image.png
+       :alt: Image of continuous signal (1 second) with dots indicating samples collected at 0, 0.25, 0.5 and 0.75 seconds.
+       :width: 400px
+       :align: center
 
     In the real world, we will sample our signal much faster. For example, Neuropixels
     samples at 30 kHz (30,000 samples per second), with a
     sampling step of 1/30000 = 0.0003 seconds!
 
-    On our computer, we typically repesent time as a long array of numbers.
-    For example, XXXX. Often, it is easier to access this array using 'indices'
-    rather than the raw time units. MORE ON THIS. It is useful to remember
-    these below quick conversion between time and indices that are often
-    used in code:
-
-    ``time * sampling_frequency = index`` and
-    ``index * sampling_step = index * (1/sampling_frequency = time``.
+    Using computers, we typically represent time as a long array of numbers,
+    here we refer to this as a 'time array' in seconds.
+    For example, `[0, 0.25, 0.5, 0.75, ...]`.
 
 ------------------------------------------------------------------
 An Overview of the possible Time representations in SpikeInterface
 ------------------------------------------------------------------
 
-When loading a raw recording, SpikeInterface only has access to the
-sampling frequency and raw data samples of the data. Only in rare
-cases are the time-stamps of extracellular electrophysiological data
-are stored alongside the recordings and can be directly loaded
-(TODO: is any of that true?)
+When you load a recording into SpikeInterface, it will be automatically
+associated with a time array. Depending on your data format, this might
+be loaded from metadata on your raw recording. [TODO: concrete example of this?]
 
-In some applications, having the exact time is very important.
-For example, NeuroPixels. In this case want to include the
-exact times. How do you do this? where is this information stored?
+If there is no time metadata on your raw recording, the times will be
+generated based on your sampling rate and number of samples.
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Providing no times to spikeinterface
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-In this case, all times used will be generated from the sample index
-and sampling frequency. For example, if a spike peak is detected at
-index 300 of the raw data, and the sampling frequency is 30 kHz,
-the peak time will be 300 * (1/30000) = 0.01 s.
-
-Note that time is represented in spikeinterface in XXXX datatype, and so
-resolution will be this. For example, a spike at index 1000 of the raw
-data will be represented as 1000 * (1/30000) = 0.03333XXX seconds.
-
-For a multi-segment recording, each segment will be fixed to start at
-0 seconds (TODO: is this true)? If there is a peak at index 300 in
-segment one and index in the peak at index 300 in segment two, both
-segments action potential peaks will be given a spike time of 0.1 s,
-and their segment tracked to distinguish them. TODO: CHECK
-
-# TODO: yes follow a code example!
-```sorting.get_unit_spike_train(0, return_times=True, segment_index=1)```
-
-^^^^^^^^^^^^^^^^^^^^^^^^^
-Providing the start time
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-### TODO :::: This section make no sense because you can't set
-`t_start` directly as far as I can tell, it is only available on
-a few extractors.
-
-Alternatively, the start-time of each segment can be provided to
-spikeinterface. The same method (index * (1 / sampling_frequency))
-will be used to determine event spike, but now an initial offset
-will be added using the `t_start` variable. TODO: reword, less confusing.
-
-For example, imagine you have two recording sessions, recorded at
-30 kHz sampling frequency, both 30 minutes long. You record one session,
-wait 10 minutes, then record another session. In this example the will imagine
-these two sessions are loaded into spikeinterface as two segments on a
-single recording (however, the process would be the same if you had loaded
-the sessions separately into two recording objects).
-
-If you wanted to represent the sessions as starting relative to the
-first session, and keeping the true timings of the recording, you can
-do:
+You can use the `get_times()` method to inspect the time array associated
+with your recording.
 
 ```
-recording.select_segment(1).set_times(XXX)
+import spikeinterface.full as si
+
+# Generate a recording for this example
+recording, _ = si.generate_ground_truth_recording(durations=[10])
+
+print(f"number of samples: {recording.get_num_samples()}")
+print(f"sampling frequency: {recording.get_sampling_frequency()}"
+
+print(
+    recording.get_times()
+)
+
 ```
 
-Alternatively, if you wanted to ignore the 10 minute gap, you could do:
+Here, we see that as no time metadata was associated with the loaded recording,
+the time array starts at 0 seconds and continues until 10 seconds
+(`10 * sampling_frequency`) in steps of sampling step (`1 / sampling_frequency`).
+
+If timings were loaded from metadata, you may find that the first timepoint is
+not zero, or the times may not be separated by exactly `1/sampling_frequency` but
+may be irregular due to small drifts in sampling rate during acquisition.
+
+^^^^^^^^^^^^^^^^^^^^^^^
+Shifting the start time
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Having loaded your recording object and inspected the associated
+time vector, you may want to change the start time of your recording.
+For example, your recording may not have metadata attached and you
+want to shift the default time vector (with zero start time) to the
+true (real world) start time of the recording, or relative to some
+other event (e.g. behavioural trial start time).
+
+Alternatively, you may want to change the start time of the metadata-loaded
+recording for similar reasons.
+
+To do this, you can use the `shift_start_time()` function to shift
+the first timepoint of the recording. Shifting by a positive value will
+increase the start time, while shifting by a negative value will decrease
+the start time.
 
 ```
-recording.select_segment(1).set_times(XXXX)
+recording.shift_start_time(100.15)
+
+print(recording.get_times())  # time now start at 100.15 seconds
+
+recording.shift_start_time(-50.15)
+
+print(recording.get_times())  # time now start at 50 seconds
 ```
-``` print spike times```
-sorting.get_unit_spike_train(0, return_times=True, segment_index=1)
-# TODO: it says use time vector but this doesn't return times.
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Providing the full time array
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Finally, may want to get full time array. Where do you get this from?
-Loaded - some more information on where from
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Manually setting a time vector
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-`recording.has_time_vector()`.
+Less commonly, you may want to manually set the time vector on a recording.
+For example, maybe you have a known time vector with non-regularly spaced
+samples due to sampling drift, and you want to associate it with your recording.
 
-we can set times e.g. as above.
+You can associate any time vector with your recording (as long as it contains
+as many samples as the recording itself) using `recording.set_times()`.
 
-1) set the times
-2) print the times. Note how they are different to the above case!
+[TODO - an example?]
 
-Note that for some extractors, e.g. read_openephys you can load the
-syncrhonized timestamps directly (load_sync_timestamps param). It would be
-important to mention! Section on when files are loaded autoamticaly!
+.. warning::
 
---------------------------
-Accessing time information
---------------------------
+   In the case of regularly spaced time vectors, it is recommended
+   to shift the default times rather than set your own time vector,
+   as this will require more memory under the hood.
 
-Cover the The two time array functions.
 
-`sample_index_to_time`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Retrieving timepoints from sample index
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+SpikeInterface provides two convenience methods for obtaining the timepoint in seconds
+given an index of the time array:
+
+```
+sample_index = recording.time_to_sample_index(5.0)
+
+print(sample_index)
+```
+
+Similarly, you can retrieve the time array index given a timepoint:
+
+
+```
+timepoint = recording.sample_index_to_to_time(125000)
+
+print(timepoint)
+```
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Aligning events across timestreams
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The alignment of electrophysiology recording time to other data streams (e.g. behaviour)
+is an important step in ephys analysis. To acheive this,it is common to collect
+a synconrisation ('sync') pulse on an additional channel. At present SpikeInterface does not include
+features for time-alignment, but some useful articles can be found on the following pages,
+[SpikeGLX](https://github.com/billkarsh/SpikeGLX/blob/master/Markdown/UserManual.md#procedure-to-calibrate-sample-rates),
+[OpenEphys](https://open-ephys.github.io/gui-docs/Tutorials/Data-Synchronization.html),
+[NWB](https://neuroconv.readthedocs.io/en/main/user_guide/temporal_alignment.html).
