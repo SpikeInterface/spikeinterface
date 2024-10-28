@@ -136,57 +136,26 @@ def test_compute_merge_unit_groups(sorting_analyzer_for_curation, preset):
 
 
 def test_auto_merge_units(sorting_analyzer_for_curation):
-
     recording = sorting_analyzer_for_curation.recording
     job_kwargs = dict(n_jobs=-1)
     new_sorting, _ = split_sorting_by_times(sorting_analyzer_for_curation)
-    sorting_analyzer = create_sorting_analyzer(new_sorting, recording, format="memory")
-    sorting_analyzer.compute(
-        [
-            "random_spikes",
-            "waveforms",
-            "templates",
-            "unit_locations",
-            "spike_amplitudes",
-            "spike_locations",
-            "correlograms",
-            "template_similarity",
-        ],
-        **job_kwargs,
-    )
-
-    merged_sorting = auto_merge_units(sorting_analyzer, {"preset": "x_contaminations"}, **job_kwargs)
-    assert len(merged_sorting.unit_ids) <= len(sorting_analyzer_for_curation.unit_ids)
+    new_sorting_analyzer = create_sorting_analyzer(new_sorting, recording, format="memory")
+    merged_analyzer = auto_merge_units(new_sorting_analyzer, {"preset": "x_contaminations"}, **job_kwargs)
+    assert len(merged_analyzer.unit_ids) < len(new_sorting_analyzer.unit_ids)
 
 
 def test_auto_merge_units_iterative(sorting_analyzer_for_curation):
-
     recording = sorting_analyzer_for_curation.recording
     job_kwargs = dict(n_jobs=-1)
     new_sorting, _ = split_sorting_by_times(sorting_analyzer_for_curation)
-    sorting_analyzer = create_sorting_analyzer(new_sorting, recording, format="memory")
-    sorting_analyzer.compute(
-        [
-            "random_spikes",
-            "waveforms",
-            "templates",
-            "unit_locations",
-            "spike_amplitudes",
-            "spike_locations",
-            "correlograms",
-            "template_similarity",
-        ],
-        **job_kwargs,
-    )
-
-    merged_sorting = auto_merge_units_iterative(sorting_analyzer, [{"preset": "x_contaminations"}], **job_kwargs)
-    assert len(merged_sorting.unit_ids) <= len(sorting_analyzer_for_curation.unit_ids)
+    new_sorting_analyzer = create_sorting_analyzer(new_sorting, recording, format="memory")
+    merged_analyzer = auto_merge_units_iterative(new_sorting_analyzer, [{"preset": "x_contaminations"}], **job_kwargs)
+    assert len(merged_analyzer.unit_ids) < len(new_sorting_analyzer.unit_ids)
 
 
 if __name__ == "__main__":
     sorting_analyzer = make_sorting_analyzer(sparse=True)
-    # preset = "x_contaminations"
-    preset = None
+    preset=None
     test_compute_merge_unit_groups(sorting_analyzer, preset=preset)
     test_auto_merge_units(sorting_analyzer)
     test_auto_merge_units_iterative(sorting_analyzer)

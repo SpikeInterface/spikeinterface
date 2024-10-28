@@ -589,7 +589,7 @@ def get_potential_auto_merge(
 
 def auto_merge_units_iterative(
     sorting_analyzer: SortingAnalyzer,
-    compute_merge_kwargs: None,
+    compute_merge_kwargs: dict = {},
     apply_merge_kwargs: dict = {},
     greedy_merge: bool = True,
     extra_outputs: bool = False,
@@ -622,11 +622,6 @@ def auto_merge_units_iterative(
         A list with all the merges performed at every steps, and dictionaries that contains data for debugging and plotting.
     """
 
-    if compute_merge_kwargs is None:
-        compute_merge_kwargs = {}
-    if apply_merge_kwargs is None:
-        apply_merge_kwargs = {}
-
     if isinstance(compute_merge_kwargs, dict):
         return auto_merge_units(
             sorting_analyzer,
@@ -638,7 +633,6 @@ def auto_merge_units_iterative(
     elif isinstance(compute_merge_kwargs, list):
 
         merged_analyzer = sorting_analyzer.copy()
-
         n_units = max(merged_analyzer.unit_ids) + 1
         n_steps = len(compute_merge_kwargs)
 

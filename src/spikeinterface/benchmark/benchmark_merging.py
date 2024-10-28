@@ -19,7 +19,6 @@ class MergingBenchmark(Benchmark):
     def __init__(self, recording, splitted_sorting, params, gt_sorting, splitted_cells=None):
         self.recording = recording
         self.splitted_sorting = splitted_sorting
-        self.method = params["method"]
         self.gt_sorting = gt_sorting
         self.splitted_cells = splitted_cells
         self.method_kwargs = params["method_kwargs"]
@@ -27,13 +26,13 @@ class MergingBenchmark(Benchmark):
 
     def run(self, **job_kwargs):
         sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
-        self.result["sorting"], self.result["merges"], self.result["outs"] = auto_merge_units_iterative(
+        merged_analyzer, self.result["merges"], self.result["outs"] = auto_merge_units_iterative(
             sorting_analyzer,
-            method=self.method,
             verbose=True,
             extra_outputs=True,
-            method_kwargs=self.method_kwargs,
+            **self.method_kwargs,
         )
+        self.result["sorting"] = merged_analyzer.sorting
 
     def compute_result(self, **result_params):
         sorting = self.result["sorting"]
