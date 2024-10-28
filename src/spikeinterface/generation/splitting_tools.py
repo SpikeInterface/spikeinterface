@@ -99,35 +99,35 @@ def split_sorting_by_amplitudes(
     new_sorting, splitted_pairs : The new splitted sorting, and the pairs that have been splitted
     """
 
-    sa = sorting_analyzer
-    if sa.get_extension("spike_amplitudes") is None:
-        sa.compute("spike_amplitudes")
+    if sorting_analyzer.get_extension("spike_amplitudes") is None:
+        sorting_analyzer.compute("spike_amplitudes")
 
     rng = np.random.RandomState(seed)
+    fs = sorting_analyzer.sampling_frequency
     from spikeinterface.core.template_tools import get_template_extremum_channel
 
-    extremum_channel_inds = get_template_extremum_channel(sa, outputs="index")
-    spikes = sa.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds, concatenated=False)
+    extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
+    spikes = sorting_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds, concatenated=False)
     new_spikes = spikes[0].copy()
-    amplitudes = sa.get_extension("spike_amplitudes").get_data()
-    nb_splits = int(splitting_probability * len(sa.sorting.unit_ids))
+    amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
+    nb_splits = int(splitting_probability * len(sorting_analyzer.sorting.unit_ids))
 
     if unit_ids is None:
-        select_from = sa.sorting.unit_ids
+        select_from = sorting_analyzer.sorting.unit_ids
         if min_snr is not None:
-            if sa.get_extension("noise_levels") is None:
-                sa.compute("noise_levels")
-            if sa.get_extension("quality_metrics") is None:
-                sa.compute("quality_metrics", metric_names=["snr"])
+            if sorting_analyzer.get_extension("noise_levels") is None:
+                sorting_analyzer.compute("noise_levels")
+            if sorting_analyzer.get_extension("quality_metrics") is None:
+                sorting_analyzer.compute("quality_metrics", metric_names=["snr"])
 
-            snr = sa.get_extension("quality_metrics").get_data()["snr"].values
+            snr = sorting_analyzer.get_extension("quality_metrics").get_data()["snr"].values
             select_from = select_from[snr > min_snr]
         to_split_ids = rng.choice(select_from, nb_splits, replace=False)
     else:
         to_split_ids = unit_ids
 
     max_index = np.max(new_spikes["unit_index"])
-    new_unit_ids = list(sa.sorting.unit_ids.copy())
+    new_unit_ids = list(sorting_analyzer.sorting.unit_ids.copy())
     splitted_pairs = []
     spike_indices = spike_vector_to_indices(spikes, sorting_analyzer.unit_ids, absolute_index=True)
 
@@ -143,5 +143,5 @@ def split_sorting_by_amplitudes(
         splitted_pairs += [(unit_id, new_unit_ids[-1])]
         max_index += 1
 
-    new_sorting = NumpySorting(new_spikes, sampling_frequency=sa.sampling_frequency, unit_ids=new_unit_ids)
+    new_sorting = NumpySorting(new_spikes, sampling_frequency=fs, unit_ids=new_unit_ids)
     return new_sorting, splitted_pairs
