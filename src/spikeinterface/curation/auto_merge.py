@@ -59,7 +59,7 @@ _required_extensions = {
     "correlogram": ["correlograms"],
     "snr": ["templates", "noise_levels"],
     "template_similarity": ["templates", "template_similarity"],
-    "knn": ["templates", "spike_locations", "spike_amplitudes"]
+    "knn": ["templates", "spike_locations", "spike_amplitudes"],
 }
 
 
