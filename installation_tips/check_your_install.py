@@ -28,19 +28,21 @@ def _create_recording():
 
 def _run_one_sorter_and_analyzer(sorter_name):
     import spikeinterface.full as si
+
+    si.set_global_job_kwargs(**job_kwargs)
+
     recording = si.load_extractor('./toy_example_recording')
     sorting = si.run_sorter(sorter_name, recording, folder=f'./sorter_with_{sorter_name}', verbose=False)
 
     sorting_analyzer = si.create_sorting_analyzer(sorting, recording,
-                                                format="binary_folder", folder=f"./analyzer_with_{sorter_name}",
-                                                **job_kwargs)
+                                                format="binary_folder", folder=f"./analyzer_with_{sorter_name}")
     sorting_analyzer.compute("random_spikes", method="uniform", max_spikes_per_unit=500)
-    sorting_analyzer.compute("waveforms", **job_kwargs)
+    sorting_analyzer.compute("waveforms")
     sorting_analyzer.compute("templates")
     sorting_analyzer.compute("noise_levels")
     sorting_analyzer.compute("unit_locations", method="monopolar_triangulation")
     sorting_analyzer.compute("correlograms", window_ms=100, bin_ms=5.)
-    sorting_analyzer.compute("principal_components", n_components=3, mode='by_channel_global', whiten=True, **job_kwargs)
+    sorting_analyzer.compute("principal_components", n_components=3, mode='by_channel_global', whiten=True)
     sorting_analyzer.compute("quality_metrics", metric_names=["snr", "firing_rate"])
 
 
@@ -117,9 +119,6 @@ if __name__ == '__main__':
         steps.append(('Open spikeinterface-gui', open_sigui))
 
     steps.append(('Export to phy', export_to_phy)),
-        # phy is removed from the env because it force a pip install PyQt5
-        # which break the conda env
-        # ('Open phy', open_phy),
 
     # if platform.system() == "Windows":
     #     pass
