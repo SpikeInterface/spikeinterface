@@ -8,6 +8,7 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
 
     viewers
     handle_drift
+    handle_times
     analyze_neuropixels
     load_matlab_data
     combine_recordings

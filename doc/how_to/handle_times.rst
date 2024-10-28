@@ -37,7 +37,7 @@ please see the below dropdown for a refresher.
     This is known as the 'sampling step' (sometimes denoted $t_s$) and is the inverse of
     the sampling frequency.
 
-    .. image:: handle-times-sampling-image.png
+    .. image:: handle_times_files/handle-times-sampling-image.png
        :alt: Image of continuous signal (1 second) with dots indicating samples collected at 0, 0.25, 0.5 and 0.75 seconds.
        :width: 400px
        :align: center
@@ -56,7 +56,9 @@ An Overview of the possible Time representations in SpikeInterface
 
 When you load a recording into SpikeInterface, it will be automatically
 associated with a time array. Depending on your data format, this might
-be loaded from metadata on your raw recording. [TODO: concrete example of this?]
+be loaded from metadata on your raw recording.
+
+**[TODO: concrete example of this?]**
 
 If there is no time metadata on your raw recording, the times will be
 generated based on your sampling rate and number of samples.
@@ -64,20 +66,19 @@ generated based on your sampling rate and number of samples.
 You can use the `get_times()` method to inspect the time array associated
 with your recording.
 
-```
-import spikeinterface.full as si
+.. code-block:: python
 
-# Generate a recording for this example
-recording, _ = si.generate_ground_truth_recording(durations=[10])
+    import spikeinterface.full as si
 
-print(f"number of samples: {recording.get_num_samples()}")
-print(f"sampling frequency: {recording.get_sampling_frequency()}"
+    # Generate a recording for this example
+    recording, _ = si.generate_ground_truth_recording(durations=[10])
 
-print(
-    recording.get_times()
-)
+    print(f"number of samples: {recording.get_num_samples()}")
+    print(f"sampling frequency: {recording.get_sampling_frequency()}"
 
-```
+    print(
+        recording.get_times()
+    )
 
 Here, we see that as no time metadata was associated with the loaded recording,
 the time array starts at 0 seconds and continues until 10 seconds
@@ -106,15 +107,15 @@ the first timepoint of the recording. Shifting by a positive value will
 increase the start time, while shifting by a negative value will decrease
 the start time.
 
-```
-recording.shift_start_time(100.15)
+.. code-block:: python
 
-print(recording.get_times())  # time now start at 100.15 seconds
+    recording.shift_start_time(100.15)
 
-recording.shift_start_time(-50.15)
+    print(recording.get_times())  # time now start at 100.15 seconds
 
-print(recording.get_times())  # time now start at 50 seconds
-```
+    recording.shift_start_time(-50.15)
+
+    print(recording.get_times())  # time now start at 50 seconds
 
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -144,20 +145,21 @@ Retrieving timepoints from sample index
 SpikeInterface provides two convenience methods for obtaining the timepoint in seconds
 given an index of the time array:
 
-```
-sample_index = recording.time_to_sample_index(5.0)
+.. code-block:: python
 
-print(sample_index)
-```
+    sample_index = recording.time_to_sample_index(5.0)
+
+    print(sample_index)
+
 
 Similarly, you can retrieve the time array index given a timepoint:
 
 
-```
-timepoint = recording.sample_index_to_to_time(125000)
+.. code-block:: python
 
-print(timepoint)
-```
+    timepoint = recording.sample_index_to_to_time(125000)
+
+    print(timepoint)
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Aligning events across timestreams
@@ -167,6 +169,6 @@ The alignment of electrophysiology recording time to other data streams (e.g. be
 is an important step in ephys analysis. To acheive this,it is common to collect
 a synconrisation ('sync') pulse on an additional channel. At present SpikeInterface does not include
 features for time-alignment, but some useful articles can be found on the following pages,
-[SpikeGLX](https://github.com/billkarsh/SpikeGLX/blob/master/Markdown/UserManual.md#procedure-to-calibrate-sample-rates),
-[OpenEphys](https://open-ephys.github.io/gui-docs/Tutorials/Data-Synchronization.html),
-[NWB](https://neuroconv.readthedocs.io/en/main/user_guide/temporal_alignment.html).
+`SpikeGLX <https://github.com/billkarsh/SpikeGLX/blob/master/Markdown/UserManual.md#procedure-to-calibrate-sample-rates>`_,
+`OpenEphys <https://open-ephys.github.io/gui-docs/Tutorials/Data-Synchronization.html>`_,
+`NWB <https://neuroconv.readthedocs.io/en/main/user_guide/temporal_alignment.html>`_

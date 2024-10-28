@@ -6,7 +6,7 @@
 
 Computation times
 =================
-**03:26.753** total execution time for 16 files **from all galleries**:
+**00:04.190** total execution time for 16 files **from all galleries**:
 
 .. container::
 
@@ -33,7 +33,7 @@ Computation times
      - Time
      - Mem (MB)
    * - :ref:`sphx_glr_tutorials_core_plot_4_sorting_analyzer.py` (``..\examples\tutorials\core\plot_4_sorting_analyzer.py``)
-     - 03:26.753
+     - 00:04.190
      - 0.0
    * - :ref:`sphx_glr_tutorials_comparison_generate_erroneous_sorting.py` (``..\examples\tutorials\comparison\generate_erroneous_sorting.py``)
      - 00:00.000
