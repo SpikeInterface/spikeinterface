@@ -13,7 +13,7 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
-from ..core import SortingAnalyzer, Templates
+from ..core import SortingAnalyzer
 from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
 
 from .mergeunitssorting import MergeUnitsSorting
@@ -359,18 +359,47 @@ def compute_merge_unit_groups(
 
 
 def auto_merge_units(
-    sorting_analyzer: SortingAnalyzer, compute_merge_kwargs: dict = {}, apply_merge_kwargs: dict = {}, **job_kwargs
+    sorting_analyzer: SortingAnalyzer, 
+    compute_merge_kwargs: dict = {}, 
+    apply_merge_kwargs: dict = {},
+    extra_outputs: bool = False,
+    **job_kwargs
 ) -> SortingAnalyzer:
     """
     Compute merge unit groups and apply it on a SortingAnalyzer.
     Internally uses `compute_merge_unit_groups()`
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer
+    compute_merge_kwargs : compute_params that should be given to auto_merge_units
+    merging_kwargs : dict, the paramaters that should be used while merging units after each preset
+    extra_outputs : bool, default: False
+        If True, additional list of merges applied, and dictionary (`outs`) with processed data are returned.
+    
+    Returns
+    -------
+    sorting_analyzer:
+        The new sorting analyzer where all the merges from all the presets have been applied
+    merges, outs:
+        Returned only when extra_outputs=True
+        A list with the merges performed, and dictionaries that contains data for debugging and plotting.
     """
+
     merge_unit_groups = compute_merge_unit_groups(
-        sorting_analyzer, extra_outputs=False, **compute_merge_kwargs, **job_kwargs
+        sorting_analyzer, extra_outputs=extra_outputs, **compute_merge_kwargs, **job_kwargs
     )
 
+    if extra_outputs:
+        merge_unit_groups, outs = merge_unit_groups
+
     merged_analyzer = sorting_analyzer.merge_units(merge_unit_groups, **apply_merge_kwargs, **job_kwargs)
-    return merged_analyzer
+    
+    if extra_outputs:
+        return merged_analyzer, merge_unit_groups, outs
+    else:
+        return merged_analyzer    
 
 
 def get_potential_auto_merge(
@@ -558,39 +587,32 @@ def get_potential_auto_merge(
     )
 
 
-def iterative_merges(
-    sorting_analyzer,
-    presets,
-    presets_params=None,
-    merging_kwargs={"merging_mode": "soft", "sparsity_overlap": 0.5, "censor_ms": 3},
-    compute_needed_extensions=True,
-    verbose=False,
-    greedy_merges=False,
-    extra_outputs=False,
-    **job_kwargs,
-):
+def auto_merge_units_iterative(
+    sorting_analyzer: SortingAnalyzer, 
+    compute_merge_kwargs: None, 
+    apply_merge_kwargs: dict = {}, 
+    greedy_merge: bool = True,
+    extra_outputs: bool = False,
+    verbose: bool = True,
+    **job_kwargs
+) -> SortingAnalyzer:
     """
-    Wrapper to conveniently be able to launch several presets for auto_merges in a row, as a list. Merges
-    are applied sequentially or until no more merges are done, one preset at a time, and extensions are
-    not recomputed thanks to the merging units.
+    Wrapper to conveniently be able to launch several presets for auto_merge_units in a row, as a list. 
+    Merges are applied sequentially or until no more merges are done, one preset at a time, and extensions 
+    are not recomputed thanks to the merging units.
 
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    presets : list of presets for the auto_merges() functions. Presets can be in
-            "similarity_correlograms" | "x_contaminations" | "temporal_splits" | "feature_neighbors"
-            (see auto_merge for more details)
-    params : list of params that should be given to all presets. Should have the same length as presets
+    compute_merge_kwargs : list of compute_params that should be given to auto_merge_units
     merging_kwargs : dict, the paramaters that should be used while merging units after each preset
-    compute_needed_extensions  : bool, default True
-            During the preset, boolean to specify is extensions needed by the steps should be recomputed,
-            or used as they are if already present in the sorting_analyzer
-    greedy_merges : bool, default: False
+    greedy_merges : bool, default: True
             If True, then each presets of the list is applied until no further merges can be done, before trying
             the next one
     extra_outputs : bool, default: False
         If True, additional list of merges applied at every preset, and dictionary (`outs`) with processed data are returned.
+    
     Returns
     -------
     sorting_analyzer:
@@ -599,84 +621,78 @@ def iterative_merges(
         Returned only when extra_outputs=True
         A list with all the merges performed at every steps, and dictionaries that contains data for debugging and plotting.
     """
+    
+    if compute_merge_kwargs is None:
+        compute_merge_kwargs = {}
+    if apply_merge_kwargs is None:
+        apply_merge_kwargs = {}
+    
+    if isinstance(compute_merge_kwargs, dict):
+        return auto_merge_units(sorting_analyzer, 
+                                compute_merge_kwargs, 
+                                apply_merge_kwargs=apply_merge_kwargs, 
+                                extra_outputs=extra_outputs,
+                                **job_kwargs)
+    elif isinstance(compute_merge_kwargs, list):
 
-    if presets_params is None:
-        presets_params = [dict()] * len(presets)
+        merged_analyzer = sorting_analyzer.copy()
 
-    assert len(presets) == len(presets_params)
-    n_units = max(sorting_analyzer.unit_ids) + 1
-
-    if compute_needed_extensions:
-        sorting_analyzer = sorting_analyzer.copy()
-
-    if extra_outputs:
-        all_merges = []
-        all_outs = []
-
-    preset_number = 0
-
-    while True:
-
-        if preset_number == len(presets_params):
-            break
-
-        should_compute_extensions = bool(compute_needed_extensions * (preset_number == 0))
+        n_units = max(merged_analyzer.unit_ids) + 1
+        n_steps = len(compute_merge_kwargs)
 
         if extra_outputs:
-            merges, outs = auto_merges(
-                sorting_analyzer,
-                preset=presets[preset_number],
-                resolve_graph=True,
-                compute_needed_extensions=should_compute_extensions,
-                extra_outputs=extra_outputs,
-                force_copy=False,
-                steps_params=presets_params[preset_number],
-                **job_kwargs,
-            )
+            all_merging_groups = []
+            all_outs = []
 
-            all_merges += [merges]
-            all_outs += [outs]
+        num_step = 0
+
+        while True:
+
+            if num_step == n_steps:
+                break
+            
+            n_before = len(merged_analyzer.unit_ids)
+            merged_analyzer = auto_merge_units(
+                    merged_analyzer,
+                    compute_merge_kwargs[num_step],
+                    apply_merge_kwargs=apply_merge_kwargs,
+                    extra_outputs=extra_outputs,
+                    **job_kwargs,
+                )
+
+            if extra_outputs:
+                merged_analyzer, merge_unit_groups, outs = merged_analyzer
+                all_merging_groups += [merge_unit_groups]
+                all_outs += [outs]
+
+            if verbose:
+                n_merges = len(merged_analyzer.unit_ids) - n_before
+                print(f"{n_merges} merges have been made during pass")
+
+            if greedy_merge and n_merges == 0:
+                num_step += 1
+                if verbose:
+                    print(f"No more merges, skipping to next pass")
+            else:
+                num_step += 1
+
+        if extra_outputs:
+
+            final_merges = {}
+            for merge in all_merging_groups:
+                for count, m in enumerate(merge):
+                    new_list = m
+                    for k in m:
+                        if k in final_merges:
+                            new_list.remove(k)
+                            new_list += final_merges[k]
+                    final_merges[count + n_units] = new_list
+                if len(final_merges.keys()) > 0:
+                    n_units = max(final_merges.keys()) + 1
+
+            return merged_analyzer, list(final_merges.values()), all_outs
         else:
-            merges = auto_merges(
-                sorting_analyzer,
-                preset=presets[preset_number],
-                resolve_graph=True,
-                compute_needed_extensions=should_compute_extensions,
-                extra_outputs=extra_outputs,
-                force_copy=False,
-                steps_params=presets_params[preset_number],
-                **job_kwargs,
-            )
-
-        if verbose:
-            n_merges = int(np.sum([len(i) for i in merges]))
-            print(f"{n_merges} merges have been made during pass", presets[preset_number])
-
-        if greedy_merges:
-            if n_merges == 0:
-                preset_number += 1
-        else:
-            preset_number += 1
-
-        sorting_analyzer = sorting_analyzer.merge_units(merges, **merging_kwargs, **job_kwargs)
-
-    if extra_outputs:
-
-        final_merges = {}
-        for merge in all_merges:
-            for count, m in enumerate(merge):
-                new_list = m
-                for k in m:
-                    if k in final_merges:
-                        new_list.remove(k)
-                        new_list += final_merges[k]
-                final_merges[count + n_units] = new_list
-            if len(final_merges.keys()) > 0:
-                n_units = max(final_merges.keys()) + 1
-
-        return sorting_analyzer.sorting, list(final_merges.values()), all_outs
-    else:
-        return sorting_analyzer.sorting
+            return merged_analyzer
 
 
 def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs):
