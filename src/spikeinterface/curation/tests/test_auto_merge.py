@@ -82,6 +82,7 @@ def test_compute_merge_unit_groups(sorting_analyzer_for_curation, preset):
             **job_kwargs,
         )
 
+
 # DEBUG
 # import matplotlib.pyplot as plt
 # from spikeinterface.curation.auto_merge import normalize_correlogram
