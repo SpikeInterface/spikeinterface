@@ -57,10 +57,9 @@ _compute_merge_presets = {
 _required_extensions = {
     "unit_locations": ["templates", "unit_locations"],
     "correlogram": ["correlograms"],
-    "snr": ["templates", "noise_levels", "templates"],
+    "snr": ["templates", "noise_levels"],
     "template_similarity": ["templates", "template_similarity"],
-    "knn": ["templates", "spike_locations", "spike_amplitudes"],
-    "spike_amplitudes": ["templates"],
+    "knn": ["templates", "spike_locations", "spike_amplitudes"]
 }
 
 
