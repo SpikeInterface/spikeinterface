@@ -347,7 +347,7 @@ def final_cleaning_circus(
     sorting,
     templates,
     similarity_kwargs={"method": "l2", "support": "union", "max_lag_ms": 0.1},
-    apply_merge_kwargs={"merging_mode": "soft", "sparsity_overlap": 0.5, "censor_ms" : 3.},
+    apply_merge_kwargs={"merging_mode": "soft", "sparsity_overlap": 0.5, "censor_ms": 3.0},
     correlograms_kwargs={},
 ):
 

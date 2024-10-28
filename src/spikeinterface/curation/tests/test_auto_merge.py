@@ -82,56 +82,56 @@ from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_
 #             **job_kwargs,
 #         )
 
-    # DEBUG
-    # import matplotlib.pyplot as plt
-    # from spikeinterface.curation.auto_merge import normalize_correlogram
-    # templates_diff = outs['templates_diff']
-    # correlogram_diff = outs['correlogram_diff']
-    # bins = outs['bins']
-    # correlograms_smoothed = outs['correlograms_smoothed']
-    # correlograms = outs['correlograms']
-    # win_sizes = outs['win_sizes']
+# DEBUG
+# import matplotlib.pyplot as plt
+# from spikeinterface.curation.auto_merge import normalize_correlogram
+# templates_diff = outs['templates_diff']
+# correlogram_diff = outs['correlogram_diff']
+# bins = outs['bins']
+# correlograms_smoothed = outs['correlograms_smoothed']
+# correlograms = outs['correlograms']
+# win_sizes = outs['win_sizes']
 
-    # fig, ax = plt.subplots()
-    # ax.hist(correlogram_diff.flatten(), bins=np.arange(0, 1, 0.05))
+# fig, ax = plt.subplots()
+# ax.hist(correlogram_diff.flatten(), bins=np.arange(0, 1, 0.05))
 
-    # fig, ax = plt.subplots()
-    # ax.hist(templates_diff.flatten(), bins=np.arange(0, 1, 0.05))
+# fig, ax = plt.subplots()
+# ax.hist(templates_diff.flatten(), bins=np.arange(0, 1, 0.05))
 
-    # m = correlograms.shape[2] // 2
+# m = correlograms.shape[2] // 2
 
-    # for unit_id1, unit_id2 in merge_unit_groups[:5]:
-    #     unit_ind1 = sorting_with_split.id_to_index(unit_id1)
-    #     unit_ind2 = sorting_with_split.id_to_index(unit_id2)
+# for unit_id1, unit_id2 in merge_unit_groups[:5]:
+#     unit_ind1 = sorting_with_split.id_to_index(unit_id1)
+#     unit_ind2 = sorting_with_split.id_to_index(unit_id2)
 
-    #     bins2 = bins[:-1] + np.mean(np.diff(bins))
-    #     fig, axs = plt.subplots(ncols=3)
-    #     ax = axs[0]
-    #     ax.plot(bins2, correlograms[unit_ind1, unit_ind1, :], color='b')
-    #     ax.plot(bins2, correlograms[unit_ind2, unit_ind2, :], color='r')
-    #     ax.plot(bins2, correlograms_smoothed[unit_ind1, unit_ind1, :], color='b')
-    #     ax.plot(bins2, correlograms_smoothed[unit_ind2, unit_ind2, :], color='r')
+#     bins2 = bins[:-1] + np.mean(np.diff(bins))
+#     fig, axs = plt.subplots(ncols=3)
+#     ax = axs[0]
+#     ax.plot(bins2, correlograms[unit_ind1, unit_ind1, :], color='b')
+#     ax.plot(bins2, correlograms[unit_ind2, unit_ind2, :], color='r')
+#     ax.plot(bins2, correlograms_smoothed[unit_ind1, unit_ind1, :], color='b')
+#     ax.plot(bins2, correlograms_smoothed[unit_ind2, unit_ind2, :], color='r')
 
-    #     ax.set_title(f'{unit_id1} {unit_id2}')
-    #     ax = axs[1]
-    #     ax.plot(bins2, correlograms_smoothed[unit_ind1, unit_ind2, :], color='g')
+#     ax.set_title(f'{unit_id1} {unit_id2}')
+#     ax = axs[1]
+#     ax.plot(bins2, correlograms_smoothed[unit_ind1, unit_ind2, :], color='g')
 
-    #     auto_corr1 = normalize_correlogram(correlograms_smoothed[unit_ind1, unit_ind1, :])
-    #     auto_corr2 = normalize_correlogram(correlograms_smoothed[unit_ind2, unit_ind2, :])
-    #     cross_corr = normalize_correlogram(correlograms_smoothed[unit_ind1, unit_ind2, :])
+#     auto_corr1 = normalize_correlogram(correlograms_smoothed[unit_ind1, unit_ind1, :])
+#     auto_corr2 = normalize_correlogram(correlograms_smoothed[unit_ind2, unit_ind2, :])
+#     cross_corr = normalize_correlogram(correlograms_smoothed[unit_ind1, unit_ind2, :])
 
-    #     ax = axs[2]
-    #     ax.plot(bins2, auto_corr1, color='b')
-    #     ax.plot(bins2, auto_corr2, color='r')
-    #     ax.plot(bins2, cross_corr, color='g')
+#     ax = axs[2]
+#     ax.plot(bins2, auto_corr1, color='b')
+#     ax.plot(bins2, auto_corr2, color='r')
+#     ax.plot(bins2, cross_corr, color='g')
 
-    #     ax.axvline(bins2[m - win_sizes[unit_ind1]], color='b')
-    #     ax.axvline(bins2[m + win_sizes[unit_ind1]], color='b')
-    #     ax.axvline(bins2[m - win_sizes[unit_ind2]], color='r')
-    #     ax.axvline(bins2[m + win_sizes[unit_ind2]], color='r')
+#     ax.axvline(bins2[m - win_sizes[unit_ind1]], color='b')
+#     ax.axvline(bins2[m + win_sizes[unit_ind1]], color='b')
+#     ax.axvline(bins2[m - win_sizes[unit_ind2]], color='r')
+#     ax.axvline(bins2[m + win_sizes[unit_ind2]], color='r')
 
-    #     ax.set_title(f'corr diff {correlogram_diff[unit_ind1, unit_ind2]} - temp diff {templates_diff[unit_ind1, unit_ind2]}')
-    #     plt.show()
+#     ax.set_title(f'corr diff {correlogram_diff[unit_ind1, unit_ind2]} - temp diff {templates_diff[unit_ind1, unit_ind2]}')
+#     plt.show()
 
 
 def test_auto_merge_units(sorting_analyzer_for_curation):
@@ -154,9 +154,9 @@ def test_auto_merge_units(sorting_analyzer_for_curation):
         **job_kwargs,
     )
 
-    merged_sorting = auto_merge_units(sorting_analyzer, {"preset" : "x_contaminations"})
+    merged_sorting = auto_merge_units(sorting_analyzer, {"preset": "x_contaminations"})
     assert len(merged_sorting.unit_ids) < len(sorting_analyzer_for_curation.unit_ids)
-    
+
 
 def test_auto_merge_units_iterative(sorting_analyzer_for_curation):
 
@@ -178,7 +178,7 @@ def test_auto_merge_units_iterative(sorting_analyzer_for_curation):
         **job_kwargs,
     )
 
-    merged_sorting = auto_merge_units_iterative(sorting_analyzer, [{"preset" : "x_contaminations"}])
+    merged_sorting = auto_merge_units_iterative(sorting_analyzer, [{"preset": "x_contaminations"}])
     assert len(merged_sorting.unit_ids) < len(sorting_analyzer_for_curation.unit_ids)
 
 
@@ -186,6 +186,6 @@ if __name__ == "__main__":
     sorting_analyzer = make_sorting_analyzer(sparse=True)
     # preset = "x_contaminations"
     preset = None
-    #test_compute_merge_unit_groups(sorting_analyzer, preset=preset)
+    # test_compute_merge_unit_groups(sorting_analyzer, preset=preset)
     test_auto_merge_units(sorting_analyzer)
     test_auto_merge_units_iterative(sorting_analyzer)
