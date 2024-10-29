@@ -155,7 +155,7 @@ def test_auto_merge_units_iterative(sorting_analyzer_for_curation):
 
 if __name__ == "__main__":
     sorting_analyzer = make_sorting_analyzer(sparse=True)
-    preset=None
+    preset = None
     test_compute_merge_unit_groups(sorting_analyzer, preset=preset)
     test_auto_merge_units(sorting_analyzer)
     test_auto_merge_units_iterative(sorting_analyzer)
