@@ -70,7 +70,7 @@ _default_step_params = {
     "unit_locations": {"max_distance_um": 50},
     "correlogram": {
         "corr_diff_thresh": 0.16,
-        "censor_correlograms_ms": 0.3,
+        "censor_correlograms_ms": 0.15,
         "sigma_smooth_ms": 0.6,
         "adaptative_window_thresh": 0.5,
     },
@@ -215,6 +215,7 @@ def compute_merge_unit_groups(
                 if ext == "templates" and not sorting_analyzer.has_extension("random_spikes"):
                     sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
                 else:
+                    print(f"Computing with default extension {ext}")
                     sorting_analyzer.compute(ext, **job_kwargs)
 
         params = _default_step_params.get(step).copy()
@@ -258,7 +259,7 @@ def compute_merge_unit_groups(
             outs["remove_contaminated"] = to_remove
 
         # STEP : unit positions are estimated roughly with channel
-        elif step == "unit_locations" in steps:
+        elif step == "unit_locations":
             location_ext = sorting_analyzer.get_extension("unit_locations")
             unit_locations = location_ext.get_data()[:, :2]
 
@@ -267,7 +268,7 @@ def compute_merge_unit_groups(
             outs["unit_distances"] = unit_distances
 
         # STEP : potential auto merge by correlogram
-        elif step == "correlogram" in steps:
+        elif step == "correlogram":
             correlograms_ext = sorting_analyzer.get_extension("correlograms")
             correlograms, bins = correlograms_ext.get_data()
             censor_ms = params["censor_correlograms_ms"]
@@ -297,7 +298,7 @@ def compute_merge_unit_groups(
             outs["win_sizes"] = win_sizes
 
         # STEP : check if potential merge with CC also have template similarity
-        elif step == "template_similarity" in steps:
+        elif step == "template_similarity":
             template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
             templates_similarity = template_similarity_ext.get_data()
             templates_diff = 1 - templates_similarity
@@ -305,11 +306,11 @@ def compute_merge_unit_groups(
             outs["templates_diff"] = templates_diff
 
         # STEP : check the vicinity of the spikes
-        elif step == "knn" in steps:
+        elif step == "knn":
             pair_mask = get_pairs_via_nntree(sorting_analyzer, **params, pair_mask=pair_mask)
 
         # STEP : check how the rates overlap in times
-        elif step == "presence_distance" in steps:
+        elif step == "presence_distance":
             presence_distance_kwargs = params.copy()
             presence_distance_thresh = presence_distance_kwargs.pop("presence_distance_thresh")
             num_samples = [
@@ -345,6 +346,8 @@ def compute_merge_unit_groups(
             )
             outs["pairs_decreased_score"] = pairs_decreased_score
 
+        ind1, ind2 = np.nonzero(pair_mask)
+    
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
     merge_unit_groups = list(zip(unit_ids[ind1], unit_ids[ind2]))
@@ -358,10 +361,11 @@ def compute_merge_unit_groups(
         return merge_unit_groups
 
 
-def auto_merge_units(
+def auto_merge_units_internal(
     sorting_analyzer: SortingAnalyzer,
     compute_merge_kwargs: dict = {},
     apply_merge_kwargs: dict = {},
+    recursive: bool = False,
     extra_outputs: bool = False,
     **job_kwargs,
 ) -> SortingAnalyzer:
@@ -375,6 +379,9 @@ def auto_merge_units(
         The SortingAnalyzer
     compute_merge_kwargs : compute_params that should be given to auto_merge_units
     merging_kwargs : dict, the paramaters that should be used while merging units after each preset
+    recursive : bool, default: False
+        If True, then merges are performed recursively until no more merges can be performed, given the
+        compute_merge_kwargs
     extra_outputs : bool, default: False
         If True, additional list of merges applied, and dictionary (`outs`) with processed data are returned.
 
@@ -382,19 +389,44 @@ def auto_merge_units(
     -------
     sorting_analyzer:
         The new sorting analyzer where all the merges from all the presets have been applied
+    
     merges, outs:
         Returned only when extra_outputs=True
         A list with the merges performed, and dictionaries that contains data for debugging and plotting.
+        Note that if recursive, then you are receiving list of lists (for all merges and outs at every step)
     """
 
-    merge_unit_groups = compute_merge_unit_groups(
-        sorting_analyzer, extra_outputs=extra_outputs, **compute_merge_kwargs, **job_kwargs
-    )
+    if not recursive:
 
-    if extra_outputs:
-        merge_unit_groups, outs = merge_unit_groups
+        merge_unit_groups = compute_merge_unit_groups(
+            sorting_analyzer, extra_outputs=extra_outputs, **compute_merge_kwargs, **job_kwargs
+        )
 
-    merged_analyzer = sorting_analyzer.merge_units(merge_unit_groups, **apply_merge_kwargs, **job_kwargs)
+        if extra_outputs:
+            merge_unit_groups, outs = merge_unit_groups
+
+        merged_analyzer = sorting_analyzer.merge_units(merge_unit_groups, **apply_merge_kwargs, **job_kwargs)
+
+    else:
+        merged_units = True
+        all_merging_groups = []
+        all_outs = []
+        while merged_units:
+            merge_unit_groups = compute_merge_unit_groups(
+                sorting_analyzer, extra_outputs=extra_outputs, **compute_merge_kwargs, **job_kwargs
+            )
+
+            if extra_outputs:
+                merge_unit_groups, outs = merge_unit_groups
+                all_merging_groups += [merge_unit_groups]
+                all_outs += [outs]
+
+            merged_analyzer = sorting_analyzer.merge_units(merge_unit_groups, **apply_merge_kwargs, **job_kwargs)
+            merged_units = len(merged_analyzer.unit_ids) < len(sorting_analyzer.unit_ids)
+
+        if extra_outputs:
+            merge_unit_groups = all_merging_groups
+            outs = all_outs
 
     if extra_outputs:
         return merged_analyzer, merge_unit_groups, outs
@@ -587,13 +619,14 @@ def get_potential_auto_merge(
     )
 
 
-def auto_merge_units_iterative(
+def auto_merge_units(
     sorting_analyzer: SortingAnalyzer,
-    compute_merge_kwargs: dict = {},
+    presets: list | None = ["similarity_correlograms"],
+    steps_params: dict = None,
+    steps: list[str] | None = None,
     apply_merge_kwargs: dict = {},
-    greedy_merge: bool = True,
+    recursive : bool = True,
     extra_outputs: bool = False,
-    verbose: bool = False,
     **job_kwargs,
 ) -> SortingAnalyzer:
     """
@@ -622,73 +655,43 @@ def auto_merge_units_iterative(
         A list with all the merges performed at every steps, and dictionaries that contains data for debugging and plotting.
     """
 
-    if isinstance(compute_merge_kwargs, dict):
-        return auto_merge_units(
-            sorting_analyzer,
-            compute_merge_kwargs,
-            apply_merge_kwargs=apply_merge_kwargs,
-            extra_outputs=extra_outputs,
-            **job_kwargs,
-        )
-    elif isinstance(compute_merge_kwargs, list):
+    if isinstance(presets, str):
+        presets = [presets]
 
-        merged_analyzer = sorting_analyzer.copy()
-        n_units = max(merged_analyzer.unit_ids) + 1
-        n_steps = len(compute_merge_kwargs)
+    if (steps is not None) and (presets is not None):
+        raise Exception('presets and steps are mutually exclusive')
 
-        if extra_outputs:
-            all_merging_groups = []
-            all_outs = []
+    if presets is not None:
+        to_be_launched = presets
+        launch_mode = "presets"
+    elif steps is not None:
+        to_be_launched = steps
+        launch_mode = "steps"
 
-        num_step = 0
+    if steps_params is not None:
+        assert len(steps_params) == len(to_be_launched), f"steps params should have the same size as {launch_mode}"
+    else:
+        steps_params = [None]*len(to_be_launched)
 
-        while True:
+    for to_launch, params in zip(to_be_launched, steps_params):
+        
+        if launch_mode == "presets":
+            compute_merge_kwargs = {"preset" : to_launch}
+        elif launch_mode == "steps":
+            compute_merge_kwargs = {"steps" : to_launch}
 
-            if num_step == n_steps:
-                break
-
-            n_before = len(merged_analyzer.unit_ids)
-            merged_analyzer = auto_merge_units(
-                merged_analyzer,
-                compute_merge_kwargs[num_step],
-                apply_merge_kwargs=apply_merge_kwargs,
-                extra_outputs=extra_outputs,
-                **job_kwargs,
-            )
-
-            if extra_outputs:
-                merged_analyzer, merge_unit_groups, outs = merged_analyzer
-                all_merging_groups += [merge_unit_groups]
-                all_outs += [outs]
-
-            n_merges = len(merged_analyzer.unit_ids) - n_before
-            if verbose:
-                print(f"{n_merges} merges have been made during pass")
-
-            if greedy_merge and n_merges == 0:
-                num_step += 1
-                if verbose:
-                    print(f"No more merges, skipping to next pass")
-            else:
-                num_step += 1
+        compute_merge_kwargs.update({"steps_params": params})
+        sorting_analyzer = auto_merge_units_internal(sorting_analyzer, 
+                                                     compute_merge_kwargs, 
+                                                     apply_merge_kwargs, 
+                                                     recursive,
+                                                     extra_outputs, 
+                                                     **job_kwargs)
 
         if extra_outputs:
+            sorting_analyzer, merge_unit_groups, outs = sorting_analyzer
 
-            final_merges = {}
-            for merge in all_merging_groups:
-                for count, m in enumerate(merge):
-                    new_list = m
-                    for k in m:
-                        if k in final_merges:
-                            new_list.remove(k)
-                            new_list += final_merges[k]
-                    final_merges[count + n_units] = new_list
-                if len(final_merges.keys()) > 0:
-                    n_units = max(final_merges.keys()) + 1
-
-            return merged_analyzer, list(final_merges.values()), all_outs
-        else:
-            return merged_analyzer
+    return sorting_analyzer
 
 
 def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs):
@@ -787,6 +790,7 @@ def compute_correlogram_diff(sorting, correlograms_smoothed, win_sizes, pair_mas
             diff2 = np.sum(np.abs(cross_corr[corr_inds - shift] - auto_corr2[corr_inds])) / len(corr_inds)
             # Weighted difference (larger unit imposes its difference).
             w_diff = (num1 * diff1 + num2 * diff2) / (num1 + num2)
+            print(num1 * diff1 + num2 * diff2, num1 + num2, w_diff)
             corr_diff[unit_ind1, unit_ind2] = w_diff
 
     return corr_diff
