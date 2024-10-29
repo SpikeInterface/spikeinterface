@@ -66,9 +66,7 @@ _required_extensions = {
 _default_step_params = {
     "num_spikes": {"min_spikes": 100},
     "snr": {"min_snr": 2},
-    "remove_contaminated": {"contamination_thresh": 0.2, 
-                            "refractory_period_ms": 1.0, 
-                            "censored_period_ms": 0.3},
+    "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
     "unit_locations": {"max_distance_um": 150},
     "correlogram": {
         "corr_diff_thresh": 0.16,
@@ -85,9 +83,7 @@ _default_step_params = {
         "refractory_period_ms": 1.0,
         "censored_period_ms": 0.3,
     },
-    "quality_score": {"firing_contamination_balance": 1.5, 
-                      "refractory_period_ms": 1.0, 
-                      "censored_period_ms": 0.3},
+    "quality_score": {"firing_contamination_balance": 1.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
 }
 
 
