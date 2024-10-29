@@ -25,12 +25,11 @@ class MergingBenchmark(Benchmark):
         self.result = {}
 
     def run(self, **job_kwargs):
-        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=True, **job_kwargs)
+        sorting_analyzer = create_sorting_analyzer(
+            self.gt_sorting, self.recording, format="memory", sparse=True, **job_kwargs
+        )
         merged_analyzer, self.result["merges"], self.result["outs"] = auto_merge_units(
-            sorting_analyzer,
-            extra_outputs=True,
-            **self.method_kwargs,
-            **job_kwargs
+            sorting_analyzer, extra_outputs=True, **self.method_kwargs, **job_kwargs
         )
         self.result["sorting"] = merged_analyzer.sorting
 

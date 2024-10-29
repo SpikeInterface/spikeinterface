@@ -343,7 +343,7 @@ def compute_merge_unit_groups(
                 params["censored_period_ms"],
             )
             outs["pairs_decreased_score"] = pairs_decreased_score
-        
+
         ind1, ind2 = np.nonzero(pair_mask)
         print(step, len(ind1))
 
