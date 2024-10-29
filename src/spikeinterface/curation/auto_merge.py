@@ -625,7 +625,7 @@ def auto_merge_units(
     steps_params: dict = None,
     steps: list[str] | None = None,
     apply_merge_kwargs: dict = {},
-    recursive: bool = True,
+    recursive: bool = False,
     extra_outputs: bool = False,
     **job_kwargs,
 ) -> SortingAnalyzer:
