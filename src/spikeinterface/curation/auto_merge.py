@@ -185,7 +185,7 @@ def compute_merge_unit_groups(
     if preset is None and steps is None:
         raise ValueError("You need to specify a preset or steps for the auto-merge function")
     elif steps is not None:
-        # steps has presendance on presets
+        # steps has precedence on presets
         pass
     elif preset is not None:
         if preset not in _compute_merge_presets:
