@@ -366,7 +366,7 @@ def auto_merge_units_internal(
     sorting_analyzer: SortingAnalyzer,
     compute_merge_kwargs: dict = {},
     apply_merge_kwargs: dict = {},
-    recursive: bool = True,
+    recursive: bool = False,
     extra_outputs: bool = False,
     **job_kwargs,
 ) -> SortingAnalyzer:
@@ -626,7 +626,7 @@ def auto_merge_units(
     steps_params: dict = None,
     steps: list[str] | None = None,
     apply_merge_kwargs: dict = {},
-    recursive : bool = True,
+    recursive : bool = False,
     extra_outputs: bool = False,
     **job_kwargs,
 ) -> SortingAnalyzer:
@@ -641,7 +641,7 @@ def auto_merge_units(
         The SortingAnalyzer
     compute_merge_kwargs : list of compute_params that should be given to auto_merge_units
     apply_merge_kwargs : dict, the paramaters that should be used while merging units after each preset
-    recursive : bool, default: True
+    recursive : bool, default: False
             If True, then each presets of the list is applied until no further merges can be done, before trying
             the next one
     extra_outputs : bool, default: False
@@ -800,7 +800,6 @@ def compute_correlogram_diff(sorting, correlograms_smoothed, win_sizes, pair_mas
             diff2 = np.sum(np.abs(cross_corr[corr_inds - shift] - auto_corr2[corr_inds])) / len(corr_inds)
             # Weighted difference (larger unit imposes its difference).
             w_diff = (num1 * diff1 + num2 * diff2) / (num1 + num2)
-            print(num1 * diff1 + num2 * diff2, num1 + num2, w_diff)
             corr_diff[unit_ind1, unit_ind2] = w_diff
 
     return corr_diff
@@ -913,7 +912,6 @@ def compute_cross_contaminations(analyzer, pair_mask, cc_thresh, refractory_peri
     if pair_mask is None:
         pair_mask = np.ones((n, n), dtype="bool")
 
-    print(pair_mask)
     CC = np.zeros((n, n), dtype=np.float32)
     p_values = np.zeros((n, n), dtype=np.float32)
 
@@ -936,7 +934,6 @@ def compute_cross_contaminations(analyzer, pair_mask, cc_thresh, refractory_peri
             CC[unit_ind1, unit_ind2], p_values[unit_ind1, unit_ind2] = estimate_cross_contamination(
                 spike_train1, spike_train2, sf, n_frames, refractory_period, limit=cc_thresh, C1=C1
             )
-            print(CC[unit_ind1, unit_ind2], p_values[unit_ind1, unit_ind2])
 
     return CC, p_values
 
@@ -1353,7 +1350,6 @@ def estimate_cross_contamination(
     n_violations = compute_nb_coincidence(spike_train1, spike_train2, t_r) - compute_nb_coincidence(
         spike_train1, spike_train2, t_c
     )
-
     estimation = 1 - ((n_violations * T) / (2 * N1 * N2 * t_r) - 1.0) / (C1 - 1.0) if C1 != 1.0 else -np.inf
     if limit is None:
         return estimation
