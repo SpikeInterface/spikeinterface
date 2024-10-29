@@ -347,7 +347,7 @@ def compute_merge_unit_groups(
             outs["pairs_decreased_score"] = pairs_decreased_score
 
         ind1, ind2 = np.nonzero(pair_mask)
-    
+
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
     merge_unit_groups = list(zip(unit_ids[ind1], unit_ids[ind2]))
@@ -625,7 +625,7 @@ def auto_merge_units(
     steps_params: dict = None,
     steps: list[str] | None = None,
     apply_merge_kwargs: dict = {},
-    recursive : bool = True,
+    recursive: bool = True,
     extra_outputs: bool = False,
     **job_kwargs,
 ) -> SortingAnalyzer:
