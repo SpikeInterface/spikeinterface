@@ -258,7 +258,7 @@ def compute_merge_unit_groups(
             outs["remove_contaminated"] = to_remove
 
         # STEP : unit positions are estimated roughly with channel
-        elif step == "unit_locations" in steps:
+        elif step == "unit_locations":
             location_ext = sorting_analyzer.get_extension("unit_locations")
             unit_locations = location_ext.get_data()[:, :2]
 
@@ -267,7 +267,7 @@ def compute_merge_unit_groups(
             outs["unit_distances"] = unit_distances
 
         # STEP : potential auto merge by correlogram
-        elif step == "correlogram" in steps:
+        elif step == "correlogram":
             correlograms_ext = sorting_analyzer.get_extension("correlograms")
             correlograms, bins = correlograms_ext.get_data()
             censor_ms = params["censor_correlograms_ms"]
@@ -297,7 +297,7 @@ def compute_merge_unit_groups(
             outs["win_sizes"] = win_sizes
 
         # STEP : check if potential merge with CC also have template similarity
-        elif step == "template_similarity" in steps:
+        elif step == "template_similarity":
             template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
             templates_similarity = template_similarity_ext.get_data()
             templates_diff = 1 - templates_similarity
@@ -305,11 +305,11 @@ def compute_merge_unit_groups(
             outs["templates_diff"] = templates_diff
 
         # STEP : check the vicinity of the spikes
-        elif step == "knn" in steps:
+        elif step == "knn":
             pair_mask = get_pairs_via_nntree(sorting_analyzer, **params, pair_mask=pair_mask)
 
         # STEP : check how the rates overlap in times
-        elif step == "presence_distance" in steps:
+        elif step == "presence_distance":
             presence_distance_kwargs = params.copy()
             presence_distance_thresh = presence_distance_kwargs.pop("presence_distance_thresh")
             num_samples = [
@@ -322,7 +322,7 @@ def compute_merge_unit_groups(
             outs["presence_distances"] = presence_distances
 
         # STEP : check if the cross contamination is significant
-        elif step == "cross_contamination" in steps:
+        elif step == "cross_contamination":
             refractory = (
                 params["censored_period_ms"],
                 params["refractory_period_ms"],
@@ -334,7 +334,7 @@ def compute_merge_unit_groups(
             outs["cross_contaminations"] = CC, p_values
 
         # STEP : validate the potential merges with CC increase the contamination quality metrics
-        elif step == "quality_score" in steps:
+        elif step == "quality_score":
             pair_mask, pairs_decreased_score = check_improve_contaminations_score(
                 sorting_analyzer,
                 pair_mask,
