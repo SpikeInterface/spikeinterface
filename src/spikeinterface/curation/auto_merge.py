@@ -197,7 +197,7 @@ def compute_merge_unit_groups(
         sorting_analyzer = sorting_analyzer.copy()
 
     n = unit_ids.size
-    pair_mask = np.triu(np.arange(n)) > 0
+    pair_mask = np.triu(np.arange(n), 1) > 0
     outs = dict()
 
     for step in steps:
