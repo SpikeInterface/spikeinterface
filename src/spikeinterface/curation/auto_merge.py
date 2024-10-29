@@ -351,6 +351,7 @@ def compute_merge_unit_groups(
             outs["pairs_decreased_score"] = pairs_decreased_score
 
         ind1, ind2 = np.nonzero(pair_mask)
+        print(step, len(ind1))
     
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
@@ -382,7 +383,7 @@ def auto_merge_units_internal(
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
     compute_merge_kwargs : compute_params that should be given to auto_merge_units
-    merging_kwargs : dict, the paramaters that should be used while merging units after each preset
+    apply_merge_kwargs : dict, the paramaters that should be used while merging units after each preset
     recursive : bool, default: False
         If True, then merges are performed recursively until no more merges can be performed, given the
         compute_merge_kwargs
@@ -643,8 +644,8 @@ def auto_merge_units(
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
     compute_merge_kwargs : list of compute_params that should be given to auto_merge_units
-    merging_kwargs : dict, the paramaters that should be used while merging units after each preset
-    greedy_merges : bool, default: True
+    apply_merge_kwargs : dict, the paramaters that should be used while merging units after each preset
+    recursive : bool, default: True
             If True, then each presets of the list is applied until no further merges can be done, before trying
             the next one
     extra_outputs : bool, default: False
@@ -916,6 +917,7 @@ def compute_cross_contaminations(analyzer, pair_mask, cc_thresh, refractory_peri
     if pair_mask is None:
         pair_mask = np.ones((n, n), dtype="bool")
 
+    print(pair_mask)
     CC = np.zeros((n, n), dtype=np.float32)
     p_values = np.zeros((n, n), dtype=np.float32)
 
@@ -938,6 +940,7 @@ def compute_cross_contaminations(analyzer, pair_mask, cc_thresh, refractory_peri
             CC[unit_ind1, unit_ind2], p_values[unit_ind1, unit_ind2] = estimate_cross_contamination(
                 spike_train1, spike_train2, sf, n_frames, refractory_period, limit=cc_thresh, C1=C1
             )
+            print(CC[unit_ind1, unit_ind2], p_values[unit_ind1, unit_ind2])
 
     return CC, p_values
 
