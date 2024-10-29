@@ -20,7 +20,7 @@ class WhitenRecording(BasePreprocessor):
         The recording extractor to be whitened.
     dtype : None or dtype, default: None
         Datatype of the output recording (covariance matrix estimation
-        and whitening are performed in float64.
+        and whitening are performed in float64).
         If None the the parent dtype is kept.
         For integer dtype a int_scale must be also given.
     mode : "global" | "local", default: "global"
