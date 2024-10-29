@@ -369,7 +369,7 @@ def auto_merge_units_internal(
     sorting_analyzer: SortingAnalyzer,
     compute_merge_kwargs: dict = {},
     apply_merge_kwargs: dict = {},
-    recursive: bool = False,
+    recursive: bool = True,
     extra_outputs: bool = False,
     **job_kwargs,
 ) -> SortingAnalyzer:
@@ -401,9 +401,8 @@ def auto_merge_units_internal(
     """
 
     if not recursive:
-
         merge_unit_groups = compute_merge_unit_groups(
-            sorting_analyzer, extra_outputs=extra_outputs, **compute_merge_kwargs, **job_kwargs
+            sorting_analyzer, **compute_merge_kwargs, extra_outputs=extra_outputs, **job_kwargs
         )
 
         if extra_outputs:
@@ -413,11 +412,12 @@ def auto_merge_units_internal(
 
     else:
         merged_units = True
-        all_merging_groups = []
-        all_outs = []
+        if extra_outputs:
+            all_merging_groups = []
+            all_outs = []
         while merged_units:
             merge_unit_groups = compute_merge_unit_groups(
-                sorting_analyzer, extra_outputs=extra_outputs, **compute_merge_kwargs, **job_kwargs
+                sorting_analyzer, **compute_merge_kwargs, extra_outputs=extra_outputs, **job_kwargs
             )
 
             if extra_outputs:
@@ -677,6 +677,10 @@ def auto_merge_units(
     else:
         steps_params = [None]*len(to_be_launched)
 
+    if extra_outputs:
+        all_merging_groups = []
+        all_outs = []
+
     for to_launch, params in zip(to_be_launched, steps_params):
         
         if launch_mode == "presets":
@@ -694,8 +698,13 @@ def auto_merge_units(
 
         if extra_outputs:
             sorting_analyzer, merge_unit_groups, outs = sorting_analyzer
+            all_merging_groups += [merge_unit_groups]
+            all_outs += [outs]
 
-    return sorting_analyzer
+    if extra_outputs:
+        return sorting_analyzer, all_merging_groups, all_outs
+    else:
+        return sorting_analyzer
 
 
 def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs):

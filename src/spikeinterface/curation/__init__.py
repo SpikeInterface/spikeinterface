@@ -7,7 +7,6 @@ from .auto_merge import (
     compute_merge_unit_groups,
     auto_merge_units,
     get_potential_auto_merge,
-    auto_merge_units_iterative,
 )
 
 

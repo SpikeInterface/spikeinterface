@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from spikeinterface.curation.auto_merge import auto_merge_units_iterative
+from spikeinterface.curation.auto_merge import auto_merge_units
 from spikeinterface.comparison import compare_sorter_to_ground_truth
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.widgets import (
@@ -31,9 +31,8 @@ class MergingBenchmark(Benchmark):
         sorting_analyzer.compute("template_similarity", **{"method": "l2", "support": "union", "max_lag_ms": 0.1})
         #sorting_analyzer.compute("correlograms", **correlograms_kwargs)
         
-        merged_analyzer, self.result["merges"], self.result["outs"] = auto_merge_units_iterative(
+        merged_analyzer, self.result["merges"], self.result["outs"] = auto_merge_units(
             sorting_analyzer,
-            verbose=True,
             extra_outputs=True,
             **self.method_kwargs,
         )

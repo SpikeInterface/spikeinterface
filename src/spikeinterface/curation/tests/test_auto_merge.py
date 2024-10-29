@@ -3,7 +3,7 @@ import pytest
 
 from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.core.generate import inject_some_split_units
-from spikeinterface.curation import compute_merge_unit_groups, auto_merge_units, auto_merge_units_iterative
+from spikeinterface.curation import compute_merge_unit_groups, auto_merge_units
 from spikeinterface.generation import split_sorting_by_times
 
 

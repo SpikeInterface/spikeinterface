@@ -352,7 +352,7 @@ def final_cleaning_circus(
 ):
 
     from spikeinterface.sortingcomponents.tools import create_sorting_analyzer_with_existing_templates
-    from spikeinterface.curation.auto_merge import auto_merge_units_iterative
+    from spikeinterface.curation.auto_merge import auto_merge_units
 
     # First we compute the needed extensions
     sa = create_sorting_analyzer_with_existing_templates(sorting, recording, templates)
@@ -361,9 +361,8 @@ def final_cleaning_circus(
     sa.compute("correlograms", **correlograms_kwargs)
 
     template_diff_thresh = np.arange(0.05, 0.25, 0.05)
-    compute_merge_kwargs = [
-        {"preset": "x_contaminations", "steps_params": {"template_similarity": {"template_diff_thresh": i}}}
-        for i in template_diff_thresh
+    presets = ["x_contaminations"] * len(template_diff_thresh)
+    steps_params = [{"template_similarity": {"template_diff_thresh": i}} for i in template_diff_thresh
     ]
-    final_sa = auto_merge_units_iterative(sa, compute_merge_kwargs, apply_merge_kwargs)
+    final_sa = auto_merge_units(sa, presets=presets, steps_params=steps_params, apply_merge_kwargs)
     return final_sa.sorting
