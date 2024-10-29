@@ -29,8 +29,8 @@ class MergingBenchmark(Benchmark):
         sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
         sorting_analyzer.compute("unit_locations", method="monopolar_triangulation")
         sorting_analyzer.compute("template_similarity", **{"method": "l2", "support": "union", "max_lag_ms": 0.1})
-        #sorting_analyzer.compute("correlograms", **correlograms_kwargs)
-        
+        # sorting_analyzer.compute("correlograms", **correlograms_kwargs)
+
         merged_analyzer, self.result["merges"], self.result["outs"] = auto_merge_units(
             sorting_analyzer,
             extra_outputs=True,
@@ -160,4 +160,3 @@ class MergingStudy(BenchmarkStudy):
         from spikeinterface.widgets import plot_potential_merges
 
         plot_potential_merges(analyzer, mylist, backend=backend)
-        
