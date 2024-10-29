@@ -347,7 +347,6 @@ def compute_merge_unit_groups(
             outs["pairs_decreased_score"] = pairs_decreased_score
 
         ind1, ind2 = np.nonzero(pair_mask)
-        print(step, len(ind1))
     
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
@@ -390,7 +389,7 @@ def auto_merge_units_internal(
     -------
     sorting_analyzer:
         The new sorting analyzer where all the merges from all the presets have been applied
-    
+
     merges, outs:
         Returned only when extra_outputs=True
         A list with the merges performed, and dictionaries that contains data for debugging and plotting.
@@ -626,7 +625,7 @@ def auto_merge_units(
     steps_params: dict = None,
     steps: list[str] | None = None,
     apply_merge_kwargs: dict = {},
-    recursive : bool = False,
+    recursive : bool = True,
     extra_outputs: bool = False,
     **job_kwargs,
 ) -> SortingAnalyzer:
@@ -660,7 +659,7 @@ def auto_merge_units(
         presets = [presets]
 
     if (steps is not None) and (presets is not None):
-        raise Exception('presets and steps are mutually exclusive')
+        raise Exception("presets and steps are mutually exclusive")
 
     if presets is not None:
         to_be_launched = presets
@@ -672,26 +671,23 @@ def auto_merge_units(
     if steps_params is not None:
         assert len(steps_params) == len(to_be_launched), f"steps params should have the same size as {launch_mode}"
     else:
-        steps_params = [None]*len(to_be_launched)
+        steps_params = [None] * len(to_be_launched)
 
     if extra_outputs:
         all_merging_groups = []
         all_outs = []
 
     for to_launch, params in zip(to_be_launched, steps_params):
-        
+
         if launch_mode == "presets":
-            compute_merge_kwargs = {"preset" : to_launch}
+            compute_merge_kwargs = {"preset": to_launch}
         elif launch_mode == "steps":
-            compute_merge_kwargs = {"steps" : to_launch}
+            compute_merge_kwargs = {"steps": to_launch}
 
         compute_merge_kwargs.update({"steps_params": params})
-        sorting_analyzer = auto_merge_units_internal(sorting_analyzer, 
-                                                     compute_merge_kwargs, 
-                                                     apply_merge_kwargs, 
-                                                     recursive,
-                                                     extra_outputs, 
-                                                     **job_kwargs)
+        sorting_analyzer = auto_merge_units_internal(
+            sorting_analyzer, compute_merge_kwargs, apply_merge_kwargs, recursive, extra_outputs, **job_kwargs
+        )
 
         if extra_outputs:
             sorting_analyzer, merge_unit_groups, outs = sorting_analyzer
