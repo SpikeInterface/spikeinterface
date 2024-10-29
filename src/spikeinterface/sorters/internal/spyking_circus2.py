@@ -60,7 +60,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                             True, one other clustering called circus will be used, similar to the one used in Spyking Circus 1",
         "matching": "A dictionary to specify the matching engine used to recover spikes. The method default is circus-omp-svd, but other engines\
                                           can be used",
-        "merging": "A dictionary to specify the final merging param to group cells after template matching (get_potential_auto_merge)",
+        "merging": "A dictionary to specify the final merging param to group cells after template matching (auto_merge_units)",
         "motion_correction": "A dictionary to be provided if motion correction has to be performed (dense probe only)",
         "apply_preprocessing": "Boolean to specify whether circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
                                                     median reference + zscore",
