@@ -346,8 +346,6 @@ def compute_merge_unit_groups(
             )
             outs["pairs_decreased_score"] = pairs_decreased_score
 
-        ind1, ind2 = np.nonzero(pair_mask)
-
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
     merge_unit_groups = list(zip(unit_ids[ind1], unit_ids[ind2]))
@@ -408,12 +406,13 @@ def auto_merge_units_internal(
 
     else:
         merged_units = True
+        merged_analyzer = sorting_analyzer.copy()
         if extra_outputs:
             all_merging_groups = []
             all_outs = []
         while merged_units:
             merge_unit_groups = compute_merge_unit_groups(
-                sorting_analyzer, **compute_merge_kwargs, extra_outputs=extra_outputs, **job_kwargs
+                merged_analyzer, **compute_merge_kwargs, extra_outputs=extra_outputs, **job_kwargs
             )
 
             if extra_outputs:
@@ -421,8 +420,8 @@ def auto_merge_units_internal(
                 all_merging_groups += [merge_unit_groups]
                 all_outs += [outs]
 
-            merged_analyzer = sorting_analyzer.merge_units(merge_unit_groups, **apply_merge_kwargs, **job_kwargs)
-            merged_units = len(merged_analyzer.unit_ids) < len(sorting_analyzer.unit_ids)
+            merged_analyzer = merged_analyzer.merge_units(merge_unit_groups, **apply_merge_kwargs, **job_kwargs)
+            merged_units = len(merge_unit_groups) > 0
 
         if extra_outputs:
             merge_unit_groups = all_merging_groups
