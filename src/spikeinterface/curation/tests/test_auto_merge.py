@@ -149,7 +149,9 @@ def test_auto_merge_units_iterative(sorting_analyzer_for_curation):
     job_kwargs = dict(n_jobs=-1)
     new_sorting, _ = split_sorting_by_times(sorting_analyzer_for_curation)
     new_sorting_analyzer = create_sorting_analyzer(new_sorting, recording, format="memory")
-    merged_analyzer = auto_merge_units(new_sorting_analyzer, presets=["x_contaminations", "x_contaminations"], **job_kwargs)
+    merged_analyzer = auto_merge_units(
+        new_sorting_analyzer, presets=["x_contaminations", "x_contaminations"], **job_kwargs
+    )
     assert len(merged_analyzer.unit_ids) < len(new_sorting_analyzer.unit_ids)
 
 

@@ -215,7 +215,6 @@ def compute_merge_unit_groups(
                 if ext == "templates" and not sorting_analyzer.has_extension("random_spikes"):
                     sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
                 else:
-                    print(f"Computing with default extension {ext}")
                     sorting_analyzer.compute(ext, **job_kwargs)
 
         params = _default_step_params.get(step).copy()
@@ -224,7 +223,6 @@ def compute_merge_unit_groups(
 
         # STEP : remove units with too few spikes
         if step == "min_spikes":
-
             num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
             to_remove = num_spikes < params["min_spikes"]
             pair_mask[to_remove, :] = False
@@ -345,6 +343,9 @@ def compute_merge_unit_groups(
                 params["censored_period_ms"],
             )
             outs["pairs_decreased_score"] = pairs_decreased_score
+        
+        ind1, ind2 = np.nonzero(pair_mask)
+        print(step, len(ind1))
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
