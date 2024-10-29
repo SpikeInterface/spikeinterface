@@ -66,8 +66,10 @@ _required_extensions = {
 _default_step_params = {
     "num_spikes": {"min_spikes": 100},
     "snr": {"min_snr": 2},
-    "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    "unit_locations": {"max_distance_um": 50},
+    "remove_contaminated": {"contamination_thresh": 0.2, 
+                            "refractory_period_ms": 1.0, 
+                            "censored_period_ms": 0.3},
+    "unit_locations": {"max_distance_um": 150},
     "correlogram": {
         "corr_diff_thresh": 0.16,
         "censor_correlograms_ms": 0.15,
@@ -83,7 +85,9 @@ _default_step_params = {
         "refractory_period_ms": 1.0,
         "censored_period_ms": 0.3,
     },
-    "quality_score": {"firing_contamination_balance": 2.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+    "quality_score": {"firing_contamination_balance": 1.5, 
+                      "refractory_period_ms": 1.0, 
+                      "censored_period_ms": 0.3},
 }
 
 
@@ -323,7 +327,7 @@ def compute_merge_unit_groups(
             outs["presence_distances"] = presence_distances
 
         # STEP : check if the cross contamination is significant
-        elif step == "cross_contamination" in steps:
+        elif step == "cross_contamination":
             refractory = (
                 params["censored_period_ms"],
                 params["refractory_period_ms"],
@@ -335,7 +339,7 @@ def compute_merge_unit_groups(
             outs["cross_contaminations"] = CC, p_values
 
         # STEP : validate the potential merges with CC increase the contamination quality metrics
-        elif step == "quality_score" in steps:
+        elif step == "quality_score":
             pair_mask, pairs_decreased_score = check_improve_contaminations_score(
                 sorting_analyzer,
                 pair_mask,
@@ -452,7 +456,7 @@ def get_potential_auto_merge(
     sigma_smooth_ms: float = 0.6,
     adaptative_window_thresh: float = 0.5,
     censor_correlograms_ms: float = 0.15,
-    firing_contamination_balance: float = 2.5,
+    firing_contamination_balance: float = 1.5,
     k_nn: int = 10,
     knn_kwargs: dict | None = None,
     presence_distance_kwargs: dict | None = None,
@@ -540,7 +544,7 @@ def get_potential_auto_merge(
         Parameter to detect the window size in correlogram estimation.
     censor_correlograms_ms : float, default: 0.15
         The period to censor on the auto and cross-correlograms.
-    firing_contamination_balance : float, default: 2.5
+    firing_contamination_balance : float, default: 1.5
         Parameter to control the balance between firing rate and contamination in computing unit "quality score".
     k_nn : int, default 5
         The number of neighbors to consider for every spike in the recording.
@@ -980,10 +984,10 @@ def check_improve_contaminations_score(
         f_new = compute_firing_rates(sorting_analyzer_new)[unit_id1]
 
         # old and new scores
-        k = firing_contamination_balance
-        score_1 = f_1 * (1 - (k + 1) * c_1)
-        score_2 = f_2 * (1 - (k + 1) * c_2)
-        score_new = f_new * (1 - (k + 1) * c_new)
+        k = 1 + firing_contamination_balance
+        score_1 = f_1 * (1 - k * c_1)
+        score_2 = f_2 * (1 - k * c_2)
+        score_new = f_new * (1 - k * c_new)
 
         if score_new < score_1 or score_new < score_2:
             # the score is not improved
