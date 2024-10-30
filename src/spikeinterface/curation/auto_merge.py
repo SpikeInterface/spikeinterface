@@ -343,9 +343,9 @@ def compute_merge_unit_groups(
                 params["censored_period_ms"],
             )
             outs["pairs_decreased_score"] = pairs_decreased_score
-        
-        #ind1, ind2 = np.nonzero(pair_mask)
-        #print(step, len(ind1))
+
+        # ind1, ind2 = np.nonzero(pair_mask)
+        # print(step, len(ind1))
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
@@ -641,7 +641,7 @@ def auto_merge_units(
     presets : str or list
         A single preset or a list of presets, that should be applied iteratively to the data
     steps_params : dict or list of dict, default None
-        The params that should be used for the steps or presets. Should be a single dict if only one steps, 
+        The params that should be used for the steps or presets. Should be a single dict if only one steps,
         or a list of dict is multiples steps (same size as presets)
     steps : list or list of list, default None
         The list of steps that should be applied. If list of list is provided, then these lists will be applied
@@ -703,7 +703,6 @@ def auto_merge_units(
             sorting_analyzer, merge_unit_groups, outs = sorting_analyzer
             all_merging_groups += [merge_unit_groups]
             all_outs += [outs]
-
 
     if extra_outputs:
         if len(to_be_launched) == 1:
