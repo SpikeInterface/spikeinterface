@@ -638,7 +638,14 @@ def auto_merge_units(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    compute_merge_kwargs : list of compute_params that should be given to auto_merge_units
+    presets : str or list
+        A single preset or a list of presets, that should be applied iteratively to the data
+    steps_params : dict or list of dict, default None
+        The params that should be used for the steps or presets. Should be a single dict if only one steps, 
+        or a list of dict is multiples steps (same size as presets)
+    steps : list or list of list, default None
+        The list of steps that should be applied. If list of list is provided, then these lists will be applied
+        iteratively. Mutually exclusive with presets
     apply_merge_kwargs : dict, the paramaters that should be used while merging units after each preset
     recursive : bool, default: False
             If True, then each presets of the list is applied until no further merges can be done, before trying
@@ -694,7 +701,11 @@ def auto_merge_units(
             all_merging_groups += [merge_unit_groups]
             all_outs += [outs]
 
+
     if extra_outputs:
+        if len(to_be_launched) == 1:
+            all_merging_groups = all_merging_groups[0]
+            all_outs = all_outs[0]
         return sorting_analyzer, all_merging_groups, all_outs
     else:
         return sorting_analyzer
