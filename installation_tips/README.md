@@ -40,7 +40,7 @@ Kilosort, Ironclust and HDSort are MATLAB based and need to be installed from so
     * [`requirements_stable.txt`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/requirements_stable.txt)
 4. open terminal or powershell
 5. `uv venv si_env --python 3.11`
-6. For Mac/Linux `source si_env/bin/activate` (you should have `(si_env)` in your terminal) or for Powershell `si_env\Scripts\activate` 
+6. For Mac/Linux `source si_env/bin/activate` (you should have `(si_env)` in your terminal) or for Powershell `si_env\Scripts\activate`
 7. `uv pip install -r Documents/requirements_stable.txt`
 
 
