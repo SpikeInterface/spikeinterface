@@ -662,6 +662,12 @@ def auto_merge_units(
     extra_outputs : bool, default: False
         If True, additional list of merges applied at every preset, and dictionary (`outs`) with processed data are returned.
 
+    IMPORTANT: internally, all computations are relying on extensions of the analyzer, that are computed
+    with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to
+    have a finer control on these values, please precompute the extensions before applying the auto_merge
+
+    
+
     Returns
     -------
     sorting_analyzer:
