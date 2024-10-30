@@ -666,7 +666,7 @@ def auto_merge_units(
     with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to
     have a finer control on these values, please precompute the extensions before applying the auto_merge
 
-    
+
 
     Returns
     -------

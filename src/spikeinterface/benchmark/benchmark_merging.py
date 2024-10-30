@@ -158,7 +158,6 @@ class MergingStudy(BenchmarkStudy):
     
     def plot_performed_merges(self, case_key, recursive=False, backend="ipywidgets"):
         analyzer = self.get_sorting_analyzer(case_key)
-        mylist = self.get_splitted_pairs(case_key)
 
         if analyzer.get_extension("spike_amplitudes") is None:
             analyzer.compute(["spike_amplitudes"])
