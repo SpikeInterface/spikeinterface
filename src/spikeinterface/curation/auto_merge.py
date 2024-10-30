@@ -67,7 +67,7 @@ _default_step_params = {
     "num_spikes": {"min_spikes": 100},
     "snr": {"min_snr": 2},
     "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    "unit_locations": {"max_distance_um": 150},
+    "unit_locations": {"max_distance_um": 50},
     "correlogram": {
         "corr_diff_thresh": 0.16,
         "censor_correlograms_ms": 0.15,
@@ -693,7 +693,10 @@ def auto_merge_units(
 
         compute_merge_kwargs.update({"steps_params": params})
         sorting_analyzer = auto_merge_units_internal(
-            sorting_analyzer, compute_merge_kwargs, apply_merge_kwargs, recursive, extra_outputs, **job_kwargs
+            sorting_analyzer, compute_merge_kwargs, 
+            apply_merge_kwargs=apply_merge_kwargs, 
+            recursive=recursive, 
+            extra_outputs=extra_outputs, **job_kwargs
         )
 
         if extra_outputs:

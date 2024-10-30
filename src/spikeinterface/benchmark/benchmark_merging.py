@@ -4,7 +4,6 @@ from spikeinterface.curation.auto_merge import auto_merge_units
 from spikeinterface.comparison import compare_sorter_to_ground_truth
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.widgets import (
-    plot_agreement_matrix,
     plot_unit_templates,
     plot_amplitudes,
     plot_crosscorrelograms,
@@ -26,11 +25,12 @@ class MergingBenchmark(Benchmark):
 
     def run(self, **job_kwargs):
         sorting_analyzer = create_sorting_analyzer(
-            self.gt_sorting, self.recording, format="memory", sparse=True, **job_kwargs
+            self.splitted_sorting, self.recording, format="memory", sparse=True, **job_kwargs
         )
         merged_analyzer, self.result["merges"], self.result["outs"] = auto_merge_units(
             sorting_analyzer, extra_outputs=True, **self.method_kwargs, **job_kwargs
         )
+
         self.result["sorting"] = merged_analyzer.sorting
 
     def compute_result(self, **result_params):
