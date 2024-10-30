@@ -40,7 +40,7 @@ Kilosort, Ironclust and HDSort are MATLAB based and need to be installed from so
     * [`requirements_stable.txt`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/requirements_stable.txt)
 4. open terminal or powershell
 5. `uv venv si_env --python 3.11`
-6. `source si_env/bin/activate` (you should have `(si_env)` in your terminal)
+6. For Mac/Linux `source si_env/bin/activate` (you should have `(si_env)` in your terminal) or for Powershell `si_env\Scripts\activate` 
 7. `uv pip install -r Documents/requirements_stable.txt`
 
 
@@ -61,7 +61,7 @@ If you want to test the spikeinterface install you can:
 1. Download with right click + save the file [`check_your_install.py`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/check_your_install.py)
     and put it into the "Documents" folder
 2. Open the CMD (Windows) or Terminal (Mac/Linux)
-3. Acticate your is_env : `source si_env/bin/activate`
+3. Activate your si_env : `source si_env/bin/activate` (Max/Linux), `si_env\Scripts\activate` (CMD prompt)
 4. Go to your "Documents" folder with `cd Documents` or the place where you downloaded the `check_your_install.py`
 5. Run this:
     `python check_your_install.py`
