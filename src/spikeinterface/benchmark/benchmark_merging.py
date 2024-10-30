@@ -27,8 +27,8 @@ class MergingBenchmark(Benchmark):
         sorting_analyzer = create_sorting_analyzer(
             self.splitted_sorting, self.recording, format="memory", sparse=True, **job_kwargs
         )
-        #sorting_analyzer.compute(['random_spikes', 'templates'])
-        #sorting_analyzer.compute('template_similarity', max_lag_ms=0.1, method="l2", **job_kwargs)
+        # sorting_analyzer.compute(['random_spikes', 'templates'])
+        # sorting_analyzer.compute('template_similarity', max_lag_ms=0.1, method="l2", **job_kwargs)
         merged_analyzer, self.result["merges"], self.result["outs"] = auto_merge_units(
             sorting_analyzer, extra_outputs=True, **self.method_kwargs, **job_kwargs
         )
@@ -99,6 +99,7 @@ class MergingStudy(BenchmarkStudy):
 
     def plot_unit_counts(self, case_keys=None, **kwargs):
         from .benchmark_plot_tools import plot_unit_counts
+
         return plot_unit_counts(self, case_keys, **kwargs)
 
     def get_splitted_pairs(self, case_key):

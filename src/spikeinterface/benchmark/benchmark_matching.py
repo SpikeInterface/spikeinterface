@@ -135,6 +135,7 @@ class MatchingStudy(BenchmarkStudy):
 
     def plot_unit_counts(self, case_keys=None, **kwargs):
         from .benchmark_plot_tools import plot_unit_counts
+
         return plot_unit_counts(self, case_keys, **kwargs)
 
     def plot_unit_losses(self, before, after, metric=["precision"], figsize=None):

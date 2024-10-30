@@ -392,7 +392,7 @@ def auto_merge_units_internal(
     force_copy : boolean, default: True
         When new extensions are computed, the default is to make a copy of the analyzer, to avoid overwriting
         already computed extensions. False if you want to overwrite
-        
+
     Returns
     -------
     sorting_analyzer:
@@ -410,11 +410,7 @@ def auto_merge_units_internal(
 
     if not recursive:
         merge_unit_groups = compute_merge_unit_groups(
-            sorting_analyzer, 
-            **compute_merge_kwargs, 
-            extra_outputs=extra_outputs, 
-            force_copy=False, 
-            **job_kwargs
+            sorting_analyzer, **compute_merge_kwargs, extra_outputs=extra_outputs, force_copy=False, **job_kwargs
         )
 
         if extra_outputs:
@@ -430,11 +426,7 @@ def auto_merge_units_internal(
             all_outs = []
         while merged_units:
             merge_unit_groups = compute_merge_unit_groups(
-                merged_analyzer, 
-                **compute_merge_kwargs, 
-                extra_outputs=extra_outputs,
-                force_copy=False,
-                **job_kwargs
+                merged_analyzer, **compute_merge_kwargs, extra_outputs=extra_outputs, force_copy=False, **job_kwargs
             )
 
             if extra_outputs:
@@ -681,13 +673,13 @@ def auto_merge_units(
     force_copy : boolean, default: True
         When new extensions are computed, the default is to make a copy of the analyzer, to avoid overwriting
         already computed extensions. False if you want to overwrite
-        
+
     IMPORTANT: internally, all computations are relying on extensions of the analyzer, that are computed
     with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to
     have a finer control on these values, please precompute the extensions before applying the auto_merge
 
-    If you have errors on sparsity_threshold, this is because you are trying to perform soft_merges for units 
-    that are barely overlapping. While in theory this should 
+    If you have errors on sparsity_threshold, this is because you are trying to perform soft_merges for units
+    that are barely overlapping. While in theory this should
 
     Returns
     -------
