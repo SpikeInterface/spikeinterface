@@ -369,6 +369,7 @@ def auto_merge_units_internal(
     apply_merge_kwargs: dict = {},
     recursive: bool = False,
     extra_outputs: bool = False,
+    force_copy: bool = True,
     **job_kwargs,
 ) -> SortingAnalyzer:
     """
@@ -388,7 +389,10 @@ def auto_merge_units_internal(
         compute_merge_kwargs
     extra_outputs : bool, default: False
         If True, additional list of merges applied, and dictionary (`outs`) with processed data are returned.
-
+    force_copy : boolean, default: True
+        When new extensions are computed, the default is to make a copy of the analyzer, to avoid overwriting
+        already computed extensions. False if you want to overwrite
+        
     Returns
     -------
     sorting_analyzer:
@@ -400,9 +404,17 @@ def auto_merge_units_internal(
         Note that if recursive, then you are receiving list of lists (for all merges and outs at every step)
     """
 
+    if force_copy:
+        # To avoid erasing the extensions of the user
+        sorting_analyzer = sorting_analyzer.copy()
+
     if not recursive:
         merge_unit_groups = compute_merge_unit_groups(
-            sorting_analyzer, **compute_merge_kwargs, extra_outputs=extra_outputs, **job_kwargs
+            sorting_analyzer, 
+            **compute_merge_kwargs, 
+            extra_outputs=extra_outputs, 
+            force_copy=False, 
+            **job_kwargs
         )
 
         if extra_outputs:
@@ -412,13 +424,17 @@ def auto_merge_units_internal(
 
     else:
         merged_units = True
-        merged_analyzer = sorting_analyzer.copy()
+        merged_analyzer = sorting_analyzer
         if extra_outputs:
             all_merging_groups = []
             all_outs = []
         while merged_units:
             merge_unit_groups = compute_merge_unit_groups(
-                merged_analyzer, **compute_merge_kwargs, extra_outputs=extra_outputs, **job_kwargs
+                merged_analyzer, 
+                **compute_merge_kwargs, 
+                extra_outputs=extra_outputs,
+                force_copy=False,
+                **job_kwargs
             )
 
             if extra_outputs:
@@ -635,6 +651,7 @@ def auto_merge_units(
     apply_merge_kwargs: dict = {},
     recursive: bool = False,
     extra_outputs: bool = False,
+    force_copy: bool = True,
     **job_kwargs,
 ) -> SortingAnalyzer:
     """
@@ -661,12 +678,16 @@ def auto_merge_units(
         the next one
     extra_outputs : bool, default: False
         If True, additional list of merges applied at every preset, and dictionary (`outs`) with processed data are returned.
-
+    force_copy : boolean, default: True
+        When new extensions are computed, the default is to make a copy of the analyzer, to avoid overwriting
+        already computed extensions. False if you want to overwrite
+        
     IMPORTANT: internally, all computations are relying on extensions of the analyzer, that are computed
     with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to
     have a finer control on these values, please precompute the extensions before applying the auto_merge
 
-
+    If you have errors on sparsity_threshold, this is because you are trying to perform soft_merges for units 
+    that are barely overlapping. While in theory this should 
 
     Returns
     -------
@@ -699,6 +720,9 @@ def auto_merge_units(
         all_merging_groups = []
         all_outs = []
 
+    if force_copy:
+        sorting_analyzer = sorting_analyzer.copy()
+
     for to_launch, params in zip(to_be_launched, steps_params):
 
         if launch_mode == "presets":
@@ -714,6 +738,7 @@ def auto_merge_units(
             apply_merge_kwargs=apply_merge_kwargs,
             recursive=recursive,
             extra_outputs=extra_outputs,
+            force_copy=False,
             **job_kwargs,
         )
 
