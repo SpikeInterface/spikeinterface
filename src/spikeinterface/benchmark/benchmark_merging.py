@@ -155,7 +155,7 @@ class MergingStudy(BenchmarkStudy):
         from spikeinterface.widgets import plot_potential_merges
 
         plot_potential_merges(analyzer, mylist, backend=backend)
-    
+
     def plot_performed_merges(self, case_key, recursive=False, backend="ipywidgets"):
         analyzer = self.get_sorting_analyzer(case_key)
 
@@ -164,7 +164,7 @@ class MergingStudy(BenchmarkStudy):
         if analyzer.get_extension("correlograms") is None:
             analyzer.compute(["correlograms"])
 
-        all_merges = self.benchmarks[case_key].result['merges']
+        all_merges = self.benchmarks[case_key].result["merges"]
         if recursive:
             final_merges = {}
             for merges in all_merges:
