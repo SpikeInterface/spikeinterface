@@ -34,7 +34,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         },
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
-        "merging": {"max_distance_um" : 50},
+        "merging": {"max_distance_um": 50},
         "clustering": {"legacy": True},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
@@ -310,7 +310,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 max_motion = max(
                     np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
                 )
-                max_distance_um = merging_params.get('max_distance_um', 50)
+                max_distance_um = merging_params.get("max_distance_um", 50)
                 merging_params["max_distance_um"] = max(max_distance_um, 2 * max_motion)
 
             if params["debug"]:
@@ -350,7 +350,7 @@ def final_cleaning_circus(
     correlograms_kwargs={},
     max_distance_um=50,
     template_diff_thresh=np.arange(0.05, 0.25, 0.05),
-    **job_kwargs
+    **job_kwargs,
 ):
 
     from spikeinterface.sortingcomponents.tools import create_sorting_analyzer_with_existing_templates
@@ -363,14 +363,16 @@ def final_cleaning_circus(
     analyzer.compute("correlograms", **correlograms_kwargs)
 
     presets = ["x_contaminations"] * len(template_diff_thresh)
-    steps_params = [{"template_similarity": {"template_diff_thresh": i}, 
-                    "unit_locations" : {"max_distance_um" : max_distance_um}} for i in template_diff_thresh]
+    steps_params = [
+        {"template_similarity": {"template_diff_thresh": i}, "unit_locations": {"max_distance_um": max_distance_um}}
+        for i in template_diff_thresh
+    ]
     final_sa = auto_merge_units(
-        analyzer, 
-        presets=presets, 
-        steps_params=steps_params, 
-        apply_merge_kwargs=apply_merge_kwargs, 
+        analyzer,
+        presets=presets,
+        steps_params=steps_params,
+        apply_merge_kwargs=apply_merge_kwargs,
         recursive=True,
-        **job_kwargs
+        **job_kwargs,
     )
     return final_sa.sorting
