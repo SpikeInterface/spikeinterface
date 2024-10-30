@@ -122,8 +122,8 @@ def compute_merge_unit_groups(
         Q = f(1 - (k + 1)C)
 
     IMPORTANT: internally, all computations are relying on extensions of the analyzer, that are computed
-    with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to 
-    have a finer control on these values, please precompute the extensions before applying the auto_merge  
+    with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to
+    have a finer control on these values, please precompute the extensions before applying the auto_merge
 
     Parameters
     ----------
@@ -428,8 +428,8 @@ def get_potential_auto_merge(
         Q = f(1 - (k + 1)C)
 
     IMPORTANT: internally, all computations are relying on extensions of the analyzer, that are computed
-    with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to 
-    have a finer control on these values, please precompute the extensions before applying the auto_merge     
+    with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to
+    have a finer control on these values, please precompute the extensions before applying the auto_merge
 
     Parameters
     ----------
