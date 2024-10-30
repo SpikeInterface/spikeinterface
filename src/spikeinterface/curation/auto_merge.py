@@ -376,8 +376,10 @@ def auto_merge_units_internal(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    compute_merge_kwargs : compute_params that should be given to auto_merge_units
-    apply_merge_kwargs : dict, the paramaters that should be used while merging units after each preset
+    compute_merge_kwargs : dict
+        The params that should be given to auto_merge_units
+    apply_merge_kwargs : dict
+        The paramaters that should be used while merging units after each preset
     recursive : bool, default: False
         If True, then merges are performed recursively until no more merges can be performed, given the
         compute_merge_kwargs
@@ -638,7 +640,7 @@ def auto_merge_units(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    presets : str or list
+    presets : str or list, default = "similarity_correlograms"
         A single preset or a list of presets, that should be applied iteratively to the data
     steps_params : dict or list of dict, default None
         The params that should be used for the steps or presets. Should be a single dict if only one steps,
@@ -646,10 +648,11 @@ def auto_merge_units(
     steps : list or list of list, default None
         The list of steps that should be applied. If list of list is provided, then these lists will be applied
         iteratively. Mutually exclusive with presets
-    apply_merge_kwargs : dict, the paramaters that should be used while merging units after each preset
+    apply_merge_kwargs : dict
+        The paramaters that should be used while merging units after each preset
     recursive : bool, default: False
-            If True, then each presets of the list is applied until no further merges can be done, before trying
-            the next one
+        If True, then each presets of the list is applied until no further merges can be done, before trying
+        the next one
     extra_outputs : bool, default: False
         If True, additional list of merges applied at every preset, and dictionary (`outs`) with processed data are returned.
 
