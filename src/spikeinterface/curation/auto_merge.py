@@ -696,10 +696,12 @@ def auto_merge_units(
 
         compute_merge_kwargs.update({"steps_params": params})
         sorting_analyzer = auto_merge_units_internal(
-            sorting_analyzer, compute_merge_kwargs, 
-            apply_merge_kwargs=apply_merge_kwargs, 
-            recursive=recursive, 
-            extra_outputs=extra_outputs, **job_kwargs
+            sorting_analyzer,
+            compute_merge_kwargs,
+            apply_merge_kwargs=apply_merge_kwargs,
+            recursive=recursive,
+            extra_outputs=extra_outputs,
+            **job_kwargs,
         )
 
         if extra_outputs:
