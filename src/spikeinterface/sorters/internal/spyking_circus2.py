@@ -34,7 +34,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         },
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
-        "merging": {},
+        "merging": {"max_distance_um" : 50},
         "clustering": {"legacy": True},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
@@ -307,10 +307,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
                 motion_info = load_motion_info(motion_folder)
                 motion = motion_info["motion"]
-                # max_motion = max(
-                #     np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
-                # )
-                # merging_params["max_distance_um"] = max(50, 2 * max_motion)
+                max_motion = max(
+                    np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
+                )
+                max_distance_um = merging_params.get('max_distance_um', 50)
+                merging_params["max_distance_um"] = max(max_distance_um, 2 * max_motion)
 
             if params["debug"]:
                 curation_folder = sorter_output_folder / "curation"
@@ -319,7 +320,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting.save(folder=curation_folder)
                 # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
-            sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params)
+            sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params, **job_kwargs)
 
             if verbose:
                 print(f"Final merging, keeping {len(sorting.unit_ids)} units")
@@ -347,7 +348,9 @@ def final_cleaning_circus(
     similarity_kwargs={"method": "l2", "support": "union", "max_lag_ms": 0.1},
     apply_merge_kwargs={"merging_mode": "soft", "sparsity_overlap": 0.5, "censor_ms": 3.0},
     correlograms_kwargs={},
+    max_distance_um=50,
     template_diff_thresh=np.arange(0.05, 0.25, 0.05),
+    **job_kwargs
 ):
 
     from spikeinterface.sortingcomponents.tools import create_sorting_analyzer_with_existing_templates
@@ -360,8 +363,14 @@ def final_cleaning_circus(
     analyzer.compute("correlograms", **correlograms_kwargs)
 
     presets = ["x_contaminations"] * len(template_diff_thresh)
-    steps_params = [{"template_similarity": {"template_diff_thresh": i}} for i in template_diff_thresh]
+    steps_params = [{"template_similarity": {"template_diff_thresh": i}, 
+                    "unit_locations" : {"max_distance_um" : max_distance_um}} for i in template_diff_thresh]
     final_sa = auto_merge_units(
-        analyzer, presets=presets, steps_params=steps_params, apply_merge_kwargs=apply_merge_kwargs, recursive=True
+        analyzer, 
+        presets=presets, 
+        steps_params=steps_params, 
+        apply_merge_kwargs=apply_merge_kwargs, 
+        recursive=True,
+        **job_kwargs
     )
     return final_sa.sorting
