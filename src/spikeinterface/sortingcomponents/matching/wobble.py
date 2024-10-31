@@ -8,6 +8,15 @@ from typing import List, Tuple, Optional
 from .base import BaseTemplateMatching, _base_matching_dtype
 from spikeinterface.core.template import Templates
 
+try:
+    import torch
+    import torch.nn.functional as F
+
+    HAVE_TORCH = True
+    from torch.nn.functional import conv1d
+except ImportError:
+    HAVE_TORCH = False
+
 
 @dataclass
 class WobbleParameters:
@@ -41,6 +50,10 @@ class WobbleParameters:
         Maximum value for ampltiude scaling of templates.
     scale_amplitudes : bool
         If True, scale amplitudes of templates to match spikes.
+    engine : string in ["numpy", "torch", "auto"]. Default "auto"
+        The engine to use for the convolutions
+    torch_device : string in ["cpu", "cuda", None]. Default "cpu"
+        Controls torch device if the torch engine is selected
 
     Notes
     -----
@@ -62,6 +75,8 @@ class WobbleParameters:
     scale_min: float = 0
     scale_max: float = np.inf
     scale_amplitudes: bool = False
+    engine: str = "numpy"
+    torch_device: str = "cpu"
 
     def __post_init__(self):
         assert self.amplitude_variance >= 0, "amplitude_variance must be a non-negative scalar"
@@ -344,6 +359,8 @@ class WobbleMatch(BaseTemplateMatching):
         parents=None,
         templates=None,
         parameters={},
+        engine="numpy",
+        torch_device="cpu",
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
@@ -352,6 +369,21 @@ class WobbleMatch(BaseTemplateMatching):
 
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
+
+        assert engine in ["numpy", "torch", "auto"], "engine should be numpy, torch or auto"
+        if engine == "auto":
+            if HAVE_TORCH:
+                self.engine = "torch"
+            else:
+                self.engine = "numpy"
+        else:
+            if engine == "torch":
+                assert HAVE_TORCH, "please install torch to use the torch engine"
+            self.engine = engine
+
+        assert torch_device in ["cuda", "cpu", None]
+        self.torch_device = torch_device
+
         template_meta = TemplateMetadata.from_parameters_and_templates(params, templates_array)
         if not templates.are_templates_sparse():
             sparsity = WobbleSparsity.from_parameters_and_templates(params, templates_array)
@@ -366,13 +398,21 @@ class WobbleMatch(BaseTemplateMatching):
         pairwise_convolution = convolve_templates(
             compressed_templates, params.jitter_factor, params.approx_rank, template_meta.jittered_indices, sparsity
         )
+
         norm_squared = compute_template_norm(sparsity.visible_channels, templates_array)
+
+        spatial = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
+        temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
+        singular = singular.T[:, :, np.newaxis]
+
+        compressed_templates = (temporal, singular, spatial, temporal_jittered)
         template_data = TemplateData(
             compressed_templates=compressed_templates,
             pairwise_convolution=pairwise_convolution,
             norm_squared=norm_squared,
         )
 
+        self.is_pushed = False
         self.params = params
         self.template_meta = template_meta
         self.sparsity = sparsity
@@ -384,10 +424,23 @@ class WobbleMatch(BaseTemplateMatching):
         # self.margin = int(buffer_ms*1e-3 * recording.sampling_frequency)
         self.margin = 300  # To ensure equivalence with spike-psvae version of the algorithm
 
+    def _push_to_torch(self):
+        if self.engine == "torch":
+            temporal, singular, spatial, temporal_jittered = self.template_data.compressed_templates
+            spatial = torch.as_tensor(spatial, device=self.torch_device)
+            singular = torch.as_tensor(singular, device=self.torch_device)
+            temporal = torch.as_tensor(temporal.copy(), device=self.torch_device).swapaxes(0, 1)
+            temporal = torch.flip(temporal, (2,))
+            self.template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
+        self.is_pushed = True
+
     def get_trace_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
+
+        if not self.is_pushed:
+            self._push_to_torch()
 
         # Unpack method_kwargs
         # nbefore, nafter = method_kwargs["nbefore"], method_kwargs["nafter"]
@@ -400,7 +453,9 @@ class WobbleMatch(BaseTemplateMatching):
         assert traces.dtype == np.float32, "traces must be specified as np.float32"
 
         # Compute objective
-        objective = compute_objective(traces, self.template_data, self.params.approx_rank)
+        objective = compute_objective(
+            traces, self.template_data, self.params.approx_rank, self.engine, self.torch_device
+        )
         objective_normalized = 2 * objective - self.template_data.norm_squared[:, np.newaxis]
 
         # Compute spike train
@@ -786,10 +841,11 @@ def compress_templates(templates, approx_rank) -> tuple[np.ndarray, np.ndarray, 
     temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
 
     # Keep only the strongest components
-    temporal = temporal[:, :, :approx_rank]
+    temporal = temporal[:, :, :approx_rank].astype(np.float32)
     temporal = np.flip(temporal, axis=1)
-    singular = singular[:, :approx_rank]
-    spatial = spatial[:, :approx_rank, :]
+    singular = singular[:, :approx_rank].astype(np.float32)
+    spatial = spatial[:, :approx_rank, :].astype(np.float32)
+
     return temporal, singular, spatial
 
 
@@ -827,7 +883,6 @@ def upsample_and_jitter(temporal, jitter_factor, num_samples):
 
     shape_temporal_jittered = (-1, num_samples, approx_rank)
     temporal_jittered = np.reshape(temporal_jittered[:, shifted_index, :], shape_temporal_jittered)
-
     temporal_jittered = np.flip(temporal_jittered, axis=1)
     return temporal_jittered
 
@@ -889,7 +944,7 @@ def convolve_templates(compressed_templates, jitter_factor, approx_rank, jittere
     return pairwise_convolution
 
 
-def compute_objective(traces, template_data, approx_rank) -> np.ndarray:
+def compute_objective(traces, template_data, approx_rank, engine="numpy", torch_device=None) -> np.ndarray:
     """Compute objective by convolving templates with voltage traces.
 
     Parameters
@@ -898,31 +953,39 @@ def compute_objective(traces, template_data, approx_rank) -> np.ndarray:
         Voltage traces for a chunk of the recording.
     template_data : TemplateData
         Dataclass object for aggregating template data together.
-    approx_rank : int
-        Rank of the compressed template matrices.
 
     Returns
     -------
     objective : ndarray (template_meta.num_templates, traces.shape[0]+template_meta.num_samples-1)
             Template matching objective for each template.
     """
-    temporal, singular, spatial, temporal_jittered = template_data.compressed_templates
-    num_templates = temporal.shape[0]
-    num_samples = temporal.shape[1]
-    objective_len = get_convolution_len(traces.shape[0], num_samples)
-    conv_shape = (num_templates, objective_len)
-    objective = np.zeros(conv_shape, dtype=np.float32)
-    spatial_filters = np.moveaxis(spatial[:, :approx_rank, :], [0, 1, 2], [1, 0, 2])
-    temporal_filters = np.moveaxis(temporal[:, :, :approx_rank], [0, 1, 2], [1, 2, 0])
-    singular_filters = singular.T[:, :, np.newaxis]
+    temporal, singular, spatial, _ = template_data.compressed_templates
+    if engine == "torch":
+        nt = temporal.shape[2] - 1
+        num_channels = traces.shape[1]
+        blank = np.zeros((nt, num_channels), dtype=np.float32)
+        traces = np.vstack((blank, traces, blank))
+        torch_traces = torch.as_tensor(traces.T[None, :, :], device=torch_device)
+        num_templates, num_channels = temporal.shape[0], temporal.shape[1]
+        num_timesteps = torch_traces.shape[2]
+        spatially_filtered_data = torch.matmul(spatial, torch_traces)
+        scaled_filtered_data = (spatially_filtered_data * singular).swapaxes(0, 1)
+        scaled_filtered_data_ = scaled_filtered_data.reshape(1, num_templates * num_channels, num_timesteps)
+        objective = conv1d(scaled_filtered_data_, temporal, groups=num_templates, padding="valid")
+        objective = objective.cpu().numpy()[0, :, :]
+    elif engine == "numpy":
+        num_channels, num_templates = temporal.shape[0], temporal.shape[1]
+        num_timesteps = temporal.shape[2]
+        objective_len = get_convolution_len(traces.shape[0], num_timesteps)
+        conv_shape = (num_templates, objective_len)
+        objective = np.zeros(conv_shape, dtype=np.float32)
+        # Filter using overlap-and-add convolution
+        spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
+        scaled_filtered_data = spatially_filtered_data * singular
+        from scipy import signal
 
-    # Filter using overlap-and-add convolution
-    spatially_filtered_data = np.matmul(spatial_filters, traces.T[np.newaxis, :, :])
-    scaled_filtered_data = spatially_filtered_data * singular_filters
-    from scipy import signal
-
-    objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal_filters, axes=2, mode="full")
-    objective += np.sum(objective_by_rank, axis=0)
+        objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="full")
+        objective += np.sum(objective_by_rank, axis=0)
     return objective
 
 

@@ -88,7 +88,7 @@ The ``censored_period_ms`` parameter is the time window in milliseconds to consi
 The :py:func:`~spikeinterface.curation.remove_redundand_units` function removes
 redundant units from the sorting output. Redundant units are units that share over
 a certain percentage of spikes, by default 80%.
-The function can acto both on a ``BaseSorting`` or a ``SortingAnalyzer`` object.
+The function can act both on a ``BaseSorting`` or a ``SortingAnalyzer`` object.
 
 .. code-block:: python
 
@@ -102,13 +102,18 @@ The function can acto both on a ``BaseSorting`` or a ``SortingAnalyzer`` object.
     )
 
     # remove redundant units from SortingAnalyzer object
-    clean_sorting_analyzer = remove_redundant_units(
+    # note this returns a cleaned sorting
+    clean_sorting = remove_redundant_units(
         sorting_analyzer,
         duplicate_threshold=0.9,
         remove_strategy="min_shift"
     )
+    # in order to have a SortingAnalyer with only the non-redundant units one must
+    # select the designed units remembering to give format and folder if one wants
+    # a persistent SortingAnalyzer.
+    clean_sorting_analyzer = sorting_analyzer.select_units(clean_sorting.unit_ids)
 
-We recommend usinf the ``SortingAnalyzer`` approach, since the ``min_shift`` strategy keeps
+We recommend using the ``SortingAnalyzer`` approach, since the ``min_shift`` strategy keeps
 the unit (among the redundant ones), with a better template alignment.
 
 

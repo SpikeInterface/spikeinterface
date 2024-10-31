@@ -368,7 +368,7 @@ class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2RecordingExtractor
     downloads = ["plexon"]
     entities = [
-        ("plexon/4chDemoPL2.pl2", {"stream_id": "3"}),
+        ("plexon/4chDemoPL2.pl2", {"stream_name": "WB-Wideband"}),
     ]
 
 
