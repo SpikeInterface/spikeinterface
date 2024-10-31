@@ -188,6 +188,51 @@ def compute_whitening_matrix(
         The "mean" matrix
 
     """
+    data, cov, M = compute_covariance_matrix(
+        recording, apply_mean, regularize, regularize_kwargs, random_chunk_kwargs
+    )
+
+    # Here we determine eps used below to avoid division by zero.
+    # Typically we can assume that data is either unscaled integers or in units of
+    # uV, but this is not always the case. When data
+    # is float type and scaled down to very small values, then the
+    # default eps=1e-8 can be too large, resulting in incorrect
+    # whitening. We therefore check to see if the data is float
+    # type and we estimate a more reasonable eps in the case
+    # where the data is on a scale less than 1.
+    if eps is None:
+        eps = 1e-8
+
+    if data.dtype.kind == "f":
+        median_data_sqr = np.median(data**2)  # use the square because cov (and hence S) scales as the square
+        if median_data_sqr < 1 and median_data_sqr > 0:
+            if eps is None:
+                eps = max(1e-16, median_data_sqr * 1e-3)  # use a small fraction of the median of the squared data
+
+    if mode == "global":
+        U, S, Ut = np.linalg.svd(cov, full_matrices=True)
+        W = (U @ np.diag(1 / np.sqrt(S + eps))) @ Ut
+
+    elif mode == "local":
+        assert radius_um is not None
+        n = cov.shape[0]
+        distances = get_channel_distances(recording)
+        W = np.zeros((n, n), dtype="float64")
+        for c in range(n):
+            (inds,) = np.nonzero(distances[c, :] <= radius_um)
+            cov_local = cov[inds, :][:, inds]
+            U, S, Ut = np.linalg.svd(cov_local, full_matrices=True)
+            W_local = (U @ np.diag(1 / np.sqrt(S + eps))) @ Ut
+            W[inds, c] = W_local[c == inds]
+    else:
+        raise ValueError(f"compute_whitening_matrix : wrong mode {mode}")
+
+    return W, M
+
+
+def compute_covariance_matrix(recording, apply_mean, regularize, regularize_kwargs, random_chunk_kwargs):  # TODO: check order
+    """
+    """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
     random_data = random_data.astype(np.float32)
 
@@ -214,36 +259,7 @@ def compute_whitening_matrix(
         estimator.fit(data)
         cov = estimator.covariance_
 
-    # Here we determine eps used below to avoid division by zero.
-    # Typically we can assume that data is either unscaled integers or in units of
-    # uV, but this is not always the case. When data
-    # is float type and scaled down to very small values, then the
-    # default eps=1e-8 can be too large, resulting in incorrect
-    # whitening. We therefore check to see if the data is float
-    # type and we estimate a more reasonable eps in the case
-    # where the data is on a scale less than 1.
-    if eps is None:
-        eps = 1e-8
-    if data.dtype.kind == "f":
-        median_data_sqr = np.median(data**2)  # use the square because cov (and hence S) scales as the square
-        if median_data_sqr < 1 and median_data_sqr > 0:
-            eps = max(1e-16, median_data_sqr * 1e-3)  # use a small fraction of the median of the squared data
+    return data, cov, M  # TODO: rename data
 
-    if mode == "global":
-        U, S, Ut = np.linalg.svd(cov, full_matrices=True)
-        W = (U @ np.diag(1 / np.sqrt(S + eps))) @ Ut
-    elif mode == "local":
-        assert radius_um is not None
-        n = cov.shape[0]
-        distances = get_channel_distances(recording)
-        W = np.zeros((n, n), dtype="float64")
-        for c in range(n):
-            (inds,) = np.nonzero(distances[c, :] <= radius_um)
-            cov_local = cov[inds, :][:, inds]
-            U, S, Ut = np.linalg.svd(cov_local, full_matrices=True)
-            W_local = (U @ np.diag(1 / np.sqrt(S + eps))) @ Ut
-            W[inds, c] = W_local[c == inds]
-    else:
-        raise ValueError(f"compute_whitening_matrix : wrong mode {mode}")
 
-    return W, M
+
