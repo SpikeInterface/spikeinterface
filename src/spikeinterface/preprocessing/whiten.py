@@ -77,7 +77,7 @@ class WhitenRecording(BasePreprocessor):
 
         if dtype_.kind == "i":
             assert int_scale is not None, (
-                "For recording with dtype=int you must set the output dtype to float " " OR set a int_scale"
+                "For recording with dtype=int you must set the output dtype to float OR set a int_scale"
             )
 
         if W is not None:
