@@ -67,7 +67,7 @@ _default_step_params = {
     "num_spikes": {"min_spikes": 100},
     "snr": {"min_snr": 2},
     "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    "unit_locations": {"max_distance_um": 50},
+    "unit_locations": {"max_distance_um": 150},
     "correlogram": {
         "corr_diff_thresh": 0.16,
         "censor_correlograms_ms": 0.15,
@@ -233,7 +233,7 @@ def compute_merge_unit_groups(
             params.update(steps_params[step])
 
         # STEP : remove units with too few spikes
-        if step == "min_spikes":
+        if step == "num_spikes":
             num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
             to_remove = num_spikes < params["min_spikes"]
             pair_mask[to_remove, :] = False
