@@ -20,7 +20,7 @@ class WhitenRecording(BasePreprocessor):
         The recording extractor to be whitened.
     dtype : None or dtype, default: None
         Datatype of the output recording (covariance matrix estimation
-        and whitening are performed in float64).
+        and whitening are performed in float32).
         If None the the parent dtype is kept.
         For integer dtype a int_scale must be also given.
     mode : "global" | "local", default: "global"
@@ -189,7 +189,7 @@ def compute_whitening_matrix(
 
     """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
-    random_data = random_data.astype(np.float64)
+    random_data = random_data.astype(np.float32)
 
     regularize_kwargs = regularize_kwargs if regularize_kwargs is not None else {"method": "GraphicalLassoCV"}
 
