@@ -1,4 +1,4 @@
-How SpikeInterface handles Time
+How SpikeInterface handles time
 =================================
 
 Extracellular electrophysiology commonly involves synchronisation of events
