@@ -3,6 +3,10 @@ from __future__ import annotations
 import warnings
 
 import numpy as np
+from spikeinterface.core import SortingAnalyzer, Templates, compute_sparsity
+from spikeinterface.core.template_tools import (_get_nbefore,
+                                                get_dense_templates_array,
+                                                get_template_extremum_channel)
 
 try:
     import numba
@@ -12,8 +16,6 @@ except ImportError:
     HAVE_NUMBA = False
 
 
-from spikeinterface.core import compute_sparsity, SortingAnalyzer, Templates
-from spikeinterface.core.template_tools import get_template_extremum_channel, _get_nbefore, get_dense_templates_array
 
 
 def compute_monopolar_triangulation(
@@ -110,7 +112,7 @@ def compute_monopolar_triangulation(
         # wf is (nsample, nchan) - chann is only nieghboor
         wf = templates[i, :, :][:, chan_inds]
         if feature == "ptp":
-            wf_data = wf.ptp(axis=0)
+            wf_data = np.ptp(wf, axis=0)
         elif feature == "energy":
             wf_data = np.linalg.norm(wf, axis=0)
         elif feature == "peak_voltage":
@@ -188,7 +190,7 @@ def compute_center_of_mass(
         wf = templates[i, :, :]
 
         if feature == "ptp":
-            wf_data = (wf[:, chan_inds]).ptp(axis=0)
+            wf_data = np.ptp(wf[:, chan_inds], axis=0)
         elif feature == "mean":
             wf_data = (wf[:, chan_inds]).mean(axis=0)
         elif feature == "energy":

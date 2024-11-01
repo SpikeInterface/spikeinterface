@@ -22,21 +22,15 @@ but the original function dredge_ap() and dredge_online_lfp() can be used direct
 
 """
 
+import gc
 import warnings
 
-from tqdm.auto import trange
 import numpy as np
+from tqdm.auto import trange
 
-import gc
-
-from .motion_utils import (
-    Motion,
-    get_spatial_windows,
-    get_window_domains,
-    scipy_conv1d,
-    make_2d_motion_histogram,
-    get_spatial_bin_edges,
-)
+from .motion_utils import (Motion, get_spatial_bin_edges, get_spatial_windows,
+                           get_window_domains, make_2d_motion_histogram,
+                           scipy_conv1d)
 
 
 # simple class wrapper to be compliant with estimate_motion
@@ -979,7 +973,7 @@ def xcorr_windows(
 
     if max_disp_um is None:
         if rigid:
-            max_disp_um = int(spatial_bin_edges_um.ptp() // 4)
+            max_disp_um = int(np.ptp(spatial_bin_edges_um) // 4)
         else:
             max_disp_um = int(win_scale_um // 4)
 
