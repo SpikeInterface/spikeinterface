@@ -6,7 +6,7 @@
 
 Computation times
 =================
-**00:02.107** total execution time for 15 files **from all galleries**:
+**00:01.439** total execution time for 17 files **from all galleries**:
 
 .. container::
 
@@ -32,48 +32,54 @@ Computation times
    * - Example
      - Time
      - Mem (MB)
-   * - :ref:`sphx_glr_tutorials_core_plot_4_sorting_analyzer.py` (``../examples/tutorials/core/plot_4_sorting_analyzer.py``)
-     - 00:02.107
+   * - :ref:`sphx_glr_tutorials_core_plot_4_sorting_analyzer.py` (``..\examples\tutorials\core\plot_4_sorting_analyzer.py``)
+     - 00:01.425
      - 0.0
-   * - :ref:`sphx_glr_tutorials_comparison_plot_5_comparison_sorter_weaknesses.py` (``../examples/tutorials/comparison/plot_5_comparison_sorter_weaknesses.py``)
+   * - :ref:`sphx_glr_tutorials_core_plot_7_handle_times_new.py` (``..\examples\tutorials\core\plot_7_handle_times_new.py``)
+     - 00:00.013
+     - 0.0
+   * - :ref:`sphx_glr_tutorials_comparison_generate_erroneous_sorting.py` (``..\examples\tutorials\comparison\generate_erroneous_sorting.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_core_plot_1_recording_extractor.py` (``../examples/tutorials/core/plot_1_recording_extractor.py``)
+   * - :ref:`sphx_glr_tutorials_comparison_plot_5_comparison_sorter_weaknesses.py` (``..\examples\tutorials\comparison\plot_5_comparison_sorter_weaknesses.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_core_plot_2_sorting_extractor.py` (``../examples/tutorials/core/plot_2_sorting_extractor.py``)
+   * - :ref:`sphx_glr_tutorials_core_plot_1_recording_extractor.py` (``..\examples\tutorials\core\plot_1_recording_extractor.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_core_plot_3_handle_probe_info.py` (``../examples/tutorials/core/plot_3_handle_probe_info.py``)
+   * - :ref:`sphx_glr_tutorials_core_plot_2_sorting_extractor.py` (``..\examples\tutorials\core\plot_2_sorting_extractor.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_core_plot_5_append_concatenate_segments.py` (``../examples/tutorials/core/plot_5_append_concatenate_segments.py``)
+   * - :ref:`sphx_glr_tutorials_core_plot_3_handle_probe_info.py` (``..\examples\tutorials\core\plot_3_handle_probe_info.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_core_plot_6_handle_times.py` (``../examples/tutorials/core/plot_6_handle_times.py``)
+   * - :ref:`sphx_glr_tutorials_core_plot_5_append_concatenate_segments.py` (``..\examples\tutorials\core\plot_5_append_concatenate_segments.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_extractors_plot_1_read_various_formats.py` (``../examples/tutorials/extractors/plot_1_read_various_formats.py``)
+   * - :ref:`sphx_glr_tutorials_core_plot_6_handle_times.py` (``..\examples\tutorials\core\plot_6_handle_times.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_extractors_plot_2_working_with_unscaled_traces.py` (``../examples/tutorials/extractors/plot_2_working_with_unscaled_traces.py``)
+   * - :ref:`sphx_glr_tutorials_extractors_plot_1_read_various_formats.py` (``..\examples\tutorials\extractors\plot_1_read_various_formats.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_qualitymetrics_plot_3_quality_mertics.py` (``../examples/tutorials/qualitymetrics/plot_3_quality_mertics.py``)
+   * - :ref:`sphx_glr_tutorials_extractors_plot_2_working_with_unscaled_traces.py` (``..\examples\tutorials\extractors\plot_2_working_with_unscaled_traces.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_qualitymetrics_plot_4_curation.py` (``../examples/tutorials/qualitymetrics/plot_4_curation.py``)
+   * - :ref:`sphx_glr_tutorials_qualitymetrics_plot_3_quality_mertics.py` (``..\examples\tutorials\qualitymetrics\plot_3_quality_mertics.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_widgets_plot_1_rec_gallery.py` (``../examples/tutorials/widgets/plot_1_rec_gallery.py``)
+   * - :ref:`sphx_glr_tutorials_qualitymetrics_plot_4_curation.py` (``..\examples\tutorials\qualitymetrics\plot_4_curation.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_widgets_plot_2_sort_gallery.py` (``../examples/tutorials/widgets/plot_2_sort_gallery.py``)
+   * - :ref:`sphx_glr_tutorials_widgets_plot_1_rec_gallery.py` (``..\examples\tutorials\widgets\plot_1_rec_gallery.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_widgets_plot_3_waveforms_gallery.py` (``../examples/tutorials/widgets/plot_3_waveforms_gallery.py``)
+   * - :ref:`sphx_glr_tutorials_widgets_plot_2_sort_gallery.py` (``..\examples\tutorials\widgets\plot_2_sort_gallery.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_tutorials_widgets_plot_4_peaks_gallery.py` (``../examples/tutorials/widgets/plot_4_peaks_gallery.py``)
+   * - :ref:`sphx_glr_tutorials_widgets_plot_3_waveforms_gallery.py` (``..\examples\tutorials\widgets\plot_3_waveforms_gallery.py``)
+     - 00:00.000
+     - 0.0
+   * - :ref:`sphx_glr_tutorials_widgets_plot_4_peaks_gallery.py` (``..\examples\tutorials\widgets\plot_4_peaks_gallery.py``)
      - 00:00.000
      - 0.0

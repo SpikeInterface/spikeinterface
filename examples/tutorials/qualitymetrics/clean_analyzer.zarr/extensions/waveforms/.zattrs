@@ -1,0 +1,12 @@
+{
+    "info": {
+        "class": "spikeinterface.core.analyzer_extension_core.ComputeWaveforms",
+        "module": "spikeinterface",
+        "version": "0.101.1"
+    },
+    "params": {
+        "dtype": "<f4",
+        "ms_after": 2.0,
+        "ms_before": 1.0
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "info": {
+        "class": "spikeinterface.core.analyzer_extension_core.ComputeRandomSpikes",
+        "module": "spikeinterface",
+        "version": "0.101.1"
+    },
+    "params": {
+        "margin_size": null,
+        "max_spikes_per_unit": 500,
+        "method": "uniform",
+        "seed": null
+    }
+}

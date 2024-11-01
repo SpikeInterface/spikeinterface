@@ -1,0 +1,10 @@
+{
+    "settings": {
+        "return_scaled": true
+    },
+    "spikeinterface_info": {
+        "dev_mode": true,
+        "object": "SortingAnalyzer",
+        "version": "0.101.1"
+    }
+}

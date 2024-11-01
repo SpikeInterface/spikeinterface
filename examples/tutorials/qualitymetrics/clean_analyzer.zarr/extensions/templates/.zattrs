@@ -1,0 +1,15 @@
+{
+    "info": {
+        "class": "spikeinterface.core.analyzer_extension_core.ComputeTemplates",
+        "module": "spikeinterface",
+        "version": "0.101.1"
+    },
+    "params": {
+        "nafter": 64,
+        "nbefore": 32,
+        "operators": [
+            "average",
+            "std"
+        ]
+    }
+}

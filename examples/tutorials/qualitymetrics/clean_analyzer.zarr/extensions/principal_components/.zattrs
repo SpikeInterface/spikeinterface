@@ -1,0 +1,13 @@
+{
+    "info": {
+        "class": "spikeinterface.postprocessing.principal_component.ComputePrincipalComponents",
+        "module": "spikeinterface",
+        "version": "0.101.1"
+    },
+    "params": {
+        "dtype": "float32",
+        "mode": "by_channel_local",
+        "n_components": 3,
+        "whiten": true
+    }
+}

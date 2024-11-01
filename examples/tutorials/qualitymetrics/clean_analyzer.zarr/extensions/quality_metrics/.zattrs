@@ -1,0 +1,108 @@
+{
+    "info": {
+        "class": "spikeinterface.qualitymetrics.quality_metric_calculator.ComputeQualityMetrics",
+        "module": "spikeinterface",
+        "version": "0.101.1"
+    },
+    "params": {
+        "metric_names": [
+            "isi_violation",
+            "nearest_neighbor",
+            "snr"
+        ],
+        "peak_sign": null,
+        "qm_params": {
+            "amplitude_cutoff": {
+                "amplitudes_bins_min_ratio": 5,
+                "histogram_smoothing_value": 3,
+                "num_histogram_bins": 100,
+                "peak_sign": "neg"
+            },
+            "amplitude_cv": {
+                "amplitude_extension": "spike_amplitudes",
+                "average_num_spikes_per_bin": 50,
+                "min_num_bins": 10,
+                "percentiles": [
+                    5,
+                    95
+                ]
+            },
+            "amplitude_median": {
+                "peak_sign": "neg"
+            },
+            "drift": {
+                "direction": "y",
+                "interval_s": 60,
+                "min_num_bins": 2,
+                "min_spikes_per_interval": 100
+            },
+            "firing_range": {
+                "bin_size_s": 5,
+                "percentiles": [
+                    5,
+                    95
+                ]
+            },
+            "isi_violation": {
+                "isi_threshold_ms": 1.5,
+                "min_isi_ms": 0
+            },
+            "nearest_neighbor": {
+                "max_spikes": 10000,
+                "n_neighbors": 5
+            },
+            "nn_isolation": {
+                "max_spikes": 10000,
+                "min_fr": 0.0,
+                "min_spikes": 10,
+                "n_components": 10,
+                "n_neighbors": 4,
+                "peak_sign": "neg",
+                "radius_um": 100
+            },
+            "nn_noise_overlap": {
+                "max_spikes": 10000,
+                "min_fr": 0.0,
+                "min_spikes": 10,
+                "n_components": 10,
+                "n_neighbors": 4,
+                "peak_sign": "neg",
+                "radius_um": 100
+            },
+            "presence_ratio": {
+                "bin_duration_s": 60,
+                "mean_fr_ratio_thresh": 0.0
+            },
+            "rp_violation": {
+                "censored_period_ms": 0.0,
+                "refractory_period_ms": 1.0
+            },
+            "silhouette": {
+                "method": [
+                    "simplified"
+                ]
+            },
+            "sliding_rp_violation": {
+                "bin_size_ms": 0.25,
+                "contamination_values": null,
+                "exclude_ref_period_below_ms": 0.5,
+                "max_ref_period_ms": 10,
+                "min_spikes": 0,
+                "window_size_s": 1
+            },
+            "snr": {
+                "peak_mode": "extremum",
+                "peak_sign": "neg"
+            },
+            "synchrony": {
+                "synchrony_sizes": [
+                    2,
+                    4,
+                    8
+                ]
+            }
+        },
+        "seed": null,
+        "skip_pc_metrics": false
+    }
+}
