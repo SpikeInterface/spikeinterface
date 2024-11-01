@@ -52,7 +52,6 @@ SpikeInterface is made of several modules to deal with different aspects of the 
     overview
     get_started/index
     tutorials_custom_index
-    tutorials/index
     how_to/index
     modules/index
     api

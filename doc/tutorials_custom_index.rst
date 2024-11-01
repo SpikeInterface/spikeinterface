@@ -12,12 +12,14 @@
 
 :orphan:
 
-TutorialsNew
+Tutorials
 ============
 
-Longer form tutorials about using SpikeInterface. Many of these are downloadable as notebooks or Python scripts so that you can "code along" with the tutorials.
+Longer form tutorials about using SpikeInterface. Many of these are downloadable
+as notebooks or Python scripts so that you can "code along" with the tutorials.
 
-If you're new to SpikeInterface, we recommend trying out the :ref:`get_started/quickstart:Quickstart tutorial` first.
+If you're new to SpikeInterface, we recommend trying out the
+:ref:`get_started/quickstart:Quickstart tutorial` first.
 
 Updating from legacy
 --------------------
@@ -35,77 +37,53 @@ These tutorials focus on the :py:mod:`spikeinterface.core` module.
 .. grid:: 1 2 2 3
    :gutter: 2
 
-   .. grid-item-card::
+   .. grid-item-card:: Recording objects
       :link-type: ref
       :link: sphx_glr_tutorials_core_plot_1_recording_extractor.py
       :img-top: /tutorials/core/images/thumb/sphx_glr_plot_1_recording_extractor_thumb.png
       :img-alt: Recording objects
       :class-card: gallery-card
+      :text-align: center
 
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">Recording objects</div>
-         <div class="hover-content">Manage loaded recordings in SpikeInterface</div>
-
-   .. grid-item-card::
+   .. grid-item-card:: Sorting objects
       :link-type: ref
       :link: sphx_glr_tutorials_core_plot_2_sorting_extractor.py
       :img-top: /tutorials/core/images/thumb/sphx_glr_plot_2_sorting_extractor_thumb.png
       :img-alt: Sorting objects
       :class-card: gallery-card
+      :text-align: center
 
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">Sorting objects</div>
-         <div class="hover-content">Explore sorting extractor features</div>
-
-   .. grid-item-card::
+   .. grid-item-card:: Handling probe information
       :link-type: ref
       :link: sphx_glr_tutorials_core_plot_3_handle_probe_info.py
       :img-top: /tutorials/core/images/thumb/sphx_glr_plot_3_handle_probe_info_thumb.png
       :img-alt: Handling probe information
       :class-card: gallery-card
+      :text-align: center
 
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">Handling probe information</div>
-         <div class="hover-content">Handle and visualize probe information</div>
-
-   .. grid-item-card::
+   .. grid-item-card:: SortingAnalyzer
       :link-type: ref
       :link: sphx_glr_tutorials_core_plot_4_sorting_analyzer.py
       :img-top: /tutorials/core/images/thumb/sphx_glr_plot_4_sorting_analyzer_thumb.png
       :img-alt: SortingAnalyzer
       :class-card: gallery-card
+      :text-align: center
 
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">SortingAnalyzer</div>
-         <div class="hover-content">Analyze sorting results with ease</div>
-
-   .. grid-item-card::
+   .. grid-item-card:: Append and/or concatenate segments
       :link-type: ref
       :link: sphx_glr_tutorials_core_plot_5_append_concatenate_segments.py
       :img-top: /tutorials/core/images/thumb/sphx_glr_plot_5_append_concatenate_segments_thumb.png
       :img-alt: Append/Concatenate segments
       :class-card: gallery-card
+      :text-align: center
 
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">Append and/or concatenate segments</div>
-         <div class="hover-content">Combine segments efficiently</div>
-
-   .. grid-item-card::
+   .. grid-item-card:: Handle time information
       :link-type: ref
       :link: sphx_glr_tutorials_core_plot_6_handle_times.py
       :img-top: /tutorials/core/images/thumb/sphx_glr_plot_6_handle_times_thumb.png
       :img-alt: Handle time information
       :class-card: gallery-card
-
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">Handle time information</div>
-         <div class="hover-content">Manage and analyze time information</div>
+      :text-align: center
 
 Extractors tutorials
 --------------------
@@ -115,29 +93,21 @@ The :py:mod:`spikeinterface.extractors` module is designed to load and save reco
 .. grid:: 1 2 2 3
    :gutter: 2
 
-   .. grid-item-card::
+   .. grid-item-card:: Read various formats
       :link-type: ref
       :link: sphx_glr_tutorials_extractors_plot_1_read_various_formats.py
       :img-top: /tutorials/extractors/images/thumb/sphx_glr_plot_1_read_various_formats_thumb.png
       :img-alt: Read various formats
       :class-card: gallery-card
+      :text-align: center
 
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">Read various formats</div>
-         <div class="hover-content">Read different recording formats efficiently</div>
-
-   .. grid-item-card::
+   .. grid-item-card:: Working with unscaled traces
       :link-type: ref
       :link: sphx_glr_tutorials_extractors_plot_2_working_with_unscaled_traces.py
       :img-top: /tutorials/extractors/images/thumb/sphx_glr_plot_2_working_with_unscaled_traces_thumb.png
       :img-alt: Unscaled traces
       :class-card: gallery-card
-
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">Working with unscaled traces</div>
-         <div class="hover-content">Learn about managing unscaled traces</div>
+      :text-align: center
 
 Quality metrics tutorial
 ------------------------
@@ -147,29 +117,21 @@ The :code:`spikeinterface.qualitymetrics` module allows users to compute various
 .. grid:: 1 2 2 3
    :gutter: 2
 
-   .. grid-item-card::
+   .. grid-item-card:: Quality Metrics
       :link-type: ref
       :link: sphx_glr_tutorials_qualitymetrics_plot_3_quality_mertics.py
       :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_3_quality_mertics_thumb.png
       :img-alt: Quality Metrics
       :class-card: gallery-card
+      :text-align: center
 
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">Quality Metrics</div>
-         <div class="hover-content">Evaluate sorting quality using metrics</div>
-
-   .. grid-item-card::
+   .. grid-item-card:: Curation Tutorial
       :link-type: ref
       :link: sphx_glr_tutorials_qualitymetrics_plot_4_curation.py
       :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_4_curation_thumb.png
       :img-alt: Curation Tutorial
       :class-card: gallery-card
-
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">Curation Tutorial</div>
-         <div class="hover-content">Learn how to curate spike sorting data</div>
+      :text-align: center
 
 Comparison tutorial
 -------------------
@@ -179,17 +141,13 @@ The :code:`spikeinterface.comparison` module allows you to compare sorter output
 .. grid:: 1 2 2 3
    :gutter: 2
 
-   .. grid-item-card::
+   .. grid-item-card:: Sorter Comparison
       :link-type: ref
       :link: sphx_glr_tutorials_comparison_plot_5_comparison_sorter_weaknesses.py
       :img-top: /tutorials/comparison/images/thumb/sphx_glr_plot_5_comparison_sorter_weaknesses_thumb.png
       :img-alt: Sorter Comparison
       :class-card: gallery-card
-
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">Sorter Comparison</div>
-         <div class="hover-content">Compare sorter outputs and assess weaknesses</div>
+      :text-align: center
 
 Widgets tutorials
 -----------------
@@ -199,53 +157,37 @@ The :code:`widgets` module contains several plotting routines (widgets) for visu
 .. grid:: 1 2 2 3
    :gutter: 2
 
-   .. grid-item-card::
+   .. grid-item-card:: RecordingExtractor Widgets
       :link-type: ref
       :link: sphx_glr_tutorials_widgets_plot_1_rec_gallery.py
       :img-top: /tutorials/widgets/images/thumb/sphx_glr_plot_1_rec_gallery_thumb.png
       :img-alt: Recording Widgets
       :class-card: gallery-card
+      :text-align: center
 
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">RecordingExtractor Widgets</div>
-         <div class="hover-content">Visualize recordings with widgets</div>
-
-   .. grid-item-card::
+   .. grid-item-card:: SortingExtractor Widgets
       :link-type: ref
       :link: sphx_glr_tutorials_widgets_plot_2_sort_gallery.py
       :img-top: /tutorials/widgets/images/thumb/sphx_glr_plot_2_sort_gallery_thumb.png
       :img-alt: Sorting Widgets
       :class-card: gallery-card
+      :text-align: center
 
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">SortingExtractor Widgets</div>
-         <div class="hover-content">Explore sorting data using widgets</div>
-
-   .. grid-item-card::
+   .. grid-item-card:: Waveforms Widgets
       :link-type: ref
       :link: sphx_glr_tutorials_widgets_plot_3_waveforms_gallery.py
       :img-top: /tutorials/widgets/images/thumb/sphx_glr_plot_3_waveforms_gallery_thumb.png
       :img-alt: Waveforms Widgets
       :class-card: gallery-card
+      :text-align: center
 
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">Waveforms Widgets</div>
-         <div class="hover-content">Display waveforms using SpikeInterface</div>
-
-   .. grid-item-card::
+   .. grid-item-card:: Peaks Widgets
       :link-type: ref
       :link: sphx_glr_tutorials_widgets_plot_4_peaks_gallery.py
       :img-top: /tutorials/widgets/images/thumb/sphx_glr_plot_4_peaks_gallery_thumb.png
       :img-alt: Peaks Widgets
       :class-card: gallery-card
-
-      .. raw:: html
-
-         <div class="grid-item-card-title default-title">Peaks Widgets</div>
-         <div class="hover-content">Visualize detected peaks</div>
+      :text-align: center
 
 Download All Examples
 ---------------------
