@@ -4,9 +4,7 @@ import warnings
 
 import numpy as np
 from spikeinterface.core import SortingAnalyzer, Templates, compute_sparsity
-from spikeinterface.core.template_tools import (_get_nbefore,
-                                                get_dense_templates_array,
-                                                get_template_extremum_channel)
+from spikeinterface.core.template_tools import _get_nbefore, get_dense_templates_array, get_template_extremum_channel
 
 try:
     import numba
@@ -14,8 +12,6 @@ try:
     HAVE_NUMBA = True
 except ImportError:
     HAVE_NUMBA = False
-
-
 
 
 def compute_monopolar_triangulation(

@@ -28,9 +28,14 @@ import warnings
 import numpy as np
 from tqdm.auto import trange
 
-from .motion_utils import (Motion, get_spatial_bin_edges, get_spatial_windows,
-                           get_window_domains, make_2d_motion_histogram,
-                           scipy_conv1d)
+from .motion_utils import (
+    Motion,
+    get_spatial_bin_edges,
+    get_spatial_windows,
+    get_window_domains,
+    make_2d_motion_histogram,
+    scipy_conv1d,
+)
 
 
 # simple class wrapper to be compliant with estimate_motion
