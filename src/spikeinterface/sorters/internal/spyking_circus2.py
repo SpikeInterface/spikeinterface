@@ -53,6 +53,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
+        "seed" : 42,
         "debug": False,
     }
 
@@ -174,6 +175,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
+        selection_params = params["selection"].copy()
         detection_params.update(job_kwargs)
 
         detection_params["radius_um"] = detection_params.get("radius_um", 50)
@@ -184,13 +186,28 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         nbefore = int(ms_before * fs / 1000.0)
         nafter = int(ms_after * fs / 1000.0)
 
+        if params["seed"] is not None:
+            recording_slices = divide_recording(recording_w, seed=42, **job_kwargs)
+        else:
+            recording_slices = None
+
+        detection_params["recording_slices"] = recording_slices
+
+        skip_peaks = not params["multi_units_only"] and selection_params.get("method", "uniform") == "uniform"
+        max_n_peaks = selection_params["n_peaks_per_channel"] * num_channels
+        n_peaks = max(selection_params["min_n_peaks"], max_n_peaks)
+
         if params["matched_filtering"]:
             peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, skip_after_n_peaks=5000)
             prototype = get_prototype_spike(recording_w, peaks, ms_before, ms_after, **job_kwargs)
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
+            if skip_peaks:
+                detection_params["skip_after_n_peaks"] = n_peaks
             peaks = detect_peaks(recording_w, "matched_filtering", **detection_params)
         else:
+            if skip_peaks:
+                detection_params["skip_after_n_peaks"] = n_peaks
             peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params)
 
         if verbose:
@@ -202,9 +219,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
             ## channels as flat as possible
             selection_params = params["selection"]
-            selection_params["n_peaks"] = min(len(peaks), selection_params["n_peaks_per_channel"] * num_channels)
-            selection_params["n_peaks"] = max(selection_params["min_n_peaks"], selection_params["n_peaks"])
-
+            selection_params["n_peaks"] = n_peaks
             selection_params.update({"noise_levels": noise_levels})
             selected_peaks = select_peaks(peaks, **selection_params)
 
@@ -379,12 +394,28 @@ def create_sorting_analyzer_with_templates(sorting, recording, templates, remove
     return sa
 
 
+def divide_recording(recording, seed=None, **job_kwargs):
+    from spikeinterface.core.job_tools import ensure_chunk_size
+    from spikeinterface.core.job_tools import divide_segment_into_chunks
+    chunk_size = ensure_chunk_size(recording, **job_kwargs)
+    recording_slices = []
+    for segment_index in range(recording.get_num_segments()):
+        num_frames = recording.get_num_samples(segment_index)
+        chunks = divide_segment_into_chunks(num_frames, chunk_size)
+        recording_slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
+    
+    if seed is not None:
+        rng = np.random.RandomState(seed)
+        recording_slices = rng.permutation(recording_slices)
+    
+    return recording_slices
+
+
 def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
 
     from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 
     sa = create_sorting_analyzer_with_templates(sorting, recording, templates)
-
     sa.compute("unit_locations", method="monopolar_triangulation")
     similarity_kwargs = merging_kwargs.pop("similarity_kwargs", {})
     sa.compute("template_similarity", **similarity_kwargs)
