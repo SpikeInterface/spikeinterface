@@ -2,6 +2,7 @@ import pytest
 from pathlib import Path
 from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 from spikeinterface.curation.model_based_curation import ModelBasedClassification
+import numpy as np
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "curation"
@@ -102,52 +103,14 @@ def test_model_based_classification_export_to_phy(sorting_analyzer_for_curation,
 def test_model_based_classification_predict_labels(sorting_analyzer_for_curation, pipeline):
     sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
     sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["num_spikes"])
+
     # Test the predict_labels() method of ModelBasedClassification
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, pipeline)
     classified_units = model_based_classification.predict_labels()
-    predictions = [classified_units[i][0] for i in classified_units]
-    assert predictions == [1, 0, 1, 0, 1]
+    predictions = classified_units["prediction"].values
+    assert np.all(predictions == np.array([1, 0, 1, 0, 1]))
 
     conversion = {0: "noise", 1: "good"}
     classified_units_labelled = model_based_classification.predict_labels(label_conversion=conversion)
-    predictions_labelled = [classified_units_labelled[i][0] for i in classified_units_labelled]
-    assert predictions_labelled == ["good", "noise", "good", "noise", "good"]
-
-
-# # Code to create the trained pipeline for testing
-# import pandas as pd
-# from sklearn.preprocessing import StandardScaler
-# from sklearn.linear_model import LogisticRegression
-# from sklearn.pipeline import Pipeline
-# import numpy as np
-# from skops.io import dump
-
-# from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
-
-
-# # Set random seed for reproducibility
-# np.random.seed(42)
-
-# # Sample data
-# sorting_analyzer = make_sorting_analyzer()
-# sorting_analyzer.compute("quality_metrics", metric_names = ["num_spikes"])
-# sorting_analyzer.compute("template_metrics", metric_names = ["half_width"])
-# data = pd.concat([sorting_analyzer.extensions["quality_metrics"].data["metrics"], sorting_analyzer.extensions["template_metrics"].data["metrics"]], axis=1)
-
-# data
-
-# # Define features and target
-# X = data
-# y = [1,0,1,0,1]
-
-# # Create a simple pipeline
-# pipeline = Pipeline([
-#     ('scaler', StandardScaler()),  # Standardize the features
-#     ('classifier', LogisticRegression(random_state=42))  # Logistic Regression classifier
-# ])
-
-# # Fit the pipeline
-# pipeline.fit(X, y)
-
-# # Save the pipeline to a skops file
-# dump(pipeline, "trained_pipeline.skops")
+    predictions_labelled = classified_units_labelled["prediction"]
+    assert np.all(predictions_labelled == ["good", "noise", "good", "noise", "good"])

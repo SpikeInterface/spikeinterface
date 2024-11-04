@@ -29,20 +29,21 @@ Upload a pipeline to Hugging Face Hub
 # any information which shows when a model is applicable (and when it is *not*). Taking
 # a model trained on mouse data and applying it to a primate is likely a bad idea (or a
 # great research paper!). And a model trained in tetrode data will have limited application
-# on a silconehigh density probe. Hence we suggest the following dictionary as a minimal
+# on a silcone high-density probe. Hence we suggest the following dictionary as a minimal
 # amount of information needed. Note that we format the metadata so that the information
-# in common with the NWB data format is consistent with it,
+# in common with the NWB data format is consistent with it. Since the models can be trained
+# on several curations, all the metadata fields are lists:
 #
 # .. code-block::
 #
 #     model_metadata = {
-#         "subject_species": "Mus musculus",
-#         "brain_area": "CA1",
-#         "probe":
-#             {
-#              "manufacturer": "Neuropixels",
-#              "name": "Neuropixles 2.0"
-#             }
+#         "subject_species": ["Mus musculus"],
+#         "brain_areas": ["CA1"],
+#         "probes":
+#             [{
+#              "manufacturer": "IMEc",
+#              "name": "Neuropixels 2.0"
+#             }]
 #         }
 #
 #     import json
@@ -102,7 +103,7 @@ Upload a pipeline to Hugging Face Hub
 #         labels = auto_label_units(
 #             sorting_analyzer = sorting_analyzer,
 #             repo_id = "SpikeInterface/toy_tetrode_model",
-#             trusted = ['numpy.dtype']
+#             trust_model=True
 #         )
 #     ` ` `
 #

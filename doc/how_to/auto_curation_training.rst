@@ -7,7 +7,7 @@ Here, we assume that you have:
 
 * Two SortingAnalyzers called ``analyzer_1`` and
   ``analyzer_2``, and have calculated some template and quality metrics for both
-* Manutally curated labels for the units in each analyzer, in lists called
+* Manually curated labels for the units in each analyzer, in lists called
   ``analyzer_1_labels`` and ``analyzer_2_labels``. If you have used phy, the lists can
   be accessed using ``curated_labels = analyzer.sorting.get_property("quality")``.
 

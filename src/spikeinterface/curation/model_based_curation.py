@@ -62,9 +62,9 @@ class ModelBasedClassification:
 
         Returns
         -------
-        dict
-            A dictionary containing the classified units and their corresponding predictions and probabilities.
-            The dictionary has the format {unit_id: (prediction, probability)}.
+        pd.DataFrame
+            A dataframe containing the classified units and their corresponding predictions and probabilities,
+            indexed by their `unit_ids`.
         """
         import pandas as pd
 
@@ -104,11 +104,9 @@ class ModelBasedClassification:
                 raise ValueError("Labels in predictions do not match those in label_conversion")
             predictions = [label_conversion[label] for label in predictions]
 
-        # Make output dict with {unit_id: (prediction, probability)}
-        classified_units = {
-            unit_id: (prediction, probability)
-            for unit_id, prediction, probability in zip(input_data.index, predictions, probabilities)
-        }
+        classified_units = pd.DataFrame(
+            zip(predictions, probabilities), columns=["prediction", "probability"], index=self.sorting_analyzer.unit_ids
+        )
 
         # Set predictions and probability as sorting properties
         self.sorting_analyzer.sorting.set_property("classifier_label", predictions)
@@ -246,8 +244,9 @@ def auto_label_units(
 
     Returns
     -------
-    classified_units : dict
-        A dictionary containing the classified units, where the keys are the unit IDs and the values are a tuple of labels and confidence.
+    classified_units : pd.DataFrame
+        A dataframe containing the classified units, indexed by the `unit_ids`, containing the predicted label
+        and confidence probability of each labelled unit.
 
     Raises
     ------
