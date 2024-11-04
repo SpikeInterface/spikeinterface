@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 
 from spikeinterface import create_sorting_analyzer, get_template_extremum_channel, generate_ground_truth_recording
-
+from spikeinterface.core.job_tools import divide_recording_into_chunks
 
 # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.core.node_pipeline import (
@@ -191,8 +191,8 @@ def test_run_node_pipeline(cache_folder_creation):
             unpickled_node = pickle.loads(pickled_node)
 
 
-def test_skip_after_n_peaks():
-    recording, sorting = generate_ground_truth_recording(num_channels=10, num_units=10, durations=[10.0])
+def test_skip_after_n_peaks_and_recording_slices():
+    recording, sorting = generate_ground_truth_recording(num_channels=10, num_units=10, durations=[10.0], seed=2205)
 
     # job_kwargs = dict(chunk_duration="0.5s", n_jobs=2, progress_bar=False)
     job_kwargs = dict(chunk_duration="0.5s", n_jobs=1, progress_bar=False)
@@ -211,13 +211,22 @@ def test_skip_after_n_peaks():
     node1 = AmplitudeExtractionNode(recording, parents=[node0], param0=6.6, return_output=True)
     nodes = [node0, node1]
 
+    # skip
     skip_after_n_peaks = 30
     some_amplitudes = run_node_pipeline(
         recording, nodes, job_kwargs, gather_mode="memory", skip_after_n_peaks=skip_after_n_peaks
     )
-
     assert some_amplitudes.size >= skip_after_n_peaks
     assert some_amplitudes.size < spikes.size
+
+    # slices : 1 every 4
+    recording_slices = divide_recording_into_chunks(recording, 10_000)
+    recording_slices = recording_slices[::4]
+    some_amplitudes = run_node_pipeline(
+        recording, nodes, job_kwargs, gather_mode="memory", recording_slices=recording_slices
+    )
+    tolerance = 1.2
+    assert some_amplitudes.size < (spikes.size // 4) * tolerance
 
 
 # the following is for testing locally with python or ipython. It is not used in ci or with pytest.
@@ -225,4 +234,4 @@ if __name__ == "__main__":
     # folder = Path("./cache_folder/core")
     # test_run_node_pipeline(folder)
 
-    test_skip_after_n_peaks()
+    test_skip_after_n_peaks_and_recording_slices()
