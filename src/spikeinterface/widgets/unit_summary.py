@@ -108,7 +108,7 @@ class UnitSummaryWidget(BaseWidget):
         fig = self.figure
         nrows = 2
         ncols = 2
-        if sorting_analyzer.has_extension("correlograms") and sorting_analyzer.has_extension("template_similarity"):
+        if sorting_analyzer.has_extension("correlograms"):
             ncols += 1
         if sorting_analyzer.has_extension("waveforms"):
             ncols += 1
@@ -172,7 +172,7 @@ class UnitSummaryWidget(BaseWidget):
             col_counter += 1
             ax_waveform_density.set_ylabel(None)
 
-        if sorting_analyzer.has_extension("correlograms") and sorting_analyzer.has_extension("template_similarity"):
+        if sorting_analyzer.has_extension("correlograms"):
             ax_correlograms = fig.add_subplot(gs[:2, col_counter])
             AutoCorrelogramsWidget(
                 sorting_analyzer,

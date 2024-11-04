@@ -22,8 +22,8 @@ def export_report(
     """
     Exports a SI spike sorting report. The report includes summary figures of the spike sorting output.
     What is plotted depends on what has been calculated. Unit locations and unit waveforms are always included.
-    Unit waveform densities, correlograms and spike amplitudes are plotted if `waveforms`, `correlograms`
-    and 'template_similarity', and `spike_amplitudes` have been computed for the given `sorting_analyzer`.
+    Unit waveform densities, correlograms and spike amplitudes are plotted if `waveforms`, `correlograms`,
+    and `spike_amplitudes` have been computed for the given `sorting_analyzer`.
 
     Parameters
     ----------
