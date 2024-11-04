@@ -126,6 +126,9 @@ test_core = [
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+
+    # for slurm jobs,
+    "pytest-mock"
 ]
 
 test_extractors = [
@@ -175,6 +178,9 @@ test = [
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+
+    # for slurm jobs
+    "pytest-mock",
 ]
 
 docs = [
