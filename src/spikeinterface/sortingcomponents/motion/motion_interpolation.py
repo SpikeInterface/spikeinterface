@@ -126,11 +126,16 @@ def interpolate_motion_on_traces(
 
     # nearest interpolation bin:
     # seachsorted(b, t, side="right") == i means that b[i-1] <= t < b[i]
-    # hence the -1. doing it with "left" is not as nice.
-    # time_bins are bin centers, so subtract half the bin length. this leads
-    # to snapping to the nearest bin center.
-    bin_s = time_bins[1] - time_bins[0]
-    bin_inds = np.searchsorted(time_bins - bin_s / 2, times, side="right") - 1
+    # hence the -1. doing it with "left" is not as nice -- we want t==b[0]
+    # to lead to i=1 (rounding down).
+    # time_bins are bin centers, but we want to snap to the nearest center.
+    # idea is to get the left bin edges and bin the interp times.
+    # this is like subtracting bin_dt_s/2, but allows non-equally-spaced bins.
+    bin_left = np.zeros_like(time_bins)
+    # it's fine to use the first bin center for the first left edge
+    bin_left[0] = time_bins[0]
+    bin_left[1:] = 0.5 * (time_bins[1:] + time_bins[:-1])
+    bin_inds = np.searchsorted(bin_left, times, side="right") - 1
 
     # the time bins may not cover the whole set of times in the recording,
     # so we need to clip these indices to the valid range
@@ -438,9 +443,6 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
         self.motion = motion
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if self.time_vector is not None:
-            raise NotImplementedError("InterpolateMotionRecording does not yet support recordings with time_vectors.")
-
         if start_frame is None:
             start_frame = 0
         if end_frame is None:

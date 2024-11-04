@@ -1,16 +1,11 @@
-from pathlib import Path
+import warnings
 
 import numpy as np
-import pytest
 import spikeinterface.core as sc
-from spikeinterface import download_dataset
-from spikeinterface.sortingcomponents.motion.motion_interpolation import (
-    InterpolateMotionRecording,
-    correct_motion_on_peaks,
-    interpolate_motion,
-    interpolate_motion_on_traces,
-)
 from spikeinterface.sortingcomponents.motion import Motion
+from spikeinterface.sortingcomponents.motion.motion_interpolation import (
+    InterpolateMotionRecording, correct_motion_on_peaks, interpolate_motion,
+    interpolate_motion_on_traces)
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 
@@ -115,6 +110,66 @@ def test_interpolation_simple():
     assert np.all(traces_corrected[:, 2:] == 0)
 
 
+def test_cross_band_interpolation():
+    """Simple version of using LFP to interpolate AP data
+
+    This also tests the time vector implementation in interpolation.
+    The idea is to have two recordings which are all 0s with a 1 that
+    moves from one channel to another after 3s. They're at different
+    sampling frequencies. motion estimation in one sampling frequency
+    applied to the other should still lead to perfect correction.
+    """
+    from spikeinterface.sortingcomponents.motion import estimate_motion
+
+    # sampling freqs and timing for AP and LFP recordings
+    fs_lfp = 50.0
+    fs_ap = 300.0
+    t_start = 10.0
+    total_duration = 5.0
+    nt_lfp = int(fs_lfp * total_duration)
+    nt_ap = int(fs_ap * total_duration)
+    t_switch = 3
+
+    # because interpolation uses bin centers logic, there will be a half
+    # bin offset at the change point in the AP recording.
+    halfbin_ap_lfp = int(0.5 * (fs_ap / fs_lfp))
+
+    # channel geometry
+    nc = 10
+    geom = np.c_[np.zeros(nc), np.arange(nc)]
+
+    # make an LFP recording which drifts a bit
+    traces_lfp = np.zeros((nt_lfp, nc))
+    traces_lfp[: int(t_switch * fs_lfp), 5] = 1.0
+    traces_lfp[int(t_switch * fs_lfp) :, 6] = 1.0
+    rec_lfp = sc.NumpyRecording(traces_lfp, sampling_frequency=fs_lfp)
+    rec_lfp.set_dummy_probe_from_locations(geom)
+
+    # same for AP
+    traces_ap = np.zeros((nt_ap, nc))
+    traces_ap[: int(t_switch * fs_ap) - halfbin_ap_lfp, 5] = 1.0
+    traces_ap[int(t_switch * fs_ap) - halfbin_ap_lfp :, 6] = 1.0
+    rec_ap = sc.NumpyRecording(traces_ap, sampling_frequency=fs_ap)
+    rec_ap.set_dummy_probe_from_locations(geom)
+
+    # set times for both, and silence the warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        rec_lfp.set_times(t_start + np.arange(nt_lfp) / fs_lfp)
+        rec_ap.set_times(t_start + np.arange(nt_ap) / fs_ap)
+
+    # estimate motion
+    motion = estimate_motion(rec_lfp, method="dredge_lfp", rigid=True)
+
+    # nearest to keep it simple
+    rec_corrected = interpolate_motion(rec_ap, motion, spatial_interpolation_method="nearest", num_closest=2)
+    traces_corrected = rec_corrected.get_traces()
+    target = np.zeros((nt_ap, nc - 2))
+    target[:, 4] = 1
+    ii, jj = np.nonzero(traces_corrected)
+    assert np.array_equal(traces_corrected, target)
+
+
 def test_InterpolateMotionRecording():
     rec, sorting = make_dataset()
     motion = make_fake_motion(rec)
@@ -148,5 +203,6 @@ def test_InterpolateMotionRecording():
 if __name__ == "__main__":
     # test_correct_motion_on_peaks()
     # test_interpolate_motion_on_traces()
-    test_interpolation_simple()
-    test_InterpolateMotionRecording()
+    # test_interpolation_simple()
+    # test_InterpolateMotionRecording()
+    test_cross_band_interpolation()
