@@ -126,19 +126,18 @@ class ComputeQualityMetrics(AnalyzerExtension):
         not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
 
         # this creates a new metrics dictionary, but the dtype for everything will be
-        # object
+        # object. So we will need to fix this later after computing metrics
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
-        # we can iterate through the columns and convert them back to numbers with
-        # pandas.to_numeric. coerce allows us to keep the nan values.
-        for column in metrics.columns:
-            metrics[column] = pd.to_numeric(metrics[column], errors="coerce")
-            if np.all(np.mod(metrics[column], 1) == 0):
-                metrics[column] = metrics[column].astype(int)
-
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
         metrics.loc[new_unit_ids, :] = self._compute_metrics(
             new_sorting_analyzer, new_unit_ids, verbose, metric_names, **job_kwargs
         )
+
+        # we need to fix the dtypes after we compute everything because we have nans
+        # we can iterate through the columns and convert them back to the dtype
+        # of the original quality dataframe.
+        for column in old_metrics.columns:
+            metrics[column] = metrics[column].astype(old_metrics[column].dtype)
 
         new_data = dict(metrics=metrics)
         return new_data

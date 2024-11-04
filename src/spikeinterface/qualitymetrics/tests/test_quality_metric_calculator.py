@@ -68,15 +68,11 @@ def test_merging_quality_metrics(sorting_analyzer_simple):
     # we should copy over the metrics after merge
     for column in metrics.columns:
         assert column in new_metrics.columns
+        # should copy dtype too
+        assert metrics[column].dtype == new_metrics[column].dtype
 
     # 10 units vs 9 units
     assert len(metrics.index) > len(new_metrics.index)
-
-    # dtype should be fine after merge but is cast from Float64->float64
-    assert np.float64 == new_metrics["snr"].dtype
-
-    # test that we appropriate convert int based metrics to int
-    assert np.int32 == new_metrics["num_spikes"].dtype
 
 
 def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
