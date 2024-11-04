@@ -132,6 +132,8 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # pandas.to_numeric. coerce allows us to keep the nan values.
         for column in metrics.columns:
             metrics[column] = pd.to_numeric(metrics[column], errors="coerce")
+            if np.all(np.mod(metrics[column], 1) == 0):
+                metrics[column] = metrics[column].astype(int)
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
         metrics.loc[new_unit_ids, :] = self._compute_metrics(

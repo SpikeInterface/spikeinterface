@@ -57,6 +57,7 @@ def detect_peaks(
     folder=None,
     names=None,
     skip_after_n_peaks=None,
+    recording_slices=None,
     **kwargs,
 ):
     """Peak detection based on threshold crossing in term of k x MAD.
@@ -83,6 +84,10 @@ def detect_peaks(
     skip_after_n_peaks : None | int
         Skip the computation after n_peaks.
         This is not an exact because internally this skip is done per worker in average.
+    recording_slices : None | list[tuple]
+        Optionaly give a list of slices to run the pipeline only on some chunks of the recording.
+        It must be a list of (segment_index, frame_start, frame_stop).
+        If None (default), the function iterates over the entire duration of the recording.
 
     {method_doc}
     {job_doc}
@@ -135,6 +140,7 @@ def detect_peaks(
         folder=folder,
         names=names,
         skip_after_n_peaks=skip_after_n_peaks,
+        recording_slices=recording_slices,
     )
     return outs
 
