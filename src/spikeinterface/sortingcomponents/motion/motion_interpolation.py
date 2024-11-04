@@ -3,7 +3,8 @@ from __future__ import annotations
 import numpy as np
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
-from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.preprocessing.basepreprocessor import (
+    BasePreprocessor, BasePreprocessorSegment)
 from spikeinterface.preprocessing.filter import fix_dtype
 
 
@@ -122,14 +123,18 @@ def interpolate_motion_on_traces(
     time_bins = interpolation_time_bin_centers_s
     if time_bins is None:
         time_bins = motion.temporal_bins_s[segment_index]
+
+    # nearest interpolation bin:
+    # seachsorted(b, t, side="right") == i means that b[i-1] <= t < b[i]
+    # hence the -1. doing it with "left" is not as nice.
+    # time_bins are bin centers, so subtract half the bin length. this leads
+    # to snapping to the nearest bin center.
     bin_s = time_bins[1] - time_bins[0]
-    bins_start = time_bins[0] - 0.5 * bin_s
-    # nearest bin center for each frame?
-    bin_inds = (times - bins_start) // bin_s
-    bin_inds = bin_inds.astype(int)
+    bin_inds = np.searchsorted(time_bins - bin_s / 2, times, side="right") - 1
+
     # the time bins may not cover the whole set of times in the recording,
     # so we need to clip these indices to the valid range
-    np.clip(bin_inds, 0, time_bins.size, out=bin_inds)
+    np.clip(bin_inds, 0, time_bins.size - 1, out=bin_inds)
 
     # -- what are the possibilities here anyway?
     bins_here = np.arange(bin_inds[0], bin_inds[-1] + 1)
