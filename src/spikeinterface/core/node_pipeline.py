@@ -544,7 +544,7 @@ def run_node_pipeline(
     recording_slices : None | list[tuple]
         Optionaly give a list of slices to run the pipeline only on some chunks of the recording.
         It must be a list of (segment_index, frame_start, frame_stop).
-        If None (default), the entire recording is computed.
+        If None (default), the function iterates over the entire duration of the recording.
 
     Returns
     -------
