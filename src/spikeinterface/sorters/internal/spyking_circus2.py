@@ -186,11 +186,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         nbefore = int(ms_before * fs / 1000.0)
         nafter = int(ms_after * fs / 1000.0)
 
-        if params["seed"] is not None:
-            recording_slices = divide_recording(recording_w, seed=42, **job_kwargs)
-        else:
-            recording_slices = None
-
+        recording_slices = divide_recording(recording_w, seed=params["seed"], **job_kwargs)
         detection_params["recording_slices"] = recording_slices
 
         skip_peaks = not params["multi_units_only"] and selection_params.get("method", "uniform") == "uniform"
