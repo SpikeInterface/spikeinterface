@@ -53,7 +53,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.8},
-        "seed" : 42,
+        "seed": 42,
         "debug": False,
     }
 
@@ -393,17 +393,18 @@ def create_sorting_analyzer_with_templates(sorting, recording, templates, remove
 def divide_recording(recording, seed=None, **job_kwargs):
     from spikeinterface.core.job_tools import ensure_chunk_size
     from spikeinterface.core.job_tools import divide_segment_into_chunks
+
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
     recording_slices = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
         recording_slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
-    
+
     if seed is not None:
         rng = np.random.RandomState(seed)
         recording_slices = rng.permutation(recording_slices)
-    
+
     return recording_slices
 
 
