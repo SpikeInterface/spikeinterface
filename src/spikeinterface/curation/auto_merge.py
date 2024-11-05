@@ -446,7 +446,16 @@ def auto_merge_units_internal(
             merged_units = len(merge_unit_groups) > 0
 
         if extra_outputs:
-            merge_unit_groups = all_merging_groups
+            merge_unit_groups = {}
+            for merges in all_merging_groups:
+                for m in merges:
+                    new_list = m
+                    for k in m:
+                        if k in merge_unit_groups:
+                            new_list.remove(k)
+                            new_list += merge_unit_groups[k]
+                    merge_unit_groups[m[0]] = new_list
+            merge_unit_groups = list(merge_unit_groups.values())
             outs = all_outs
 
     if extra_outputs:
@@ -751,7 +760,19 @@ def auto_merge_units(
         if len(to_be_launched) == 1:
             all_merging_groups = all_merging_groups[0]
             all_outs = all_outs[0]
-        return sorting_analyzer, all_merging_groups, all_outs
+        
+        merge_unit_groups = {}
+        for merges in all_merging_groups:
+            for m in merges:
+                new_list = m
+                for k in m:
+                    if k in merge_unit_groups:
+                        new_list.remove(k)
+                        new_list += merge_unit_groups[k]
+                merge_unit_groups[m[0]] = new_list
+        merge_unit_groups = list(merge_unit_groups.values())
+
+        return sorting_analyzer, merge_unit_groups, all_outs
     else:
         return sorting_analyzer
 
