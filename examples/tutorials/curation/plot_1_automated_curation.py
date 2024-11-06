@@ -63,7 +63,7 @@ sorting_analyzer.compute(['noise_levels','random_spikes','waveforms','templates'
 # We can check that this is true by accessing the extension data.
 
 all_metric_names = list(sorting_analyzer.get_extension('quality_metrics').get_data().keys()) + list(sorting_analyzer.get_extension('template_metrics').get_data().keys())
-print(np.all(all_metric_names == model.feature_names_in_))
+print(set(all_metric_names) == set(model.feature_names_in_))
 
 ##############################################################################
 # Great! We can now use the model to predict labels. You can either pass a HuggingFace repo, or a
@@ -105,7 +105,7 @@ human_labels = ['bad', 'good', 'good', 'bad', 'good', 'bad', 'good', 'bad', 'goo
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score
 
 label_conversion = model_info['label_conversion']
-predictions = [ labels[a][0] for a in range(10) ]
+predictions = labels['prediction']
 
 conf_matrix = confusion_matrix(human_labels, predictions)
 
@@ -148,7 +148,7 @@ def calculate_moving_avg(label_df, confidence_label, window_size):
 
     return label_df_sorted[confidence_label], p_label_moving_avg
 
-confidences = sorting_analyzer.sorting.get_property('classifier_probability')
+confidences = labels['probability']
 
 # Make dataframe of human label, model label, and confidence
 label_df = pd.DataFrame(data = {
