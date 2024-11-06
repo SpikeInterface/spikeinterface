@@ -105,7 +105,7 @@ class DecimateRecordingSegment(BaseRecordingSegment):
             if parent_recording_segment.t_start is None:
                 t_start = None
             else:
-                t_start = parent_recording_segment.t_start + decimation_offset / parent_rate
+                t_start = parent_recording_segment.t_start + (decimation_offset / parent_rate)
 
         # Do not use BasePreprocessorSegment bcause we have to reset the sampling rate!
         BaseRecordingSegment.__init__(

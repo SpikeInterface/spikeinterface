@@ -9,7 +9,7 @@ import numpy as np
 
 
 @pytest.mark.parametrize("num_segments", [1, 2])
-@pytest.mark.parametrize("decimation_offset", [0, 5, 21, 101])
+@pytest.mark.parametrize("decimation_offset", [0, 1, 5, 21, 101])
 @pytest.mark.parametrize("decimation_factor", [1, 7, 50])
 def test_decimate(num_segments, decimation_offset, decimation_factor):
     segment_num_samps = [20000, 40000]
