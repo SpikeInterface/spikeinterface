@@ -43,7 +43,9 @@ class ModelBasedClassification:
         self.pipeline = pipeline
         self.required_metrics = pipeline.feature_names_in_
 
-    def predict_labels(self, label_conversion=None, input_data=None, export_to_phy=False, model_info=None):
+    def predict_labels(
+        self, label_conversion=None, input_data=None, export_to_phy=False, model_info=None, enforce_params=False
+    ):
         """
         Predicts the labels for the spike sorting data using the trained model.
         Populates the sorting object with the predicted labels and probabilities as unit properties
@@ -59,6 +61,9 @@ class ModelBasedClassification:
             The input data for classification. If not provided, the method will extract metrics stored in the sorting analyzer.
         export_to_phy : bool, default: False.
             Whether to export the classified units to Phy format. Default is False.
+        enforce_params : bool, default: False
+            If True and the parameters used to compute the metrics in `sorting_analyzer` are different than the parmeters
+            used to compute the metrics used to train the model, this function will raise an error. Otherwise, a warning is raised.
 
         Returns
         -------
@@ -76,7 +81,7 @@ class ModelBasedClassification:
                 raise ValueError("Input data must be a pandas DataFrame")
 
         if model_info is not None:
-            self._check_params_for_classification(model_info=model_info)
+            self._check_params_for_classification(enforce_params, model_info=model_info)
 
         if model_info is not None and label_conversion is None:
             try:
@@ -146,12 +151,15 @@ class ModelBasedClassification:
 
         return input_data
 
-    def _check_params_for_classification(self, model_info=None):
+    def _check_params_for_classification(self, enforce_params=False, model_info=None):
         """
         Check that quality and template metrics parameters match those used to train the model
 
         Parameters
         ----------
+        enforce_params : bool, default: False
+            If True and the parameters used to compute the metrics in `sorting_analyzer` are different than the parmeters
+            used to compute the metrics used to train the model, this function will raise an error. Otherwise, a warning is raised.
         model_info_path : str or Path, default: None
             Path to model_info.json provenance file
         """
@@ -161,28 +169,42 @@ class ModelBasedClassification:
 
         if quality_metrics_extension is not None:
 
-            model_quality_metrics_params = model_info["metric_params"]["analyzer_0"]["quality_metric_params"][
-                "qm_params"
-            ]
+            model_quality_metrics_params = model_info["metric_params"]["quality_metric_params"]["qm_params"]
             quality_metrics_params = quality_metrics_extension.params["qm_params"]
+
+            if model_quality_metrics_params == []:
+                warning_message = "Parameters used to compute quality metrics used to train this model are unknown."
+                if enforce_params is True:
+                    raise Exception(warning_message)
+                else:
+                    warnings.warn(warning_message)
 
             # need to make sure both dicts are in json format, so that lists are equal
             if json.dumps(quality_metrics_params) != json.dumps(model_quality_metrics_params):
-                warnings.warn(
-                    "Quality metrics params do not match those used to train model. Check these in the 'model_info.json' file."
-                )
+                warning_message = "Quality metrics params do not match those used to train model. Check these in the 'model_info.json' file."
+                if enforce_params is True:
+                    raise Exception(warning_message)
+                else:
+                    warnings.warn(warning_message)
 
         if template_metrics_extension is not None:
 
-            model_template_metrics_params = model_info["metric_params"]["analyzer_0"]["template_metric_params"][
-                "metrics_kwargs"
-            ]
+            model_template_metrics_params = model_info["metric_params"]["template_metric_params"]["metrics_kwargs"]
             template_metrics_params = template_metrics_extension.params["metrics_kwargs"]
 
+            if template_metrics_params == []:
+                warning_message = "Parameters used to compute template metrics used to train this model are unknown."
+                if enforce_params is True:
+                    raise Exception(warning_message)
+                else:
+                    warnings.warn(warning_message)
+
             if template_metrics_params != model_template_metrics_params:
-                warnings.warn(
-                    "Template metrics metrics params do not match those used to train model. Check these in the 'model_info.json' file."
-                )
+                warning_message = "Template metrics metrics params do not match those used to train model. Check these in the 'model_info.json' file."
+                if enforce_params is True:
+                    raise Exception(warning_message)
+                else:
+                    warnings.warn(warning_message)
 
     def _export_to_phy(self, classified_units):
         """Export the classified units to Phy as cluster_prediction.tsv file"""
@@ -212,6 +234,7 @@ def auto_label_units(
     trust_model=False,
     trusted=None,
     export_to_phy=False,
+    enforce_params=False,
 ):
     """
     Automatically labels units based on a model-based classification, either from a model
@@ -241,6 +264,10 @@ def auto_label_units(
         automatically inferred. If False, the `trusted` parameter must be provided to indicate the trusted objects.
     trusted : list of str, default: None
         Passed to skops.load. The object will be loaded only if there are only trusted objects and objects of types listed in trusted in the dumped file.
+    enforce_params : bool, default: False
+            If True and the parameters used to compute the metrics in `sorting_analyzer` are different than the parmeters
+            used to compute the metrics used to train the model, this function will raise an error. Otherwise, a warning is raised.
+
 
     Returns
     -------
@@ -266,7 +293,10 @@ def auto_label_units(
     model_based_classification = ModelBasedClassification(sorting_analyzer, model)
 
     classified_units = model_based_classification.predict_labels(
-        label_conversion=label_conversion, export_to_phy=export_to_phy, model_info=model_info
+        label_conversion=label_conversion,
+        export_to_phy=export_to_phy,
+        model_info=model_info,
+        enforce_params=enforce_params,
     )
 
     return classified_units

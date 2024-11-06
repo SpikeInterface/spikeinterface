@@ -73,11 +73,11 @@ def test_model_based_classification_check_params_for_classification(
     sorting_analyzer_for_curation.compute("quality_metrics", metric_names=[required_metrics[0]])
     sorting_analyzer_for_curation.compute("template_metrics", metric_names=[required_metrics[1]])
 
-    model_info = {"metric_params": {"analyzer_0": {}}}
-    model_info["metric_params"]["analyzer_0"]["quality_metric_params"] = sorting_analyzer_for_curation.get_extension(
+    model_info = {"metric_params": {}}
+    model_info["metric_params"]["quality_metric_params"] = sorting_analyzer_for_curation.get_extension(
         "quality_metrics"
     ).params
-    model_info["metric_params"]["analyzer_0"]["template_metric_params"] = sorting_analyzer_for_curation.get_extension(
+    model_info["metric_params"]["template_metric_params"] = sorting_analyzer_for_curation.get_extension(
         "template_metrics"
     ).params
 
