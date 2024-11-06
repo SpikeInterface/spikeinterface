@@ -148,30 +148,22 @@ def export_to_ibl(
         print("Running IBL-specific steps...")
 
     # Now we need to add the extra IBL specific files
-    (channel_inds,) = np.isin(
-        analyzer.recording.channel_ids, analyzer.channel_ids
-    ).nonzero()
+    (channel_inds,) = np.isin(analyzer.recording.channel_ids, analyzer.channel_ids).nonzero()
 
     ### Run spectral density and rms ###
     fs_ap = analyzer.recording.sampling_frequency
     rms_win_length_samples_ap = 2 ** np.ceil(np.log2(fs_ap * rms_win_length_sec))
-    total_samples_ap = int(
-        np.min([fs_ap * total_secs, analyzer.recording.get_num_samples()])
-    )
+    total_samples_ap = int(np.min([fs_ap * total_secs, analyzer.recording.get_num_samples()]))
 
     # the window generator will generates window indices
-    wingen = WindowGenerator(
-        ns=total_samples_ap, nswin=rms_win_length_samples_ap, overlap=0
-    )
+    wingen = WindowGenerator(ns=total_samples_ap, nswin=rms_win_length_samples_ap, overlap=0)
     win = {
         "TRMS": np.zeros((wingen.nwin, analyzer.recording.get_num_channels())),
         "nsamples": np.zeros((wingen.nwin,)),
         "fscale": fscale(welch_win_length_samples, 1 / fs_ap, one_sided=True),
         "tscale": wingen.tscale(fs=fs_ap),
     }
-    win["spectral_density"] = np.zeros(
-        (len(win["fscale"]), analyzer.recording.get_num_channels())
-    )
+    win["spectral_density"] = np.zeros((len(win["fscale"]), analyzer.recording.get_num_channels()))
 
     # @Josh: this could be dramatically sped up if we employ SpikeInterface parallelization
     with tqdm(total=wingen.nwin) as pbar:
@@ -213,17 +205,13 @@ def export_to_ibl(
         "rms": win["TRMS"].astype(np.single),
         "timestamps": win["tscale"].astype(np.single),
     }
-    save_object_npy(
-        output_folder, object=alf_object_time, dico=tdict, namespace="iblqc"
-    )
+    save_object_npy(output_folder, object=alf_object_time, dico=tdict, namespace="iblqc")
 
     fdict = {
         "power": win["spectral_density"].astype(np.single),
         "freqs": win["fscale"].astype(np.single),
     }
-    save_object_npy(
-        output_folder, object=alf_object_freq, dico=fdict, namespace="iblqc"
-    )
+    save_object_npy(output_folder, object=alf_object_freq, dico=fdict, namespace="iblqc")
 
     ### Save spike info ###
 
@@ -236,9 +224,7 @@ def export_to_ibl(
 
     # convert times and squeeze
     times = np.load(output_folder / "spike_times.npy")
-    np.save(
-        output_folder / "spike_times.npy", np.squeeze(times / 30000.0).astype("float64")
-    )
+    np.save(output_folder / "spike_times.npy", np.squeeze(times / 30000.0).astype("float64"))
 
     # convert amplitudes and squeeze
     amps = np.load(output_folder / "amplitudes.npy")
@@ -246,9 +232,7 @@ def export_to_ibl(
 
     # save depths and channel inds
     np.save(output_folder / "spike_depths.npy", spike_depths)
-    np.save(
-        output_folder / "channel_inds.npy", np.arange(len(channel_inds), dtype="int")
-    )
+    np.save(output_folder / "channel_inds.npy", np.arange(len(channel_inds), dtype="int"))
 
     # # save templates
     cluster_channels = []
@@ -261,9 +245,7 @@ def export_to_ibl(
         waveform = templates[unit_idx, :, :]
         extremum_channel_index = extremum_channel_indices[unit_id]
         peak_waveform = waveform[:, extremum_channel_index]
-        peakToTrough = (
-            np.argmax(peak_waveform) - np.argmin(peak_waveform)
-        ) / analyzer.sampling_frequency
+        peakToTrough = (np.argmax(peak_waveform) - np.argmin(peak_waveform)) / analyzer.sampling_frequency
         # cluster_channels.append(int(channel_locs[extremum_channel_index, 1] / 10)) # ??? fails for odd nums of units
         cluster_channels.append(
             extremum_channel_index
