@@ -5,13 +5,9 @@ Copied from https://github.com/int-brain-lab/ibl-neuropixel/ on 2/1/2024
 
 """
 
-from math import pi
-
 import numpy as np
-import scipy.fft
 from pathlib import Path
 import re
-
 
 def _dromedary(string) -> str:
     """
