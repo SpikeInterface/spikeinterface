@@ -7,7 +7,6 @@ from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
-from scipy.signal import welch
 from tqdm.auto import tqdm
 
 from spikeinterface.core import ChannelSparsity, SortingAnalyzer
@@ -81,6 +80,11 @@ def export_to_ibl(
     {}
 
     """
+
+    try:
+        from scipy.signal import welch
+    except ImportError as e:
+        raise ImportError("Please install scipy to use the export_to_ibl function.") from e
 
     # Output folder checks
     if isinstance(output_folder, str):
