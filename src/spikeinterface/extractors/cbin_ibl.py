@@ -55,7 +55,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
             raise ImportError(self.installation_mesg)
         if cbin_file is not None:
             warnings.warn(
-                "The `cbin_file` argument is deprecated, please use `cbin_file_path` instead", DeprecationWarning
+                "The `cbin_file` argument is deprecated, please use `cbin_file_path` instead", DeprecationWarning, stacklevel=2
             )
             cbin_file_path = cbin_file
         if cbin_file_path is None:
