@@ -214,7 +214,7 @@ class CurationModelTrainer:
         """Returns the default list of metrics."""
         return get_quality_metric_list() + get_quality_pca_metric_list() + get_template_metric_names()
 
-    def load_and_preprocess_analyzers(self, analyzers, enforce_params):
+    def load_and_preprocess_analyzers(self, analyzers, enforce_metric_params):
         """
         Loads and preprocesses the quality metrics and labels from the given list of SortingAnalyzer objects.
         """
@@ -229,53 +229,69 @@ class CurationModelTrainer:
             warnings.warn("No metric_names provided, using all metrics calculated by the analyzers")
             self.metric_names = self.testing_metrics.columns.tolist()
 
-        consistent_params = self._check_metrics_parameters(enforce_params)
+        consistent_params = self._check_metrics_parameters(analyzers, enforce_metric_params)
 
         # Tidies up the metrics_params. If the metrics parameters are consistent, we keep one copy
-        # of them. If they are not, we don't keep any parameter information.
+        self.metrics_params = {}
         if consistent_params is True:
-            self.metrics_params = self.metrics_params.get("analyzer_0")
+            if analyzers[0].has_extension("quality_metrics") is True:
+                self.metrics_params["quality_metric_params"] = (
+                    analyzers[0].extensions["quality_metrics"].params["qm_params"]
+                )
+            if analyzers[0].has_extension("template_metrics") is True:
+                self.metrics_params["template_metric_params"] = (
+                    analyzers[0].extensions["template_metrics"].params["qm_params"]
+                )
+        # If they are not, we only save the metric names
         else:
             metrics_params = {}
-            metrics_params["quality_metric_params"] = {}
-            if self.metrics_params.get("analyzer_0").get("quality_metric_params") is not None:
-                metrics_params["quality_metric_params"]["metric_names"] = self.metrics_params["analyzer_0"][
-                    "quality_metric_params"
-                ]["metric_names"]
-                metrics_params["quality_metric_params"]["qm_params"] = []
-            metrics_params["template_metric_params"] = {}
-            if self.metrics_params.get("analyzer_0").get("template_metric_params") is not None:
-                metrics_params["template_metric_params"]["metric_names"] = self.metrics_params["analyzer_0"][
-                    "template_metric_params"
-                ]["metric_names"]
-                metrics_params["template_metric_params"] = []
+            if analyzers[0].has_extension("quality_metrics") is True:
+                self.metrics_params["quality_metric_params"] = {}
+                self.metrics_params["quality_metric_params"]["metric_names"] = (
+                    analyzers[0].extensions["quality_metrics"].params["qm_params"]["metric_names"]
+                )
+            if analyzers[0].has_extension("template_metrics") is True:
+                self.metrics_params["template_metric_params"] = {}
+                self.metrics_params["template_metric_params"]["metric_names"] = (
+                    analyzers[0].extensions["template_metrics"].params["metric_names"]
+                )
 
             self.metrics_params = metrics_params
 
         self.process_test_data_for_classification()
 
-    def _check_metrics_parameters(self, enforce_params):
+    def _check_metrics_parameters(self, analyzers, enforce_metric_params):
         """Checks that the metrics of each analyzer have been calcualted using the same parameters"""
-        metrics_params = self.metrics_params
 
         consistent_params = True
-        for analyzer_index_1, analyzer_metrics_1 in enumerate(metrics_params.values()):
-            for analyzer_index_2, analyzer_metrics_2 in enumerate(metrics_params.values()):
-                conflicting_metrics = []
+        for analyzer_index_1, analyzer_1 in enumerate(analyzers):
+            for analyzer_index_2, analyzer_2 in enumerate(analyzers):
 
-                # check quality metrics params
-                for metric, params in analyzer_metrics_1.get("quality_metric_params").get("qm_params").items():
-                    if params != analyzer_metrics_2.get("quality_metric_params").get("qm_params").get(metric):
-                        conflicting_metrics.append(metric)
+                if analyzer_index_1 <= analyzer_index_2:
+                    continue
+                else:
+                    if analyzer_1.has_extension("quality_metrics") is True:
+                        qm_params_1 = analyzer_1.extensions["quality_metrics"].params["qm_params"]
+                    if analyzer_2.has_extension("quality_metrics") is True:
+                        qm_params_2 = analyzer_2.extensions["quality_metrics"].params["qm_params"]
+                    if analyzer_1.has_extension("template_metrics") is True:
+                        tm_params_1 = analyzer_1.extensions["template_metrics"].params["metrics_kwargs"]
+                    if analyzer_2.has_extension("template_metrics") is True:
+                        tm_params_2 = analyzer_2.extensions["template_metrics"].params["metrics_kwargs"]
 
-                # check template metric params
-                if analyzer_metrics_1.get("template_metric_params") != analyzer_metrics_2.get("template_metric_params"):
-                    conflicting_metrics.append("template metrics")
+                    conflicting_metrics = []
+                    # check quality metrics params
+                    for metric, params_1 in qm_params_1.items():
+                        if params_1 != qm_params_2.get(metric):
+                            conflicting_metrics.append(metric)
+                    # check template metric params
+                    for metric, params_1 in tm_params_1.items():
+                        if params_1 != tm_params_2.get(metric):
+                            conflicting_metrics.append("template_metrics")
 
-                if analyzer_index_2 > analyzer_index_1:
                     if len(conflicting_metrics) > 0:
                         warning_message = f"Parameters used to calculate {conflicting_metrics} are different for sorting_analyzers #{analyzer_index_1} and #{analyzer_index_2}"
-                        if enforce_params is True:
+                        if enforce_metric_params is True:
                             raise Exception(warning_message)
                         else:
                             warnings.warn(warning_message)
@@ -481,16 +497,6 @@ class CurationModelTrainer:
 
         quality_metrics, template_metrics = try_to_get_metrics_from_analyzer(analyzer)
 
-        # Store metrics metadata (only if available)
-        analyzer_name = "analyzer_" + str(analyzer_index)
-        self.metrics_params[analyzer_name] = {}
-        if quality_metrics is not None:
-            self.metrics_params[analyzer_name]["quality_metric_params"] = analyzer.extensions["quality_metrics"].params
-        if template_metrics is not None:
-            self.metrics_params[analyzer_name]["template_metric_params"] = analyzer.extensions[
-                "template_metrics"
-            ].params
-
         # Concatenate the available metrics
         calculated_metrics = pd.concat([m for m in [quality_metrics, template_metrics] if m is not None], axis=1)
 
@@ -627,7 +633,7 @@ def train_model(
     seed=None,
     search_kwargs=None,
     verbose=True,
-    enforce_params=False,
+    enforce_metric_params=False,
     **job_kwargs,
 ):
     """
@@ -671,7 +677,7 @@ def train_model(
         `search_kwargs = {'cv': 3, 'scoring': 'balanced_accuracy', 'n_iter': 25}`.
     verbose : bool, default: True
         If True, useful information is printed during training.
-    enforce_params : bool, default: False
+    enforce_metric_params : bool, default: False
         If True and metric parameters used to calculate metrics for different `sorting_analyzer`s are
         different, an error will be raised.
 
@@ -715,7 +721,7 @@ def train_model(
 
     if mode == "analyzers":
         assert analyzers is not None, "Analyzers must be provided as a list for mode 'analyzers'"
-        trainer.load_and_preprocess_analyzers(analyzers, enforce_params)
+        trainer.load_and_preprocess_analyzers(analyzers, enforce_metric_params)
 
     elif mode == "csv":
         for metrics_path in metrics_paths:
