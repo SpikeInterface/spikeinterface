@@ -9,6 +9,7 @@ import numpy as np
 from pathlib import Path
 import re
 
+
 def _dromedary(string) -> str:
     """
     Convert a string to camel case.  Acronyms/initialisms are preserved.
