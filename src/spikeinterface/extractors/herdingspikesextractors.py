@@ -55,19 +55,19 @@ class HerdingspikesSortingExtractor(BaseSorting):
         self.extra_requirements.append("h5py")
 
     def get_unit_location(
-            self,
-            unit_id,
-            segment_index=None,
-            ):
-        
+        self,
+        unit_id,
+        segment_index=None,
+    ):
+
         segment_index = self._check_segment_index(segment_index)
         segment = self._sorting_segments[segment_index]
         loc = segment.get_unit_location(unit_id=unit_id)
         return loc
 
-        """    
+        """
         def load_unit_info(self):
-        
+
         if 'centres' in self._rf.keys() and len(self._spike_times) > 0:
             self._unit_locs = self._rf['centres'][()]  # cache for faster access
         inds = []  # get these only once
@@ -109,7 +109,7 @@ class HerdingspikesSortingSegment(BaseSortingSegment):
 
     def get_unit_location(self, unit_id):
         return self._unit_locs[unit_id]
-    
+
     """
     @staticmethod
     def write_sorting(sorting, save_path):
