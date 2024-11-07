@@ -7,7 +7,6 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 from ..core import get_random_data_chunks, get_channel_distances
 from .filter import fix_dtype
-from ..core.globals import get_global_job_kwargs
 
 
 class WhitenRecording(BasePreprocessor):
@@ -76,9 +75,12 @@ class WhitenRecording(BasePreprocessor):
         dtype_ = fix_dtype(recording, dtype)
 
         if dtype_.kind == "i":
-            assert (
-                int_scale is not None
-            ), "For recording with dtype=int you must set the output dtype to float OR set a int_scale"
+            assert int_scale is not None, (
+                "For recording with dtype=int you must set the output dtype to float OR set a int_scale"
+            )
+
+        if not apply_mean and regularize:
+            raise ValueError("`apply_mean` must be `True` if regularising. `assume_centered` is fixed to `True`.")
 
         if W is not None:
             W = np.asarray(W)
@@ -145,10 +147,6 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
         return whiten_traces.astype(self.dtype)
 
 
-# function for API
-whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")
-
-
 def compute_whitening_matrix(
     recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=None, regularize=False, regularize_kwargs=None
 ):
@@ -188,9 +186,7 @@ def compute_whitening_matrix(
         The "mean" matrix
 
     """
-    data, cov, M = compute_covariance_matrix(
-        recording, apply_mean, regularize, regularize_kwargs, random_chunk_kwargs
-    )
+    data, cov, M = compute_covariance_matrix(recording, apply_mean, regularize, regularize_kwargs, random_chunk_kwargs)
 
     # Here we determine eps used below to avoid division by zero.
     # Typically we can assume that data is either unscaled integers or in units of
@@ -230,9 +226,10 @@ def compute_whitening_matrix(
     return W, M
 
 
-def compute_covariance_matrix(recording, apply_mean, regularize, regularize_kwargs, random_chunk_kwargs):  # TODO: check order
-    """
-    """
+def compute_covariance_matrix(
+    recording, apply_mean, regularize, regularize_kwargs, random_chunk_kwargs
+):  # TODO: check order
+    """ """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
     random_data = random_data.astype(np.float32)
 
@@ -250,16 +247,43 @@ def compute_covariance_matrix(recording, apply_mean, regularize, regularize_kwar
         cov = data.T @ data
         cov = cov / data.shape[0]
     else:
-        import sklearn.covariance
-
-        method = regularize_kwargs.pop("method")
-        regularize_kwargs["assume_centered"] = True
-        estimator_class = getattr(sklearn.covariance, method)
-        estimator = estimator_class(**regularize_kwargs)
-        estimator.fit(data)
-        cov = estimator.covariance_
+        cov = compute_sklearn_covariance_matrix(data, regularize_kwargs)
+        breakpoint()
+    #        import sklearn.covariance
+    #        method = regularize_kwargs.pop("method")
+    #        regularize_kwargs["assume_centered"] = True
+    #        estimator_class = getattr(sklearn.covariance, method)
+    #        estimator = estimator_class(**regularize_kwargs)
+    #        estimator.fit(data)
+    #        cov = estimator.covariance_
 
     return data, cov, M  # TODO: rename data
 
 
+# TODO: do we want to fix assume centered here or directly use `apply_mean`?
 
+
+def compute_sklearn_covariance_matrix(data, regularize_kwargs):
+
+    import sklearn.covariance
+
+    if "assume_centered" in regularize_kwargs and not regularize_kwargs["assume_centered"]:
+        raise ValueError("Cannot use `assume_centered=False` for `regularize_kwargs`. " "Fixing to `True`.")
+
+    method = regularize_kwargs.pop("method")
+    regularize_kwargs["assume_centered"] = True
+    estimator_class = getattr(sklearn.covariance, method)
+    estimator = estimator_class(**regularize_kwargs)
+    estimator.fit(data)
+    cov = estimator.covariance_
+
+    return cov
+
+
+# 1) factor out to own function
+# 2) test function is simple way
+# 3) monkeypatch compute covariance to check function is called and returned
+# 4) check norm is smaller
+
+# function for API
+whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")
