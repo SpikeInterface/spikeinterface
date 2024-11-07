@@ -229,41 +229,33 @@ class CurationModelTrainer:
             warnings.warn("No metric_names provided, using all metrics calculated by the analyzers")
             self.metric_names = self.testing_metrics.columns.tolist()
 
-        consistent_params = self._check_metrics_parameters(analyzers, enforce_metric_params)
+        conflicting_metrics = self._check_metrics_parameters(analyzers, enforce_metric_params)
+        print(conflicting_metrics)
 
-        # Tidies up the metrics_params. If the metrics parameters are consistent, we keep one copy
         self.metrics_params = {}
-        if consistent_params is True:
-            if analyzers[0].has_extension("quality_metrics") is True:
-                self.metrics_params["quality_metric_params"] = (
-                    analyzers[0].extensions["quality_metrics"].params["qm_params"]
-                )
-            if analyzers[0].has_extension("template_metrics") is True:
-                self.metrics_params["template_metric_params"] = (
-                    analyzers[0].extensions["template_metrics"].params["qm_params"]
-                )
-        # If they are not, we only save the metric names
-        else:
-            metrics_params = {}
-            if analyzers[0].has_extension("quality_metrics") is True:
-                self.metrics_params["quality_metric_params"] = {}
-                self.metrics_params["quality_metric_params"]["metric_names"] = (
-                    analyzers[0].extensions["quality_metrics"].params["qm_params"]["metric_names"]
-                )
-            if analyzers[0].has_extension("template_metrics") is True:
-                self.metrics_params["template_metric_params"] = {}
-                self.metrics_params["template_metric_params"]["metric_names"] = (
-                    analyzers[0].extensions["template_metrics"].params["metric_names"]
-                )
+        if analyzers[0].has_extension("quality_metrics") is True:
+            self.metrics_params["quality_metric_params"] = analyzers[0].extensions["quality_metrics"].params
+            # remove metrics with conflicting params
+            if len(conflicting_metrics) > 0:
+                qm_names = self.metrics_params["quality_metric_params"]["metric_names"]
+                consistent_metrics = list(set(qm_names).difference(set(conflicting_metrics)))
+                consistent_metric_params = {
+                    metric: analyzers[0].extensions["quality_metrics"].params["qm_params"][metric]
+                    for metric in consistent_metrics
+                }
+                self.metrics_params["quality_metric_params"]["qm_params"] = consistent_metric_params
 
-            self.metrics_params = metrics_params
+        if analyzers[0].has_extension("template_metrics") is True:
+            self.metrics_params["template_metric_params"] = analyzers[0].extensions["template_metrics"].params
+            if "template_metrics" in conflicting_metrics:
+                self.metrics_params["template_metric_params"] = analyzers[0].extensions["template_metrics"].params = {}
 
         self.process_test_data_for_classification()
 
     def _check_metrics_parameters(self, analyzers, enforce_metric_params):
         """Checks that the metrics of each analyzer have been calcualted using the same parameters"""
 
-        consistent_params = True
+        conflicting_metrics = []
         for analyzer_index_1, analyzer_1 in enumerate(analyzers):
             for analyzer_index_2, analyzer_2 in enumerate(analyzers):
 
@@ -279,25 +271,27 @@ class CurationModelTrainer:
                     if analyzer_2.has_extension("template_metrics") is True:
                         tm_params_2 = analyzer_2.extensions["template_metrics"].params["metrics_kwargs"]
 
-                    conflicting_metrics = []
+                    conflicting_metrics_between_1_2 = []
                     # check quality metrics params
                     for metric, params_1 in qm_params_1.items():
                         if params_1 != qm_params_2.get(metric):
-                            conflicting_metrics.append(metric)
+                            conflicting_metrics_between_1_2.append(metric)
                     # check template metric params
                     for metric, params_1 in tm_params_1.items():
                         if params_1 != tm_params_2.get(metric):
-                            conflicting_metrics.append("template_metrics")
+                            conflicting_metrics_between_1_2.append("template_metrics")
 
-                    if len(conflicting_metrics) > 0:
-                        warning_message = f"Parameters used to calculate {conflicting_metrics} are different for sorting_analyzers #{analyzer_index_1} and #{analyzer_index_2}"
+                    conflicting_metrics += conflicting_metrics_between_1_2
+
+                    if len(conflicting_metrics_between_1_2) > 0:
+                        warning_message = f"Parameters used to calculate {conflicting_metrics_between_1_2} are different for sorting_analyzers #{analyzer_index_1} and #{analyzer_index_2}"
                         if enforce_metric_params is True:
                             raise Exception(warning_message)
                         else:
                             warnings.warn(warning_message)
-                        consistent_params = False
 
-        return consistent_params
+        unique_conflicting_metrics = set(conflicting_metrics)
+        return unique_conflicting_metrics
 
     def load_and_preprocess_csv(self, paths):
         self._load_data_files(paths)
