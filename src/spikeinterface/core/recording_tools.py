@@ -806,7 +806,7 @@ def get_noise_levels(
             gather_func=append_noise_chunk,
             **job_kwargs,
         )
-        executor.run(all_chunks=recording_slices)
+        executor.run(recording_slices=recording_slices)
         noise_levels_chunks = np.stack(noise_levels_chunks)
         noise_levels = np.mean(noise_levels_chunks, axis=0)
 
