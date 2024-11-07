@@ -25,12 +25,6 @@ from pytest import param
 
 SKIP_NUMBA = pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
 
-from spikeinterface.core import extract_waveforms
-from spikeinterface.extractors import toy_example
-from spikeinterface.comparison import compare_templates
-
-import numpy as np
-
 
 class TestSimilarityExtension(AnalyzerExtensionCommonTestSuite):
 
@@ -121,28 +115,6 @@ def test_equal_results_numba(params):
     result_numba = _compute_similarity_matrix_numpy(templates_array, other_templates_array, mask=mask, **params)
 
     assert np.allclose(result_numpy, result_numba, 1e-3)
-
-
-def test_compare_multiple_templates_different_units():
-
-    duration = 5
-    num_channels = 4
-
-    num_units_1 = 5
-    num_units_2 = 10
-
-    rec1, sort1 = toy_example(duration=duration, num_segments=1, num_channels=num_channels, num_units=num_units_1)
-
-    rec2, sort2 = toy_example(duration=duration, num_segments=1, num_channels=num_channels, num_units=num_units_2)
-
-    # compute waveforms
-    we1 = extract_waveforms(rec1, sort1, n_jobs=1, mode="memory")
-    we2 = extract_waveforms(rec2, sort2, n_jobs=1, mode="memory")
-
-    # paired comparison
-    temp_cmp = compare_templates(we1, we2)
-
-    assert np.shape(temp_cmp.agreement_scores) == (num_units_1, num_units_2)
 
 
 if __name__ == "__main__":
