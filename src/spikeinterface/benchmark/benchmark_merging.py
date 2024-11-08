@@ -29,7 +29,7 @@ class MergingBenchmark(Benchmark):
         )
         # sorting_analyzer.compute(['random_spikes', 'templates'])
         # sorting_analyzer.compute('template_similarity', max_lag_ms=0.1, method="l2", **job_kwargs)
-        merged_analyzer, self.result["merges"], self.result["outs"] = auto_merge_units(
+        merged_analyzer, self.result["merged_pairs"], self.result["merges"], self.result["outs"] = auto_merge_units(
             sorting_analyzer, extra_outputs=True, **self.method_kwargs, **job_kwargs
         )
 
@@ -40,7 +40,7 @@ class MergingBenchmark(Benchmark):
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
         self.result["gt_comparison"] = comp
 
-    _run_key_saved = [("sorting", "sorting"), ("merges", "pickle"), ("outs", "pickle")]
+    _run_key_saved = [("sorting", "sorting"), ("merges", "pickle"), ("merged_pairs", "pickle"), ("outs", "pickle")]
     _result_key_saved = [("gt_comparison", "pickle")]
 
 
@@ -166,19 +166,7 @@ class MergingStudy(BenchmarkStudy):
         if analyzer.get_extension("correlograms") is None:
             analyzer.compute(["correlograms"])
 
-        all_merges = self.benchmarks[case_key].result["merges"]
-        # if recursive:
-        #     final_merges = {}
-        #     for merges in all_merges:
-        #         for merge in merges:
-        #             for m in merge:
-        #                 new_list = m
-        #                 for k in m:
-        #                     if k in final_merges:
-        #                         new_list.remove(k)
-        #                         new_list += final_merges[k]
-        #                 final_merges[m[0]] = new_list
-        #     all_merges = list(final_merges.values())
+        all_merges = list(self.benchmarks[case_key].result["merged_pairs"].values())
 
         from spikeinterface.widgets import plot_potential_merges
 
