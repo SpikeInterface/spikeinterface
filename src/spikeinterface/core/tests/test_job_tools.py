@@ -97,8 +97,6 @@ def init_func(arg1, arg2, arg3):
 
 def test_ChunkRecordingExecutor():
     recording = generate_recording(num_channels=2)
-    # make serializable
-    recording = recording.save()
 
     init_args = "a", 120, "yep"
 

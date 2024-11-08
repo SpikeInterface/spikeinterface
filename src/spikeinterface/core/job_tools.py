@@ -39,6 +39,7 @@ _shared_job_kwargs_doc = """**job_kwargs : keyword arguments for parallel proces
 
 
 job_keys = (
+    "pool_engine",
     "n_jobs",
     "total_memory",
     "chunk_size",
@@ -292,6 +293,8 @@ class ChunkRecordingExecutor:
     gather_func : None or callable, default: None
         Optional function that is called in the main thread and retrieves the results of each worker.
         This function can be used instead of `handle_returns` to implement custom storage on-the-fly.
+    pool_engine : "process" | "thread"
+        If n_jobs>1 then use ProcessPoolExecutor or ThreadPoolExecutor
     n_jobs : int, default: 1
         Number of jobs to be used. Use -1 to use as many jobs as number of cores
     total_memory : str, default: None
@@ -383,6 +386,7 @@ class ChunkRecordingExecutor:
             print(
                 self.job_name,
                 "\n"
+                f"engine={self.pool_engine} - "
                 f"n_jobs={self.n_jobs} - "
                 f"samples_per_chunk={self.chunk_size:,} - "
                 f"chunk_memory={chunk_memory_str} - "
@@ -458,14 +462,9 @@ class ChunkRecordingExecutor:
                         if self.gather_func is not None:
                             self.gather_func(res)
 
-
             else:
                 raise ValueError("If n_jobs>1 pool_engine must be 'process' or 'thread'")
             
-
-        
-
-
         return returns
 
 
