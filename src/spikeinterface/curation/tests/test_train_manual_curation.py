@@ -3,6 +3,9 @@ import numpy as np
 import tempfile, csv
 from pathlib import Path
 
+from spikeinterface.curation.tests.common import make_sorting_analyzer
+
+
 from spikeinterface.curation.train_manual_curation import CurationModelTrainer, train_model
 
 
@@ -141,3 +144,63 @@ def test_train_model():
         overwrite=True,
     )
     assert isinstance(trainer, CurationModelTrainer)
+
+
+def test_train_using_two_sorting_analyzers():
+
+    sorting_analyzer_1 = make_sorting_analyzer()
+    sorting_analyzer_1.compute({"quality_metrics": {"metric_names": ["num_spikes", "snr"]}})
+
+    sorting_analyzer_2 = make_sorting_analyzer()
+    sorting_analyzer_2.compute({"quality_metrics": {"metric_names": ["num_spikes", "snr"]}})
+
+    labels_1 = [0, 1, 1, 1, 1]
+    labels_2 = [1, 1, 0, 1, 1]
+
+    folder = tempfile.mkdtemp()
+    trainer = train_model(
+        analyzers=[sorting_analyzer_1, sorting_analyzer_2],
+        folder=folder,
+        labels=[labels_1, labels_2],
+        imputation_strategies=["median"],
+        scaling_techniques=["standard_scaler"],
+        classifiers=["LogisticRegression"],
+        overwrite=True,
+    )
+
+    assert isinstance(trainer, CurationModelTrainer)
+
+    # Xheck that there is an error raised if the metric names are different
+
+    sorting_analyzer_2 = make_sorting_analyzer()
+    sorting_analyzer_2.compute({"quality_metrics": {"metric_names": ["num_spikes"], "delete_existing_metrics": True}})
+
+    with pytest.raises(Exception):
+        trainer = train_model(
+            analyzers=[sorting_analyzer_1, sorting_analyzer_2],
+            folder=folder,
+            labels=[labels_1, labels_2],
+            imputation_strategies=["median"],
+            scaling_techniques=["standard_scaler"],
+            classifiers=["LogisticRegression"],
+            overwrite=True,
+        )
+
+    # Now check that there is an error raised if we demand the same metric params, but don't have them
+
+    sorting_analyzer_2.compute(
+        {"quality_metrics": {"metric_names": ["num_spikes", "snr"], "qm_params": {"snr": {"peak_mode": "at_index"}}}}
+    )
+
+    with pytest.raises(Exception):
+        train_model(
+            analyzers=[sorting_analyzer_1, sorting_analyzer_2],
+            folder=folder,
+            labels=[labels_1, labels_2],
+            imputation_strategies=["median"],
+            scaling_techniques=["standard_scaler"],
+            classifiers=["LogisticRegression"],
+            search_kwargs={"cv": 3, "scoring": "balanced_accuracy", "n_iter": 1},
+            overwrite=True,
+            enforce_metric_params=True,
+        )

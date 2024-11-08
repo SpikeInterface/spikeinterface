@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
+from spikeinterface.curation.tests.common import make_sorting_analyzer
 from spikeinterface.curation.model_based_curation import ModelBasedClassification
 import numpy as np
 

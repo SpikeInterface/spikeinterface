@@ -220,9 +220,10 @@ class CurationModelTrainer:
         """
         import pandas as pd
 
-        self.testing_metrics = pd.concat(
-            [self._get_metrics_for_classification(an, an_index) for an_index, an in enumerate(analyzers)], axis=0
-        )
+        metrics_for_each_analyzer = [self._get_metrics_for_classification(an) for an in analyzers]
+        check_metric_names_are_the_same(metrics_for_each_analyzer)
+
+        self.testing_metrics = pd.concat(metrics_for_each_analyzer, axis=0)
 
         # Set metric names to those calculated if not provided
         if self.metric_names is None:
@@ -262,6 +263,12 @@ class CurationModelTrainer:
                 if analyzer_index_1 <= analyzer_index_2:
                     continue
                 else:
+
+                    qm_params_1 = {}
+                    qm_params_2 = {}
+                    tm_params_1 = {}
+                    tm_params_2 = {}
+
                     if analyzer_1.has_extension("quality_metrics") is True:
                         qm_params_1 = analyzer_1.extensions["quality_metrics"].params["qm_params"]
                     if analyzer_2.has_extension("quality_metrics") is True:
@@ -484,7 +491,7 @@ class CurationModelTrainer:
             self.search_kwargs,
         )
 
-    def _get_metrics_for_classification(self, analyzer, analyzer_index):
+    def _get_metrics_for_classification(self, analyzer):
         """Check if required metrics are present and return a DataFrame of metrics for classification."""
 
         import pandas as pd
@@ -765,3 +772,26 @@ def set_default_search_kwargs(search_kwargs):
         search_kwargs["n_iter"] = 25
 
     return search_kwargs
+
+
+def check_metric_names_are_the_same(metrics_for_each_analyzer):
+    """
+    Given a list of dataframes, checks that the keys are all equal.
+    """
+
+    for i, metrics_for_analyzer_1 in enumerate(metrics_for_each_analyzer):
+        for j, metrics_for_analyzer_2 in enumerate(metrics_for_each_analyzer):
+            if i > j:
+                metric_names_1 = set(metrics_for_analyzer_1.keys())
+                metric_names_2 = set(metrics_for_analyzer_2.keys())
+                if metric_names_1 != metric_names_2:
+                    metrics_in_1_but_not_2 = metric_names_1.difference(metric_names_2)
+                    metrics_in_2_but_not_1 = metric_names_2.difference(metric_names_1)
+                    print(metrics_in_1_but_not_2)
+                    print(metrics_in_2_but_not_1)
+                    error_message = f"Computed metrics are not equal for sorting_analyzers #{j} and #{i}\n"
+                    if metrics_in_1_but_not_2:
+                        error_message += f"#{j} does not contain {metrics_in_1_but_not_2}, which #{i} does."
+                    if metrics_in_2_but_not_1:
+                        error_message += f"#{i} does not contain {metrics_in_2_but_not_1}, which #{j} does."
+                    raise Exception(error_message)
