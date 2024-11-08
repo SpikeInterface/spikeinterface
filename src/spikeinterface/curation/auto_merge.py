@@ -380,14 +380,15 @@ def resolve_pairs(existing_merges, new_merges):
         for key, pair in new_merges.items():
             nested_merge = np.flatnonzero([i in pair for i in old_keys])
             if len(nested_merge) == 0:
-                resolved_merges.update({key : pair})
+                resolved_merges.update({key: pair})
             else:
                 for n in nested_merge:
                     previous_merges = resolved_merges.pop(old_keys[n])
                     pair.remove(old_keys[n])
                     pair += previous_merges
-                    resolved_merges.update({key : pair})
+                    resolved_merges.update({key: pair})
         return resolved_merges
+
 
 def auto_merge_units_internal(
     sorting_analyzer: SortingAnalyzer,
@@ -441,15 +442,15 @@ def auto_merge_units_internal(
 
         if extra_outputs:
             merge_unit_groups, outs = merge_unit_groups
-    
-        merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(merge_unit_groups, 
-                                                       return_new_unit_ids=True,
-                                                       **apply_merge_kwargs, **job_kwargs)
-        resolved_merges = {key : value for (key, value) in zip(new_unit_ids, merge_unit_groups)}
+
+        merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
+            merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
+        )
+        resolved_merges = {key: value for (key, value) in zip(new_unit_ids, merge_unit_groups)}
     else:
         merged_units = True
         merged_analyzer = sorting_analyzer
-        
+
         if extra_outputs:
             all_merging_groups = []
             resolved_merges = {}
@@ -464,15 +465,15 @@ def auto_merge_units_internal(
                 merge_unit_groups, outs = merge_unit_groups
 
             merged_units = len(merge_unit_groups) > 0
-            
+
             if merged_units:
-                merged_analyzer, new_unit_ids = merged_analyzer.merge_units(merge_unit_groups, 
-                                                                            return_new_unit_ids=True,
-                                                                            **apply_merge_kwargs, **job_kwargs)
+                merged_analyzer, new_unit_ids = merged_analyzer.merge_units(
+                    merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
+                )
 
                 if extra_outputs:
                     all_merging_groups += [merge_unit_groups]
-                    new_merges = {key : value for (key, value) in zip(new_unit_ids, merge_unit_groups)}
+                    new_merges = {key: value for (key, value) in zip(new_unit_ids, merge_unit_groups)}
                     resolved_merges = resolve_pairs(resolved_merges, new_merges)
                     all_outs += [outs]
 
