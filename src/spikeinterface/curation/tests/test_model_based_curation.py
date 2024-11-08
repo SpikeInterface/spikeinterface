@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from spikeinterface.curation.tests.common import make_sorting_analyzer
+from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 from spikeinterface.curation.model_based_curation import ModelBasedClassification
 import numpy as np
 
@@ -18,7 +18,6 @@ def pipeline():
 
     # Load trained_pipeline.skops
     unknown_types = get_untrusted_types(file=pipeline_path)
-    print(unknown_types)
     pipeline = load(pipeline_path, trusted=unknown_types)
     return pipeline
 
