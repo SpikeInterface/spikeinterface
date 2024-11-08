@@ -757,12 +757,8 @@ def auto_merge_units(
             all_outs += [outs]
 
     if extra_outputs:
-        if len(to_be_launched) == 1:
-            all_merging_groups = all_merging_groups[0]
-            all_outs = all_outs[0]
-
         merge_unit_groups = {}
-        for merges in all_merging_groups:
+        for merges in all_merging_groups[::-1]:
             for m in merges:
                 new_list = m
                 for k in m:
