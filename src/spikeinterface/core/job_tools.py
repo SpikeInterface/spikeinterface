@@ -428,6 +428,15 @@ class ChunkRecordingExecutor:
                     initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process),
                 ) as executor:
                     results = executor.map(process_function_wrapper, recording_slices)
+
+                    if self.progress_bar:
+                        results = tqdm(results, desc=self.job_name, total=len(recording_slices))
+
+                    for res in results:
+                        if self.handle_returns:
+                            returns.append(res)
+                        if self.gather_func is not None:
+                            self.gather_func(res)
             
             elif self.pool_engine == "thread":
                 # only one shared context
@@ -440,19 +449,20 @@ class ChunkRecordingExecutor:
                 ) as executor:
                     results = executor.map(thread_func, recording_slices)
 
+                    if self.progress_bar:
+                        results = tqdm(results, desc=self.job_name, total=len(recording_slices))
+
+                    for res in results:
+                        if self.handle_returns:
+                            returns.append(res)
+                        if self.gather_func is not None:
+                            self.gather_func(res)
+
 
             else:
                 raise ValueError("If n_jobs>1 pool_engine must be 'process' or 'thread'")
             
 
-            if self.progress_bar:
-                results = tqdm(results, desc=self.job_name, total=len(recording_slices))
-
-            for res in results:
-                if self.handle_returns:
-                    returns.append(res)
-                if self.gather_func is not None:
-                    self.gather_func(res)
         
 
 
