@@ -12,7 +12,7 @@ from spikeinterface.core.core_tools import convert_string_to_bytes, convert_byte
 import sys
 from tqdm.auto import tqdm
 
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import multiprocessing as mp
 from threadpoolctl import threadpool_limits
 
@@ -329,6 +329,7 @@ class ChunkRecordingExecutor:
         progress_bar=False,
         handle_returns=False,
         gather_func=None,
+        pool_engine="process",
         n_jobs=1,
         total_memory=None,
         chunk_size=None,
@@ -370,6 +371,8 @@ class ChunkRecordingExecutor:
         self.job_name = job_name
         self.max_threads_per_process = max_threads_per_process
 
+        self.pool_engine = pool_engine
+
         if verbose:
             chunk_memory = self.chunk_size * recording.get_num_channels() * np.dtype(recording.get_dtype()).itemsize
             total_memory = chunk_memory * self.n_jobs
@@ -402,7 +405,7 @@ class ChunkRecordingExecutor:
 
         if self.n_jobs == 1:
             if self.progress_bar:
-                recording_slices = tqdm(recording_slices, ascii=True, desc=self.job_name)
+                recording_slices = tqdm(recording_slices, desc=self.job_name, total=len(recording_slices))
 
             worker_ctx = self.init_func(*self.init_args)
             for segment_index, frame_start, frame_stop in recording_slices:
@@ -411,60 +414,89 @@ class ChunkRecordingExecutor:
                     returns.append(res)
                 if self.gather_func is not None:
                     self.gather_func(res)
+
         else:
             n_jobs = min(self.n_jobs, len(recording_slices))
 
-            # parallel
-            with ProcessPoolExecutor(
-                max_workers=n_jobs,
-                initializer=worker_initializer,
-                mp_context=mp.get_context(self.mp_context),
-                initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process),
-            ) as executor:
-                results = executor.map(function_wrapper, recording_slices)
+            if self.pool_engine == "process":
 
-                if self.progress_bar:
-                    results = tqdm(results, desc=self.job_name, total=len(recording_slices))
+                # parallel
+                with ProcessPoolExecutor(
+                    max_workers=n_jobs,
+                    initializer=process_worker_initializer,
+                    mp_context=mp.get_context(self.mp_context),
+                    initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process),
+                ) as executor:
+                    results = executor.map(process_function_wrapper, recording_slices)
+            
+            elif self.pool_engine == "thread":
+                # only one shared context
 
-                for res in results:
-                    if self.handle_returns:
-                        returns.append(res)
-                    if self.gather_func is not None:
-                        self.gather_func(res)
+                worker_dict = self.init_func(*self.init_args)
+                thread_func = WorkerFuncWrapper(self.func, worker_dict, self.max_threads_per_process)
+
+                with ThreadPoolExecutor(
+                    max_workers=n_jobs,
+                ) as executor:
+                    results = executor.map(thread_func, recording_slices)
+
+
+            else:
+                raise ValueError("If n_jobs>1 pool_engine must be 'process' or 'thread'")
+            
+
+            if self.progress_bar:
+                results = tqdm(results, desc=self.job_name, total=len(recording_slices))
+
+            for res in results:
+                if self.handle_returns:
+                    returns.append(res)
+                if self.gather_func is not None:
+                    self.gather_func(res)
+        
+
 
         return returns
 
+
+
+class WorkerFuncWrapper:
+    def __init__(self, func, worker_dict, max_threads_per_process):
+        self.func = func
+        self.worker_dict = worker_dict
+        self.max_threads_per_process = max_threads_per_process
+    
+    def __call__(self, args):
+        segment_index, start_frame, end_frame = args
+        if self.max_threads_per_process is None:
+            return self.func(segment_index, start_frame, end_frame, self.worker_dict)
+        else:
+            with threadpool_limits(limits=self.max_threads_per_process):
+                return self.func(segment_index, start_frame, end_frame, self.worker_dict)
 
 # see
 # https://stackoverflow.com/questions/10117073/how-to-use-initializer-to-set-up-my-multiprocess-pool
 # the tricks is : theses 2 variables are global per worker
 # so they are not share in the same process
-global _worker_ctx
-global _func
+# global _worker_ctx
+# global _func
+global _process_func_wrapper
 
 
-def worker_initializer(func, init_func, init_args, max_threads_per_process):
-    global _worker_ctx
+def process_worker_initializer(func, init_func, init_args, max_threads_per_process):
+    global _process_func_wrapper
     if max_threads_per_process is None:
-        _worker_ctx = init_func(*init_args)
+        worker_dict = init_func(*init_args)
     else:
         with threadpool_limits(limits=max_threads_per_process):
-            _worker_ctx = init_func(*init_args)
-    _worker_ctx["max_threads_per_process"] = max_threads_per_process
-    global _func
-    _func = func
+            worker_dict = init_func(*init_args)
+    _process_func_wrapper = WorkerFuncWrapper(func, worker_dict, max_threads_per_process)
 
 
-def function_wrapper(args):
-    segment_index, start_frame, end_frame = args
-    global _func
-    global _worker_ctx
-    max_threads_per_process = _worker_ctx["max_threads_per_process"]
-    if max_threads_per_process is None:
-        return _func(segment_index, start_frame, end_frame, _worker_ctx)
-    else:
-        with threadpool_limits(limits=max_threads_per_process):
-            return _func(segment_index, start_frame, end_frame, _worker_ctx)
+def process_function_wrapper(args):
+    global _process_func_wrapper
+    return _process_func_wrapper(args)
+
 
 
 # Here some utils copy/paste from DART (Charlie Windolf)

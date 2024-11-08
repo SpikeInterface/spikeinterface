@@ -139,7 +139,7 @@ def test_ChunkRecordingExecutor():
 
     gathering_func2 = GatherClass()
 
-    # chunk + parallel + gather_func
+    # process + gather_func
     processor = ChunkRecordingExecutor(
         recording,
         func,
@@ -148,6 +148,7 @@ def test_ChunkRecordingExecutor():
         verbose=True,
         progress_bar=True,
         gather_func=gathering_func2,
+        pool_engine="process",
         n_jobs=2,
         chunk_duration="200ms",
         job_name="job_name",
@@ -157,7 +158,7 @@ def test_ChunkRecordingExecutor():
 
     assert gathering_func2.pos == num_chunks
 
-    # chunk + parallel + spawn
+    # process spawn
     processor = ChunkRecordingExecutor(
         recording,
         func,
@@ -165,7 +166,23 @@ def test_ChunkRecordingExecutor():
         init_args,
         verbose=True,
         progress_bar=True,
+        pool_engine="process",
         mp_context="spawn",
+        n_jobs=2,
+        chunk_duration="200ms",
+        job_name="job_name",
+    )
+    processor.run()
+
+    # thread
+    processor = ChunkRecordingExecutor(
+        recording,
+        func,
+        init_func,
+        init_args,
+        verbose=True,
+        progress_bar=True,
+        pool_engine="thread",
         n_jobs=2,
         chunk_duration="200ms",
         job_name="job_name",
@@ -224,6 +241,6 @@ if __name__ == "__main__":
     # test_divide_segment_into_chunks()
     # test_ensure_n_jobs()
     # test_ensure_chunk_size()
-    # test_ChunkRecordingExecutor()
-    test_fix_job_kwargs()
+    test_ChunkRecordingExecutor()
+    # test_fix_job_kwargs()
     # test_split_job_kwargs()
