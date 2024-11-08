@@ -174,19 +174,19 @@ class ModelBasedClassification:
 
             inconsistent_metrics = []
             for metric in model_quality_metrics_params["metric_names"]:
-                if metric in model_quality_metrics_params["qm_params"]:
+                if metric not in model_quality_metrics_params["qm_params"]:
                     inconsistent_metrics += metric
-
-                if quality_metrics_params[metric] != model_quality_metrics_params["qm_params"][metric]:
-                    warning_message = "Quality metric params for {metric} do not match those used to train the model. Parameters can be found in the 'model_info.json' file."
-                    if enforce_metric_params is True:
-                        raise Exception(warning_message)
-                    else:
-                        warnings.warn(warning_message)
+                else:
+                    if quality_metrics_params[metric] != model_quality_metrics_params["qm_params"][metric]:
+                        warning_message = f"Quality metric params for {metric} do not match those used to train the model. Parameters can be found in the 'model_info.json' file."
+                        if enforce_metric_params is True:
+                            raise Exception(warning_message)
+                        else:
+                            warnings.warn(warning_message)
 
             if len(inconsistent_metrics) > 0:
                 warning_message = (
-                    "Parameters used to compute metrics {inconsistent_metrics}, used to train this model, are unknown."
+                    f"Parameters used to compute metrics {inconsistent_metrics}, used to train this model, are unknown."
                 )
                 if enforce_metric_params is True:
                     raise Exception(warning_message)

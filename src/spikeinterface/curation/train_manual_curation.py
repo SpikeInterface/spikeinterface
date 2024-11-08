@@ -231,20 +231,19 @@ class CurationModelTrainer:
             self.metric_names = self.testing_metrics.columns.tolist()
 
         conflicting_metrics = self._check_metrics_parameters(analyzers, enforce_metric_params)
-        print(conflicting_metrics)
 
         self.metrics_params = {}
         if analyzers[0].has_extension("quality_metrics") is True:
             self.metrics_params["quality_metric_params"] = analyzers[0].extensions["quality_metrics"].params
-            # remove metrics with conflicting params
-            if len(conflicting_metrics) > 0:
-                qm_names = self.metrics_params["quality_metric_params"]["metric_names"]
-                consistent_metrics = list(set(qm_names).difference(set(conflicting_metrics)))
-                consistent_metric_params = {
-                    metric: analyzers[0].extensions["quality_metrics"].params["qm_params"][metric]
-                    for metric in consistent_metrics
-                }
-                self.metrics_params["quality_metric_params"]["qm_params"] = consistent_metric_params
+
+            # Only save metric params which are 1) consistent and 2) exist in metric_names
+            qm_names = self.metrics_params["quality_metric_params"]["metric_names"]
+            consistent_metrics = list(set(qm_names).difference(set(conflicting_metrics)))
+            consistent_metric_params = {
+                metric: analyzers[0].extensions["quality_metrics"].params["qm_params"][metric]
+                for metric in consistent_metrics
+            }
+            self.metrics_params["quality_metric_params"]["qm_params"] = consistent_metric_params
 
         if analyzers[0].has_extension("template_metrics") is True:
             self.metrics_params["template_metric_params"] = analyzers[0].extensions["template_metrics"].params
