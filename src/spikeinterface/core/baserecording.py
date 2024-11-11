@@ -1,20 +1,17 @@
 from __future__ import annotations
+
 import warnings
 from pathlib import Path
 
 import numpy as np
-from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, write_probeinterface
+from probeinterface import (Probe, ProbeGroup, read_probeinterface,
+                            select_axes, write_probeinterface)
 
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
-from .core_tools import (
-    convert_bytes_to_str,
-    convert_seconds_to_str,
-)
-from .recording_tools import write_binary_recording
-
-
+from .core_tools import convert_bytes_to_str, convert_seconds_to_str
 from .job_tools import split_job_kwargs
+from .recording_tools import write_binary_recording
 
 
 class BaseRecording(BaseRecordingSnippets):
@@ -921,11 +918,11 @@ class BaseRecordingSegment(BaseSegment):
                 sample_index = time_s * self.sampling_frequency
             else:
                 sample_index = (time_s - self.t_start) * self.sampling_frequency
-            sample_index = round(sample_index)
+            sample_index = np.round(sample_index).astype(int)
         else:
             sample_index = np.searchsorted(self.time_vector, time_s, side="right") - 1
 
-        return int(sample_index)
+        return sample_index
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal segment
