@@ -1,5 +1,5 @@
-import warnings
 import json
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -54,6 +54,7 @@ class Motion:
         self.direction = direction
         self.dim = ["x", "y", "z"].index(direction)
         self.check_properties()
+        self.temporal_bin_edges_s = [ensure_time_bin_edges(tbins) for tbins in self.temporal_bins_s]
 
     def check_properties(self):
         assert all(d.ndim == 2 for d in self.displacement)
@@ -576,3 +577,24 @@ def make_3d_motion_histograms(
         motion_histograms = np.log2(1 + motion_histograms)
 
     return motion_histograms, temporal_bin_edges, spatial_bin_edges
+
+
+def ensure_time_bins(time_bin_centers_s=None, time_bin_edges_s=None):
+    if time_bin_centers_s is None and time_bin_edges_s is None:
+        raise ValueError("Need at least one of time_bin_centers_s or time_bin_edges_s.")
+
+    if time_bin_centers_s is None:
+        assert time_bin_edges_s.ndim == 1 and time_bin_edges_s.size >= 2
+        time_bin_centers_s = 0.5 * (time_bin_edges_s[1:] + time_bin_edges_s[:-1])
+
+    if time_bin_edges_s is None:
+        time_bin_edges_s = np.empty(time_bin_centers_s.shape[0] + 1, dtype=time_bin_centers_s.dtype)
+        time_bin_edges_s[[0, -1]] = time_bin_centers_s[[0, -1]]
+        if time_bin_centers_s.size > 2:
+            time_bin_edges_s[1:-1] = 0.5 * (time_bin_centers_s[1:] + time_bin_centers_s[:-1])
+
+    return time_bin_centers_s, time_bin_edges_s
+
+
+def ensure_time_bin_edges(time_bin_centers_s=None, time_bin_edges_s=None):
+    return ensure_time_bins(time_bin_centers_s, time_bin_edges_s)[1]

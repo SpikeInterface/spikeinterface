@@ -62,18 +62,20 @@ def test_interpolate_motion_on_traces():
     times = rec.get_times()[0:30000]
 
     for method in ("kriging", "idw", "nearest"):
-        traces_corrected = interpolate_motion_on_traces(
-            traces,
-            times,
-            channel_locations,
-            motion,
-            channel_inds=None,
-            spatial_interpolation_method=method,
-            # spatial_interpolation_kwargs={},
-            spatial_interpolation_kwargs={"force_extrapolate": True},
-        )
-        assert traces.shape == traces_corrected.shape
-        assert traces.dtype == traces_corrected.dtype
+        for interpolation_time_bin_centers_s in (None, np.linspace(*times[[0, -1]], num=3)):
+            traces_corrected = interpolate_motion_on_traces(
+                traces,
+                times,
+                channel_locations,
+                motion,
+                channel_inds=None,
+                spatial_interpolation_method=method,
+                interpolation_time_bin_centers_s=interpolation_time_bin_centers_s,
+                # spatial_interpolation_kwargs={},
+                spatial_interpolation_kwargs={"force_extrapolate": True},
+            )
+            assert traces.shape == traces_corrected.shape
+            assert traces.dtype == traces_corrected.dtype
 
 
 def test_interpolation_simple():
@@ -202,7 +204,7 @@ def test_InterpolateMotionRecording():
 
 if __name__ == "__main__":
     # test_correct_motion_on_peaks()
-    # test_interpolate_motion_on_traces()
+    test_interpolate_motion_on_traces()
     # test_interpolation_simple()
     # test_InterpolateMotionRecording()
     test_cross_band_interpolation()

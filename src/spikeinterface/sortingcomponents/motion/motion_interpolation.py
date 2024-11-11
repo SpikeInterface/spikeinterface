@@ -7,6 +7,8 @@ from spikeinterface.preprocessing.basepreprocessor import (
     BasePreprocessor, BasePreprocessorSegment)
 from spikeinterface.preprocessing.filter import fix_dtype
 
+from .motion_utils import ensure_time_bin_edges, ensure_time_bins
+
 
 def correct_motion_on_peaks(peaks, peak_locations, motion, recording) -> np.ndarray:
     """
@@ -55,6 +57,7 @@ def interpolate_motion_on_traces(
     segment_index=None,
     channel_inds=None,
     interpolation_time_bin_centers_s=None,
+    interpolation_time_bin_edges_s=None,
     spatial_interpolation_method="kriging",
     spatial_interpolation_kwargs={},
     dtype=None,
@@ -120,9 +123,11 @@ def interpolate_motion_on_traces(
     total_num_chans = channel_locations.shape[0]
 
     # -- determine the blocks of frames that will land in the same interpolation time bin
-    time_bins = interpolation_time_bin_centers_s
-    if time_bins is None:
-        time_bins = motion.temporal_bins_s[segment_index]
+    if interpolation_time_bin_centers_s is None and interpolation_time_bin_edges_s is None:
+        bin_centers_s = motion.temporal_bin_edges_s[segment_index]
+        bin_edges_s = motion.temporal_bin_edges_s[segment_index]
+    else:
+        bin_centers_s, bin_edges_s = ensure_time_bins(interpolation_time_bin_centers_s, interpolation_time_bin_edges_s)
 
     # nearest interpolation bin:
     # seachsorted(b, t, side="right") == i means that b[i-1] <= t < b[i]
@@ -131,15 +136,13 @@ def interpolate_motion_on_traces(
     # time_bins are bin centers, but we want to snap to the nearest center.
     # idea is to get the left bin edges and bin the interp times.
     # this is like subtracting bin_dt_s/2, but allows non-equally-spaced bins.
-    bin_left = np.zeros_like(time_bins)
     # it's fine to use the first bin center for the first left edge
-    bin_left[0] = time_bins[0]
-    bin_left[1:] = 0.5 * (time_bins[1:] + time_bins[:-1])
-    bin_inds = np.searchsorted(bin_left, times, side="right") - 1
+    bin_inds = np.searchsorted(bin_edges_s, times, side="right") - 1
 
     # the time bins may not cover the whole set of times in the recording,
     # so we need to clip these indices to the valid range
-    np.clip(bin_inds, 0, time_bins.size - 1, out=bin_inds)
+    n_bins = bin_edges_s.shape[0] - 1
+    np.clip(bin_inds, 0, n_bins - 1, out=bin_inds)
 
     # -- what are the possibilities here anyway?
     bins_here = np.arange(bin_inds[0], bin_inds[-1] + 1)
@@ -148,7 +151,7 @@ def interpolate_motion_on_traces(
     interp_times = np.empty(total_num_chans)
     current_start_index = 0
     for bin_ind in bins_here:
-        bin_time = time_bins[bin_ind]
+        bin_time = bin_centers_s[bin_ind]
         interp_times.fill(bin_time)
         channel_motions = motion.get_displacement_at_time_and_depth(
             interp_times,
@@ -307,6 +310,7 @@ class InterpolateMotionRecording(BasePreprocessor):
         p=1,
         num_closest=3,
         interpolation_time_bin_centers_s=None,
+        interpolation_time_bin_edges_s=None,
         interpolation_time_bin_size_s=None,
         dtype=None,
         **spatial_interpolation_kwargs,
@@ -373,9 +377,14 @@ class InterpolateMotionRecording(BasePreprocessor):
 
         # handle manual interpolation_time_bin_centers_s
         # the case where interpolation_time_bin_size_s is set is handled per-segment below
-        if interpolation_time_bin_centers_s is None:
+        if interpolation_time_bin_centers_s is None and interpolation_time_bin_edges_s is None:
             if interpolation_time_bin_size_s is None:
                 interpolation_time_bin_centers_s = motion.temporal_bins_s
+                interpolation_time_bin_edges_s = motion.temporal_bin_edges_s
+        else:
+            interpolation_time_bin_centers_s, interpolation_time_bin_edges_s = ensure_time_bins(
+                interpolation_time_bin_centers_s, interpolation_time_bin_edges_s
+            )
 
         for segment_index, parent_segment in enumerate(recording._recording_segments):
             # finish the per-segment part of the time bin logic
@@ -385,8 +394,13 @@ class InterpolateMotionRecording(BasePreprocessor):
                 t_start, t_end = parent_segment.sample_index_to_time(np.array([0, s_end]))
                 halfbin = interpolation_time_bin_size_s / 2.0
                 segment_interpolation_time_bins_s = np.arange(t_start + halfbin, t_end, interpolation_time_bin_size_s)
+                segment_interpolation_time_bin_edges_s = np.arange(
+                    t_start, t_end + halfbin, interpolation_time_bin_size_s
+                )
+                assert segment_interpolation_time_bin_edges_s.shape == (segment_interpolation_time_bins_s.shape[0] + 1,)
             else:
                 segment_interpolation_time_bins_s = interpolation_time_bin_centers_s[segment_index]
+                segment_interpolation_time_bin_edges_s = interpolation_time_bin_edges_s[segment_index]
 
             rec_segment = InterpolateMotionRecordingSegment(
                 parent_segment,
@@ -397,6 +411,7 @@ class InterpolateMotionRecording(BasePreprocessor):
                 channel_inds,
                 segment_index,
                 segment_interpolation_time_bins_s,
+                segment_interpolation_time_bin_edges_s,
                 dtype=dtype_,
             )
             self.add_recording_segment(rec_segment)
@@ -430,6 +445,7 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
         channel_inds,
         segment_index,
         interpolation_time_bin_centers_s,
+        interpolation_time_bin_edges_s,
         dtype="float32",
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
@@ -439,6 +455,7 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
         self.channel_inds = channel_inds
         self.segment_index = segment_index
         self.interpolation_time_bin_centers_s = interpolation_time_bin_centers_s
+        self.interpolation_time_bin_edges_s = interpolation_time_bin_edges_s
         self.dtype = dtype
         self.motion = motion
 
@@ -460,7 +477,7 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
             channel_inds=self.channel_inds,
             spatial_interpolation_method=self.spatial_interpolation_method,
             spatial_interpolation_kwargs=self.spatial_interpolation_kwargs,
-            interpolation_time_bin_centers_s=self.interpolation_time_bin_centers_s,
+            interpolation_time_bin_edges_s=self.interpolation_time_bin_edges_s,
         )
 
         if channel_indices is not None:
