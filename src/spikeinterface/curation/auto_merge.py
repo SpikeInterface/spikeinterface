@@ -443,9 +443,15 @@ def auto_merge_units_internal(
         if extra_outputs:
             merge_unit_groups, outs = merge_unit_groups
 
-        merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
-            merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
-        )
+        merged_units = len(merge_unit_groups) > 0
+        if merged_units:
+            merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
+                merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
+            )
+        else:
+            merged_analyzer = sorting_analyzer
+            new_unit_ids = []
+
         resolved_merges = {key: value for (key, value) in zip(new_unit_ids, merge_unit_groups)}
     else:
         merged_units = True
