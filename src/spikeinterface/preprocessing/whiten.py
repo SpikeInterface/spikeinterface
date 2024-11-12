@@ -198,12 +198,11 @@ def compute_whitening_matrix(
     # type and we estimate a more reasonable eps in the case
     # where the data is on a scale less than 1.
     if eps is None:
-        if data.dtype.kind == "f":
-            median_data_sqr = np.median(data**2)  # use the square because cov (and hence S) scales as the square
-            if median_data_sqr < 1 and median_data_sqr > 0:
-                eps = max(1e-16, median_data_sqr * 1e-3)  # use a small fraction of the median of the squared data
+        median_data_sqr = np.median(data**2)  # use the square because cov (and hence S) scales as the square
+        if median_data_sqr < 1 and median_data_sqr > 0:
+            eps = max(1e-16, median_data_sqr * 1e-3)  # use a small fraction of the median of the squared data
         else:
-            eps = 1e-8
+            eps = 1e-16
 
     if mode == "global":
         W = compute_whitening_from_covariance(cov, eps)

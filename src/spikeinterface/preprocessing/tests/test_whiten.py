@@ -218,7 +218,7 @@ class TestWhiten:
         is cast to float before computing the covariance matrix,
         otherwise it can overflow.
         """
-        eps = 1e-8
+        eps = 1e-16
         _, cov_mat, recording = self.get_float_test_data(num_segments=1, dtype=dtype)
 
         whitened_recording = whiten(
@@ -271,7 +271,7 @@ class TestWhiten:
         the zeros do not affect the covariance estimation
         but the covariance matrix is scaled by 1 / N.
         """
-        eps = 1e-8
+        eps = 1e-16
         _, cov_mat, recording = self.get_float_test_data(num_segments=2, dtype=np.float32)
 
         all_zero_data = np.zeros(
@@ -309,7 +309,7 @@ class TestWhiten:
         """
         means = np.array([10, 20, 30])
 
-        eps = 1e-8
+        eps = 1e-16
         _, cov_mat, recording = self.get_float_test_data(num_segments=1, dtype=np.float32, means=means)
 
         whitened_recording = whiten(
@@ -375,10 +375,10 @@ class TestWhiten:
             apply_mean=True,
             num_chunks_per_segment=1,
             chunk_size=recording.get_num_samples(segment_index=0) - 1,
-            eps=1e-8,
+            eps=1e-16,
         )
 
-        test_cov_mat = self.cov_mat_from_whitening_mat(whitened_recording, eps=1e-8)
+        test_cov_mat = self.cov_mat_from_whitening_mat(whitened_recording, eps=1e-16)
 
         # Compute covariance matrix using sklearn directly and compare.
         X = recording.get_traces()[:-1, :]
@@ -413,7 +413,7 @@ class TestWhiten:
                 apply_mean=True,
                 num_chunks_per_segment=1,
                 chunk_size=recording.get_num_samples(segment_index=0) - 1,
-                eps=1e-8,
+                eps=1e-16,
                 mode=mode,
                 radius_um=y_dist + 1e-01,
             )
