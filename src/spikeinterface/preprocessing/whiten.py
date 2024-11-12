@@ -47,7 +47,8 @@ class WhitenRecording(BasePreprocessor):
         of sklearn, specified in regularize_kwargs. Default is GraphicalLassoCV
     regularize_kwargs : {'method' : 'GraphicalLassoCV'}
         Dictionary of the parameters that could be provided to the method of sklearn, if
-        the covariance matrix needs to be regularized.
+        the covariance matrix needs to be regularized. Note that sklearn covariance methods
+        that are implemented as functions, not classes, are not supported.
     **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
@@ -75,9 +76,9 @@ class WhitenRecording(BasePreprocessor):
         dtype_ = fix_dtype(recording, dtype)
 
         if dtype_.kind == "i":
-            assert int_scale is not None, (
-                "For recording with dtype=int you must set the output dtype to float OR set a int_scale"
-            )
+            assert (
+                int_scale is not None
+            ), "For recording with dtype=int you must set the output dtype to float OR set a int_scale"
 
         if not apply_mean and regularize:
             raise ValueError("`apply_mean` must be `True` if regularising. `assume_centered` is fixed to `True`.")
@@ -197,28 +198,25 @@ def compute_whitening_matrix(
     # type and we estimate a more reasonable eps in the case
     # where the data is on a scale less than 1.
     if eps is None:
-        eps = 1e-8
-
-    if data.dtype.kind == "f":
-        median_data_sqr = np.median(data**2)  # use the square because cov (and hence S) scales as the square
-        if median_data_sqr < 1 and median_data_sqr > 0:
-            if eps is None:
+        if data.dtype.kind == "f":
+            median_data_sqr = np.median(data**2)  # use the square because cov (and hence S) scales as the square
+            if median_data_sqr < 1 and median_data_sqr > 0:
                 eps = max(1e-16, median_data_sqr * 1e-3)  # use a small fraction of the median of the squared data
+        else:
+            eps = 1e-8
 
     if mode == "global":
-        U, S, Ut = np.linalg.svd(cov, full_matrices=True)
-        W = (U @ np.diag(1 / np.sqrt(S + eps))) @ Ut
+        W = compute_whitening_from_covariance(cov, eps)
 
     elif mode == "local":
         assert radius_um is not None
         n = cov.shape[0]
         distances = get_channel_distances(recording)
-        W = np.zeros((n, n), dtype="float64")  # TODO: should fix to float32 for consistency
+        W = np.zeros((n, n), dtype="float32")
         for c in range(n):
             (inds,) = np.nonzero(distances[c, :] <= radius_um)
             cov_local = cov[inds, :][:, inds]
-            U, S, Ut = np.linalg.svd(cov_local, full_matrices=True)
-            W_local = (U @ np.diag(1 / np.sqrt(S + eps))) @ Ut
+            W_local = compute_whitening_from_covariance(cov_local, eps)
             W[inds, c] = W_local[c == inds]
     else:
         raise ValueError(f"compute_whitening_matrix : wrong mode {mode}")
@@ -226,10 +224,22 @@ def compute_whitening_matrix(
     return W, M
 
 
-def compute_covariance_matrix(
-    recording, apply_mean, regularize, regularize_kwargs, random_chunk_kwargs
-):  # TODO: check order
-    """ """
+def compute_whitening_from_covariance(cov, eps):
+    """
+    Compute the whitening matrix from the covariance
+    matrix using ZCA whitening approach. Note the `eps`
+    ensures division by zero is not possible and regularises.
+    """
+    U, S, Ut = np.linalg.svd(cov, full_matrices=True)
+    W = (U @ np.diag(1 / np.sqrt(S + eps))) @ Ut
+    return W
+
+
+def compute_covariance_matrix(recording, apply_mean, regularize, regularize_kwargs, random_chunk_kwargs):
+    """
+    Compute the covariance matrix from randomly sampled data chunsk.
+    See `compute_whitening_matrix()` for parameters.
+    """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
     random_data = random_data.astype(np.float32)
 
@@ -248,26 +258,21 @@ def compute_covariance_matrix(
         cov = cov / data.shape[0]
     else:
         cov = compute_sklearn_covariance_matrix(data, regularize_kwargs)
-    #        import sklearn.covariance
-    #        method = regularize_kwargs.pop("method")
-    #        regularize_kwargs["assume_centered"] = True
-    #        estimator_class = getattr(sklearn.covariance, method)
-    #        estimator = estimator_class(**regularize_kwargs)
-    #        estimator.fit(data)
-    #        cov = estimator.covariance_
 
-    return data, cov, M  # TODO: rename data
-
-
-# TODO: do we want to fix assume centered here or directly use `apply_mean`?
+    return data, cov, M
 
 
 def compute_sklearn_covariance_matrix(data, regularize_kwargs):
+    """
+    Estimate the covariance matrix using scikit-learn functions.
 
+    Note that sklearn covariance methods that are implemented
+    as functions, not classes, are not supported.
+    """
     import sklearn.covariance
 
     if "assume_centered" in regularize_kwargs and not regularize_kwargs["assume_centered"]:
-        raise ValueError("Cannot use `assume_centered=False` for `regularize_kwargs`. " "Fixing to `True`.")
+        raise ValueError("Cannot use `assume_centered=False` for `regularize_kwargs`. Fixing to `True`.")
 
     method = regularize_kwargs.pop("method")
     regularize_kwargs["assume_centered"] = True
@@ -278,11 +283,6 @@ def compute_sklearn_covariance_matrix(data, regularize_kwargs):
 
     return cov
 
-
-# 1) factor out to own function
-# 2) test function is simple way
-# 3) monkeypatch compute covariance to check function is called and returned
-# 4) check norm is smaller
 
 # function for API
 whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")
