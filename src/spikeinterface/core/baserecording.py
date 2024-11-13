@@ -509,19 +509,24 @@ class BaseRecording(BaseRecordingSnippets):
             rs.t_start = None
             rs.sampling_frequency = self.sampling_frequency
 
-    def shift_start_time(self, shift: int | float, segment_index: int | None = None) -> None:
+    def shift_times(self, shift: int | float, segment_index: int | None = None) -> None:
         """
-        Shift the starting time of the times.
+        Shift all times by a scalar value. The default behaviour is to
+        shift all segments uniformly.
 
+        Parameters
+        ----------
         shift : int | float
-            The shift to apply to the first time point. If positive,
-            the current start time will be increased by `shift`. If
-            negative, the start time will be decreased.
+            The shift to apply. If positive, times will be increased by `shift`.
+            e.g. shifting by 1 will be like the recording started 1 second later.
+            If negative, the start time will be decreased i.e. as if the recording
+            started earlier.
 
         segment_index : int | None
-            The segment on which to shift the times.
+            The segment on which to shift the times. if `None`, all
+            segments will be shifted.
         """
-        self._check_segment_index(segment_index)
+        self._check_segment_index(segment_index)  # Check the segment index is valid only
 
         if segment_index is None:
             segments_to_shift = range(self.get_num_segments())
