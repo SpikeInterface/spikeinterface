@@ -99,7 +99,7 @@ class SlidingHdbscanClustering:
         return params2
 
     @classmethod
-    def _initialize_folder(cls, recording, peaks, params):
+    def _initialize_folder(cls, recording, peaks, params, job_kwargs=dict()):
         d = params
         tmp_folder = params["tmp_folder"]
 
@@ -400,7 +400,7 @@ class SlidingHdbscanClustering:
         return peak_labels
 
     @classmethod
-    def _prepare_clean(cls, recording, peaks, wfs_arrays, sparsity_mask, peak_labels, d, job_kwargs):
+    def _prepare_clean(cls, recording, peaks, wfs_arrays, sparsity_mask, peak_labels, d, job_kwargs=dict()):
         tmp_folder = d["tmp_folder"]
         if tmp_folder is None:
             wf_folder = None
