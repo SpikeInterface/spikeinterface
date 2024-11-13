@@ -145,9 +145,10 @@ class BaseSorter:
         elif recording.check_serializability("pickle"):
             recording.dump(output_folder / "spikeinterface_recording.pickle", relative_to=output_folder)
         else:
-            # TODO: deprecate and finally remove this after 0.100
-            d = {"warning": "The recording is not serializable to json"}
-            rec_file.write_text(json.dumps(d, indent=4), encoding="utf8")
+            raise RuntimeError(
+                "This recording is not serializable and so can not be sorted. Consider `recording.save()` to save a "
+                "compatible binary file."
+            )
 
         return output_folder
 

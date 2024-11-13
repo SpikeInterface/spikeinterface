@@ -97,7 +97,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
     extension_name = "template_metrics"
     depend_on = ["templates"]
-    need_recording = True
+    need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
 
