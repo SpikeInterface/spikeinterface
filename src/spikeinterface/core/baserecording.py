@@ -521,13 +521,20 @@ class BaseRecording(BaseRecordingSnippets):
         segment_index : int | None
             The segment on which to shift the times.
         """
-        segment_index = self._check_segment_index(segment_index)
-        rs = self._recording_segments[segment_index]
+        self._check_segment_index(segment_index)
 
-        if self.has_time_vector():
-            rs.time_vector += shift
+        if segment_index is None:
+            segments_to_shift = range(self.get_num_segments())
         else:
-            rs.t_start += shift
+            segments_to_shift = (segment_index,)
+
+        for idx in segments_to_shift:
+            rs = self._recording_segments[idx]
+
+            if self.has_time_vector():
+                rs.time_vector += shift
+            else:
+                rs.t_start += shift
 
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
