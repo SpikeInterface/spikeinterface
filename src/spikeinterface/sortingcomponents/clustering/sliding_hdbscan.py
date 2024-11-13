@@ -65,7 +65,7 @@ class SlidingHdbscanClustering:
         peak_labels = cls._find_clusters(recording, peaks, wfs_arrays, sparsity_mask, noise, params)
 
         wfs_arrays2, sparsity_mask2 = cls._prepare_clean(
-            recording, peaks, wfs_arrays, sparsity_mask, peak_labels, params
+            recording, peaks, wfs_arrays, sparsity_mask, peak_labels, params, job_kwargs
         )
 
         clean_peak_labels, peak_sample_shifts = cls._clean_cluster(
@@ -400,7 +400,7 @@ class SlidingHdbscanClustering:
         return peak_labels
 
     @classmethod
-    def _prepare_clean(cls, recording, peaks, wfs_arrays, sparsity_mask, peak_labels, d):
+    def _prepare_clean(cls, recording, peaks, wfs_arrays, sparsity_mask, peak_labels, d, job_kwargs):
         tmp_folder = d["tmp_folder"]
         if tmp_folder is None:
             wf_folder = None

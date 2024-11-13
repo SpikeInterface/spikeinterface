@@ -84,9 +84,7 @@ class PositionAndPCAClustering:
         if params["peak_locations"] is None:
             from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
-            peak_locations = localize_peaks(
-                recording, peaks, **params["peak_localization_kwargs"], **job_kwargs
-            )
+            peak_locations = localize_peaks(recording, peaks, **params["peak_localization_kwargs"], **job_kwargs)
         else:
             peak_locations = params["peak_locations"]
 
