@@ -526,8 +526,6 @@ class BaseRecording(BaseRecordingSnippets):
             The segment on which to shift the times. if `None`, all
             segments will be shifted.
         """
-        self._check_segment_index(segment_index)  # Check the segment index is valid only
-
         if segment_index is None:
             segments_to_shift = range(self.get_num_segments())
         else:
@@ -536,7 +534,7 @@ class BaseRecording(BaseRecordingSnippets):
         for idx in segments_to_shift:
             rs = self._recording_segments[idx]
 
-            if self.has_time_vector():
+            if self.has_time_vector(segment_index=idx):
                 rs.time_vector += shift
             else:
                 rs.t_start += shift
