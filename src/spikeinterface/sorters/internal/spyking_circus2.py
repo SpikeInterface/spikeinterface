@@ -76,17 +76,20 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "motion_correction": "A dictionary to be provided if motion correction has to be performed (dense probe only)",
         "apply_preprocessing": "Boolean to specify whether circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
                                                     median reference + zscore",
+        "apply_motion_correction": "Boolean to specify whether circus 2 should apply motion correction to the recording or not",
+        "matched_filtering": "Boolean to specify whether circus 2 should detect peaks via matched filtering (slightly slower)",
         "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
                          memory_limit will control how much RAM can be used. In case of folder or zarr, delete_cache controls if cache is cleaned after sorting",
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
+        "seed": "An int to control how chunks are shuffled while detecting peaks",
         "debug": "Boolean to specify if internal data structures made during the sorting should be kept for debugging",
     }
 
     sorter_description = """Spyking Circus 2 is a rewriting of Spyking Circus, within the SpikeInterface framework
     It uses a more conservative clustering algorithm (compared to Spyking Circus), which is less prone to hallucinate units and/or find noise.
     In addition, it also uses a full Orthogonal Matching Pursuit engine to reconstruct the traces, leading to more spikes
-    being discovered."""
+    being discovered. The code is much faster and memory efficient, inheriting from all the preprocessing possibilities of spikeinterface"""
 
     @classmethod
     def get_sorter_version(cls):
@@ -164,7 +167,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             whitening_kwargs["regularize"] = False
 
         recording_w = whiten(recording_f, **whitening_kwargs)
-        noise_levels = get_noise_levels(recording_w, return_scaled=False)
+        noise_levels = get_noise_levels(recording_w, return_scaled=False, **job_kwargs)
 
         if recording_w.check_serializability("json"):
             recording_w.dump(sorter_output_folder / "preprocessed_recording.json", relative_to=None)
@@ -176,7 +179,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
         selection_params = params["selection"].copy()
-        detection_params.update(job_kwargs)
 
         detection_params["radius_um"] = detection_params.get("radius_um", 50)
         detection_params["exclude_sweep_ms"] = exclude_sweep_ms
@@ -194,17 +196,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         n_peaks = max(selection_params["min_n_peaks"], max_n_peaks)
 
         if params["matched_filtering"]:
-            peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, skip_after_n_peaks=5000)
+            peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, skip_after_n_peaks=5000, **job_kwargs)
             prototype = get_prototype_spike(recording_w, peaks, ms_before, ms_after, **job_kwargs)
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
             if skip_peaks:
                 detection_params["skip_after_n_peaks"] = n_peaks
-            peaks = detect_peaks(recording_w, "matched_filtering", **detection_params)
+            peaks = detect_peaks(recording_w, "matched_filtering", **detection_params, **job_kwargs)
         else:
             if skip_peaks:
                 detection_params["skip_after_n_peaks"] = n_peaks
-            peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params)
+            peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, **job_kwargs)
 
         if verbose:
             print("We found %d peaks in total" % len(peaks))
@@ -295,11 +297,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_method = params["matching"].pop("method")
             matching_params = params["matching"].copy()
             matching_params["templates"] = templates
-            matching_job_params = job_kwargs.copy()
 
             if matching_method is not None:
                 spikes = find_spikes_from_templates(
-                    recording_w, matching_method, method_kwargs=matching_params, **matching_job_params
+                    recording_w, matching_method, method_kwargs=matching_params, **job_kwargs
                 )
 
                 if params["debug"]:
