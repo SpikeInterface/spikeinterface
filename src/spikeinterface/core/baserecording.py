@@ -539,14 +539,15 @@ class BaseRecording(BaseRecordingSnippets):
             else:
                 rs.t_start += shift
 
-    def sample_index_to_time(self, sample_ind: int, segment_index: int | None = None):
-        """ """
+    def sample_index_to_time(self, sample_ind, segment_index=None):
+        """
+        Transform sample index into time in seconds
+        """
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
         return rs.sample_index_to_time(sample_ind)
 
-    def time_to_sample_index(self, time_s: float, segment_index: int | None = None):
-        """ """
+    def time_to_sample_index(self, time_s, segment_index=None):
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
         return rs.time_to_sample_index(time_s)
