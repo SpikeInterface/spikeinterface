@@ -196,7 +196,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         n_peaks = max(selection_params["min_n_peaks"], max_n_peaks)
 
         if params["matched_filtering"]:
-            peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, skip_after_n_peaks=5000, **job_kwargs)
+            peaks = detect_peaks(
+                recording_w, "locally_exclusive", **detection_params, skip_after_n_peaks=5000, **job_kwargs
+            )
             prototype = get_prototype_spike(recording_w, peaks, ms_before, ms_after, **job_kwargs)
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
