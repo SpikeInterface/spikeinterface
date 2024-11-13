@@ -50,14 +50,11 @@ class TdcClustering:
             "merge_radius_um": 40.0,
             "threshold_diff": 1.5,
         },
-        "job_kwargs": {},
     }
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         import hdbscan
-
-        job_kwargs = params["job_kwargs"]
 
         if params["folder"] is None:
             randname = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))

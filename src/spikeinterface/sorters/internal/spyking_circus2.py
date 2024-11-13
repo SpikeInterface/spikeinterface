@@ -234,7 +234,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["radius_um"] = radius_um
             clustering_params["waveforms"]["ms_before"] = ms_before
             clustering_params["waveforms"]["ms_after"] = ms_after
-            clustering_params["job_kwargs"] = job_kwargs
             clustering_params["noise_levels"] = noise_levels
             clustering_params["ms_before"] = exclude_sweep_ms
             clustering_params["ms_after"] = exclude_sweep_ms
@@ -248,7 +247,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 clustering_method = "random_projections"
 
             labels, peak_labels = find_cluster_from_peaks(
-                recording_w, selected_peaks, method=clustering_method, method_kwargs=clustering_params
+                recording_w, selected_peaks, method=clustering_method, method_kwargs=clustering_params, **job_kwargs
             )
 
             ## We get the labels for our peaks

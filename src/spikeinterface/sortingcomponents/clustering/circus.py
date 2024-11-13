@@ -63,15 +63,12 @@ class CircusClustering:
         "rank": 5,
         "noise_levels": None,
         "tmp_folder": None,
-        "job_kwargs": {},
         "verbose": True,
     }
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         assert HAVE_HDBSCAN, "random projections clustering needs hdbscan to be installed"
-
-        job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
         verbose = d["verbose"]
@@ -260,13 +257,12 @@ class CircusClustering:
         if verbose:
             print("We found %d raw clusters, starting to clean with matching..." % (len(templates.unit_ids)))
 
-        cleaning_matching_params = params["job_kwargs"].copy()
-        cleaning_matching_params["n_jobs"] = 1
-        cleaning_matching_params["progress_bar"] = False
+        cleaning_job_kwargs = job_kwargs.copy()
+        cleaning_job_kwargs["progress_bar"] = False
         cleaning_params = params["cleaning_kwargs"].copy()
 
         labels, peak_labels = remove_duplicates_via_matching(
-            templates, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
+            templates, peak_labels, job_kwargs=cleaning_job_kwargs, **cleaning_params
         )
 
         if verbose:
