@@ -17,7 +17,6 @@ from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.waveform_tools import estimate_templates
 from .clustering_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
-from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
 from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
 from spikeinterface.core.template import Templates
@@ -55,15 +54,12 @@ class RandomProjectionClustering:
         "noise_levels": None,
         "smoothing_kwargs": {"window_length_ms": 0.25},
         "tmp_folder": None,
-        "job_kwargs": {},
         "verbose": True,
     }
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         assert HAVE_HDBSCAN, "random projections clustering need hdbscan to be installed"
-
-        job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
         verbose = d["verbose"]

@@ -26,7 +26,6 @@ class PositionPTPScaledClustering:
         "ptps": None,
         "scales": (1, 1, 10),
         "peak_localization_kwargs": {"method": "center_of_mass"},
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "progress_bar": True},
         "hdbscan_kwargs": {
             "min_cluster_size": 20,
             "min_samples": 20,
@@ -38,7 +37,7 @@ class PositionPTPScaledClustering:
     }
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         assert HAVE_HDBSCAN, "position clustering need hdbscan to be installed"
         d = params
 
@@ -60,7 +59,7 @@ class PositionPTPScaledClustering:
 
         if d["ptps"] is None:
             (ptps,) = compute_features_from_peaks(
-                recording, peaks, ["ptp"], feature_params={"ptp": {"all_channels": True}}, **d["job_kwargs"]
+                recording, peaks, ["ptp"], feature_params={"ptp": {"all_channels": True}}, **job_kwargs
             )
         else:
             ptps = d["ptps"]

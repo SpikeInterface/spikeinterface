@@ -63,15 +63,12 @@ class CircusClustering:
         "rank": 5,
         "noise_levels": None,
         "tmp_folder": None,
-        "job_kwargs": {},
         "verbose": True,
     }
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         assert HAVE_HDBSCAN, "random projections clustering needs hdbscan to be installed"
-
-        job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
         verbose = d["verbose"]
