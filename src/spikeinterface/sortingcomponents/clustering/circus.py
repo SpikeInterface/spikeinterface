@@ -257,10 +257,12 @@ class CircusClustering:
         if verbose:
             print("We found %d raw clusters, starting to clean with matching..." % (len(templates.unit_ids)))
 
+        cleaning_job_kwargs = job_kwargs.copy()
+        cleaning_job_kwargs["progress_bar"] = False
         cleaning_params = params["cleaning_kwargs"].copy()
 
         labels, peak_labels = remove_duplicates_via_matching(
-            templates, peak_labels, job_kwargs=job_kwargs, **cleaning_params
+            templates, peak_labels, job_kwargs=cleaning_job_kwargs, **cleaning_params
         )
 
         if verbose:
