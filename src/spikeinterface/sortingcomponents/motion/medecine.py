@@ -64,6 +64,7 @@ class MedecineRegistration:
             spatial_bins_um=depth_bins,
         )
 
-        shutil.rmtree(folder)
+        # TODO check why not working
+        # shutil.rmtree(folder)
 
         return motion
