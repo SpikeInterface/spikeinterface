@@ -511,8 +511,7 @@ class BaseRecording(BaseRecordingSnippets):
 
     def shift_times(self, shift: int | float, segment_index: int | None = None) -> None:
         """
-        Shift all times by a scalar value. The default behaviour is to
-        shift all segments uniformly.
+        Shift all times by a scalar value.
 
         Parameters
         ----------
@@ -523,8 +522,8 @@ class BaseRecording(BaseRecordingSnippets):
             started earlier.
 
         segment_index : int | None
-            The segment on which to shift the times. if `None`, all
-            segments will be shifted.
+            The segment on which to shift the times.
+            If `None`, all segments will be shifted.
         """
         if segment_index is None:
             segments_to_shift = range(self.get_num_segments())
