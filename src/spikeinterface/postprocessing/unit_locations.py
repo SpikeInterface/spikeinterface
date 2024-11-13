@@ -39,7 +39,7 @@ class ComputeUnitLocations(AnalyzerExtension):
 
     extension_name = "unit_locations"
     depend_on = ["templates"]
-    need_recording = True
+    need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
     need_backward_compatibility_on_load = True

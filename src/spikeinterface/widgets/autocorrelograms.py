@@ -9,7 +9,13 @@ class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
     # the doc is copied form CrossCorrelogramsWidget
 
     def __init__(self, *args, **kargs):
-        CrossCorrelogramsWidget.__init__(self, *args, **kargs)
+        _ = kargs.pop("min_similarity_for_correlograms", 0.0)
+        CrossCorrelogramsWidget.__init__(
+            self,
+            *args,
+            **kargs,
+            min_similarity_for_correlograms=None,
+        )
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt

@@ -20,10 +20,10 @@ def export_report(
     **job_kwargs,
 ):
     """
-    Exports a SI spike sorting report. The report includes summary figures of the spike sorting output
-    (e.g. amplitude distributions, unit localization and depth VS amplitude) as well as unit-specific reports,
-    that include waveforms, templates, template maps, ISI distributions, and more.
-
+    Exports a SI spike sorting report. The report includes summary figures of the spike sorting output.
+    What is plotted depends on what has been calculated. Unit locations and unit waveforms are always included.
+    Unit waveform densities, correlograms and spike amplitudes are plotted if `waveforms`, `correlograms`,
+    and `spike_amplitudes` have been computed for the given `sorting_analyzer`.
 
     Parameters
     ----------
