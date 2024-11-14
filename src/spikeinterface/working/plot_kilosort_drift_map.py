@@ -1,14 +1,16 @@
 from pathlib import Path
-from spikeinterface.widgets.base import BaseWidget, to_attr
 import matplotlib.axis
 import scipy.signal
-from spikeinterface.core import read_python
+
+# from spikeinterface.core import read_python
 import numpy as np
 import pandas as pd
 
 import matplotlib.pyplot as plt
 from scipy import stats
 import load_kilosort_utils
+
+from spikeinterface.widgets.base import BaseWidget, to_attr
 
 
 class KilosortDriftMapWidget(BaseWidget):
@@ -399,5 +401,24 @@ class KilosortDriftMapWidget(BaseWidget):
         return spike_times, spike_amplitudes, spike_depths
 
 
-KilosortDriftMapWidget(r"D:\data\New folder\CA_528_1\imec0_ks2")
+KilosortDriftMapWidget(
+    "/Users/joeziminski/data/bombcelll/sorter_output",
+    only_include_large_amplitude_spikes=False,
+    localised_spikes_only=True,
+)
 plt.show()
+
+"""
+        sorter_output: str | Path,
+        only_include_large_amplitude_spikes: bool = True,
+        decimate: None | int = None,
+        add_histogram_plot: bool = False,
+        add_histogram_peaks_and_boundaries: bool = True,
+        add_drift_events: bool = True,
+        weight_histogram_by_amplitude: bool = False,
+        localised_spikes_only: bool = False,
+        exclude_noise: bool = False,
+        gain: float | None = None,
+        large_amplitude_only_segment_size: float = 800.0,
+        localised_spikes_channel_cutoff: int = 20,
+"""
