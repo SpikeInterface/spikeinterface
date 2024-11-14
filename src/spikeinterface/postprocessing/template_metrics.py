@@ -130,33 +130,18 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             metric_params = dict(zip(metric_names, [metrics_kwargs] * len(metric_names)))
             warnings.warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
 
-        if metric_params is None:
-            metric_params_ = _default_function_kwargs.copy()
-            if len(other_kwargs) > 0:
-                for m in other_kwargs:
-                    if m in metric_params_:
-                        metric_params_[m] = other_kwargs[m]
-        else:
-            metric_params_ = _default_function_kwargs.copy()
-            metric_params_.update(metric_params)
+        metric_params_ = get_default_tm_params()
+        for k in metric_params_:
+            if metric_params is not None and k in metric_params:
+                metric_params_[k].update(metric_params[k])
+            if "peak_sign" in metric_params_[k] and peak_sign is not None:
+                metric_params_[k]["peak_sign"] = peak_sign
 
         metrics_to_compute = metric_names
         tm_extension = self.sorting_analyzer.get_extension("template_metrics")
         if delete_existing_metrics is False and tm_extension is not None:
 
-            existing_params = tm_extension.params["metric_params"]
-            # checks that existing metrics were calculated using the same params
-            if existing_params != metric_params_:
-                warnings.warn(
-                    f"The parameters used to calculate the previous template metrics are different"
-                    f"than those used now.\nPrevious parameters: {existing_params}\nCurrent "
-                    f"parameters:  {metric_params_}\nDeleting previous template metrics..."
-                )
-                tm_extension.params["metric_names"] = []
-                existing_metric_names = []
-            else:
-                existing_metric_names = tm_extension.params["metric_names"]
-
+            existing_metric_names = tm_extension.params["metric_names"]
             existing_metric_names_propogated = [
                 metric_name for metric_name in existing_metric_names if metric_name not in metrics_to_compute
             ]
@@ -322,8 +307,8 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
     def _run(self, verbose=False):
 
-        delete_existing_metrics = self.params["delete_existing_metrics"]
         metrics_to_compute = self.params["metrics_to_compute"]
+        delete_existing_metrics = self.params["delete_existing_metrics"]
 
         # compute the metrics which have been specified by the user
         computed_metrics = self._compute_metrics(
@@ -339,9 +324,21 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         ):
             existing_metrics = tm_extension.params["metric_names"]
 
+        existing_metrics = []
+        # here we get in the loaded via the dict only (to avoid full loading from disk after params reset)
+        tm_extension = self.sorting_analyzer.extensions.get("template_metrics", None)
+        if (
+            delete_existing_metrics is False
+            and tm_extension is not None
+            and tm_extension.data.get("metrics") is not None
+        ):
+            existing_metrics = tm_extension.params["metric_names"]
+
         # append the metrics which were previously computed
         for metric_name in set(existing_metrics).difference(metrics_to_compute):
-            computed_metrics[metric_name] = tm_extension.data["metrics"][metric_name]
+            # some metrics names produce data columns with other names. This deals with that.
+            for column_name in tm_compute_name_to_column_names[metric_name]:
+                computed_metrics[column_name] = tm_extension.data["metrics"][column_name]
 
         self.data["metrics"] = computed_metrics
 
@@ -369,10 +366,26 @@ _default_function_kwargs = dict(
 
 
 def get_default_tm_params():
-    metric_names = get_single_channel_template_metric_names() + get_multi_channel_template_metric_names()
+    metric_names = get_template_metric_names()
     base_tm_params = _default_function_kwargs
     metric_params = dict(zip(metric_names, [base_tm_params] * len(metric_names)))
     return metric_params
+
+
+# a dict converting the name of the metric for computation to the output of that computation
+tm_compute_name_to_column_names = {
+    "peak_to_valley": ["peak_to_valley"],
+    "peak_trough_ratio": ["peak_trough_ratio"],
+    "half_width": ["half_width"],
+    "repolarization_slope": ["repolarization_slope"],
+    "recovery_slope": ["recovery_slope"],
+    "num_positive_peaks": ["num_positive_peaks"],
+    "num_negative_peaks": ["num_negative_peaks"],
+    "velocity_above": ["velocity_above"],
+    "velocity_below": ["velocity_below"],
+    "exp_decay": ["exp_decay"],
+    "spread": ["spread"],
+}
 
 
 def get_trough_and_peak_idx(template):
