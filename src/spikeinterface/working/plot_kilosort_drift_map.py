@@ -106,8 +106,10 @@ class KilosortDriftMapWidget(BaseWidget):
 
         dp = to_attr(data_plot)
 
+        params = load_kilosort_utils.load_ks_dir(dp.sorter_output, load_pcs=True, exclude_noise=dp.exclude_noise)
+
         spike_indexes, spike_amplitudes, spike_locations, _ = load_kilosort_utils.compute_spike_amplitude_and_depth(
-            dp.sorter_output, dp.localised_spikes_only, dp.exclude_noise, dp.gain, dp.localised_spikes_channel_cutoff
+            params, dp.localised_spikes_only, dp.gain, dp.localised_spikes_channel_cutoff
         )
         spike_times = spike_indexes / 30000
         spike_depths = spike_locations[:, 1]
