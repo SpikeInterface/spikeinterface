@@ -64,22 +64,10 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         Whether to compute multi-channel metrics
     delete_existing_metrics : bool, default: False
         If True, any template metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept, provided the `metric_params` are unchanged.
-    metric_params : dict
-        Additional arguments to pass to the metric functions. Including:
-            * recovery_window_ms: the window in ms after the peak to compute the recovery_slope, default: 0.7
-            * peak_relative_threshold: the relative threshold to detect positive and negative peaks, default: 0.2
-            * peak_width_ms: the width in samples to detect peaks, default: 0.2
-            * depth_direction: the direction to compute velocity above and below, default: "y" (see notes)
-            * min_channels_for_velocity: the minimum number of channels above or below to compute velocity, default: 5
-            * min_r2_velocity: the minimum r2 to accept the velocity fit, default: 0.7
-            * exp_peak_function: the function to use to compute the peak amplitude for the exp decay, default: "ptp"
-            * min_r2_exp_decay: the minimum r2 to accept the exp decay fit, default: 0.5
-            * spread_threshold: the threshold to compute the spread, default: 0.2
-            * spread_smooth_um: the smoothing in um to compute the spread, default: 20
-            * column_range: the range in um in the horizontal direction to consider channels for velocity, default: None
-                - If None, all channels all channels are considered
-                - If 0 or 1, only the "column" that includes the max channel is considered
-                - If > 1, only channels within range (+/-) um from the max channel horizontal position are used
+    metric_params : dict of dicts
+        metric_params : dict of dicts or None
+        Dictionary with parameters for quality metrics calculation.
+        Default parameters can be obtained with: `si.qualitymetrics.get_default_tm_params()`
 
     Returns
     -------
@@ -116,13 +104,6 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         **other_kwargs,
     ):
 
-        if metrics_kwargs is not None and metric_params is None:
-            deprecation_msg = (
-                "`metrics_kwargs` is deprecated and will be removed in version 0.104.0 Please use metric_params instead"
-            )
-            metric_params = metrics_kwargs
-            warnings.warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
-
         import pandas as pd
 
         # TODO alessio can you check this : this used to be in the function but now we have ComputeTemplateMetrics.function_factory()
@@ -141,6 +122,13 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             metric_names = get_single_channel_template_metric_names()
         if include_multi_channel_metrics:
             metric_names += get_multi_channel_template_metric_names()
+
+        if metrics_kwargs is not None and metric_params is None:
+            deprecation_msg = (
+                "`metrics_kwargs` is deprecated and will be removed in version 0.104.0 Please use metric_params instead"
+            )
+            metric_params = dict(zip(metric_names, [metrics_kwargs] * len(metric_names)))
+            warnings.warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
 
         if metric_params is None:
             metric_params_ = _default_function_kwargs.copy()
@@ -281,7 +269,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                             sampling_frequency=sampling_frequency_up,
                             trough_idx=trough_idx,
                             peak_idx=peak_idx,
-                            **self.params["metric_params"],
+                            **self.params["metric_params"][metric_name],
                         )
                     except Exception as e:
                         warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
@@ -320,7 +308,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                         template_upsampled,
                         channel_locations=channel_locations_sparse,
                         sampling_frequency=sampling_frequency_up,
-                        **self.params["metric_params"],
+                        **self.params["metric_params"][metric_name],
                     )
                 except Exception as e:
                     warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
@@ -378,6 +366,13 @@ _default_function_kwargs = dict(
     spread_smooth_um=20,
     column_range=None,
 )
+
+
+def get_default_tm_params():
+    metric_names = get_single_channel_template_metric_names() + get_multi_channel_template_metric_names()
+    base_tm_params = _default_function_kwargs
+    metric_params = dict(zip(metric_names, [base_tm_params] * len(metric_names)))
+    return metric_params
 
 
 def get_trough_and_peak_idx(template):
