@@ -7,12 +7,13 @@ import pandas as pd
 
 from scipy import stats
 
-# TODO: spike_times -> spike_indices
 """
 Notes
 -----
 - not everything is used for current purposes
 - things might be useful in future for making a sorting analyzer - compute template amplitude as average of spike amplitude.
+
+TODO: testing against diferent ks versions
 """
 
 ########################################################################################################################
@@ -21,22 +22,21 @@ Notes
 
 
 def compute_spike_amplitude_and_depth(
-    sorter_output: str | Path,
+    params: dict,
     localised_spikes_only,
-    exclude_noise,
     gain: float | None = None,
     localised_spikes_channel_cutoff: int = None,
 ) -> tuple[np.ndarray, ...]:
     """
-    Compute the amplitude and depth of all detected spikes from the kilosort output.
+    Compute the indicies, amplitudes and locations for all detected spikes from the kilosort output.
 
     This function is based on code in Nick Steinmetz's `spikes` repository,
     https://github.com/cortex-lab/spikes
 
     Parameters
     ----------
-    sorter_output : str | Path
-        Path to the kilosort run sorting output.
+    params : dict
+        `params` as loaded from the kilosort output directory (see `load_ks_dir()`)
     localised_spikes_only : bool
         If `True`, only spikes with small spatial footprint (i.e. 20 channels within 1/2 of the
         amplitude of the maximum loading channel) and which are close to the average depth for
@@ -54,23 +54,16 @@ def compute_spike_amplitude_and_depth(
         (num_spikes,) array of spike indices.
     spike_amplitudes : np.ndarray
         (num_spikes,) array of corresponding spike amplitudes.
-    spike_depths : np.ndarray
-        (num_spikes,) array of corresponding depths (probe y-axis location).
-
-    Notes
-    -----
-    In `get_template_info_and_spike_amplitudes` spike depths is calculated as simply the template
-    depth, for each spike (so it is the same for all spikes in a cluster). Here we need
-    to find the depth of each individual spike, using its low-dimensional projection.
-    `pc_features` (num_spikes, num_PC, num_channels) holds the PC values for each spike.
-    Taking the first component, the subset of 32 channels associated with this
-    spike  are indexed to get the actual channel locations (in um). Then, the channel
-    locations are weighted by their PC values.
+    spike_locations : np.ndarray
+        (num_spikes, 2) array of corresponding spike locations (x, y) estimated using
+        center of mass from the first PC (or, second PC if no signal on first PC).
+        See `_get_locations_from_pc_features()` for details.
     """
     if isinstance(sorter_output, str):
         sorter_output = Path(sorter_output)
 
-    params = load_ks_dir(sorter_output, load_pcs=True, exclude_noise=exclude_noise)
+    if not params["pc_features"]:
+        raise ValueError("`pc_features` must be loaded into params. Use `load_ks_dir` with `load_pcs=True`.")
 
     if localised_spikes_only:
         localised_templates = []
@@ -91,10 +84,11 @@ def compute_spike_amplitude_and_depth(
         params["temp_scaling_amplitudes"] = params["temp_scaling_amplitudes"][localised_template_by_spike]
         params["pc_features"] = params["pc_features"][localised_template_by_spike]
 
+    # Compute the spike locations and maximum-loading channel per spike
     spike_locations, spike_max_sites = _get_locations_from_pc_features(params)
 
-    #    Amplitude is calculated for each spike as the template amplitude
-    #    multiplied by the `template_scaling_amplitudes`.
+    # Amplitude is calculated for each spike as the template amplitude
+    # multiplied by the `template_scaling_amplitudes`.
     template_amplitudes_unscaled, *_ = get_unwhite_template_info(
         params["templates"],
         params["whitening_matrix_inv"],
@@ -105,16 +99,11 @@ def compute_spike_amplitude_and_depth(
     if gain is not None:
         spike_amplitudes *= gain
 
-    compute_template_amplitudes_from_spikes(params["templates"], params["spike_templates"], spike_amplitudes)
-
     if localised_spikes_only:
         # Interpolate the channel ids to location.
         # Remove spikes > 5 um from average position
         # Above we already removed non-localized templates, but that on its own is insufficient.
         # Note for IMEC probe adding a constant term kills the regression making the regressors rank deficient
-        # TODO: a couple of approaches. 1) do everything in 3D, draw a sphere around prediction, take spikes only within the sphere
-        # 2) do separate for x, y. But resolution will be much lower, making things noisier, also harder to determine threshold.
-        # 3) just use depth. Probably go for that. check with others.
         spike_depths = spike_locations[:, 1]
         b = stats.linregress(spike_depths, spike_max_sites).slope
         i = np.abs(spike_max_sites - b * spike_depths) <= 5
@@ -129,6 +118,14 @@ def compute_spike_amplitude_and_depth(
 
 def _get_locations_from_pc_features(params):
     """
+
+    Notes
+    -----
+    Location of of each individual spike is computed from its low-dimensional projection.
+    `pc_features` (num_spikes, num_PC, num_channels) holds the PC values for each spike.
+    Taking the first component, the subset of 32 channels associated with this
+    spike  are indexed to get the actual channel locations (in um). Then, the channel
+    locations are weighted by their PC values.
 
     This function is based on code in Nick Steinmetz's `spikes` repository,
     https://github.com/cortex-lab/spikes
@@ -145,6 +142,10 @@ def _get_locations_from_pc_features(params):
     # Then recompute the estimated waveform peak on each channel by
     # summing the PCs by their respective weights. However, the PC basis
     # vectors themselves do not appear to be output by KS.
+
+    # We include the (n_channels i.e. features) from the second PC
+    # into the `pc_features` mostly containing the first PC. As all
+    # operations are per-spike (i.e. row-wise)
     no_pc1_signal_spikes = np.where(np.sum(pc_features, axis=1) == 0)
 
     pc_features_2 = params["pc_features"][:, 1, :]
@@ -164,13 +165,12 @@ def _get_locations_from_pc_features(params):
 
     # Compute the spike locations as the center of mass of the PC scores
     spike_feature_coords = params["channel_positions"][spike_features_indices, :]
-    norm_weights = (
-        pc_features / np.sum(pc_features, axis=1)[:, np.newaxis]
-    )  # TOOD: discuss use of square. Probbaly do not use to keep in line with COM in SI.
+    norm_weights = pc_features / np.sum(pc_features, axis=1)[:, np.newaxis]
+
     spike_locations = spike_feature_coords * norm_weights[:, :, np.newaxis]
     spike_locations = np.sum(spike_locations, axis=1)
 
-    # TODO:  now max site per spike is computed from PCs, not as the channel max site as previous
+    # Find the max site as the channel with the largest PC weight.
     spike_max_sites = spike_features_indices[
         np.arange(spike_features_indices.shape[0]), np.argmax(norm_weights, axis=1)
     ]
@@ -233,23 +233,16 @@ def get_unwhite_template_info(
 
     template_amplitudes_unscaled = np.max(template_amplitudes_per_channel, axis=1)
 
-    #  Zero any small channel amplitudes  TODO: removed this.
-    #    threshold_values = 0.3 * template_amplitudes_unscaled  TODO: remove this to be more general. Agree?
-    #    template_amplitudes_per_channel[template_amplitudes_per_channel < threshold_values[:, np.newaxis]] = 0
-
     # Calculate the template depth as the center of mass based on channel amplitudes
     weights = template_amplitudes_per_channel / np.sum(template_amplitudes_per_channel, axis=1)[:, np.newaxis]
     template_locations = weights @ channel_positions
 
     # Get channel with the largest amplitude (take that as the waveform)
-    template_max_site = np.argmax(
-        np.max(np.abs(unwhite_templates), axis=1), axis=1
-    )  # TODO: i changed this to use unwhitened templates instead of templates. This okay?
+    template_max_site = np.argmax(np.max(np.abs(unwhite_templates), axis=1), axis=1)
 
     # Use template channel with max signal as waveform
-    waveforms = np.empty(
-        unwhite_templates.shape[:2]
-    )  # TODO: i changed this to use unwhitened templates instead of templates. This okay?
+    waveforms = np.empty(unwhite_templates.shape[:2])
+
     for idx, template in enumerate(unwhite_templates):
         waveforms[idx, :] = unwhite_templates[idx, :, template_max_site[idx]]
 

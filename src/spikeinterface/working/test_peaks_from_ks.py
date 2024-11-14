@@ -42,6 +42,9 @@ array([(9.47572745,  3.69015204), (8.84228701, 13.40429091),
       dtype=[('x', '<f8'), ('y', '<f8')])
 """
 
+sorter_output_path = (r"D:\data\New folder\CA_528_1\imec0_ks2",)
+
+params = load_ks_dir(sorter_output_path, load_pcs=True, exclude_noise=exclude_noise)
 
 spike_indexes, spike_amplitudes, weighted_locs, max_sites = compute_spike_amplitude_and_depth(
     r"D:\data\New folder\CA_528_1\imec0_ks2",
