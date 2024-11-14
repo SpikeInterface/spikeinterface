@@ -47,7 +47,7 @@ def test_compute_new_template_metrics(small_sorting_analyzer):
 
     # check that, when parameters are changed, the old metrics are deleted
     small_sorting_analyzer.compute(
-        {"template_metrics": {"metric_names": ["exp_decay"], "metrics_kwargs": {"recovery_window_ms": 0.6}}}
+        {"template_metrics": {"metric_names": ["exp_decay"], "metric_params": {"recovery_window_ms": 0.6}}}
     )
 
 

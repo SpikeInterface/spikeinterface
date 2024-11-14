@@ -63,8 +63,8 @@ class ComputeTemplateMetrics(AnalyzerExtension):
     include_multi_channel_metrics : bool, default: False
         Whether to compute multi-channel metrics
     delete_existing_metrics : bool, default: False
-        If True, any template metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept, provided the `metrics_kwargs` are unchanged.
-    metrics_kwargs : dict
+        If True, any template metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept, provided the `metric_params` are unchanged.
+    metric_params : dict
         Additional arguments to pass to the metric functions. Including:
             * recovery_window_ms: the window in ms after the peak to compute the recovery_slope, default: 0.7
             * peak_relative_threshold: the relative threshold to detect positive and negative peaks, default: 0.2
@@ -109,11 +109,19 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         peak_sign="neg",
         upsampling_factor=10,
         sparsity=None,
+        metric_params=None,
         metrics_kwargs=None,
         include_multi_channel_metrics=False,
         delete_existing_metrics=False,
         **other_kwargs,
     ):
+
+        if metrics_kwargs is not None and metric_params is None:
+            deprecation_msg = (
+                "`qm_params` is deprecated and will be removed in version 0.104.0 Please use metric_params instead"
+            )
+            metric_params = metrics_kwargs
+            warnings.warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
 
         import pandas as pd
 
@@ -134,27 +142,27 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         if include_multi_channel_metrics:
             metric_names += get_multi_channel_template_metric_names()
 
-        if metrics_kwargs is None:
-            metrics_kwargs_ = _default_function_kwargs.copy()
+        if metric_params is None:
+            metric_params_ = _default_function_kwargs.copy()
             if len(other_kwargs) > 0:
                 for m in other_kwargs:
-                    if m in metrics_kwargs_:
-                        metrics_kwargs_[m] = other_kwargs[m]
+                    if m in metric_params_:
+                        metric_params_[m] = other_kwargs[m]
         else:
-            metrics_kwargs_ = _default_function_kwargs.copy()
-            metrics_kwargs_.update(metrics_kwargs)
+            metric_params_ = _default_function_kwargs.copy()
+            metric_params_.update(metric_params)
 
         metrics_to_compute = metric_names
         tm_extension = self.sorting_analyzer.get_extension("template_metrics")
         if delete_existing_metrics is False and tm_extension is not None:
 
-            existing_params = tm_extension.params["metrics_kwargs"]
+            existing_params = tm_extension.params["metric_params"]
             # checks that existing metrics were calculated using the same params
-            if existing_params != metrics_kwargs_:
+            if existing_params != metric_params_:
                 warnings.warn(
                     f"The parameters used to calculate the previous template metrics are different"
                     f"than those used now.\nPrevious parameters: {existing_params}\nCurrent "
-                    f"parameters:  {metrics_kwargs_}\nDeleting previous template metrics..."
+                    f"parameters:  {metric_params_}\nDeleting previous template metrics..."
                 )
                 tm_extension.params["metric_names"] = []
                 existing_metric_names = []
@@ -171,7 +179,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             sparsity=sparsity,
             peak_sign=peak_sign,
             upsampling_factor=int(upsampling_factor),
-            metrics_kwargs=metrics_kwargs_,
+            metric_params=metric_params_,
             delete_existing_metrics=delete_existing_metrics,
             metrics_to_compute=metrics_to_compute,
         )
@@ -273,7 +281,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                             sampling_frequency=sampling_frequency_up,
                             trough_idx=trough_idx,
                             peak_idx=peak_idx,
-                            **self.params["metrics_kwargs"],
+                            **self.params["metric_params"],
                         )
                     except Exception as e:
                         warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
@@ -312,7 +320,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                         template_upsampled,
                         channel_locations=channel_locations_sparse,
                         sampling_frequency=sampling_frequency_up,
-                        **self.params["metrics_kwargs"],
+                        **self.params["metric_params"],
                     )
                 except Exception as e:
                     warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
