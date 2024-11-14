@@ -118,7 +118,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
         if metrics_kwargs is not None and metric_params is None:
             deprecation_msg = (
-                "`qm_params` is deprecated and will be removed in version 0.104.0 Please use metric_params instead"
+                "`metrics_kwargs` is deprecated and will be removed in version 0.104.0 Please use metric_params instead"
             )
             metric_params = metrics_kwargs
             warnings.warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
