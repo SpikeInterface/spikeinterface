@@ -16,7 +16,7 @@ from .quality_metric_list import (
     compute_pc_metrics,
     _misc_metric_name_to_func,
     _possible_pc_metric_names,
-    compute_name_to_column_names,
+    qm_compute_name_to_column_names,
 )
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
@@ -32,7 +32,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         A SortingAnalyzer object.
     metric_names : list or None
         List of quality metrics to compute.
-    metric_params : dict or None
+    metric_params : dict of dicts or None
         Dictionary with parameters for quality metrics calculation.
         Default parameters can be obtained with: `si.qualitymetrics.get_default_qm_params()`
     skip_pc_metrics : bool, default: False
@@ -254,7 +254,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # append the metrics which were previously computed
         for metric_name in set(existing_metrics).difference(metrics_to_compute):
             # some metrics names produce data columns with other names. This deals with that.
-            for column_name in compute_name_to_column_names[metric_name]:
+            for column_name in qm_compute_name_to_column_names[metric_name]:
                 computed_metrics[column_name] = qm_extension.data["metrics"][column_name]
 
         self.data["metrics"] = computed_metrics
