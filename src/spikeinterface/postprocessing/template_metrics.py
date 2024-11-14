@@ -66,8 +66,8 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         If True, any template metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept, provided the `metric_params` are unchanged.
     metric_params : dict of dicts
         metric_params : dict of dicts or None
-        Dictionary with parameters for quality metrics calculation.
-        Default parameters can be obtained with: `si.qualitymetrics.get_default_tm_params()`
+        Dictionary with parameters for template metrics calculation.
+        Default parameters can be obtained with: `si.postprocessing.template_metrics.get_default_tm_params()`
 
     Returns
     -------
@@ -124,18 +124,17 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             metric_names += get_multi_channel_template_metric_names()
 
         if metrics_kwargs is not None and metric_params is None:
-            deprecation_msg = (
-                "`metrics_kwargs` is deprecated and will be removed in version 0.104.0 Please use metric_params instead"
-            )
-            metric_params = dict(zip(metric_names, [metrics_kwargs] * len(metric_names)))
-            warnings.warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
+            deprecation_msg = "`metrics_kwargs` is deprecated and will be removed in version 0.104.0. Please use metric_params instead"
+            warnings.warn(deprecation_msg, category=DeprecationWarning)
 
-        metric_params_ = get_default_tm_params()
+            metric_params = {}
+            for metric_name in metric_names:
+                metric_params[metric_name] = deepcopy(metrics_kwargs)
+
+        metric_params_ = get_default_tm_params(metric_names)
         for k in metric_params_:
             if metric_params is not None and k in metric_params:
                 metric_params_[k].update(metric_params[k])
-            if "peak_sign" in metric_params_[k] and peak_sign is not None:
-                metric_params_[k]["peak_sign"] = peak_sign
 
         metrics_to_compute = metric_names
         tm_extension = self.sorting_analyzer.get_extension("template_metrics")
@@ -365,10 +364,16 @@ _default_function_kwargs = dict(
 )
 
 
-def get_default_tm_params():
-    metric_names = get_template_metric_names()
+def get_default_tm_params(metric_names):
+    if metric_names is None:
+        metric_names = get_template_metric_names()
+
     base_tm_params = _default_function_kwargs
-    metric_params = dict(zip(metric_names, [base_tm_params] * len(metric_names)))
+
+    metric_params = {}
+    for metric_name in metric_names:
+        metric_params[metric_name] = deepcopy(base_tm_params)
+
     return metric_params
 
 

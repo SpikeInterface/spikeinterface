@@ -91,10 +91,10 @@ def compute_pc_metrics(
 
     if qm_params is not None and metric_params is None:
         deprecation_msg = (
-            "`qm_params` is deprecated and will be removed in version 0.104.0 Please use metric_params instead"
+            "`qm_params` is deprecated and will be removed in version 0.104.0. Please use metric_params instead"
         )
-        metric_params = qm_params
         warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
+        metric_params = qm_params
 
     pca_ext = sorting_analyzer.get_extension("principal_components")
     assert pca_ext is not None, "calculate_pc_metrics() need extension 'principal_components'"
