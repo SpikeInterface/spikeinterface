@@ -8,6 +8,12 @@ import pandas as pd
 from scipy import stats
 
 # TODO: spike_times -> spike_indexes
+"""
+Notes
+-----
+- not everything is used for current purposes
+- things might be useful in future for making a sorting analyzer - compute template amplitude as average of spike amplitude.
+"""
 
 
 def compute_spike_amplitude_and_depth(
@@ -75,52 +81,57 @@ def compute_spike_amplitude_and_depth(
 
         localised_template_by_spike = np.isin(params["spike_templates"], localised_templates)
 
-        params["spike_templates"] = params["spike_templates"][localised_template_by_spike]
-        params["spike_indexes"] = params["spike_indexes"][localised_template_by_spike]
-        params["spike_clusters"] = params["spike_clusters"][localised_template_by_spike]
-        params["temp_scaling_amplitudes"] = params["temp_scaling_amplitudes"][localised_template_by_spike]
-        params["pc_features"] = params["pc_features"][localised_template_by_spike]
+        _strip_spikes(params, localised_template_by_spike)
 
     # Compute spike depths
-    pc_features = params["pc_features"][:, 0, :]
+    pc_features = params["pc_features"][:, 0, :]  # Do this compute
     pc_features[pc_features < 0] = 0
+
+    # Some spikes do not load at all onto the first PC. To avoid biasing the
+    # dataset by removing these, we repeat the above for the next PC,
+    # to compute distances for neurons that do not load onto the 1st PC.
+    # This is not ideal at all, it would be much better to a) find the
+    # max value for each channel on each of the PCs (i.e. basis vectors).
+    # Then recompute the estimated waveform peak on each channel by
+    # summing the PCs by their respective weights. However, the PC basis
+    # vectors themselves do not appear to be output by KS.
+    no_pc1_signal_spikes = np.where(np.sum(pc_features, axis=1) == 0)
+
+    pc_features_2 = params["pc_features"][:, 1, :]
+    pc_features_2[pc_features_2 < 0] = 0
+
+    pc_features[no_pc1_signal_spikes] = pc_features_2[no_pc1_signal_spikes]
+
+    if any(np.sum(pc_features, axis=1) == 0):
+        raise RuntimeError(
+            "Some spikes do not load at all onto the first"
+            "or second principal component. It is necessary"
+            "to extend this code section to handle more components."
+        )
 
     # Get the channel indexes corresponding to the 32 channels from the PC.
     spike_features_indices = params["pc_features_indices"][params["spike_templates"], :]
 
-    ycoords = params["channel_positions"][:, 1]
-    spike_feature_ycoords = ycoords[spike_features_indices]
-
-    spike_depths = np.sum(spike_feature_ycoords * pc_features**2, axis=1) / np.sum(pc_features**2, axis=1)
-
+    # Compute the spike locations as the center of mass of the PC scores
     spike_feature_coords = params["channel_positions"][spike_features_indices, :]
     norm_weights = pc_features / np.sum(pc_features, axis=1)[:, np.newaxis]  # TOOD: see why they use square
-    weighted_locs = spike_feature_coords * norm_weights[:, :, np.newaxis]
-    weighted_locs = np.sum(weighted_locs, axis=1)
+    spike_locations = spike_feature_coords * norm_weights[:, :, np.newaxis]
+    spike_locations = np.sum(spike_locations, axis=1)
+
+    # TODO:  now max site per spike is computed from PCs, not as the channel max site as previous
+    spike_sites = spike_features_indices[np.arange(spike_features_indices.shape[0]), np.argmax(norm_weights, axis=1)]
+
     #    Amplitude is calculated for each spike as the template amplitude
     #    multiplied by the `template_scaling_amplitudes`.
-
-    # Compute amplitudes, scale if required and drop un-localised spikes before returning.
-    spike_amplitudes, _, _, _, unwhite_templates, *_ = get_template_info_and_spike_amplitudes(
+    template_amplitudes_unscaled, *_ = get_unwhite_template_info(
         params["templates"],
         params["whitening_matrix_inv"],
-        ycoords,
-        params["spike_templates"],
-        params["temp_scaling_amplitudes"],
+        params["channel_positions"],
     )
+    spike_amplitudes = template_amplitudes_unscaled[params["spike_templates"]] * params["temp_scaling_amplitudes"]
 
     if gain is not None:
         spike_amplitudes *= gain
-
-    max_site = np.argmax(
-        np.max(np.abs(templates), axis=1), axis=1
-    )  # TODO: combine this with above function. Maybe the above function can be templates only, and everything spike-related is here.
-    max_site = np.argmax(np.max(np.abs(unwhite_templates), axis=1), axis=1)
-    spike_sites = max_site[params["spike_templates"]]
-
-    # TODO: here the max site is the same for all spikes from the same template.
-    # is this the case for spikeinterface? Should we estimate max-site per spike from
-    # the PCs?
 
     if localised_spikes_only:
         # Interpolate the channel ids to location.
@@ -130,23 +141,32 @@ def compute_spike_amplitude_and_depth(
         # TODO: a couple of approaches. 1) do everything in 3D, draw a sphere around prediction, take spikes only within the sphere
         # 2) do separate for x, y. But resolution will be much lower, making things noisier, also harder to determine threshold.
         # 3) just use depth. Probably go for that. check with others.
-        spike_depths = weighted_locs[:, 1]
+        spike_depths = spike_locations[:, 1]
         b = stats.linregress(spike_depths, spike_sites).slope
         i = np.abs(spike_sites - b * spike_depths) <= 5  # TODO: need to expose this
 
         params["spike_indexes"] = params["spike_indexes"][i]
         spike_amplitudes = spike_amplitudes[i]
-        weighted_locs = weighted_locs[i, :]
+        spike_locations = spike_locations[i, :]
 
-    return params["spike_indexes"], spike_amplitudes, weighted_locs, spike_sites  # TODO: rename everything
+    return params["spike_indexes"], spike_amplitudes, spike_locations, spike_sites
 
 
-def get_template_info_and_spike_amplitudes(
+def _strip_spikes_in_place(params, indices):
+    """ """
+    params["spike_templates"] = params["spike_templates"][
+        indices
+    ]  # TODO: make an function for this. because we do this a lot
+    params["spike_indexes"] = params["spike_indexes"][indices]
+    params["spike_clusters"] = params["spike_clusters"][indices]
+    params["temp_scaling_amplitudes"] = params["temp_scaling_amplitudes"][indices]
+    params["pc_features"] = params["pc_features"][indices]  # TODO: be conciststetn! change indees to indices
+
+
+def get_unwhite_template_info(
     templates: np.ndarray,
     inverse_whitening_matrix: np.ndarray,
-    ycoords: np.ndarray,
-    spike_templates: np.ndarray,
-    template_scaling_amplitudes: np.ndarray,
+    channel_positions: np.ndarray,
 ) -> tuple[np.ndarray, ...]:
     """
     Calculate the amplitude and depths of (unwhitened) templates and spikes.
@@ -163,28 +183,20 @@ def get_template_info_and_spike_amplitudes(
     inverse_whitening_matrix: np.ndarray
         Inverse of the whitening matrix used in KS preprocessing, used to
         unwhiten templates.
-    ycoords : np.ndarray
-        (num_channels,) array of the y-axis (depth) channel positions.
-    spike_templates : np.ndarray
-        (num_spikes,) array indicating the template associated with each spike.
-    template_scaling_amplitudes : np.ndarray
-        (num_spikes,) array holding the scaling amplitudes, by which the
-        template was scaled to match each spike.
+    channel_positions : np.ndarray
+        (num_channels, 2) array of the x, y channel positions.
 
     Returns
     -------
-    spike_amplitudes : np.ndarray
-        (num_spikes,) array of the amplitude of each spike.
-    spike_depths : np.ndarray
-        (num_spikes,) array of the depth (probe y-axis) of each spike. Note
-        this is just the template depth for each spike (i.e. depth of all spikes
-        from the same cluster are identical).
-    template_amplitudes : np.ndarray
-        (num_templates,) Amplitude of each template, calculated as average of spike amplitudes.
-    template_depths : np.ndarray
-        (num_templates,) array of the depth of each template.
+    template_amplitudes_unscaled : np.ndarray
+        (num_templates,) array of the unscaled tempalte amplitudes. These can be
+        used to calculate spike amplitude with `template_amplitude_scalings`.
+    template_locations : np.ndarray
+        (num_templates, 2) array of the x, y positions (center of mass) of each template.
     unwhite_templates : np.ndarray
         Unwhitened templates (num_clusters, num_samples, num_channels).
+    template_max_site : np.array
+        The maximum loading spike for the unwhitened template.
     trough_peak_durations : np.ndarray
         (num_templates, ) array of durations from trough to peak for each template waveform
     waveforms : np.ndarray
@@ -195,43 +207,31 @@ def get_template_info_and_spike_amplitudes(
     for idx, template in enumerate(templates):
         unwhite_templates[idx, :, :] = templates[idx, :, :] @ inverse_whitening_matrix
 
-    # First, calculate the depth of each template from the amplitude
-    # on each channel by the center of mass method.
-
     # Take the max amplitude for each channel, then use the channel
-    # with most signal as template amplitude. Zero any small channel amplitudes.
+    # with most signal as template amplitude.
     template_amplitudes_per_channel = np.max(unwhite_templates, axis=1) - np.min(unwhite_templates, axis=1)
 
     template_amplitudes_unscaled = np.max(template_amplitudes_per_channel, axis=1)
 
-    threshold_values = 0.3 * template_amplitudes_unscaled
-    template_amplitudes_per_channel[template_amplitudes_per_channel < threshold_values[:, np.newaxis]] = 0
+    #  Zero any small channel amplitudes
+    #    threshold_values = 0.3 * template_amplitudes_unscaled  TODO: remove this to be more general. Agree?
+    #    template_amplitudes_per_channel[template_amplitudes_per_channel < threshold_values[:, np.newaxis]] = 0
 
     # Calculate the template depth as the center of mass based on channel amplitudes
-    template_depths = np.sum(template_amplitudes_per_channel * ycoords[np.newaxis, :], axis=1) / np.sum(
-        template_amplitudes_per_channel, axis=1
-    )
-
-    # Next, find the depth of each spike based on its template. Recompute the template
-    # amplitudes as the average of the spike amplitudes ('since
-    # tempScalingAmps are equal mean for all templates')
-    spike_amplitudes = template_amplitudes_unscaled[spike_templates] * template_scaling_amplitudes
-
-    # Take the average of all spike amplitudes to get actual template amplitudes
-    # (since tempScalingAmps are equal mean for all templates)
-    num_indices = templates.shape[0]
-    sum_per_index = np.zeros(num_indices, dtype=np.float64)
-    np.add.at(sum_per_index, spike_templates, spike_amplitudes)
-    counts = np.bincount(spike_templates, minlength=num_indices)
-    template_amplitudes = np.divide(sum_per_index, counts, out=np.zeros_like(sum_per_index), where=counts != 0)
+    weights = template_amplitudes_per_channel / np.sum(template_amplitudes_per_channel, axis=1)[:, np.newaxis]
+    template_locations = weights @ channel_positions
 
     # Get channel with the largest amplitude (take that as the waveform)
-    max_site = np.argmax(np.max(np.abs(templates), axis=1), axis=1)
+    template_max_site = np.argmax(
+        np.max(np.abs(unwhite_templates), axis=1), axis=1
+    )  # TODO: i changed this to use unwhitened templates instead of templates. This okay?
 
     # Use template channel with max signal as waveform
-    waveforms = np.empty(templates.shape[:2])
-    for idx, template in enumerate(templates):
-        waveforms[idx, :] = templates[idx, :, max_site[idx]]
+    waveforms = np.empty(
+        unwhite_templates.shape[:2]
+    )  # TODO: i changed this to use unwhitened templates instead of templates. This okay?
+    for idx, template in enumerate(unwhite_templates):
+        waveforms[idx, :] = unwhite_templates[idx, :, template_max_site[idx]]
 
     # Get trough-to-peak time for each template. Find the trough as the
     # minimum signal for the template waveform. The duration (in
@@ -244,13 +244,24 @@ def get_template_info_and_spike_amplitudes(
         trough_peak_durations[idx] = np.argmax(tmp_max[waveform_trough[idx] :])
 
     return (
-        spike_amplitudes,
-        template_depths,
-        template_amplitudes,
+        template_amplitudes_unscaled,
+        template_locations,
+        template_max_site,
         unwhite_templates,
         trough_peak_durations,
         waveforms,
     )
+
+
+def compute_template_amplitudes_from_spikes():
+    # Take the average of all spike amplitudes to get actual template amplitudes
+    # (since tempScalingAmps are equal mean for all templates)
+    num_indices = templates.shape[0]
+    sum_per_index = np.zeros(num_indices, dtype=np.float64)
+    np.add.at(sum_per_index, spike_templates, spike_amplitudes)
+    counts = np.bincount(spike_templates, minlength=num_indices)
+    template_amplitudes = np.divide(sum_per_index, counts, out=np.zeros_like(sum_per_index), where=counts != 0)
+    return template_amplitudes
 
 
 def _load_ks_dir(sorter_output: Path, exclude_noise: bool = True, load_pcs: bool = False) -> dict:
