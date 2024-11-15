@@ -53,7 +53,7 @@ class RandomProjectionClustering:
         "random_seed": 42,
         "noise_levels": None,
         "smoothing_kwargs": {"window_length_ms": 0.25},
-        "noise_threshold" : 1,
+        "noise_threshold": 1,
         "tmp_folder": None,
         "verbose": True,
     }
@@ -134,11 +134,19 @@ class RandomProjectionClustering:
             params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
 
         templates_array, templates_array_std = estimate_templates_with_accumulator(
-            recording, spikes, unit_ids, nbefore, nafter, return_scaled=False, return_std=True, job_name=None, **job_kwargs
+            recording,
+            spikes,
+            unit_ids,
+            nbefore,
+            nafter,
+            return_scaled=False,
+            return_std=True,
+            job_name=None,
+            **job_kwargs,
         )
-            
-        peak_snrs = np.abs(templates_array[:, nbefore, :])/templates_array_std[:, nbefore, :]
-        valid_templates = np.linalg.norm(peak_snrs, axis=1)/np.linalg.norm(params["noise_levels"])
+
+        peak_snrs = np.abs(templates_array[:, nbefore, :]) / templates_array_std[:, nbefore, :]
+        valid_templates = np.linalg.norm(peak_snrs, axis=1) / np.linalg.norm(params["noise_levels"])
         valid_templates = valid_templates > params["noise_threshold"]
 
         templates = Templates(
@@ -151,12 +159,12 @@ class RandomProjectionClustering:
             probe=recording.get_probe(),
             is_scaled=False,
         )
-        
+
         sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
         empty_templates = templates.sparsity_mask.sum(axis=1) == 0
         templates = remove_empty_templates(templates)
-        
+
         mask = np.isin(peak_labels, np.where(empty_templates)[0])
         peak_labels[mask] = -1
 
