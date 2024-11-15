@@ -38,6 +38,7 @@ class NumpyRecording(BaseRecording):
     """
 
     def __init__(self, traces_list, sampling_frequency, t_starts=None, channel_ids=None):
+
         if isinstance(traces_list, list):
             all_elements_are_list = all(isinstance(e, list) for e in traces_list)
             if all_elements_are_list:
@@ -102,6 +103,23 @@ class NumpyRecording(BaseRecording):
             channel_ids=source_recording.channel_ids,
         )
         return recording
+
+    def update_traces(self, traces, segment_index=0):
+        """
+        Set the `traces` on on the segment of index `segment_index`.
+        `traces` must be the same size (num_samples, num_channels)
+        and dtype as the recording.
+        """
+        if traces.shape[0] != self.get_num_samples(segment_index=segment_index):
+            raise ValueError("The first dimension must be the same size as" "the number of samples.")
+
+        if traces.shape[1] != self.get_num_channels():
+            raise ValueError("The second dimension of the data be the same" "size as the number of channels.")
+
+        if traces.dtype != self.dtype:
+            raise ValueError("The dtype of the data must match the recording dtype.")
+
+        self._recording_segments[segment_index]._traces = traces
 
 
 class NumpyRecordingSegment(BaseRecordingSegment):

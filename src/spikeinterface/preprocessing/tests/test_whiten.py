@@ -3,6 +3,7 @@ import numpy as np
 
 from spikeinterface.core import generate_recording
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
+from spikeinterface.core.numpyextractors import NumpyRecording
 from spikeinterface.preprocessing import whiten, scale, compute_whitening_matrix
 from spikeinterface.preprocessing.whiten import compute_sklearn_covariance_matrix
 
@@ -12,82 +13,6 @@ try:
     HAS_SKLEARN = True
 except ImportError:
     HAS_SKLEARN = False
-
-
-#################################################
-# Custom Recording -  TODO: get feedback and move
-#################################################
-
-
-class CustomRecording(BaseRecording):
-    """
-    A convenience class for adding custom data to
-    a recording for test purposes.
-    """
-
-    def __init__(self, durations, num_channels, channel_ids, sampling_frequency, dtype):
-        BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
-
-        num_samples = [dur * sampling_frequency for dur in durations]
-
-        for sample_num in num_samples:
-            rec_segment = CustomRecordingSegment(
-                sample_num,
-                num_channels,
-                sampling_frequency,
-            )
-            self.add_recording_segment(rec_segment)
-
-        self._kwargs = {
-            "num_channels": num_channels,
-            "durations": durations,
-            "sampling_frequency": sampling_frequency,
-        }
-
-    def set_data(self, data, segment_index=0):
-        """
-        Set the `data` on on the segment of index `segment_index`.
-        `data` must be the same size (num_samples, num_channels)
-        and dtype as the reocrding.
-        """
-        if data.shape[0] != self.get_num_samples(segment_index=segment_index):
-            raise ValueError("The first dimension must be the same size as" "the number of samples.")
-
-        if data.shape[1] != self.get_num_channels():
-            raise ValueError("The second dimension of the data be the same" "size as the number of channels.")
-
-        if data.dtype != self.dtype:
-            raise ValueError("The dtype of the data must match the recording dtype.")
-
-        self._recording_segments[segment_index].data = data
-
-
-class CustomRecordingSegment(BaseRecordingSegment):
-    """
-    Segment for the `CustomRecording` which simply returns
-    the set data when `get_traces()` is called. See
-    `CustomRecording.set_data()` for details on the set data.
-    """
-
-    def __init__(self, num_samples, num_channels, sampling_frequency):
-        self.num_samples = num_samples
-        self.num_channels = num_channels
-        self.sampling_frequency = sampling_frequency
-        self.data = np.zeros((num_samples, num_channels))
-
-        self.t_start = None
-        self.time_vector = None
-
-    def get_traces(
-        self,
-        start_frame=None,
-        end_frame=None,
-        channel_indices=None,
-    ):
-        return self.data[start_frame:end_frame, channel_indices]
-
-    def get_num_samples(self):
-        return self.num_samples
 
 
 #################################################
@@ -155,18 +80,21 @@ class TestWhiten:
             raise ValueError("dtype must be float32 or int16")
 
         # Set the data on the recording and return
-        recording.set_data(seg_1_data)
+        recording.update_traces(seg_1_data)
         assert np.array_equal(recording.get_traces(segment_index=0), seg_1_data), "segment 1 test setup did not work."
 
         return means, cov_mat, recording
 
     def get_empty_custom_recording(self, num_segments, num_channels, dtype):
-        return CustomRecording(
-            durations=[10 for _ in range(num_segments)],
-            num_channels=num_channels,
-            channel_ids=np.arange(num_channels),
+
+        sampling_frequency = 30000
+        num_samples = int(10 * sampling_frequency)
+
+        traces_list = [np.zeros((num_samples, num_channels), dtype=dtype) for _ in range(num_segments)]
+
+        return NumpyRecording(
+            traces_list,
             sampling_frequency=30000,
-            dtype=dtype,
         )
 
     def cov_mat_from_whitening_mat(self, whitened_recording, eps):
@@ -279,7 +207,7 @@ class TestWhiten:
             dtype=np.float32,
         )
 
-        recording.set_data(
+        recording.update_traces(
             all_zero_data,
             segment_index=1,
         )
@@ -347,15 +275,11 @@ class TestWhiten:
         """
         X = np.random.randn(100, 100)
 
-        test_cov = compute_sklearn_covariance_matrix(
-            X, {"method": "GraphicalLasso", "alpha": 1, "enet_tol": 0.04}
-        )  # RENAME test_cov
+        test_cov = compute_sklearn_covariance_matrix(X, {"method": "GraphicalLasso", "alpha": 1, "enet_tol": 0.04})
         cov = sklearn_covariance.GraphicalLasso(alpha=1, enet_tol=0.04, assume_centered=True).fit(X).covariance_
         assert np.allclose(test_cov, cov)
 
-        test_cov = compute_sklearn_covariance_matrix(
-            X, {"method": "ShrunkCovariance", "shrinkage": 0.3}
-        )  # RENAME test_cov
+        test_cov = compute_sklearn_covariance_matrix(X, {"method": "ShrunkCovariance", "shrinkage": 0.3})
         cov = sklearn_covariance.ShrunkCovariance(shrinkage=0.3, assume_centered=True).fit(X).covariance_
         assert np.allclose(test_cov, cov)
 
