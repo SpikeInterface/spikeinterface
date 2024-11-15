@@ -27,7 +27,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 50},
         "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2},
-        "whitening": {"mode": "local", "regularize": False, "radius_um": 150},
+        "whitening": {"mode": "local", "regularize": False, "radius_um": 100},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
             "method": "uniform",
@@ -46,7 +46,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 "corr_diff_thresh": 0.25,
             },
         },
-        "clustering": {"legacy": True},
+        "clustering": {"legacy": False},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
         "matched_filtering": True,
@@ -286,7 +286,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             sparsity = compute_sparsity(templates, noise_levels, **params["sparsity"])
             templates = templates.to_sparse(sparsity)
             templates = remove_empty_templates(templates)
-
+            
             if params["debug"]:
                 templates.to_zarr(folder_path=clustering_folder / "templates")
                 sorting = sorting.save(folder=clustering_folder / "sorting")
