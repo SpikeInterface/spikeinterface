@@ -131,7 +131,7 @@ class TestWhiten:
         otherwise it can overflow.
         """
         eps = 1e-16
-        _, cov_mat, recording = self.get_test_recording(num_segments=1, dtype=dtype)
+        _, cov_mat, recording = self.get_test_recording(dtype=dtype)
 
         whitened_recording = whiten(
             recording,
@@ -161,7 +161,7 @@ class TestWhiten:
         the cov mat if the correct eps is used.
         """
         eps = 1
-        _, cov_mat, recording = self.get_test_recording(num_segments=1, dtype=np.float32)
+        _, cov_mat, recording = self.get_test_recording(dtype=np.float32)
 
         whitened_recording = whiten(
             recording,
@@ -218,7 +218,7 @@ class TestWhiten:
         means = np.array([10, 20, 30])
 
         eps = 1e-16
-        _, cov_mat, recording = self.get_test_recording(num_segments=1, dtype=np.float32, means=means)
+        _, cov_mat, recording = self.get_test_recording(dtype=np.float32, means=means)
 
         whitened_recording = whiten(
             recording,
@@ -269,7 +269,7 @@ class TestWhiten:
         whitening preprocessing is the same as the one
         computed from sklearn when regularise kwargs are given.
         """
-        _, _, recording = self.get_test_recording(num_segments=1, dtype=np.float32)
+        _, _, recording = self.get_test_recording(dtype=np.float32)
 
         whitened_recording = whiten(
             recording,
@@ -297,7 +297,7 @@ class TestWhiten:
         channels are considered for whitening. Test that whitening
         is correct for the first pair and last pair.
         """
-        _, _, recording = self.get_test_recording(num_segments=1, dtype=np.float32)
+        _, _, recording = self.get_test_recording(dtype=np.float32)
 
         y_dist = 2
         recording.set_channel_locations(
