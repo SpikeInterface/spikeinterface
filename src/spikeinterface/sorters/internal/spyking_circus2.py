@@ -235,6 +235,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["noise_levels"] = noise_levels
             clustering_params["ms_before"] = exclude_sweep_ms
             clustering_params["ms_after"] = exclude_sweep_ms
+            clustering_params["verbose"] = verbose
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
 
             legacy = clustering_params.get("legacy", True)
