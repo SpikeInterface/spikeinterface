@@ -15,11 +15,6 @@ except ImportError:
     HAS_SKLEARN = False
 
 
-#################################################
-# Test Class
-#################################################
-
-
 class TestWhiten:
     """
     Test the whitening preprocessing step.
@@ -30,7 +25,7 @@ class TestWhiten:
     returned data is indeed white.
     """
 
-    def get_test_recording(self, num_segments, dtype, means=None):
+    def get_test_recording(self, dtype, means=None):
         """
         Generate a set of test data with known covariance matrix and mean.
         Test data is drawn from a multivariate Gaussian distribute with
@@ -44,11 +39,6 @@ class TestWhiten:
 
         Parameters
         ----------
-
-        num_segments : int
-            Number of segments for the recording. Note that only the first
-            segment is filled with data. Data for other segments must be
-            set manually.
 
         dtype : np.float32 | np.int16
             Datatype of the generated recording.
@@ -67,7 +57,10 @@ class TestWhiten:
         return means, cov_mat, recording
 
     def get_test_data_with_known_distribution(self, num_samples, dtype, means=None):
-        """ """
+        """
+        Create multivariate normal data with known means and covariance matrixs.
+        If `dtype` is int16, scale to full range of int16 before cast.
+        """
         num_channels = 3
 
         if means is None:
@@ -118,8 +111,7 @@ class TestWhiten:
 
     def compute_cov_mat(self, X):
         """
-        Estimate the covariance matrix from data
-        using the standard linear algebra approach.
+        Estimate the covariance matrix as the sample covariance.
         """
         X = X - np.mean(X, axis=0)
         S = X.T @ X / X.shape[0]
@@ -205,7 +197,6 @@ class TestWhiten:
             recording,
             apply_mean=True,
             regularize=False,
-            regularize_kwargs={},
             num_chunks_per_segment=1,
             chunk_size=recording.get_num_samples(segment_index=0) - 1,
             eps=eps,
@@ -233,7 +224,6 @@ class TestWhiten:
             recording,
             apply_mean=apply_mean,
             regularize=False,
-            regularize_kwargs={},
             num_chunks_per_segment=1,
             chunk_size=recording.get_num_samples(segment_index=0) - 1,
             eps=eps,
@@ -332,6 +322,8 @@ class TestWhiten:
             )
             results[mode] = whitened_recording
 
+        # In local, parts of the covariance matrix are exactly zero
+        # (when pairs of channels are not in the same group).
         assert results["local"]._kwargs["W"][0][2] == 0.0
         assert results["global"]._kwargs["W"][0][2] != 0.0
 
