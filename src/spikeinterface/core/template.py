@@ -205,7 +205,7 @@ class Templates:
             unit_ids=self.unit_ids,
             probe=self.probe,
             check_for_consistent_sparsity=self.check_for_consistent_sparsity,
-            is_scaled=self.is_scaled
+            is_scaled=self.is_scaled,
         )
 
     def get_one_template_dense(self, unit_index):
