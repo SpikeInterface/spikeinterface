@@ -245,8 +245,10 @@ class CircusClustering:
             probe=recording.get_probe(),
             is_scaled=False,
         )
+
         if params["noise_levels"] is None:
             params["noise_levels"] = get_noise_levels(recording, return_scaled=False)
+        
         sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
         empty_templates = templates.sparsity_mask.sum(axis=1) == 0

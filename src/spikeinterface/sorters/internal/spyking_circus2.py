@@ -24,10 +24,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
     _default_params = {
-        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 75},
-        "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
+        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 50},
+        "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 6},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2},
-        "whitening": {"mode": "local", "regularize": False},
+        "whitening": {"mode": "local", "regularize": False, "radius_um" : 150},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
             "method": "uniform",
@@ -130,7 +130,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         num_channels = recording.get_num_channels()
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
-        radius_um = params["general"].get("radius_um", 75)
+        radius_um = params["general"].get("radius_um", 50)
         exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after) / 2)
 
         ## First, we are filtering the data
@@ -162,7 +162,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         # TODO add , regularize=True chen ready
         whitening_kwargs = params["whitening"].copy()
         whitening_kwargs["dtype"] = "float32"
-        whitening_kwargs["radius_um"] = radius_um
         if num_channels == 1:
             whitening_kwargs["regularize"] = False
 
