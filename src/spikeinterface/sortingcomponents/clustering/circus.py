@@ -60,7 +60,7 @@ class CircusClustering:
         "n_svd": [5, 2],
         "ms_before": 0.5,
         "ms_after": 0.5,
-        "noise_threshold" : 1,
+        "noise_threshold" : 4,
         "rank": 5,
         "noise_levels": None,
         "tmp_folder": None,
@@ -233,11 +233,11 @@ class CircusClustering:
         templates_array, templates_array_std = estimate_templates_with_accumulator(
             recording, spikes, unit_ids, nbefore, nafter, return_scaled=False, return_std=True, job_name=None, **job_kwargs
         )
-            
+    
         peak_snrs = np.abs(templates_array[:, nbefore, :])/templates_array_std[:, nbefore, :]
-        valid_templates = np.linalg.norm(peak_snrs, axis=1)/np.linalg.norm(params["noise_levels"])
-        valid_templates = valid_templates > params["noise_threshold"]
-
+        best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
+        best_snrs_ratio = (peak_snrs/params["noise_levels"])[np.arange(len(peak_snrs)), best_channels]
+        valid_templates = best_snrs_ratio > params["noise_threshold"]
 
         if d["rank"] is not None:
             from spikeinterface.sortingcomponents.matching.circus import compress_templates

@@ -46,7 +46,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 "corr_diff_thresh": 0.25,
             },
         },
-        "clustering": {"legacy": False},
+        "clustering": {"legacy": True},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
         "matched_filtering": True,
@@ -75,7 +75,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "merging": "A dictionary to specify the final merging param to group cells after template matching (get_potential_auto_merge)",
         "motion_correction": "A dictionary to be provided if motion correction has to be performed (dense probe only)",
         "apply_preprocessing": "Boolean to specify whether circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
-                                                    median reference + zscore",
+                                                    median reference + whitening",
         "apply_motion_correction": "Boolean to specify whether circus 2 should apply motion correction to the recording or not",
         "matched_filtering": "Boolean to specify whether circus 2 should detect peaks via matched filtering (slightly slower)",
         "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
@@ -192,12 +192,19 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         max_n_peaks = selection_params["n_peaks_per_channel"] * num_channels
         n_peaks = max(selection_params["min_n_peaks"], max_n_peaks)
 
+        if params["debug"]:
+            clustering_folder = sorter_output_folder / "clustering"
+            clustering_folder.mkdir(parents=True, exist_ok=True)
+            np.save(clustering_folder / "noise_levels.npy", noise_levels)
+
         if params["matched_filtering"]:
             prototype = get_prototype(
                 recording_w, n_peaks=5000, ms_before=ms_before, ms_after=ms_after, **detection_params, **job_kwargs
             )
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
+            if params["debug"]:
+                np.save(clustering_folder / 'prototype.npy', prototype)
             if skip_peaks:
                 detection_params["skip_after_n_peaks"] = n_peaks
             peaks = detect_peaks(recording_w, "matched_filtering", **detection_params, **job_kwargs)
@@ -259,12 +266,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             unit_ids = np.arange(len(np.unique(labeled_peaks["unit_index"])))
             sorting = NumpySorting(labeled_peaks, sampling_frequency, unit_ids=unit_ids)
 
-            clustering_folder = sorter_output_folder / "clustering"
-            clustering_folder.mkdir(parents=True, exist_ok=True)
-
-            if not params["debug"]:
-                shutil.rmtree(clustering_folder)
-            else:
+            if params["debug"]:
+                np.save(clustering_folder / "peak_labels", peak_labels)
                 np.save(clustering_folder / "labels", labels)
                 np.save(clustering_folder / "peaks", selected_peaks)
 
