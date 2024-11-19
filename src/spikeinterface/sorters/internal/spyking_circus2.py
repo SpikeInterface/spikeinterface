@@ -289,7 +289,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             sparsity = compute_sparsity(templates, noise_levels, **params["sparsity"])
             templates = templates.to_sparse(sparsity)
             templates = remove_empty_templates(templates)
-            
+
             if params["debug"]:
                 templates.to_zarr(folder_path=clustering_folder / "templates")
                 sorting = sorting.save(folder=clustering_folder / "sorting")
