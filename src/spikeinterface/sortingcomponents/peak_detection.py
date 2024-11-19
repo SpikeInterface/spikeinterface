@@ -727,7 +727,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
         peak_sample_ind += self.exclude_sweep_size + self.conv_margin + self.nbefore
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
-        
+
         local_peaks = np.zeros(peak_sample_ind.size, dtype=self._dtype)
         local_peaks["sample_index"] = peak_sample_ind
         local_peaks["channel_index"] = peak_chan_ind

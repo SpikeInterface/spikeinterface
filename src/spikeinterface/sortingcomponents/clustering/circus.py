@@ -60,7 +60,7 @@ class CircusClustering:
         "n_svd": [5, 2],
         "ms_before": 0.5,
         "ms_after": 0.5,
-        "noise_threshold" : 4,
+        "noise_threshold": 4,
         "rank": 5,
         "noise_levels": None,
         "tmp_folder": None,
@@ -241,10 +241,10 @@ class CircusClustering:
             job_name=None,
             **job_kwargs,
         )
-    
-        peak_snrs = np.abs(templates_array[:, nbefore, :])/templates_array_std[:, nbefore, :]
+
+        peak_snrs = np.abs(templates_array[:, nbefore, :]) / templates_array_std[:, nbefore, :]
         best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
-        best_snrs_ratio = (peak_snrs/params["noise_levels"])[np.arange(len(peak_snrs)), best_channels]
+        best_snrs_ratio = (peak_snrs / params["noise_levels"])[np.arange(len(peak_snrs)), best_channels]
         valid_templates = best_snrs_ratio > params["noise_threshold"]
 
         if d["rank"] is not None:
