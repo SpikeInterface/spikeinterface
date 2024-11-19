@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import warnings
 import numpy as np
 
 import probeinterface
@@ -30,8 +31,10 @@ class CompressedBinaryIblExtractor(BaseRecording):
     stream_name : {"ap", "lp"}, default: "ap".
         Whether to load AP or LFP band, one
         of "ap" or "lp".
-    cbin_file : str or None, default None
+    cbin_file_path : str, Path or None, default None
         The cbin file of the recording. If None, searches in `folder_path` for file.
+    cbin_file : str or None, default None
+        (deprecated) The cbin file of the recording. If None, searches in `folder_path` for file.
 
     Returns
     -------
@@ -41,14 +44,23 @@ class CompressedBinaryIblExtractor(BaseRecording):
 
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"
 
-    def __init__(self, folder_path=None, load_sync_channel=False, stream_name="ap", cbin_file=None):
+    def __init__(
+        self, folder_path=None, load_sync_channel=False, stream_name="ap", cbin_file_path=None, cbin_file=None
+    ):
         from neo.rawio.spikeglxrawio import read_meta_file
 
         try:
             import mtscomp
         except ImportError:
             raise ImportError(self.installation_mesg)
-        if cbin_file is None:
+        if cbin_file is not None:
+            warnings.warn(
+                "The `cbin_file` argument is deprecated, please use `cbin_file_path` instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            cbin_file_path = cbin_file
+        if cbin_file_path is None:
             folder_path = Path(folder_path)
             # check bands
             assert stream_name in ["ap", "lp"], "stream_name must be one of: 'ap', 'lp'"
@@ -60,17 +72,17 @@ class CompressedBinaryIblExtractor(BaseRecording):
             assert (
                 len(curr_cbin_files) == 1
             ), f"There should only be one `*.cbin` file in the folder, but {print(curr_cbin_files)} have been found"
-            cbin_file = curr_cbin_files[0]
+            cbin_file_path = curr_cbin_files[0]
         else:
-            cbin_file = Path(cbin_file)
-            folder_path = cbin_file.parent
+            cbin_file_path = Path(cbin_file_path)
+            folder_path = cbin_file_path.parent
 
-        ch_file = cbin_file.with_suffix(".ch")
-        meta_file = cbin_file.with_suffix(".meta")
+        ch_file = cbin_file_path.with_suffix(".ch")
+        meta_file = cbin_file_path.with_suffix(".meta")
 
         # reader
         cbuffer = mtscomp.Reader()
-        cbuffer.open(cbin_file, ch_file)
+        cbuffer.open(cbin_file_path, ch_file)
 
         # meta data
         meta = read_meta_file(meta_file)
@@ -119,7 +131,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
         self._kwargs = {
             "folder_path": str(Path(folder_path).resolve()),
             "load_sync_channel": load_sync_channel,
-            "cbin_file": str(Path(cbin_file).resolve()),
+            "cbin_file_path": str(Path(cbin_file_path).resolve()),
         }
 
 
