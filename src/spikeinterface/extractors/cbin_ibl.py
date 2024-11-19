@@ -31,7 +31,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
     stream_name : {"ap", "lp"}, default: "ap".
         Whether to load AP or LFP band, one
         of "ap" or "lp".
-    cbin_file_path : str or None, default None
+    cbin_file_path : str, Path or None, default None
         The cbin file of the recording. If None, searches in `folder_path` for file.
     cbin_file : str or None, default None
         (deprecated) The cbin file of the recording. If None, searches in `folder_path` for file.
