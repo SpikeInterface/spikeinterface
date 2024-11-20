@@ -13,7 +13,7 @@ import sys
 from tqdm.auto import tqdm
 
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-import multiprocessing as mp
+import multiprocessing
 import threading
 from threadpoolctl import threadpool_limits
 
@@ -289,6 +289,8 @@ class ChunkRecordingExecutor:
         If True, output is verbose
     job_name : str, default: ""
         Job name
+    progress_bar : bool, default: False
+        If True, a progress bar is printed to monitor the progress of the process
     handle_returns : bool, default: False
         If True, the function can return values
     gather_func : None or callable, default: None
@@ -313,9 +315,8 @@ class ChunkRecordingExecutor:
         Limit the number of thread per process using threadpoolctl modules.
         This used only when n_jobs>1
         If None, no limits.
-    progress_bar : bool, default: False
-        If True, a progress bar is printed to monitor the progress of the process
-
+    need_worker_index : bool, default False
+        If True then each worker will also have a "worker_index" injected in the local worker dict.
 
     Returns
     -------
@@ -342,6 +343,7 @@ class ChunkRecordingExecutor:
         mp_context=None,
         job_name="",
         max_threads_per_process=1,
+        need_worker_index=False,
     ):
         self.recording = recording
         self.func = func
@@ -376,6 +378,8 @@ class ChunkRecordingExecutor:
         self.max_threads_per_process = max_threads_per_process
 
         self.pool_engine = pool_engine
+
+        self.need_worker_index = need_worker_index
 
         if verbose:
             chunk_memory = self.chunk_size * recording.get_num_channels() * np.dtype(recording.get_dtype()).itemsize
@@ -412,9 +416,12 @@ class ChunkRecordingExecutor:
             if self.progress_bar:
                 recording_slices = tqdm(recording_slices, desc=self.job_name, total=len(recording_slices))
 
-            worker_ctx = self.init_func(*self.init_args)
+            worker_dict = self.init_func(*self.init_args)
+            if self.need_worker_index:
+                worker_dict["worker_index"] = 0
+
             for segment_index, frame_start, frame_stop in recording_slices:
-                res = self.func(segment_index, frame_start, frame_stop, worker_ctx)
+                res = self.func(segment_index, frame_start, frame_stop, worker_dict)
                 if self.handle_returns:
                     returns.append(res)
                 if self.gather_func is not None:
@@ -425,12 +432,21 @@ class ChunkRecordingExecutor:
 
             if self.pool_engine == "process":
 
+                if self.need_worker_index:
+                    lock = multiprocessing.Lock()
+                    array_pid = multiprocessing.Array("i", n_jobs)
+                    for i in range(n_jobs):
+                        array_pid[i] = -1
+                else:
+                    lock = None
+                    array_pid = None
+
                 # parallel
                 with ProcessPoolExecutor(
                     max_workers=n_jobs,
                     initializer=process_worker_initializer,
-                    mp_context=mp.get_context(self.mp_context),
-                    initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process),
+                    mp_context=multiprocessing.get_context(self.mp_context),
+                    initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process, self.need_worker_index, lock, array_pid),
                 ) as executor:
                     results = executor.map(process_function_wrapper, recording_slices)
 
@@ -444,29 +460,41 @@ class ChunkRecordingExecutor:
                             self.gather_func(res)
             
             elif self.pool_engine == "thread":
-                # only one shared context
+                # this is need to create a per worker local dict where the initializer will push the func wrapper
+                thread_local_data = threading.local()
 
-                # worker_dict = self.init_func(*self.init_args)
-                # thread_func = WorkerFuncWrapper(self.func, worker_dict, self.max_threads_per_process)
+                global _thread_started
+                _thread_started = 0
 
-                thread_data = threading.local()
+                if self.progress_bar:
+                    # here the tqdm threading do not work (maybe collision) so we need to create a pbar
+                    # before thread spawning
+                    pbar = tqdm(desc=self.job_name, total=len(recording_slices))
+                
+                if self.need_worker_index:
+                    lock = threading.Lock()
+                    thread_started = 0
 
                 with ThreadPoolExecutor(
                     max_workers=n_jobs,
                     initializer=thread_worker_initializer,
-                    initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process, thread_data),
+                    initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process, thread_local_data, self.need_worker_index, lock),
                 ) as executor:
-                    recording_slices2 = [(thread_data, ) + args for args in recording_slices]
+
+
+                    recording_slices2 = [(thread_local_data, ) + args for args in recording_slices]
                     results = executor.map(thread_function_wrapper, recording_slices2)
 
-                    if self.progress_bar:
-                        results = tqdm(results, desc=self.job_name, total=len(recording_slices))
-
                     for res in results:
+                        if self.progress_bar:
+                            pbar.update(1)
                         if self.handle_returns:
                             returns.append(res)
                         if self.gather_func is not None:
                             self.gather_func(res)
+                if self.progress_bar:
+                    pbar.close()
+                    del pbar
 
             else:
                 raise ValueError("If n_jobs>1 pool_engine must be 'process' or 'thread'")
@@ -476,6 +504,11 @@ class ChunkRecordingExecutor:
 
 
 class WorkerFuncWrapper:
+    """
+    small wraper that handle:
+      * local worker_dict
+      *  max_threads_per_process
+    """
     def __init__(self, func, worker_dict, max_threads_per_process):
         self.func = func
         self.worker_dict = worker_dict
@@ -498,36 +531,57 @@ class WorkerFuncWrapper:
 global _process_func_wrapper
 
 
-def process_worker_initializer(func, init_func, init_args, max_threads_per_process):
+def process_worker_initializer(func, init_func, init_args, max_threads_per_process, need_worker_index, lock, array_pid):
     global _process_func_wrapper
     if max_threads_per_process is None:
         worker_dict = init_func(*init_args)
     else:
         with threadpool_limits(limits=max_threads_per_process):
             worker_dict = init_func(*init_args)
+
+    if need_worker_index:
+        child_process = multiprocessing.current_process()
+        lock.acquire()
+        worker_index = None
+        for i in range(len(array_pid)):
+            if array_pid[i] == -1:
+                worker_index = i
+                array_pid[i] = child_process.ident
+                break
+        worker_dict["worker_index"] = worker_index
+        lock.release()
+
     _process_func_wrapper = WorkerFuncWrapper(func, worker_dict, max_threads_per_process)
 
 def process_function_wrapper(args):
     global _process_func_wrapper
     return _process_func_wrapper(args)
 
-def thread_worker_initializer(func, init_func, init_args, max_threads_per_process, thread_data):
+
+# use by thread at init
+global _thread_started
+
+def thread_worker_initializer(func, init_func, init_args, max_threads_per_process, thread_local_data, need_worker_index, lock):
     if max_threads_per_process is None:
         worker_dict = init_func(*init_args)
     else:
         with threadpool_limits(limits=max_threads_per_process):
             worker_dict = init_func(*init_args)
-    thread_data._func_wrapper = WorkerFuncWrapper(func, worker_dict, max_threads_per_process)
-    # print("ici", thread_data._func_wrapper)
+
+    if need_worker_index:
+        lock.acquire()
+        global _thread_started
+        worker_index = _thread_started
+        _thread_started += 1
+        worker_dict["worker_index"] = worker_index
+        lock.release()
+
+    thread_local_data.func_wrapper = WorkerFuncWrapper(func, worker_dict, max_threads_per_process)
 
 def thread_function_wrapper(args):
-    thread_data = args[0]
+    thread_local_data = args[0]
     args = args[1:]
-    # thread_data = threading.local()
-    # print("la", thread_data._func_wrapper)
-    return thread_data._func_wrapper(args)
-
-
+    return thread_local_data.func_wrapper(args)
 
 
 

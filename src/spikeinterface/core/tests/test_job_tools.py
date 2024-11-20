@@ -1,6 +1,8 @@
 import pytest
 import os
 
+import time
+
 from spikeinterface.core import generate_recording, set_global_job_kwargs, get_global_job_kwargs
 
 from spikeinterface.core.job_tools import (
@@ -77,22 +79,22 @@ def test_ensure_chunk_size():
         assert end_frame == recording.get_num_frames(segment_index=segment_index)
 
 
-def func(segment_index, start_frame, end_frame, worker_ctx):
+def func(segment_index, start_frame, end_frame, worker_dict):
     import os
     import time
 
-    #  print('func', segment_index, start_frame, end_frame, worker_ctx, os.getpid())
+    #  print('func', segment_index, start_frame, end_frame, worker_dict, os.getpid())
     time.sleep(0.010)
     # time.sleep(1.0)
     return os.getpid()
 
 
 def init_func(arg1, arg2, arg3):
-    worker_ctx = {}
-    worker_ctx["arg1"] = arg1
-    worker_ctx["arg2"] = arg2
-    worker_ctx["arg3"] = arg3
-    return worker_ctx
+    worker_dict = {}
+    worker_dict["arg1"] = arg1
+    worker_dict["arg2"] = arg2
+    worker_dict["arg3"] = arg3
+    return worker_dict
 
 
 def test_ChunkRecordingExecutor():
@@ -235,10 +237,51 @@ def test_split_job_kwargs():
     assert "other_param" not in job_kwargs and "n_jobs" in job_kwargs and "progress_bar" in job_kwargs
 
 
+
+
+def func2(segment_index, start_frame, end_frame, worker_dict):
+    time.sleep(0.010)
+    # print(os.getpid(), worker_dict["worker_index"])
+    return worker_dict["worker_index"]
+
+
+def init_func2():
+    # this leave time for other thread/process to start
+    time.sleep(0.010)
+    worker_dict = {}
+    return worker_dict
+
+
+def test_worker_index():
+    recording = generate_recording(num_channels=2)
+    init_args = tuple()
+
+    for i in range(2):
+        # making this 2 times ensure to test that global variables are correctly reset
+        for pool_engine in ("process", "thread"):
+            processor = ChunkRecordingExecutor(
+                recording,
+                func2,
+                init_func2,
+                init_args,
+                progress_bar=False,
+                gather_func=None,
+                pool_engine=pool_engine,
+                n_jobs=2,
+                handle_returns=True,
+                chunk_duration="200ms",
+                need_worker_index=True
+            )
+            res = processor.run()
+            # we should have a mix of 0 and 1
+            assert 0 in res
+            assert 1 in res
+
 if __name__ == "__main__":
     # test_divide_segment_into_chunks()
     # test_ensure_n_jobs()
     # test_ensure_chunk_size()
-    test_ChunkRecordingExecutor()
+    # test_ChunkRecordingExecutor()
     # test_fix_job_kwargs()
     # test_split_job_kwargs()
+    test_worker_index()

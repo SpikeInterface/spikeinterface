@@ -176,17 +176,25 @@ def test_estimate_templates_with_accumulator():
     templates = estimate_templates_with_accumulator(
         recording, spikes, sorting.unit_ids, nbefore, nafter, return_scaled=True, **job_kwargs
     )
-    print(templates.shape)
+    # print(templates.shape)
     assert templates.shape[0] == sorting.unit_ids.size
     assert templates.shape[1] == nbefore + nafter
     assert templates.shape[2] == recording.get_num_channels()
 
     assert np.any(templates != 0)
 
+    job_kwargs = dict(n_jobs=1, progress_bar=True, chunk_duration="1s")
+    templates_loop = estimate_templates_with_accumulator(
+        recording, spikes, sorting.unit_ids, nbefore, nafter, return_scaled=True, **job_kwargs
+    )
+    np.testing.assert_almost_equal(templates, templates_loop, decimal=4)
+    
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
     # for unit_index, unit_id in enumerate(sorting.unit_ids):
-    #     ax.plot(templates[unit_index, :, :].T.flatten())
+        # ax.plot(templates[unit_index, :, :].T.flatten())
+        # ax.plot(templates_loop[unit_index, :, :].T.flatten(), color="k", ls="--")
+        # ax.plot((templates - templates_loop)[unit_index, :, :].T.flatten(), color="k", ls="--")
     # plt.show()
 
 
@@ -225,6 +233,6 @@ def test_estimate_templates():
 
 
 if __name__ == "__main__":
-    test_waveform_tools()
+    # test_waveform_tools()
     test_estimate_templates_with_accumulator()
-    test_estimate_templates()
+    # test_estimate_templates()
