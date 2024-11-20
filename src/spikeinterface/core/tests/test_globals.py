@@ -36,7 +36,7 @@ def test_global_tmp_folder(create_cache_folder):
 
 
 def test_global_job_kwargs():
-    job_kwargs = dict(n_jobs=4, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_worker=1)
+    job_kwargs = dict(pool_engine="thread", n_jobs=4, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_worker=1)
     global_job_kwargs = get_global_job_kwargs()
 
     # test warning when not setting n_jobs and calling fix_job_kwargs
@@ -59,7 +59,7 @@ def test_global_job_kwargs():
     set_global_job_kwargs(**partial_job_kwargs)
     global_job_kwargs = get_global_job_kwargs()
     assert global_job_kwargs == dict(
-        n_jobs=2, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_worker=1
+        pool_engine="thread", n_jobs=2, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_worker=1
     )
     # test that fix_job_kwargs grabs global kwargs
     new_job_kwargs = dict(n_jobs=cpu_count())
