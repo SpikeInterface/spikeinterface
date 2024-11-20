@@ -59,6 +59,45 @@ _mutually_exclusive = (
     "chunk_duration",
 )
 
+def get_best_job_kwargs():
+    """
+    Given best possible job_kwargs for the platform.
+    """
+
+    n_cpu = os.cpu_count()
+
+    if platform.system() == "Linux":
+        # maybe we should test this more but with linux the fork is still faster than threading
+        pool_engine = "process"
+        mp_context = "fork"
+
+        # this is totally empiricat but this is a good start
+        if n_cpu <= 16:
+            # for small n_cpu lets make many process
+            n_jobs = n_cpu
+            max_threads_per_worker = 1
+        else:
+            # lets have less process with more thread each
+            n_cpu = int(n_cpu / 4)
+            max_threads_per_worker = 8
+
+    else: # windows and mac
+        # on windows and macos the fork is forbidden and process+spwan is super slow at startup
+        # so lets go to threads
+        pool_engine = "thread"
+        mp_context = None
+        n_jobs = n_cpu
+        max_threads_per_worker = 1
+
+    return dict(
+        pool_engine=pool_engine,
+        mp_context=mp_context,
+        n_jobs=n_jobs,
+        max_threads_per_worker=max_threads_per_worker,
+    )
+
+
+
 
 def fix_job_kwargs(runtime_job_kwargs):
     from .globals import get_global_job_kwargs, is_set_global_job_kwargs_set

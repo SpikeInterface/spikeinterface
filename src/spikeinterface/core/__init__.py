@@ -90,7 +90,7 @@ from .core_tools import (
     write_python,
     normal_pdf,
 )
-from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor, split_job_kwargs, fix_job_kwargs
+from .job_tools import get_best_job_kwargs, ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor, split_job_kwargs, fix_job_kwargs
 from .recording_tools import (
     write_binary_recording,
     write_to_h5_dataset_format,

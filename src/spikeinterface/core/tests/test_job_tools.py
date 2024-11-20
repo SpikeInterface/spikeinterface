@@ -3,7 +3,7 @@ import os
 
 import time
 
-from spikeinterface.core import generate_recording, set_global_job_kwargs, get_global_job_kwargs
+from spikeinterface.core import generate_recording, set_global_job_kwargs, get_global_job_kwargs, get_best_job_kwargs
 
 from spikeinterface.core.job_tools import (
     divide_segment_into_chunks,
@@ -277,11 +277,16 @@ def test_worker_index():
             assert 0 in res
             assert 1 in res
 
+def test_get_best_job_kwargs():
+    job_kwargs = get_best_job_kwargs()
+    print(job_kwargs)
+
 if __name__ == "__main__":
     # test_divide_segment_into_chunks()
     # test_ensure_n_jobs()
     # test_ensure_chunk_size()
-    test_ChunkRecordingExecutor()
+    # test_ChunkRecordingExecutor()
     # test_fix_job_kwargs()
     # test_split_job_kwargs()
     # test_worker_index()
+    test_get_best_job_kwargs()
