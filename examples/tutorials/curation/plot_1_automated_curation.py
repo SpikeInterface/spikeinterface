@@ -2,9 +2,21 @@
 Model-based curation tutorial
 =============================
 
-This notebook provides a step-by-step guide on how to use a machine learning classifier for
-curating spike sorted output. We'll download a toy model and use it to label our sorted data by using
-Spikeinterface. We start by importing some packages
+Sorters are not perfect. They output excellent units, as well as noisy ones, and ones that
+should be split or merged. Hence one should curate the generated units. Historically, this
+has been done using laborious manual curation. An alternative is to use automated methods
+based on metrics which quantify features of the units. In spikeinterface these are the
+quality metrics and the template metrics. A simple approach is to use thresholding:
+only accept units whose metrics pass a certain quality threshold. Another approach is to
+take one (or more) manually labelled sortings, whose metrics have been computed, and train
+a machine learning model to predict labels.
+
+This notebook provides a step-by-step guide on how to take a machine learning model that
+someone else has trained and use it to curate your own spike sorted output. SpikeInterface
+also provides the tools to train your own model,
+`which you can learn about here <https://spikeinterface.readthedocs.io/en/latest/tutorials/curation/plot_2_train_a_model.html>`_.
+
+We'll download a toy model and use it to label our sorted data. We start by importing some packages
 """
 
 import warnings
@@ -25,7 +37,8 @@ import spikeinterface.widgets as sw
 # Download a pretrained model
 # ---------------------------
 #
-# Let's download a pretrained model from `Hugging Face <https://huggingface.co/>`_ (HF). The
+# Let's download a pretrained model from `Hugging Face <https://huggingface.co/>`_ (HF),
+# a model sharing platform focused on AI and ML models and datasets. The
 # ``load_model`` function allows us to download directly from HF, or use a model in a local
 # folder. The function downloads the model and saves it in a temporary folder and returns a
 # model and some metadata about the model.
@@ -43,8 +56,10 @@ model, model_info = sc.load_model(
 model
 
 ##############################################################################
-# The model object (an sklearn Pipeline) contains information about which metrics
-# were used to compute the model. We can access it from the model (or from the model_info)
+# This tells us more information about the model. The one we've just downloaded was trained used
+# a `RandomForestClassifier`. You can also discover this information by running
+# `model.get_params()`. The model object (an sklearn Pipeline) also contains information
+# about which metrics were used to compute the model. We can access it from the model (or from the model_info)
 
 print(model.feature_names_in_)
 
@@ -77,7 +92,7 @@ labels = sc.auto_label_units(
     trusted = ['numpy.dtype']
 )
 
-labels
+print(labels)
 
 
 ##############################################################################
@@ -87,20 +102,27 @@ labels
 sw.plot_unit_templates(sorting_analyzer, unit_ids=[7,9])
 
 ##############################################################################
-# Nice - we see that unit 9 does look a lot more spikey than unit 7. You might think that unit
-# 7 is a real unit. If so, this model isn't good for you.
+# Nice! Unit 9 looks more like an expected action potential waveform while unit 7 doesn't,
+# and it seems reasonable that unit 7 is labelled as `bad`. However, for certain experiments
+# or brain areas, unit 7 might be a great small-amplitude unit. This example highlights that
+# you should be careful applying models trained on one dataset to your own dataset. You can
+# explore the currently available models on the `spikeinterface hugging face hub <https://huggingface.co/SpikeInterface>`_
+# page, or `train your own one <https://spikeinterface.readthedocs.io/en/latest/tutorials/curation/plot_2_train_a_model.html>`_.
 #
 # Assess the model performance
 # ----------------------------
 #
-# To assess the performance of the model relative to human labels, we can load or generate some
-# human labels, and plot a confusion matrix of predicted vs human labels for all clusters. Here
+# To assess the performance of the model relative to labels assigned by a human creator, we can load or generate some
+# "human labels", and plot a confusion matrix of predicted vs human labels for all clusters. Here
 # we'll be a conservative human, who has labelled several units with small amplitudes as 'bad'.
 
 human_labels = ['bad', 'good', 'good', 'bad', 'good', 'bad', 'good', 'bad', 'good', 'good']
 
 # Note: if you labelled using phy, you can load the labels using:
 # human_labels = sorting_analyzer.sorting.get_property('quality')
+# We need to load in the `label_conversion` dictionary, which converts integers such
+# as '0' and '1' to readable labels such as 'good' and 'bad'. This is stored as
+# in `model_info`, which we loaded earlier.
 
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score
 
@@ -128,10 +150,15 @@ plt.show()
 # Here, there are several false positives (if we consider the human labels to be "the truth").
 #
 # Next, we can also see how the model's confidence relates to the probability that the model
-# label matches the human label
+# label matches the human label.
 #
-# This could be used to set a threshold above which you accept the model's classification,
-# and only manually curate those which it is less sure of.
+# This could be used to help decide which units should be auto-curated and which need further
+# manual creation. For example, we might accept any unit as 'good' that the model predicts
+# as 'good' with confidence over a threshold, say 80%. If the confidence is lower we might decide to take a
+# look at this unit manually. Below, we will create a plot that shows how the agreement
+# between human and model labels changes as we increase the confidence threshold. We see that
+# the agreement increases as the confidence does. So the model gets more accurate with a
+# higher confidence threshold, as expceted.
 
 
 def calculate_moving_avg(label_df, confidence_label, window_size):
@@ -172,9 +199,10 @@ plt.title('Agreement vs Confidence (Moving Average)')
 plt.legend(); plt.grid(True); plt.show()
 
 ##############################################################################
-# In this case, you might decide to only trust labels which had confidence over above 0.86.
+# In this case, you might decide to only trust labels which had confidence over above 0.88,
+# and manually labels the ones the model isn't so confident about.
 #
-# A more realistic example: Neuropixels data
+# Using other models, e.g. one trained on Neuropixels data
 # ------------------------------------------
 #
 # Above, we used a toy model trained on generated data. There are also models on HuggingFace
