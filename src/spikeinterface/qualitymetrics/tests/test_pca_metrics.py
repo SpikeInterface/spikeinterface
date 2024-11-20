@@ -31,13 +31,13 @@ def test_pca_metrics_multi_processing(small_sorting_analyzer):
 
     print(f"Computing PCA metrics with 1 thread per process")
     res1 = compute_pc_metrics(
-        sorting_analyzer, n_jobs=-1, metric_names=metric_names, max_threads_per_process=1, progress_bar=True
+        sorting_analyzer, n_jobs=-1, metric_names=metric_names, max_threads_per_worker=1, progress_bar=True
     )
     print(f"Computing PCA metrics with 2 thread per process")
     res2 = compute_pc_metrics(
-        sorting_analyzer, n_jobs=-1, metric_names=metric_names, max_threads_per_process=2, progress_bar=True
+        sorting_analyzer, n_jobs=-1, metric_names=metric_names, max_threads_per_worker=2, progress_bar=True
     )
     print("Computing PCA metrics with spawn context")
     res2 = compute_pc_metrics(
-        sorting_analyzer, n_jobs=-1, metric_names=metric_names, max_threads_per_process=2, progress_bar=True
+        sorting_analyzer, n_jobs=-1, metric_names=metric_names, max_threads_per_worker=2, progress_bar=True
     )

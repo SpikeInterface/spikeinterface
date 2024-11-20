@@ -58,7 +58,7 @@ def compute_pc_metrics(
     n_jobs=1,
     progress_bar=False,
     mp_context=None,
-    max_threads_per_process=None,
+    max_threads_per_worker=None,
 ) -> dict:
     """
     Calculate principal component derived metrics.
@@ -147,7 +147,7 @@ def compute_pc_metrics(
         pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
 
-        func_args = (pcs_flat, labels, non_nn_metrics, unit_id, unit_ids, qm_params, max_threads_per_process)
+        func_args = (pcs_flat, labels, non_nn_metrics, unit_id, unit_ids, qm_params, max_threads_per_worker)
         items.append(func_args)
 
     if not run_in_parallel and non_nn_metrics:
@@ -977,12 +977,12 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
 
 
 def pca_metrics_one_unit(args):
-    (pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params, max_threads_per_process) = args
+    (pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params, max_threads_per_worker) = args
 
-    if max_threads_per_process is None:
+    if max_threads_per_worker is None:
         return _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params)
     else:
-        with threadpool_limits(limits=int(max_threads_per_process)):
+        with threadpool_limits(limits=int(max_threads_per_worker)):
             return _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params)
 
 
