@@ -44,7 +44,7 @@ def test_global_job_kwargs():
         job_kwargs_split = fix_job_kwargs({})
 
     assert global_job_kwargs == dict(
-        n_jobs=1, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_worker=1
+        pool_engine="thread", n_jobs=1, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_worker=1
     )
     set_global_job_kwargs(**job_kwargs)
     assert get_global_job_kwargs() == job_kwargs
@@ -80,6 +80,6 @@ def test_global_job_kwargs():
 
 
 if __name__ == "__main__":
-    test_global_dataset_folder()
-    test_global_tmp_folder()
+    # test_global_dataset_folder()
+    # test_global_tmp_folder()
     test_global_job_kwargs()
