@@ -132,7 +132,7 @@ def interpolate_motion_on_traces(
         bin_centers_s, bin_edges_s = ensure_time_bins(interpolation_time_bin_centers_s, interpolation_time_bin_edges_s)
 
     # nearest interpolation bin:
-    # seachsorted(b, t, side="right") == i means that b[i-1] <= t < b[i]
+    # searchsorted(b, t, side="right") == i means that b[i-1] <= t < b[i]
     # hence the -1. doing it with "left" is not as nice -- we want t==b[0]
     # to lead to i=1 (rounding down).
     # time_bins are bin centers, but we want to snap to the nearest center.
