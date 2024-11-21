@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 
 recordings_list, _ = generate_session_displacement_recordings(
     num_units=50,
-    recording_durations=[50, 50, 50]
+    recording_durations=[50, 50, 50],
+    recording_shifts=((0, 0), (0, 50), (0, 75))
 )
 
 # --------------------------------------------------------------------------------------
