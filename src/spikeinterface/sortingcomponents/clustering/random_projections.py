@@ -53,7 +53,7 @@ class RandomProjectionClustering:
         "random_seed": 42,
         "noise_levels": None,
         "smoothing_kwargs": {"window_length_ms": 0.25},
-        "noise_threshold" : 5,
+        "noise_threshold": 5,
         "tmp_folder": None,
         "verbose": True,
     }

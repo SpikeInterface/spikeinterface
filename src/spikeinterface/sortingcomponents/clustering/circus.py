@@ -60,7 +60,7 @@ class CircusClustering:
         "n_svd": [5, 2],
         "ms_before": 0.5,
         "ms_after": 0.5,
-        "noise_threshold" : 5,
+        "noise_threshold": 5,
         "rank": 5,
         "noise_levels": None,
         "tmp_folder": None,
