@@ -4,8 +4,11 @@ import numpy as np
 import spikeinterface.core as sc
 from spikeinterface.sortingcomponents.motion import Motion
 from spikeinterface.sortingcomponents.motion.motion_interpolation import (
-    InterpolateMotionRecording, correct_motion_on_peaks, interpolate_motion,
-    interpolate_motion_on_traces)
+    InterpolateMotionRecording,
+    correct_motion_on_peaks,
+    interpolate_motion,
+    interpolate_motion_on_traces,
+)
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 
