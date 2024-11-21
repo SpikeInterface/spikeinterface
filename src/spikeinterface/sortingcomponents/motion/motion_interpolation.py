@@ -83,6 +83,9 @@ def interpolate_motion_on_traces(
     interpolation_time_bin_centers_s : None or np.array
         Manually specify the time bins which the interpolation happens
         in for this segment. If None, these are the motion estimate's time bins.
+    interpolation_time_bin_edges_s : None or np.array
+        If present, interpolation chunks will be the time bins defined by these edges
+        rather than interpolation_time_bin_centers_s or the motion's bins.
     spatial_interpolation_method : "idw" | "kriging", default: "kriging"
         The spatial interpolation method used to interpolate the channel locations:
             * idw : Inverse Distance Weighing
