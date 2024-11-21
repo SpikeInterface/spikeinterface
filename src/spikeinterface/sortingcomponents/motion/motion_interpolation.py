@@ -65,7 +65,7 @@ def interpolate_motion_on_traces(
     Apply inverse motion with spatial interpolation on traces.
 
     Traces can be full traces, but also waveforms snippets. Times used for looking up
-    displacements are controlled by interpolation_time_bin_edges_s or 
+    displacements are controlled by interpolation_time_bin_edges_s or
     interpolation_time_bin_centers_s, or fall back to the Motion object's time bins
     by default; times in the recording outside these time bins use the closest edge
     bin's displacement value during interpolation.
@@ -133,7 +133,9 @@ def interpolate_motion_on_traces(
         interpolation_time_bin_centers_s = motion.temporal_bin_centers_s[segment_index]
         interpolation_time_bin_edges_s = motion.temporal_bin_edges_s[segment_index]
     else:
-        interpolation_time_bin_centers_s, interpolation_time_bin_edges_s = ensure_time_bins(interpolation_time_bin_centers_s, interpolation_time_bin_edges_s)
+        interpolation_time_bin_centers_s, interpolation_time_bin_edges_s = ensure_time_bins(
+            interpolation_time_bin_centers_s, interpolation_time_bin_edges_s
+        )
 
     # bin the frame times according to the interpolation time bins.
     # searchsorted(b, t, side="right") == i means that b[i-1] <= t < b[i]
