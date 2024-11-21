@@ -64,7 +64,11 @@ def interpolate_motion_on_traces(
     """
     Apply inverse motion with spatial interpolation on traces.
 
-    Traces can be full traces, but also waveforms snippets.
+    Traces can be full traces, but also waveforms snippets. Times used for looking up
+    displacements are controlled by interpolation_time_bin_edges_s or 
+    interpolation_time_bin_centers_s, or fall back to the Motion object's time bins
+    by default; times in the recording outside these time bins use the closest edge
+    bin's displacement value during interpolation.
 
     Parameters
     ----------
