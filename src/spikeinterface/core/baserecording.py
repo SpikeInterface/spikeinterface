@@ -509,6 +509,35 @@ class BaseRecording(BaseRecordingSnippets):
             rs.t_start = None
             rs.sampling_frequency = self.sampling_frequency
 
+    def shift_times(self, shift: int | float, segment_index: int | None = None) -> None:
+        """
+        Shift all times by a scalar value.
+
+        Parameters
+        ----------
+        shift : int | float
+            The shift to apply. If positive, times will be increased by `shift`.
+            e.g. shifting by 1 will be like the recording started 1 second later.
+            If negative, the start time will be decreased i.e. as if the recording
+            started earlier.
+
+        segment_index : int | None
+            The segment on which to shift the times.
+            If `None`, all segments will be shifted.
+        """
+        if segment_index is None:
+            segments_to_shift = range(self.get_num_segments())
+        else:
+            segments_to_shift = (segment_index,)
+
+        for idx in segments_to_shift:
+            rs = self._recording_segments[idx]
+
+            if self.has_time_vector(segment_index=idx):
+                rs.time_vector += shift
+            else:
+                rs.t_start += shift
+
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
         Transform sample index into time in seconds
