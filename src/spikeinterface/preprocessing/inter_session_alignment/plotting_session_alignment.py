@@ -19,11 +19,10 @@ class SessionAlignmentWidget(BaseWidget):
         spatial_bin_centers: np.ndarray | None = None,
         corrected_peak_locations_list: list[np.ndarray] | None = None,
         corrected_session_histogram_list: list[np.ndarray] = None,
-        drift_raster_map_kwargs : dict | None = None,
+        drift_raster_map_kwargs: dict | None = None,
         session_alignment_histogram_kwargs: dict | None = None,
         **backend_kwargs,
     ):
-
         """
         Widget to display the output of inter-session alignment.
         In the top section, `DriftRasterMapWidget`s are used to display
@@ -230,9 +229,8 @@ class SessionAlignmentWidget(BaseWidget):
 
 
 class SessionAlignmentHistogramWidget(BaseWidget):
-    """
+    """ """
 
-    """
     def __init__(
         self,
         session_histogram_list: list[np.ndarray],
