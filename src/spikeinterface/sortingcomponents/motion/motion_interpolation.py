@@ -126,30 +126,30 @@ def interpolate_motion_on_traces(
 
     # -- determine the blocks of frames that will land in the same interpolation time bin
     if interpolation_time_bin_centers_s is None and interpolation_time_bin_edges_s is None:
-        bin_centers_s = motion.temporal_bin_centers_s[segment_index]
-        bin_edges_s = motion.temporal_bin_edges_s[segment_index]
+        interpolation_time_bin_centers_s = motion.temporal_bin_centers_s[segment_index]
+        interpolation_time_bin_edges_s = motion.temporal_bin_edges_s[segment_index]
     else:
-        bin_centers_s, bin_edges_s = ensure_time_bins(interpolation_time_bin_centers_s, interpolation_time_bin_edges_s)
+        interpolation_time_bin_centers_s, interpolation_time_bin_edges_s = ensure_time_bins(interpolation_time_bin_centers_s, interpolation_time_bin_edges_s)
 
     # bin the frame times according to the interpolation time bins.
     # searchsorted(b, t, side="right") == i means that b[i-1] <= t < b[i]
     # hence the -1. doing it with "left" is not as nice -- we want t==b[0]
     # to lead to i=1 (rounding down).
-    bin_inds = np.searchsorted(bin_edges_s, times, side="right") - 1
+    interpolation_bin_inds = np.searchsorted(interpolation_time_bin_edges_s, times, side="right") - 1
 
     # the time bins may not cover the whole set of times in the recording,
     # so we need to clip these indices to the valid range
-    n_bins = bin_edges_s.shape[0] - 1
-    np.clip(bin_inds, 0, n_bins - 1, out=bin_inds)
+    n_bins = interpolation_time_bin_edges_s.shape[0] - 1
+    np.clip(interpolation_bin_inds, 0, n_bins - 1, out=interpolation_bin_inds)
 
     # -- what are the possibilities here anyway?
-    bins_here = np.arange(bin_inds[0], bin_inds[-1] + 1)
+    interpolation_bins_here = np.arange(interpolation_bin_inds[0], interpolation_bin_inds[-1] + 1)
 
     # inperpolation kernel will be the same per temporal bin
     interp_times = np.empty(total_num_chans)
     current_start_index = 0
-    for bin_ind in bins_here:
-        bin_time = bin_centers_s[bin_ind]
+    for interp_bin_ind in interpolation_bins_here:
+        bin_time = bin_centers_s[interp_bin_ind]
         interp_times.fill(bin_time)
         channel_motions = motion.get_displacement_at_time_and_depth(
             interp_times,
@@ -177,16 +177,17 @@ def interpolate_motion_on_traces(
         # ax.set_title(f"bin_ind {bin_ind} - {bin_time}s - {spatial_interpolation_method}")
         # plt.show()
 
+        # quick search logic to find frames corresponding to this interpolation bin in the recording
         # quickly find the end of this bin, which is also the start of the next
         next_start_index = current_start_index + np.searchsorted(
-            bin_inds[current_start_index:], bin_ind + 1, side="left"
+            interpolation_bin_inds[current_start_index:], interp_bin_ind + 1, side="left"
         )
-        in_bin = slice(current_start_index, next_start_index)
+        frames_in_bin = slice(current_start_index, next_start_index)
 
         # here we use a simple np.matmul even if dirft_kernel can be super sparse.
         # because the speed for a sparse matmul is not so good when we disable multi threaad (due multi processing
         # in ChunkRecordingExecutor)
-        np.matmul(traces[in_bin], drift_kernel, out=traces_corrected[in_bin])
+        np.matmul(traces[frames_in_bin], drift_kernel, out=traces_corrected[frames_in_bin])
         current_start_index = next_start_index
 
     return traces_corrected
