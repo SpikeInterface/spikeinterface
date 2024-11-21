@@ -580,6 +580,22 @@ def make_3d_motion_histograms(
 
 
 def ensure_time_bins(time_bin_centers_s=None, time_bin_edges_s=None):
+    """Ensure that both bin edges and bin centers are present
+
+    If either of the inputs are None but not both, the missing is reconstructed
+    from the present. Going from edges to centers is done by taking midpoints.
+    Going from centers to edges is done by taking midpoints and padding with the
+    left and rightmost centers.
+
+    Parameters
+    ----------
+    time_bin_centers_s : None or np.array
+    time_bin_edges_s : None or np.array
+
+    Returns
+    -------
+    time_bin_centers_s, time_bin_edges_s
+    """
     if time_bin_centers_s is None and time_bin_edges_s is None:
         raise ValueError("Need at least one of time_bin_centers_s or time_bin_edges_s.")
 

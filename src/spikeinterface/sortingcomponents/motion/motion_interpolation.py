@@ -3,7 +3,8 @@ from __future__ import annotations
 import numpy as np
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
-from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.preprocessing.basepreprocessor import (
+    BasePreprocessor, BasePreprocessorSegment)
 from spikeinterface.preprocessing.filter import fix_dtype
 
 from .motion_utils import ensure_time_bin_edges, ensure_time_bins
@@ -155,7 +156,7 @@ def interpolate_motion_on_traces(
     interp_times = np.empty(total_num_chans)
     current_start_index = 0
     for interp_bin_ind in interpolation_bins_here:
-        bin_time = bin_centers_s[interp_bin_ind]
+        bin_time = interpolation_time_bin_centers_s[interp_bin_ind]
         interp_times.fill(bin_time)
         channel_motions = motion.get_displacement_at_time_and_depth(
             interp_times,
