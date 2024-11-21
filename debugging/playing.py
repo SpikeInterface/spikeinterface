@@ -40,15 +40,15 @@ peaks_list, peak_locations_list = session_alignment.compute_peaks_locations_for_
 # This might be useful if periods of the recording have weird kinetics or noise.
 # See `session_alignment.py` for docs on these settings.
 
-non_rigid_window_kwarg = session_alignment.get_non_rigid_window_kwargs()
-non_rigid_window_kwarg["rigid"] = True
+non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
+non_rigid_window_kwargs["rigid"] = True
 
 corrected_recordings_list, extra_info = session_alignment.align_sessions(
     recordings_list,
     peaks_list,
     peak_locations_list,
     alignment_order="to_session_1",  # "to_session_X" or "to_middle"
-    non_rigid_window_kwargs=non_rigid_window_kwarg,
+    non_rigid_window_kwargs=non_rigid_window_kwargs,
 )
 
 plotting_session_alignment.SessionAlignmentWidget(
@@ -58,7 +58,7 @@ plotting_session_alignment.SessionAlignmentWidget(
     extra_info["session_histogram_list"],
     **extra_info["corrected"],
     spatial_bin_centers=extra_info["spatial_bin_centers"],
-    drift_raster_map_kwargs={"clim":(-250, 0), "scatter_decimate": 10}  # TODO: option to fix this across recordings.
+    drift_raster_map_kwargs={"clim":(-250, 0), "scatter_decimate": 10}
 )
 
 plt.show()
