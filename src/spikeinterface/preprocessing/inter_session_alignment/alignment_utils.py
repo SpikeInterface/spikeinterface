@@ -16,7 +16,7 @@ def get_activity_histogram(
     peak_locations: np.ndarray,
     spatial_bin_edges: np.ndarray,
     log_scale: bool,
-    bin_s: float| None,
+    bin_s: float | None,
     depth_smooth_um: float | None,
 ):
     """
@@ -114,6 +114,7 @@ def estimate_chunk_size(scaled_activity_histogram):
 # Given a set off chunked_session_histograms (num time chunks x num spatial bins)
 # take the summary statistic over the time axis.
 
+
 def get_chunked_hist_mean(chunked_session_histograms):
 
     mean_hist = np.mean(chunked_session_histograms, axis=0)
@@ -141,6 +142,7 @@ def get_chunked_hist_poisson_estimate(chunked_session_histograms):
     Keeping for now as opportunity to add prior or do some outlier
     removal per bin. But if not useful, deprecate in future.
     """
+
     def obj_fun(lambda_, m, sum_k):
         return -(sum_k * np.log(lambda_) - m * lambda_)
 
@@ -154,9 +156,7 @@ def get_chunked_hist_poisson_estimate(chunked_session_histograms):
         m = ks.shape
         sum_k = np.sum(ks)
 
-        poisson_estimate[i] = minimize(
-            obj_fun, 0.5, (m, sum_k), bounds=((1e-10, np.inf),)
-        ).x
+        poisson_estimate[i] = minimize(obj_fun, 0.5, (m, sum_k), bounds=((1e-10, np.inf),)).x
 
     return poisson_estimate
 
@@ -305,10 +305,7 @@ def compute_histogram_crosscorrelation(
                 xcorr = np.correlate(windowed_histogram_i, windowed_histogram_j, mode="full")
 
                 if num_shifts_block:
-                    window_indices = np.arange(
-                        center_bin - num_shifts_block,
-                        center_bin + num_shifts_block
-                    )
+                    window_indices = np.arange(center_bin - num_shifts_block, center_bin + num_shifts_block)
                     mask = np.zeros_like(xcorr)
                     mask[window_indices] = 1
                     xcorr *= mask
