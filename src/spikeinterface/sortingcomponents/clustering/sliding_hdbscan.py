@@ -23,7 +23,7 @@ from spikeinterface.core import (
     get_random_data_chunks,
     extract_waveforms_to_buffers,
 )
-from .clustering_tools import auto_clean_clustering, auto_split_clustering
+from .clustering_tools import auto_clean_clustering
 
 
 class SlidingHdbscanClustering:

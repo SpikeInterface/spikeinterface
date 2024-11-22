@@ -16,7 +16,7 @@ except:
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.waveform_tools import estimate_templates
 from .clustering_tools import remove_duplicates_via_matching
-from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
+from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
 from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
 from spikeinterface.core.template import Templates
@@ -144,7 +144,7 @@ class RandomProjectionClustering:
             is_scaled=False,
         )
         if params["noise_levels"] is None:
-            params["noise_levels"] = get_noise_levels(recording, return_scaled=False)
+            params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
         sparsity = compute_sparsity(templates, params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
         templates = remove_empty_templates(templates)
