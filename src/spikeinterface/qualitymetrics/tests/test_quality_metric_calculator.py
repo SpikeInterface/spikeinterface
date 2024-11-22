@@ -133,10 +133,15 @@ def test_empty_units(sorting_analyzer_simple):
         seed=2205,
     )
 
+    # num_spikes are ints not nans so we confirm empty units are nans for everything except
+    # num_spikes which should be 0
+    nan_containing_columns = [column for column in metrics_empty.columns if column != "num_spikes"]
     for empty_unit_id in sorting_empty.get_empty_unit_ids():
         from pandas import isnull
 
-        assert np.all(isnull(metrics_empty.loc[empty_unit_id].values))
+        assert np.all(isnull(metrics_empty.loc[empty_unit_id, nan_containing_columns].values))
+        if "num_spikes" in metrics_empty.columns:
+            assert metrics_empty.loc[empty_unit_id, ["num_spikes"]] == 0
 
 
 # TODO @alessio all theses old test should be moved in test_metric_functions.py or test_pca_metrics()

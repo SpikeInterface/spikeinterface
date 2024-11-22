@@ -222,6 +222,9 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # add NaN for empty units
         if len(empty_unit_ids) > 0:
             metrics.loc[empty_unit_ids] = np.nan
+            # num_spikes is an int and should be 0
+            if "num_spikes" in metrics.columns:
+                metrics.loc[empty_unit_ids, ["num_spikes"]] = 0
 
         # we use the convert_dtypes to convert the columns to the most appropriate dtype and avoid object columns
         # (in case of NaN values)
