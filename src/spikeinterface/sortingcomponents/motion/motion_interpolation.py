@@ -130,7 +130,7 @@ def interpolate_motion_on_traces(
 
     # -- determine the blocks of frames that will land in the same interpolation time bin
     if interpolation_time_bin_centers_s is None and interpolation_time_bin_edges_s is None:
-        interpolation_time_bin_centers_s = motion.temporal_bin_centers_s[segment_index]
+        interpolation_time_bin_centers_s = motion.temporal_bins_s[segment_index]
         interpolation_time_bin_edges_s = motion.temporal_bin_edges_s[segment_index]
     else:
         interpolation_time_bin_centers_s, interpolation_time_bin_edges_s = ensure_time_bins(
