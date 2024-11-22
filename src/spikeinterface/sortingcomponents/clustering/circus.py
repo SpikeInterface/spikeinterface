@@ -18,7 +18,6 @@ from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.waveform_tools import estimate_templates, estimate_templates_with_accumulator
 from .clustering_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
-from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
 from spikeinterface.core.template import Templates
