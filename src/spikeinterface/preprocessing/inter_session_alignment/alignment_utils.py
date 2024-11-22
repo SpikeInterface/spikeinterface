@@ -87,8 +87,12 @@ def get_bin_centers(bin_edges):
 def estimate_chunk_size(scaled_activity_histogram):
     """
     Get an estimate of chunk size such that
-    the 85% percentile of the firing rate will be
-    estimated within 10% 99% of the time,
+    the 80th percentile of the firing rate will be
+    estimated within 10% 90% of the time,
+
+    I think a better way is to take the peaks above half width and find the min.
+    Or just to take the 50th percentile...? NO. Because all peaks might be similar heights
+
     corrected based on assumption
     of Poisson firing (based on CLT).
 
@@ -96,16 +100,18 @@ def estimate_chunk_size(scaled_activity_histogram):
     ----
     - make the details available.
     """
-    firing_rate = np.percentile(scaled_activity_histogram, 98)
+    firing_rate = np.percentile(scaled_activity_histogram, 80)
 
-    lambda_ = firing_rate
-    c = 0.5
-    n_sd = 2
-    n_draws = n_sd**2 * lambda_ / c**2
+    lambda_hat_s = firing_rate
+    range_percent = 0.1
+    confidence_z = 1.645  # 90% of samples in the normal distribution
+    e = lambda_hat_s * firing_rate
 
-    t = n_draws
+    t = lambda_hat_s / (e / confidence_z) ** 2
 
-    return t, lambda_
+    print(f"estimated t: {t} for lambda {lambda_hat_s}")
+
+    return t
 
 
 # #############################################################################

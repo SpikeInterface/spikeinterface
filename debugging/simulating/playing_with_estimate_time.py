@@ -1,55 +1,31 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
-lambda_ = 100
+lambda_hat_s = 2
+range_percent = 0.1
 
-c = 0.1
-n_sd = 1
-n_draws = n_sd**2 * lambda_ / c**2
+confidence_z = 1.645  # TODO: check, based on 90% confidence
 
-t = n_draws  # * lambda_  # TODO: check this
+e = lambda_hat_s * range_percent
 
-print(n_draws)
+n = lambda_hat_s / (e / confidence_z)**2
+
 
 MC = 10000
-estimates = np.zeros(MC)
+
+sim_data = np.empty(MC)
+
 for i in range(MC):
-    exp = np.random.poisson(lambda_, int(n_draws))
-    estimates[i] = np.mean(exp)
 
-plt.hist(estimates)
-plt.show()
+    # Dont do this, model a poisson process
+    draws = np.random.exponential(1/lambda_hat_s, size=10000) # way too many, calculate properly
 
-print(np.std(estimates))
-print(np.sum(np.logical_and(estimates >= lambda_ - c, estimates <= lambda_ + c) / estimates.size))
+    in_time_range = np.cumsum(draws) < n
+    assert not np.all(in_time_range) / n, "need to increase size"
 
+    count = np.sum(in_time_range) / n
 
-if False:
-    # Q: how many spikes do we need to get a good estimate of l < std 1
+    sim_data[i] = count
 
-    # Damn this works for small
-    c = 5 * 0.01
-    n_sd = 1
+in_range = np.logical_or(sim_data < lambda_hat_s - e, sim_data > lambda_hat_s + e)
 
-    n = n_sd**2 / (c**2 * rate**2)
-    t = n / rate
-
-    print("c", c)
-
-    print("std:", 1 / (rate * np.sqrt(n)))
-
-    print("n", n)
-    print("t", t)
-
-    MC = 10000
-    estimates = np.zeros(MC)
-    for i in range(MC):
-
-        exp = np.random.exponential(1 / rate, int(n))
-        estimates[i] = np.mean(exp)
-
-    plt.hist(estimates)
-    plt.show()
-
-    print(np.std(estimates))
-    print(np.sum(np.logical_and(estimates >= (1 / rate) - c, estimates <= (1 / rate) + c) / estimates.size))
+print(f"confidence : {1 - np.mean(in_range)}")  # this is compeltely wrong
