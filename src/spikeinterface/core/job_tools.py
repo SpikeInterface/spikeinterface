@@ -110,7 +110,7 @@ def fix_job_kwargs(runtime_job_kwargs):
         runtime_job_kwargs = runtime_job_kwargs.copy()
         runtime_job_kwargs["max_threads_per_worker"] = runtime_job_kwargs.pop("max_threads_per_process")
         warnings.warn(
-            "job_kwargs: max_threads_per_worker was changed to max_threads_per_worker",
+            "job_kwargs: max_threads_per_process was changed to max_threads_per_worker, max_threads_per_process will be removed in 0.104",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -346,7 +346,7 @@ class ChunkRecordingExecutor:
     gather_func : None or callable, default: None
         Optional function that is called in the main thread and retrieves the results of each worker.
         This function can be used instead of `handle_returns` to implement custom storage on-the-fly.
-    pool_engine : "process" | "thread"
+    pool_engine : "process" | "thread", default: "thread"
         If n_jobs>1 then use ProcessPoolExecutor or ThreadPoolExecutor
     n_jobs : int, default: 1
         Number of jobs to be used. Use -1 to use as many jobs as number of cores
@@ -384,7 +384,7 @@ class ChunkRecordingExecutor:
         progress_bar=False,
         handle_returns=False,
         gather_func=None,
-        pool_engine="process",
+        pool_engine="thread",
         n_jobs=1,
         total_memory=None,
         chunk_size=None,
@@ -400,12 +400,13 @@ class ChunkRecordingExecutor:
         self.init_func = init_func
         self.init_args = init_args
 
-        if mp_context is None:
-            mp_context = recording.get_preferred_mp_context()
-        if mp_context is not None and platform.system() == "Windows":
-            assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
-        elif mp_context == "fork" and platform.system() == "Darwin":
-            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
+        if pool_engine == "process":
+            if mp_context is None:
+                mp_context = recording.get_preferred_mp_context()
+            if mp_context is not None and platform.system() == "Windows":
+                assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+            elif mp_context == "fork" and platform.system() == "Darwin":
+                warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
 
         self.mp_context = mp_context
 
@@ -572,13 +573,9 @@ class WorkerFuncWrapper:
         else:
             with threadpool_limits(limits=self.max_threads_per_worker):
                 return self.func(segment_index, start_frame, end_frame, self.worker_dict)
-
 # see
 # https://stackoverflow.com/questions/10117073/how-to-use-initializer-to-set-up-my-multiprocess-pool
-# the tricks is : thiw variables are global per worker
-# so they are not share in the same process
-# global _worker_ctx
-# global _func
+# the tricks is : this variable are global per worker (so not shared in the same process)
 global _process_func_wrapper
 
 

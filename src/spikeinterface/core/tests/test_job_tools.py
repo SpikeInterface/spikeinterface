@@ -81,7 +81,6 @@ def test_ensure_chunk_size():
 
 def func(segment_index, start_frame, end_frame, worker_dict):
     import os
-    import time
 
     #  print('func', segment_index, start_frame, end_frame, worker_dict, os.getpid())
     time.sleep(0.010)
