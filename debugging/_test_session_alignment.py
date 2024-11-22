@@ -3,10 +3,12 @@ from __future__ import annotations
 from spikeinterface.generation.session_displacement_generator import generate_session_displacement_recordings
 import matplotlib.pyplot as plt
 import numpy as np
-import alignment_utils  # TODO
 import pickle
-import session_alignment  # TODO
-import plotting
+from spikeinterface.preprocessing.inter_session_alignment import (
+    session_alignment,
+    plotting_session_alignment,
+    alignment_utils
+)
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 import spikeinterface.full as si
@@ -132,22 +134,21 @@ def _prep_recording(recording, plot=False):
 
     return peaks, peak_locations
 
-MOTION = True  # True
-SAVE = False
-PLOT = False
-BIN_UM = 1
+MOTION = False  # True
+SAVE = True
+PLOT = True
+BIN_UM = 5
 
 
 if SAVE:
     scalings = [np.ones(25), np.r_[np.zeros(10), np.ones(15)]]
     recordings_list, _ = generate_session_displacement_recordings(
-        non_rigid_gradient=0.05, # 0.05,  # 0.05, # 0.05,
+        non_rigid_gradient=None, # 0.05,  # 0.05, # 0.05,
         num_units=55,
-        recording_durations=(100, 100, 100), # , 100),
+        recording_durations=(50, 50), # , 100),
         recording_shifts=(
             (0, 0),
             (0, 75),
-            (0, -150),
         ),
         recording_amplitude_scalings=None,  # {"method": "by_amplitude_and_firing_rate", "scalings": scalings},
         generate_unit_locations_kwargs={"margin_um": 0, "minimum_z": 0, "maximum_z": 0},
@@ -156,7 +157,7 @@ if SAVE:
             ms_after=3.0,
             mode="sphere",  # this is key to maintaining consistent unit positions with shift
             unit_params=dict(
-                alpha=(150.0, 500.0),
+                alpha=(75, 125.0),  # firing rate
                 spatial_decay=(10, 45),
             ),
         ),
@@ -168,7 +169,7 @@ if SAVE:
         peak_locations_list = []
 
         for recording in recordings_list:
-            peaks, peak_locations = alignment_utils.prep_recording(
+            peaks, peak_locations = _prep_recording(
                 recording,
                 plot=PLOT,
             )
@@ -265,12 +266,11 @@ else:
         peaks_list,
         peak_locations_list,
         alignment_order="to_session_1",
-        rigid=False,
         estimate_histogram_kwargs=estimate_histogram_kwargs,
         compute_alignment_kwargs=compute_alignment_kwargs,
     )
 
-plotting.SessionAlignmentWidget(
+plotting_session_alignment.SessionAlignmentWidget(
     recordings_list,
     peaks_list,
     peak_locations_list,
