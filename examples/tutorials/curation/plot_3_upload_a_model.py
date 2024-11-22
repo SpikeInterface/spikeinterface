@@ -4,11 +4,19 @@ Upload a pipeline to Hugging Face Hub
 """
 ##############################################################################
 # In this tutorial we will upload a pipeline, trained in SpikeInterface, to the
-# `Hugging Face Hub <https://huggingface.co/>`_ (HFH). To do this, you need a HFH account.
+# `Hugging Face Hub <https://huggingface.co/>`_ (HFH).
+#
+# Hugging Face Hub?
+# -----------------
+# Hugging Face Hub (HFH) is a model sharing platform focused on AI and ML models and datasets.
+# To upload your own model to HFH, you need to make an account with them.
 # If you do not want to make an account, you can simply share the model folder with colleagues.
 # There are also several ways to interaction with HFH: the way we propose here doesn't use
 # many of the tools ``skops`` and hugging face have developed such as the ``Card`` and
 # ``hub_utils``. Feel free to check those out `here <https://skops.readthedocs.io/en/stable/examples.html>`_.
+#
+# Prepare your model
+# ------------------
 #
 # The plan is to make a folder with the following file structure
 #
@@ -21,20 +29,24 @@ Upload a pipeline to Hugging Face Hub
 #         labels.csv
 #         metadata.json
 #
-# SpikeInterface doesn't require you to keep this folder structure, we just advise it as
+# SpikeInterface and HFH don't require you to keep this folder structure, we just advise it as
 # best practice.
 #
-# If you've used SpikeInterface to train your model, you have already created such a folder,
-# containing everything except the ``metadata.json`` file. In this file, we suggest saving
-# any information which shows when a model is applicable (and when it is *not*). Taking
+# If you've used SpikeInterface to train your model, the `train_model` function auto-generates
+# most of this data. The only thing missing is the the ``metadata.json`` file. The purpose of this
+# file is to detail how the model was trained, which can help prospective users decide if it
+# is relevant for them. For example, taking
 # a model trained on mouse data and applying it to a primate is likely a bad idea (or a
-# great research paper!). And a model trained in tetrode data will have limited application
-# on a silcone high-density probe. Hence we suggest the following dictionary as a minimal
-# amount of information needed. Note that we format the metadata so that the information
+# great research paper!). And a model trained using tetrode data might have limited application
+# on a silcone high-density probes. Hence we suggest saving at least the species, brain areas
+# and probe information, as is done in the dictionary below. Note that we format the metadata
+# so that the information
 # in common with the NWB data format is consistent with it. Since the models can be trained
 # on several curations, all the metadata fields are lists:
 #
 # .. code-block::
+#
+#     import json
 #
 #     model_metadata = {
 #         "subject_species": ["Mus musculus"],
@@ -45,19 +57,16 @@ Upload a pipeline to Hugging Face Hub
 #              "name": "Neuropixels 2.0"
 #             }]
 #         }
-#
-#     import json
 #     with open("my_model_folder/metadata.json", "w") as file:
 #         json.dump(model_metadata, file)
 #
-# You could now share this folder with a colleague, or upload it to github. Or if you'd
-# like to upload the model to Hugging Face Hub, keep reading. We'll use the
-# HFH web interface.
+# We'll now upload this folder to HFH using the web interface. (If you don't want to
+# use HFH, you could just share this folder with a colleague.)
 #
 # First, go to https://huggingface.co/ and make an account. Once you've logged in, press
 # ``+`` then ``New model`` or find ``+ New Model`` in the user menu. You will be asked
 # to enter a model name, to choose a license for the model and whether the model should
-#  be public or private. After you have made these choices, press ``Create Model``.
+# be public or private. After you have made these choices, press ``Create Model``.
 #
 # You should be on your model's landing page, whose header looks something like
 #
