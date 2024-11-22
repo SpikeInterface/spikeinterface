@@ -118,7 +118,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
         job_kwargs.update({"progress_bar": verbose})
-        print(job_kwargs)
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -231,7 +230,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             else:
                 clustering_method = "random_projections"
 
-            print('test')
             labels, peak_labels = find_cluster_from_peaks(
                 recording_w, selected_peaks, method=clustering_method, method_kwargs=clustering_params, **job_kwargs
             )
