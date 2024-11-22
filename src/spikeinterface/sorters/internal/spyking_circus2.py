@@ -350,7 +350,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting.save(folder=curation_folder)
                 # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
-            sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params)
+            sorting = final_cleaning_circus(recording_w, sorting, templates, merging_params, **job_kwargs)
 
             if verbose:
                 print(f"Final merging, keeping {len(sorting.unit_ids)} units")
@@ -410,16 +410,17 @@ def divide_recording(recording, seed=None, **job_kwargs):
     return recording_slices
 
 
-def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
+def final_cleaning_circus(recording, sorting, templates, merging_kwargs, **job_kwargs):
 
     from spikeinterface.core.sorting_tools import apply_merges_to_sorting
-
     sa = create_sorting_analyzer_with_templates(sorting, recording, templates)
-    sa.compute("unit_locations", method="monopolar_triangulation")
+    
+    sa.compute("unit_locations", method="monopolar_triangulation", **job_kwargs)
     similarity_kwargs = merging_kwargs.pop("similarity_kwargs", {})
-    sa.compute("template_similarity", **similarity_kwargs)
+    sa.compute("template_similarity", **similarity_kwargs, **job_kwargs)
     correlograms_kwargs = merging_kwargs.pop("correlograms_kwargs", {})
-    sa.compute("correlograms", **correlograms_kwargs)
+    sa.compute("correlograms", **correlograms_kwargs, **job_kwargs)
+    
     auto_merge_kwargs = merging_kwargs.pop("auto_merge", {})
     merges = get_potential_auto_merge(sa, resolve_graph=True, **auto_merge_kwargs)
     sorting = apply_merges_to_sorting(sa.sorting, merges)
