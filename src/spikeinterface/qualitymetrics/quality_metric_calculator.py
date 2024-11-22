@@ -16,6 +16,7 @@ from .quality_metric_list import (
     _misc_metric_name_to_func,
     _possible_pc_metric_names,
     compute_name_to_column_names,
+    column_name_to_column_dtype,
 )
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
@@ -225,6 +226,12 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # we use the convert_dtypes to convert the columns to the most appropriate dtype and avoid object columns
         # (in case of NaN values)
         metrics = metrics.convert_dtypes()
+
+        # we do this because the convert_dtypes infers the wrong types sometimes.
+        # the actual types for columns can be found in column_name_to_column_dtype dictionary.
+        for column in metrics.columns:
+            metrics[column] = metrics[column].astype(column_name_to_column_dtype[column])
+
         return metrics
 
     def _run(self, verbose=False, **job_kwargs):
