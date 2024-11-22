@@ -26,7 +26,6 @@ from spikeinterface.sortingcomponents.clustering.split import split_clusters
 from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
 
 
-
 class TdcClustering:
     """
     Here the implementation of clustering used by tridesclous2
