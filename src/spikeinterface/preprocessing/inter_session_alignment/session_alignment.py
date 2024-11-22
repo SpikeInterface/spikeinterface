@@ -516,8 +516,9 @@ def _get_single_session_activity_histogram(
     # Compute summary histogram based on histograms
     # calculated on session chunks
     if chunked_bin_size_s == "estimate":
-        # It is important that the passed histogram is scaled to firing rate
-        chunked_bin_size_s, _ = alignment_utils.estimate_chunk_size(one_bin_histogram)
+        # It is important that the passed histogram is scaled to firing rate in Hz
+        breakpoint()
+        chunked_bin_size_s = alignment_utils.estimate_chunk_size(one_bin_histogram)
 
     chunked_histograms, chunked_temporal_bin_centers, _ = alignment_utils.get_activity_histogram(
         recording,
