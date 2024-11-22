@@ -84,6 +84,7 @@ compute_name_to_column_names = {
     "silhouette_full": ["silhouette_full"],
 }
 
+# this dict allows us to ensure the appropriate dtype of metrics rather than allow Pandas to infer them
 column_name_to_column_dtype = {
     "num_spikes": int,
     "firing_rate": float,
@@ -98,7 +99,7 @@ column_name_to_column_dtype = {
     "amplitude_median": float,
     "amplitude_cv_median": float,
     "amplitude_cv_range": float,
-    "synch": float,
+    "sync": float,
     "firing_range": float,
     "drift_ptp": float,
     "drift_std": float,

@@ -230,7 +230,13 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # we do this because the convert_dtypes infers the wrong types sometimes.
         # the actual types for columns can be found in column_name_to_column_dtype dictionary.
         for column in metrics.columns:
-            metrics[column] = metrics[column].astype(column_name_to_column_dtype[column])
+            # we have one issue where the name of the columns for synchrony are named based on
+            # what the user has input as arguments so we need a way to handle this separately
+            # everything else should be handled with the column name.
+            if "sync" in column:
+                metrics[column] = metrics[column].astype(column_name_to_column_dtype["sync"])
+            else:
+                metrics[column] = metrics[column].astype(column_name_to_column_dtype[column])
 
         return metrics
 
