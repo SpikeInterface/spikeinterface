@@ -241,7 +241,10 @@ class CircusClustering:
             **job_kwargs,
         )
 
-        peak_snrs = np.abs(templates_array[:, nbefore, :]) / templates_array_std[:, nbefore, :]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            peak_snrs = np.abs(templates_array[:, nbefore, :]) / templates_array_std[:, nbefore, :]
+        mask = ~np.isfinite(peak_snrs)
+        peak_snrs[mask] = 0
         best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
         best_snrs_ratio = (peak_snrs / params["noise_levels"])[np.arange(len(peak_snrs)), best_channels]
         valid_templates = best_snrs_ratio > params["noise_threshold"]
