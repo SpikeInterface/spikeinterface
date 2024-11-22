@@ -44,7 +44,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 
     extension_name = "template_similarity"
     depend_on = ["templates"]
-    need_recording = True
+    need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
     need_backward_compatibility_on_load = True
