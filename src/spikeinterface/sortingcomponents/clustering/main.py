@@ -32,6 +32,7 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
         peak_labels.shape[0] == peaks.shape[0]
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
+    print("toto", job_kwargs)
 
     assert (
         method in clustering_methods

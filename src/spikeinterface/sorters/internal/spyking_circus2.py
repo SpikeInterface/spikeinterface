@@ -115,10 +115,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.sortingcomponents.tools import get_prototype_spike, check_probe_for_drift_correction
-        from spikeinterface.sortingcomponents.tools import get_prototype_spike
 
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
         job_kwargs.update({"progress_bar": verbose})
+        print(job_kwargs)
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -231,6 +231,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             else:
                 clustering_method = "random_projections"
 
+            print('test')
             labels, peak_labels = find_cluster_from_peaks(
                 recording_w, selected_peaks, method=clustering_method, method_kwargs=clustering_params, **job_kwargs
             )
