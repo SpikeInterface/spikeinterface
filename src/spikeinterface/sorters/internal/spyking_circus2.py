@@ -231,7 +231,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             else:
                 clustering_method = "random_projections"
 
-            print('test')
+            print("test")
             labels, peak_labels = find_cluster_from_peaks(
                 recording_w, selected_peaks, method=clustering_method, method_kwargs=clustering_params, **job_kwargs
             )
