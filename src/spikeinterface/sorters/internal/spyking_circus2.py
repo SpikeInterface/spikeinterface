@@ -52,7 +52,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
-        "job_kwargs": {"n_jobs": 0.8},
+        "job_kwargs": {"n_jobs": 0.5},
         "debug": False,
     }
 
@@ -282,11 +282,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_method = params["matching"].pop("method")
             matching_params = params["matching"].copy()
             matching_params["templates"] = templates
-            matching_job_params = job_kwargs.copy()
 
             if matching_method is not None:
                 spikes = find_spikes_from_templates(
-                    recording_w, matching_method, method_kwargs=matching_params, **matching_job_params
+                    recording_w, matching_method, method_kwargs=matching_params, **job_kwargs
                 )
 
                 if params["debug"]:
