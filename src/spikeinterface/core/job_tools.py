@@ -61,7 +61,8 @@ _mutually_exclusive = (
 
 def get_best_job_kwargs():
     """
-    Given best possible job_kwargs for the platform.
+    Gives best possible job_kwargs for the platform.
+    Currently this function  is from developer experience, but may be adapted in the future.
     """
 
     n_cpu = os.cpu_count()
@@ -71,19 +72,19 @@ def get_best_job_kwargs():
         pool_engine = "process"
         mp_context = "fork"
 
-        # this is totally empiricat but this is a good start
+        # this is totally empirical but this is a good start
         if n_cpu <= 16:
-            # for small n_cpu lets make many process
+            # for small n_cpu let's make many process
             n_jobs = n_cpu
             max_threads_per_worker = 1
         else:
-            # lets have less process with more thread each
+            # let's have fewer processes with more threads each
             n_cpu = int(n_cpu / 4)
             max_threads_per_worker = 8
 
     else: # windows and mac
         # on windows and macos the fork is forbidden and process+spwan is super slow at startup
-        # so lets go to threads
+        # so let's go to threads
         pool_engine = "thread"
         mp_context = None
         n_jobs = n_cpu
@@ -557,7 +558,7 @@ class ChunkRecordingExecutor:
 
 class WorkerFuncWrapper:
     """
-    small wraper that handle:
+    small wrapper that handles:
       * local worker_dict
       *  max_threads_per_worker
     """
@@ -575,7 +576,7 @@ class WorkerFuncWrapper:
                 return self.func(segment_index, start_frame, end_frame, self.worker_dict)
 # see
 # https://stackoverflow.com/questions/10117073/how-to-use-initializer-to-set-up-my-multiprocess-pool
-# the tricks is : this variable are global per worker (so not shared in the same process)
+# the trick is : this variable is global per worker (so not shared in the same process)
 global _process_func_wrapper
 
 
