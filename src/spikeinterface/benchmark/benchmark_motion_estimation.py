@@ -109,7 +109,6 @@ class MotionEstimationBenchmark(Benchmark):
             estimate_motion=t4 - t3,
         )
 
-
         self.result["peaks"] = peaks
         self.result["peak_locations"] = peak_locations
         self.result["step_run_times"] = step_run_times
@@ -166,7 +165,9 @@ class MotionEstimationStudy(BenchmarkStudy):
     def plot_true_drift(self, case_keys=None, scaling_probe=1.5, figsize=(8, 6)):
         self.plot_drift(case_keys=case_keys, tested_drift=False, scaling_probe=scaling_probe, figsize=figsize)
 
-    def plot_drift(self, case_keys=None, gt_drift=True, tested_drift=True, raster=False, scaling_probe=1.0, figsize=(8, 6)):
+    def plot_drift(
+        self, case_keys=None, gt_drift=True, tested_drift=True, raster=False, scaling_probe=1.0, figsize=(8, 6)
+    ):
         import matplotlib.pyplot as plt
 
         if case_keys is None:
@@ -206,7 +207,7 @@ class MotionEstimationStudy(BenchmarkStudy):
                 rec = bench.recording
                 x = peaks["sample_index"] / rec.sampling_frequency
                 y = peak_locations[bench.direction]
-                ax.scatter(x, y, alpha=.2, s=2,  c=np.abs(peaks["amplitude"]), cmap="inferno")
+                ax.scatter(x, y, alpha=0.2, s=2, c=np.abs(peaks["amplitude"]), cmap="inferno")
 
             for i in range(gt_motion.displacement[0].shape[1]):
                 depth = motion.spatial_bins_um[i]
