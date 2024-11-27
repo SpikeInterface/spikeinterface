@@ -9,8 +9,7 @@ from .motion_utils import get_spatial_windows
 
 
 class MedecineRegistration:
-    """
-    """
+    """ """
 
     name = "medecine"
     need_peak_location = True
@@ -25,8 +24,7 @@ class MedecineRegistration:
         peaks,
         peak_locations,
         direction,
-
-        #unsed need to be adapted
+        # unsed need to be adapted
         rigid,
         win_shape,
         win_step_um,
@@ -35,19 +33,15 @@ class MedecineRegistration:
         verbose,
         progress_bar,
         extra,
-
         # bin_um=5.0,
         # hist_margin_um=20.0,
         bin_s=1.0,
-        time_kernel_width=30.,
-        amplitude_threshold_quantile=0.,
-
-
+        time_kernel_width=30.0,
+        amplitude_threshold_quantile=0.0,
         ####
         training_steps=10_000,
-
     ):
-        
+
         from medicine import run_medicine
 
         # folder = Path(tempfile.gettempdir())
@@ -65,13 +59,12 @@ class MedecineRegistration:
             if win_margin_um is not None:
                 deph_range = deph_range - 2 * win_margin_um
             num_depth_bins = max(int(np.round(deph_range / win_scale_um)), 1)
-            print('num_depth_bins', num_depth_bins)
-            
+            print("num_depth_bins", num_depth_bins)
 
         trainer, motion = run_medicine(
-            peak_amplitudes=peaks['amplitude'],
+            peak_amplitudes=peaks["amplitude"],
             peak_depths=peak_locations[direction],
-            peak_times=peaks['sample_index'] / recording.get_sampling_frequency(),
+            peak_times=peaks["sample_index"] / recording.get_sampling_frequency(),
             time_bin_size=bin_s,
             num_depth_bins=num_depth_bins,
             training_steps=training_steps,
