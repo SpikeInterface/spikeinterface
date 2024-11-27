@@ -98,6 +98,9 @@ class CircusClustering:
             offset = int(params["waveforms"]["ms_before"] * fs / 1000)
             wfs = params["few_waveforms"][:, offset-nbefore:offset+nafter]
 
+        # Ensure all waveforms have a positive max
+        wfs *= np.sign(wfs[:, nbefore])[:, np.newaxis]
+
         from sklearn.decomposition import TruncatedSVD
 
         tsvd = TruncatedSVD(params["n_svd"][0])
