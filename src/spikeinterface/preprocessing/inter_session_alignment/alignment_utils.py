@@ -1,3 +1,7 @@
+from signal import signal
+
+from toolz import first
+
 from spikeinterface import BaseRecording
 import numpy as np
 from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_histogram
@@ -18,6 +22,7 @@ def get_activity_histogram(
     log_scale: bool,
     bin_s: float | None,
     depth_smooth_um: float | None,
+    scale_to_hz: bool = False,
 ):
     """
     Generate a 2D activity histogram for the session. Wraps the underlying
@@ -67,12 +72,13 @@ def get_activity_histogram(
     temporal_bin_centers = get_bin_centers(temporal_bin_edges)
     spatial_bin_centers = get_bin_centers(spatial_bin_edges)
 
-    if bin_s is None:
-        scaler = 1 / recording.get_duration(segment_index=0)
-    else:
-        scaler = 1 / np.diff(temporal_bin_edges)[:, np.newaxis]
+    if scale_to_hz:
+        if bin_s is None:
+            scaler = 1 / recording.get_duration(segment_index=0)
+        else:
+            scaler = 1 / np.diff(temporal_bin_edges)[:, np.newaxis]
 
-    activity_histogram *= scaler
+        activity_histogram *= scaler
 
     if log_scale:
         activity_histogram = np.log10(1 + activity_histogram)
@@ -100,12 +106,12 @@ def estimate_chunk_size(scaled_activity_histogram):
     ----
     - make the details available.
     """
-    firing_rate = np.percentile(scaled_activity_histogram, 80)
+    firing_rate = np.max(scaled_activity_histogram) * 0.25
 
     lambda_hat_s = firing_rate
     range_percent = 0.1
     confidence_z = 1.645  # 90% of samples in the normal distribution
-    e = lambda_hat_s * firing_rate
+    e = lambda_hat_s * range_percent
 
     t = lambda_hat_s / (e / confidence_z) ** 2
 
@@ -167,7 +173,7 @@ def get_chunked_hist_poisson_estimate(chunked_session_histograms):
     return poisson_estimate
 
 
-def DEPRECATE_get_chunked_hist_eigenvector(chunked_session_histograms):
+def get_chunked_hist_eigenvector(chunked_session_histograms):
     """
     TODO: currently deprecated due to scaling issues between
     sessions. A much better (?) way will to make PCA from all
@@ -176,15 +182,13 @@ def DEPRECATE_get_chunked_hist_eigenvector(chunked_session_histograms):
     if chunked_session_histograms.shape[0] == 1:  # TODO: handle elsewhere
         return chunked_session_histograms.squeeze()
 
-    A = chunked_session_histograms - np.mean(chunked_session_histograms, axis=0)[np.newaxis, :]
-    S = (1 / A.shape[0]) * A.T @ A  # (num hist, num_bins)
+    A = chunked_session_histograms
+    S = (1 / A.shape[0]) * A.T @ A
 
     U, S, Vh = np.linalg.svd(S)  # TODO: this is already symmetric PSD so use eig
 
-    # TODO: check why this is flipped
-    first_eigenvector = (
-        U[:, 0] * -1 * S[0]
-    )  # * np.sqrt(S[0]) # TODO: revise a little + consider another distance metric
+    first_eigenvector = U[:, 0] * np.sqrt(S[0])
+    first_eigenvector = np.abs(first_eigenvector)  # sometimes the eigenvector can be negative
 
     return first_eigenvector
 

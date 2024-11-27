@@ -506,6 +506,7 @@ def _get_single_session_activity_histogram(
             log_scale=False,
             bin_s=None,
             depth_smooth_um=depth_smooth_um,
+            scale_to_hz=False,
         )
         if method == "entire_session":
             if log_scale:
@@ -517,8 +518,8 @@ def _get_single_session_activity_histogram(
     # calculated on session chunks
     if chunked_bin_size_s == "estimate":
         # It is important that the passed histogram is scaled to firing rate in Hz
-        breakpoint()
-        chunked_bin_size_s = alignment_utils.estimate_chunk_size(one_bin_histogram)
+        scaled_hist = one_bin_histogram / recording.get_duration()
+        chunked_bin_size_s = alignment_utils.estimate_chunk_size(scaled_hist)
 
     chunked_histograms, chunked_temporal_bin_centers, _ = alignment_utils.get_activity_histogram(
         recording,
@@ -528,8 +529,11 @@ def _get_single_session_activity_histogram(
         log_scale,
         bin_s=chunked_bin_size_s,
         depth_smooth_um=depth_smooth_um,
+        scale_to_hz=True,
     )
-    session_std = np.sum(np.std(chunked_histograms, axis=0)) / chunked_histograms.shape[1]
+    session_std = (
+        np.sum(np.std(chunked_histograms, axis=0)) / chunked_histograms.shape[1]
+    )  # TODO: this should be calcualed around the central summary?
 
     if method == "chunked_mean":
         session_histogram = alignment_utils.get_chunked_hist_mean(chunked_histograms)
@@ -542,6 +546,9 @@ def _get_single_session_activity_histogram(
 
     elif method == "chunked_poisson":
         session_histogram = alignment_utils.get_chunked_hist_poisson_estimate(chunked_histograms)
+
+    elif method == "first_eigenvector":
+        session_histogram = alignment_utils.get_chunked_hist_eigenvector(chunked_histograms)
 
     histogram_info = {
         "chunked_histograms": chunked_histograms,
@@ -967,7 +974,14 @@ def _check_align_sesssions_inpus(
 
     accepted_hist_methods = ["entire_session", "chunked_mean", "chunked_median", "chunked_supremum", "chunked_poisson"]
     method = estimate_histogram_kwargs["method"]
-    if method not in ["entire_session", "chunked_mean", "chunked_median", "chunked_supremum", "chunked_poisson"]:
+    if method not in [
+        "entire_session",
+        "chunked_mean",
+        "chunked_median",
+        "chunked_supremum",
+        "chunked_poisson",
+        "first_eigenvector",
+    ]:
         raise ValueError(f"`method` option must be one of: {accepted_hist_methods}")
 
     if alignment_order != "to_middle":
