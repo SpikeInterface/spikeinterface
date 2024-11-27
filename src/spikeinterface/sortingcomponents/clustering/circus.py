@@ -43,7 +43,7 @@ class CircusClustering:
         "hdbscan_kwargs": {
             "min_cluster_size": 25,
             "allow_single_cluster": True,
-            #"core_dist_n_jobs": -1,
+            # "core_dist_n_jobs": -1,
             "cluster_selection_method": "eom",
             # "cluster_selection_epsilon" : 5 ## To be optimized
         },
@@ -57,7 +57,7 @@ class CircusClustering:
         },
         "radius_um": 100,
         "n_svd": [5, 2],
-        "few_waveforms" : None, 
+        "few_waveforms": None,
         "ms_before": 0.5,
         "ms_after": 0.5,
         "noise_threshold": 5,
@@ -89,14 +89,16 @@ class CircusClustering:
 
         # SVD for time compression
         if params["few_waveforms"] is None:
-            few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=10000, margin=(nbefore, nafter))
+            few_peaks = select_peaks(
+                peaks, recording=recording, method="uniform", n_peaks=10000, margin=(nbefore, nafter)
+            )
             few_wfs = extract_waveform_at_max_channel(
                 recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
             )
             wfs = few_wfs[:, :, 0]
         else:
             offset = int(params["waveforms"]["ms_before"] * fs / 1000)
-            wfs = params["few_waveforms"][:, offset-nbefore:offset+nafter]
+            wfs = params["few_waveforms"][:, offset - nbefore : offset + nafter]
 
         from sklearn.decomposition import TruncatedSVD
 

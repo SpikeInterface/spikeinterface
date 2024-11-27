@@ -454,7 +454,7 @@ def get_prototype(recording, n_peaks, ms_before, ms_after, return_waveforms=True
     waveforms = res[1]
     with np.errstate(divide="ignore", invalid="ignore"):
         prototype = np.nanmedian(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
-    
+
     if not return_waveforms:
         return prototype
     else:
