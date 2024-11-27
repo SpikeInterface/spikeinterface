@@ -2,12 +2,18 @@ from pathlib import Path
 import spikeinterface.full as si
 import numpy as np
 
-base_path = Path(r"X:\neuroinformatics\scratch\jziminski\ephys\inter-session-alignment\test_motion_project_short\derivatives\1119617")
+# base_path = Path(r"X:\neuroinformatics\scratch\jziminski\ephys\inter-session-alignment\test_motion_project_short\derivatives\1119617")
+# sessions = [
+#     "1119617_LSE1_shank12_g0",
+#     "1119617_posttest1_shank12_g0",
+#     "1119617_pretest1_shank12_g0",
+# ]
 
+base_path = Path(r"X:\neuroinformatics\scratch\jziminski\ephys\inter-session-alignment\test_motion_project\derivatives\sub-013_id-1121381")
 sessions = [
-    "1119617_LSE1_shank12_g0",
-    "1119617_posttest1_shank12_g0",
-    "1119617_pretest1_shank12_g0",
+     "ses-006_date-20231223_type-lse2",
+     "ses-003_date-20231221_type-pretest",
+     "ses-007_date-20231223_type-posttest2",
 ]
 
 recordings_list = []
@@ -15,6 +21,7 @@ peaks_list = []
 peak_locations_list = []
 
 for ses in sessions:
+    print(ses)
 
     ses_path = base_path / ses
 
@@ -27,10 +34,10 @@ for ses in sessions:
 
 
 estimate_histogram_kwargs = {
-    "bin_um": 1,
+    "bin_um": 5,
     "method": "chunked_median",  # TODO: double check scaling
     "chunked_bin_size_s": "estimate",
-    "log_scale": False,
+    "log_scale": False,  # TODO: this will mess up time chunk estimation? not currently but definately test this carefully.
     "depth_smooth_um": 5,
 }
 compute_alignment_kwargs = {
@@ -43,32 +50,35 @@ compute_alignment_kwargs = {
     "smoothing_sigma_bin": False,  # 0.5,
     "smoothing_sigma_window": False,  # 0.5,
     "akima_interp_nonrigid": False,
-
-    "non_rigid_window_kwargs": {
-        "win_shape": "gaussian",
-        "win_step_um": 400,
-        "win_scale_um": 400,
-        "win_margin_um": None,
-        "zero_threshold": None,
-    },
+}
+non_rigid_window_kwargs = {
+    "rigid": True,
+    "win_shape": "gaussian",
+    "win_step_um": 400,
+    "win_scale_um": 400,
+    "win_margin_um": None,
+    "zero_threshold": None,
 }
 
-import session_alignment
-import plotting
+from spikeinterface.preprocessing.inter_session_alignment import (
+    session_alignment,
+    plotting_session_alignment,
+    alignment_utils
+)
 import matplotlib.pyplot as plt
 
 # TODO: add some print statements for progress
-corrected_recordings_list, motion_objects_list, extra_info = session_alignment.align_sessions(
+corrected_recordings_list, extra_info = session_alignment.align_sessions(
     recordings_list,
     peaks_list,
     peak_locations_list,
     alignment_order="to_session_1",
-    rigid=False,
     estimate_histogram_kwargs=estimate_histogram_kwargs,
     compute_alignment_kwargs=compute_alignment_kwargs,
+    non_rigid_window_kwargs=non_rigid_window_kwargs,
 )
 
-plotting.SessionAlignmentWidget(
+plotting_session_alignment.SessionAlignmentWidget(
     recordings_list,
     peaks_list,
     peak_locations_list,
@@ -78,4 +88,21 @@ plotting.SessionAlignmentWidget(
     drift_raster_map_kwargs={"clim":(-250, 0), "scatter_decimate": 10}  # TODO: option to fix this across recordings.
 )
 
+plt.show()
+
+A = extra_info["histogram_info_list"][0]["chunked_histograms"]
+
+mean_ = alignment_utils.get_chunked_hist_mean(A)
+median_ = alignment_utils.get_chunked_hist_median(A)
+supremum_ = alignment_utils.get_chunked_hist_supremum(A)
+poisson_ = alignment_utils.get_chunked_hist_poisson_estimate(A)
+eigenvector_ = alignment_utils.get_chunked_hist_eigenvector(A)
+
+plt.plot(extra_info["spatial_bin_centers"], A.T, color="k")
+plt.plot(extra_info["spatial_bin_centers"], mean_)
+plt.plot(extra_info["spatial_bin_centers"], median_)
+plt.plot(extra_info["spatial_bin_centers"], supremum_)
+plt.plot(extra_info["spatial_bin_centers"], poisson_)
+plt.plot(extra_info["spatial_bin_centers"], eigenvector_)
+plt.legend(["mean", "median", "supremum", "poisson", "eigenvector"])
 plt.show()

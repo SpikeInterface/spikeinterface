@@ -135,8 +135,8 @@ def _prep_recording(recording, plot=False):
     return peaks, peak_locations
 
 MOTION = False  # True
-SAVE = True
-PLOT = True
+SAVE = False
+PLOT = False
 BIN_UM = 5
 
 
@@ -220,7 +220,7 @@ else:
 
 estimate_histogram_kwargs = {
     "bin_um": BIN_UM,
-    "method": "chunked_supremum",  # TODO: double check scaling
+    "method": "first_eigenvector",  # CHANGE NAME!!   # TODO: double check scaling
     "chunked_bin_size_s": "estimate",
     "log_scale": True,
     "depth_smooth_um": 10,
@@ -237,7 +237,7 @@ compute_alignment_kwargs = {
     "akima_interp_nonrigid": False,
 }
 non_rigid_window_kwargs = {
-    "rigid": False,
+    "rigid": True,
     "win_shape": "gaussian",
     "win_step_um": 250,
     "win_scale_um": 250,
@@ -270,18 +270,36 @@ else:
         compute_alignment_kwargs=compute_alignment_kwargs,
     )
 
-plotting_session_alignment.SessionAlignmentWidget(
-    recordings_list,
-    peaks_list,
-    peak_locations_list,
-    extra_info["session_histogram_list"],
-    **extra_info["corrected"],
-    spatial_bin_centers=extra_info["spatial_bin_centers"],
-    drift_raster_map_kwargs={"clim":(-250, 0)}  # TODO: option to fix this across recordings.
-)
+if False:
+    plotting_session_alignment.SessionAlignmentWidget(
+        recordings_list,
+        peaks_list,
+        peak_locations_list,
+        extra_info["session_histogram_list"],
+        **extra_info["corrected"],
+        spatial_bin_centers=extra_info["spatial_bin_centers"],
+        drift_raster_map_kwargs={"clim":(-250, 0)}  # TODO: option to fix this across recordings.
+    )
 
-plt.show()
+    plt.show()
+
+# TODO: estimate chunk size Hz needs to be scaled for time? is it not been done correctly?
 
 # No, even two sessions is a mess
 # TODO: working assumptions, maybe after rigid, make a template for nonrigid alignment
 # as at the moment all nonrigid to eachother is a mess
+A = extra_info["histogram_info_list"][2]["chunked_histograms"]
+
+mean_ = alignment_utils.get_chunked_hist_mean(A)
+median_ = alignment_utils.get_chunked_hist_median(A)
+supremum_ = alignment_utils.get_chunked_hist_supremum(A)
+poisson_ = alignment_utils.get_chunked_hist_poisson_estimate(A)
+eigenvector_ = alignment_utils.get_chunked_hist_eigenvector(A)
+
+plt.plot(mean_)
+plt.plot(median_)
+plt.plot(supremum_)
+plt.plot(poisson_)
+plt.plot(eigenvector_)
+plt.legend(["mean", "median", "supremum", "poisson", "eigenvector"])
+plt.show()
