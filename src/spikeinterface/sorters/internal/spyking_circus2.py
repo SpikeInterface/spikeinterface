@@ -204,6 +204,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
             if params["debug"]:
+                np.save(clustering_folder / "waveforms.npy", waveforms)
                 np.save(clustering_folder / "prototype.npy", prototype)
             if skip_peaks:
                 detection_params["skip_after_n_peaks"] = n_peaks
