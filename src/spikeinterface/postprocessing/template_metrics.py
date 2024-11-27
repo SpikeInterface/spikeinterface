@@ -335,13 +335,18 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         )
 
         existing_metrics = []
-        tm_extension = self.sorting_analyzer.get_extension("template_metrics")
-        if (
-            delete_existing_metrics is False
-            and tm_extension is not None
-            and tm_extension.data.get("metrics") is not None
-        ):
-            existing_metrics = tm_extension.params["metric_names"]
+
+        # Check if we need to propogate any old metrics. If so, we'll do that.
+        # Otherwise, we'll avoid attempting to load an empty template_metrics.
+        if set(self.params["metrics_to_compute"]) != set(self.params["metric_names"]):
+
+            tm_extension = self.sorting_analyzer.get_extension("template_metrics")
+            if (
+                delete_existing_metrics is False
+                and tm_extension is not None
+                and tm_extension.data.get("metrics") is not None
+            ):
+                existing_metrics = tm_extension.params["metric_names"]
 
         # append the metrics which were previously computed
         for metric_name in set(existing_metrics).difference(metrics_to_compute):
