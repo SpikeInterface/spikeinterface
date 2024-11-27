@@ -198,7 +198,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             np.save(clustering_folder / "noise_levels.npy", noise_levels)
 
         if params["matched_filtering"]:
-            prototype = get_prototype(
+            prototype, waveforms = get_prototype(
                 recording_w, n_peaks=5000, ms_before=ms_before, ms_after=ms_after, **detection_params, **job_kwargs
             )
             detection_params["prototype"] = prototype
@@ -209,6 +209,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 detection_params["skip_after_n_peaks"] = n_peaks
             peaks = detect_peaks(recording_w, "matched_filtering", **detection_params, **job_kwargs)
         else:
+            waveforms = None
             if skip_peaks:
                 detection_params["skip_after_n_peaks"] = n_peaks
             peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, **job_kwargs)
@@ -237,6 +238,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["radius_um"] = radius_um
             clustering_params["waveforms"]["ms_before"] = ms_before
             clustering_params["waveforms"]["ms_after"] = ms_after
+            clustering_params["few_waveforms"] = waveforms
             clustering_params["noise_levels"] = noise_levels
             clustering_params["ms_before"] = exclude_sweep_ms
             clustering_params["ms_after"] = exclude_sweep_ms
@@ -429,7 +431,7 @@ def final_cleaning_circus(recording, sorting, templates, merging_kwargs, **job_k
     return sorting
 
 
-def get_prototype(recording, n_peaks, ms_before, ms_after, **all_kwargs):
+def get_prototype(recording, n_peaks, ms_before, ms_after, return_waveforms=True, **all_kwargs):
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
     from spikeinterface.core.node_pipeline import ExtractSparseWaveforms
 
@@ -452,4 +454,8 @@ def get_prototype(recording, n_peaks, ms_before, ms_after, **all_kwargs):
     waveforms = res[1]
     with np.errstate(divide="ignore", invalid="ignore"):
         prototype = np.nanmedian(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
-    return prototype
+    
+    if not return_waveforms:
+        return prototype
+    else:
+        return prototype, waveforms[:, :, 0]
