@@ -128,7 +128,6 @@ accuracies.head()
 # Plot feature importances
 importances = best_model.named_steps['classifier'].feature_importances_
 indices = np.argsort(importances)[::-1]
-print(indices)
 
 # The sklearn importances are not computed for inputs whose values are all `nan`.
 # Hence, we need to pick out the non-`nan` columns of our metrics
@@ -149,10 +148,11 @@ plt.xlim([-1, n_features])
 plt.show()
 
 ##############################################################################
-# Roughly, this means the model isn't using metrics such as "l_ratio" and "d_prime"
-# but is using "snr" and "firing_rate". Using this information, you could retrain another,
+# Roughly, this means the model is using metrics such as "nn_hit_rate" and "l_ratio"
+# but is using "sync_spike_4" and "rp_contanimation". This is a toy model, so don't
+# take these results seriously! But using this information, you could retrain another,
 # simpler model using a subset of the metrics, by passing, e.g.,
-# `metric_names = ['snr', 'firing_rate',...]` to the `train_model` function.
+# `metric_names = ['nn_hit_rate', 'l_ratio',...]` to the `train_model` function.
 #
 # Now that you have a model, you can `apply it to another sorting
 # <https://spikeinterface.readthedocs.io/en/latest/tutorials/curation/plot_1_automated_curation.html>`_
