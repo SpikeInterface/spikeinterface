@@ -3,6 +3,8 @@ from pathlib import Path
 from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
 from spikeinterface.curation.model_based_curation import ModelBasedClassification
 from spikeinterface.curation import auto_label_units, load_model
+from spikeinterface.curation.train_manual_curation import _get_computed_metrics
+
 import numpy as np
 
 if hasattr(pytest, "global_test_folder"):
@@ -68,11 +70,11 @@ def test_model_based_classification_get_metrics_for_classification(
 
     # Check that ValueError is returned when quality_metrics are not present in sorting_analyzer
     with pytest.raises(ValueError):
-        computed_metrics = model_based_classification._get_computed_metrics()
+        computed_metrics = _get_computed_metrics(sorting_analyzer_for_curation)
 
     # Compute some (but not all) of the required metrics in sorting_analyzer
     sorting_analyzer_for_curation.compute("quality_metrics", metric_names=[required_metrics[0]])
-    computed_metrics = model_based_classification._get_computed_metrics()
+    computed_metrics = _get_computed_metrics(sorting_analyzer_for_curation)
     with pytest.raises(ValueError):
         model_based_classification._check_required_metrics_are_present(computed_metrics)
 
@@ -81,7 +83,7 @@ def test_model_based_classification_get_metrics_for_classification(
     sorting_analyzer_for_curation.compute("template_metrics", metric_names=[required_metrics[2]])
 
     # Check that the metrics data is returned as a pandas DataFrame
-    metrics_data = model_based_classification._get_computed_metrics()
+    metrics_data = _get_computed_metrics(sorting_analyzer_for_curation)
     assert metrics_data.shape[0] == len(sorting_analyzer_for_curation.sorting.get_unit_ids())
     assert set(metrics_data.columns.to_list()) == set(required_metrics)
 

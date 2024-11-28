@@ -4,7 +4,7 @@ import json
 import warnings
 
 from spikeinterface.core import SortingAnalyzer
-from spikeinterface.curation.train_manual_curation import try_to_get_metrics_from_analyzer
+from spikeinterface.curation.train_manual_curation import try_to_get_metrics_from_analyzer, _get_computed_metrics
 
 
 class ModelBasedClassification:
@@ -75,7 +75,7 @@ class ModelBasedClassification:
 
         # Get metrics DataFrame for classification
         if input_data is None:
-            input_data = self._get_computed_metrics()
+            input_data = _get_computed_metrics(self.sorting_analyzer)
         else:
             if not isinstance(input_data, pd.DataFrame):
                 raise ValueError("Input data must be a pandas DataFrame")
@@ -121,23 +121,6 @@ class ModelBasedClassification:
             self._export_to_phy(classified_units)
 
         return classified_units
-
-    def _get_computed_metrics(self):
-        """Check if all required metrics are present and return a DataFrame of metrics for classification"""
-
-        import pandas as pd
-
-        quality_metrics, template_metrics = try_to_get_metrics_from_analyzer(self.sorting_analyzer)
-        calculated_metrics = pd.concat([quality_metrics, template_metrics], axis=1)
-
-        # Remove any metrics for non-existent units, raise error if no units are present
-        calculated_metrics = calculated_metrics.loc[
-            calculated_metrics.index.isin(self.sorting_analyzer.sorting.get_unit_ids())
-        ]
-        if calculated_metrics.shape[0] == 0:
-            raise ValueError("No units present in sorting data")
-
-        return calculated_metrics
 
     def _check_required_metrics_are_present(self, calculated_metrics):
 

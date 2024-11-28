@@ -224,7 +224,7 @@ class CurationModelTrainer:
         """
         import pandas as pd
 
-        metrics_for_each_analyzer = [self._get_metrics_for_classification(an) for an in analyzers]
+        metrics_for_each_analyzer = [_get_computed_metrics(an) for an in analyzers]
         check_metric_names_are_the_same(metrics_for_each_analyzer)
 
         self.testing_metrics = pd.concat(metrics_for_each_analyzer, axis=0)
@@ -494,23 +494,6 @@ class CurationModelTrainer:
             self.search_kwargs,
         )
 
-    def _get_metrics_for_classification(self, analyzer):
-        """Check if required metrics are present and return a DataFrame of metrics for classification."""
-
-        import pandas as pd
-
-        quality_metrics, template_metrics = try_to_get_metrics_from_analyzer(analyzer)
-
-        # Concatenate the available metrics
-        calculated_metrics = pd.concat([m for m in [quality_metrics, template_metrics] if m is not None], axis=1)
-
-        # Remove any metrics for non-existent units, raise error if no units are present
-        calculated_metrics = calculated_metrics.loc[calculated_metrics.index.isin(analyzer.sorting.get_unit_ids())]
-        if calculated_metrics.shape[0] == 0:
-            raise ValueError("No units present in sorting data")
-
-        return calculated_metrics
-
     def _load_data_files(self, paths):
         import pandas as pd
 
@@ -734,6 +717,22 @@ def train_model(
 
     trainer.evaluate_model_config()
     return trainer
+
+
+def _get_computed_metrics(sorting_analyzer):
+    """Loads and organises the computed metrics from a sorting_analyzer into a single dataframe"""
+
+    import pandas as pd
+
+    quality_metrics, template_metrics = try_to_get_metrics_from_analyzer(sorting_analyzer)
+    calculated_metrics = pd.concat([quality_metrics, template_metrics], axis=1)
+
+    # Remove any metrics for non-existent units, raise error if no units are present
+    calculated_metrics = calculated_metrics.loc[calculated_metrics.index.isin(sorting_analyzer.sorting.get_unit_ids())]
+    if calculated_metrics.shape[0] == 0:
+        raise ValueError("No units present in sorting data")
+
+    return calculated_metrics
 
 
 def try_to_get_metrics_from_analyzer(sorting_analyzer):
