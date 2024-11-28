@@ -75,10 +75,12 @@ class ModelBasedClassification:
 
         # Get metrics DataFrame for classification
         if input_data is None:
-            input_data = self._get_metrics_for_classification()
+            input_data = self._get_computed_metrics()
         else:
             if not isinstance(input_data, pd.DataFrame):
                 raise ValueError("Input data must be a pandas DataFrame")
+
+        input_data = self._check_required_metrics_are_present(input_data)
 
         if model_info is not None:
             self._check_params_for_classification(enforce_metric_params, model_info=model_info)
@@ -103,9 +105,7 @@ class ModelBasedClassification:
         probabilities = np.max(probabilities, axis=1)
 
         if isinstance(label_conversion, dict):
-            try:
-                assert set(predictions).issubset(label_conversion.keys())
-            except AssertionError:
+            if set(predictions) != set(label_conversion.keys()):
                 raise ValueError("Labels in predictions do not match those in label_conversion")
             predictions = [label_conversion[label] for label in predictions]
 
@@ -122,14 +122,12 @@ class ModelBasedClassification:
 
         return classified_units
 
-    def _get_metrics_for_classification(self):
+    def _get_computed_metrics(self):
         """Check if all required metrics are present and return a DataFrame of metrics for classification"""
 
         import pandas as pd
 
         quality_metrics, template_metrics = try_to_get_metrics_from_analyzer(self.sorting_analyzer)
-
-        # Create DataFrame of all metrics and reorder columns to match the model
         calculated_metrics = pd.concat([quality_metrics, template_metrics], axis=1)
 
         # Remove any metrics for non-existent units, raise error if no units are present
@@ -138,6 +136,10 @@ class ModelBasedClassification:
         ]
         if calculated_metrics.shape[0] == 0:
             raise ValueError("No units present in sorting data")
+
+        return calculated_metrics
+
+    def _check_required_metrics_are_present(self, calculated_metrics):
 
         # Check all the required metrics have been calculated
         required_metrics = set(self.required_metrics)
@@ -416,8 +418,9 @@ def _load_model_from_folder(model_folder=None, model_name=None, trust_model=Fals
             model = skio.load(skops_file)
         except UntrustedTypesFoundException as e:
             exception_msg = str(e)
-            # the exception message contains the list of untrusted objects after a colon and enswith a period
-            trusted = eval(exception_msg.split(":")[1][:-1])
+            # the exception message contains the list of untrusted objects. The following
+            #  search assumes it is the only list in the message.
+            trusted = re.search(r"\[(.*?)\]", exception_msg).group()
     model = skio.load(skops_file, trusted=trusted)
 
     model_info_path = folder / "model_info.json"

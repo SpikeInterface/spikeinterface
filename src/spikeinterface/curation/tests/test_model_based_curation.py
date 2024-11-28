@@ -32,27 +32,56 @@ def test_model_based_classification_init(sorting_analyzer_for_curation, model):
     assert model_based_classification.pipeline == model[0]
 
 
+def test_metric_ordering_independence(sorting_analyzer_for_curation, model):
+
+    sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
+    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["num_spikes", "snr"])
+
+    model_folder = Path(__file__).parent / Path("trained_pipeline")
+
+    prediction_prob_dataframe_1 = auto_label_units(
+        sorting_analyzer=sorting_analyzer_for_curation,
+        model_folder=model_folder,
+        trusted=["numpy.dtype"],
+    )
+
+    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["snr", "num_spikes"])
+
+    prediction_prob_dataframe_2 = auto_label_units(
+        sorting_analyzer=sorting_analyzer_for_curation,
+        model_folder=model_folder,
+        trusted=["numpy.dtype"],
+    )
+
+    assert prediction_prob_dataframe_1.equals(prediction_prob_dataframe_2)
+
+
 def test_model_based_classification_get_metrics_for_classification(
     sorting_analyzer_for_curation, model, required_metrics
 ):
-    # Test the _get_metrics_for_classification() method of ModelBasedClassification
+
+    sorting_analyzer_for_curation.delete_extension("quality_metrics")
+    sorting_analyzer_for_curation.delete_extension("template_metrics")
+
+    # Test the _check_required_metrics_are_present() method of ModelBasedClassification
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, model[0])
 
     # Check that ValueError is returned when quality_metrics are not present in sorting_analyzer
     with pytest.raises(ValueError):
-        model_based_classification._get_metrics_for_classification()
+        computed_metrics = model_based_classification._get_computed_metrics()
 
     # Compute some (but not all) of the required metrics in sorting_analyzer
     sorting_analyzer_for_curation.compute("quality_metrics", metric_names=[required_metrics[0]])
+    computed_metrics = model_based_classification._get_computed_metrics()
     with pytest.raises(ValueError):
-        model_based_classification._get_metrics_for_classification()
+        model_based_classification._check_required_metrics_are_present(computed_metrics)
 
     # Compute all of the required metrics in sorting_analyzer
     sorting_analyzer_for_curation.compute("quality_metrics", metric_names=required_metrics[0:2])
     sorting_analyzer_for_curation.compute("template_metrics", metric_names=[required_metrics[2]])
 
     # Check that the metrics data is returned as a pandas DataFrame
-    metrics_data = model_based_classification._get_metrics_for_classification()
+    metrics_data = model_based_classification._get_computed_metrics()
     assert metrics_data.shape[0] == len(sorting_analyzer_for_curation.sorting.get_unit_ids())
     assert set(metrics_data.columns.to_list()) == set(required_metrics)
 
@@ -138,3 +167,11 @@ def test_exception_raised_when_metricparams_not_equal(sorting_analyzer_for_curat
         enforce_metric_params=False,
         trusted=["numpy.dtype"],
     )
+
+    classifer_labels = sorting_analyzer_for_curation.get_sorting_property("classifier_label")
+    assert isinstance(classifer_labels, np.ndarray)
+    assert len(classifer_labels) == sorting_analyzer_for_curation.get_num_units()
+
+    classifier_probabilities = sorting_analyzer_for_curation.get_sorting_property("classifier_probability")
+    assert isinstance(classifier_probabilities, np.ndarray)
+    assert len(classifier_probabilities) == sorting_analyzer_for_curation.get_num_units()
