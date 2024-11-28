@@ -104,6 +104,13 @@ trainer = sc.train_model(
 best_model = trainer.best_pipeline
 
 ##############################################################################
+#
+# You can pass many sklearn `classifiers <https://scikit-learn.org/1.5/api/sklearn.impute.html>`_
+# `imputation strategies <https://scikit-learn.org/1.5/api/sklearn.impute.html>`_ and
+# `scalers <https://scikit-learn.org/1.5/api/sklearn.preprocessing.html>`_, although the
+# documentation is quite overwhelming. You can find the classifiers we've tried out
+# using the `sc.get_default_classifier_search_spaces` function.
+#
 # The above code saves the model in ``model.skops``, some metadata in
 # ``model_info.json`` and the model accuracies in ``model_accuracies.csv``
 # in the specified ``folder`` (in this case ``'my_folder'``).

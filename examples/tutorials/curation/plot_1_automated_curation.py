@@ -58,7 +58,7 @@ model
 ##############################################################################
 # This tells us more information about the model. The one we've just downloaded was trained used
 # a `RandomForestClassifier`. You can also discover this information by running
-# `model.get_params()`. The model object (an sklearn Pipeline) also contains information
+# `model.get_params()`. The model object (an `sklearn Pipeline <https://scikit-learn.org/1.5/modules/generated/sklearn.pipeline.Pipeline.html>`_) also contains information
 # about which metrics were used to compute the model. We can access it from the model (or from the model_info)
 
 print(model.feature_names_in_)

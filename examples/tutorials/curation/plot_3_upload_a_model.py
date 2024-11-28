@@ -60,6 +60,9 @@ Upload a pipeline to Hugging Face Hub
 #     with open("my_model_folder/metadata.json", "w") as file:
 #         json.dump(model_metadata, file)
 #
+# Upload to HuggingFaceHub
+# ------------------------
+#
 # We'll now upload this folder to HFH using the web interface. (If you don't want to
 # use HFH, you could just share this folder with a colleague.)
 #
