@@ -96,7 +96,7 @@ class ModelBasedClassification:
                 warnings.warn("Could not find `label_conversion` key in `model_info.json` file")
 
         # Prepare input data
-        input_data = input_data.applymap(lambda x: np.nan if np.isinf(x) else x)
+        input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
         input_data = input_data.astype("float32")
 
         # Apply classifier

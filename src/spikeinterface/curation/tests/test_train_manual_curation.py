@@ -4,8 +4,6 @@ import tempfile, csv
 from pathlib import Path
 
 from spikeinterface.curation.tests.common import make_sorting_analyzer
-
-
 from spikeinterface.curation.train_manual_curation import CurationModelTrainer, train_model
 
 
