@@ -106,7 +106,7 @@ best_model = trainer.best_pipeline
 ##############################################################################
 # The above code saves the model in ``model.skops``, some metadata in
 # ``model_info.json`` and the model accuracies in ``model_accuracies.csv``
-# in the specified ``folder`` (in this case ``my_folder``.
+# in the specified ``folder`` (in this case ``'my_folder'``).
 #
 # (``skops`` is a file format: you can think of it as a more-secure pkl file. `Read more <https://skops.readthedocs.io/en/stable/index.html>`_.)
 #
@@ -128,13 +128,23 @@ accuracies.head()
 # Plot feature importances
 importances = best_model.named_steps['classifier'].feature_importances_
 indices = np.argsort(importances)[::-1]
+print(indices)
+
+# The sklearn importances are not computed for inputs whose values are all `nan`.
+# Hence, we need to pick out the non-`nan` columns of our metrics
 features = best_model.feature_names_in_
 n_features = best_model.n_features_in_
+
+metrics = pd.concat([analyzer.get_extension('quality_metrics').get_data(), analyzer.get_extension('template_metrics').get_data()], axis=1)
+non_null_metrics = ~(metrics.isnull().all()).values
+
+features = features[non_null_metrics]
+n_features = len(features)
 
 plt.figure(figsize=(12, 7))
 plt.title("Feature Importances")
 plt.bar(range(n_features), importances[indices], align="center")
-plt.xticks(range(n_features), features, rotation=90)
+plt.xticks(range(n_features), features[indices], rotation=90)
 plt.xlim([-1, n_features])
 plt.show()
 
