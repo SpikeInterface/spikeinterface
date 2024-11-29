@@ -209,7 +209,7 @@ class BenchmarkStudy:
 
             result_folder = self.folder / "results" / self.key_to_str(key)
             sorter_folder = self.folder / "sorters" / self.key_to_str(key)
-        
+
             if keep and result_folder.exists():
                 continue
             elif not keep and (result_folder.exists() or sorter_folder.exists()):
