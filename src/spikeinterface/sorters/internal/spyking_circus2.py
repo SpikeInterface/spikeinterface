@@ -14,10 +14,6 @@ from spikeinterface.preprocessing import common_reference, whiten, bandpass_filt
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-from spikeinterface.curation.auto_merge import get_potential_auto_merge
-from spikeinterface.core.analyzer_extension_core import ComputeTemplates
-from spikeinterface.core.sparsity import ChannelSparsity
 
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
@@ -38,14 +34,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         },
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
-        "merging": {
-            "similarity_kwargs": {"method": "cosine", "support": "union", "max_lag_ms": 0.2},
-            "correlograms_kwargs": {},
-            "auto_merge": {
-                "min_spikes": 10,
-                "corr_diff_thresh": 0.25,
-            },
-        },
+        "merging": {"max_distance_um": 50},
         "clustering": {"legacy": True},
         "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
@@ -71,7 +60,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                             True, one other clustering called circus will be used, similar to the one used in Spyking Circus 1",
         "matching": "A dictionary to specify the matching engine used to recover spikes. The method default is circus-omp-svd, but other engines\
                                           can be used",
-        "merging": "A dictionary to specify the final merging param to group cells after template matching (get_potential_auto_merge)",
+        "merging": "A dictionary to specify the final merging param to group cells after template matching (auto_merge_units)",
         "motion_correction": "A dictionary to be provided if motion correction has to be performed (dense probe only)",
         "apply_preprocessing": "Boolean to specify whether circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
                                                     median reference + zscore",
@@ -100,13 +89,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         except:
             HAVE_HDBSCAN = False
 
+        assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
+
         try:
             import torch
         except ImportError:
             HAVE_TORCH = False
             print("spykingcircus2 could benefit from using torch. Consider installing it")
-
-        assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
         # this is importanted only on demand because numba import are too heavy
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -321,14 +310,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 max_motion = max(
                     np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
                 )
-                merging_params["max_distance_um"] = max(50, 2 * max_motion)
-
-            # peak_sign = params['detection'].get('peak_sign', 'neg')
-            # best_amplitudes = get_template_extremum_amplitude(templates, peak_sign=peak_sign)
-            # guessed_amplitudes = spikes['amplitude'].copy()
-            # for ind in unit_ids:
-            #     mask = spikes['cluster_index'] == ind
-            #     guessed_amplitudes[mask] *= best_amplitudes[ind]
+                max_distance_um = merging_params.get("max_distance_um", 50)
+                merging_params["max_distance_um"] = max(max_distance_um, 2 * max_motion)
 
             if params["debug"]:
                 curation_folder = sorter_output_folder / "curation"
@@ -337,7 +320,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting.save(folder=curation_folder)
                 # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
-            sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params)
+            sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params, **job_kwargs)
 
             if verbose:
                 print(f"Final merging, keeping {len(sorting.unit_ids)} units")
@@ -358,40 +341,38 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         return sorting
 
 
-def create_sorting_analyzer_with_templates(sorting, recording, templates, remove_empty=True):
-    sparsity = templates.sparsity
-    templates_array = templates.get_dense_templates().copy()
+def final_cleaning_circus(
+    recording,
+    sorting,
+    templates,
+    similarity_kwargs={"method": "l2", "support": "union", "max_lag_ms": 0.1},
+    apply_merge_kwargs={"sparsity_overlap": 0.1, "censor_ms": 3.0},
+    # correlograms_kwargs={},
+    max_distance_um=50,
+    template_diff_thresh=np.arange(0.05, 0.5, 0.05),
+    **job_kwargs,
+):
 
-    if remove_empty:
-        non_empty_unit_ids = sorting.get_non_empty_unit_ids()
-        non_empty_sorting = sorting.remove_empty_units()
-        non_empty_unit_indices = sorting.ids_to_indices(non_empty_unit_ids)
-        templates_array = templates_array[non_empty_unit_indices]
-        sparsity_mask = sparsity.mask[non_empty_unit_indices, :]
-        sparsity = ChannelSparsity(sparsity_mask, non_empty_unit_ids, sparsity.channel_ids)
-    else:
-        non_empty_sorting = sorting
+    from spikeinterface.sortingcomponents.tools import create_sorting_analyzer_with_existing_templates
+    from spikeinterface.curation.auto_merge import auto_merge_units
 
-    sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
-    sa.extensions["templates"] = ComputeTemplates(sa)
-    sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
-    sa.extensions["templates"].data["average"] = templates_array
-    return sa
+    # First we compute the needed extensions
+    analyzer = create_sorting_analyzer_with_existing_templates(sorting, recording, templates)
+    analyzer.compute("unit_locations", method="monopolar_triangulation")
+    analyzer.compute("template_similarity", **similarity_kwargs)
+    # analyzer.compute("correlograms", **correlograms_kwargs)
 
-
-def final_cleaning_circus(recording, sorting, templates, **merging_kwargs):
-
-    from spikeinterface.core.sorting_tools import apply_merges_to_sorting
-
-    sa = create_sorting_analyzer_with_templates(sorting, recording, templates)
-
-    sa.compute("unit_locations", method="monopolar_triangulation")
-    similarity_kwargs = merging_kwargs.pop("similarity_kwargs", {})
-    sa.compute("template_similarity", **similarity_kwargs)
-    correlograms_kwargs = merging_kwargs.pop("correlograms_kwargs", {})
-    sa.compute("correlograms", **correlograms_kwargs)
-    auto_merge_kwargs = merging_kwargs.pop("auto_merge", {})
-    merges = get_potential_auto_merge(sa, resolve_graph=True, **auto_merge_kwargs)
-    sorting = apply_merges_to_sorting(sa.sorting, merges)
-
-    return sorting
+    presets = ["x_contaminations"] * len(template_diff_thresh)
+    steps_params = [
+        {"template_similarity": {"template_diff_thresh": i}, "unit_locations": {"max_distance_um": max_distance_um}}
+        for i in template_diff_thresh
+    ]
+    final_sa = auto_merge_units(
+        analyzer,
+        presets=presets,
+        steps_params=steps_params,
+        apply_merge_kwargs=apply_merge_kwargs,
+        recursive=True,
+        **job_kwargs,
+    )
+    return final_sa.sorting

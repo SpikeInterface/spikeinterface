@@ -118,7 +118,7 @@ def detect_peaks(
         squeeze_output = True
     else:
         squeeze_output = False
-        job_name += f"  + {len(pipeline_nodes)} nodes"
+        job_name += f" + {len(pipeline_nodes)} nodes"
 
         # because node are modified inplace (insert parent) they need to copy incase
         # the same pipeline is run several times
