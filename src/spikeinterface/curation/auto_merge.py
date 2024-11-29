@@ -231,7 +231,7 @@ def compute_merge_unit_groups(
         params = _default_step_params.get(step).copy()
         if steps_params is not None and step in steps_params:
             params.update(steps_params[step])
-
+    
         # STEP : remove units with too few spikes
         if step == "num_spikes":
 

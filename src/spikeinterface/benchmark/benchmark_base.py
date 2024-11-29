@@ -208,10 +208,11 @@ class BenchmarkStudy:
         for key in case_keys:
 
             result_folder = self.folder / "results" / self.key_to_str(key)
-
+            sorter_folder = self.folder / "sorters" / self.key_to_str(key)
+        
             if keep and result_folder.exists():
                 continue
-            elif not keep and result_folder.exists():
+            elif not keep and (result_folder.exists() or sorter_folder.exists()):
                 self.remove_benchmark(key)
             job_keys.append(key)
 

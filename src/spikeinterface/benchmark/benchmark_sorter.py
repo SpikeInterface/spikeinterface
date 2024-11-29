@@ -56,6 +56,15 @@ class SorterStudy(BenchmarkStudy):
         benchmark = SorterBenchmark(recording, gt_sorting, params, sorter_folder)
         return benchmark
 
+    def remove_benchmark(self, key):
+        BenchmarkStudy.remove_benchmark(self, key)
+
+        sorter_folder = self.folder / "sorters" / self.key_to_str(key)
+        import shutil
+        if sorter_folder.exists():
+            shutil.rmtree(sorter_folder)
+        
+
     def get_performance_by_unit(self, case_keys=None):
         import pandas as pd
 
