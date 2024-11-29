@@ -100,7 +100,6 @@ class SilencedPeriodsRecording(BasePreprocessor):
         self._kwargs = dict(recording=recording,
                             list_periods=list_periods,
                             mode=mode,
-                            noise_levels=noise_levels,
                             seed=seed,
                             random_chunk_kwargs=random_chunk_kwargs)
 
