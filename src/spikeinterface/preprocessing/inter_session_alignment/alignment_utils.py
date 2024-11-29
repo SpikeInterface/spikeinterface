@@ -1,6 +1,7 @@
 from signal import signal
 
 from toolz import first
+from torch.onnx.symbolic_opset11 import chunk
 
 from spikeinterface import BaseRecording
 import numpy as np
@@ -61,7 +62,7 @@ def get_activity_histogram(
         peak_locations,
         weight_with_amplitude=False,
         direction="y",
-        bin_s=bin_s if bin_s is not None else recording.get_duration(segment_index=0),
+        bin_s=bin_s if bin_s is not None else recording.get_duration(segment_index=0),  # TODO: doube cehck is this already scaling?
         bin_um=None,
         hist_margin_um=None,
         spatial_bin_edges=spatial_bin_edges,
@@ -74,7 +75,7 @@ def get_activity_histogram(
 
     if scale_to_hz:
         if bin_s is None:
-            scaler = 1 / recording.get_duration(segment_index=0)
+            scaler = 1 / recording.get_duration()
         else:
             scaler = 1 / np.diff(temporal_bin_edges)[:, np.newaxis]
 
@@ -106,6 +107,8 @@ def estimate_chunk_size(scaled_activity_histogram):
     ----
     - make the details available.
     """
+    print("scaled max", np.max(scaled_activity_histogram))
+
     firing_rate = np.max(scaled_activity_histogram) * 0.25
 
     lambda_hat_s = firing_rate
@@ -130,19 +133,33 @@ def estimate_chunk_size(scaled_activity_histogram):
 def get_chunked_hist_mean(chunked_session_histograms):
 
     mean_hist = np.mean(chunked_session_histograms, axis=0)
-    return mean_hist
+
+    std = np.std(chunked_session_histograms, axis=0, ddof=0)
+
+    return mean_hist, std
 
 
 def get_chunked_hist_median(chunked_session_histograms):
 
     median_hist = np.median(chunked_session_histograms, axis=0)
-    return median_hist
+
+    quartile_1 = np.percentile(chunked_session_histograms, 25, axis=0)
+    quartile_3 = np.percentile(chunked_session_histograms, 75, axis=0)
+
+    iqr = quartile_3 - quartile_1
+
+    return median_hist, iqr
 
 
 def get_chunked_hist_supremum(chunked_session_histograms):
 
     max_hist = np.max(chunked_session_histograms, axis=0)
-    return max_hist
+
+    min_hist = np.min(chunked_session_histograms, axis=0)
+
+    scaled_range = (max_hist - min_hist) / max_hist  # TODO: no idea if this is a good idea or not
+
+    return max_hist, scaled_range
 
 
 def get_chunked_hist_poisson_estimate(chunked_session_histograms):
@@ -170,17 +187,16 @@ def get_chunked_hist_poisson_estimate(chunked_session_histograms):
 
         poisson_estimate[i] = minimize(obj_fun, 0.5, (m, sum_k), bounds=((1e-10, np.inf),)).x
 
+    raise NotImplementedError("This is the same as the mean, deprecate")
+
     return poisson_estimate
 
 
 def get_chunked_hist_eigenvector(chunked_session_histograms):
     """
-    TODO: currently deprecated due to scaling issues between
-    sessions. A much better (?) way will to make PCA from all
-    sessions, then align based on projection
     """
     if chunked_session_histograms.shape[0] == 1:  # TODO: handle elsewhere
-        return chunked_session_histograms.squeeze()
+        return chunked_session_histograms.squeeze(), None
 
     A = chunked_session_histograms
     S = (1 / A.shape[0]) * A.T @ A
@@ -190,8 +206,109 @@ def get_chunked_hist_eigenvector(chunked_session_histograms):
     first_eigenvector = U[:, 0] * np.sqrt(S[0])
     first_eigenvector = np.abs(first_eigenvector)  # sometimes the eigenvector can be negative
 
-    return first_eigenvector
+    v1 = first_eigenvector[:, np.newaxis]
+    reconstruct = (A @ v1) @ v1.T
+    v1_std = np.std(np.sqrt(reconstruct), axis=0, ddof=0)  # TODO: check sqrt, completel guess
 
+    return first_eigenvector, v1_std
+
+
+def get_chunked_gaussian_process_regression(chunked_session_histogram):
+    """
+    """
+    # TODO: try https://github.com/cornellius-gp/gpytorch
+
+    from sklearn.gaussian_process import GaussianProcessRegressor
+    from sklearn.gaussian_process.kernels import RBF, ConstantKernel
+
+    from sklearn.preprocessing import StandardScaler
+
+    import GPy
+
+    chunked_session_histogram = chunked_session_histogram.copy()
+    chunked_session_histogram = chunked_session_histogram
+
+    num_hist = chunked_session_histogram.shape[0]
+    num_bins = chunked_session_histogram.shape[1]
+
+    X = np.arange(num_bins)
+
+    Y = chunked_session_histogram
+
+    bias_mean = True
+    if bias_mean:
+        #this is cool, bias the estimation towards the peak
+        Y = Y + np.mean(Y, axis=0) - np.percentile(Y, 5, axis=0)  # TODO: avoid copy, also fix dims in case of square
+
+    # var = np.mean(np.std(Y, axis=0))
+    Y = Y.flatten()
+
+    scaler_x = StandardScaler()
+    X_scaled = scaler_x.fit_transform(X.reshape(-1, 1)).flatten()
+    X_rep = np.tile(X_scaled, num_hist)
+
+    scaler_y = StandardScaler()
+    Y_scaled = scaler_y.fit_transform(Y.reshape(-1, 1)).flatten()
+
+    ls = 1 / scaler_x.scale_  # 1 spatial bin
+
+    # note variance of the KERNEL is amplitude (sigma^2 out front)
+    # noise variance alpha is added to K(X,X) after computation, so is seaprate from kernel
+
+    kernel = GPy.kern.RBF(input_dim=1, lengthscale=ls, variance=1.0)  # + GPy.kern.Constant(input_dim=1, variance=1.0)
+
+    # https://docs.gpytorch.ai/en/v1.9.0/examples/02_Scalable_Exact_GPs/SGPR_Regression_CUDA.html
+    sparse = True
+    if sparse:
+        # num_inducing = (X.shape[0] - 1)  #
+        inducing_points = X_scaled # X[np.random.choice(X.shape[0], num_inducing, replace=False)]
+        gp = GPy.models.SparseGPRegression(X_rep.reshape(-1, 1), Y_scaled.reshape(-1, 1), kernel, Z=inducing_points.reshape(-1, 1))
+    else:
+        gp = GPy.models.GPRegression(X_rep.reshape(-1, 1), Y_scaled.reshape(-1, 1), kernel)
+
+    # gp.likelihood = t_distribution  # GPy.likelihoods.StudentT()
+
+    optimise = False
+    if optimise:
+        kernel.lengthscale.fix()  # try unfixing but TBH looks goood already
+        gp.optimize(messages=True)
+    else:
+        kernel.lengthscale.fix()
+        kernel.variance.fix()
+
+    mean_pred, var_pred = gp.predict(X_scaled.reshape(-1, 1))
+
+    mean_pred = scaler_y.inverse_transform(mean_pred.reshape(-1, 1)).flatten()
+    std_pred = np.sqrt(var_pred * scaler_y.scale_).flatten()  # TODO: triple check this
+
+    if False:
+
+        kernel =  ConstantKernel(constant_value=1.0, constant_value_bounds=(1, 5)) + RBF(length_scale=ls[1], length_scale_bounds="fixed") # length_scale_bounds=(np.min([ls[0], 1e-2]), ls[2])) # "fixed") # RBF(length_scale=1, length_scale_bounds=(1e-2, 1e2))
+
+        gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10, alpha=var)  # TODO: what to do ABOUT alpha, might need to fix over all sessions
+
+        gp.fit(X_rep.reshape(-1, 1), Y_scaled)
+
+        mean_pred, std_pred = gp.predict(X_scaled.reshape(-1, 1), return_std=True)
+        mean_pred = scaler_y.inverse_transform(mean_pred.reshape(-1, 1)).flatten()
+        std_pred = std_pred * scaler_y.scale_
+
+    if False:
+        X_pred = X_scaled
+        #  X_pred = scaler.inverse_transform(X_scaled.reshape(-1, 1)).flatten()
+
+        import matplotlib.pyplot as plt
+
+        unscaled_X_rep = np.tile(X, chunked_session_histogram.shape[0])
+        unscaled_Y_rep = Y.flatten()
+
+        plt.scatter(unscaled_X_rep, unscaled_Y_rep)
+        plt.plot(X_pred, mean_pred)
+        plt.plot(X_pred, mean_pred + std_pred * 1.96)
+        plt.plot(X_pred, mean_pred - std_pred * 1.96)
+        plt.show()
+
+    return mean_pred, std_pred, gp
 
 # #############################################################################
 # TODO: MOVE creating recordings

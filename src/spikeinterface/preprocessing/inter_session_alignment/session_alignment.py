@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
+from torch.onnx.symbolic_opset11 import chunk
+
 if TYPE_CHECKING:
     from spikeinterface.core.baserecording import BaseRecording
 
@@ -496,7 +498,7 @@ def _get_single_session_activity_histogram(
 
     # Estimate a entire session histogram if requested or doing
     # full estimation for chunked bin size
-    if method == "entire_session" or chunked_bin_size_s == "estimate":
+    if chunked_bin_size_s == "estimate":
 
         one_bin_histogram, _, _ = alignment_utils.get_activity_histogram(
             recording,
@@ -505,21 +507,17 @@ def _get_single_session_activity_histogram(
             spatial_bin_edges,
             log_scale=False,
             bin_s=None,
-            depth_smooth_um=depth_smooth_um,
+            depth_smooth_um=None,
             scale_to_hz=False,
         )
-        if method == "entire_session":
-            if log_scale:
-                one_bin_histogram = np.log10(1 + one_bin_histogram)
 
-            return one_bin_histogram.squeeze(), temporal_bin_centers, None
-
-    # Compute summary histogram based on histograms
-    # calculated on session chunks
-    if chunked_bin_size_s == "estimate":
         # It is important that the passed histogram is scaled to firing rate in Hz
         scaled_hist = one_bin_histogram / recording.get_duration()
         chunked_bin_size_s = alignment_utils.estimate_chunk_size(scaled_hist)
+        chunked_bin_size_s = np.min([chunked_bin_size_s, recording.get_duration()])
+
+ #   if method == "chunked_gp":
+  #      chunked_bin_size_s = TEMP_fix_bin_size_for_gp(chunked_bin_size_s, recording.get_duration(), spatial_bin_edges)
 
     chunked_histograms, chunked_temporal_bin_centers, _ = alignment_utils.get_activity_histogram(
         recording,
@@ -531,32 +529,53 @@ def _get_single_session_activity_histogram(
         depth_smooth_um=depth_smooth_um,
         scale_to_hz=True,
     )
-    session_std = (
-        np.sum(np.std(chunked_histograms, axis=0)) / chunked_histograms.shape[1]
-    )  # TODO: this should be calcualed around the central summary?
-
     if method == "chunked_mean":
-        session_histogram = alignment_utils.get_chunked_hist_mean(chunked_histograms)
+        session_histogram, variation = alignment_utils.get_chunked_hist_mean(chunked_histograms)
 
     elif method == "chunked_median":
-        session_histogram = alignment_utils.get_chunked_hist_median(chunked_histograms)
+        session_histogram, variation = alignment_utils.get_chunked_hist_median(chunked_histograms)
 
     elif method == "chunked_supremum":
-        session_histogram = alignment_utils.get_chunked_hist_supremum(chunked_histograms)
+        session_histogram, variation = alignment_utils.get_chunked_hist_supremum(chunked_histograms)
 
     elif method == "chunked_poisson":
-        session_histogram = alignment_utils.get_chunked_hist_poisson_estimate(chunked_histograms)
+        session_histogram, variation = alignment_utils.get_chunked_hist_poisson_estimate(chunked_histograms)
 
     elif method == "first_eigenvector":
-        session_histogram = alignment_utils.get_chunked_hist_eigenvector(chunked_histograms)
+        session_histogram, variation = alignment_utils.get_chunked_hist_eigenvector(chunked_histograms)
+
+    elif method == "chunked_gp":  # TODO: better name
+        session_histogram = variation = gp_model = None
+        # session_histogram, variation, gp_model= alignment_utils.get_chunked_gaussian_process_regression(chunked_histograms)
+
+    session_variation = None # np.mean(variation)  # each b in independent, I think this is fine irrespective of method used
 
     histogram_info = {
         "chunked_histograms": chunked_histograms,
         "chunked_temporal_bin_centers": chunked_temporal_bin_centers,
-        "session_std": session_std,
+        "session_variation": session_variation,
         "chunked_bin_size_s": chunked_bin_size_s,
+        "session_histogram_variation": variation,
     }
+
+    if method == "chunked_gp":
+        histogram_info.update({"gp_model": gp_model})
+
     return session_histogram, temporal_bin_centers, histogram_info
+
+def TEMP_fix_bin_size_for_gp(chunked_bin_size_s, recording_len_s, spatial_bin_edges):
+    """
+    GP cannot handle a lot of data. This fixes the max number of datapoints by
+    adjusting the time bin. note typically we have 250 spatial bins, so this gives
+    max of around 50 time bins...
+    """
+    cutoff = 5000
+    if np.ceil(recording_len_s / chunked_bin_size_s) * (spatial_bin_edges.size - 1) > cutoff:
+        time_bins_to_play_with = cutoff / (spatial_bin_edges.size - 1)
+        chunked_bin_size_s = np.ceil(recording_len_s / time_bins_to_play_with)
+        print(f"Data is too large. Updated chunked bin size to: {chunked_bin_size_s}")
+        # TODO: this completely breaks the matching of chunk times between sessions...
+    return chunked_bin_size_s
 
 
 def _create_motion_recordings(
@@ -981,6 +1000,7 @@ def _check_align_sesssions_inpus(
         "chunked_supremum",
         "chunked_poisson",
         "first_eigenvector",
+        "chunked_gp",
     ]:
         raise ValueError(f"`method` option must be one of: {accepted_hist_methods}")
 
