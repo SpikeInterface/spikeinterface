@@ -62,7 +62,9 @@ def get_activity_histogram(
         peak_locations,
         weight_with_amplitude=False,
         direction="y",
-        bin_s=bin_s if bin_s is not None else recording.get_duration(segment_index=0),  # TODO: doube cehck is this already scaling?
+        bin_s=(
+            bin_s if bin_s is not None else recording.get_duration(segment_index=0)
+        ),  # TODO: doube cehck is this already scaling?
         bin_um=None,
         hist_margin_um=None,
         spatial_bin_edges=spatial_bin_edges,
@@ -120,7 +122,7 @@ def estimate_chunk_size(scaled_activity_histogram):
 
     print(f"estimated t: {t} for lambda {lambda_hat_s}")
 
-    return t
+    return 10
 
 
 # #############################################################################
@@ -193,8 +195,7 @@ def get_chunked_hist_poisson_estimate(chunked_session_histograms):
 
 
 def get_chunked_hist_eigenvector(chunked_session_histograms):
-    """
-    """
+    """ """
     if chunked_session_histograms.shape[0] == 1:  # TODO: handle elsewhere
         return chunked_session_histograms.squeeze(), None
 
@@ -214,8 +215,7 @@ def get_chunked_hist_eigenvector(chunked_session_histograms):
 
 
 def get_chunked_gaussian_process_regression(chunked_session_histogram):
-    """
-    """
+    """ """
     # TODO: try https://github.com/cornellius-gp/gpytorch
 
     from sklearn.gaussian_process import GaussianProcessRegressor
@@ -237,7 +237,7 @@ def get_chunked_gaussian_process_regression(chunked_session_histogram):
 
     bias_mean = True
     if bias_mean:
-        #this is cool, bias the estimation towards the peak
+        # this is cool, bias the estimation towards the peak
         Y = Y + np.mean(Y, axis=0) - np.percentile(Y, 5, axis=0)  # TODO: avoid copy, also fix dims in case of square
 
     # var = np.mean(np.std(Y, axis=0))
@@ -261,8 +261,10 @@ def get_chunked_gaussian_process_regression(chunked_session_histogram):
     sparse = True
     if sparse:
         # num_inducing = (X.shape[0] - 1)  #
-        inducing_points = X_scaled # X[np.random.choice(X.shape[0], num_inducing, replace=False)]
-        gp = GPy.models.SparseGPRegression(X_rep.reshape(-1, 1), Y_scaled.reshape(-1, 1), kernel, Z=inducing_points.reshape(-1, 1))
+        inducing_points = X_scaled  # X[np.random.choice(X.shape[0], num_inducing, replace=False)]
+        gp = GPy.models.SparseGPRegression(
+            X_rep.reshape(-1, 1), Y_scaled.reshape(-1, 1), kernel, Z=inducing_points.reshape(-1, 1)
+        )
     else:
         gp = GPy.models.GPRegression(X_rep.reshape(-1, 1), Y_scaled.reshape(-1, 1), kernel)
 
@@ -282,6 +284,38 @@ def get_chunked_gaussian_process_regression(chunked_session_histogram):
     std_pred = np.sqrt(var_pred * scaler_y.scale_).flatten()  # TODO: triple check this
 
     return mean_pred, std_pred, gp
+
+
+# #############################################################################
+# 2D VERSIONS
+# #############################################################################
+
+# dims are (time, depth, amplitude
+
+
+def get_chunked_hist_mean_2d(chunked_histograms):
+
+    mean_hist = np.mean(chunked_histograms, axis=0)
+
+    std = np.std(chunked_histograms, axis=0)
+
+    return mean_hist, std
+
+
+def get_chunked_hist_median_2d(chunked_histograms):
+    breakpoint()
+    pass
+
+
+def get_chunked_hist_supremum_2d(chunked_histograms):
+    breakpoint()
+    pass
+
+
+def get_chunked_hist_eigenvector_2d(chunked_histograms):
+    breakpoint()
+    pass
+
 
 # #############################################################################
 # TODO: MOVE creating recordings

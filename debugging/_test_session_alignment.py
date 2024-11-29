@@ -224,6 +224,7 @@ estimate_histogram_kwargs = {
     "chunked_bin_size_s": "estimate",
     "log_scale": True,
     "depth_smooth_um": 10,
+    "histogram_type": "2Dy_x",  # "y_only", "2Dy_x", "2Dy_amplitude""  TOOD: better names!
 }
 compute_alignment_kwargs = {
     "num_shifts_block": None,  # TODO: can be in um so comaprable with window kwargs.
