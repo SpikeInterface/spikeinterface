@@ -161,7 +161,7 @@ and share your own model.
    .. grid-item-card:: Upload your model to HuggingFaceHub
       :link-type: ref
       :link: sphx_glr_tutorials_curation_plot_3_upload_a_model.py
-      :img-top: /tutorials/curation/images/hf-logo.svg
+      :img-top: /images/hf-logo.svg
       :img-alt: Upload your model
       :class-card: gallery-card
       :text-align: center
