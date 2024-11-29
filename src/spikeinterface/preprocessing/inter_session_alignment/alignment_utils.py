@@ -281,33 +281,6 @@ def get_chunked_gaussian_process_regression(chunked_session_histogram):
     mean_pred = scaler_y.inverse_transform(mean_pred.reshape(-1, 1)).flatten()
     std_pred = np.sqrt(var_pred * scaler_y.scale_).flatten()  # TODO: triple check this
 
-    if False:
-
-        kernel =  ConstantKernel(constant_value=1.0, constant_value_bounds=(1, 5)) + RBF(length_scale=ls[1], length_scale_bounds="fixed") # length_scale_bounds=(np.min([ls[0], 1e-2]), ls[2])) # "fixed") # RBF(length_scale=1, length_scale_bounds=(1e-2, 1e2))
-
-        gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10, alpha=var)  # TODO: what to do ABOUT alpha, might need to fix over all sessions
-
-        gp.fit(X_rep.reshape(-1, 1), Y_scaled)
-
-        mean_pred, std_pred = gp.predict(X_scaled.reshape(-1, 1), return_std=True)
-        mean_pred = scaler_y.inverse_transform(mean_pred.reshape(-1, 1)).flatten()
-        std_pred = std_pred * scaler_y.scale_
-
-    if False:
-        X_pred = X_scaled
-        #  X_pred = scaler.inverse_transform(X_scaled.reshape(-1, 1)).flatten()
-
-        import matplotlib.pyplot as plt
-
-        unscaled_X_rep = np.tile(X, chunked_session_histogram.shape[0])
-        unscaled_Y_rep = Y.flatten()
-
-        plt.scatter(unscaled_X_rep, unscaled_Y_rep)
-        plt.plot(X_pred, mean_pred)
-        plt.plot(X_pred, mean_pred + std_pred * 1.96)
-        plt.plot(X_pred, mean_pred - std_pred * 1.96)
-        plt.show()
-
     return mean_pred, std_pred, gp
 
 # #############################################################################
