@@ -164,8 +164,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if num_channels == 1:
             whitening_kwargs["regularize"] = False
         if whitening_kwargs["regularize"]:
-            n_jobs = job_kwargs['n_jobs']
-            whitening_kwargs["regularize_kwargs"] = {"method": "GraphicalLassoCV", "n_jobs" : n_jobs}
+            n_jobs = job_kwargs["n_jobs"]
+            whitening_kwargs["regularize_kwargs"] = {"method": "GraphicalLassoCV", "n_jobs": n_jobs}
 
         recording_w = whiten(recording_f, **whitening_kwargs)
         noise_levels = get_noise_levels(recording_w, return_scaled=False, **job_kwargs)
