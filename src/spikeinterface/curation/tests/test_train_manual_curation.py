@@ -173,7 +173,29 @@ def test_saved_files(trainer):
     assert set(model_info.keys()) == set(["metric_params", "requirements", "label_conversion"])
 
 
+def test_train_model():
+    """A simple function test to check that `train_model` doesn't fail with one csv inputs"""
+
+    metrics_path = make_temp_training_csv()
+    folder = tempfile.mkdtemp()
+    metric_names = ["metric1", "metric2", "metric3"]
+    trainer = train_model(
+        mode="csv",
+        metrics_paths=[metrics_path],
+        folder=folder,
+        labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1]],
+        metric_names=metric_names,
+        imputation_strategies=["median"],
+        scaling_techniques=["standard_scaler"],
+        classifiers=["LogisticRegression"],
+        overwrite=True,
+    )
+    assert isinstance(trainer, CurationModelTrainer)
+
+
 def test_train_model_using_two_csvs():
+    """Models can be trained using more than one set of training data. This test checks
+    that `train_model` works with two inputs, from csv files."""
 
     metrics_path_1 = make_temp_training_csv()
     metrics_path_2 = make_temp_training_csv()
@@ -195,26 +217,10 @@ def test_train_model_using_two_csvs():
     assert isinstance(trainer, CurationModelTrainer)
 
 
-def test_train_model():
-
-    metrics_path = make_temp_training_csv()
-    folder = tempfile.mkdtemp()
-    metric_names = ["metric1", "metric2", "metric3"]
-    trainer = train_model(
-        mode="csv",
-        metrics_paths=[metrics_path],
-        folder=folder,
-        labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1]],
-        metric_names=metric_names,
-        imputation_strategies=["median"],
-        scaling_techniques=["standard_scaler"],
-        classifiers=["LogisticRegression"],
-        overwrite=True,
-    )
-    assert isinstance(trainer, CurationModelTrainer)
-
-
 def test_train_using_two_sorting_analyzers():
+    """Models can be trained using more than one set of training data. This test checks
+    that `train_model` works with two inputs, from sorting analzyers. It also checks that
+    an error is raised if the sorting_analyzers have different sets of metrics computed."""
 
     sorting_analyzer_1 = make_sorting_analyzer()
     sorting_analyzer_1.compute({"quality_metrics": {"metric_names": ["num_spikes", "snr"]}})
@@ -238,8 +244,7 @@ def test_train_using_two_sorting_analyzers():
 
     assert isinstance(trainer, CurationModelTrainer)
 
-    # Xheck that there is an error raised if the metric names are different
-
+    # Check that there is an error raised if the metric names are different
     sorting_analyzer_2 = make_sorting_analyzer()
     sorting_analyzer_2.compute({"quality_metrics": {"metric_names": ["num_spikes"], "delete_existing_metrics": True}})
 
