@@ -88,8 +88,21 @@ class ComputeTemplateMetrics(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
+    need_backward_compatibility_on_load = True
 
     min_channels_for_multi_channel_warning = 10
+
+    def _handle_backward_compatibility_on_load(self):
+
+        # For backwards compatibility - this reformats metrics_kwargs as metric_params
+        if (metrics_kwargs := self.params.get("metrics_kwargs")) is not None:
+
+            metric_params = {}
+            for metric_name in self.params["metric_names"]:
+                metric_params[metric_name] = deepcopy(metrics_kwargs)
+            self.params["metric_params"] = metric_params
+
+            del self.params["metrics_kwargs"]
 
     def _set_params(
         self,
@@ -343,18 +356,6 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
     def _get_data(self):
         return self.data["metrics"]
-
-    def load_params(self):
-        AnalyzerExtension.load_params(self)
-        # For backwards compatibility - this reformats metrics_kwargs as metric_params
-        if (metrics_kwargs := self.params.get("metrics_kwargs")) is not None:
-
-            metric_params = {}
-            for metric_name in self.params["metric_names"]:
-                metric_params[metric_name] = deepcopy(metrics_kwargs)
-            self.params["metric_params"] = metric_params
-
-            del self.params["metrics_kwargs"]
 
 
 register_result_extension(ComputeTemplateMetrics)

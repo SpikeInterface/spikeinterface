@@ -55,6 +55,13 @@ class ComputeQualityMetrics(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
+    need_backward_compatibility_on_load = True
+
+    def _handle_backward_compatibility_on_load(self):
+        # For backwards compatibility - this renames qm_params as metric_params
+        if (qm_params := self.params.get("qm_params")) is not None:
+            self.params["metric_params"] = qm_params
+            del self.params["qm_params"]
 
     def _set_params(
         self,
@@ -261,13 +268,6 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
     def _get_data(self):
         return self.data["metrics"]
-
-    def load_params(self):
-        AnalyzerExtension.load_params(self)
-        # For backwards compatibility - this renames qm_params as metric_params
-        if (qm_params := self.params.get("qm_params")) is not None:
-            self.params["metric_params"] = qm_params
-            del self.params["qm_params"]
 
 
 register_result_extension(ComputeQualityMetrics)
