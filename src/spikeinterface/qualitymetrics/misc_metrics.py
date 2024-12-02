@@ -565,7 +565,7 @@ def _get_synchrony_counts(spikes, all_unit_ids, synchrony_sizes=np.array([2, 4, 
     return synchrony_counts
 
 
-def compute_synchrony_metrics(sorting_analyzer, unit_ids=None):
+def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=None):
     """
     Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
     spikes at the exact same sample index, with synchrony sizes 2, 4 and 8.
@@ -587,6 +587,10 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None):
     Based on concepts described in [Grün]_
     This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
     """
+
+    if synchrony_sizes is not None:
+        warning_message = "Custom `synchrony_sizes` is deprecated; the `synchrony_metrics` will be computed using `synchrony_sizes = [2,4,8]`"
+        warnings.warn(warning_message)
 
     synchrony_sizes = np.array([2, 4, 8])
 
