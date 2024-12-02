@@ -520,7 +520,7 @@ _default_params["sliding_rp_violation"] = dict(
 )
 
 
-def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
+def _get_synchrony_counts(spikes, all_unit_ids, synchrony_sizes=np.array([2, 4, 8])):
     """
     Compute synchrony counts, the number of simultaneous spikes with sizes `synchrony_sizes`.
 
@@ -528,10 +528,10 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     ----------
     spikes : np.array
         Structured numpy array with fields ("sample_index", "unit_index", "segment_index").
-    synchrony_sizes : numpy array
-        The synchrony sizes to compute. Should be pre-sorted.
     all_unit_ids : list or None, default: None
         List of unit ids to compute the synchrony metrics. Expecting all units.
+    synchrony_sizes : numpy array
+        The synchrony sizes to compute. Should be pre-sorted.
 
     Returns
     -------
@@ -565,17 +565,15 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     return synchrony_counts
 
 
-def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_ids=None):
+def compute_synchrony_metrics(sorting_analyzer, unit_ids=None):
     """
     Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
-    "synchrony_size" spikes at the exact same sample index.
+    spikes at the exact same sample index, with synchrony sizes 2, 4 and 8.
 
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object.
-    synchrony_sizes : list or tuple, default: (2, 4, 8)
-        The synchrony sizes to compute.
     unit_ids : list or None, default: None
         List of unit ids to compute the synchrony metrics. If None, all units are used.
 
@@ -583,19 +581,16 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     -------
     sync_spike_{X} : dict
         The synchrony metric for synchrony size X.
-        Returns are as many as synchrony_sizes.
 
     References
     ----------
     Based on concepts described in [Grün]_
     This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
     """
-    assert min(synchrony_sizes) > 1, "Synchrony sizes must be greater than 1"
-    # Sort the synchrony times so we can slice numpy arrays, instead of using dicts
-    synchrony_sizes_np = np.array(synchrony_sizes, dtype=np.int16)
-    synchrony_sizes_np.sort()
 
-    res = namedtuple("synchrony_metrics", [f"sync_spike_{size}" for size in synchrony_sizes_np])
+    synchrony_sizes = np.array([2, 4, 8])
+
+    res = namedtuple("synchrony_metrics", [f"sync_spike_{size}" for size in synchrony_sizes])
 
     sorting = sorting_analyzer.sorting
 
@@ -606,10 +601,10 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
 
     spikes = sorting.to_spike_vector()
     all_unit_ids = sorting.unit_ids
-    synchrony_counts = get_synchrony_counts(spikes, synchrony_sizes_np, all_unit_ids)
+    synchrony_counts = _get_synchrony_counts(spikes, all_unit_ids, synchrony_sizes=synchrony_sizes)
 
     synchrony_metrics_dict = {}
-    for sync_idx, synchrony_size in enumerate(synchrony_sizes_np):
+    for sync_idx, synchrony_size in enumerate(synchrony_sizes):
         sync_id_metrics_dict = {}
         for i, unit_id in enumerate(all_unit_ids):
             if unit_id not in unit_ids:
@@ -623,7 +618,7 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     return res(**synchrony_metrics_dict)
 
 
-_default_params["synchrony"] = dict(synchrony_sizes=(2, 4, 8))
+_default_params["synchrony"] = dict()
 
 
 def compute_firing_ranges(sorting_analyzer, bin_size_s=5, percentiles=(5, 95), unit_ids=None):
