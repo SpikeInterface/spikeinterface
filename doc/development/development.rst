@@ -213,6 +213,25 @@ We use Sphinx to build the documentation. To build the documentation locally, yo
 
 This will build the documentation in the :code:`doc/_build/html` folder. You can open the :code:`index.html` file in your browser to see the documentation.
 
+Adding new documentation
+------------------------
+
+Documentation can be added as a
+`sphinx-gallery <https://sphinx-gallery.github.io/stable/index.html>`_
+python file ('tutorials')
+or a
+`sphinx rst <https://sphinx-tutorial.readthedocs.io/step-1/>`_
+file (all other sections).
+
+To add a new tutorial, add your ``.py`` file to ``spikeinterface/examples``.
+Then, update the ``spikeinterface/doc/tutorials_custom_index.rst`` file
+to make a new card linking to the page and an optional image. See
+``tutorials_custom_index.rst`` header for more information.
+
+For other sections, write your documentation in ``.rst`` format and add
+the page to the appropriate ``index.rst`` file found in the relevant
+folder (e.g. ``how_to/index.rst``).
+
 How to run code coverage locally
 --------------------------------
 To run code coverage locally, you can use the following command:
