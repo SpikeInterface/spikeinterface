@@ -352,7 +352,7 @@ def test_synchrony_counts_no_sync():
     one_spike["sample_index"] = spike_times
     one_spike["unit_index"] = spike_units
 
-    sync_count = _get_synchrony_counts(one_spike, [0])
+    sync_count = _get_synchrony_counts(one_spike, np.array([2, 4, 8]), [0])
 
     assert np.all(sync_count[0] == np.array([0]))
 
@@ -372,7 +372,7 @@ def test_synchrony_counts_one_sync():
     two_spikes["sample_index"] = np.concatenate((spike_indices, added_spikes_indices))
     two_spikes["unit_index"] = np.concatenate((spike_labels, added_spikes_labels))
 
-    sync_count = _get_synchrony_counts(two_spikes, [0, 1])
+    sync_count = _get_synchrony_counts(two_spikes, np.array([2, 4, 8]), [0, 1])
 
     assert np.all(sync_count[0] == np.array([1, 1]))
 
@@ -392,7 +392,7 @@ def test_synchrony_counts_one_quad_sync():
     four_spikes["sample_index"] = np.concatenate((spike_indices, added_spikes_indices))
     four_spikes["unit_index"] = np.concatenate((spike_labels, added_spikes_labels))
 
-    sync_count = _get_synchrony_counts(four_spikes, [0, 1, 2, 3])
+    sync_count = _get_synchrony_counts(four_spikes, np.array([2, 4, 8]), [0, 1, 2, 3])
 
     assert np.all(sync_count[0] == np.array([1, 1, 1, 1]))
     assert np.all(sync_count[1] == np.array([1, 1, 1, 1]))
@@ -409,7 +409,7 @@ def test_synchrony_counts_not_all_units():
     three_spikes["sample_index"] = np.concatenate((spike_indices, added_spikes_indices))
     three_spikes["unit_index"] = np.concatenate((spike_labels, added_spikes_labels))
 
-    sync_count = _get_synchrony_counts(three_spikes, [0, 1, 2])
+    sync_count = _get_synchrony_counts(three_spikes, np.array([2, 4, 8]), [0, 1, 2])
 
     assert np.all(sync_count[0] == np.array([0, 1, 1]))
 

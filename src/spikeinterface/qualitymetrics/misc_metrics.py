@@ -520,7 +520,7 @@ _default_params["sliding_rp_violation"] = dict(
 )
 
 
-def _get_synchrony_counts(spikes, all_unit_ids, synchrony_sizes=np.array([2, 4, 8])):
+def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     """
     Compute synchrony counts, the number of simultaneous spikes with sizes `synchrony_sizes`.
 
@@ -530,7 +530,7 @@ def _get_synchrony_counts(spikes, all_unit_ids, synchrony_sizes=np.array([2, 4, 
         Structured numpy array with fields ("sample_index", "unit_index", "segment_index").
     all_unit_ids : list or None, default: None
         List of unit ids to compute the synchrony metrics. Expecting all units.
-    synchrony_sizes : numpy array
+    synchrony_sizes : None or np.array, default: None
         The synchrony sizes to compute. Should be pre-sorted.
 
     Returns
@@ -576,6 +576,8 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=N
         A SortingAnalyzer object.
     unit_ids : list or None, default: None
         List of unit ids to compute the synchrony metrics. If None, all units are used.
+    synchrony_sizes: None, default: None
+        Deprecated argument. Please use private `_get_synchrony_counts` if you need finer control over number of synchronous spikes.
 
     Returns
     -------
@@ -590,7 +592,7 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=N
 
     if synchrony_sizes is not None:
         warning_message = "Custom `synchrony_sizes` is deprecated; the `synchrony_metrics` will be computed using `synchrony_sizes = [2,4,8]`"
-        warnings.warn(warning_message)
+        warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
 
     synchrony_sizes = np.array([2, 4, 8])
 
@@ -605,7 +607,7 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=N
 
     spikes = sorting.to_spike_vector()
     all_unit_ids = sorting.unit_ids
-    synchrony_counts = _get_synchrony_counts(spikes, all_unit_ids, synchrony_sizes=synchrony_sizes)
+    synchrony_counts = _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids)
 
     synchrony_metrics_dict = {}
     for sync_idx, synchrony_size in enumerate(synchrony_sizes):
