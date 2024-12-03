@@ -136,7 +136,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             metric_names += get_multi_channel_template_metric_names()
 
         if metrics_kwargs is not None and metric_params is None:
-            deprecation_msg = "`metrics_kwargs` is deprecated and will be removed in version 0.104.0. Please use metric_params instead"
+            deprecation_msg = "`metrics_kwargs` is deprecated and will be removed in version 0.104.0. Please use `metric_params` instead"
             deprecation_msg = "`metrics_kwargs` is deprecated and will be removed in version 0.104.0. Please use `metric_params` instead"
 
             metric_params = {}
