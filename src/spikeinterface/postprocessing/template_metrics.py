@@ -64,8 +64,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         Whether to compute multi-channel metrics
     delete_existing_metrics : bool, default: False
         If True, any template metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept, provided the `metric_params` are unchanged.
-    metric_params : dict of dicts
-        metric_params : dict of dicts or None
+    metric_params : dict of dicts or None, default: None
         Dictionary with parameters for template metrics calculation.
         Default parameters can be obtained with: `si.postprocessing.template_metrics.get_default_tm_params()`
 
@@ -138,7 +137,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
         if metrics_kwargs is not None and metric_params is None:
             deprecation_msg = "`metrics_kwargs` is deprecated and will be removed in version 0.104.0. Please use metric_params instead"
-            warnings.warn(deprecation_msg, category=DeprecationWarning)
+            deprecation_msg = "`metrics_kwargs` is deprecated and will be removed in version 0.104.0. Please use `metric_params` instead"
 
             metric_params = {}
             for metric_name in metric_names:
