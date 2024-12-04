@@ -69,7 +69,7 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
     assert calculated_metrics == ["snr"]
 
     small_sorting_analyzer.compute(
-        {"quality_metrics": {"metric_names": list(qm_params.keys()), "qm_params": qm_params}}
+        {"quality_metrics": {"metric_names": list(qm_params.keys()), "metric_params": qm_params}}
     )
     small_sorting_analyzer.compute({"quality_metrics": {"metric_names": ["snr"]}})
 
@@ -96,13 +96,13 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
     # check that, when parameters are changed, the data and metadata are updated
     old_snr_data = deepcopy(quality_metric_extension.get_data()["snr"].values)
     small_sorting_analyzer.compute(
-        {"quality_metrics": {"metric_names": ["snr"], "qm_params": {"snr": {"peak_mode": "peak_to_peak"}}}}
+        {"quality_metrics": {"metric_names": ["snr"], "metric_params": {"snr": {"peak_mode": "peak_to_peak"}}}}
     )
     new_quality_metric_extension = small_sorting_analyzer.get_extension("quality_metrics")
     new_snr_data = new_quality_metric_extension.get_data()["snr"].values
 
     assert np.all(old_snr_data != new_snr_data)
-    assert new_quality_metric_extension.params["qm_params"]["snr"]["peak_mode"] == "peak_to_peak"
+    assert new_quality_metric_extension.params["metric_params"]["snr"]["peak_mode"] == "peak_to_peak"
 
     # check that all quality metrics are deleted when parents are recomputed, even after
     # recomputation
@@ -280,10 +280,10 @@ def test_unit_id_order_independence(small_sorting_analyzer):
     }
 
     quality_metrics_1 = compute_quality_metrics(
-        small_sorting_analyzer, metric_names=get_quality_metric_list(), qm_params=qm_params
+        small_sorting_analyzer, metric_names=get_quality_metric_list(), metric_params=qm_params
     )
     quality_metrics_2 = compute_quality_metrics(
-        small_sorting_analyzer_2, metric_names=get_quality_metric_list(), qm_params=qm_params
+        small_sorting_analyzer_2, metric_names=get_quality_metric_list(), metric_params=qm_params
     )
 
     for metric, metric_2_data in quality_metrics_2.items():
