@@ -163,4 +163,4 @@ plt.show()
 #
 # Now that you have a model, you can `apply it to another sorting
 # <https://spikeinterface.readthedocs.io/en/latest/tutorials/curation/plot_1_automated_curation.html>`_
-# or upload it to `HuggingFaceHub <https://huggingface.co/>`_.
+# or `upload it to HuggingFaceHub <https://spikeinterface.readthedocs.io/en/latest/tutorials/curation/plot_3_upload_a_model.html>`_.

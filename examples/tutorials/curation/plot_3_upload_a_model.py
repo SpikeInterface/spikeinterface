@@ -6,6 +6,8 @@ Upload a pipeline to Hugging Face Hub
 # In this tutorial we will upload a pipeline, trained in SpikeInterface, to the
 # `Hugging Face Hub <https://huggingface.co/>`_ (HFH).
 #
+# To do this, you first need to train a model. `Learn how here! <https://spikeinterface.readthedocs.io/en/latest/tutorials/curation/plot_2_train_a_model.html>`_
+#
 # Hugging Face Hub?
 # -----------------
 # Hugging Face Hub (HFH) is a model sharing platform focused on AI and ML models and datasets.
