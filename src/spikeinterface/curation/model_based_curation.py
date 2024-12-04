@@ -150,53 +150,37 @@ class ModelBasedClassification:
             Path to model_info.json provenance file
         """
 
-        quality_metrics_extension = self.sorting_analyzer.get_extension("quality_metrics")
-        template_metrics_extension = self.sorting_analyzer.get_extension("template_metrics")
+        extension_names = ["quality_metrics", "template_metrics"]
 
-        if quality_metrics_extension is not None:
+        metric_extensions = [self.sorting_analyzer.get_extension(extension_name) for extension_name in extension_names]
 
-            model_quality_metrics_params = model_info["metric_params"]["quality_metric_params"]
-            quality_metrics_params = quality_metrics_extension.params["metric_params"]
+        for metric_extension, extension_name in zip(metric_extensions, extension_names):
 
-            inconsistent_metrics = []
-            for metric in model_quality_metrics_params["metric_names"]:
-                if metric not in model_quality_metrics_params["metric_params"]:
-                    inconsistent_metrics += metric
-                else:
-                    if quality_metrics_params[metric] != model_quality_metrics_params["metric_params"][metric]:
-                        warning_message = f"Quality metric params for {metric} do not match those used to train the model. Parameters can be found in the 'model_info.json' file."
-                        if enforce_metric_params is True:
-                            raise Exception(warning_message)
-                        else:
-                            warnings.warn(warning_message)
+            # remove the 's' at the end of the extension name
+            extension_name = extension_name[:-1]
+            if metric_extension is not None:
 
-            if len(inconsistent_metrics) > 0:
-                warning_message = (
-                    f"Parameters used to compute metrics {inconsistent_metrics}, used to train this model, are unknown."
-                )
-                if enforce_metric_params is True:
-                    raise Exception(warning_message)
-                else:
-                    warnings.warn(warning_message)
+                model_metric_params = model_info["metric_params"][extension_name + "_params"]
+                metric_params = metric_extension.params["metric_params"]
 
-        if template_metrics_extension is not None:
+                inconsistent_metrics = []
+                for metric in model_metric_params["metric_names"]:
+                    if metric not in model_metric_params["metric_params"]:
+                        inconsistent_metrics += metric
+                    else:
+                        if metric_params[metric] != model_metric_params["metric_params"][metric]:
+                            warning_message = f"{extension_name} params for {metric} do not match those used to train the model. Parameters can be found in the 'model_info.json' file."
+                            if enforce_metric_params is True:
+                                raise Exception(warning_message)
+                            else:
+                                warnings.warn(warning_message)
 
-            model_template_metrics_params = model_info["metric_params"]["template_metric_params"]["metric_params"]
-            template_metrics_params = template_metrics_extension.params["metric_params"]
-
-            if template_metrics_params == {}:
-                warning_message = "Parameters used to compute template metrics, used to train this model, are unknown."
-                if enforce_metric_params is True:
-                    raise Exception(warning_message)
-                else:
-                    warnings.warn(warning_message)
-
-            if template_metrics_params != model_template_metrics_params:
-                warning_message = "Template metrics params do not match those used to train model. Parameters can be found in the 'model_info.json' file."
-                if enforce_metric_params is True:
-                    raise Exception(warning_message)
-                else:
-                    warnings.warn(warning_message)
+                if len(inconsistent_metrics) > 0:
+                    warning_message = f"Parameters used to compute metrics {inconsistent_metrics}, used to train this model, are unknown."
+                    if enforce_metric_params is True:
+                        raise Exception(warning_message)
+                    else:
+                        warnings.warn(warning_message)
 
     def _export_to_phy(self, classified_units):
         """Export the classified units to Phy as cluster_prediction.tsv file"""

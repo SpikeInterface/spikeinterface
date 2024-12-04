@@ -237,27 +237,31 @@ class CurationModelTrainer:
         conflicting_metrics = self._check_metrics_parameters(analyzers, enforce_metric_params)
 
         self.metrics_params = {}
-        if analyzers[0].has_extension("quality_metrics") is True:
-            self.metrics_params["quality_metric_params"] = analyzers[0].extensions["quality_metrics"].params
 
-            # Only save metric params which are 1) consistent and 2) exist in metric_names
-            qm_names = self.metrics_params["quality_metric_params"]["metric_names"]
-            consistent_metrics = list(set(qm_names).difference(set(conflicting_metrics)))
-            consistent_metric_params = {
-                metric: analyzers[0].extensions["quality_metrics"].params["metric_params"][metric]
-                for metric in consistent_metrics
-            }
-            self.metrics_params["quality_metric_params"]["metric_params"] = consistent_metric_params
+        extension_names = ["quality_metrics", "template_metrics"]
+        metric_extensions = [analyzers[0].get_extension(extension_name) for extension_name in extension_names]
 
-        if analyzers[0].has_extension("template_metrics") is True:
-            self.metrics_params["template_metric_params"] = deepcopy(analyzers[0].extensions["template_metrics"].params)
-            if "template_metrics" in conflicting_metrics:
-                self.metrics_params["template_metric_params"] = {}
+        for metric_extension, extension_name in zip(metric_extensions, extension_names):
+
+            # remove the 's' at the end of the extension name
+            extension_name = extension_name[:-1]
+            if metric_extension is not None:
+                self.metrics_params[extension_name + "_params"] = metric_extension.params
+
+                # Only save metric params which are 1) consistent and 2) exist in metric_names
+                metric_names = metric_extension.params["metric_names"]
+                consistent_metrics = list(set(metric_names).difference(set(conflicting_metrics)))
+                consistent_metric_params = {
+                    metric: metric_extension.params["metric_params"][metric] for metric in consistent_metrics
+                }
+                self.metrics_params[extension_name + "_params"]["metric_params"] = consistent_metric_params
 
         self.process_test_data_for_classification()
 
     def _check_metrics_parameters(self, analyzers, enforce_metric_params):
         """Checks that the metrics of each analyzer have been calcualted using the same parameters"""
+
+        extension_names = ["quality_metrics", "template_metrics"]
 
         conflicting_metrics = []
         for analyzer_index_1, analyzer_1 in enumerate(analyzers):
@@ -267,29 +271,20 @@ class CurationModelTrainer:
                     continue
                 else:
 
-                    qm_params_1 = {}
-                    qm_params_2 = {}
-                    tm_params_1 = {}
-                    tm_params_2 = {}
+                    metric_params_1 = {}
+                    metric_params_2 = {}
 
-                    if analyzer_1.has_extension("quality_metrics") is True:
-                        qm_params_1 = analyzer_1.extensions["quality_metrics"].params["metric_params"]
-                    if analyzer_2.has_extension("quality_metrics") is True:
-                        qm_params_2 = analyzer_2.extensions["quality_metrics"].params["metric_params"]
-                    if analyzer_1.has_extension("template_metrics") is True:
-                        tm_params_1 = analyzer_1.extensions["template_metrics"].params["metric_params"]
-                    if analyzer_2.has_extension("template_metrics") is True:
-                        tm_params_2 = analyzer_2.extensions["template_metrics"].params["metric_params"]
+                    for extension_name in extension_names:
+                        if (extension_1 := analyzer_1.get_extension(extension_name)) is not None:
+                            metric_params_1.update(extension_1.params["metric_params"])
+                        if (extension_2 := analyzer_2.get_extension(extension_name)) is not None:
+                            metric_params_2.update(extension_2.params["metric_params"])
 
                     conflicting_metrics_between_1_2 = []
                     # check quality metrics params
-                    for metric, params_1 in qm_params_1.items():
-                        if params_1 != qm_params_2.get(metric):
+                    for metric, params_1 in metric_params_1.items():
+                        if params_1 != metric_params_2.get(metric):
                             conflicting_metrics_between_1_2.append(metric)
-                    # check template metric params
-                    for metric, params_1 in tm_params_1.items():
-                        if params_1 != tm_params_2.get(metric):
-                            conflicting_metrics_between_1_2.append("template_metrics")
 
                     conflicting_metrics += conflicting_metrics_between_1_2
 
@@ -737,28 +732,23 @@ def _get_computed_metrics(sorting_analyzer):
 
 def try_to_get_metrics_from_analyzer(sorting_analyzer):
 
-    quality_metrics = None
-    template_metrics = None
+    extension_names = ["quality_metrics", "template_metrics"]
+    metric_extensions = [sorting_analyzer.get_extension(extension_name) for extension_name in extension_names]
 
-    # Try to get metrics if available
-    try:
-        quality_metrics = sorting_analyzer.get_extension("quality_metrics").get_data()
-    except:
-        pass
-
-    try:
-        template_metrics = sorting_analyzer.get_extension("template_metrics").get_data()
-    except:
-        pass
-
-    # Check if at least one of the metrics is available
-    if quality_metrics is None and template_metrics is None:
+    if any(metric_extensions) is False:
         raise ValueError(
             "At least one of quality metrics or template metrics must be computed before classification.",
             "Compute both using `sorting_analyzer.compute('quality_metrics', 'template_metrics')",
         )
 
-    return quality_metrics, template_metrics
+    metric_extensions_data = []
+    for metric_extension in metric_extensions:
+        try:
+            metric_extensions_data.append(metric_extension.get_data())
+        except:
+            metric_extensions_data.append(None)
+
+    return metric_extensions_data
 
 
 def set_default_search_kwargs(search_kwargs):
