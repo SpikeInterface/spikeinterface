@@ -262,7 +262,12 @@ def test_train_using_two_sorting_analyzers():
     # Now check that there is an error raised if we demand the same metric params, but don't have them
 
     sorting_analyzer_2.compute(
-        {"quality_metrics": {"metric_names": ["num_spikes", "snr"], "qm_params": {"snr": {"peak_mode": "at_index"}}}}
+        {
+            "quality_metrics": {
+                "metric_names": ["num_spikes", "snr"],
+                "metric_params": {"snr": {"peak_mode": "at_index"}},
+            }
+        }
     )
 
     with pytest.raises(Exception):

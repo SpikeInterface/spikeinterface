@@ -244,10 +244,10 @@ class CurationModelTrainer:
             qm_names = self.metrics_params["quality_metric_params"]["metric_names"]
             consistent_metrics = list(set(qm_names).difference(set(conflicting_metrics)))
             consistent_metric_params = {
-                metric: analyzers[0].extensions["quality_metrics"].params["qm_params"][metric]
+                metric: analyzers[0].extensions["quality_metrics"].params["metric_params"][metric]
                 for metric in consistent_metrics
             }
-            self.metrics_params["quality_metric_params"]["qm_params"] = consistent_metric_params
+            self.metrics_params["quality_metric_params"]["metric_params"] = consistent_metric_params
 
         if analyzers[0].has_extension("template_metrics") is True:
             self.metrics_params["template_metric_params"] = deepcopy(analyzers[0].extensions["template_metrics"].params)
@@ -273,9 +273,9 @@ class CurationModelTrainer:
                     tm_params_2 = {}
 
                     if analyzer_1.has_extension("quality_metrics") is True:
-                        qm_params_1 = analyzer_1.extensions["quality_metrics"].params["qm_params"]
+                        qm_params_1 = analyzer_1.extensions["quality_metrics"].params["metric_params"]
                     if analyzer_2.has_extension("quality_metrics") is True:
-                        qm_params_2 = analyzer_2.extensions["quality_metrics"].params["qm_params"]
+                        qm_params_2 = analyzer_2.extensions["quality_metrics"].params["metric_params"]
                     if analyzer_1.has_extension("template_metrics") is True:
                         tm_params_1 = analyzer_1.extensions["template_metrics"].params["metrics_kwargs"]
                     if analyzer_2.has_extension("template_metrics") is True:

@@ -7,7 +7,7 @@
             ],
             "peak_sign": null,
             "seed": null,
-            "qm_params": {
+            "metric_params": {
                 "num_spikes": {},
                 "snr": {
                     "peak_sign": "neg",

@@ -162,7 +162,7 @@ def test_exception_raised_when_metricparams_not_equal(sorting_analyzer_for_curat
     be raised depending on the `enforce_metric_params` kwarg. This behaviour is tested here."""
 
     sorting_analyzer_for_curation.compute(
-        "quality_metrics", metric_names=["num_spikes", "snr"], qm_params={"snr": {"peak_mode": "peak_to_peak"}}
+        "quality_metrics", metric_names=["num_spikes", "snr"], metric_params={"snr": {"peak_mode": "peak_to_peak"}}
     )
     sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
 
@@ -180,7 +180,7 @@ def test_exception_raised_when_metricparams_not_equal(sorting_analyzer_for_curat
         model_based_classification._check_params_for_classification(enforce_metric_params=False, model_info=model_info)
 
     # Now test the positive case. Recompute using the default parameters
-    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["num_spikes", "snr"], qm_params={})
+    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["num_spikes", "snr"], metric_params={})
     sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
 
     model, model_info = load_model(model_folder=model_folder, trusted=["numpy.dtype"])
