@@ -26,7 +26,6 @@ runs:
         git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
     - name: Force installation of latest dev from key-packages when running dev (not release)
       run: |
-        source ${{ github.workspace }}/test_env/bin/activate
         spikeinterface_is_dev_version=$(python -c "import spikeinterface; print(spikeinterface.DEV_MODE)")
         if [ $spikeinterface_is_dev_version = "True" ]; then
           echo "Running spikeinterface dev version"
