@@ -155,14 +155,14 @@ class ModelBasedClassification:
         if quality_metrics_extension is not None:
 
             model_quality_metrics_params = model_info["metric_params"]["quality_metric_params"]
-            quality_metrics_params = quality_metrics_extension.params["qm_params"]
+            quality_metrics_params = quality_metrics_extension.params["metric_params"]
 
             inconsistent_metrics = []
             for metric in model_quality_metrics_params["metric_names"]:
-                if metric not in model_quality_metrics_params["qm_params"]:
+                if metric not in model_quality_metrics_params["metric_params"]:
                     inconsistent_metrics += metric
                 else:
-                    if quality_metrics_params[metric] != model_quality_metrics_params["qm_params"][metric]:
+                    if quality_metrics_params[metric] != model_quality_metrics_params["metric_params"][metric]:
                         warning_message = f"Quality metric params for {metric} do not match those used to train the model. Parameters can be found in the 'model_info.json' file."
                         if enforce_metric_params is True:
                             raise Exception(warning_message)
@@ -180,8 +180,8 @@ class ModelBasedClassification:
 
         if template_metrics_extension is not None:
 
-            model_template_metrics_params = model_info["metric_params"]["template_metric_params"]["metrics_kwargs"]
-            template_metrics_params = template_metrics_extension.params["metrics_kwargs"]
+            model_template_metrics_params = model_info["metric_params"]["template_metric_params"]["metric_params"]
+            template_metrics_params = template_metrics_extension.params["metric_params"]
 
             if template_metrics_params == {}:
                 warning_message = "Parameters used to compute template metrics, used to train this model, are unknown."
@@ -413,4 +413,30 @@ def _load_model_from_folder(model_folder=None, model_name=None, trust_model=Fals
     else:
         model_info = json.load(open(model_info_path))
 
+    model_info = handle_backwards_compatibility_metric_params(model_info)
+
     return model, model_info
+
+
+def handle_backwards_compatibility_metric_params(model_info):
+
+    if (
+        model_info.get("metric_params") is not None
+        and model_info.get("metric_params").get("quality_metric_params") is not None
+    ):
+        if (qm_params := model_info["metric_params"]["quality_metric_params"].get("qm_params")) is not None:
+            model_info["metric_params"]["quality_metric_params"]["metric_params"] = qm_params
+            del model_info["metric_params"]["quality_metric_params"]["qm_params"]
+
+    if (
+        model_info.get("metric_params") is not None
+        and model_info.get("metric_params").get("template_metric_params") is not None
+    ):
+        if (tm_params := model_info["metric_params"]["template_metric_params"].get("metrics_kwargs")) is not None:
+            metric_params = {}
+            for metric_name in model_info["metric_params"]["template_metric_params"].get("metric_names"):
+                metric_params[metric_name] = deepcopy(metrics_kwargs)
+            model_info["metric_params"]["template_metric_params"]["metric_params"] = metric_params
+            del model_info["metric_params"]["template_metric_params"]["metrics_kwargs"]
+
+    return model_info

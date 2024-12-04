@@ -277,9 +277,9 @@ class CurationModelTrainer:
                     if analyzer_2.has_extension("quality_metrics") is True:
                         qm_params_2 = analyzer_2.extensions["quality_metrics"].params["metric_params"]
                     if analyzer_1.has_extension("template_metrics") is True:
-                        tm_params_1 = analyzer_1.extensions["template_metrics"].params["metrics_kwargs"]
+                        tm_params_1 = analyzer_1.extensions["template_metrics"].params["metric_params"]
                     if analyzer_2.has_extension("template_metrics") is True:
-                        tm_params_2 = analyzer_2.extensions["template_metrics"].params["metrics_kwargs"]
+                        tm_params_2 = analyzer_2.extensions["template_metrics"].params["metric_params"]
 
                     conflicting_metrics_between_1_2 = []
                     # check quality metrics params
