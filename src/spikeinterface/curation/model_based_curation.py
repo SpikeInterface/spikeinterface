@@ -5,6 +5,7 @@ import warnings
 
 from spikeinterface.core import SortingAnalyzer
 from spikeinterface.curation.train_manual_curation import try_to_get_metrics_from_analyzer, _get_computed_metrics
+from copy import deepcopy
 
 
 class ModelBasedClassification:
@@ -435,7 +436,7 @@ def handle_backwards_compatibility_metric_params(model_info):
         if (tm_params := model_info["metric_params"]["template_metric_params"].get("metrics_kwargs")) is not None:
             metric_params = {}
             for metric_name in model_info["metric_params"]["template_metric_params"].get("metric_names"):
-                metric_params[metric_name] = deepcopy(metrics_kwargs)
+                metric_params[metric_name] = deepcopy(tm_params)
             model_info["metric_params"]["template_metric_params"]["metric_params"] = metric_params
             del model_info["metric_params"]["template_metric_params"]["metrics_kwargs"]
 
