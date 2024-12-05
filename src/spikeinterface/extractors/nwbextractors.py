@@ -599,6 +599,8 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
         else:
             gains, offsets, locations, groups = self._fetch_main_properties_backend()
             self.extra_requirements.append("h5py")
+        if stream_mode is not None:
+            self.extra_requirements.append(stream_mode)
         self.set_channel_gains(gains)
         self.set_channel_offsets(offsets)
         if locations is not None:
@@ -1100,6 +1102,8 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
             for property_name, property_values in properties.items():
                 values = [x.decode("utf-8") if isinstance(x, bytes) else x for x in property_values]
                 self.set_property(property_name, values)
+        if stream_mode is not None:
+            self.extra_requirements.append(stream_mode)
 
         if stream_mode is None and file_path is not None:
             file_path = str(Path(file_path).resolve())
