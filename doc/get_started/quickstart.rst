@@ -673,7 +673,7 @@ compute quality metrics (some quality metrics require certain extensions
                               'min_spikes': 0,
                               'window_size_s': 1},
      'snr': {'peak_mode': 'extremum', 'peak_sign': 'neg'},
-     'synchrony': {'synchrony_sizes': (2, 4, 8)}}
+     'synchrony': {}
 
 
 Since the recording is very short, let’s change some parameters to
