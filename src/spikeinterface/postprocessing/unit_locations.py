@@ -26,7 +26,7 @@ class ComputeUnitLocations(AnalyzerExtension):
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    method : "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
+    method : "monopolar_triangulation" or  "center_of_mass" or "grid_convolution", default: "monopolar_triangulation"
         The method to use for localization
     **method_kwargs : dict, default: {}
         Kwargs which are passed to the method function. These can be found in the docstrings of `compute_center_of_mass`, `compute_grid_convolution` and `compute_monopolar_triangulation`.
