@@ -215,7 +215,8 @@ def get_chunked_hist_eigenvector(chunked_session_histograms):
 
 
 def get_chunked_gaussian_process_regression(chunked_session_histogram):
-    """ """
+    """
+    """
     # TODO: try https://github.com/cornellius-gp/gpytorch
 
     from sklearn.gaussian_process import GaussianProcessRegressor
@@ -232,56 +233,56 @@ def get_chunked_gaussian_process_regression(chunked_session_histogram):
     num_bins = chunked_session_histogram.shape[1]
 
     X = np.arange(num_bins)
+    X_scaled = X
 
     Y = chunked_session_histogram
 
-    bias_mean = True
+    bias_mean = False
     if bias_mean:
-        # this is cool, bias the estimation towards the peak
+        #this is cool, bias the estimation towards the peak
         Y = Y + np.mean(Y, axis=0) - np.percentile(Y, 5, axis=0)  # TODO: avoid copy, also fix dims in case of square
 
-    # var = np.mean(np.std(Y, axis=0))
-    Y = Y.flatten()
 
-    scaler_x = StandardScaler()
-    X_scaled = scaler_x.fit_transform(X.reshape(-1, 1)).flatten()
-    X_rep = np.tile(X_scaled, num_hist)
+    # normalise X and set lengthscale to 1 bin
+    mu_x = np.mean(X)
+    std_x = np.std(X)
+    X_scaled = (X - mu_x) / std_x
 
-    scaler_y = StandardScaler()
-    Y_scaled = scaler_y.fit_transform(Y.reshape(-1, 1)).flatten()
+    lengthscale = 1 / std_x  # 1 spatial bin
 
-    ls = 1 / scaler_x.scale_  # 1 spatial bin
+    mu_ystar = np.mean(Y)
+    std_ystar = np.std(Y)
 
-    # note variance of the KERNEL is amplitude (sigma^2 out front)
-    # noise variance alpha is added to K(X,X) after computation, so is seaprate from kernel
+    # take the mean and variance of Y replicates. Scale to the mean / standard deviation of all y
+    y_mean = np.mean(Y, axis=0)
+    y_var = np.std(Y, axis=0)
 
-    kernel = GPy.kern.RBF(input_dim=1, lengthscale=ls, variance=1.0)  # + GPy.kern.Constant(input_dim=1, variance=1.0)
+    Y_mean_scaled = (y_mean - mu_ystar) /std_ystar  # standardise the normal way
+    Y_var_scaled = (1/std_ystar**2) * y_var  # this is a variance so need to scale to the square (TODO: see overleaf notes)
 
-    # https://docs.gpytorch.ai/en/v1.9.0/examples/02_Scalable_Exact_GPs/SGPR_Regression_CUDA.html
-    sparse = True
-    if sparse:
-        # num_inducing = (X.shape[0] - 1)  #
-        inducing_points = X_scaled  # X[np.random.choice(X.shape[0], num_inducing, replace=False)]
-        gp = GPy.models.SparseGPRegression(
-            X_rep.reshape(-1, 1), Y_scaled.reshape(-1, 1), kernel, Z=inducing_points.reshape(-1, 1)
-        )
-    else:
-        gp = GPy.models.GPRegression(X_rep.reshape(-1, 1), Y_scaled.reshape(-1, 1), kernel)
+    kernel = GPy.kern.RBF(input_dim=1, lengthscale=lengthscale, variance=np.mean(Y_var_scaled))  # TODO: check this
 
-    # gp.likelihood = t_distribution  # GPy.likelihoods.StudentT()
+    output_index2 = np.arange(num_bins)
+    Y_metadata2 = {'output_index': output_index2}
 
-    optimise = False
-    if optimise:
-        kernel.lengthscale.fix()  # try unfixing but TBH looks goood already
-        gp.optimize(messages=True)
-    else:
-        kernel.lengthscale.fix()
-        kernel.variance.fix()
+    likelihood = GPy.likelihoods.HeteroscedasticGaussian(Y_metadata2, variance=Y_var_scaled)  # one variance per y, but should be repeated for the same x
 
-    mean_pred, var_pred = gp.predict(X_scaled.reshape(-1, 1))
+    gp = GPy.models.GPRegression(X_scaled.reshape(-1, 1), Y_mean_scaled.reshape(-1, 1), kernel, Y_metadata2)
 
-    mean_pred = scaler_y.inverse_transform(mean_pred.reshape(-1, 1)).flatten()
-    std_pred = np.sqrt(var_pred * scaler_y.scale_).flatten()  # TODO: triple check this
+    gp.likelihood = likelihood
+
+    # kernel.lengthscale.fix()  # try unfixing but TBH looks goood already
+    gp.optimize(messages=True)
+
+    mean_pred, var_pred = gp.predict(X_scaled.reshape(-1, 1), Y_metadata=Y_metadata2)
+
+    mean_pred = (mean_pred * std_ystar) + mu_ystar
+    var_pred = var_pred * std_ystar**2
+
+    std_pred = np.sqrt(var_pred)
+
+  #  mean_pred = scaler_y.inverse_transform(mean_pred.reshape(-1, 1)).flatten()
+ #   std_pred = np.sqrt(var_pred * scaler_y.scale_).flatten()  # TODO: triple check this
 
     return mean_pred, std_pred, gp
 
