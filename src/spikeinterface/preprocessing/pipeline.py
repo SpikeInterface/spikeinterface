@@ -1,11 +1,9 @@
 import re
 import json
+import inspect
 from copy import deepcopy
 from spikeinterface.core.core_tools import is_dict_extractor
-from spikeinterface.preprocessing.preprocessinglist import (
-    pp_function_to_class,
-    preprocesser_dict,
-)
+from spikeinterface.preprocessing.preprocessinglist import pp_function_to_class, preprocesser_dict, pp_name_to_function
 
 
 class PreprocessingPipeline:
@@ -46,15 +44,32 @@ class PreprocessingPipeline:
         return txt
 
     def _repr_html_(self):
-        html_text = ""
-        html_text += """<div style="border-style: dotted; border-width: 2; padding: 10; text-align: center; display: inline-block">"""
-        html_text += make_box(name="Raw Recording")
-        html_text += """<p style="margin:0; text-align:center;">&#x2193;</p>"""
-        for preprocessor in self.preprocessor_list:
-            html_text += make_box(name=str(preprocessor))
+
+        all_kwargs = _get_all_kwargs_and_values(self)
+
+        num_titles = len(all_kwargs) + 3
+        colors = [
+            [255 - (a * 15) // num_titles, 255 - (a * 82) // num_titles, 255 - (a * 30) // num_titles]
+            for a in range(0, num_titles + 1)
+        ]
+
+        html_text = "<div style='width: 260px; text-align: center'>"
+
+        html_text += f"<div style='font-size: 20px; border: 1px solid; background-color: rgb({colors[1][0]}, {colors[1][1]}, {colors[1][2]});'><strong>Raw Recording</strong></div>"
+
+        html_text += "<div style='margin: auto'>&#x2193;</div>"
+
+        for a, (preprocessor, kwargs) in enumerate(all_kwargs.items()):
+            html_text += "<details style='width: 240px; border: 1px solid; text-align: center; margin: auto;'>"
+            html_text += f"<summary style='background-color: rgb({colors[a+2][0]}, {colors[a+2][1]}, {colors[a+2][2]});'><strong>{preprocessor}</strong></summary>"
+            for kwarg, value in kwargs.items():
+                html_text += f"{kwarg}: {value}<br />"
+            html_text += "</details>"
             html_text += """<p style="margin: auto; text-align:center;">&#x2193;</p>"""
-        html_text += make_box(name="Preprocessed Recording")
-        html_text += """</div>"""
+
+        html_text += f"<div style='font-size: 20px; border: 1px solid; background-color: rgb({colors[num_titles][0]}, {colors[num_titles][1]}, {colors[num_titles][2]});'><strong>Preprocessed Recording</strong></div>"
+
+        html_text += "</div>"
 
         return html_text
 
@@ -84,9 +99,14 @@ class PreprocessingPipeline:
 
             using_class_name = bool(re.search("Recording", preprocessor))
             if using_class_name is True:
-                recording = preprocesser_dict[preprocessor.split(".")[-1]](recording, **kwargs)
+                pp_output = preprocesser_dict[preprocessor.split(".")[-1]](recording, **kwargs)
             else:
-                recording = pp_function_to_class[preprocessor.split(".")[-1]](recording, **kwargs)
+                pp_output = pp_name_to_function[preprocessor.split(".")[-1]](recording, **kwargs)
+
+            if preprocessor == "motion_correct":
+                pp_output = pp_output[0]
+
+            recording = pp_output
 
         return recording
 
@@ -185,7 +205,7 @@ def _is_genuine_preprocessor(preprocessor):
     if using_class_name:
         genuine_preprocessor = preprocessor in preprocesser_dict.keys()
     else:
-        genuine_preprocessor = preprocessor in pp_function_to_class.keys()
+        genuine_preprocessor = preprocessor in pp_name_to_function.keys()
 
     return genuine_preprocessor
 
@@ -211,9 +231,35 @@ def _load_pp_from_dict(prov_dict, kwargs_dict):
     return new_kwargs
 
 
-def make_box(name=None):
-    """
-    Make a box for a string.
-    """
-    html_string = name
-    return html_string
+def _get_all_kwargs_and_values(my_pipeline):
+
+    all_kwargs = {}
+    for preprocessor in my_pipeline.preprocessor_list:
+
+        preprocessor_name = preprocessor.split(".")[-1]
+        pp_function = pp_name_to_function[preprocessor.split(".")[-1]]
+        signature = inspect.signature(pp_function)
+
+        all_kwargs[preprocessor_name] = {}
+
+        for parameter, value in signature.parameters.items():
+            par_name = str(value).split("=")[0].split(":")[0]
+            if par_name != "recording":
+                try:
+                    default_value = str(value).split("=")
+                    if len(default_value) == 1:
+                        default_value = None
+                    else:
+                        default_value = default_value[-1]
+                except:
+                    default_value = None
+
+                pipeline_value = my_pipeline.preprocessor_list[preprocessor].get(par_name)
+
+                if pipeline_value is None:
+                    if default_value != pipeline_value:
+                        pipeline_value = default_value
+
+                all_kwargs[preprocessor_name][par_name] = pipeline_value
+
+    return all_kwargs
