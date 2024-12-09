@@ -24,14 +24,14 @@ def test_compute_quality_metrics(sorting_analyzer_simple):
     metrics = compute_quality_metrics(
         sorting_analyzer,
         metric_names=["snr"],
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=True,
         seed=2205,
     )
     # print(metrics)
 
     qm = sorting_analyzer.get_extension("quality_metrics")
-    assert qm.params["qm_params"]["isi_violation"]["isi_threshold_ms"] == 2
+    assert qm.params["metric_params"]["isi_violation"]["isi_threshold_ms"] == 2
     assert "snr" in metrics.columns
     assert "isolation_distance" not in metrics.columns
 
@@ -40,7 +40,7 @@ def test_compute_quality_metrics(sorting_analyzer_simple):
     metrics = compute_quality_metrics(
         sorting_analyzer,
         metric_names=None,
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=False,
         seed=2205,
     )
@@ -54,7 +54,7 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
     metrics = compute_quality_metrics(
         sorting_analyzer,
         metric_names=None,
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=False,
         seed=2205,
     )
@@ -68,7 +68,7 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
     metrics_norec = compute_quality_metrics(
         sorting_analyzer_norec,
         metric_names=None,
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=False,
         seed=2205,
     )
@@ -101,7 +101,7 @@ def test_empty_units(sorting_analyzer_simple):
     metrics_empty = compute_quality_metrics(
         sorting_analyzer_empty,
         metric_names=None,
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=True,
         seed=2205,
     )
