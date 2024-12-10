@@ -72,6 +72,7 @@ class MdaRecordingExtractor(BaseRecording):
         params_fname="params.json",
         geom_fname="geom.csv",
         dtype=None,
+        verbose=False,
         **job_kwargs,
     ):
         """Write a recording to file in MDA format.
@@ -93,6 +94,8 @@ class MdaRecordingExtractor(BaseRecording):
             File name of geom file
         dtype : dtype or None, default: None
             Data type to be used. If None dtype is same as recording traces.
+        verbose : bool
+            If True, shows progress bar when saving recording.
         **job_kwargs:
             Use by job_tools modules to set:
 
@@ -130,6 +133,7 @@ class MdaRecordingExtractor(BaseRecording):
             dtype=dtype,
             byte_offset=header_size,
             add_file_extension=False,
+            verbose=verbose,
             **job_kwargs,
         )
 

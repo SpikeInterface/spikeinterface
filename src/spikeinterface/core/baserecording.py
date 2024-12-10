@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import warnings
 from pathlib import Path
 
@@ -7,14 +8,9 @@ from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, 
 
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
-from .core_tools import (
-    convert_bytes_to_str,
-    convert_seconds_to_str,
-)
-from .recording_tools import write_binary_recording
-
-
+from .core_tools import convert_bytes_to_str, convert_seconds_to_str
 from .job_tools import split_job_kwargs
+from .recording_tools import write_binary_recording
 
 
 class BaseRecording(BaseRecordingSnippets):
@@ -509,6 +505,35 @@ class BaseRecording(BaseRecordingSnippets):
             rs.t_start = None
             rs.sampling_frequency = self.sampling_frequency
 
+    def shift_times(self, shift: int | float, segment_index: int | None = None) -> None:
+        """
+        Shift all times by a scalar value.
+
+        Parameters
+        ----------
+        shift : int | float
+            The shift to apply. If positive, times will be increased by `shift`.
+            e.g. shifting by 1 will be like the recording started 1 second later.
+            If negative, the start time will be decreased i.e. as if the recording
+            started earlier.
+
+        segment_index : int | None
+            The segment on which to shift the times.
+            If `None`, all segments will be shifted.
+        """
+        if segment_index is None:
+            segments_to_shift = range(self.get_num_segments())
+        else:
+            segments_to_shift = (segment_index,)
+
+        for idx in segments_to_shift:
+            rs = self._recording_segments[idx]
+
+            if self.has_time_vector(segment_index=idx):
+                rs.time_vector += shift
+            else:
+                rs.t_start += shift
+
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
         Transform sample index into time in seconds
@@ -921,11 +946,11 @@ class BaseRecordingSegment(BaseSegment):
                 sample_index = time_s * self.sampling_frequency
             else:
                 sample_index = (time_s - self.t_start) * self.sampling_frequency
-            sample_index = round(sample_index)
+            sample_index = np.round(sample_index).astype(int)
         else:
             sample_index = np.searchsorted(self.time_vector, time_s, side="right") - 1
 
-        return int(sample_index)
+        return sample_index
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal segment
