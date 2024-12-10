@@ -47,7 +47,7 @@ jobs:
             echo "$file was changed"
           done
 
-      - name: Set testing environment  # This decides which tests are run and whether to install especial dependencies
+      - name: Set testing environment  # This decides which tests are run and whether to install special dependencies
         shell: bash
         run: |
           changed_files="${{ steps.changed-files.outputs.all_changed_files }}"
