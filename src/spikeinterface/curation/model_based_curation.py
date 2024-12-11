@@ -109,7 +109,8 @@ class ModelBasedClassification:
         probabilities = np.max(probabilities, axis=1)
 
         if isinstance(label_conversion, dict):
-            if set(predictions) != set(label_conversion.keys()):
+
+            if set(predictions).issubset(set(label_conversion.keys())) is False:
                 raise ValueError("Labels in predictions do not match those in label_conversion")
             predictions = [label_conversion[label] for label in predictions]
 
@@ -161,9 +162,10 @@ class ModelBasedClassification:
 
             # remove the 's' at the end of the extension name
             extension_name = extension_name[:-1]
-            if metric_extension is not None:
+            model_metric_params = model_info["metric_params"].get(extension_name + "_params")
 
-                model_metric_params = model_info["metric_params"][extension_name + "_params"]
+            if metric_extension is not None and model_metric_params is not None:
+
                 metric_params = metric_extension.params["metric_params"]
 
                 inconsistent_metrics = []

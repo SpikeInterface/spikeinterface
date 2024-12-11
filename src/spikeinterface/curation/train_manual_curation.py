@@ -301,6 +301,9 @@ class CurationModelTrainer:
     def load_and_preprocess_csv(self, paths):
         self._load_data_files(paths)
         self.process_test_data_for_classification()
+        self.metrics_params = {}
+        for metric_name in self.metric_names:
+            self.metrics_params[metric_name] = {}
 
     def process_test_data_for_classification(self):
         """
