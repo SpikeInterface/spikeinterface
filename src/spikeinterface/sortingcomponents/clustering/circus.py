@@ -18,7 +18,6 @@ from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.waveform_tools import estimate_templates
 from .clustering_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
-from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
 from spikeinterface.core.template import Templates
@@ -63,15 +62,12 @@ class CircusClustering:
         "rank": 5,
         "noise_levels": None,
         "tmp_folder": None,
-        "job_kwargs": {},
         "verbose": True,
     }
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         assert HAVE_HDBSCAN, "random projections clustering needs hdbscan to be installed"
-
-        job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
         verbose = d["verbose"]
@@ -248,8 +244,10 @@ class CircusClustering:
             probe=recording.get_probe(),
             is_scaled=False,
         )
+
         if params["noise_levels"] is None:
-            params["noise_levels"] = get_noise_levels(recording, return_scaled=False)
+            params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
+
         sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
         empty_templates = templates.sparsity_mask.sum(axis=1) == 0
@@ -260,13 +258,12 @@ class CircusClustering:
         if verbose:
             print("We found %d raw clusters, starting to clean with matching..." % (len(templates.unit_ids)))
 
-        cleaning_matching_params = params["job_kwargs"].copy()
-        cleaning_matching_params["n_jobs"] = 1
-        cleaning_matching_params["progress_bar"] = False
+        cleaning_job_kwargs = job_kwargs.copy()
+        cleaning_job_kwargs["progress_bar"] = False
         cleaning_params = params["cleaning_kwargs"].copy()
 
         labels, peak_labels = remove_duplicates_via_matching(
-            templates, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
+            templates, peak_labels, job_kwargs=cleaning_job_kwargs, **cleaning_params
         )
 
         if verbose:
