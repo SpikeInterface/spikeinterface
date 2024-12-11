@@ -2,9 +2,14 @@ import numpy as np
 from pathlib import Path
 import json
 import warnings
+import re
 
 from spikeinterface.core import SortingAnalyzer
-from spikeinterface.curation.train_manual_curation import try_to_get_metrics_from_analyzer, _get_computed_metrics
+from spikeinterface.curation.train_manual_curation import (
+    try_to_get_metrics_from_analyzer,
+    _get_computed_metrics,
+    _format_metric_dataframe,
+)
 from copy import deepcopy
 
 
@@ -96,9 +101,7 @@ class ModelBasedClassification:
             except:
                 warnings.warn("Could not find `label_conversion` key in `model_info.json` file")
 
-        # Prepare input data
-        input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
-        input_data = input_data.astype("float32")
+        input_data = _format_metric_dataframe(input_data)
 
         # Apply classifier
         predictions = self.pipeline.predict(input_data)
@@ -388,7 +391,9 @@ def _load_model_from_folder(model_folder=None, model_name=None, trust_model=Fals
             exception_msg = str(e)
             # the exception message contains the list of untrusted objects. The following
             #  search assumes it is the only list in the message.
-            trusted = re.search(r"\[(.*?)\]", exception_msg).group()
+            string_list = re.search(r"\[(.*?)\]", exception_msg).group()
+            trusted = [list_item for list_item in string_list.split("'") if len(list_item) > 2]
+
     model = skio.load(skops_file, trusted=trusted)
 
     model_info_path = folder / "model_info.json"

@@ -339,8 +339,7 @@ class CurationModelTrainer:
             raise KeyError(f"{str(e)}, metrics_list contains invalid metric names")
 
         self.X = self.testing_metrics.reindex(columns=self.metric_names)
-        self.X = self.X.map(lambda x: np.nan if np.isinf(x) else x)
-        self.X = self.X.astype("float32")
+        self.X = _format_metric_dataframe(self.testing_metrics)
 
     def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_test, y_train, y_test):
         """Impute and scale the data using the specified techniques."""
@@ -786,3 +785,11 @@ def check_metric_names_are_the_same(metrics_for_each_analyzer):
                     if metrics_in_2_but_not_1:
                         error_message += f"#{i} does not contain {metrics_in_2_but_not_1}, which #{j} does."
                     raise Exception(error_message)
+
+
+def _format_metric_dataframe(input_data):
+
+    input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
+    input_data = input_data.astype("float32")
+
+    return input_data
