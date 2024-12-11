@@ -34,7 +34,7 @@ Upload a pipeline to Hugging Face Hub
 # SpikeInterface and HFH don't require you to keep this folder structure, we just advise it as
 # best practice.
 #
-# If you've used SpikeInterface to train your model, the `train_model` function auto-generates
+# If you've used SpikeInterface to train your model, the ``train_model`` function auto-generates
 # most of this data. The only thing missing is the the ``metadata.json`` file. The purpose of this
 # file is to detail how the model was trained, which can help prospective users decide if it
 # is relevant for them. For example, taking
@@ -65,8 +65,7 @@ Upload a pipeline to Hugging Face Hub
 # Upload to HuggingFaceHub
 # ------------------------
 #
-# We'll now upload this folder to HFH using the web interface. (If you don't want to
-# use HFH, you could just share this folder with a colleague.)
+# We'll now upload this folder to HFH using the web interface.
 #
 # First, go to https://huggingface.co/ and make an account. Once you've logged in, press
 # ``+`` then ``New model`` or find ``+ New Model`` in the user menu. You will be asked
@@ -128,7 +127,7 @@ Upload a pipeline to Hugging Face Hub
 #
 #         labels = auto_label_units(
 #             sorting_analyzer = sorting_analyzer,
-#             model_folder = "SpikeInterface/a_folder_for_a_model",
+#             model_folder = "path/to/a_folder_for_a_model",
 #             trusted = ['numpy.dtype']
 #         )
 #     ` ` `

@@ -58,7 +58,7 @@ sw.plot_unit_templates(analyzer, unit_ids=[0,5])
 
 ##############################################################################
 # This is as expected: great! (Find out more about plotting using widgets `here <https://spikeinterface.readthedocs.io/en/latest/modules/widgets.html>`_.)
-# We've set out system up so that the first five units are 'good' and the next five are 'bad'.
+# We've set up our system so that the first five units are 'good' and the next five are 'bad'.
 # So we can make a list of labels which contain this information. For real data, you could
 # use a manual curation tool to make your own list.
 
@@ -72,13 +72,13 @@ labels = ['good', 'good', 'good', 'good', 'good', 'bad', 'bad', 'bad', 'bad', 'b
 # of the units, and then be applied to units from other sortings. The properties we use are the
 # `quality metrics <https://spikeinterface.readthedocs.io/en/latest/modules/qualitymetrics.html>`_
 # and `template metrics <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html#template-metrics>`_.
-# Hence we need to compute these, using some `sorting_analyzer` extensions.
+# Hence we need to compute these, using some ``sorting_analyzer``` extensions.
 
 analyzer.compute(['spike_locations','spike_amplitudes','correlograms','principal_components','quality_metrics','template_metrics'])
 
 ##############################################################################
 # Now that we have metrics and labels, we're ready to train the model using the
-# `train_model` function. The trainer will try several classifiers, imputation strategies and
+# ``train_model``` function. The trainer will try several classifiers, imputation strategies and
 # scaling techniques then save the most accurate. To save time in this tutorial,
 # we'll only try one classifier (Random Forest), imputation strategy (median) and scaling
 # technique (standard scaler).
@@ -109,7 +109,7 @@ best_model = trainer.best_pipeline
 # `imputation strategies <https://scikit-learn.org/1.5/api/sklearn.impute.html>`_ and
 # `scalers <https://scikit-learn.org/1.5/api/sklearn.preprocessing.html>`_, although the
 # documentation is quite overwhelming. You can find the classifiers we've tried out
-# using the `sc.get_default_classifier_search_spaces` function.
+# using the ``sc.get_default_classifier_search_spaces`` function.
 #
 # The above code saves the model in ``model.skops``, some metadata in
 # ``model_info.json`` and the model accuracies in ``model_accuracies.csv``
@@ -156,10 +156,10 @@ plt.show()
 
 ##############################################################################
 # Roughly, this means the model is using metrics such as "nn_hit_rate" and "l_ratio"
-# but is using "sync_spike_4" and "rp_contanimation". This is a toy model, so don't
-# take these results seriously! But using this information, you could retrain another,
+# but is not using "sync_spike_4" and "rp_contanimation". This is a toy model, so don't
+# take these results seriously. But using this information, you could retrain another,
 # simpler model using a subset of the metrics, by passing, e.g.,
-# `metric_names = ['nn_hit_rate', 'l_ratio',...]` to the `train_model` function.
+# ``metric_names = ['nn_hit_rate', 'l_ratio',...]`` to the ``train_model`` function.
 #
 # Now that you have a model, you can `apply it to another sorting
 # <https://spikeinterface.readthedocs.io/en/latest/tutorials/curation/plot_1_automated_curation.html>`_
