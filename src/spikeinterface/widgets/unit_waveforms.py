@@ -565,7 +565,7 @@ class UnitWaveformsWidget(BaseWidget):
             channel_locations = self.sorting_analyzer.get_channel_locations()
         else:
             unit_indices = [list(self.templates.unit_ids).index(unit_id) for unit_id in unit_ids]
-            templates = self.templates.templates_array[unit_indices]
+            templates = self.templates.get_dense_templates()[unit_indices]
             templates_shadings = None
             channel_locations = self.templates.get_channel_locations()
 

@@ -73,7 +73,7 @@ extractors = [
 ]
 
 streaming_extractors = [
-    "ONE-api>=2.7.0", # alf sorter and streaming IBL
+    "ONE-api>=2.7.0,<2.10.0", # alf sorter and streaming IBL
     "ibllib>=2.36.0", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
