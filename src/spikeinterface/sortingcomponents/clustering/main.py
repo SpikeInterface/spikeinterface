@@ -41,7 +41,7 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
     params = method_class._default_params.copy()
     params.update(**method_kwargs)
 
-    outputs = method_class.main_function(recording, peaks, params)
+    outputs = method_class.main_function(recording, peaks, params, job_kwargs=job_kwargs)
 
     if extra_outputs:
         return outputs
