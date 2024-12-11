@@ -4,8 +4,13 @@ import numpy as np
 import json
 import spikeinterface
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.qualitymetrics import get_quality_metric_list, get_quality_pca_metric_list
+from spikeinterface.qualitymetrics import (
+    get_quality_metric_list,
+    get_quality_pca_metric_list,
+    qm_compute_name_to_column_names,
+)
 from spikeinterface.postprocessing import get_template_metric_names
+from spikeinterface.postprocessing.template_metrics import tm_compute_name_to_column_names
 from pathlib import Path
 from copy import deepcopy
 
@@ -301,9 +306,31 @@ class CurationModelTrainer:
     def load_and_preprocess_csv(self, paths):
         self._load_data_files(paths)
         self.process_test_data_for_classification()
-        self.metrics_params = {}
+        self.get_metric_params_csv()
+
+    def get_metric_params_csv(self):
+
+        from itertools import chain
+
+        qm_metric_names = list(chain.from_iterable(qm_compute_name_to_column_names.values()))
+        tm_metric_names = list(chain.from_iterable(tm_compute_name_to_column_names.values()))
+
+        quality_metric_names = []
+        template_metric_names = []
+
         for metric_name in self.metric_names:
-            self.metrics_params[metric_name] = {}
+            if metric_name in qm_metric_names:
+                quality_metric_names.append(metric_name)
+            if metric_name in tm_metric_names:
+                template_metric_names.append(metric_name)
+
+        self.metrics_params = {}
+        if quality_metric_names != {}:
+            self.metrics_params["quality_metric_params"] = {"metric_names": quality_metric_names}
+        if template_metric_names != {}:
+            self.metrics_params["template_metric_params"] = {"metric_names": template_metric_names}
+
+        return
 
     def process_test_data_for_classification(self):
         """
