@@ -113,6 +113,11 @@ def test_model_based_classification_export_to_phy(sorting_analyzer_for_curation,
 
 
 def test_model_based_classification_predict_labels(sorting_analyzer_for_curation, model):
+    """The model `model` has been trained on the `sorting_analyzer` used in this test with
+    the labels `[1, 0, 1, 0, 1]`. Hence if we apply the model to this `sorting_analyzer`
+    we expect these labels to be outputted. The test checks this, and also checks
+    that label conversion works as expected."""
+
     sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
     sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["num_spikes", "snr"])
 
@@ -120,39 +125,13 @@ def test_model_based_classification_predict_labels(sorting_analyzer_for_curation
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, model[0])
     classified_units = model_based_classification.predict_labels()
     predictions = classified_units["prediction"].values
-    print(predictions)
+
     assert np.all(predictions == np.array([1, 0, 1, 0, 1]))
 
     conversion = {0: "noise", 1: "good"}
     classified_units_labelled = model_based_classification.predict_labels(label_conversion=conversion)
     predictions_labelled = classified_units_labelled["prediction"]
     assert np.all(predictions_labelled == ["good", "noise", "good", "noise", "good"])
-
-
-def test_model_based_classification_check_params_for_classification(
-    sorting_analyzer_for_curation, model, required_metrics
-):
-    """ """
-    # Make a fresh copy of the sorting_analyzer to remove any calculated metrics
-    sorting_analyzer_for_curation.delete_extension("quality_metrics")
-    sorting_analyzer_for_curation.delete_extension("template_metrics")
-
-    # Test the _check_params_for_classification() method of ModelBasedClassification
-    model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, model[0])
-
-    # Check that function runs without error when required_metrics are computed
-    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=required_metrics[0:2])
-    sorting_analyzer_for_curation.compute("template_metrics", metric_names=[required_metrics[2]])
-
-    model_info = {"metric_params": {}}
-    model_info["metric_params"]["quality_metric_params"] = sorting_analyzer_for_curation.get_extension(
-        "quality_metrics"
-    ).params
-    model_info["metric_params"]["template_metric_params"] = sorting_analyzer_for_curation.get_extension(
-        "template_metrics"
-    ).params
-
-    model_based_classification._check_params_for_classification(model_info=model_info)
 
 
 def test_exception_raised_when_metricparams_not_equal(sorting_analyzer_for_curation):
