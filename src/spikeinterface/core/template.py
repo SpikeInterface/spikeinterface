@@ -459,24 +459,39 @@ class Templates:
 
 class SharedMemoryTemplates(Templates):
 
-    def __init__(self, shm_name, shape, dtype, sampling_frequency, nbefore, sparsity_mask,
-                 channel_ids, unit_ids, probe, is_scaled, main_shm_owner=True):
+    def __init__(
+        self,
+        shm_name,
+        shape,
+        dtype,
+        sampling_frequency,
+        nbefore,
+        sparsity_mask,
+        channel_ids,
+        unit_ids,
+        probe,
+        is_scaled,
+        main_shm_owner=True,
+    ):
 
         assert len(shape) == 3
         assert shape[0] > 0, "SharedMemoryTemplates only supported with no empty templates"
 
         self.shm = SharedMemory(shm_name, create=False)
         templates_array = np.ndarray(shape=shape, dtype=dtype, buffer=self.shm.buf)
-        
-        Templates.__init__(self, templates_array=templates_array, 
-                           sampling_frequency=sampling_frequency, 
-                           nbefore=nbefore, 
-                           sparsity_mask=sparsity_mask,
-                           channel_ids=channel_ids, 
-                           unit_ids=unit_ids, 
-                           probe=probe, 
-                           is_scaled=is_scaled)
-        
+
+        Templates.__init__(
+            self,
+            templates_array=templates_array,
+            sampling_frequency=sampling_frequency,
+            nbefore=nbefore,
+            sparsity_mask=sparsity_mask,
+            channel_ids=channel_ids,
+            unit_ids=unit_ids,
+            probe=probe,
+            is_scaled=is_scaled,
+        )
+
         # self._serializability["memory"] = True
         # self._serializability["json"] = False
         # self._serializability["pickle"] = False
