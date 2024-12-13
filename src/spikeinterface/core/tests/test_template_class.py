@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pickle
-from spikeinterface.core.template import Templates
+from spikeinterface.core.template import Templates, SharedMemoryTemplates
 from spikeinterface.core.sparsity import ChannelSparsity
 
 from probeinterface import generate_multi_columns_probe
@@ -169,6 +169,21 @@ def test_select_channels(template_type, is_scaled):
 
     if template.sparsity_mask is not None:
         assert np.array_equal(selected_template.sparsity_mask, template.sparsity_mask[:, selected_channel_ids_indices])
+
+
+@pytest.mark.parametrize("is_scaled", [True, False])
+@pytest.mark.parametrize("template_type", ["dense"])
+def test_shm_templates(template_type, is_scaled):
+    template = generate_test_template(template_type, is_scaled)
+    shm_templates = SharedMemoryTemplates.from_templates(template)
+
+    # Verify that the channel ids match
+    assert np.array_equal(shm_templates.channel_ids, template.channel_ids)
+    # Verify that the templates data matches
+    assert np.array_equal(shm_templates.templates_array, template.templates_array)
+
+    if template.sparsity_mask is not None:
+        assert np.array_equal(shm_templates.sparsity_mask, template.sparsity_mask)
 
 
 if __name__ == "__main__":
