@@ -89,8 +89,6 @@ def test_apply_scaling_imputation(trainer):
     assert np.all(y_train == y_train_scaled)
     assert np.all(y_test == y_test_scaled)
 
-    print(type(scaler))
-
     assert isinstance(imputer, KNNImputer)
     assert isinstance(scaler, StandardScaler)
 

@@ -369,7 +369,7 @@ class CurationModelTrainer:
             raise KeyError(f"{str(e)}, metrics_list contains invalid metric names")
 
         self.X = self.testing_metrics.reindex(columns=self.metric_names)
-        self.X = _format_metric_dataframe(self.testing_metrics)
+        self.X = _format_metric_dataframe(self.X)
 
     def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_test, y_train, y_test):
         """Impute and scale the data using the specified techniques."""
