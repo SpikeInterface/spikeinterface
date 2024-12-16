@@ -195,9 +195,17 @@ def get_chunked_hist_poisson_estimate(chunked_session_histograms):
 
 
 def get_chunked_hist_eigenvector(chunked_session_histograms):
-    """ """
+    """
+    TODO: a little messy with the 2D stuff. Will probably deprecate anyway.
+    """
     if chunked_session_histograms.shape[0] == 1:  # TODO: handle elsewhere
         return chunked_session_histograms.squeeze(), None
+
+    is_2d = chunked_session_histograms.ndim == 3
+
+    if is_2d:
+        num_hist, num_spat_bin, num_amp_bin = chunked_histograms.shape
+        chunked_session_histograms = np.reshape(chunked_session_histograms, (num_hist, num_spat_bin * num_amp_bin))
 
     A = chunked_session_histograms
     S = (1 / A.shape[0]) * A.T @ A
@@ -209,7 +217,11 @@ def get_chunked_hist_eigenvector(chunked_session_histograms):
 
     v1 = first_eigenvector[:, np.newaxis]
     reconstruct = (A @ v1) @ v1.T
-    v1_std = np.std(np.sqrt(reconstruct), axis=0, ddof=0)  # TODO: check sqrt, completel guess
+    v1_std = np.std(np.sqrt(reconstruct), axis=0, ddof=0)  # TODO: double check sqrt works out
+
+    if is_2d:
+        first_eigenvector = np.reshape(first_eigenvector, (num_spat_bin, num_amp_bin))
+        v1_std = np.reshape(v1_std, (num_spat_bin, num_amp_bin))
 
     return first_eigenvector, v1_std
 
@@ -217,13 +229,17 @@ def get_chunked_hist_eigenvector(chunked_session_histograms):
 def get_chunked_gaussian_process_regression(chunked_session_histogram):
     """
     """
+    # TODO: this is currently a placeholder implementation where the
+    # mean and variance over repeated samples is taken to run quickly.
+    # It would be better to use sparse version with repeated measures
+    # as done in pymc.
     # TODO: try https://github.com/cornellius-gp/gpytorch
+    # even better : https://www.pymc.io/projects/examples/en/latest/gaussian_processes/GP-Heteroskedastic.html
+    #
 
     from sklearn.gaussian_process import GaussianProcessRegressor
     from sklearn.gaussian_process.kernels import RBF, ConstantKernel
-
     from sklearn.preprocessing import StandardScaler
-
     import GPy
 
     chunked_session_histogram = chunked_session_histogram.copy()
@@ -241,7 +257,6 @@ def get_chunked_gaussian_process_regression(chunked_session_histogram):
     if bias_mean:
         #this is cool, bias the estimation towards the peak
         Y = Y + np.mean(Y, axis=0) - np.percentile(Y, 5, axis=0)  # TODO: avoid copy, also fix dims in case of square
-
 
     # normalise X and set lengthscale to 1 bin
     mu_x = np.mean(X)
@@ -271,7 +286,6 @@ def get_chunked_gaussian_process_regression(chunked_session_histogram):
 
     gp.likelihood = likelihood
 
-    # kernel.lengthscale.fix()  # try unfixing but TBH looks goood already
     gp.optimize(messages=True)
 
     mean_pred, var_pred = gp.predict(X_scaled.reshape(-1, 1), Y_metadata=Y_metadata2)
@@ -281,41 +295,7 @@ def get_chunked_gaussian_process_regression(chunked_session_histogram):
 
     std_pred = np.sqrt(var_pred)
 
-  #  mean_pred = scaler_y.inverse_transform(mean_pred.reshape(-1, 1)).flatten()
- #   std_pred = np.sqrt(var_pred * scaler_y.scale_).flatten()  # TODO: triple check this
-
     return mean_pred, std_pred, gp
-
-
-# #############################################################################
-# 2D VERSIONS
-# #############################################################################
-
-# dims are (time, depth, amplitude
-
-
-def get_chunked_hist_mean_2d(chunked_histograms):
-
-    mean_hist = np.mean(chunked_histograms, axis=0)
-
-    std = np.std(chunked_histograms, axis=0)
-
-    return mean_hist, std
-
-
-def get_chunked_hist_median_2d(chunked_histograms):
-    breakpoint()
-    pass
-
-
-def get_chunked_hist_supremum_2d(chunked_histograms):
-    breakpoint()
-    pass
-
-
-def get_chunked_hist_eigenvector_2d(chunked_histograms):
-    breakpoint()
-    pass
 
 
 # #############################################################################
