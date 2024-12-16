@@ -120,7 +120,10 @@ def estimate_chunk_size(scaled_activity_histogram):
 
     t = lambda_hat_s / (e / confidence_z) ** 2
 
-    print(f"estimated t: {t} for lambda {lambda_hat_s}")
+    print(
+        f"Chunked histogram window size of: {t}s estimated "
+        f"for firing rate (25% of histogram peak) of {lambda_hat_s}"
+    )
 
     return 10
 
@@ -227,8 +230,7 @@ def get_chunked_hist_eigenvector(chunked_session_histograms):
 
 
 def get_chunked_gaussian_process_regression(chunked_session_histogram):
-    """
-    """
+    """ """
     # TODO: this is currently a placeholder implementation where the
     # mean and variance over repeated samples is taken to run quickly.
     # It would be better to use sparse version with repeated measures
@@ -255,7 +257,7 @@ def get_chunked_gaussian_process_regression(chunked_session_histogram):
 
     bias_mean = False
     if bias_mean:
-        #this is cool, bias the estimation towards the peak
+        # this is cool, bias the estimation towards the peak
         Y = Y + np.mean(Y, axis=0) - np.percentile(Y, 5, axis=0)  # TODO: avoid copy, also fix dims in case of square
 
     # normalise X and set lengthscale to 1 bin
@@ -272,15 +274,19 @@ def get_chunked_gaussian_process_regression(chunked_session_histogram):
     y_mean = np.mean(Y, axis=0)
     y_var = np.std(Y, axis=0)
 
-    Y_mean_scaled = (y_mean - mu_ystar) /std_ystar  # standardise the normal way
-    Y_var_scaled = (1/std_ystar**2) * y_var  # this is a variance so need to scale to the square (TODO: see overleaf notes)
+    Y_mean_scaled = (y_mean - mu_ystar) / std_ystar  # standardise the normal way
+    Y_var_scaled = (
+        1 / std_ystar**2
+    ) * y_var  # this is a variance so need to scale to the square (TODO: see overleaf notes)
 
     kernel = GPy.kern.RBF(input_dim=1, lengthscale=lengthscale, variance=np.mean(Y_var_scaled))  # TODO: check this
 
     output_index2 = np.arange(num_bins)
-    Y_metadata2 = {'output_index': output_index2}
+    Y_metadata2 = {"output_index": output_index2}
 
-    likelihood = GPy.likelihoods.HeteroscedasticGaussian(Y_metadata2, variance=Y_var_scaled)  # one variance per y, but should be repeated for the same x
+    likelihood = GPy.likelihoods.HeteroscedasticGaussian(
+        Y_metadata2, variance=Y_var_scaled
+    )  # one variance per y, but should be repeated for the same x
 
     gp = GPy.models.GPRegression(X_scaled.reshape(-1, 1), Y_mean_scaled.reshape(-1, 1), kernel, Y_metadata2)
 
