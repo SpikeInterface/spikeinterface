@@ -15,13 +15,7 @@ from spikeinterface.preprocessing.inter_session_alignment import alignment_utils
 from spikeinterface.preprocessing.motion import run_peak_detection_pipeline_node
 import copy
 
-
-# 1) add docstrings and type hints
-# 2) add print statements to the entry function
-# 3) look into the DREDGE stuff
-
-# TODO: 1) think of a method to choose some reasonable defaults for bin size, nonrigid smoothing.
-# TODO: 2) different alignment procedure
+import matplotlib.pyplot as plt
 
 
 def get_estimate_histogram_kwargs() -> dict:
@@ -111,8 +105,6 @@ def get_interpolate_motion_kwargs():
 ###############################################################################
 # Public Entry Level Functions
 ###############################################################################
-
-# TODO: add some print statements for progress
 
 
 def align_sessions(
@@ -499,7 +491,7 @@ def _get_single_session_activity_histogram(
     times = recording.get_times()
     temporal_bin_centers = np.atleast_1d((times[-1] + times[0]) / 2)
 
-    # Estimate a entire session histogram if requested or doing
+    # Estimate an entire session histogram if requested or doing
     # full estimation for chunked bin size
     if chunked_bin_size_s == "estimate":
 
@@ -531,29 +523,6 @@ def _get_single_session_activity_histogram(
             depth_smooth_um=depth_smooth_um,
             scale_to_hz=True,
         )
-        if method == "chunked_mean":
-            session_histogram, variation = alignment_utils.get_chunked_hist_mean(chunked_histograms)
-
-        elif method == "chunked_median":
-            session_histogram, variation = alignment_utils.get_chunked_hist_median(chunked_histograms)
-
-        elif method == "chunked_supremum":
-            session_histogram, variation = alignment_utils.get_chunked_hist_supremum(chunked_histograms)
-
-        elif method == "chunked_poisson":
-            session_histogram, variation = alignment_utils.get_chunked_hist_poisson_estimate(chunked_histograms)
-
-        elif method == "first_eigenvector":
-            session_histogram, variation = alignment_utils.get_chunked_hist_eigenvector(chunked_histograms)
-
-        elif method == "chunked_gp":  # TODO: better name
-            session_histogram, variation, gp_model = alignment_utils.get_chunked_gaussian_process_regression(
-                chunked_histograms
-            )
-
-        session_variation = np.mean(
-            variation
-        )  # each b in independent, I think this is fine irrespective of method used
 
     elif histogram_type in ["2Dy_amplitude", "2Dy_x"]:
 
@@ -574,123 +543,34 @@ def _get_single_session_activity_histogram(
             )
 
         else:
-            min_x = np.min(peak_locations["x"])
-            max_x = np.max(peak_locations["x"])
+            chunked_histogram, chunked_temporal_bin_edges = _get_peak_positions_as_histogram(
+                recording, peak_locations
+            )  # TODO: could add smoothing
 
-            # TODO: add to "make_2d_histogram"
+        chunked_temporal_bin_centers = alignment_utils.get_bin_centers(chunked_temporal_bin_edges)
 
-            num_x_bins = 20  # guess
-            x_bins = np.linspace(min_x, max_x, num_x_bins)
-
-            # basically direct copy from make_3d_motion_histograms
-            n_samples = recording.get_num_samples()
-            mint_s = recording.sample_index_to_time(0)
-            maxt_s = recording.sample_index_to_time(n_samples - 1)
-            bin_s = chunked_bin_size_s
-            chunked_temporal_bin_edges = np.arange(mint_s, maxt_s + bin_s, bin_s)
-
-            arr = np.zeros((peaks.size, 3), dtype="float64")
-            arr[:, 0] = recording.sample_index_to_time(peaks["sample_index"])
-            arr[:, 1] = peak_locations["y"]
-            arr[:, 2] = peak_locations["x"]
-
-            chunked_histograms, _ = np.histogramdd(arr, (chunked_temporal_bin_edges, spatial_bin_edges, x_bins))
-
-        import matplotlib.pyplot as plt
-
-        if False:
-            fig, ax = plt.subplots()
-            im = ax.imshow(chunked_histograms[0, :, :], origin="lower", cmap="Blues", aspect="auto")
-
-            def update(frame):
-                im.set_data(chunked_histograms[frame, :, :])
-                ax.set_title(f"Slice {frame}")
-                return [im]
-
-            from matplotlib.animation import FuncAnimation
-
-            ani = FuncAnimation(fig, update, frames=chunked_histograms.shape[0], interval=100)
-            plt.show()
-
+    if method == "chunked_mean":
         session_histogram, variation = alignment_utils.get_chunked_hist_mean(chunked_histograms)
 
+    elif method == "chunked_median":
         session_histogram, variation = alignment_utils.get_chunked_hist_median(chunked_histograms)
 
+    elif method == "chunked_supremum":
         session_histogram, variation = alignment_utils.get_chunked_hist_supremum(chunked_histograms)
 
-        # todo: assign these above
-        num_hist = chunked_histograms.shape[0]
-        num_spat_bin = chunked_histograms.shape[1]
-        num_amp_bin = chunked_histograms.shape[2]
+    elif method == "chunked_poisson":
+        session_histogram, variation = alignment_utils.get_chunked_hist_poisson_estimate(chunked_histograms)
 
-        # lol it's so mad this works
-        new_chunked_hist = np.reshape(chunked_histograms, (num_hist, num_spat_bin * num_amp_bin))
+    elif method == "first_eigenvector":
+        session_histogram, variation = alignment_utils.get_chunked_hist_eigenvector(chunked_histograms)
 
-        session_histogram, variation = alignment_utils.get_chunked_hist_eigenvector(
-            new_chunked_hist
-        )  # TODO: might want more stable method that my lazy way
+    elif method == "chunked_gp":  # TODO: better name
+        session_histogram, variation, gp_model = alignment_utils.get_chunked_gaussian_process_regression(
+            chunked_histograms
+        )
 
-        session_histogram = np.reshape(session_histogram, (num_spat_bin, num_amp_bin))
-        variation = np.reshape(variation, (num_spat_bin, num_amp_bin))
-
-        if False:
-            import matplotlib.pyplot as plt
-            from mpl_toolkits.mplot3d import Axes3D
-
-            x = spatial_bin_edges[:-1]
-            y = np.arange(20)  # TODO: as above
-            X, Y = np.meshgrid(x, y)
-
-            means = session_histogram
-            upper = session_histogram + variation
-            lower = session_histogram - variation
-
-            fig = plt.figure(figsize=(10, 7))
-            ax = fig.add_subplot(111, projection="3d")
-
-            # Plot the mean surface
-            ax.plot_surface(X, Y, variation.T, cmap="viridis", alpha=0.8, label="Mean")
-            ax.plot_surface(X, Y, -variation.T, cmap="viridis", alpha=0.8, label="Mean")
-
-            # Add labels
-            ax.set_xlabel("X-axis")
-            ax.set_ylabel("Y-axis")
-            ax.set_zlabel("Z-axis")
-            ax.set_title("Mean ± Variation")
-
-            plt.show()
-
-        if False:
-            if method == "chunked_mean":
-                session_histogram, variation = alignment_utils.get_chunked_hist_mean_2d(chunked_histograms)
-
-            elif method == "chunked_median":
-                session_histogram, variation = alignment_utils.get_chunked_hist_median_2d(chunked_histograms)
-
-            elif method == "chunked_supremum":
-                session_histogram, variation = alignment_utils.get_chunked_hist_supremum_2d(chunked_histograms)
-
-            elif method == "first_eigenvector":
-                session_histogram, variation = alignment_utils.get_chunked_hist_eigenvector_2d(chunked_histograms)
-
-            elif method == "chunked_gp":  # TODO: better name
-                session_histogram = variation = gp_model = None
-
-        plt.imshow(session_histogram, origin="lower", cmap="Blues", aspect="auto")
-        plt.title("Summary Histogram")
-        plt.xlabel("Amplitude bin")
-        plt.ylabel("Depth (um)")
-        plt.show()
-
-        plt.imshow(variation, origin="lower", cmap="Blues", aspect="auto")
-        plt.title("Variation")
-        plt.xlabel("Amplitude bin")
-        plt.ylabel("Depth (um)")
-        plt.show()
-
-        session_variation = np.mean(variation)  # think about meaning of this 1d vs. 2D
-        # TODO: sort out
-        chunked_temporal_bin_centers = alignment_utils.get_bin_centers(chunked_temporal_bin_edges)
+    # each b in independent, I think this is fine irrespective of method used
+    session_variation = np.mean(variation)  # think about meaning of this 1d vs. 2D
 
     histogram_info = {
         "chunked_histograms": chunked_histograms,
@@ -704,6 +584,37 @@ def _get_single_session_activity_histogram(
         histogram_info.update({"gp_model": gp_model})
 
     return session_histogram, temporal_bin_centers, histogram_info
+
+
+def _get_peak_positions_as_histogram(
+    recording, peak_locations
+):
+    """
+    This is just a temp function to see how it goes...
+    
+    # TODO: could add smoothing
+    """
+    min_x = np.min(peak_locations["x"])
+    max_x = np.max(peak_locations["x"])
+
+    num_x_bins = 20  # guess
+    x_bins = np.linspace(min_x, max_x, num_x_bins)
+
+    # basically direct copy from make_3d_motion_histograms
+    n_samples = recording.get_num_samples()
+    mint_s = recording.sample_index_to_time(0)
+    maxt_s = recording.sample_index_to_time(n_samples - 1)
+    bin_s = chunked_bin_size_s
+    chunked_temporal_bin_edges = np.arange(mint_s, maxt_s + bin_s, bin_s)
+
+    arr = np.zeros((peaks.size, 3), dtype="float64")
+    arr[:, 0] = recording.sample_index_to_time(peaks["sample_index"])
+    arr[:, 1] = peak_locations["y"]
+    arr[:, 2] = peak_locations["x"]
+
+    chunked_histograms, _ = np.histogramdd(arr, (chunked_temporal_bin_edges, spatial_bin_edges, x_bins))
+
+    return chunked_histogram, chunked_temporal_bin_edges
 
 
 def _create_motion_recordings(
