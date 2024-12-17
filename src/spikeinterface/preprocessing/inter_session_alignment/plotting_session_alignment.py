@@ -6,6 +6,7 @@ from spikeinterface.widgets.base import BaseWidget
 from spikeinterface.widgets.base import to_attr
 from spikeinterface.widgets.motion import DriftRasterMapWidget
 from matplotlib.animation import FuncAnimation
+
 # TODO: decide on name, Displacement vs. Alignment
 
 
@@ -15,7 +16,6 @@ def _plot_2d_histogram_as_animation(chunked_histogram):
     fig, ax = plt.subplots()
     im = ax.imshow(chunked_histograms[0, :, :], origin="lower", cmap="Blues", aspect="auto")
 
-
     def update(frame):
         im.set_data(chunked_histograms[frame, :, :])
         ax.set_title(f"Slice {frame}")
@@ -24,9 +24,8 @@ def _plot_2d_histogram_as_animation(chunked_histogram):
     FuncAnimation(fig, update, frames=chunked_histograms.shape[0], interval=100)
     plt.show()
 
-def _plot_session_histogram_and_variation(
-  session_histogram, variation
-):
+
+def _plot_session_histogram_and_variation(session_histogram, variation):
     plt.imshow(session_histogram, origin="lower", cmap="Blues", aspect="auto")
     plt.title("Summary Histogram")
     plt.xlabel("Amplitude bin")
@@ -38,8 +37,6 @@ def _plot_session_histogram_and_variation(
     plt.xlabel("Amplitude bin")
     plt.ylabel("Depth (um)")
     plt.show()
-
-
 
 
 class SessionAlignmentWidget(BaseWidget):
