@@ -31,6 +31,14 @@ def get_dataset():
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
+
+    # TODO: the tests or the sorting analyzer make assumptions about the ids being integers
+    # So keeping this the way it was
+    integer_channel_ids = [int(id) for id in recording.get_channel_ids()]
+    integer_unit_ids = [int(id) for id in sorting.get_unit_ids()]
+
+    recording = recording.rename_channels(new_channel_ids=integer_channel_ids)
+    sorting = sorting.rename_units(new_unit_ids=integer_unit_ids)
     return recording, sorting
 
 
@@ -358,7 +366,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
                 shutil.rmtree(folder)
         else:
             folder = None
-        sorting_analyzer4 = sorting_analyzer.merge_units(merge_unit_groups=[["0", "1"]], format=format, folder=folder)
+        sorting_analyzer4 = sorting_analyzer.merge_units(merge_unit_groups=[[0, 1]], format=format, folder=folder)
 
         if format != "memory":
             if format == "zarr":
