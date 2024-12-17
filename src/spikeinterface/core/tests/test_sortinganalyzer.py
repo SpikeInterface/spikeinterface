@@ -84,8 +84,8 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
 
     # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
     # this bug requires that we have an info.json file so we calculate templates above
-    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=["1"])
-    assert len(select_units_sorting_analyer.unit_ids) == "1"
+    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=[1])
+    assert len(select_units_sorting_analyer.unit_ids) == 1
 
     folder = tmp_path / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
@@ -129,11 +129,11 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
 
     # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
     # this bug requires that we have an info.json file so we calculate templates above
-    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=["1"])
-    assert len(select_units_sorting_analyer.unit_ids) == "1"
-    remove_units_sorting_analyer = sorting_analyzer.remove_units(remove_unit_ids=["1"])
+    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=[1])
+    assert len(select_units_sorting_analyer.unit_ids) == 1
+    remove_units_sorting_analyer = sorting_analyzer.remove_units(remove_unit_ids=[1])
     assert len(remove_units_sorting_analyer.unit_ids) == len(sorting_analyzer.unit_ids) - 1
-    assert "1" not in remove_units_sorting_analyer.unit_ids
+    assert 1 not in remove_units_sorting_analyer.unit_ids
 
     # test no compression
     sorting_analyzer_no_compression = create_sorting_analyzer(
