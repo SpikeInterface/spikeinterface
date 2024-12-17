@@ -16,6 +16,11 @@ def small_sorting_analyzer():
         seed=1205,
     )
 
+    channel_ids_as_integers = [id for id in range(recording.get_num_channels())]
+    unit_ids_as_integers = [id for id in range(sorting.get_num_units())]
+    recording = recording.rename_channels(new_channel_ids=channel_ids_as_integers)
+    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
+
     sorting = sorting.select_units([2, 7, 0], ["#3", "#9", "#4"])
 
     sorting_analyzer = create_sorting_analyzer(recording=recording, sorting=sorting, format="memory")
@@ -59,6 +64,11 @@ def sorting_analyzer_simple():
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=1205,
     )
+
+    channel_ids_as_integers = [id for id in range(recording.get_num_channels())]
+    unit_ids_as_integers = [id for id in range(sorting.get_num_units())]
+    recording = recording.rename_channels(new_channel_ids=channel_ids_as_integers)
+    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
 

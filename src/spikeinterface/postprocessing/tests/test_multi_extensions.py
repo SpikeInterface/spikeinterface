@@ -23,6 +23,11 @@ def get_dataset():
         seed=2205,
     )
 
+    channel_ids_as_integers = [id for id in range(recording.get_num_channels())]
+    unit_ids_as_integers = [id for id in range(sorting.get_num_units())]
+    recording = recording.rename_channels(new_channel_ids=channel_ids_as_integers)
+    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
+
     # since templates are going to be averaged and this might be a problem for amplitude scaling
     # we select the 3 units with the largest templates to split
     analyzer_raw = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
