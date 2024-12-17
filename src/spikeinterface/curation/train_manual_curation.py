@@ -544,7 +544,12 @@ class CurationModelTrainer:
         )
 
         test_accuracies, models = zip(*results)
-        scoring_method = self.search_kwargs.get("scoring")
+
+        if self.search_kwargs is None or self.search_kwargs.get("scoring"):
+            scoring_method = "balanced_accuracy"
+        else:
+            scoring_method = self.search_kwargs.get("scoring")
+
         self.test_accuracies_df = pd.DataFrame(test_accuracies).sort_values(scoring_method, ascending=False)
 
         best_model_id = int(self.test_accuracies_df.iloc[0]["model_id"])
@@ -597,7 +602,7 @@ class CurationModelTrainer:
         if self.verbose is True:
             print(f"Running {classifier.__class__.__name__} with imputation {imputation_strategy} and scaling {scaler}")
         model, param_space = self.get_classifier_search_space(classifier.__class__.__name__)
-        print("search kwargs:", search_kwargs, flush=True)
+
         try:
             from skopt import BayesSearchCV
 
@@ -610,7 +615,7 @@ class CurationModelTrainer:
             )
         except:
             if self.verbose is True:
-                print("BayesSearchCV from scikit-optimize not available, using GridSearchCV")
+                print("BayesSearchCV from scikit-optimize not available, using RandomizedSearchCV")
             from sklearn.model_selection import RandomizedSearchCV
 
             model = RandomizedSearchCV(model, param_space, n_jobs=self.n_jobs, **search_kwargs)

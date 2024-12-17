@@ -17,6 +17,7 @@ def trainer():
     scaling_techniques = ["standard_scaler"]
     classifiers = ["LogisticRegression"]
     metric_names = ["metric1", "metric2", "metric3"]
+    search_kwargs = {"cv": 3}
     return CurationModelTrainer(
         labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1]],
         folder=folder,
@@ -24,6 +25,7 @@ def trainer():
         imputation_strategies=imputation_strategies,
         scaling_techniques=scaling_techniques,
         classifiers=classifiers,
+        search_kwargs=search_kwargs,
     )
 
 
@@ -187,6 +189,7 @@ def test_train_model():
         scaling_techniques=["standard_scaler"],
         classifiers=["LogisticRegression"],
         overwrite=True,
+        search_kwargs={"cv": 3, "scoring": "balanced_accuracy", "n_iter": 1},
     )
     assert isinstance(trainer, CurationModelTrainer)
 
