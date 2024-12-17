@@ -13,6 +13,7 @@ from spikeinterface.postprocessing import get_template_metric_names
 from spikeinterface.postprocessing.template_metrics import tm_compute_name_to_column_names
 from pathlib import Path
 from copy import deepcopy
+from scipy.stats import uniform, randint
 
 default_classifier_search_spaces = {
     "RandomForestClassifier": {
@@ -28,35 +29,35 @@ default_classifier_search_spaces = {
         "algorithm": ["SAMME", "SAMME.R"],
     },
     "GradientBoostingClassifier": {
-        "learning_rate": [0.05, 0.1],
-        "n_estimators": [100, 150],
+        "learning_rate": uniform(0.05, 0.1),
+        "n_estimators": randint(100, 150),
         "max_depth": [2, 4],
         "min_samples_split": [2, 4],
         "min_samples_leaf": [2, 4],
     },
     "SVC": {
-        "C": [0.001, 10.0],
+        "C": uniform(0.001, 10.0),
         "kernel": ["sigmoid", "rbf"],
-        "gamma": [0.001, 10.0],
+        "gamma": uniform(0.001, 10.0),
         "probability": [True],
     },
     "LogisticRegression": {
-        "C": [0.001, 10.0],
+        "C": uniform(0.001, 10.0),
         "solver": ["newton-cg", "lbfgs", "liblinear", "sag", "saga"],
-        "max_iter": [100, 500],
+        "max_iter": [100],
     },
     "XGBClassifier": {
         "max_depth": [2, 4],
-        "eta": [0.2, 0.5],
+        "eta": uniform(0.2, 0.5),
         "sampling_method": ["uniform"],
         "grow_policy": ["depthwise", "lossguide"],
     },
-    "CatBoostClassifier": {"depth": [2, 4], "learning_rate": [0.05, 0.15], "n_estimators": [100, 150]},
-    "LGBMClassifier": {"learning_rate": [0.05, 0.15], "n_estimators": [100, 150]},
+    "CatBoostClassifier": {"depth": [2, 4], "learning_rate": uniform(0.05, 0.15), "n_estimators": [100, 150]},
+    "LGBMClassifier": {"learning_rate": uniform(0.05, 0.15), "n_estimators": randint(100, 150)},
     "MLPClassifier": {
         "activation": ["tanh", "relu"],
         "solver": ["adam"],
-        "alpha": [1e-7, 1e-1],
+        "alpha": uniform(1e-7, 1e-1),
         "learning_rate": ["constant", "adaptive"],
         "n_iter_no_change": [32],
     },
@@ -595,7 +596,10 @@ class CurationModelTrainer:
         if self.verbose is True:
             print(f"Running {classifier.__class__.__name__} with imputation {imputation_strategy} and scaling {scaler}")
         model, param_space = self.get_classifier_search_space(classifier.__class__.__name__)
+        print("search kwargs:", search_kwargs, flush=True)
         try:
+            print("now trying the classifier search...")
+
             from skopt import BayesSearchCV
 
             model = BayesSearchCV(
@@ -610,7 +614,7 @@ class CurationModelTrainer:
                 print("BayesSearchCV from scikit-optimize not available, using GridSearchCV")
             from sklearn.model_selection import RandomizedSearchCV
 
-            model = RandomizedSearchCV(model, param_space, n_jobs=self.n_jobs, **search_kwargs)
+            model = RandomizedSearchCV(model, param_space, n_jobs=self.n_jobs, **search_kwargs, verbose=5)
 
         model.fit(X_train_scaled, y_train)
         y_pred = model.predict(X_test_scaled)
