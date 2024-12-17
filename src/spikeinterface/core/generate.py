@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 import warnings
 import numpy as np
-from typing import Literal
+from typing import Literal, Optional
 from math import ceil
 
 from .basesorting import SpikeVectorSortingSegment
@@ -1138,6 +1138,7 @@ class SortingGenerator(BaseSorting):
                 firing_rates=firing_rates,
                 refractory_period_seconds=self.refractory_period_seconds,
                 seed=segment_seed,
+                unit_ids=unit_ids,
                 t_start=None,
             )
             self.add_sorting_segment(segment)
@@ -1161,6 +1162,7 @@ class SortingGeneratorSegment(BaseSortingSegment):
         firing_rates: float | np.ndarray,
         refractory_period_seconds: float | np.ndarray,
         seed: int,
+        unit_ids: list[str],
         t_start: Optional[float] = None,
     ):
         self.num_units = num_units
@@ -1177,7 +1179,8 @@ class SortingGeneratorSegment(BaseSortingSegment):
             self.refractory_period_seconds = np.full(num_units, self.refractory_period_seconds, dtype="float64")
 
         self.segment_seed = seed
-        self.units_seed = {unit_id: self.segment_seed + hash(unit_id) for unit_id in range(num_units)}
+        self.units_seed = {unit_id: abs(self.segment_seed + hash(unit_id)) for unit_id in unit_ids}
+
         self.num_samples = math.ceil(sampling_frequency * duration)
         super().__init__(t_start)
 
