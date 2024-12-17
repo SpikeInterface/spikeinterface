@@ -134,8 +134,8 @@ def _prep_recording(recording, plot=False):
 
     return peaks, peak_locations
 
-MOTION = False  # True
-SAVE = False
+MOTION = True  # True
+SAVE = True
 PLOT = False
 BIN_UM = 5
 
@@ -224,7 +224,7 @@ estimate_histogram_kwargs = {
     "chunked_bin_size_s": "estimate",
     "log_scale": True,
     "depth_smooth_um": 10,
-    "histogram_type": "activity_1d",  # "y_only", "2Dy_x", "2Dy_amplitude""  TOOD: better names!
+    "histogram_type": "activity_1d",  # "y_only", "locations_2d", "activity_2d""  TOOD: better names!
 }
 compute_alignment_kwargs = {
     "num_shifts_block": None,  # TODO: can be in um so comaprable with window kwargs.
@@ -247,9 +247,7 @@ non_rigid_window_kwargs = {
 }
 
 if MOTION:
-    from session_alignment import align_sessions_after_motion_correction
-
-    corrected_recordings_list, extra_info = align_sessions_after_motion_correction(
+    corrected_recordings_list, extra_info = session_alignment.align_sessions_after_motion_correction(
         recordings_list,
         motion_info_list,
         align_sessions_kwargs={
@@ -271,6 +269,7 @@ else:
         compute_alignment_kwargs=compute_alignment_kwargs,
     )
 
+<<<<<<< HEAD
 
 plotting_session_alignment.SessionAlignmentWidget(
     recordings_list,
@@ -282,14 +281,33 @@ plotting_session_alignment.SessionAlignmentWidget(
     drift_raster_map_kwargs={"clim":(-250, 0)}  # TODO: option to fix this across recordings.
 )
 
+=======
+plotting_session_alignment.SessionAlignmentWidget(
+    recordings_list,
+    peaks_list,
+    peak_locations_list,
+    extra_info["session_histogram_list"],
+    **extra_info["corrected"],
+    spatial_bin_centers=extra_info["spatial_bin_centers"],
+    drift_raster_map_kwargs={"clim":(-250, 0)}  # TODO: option to fix this across recordings.
+)
+
+>>>>>>> 978c5343c (Reformatting alignment methods and add 2D, need to tidy up.)
 plt.show()
 
 # TODO: estimate chunk size Hz needs to be scaled for time? is it not been done correctly?
 
+<<<<<<< HEAD
 # No, even two sessions is a mess
 # TODO: working assumptions, maybe after rigid, make a template for nonrigid alignment
 # as at the moment all nonrigid to eachother is a mess
 if False:
+=======
+if False:
+    # No, even two sessions is a mess
+    # TODO: working assumptions, maybe after rigid, make a template for nonrigid alignment
+    # as at the moment all nonrigid to eachother is a mess
+>>>>>>> 978c5343c (Reformatting alignment methods and add 2D, need to tidy up.)
     A = extra_info["histogram_info_list"][2]["chunked_histograms"]
 
     mean_ = alignment_utils.get_chunked_hist_mean(A)
