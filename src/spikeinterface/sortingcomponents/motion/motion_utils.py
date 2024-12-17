@@ -86,6 +86,8 @@ def get_spatial_windows(
         window_centers = np.arange(num_windows + 1) * win_step_um + min_ + border
         windows = []
 
+        print("CENTERS: ", window_centers.size)
+
         for win_center in window_centers:
             if win_shape == "gaussian":
                 win = np.exp(-((spatial_bin_centers - win_center) ** 2) / (2 * win_scale_um**2))

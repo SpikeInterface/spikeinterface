@@ -66,7 +66,7 @@ def get_compute_alignment_kwargs() -> dict:
         windows along the probe depth. See `get_spatial_windows`.
     """
     return {
-        "num_shifts_block": 5,
+        "num_shifts_block": 100,  # TODO: estimate this properly, make take as some factor of the window width? Also check if it is 2x the block xcorr in motion correction
         "interpolate": False,
         "interp_factor": 10,
         "kriging_sigma": 1,
@@ -108,6 +108,8 @@ def get_interpolate_motion_kwargs():
 ###############################################################################
 # Public Entry Level Functions
 ###############################################################################
+
+# TODO: sometimes with small bins, the interpolation spreads the signal over too small a bin and flattens it on the corrected histogram
 
 
 def align_sessions(
@@ -684,9 +686,7 @@ def _create_motion_recordings(
 
         if isinstance(recording, InterpolateMotionRecording):
 
-            print(
-                "Recording is already an `InterpolateMotionRecording. " "Adding shifts directly the recording object."
-            )
+            print("Recording is already an `InterpolateMotionRecording. Adding shifts directly the recording object.")
 
             corrected_recording = _add_displacement_to_interpolate_recording(recording, motion)
         else:
@@ -882,13 +882,20 @@ def _compute_session_alignment(
         return rigid_shifts, non_rigid_windows, non_rigid_window_centers
 
     # For non-rigid, first shift the histograms according to the rigid shift
-    shifted_histograms = np.zeros_like(session_histogram_array)
-    for ses_idx, orig_histogram in enumerate(session_histogram_array):
 
-        shifted_histogram = alignment_utils.shift_array_fill_zeros(
-            array=orig_histogram, shift=int(rigid_shifts[ses_idx, 0])
-        )
-        shifted_histograms[ses_idx, :] = shifted_histogram
+    # When there is non-rigid drift, the rigid drift can be very wrong!
+    # So we depart from the kilosort approach for inter-session,
+    # for non-rigid, it makes sense to start without rigid alignment
+    shifted_histograms = session_histogram_array.copy()
+
+    if False:
+        shifted_histograms = np.zeros_like(session_histogram_array)
+        for ses_idx, orig_histogram in enumerate(session_histogram_array):
+
+            shifted_histogram = alignment_utils.shift_array_fill_zeros(
+                array=orig_histogram, shift=int(rigid_shifts[ses_idx, 0])
+            )
+            shifted_histograms[ses_idx, :] = shifted_histogram
 
     # Then compute the nonrigid shifts
     nonrigid_session_offsets_matrix = alignment_utils.compute_histogram_crosscorrelation(
@@ -901,10 +908,10 @@ def _compute_session_alignment(
         interp_nonrigid_shifts = alignment_utils.akima_interpolate_nonrigid_shifts(
             non_rigid_shifts, non_rigid_window_centers, spatial_bin_centers
         )
-        shifts = rigid_shifts + interp_nonrigid_shifts
+        shifts = interp_nonrigid_shifts  # rigid_shifts + interp_nonrigid_shifts
         non_rigid_window_centers = spatial_bin_centers
     else:
-        shifts = rigid_shifts + non_rigid_shifts
+        shifts = non_rigid_shifts  # rigid_shifts + non_rigid_shifts
 
     return shifts, non_rigid_windows, non_rigid_window_centers
 
@@ -937,12 +944,12 @@ def _estimate_rigid_alignment(
     compute_alignment_kwargs = copy.deepcopy(compute_alignment_kwargs)
     compute_alignment_kwargs["num_shifts_block"] = False
 
-    rigid_window = np.ones_like(session_histogram_array[0, :])[np.newaxis, :]
+    rigid_window = np.ones(session_histogram_array.shape[1])[np.newaxis, :]
 
     rigid_session_offsets_matrix = alignment_utils.compute_histogram_crosscorrelation(
         session_histogram_array,
         rigid_window,
-        **compute_alignment_kwargs,
+        **compute_alignment_kwargs,  # TODO: remove the copy above and pass directly. COnsider removing this function...
     )
     optimal_shift_indices = alignment_utils.get_shifts_from_session_matrix(
         alignment_order, rigid_session_offsets_matrix

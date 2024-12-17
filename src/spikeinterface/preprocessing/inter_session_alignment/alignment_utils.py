@@ -1,5 +1,7 @@
 from spikeinterface import BaseRecording
 import numpy as np
+
+from spikeinterface.preprocessing import center
 from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_histogram
 from scipy.optimize import minimize
 from scipy.ndimage import gaussian_filter
@@ -77,7 +79,7 @@ def get_activity_histogram(
         activity_histogram *= scaler
 
     if log_scale:
-        activity_histogram = np.log10(1 + activity_histogram)
+        activity_histogram = np.log10(1 + activity_histogram)  # TODO: make_2d_motion_histogram uses log2
 
     return activity_histogram, temporal_bin_centers, spatial_bin_centers
 
@@ -405,7 +407,7 @@ def compute_histogram_crosscorrelation(
     mean does not make sense over sessions.
     """
     num_sessions = len(session_histogram_list)
-    num_bins = session_histogram_list[0].size  # all hists are same length
+    num_bins = session_histogram_list.shape[1]  # all hists are same length
     num_windows = non_rigid_windows.shape[0]
 
     shift_matrix = np.zeros((num_sessions, num_sessions, num_windows))
@@ -416,36 +418,75 @@ def compute_histogram_crosscorrelation(
         for j in range(num_sessions):
 
             # Create the (num windows, num_bins) matrix for this pair of sessions
-            xcorr_matrix = np.zeros((non_rigid_windows.shape[0], num_bins * 2 - 1))
+
+            import matplotlib.pyplot as plt
+
+            # TODO: plot everything
+
+            num_iter = (
+                num_bins * 2 - 1 if not num_shifts_block else num_shifts_block * 2
+            )  # TODO: make sure this is clearly defined, it is either side...
+            xcorr_matrix = np.zeros((non_rigid_windows.shape[0], num_iter))
 
             # For each window, window the session histograms (`window` is binary)
             # and perform the cross correlations
             for win_idx, window in enumerate(non_rigid_windows):
-                windowed_histogram_i = session_histogram_list[i, :] * window
-                windowed_histogram_j = session_histogram_list[j, :] * window
 
-                xcorr = np.correlate(
-                    windowed_histogram_i, windowed_histogram_j, mode="full"
-                )  # TODO: add weight option.
+                #   breakpoint()
+                # TODO: track the 2d histogram through all steps to check everything is working okay
+
+                # TOOD: gaussian window with crosscorr, won't it strongly bias zero shifts by maximising the signal at 0?
+                # TODO: add weight option.
+                # TODO: damn this is slow for 2D, speed up.
+                if session_histogram_list.ndim == 3:
+                    windowed_histogram_i = session_histogram_list[i, :] * window[:, np.newaxis]
+                    windowed_histogram_j = session_histogram_list[j, :] * window[:, np.newaxis]
+
+                    from scipy.signal import correlate2d
+
+                    # carefully check indices
+                    xcorr = correlate2d(
+                        windowed_histogram_i - np.mean(windowed_histogram_i, axis=1)[:, np.newaxis],
+                        windowed_histogram_j - np.mean(windowed_histogram_j, axis=1)[:, np.newaxis],
+                    )  # TOOD: check speed, probs don't remove mean because we want zeros for unmasked version
+
+                    mid_idx = windowed_histogram_j.shape[1] - 1
+                    xcorr = xcorr[:, mid_idx]
+
+                else:
+                    windowed_histogram_i = session_histogram_list[i, :] * window
+
+                    window_target = True  # this makes less sense now that things could be very far apart
+                    if window_target:
+                        windowed_histogram_j = session_histogram_list[j, :] * window
+                    else:
+                        windowed_histogram_j = session_histogram_list[j, :]
+
+                    xcorr = np.correlate(windowed_histogram_i, windowed_histogram_j, mode="full")
+
+                #            plt.plot(windowed_histogram_i)
+                #            plt.plot(windowed_histogram_j)
+                #            plt.show()
 
                 if num_shifts_block:
                     window_indices = np.arange(center_bin - num_shifts_block, center_bin + num_shifts_block)
-                    mask = np.zeros_like(xcorr)
-                    mask[window_indices] = 1
-                    xcorr *= mask
+                    xcorr = xcorr[window_indices]
+                    shift_center_bin = (
+                        num_shifts_block  # np.floor(num_shifts_block / 2)  # TODO: CHECK! and move out of loop!
+                    )
+                else:
+                    shift_center_bin = center_bin
+
+                #          plt.plot(xcorr)
+                #          plt.show()
 
                 xcorr_matrix[win_idx, :] = xcorr
 
+            # TODO: check absolute value of different bins, they are quite different (log scale, zero mean histograms)
+            # TODO: print out a load of quality metrics from this!
+
             # Smooth the cross-correlations across the bins
             if smoothing_sigma_bin:
-                breakpoint()
-                import matplotlib.pyplot as plt
-
-                plt.plot(xcorr_matrix[0, :])
-                X = gaussian_filter(xcorr_matrix, smoothing_sigma_bin, axes=1)
-                plt.plot(X[0, :])
-                plt.show()
-
                 xcorr_matrix = gaussian_filter(xcorr_matrix, smoothing_sigma_bin, axes=1)
 
             # Smooth the cross-correlations across the windows
@@ -470,7 +511,9 @@ def compute_histogram_crosscorrelation(
             else:
                 xcorr_peak = np.argmax(xcorr_matrix, axis=1)
 
-            shift = xcorr_peak - center_bin
+            #           breakpoint()
+
+            shift = xcorr_peak - shift_center_bin  # center_bin
             shift_matrix[i, j, :] = shift
 
     return shift_matrix
@@ -502,8 +545,16 @@ def shift_array_fill_zeros(array: np.ndarray, shift: int) -> np.ndarray:
     """
     abs_shift = np.abs(shift)
     pad_tuple = (0, abs_shift) if shift > 0 else (abs_shift, 0)
+
+    if array.ndim == 2:
+        pad_tuple = (pad_tuple, (0, 0))
+
     padded_hist = np.pad(array, pad_tuple, mode="constant")
-    cut_padded_array = padded_hist[abs_shift:] if shift >= 0 else padded_hist[:-abs_shift]
+
+    if padded_hist.ndim == 2:
+        cut_padded_array = padded_hist[abs_shift:, :] if shift >= 0 else padded_hist[:-abs_shift, :]  # TOOD: tidy up
+    else:
+        cut_padded_array = padded_hist[abs_shift:] if shift >= 0 else padded_hist[:-abs_shift]
 
     return cut_padded_array
 

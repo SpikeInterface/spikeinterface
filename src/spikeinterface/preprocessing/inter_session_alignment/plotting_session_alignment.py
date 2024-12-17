@@ -311,6 +311,7 @@ class SessionAlignmentHistogramWidget(BaseWidget):
         elif isinstance(spatial_bin_centers, np.ndarray):
             spatial_bin_centers = [spatial_bin_centers] * num_histograms
 
+        # TOOD: For 2D histogram, will need to subplot and just plot the individual histograms...
         for i in range(num_histograms):
             self.ax.plot(spatial_bin_centers[i], dp.session_histogram_list[i], color=colors[i], linewidth=linewidths[i])
 
