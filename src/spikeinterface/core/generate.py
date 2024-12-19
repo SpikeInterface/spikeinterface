@@ -1111,7 +1111,7 @@ class SortingGenerator(BaseSorting):
 
         """
 
-        unit_ids = [str(id) for id in np.arange(num_units)]
+        unit_ids = [str(idx) for idx in np.arange(num_units)]
         super().__init__(sampling_frequency, unit_ids)
 
         self.num_units = num_units
