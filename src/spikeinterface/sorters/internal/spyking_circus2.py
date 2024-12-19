@@ -27,7 +27,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 50},
         "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2},
-        "whitening": {"mode": "local", "regularize": False, "radius_um": 100},
+        "whitening": {"mode": "local", "regularize": True, "radius_um": 100},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
             "method": "uniform",
@@ -165,7 +165,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             whitening_kwargs["regularize"] = False
         if whitening_kwargs["regularize"]:
             n_jobs = job_kwargs["n_jobs"]
-            whitening_kwargs["regularize_kwargs"] = {"method": "GraphicalLassoCV", "n_jobs": n_jobs}
+            whitening_kwargs["regularize_kwargs"] = {"method": "LedoitWolf"}
 
         recording_w = whiten(recording_f, **whitening_kwargs)
         noise_levels = get_noise_levels(recording_w, return_scaled=False, **job_kwargs)
