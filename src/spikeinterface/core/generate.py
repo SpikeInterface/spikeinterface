@@ -134,7 +134,7 @@ def generate_sorting(
     seed = _ensure_seed(seed)
     rng = np.random.default_rng(seed)
     num_segments = len(durations)
-    unit_ids = [str(id) for id in np.arange(num_units)]
+    unit_ids = [str(idx) for idx in np.arange(num_units)]
 
     spikes = []
     for segment_index in range(num_segments):
