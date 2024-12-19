@@ -135,7 +135,7 @@ class BaseSorting(BaseExtractor):
 
     def get_unit_spike_train(
         self,
-        unit_id,
+        unit_id: str | int,
         segment_index: Union[int, None] = None,
         start_frame: Union[int, None] = None,
         end_frame: Union[int, None] = None,

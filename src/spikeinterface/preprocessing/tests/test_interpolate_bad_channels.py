@@ -163,7 +163,9 @@ def test_output_values():
     expected_weights = np.r_[np.tile(np.exp(-2), 3), np.exp(-4)]
     expected_weights /= np.sum(expected_weights)
 
-    si_interpolated_recording = spre.interpolate_bad_channels(recording, bad_channel_indexes, sigma_um=1, p=1)
+    si_interpolated_recording = spre.interpolate_bad_channels(
+        recording, bad_channel_ids=bad_channel_ids, sigma_um=1, p=1
+    )
     si_interpolated = si_interpolated_recording.get_traces()
 
     expected_ts = si_interpolated[:, 1:] @ expected_weights

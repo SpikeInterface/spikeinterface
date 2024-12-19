@@ -49,6 +49,9 @@ def test_gh_curation():
     Test curation using GitHub URI.
     """
     sorting = generate_sorting(num_units=10)
+    unit_ids_as_int = [id for id in range(sorting.get_num_units())]
+    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_int)
+
     # curated link:
     # https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://058ab901610aa9d29df565595a3cc2a81a1b08e5
     gh_uri = "gh://SpikeInterface/spikeinterface/main/src/spikeinterface/curation/tests/sv-sorting-curation.json"
@@ -76,6 +79,8 @@ def test_sha1_curation():
     Test curation using SHA1 URI.
     """
     sorting = generate_sorting(num_units=10)
+    unit_ids_as_int = [id for id in range(sorting.get_num_units())]
+    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_int)
 
     # from SHA1
     # curated link:
@@ -105,6 +110,8 @@ def test_json_curation():
     Test curation using a JSON file.
     """
     sorting = generate_sorting(num_units=10)
+    unit_ids_as_int = [id for id in range(sorting.get_num_units())]
+    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_int)
 
     # from curation.json
     json_file = parent_folder / "sv-sorting-curation.json"
@@ -248,6 +255,8 @@ def test_json_no_merge_curation():
     Test curation with no merges using a JSON file.
     """
     sorting = generate_sorting(num_units=10)
+    unit_ids_as_int = [id for id in range(sorting.get_num_units())]
+    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_int)
 
     json_file = parent_folder / "sv-sorting-curation-no-merge.json"
     sorting_curated = apply_sortingview_curation(sorting, uri_or_json=json_file)

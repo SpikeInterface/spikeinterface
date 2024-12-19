@@ -38,10 +38,12 @@ def test_channelsaggregationrecording():
 
         assert np.allclose(traces1_1, recording_agg.get_traces(channel_ids=[str(channel_ids[1])], segment_index=seg))
         assert np.allclose(
-            traces2_0, recording_agg.get_traces(channel_ids=[str(num_channels + channel_ids[0])], segment_index=seg)
+            traces2_0,
+            recording_agg.get_traces(channel_ids=[str(num_channels + int(channel_ids[0]))], segment_index=seg),
         )
         assert np.allclose(
-            traces3_2, recording_agg.get_traces(channel_ids=[str(2 * num_channels + channel_ids[2])], segment_index=seg)
+            traces3_2,
+            recording_agg.get_traces(channel_ids=[str(2 * num_channels + int(channel_ids[2]))], segment_index=seg),
         )
         # all traces
         traces1 = recording1.get_traces(segment_index=seg)

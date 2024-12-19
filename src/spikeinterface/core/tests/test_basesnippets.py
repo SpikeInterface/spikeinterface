@@ -41,8 +41,8 @@ def test_BaseSnippets(create_cache_folder):
     assert snippets.get_num_segments() == len(duration)
     assert snippets.get_num_channels() == num_channels
 
-    assert np.all(snippets.ids_to_indices([0, 1, 2]) == [0, 1, 2])
-    assert np.all(snippets.ids_to_indices([0, 1, 2], prefer_slice=True) == slice(0, 3, None))
+    assert np.all(snippets.ids_to_indices(["0", "1", "2"]) == [0, 1, 2])
+    assert np.all(snippets.ids_to_indices(["0", "1", "2"], prefer_slice=True) == slice(0, 3, None))
 
     # annotations / properties
     snippets.annotate(gre="ta")
@@ -60,7 +60,7 @@ def test_BaseSnippets(create_cache_folder):
     )
 
     # missing property
-    snippets.set_property("string_property", ["ciao", "bello"], ids=[0, 1])
+    snippets.set_property("string_property", ["ciao", "bello"], ids=["0", "1"])
     values = snippets.get_property("string_property")
     assert values[2] == ""
 
@@ -70,14 +70,14 @@ def test_BaseSnippets(create_cache_folder):
         snippets.set_property,
         key="string_property_nan",
         values=["hola", "chabon"],
-        ids=[0, 1],
+        ids=["0", "1"],
         missing_value=np.nan,
     )
 
     # int properties without missing values raise an error
     assert_raises(Exception, snippets.set_property, key="int_property", values=[5, 6], ids=[1, 2])
 
-    snippets.set_property("int_property", [5, 6], ids=[1, 2], missing_value=200)
+    snippets.set_property("int_property", [5, 6], ids=["1", "2"], missing_value=200)
     values = snippets.get_property("int_property")
     assert values.dtype.kind == "i"
 
