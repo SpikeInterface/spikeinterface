@@ -311,9 +311,14 @@ class SessionAlignmentHistogramWidget(BaseWidget):
         elif isinstance(spatial_bin_centers, np.ndarray):
             spatial_bin_centers = [spatial_bin_centers] * num_histograms
 
-        # TOOD: For 2D histogram, will need to subplot and just plot the individual histograms...
+        if dp.session_histogram_list[0].ndim == 2:
+            histogram_list = [np.sum(hist_, axis=1) for hist_ in dp.session_histogram_list]
+            print("2D histogram passed, will be summed across first (i.e. amplitude) axis.")
+        else:
+            histogram_list = dp.session_histogram_list
+
         for i in range(num_histograms):
-            self.ax.plot(spatial_bin_centers[i], dp.session_histogram_list[i], color=colors[i], linewidth=linewidths[i])
+            self.ax.plot(spatial_bin_centers[i], histogram_list[i], color=colors[i], linewidth=linewidths[i])
 
         if legend is not None:
             self.ax.legend(legend)
