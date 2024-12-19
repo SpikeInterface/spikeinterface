@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from spikeinterface.core.baserecording import BaseRecording
 
@@ -836,7 +837,100 @@ def _correct_session_displacement(
     return corrected_peak_locations_list, corrected_session_histogram_list
 
 
-def get_shifts(signal1, signal2, windows):
+def cross_correlate(sig1, sig2, thr= None):
+    xcorr = np.correlate(sig1, sig2, mode="full")
+
+    n = sig1.size
+    low_cut_idx = np.arange(0, n - thr)  # double check
+    high_cut_idx = np.arange(n + thr, 2 * n - 1)
+
+    xcorr[low_cut_idx] = 0
+    xcorr[high_cut_idx] = 0
+
+    if np.max(xcorr) < 0.01:
+        shift = 0
+    else:
+        shift = np.argmax(xcorr) - xcorr.size // 2
+
+    return shift
+
+def cross_correlate_with_scale(signa11_blanked, signal2_blanked, thr=100, plot=False):
+    """
+    """
+    import scipy
+    xcorr = []
+    for s in np.arange(-thr, thr):  # TODO: we are off by one here
+
+        shift_signal1_blanked = alignment_utils.shift_array_fill_zeros(signa11_blanked, s)
+
+        x = np.arange(shift_signal1_blanked.size)
+
+        xcorr_scale = []
+        for scale in np.linspace(0.75, 1.25, 10):
+
+
+            nonzero = np.where(shift_signal1_blanked > 0)[0]
+            if not np.any(nonzero):
+                xcorr_scale.append(
+                    0
+                )
+                continue
+
+            midpoint = nonzero[0] + np.ptp(nonzero) / 2
+
+            xs = (x - midpoint) * scale + midpoint
+
+            # is this pull back?
+            # TODO: maybe upsample 10x here...
+            interp_f = scipy.interpolate.interp1d(xs, shift_signal1_blanked, fill_value=0.0, bounds_error=False)  # TODO: try cubic etc... or Kriging
+
+            scaled_func = interp_f(x)
+
+            corr_value = np.correlate(
+                    scaled_func - np.mean(scaled_func),
+                    signal2_blanked - np.mean(signal2_blanked),
+                ) / signa11_blanked.size
+
+            xcorr_scale.append(
+                corr_value
+            )
+
+            if plot and np.abs(s) < 2 and False:
+                import matplotlib.pyplot as plt
+                print(corr_value)
+
+                plt.plot(shift_signal1_blanked)
+                plt.plot(signal2_blanked)
+                plt.show()
+
+                plt.plot(scaled_func)
+                plt.plot(signal2_blanked)
+                plt.show()
+          #      plt.title(f"corr value: {corr_value}")
+           #     plt.draw()  # Draw the updated figure
+            #    plt.pause(0.1)  # Pause for 0.5 seconds before updating
+             #   plt.clf()
+
+        xcorr.append(np.max(np.r_[xcorr_scale]))
+
+    xcorr = np.r_[xcorr]
+#    shift = np.argmax(xcorr) - thr
+
+    print("MAX", np.max(xcorr))
+
+    if np.max(xcorr) < 0.0001:
+        shift = 0
+    else:
+        shift = np.argmax(xcorr) - thr
+
+    print("output shift", shift)
+
+    return shift
+
+# plt.plot(signal1)
+# plt.plot(signal2)
+
+def get_shifts(signal1, signal2, windows, plot=True):
 
     import matplotlib.pyplot as plt
 
@@ -853,42 +947,46 @@ def get_shifts(signal1, signal2, windows):
         signa11_blanked[last_idx:] = 0
         signal2_blanked[last_idx:] = 0
 
-    segment_shifts = np.empty(windows.shape[0])
+    segment_shifts = np.empty(len(windows))
     cum_shifts = []
 
-    for round in range(windows.shape[0]):
 
-        xcorr = np.correlate(signa11_blanked, signal2_blanked, mode="full")
+    for round in range(len(windows)):
 
-        if np.max(xcorr) < 0.01:
-            shift = 0
+        if round == 0:
+            shift = cross_correlate(signa11_blanked, signal2_blanked, thr=150)  # for first rigid, do larger!
         else:
-            shift = np.argmax(xcorr) - xcorr.size // 2
+            shift = cross_correlate_with_scale(signa11_blanked, signal2_blanked, thr=150, plot=False)
+
+
         cum_shifts.append(shift)
-        print(shift)
+        print("shift", shift)
 
         # shift the signal1, or use indexing
+
         signa11_blanked = alignment_utils.shift_array_fill_zeros(signa11_blanked, shift)
 
-        #    plt.plot(signa11_blanked)
-        #    plt.plot(signal2_blanked)
-        #    plt.show()
+        if plot and False:
+            print("round", round)
+            plt.plot(signa11_blanked)
+            plt.plot(signal2_blanked)
+            plt.show()
 
-        window_corrs = np.empty(windows.shape[0])
+        window_corrs = np.empty(len(windows))
         for i, idx in enumerate(windows):
-
             window_corrs[i] = np.correlate(
                 signa11_blanked[idx] - np.mean(signa11_blanked[idx]),
                 signal2_blanked[idx] - np.mean(signal2_blanked[idx]),
-            )
+            ) / signa11_blanked[idx].size
 
-        max_window = np.argmax(window_corrs)
+        max_window = np.argmax(window_corrs)  # TODO: cutoff!
 
-        segment_shifts[max_window] = np.sum(cum_shifts)
+        small_shift = cross_correlate(signa11_blanked[windows[max_window]], signal2_blanked[windows[max_window]], thr=windows[max_window].size //2)
 
-        # print(segment_shifts[max_window])
+        signa11_blanked = alignment_utils.shift_array_fill_zeros(signa11_blanked, small_shift)
 
-        # TODO: this is interacting with the shift to make spikes!
+        segment_shifts[max_window] = np.sum(cum_shifts) + small_shift
+
         signa11_blanked[windows[max_window]] = 0
         signal2_blanked[windows[max_window]] = 0
 
@@ -967,36 +1065,43 @@ def _compute_session_alignment(
 
     nonrigid_session_offsets_matrix = np.empty((shifted_histograms.shape[0], shifted_histograms.shape[0]))
 
-    windows = []
-    for i in range(non_rigid_windows.shape[0]):
-        idxs = np.arange(non_rigid_windows.shape[1])[non_rigid_windows[i, :].astype(bool)]
-        windows.append(idxs)
+   # windows = []
+   # for i in range(non_rigid_windows.shape[0]):
+   #     idxs = np.arange(non_rigid_windows.shape[1])[non_rigid_windows[i, :].astype(bool)]
+   #     windows.append(idxs)
         # TODO: check assumptions these are always the same size
+#  windows = np.vstack(windows)
 
-    windows = np.vstack(windows)
+    num_windows = non_rigid_windows.shape[0]
+
+    windows = np.arange(shifted_histograms.shape[1])
+    windows1 = np.array_split(windows, num_windows)
 
     #    import matplotlib.pyplot as plt
     #    plt.plot(non_rigid_windows.T)
     #    plt.show()
-
-    windows1 = windows[::2, :]
-    windows2 = windows[1::2, :]
+    # num_windows =
+    # windows1 = windows[::2, :]
 
     nonrigid_session_offsets_matrix = np.empty(
         (shifted_histograms.shape[0], shifted_histograms.shape[0], non_rigid_windows.shape[0])
     )
 
+    print("NUM WINDOWS: ", num_windows)
+
     for i in range(shifted_histograms.shape[0]):
         for j in range(shifted_histograms.shape[0]):
 
-            shifts1 = get_shifts(shifted_histograms[i, :], shifted_histograms[j, :], windows1)
-            shifts2 = get_shifts(shifted_histograms[i, :], shifted_histograms[j, :], windows2)
-            shifts = np.empty(shifts1.size + shifts2.size)
+            plot_ = j == 2 and i == 0
+
+            shifts1 = get_shifts(shifted_histograms[i, :], shifted_histograms[j, :], windows1, plot=True)
+        #    shifts2 = get_shifts(shifted_histograms[i, :], shifted_histograms[j, :], windows2)
+         #   shifts = np.empty(shifts1.size + shifts1.size - 1)
             # breakpoint()
-            shifts[::2] = shifts1
-            shifts[1::2] = (shifts1[:-1] + shifts1[1:]) / 2  # np.shifts2
+      #      shifts[::2] = shifts1
+     #       shifts[1::2] = (shifts1[:-1] + shifts1[1:]) / 2  # np.shifts2
             #    breakpoint()
-            nonrigid_session_offsets_matrix[i, j, :] = shifts
+            nonrigid_session_offsets_matrix[i, j, :] = shifts1
 
     # TODO: there are gaps in between rect, rect seems weird,  they are non-overlapping :S
 

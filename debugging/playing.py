@@ -77,13 +77,13 @@ if __name__ == '__main__':
     non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
     non_rigid_window_kwargs["rigid_mode"] = "nonrigid"
     non_rigid_window_kwargs["win_shape"] = "rect"
-    non_rigid_window_kwargs["win_step_um"] = 100.0
-    non_rigid_window_kwargs["win_scale_um"] = 200.0
+    non_rigid_window_kwargs["win_step_um"] = 200.0
+    non_rigid_window_kwargs["win_scale_um"] = 400.0
 
     estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
     estimate_histogram_kwargs["method"] = "chunked_median"
     estimate_histogram_kwargs["histogram_type"] = "activity_1d"  # TODO: investigate this case thoroughly
-    estimate_histogram_kwargs["bin_um"] = 2
+    estimate_histogram_kwargs["bin_um"] = 0.5
     estimate_histogram_kwargs["log_scale"] = True
     estimate_histogram_kwargs["weight_with_amplitude"] = False
 
