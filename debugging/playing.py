@@ -9,6 +9,8 @@ from spikeinterface.preprocessing.inter_session_alignment import (
 import matplotlib.pyplot as plt
 
 import spikeinterface.full as si
+import numpy as np
+
 
 si.set_global_job_kwargs(n_jobs=10)
 
@@ -18,8 +20,6 @@ if __name__ == '__main__':
     # --------------------------------------------------------------------------------------
     # Load / generate some recordings
     # --------------------------------------------------------------------------------------
-
-
 
     recordings_list, _ = generate_session_displacement_recordings(
         num_units=20,
@@ -48,21 +48,23 @@ if __name__ == '__main__':
     # There is a function 'session_alignment.align_sessions_after_motion_correction()
     # you can use instead of the below.
 
-    peaks_list, peak_locations_list = session_alignment.compute_peaks_locations_for_session_alignment(
-        recordings_list,
-        detect_kwargs={"method": "locally_exclusive"},
-        localize_peaks_kwargs={"method": "grid_convolution"},
-    )
-
     if False:
+        peaks_list, peak_locations_list = session_alignment.compute_peaks_locations_for_session_alignment(
+            recordings_list,
+            detect_kwargs={"method": "locally_exclusive"},
+            localize_peaks_kwargs={"method": "grid_convolution"},
+        )
+
         np.save("peaks_1.npy", peaks_list[0])
         np.save("peaks_2.npy", peaks_list[1])
+        np.save("peaks_3.npy", peaks_list[2])
         np.save("peak_locs_1.npy", peak_locations_list[0])
         np.save("peak_locs_2.npy", peak_locations_list[1])
+        np.save("peak_locs_3.npy", peak_locations_list[2])
 
-    if False:
-        peaks_list = [np.load("peaks_1.npy"), np.load("peaks_2.npy")]
-        peak_locations_list = [np.load("peak_locs_1.npy"), np.load("peak_locs_2.npy")]
+   # if False:
+    peaks_list = [np.load("peaks_1.npy"), np.load("peaks_2.npy"), np.load("peaks_3.npy")]
+    peak_locations_list = [np.load("peak_locs_1.npy"), np.load("peak_locs_2.npy"), np.load("peak_locs_3.npy")]
 
     # --------------------------------------------------------------------------------------
     # Do the estimation
@@ -73,14 +75,20 @@ if __name__ == '__main__':
     # See `session_alignment.py` for docs on these settings.
 
     non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
-    non_rigid_window_kwargs["rigid"] = False
-    # non_rigid_window_kwargs["win_shape"] = "rect"
-    # non_rigid_window_kwargs["win_step_um"] = 25
+    non_rigid_window_kwargs["rigid_mode"] = "nonrigid"
+    non_rigid_window_kwargs["win_shape"] = "rect"
+    non_rigid_window_kwargs["win_step_um"] = 100.0
+    non_rigid_window_kwargs["win_scale_um"] = 200.0
 
     estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
-    estimate_histogram_kwargs["method"] = "chunked_mean"
-    estimate_histogram_kwargs["histogram_type"] = "activity_1d"
-    estimate_histogram_kwargs["bin_um"] = 5
+    estimate_histogram_kwargs["method"] = "chunked_median"
+    estimate_histogram_kwargs["histogram_type"] = "activity_1d"  # TODO: investigate this case thoroughly
+    estimate_histogram_kwargs["bin_um"] = 2
+    estimate_histogram_kwargs["log_scale"] = True
+    estimate_histogram_kwargs["weight_with_amplitude"] = False
+
+    compute_alignment_kwargs = session_alignment.get_compute_alignment_kwargs()
+    compute_alignment_kwargs["num_shifts_block"] = 300
 
     corrected_recordings_list, extra_info = session_alignment.align_sessions(
         recordings_list,

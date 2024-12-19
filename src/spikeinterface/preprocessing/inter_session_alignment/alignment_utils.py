@@ -21,6 +21,7 @@ def get_activity_histogram(
     bin_s: float | None,
     depth_smooth_um: float | None,
     scale_to_hz: bool = False,
+    weight_with_amplitude: bool = False,
 ):
     """
     Generate a 2D activity histogram for the session. Wraps the underlying
@@ -57,7 +58,7 @@ def get_activity_histogram(
         recording,
         peaks,
         peak_locations,
-        weight_with_amplitude=False,
+        weight_with_amplitude=weight_with_amplitude,
         direction="y",
         bin_s=(bin_s if bin_s is not None else recording.get_duration(segment_index=0)),
         bin_um=None,
