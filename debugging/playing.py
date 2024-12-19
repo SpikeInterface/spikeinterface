@@ -94,7 +94,7 @@ if __name__ == '__main__':
         recordings_list,
         peaks_list,
         peak_locations_list,
-        alignment_order="to_session_1",  # "to_session_X" or "to_middle"
+        alignment_order="to_session_2",  # "to_session_X" or "to_middle"
         non_rigid_window_kwargs=non_rigid_window_kwargs,
         estimate_histogram_kwargs=estimate_histogram_kwargs,
     )
