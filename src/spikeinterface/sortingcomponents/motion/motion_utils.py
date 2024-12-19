@@ -68,7 +68,13 @@ class Motion:
         else:
             rigid_txt = f"non-rigid - {nbins} spatial bins"
 
-        interval_s = self.temporal_bins_s[0][1] - self.temporal_bins_s[0][0]
+        if self.temporal_bins_s[0].size > 1:
+            interval_s = self.temporal_bins_s[0][1] - self.temporal_bins_s[0][0]
+        else:
+            # If there is only one temporal bin (entire session), assume the bin
+            # left edge is zero, and take twice it for the bin size.
+            interval_s = self.temporal_bins_s[0][0] * 2
+
         txt = f"Motion {rigid_txt} - interval {interval_s}s - {self.num_segments} segments"
         return txt
 
@@ -149,6 +155,12 @@ class Motion:
         displacement = self.interpolators[segment_index](points)
         # reshape to grid domain shape if necessary
         displacement = displacement.reshape(out_shape)
+
+        # TODO: hacky
+        if self.temporal_bins_s[segment_index].size == 1 and self.spatial_bins_um.size == 1:
+            assert np.all(np.isnan(displacement))
+            assert self.displacement[segment_index].size == 1
+            displacement[:] = self.displacement[segment_index]
 
         return displacement
 
@@ -318,6 +330,8 @@ def get_spatial_windows(
         window_centers = np.arange(num_windows + 1) * win_step_um + min_ + border
         windows = []
 
+        print("CENTERS: ", window_centers.size)
+
         for win_center in window_centers:
             if win_shape == "gaussian":
                 win = np.exp(-((spatial_bin_centers - win_center) ** 2) / (2 * win_scale_um**2))
@@ -398,6 +412,18 @@ def get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um):
     spatial_bins = np.arange(min_, max_ + bin_um, bin_um)
 
     return spatial_bins
+
+
+def get_spatial_bins(recording, direction, hist_margin_um, bin_um):
+    # TODO: could this be merged with the above function?
+    dim = ["x", "y", "z"].index(direction)
+    contact_depths = recording.get_channel_locations()[:, dim]
+
+    # spatial histogram bins
+    spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
+    spatial_bin_centers = 0.5 * (spatial_bin_edges[1:] + spatial_bin_edges[:-1])
+
+    return spatial_bin_centers, spatial_bin_edges, contact_depths
 
 
 def make_2d_motion_histogram(
