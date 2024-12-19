@@ -172,8 +172,6 @@ def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
 
     """
 
-    print("apply_waveforms_shift")
-
     if inplace:
         aligned_waveforms = waveforms
     else:
@@ -192,7 +190,5 @@ def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
             aligned_waveforms[mask, :-shift, :] = wfs[:, shift:, :]
         else:
             aligned_waveforms[mask, -shift:, :] = wfs[:, :-shift, :]
-
-    print("apply_waveforms_shift DONE")
 
     return aligned_waveforms

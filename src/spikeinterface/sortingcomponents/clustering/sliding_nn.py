@@ -71,11 +71,10 @@ class SlidingNNClustering:
         "tmp_folder": None,
         "verbose": False,
         "tmp_folder": None,
-        "job_kwargs": {"n_jobs": -1},
     }
 
     @classmethod
-    def _initialize_folder(cls, recording, peaks, params):
+    def _initialize_folder(cls, recording, peaks, params, job_kwargs=dict()):
         assert HAVE_NUMBA, "SlidingNN needs numba to work"
         assert HAVE_TORCH, "SlidingNN needs torch to work"
         assert HAVE_NNDESCENT, "SlidingNN needs pynndescent to work"
@@ -126,16 +125,16 @@ class SlidingNNClustering:
             dtype=dtype,
             sparsity_mask=sparsity_mask,
             copy=(d["waveform_mode"] == "shared_memory"),
-            **d["job_kwargs"],
+            **job_kwargs,
         )
 
         return wfs_arrays, sparsity_mask
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         d = params
 
-        # wfs_arrays, sparsity_mask, noise = cls._initialize_folder(recording, peaks, params)
+        # wfs_arrays, sparsity_mask, noise = cls._initialize_folder(recording, peaks, params, job_kwargs)
 
         # prepare neighborhood parameters
         fs = recording.get_sampling_frequency()
@@ -228,7 +227,7 @@ class SlidingNNClustering:
                 n_channel_neighbors=d["n_channel_neighbors"],
                 low_memory=d["low_memory"],
                 knn_verbose=d["verbose"],
-                n_jobs=d["job_kwargs"]["n_jobs"],
+                n_jobs=job_kwargs["n_jobs"],
             )
             # remove the first nearest neighbor (which should be self)
             knn_distances = knn_distances[:, 1:]
@@ -297,7 +296,7 @@ class SlidingNNClustering:
                     # TODO HDBSCAN can be done on GPU with NVIDIA RAPIDS for speed
                     clusterer = hdbscan.HDBSCAN(
                         prediction_data=True,
-                        core_dist_n_jobs=d["job_kwargs"]["n_jobs"],
+                        core_dist_n_jobs=job_kwargs["n_jobs"],
                         **d["hdbscan_kwargs"],
                     ).fit(embeddings_chunk)
 
