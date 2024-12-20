@@ -23,14 +23,13 @@ if __name__ == '__main__':
 
     recordings_list, _ = generate_session_displacement_recordings(
         num_units=20,
-        recording_durations=[400, 400, 400],
-        recording_shifts=((0, 0), (0, 200), (0, -125)),
-        non_rigid_gradient=0.005,
-        seed=52,
+        recording_durations=[1000, 1000, 1000],
+        recording_shifts=((0, 0), (0, -300), (0, 450)),  # TODO: can see how well this is recaptured by comparing the displacements to the known displacement + gradient
+        non_rigid_gradient=0.2,
+        seed=54,  # 52
     )
     if False:
         import numpy as np
-
 
         recordings_list = [
             si.read_zarr(r"C:\Users\Joe\Downloads\M25_D18_2024-11-05_12-38-28_VR1.zarr\M25_D18_2024-11-05_12-38-28_VR1.zarr"),
@@ -63,7 +62,7 @@ if __name__ == '__main__':
         np.save("peak_locs_3.npy", peak_locations_list[2])
 
    # if False:
-    peaks_list = [np.load("peaks_1.npy"), np.load("peaks_2.npy"), np.load("peaks_3.npy")]
+    peaks_list = [np.load("peaks_1.npy"), np.load("peaks_2.npy") , np.load("peaks_3.npy")]
     peak_locations_list = [np.load("peak_locs_1.npy"), np.load("peak_locs_2.npy"), np.load("peak_locs_3.npy")]
 
     # --------------------------------------------------------------------------------------
@@ -83,9 +82,9 @@ if __name__ == '__main__':
     estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
     estimate_histogram_kwargs["method"] = "chunked_median"
     estimate_histogram_kwargs["histogram_type"] = "activity_1d"  # TODO: investigate this case thoroughly
-    estimate_histogram_kwargs["bin_um"] = 0.5
+    estimate_histogram_kwargs["bin_um"] = 5
     estimate_histogram_kwargs["log_scale"] = True
-    estimate_histogram_kwargs["weight_with_amplitude"] = False
+    estimate_histogram_kwargs["weight_with_amplitude"] = True
 
     compute_alignment_kwargs = session_alignment.get_compute_alignment_kwargs()
     compute_alignment_kwargs["num_shifts_block"] = 300
@@ -94,10 +93,12 @@ if __name__ == '__main__':
         recordings_list,
         peaks_list,
         peak_locations_list,
-        alignment_order="to_session_2",  # "to_session_X" or "to_middle"
+        alignment_order="to_session_1",  # "to_session_X" or "to_middle"
         non_rigid_window_kwargs=non_rigid_window_kwargs,
         estimate_histogram_kwargs=estimate_histogram_kwargs,
     )
+    si.plot_traces(recordings_list[0], mode="line", time_range=(0, 1))
+    plt.show()
 
     # TODO: nonlinear is not working well 'to middle', investigate
     # TODO: also finalise the estimation of bin number of nonrigid.
