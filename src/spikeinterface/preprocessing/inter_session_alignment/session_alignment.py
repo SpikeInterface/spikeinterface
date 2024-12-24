@@ -867,10 +867,10 @@ def _correlate(signal1, signal2):
         corr_value = np.correlate(signal1 - np.mean(signal1), signal2 - np.mean(signal2)) / signal1.size
     return corr_value
 
-def cross_correlate_with_scale(x, signa11_blanked, signal2_blanked, thr=100, plot=True, round=0):
+def cross_correlate_with_scale(x, signal1_blanked, signal2_blanked, thr=100, plot=True, round=0):
     """ """
     best_correlation = 0
-    best_displacements = np.zeros_like(signa11_blanked)
+    best_displacements = np.zeros_like(signal1_blanked)
 
     # TODO: use kriging interp
 
@@ -878,15 +878,15 @@ def cross_correlate_with_scale(x, signa11_blanked, signal2_blanked, thr=100, plo
 
     for scale in np.r_[np.linspace(0.85, 1, 10), np.linspace(1, 1.15, 10)]:  # TODO: double 1
 
-        nonzero = np.where(signa11_blanked > 0)[0]
+        nonzero = np.where(signal1_blanked > 0)[0]
         if not np.any(nonzero):
             continue
 
-        midpoint = nonzero[0] + np.ptp(nonzero) / 2
+        midpoint = nonzero[0]  + np.ptp(nonzero) / 2
         x_scale = (x - midpoint) * scale + midpoint
 
    #     interp_f = scipy.interpolate.interp1d(
-   #         x_scale, signa11_blanked, fill_value=0.0, bounds_error=False
+   #         x_scale, signal1_blanked, fill_value=0.0, bounds_error=False
    #     )  # TODO: try cubic etc... or Kriging
 
     #    scaled_func = interp_f(x)
@@ -898,7 +898,7 @@ def cross_correlate_with_scale(x, signa11_blanked, signal2_blanked, thr=100, plo
             x_shift = x_scale - sh
 
             interp_f = scipy.interpolate.interp1d(
-                x_shift, signa11_blanked, fill_value=0.0, bounds_error=False, kind=INTERP
+                x_shift, signal1_blanked, fill_value=0.0, bounds_error=False, kind=INTERP
             )
             shift_signal1_blanked = interp_f(x)
 
@@ -916,23 +916,23 @@ def cross_correlate_with_scale(x, signa11_blanked, signal2_blanked, thr=100, plo
                 best_displacements = x_shift
                 best_correlation = corr_value
 
-                if False and plot and round == 1 and (corr_value > 0.3): # and plot and np.abs(sh) < 25:
-                    print("3")
-                    plt.plot(shift_signal1_blanked)
-                    plt.plot(signal2_blanked)
-                    plt.title(corr_value)
-                    plt.show()
+               # if plot and round == 1 and (corr_value > 0.3): # and plot and np.abs(sh) < 25:
+              #      print("3")
+             #       plt.plot(shift_signal1_blanked)
+            #        plt.plot(signal2_blanked)
+           #         plt.title(corr_value)
+          #          plt.show()
                #     plt.draw()
                 #    plt.pause(0.1)
                  #   plt.clf()
-    if plot:
+    if False and plot:
         print("DONE)")
-        plt.plot(signa11_blanked)
+        plt.plot(signal1_blanked)
         plt.plot(signal2_blanked)
         plt.show()
 
         interp_f = scipy.interpolate.interp1d(
-            best_displacements, signa11_blanked, fill_value=0.0, bounds_error=False, kind=INTERP
+            best_displacements, signal1_blanked, fill_value=0.0, bounds_error=False, kind=INTERP
         )
         final = interp_f(x)
         plt.plot(final)
@@ -942,85 +942,405 @@ def cross_correlate_with_scale(x, signa11_blanked, signal2_blanked, thr=100, plo
     return best_displacements
 
 
-def get_shifts(signal1, signal2, windows, plot=True):
+def cross_correlate_with_scaled_fixed(x_orig, new_positions, fixed_windows, signal1_blanked, signal2_blanked, thr, round_, plot):
+    """
+    """
+    best_correlation = 0
+    best_positions = np.zeros_like(signal1_blanked)
 
-    import matplotlib.pyplot as plt
+    for scale in np.r_[np.linspace(0.85, 1, 10), np.linspace(1, 1.15, 10)]:  # TODO: double 1
 
-    signa11_blanked = signal1.copy()
-    signal2_blanked = signal2.copy()
+        nonzero = np.where(signal1_blanked > 0)[0]
+        if not np.any(nonzero):
+            continue
 
-    best_displacements = np.zeros_like(signal1)
+        midpoint = nonzero[0] + np.ptp(nonzero) / 2
+        x_scale = (x_orig - midpoint) * scale + midpoint
 
-    if (first_idx := windows[0][0]) != 0:
-        print("first idx", first_idx)
-        signa11_blanked[:first_idx] = 0
-        signal2_blanked[:first_idx] = 0
+        for sh in np.arange(-thr, thr):  # TODO: we are off by one here
 
-    if (last_idx := windows[-1][-1]) != signal1.size - 1:  # double check
-        print("last idx", last_idx)
-        signa11_blanked[last_idx:] = 0
-        signal2_blanked[last_idx:] = 0
+            x_shift = x_scale - sh
 
-    segment_shifts = np.empty(len(windows))
+            x_shift_ = x_orig.copy()  # TODO
+            x_shift_[~fixed_windows] = x_shift[~fixed_windows]
+            x_shift = x_shift_
 
-    x = np.arange(signa11_blanked.size)
-    x_orig = x.copy()
+            interp_f = scipy.interpolate.interp1d(
+                x_shift, signal1_blanked, fill_value=0.0, bounds_error=False, kind=INTERP
+            )
+            shift_signal1_blanked = interp_f(x_orig)
 
+            from scipy.ndimage import gaussian_filter
+
+            corr_value = _correlate(
+                gaussian_filter(shift_signal1_blanked, 0.5),  # TODO: need to adapt to kinetics of the data
+                gaussian_filter(signal2_blanked, 0.5)
+            )
+
+            corr_value *= 1 - np.abs(sh - 0) / thr
+
+            if np.isnan(corr_value) or corr_value < 0:
+                corr_value = 0
+
+            if corr_value > best_correlation:
+                best_positions = x_shift
+                best_correlation = corr_value
+
+        #        plt.plot(shift_signal1_blanked)
+        #        plt.plot(signal2_blanked)
+        #        plt.title(corr_value)
+        #        plt.draw()
+        #        plt.pause(0.1)
+        #        plt.clf()
+
+    new_positions = new_positions + (best_positions - x_orig)
+
+    return new_positions, best_correlation
+
+
+def cross_correlate_combined_loss(x_orig, new_positions, fixed_windows, orig_blank_histograms, interp_blanked_histograms, thr, round_, plot):
+    """"""
+
+   # while True:
+    for i in range(interp_blanked_histograms.shape[0]):
+
+        best_correlation = 0
+        best_positions = np.zeros_like(interp_blanked_histograms[i, :])
+
+        interp_blanked_histograms = np.zeros_like(orig_blank_histograms)
+        for j in range(orig_blank_histograms.shape[0]):
+            interp_f = scipy.interpolate.interp1d(
+                new_positions[j, :], orig_blank_histograms[j, :], fill_value=0.0, bounds_error=False, kind=INTERP
+            )
+            interp_blanked_histograms[j, :] = interp_f(x_orig)
+
+        for scale in np.r_[np.linspace(0.75, 1, 15), np.linspace(1, 1.25, 15)]:  # TODO: double 1
+
+            nonzero = np.where(interp_blanked_histograms[i, :] > 0)[0]
+            if not np.any(nonzero):
+                continue
+
+            midpoint = nonzero[0] + np.ptp(nonzero) / 2
+            x_scale = (new_positions[i, :] - midpoint) * scale + midpoint
+
+            for sh in np.arange(-thr, thr):  # TODO: we are off by one here
+
+                x_shift = x_scale - sh
+
+                x_shift_ = new_positions[i, :].copy()  # TODO
+                x_shift_[~fixed_windows[i, :]] = x_shift[~fixed_windows[i, :]]
+                x_shift = x_shift_
+
+                interp_f = scipy.interpolate.interp1d(
+                    x_shift, orig_blank_histograms[i, :], fill_value=0.0, bounds_error=False, kind=INTERP
+                )
+                shift_signal1_blanked = interp_f(x_orig)
+
+                from scipy.ndimage import gaussian_filter
+
+                corr_value = 0
+
+                for j in range(interp_blanked_histograms.shape[0]):
+                    if i == j:
+                        continue
+
+                    # gaussian_filter(shift_signal1_blanked, 1.5),  # TODO: need to adapt to kinetics of the data
+                    # gaussian_filter(interp_blanked_histograms[j, :], 1.5)
+                    corr_value += _correlate(gaussian_filter(shift_signal1_blanked, 1.5), gaussian_filter(interp_blanked_histograms[j, :], 1.5))
+
+                # corr_value *= 1 - np.abs(sh - 0) / thr
+
+                percent_diff = np.exp(-(np.abs(1 - np.sum(shift_signal1_blanked) / np.sum(orig_blank_histograms[i, :])))**2/1.5**2)**6
+                corr_value *= percent_diff # heavily penalise interpolation errors
+
+                if np.isnan(corr_value) or corr_value < 0:
+                    corr_value = 0
+
+                if corr_value > best_correlation:
+                    best_positions = x_shift
+                    best_correlation = corr_value
+
+                    plt.plot(shift_signal1_blanked)
+                    for j in range(interp_blanked_histograms.shape[0]):
+                        if i == j:
+                            continue
+                        plt.plot(interp_blanked_histograms[j, :].T)
+                    plt.title(corr_value)
+                    plt.draw()
+                    plt.pause(0.1)
+                    plt.clf()
+
+
+        print("FINAL i update", i)
+        new_positions[i, :] = best_positions # new_positions[i, :] + (best_positions - x_orig)
+
+        interp_f = scipy.interpolate.interp1d(
+            new_positions[i, :], orig_blank_histograms[i, :], fill_value=0.0, bounds_error=False, kind=INTERP
+        )
+        interp_blanked_histograms[i, :] = interp_f(x_orig)
+
+        if False:
+            print("AFTER)")
+            plt.plot(interp_blanked_histograms[i, :])
+            for j in range(interp_blanked_histograms.shape[0]):
+                if i == j:
+                    continue
+                plt.plot(interp_blanked_histograms[j, :].T)
+            plt.show()
+
+    return new_positions
+
+def get_threshold_array(num_bins, windows):
     num_points = len(windows)
-    max = signal1.size // 2
-    min = windows[0].size // 5
+    max = num_bins
+    min = windows[0].size // 2
 
     k = -np.log(min / (max - min)) / (num_points - 1)
     x_values = np.arange(num_points)
     all_thr = (max - min) * np.exp(-1.2 * x_values) + min
+    return all_thr
 
-#    all_thr = np.linspace(max, min, len(windows))
 
+def get_shifts_union(histogram_array, windows, plot=True):
+    import matplotlib.pyplot as plt
+
+    plot = True
+
+    histogram_array_blanked = histogram_array.copy()
+
+    x_orig = np.arange(histogram_array_blanked.shape[1])
+    new_positions = np.vstack([x_orig.copy()] * histogram_array_blanked.shape[0])
+    fixed_windows = np.zeros_like(histogram_array_blanked).astype(bool)
+
+    windows_to_run = np.arange(len(windows))
+
+    all_thr = get_threshold_array(histogram_array.shape[1], windows)  # TOOD: tidy
+
+    loss = 0
+
+    for round in range(len(windows)):
+
+#        print("ROUND", round)
+
+#        thr = all_thr[round]
+
+#        shift_matrix = np.zeros((histogram_array.shape[0], histogram_array.shape[0], histogram_array.shape[1]))
+#        correlations = np.zeros((histogram_array.shape[0], histogram_array.shape[0]))
+
+#        histogram_array_blanked_interp = np.zeros_like(histogram_array_blanked)
+#        for i in range(histogram_array_blanked.shape[0]):
+#            interpf = scipy.interpolate.interp1d(
+#                new_positions[i, :], histogram_array_blanked[i, :], fill_value=0.0, bounds_error=False,
+#                kind=INTERP
+#            )
+#           histogram_array_blanked_interp[i, :] = interpf(x_orig)
+
+#        print("BEFORE")
+#        plt.plot(histogram_array_blanked_interp.T)
+#        plt.show()
+
+        # find contigious window ids
+        diffs = np.diff(windows_to_run)
+        block_boundaries = np.where(diffs > 1)[0]  # Find indices where the difference is greater than 1
+        all_blocks = np.split(windows_to_run, block_boundaries + 1)
+
+        for block in all_blocks:
+
+            block_bools = np.ones(histogram_array.shape[1]).astype(bool)
+            for block_idx in block:
+                block_bools[windows[block_idx]] = False
+
+            if round == 0: # TODO: maybe some function of num windows?
+                for i in range(histogram_array.shape[0]):
+                    for j in range(histogram_array.shape[0]):
+
+                        fixed_windows_round = np.logical_or(fixed_windows[i, :],  block_bools)
+
+                        histogram_array_blanked_interp_i = histogram_array_blanked_interp[i, :].copy()
+                        histogram_array_blanked_interp_i[fixed_windows_round] = 0
+
+                        histogram_array_blanked_interp_j = histogram_array_blanked_interp[j, :].copy()
+                        histogram_array_blanked_interp_j[np.logical_or(fixed_windows[j, :],  block_bools)] = 0
+
+                        shift_matrix[i, j, :], correlations[i, j] = cross_correlate_with_scaled_fixed(
+                            x_orig, new_positions[i, :], fixed_windows_round, histogram_array_blanked_interp_i, histogram_array_blanked_interp_j, thr=thr, round_=round, plot=plot  # , plot=False, round=round
+                        )
+
+
+                this_round_new_positions = np.mean(shift_matrix, axis=1)  # TODO: FIX! TODO: these are not displacements
+            else:
+                # Not bad for evne no blanking!
+                fixed_windows_round = block_bools  #np.logical_or(fixed_windows, block_bools)
+                histogram_array_blanked_interp_new = histogram_array_blanked_interp.copy()
+                histogram_array_blanked_new = histogram_array_blanked.copy()
+
+                for j in range(histogram_array_blanked_interp.shape[0]):
+                    histogram_array_blanked_interp_new[j, ~fixed_windows_round] = 0
+
+                    # todo: direct copy
+                    this_windows = []
+                    for block_idx in block:
+                        this_windows.append(windows[block_idx])
+                    this_windows = np.hstack(this_windows)
+
+                    if this_windows[0] == 0:
+                        window_min = np.min(new_positions[j, :]) - 1
+                    else:
+                        window_min = this_windows[0]
+
+                    if this_windows[-1] == x_orig[-1]:
+                        window_max = np.max(new_positions[j, :]) + 1
+                    else:
+                        window_max = this_windows[-1]
+
+                    fixed_indices = np.where(
+                        np.logical_and(new_positions[j, :] > window_min, new_positions[j, :] < window_max)
+                    )
+
+                    histogram_array_blanked_new[j, fixed_indices] = 0
+
+                print("INTERP")
+                plt.plot(histogram_array_blanked_interp_new.T)
+                plt.show()
+
+                y = np.zeros_like(histogram_array_blanked)
+                for i in range(histogram_array_blanked.shape[0]):
+                    interpf = scipy.interpolate.interp1d(
+                        new_positions[i, :], histogram_array_blanked_new[i, :], fill_value=0.0,
+                        bounds_error=False,
+                        kind=INTERP
+                    )
+                    y[i, :] = interpf(x_orig)
+
+                print("INTERPED")
+                plt.plot(y.T)
+                plt.show()
+
+                this_round_new_positions = cross_correlate_combined_loss(x_orig, new_positions, fixed_windows, histogram_array_blanked_new, histogram_array_blanked_interp_new, thr, round, plot=True)
+
+        histogram_array_interp = np.zeros_like(histogram_array_blanked)
+        for i in range(histogram_array_blanked.shape[0]):
+            interpf = scipy.interpolate.interp1d(
+                this_round_new_positions[i, :], histogram_array_blanked[i, :], fill_value=0.0, bounds_error=False,
+                kind=INTERP
+            )
+            histogram_array_interp[i, :] = interpf(x_orig)
+
+        print("INTERPED")
+        plt.plot(histogram_array_interp.T)
+        plt.show()
+
+        window_corrs = np.empty(len(windows))  # okay need to increase but shouldn't fail for one window
+        for i, idx in enumerate(windows):
+            window_corrs[i] = np.sum(np.triu(np.cov(histogram_array_interp[:, idx]), k=1))  # det doesn't work very well, too small
+        window_corrs[np.isnan(window_corrs)] = 0
+        window_corrs = np.abs(window_corrs)
+
+        print(window_corrs)
+        # Now fix indices and blank in the originals space
+        if np.any(window_corrs):
+            max_window = np.argmax(np.abs(window_corrs))  # TODO: cutoff!  TODO: note sure about the abs, very weird edge case...
+            for i in range(histogram_array.shape[0]):
+
+                if windows[max_window][0] == 0:
+                    window_min = np.min(this_round_new_positions) - 1
+                else:
+                    window_min = windows[max_window][0]
+
+                if windows[max_window][-1] == x_orig[-1]:
+                    window_max = np.max(this_round_new_positions) + 1
+                else:
+                    window_max = windows[max_window][-1]
+
+                fixed_indices = np.where(np.logical_and(this_round_new_positions[i, :] >= window_min, this_round_new_positions[i, :] <= window_max))
+                fixed_windows[i, fixed_indices] = True
+                # this is in original space, the new_positions are also in original space (x -> new_positions)
+                histogram_array_blanked[i, fixed_indices] = 0   # this is in interpolated space
+                window_corrs[max_window] = 0
+                windows_to_run = np.delete(windows_to_run, np.where(windows_to_run == max_window)[0])
+
+      #  if round == 1 or not np.any(window_corrs > 0.1):  # TODO: definately keep a running track of the xcorr and quit when it gets worse or doesn't improve. See how this example does across the rounds
+       #     break
+
+        final = np.zeros_like(histogram_array_blanked)
+        for i in range(histogram_array_blanked.shape[0]):
+            interpf = scipy.interpolate.interp1d(
+                this_round_new_positions[i], histogram_array[i, :], fill_value=0.0, bounds_error=False, kind=INTERP
+            )
+            final[i, :] = interpf(x_orig)
+
+        loss_ = 0  # okay need to increase but shouldn't fail for one window
+        loss_ += np.sum(
+                np.triu(np.cov(histogram_array_interp), k=1)
+        )
+
+        new_positions = this_round_new_positions  # TODO
+
+      #  if round == 1:
+       #     break
+    #    if round == 0:
+     #       break
+  #      print("loss_", loss_)
+   ##     if loss_ < loss:
+     #       break
+      #  else:
+       #     new_positions = this_round_new_positions  # TODO
+        #    loss = loss_
+
+        print("FINAL")
+        plt.plot(final.T)
+        plt.show()
+
+        # going to have to check the improvement in fit for every round and
+        # if the round does not add much to the loss, then don't make the
+        # change from this round!
+     #   if not np.any(window_corrs > 0.01):  # TODO: KEY <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< HADNLE THIS FIRST
+      #      break
+
+    return np.ceil(x_orig - new_positions)
+
+
+def get_shifts_pairwise(signal1, signal2, windows, plot=True):
+
+    import matplotlib.pyplot as plt
+
+    signal1_blanked = signal1.copy(signal1)
+    signal2_blanked = signal2.copy(signal2)
+
+    best_displacements = np.zeros_like(signal1)
+
+    x = np.arange(signal1_blanked.size)
+    x_orig = x.copy()
+
+    all_thr = get_threshold_array(signal1.size, windows)  # TOOD: tidy
     for round in range(num_points):
 
         thr = all_thr[round]  # TODO: optimise this somehow? go back and forth?
-    #    if round < 2:
-    #        thr =  np.where(best_displacements == 0)[0].size // 2
-     #   else:
-     #       thr = windows[0].size // 5
 
         print(f"ROUND: {round}, THR: {thr}")
-        displacements = cross_correlate_with_scale(x, signa11_blanked, signal2_blanked, thr=thr, plot=plot, round=round)
+        displacements = cross_correlate_with_scale(x, signal1_blanked, signal2_blanked, thr=thr, plot=plot, round=round)
 
         interpf = scipy.interpolate.interp1d(
-            displacements, signa11_blanked, fill_value=0.0, bounds_error=False, kind=INTERP
+            displacements, signal1_blanked, fill_value=0.0, bounds_error=False, kind=INTERP
         )  # TODO: move away from this indexing sceheme
-        signa11_blanked = interpf(x)
+        signal1_blanked = interpf(x)
 
         window_corrs = np.empty(len(windows))
         for i, idx in enumerate(windows):
-            window_corrs[i] = _correlate(signa11_blanked[idx], signal2_blanked[idx])
+            window_corrs[i] = _correlate(signal1_blanked[idx], signal2_blanked[idx])
 
         window_corrs[np.isnan(window_corrs)] = 0
         if np.any(window_corrs):
             max_window = np.argmax(np.abs(window_corrs))  # TODO: cutoff!  TODO: note sure about the abs, very weird edge case...
 
-            if False:
-                small_shift = cross_correlate(
-                    signa11_blanked[windows[max_window]],
-                    signal2_blanked[windows[max_window]],
-                    thr=windows[max_window].size // 2,
-                )
-                signa11_blanked = alignment_utils.shift_array_fill_zeros(signa11_blanked, small_shift)
-                segment_shifts[max_window] = np.sum(cum_shifts) + small_shift
-
-            if plot:
-                breakpoint()
-
             best_displacements[windows[max_window]] = displacements[windows[max_window]]
 
+            signal1_blanked[windows[max_window]] = 0
+            signal2_blanked[windows[max_window]] = 0
 
         x = displacements
 
-        signa11_blanked[windows[max_window]] = 0
-        signal2_blanked[windows[max_window]] = 0
-
-    if plot:
+    if False and plot:
         print("FINAL")
         plt.plot(signal1)
         plt.plot(signal2)
@@ -1117,7 +1437,7 @@ def _compute_session_alignment(
     num_windows = non_rigid_windows.shape[0]
 
     windows = np.arange(shifted_histograms.shape[1])
-    windows1 = np.array_split(windows, num_windows)
+    windows = np.array_split(windows, num_windows)
 
     #    import matplotlib.pyplot as plt
     #    plt.plot(non_rigid_windows.T)
@@ -1131,22 +1451,29 @@ def _compute_session_alignment(
 
     print("NUM WINDOWS: ", num_windows)
 
-    for i in range(shifted_histograms.shape[0]):
-        for j in range(shifted_histograms.shape[0]):
+    mode = "centered"
+    if mode == "centered":
 
-            plot_ = False # i == 0 and j == 1
-            print("I", i)
-            print("J", j)
+        plot_ = False
+        non_rigid_shifts = get_shifts_union(shifted_histograms, windows, plot_)
 
-            shifts1 = get_shifts(shifted_histograms[i, :], shifted_histograms[j, :], windows1, plot=plot_)
+    else:
+        for i in range(shifted_histograms.shape[0]):
+            for j in range(shifted_histograms.shape[0]):
 
-            #    shifts2 = get_shifts(shifted_histograms[i, :], shifted_histograms[j, :], windows2)
-            #   shifts = np.empty(shifts1.size + shifts1.size - 1)
-            # breakpoint()
-            #      shifts[::2] = shifts1
-            #       shifts[1::2] = (shifts1[:-1] + shifts1[1:]) / 2  # np.shifts2
-            #    breakpoint()
-            nonrigid_session_offsets_matrix[i, j, :] = shifts1
+                plot_ = False # i == 0 and j == 1
+                print("I", i)
+                print("J", j)
+
+                shifts1 = get_shifts_pairwise(shifted_histograms[i, :], shifted_histograms[j, :], windows, plot=plot_)
+
+                #    shifts2 = get_shifts(shifted_histograms[i, :], shifted_histograms[j, :], windows2)
+                #   shifts = np.empty(shifts1.size + shifts1.size - 1)
+                # breakpoint()
+                #      shifts[::2] = shifts1
+                #       shifts[1::2] = (shifts1[:-1] + shifts1[1:]) / 2  # np.shifts2
+                #    breakpoint()
+                nonrigid_session_offsets_matrix[i, j, :] = shifts1
 
     # TODO: there are gaps in between rect, rect seems weird,  they are non-overlapping :S
 
@@ -1155,7 +1482,8 @@ def _compute_session_alignment(
     # nonrigid_session_offsets_matrix = alignment_utils.compute_histogram_crosscorrelation(
     #    shifted_histograms, non_rigid_windows, **compute_alignment_kwargs
     # )
-    non_rigid_shifts = nonrigid_session_offsets_matrix[0, :, :]  # alignment_utils.get_shifts_from_session_matrix(alignment_order, nonrigid_session_offsets_matrix)
+        non_rigid_shifts = alignment_utils.get_shifts_from_session_matrix(alignment_order, -nonrigid_session_offsets_matrix)  # nonrigid_session_offsets_matrix[0, :, :]  #
+
     non_rigid_window_centers = spatial_bin_centers
     shifts = non_rigid_shifts
 
