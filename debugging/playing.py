@@ -30,9 +30,9 @@ if __name__ == '__main__':
     # --------------------------------------------------------------------------------------
 
     recordings_list, _ = generate_session_displacement_recordings(
-        num_units=120,
+        num_units=20,
         recording_durations=[400, 400, 400],
-        recording_shifts=((0, 0), (0, -300), (0, 200)),  # TODO: can see how well this is recaptured by comparing the displacements to the known displacement + gradient
+        recording_shifts=((0, 0), (0, -200), (0, 100)),  # TODO: can see how well this is recaptured by comparing the displacements to the known displacement + gradient
         non_rigid_gradient=None, # 0.1,
         seed=2,  # 52
     )
