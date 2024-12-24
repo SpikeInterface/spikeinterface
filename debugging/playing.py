@@ -17,16 +17,24 @@ si.set_global_job_kwargs(n_jobs=10)
 
 if __name__ == '__main__':
 
+ #   recordings_list, _ = generate_session_displacement_recordings(
+ #       num_units=25,
+ #       recording_durations=[800, 800, 800],
+ #       recording_shifts=((0, 0), (0, -400), (0, 200)),  # TODO: can see how well this is recaptured by comparing the displacements to the known displacement + gradient
+ #       non_rigid_gradient=0.3,
+ #       seed=57,  # 52
+ #   )
+
     # --------------------------------------------------------------------------------------
     # Load / generate some recordings
     # --------------------------------------------------------------------------------------
 
     recordings_list, _ = generate_session_displacement_recordings(
-        num_units=20,
-        recording_durations=[1000, 1000, 1000],
-        recording_shifts=((0, 0), (0, -300), (0, 450)),  # TODO: can see how well this is recaptured by comparing the displacements to the known displacement + gradient
-        non_rigid_gradient=0.2,
-        seed=54,  # 52
+        num_units=120,
+        recording_durations=[400, 400, 400],
+        recording_shifts=((0, 0), (0, -300), (0, 200)),  # TODO: can see how well this is recaptured by comparing the displacements to the known displacement + gradient
+        non_rigid_gradient=None, # 0.1,
+        seed=2,  # 52
     )
     if False:
         import numpy as np
@@ -46,14 +54,13 @@ if __name__ == '__main__':
     # Note if you did motion correction the peaks are on the motion object.
     # There is a function 'session_alignment.align_sessions_after_motion_correction()
     # you can use instead of the below.
-
     if False:
         peaks_list, peak_locations_list = session_alignment.compute_peaks_locations_for_session_alignment(
             recordings_list,
             detect_kwargs={"method": "locally_exclusive"},
             localize_peaks_kwargs={"method": "grid_convolution"},
         )
-
+        # if False:
         np.save("peaks_1.npy", peaks_list[0])
         np.save("peaks_2.npy", peaks_list[1])
         np.save("peaks_3.npy", peaks_list[2])
@@ -61,8 +68,8 @@ if __name__ == '__main__':
         np.save("peak_locs_2.npy", peak_locations_list[1])
         np.save("peak_locs_3.npy", peak_locations_list[2])
 
-   # if False:
-    peaks_list = [np.load("peaks_1.npy"), np.load("peaks_2.npy") , np.load("peaks_3.npy")]
+       # if False:
+    peaks_list = [np.load("peaks_1.npy"), np.load("peaks_2.npy"), np.load("peaks_3.npy")]
     peak_locations_list = [np.load("peak_locs_1.npy"), np.load("peak_locs_2.npy"), np.load("peak_locs_3.npy")]
 
     # --------------------------------------------------------------------------------------
@@ -77,7 +84,7 @@ if __name__ == '__main__':
     non_rigid_window_kwargs["rigid_mode"] = "nonrigid"
     non_rigid_window_kwargs["win_shape"] = "rect"
     non_rigid_window_kwargs["win_step_um"] = 200.0
-    non_rigid_window_kwargs["win_scale_um"] = 400.0
+    non_rigid_window_kwargs["win_scale_um"] = 300.0
 
     estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
     estimate_histogram_kwargs["method"] = "chunked_median"
@@ -97,8 +104,8 @@ if __name__ == '__main__':
         non_rigid_window_kwargs=non_rigid_window_kwargs,
         estimate_histogram_kwargs=estimate_histogram_kwargs,
     )
-    si.plot_traces(recordings_list[0], mode="line", time_range=(0, 1))
-    plt.show()
+   # si.plot_traces(recordings_list[0], mode="line", time_range=(0, 1))
+    # plt.show()
 
     # TODO: nonlinear is not working well 'to middle', investigate
     # TODO: also finalise the estimation of bin number of nonrigid.
@@ -126,3 +133,8 @@ if __name__ == '__main__':
     )
 
     plt.show()
+
+    np.save("histogram1.npy", extra_info["session_histogram_list"][0])
+    np.save("histogram2.npy", extra_info["session_histogram_list"][1])
+    np.save("histogram3.npy", extra_info["session_histogram_list"][2])
+    breakpoint()
