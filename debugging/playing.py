@@ -30,12 +30,13 @@ if __name__ == '__main__':
     # --------------------------------------------------------------------------------------
 
     recordings_list, _ = generate_session_displacement_recordings(
-        num_units=20,
+        num_units=65,
         recording_durations=[400, 400, 400],
-        recording_shifts=((0, 0), (0, -200), (0, 100)),  # TODO: can see how well this is recaptured by comparing the displacements to the known displacement + gradient
-        non_rigid_gradient=None, # 0.1,
-        seed=2,  # 52
+        recording_shifts=((0, 0), (0, -200), (0, 150)),  # TODO: can see how well this is recaptured by comparing the displacements to the known displacement + gradient
+        non_rigid_gradient=0.1, # 0.1,
+        seed=5,  # 52
     )
+
     if False:
         import numpy as np
 
@@ -60,7 +61,6 @@ if __name__ == '__main__':
             detect_kwargs={"method": "locally_exclusive"},
             localize_peaks_kwargs={"method": "grid_convolution"},
         )
-        # if False:
         np.save("peaks_1.npy", peaks_list[0])
         np.save("peaks_2.npy", peaks_list[1])
         np.save("peaks_3.npy", peaks_list[2])
@@ -68,7 +68,7 @@ if __name__ == '__main__':
         np.save("peak_locs_2.npy", peak_locations_list[1])
         np.save("peak_locs_3.npy", peak_locations_list[2])
 
-       # if False:
+           # if False:
     peaks_list = [np.load("peaks_1.npy"), np.load("peaks_2.npy"), np.load("peaks_3.npy")]
     peak_locations_list = [np.load("peak_locs_1.npy"), np.load("peak_locs_2.npy"), np.load("peak_locs_3.npy")]
 
@@ -81,16 +81,16 @@ if __name__ == '__main__':
     # See `session_alignment.py` for docs on these settings.
 
     non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
-    non_rigid_window_kwargs["rigid_mode"] = "nonrigid"
+    non_rigid_window_kwargs["rigid_mode"] = "rigid"
     non_rigid_window_kwargs["win_shape"] = "rect"
-    non_rigid_window_kwargs["win_step_um"] = 200.0
-    non_rigid_window_kwargs["win_scale_um"] = 300.0
+    non_rigid_window_kwargs["win_step_um"] = 300.0
+    non_rigid_window_kwargs["win_scale_um"] = 400.0
 
     estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
     estimate_histogram_kwargs["method"] = "chunked_median"
     estimate_histogram_kwargs["histogram_type"] = "activity_1d"  # TODO: investigate this case thoroughly
     estimate_histogram_kwargs["bin_um"] = 5
-    estimate_histogram_kwargs["log_scale"] = True
+    estimate_histogram_kwargs["log_scale"] = False
     estimate_histogram_kwargs["weight_with_amplitude"] = True
 
     compute_alignment_kwargs = session_alignment.get_compute_alignment_kwargs()
