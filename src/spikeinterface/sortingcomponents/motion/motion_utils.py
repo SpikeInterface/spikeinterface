@@ -253,7 +253,7 @@ def make_2d_motion_histogram(
     arr[:, 1] = peak_locations[direction]
 
     if weight_with_amplitude:
-        weights = np.abs(peaks["amplitude"])
+        weights = np.abs(peaks["amplitude"]) * 10
     else:
         weights = None
 
