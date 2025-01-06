@@ -6,6 +6,7 @@ import warnings
 from copy import deepcopy
 
 import numpy as np
+from warnings import warn
 
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
@@ -15,7 +16,7 @@ from .quality_metric_list import (
     compute_pc_metrics,
     _misc_metric_name_to_func,
     _possible_pc_metric_names,
-    compute_name_to_column_names,
+    qm_compute_name_to_column_names,
 )
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
@@ -31,7 +32,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         A SortingAnalyzer object.
     metric_names : list or None
         List of quality metrics to compute.
-    qm_params : dict or None
+    metric_params : dict of dicts or None
         Dictionary with parameters for quality metrics calculation.
         Default parameters can be obtained with: `si.qualitymetrics.get_default_qm_params()`
     skip_pc_metrics : bool, default: False
@@ -54,10 +55,18 @@ class ComputeQualityMetrics(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
+    need_backward_compatibility_on_load = True
+
+    def _handle_backward_compatibility_on_load(self):
+        # For backwards compatibility - this renames qm_params as metric_params
+        if (qm_params := self.params.get("qm_params")) is not None:
+            self.params["metric_params"] = qm_params
+            del self.params["qm_params"]
 
     def _set_params(
         self,
         metric_names=None,
+        metric_params=None,
         qm_params=None,
         peak_sign=None,
         seed=None,
@@ -65,6 +74,12 @@ class ComputeQualityMetrics(AnalyzerExtension):
         delete_existing_metrics=False,
         metrics_to_compute=None,
     ):
+        if qm_params is not None and metric_params is None:
+            deprecation_msg = (
+                "`qm_params` is deprecated and will be removed in version 0.104.0 Please use metric_params instead"
+            )
+            metric_params = qm_params
+            warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
 
         if metric_names is None:
             metric_names = list(_misc_metric_name_to_func.keys())
@@ -80,12 +95,12 @@ class ComputeQualityMetrics(AnalyzerExtension):
                 if "drift" in metric_names:
                     metric_names.remove("drift")
 
-        qm_params_ = get_default_qm_params()
-        for k in qm_params_:
-            if qm_params is not None and k in qm_params:
-                qm_params_[k].update(qm_params[k])
-            if "peak_sign" in qm_params_[k] and peak_sign is not None:
-                qm_params_[k]["peak_sign"] = peak_sign
+        metric_params_ = get_default_qm_params()
+        for k in metric_params_:
+            if metric_params is not None and k in metric_params:
+                metric_params_[k].update(metric_params[k])
+            if "peak_sign" in metric_params_[k] and peak_sign is not None:
+                metric_params_[k]["peak_sign"] = peak_sign
 
         metrics_to_compute = metric_names
         qm_extension = self.sorting_analyzer.get_extension("quality_metrics")
@@ -101,7 +116,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
             metric_names=metric_names,
             peak_sign=peak_sign,
             seed=seed,
-            qm_params=qm_params_,
+            metric_params=metric_params_,
             skip_pc_metrics=skip_pc_metrics,
             delete_existing_metrics=delete_existing_metrics,
             metrics_to_compute=metrics_to_compute,
@@ -141,7 +156,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         """
         import pandas as pd
 
-        qm_params = self.params["qm_params"]
+        metric_params = self.params["metric_params"]
         # sparsity = self.params["sparsity"]
         seed = self.params["seed"]
 
@@ -177,7 +192,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
             func = _misc_metric_name_to_func[metric_name]
 
-            params = qm_params[metric_name] if metric_name in qm_params else {}
+            params = metric_params[metric_name] if metric_name in metric_params else {}
             res = func(sorting_analyzer, unit_ids=non_empty_unit_ids, **params)
             # QM with uninstall dependencies might return None
             if res is not None:
@@ -205,7 +220,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
                 # sparsity=sparsity,
                 progress_bar=progress_bar,
                 n_jobs=n_jobs,
-                qm_params=qm_params,
+                metric_params=metric_params,
                 seed=seed,
             )
             for col, values in pc_metrics.items():
@@ -246,7 +261,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # append the metrics which were previously computed
         for metric_name in set(existing_metrics).difference(metrics_to_compute):
             # some metrics names produce data columns with other names. This deals with that.
-            for column_name in compute_name_to_column_names[metric_name]:
+            for column_name in qm_compute_name_to_column_names[metric_name]:
                 computed_metrics[column_name] = qm_extension.data["metrics"][column_name]
 
         self.data["metrics"] = computed_metrics
