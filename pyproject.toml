@@ -23,7 +23,7 @@ dependencies = [
     "numpy>=1.20, <2.0",  # 1.20 np.ptp, 1.26 might be necessary for avoiding pickling errors when numpy >2.0
     "threadpoolctl>=3.0.0",
     "tqdm",
-    "zarr>=2.16,<2.18",
+    "zarr>=2.18.4,<3",
     "neo>=0.13.0",
     "probeinterface>=0.2.23",
     "packaging",
