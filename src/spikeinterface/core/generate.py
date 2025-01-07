@@ -1283,7 +1283,7 @@ class NoiseGeneratorRecording(BaseRecording):
         noise_block_size: int = 30000,
     ):
 
-        channel_ids = [str(id) for id in np.arange(num_channels)]
+        channel_ids = [str(idx) for idx in np.arange(num_channels)]
         dtype = np.dtype(dtype).name  # Cast to string for serialization
         if dtype not in ("float32", "float64"):
             raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")
