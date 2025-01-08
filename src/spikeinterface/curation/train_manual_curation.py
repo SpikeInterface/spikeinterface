@@ -13,55 +13,61 @@ from spikeinterface.postprocessing import get_template_metric_names
 from spikeinterface.postprocessing.template_metrics import tm_compute_name_to_column_names
 from pathlib import Path
 from copy import deepcopy
-from scipy.stats import uniform, randint
 
-default_classifier_search_spaces = {
-    "RandomForestClassifier": {
-        "n_estimators": [100, 150],
-        "criterion": ["gini", "entropy"],
-        "min_samples_split": [2, 4],
-        "min_samples_leaf": [2, 4],
-        "class_weight": ["balanced", "balanced_subsample"],
-    },
-    "AdaBoostClassifier": {
-        "learning_rate": [1, 2],
-        "n_estimators": [50, 100],
-        "algorithm": ["SAMME", "SAMME.R"],
-    },
-    "GradientBoostingClassifier": {
-        "learning_rate": uniform(0.05, 0.1),
-        "n_estimators": randint(100, 150),
-        "max_depth": [2, 4],
-        "min_samples_split": [2, 4],
-        "min_samples_leaf": [2, 4],
-    },
-    "SVC": {
-        "C": uniform(0.001, 10.0),
-        "kernel": ["sigmoid", "rbf"],
-        "gamma": uniform(0.001, 10.0),
-        "probability": [True],
-    },
-    "LogisticRegression": {
-        "C": uniform(0.001, 10.0),
-        "solver": ["newton-cg", "lbfgs", "liblinear", "sag", "saga"],
-        "max_iter": [100],
-    },
-    "XGBClassifier": {
-        "max_depth": [2, 4],
-        "eta": uniform(0.2, 0.5),
-        "sampling_method": ["uniform"],
-        "grow_policy": ["depthwise", "lossguide"],
-    },
-    "CatBoostClassifier": {"depth": [2, 4], "learning_rate": uniform(0.05, 0.15), "n_estimators": [100, 150]},
-    "LGBMClassifier": {"learning_rate": uniform(0.05, 0.15), "n_estimators": randint(100, 150)},
-    "MLPClassifier": {
-        "activation": ["tanh", "relu"],
-        "solver": ["adam"],
-        "alpha": uniform(1e-7, 1e-1),
-        "learning_rate": ["constant", "adaptive"],
-        "n_iter_no_change": [32],
-    },
-}
+
+def get_default_classifier_search_spaces():
+
+    from scipy.stats import uniform, randint
+
+    default_classifier_search_spaces = {
+        "RandomForestClassifier": {
+            "n_estimators": [100, 150],
+            "criterion": ["gini", "entropy"],
+            "min_samples_split": [2, 4],
+            "min_samples_leaf": [2, 4],
+            "class_weight": ["balanced", "balanced_subsample"],
+        },
+        "AdaBoostClassifier": {
+            "learning_rate": [1, 2],
+            "n_estimators": [50, 100],
+            "algorithm": ["SAMME", "SAMME.R"],
+        },
+        "GradientBoostingClassifier": {
+            "learning_rate": uniform(0.05, 0.1),
+            "n_estimators": randint(100, 150),
+            "max_depth": [2, 4],
+            "min_samples_split": [2, 4],
+            "min_samples_leaf": [2, 4],
+        },
+        "SVC": {
+            "C": uniform(0.001, 10.0),
+            "kernel": ["sigmoid", "rbf"],
+            "gamma": uniform(0.001, 10.0),
+            "probability": [True],
+        },
+        "LogisticRegression": {
+            "C": uniform(0.001, 10.0),
+            "solver": ["newton-cg", "lbfgs", "liblinear", "sag", "saga"],
+            "max_iter": [100],
+        },
+        "XGBClassifier": {
+            "max_depth": [2, 4],
+            "eta": uniform(0.2, 0.5),
+            "sampling_method": ["uniform"],
+            "grow_policy": ["depthwise", "lossguide"],
+        },
+        "CatBoostClassifier": {"depth": [2, 4], "learning_rate": uniform(0.05, 0.15), "n_estimators": [100, 150]},
+        "LGBMClassifier": {"learning_rate": uniform(0.05, 0.15), "n_estimators": randint(100, 150)},
+        "MLPClassifier": {
+            "activation": ["tanh", "relu"],
+            "solver": ["adam"],
+            "alpha": uniform(1e-7, 1e-1),
+            "learning_rate": ["constant", "adaptive"],
+            "n_iter_no_change": [32],
+        },
+    }
+
+    return default_classifier_search_spaces
 
 
 class CurationModelTrainer:
@@ -84,7 +90,7 @@ class CurationModelTrainer:
         A list of scaling techniques to try. Can be "standard_scaler", "min_max_scaler",
         or "robust_scaler", If None, all techniques will be used.
     classifiers : list of str or dict, default: None
-        A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_default_classifier_search_spaces` method for the default search spaces & format for custom spaces.
+        A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_classifier_search_space` method for the default search spaces & format for custom spaces.
     test_size : float, default: 0.2
         Proportion of the dataset to include in the test split, passed to `train_test_split` from `sklear`.
     seed : int, default: None
@@ -143,7 +149,7 @@ class CurationModelTrainer:
         Returns an instance of the specified classifier.
     get_classifier_search_space(classifier_name)
         Returns the search space for hyperparameter tuning for the specified classifier.
-    get_default_classifier_search_spaces()
+    get_classifier_search_space()
         Returns the default search spaces for hyperparameter tuning for the classifiers.
     evaluate_model_config(imputation_strategies, scaling_techniques, classifiers)
         Evaluates the model configurations with the given imputation strategies, scaling techniques, and classifiers.
@@ -465,16 +471,18 @@ class CurationModelTrainer:
 
         if classifier_name not in classifier_mapping:
             raise ValueError(
-                f"Unknown classifier: {classifier_name}. To see list of supported classifiers run\n\t>>> from spikeinterface.curation import default_classifier_search_spaces\n\t>>> print(default_classifier_search_spaces.keys())"
+                f"Unknown classifier: {classifier_name}. To see list of supported classifiers run\n\t>>> from spikeinterface.curation import get_default_classifier_search_spaces\n\t>>> print(get_default_classifier_search_spaces().keys())"
             )
 
         return classifier_mapping[classifier_name]
 
     def get_classifier_search_space(self, classifier_name):
 
+        default_classifier_search_spaces = get_default_classifier_search_spaces()
+
         if classifier_name not in default_classifier_search_spaces:
             raise ValueError(
-                f"Unknown classifier: {classifier_name}. To see list of supported classifiers run\n\t>>> from spikeinterface.curation import default_classifier_search_spaces\n\t>>> print(default_classifier_search_spaces.keys())"
+                f"Unknown classifier: {classifier_name}. To see list of supported classifiers run\n\t>>> from spikeinterface.curation import get_default_classifier_search_spaces\n\t>>> print(get_default_classifier_search_spaces().keys())"
             )
 
         model = self.get_classifier_instance(classifier_name)
@@ -684,7 +692,7 @@ def train_model(
         A list of scaling techniques to try. Can be "standard_scaler", "min_max_scaler",
         or "robust_scaler", If None, all techniques will be used.
     classifiers : list of str | dict | None, default: None
-        A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_default_classifier_search_spaces` method for the default search spaces & format for custom spaces.
+        A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_classifier_search_space` method for the default search spaces & format for custom spaces.
     test_size : float, default: 0.2
         Proportion of the dataset to include in the test split, passed to `train_test_split` from `sklear`.
     overwrite : bool, default: False
