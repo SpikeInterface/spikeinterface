@@ -8,10 +8,10 @@ from pathlib import Path
 from .motion_utils import get_spatial_windows
 
 
-class MedecineRegistration:
+class MedicineRegistration:
     """ """
 
-    name = "medecine"
+    name = "medicine"
     need_peak_location = True
     params_doc = """
 
@@ -35,7 +35,7 @@ class MedecineRegistration:
         extra,
         bin_s=1.0,
 
-        ## medecine specific kwargs propagated to the lib
+        ## medicine specific kwargs propagated to the lib
         motion_bound=800,
         time_kernel_width=30,
         activity_network_hidden_features=(256, 256),

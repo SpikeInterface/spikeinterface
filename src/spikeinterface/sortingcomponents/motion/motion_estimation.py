@@ -11,7 +11,7 @@ from .motion_utils import Motion, get_spatial_windows, get_spatial_bin_edges
 from .decentralized import DecentralizedRegistration
 from .iterative_template import IterativeTemplateRegistration
 from .dredge import DredgeLfpRegistration, DredgeApRegistration
-from .medecine import MedecineRegistration
+from .medicine import MedicineRegistration
 
 
 # estimate_motion > infer_motion
@@ -136,7 +136,7 @@ _methods_list = [
     IterativeTemplateRegistration,
     DredgeLfpRegistration,
     DredgeApRegistration,
-    MedecineRegistration,
+    MedicineRegistration,
 ]
 estimate_motion_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
