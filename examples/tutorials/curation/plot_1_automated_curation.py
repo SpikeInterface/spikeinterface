@@ -72,6 +72,7 @@ print(model.feature_names_in_)
 recording, sorting = si.generate_ground_truth_recording(num_channels=4, seed=4, num_units=10)
 sorting_analyzer = si.create_sorting_analyzer(sorting=sorting, recording=recording)
 sorting_analyzer.compute(['noise_levels','random_spikes','waveforms','templates','spike_locations','spike_amplitudes','correlograms','principal_components','quality_metrics','template_metrics'])
+sorting_analyzer.compute('template_metrics', include_multi_channel_metrics=True)
 
 ##############################################################################
 # This sorting_analyzer now contains the required quality metrics and template metrics.
@@ -98,7 +99,7 @@ print(labels)
 # The model has labelled one unit as bad. Let's look at that one, and also the 'good' unit
 # with the highest confidence of being 'good'.
 
-sw.plot_unit_templates(sorting_analyzer, unit_ids=[7,9])
+sw.plot_unit_templates(sorting_analyzer, unit_ids=['7','9'])
 
 ##############################################################################
 # Nice! Unit 9 looks more like an expected action potential waveform while unit 7 doesn't,
@@ -219,18 +220,18 @@ plt.legend(); plt.grid(True); plt.show()
 #
 
 # Apply the noise/not-noise model
-noise_neuron_labels = si.auto_label_units(
-    analyzer = sorting_analyzer,
+noise_neuron_labels = sc.auto_label_units(
+    sorting_analyzer = sorting_analyzer,
     repo_id = "AnoushkaJain3/noise_neural_classifier",
     trust_model=True,
 )
 
 noise_units = noise_neuron_labels[noise_neuron_labels['prediction']=='noise']
-analyzer_neural = analyzer.remove_units(noise_units.index)
+analyzer_neural = sorting_analyzer.remove_units(noise_units.index)
 
 # Apply the sua/mua model
-sua_mua_labels = si.auto_label_units(
-    sorting_analyzer,
+sua_mua_labels = sc.auto_label_units(
+    sorting_analyzer = analyzer_neural,
     repo_id = "AnoushkaJain3/sua_mua_classifier",
     trust_model=True,
 )
@@ -238,6 +239,7 @@ sua_mua_labels = si.auto_label_units(
 all_labels = pd.concat([sua_mua_labels, noise_units]).sort_index()
 print(all_labels)
 
+##############################################################################
 # If you run this without the ``trust_model=True`` parameter, you will receive an error:
 #
 # .. code-block::
