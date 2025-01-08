@@ -55,7 +55,7 @@ _misc_metric_name_to_func = {
 }
 
 # a dict converting the name of the metric for computation to the output of that computation
-compute_name_to_column_names = {
+qm_compute_name_to_column_names = {
     "num_spikes": ["num_spikes"],
     "firing_rate": ["firing_rate"],
     "presence_ratio": ["presence_ratio"],

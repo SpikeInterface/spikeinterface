@@ -52,7 +52,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
-        "job_kwargs": {"n_jobs": 0.8},
+        "job_kwargs": {"n_jobs": 0.5},
         "debug": False,
     }
 
@@ -115,7 +115,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.sortingcomponents.tools import get_prototype_spike, check_probe_for_drift_correction
-        from spikeinterface.sortingcomponents.tools import get_prototype_spike
 
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
         job_kwargs.update({"progress_bar": verbose})
@@ -219,7 +218,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["radius_um"] = radius_um
             clustering_params["waveforms"]["ms_before"] = ms_before
             clustering_params["waveforms"]["ms_after"] = ms_after
-            clustering_params["job_kwargs"] = job_kwargs
             clustering_params["noise_levels"] = noise_levels
             clustering_params["ms_before"] = exclude_sweep_ms
             clustering_params["ms_after"] = exclude_sweep_ms
@@ -233,7 +231,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 clustering_method = "random_projections"
 
             labels, peak_labels = find_cluster_from_peaks(
-                recording_w, selected_peaks, method=clustering_method, method_kwargs=clustering_params
+                recording_w, selected_peaks, method=clustering_method, method_kwargs=clustering_params, **job_kwargs
             )
 
             ## We get the labels for our peaks
@@ -284,11 +282,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_method = params["matching"].pop("method")
             matching_params = params["matching"].copy()
             matching_params["templates"] = templates
-            matching_job_params = job_kwargs.copy()
 
             if matching_method is not None:
                 spikes = find_spikes_from_templates(
-                    recording_w, matching_method, method_kwargs=matching_params, **matching_job_params
+                    recording_w, matching_method, method_kwargs=matching_params, **job_kwargs
                 )
 
                 if params["debug"]:
