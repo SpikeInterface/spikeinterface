@@ -32,7 +32,6 @@ def clean_clusters(
     count = np.zeros(n, dtype="int64")
     for i, label in enumerate(labels_set):
         count[i] = np.sum(peak_labels == label)
-    print(count)
 
     templates = compute_template_from_sparse(peaks, peak_labels, labels_set, sparse_wfs, sparse_mask, total_channels)
 
@@ -42,6 +41,5 @@ def clean_clusters(
         max_values = -np.min(templates, axis=(1, 2))
     elif peak_sign == "pos":
         max_values = np.max(templates, axis=(1, 2))
-    print(max_values)
 
     return clean_labels
