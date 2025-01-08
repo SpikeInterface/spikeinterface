@@ -618,7 +618,6 @@ class CurationModelTrainer:
                 model,
                 param_space,
                 random_state=self.seed,
-                n_jobs=self.n_jobs,
                 **search_kwargs,
             )
         except:
@@ -626,7 +625,7 @@ class CurationModelTrainer:
                 print("BayesSearchCV from scikit-optimize not available, using RandomizedSearchCV")
             from sklearn.model_selection import RandomizedSearchCV
 
-            model = RandomizedSearchCV(model, param_space, n_jobs=self.n_jobs, **search_kwargs)
+            model = RandomizedSearchCV(model, param_space, **search_kwargs)
 
         model.fit(X_train_scaled, y_train)
         y_pred = model.predict(X_test_scaled)
