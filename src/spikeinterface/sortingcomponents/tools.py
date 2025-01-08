@@ -70,7 +70,34 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
 
 def get_prototype_and_waveforms(recording, n_peaks=5000, peaks=None, ms_before=0.5, ms_after=0.5, seed=None, return_waveforms=False, **all_kwargs):
     """
-    Helper function to extract a prototype waveform from a peak list or from a peak detection
+    Function to extract a prototype waveform from a peak list or from a peak detection. Note that in case
+    of a peak detection, the detection stops as soon as n_peaks are detected.
+
+    Parameters
+    ----------
+    recording : Recording
+        The recording object containing the data.
+    n_peaks : int, optional
+        Number of peaks to consider, by default 5000.
+    peaks : numpy.array, optional
+        Array of peaks, if None, peaks will be detected, by default None.
+    ms_before : float, optional
+        Time in milliseconds before the peak to extract the waveform, by default 0.5.
+    ms_after : float, optional
+        Time in milliseconds after the peak to extract the waveform, by default 0.5.
+    seed : int or None, optional
+        Seed for random number generator, by default None.
+    return_waveforms : bool, optional
+        Whether to return the waveforms along with the prototype, by default False.
+    **all_kwargs : dict
+        Additional keyword arguments for peak detection and job kwargs.
+
+    Returns
+    -------
+    prototype : numpy.array
+        The prototype waveform.
+    waveforms : numpy.array, optional
+        The extracted waveforms, returned if return_waveforms is True.
     """
     
     seed = seed if seed else None
