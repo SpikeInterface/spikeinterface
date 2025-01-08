@@ -50,8 +50,16 @@ class SortingSummaryWidget(BaseWidget):
         analyzer.get_extension("quality_metrics").get_data().columns and
         analyzer.get_extension("template_metrics").get_data().columns.
         (sortingview backend)
+    curation_dict : dict or None
+        When curation is True, optionaly the viewer can get a previous 'curation_dict'
+        to continue/check  previous curations on this analyzer.
+        In this case label_definitions must be None beacuse it is already included in the curation_dict.
+        (spikeinterface_gui backend)
+    label_definitions : dict or None
+        When curation is True, optionaly the user can provide a label_definitions dict.
+        This replaces the label_choices in the curation_format.
+        (spikeinterface_gui backend)
     """
-
     def __init__(
         self,
         sorting_analyzer: SortingAnalyzer,
@@ -62,6 +70,8 @@ class SortingSummaryWidget(BaseWidget):
         curation=False,
         unit_table_properties=None,
         label_choices=None,
+        curation_dict=None,
+        label_definitions=None,
         backend=None,
         **backend_kwargs,
     ):
@@ -74,6 +84,9 @@ class SortingSummaryWidget(BaseWidget):
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
 
+        if curation_dict is not None and label_definitions is not None:
+            raise ValueError("curation_dict and label_definitions are mutualy exclusive, they cannot be not None both")
+
         plot_data = dict(
             sorting_analyzer=sorting_analyzer,
             unit_ids=unit_ids,
@@ -83,6 +96,8 @@ class SortingSummaryWidget(BaseWidget):
             curation=curation,
             label_choices=label_choices,
             max_amplitudes_per_unit=max_amplitudes_per_unit,
+            curation_dict=curation_dict,
+            label_definitions=label_definitions,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -193,6 +208,12 @@ class SortingSummaryWidget(BaseWidget):
         import spikeinterface_gui
 
         app = spikeinterface_gui.mkQApp()
-        win = spikeinterface_gui.MainWindow(sorting_analyzer, curation=data_plot["curation"])
+        win = spikeinterface_gui.MainWindow(
+            sorting_analyzer,
+            curation=data_plot["curation"]
+            curation_data=data_plot["curation_dict"],
+            label_definitions=data_plot["label_definitions"],
+            more_units_properties=data_plot["unit_table_properties"],
+        )
         win.show()
         app.exec_()
