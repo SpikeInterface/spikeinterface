@@ -208,8 +208,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if params["matched_filtering"]:
             prototype, waveforms = get_prototype_and_waveforms(
                 recording_w,
-                ms_before=ms_before, 
-                ms_after=ms_after, 
+                ms_before=ms_before,
+                ms_after=ms_after,
                 seed=params["seed"],
                 return_waveforms=True,
                 **detection_params,

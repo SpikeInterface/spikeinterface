@@ -119,9 +119,9 @@ def detect_peaks(
     else:
         squeeze_output = False
         if len(pipeline_nodes) == 1:
-            plural = ''
+            plural = ""
         else:
-            plural = 's'
+            plural = "s"
         job_name += f" + {len(pipeline_nodes)} node{plural}"
 
         # because node are modified inplace (insert parent) they need to copy incase
