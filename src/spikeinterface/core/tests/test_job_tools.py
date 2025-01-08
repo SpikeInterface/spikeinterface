@@ -280,6 +280,48 @@ def test_get_best_job_kwargs():
     job_kwargs = get_best_job_kwargs()
     print(job_kwargs)
 
+
+# def quick_becnhmark():
+#     # keep this commented do not remove
+
+
+#     from spikeinterface.generation import generate_drifting_recording
+#     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+#     from spikeinterface import get_noise_levels
+#     import time
+
+#     all_job_kwargs = [
+#         dict(pool_engine="process", n_jobs=2, mp_context="spawn", max_threads_per_worker=2),
+#         dict(pool_engine="process", n_jobs=4, mp_context="spawn", max_threads_per_worker=1),
+#         dict(pool_engine="thread", n_jobs=4, mp_context=None, max_threads_per_worker=1),
+#         dict(pool_engine="thread", n_jobs=2, mp_context=None, max_threads_per_worker=2),
+#         dict(n_jobs=1),
+#     ]
+
+    
+
+#     rec, _, sorting = generate_drifting_recording(
+#         num_units=50,
+#         duration=120.0,
+#         sampling_frequency=30000.0,
+#         probe_name="Neuropixel-128",
+
+#     )
+#     # print(rec)
+
+#     noise_levels = get_noise_levels(rec, return_scaled=False)
+#     for job_kwargs in all_job_kwargs:
+#         print()
+#         print(job_kwargs)
+#         t0 = time.perf_counter()
+#         peaks = detect_peaks(rec, method="locally_exclusive", noise_levels=noise_levels, **job_kwargs)
+#         t1 = time.perf_counter()
+#         print("time included the spawn:", t1-t0)
+
+
+
+
+
 if __name__ == "__main__":
     # test_divide_segment_into_chunks()
     # test_ensure_n_jobs()
@@ -289,3 +331,5 @@ if __name__ == "__main__":
     # test_split_job_kwargs()
     # test_worker_index()
     test_get_best_job_kwargs()
+
+    # quick_becnhmark()
