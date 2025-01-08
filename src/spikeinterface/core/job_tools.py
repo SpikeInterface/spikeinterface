@@ -535,7 +535,7 @@ class ChunkRecordingExecutor:
                 ) as executor:
 
 
-                    recording_slices2 = [(thread_local_data, ) + args for args in recording_slices]
+                    recording_slices2 = [(thread_local_data, ) + tuple(args) for args in recording_slices]
                     results = executor.map(thread_function_wrapper, recording_slices2)
 
                     for res in results:
