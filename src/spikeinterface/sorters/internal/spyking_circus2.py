@@ -27,7 +27,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 50},
         "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2},
-        "whitening": {"mode": "local", "regularize": True, "radius_um": 100},
+        "whitening": {"mode": "local", "regularize": False, "radius_um": 100},
         "detection": {"peak_sign": "neg", "detect_threshold": 4},
         "selection": {
             "method": "uniform",
@@ -47,12 +47,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             },
         },
         "clustering": {"legacy": True},
-        "matching": {"method": "circus-omp-svd"},
+        "matching": {"method": "wobble"},
         "apply_preprocessing": True,
         "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
-        "job_kwargs": {"n_jobs": 0.5},
+        "job_kwargs": {"n_jobs": 0.8},
         "seed": 42,
         "debug": False,
     }
@@ -135,10 +135,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
         if params["apply_preprocessing"]:
+            if verbose:
+                print("Preprocessing the recording (bandpass filtering + CMR + whitening)")
             recording_f = bandpass_filter(recording, **filtering_params, dtype="float32")
             if num_channels > 1:
                 recording_f = common_reference(recording_f)
         else:
+            if verbose:
+                print("Skipping preprocessing (whitening only)")
             recording_f = recording
             recording_f.annotate(is_filtered=True)
 
@@ -161,6 +165,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         # TODO add , regularize=True chen ready
         whitening_kwargs = params["whitening"].copy()
         whitening_kwargs["dtype"] = "float32"
+        whitening_kwargs["regularize"] = whitening_kwargs.get("regularize", False)
         if num_channels == 1:
             whitening_kwargs["regularize"] = False
         if whitening_kwargs["regularize"]:
