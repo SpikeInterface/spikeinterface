@@ -45,12 +45,16 @@ def validate_curation_dict(curation_dict):
         if not removed_units_set.issubset(unit_set):
             raise ValueError("Curation format: some removed units are not in the unit list")
 
+    for group in curation_dict["merge_unit_groups"]:
+        if len(group) < 2:
+            raise ValueError("Curation format: 'merge_unit_groups' must be list of list with at least 2 elements")
+
     all_merging_groups = [set(group) for group in curation_dict["merge_unit_groups"]]
     for gp_1, gp_2 in combinations(all_merging_groups, 2):
         if len(gp_1.intersection(gp_2)) != 0:
-            raise ValueError("Some units belong to multiple merge groups")
+            raise ValueError("Curation format: some units belong to multiple merge groups")
     if len(removed_units_set.intersection(merged_units_set)) != 0:
-        raise ValueError("Some units were merged and deleted")
+        raise ValueError("Curation format: some units were merged and deleted")
 
     # Check the labels exclusivity
     for lbl in curation_dict["manual_labels"]:
@@ -253,7 +257,7 @@ def apply_curation_labels(sorting, new_unit_ids, curation_dict):
                         group_values.append(value)
                 if len(set(group_values)) == 1:
                     # all group has the same label or empty
-                    sorting.set_property(key, values=group_values, ids=[new_unit_id])
+                    sorting.set_property(key, values=group_values[:1], ids=[new_unit_id])
             else:
 
                 for key in label_def["label_options"]:
