@@ -8,7 +8,6 @@ from spikeinterface.core import (
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 
-
 def make_small_analyzer():
     recording, sorting = generate_ground_truth_recording(
         durations=[2.0],
@@ -39,9 +38,11 @@ def make_small_analyzer():
 
     return sorting_analyzer
 
+
 @pytest.fixture(scope="module")
 def small_sorting_analyzer():
     return make_small_analyzer()
+
 
 @pytest.fixture(scope="module")
 def sorting_analyzer_simple():

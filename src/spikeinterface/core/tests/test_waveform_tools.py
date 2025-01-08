@@ -199,7 +199,7 @@ def test_estimate_templates_with_accumulator():
             if len(templates_by_worker) > 1:
                 templates_loop = templates_by_worker[0]
                 np.testing.assert_almost_equal(templates, templates_loop, decimal=4)
-                
+
                 # import matplotlib.pyplot as plt
                 # fig, axs = plt.subplots(nrows=2, sharex=True)
                 # for unit_index, unit_id in enumerate(sorting.unit_ids):
@@ -210,8 +210,6 @@ def test_estimate_templates_with_accumulator():
                 #     ax = axs[1]
                 #     ax.plot((templates - templates_loop)[unit_index, :, :].T.flatten(), color="k", ls="--")
                 # plt.show()
-
-
 
 
 def test_estimate_templates():

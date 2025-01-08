@@ -236,8 +236,6 @@ def test_split_job_kwargs():
     assert "other_param" not in job_kwargs and "n_jobs" in job_kwargs and "progress_bar" in job_kwargs
 
 
-
-
 def func2(segment_index, start_frame, end_frame, worker_dict):
     time.sleep(0.010)
     # print(os.getpid(), worker_dict["worker_index"])
@@ -269,12 +267,13 @@ def test_worker_index():
                 n_jobs=2,
                 handle_returns=True,
                 chunk_duration="200ms",
-                need_worker_index=True
+                need_worker_index=True,
             )
             res = processor.run()
             # we should have a mix of 0 and 1
             assert 0 in res
             assert 1 in res
+
 
 def test_get_best_job_kwargs():
     job_kwargs = get_best_job_kwargs()
@@ -298,7 +297,6 @@ def test_get_best_job_kwargs():
 #         dict(n_jobs=1),
 #     ]
 
-    
 
 #     rec, _, sorting = generate_drifting_recording(
 #         num_units=50,
@@ -317,9 +315,6 @@ def test_get_best_job_kwargs():
 #         peaks = detect_peaks(rec, method="locally_exclusive", noise_levels=noise_levels, **job_kwargs)
 #         t1 = time.perf_counter()
 #         print("time included the spawn:", t1-t0)
-
-
-
 
 
 if __name__ == "__main__":

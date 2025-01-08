@@ -56,7 +56,9 @@ def test_pca_metrics_multi_processing(small_sorting_analyzer):
         sorting_analyzer, n_jobs=-1, metric_names=metric_names, max_threads_per_worker=2, progress_bar=True
     )
 
+
 if __name__ == "__main__":
     from spikeinterface.qualitymetrics.tests.conftest import make_small_analyzer
+
     small_sorting_analyzer = make_small_analyzer()
     test_calculate_pc_metrics(small_sorting_analyzer)
