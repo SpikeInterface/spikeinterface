@@ -150,8 +150,8 @@ class ModelBasedClassification:
         enforce_metric_params : bool, default: False
             If True and the parameters used to compute the metrics in `sorting_analyzer` are different than the parmeters
             used to compute the metrics used to train the model, this function will raise an error. Otherwise, a warning is raised.
-        model_info_path : str or Path, default: None
-            Path to model_info.json provenance file
+        model_info : dict, default: None
+            Dictionary of model info containing provenance of the model.
         """
 
         extension_names = ["quality_metrics", "template_metrics"]
@@ -162,18 +162,19 @@ class ModelBasedClassification:
 
             # remove the 's' at the end of the extension name
             extension_name = extension_name[:-1]
-            model_metric_params = model_info["metric_params"].get(extension_name + "_params")
+            model_extension_params = model_info["metric_params"].get(extension_name + "_params")
 
-            if metric_extension is not None and model_metric_params is not None:
+            if metric_extension is not None and model_extension_params is not None:
 
                 metric_params = metric_extension.params["metric_params"]
 
                 inconsistent_metrics = []
-                for metric in model_metric_params["metric_names"]:
-                    if metric not in model_metric_params["metric_params"]:
-                        inconsistent_metrics += metric
+                for metric in model_extension_params["metric_names"]:
+                    model_metric_params = model_extension_params.get("metric_params")
+                    if model_metric_params is None or metric not in model_metric_params:
+                        inconsistent_metrics.append(metric)
                     else:
-                        if metric_params[metric] != model_metric_params["metric_params"][metric]:
+                        if metric_params[metric] != model_metric_params[metric]:
                             warning_message = f"{extension_name} params for {metric} do not match those used to train the model. Parameters can be found in the 'model_info.json' file."
                             if enforce_metric_params is True:
                                 raise Exception(warning_message)

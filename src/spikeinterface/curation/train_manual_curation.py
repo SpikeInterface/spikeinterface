@@ -190,7 +190,7 @@ class CurationModelTrainer:
             raise ValueError("classifiers must be a list or dictionary")
 
         # check if labels is a list of lists
-        if not all(isinstance(labels, list) for labels in labels):
+        if not all(isinstance(label, list) or isinstance(label, np.ndarray) for label in labels):
             raise ValueError("labels must be a list of lists")
 
         self.folder = Path(folder) if folder is not None else None
@@ -711,6 +711,9 @@ def train_model(
     This function handles the entire workflow of initializing the trainer, loading and preprocessing the data,
     and evaluating the models. The evaluation results are saved to the specified output folder.
     """
+
+    if folder is None:
+        raise Exception("You must supply a folder for the model to be saved in using `folder='path/to/folder/'`")
 
     if overwrite is False:
         assert not Path(folder).is_dir(), f"folder {folder} already exists, choose another name or use overwrite=True"
