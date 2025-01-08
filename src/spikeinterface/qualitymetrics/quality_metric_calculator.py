@@ -18,7 +18,6 @@ from .quality_metric_list import (
     _possible_pc_metric_names,
     compute_name_to_column_names,
     column_name_to_column_dtype,
-
 )
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
