@@ -68,21 +68,55 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
 
     return all_wfs
 
+def get_prototype_and_waveforms(recording, n_peaks=5000, peaks=None, ms_before=0.5, ms_after=0.5, seed=None, return_waveforms=False, **all_kwargs):
+    """
+    Helper function to extract a prototype waveform from a peak list or from a peak detection
+    """
+    
+    seed = seed if seed else None
+    rng = np.random.default_rng(seed=seed)
 
-def get_prototype_spike(recording, peaks, ms_before=0.5, ms_after=0.5, nb_peaks=1000, **job_kwargs):
-    from spikeinterface.sortingcomponents.peak_selection import select_peaks
-
+    detection_kwargs, job_kwargs = split_job_kwargs(all_kwargs)
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
     nafter = int(ms_after * recording.sampling_frequency / 1000.0)
 
-    few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=nb_peaks, margin=(nbefore, nafter))
+    if peaks is None:
+        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+        from spikeinterface.core.node_pipeline import ExtractSparseWaveforms
+        node = ExtractSparseWaveforms(
+            recording,
+            parents=None,
+            return_output=True,
+            ms_before=ms_before,
+            ms_after=ms_after,
+            radius_um=0,
+        )
+        pipeline_nodes = [node]
 
-    waveforms = extract_waveform_at_max_channel(
-        recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
-    )
+        recording_slices = get_shuffled_recording_slices(recording, seed=seed, **job_kwargs)
+
+        res = detect_peaks(
+            recording, pipeline_nodes=pipeline_nodes, 
+            skip_after_n_peaks=n_peaks, 
+            recording_slices=recording_slices, 
+            **detection_kwargs, 
+            **job_kwargs, 
+        )
+        waveforms = res[1]
+    else:
+        from spikeinterface.sortingcomponents.peak_selection import select_peaks
+        few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=n_peaks, margin=(nbefore, nafter), seed=seed)
+        waveforms = extract_waveform_at_max_channel(
+            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+        )
+
     with np.errstate(divide="ignore", invalid="ignore"):
         prototype = np.nanmedian(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
-    return prototype
+
+    if not return_waveforms:
+        return prototype
+    else:
+        return prototype, waveforms[:, :, 0]
 
 
 def check_probe_for_drift_correction(recording, dist_x_max=60):
@@ -151,3 +185,21 @@ def fit_sigmoid(xdata, ydata, p0=None):
 
     popt, pcov = curve_fit(sigmoid, xdata, ydata, p0)
     return popt
+
+
+def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):
+    from spikeinterface.core.job_tools import ensure_chunk_size
+    from spikeinterface.core.job_tools import divide_segment_into_chunks
+
+    chunk_size = ensure_chunk_size(recording, **job_kwargs)
+    recording_slices = []
+    for segment_index in range(recording.get_num_segments()):
+        num_frames = recording.get_num_samples(segment_index)
+        chunks = divide_segment_into_chunks(num_frames, chunk_size)
+        recording_slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
+
+    if seed is not None:
+        rng = np.random.RandomState(seed)
+        recording_slices = rng.permutation(recording_slices)
+
+    return recording_slices

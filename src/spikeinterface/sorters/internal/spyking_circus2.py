@@ -11,7 +11,7 @@ from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.template import Templates
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.preprocessing import common_reference, whiten, bandpass_filter, correct_motion
-from spikeinterface.sortingcomponents.tools import cache_preprocessing
+from spikeinterface.sortingcomponents.tools import cache_preprocessing, get_prototype_and_waveforms, get_shuffled_recording_slices
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
@@ -193,9 +193,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         nbefore = int(ms_before * fs / 1000.0)
         nafter = int(ms_after * fs / 1000.0)
 
-        recording_slices = divide_recording(recording_w, seed=params["seed"], **job_kwargs)
-        detection_params["recording_slices"] = recording_slices
-
         skip_peaks = not params["multi_units_only"] and selection_params.get("method", "uniform") == "uniform"
         max_n_peaks = selection_params["n_peaks_per_channel"] * num_channels
         n_peaks = max(selection_params["min_n_peaks"], max_n_peaks)
@@ -206,8 +203,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             np.save(clustering_folder / "noise_levels.npy", noise_levels)
 
         if params["matched_filtering"]:
-            prototype, waveforms = get_prototype(
-                recording_w, n_peaks=5000, ms_before=ms_before, ms_after=ms_after, **detection_params, **job_kwargs
+            prototype, waveforms = get_prototype_and_waveforms(
+                recording_w, 
+                n_peaks=5000, 
+                ms_before=ms_before, 
+                ms_after=ms_after, 
+                seed=params["seed"],
+                return_waveforms=True,
+                **detection_params, 
+                **job_kwargs
             )
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
@@ -403,24 +407,6 @@ def create_sorting_analyzer_with_templates(sorting, recording, templates, remove
     return sa
 
 
-def divide_recording(recording, seed=None, **job_kwargs):
-    from spikeinterface.core.job_tools import ensure_chunk_size
-    from spikeinterface.core.job_tools import divide_segment_into_chunks
-
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
-    recording_slices = []
-    for segment_index in range(recording.get_num_segments()):
-        num_frames = recording.get_num_samples(segment_index)
-        chunks = divide_segment_into_chunks(num_frames, chunk_size)
-        recording_slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
-
-    if seed is not None:
-        rng = np.random.RandomState(seed)
-        recording_slices = rng.permutation(recording_slices)
-
-    return recording_slices
-
-
 def final_cleaning_circus(recording, sorting, templates, merging_kwargs, **job_kwargs):
 
     from spikeinterface.core.sorting_tools import apply_merges_to_sorting
@@ -438,33 +424,3 @@ def final_cleaning_circus(recording, sorting, templates, merging_kwargs, **job_k
     sorting = apply_merges_to_sorting(sa.sorting, merges)
 
     return sorting
-
-
-def get_prototype(recording, n_peaks, ms_before, ms_after, return_waveforms=True, **all_kwargs):
-    from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-    from spikeinterface.core.node_pipeline import ExtractSparseWaveforms
-
-    detection_kwargs, job_kwargs = split_job_kwargs(all_kwargs)
-
-    node = ExtractSparseWaveforms(
-        recording,
-        parents=None,
-        return_output=True,
-        ms_before=ms_before,
-        ms_after=ms_after,
-        radius_um=0,
-    )
-
-    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-    pipeline_nodes = [node]
-    res = detect_peaks(
-        recording, pipeline_nodes=pipeline_nodes, skip_after_n_peaks=n_peaks, **detection_kwargs, **job_kwargs
-    )
-    waveforms = res[1]
-    with np.errstate(divide="ignore", invalid="ignore"):
-        prototype = np.nanmedian(waveforms[:, :, 0] / (np.abs(waveforms[:, nbefore, 0][:, np.newaxis])), axis=0)
-
-    if not return_waveforms:
-        return prototype
-    else:
-        return prototype, waveforms[:, :, 0]
