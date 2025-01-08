@@ -300,7 +300,7 @@ def calculate_displacement_unit_factor(
         factors = 1 - factors
 
     f = np.abs(non_rigid_gradient)
-    print("f", f)
+
     displacement_unit_factor = factors * (1 - f) + f
 
     return displacement_unit_factor
