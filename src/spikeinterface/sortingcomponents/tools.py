@@ -68,7 +68,10 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
 
     return all_wfs
 
-def get_prototype_and_waveforms(recording, n_peaks=5000, peaks=None, ms_before=0.5, ms_after=0.5, seed=None, return_waveforms=False, **all_kwargs):
+
+def get_prototype_and_waveforms(
+    recording, n_peaks=5000, peaks=None, ms_before=0.5, ms_after=0.5, seed=None, return_waveforms=False, **all_kwargs
+):
     """
     Function to extract a prototype waveform from a peak list or from a peak detection. Note that in case
     of a peak detection, the detection stops as soon as n_peaks are detected.
@@ -99,7 +102,7 @@ def get_prototype_and_waveforms(recording, n_peaks=5000, peaks=None, ms_before=0
     waveforms : numpy.array, optional
         The extracted waveforms, returned if return_waveforms is True.
     """
-    
+
     seed = seed if seed else None
     rng = np.random.default_rng(seed=seed)
 
@@ -110,6 +113,7 @@ def get_prototype_and_waveforms(recording, n_peaks=5000, peaks=None, ms_before=0
     if peaks is None:
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.core.node_pipeline import ExtractSparseWaveforms
+
         node = ExtractSparseWaveforms(
             recording,
             parents=None,
@@ -123,16 +127,20 @@ def get_prototype_and_waveforms(recording, n_peaks=5000, peaks=None, ms_before=0
         recording_slices = get_shuffled_recording_slices(recording, seed=seed, **job_kwargs)
 
         res = detect_peaks(
-            recording, pipeline_nodes=pipeline_nodes, 
-            skip_after_n_peaks=n_peaks, 
-            recording_slices=recording_slices, 
-            **detection_kwargs, 
-            **job_kwargs, 
+            recording,
+            pipeline_nodes=pipeline_nodes,
+            skip_after_n_peaks=n_peaks,
+            recording_slices=recording_slices,
+            **detection_kwargs,
+            **job_kwargs,
         )
         waveforms = res[1]
     else:
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
-        few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=n_peaks, margin=(nbefore, nafter), seed=seed)
+
+        few_peaks = select_peaks(
+            peaks, recording=recording, method="uniform", n_peaks=n_peaks, margin=(nbefore, nafter), seed=seed
+        )
         waveforms = extract_waveform_at_max_channel(
             recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
         )

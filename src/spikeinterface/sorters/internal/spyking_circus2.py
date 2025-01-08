@@ -11,7 +11,11 @@ from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.template import Templates
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.preprocessing import common_reference, whiten, bandpass_filter, correct_motion
-from spikeinterface.sortingcomponents.tools import cache_preprocessing, get_prototype_and_waveforms, get_shuffled_recording_slices
+from spikeinterface.sortingcomponents.tools import (
+    cache_preprocessing,
+    get_prototype_and_waveforms,
+    get_shuffled_recording_slices,
+)
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
@@ -208,8 +212,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 ms_after=ms_after, 
                 seed=params["seed"],
                 return_waveforms=True,
-                **detection_params, 
-                **job_kwargs
+                **detection_params,
+                **job_kwargs,
             )
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
