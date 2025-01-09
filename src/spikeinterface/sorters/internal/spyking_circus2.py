@@ -51,7 +51,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             },
         },
         "clustering": {"legacy": True},
-        "matching": {"method": "wobble"},
+        "matching": {"method": "circus-omp-svd"},
         "apply_preprocessing": True,
         "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
@@ -264,6 +264,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["ms_after"] = exclude_sweep_ms
             clustering_params["verbose"] = verbose
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
+            clustering_params["noise_threshold"] = detection_params.get('detect_threshold', 4)
 
             legacy = clustering_params.get("legacy", True)
 

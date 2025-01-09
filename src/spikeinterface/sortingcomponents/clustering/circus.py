@@ -15,7 +15,7 @@ except:
 import random, string
 from spikeinterface.core import get_global_tmp_folder
 from spikeinterface.core.basesorting import minimum_spike_dtype
-from spikeinterface.core.waveform_tools import estimate_templates, estimate_templates_with_accumulator
+from spikeinterface.core.waveform_tools import estimate_templates
 from .clustering_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
@@ -60,7 +60,7 @@ class CircusClustering:
         "few_waveforms": None,
         "ms_before": 0.5,
         "ms_after": 0.5,
-        "noise_threshold": 5,
+        "noise_threshold": 4,
         "rank": 5,
         "noise_levels": None,
         "tmp_folder": None,
@@ -239,7 +239,7 @@ class CircusClustering:
         if params["noise_levels"] is None:
             params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
 
-        templates_array, templates_array_std = estimate_templates_with_accumulator(
+        templates_array = estimate_templates(
             recording,
             spikes,
             unit_ids,
@@ -251,11 +251,8 @@ class CircusClustering:
             **job_kwargs,
         )
 
-        with np.errstate(divide="ignore", invalid="ignore"):
-            peak_snrs = np.abs(templates_array[:, nbefore, :]) / templates_array_std[:, nbefore, :]
-        mask = ~np.isfinite(peak_snrs)
-        peak_snrs[mask] = 0
         best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
+        peak_snrs = np.abs(templates_array[:, nbefore, :])
         best_snrs_ratio = (peak_snrs / params["noise_levels"])[np.arange(len(peak_snrs)), best_channels]
         valid_templates = best_snrs_ratio > params["noise_threshold"]
 
