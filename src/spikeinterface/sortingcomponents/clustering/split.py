@@ -220,7 +220,7 @@ class LocalFeatureClustering:
 
         if not isinstance(n_pca_features, np.ndarray):
             n_pca_features = np.array([n_pca_features])
-        
+
         n_pca_features = n_pca_features[n_pca_features <= aligned_wfs.shape[1]]
         flatten_features = aligned_wfs.reshape(aligned_wfs.shape[0], -1)
 
@@ -230,6 +230,7 @@ class LocalFeatureClustering:
 
             if flatten_features.shape[1] > n_pca:
                 from sklearn.decomposition import PCA
+
                 # from sklearn.decomposition import TruncatedSVD
                 # tsvd = TruncatedSVD(n_pca_features)
                 tsvd = PCA(n_pca, whiten=True)
@@ -258,7 +259,7 @@ class LocalFeatureClustering:
             else:
                 raise ValueError(f"wrong clusterer {clusterer}")
 
-            #DEBUG = True
+            # DEBUG = True
             DEBUG = False
             if DEBUG:
                 import matplotlib.pyplot as plt
@@ -279,14 +280,15 @@ class LocalFeatureClustering:
 
                     ax = axs[1]
                     ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
-                    ax.set_xlabel('PCA features')
+                    ax.set_xlabel("PCA features")
 
                 axs[0].set_title(f"{clusterer} {is_split} {peak_indices[0]} {n_pca}, recursion_level={recursion_level}")
                 import time
-                plt.savefig(f'split_{recursion_level}_{time.time()}.png')
+
+                plt.savefig(f"split_{recursion_level}_{time.time()}.png")
                 plt.close()
-                #plt.show()
-            
+                # plt.show()
+
             if is_split:
                 break
 
