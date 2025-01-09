@@ -41,11 +41,9 @@ class CircusClustering:
 
     _default_params = {
         "hdbscan_kwargs": {
-            "min_cluster_size": 25,
+            "min_cluster_size": 10,
             "allow_single_cluster": True,
-            # "core_dist_n_jobs": -1,
-            "cluster_selection_method": "eom",
-            # "cluster_selection_epsilon" : 5 ## To be optimized
+            "min_samples" : 5
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
@@ -56,7 +54,7 @@ class CircusClustering:
             "returns_split_count": True,
         },
         "radius_um": 100,
-        "n_svd": [5, 2],
+        "n_svd": 5,
         "few_waveforms": None,
         "ms_before": 0.5,
         "ms_after": 0.5,
@@ -103,9 +101,13 @@ class CircusClustering:
         # Ensure all waveforms have a positive max
         wfs *= np.sign(wfs[:, nbefore])[:, np.newaxis]
 
+        # Remove outliers
+        valid = np.argmax(np.abs(wfs), axis=1) == nbefore
+        wfs = wfs[valid]
+
         from sklearn.decomposition import TruncatedSVD
 
-        tsvd = TruncatedSVD(params["n_svd"][0])
+        tsvd = TruncatedSVD(params["n_svd"])
         tsvd.fit(wfs)
 
         model_folder = tmp_folder / "tsvd_model"
@@ -159,8 +161,8 @@ class CircusClustering:
                 sub_data = all_pc_data[mask]
                 sub_data = sub_data.reshape(len(sub_data), -1)
 
-                if all_pc_data.shape[1] > params["n_svd"][1]:
-                    tsvd = PCA(params["n_svd"][1], whiten=True)
+                if all_pc_data.shape[1] > params["n_svd"]:
+                    tsvd = PCA(params["n_svd"], whiten=True)
                 else:
                     tsvd = PCA(all_pc_data.shape[1], whiten=True)
 
@@ -200,7 +202,7 @@ class CircusClustering:
             original_labels = peaks["channel_index"]
             from spikeinterface.sortingcomponents.clustering.split import split_clusters
 
-            min_size = params["hdbscan_kwargs"].get("min_cluster_size", 50)
+            min_size = 2*params["hdbscan_kwargs"].get("min_cluster_size", 10)
 
             peak_labels, _ = split_clusters(
                 original_labels,
@@ -214,8 +216,7 @@ class CircusClustering:
                     waveforms_sparse_mask=sparse_mask,
                     min_size_split=min_size,
                     clusterer_kwargs=d["hdbscan_kwargs"],
-                    n_pca_features=params["n_svd"][1],
-                    scale_n_pca_by_depth=True,
+                    n_pca_features=[2, 4, 6, 8, 10]
                 ),
                 **params["recursive_kwargs"],
                 **job_kwargs,

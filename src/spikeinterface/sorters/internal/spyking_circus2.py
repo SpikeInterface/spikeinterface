@@ -51,7 +51,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             },
         },
         "clustering": {"legacy": True},
-        "matching": {"method": "circus-omp-svd"},
+        "matching": {"method": "wobble"},
         "apply_preprocessing": True,
         "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
@@ -208,6 +208,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if params["matched_filtering"]:
             prototype, waveforms, _ = get_prototype_and_waveforms_from_recording(
                 recording_w,
+                n_peaks=10000,
                 ms_before=ms_before,
                 ms_after=ms_after,
                 seed=params["seed"],
@@ -260,8 +261,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["waveforms"]["ms_after"] = ms_after
             clustering_params["few_waveforms"] = waveforms
             clustering_params["noise_levels"] = noise_levels
-            clustering_params["ms_before"] = exclude_sweep_ms
-            clustering_params["ms_after"] = exclude_sweep_ms
+            clustering_params["ms_before"] = ms_before
+            clustering_params["ms_after"] = ms_after
             clustering_params["verbose"] = verbose
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
             clustering_params["noise_threshold"] = detection_params.get("detect_threshold", 4)
