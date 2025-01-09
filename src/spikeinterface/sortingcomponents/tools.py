@@ -206,8 +206,6 @@ def get_prototype_and_waveforms(
         Time in milliseconds after the peak to extract the waveform, by default 0.5.
     seed : int or None, optional
         Seed for random number generator, by default None.
-    return_waveforms : bool, optional
-        Whether to return the waveforms along with the prototype, by default False.
     **all_kwargs : dict
         Additional keyword arguments for peak detection and job kwargs.
 
@@ -215,8 +213,10 @@ def get_prototype_and_waveforms(
     -------
     prototype : numpy.array
         The prototype waveform.
-    waveforms : numpy.array, optional
-        The extracted waveforms, returned if return_waveforms is True.
+    waveforms : numpy.array
+        The extracted waveforms for the selected peaks.
+    peaks : numpy.array
+        The selected peaks used to extract waveforms.
     """
     if peaks is None:
        return get_prototype_and_waveforms_from_peaks(recording, n_peaks, ms_before=ms_before, ms_after=ms_after, seed=seed, **all_kwargs) 

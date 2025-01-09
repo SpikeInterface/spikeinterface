@@ -73,7 +73,7 @@ def get_localization_pipeline_nodes(
             assert isinstance(peak_source, (PeakRetriever, SpikeRetriever))
             # extract prototypes silently
             job_kwargs["progress_bar"] = False
-            method_kwargs["prototype"] = get_prototype_and_waveforms_from_peaks(
+            method_kwargs["prototype"], _, _ = get_prototype_and_waveforms_from_peaks(
                 recording, peaks=peak_source.peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
             )
         extract_dense_waveforms = ExtractDenseWaveforms(

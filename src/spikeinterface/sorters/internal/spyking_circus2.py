@@ -206,12 +206,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             np.save(clustering_folder / "noise_levels.npy", noise_levels)
 
         if params["matched_filtering"]:
-            prototype, waveforms = get_prototype_and_waveforms_from_recording(
+            prototype, waveforms, _ = get_prototype_and_waveforms_from_recording(
                 recording_w,
                 ms_before=ms_before,
                 ms_after=ms_after,
                 seed=params["seed"],
-                return_waveforms=True,
                 **detection_params,
                 **job_kwargs,
             )
