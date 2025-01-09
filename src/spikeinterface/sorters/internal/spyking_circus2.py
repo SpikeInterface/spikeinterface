@@ -221,13 +221,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 np.save(clustering_folder / "prototype.npy", prototype)
             if skip_peaks:
                 detection_params["skip_after_n_peaks"] = n_peaks
-                detection_params["recording_slices"] = get_shuffled_recording_slices(recording_w, seed=params["seed"], **job_kwargs)
+                detection_params["recording_slices"] = get_shuffled_recording_slices(
+                    recording_w, seed=params["seed"], **job_kwargs
+                )
             peaks = detect_peaks(recording_w, "matched_filtering", **detection_params, **job_kwargs)
         else:
             waveforms = None
             if skip_peaks:
                 detection_params["skip_after_n_peaks"] = n_peaks
-                detection_params["recording_slices"] = get_shuffled_recording_slices(recording_w, seed=params["seed"], **job_kwargs)
+                detection_params["recording_slices"] = get_shuffled_recording_slices(
+                    recording_w, seed=params["seed"], **job_kwargs
+                )
             peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, **job_kwargs)
 
         if verbose:
