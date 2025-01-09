@@ -16,6 +16,7 @@ from .quality_metric_list import (
     compute_pc_metrics,
     _misc_metric_name_to_func,
     _possible_pc_metric_names,
+    qm_compute_name_to_column_names,
     column_name_to_column_dtype,
 )
 from .misc_metrics import _default_params as misc_metrics_params
