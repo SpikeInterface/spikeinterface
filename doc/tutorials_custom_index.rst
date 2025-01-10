@@ -119,8 +119,8 @@ The :code:`spikeinterface.qualitymetrics` module allows users to compute various
 
    .. grid-item-card:: Quality Metrics
       :link-type: ref
-      :link: sphx_glr_tutorials_qualitymetrics_plot_3_quality_mertics.py
-      :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_3_quality_mertics_thumb.png
+      :link: sphx_glr_tutorials_qualitymetrics_plot_3_quality_metrics.py
+      :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_3_quality_metrics_thumb.png
       :img-alt: Quality Metrics
       :class-card: gallery-card
       :text-align: center
