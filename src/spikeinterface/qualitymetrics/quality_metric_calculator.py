@@ -248,7 +248,8 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # we do this because the convert_dtypes infers the wrong types sometimes.
         # the actual types for columns can be found in column_name_to_column_dtype dictionary.
         for column in metrics.columns:
-            metrics[column] = metrics[column].astype(column_name_to_column_dtype[column])
+            if column in column_name_to_column_dtype:
+                metrics[column] = metrics[column].astype(column_name_to_column_dtype[column])
 
         return metrics
 
