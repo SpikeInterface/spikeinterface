@@ -153,6 +153,7 @@ plt.title("Feature Importances")
 plt.bar(range(n_features), importances[indices], align="center")
 plt.xticks(range(n_features), features[indices], rotation=90)
 plt.xlim([-1, n_features])
+plt.subplots_adjust(bottom=0.3)
 plt.show()
 
 ##############################################################################
