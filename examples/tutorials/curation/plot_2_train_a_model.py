@@ -54,7 +54,7 @@ analyzer.compute(['noise_levels','random_spikes','waveforms','templates'])
 # :code:`sorting_1` so should look like a real unit; the sixth (unit id 5) belongs to :code:`sorting_2`
 # so should look like noise.
 
-sw.plot_unit_templates(analyzer, unit_ids=[0,5])
+sw.plot_unit_templates(analyzer, unit_ids=["0", "5"])
 
 ##############################################################################
 # This is as expected: great! (Find out more about plotting using widgets `here <https://spikeinterface.readthedocs.io/en/latest/modules/widgets.html>`_.)
