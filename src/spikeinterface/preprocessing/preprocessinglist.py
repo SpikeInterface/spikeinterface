@@ -44,41 +44,84 @@ from .depth_order import DepthOrderRecording, depth_order
 from .astype import AstypeRecording, astype
 from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
 
+from .motion import correct_motion
 
-preprocessers_full_list = [
+pp_name_to_function = {
     # filter stuff
-    FilterRecording,
-    BandpassFilterRecording,
-    HighpassFilterRecording,
-    NotchFilterRecording,
-    GaussianFilterRecording,
+    "filter": filter,
+    "bandpass_filter": bandpass_filter,
+    "notch_filter": notch_filter,
+    "highpass_filter": highpass_filter,
+    "gaussian_filter": gaussian_filter,
     # gain offset stuff
-    NormalizeByQuantileRecording,
-    ScaleRecording,
-    CenterRecording,
-    ZScoreRecording,
+    "normalize_by_quantile": normalize_by_quantile,
+    "scale": scale,
+    "zscore": zscore,
+    "center": center,
     # decorrelation stuff
-    WhitenRecording,
+    "whiten": whiten,
     # re-reference
-    CommonReferenceRecording,
-    PhaseShiftRecording,
+    "common_reference": common_reference,
+    "phase_shift": phase_shift,
     # misc
-    RectifyRecording,
-    ClipRecording,
-    BlankSaturationRecording,
-    SilencedPeriodsRecording,
-    RemoveArtifactsRecording,
-    ZeroChannelPaddedRecording,
-    DeepInterpolatedRecording,
-    ResampleRecording,
-    DecimateRecording,
-    HighpassSpatialFilterRecording,
-    InterpolateBadChannelsRecording,
-    DepthOrderRecording,
-    AverageAcrossDirectionRecording,
-    DirectionalDerivativeRecording,
-    AstypeRecording,
-    UnsignedToSignedRecording,
-]
+    "rectify": rectify,
+    "clip": clip,
+    "blank_staturation": blank_staturation,
+    "silence_periods": silence_periods,
+    "remove_artifacts": remove_artifacts,
+    "zero_channel_pad": zero_channel_pad,
+    "deepinterpolate": deepinterpolate,
+    "resample": resample,
+    "decimate": decimate,
+    "highpass_spatial_filter": highpass_spatial_filter,
+    "interpolate_bad_channels": interpolate_bad_channels,
+    "depth_order": depth_order,
+    "average_across_direction": average_across_direction,
+    "directional_derivative": directional_derivative,
+    "astype": astype,
+    "unsigned_to_signed": unsigned_to_signed,
+    "unsigned_to_signed": unsigned_to_signed,
+    # motion correction
+    "correct_motion": correct_motion,
+}
 
-preprocesser_dict = {pp_class.name: pp_class for pp_class in preprocessers_full_list}
+pp_function_to_class = {
+    # filter stuff
+    "filter": FilterRecording,
+    "bandpass_filter": BandpassFilterRecording,
+    "notch_filter": NotchFilterRecording,
+    "highpass_filter": HighpassFilterRecording,
+    "gaussian_filter": GaussianFilterRecording,
+    # gain offset stuff
+    "normalize_by_quantile": NormalizeByQuantileRecording,
+    "scale": ScaleRecording,
+    "zscore": ZScoreRecording,
+    "center": CenterRecording,
+    # decorrelation stuff
+    "whiten": WhitenRecording,
+    # re-reference
+    "common_reference": CommonReferenceRecording,
+    "phase_shift": PhaseShiftRecording,
+    # misc
+    "rectify": RectifyRecording,
+    "clip": ClipRecording,
+    "blank_staturation": BlankSaturationRecording,
+    "silence_periods": SilencedPeriodsRecording,
+    "remove_artifacts": RemoveArtifactsRecording,
+    "zero_channel_pad": ZeroChannelPaddedRecording,
+    "deepinterpolate": DeepInterpolatedRecording,
+    "resample": ResampleRecording,
+    "decimate": DecimateRecording,
+    "highpass_spatial_filter": HighpassSpatialFilterRecording,
+    "interpolate_bad_channels": InterpolateBadChannelsRecording,
+    "depth_order": DepthOrderRecording,
+    "average_across_direction": AverageAcrossDirectionRecording,
+    "directional_derivative": DirectionalDerivativeRecording,
+    "astype": AstypeRecording,
+    "unsigned_to_signed": UnsignedToSignedRecording,
+}
+
+
+preprocessers_full_list = pp_function_to_class.values()
+
+preprocesser_dict = {pp_class.__name__: pp_class for pp_class in preprocessers_full_list}
