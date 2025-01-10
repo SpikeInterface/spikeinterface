@@ -101,7 +101,7 @@ class CurationModelTrainer:
         If True, useful information is printed during training.
     search_kwargs : dict or None, default: None
         Keyword arguments passed to `BayesSearchCV` or `RandomizedSearchCV` from `sklearn`. If None, use
-        `search_kwargs = {'cv': 5, 'scoring': 'balanced_accuracy', 'n_iter': 25}`.
+        `search_kwargs = {'cv': 3, 'scoring': 'balanced_accuracy', 'n_iter': 25}`.
 
     Attributes
     ----------

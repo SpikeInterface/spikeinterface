@@ -99,6 +99,7 @@ trainer = sc.train_model(
     scaling_techniques = ["standard_scaler"], # Defaults to all
     classifiers = None, # Default to Random Forest only. Other classifiers you can try [ "AdaBoostClassifier","GradientBoostingClassifier","LogisticRegression","MLPClassifier"]
     overwrite = True, # Whether or not to overwrite `folder` if it already exists. Default is False.
+    search_kwargs = {'cv': 3} # Parameters used during the model hyperparameter search
 )
 
 best_model = trainer.best_pipeline
