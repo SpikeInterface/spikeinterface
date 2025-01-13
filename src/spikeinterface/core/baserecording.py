@@ -59,7 +59,7 @@ class BaseRecording(BaseRecordingSnippets):
         if num_segments > 1:
             samples_per_segment = [self.get_num_samples(segment_index) for segment_index in range(num_segments)]
             memory_per_segment_bytes = (self.get_memory_size(segment_index) for segment_index in range(num_segments))
-            durations = [self.get_duration(segment_index) for segment_index in range(num_segments)]
+            durations = [self.get_duration(segment_index, use_times=False) for segment_index in range(num_segments)]
 
             samples_per_segment_formated = [f"{samples:,}" for samples in samples_per_segment]
             durations_per_segment_formated = [convert_seconds_to_str(d) for d in durations]
@@ -95,7 +95,7 @@ class BaseRecording(BaseRecordingSnippets):
         dtype = self.get_dtype()
 
         total_samples = self.get_total_samples()
-        total_duration = self.get_total_duration()
+        total_duration = self.get_total_duration(use_times=False)
         total_memory_size = self.get_total_memory_size()
 
         sf_hz = self.get_sampling_frequency()
@@ -216,7 +216,7 @@ class BaseRecording(BaseRecordingSnippets):
 
         return sum(samples_per_segment)
 
-    def get_duration(self, segment_index=None) -> float:
+    def get_duration(self, segment_index=None, use_times=True) -> float:
         """
         Returns the duration in seconds.
 
@@ -226,6 +226,9 @@ class BaseRecording(BaseRecordingSnippets):
             The sample index to retrieve the duration for.
             For multi-segment objects, it is required, default: None
             With single segment recording returns the duration of the single segment
+        use_times : bool, default: True
+            If True, the duration is calculated using the time vector if available.
+            If False, the duration is calculated using the number of samples and the sampling frequency.
 
         Returns
         -------
@@ -234,7 +237,7 @@ class BaseRecording(BaseRecordingSnippets):
         """
         segment_index = self._check_segment_index(segment_index)
 
-        if self.has_time_vector(segment_index):
+        if self.has_time_vector(segment_index) and use_times:
             times = self.get_times(segment_index)
             segment_duration = times[-1] - times[0] + (1 / self.get_sampling_frequency())
         else:
@@ -243,16 +246,22 @@ class BaseRecording(BaseRecordingSnippets):
 
         return segment_duration
 
-    def get_total_duration(self) -> float:
+    def get_total_duration(self, use_times=True) -> float:
         """
         Returns the total duration in seconds
+
+        Parameters
+        ----------
+        use_times : bool, default: True
+            If True, the duration is calculated using the time vector if available.
+            If False, the duration is calculated using the number of samples and the sampling frequency.
 
         Returns
         -------
         float
             The duration in seconds
         """
-        duration = sum([self.get_duration(idx) for idx in range(self.get_num_segments())])
+        duration = sum([self.get_duration(idx, use_times) for idx in range(self.get_num_segments())])
         return duration
 
     def get_memory_size(self, segment_index=None) -> int:

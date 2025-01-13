@@ -16,7 +16,7 @@ import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import (
-    check_json,
+    is_path_remote,
     clean_zarr_folder_name,
     is_dict_extractor,
     SIJsonEncoder,
@@ -761,62 +761,70 @@ class BaseExtractor:
           * save (...)  a folder which contain data  + json (or pickle) + metadata.
 
         """
+        if not is_path_remote(file_path):
+            file_path = Path(file_path)
 
-        file_path = Path(file_path)
-        if base_folder is True:
-            base_folder = file_path.parent
+            if base_folder is True:
+                base_folder = file_path.parent
 
-        if file_path.is_file():
-            # standard case based on a file (json or pickle)
-            if str(file_path).endswith(".json"):
-                with open(file_path, "r") as f:
-                    d = json.load(f)
-            elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-                with open(file_path, "rb") as f:
-                    d = pickle.load(f)
-            else:
-                raise ValueError(f"Impossible to load {file_path}")
-            if "warning" in d:
-                print("The extractor was not serializable to file")
-                return None
+            if file_path.is_file():
+                # standard case based on a file (json or pickle)
+                if str(file_path).endswith(".json"):
+                    with open(file_path, "r") as f:
+                        d = json.load(f)
+                elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
+                    with open(file_path, "rb") as f:
+                        d = pickle.load(f)
+                else:
+                    raise ValueError(f"Impossible to load {file_path}")
+                if "warning" in d:
+                    print("The extractor was not serializable to file")
+                    return None
 
-            extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
-            return extractor
+                extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
+                return extractor
 
-        elif file_path.is_dir():
-            # case from a folder after a calling extractor.save(...)
-            folder = file_path
-            file = None
+            elif file_path.is_dir():
+                # case from a folder after a calling extractor.save(...)
+                folder = file_path
+                file = None
 
-            if folder.suffix == ".zarr":
-                from .zarrextractors import read_zarr
+                if folder.suffix == ".zarr":
+                    from .zarrextractors import read_zarr
 
-                extractor = read_zarr(folder)
-            else:
-                # the is spikeinterface<=0.94.0
-                # a folder came with 'cached.json'
-                for dump_ext in ("json", "pkl", "pickle"):
-                    f = folder / f"cached.{dump_ext}"
+                    extractor = read_zarr(folder)
+                else:
+                    # the is spikeinterface<=0.94.0
+                    # a folder came with 'cached.json'
+                    for dump_ext in ("json", "pkl", "pickle"):
+                        f = folder / f"cached.{dump_ext}"
+                        if f.is_file():
+                            file = f
+
+                    # spikeinterface>=0.95.0
+                    f = folder / f"si_folder.json"
                     if f.is_file():
                         file = f
 
-                # spikeinterface>=0.95.0
-                f = folder / f"si_folder.json"
-                if f.is_file():
-                    file = f
+                    if file is None:
+                        raise ValueError(f"This folder is not a cached folder {file_path}")
+                    extractor = BaseExtractor.load(file, base_folder=folder)
+            else:
+                error_msg = (
+                    f"{file_path} is not a file or a folder. It should point to either a json, pickle file or a "
+                    "folder that is the result of extractor.save(...)"
+                )
+                raise ValueError(error_msg)
+        else:
+            # remote case - zarr
+            if str(file_path).endswith(".zarr"):
+                from .zarrextractors import read_zarr
 
-                if file is None:
-                    raise ValueError(f"This folder is not a cached folder {file_path}")
-                extractor = BaseExtractor.load(file, base_folder=folder)
+                extractor = read_zarr(file_path)
+            else:
+                raise NotImplementedError("Only zarr format is supported for remote files")
 
             return extractor
-
-        else:
-            error_msg = (
-                f"{file_path} is not a file or a folder. It should point to either a json, pickle file or a "
-                "folder that is the result of extractor.save(...)"
-            )
-            raise ValueError(error_msg)
 
     def __reduce__(self):
         """
