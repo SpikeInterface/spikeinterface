@@ -137,175 +137,22 @@ def estimate_chunk_size(scaled_activity_histogram):
 
 
 def get_chunked_hist_mean(chunked_session_histograms):
-
+    """
+    """
     mean_hist = np.mean(chunked_session_histograms, axis=0)
 
-    std = np.std(chunked_session_histograms, axis=0, ddof=0)
-
-    return mean_hist, std
+    return mean_hist
 
 
 def get_chunked_hist_median(chunked_session_histograms):
-
+    """
+    """
     median_hist = np.median(chunked_session_histograms, axis=0)
 
     quartile_1 = np.percentile(chunked_session_histograms, 25, axis=0)
     quartile_3 = np.percentile(chunked_session_histograms, 75, axis=0)
 
-    iqr = quartile_3 - quartile_1
-
-    return median_hist, iqr
-
-
-def get_chunked_hist_supremum(chunked_session_histograms):
-
-    max_hist = np.max(chunked_session_histograms, axis=0)
-
-    min_hist = np.min(chunked_session_histograms, axis=0)
-
-    scaled_range = (max_hist - min_hist) / (max_hist + 1e-12)
-
-    return max_hist, scaled_range
-
-
-def get_chunked_hist_poisson_estimate(chunked_session_histograms):
-    """
-    Make a MLE estimate of the most likely value for each bin
-    given the assumption of Poisson firing. Turns out this is
-    basically identical to the mean :'D.
-
-    Keeping for now as opportunity to add prior or do some outlier
-    removal per bin. But if not useful, deprecate in future.
-    """
-
-    def obj_fun(lambda_, m, sum_k):
-        return -(sum_k * np.log(lambda_) - m * lambda_)
-
-    poisson_estimate = np.zeros(chunked_session_histograms.shape[1])
-    std_devs = []
-    for i in range(chunked_session_histograms.shape[1]):
-
-        ks = chunked_session_histograms[:, i]
-
-        std_devs.append(np.std(ks))
-        m = ks.shape
-        sum_k = np.sum(ks)
-
-        poisson_estimate[i] = minimize(obj_fun, 0.5, (m, sum_k), bounds=((1e-10, np.inf),)).x
-
-    raise NotImplementedError("This is the same as the mean, deprecate")
-
-    return poisson_estimate
-
-
-def get_chunked_hist_eigenvector(chunked_session_histograms):
-    """
-    TODO: a little messy with the 2D stuff. Will probably deprecate anyway.
-    """
-    if chunked_session_histograms.shape[0] == 1:
-        return chunked_session_histograms.squeeze(), None
-
-    is_2d = chunked_session_histograms.ndim == 3
-
-    if is_2d:
-        num_hist, num_spat_bin, num_amp_bin = chunked_session_histograms.shape
-        chunked_session_histograms = np.reshape(chunked_session_histograms, (num_hist, num_spat_bin * num_amp_bin))
-
-    A = chunked_session_histograms
-    S = (1 / A.shape[0]) * A.T @ A
-
-    L, U = np.linalg.eigh(S)
-
-    first_eigenvector = U[:, -1] * np.sqrt(L[-1])
-    first_eigenvector = np.abs(first_eigenvector)  # sometimes the eigenvector is negative
-
-    # Project all vectors (histograms) onto the principal component,
-    # then take the standard deviation in each dimension (over bins)
-    v1 = first_eigenvector[:, np.newaxis]
-    projection_onto_v1 = (A @ v1 @ v1.T) / (v1.T @ v1)
-
-    v1_std = np.std(projection_onto_v1, axis=0)
-
-    if is_2d:  # TODO: double check this
-        first_eigenvector = np.reshape(first_eigenvector, (num_spat_bin, num_amp_bin))
-        v1_std = np.reshape(v1_std, (num_spat_bin, num_amp_bin))
-
-    return first_eigenvector, v1_std
-
-
-def get_chunked_gaussian_process_regression(chunked_session_histogram):
-    """ """
-    # TODO: this is currently a placeholder implementation where the
-    # mean and variance over repeated samples is taken to run quickly.
-    # It would be better to use sparse version with repeated measures
-    # as done in pymc.
-    # TODO: try https://github.com/cornellius-gp/gpytorch
-    # even better : https://www.pymc.io/projects/examples/en/latest/gaussian_processes/GP-Heteroskedastic.html
-    #
-
-    from sklearn.gaussian_process import GaussianProcessRegressor
-    from sklearn.gaussian_process.kernels import RBF, ConstantKernel
-    from sklearn.preprocessing import StandardScaler
-    import GPy
-
-    chunked_session_histogram = chunked_session_histogram.copy()
-    chunked_session_histogram = chunked_session_histogram
-
-    num_hist = chunked_session_histogram.shape[0]
-    num_bins = chunked_session_histogram.shape[1]
-
-    X = np.arange(num_bins)
-    X_scaled = X
-
-    Y = chunked_session_histogram
-
-    bias_mean = False
-    if bias_mean:
-        # this is cool, bias the estimation towards the peak
-        Y = Y + np.mean(Y, axis=0) - np.percentile(Y, 5, axis=0)  # TODO: avoid copy, also fix dims in case of square
-
-    # normalise X and set lengthscale to 1 bin
-    mu_x = np.mean(X)
-    std_x = np.std(X)
-    X_scaled = (X - mu_x) / std_x
-
-    lengthscale = 1 / std_x  # 1 spatial bin
-
-    mu_ystar = np.mean(Y)
-    std_ystar = np.std(Y)
-
-    # take the mean and variance of Y replicates. Scale to the mean / standard deviation of all y
-    y_mean = np.mean(Y, axis=0)
-    y_var = np.std(Y, axis=0)
-
-    Y_mean_scaled = (y_mean - mu_ystar) / std_ystar  # standardise the normal way
-    Y_var_scaled = (
-        1 / std_ystar**2
-    ) * y_var  # this is a variance so need to scale to the square (TODO: see overleaf notes)
-
-    kernel = GPy.kern.RBF(input_dim=1, lengthscale=lengthscale, variance=np.mean(Y_var_scaled))  # TODO: check this
-
-    output_index2 = np.arange(num_bins)
-    Y_metadata2 = {"output_index": output_index2}
-
-    likelihood = GPy.likelihoods.HeteroscedasticGaussian(
-        Y_metadata2, variance=Y_var_scaled
-    )  # one variance per y, but should be repeated for the same x
-
-    gp = GPy.models.GPRegression(X_scaled.reshape(-1, 1), Y_mean_scaled.reshape(-1, 1), kernel, Y_metadata2)
-
-    gp.likelihood = likelihood
-
-    gp.optimize(messages=True)
-
-    mean_pred, var_pred = gp.predict(X_scaled.reshape(-1, 1), Y_metadata=Y_metadata2)
-
-    mean_pred = (mean_pred * std_ystar) + mu_ystar
-    var_pred = var_pred * std_ystar**2
-
-    std_pred = np.sqrt(var_pred)
-
-    return mean_pred, std_pred, gp
+    return median_hist
 
 
 # #############################################################################
