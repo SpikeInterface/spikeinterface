@@ -103,8 +103,8 @@ class CircusClustering:
         wfs = wfs[valid]
 
         # Perform Hanning filtering
-        hanning_before = np.hanning(2*nbefore)
-        hanning_after = np.hanning(2*nafter)
+        hanning_before = np.hanning(2 * nbefore)
+        hanning_after = np.hanning(2 * nafter)
         hanning = np.concatenate((hanning_before[:nbefore], hanning_after[nafter:]))
         wfs *= hanning
 
