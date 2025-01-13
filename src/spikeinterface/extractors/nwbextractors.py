@@ -657,7 +657,7 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
             "file": file,
         }
 
-        # Set extra requirements for the extractor, so they can be installed from docker
+        # Set extra requirements for the extractor, so they can be installed when using docker
         if use_pynwb:
             self.extra_requirements.append("pynwb")
         else:
@@ -1423,11 +1423,11 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
         Determines the streaming mode for reading the file.
     file : BinaryIO | None, default: None
         A file-like object representing the NWB file. Use this parameter if you have
-        an in-memory representation of the NWB file instead of a file path.
+        an in-memory representation of the NWB file instead of a file path given by `file_path`.
     cache : bool, default: False
         If True, the file is cached locally when using streaming.
     stream_cache_path : str | Path | None, default: None
-        Local path for caching. Only used if cache is True.
+        Local path for caching. Only used if `cache` is True.
     storage_options : dict | None, default: None
         Additional kwargs (e.g. AWS credentials) passed to zarr.open. Only used with
         "zarr" stream_mode.
@@ -1497,7 +1497,7 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
         if storage_options is not None and stream_mode == "zarr":
             warnings.warn(
                 "The `storage_options` parameter will not be propagated to JSON or pickle files "
-                "for security reasons, so the extractor will not be JSON/pickle serializable."
+                "for security reasons, so this extractor will not be JSON/pickle serializable."
             )
             self._serializability["json"] = False
             self._serializability["pickle"] = False
