@@ -39,9 +39,9 @@ class HanningFilter(WaveformsNode):
             parents=parents,
         )
 
-        hanning_before = np.hanning(2*self.nbefore)
-        hanning_after = np.hanning(2*self.nafter)
-        hanning = np.concatenate((hanning_before[:self.nbefore], hanning_after[self.nafter:]))
+        hanning_before = np.hanning(2 * self.nbefore)
+        hanning_after = np.hanning(2 * self.nafter)
+        hanning = np.concatenate((hanning_before[: self.nbefore], hanning_after[self.nafter :]))
         self.hanning = hanning[:, None]
         self._kwargs.update(dict())
 
