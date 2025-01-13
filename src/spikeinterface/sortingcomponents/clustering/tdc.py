@@ -161,7 +161,8 @@ class TdcClustering:
                 neighbours_mask=neighbours_mask,
                 waveforms_sparse_mask=sparse_mask,
                 min_size_split=min_cluster_size,
-                n_pca_features=3
+                n_pca_features=3,
+                scale_n_pca_by_depth=True,
             ),
             recursive=True,
             recursive_depth=3,
