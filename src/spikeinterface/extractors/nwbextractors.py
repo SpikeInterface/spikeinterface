@@ -160,6 +160,9 @@ def read_nwbfile(
     return nwbfile
 
 
+1
+
+
 def _retrieve_electrical_series_pynwb(
     nwbfile: "NWBFile", electrical_series_path: Optional[str] = None
 ) -> "ElectricalSeries":
@@ -1521,9 +1524,10 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
                 self.extra_requirements.append("h5py")
             if self.backend == "zarr":
                 self.extra_requirements.append("zarr")
+
         if self.stream_mode == "fsspec":
             self.extra_requirements.append("fsspec")
-        if self.stream_mode == "remfile":
+        elif self.stream_mode == "remfile":
             self.extra_requirements.append("remfile")
 
     def _fetch_recording_segment_info(self, file, cache, load_time_vector, samples_for_rate_estimation):
