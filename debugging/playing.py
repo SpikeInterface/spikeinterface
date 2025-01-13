@@ -6,6 +6,7 @@ from spikeinterface.preprocessing.inter_session_alignment import (
     session_alignment,
     plotting_session_alignment,
 )
+from spikeinterface.widgets import plot_session_alignment, plot_activity_histogram_2d
 import matplotlib.pyplot as plt
 
 import spikeinterface.full as si
@@ -31,10 +32,10 @@ if __name__ == '__main__':
 
     recordings_list, _ = generate_session_displacement_recordings(
         num_units=65,
-        recording_durations=[400, 400, 400],
+        recording_durations=[200, 200, 200],
         recording_shifts=((0, 0), (0, -200), (0, 150)),  # TODO: can see how well this is recaptured by comparing the displacements to the known displacement + gradient
-        non_rigid_gradient=0.1, # 0.1,
-        seed=5,  # 52
+        non_rigid_gradient=None, # 0.1, # 0.1,
+        seed=55,  # 52
     )
 
     if False:
@@ -81,20 +82,21 @@ if __name__ == '__main__':
     # See `session_alignment.py` for docs on these settings.
 
     non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
-    non_rigid_window_kwargs["rigid_mode"] = "rigid"
-    non_rigid_window_kwargs["win_shape"] = "rect"
-    non_rigid_window_kwargs["win_step_um"] = 300.0
-    non_rigid_window_kwargs["win_scale_um"] = 400.0
+    non_rigid_window_kwargs["rigid"] = False
+    non_rigid_window_kwargs["num_shifts_global"] = 500
+    non_rigid_window_kwargs["num_shifts_block"] = 24  # TODO: it makes no sense for this to be larger than the window
+    non_rigid_window_kwargs["win_step_um"] = 125
+    non_rigid_window_kwargs["win_scale_um"] = 60
 
     estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
     estimate_histogram_kwargs["method"] = "chunked_median"
-    estimate_histogram_kwargs["histogram_type"] = "activity_1d"  # TODO: investigate this case thoroughly
-    estimate_histogram_kwargs["bin_um"] = 5
-    estimate_histogram_kwargs["log_scale"] = False
-    estimate_histogram_kwargs["weight_with_amplitude"] = True
+    estimate_histogram_kwargs["histogram_type"] = "activity_2d"  # TODO: investigate this case thoroughly
+    estimate_histogram_kwargs["bin_um"] = 2
+    estimate_histogram_kwargs["log_scale"] = True
+    estimate_histogram_kwargs["weight_with_amplitude"] = False
 
     compute_alignment_kwargs = session_alignment.get_compute_alignment_kwargs()
-    compute_alignment_kwargs["num_shifts_block"] = 300
+    compute_alignment_kwargs["interpolate"] = False
 
     corrected_recordings_list, extra_info = session_alignment.align_sessions(
         recordings_list,
@@ -103,26 +105,10 @@ if __name__ == '__main__':
         alignment_order="to_session_1",  # "to_session_X" or "to_middle"
         non_rigid_window_kwargs=non_rigid_window_kwargs,
         estimate_histogram_kwargs=estimate_histogram_kwargs,
+        compute_alignment_kwargs=compute_alignment_kwargs,
     )
-   # si.plot_traces(recordings_list[0], mode="line", time_range=(0, 1))
-    # plt.show()
 
-    # TODO: nonlinear is not working well 'to middle', investigate
-    # TODO: also finalise the estimation of bin number of nonrigid.
-
-    if False:
-        plt.plot(extra_info["histogram_info_list"][0]["chunked_histograms"].T, color="black")
-
-        M = extra_info["session_histogram_list"][0]
-        S = extra_info["histogram_info_list"][0]["session_histogram_variation"]
-
-        plt.plot(M, color="red")
-        plt.plot(M + S, color="green")
-        plt.plot(M - S, color="green")
-
-        plt.show()
-
-    plotting_session_alignment.SessionAlignmentWidget(
+    plot_session_alignment(
         recordings_list,
         peaks_list,
         peak_locations_list,
@@ -131,10 +117,12 @@ if __name__ == '__main__':
         spatial_bin_centers=extra_info["spatial_bin_centers"],
         drift_raster_map_kwargs={"clim":(-250, 0), "scatter_decimate": 10}
     )
-
     plt.show()
 
-    np.save("histogram1.npy", extra_info["session_histogram_list"][0])
-    np.save("histogram2.npy", extra_info["session_histogram_list"][1])
-    np.save("histogram3.npy", extra_info["session_histogram_list"][2])
-    breakpoint()
+    if estimate_histogram_kwargs["histogram_type"]  == "activity_2d":
+        plot_activity_histogram_2d(
+            extra_info["session_histogram_list"],
+            extra_info["spatial_bin_centers"],
+            extra_info["corrected"]["corrected_session_histogram_list"]
+        )
+        plt.show()
