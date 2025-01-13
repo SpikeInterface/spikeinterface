@@ -50,7 +50,7 @@ class CircusClustering:
             "returns_split_count": True,
         },
         "radius_um": 100,
-        "n_svd": 5,
+        "n_svd": [5, 2],
         "few_waveforms": None,
         "ms_before": 0.5,
         "ms_after": 0.5,
@@ -103,7 +103,7 @@ class CircusClustering:
 
         from sklearn.decomposition import TruncatedSVD
 
-        tsvd = TruncatedSVD(params["n_svd"])
+        tsvd = TruncatedSVD(params["n_svd"][0])
         tsvd.fit(wfs)
 
         model_folder = tmp_folder / "tsvd_model"
@@ -157,8 +157,8 @@ class CircusClustering:
                 sub_data = all_pc_data[mask]
                 sub_data = sub_data.reshape(len(sub_data), -1)
 
-                if all_pc_data.shape[1] > params["n_svd"]:
-                    tsvd = PCA(params["n_svd"], whiten=True)
+                if all_pc_data.shape[1] > params["n_svd"][1]:
+                    tsvd = PCA(params["n_svd"][1], whiten=True)
                 else:
                     tsvd = PCA(all_pc_data.shape[1], whiten=True)
 
@@ -212,7 +212,8 @@ class CircusClustering:
                     waveforms_sparse_mask=sparse_mask,
                     min_size_split=min_size,
                     clusterer_kwargs=d["hdbscan_kwargs"],
-                    n_pca_features=[2, 4, 6, 8, 10],
+                    n_pca_features=params["n_svd"][1],
+                    scale_n_pca_by_depth=True,
                 ),
                 **params["recursive_kwargs"],
                 **job_kwargs,
