@@ -761,6 +761,7 @@ class BaseExtractor:
           * save (...)  a folder which contain data  + json (or pickle) + metadata.
 
         """
+        print(file_path, is_path_remote(file_path))
         if not is_path_remote(file_path):
             file_path = Path(file_path)
 
@@ -782,7 +783,6 @@ class BaseExtractor:
                     return None
 
                 extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
-                return extractor
 
             elif file_path.is_dir():
                 # case from a folder after a calling extractor.save(...)
@@ -809,6 +809,7 @@ class BaseExtractor:
                     if file is None:
                         raise ValueError(f"This folder is not a cached folder {file_path}")
                     extractor = BaseExtractor.load(file, base_folder=folder)
+
             else:
                 error_msg = (
                     f"{file_path} is not a file or a folder. It should point to either a json, pickle file or a "
@@ -824,7 +825,7 @@ class BaseExtractor:
             else:
                 raise NotImplementedError("Only zarr format is supported for remote files")
 
-            return extractor
+        return extractor
 
     def __reduce__(self):
         """
