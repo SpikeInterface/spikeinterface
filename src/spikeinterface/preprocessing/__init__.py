@@ -1,6 +1,5 @@
 from .preprocessing_classes import *
 
-<<<<<<< HEAD
 from .motion import (
     correct_motion,
     load_motion_info,
@@ -9,10 +8,6 @@ from .motion import (
     get_motion_presets,
     compute_motion,
 )
-from .inter_session_displacement import correct_inter_session_displacement
-=======
-from .motion import correct_motion, load_motion_info, save_motion_info, get_motion_parameters_preset, get_motion_presets
->>>>>>> e651018a9 (Small fixes)
 
 """
 from .inter_session_alignment.session_alignment import (
