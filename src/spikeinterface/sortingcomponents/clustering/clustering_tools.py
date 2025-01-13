@@ -570,7 +570,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
         )
     else:
         recording = NumpyRecording(zdata, sampling_frequency=fs)
-        recording = SharedMemoryRecording.from_recording(recording)
+        recording = SharedMemoryRecording.from_recording(recording, **job_kwargs)
 
     recording = recording.set_probe(templates.probe)
     recording.annotate(is_filtered=True)
