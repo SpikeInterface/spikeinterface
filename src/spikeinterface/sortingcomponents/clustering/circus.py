@@ -102,6 +102,12 @@ class CircusClustering:
         valid = np.argmax(np.abs(wfs), axis=1) == nbefore
         wfs = wfs[valid]
 
+        # Perform Hanning filtering
+        hanning_before = np.hanning(2*nbefore)
+        hanning_after = np.hanning(2*nafter)
+        hanning = np.concatenate((hanning_before[:nbefore], hanning_after[nafter:]))
+        wfs *= hanning
+
         from sklearn.decomposition import TruncatedSVD
 
         tsvd = TruncatedSVD(params["n_svd"][0])
