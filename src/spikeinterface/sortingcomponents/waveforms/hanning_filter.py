@@ -39,7 +39,10 @@ class HanningFilter(WaveformsNode):
             parents=parents,
         )
 
-        self.hanning = np.hanning(self.nbefore + self.nafter)[:, None]
+        hanning_before = np.hanning(2*self.nbefore)
+        hanning_after = np.hanning(2*self.nafter)
+        hanning = np.concatenate((hanning_before[:self.nbefore], hanning_after[self.nafter:]))
+        self.hanning = hanning[:, None]
         self._kwargs.update(dict())
 
     def compute(self, traces, peaks, waveforms):
