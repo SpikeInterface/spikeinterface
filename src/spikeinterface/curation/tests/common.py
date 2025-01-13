@@ -18,6 +18,11 @@ def make_sorting_analyzer(sparse=True, num_units=5):
         seed=2205,
     )
 
+    channel_ids_as_integers = [id for id in range(recording.get_num_channels())]
+    unit_ids_as_integers = [id for id in range(sorting.get_num_units())]
+    recording = recording.rename_channels(new_channel_ids=channel_ids_as_integers)
+    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
+
     sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, format="memory", sparse=sparse)
     sorting_analyzer.compute("random_spikes")
     sorting_analyzer.compute("waveforms", **job_kwargs)
