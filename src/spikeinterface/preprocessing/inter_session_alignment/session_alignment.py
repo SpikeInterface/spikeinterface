@@ -20,7 +20,6 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 import matplotlib.pyplot as plt
 
-INTERP = "linear"
 
 def get_estimate_histogram_kwargs() -> dict:
     """
@@ -75,7 +74,6 @@ def get_compute_alignment_kwargs() -> dict:
         windows along the probe depth. See `get_spatial_windows`.
     """
     return {
-        "num_shifts_block": 50,  # TODO: estimate this properly, make take as some factor of the window width? Also check if it is 2x the block xcorr in motion correction
         "interpolate": False,
         "interp_factor": 10,
         "kriging_sigma": 1,
@@ -97,7 +95,9 @@ def get_non_rigid_window_kwargs():
     defined in the function signature.
     """
     return {
-        "rigid_mode": "rigid",  # "rigid", "rigid_nonrigid", "nonrigid"
+        "rigid": True,
+        "num_shifts_global": None,
+        "num_shifts_block": 20,
         "win_shape": "gaussian",
         "win_step_um": 50,
         "win_scale_um": 50,
@@ -117,8 +117,6 @@ def get_interpolate_motion_kwargs():
 ###############################################################################
 # Public Entry Level Functions
 ###############################################################################
-
-# TODO: sometimes with small bins, the interpolation spreads the signal over too small a bin and flattens it on the corrected histogram
 
 
 def align_sessions(
@@ -326,7 +324,7 @@ def align_sessions_after_motion_correction(
         and "nonrigid" in align_sessions_kwargs["non_rigid_window_kwargs"]["rigid_mode"]
     ):
 
-        if motion_window_kwargs["rigid"] is False:
+        if not motion_window_kwargs["rigid"]:
             print(
                 "Nonrigid inter-session alignment must use the motion correct "
                 "nonrigid settings. Overwriting any passed `non_rigid_window_kwargs` "
@@ -828,9 +826,8 @@ def _compute_session_alignment(
     session_histogram_array = np.array(session_histogram_list)
 
     akima_interp_nonrigid = compute_alignment_kwargs.pop("akima_interp_nonrigid")
-
-    rigid_mode = non_rigid_window_kwargs.pop("rigid_mode")  # TODO: carefully check all popped kwargs
-    non_rigid_window_kwargs["rigid"] = rigid_mode == "rigid"
+    num_shifts_global = non_rigid_window_kwargs.pop("num_shifts_global")
+    num_shifts_block = non_rigid_window_kwargs.pop("num_shifts_block")
 
     non_rigid_windows, non_rigid_window_centers = get_spatial_windows(
         contact_depths, spatial_bin_centers, **non_rigid_window_kwargs
@@ -839,32 +836,27 @@ def _compute_session_alignment(
     rigid_shifts = _estimate_rigid_alignment(
         session_histogram_array,
         alignment_order,
+        num_shifts_global,
         compute_alignment_kwargs,
     )
 
-    if rigid_mode == "rigid":
+    if non_rigid_window_kwargs["rigid"]:
         return rigid_shifts, non_rigid_windows, non_rigid_window_centers
 
     # For non-rigid, first shift the histograms according to the rigid shift
-    # When there is non-rigid drift, the rigid drift can be very wrong!
-    # So we depart from the kilosort approach for inter-session,
-    # for non-rigid, it makes sense to start without rigid alignment
     shifted_histograms = session_histogram_array.copy()
 
-    if rigid_mode == "rigid_nonrigid":  # TOOD: add to docs
-        shifted_histograms = np.zeros_like(session_histogram_array)
-        for ses_idx, orig_histogram in enumerate(session_histogram_array):
+    shifted_histograms = np.zeros_like(session_histogram_array)
+    for ses_idx, orig_histogram in enumerate(session_histogram_array):
 
-            shifted_histogram = alignment_utils.shift_array_fill_zeros(
-                array=orig_histogram, shift=int(rigid_shifts[ses_idx, 0])
-            )
-            shifted_histograms[ses_idx, :] = shifted_histogram
-    else:
-        shifted_histograms = session_histogram_array
+        shifted_histogram = alignment_utils.shift_array_fill_zeros(
+            array=orig_histogram, shift=int(rigid_shifts[ses_idx, 0])
+        )
+        shifted_histograms[ses_idx, :] = shifted_histogram
 
     # Then compute the nonrigid shifts
     nonrigid_session_offsets_matrix = alignment_utils.compute_histogram_crosscorrelation(
-        shifted_histograms, non_rigid_windows, **compute_alignment_kwargs
+        shifted_histograms, non_rigid_windows, num_shifts_block, **compute_alignment_kwargs
     )
     non_rigid_shifts = alignment_utils.get_shifts_from_session_matrix(alignment_order, nonrigid_session_offsets_matrix)
 
@@ -873,14 +865,10 @@ def _compute_session_alignment(
         interp_nonrigid_shifts = alignment_utils.akima_interpolate_nonrigid_shifts(
             non_rigid_shifts, non_rigid_window_centers, spatial_bin_centers
         )
-        shifts = interp_nonrigid_shifts  # rigid_shifts + interp_nonrigid_shifts
+        shifts = rigid_shifts + interp_nonrigid_shifts
         non_rigid_window_centers = spatial_bin_centers
     else:
-        # TODO: so check + add a test, the interpolator will handle this?
-        shifts = non_rigid_shifts  # rigid_shifts + non_rigid_shifts
-
-    if rigid_mode == "rigid_nonrigid":
-        shifts += rigid_shifts
+        shifts = rigid_shifts + non_rigid_shifts
 
     return shifts, non_rigid_windows, non_rigid_window_centers
 
@@ -888,6 +876,7 @@ def _compute_session_alignment(
 def _estimate_rigid_alignment(
     session_histogram_array: np.ndarray,
     alignment_order: str,
+    num_shifts: None | int,
     compute_alignment_kwargs: dict,
 ):
     """
@@ -911,14 +900,14 @@ def _estimate_rigid_alignment(
         session histograms into alignment.
     """
     compute_alignment_kwargs = copy.deepcopy(compute_alignment_kwargs)
-    compute_alignment_kwargs["num_shifts_block"] = False
 
     rigid_window = np.ones(session_histogram_array.shape[1])[np.newaxis, :]
 
     rigid_session_offsets_matrix = alignment_utils.compute_histogram_crosscorrelation(
         session_histogram_array,
         rigid_window,
-        **compute_alignment_kwargs,  # TODO: remove the copy above and pass directly. COnsider removing this function...
+        num_shifts,
+        **compute_alignment_kwargs,  # TODO: remove the copy above and pass directly. Consider removing this function...
     )
     optimal_shift_indices = alignment_utils.get_shifts_from_session_matrix(
         alignment_order, rigid_session_offsets_matrix
