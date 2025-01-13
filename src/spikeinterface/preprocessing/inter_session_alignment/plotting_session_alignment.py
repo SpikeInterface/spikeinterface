@@ -7,37 +7,6 @@ from spikeinterface.widgets.base import to_attr
 from spikeinterface.widgets.motion import DriftRasterMapWidget
 from matplotlib.animation import FuncAnimation
 
-# TODO: decide on name, Displacement vs. Alignment
-
-
-# Animation
-# TODO: temp functions
-def _plot_2d_histogram_as_animation(chunked_histogram):
-    fig, ax = plt.subplots()
-    im = ax.imshow(chunked_histograms[0, :, :], origin="lower", cmap="Blues", aspect="auto")
-
-    def update(frame):
-        im.set_data(chunked_histograms[frame, :, :])
-        ax.set_title(f"Slice {frame}")
-        return [im]
-
-    FuncAnimation(fig, update, frames=chunked_histograms.shape[0], interval=100)
-    plt.show()
-
-
-def _plot_session_histogram_and_variation(session_histogram, variation):
-    plt.imshow(session_histogram, origin="lower", cmap="Blues", aspect="auto")
-    plt.title("Summary Histogram")
-    plt.xlabel("Amplitude bin")
-    plt.ylabel("Depth (um)")
-    plt.show()
-
-    plt.imshow(variation, origin="lower", cmap="Blues", aspect="auto")
-    plt.title("Variation")
-    plt.xlabel("Amplitude bin")
-    plt.ylabel("Depth (um)")
-    plt.show()
-
 
 class SessionAlignmentWidget(BaseWidget):
     def __init__(
@@ -259,7 +228,8 @@ class SessionAlignmentWidget(BaseWidget):
 
 
 class SessionAlignmentHistogramWidget(BaseWidget):
-    """ """
+    """
+    """
 
     def __init__(
         self,
@@ -313,7 +283,8 @@ class SessionAlignmentHistogramWidget(BaseWidget):
 
         if dp.session_histogram_list[0].ndim == 2:
             histogram_list = [np.sum(hist_, axis=1) for hist_ in dp.session_histogram_list]
-            print("2D histogram passed, will be summed across first (i.e. amplitude) axis.")
+            print("2D histogram passed, will be summed across first (i.e. amplitude) axis. "
+                  "Use SessionAlignment2DHistograms to plot the 2D histograms directly.")
         else:
             histogram_list = dp.session_histogram_list
 
@@ -324,5 +295,84 @@ class SessionAlignmentHistogramWidget(BaseWidget):
             self.ax.legend(legend)
 
         self.ax.set_xlabel("Spatial bins (um)")
-        self.ax.set_ylabel("Firing rate (Hz)")  # TODO: this is an assumption based on the
-        # output of histogram estimation
+        self.ax.set_ylabel("Firing rate (Hz)")  # TODO: this is an assumption based on the output of histogram estimation
+
+
+class SessionAlignment2DHistograms(BaseWidget):
+    def __init__(
+        self,
+        extra_info,
+        **backend_kwargs,
+    ):
+        """
+        """
+        plot_data = dict(
+            extra_info=extra_info,
+        )
+
+        BaseWidget.__init__(self, plot_data, backend="matplotlib", **backend_kwargs)
+
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        """
+        Create the `SessionAlignmentWidget` for matplotlib.
+        """
+        from spikeinterface.widgets.utils_matplotlib import make_mpl_figure
+
+        dp = to_attr(data_plot)
+
+        # TODO: direct copy
+        assert backend_kwargs["axes"] is None, "axes argument is not allowed in MotionWidget"
+        assert backend_kwargs["ax"] is None, "ax argument is not allowed in MotionWidget"
+
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+        fig = self.figure
+        fig.clear()
+
+        extra_info = dp.extra_info  # TODO: save amplitude bins
+
+        num_sessions = len(extra_info["session_histogram_list"])
+        has_corrected = "corrected" in extra_info
+
+        num_cols = 2 if has_corrected else 1
+        gs = fig.add_gridspec(num_sessions, num_cols, wspace=0.3, hspace=0.5)
+
+        extra_info["session_histogram_list"]
+
+        bin_centers = extra_info["spatial_bin_centers"]
+        divisor = int(bin_centers.size // 8)  # 8 here is arbitrary num ticks
+        xlabels = bin_centers[::divisor]
+
+        extra_info["corrected"]["corrected_session_histogram_list"]
+
+        for idx in range(num_sessions):
+
+            ax = fig.add_subplot(gs[idx, 0])
+
+            num_bins = extra_info["session_histogram_list"][idx].shape[0]
+            ax.imshow(extra_info["session_histogram_list"][idx].T, aspect='auto')
+
+            ax.set_title(f"Session {idx + 1}")
+
+            self.set_plot_tick_labels(idx, num_sessions, ax, num_bins, xlabels, col=0)
+
+            if has_corrected:
+                ax = fig.add_subplot(gs[idx, 1])
+
+                ax.imshow(extra_info["corrected"]["corrected_session_histogram_list"][idx].T, aspect='auto')
+                ax.set_title(f"Corrected Session {idx + 1}")
+
+                self.set_plot_tick_labels(idx, num_sessions, ax, num_bins, xlabels, col=1)
+
+    def set_plot_tick_labels(self, idx, num_sessions, ax, num_bins, xlabels, col):
+        """
+        """
+        if col == 0:
+            ax.set_ylabel("Amplitude Bins")
+
+        if idx == num_sessions - 1:
+            ax.set_xticks(np.linspace(0, num_bins - 1, xlabels.size))  # Set ticks at each column
+            ax.set_xticklabels([f'{i}' for i in xlabels], rotation=45)
+            ax.set_xlabel("Spatial Bins (µm)")
+        else:
+            ax.set_xticks([])  # Remove ticks
+            ax.set_xticklabels([])  # Remove tick labels
