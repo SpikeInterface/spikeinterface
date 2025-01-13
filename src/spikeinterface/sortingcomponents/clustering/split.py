@@ -257,7 +257,7 @@ class LocalFeatureClustering:
                 else:
                     is_split = False
             else:
-                raise ValueError(f"wrong clusterer {clusterer}")
+                raise ValueError(f"wrong clusterer {clusterer}. Possible options are 'hdbscan' or 'isocut5'.")
 
             # DEBUG = True
             DEBUG = False
