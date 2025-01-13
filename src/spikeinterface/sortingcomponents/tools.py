@@ -225,11 +225,11 @@ def get_prototype_and_waveforms(
         The selected peaks used to extract waveforms.
     """
     if peaks is None:
-        return get_prototype_and_waveforms_from_peaks(
+        return get_prototype_and_waveforms_from_recording(
             recording, n_peaks, ms_before=ms_before, ms_after=ms_after, seed=seed, **all_kwargs
         )
     else:
-        return get_prototype_and_waveforms_from_recording(
+        return get_prototype_and_waveforms_from_peaks(
             recording, peaks, n_peaks, ms_before=ms_before, ms_after=ms_after, seed=seed, **all_kwargs
         )
 
