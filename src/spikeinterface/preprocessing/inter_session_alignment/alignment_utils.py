@@ -1,3 +1,5 @@
+import time
+
 from spikeinterface import BaseRecording
 import numpy as np
 
@@ -6,6 +8,8 @@ from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_
 from scipy.optimize import minimize
 from scipy.ndimage import gaussian_filter
 from spikeinterface.sortingcomponents.motion.iterative_template import kriging_kernel
+from packaging.version import Version
+
 
 # #############################################################################
 # Get Histograms
@@ -137,16 +141,14 @@ def estimate_chunk_size(scaled_activity_histogram):
 
 
 def get_chunked_hist_mean(chunked_session_histograms):
-    """
-    """
+    """ """
     mean_hist = np.mean(chunked_session_histograms, axis=0)
 
     return mean_hist
 
 
 def get_chunked_hist_median(chunked_session_histograms):
-    """
-    """
+    """ """
     median_hist = np.median(chunked_session_histograms, axis=0)
 
     quartile_1 = np.percentile(chunked_session_histograms, 25, axis=0)
@@ -160,10 +162,11 @@ def get_chunked_hist_median(chunked_session_histograms):
 # #############################################################################
 
 
+# TODO: a good test here is to give zero shift for even and off numbered hist and check the output is zero!
 def compute_histogram_crosscorrelation(
     session_histogram_list: list[np.ndarray],
     non_rigid_windows: np.ndarray,
-    num_shifts_block: int,
+    num_shifts: int,
     interpolate: bool,
     interp_factor: int,
     kriging_sigma: float,
@@ -190,7 +193,7 @@ def compute_histogram_crosscorrelation(
         2 rectangular masks were used, there would be a two row binary mask
         the first row with mask of the first half of the probe and the second
         row a mask for the second half of the probe.
-    num_shifts_block : int
+    num_shifts : int
         Number of indices by which to shift the histogram to find the maximum
         of the cross correlation. If `None`, the entire activity histograms
         are cross-correlated.
@@ -230,7 +233,7 @@ def compute_histogram_crosscorrelation(
       1) the cross correlations for each session comparison are performed
          twice. They are slightly different due to interpolation, but
          still probably better to calculate once and flip.
-      2) `num_shifts_block` is implemented by simply making the full
+      2) `num_shifts` is implemented by simply making the full
         cross correlation. Would probably be nicer to explicitly calculate
          only where needed. However, in general these cross correlations are
         only a few thousand datapoints and so are already extremely
@@ -254,6 +257,8 @@ def compute_histogram_crosscorrelation(
     Note that kilosort method does not work because creating a
     mean does not make sense over sessions.
     """
+    import matplotlib.pyplot as plt
+
     num_sessions = len(session_histogram_list)
     num_bins = session_histogram_list.shape[1]  # all hists are same length
     num_windows = non_rigid_windows.shape[0]
@@ -263,75 +268,59 @@ def compute_histogram_crosscorrelation(
     center_bin = np.floor((num_bins * 2 - 1) / 2).astype(int)
 
     for i in range(num_sessions):
-        for j in range(num_sessions):
+        for j in range(i, num_sessions):
 
             # Create the (num windows, num_bins) matrix for this pair of sessions
-
-            import matplotlib.pyplot as plt
-
-            # TODO: plot everything
-
             num_iter = (
-                num_bins * 2 - 1 if not num_shifts_block else num_shifts_block * 2
-            )  # TODO: make sure this is clearly defined, it is either side...
+                num_bins * 2 - 1
+                if not num_shifts
+                else num_shifts * 2  # num_shift_block with iterative alignment is 2x, the same, make note!
+            )
             xcorr_matrix = np.zeros((non_rigid_windows.shape[0], num_iter))
 
             # For each window, window the session histograms (`window` is binary)
             # and perform the cross correlations
             for win_idx, window in enumerate(non_rigid_windows):
 
-                #   breakpoint()
-                # TODO: track the 2d histogram through all steps to check everything is working okay
-
-                # TOOD: gaussian window with crosscorr, won't it strongly bias zero shifts by maximising the signal at 0?
-                # TODO: add weight option.
-                # TODO: damn this is slow for 2D, speed up.
                 if session_histogram_list.ndim == 3:
+                    # For 2D histogram (spatial, amplitude), manually loop through shifts along
+                    # the spatial axis of the histogram. This is faster than using correlate2d
+                    # because we are not shifting along the amplitude axis.
+
                     windowed_histogram_i = session_histogram_list[i, :] * window[:, np.newaxis]
                     windowed_histogram_j = session_histogram_list[j, :] * window[:, np.newaxis]
 
-                    from scipy.signal import correlate2d
+                    window_i = windowed_histogram_i - np.mean(windowed_histogram_i, axis=1)[:, np.newaxis]
+                    window_j = windowed_histogram_j - np.mean(windowed_histogram_j, axis=1)[:, np.newaxis]
 
-                    # carefully check indices
-                    xcorr = correlate2d(
-                        windowed_histogram_i - np.mean(windowed_histogram_i, axis=1)[:, np.newaxis],
-                        windowed_histogram_j - np.mean(windowed_histogram_j, axis=1)[:, np.newaxis],
-                    )  # TOOD: check speed, probs don't remove mean because we want zeros for unmasked version
+                    xcorr = np.zeros(num_iter)
+                    for idx, shift in enumerate(range(-num_iter // 2, num_iter // 2)):
+                        shifted_i = shift_array_fill_zeros(window_i, shift)
 
-                    mid_idx = windowed_histogram_j.shape[1] - 1
-                    xcorr = xcorr[:, mid_idx]
+                        xcorr[idx] = np.correlate(shifted_i.flatten(), window_j.flatten())
 
                 else:
+                    # For a 1D histogram, compute the full cross-correlation and
+                    # window the desired shifts ( this is faster than manual looping).
                     windowed_histogram_i = session_histogram_list[i, :] * window
+                    windowed_histogram_j = session_histogram_list[j, :] * window
 
-                    window_target = True  # this makes less sense now that things could be very far apart
-                    if window_target:
-                        windowed_histogram_j = session_histogram_list[j, :] * window
-                    else:
-                        windowed_histogram_j = session_histogram_list[j, :]
-
-                    xcorr = np.correlate(windowed_histogram_i, windowed_histogram_j, mode="full")
-
-                #            plt.plot(windowed_histogram_i)
-                #            plt.plot(windowed_histogram_j)
-                #            plt.show()
-
-                if num_shifts_block:
-                    window_indices = np.arange(center_bin - num_shifts_block, center_bin + num_shifts_block)
-                    xcorr = xcorr[window_indices]
-                    shift_center_bin = (
-                        num_shifts_block  # np.floor(num_shifts_block / 2)  # TODO: CHECK! and move out of loop!
+                    xcorr = np.correlate(
+                        windowed_histogram_i - np.mean(windowed_histogram_i),
+                        windowed_histogram_j - np.mean(windowed_histogram_i),
+                        mode="full",
                     )
-                else:
-                    shift_center_bin = center_bin
 
-                #          plt.plot(xcorr)
-                #          plt.show()
+                    if num_shifts:
+                        window_indices = np.arange(center_bin - num_shifts, center_bin + num_shifts)
+                        xcorr = xcorr[window_indices]
 
                 xcorr_matrix[win_idx, :] = xcorr
 
-            # TODO: check absolute value of different bins, they are quite different (log scale, zero mean histograms)
-            # TODO: print out a load of quality metrics from this!
+            if num_shifts:
+                shift_center_bin = num_shifts
+            else:
+                shift_center_bin = center_bin
 
             # Smooth the cross-correlations across the bins
             if smoothing_sigma_bin:
@@ -359,10 +348,16 @@ def compute_histogram_crosscorrelation(
             else:
                 xcorr_peak = np.argmax(xcorr_matrix, axis=1)
 
-            #           breakpoint()
-
-            shift = xcorr_peak - shift_center_bin  # center_bin
+            # Caclulate and save the shift for session i to j
+            shift = xcorr_peak - shift_center_bin
             shift_matrix[i, j, :] = shift
+
+    # As xcorr shifts are symmetric, the shift matrix is skew symmetric, so fill
+    # the (empty) lower triangular with the negative (already computed) upper triangular to save computation
+    for k in range(shift_matrix.shape[2]):
+        lower_i, lower_j = np.tril_indices_from(shift_matrix[:, :, k], k=-1)
+        upper_i, upper_j = np.triu_indices_from(shift_matrix[:, :, k], k=1)
+        shift_matrix[lower_i, lower_j, k] = shift_matrix[upper_i, upper_j, k] * -1
 
     return shift_matrix
 
@@ -400,7 +395,7 @@ def shift_array_fill_zeros(array: np.ndarray, shift: int) -> np.ndarray:
     padded_hist = np.pad(array, pad_tuple, mode="constant")
 
     if padded_hist.ndim == 2:
-        cut_padded_array = padded_hist[abs_shift:, :] if shift >= 0 else padded_hist[:-abs_shift, :]  # TOOD: tidy up
+        cut_padded_array = padded_hist[abs_shift:, :] if shift >= 0 else padded_hist[:-abs_shift, :]
     else:
         cut_padded_array = padded_hist[abs_shift:] if shift >= 0 else padded_hist[:-abs_shift]
 
@@ -431,10 +426,10 @@ def akima_interpolate_nonrigid_shifts(
         An array (length num_spatial_bins) of shifts
         interpolated from the non-rigid shifts.
 
-    TODO
-    ----
-    requires scipy 14
     """
+    if Version(scipy.__version__) >= Version("1.4.0"):
+        raise ImportError("Scipy version 14 or higher is required fro Akima interpolation.")
+
     from scipy.interpolate import Akima1DInterpolator
 
     x = non_rigid_window_centers
@@ -457,6 +452,7 @@ def get_shifts_from_session_matrix(alignment_order: str, session_offsets_matrix:
     """
     Given a matrix of displacements between all sessions, find the
     shifts (one per session) to bring the sessions into alignment.
+    Assumes `session_offsets_matrix` is skew symmetric.
 
     Parameters
     ----------
@@ -465,8 +461,7 @@ def get_shifts_from_session_matrix(alignment_order: str, session_offsets_matrix:
     session_offsets_matrix : np.ndarray
         The num_sessions x num_sessions symmetric matrix
         of displacements between all sessions, generated by
-        `_compute_session_alignment()`. Assumes entry Xij
-        aligns the source histogram i to the target j.
+        `_compute_session_alignment()`.
 
     Returns
     -------
@@ -476,9 +471,9 @@ def get_shifts_from_session_matrix(alignment_order: str, session_offsets_matrix:
         alignment.
     """
     if alignment_order == "to_middle":
-        optimal_shift_indices = -np.mean(session_offsets_matrix, axis=1)
+        optimal_shift_indices = -np.mean(session_offsets_matrix, axis=0)
     else:
         ses_idx = int(alignment_order.split("_")[-1]) - 1
-        optimal_shift_indices = -session_offsets_matrix[ses_idx, :, :]  # TODO: this assumes symmetry...
+        optimal_shift_indices = -session_offsets_matrix[ses_idx, :, :]
 
     return optimal_shift_indices
