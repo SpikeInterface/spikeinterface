@@ -242,7 +242,7 @@ def apply_curation_labels(sorting, new_unit_ids, curation_dict):
         all_values = np.zeros(sorting.unit_ids.size, dtype=values.dtype)
         for unit_ind, unit_id in enumerate(sorting.unit_ids):
             if unit_id not in new_unit_ids:
-                ind = curation_dict["unit_ids"].index(unit_id)
+                ind = list(curation_dict["unit_ids"]).index(unit_id)
                 all_values[unit_ind] = values[ind]
         sorting.set_property(key, all_values)
 
@@ -343,18 +343,22 @@ def apply_curation(
 
     elif isinstance(sorting_or_analyzer, SortingAnalyzer):
         analyzer = sorting_or_analyzer
-        analyzer = analyzer.remove_units(curation_dict["removed_units"])
-        analyzer, new_unit_ids = analyzer.merge_units(
-            curation_dict["merge_unit_groups"],
-            censor_ms=censor_ms,
-            merging_mode=merging_mode,
-            sparsity_overlap=sparsity_overlap,
-            new_id_strategy=new_id_strategy,
-            return_new_unit_ids=True,
-            format="memory",
-            verbose=verbose,
-            **job_kwargs,
-        )
+        if len(curation_dict["removed_units"]) > 0:
+            analyzer = analyzer.remove_units(curation_dict["removed_units"])
+        if len(curation_dict["merge_unit_groups"]) > 0:
+            analyzer, new_unit_ids = analyzer.merge_units(
+                curation_dict["merge_unit_groups"],
+                censor_ms=censor_ms,
+                merging_mode=merging_mode,
+                sparsity_overlap=sparsity_overlap,
+                new_id_strategy=new_id_strategy,
+                return_new_unit_ids=True,
+                format="memory",
+                verbose=verbose,
+                **job_kwargs,
+            )
+        else:
+            new_unit_ids = []
         apply_curation_labels(analyzer.sorting, new_unit_ids, curation_dict)
         return analyzer
     else:
