@@ -10,6 +10,7 @@ import numpy as np
 from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
 from spikeinterface.sortingcomponents.motion.motion_utils import get_spatial_windows, Motion, get_spatial_bins
 from spikeinterface.sortingcomponents.motion.motion_interpolation import correct_motion_on_peaks
+from spikeinterface.sortingcomponents.motion.motion_utils import make_3d_motion_histograms
 
 from spikeinterface.preprocessing.inter_session_alignment import alignment_utils
 from spikeinterface.preprocessing.motion import run_peak_detection_pipeline_node
@@ -567,10 +568,9 @@ def _get_single_session_activity_histogram(
             scale_to_hz=True,
         )
 
-    elif histogram_type in ["activity_2d", "locations_2d"]:
+    elif histogram_type in ["activity_2d"]:
 
         if histogram_type == "activity_2d":
-            from spikeinterface.sortingcomponents.motion.motion_utils import make_3d_motion_histograms
 
             chunked_histograms, chunked_temporal_bin_edges, _ = make_3d_motion_histograms(
                 recording,
@@ -585,77 +585,21 @@ def _get_single_session_activity_histogram(
                 spatial_bin_edges=spatial_bin_edges,
             )
 
-        else:
-            chunked_histograms, chunked_temporal_bin_edges = _get_peak_positions_as_histogram(
-                recording, spatial_bin_edges, chunked_bin_size_s, peaks, peak_locations
-            )
-
         chunked_temporal_bin_centers = alignment_utils.get_bin_centers(chunked_temporal_bin_edges)
 
     if method == "chunked_mean":
-        session_histogram, hist_variability = alignment_utils.get_chunked_hist_mean(chunked_histograms)
+        session_histogram = alignment_utils.get_chunked_hist_mean(chunked_histograms)
 
     elif method == "chunked_median":
-        session_histogram, hist_variability = alignment_utils.get_chunked_hist_median(chunked_histograms)
-
-    elif method == "chunked_supremum":
-        session_histogram, hist_variability = alignment_utils.get_chunked_hist_supremum(chunked_histograms)
-
-    elif method == "chunked_poisson":
-        session_histogram, hist_variability = alignment_utils.get_chunked_hist_poisson_estimate(chunked_histograms)
-
-    elif method == "first_eigenvector":
-        session_histogram, hist_variability = alignment_utils.get_chunked_hist_eigenvector(chunked_histograms)
-
-    elif method == "chunked_gp":  # TODO: better name
-        session_histogram, hist_variability, gp_model = alignment_utils.get_chunked_gaussian_process_regression(
-            chunked_histograms
-        )
-
-    # Take the average variability across bins as a summary measure.
-    session_mean_variability = np.mean(hist_variability)
+        session_histogram = alignment_utils.get_chunked_hist_median(chunked_histograms)
 
     histogram_info = {
         "chunked_histograms": chunked_histograms,
         "chunked_temporal_bin_centers": chunked_temporal_bin_centers,
-        "session_mean_variability": session_mean_variability,
         "chunked_bin_size_s": chunked_bin_size_s,
-        "session_histogram_variation": hist_variability,
     }
 
-    if method == "chunked_gp":
-        histogram_info.update({"gp_model": gp_model})
-
     return session_histogram, temporal_bin_centers, histogram_info
-
-
-def _get_peak_positions_as_histogram(recording, spatial_bin_edges, chunked_bin_size_s, peaks, peak_locations):
-    """
-    This is just a temp function to see how it goes...
-
-    # TODO: could add smoothing
-    """
-    min_x = np.min(peak_locations["x"])
-    max_x = np.max(peak_locations["x"])
-
-    num_x_bins = 20  # guess
-    x_bins = np.linspace(min_x, max_x, num_x_bins)
-
-    # basically direct copy from make_3d_motion_histograms
-    n_samples = recording.get_num_samples()
-    mint_s = recording.sample_index_to_time(0)
-    maxt_s = recording.sample_index_to_time(n_samples - 1)
-    bin_s = chunked_bin_size_s
-    chunked_temporal_bin_edges = np.arange(mint_s, maxt_s + bin_s, bin_s)
-
-    arr = np.zeros((peaks.size, 3), dtype="float64")
-    arr[:, 0] = recording.sample_index_to_time(peaks["sample_index"])
-    arr[:, 1] = peak_locations["y"]
-    arr[:, 2] = peak_locations["x"]
-
-    chunked_histograms, _ = np.histogramdd(arr, (chunked_temporal_bin_edges, spatial_bin_edges, x_bins))
-
-    return chunked_histograms, chunked_temporal_bin_edges
 
 
 def _create_motion_recordings(
@@ -844,418 +788,6 @@ def _correct_session_displacement(
     return corrected_peak_locations_list, corrected_session_histogram_list
 
 
-def _correlate(signal1, signal2):
-
-    corr_value = (
-        np.corrcoef(signal1,
-                    signal2)[0, 1]
-    )
-
-    corr_value = np.correlate(signal1 - np.mean(signal1), signal2 - np.mean(signal2)) / signal1.size
-    return corr_value
-
-
-def _interp(signal, current_coords, orig_coords):
-    interp_f = scipy.interpolate.interp1d(
-        current_coords, signal, fill_value=0.0, bounds_error=False, kind=INTERP
-    )
-    return interp_f(orig_coords)
-
-# Am not using amplitude properly! Revisit with aim to properly use amplitude information
-# and preform the task as is done by eye!
-
-# 1) fix the interpolation issue for the 35-unit test case
-# 2) fix the overall loss-tracking
-# 3) combine pairwise and union approach
-# 4) make a stimulation benchmark and test all
-# 5) visualise the data after interpolation. Apply to real data
-# 6) Revising the concept, the way of blanking is not very nice. It would
-#    be better to fix areas with regularisation and stop some regions moving into others.
-# 7) dynamically adjust the allowed window movement
-# 8) dynamically adjust the gaussian smoothing window (currently unused)
-# 9) make a version for 2D
-
-# Be extremely careful, if the fixed_indices is not correct, everything will be messed
-# up and it will be very hard to detect!
-# the windowing will just adjust blanked_mask and fixed_windows...
-# For windowing, it would be easier just to pass the sinals directly and get displacements back
-# 1) project 2) window 3) correlate and add shifts
-# notes
-# splitting window adds a lot of overhead and not sure it helps much. Makes very uninterpretable.
-# better to iteratively maintain joint information for as long as possible
-# TODO:
-# definlately revise the window sizes. should go to zero basicall on the second of third window? Basically overfitting...
-
-
-def cross_correlate_with_scaled_fixed(x_orig, new_positions, fixed_windows, histogram_array_blanked, i, j, thr, round_, plot):
-    """
-    """
-    best_correlation = 0
-    best_positions = np.zeros(histogram_array_blanked.shape[1])
-
-  #  histogram_array_blanked = histogram_array_blanked.copy()
-    for i_ in range(histogram_array_blanked.shape[0]):
-        histogram_array_blanked[i_, fixed_windows[i_, :]] = 0
-
-    # We are comparing i to j
-    signal2 = _interp(histogram_array_blanked[j, :], new_positions[j, :], x_orig)
-
-    # just need to do this to find the scaling midpoint...
-    signal1_for_midpoint = _interp(histogram_array_blanked[i, :], new_positions[i, :], x_orig)
-    nonzero = np.where(signal1_for_midpoint > 0)[0]
-    if not np.any(nonzero):
-        return new_positions[i, :]
-    midpoint = nonzero[0] + np.ptp(nonzero) / 2
-
-    for scale in np.r_[np.linspace(0.85, 1, 10), np.linspace(1, 1.15, 10)]:  # TODO: double 1
-
-        x_scale = (new_positions[i, :] - midpoint) * scale + midpoint
-
-        for sh in np.arange(-thr, thr):  # TODO: we are off by one here (note we go 2x thr here!)
-
-            putative_new_x = x_scale - sh
-
-            shift_signal1 = _interp(histogram_array_blanked[i, :], putative_new_x, x_orig)
-
-            corr_value = _correlate(
-                shift_signal1, # gaussian_filter(histogram_array_blanked[i, :], 0.5),  # TODO: need to adapt to kinetics of the data
-                signal2,       # gaussian_filter(signal2_blanked, 0.5)
-            )
-
-            percent_diff = np.exp(-(np.abs(1 - np.sum(shift_signal1) / np.sum(histogram_array_blanked[i, :]) ) ) ** 2 / 1.2 ** 2) # ** 6
-            corr_value *= percent_diff  # heavily penalise interpolation errors
-
-            corr_value *= 1 - np.abs(sh - 0) / thr
-
-            if np.isnan(corr_value) or corr_value < 0:
-                corr_value = 0
-
-            if corr_value > best_correlation:
-                best_positions = putative_new_x
-                best_correlation = corr_value
-
-    new_pos = new_positions[i, :].copy()
-    new_pos[~fixed_windows[i, :]] = best_positions[~fixed_windows[i, :]]  # hmm still not ideal...
-
-    return new_pos
-
-
-def cross_correlate_combined_loss(x_orig, new_positions, fixed_windows, histogram_array, thr, round_, plot):
-    """"""
-    blanked_histogram_array = histogram_array.copy()
-    for i in range(histogram_array.shape[0]):
-        blanked_histogram_array[i, fixed_windows[i, :]] = 0
-
-    for i in range(blanked_histogram_array.shape[0]):
-
-        best_correlation = 0
-        best_positions = np.zeros_like(blanked_histogram_array[i, :])
-
-        # Interpolate the other histograms. We use the i histogram for the midpoint but otherwise ignore
-        interp_blanked_histograms = np.zeros_like(blanked_histogram_array)
-        for j in range(blanked_histogram_array.shape[0]):
-            interp_blanked_histograms[j, :] = _interp(blanked_histogram_array[j, :], new_positions[j, :], x_orig)
-
-        # find the scaling midpoint
-        nonzero = np.where(interp_blanked_histograms[i, :] > 0)[0]
-        if not np.any(nonzero):
-            print("CONTINUED")
-            continue
-        midpoint = nonzero[0] + np.ptp(nonzero) / 2
-
-        best_si = None
-
-        for scale in np.r_[np.linspace(0.85, 1, 15), np.linspace(1, 1.15, 15)]:  # TODO: double 1
-
-            x_scale = (new_positions[i, :] - midpoint) * scale + midpoint
-
-            for sh in np.arange(-thr, thr):  # TODO: we are off by one here
-
-                putative_new_x = x_scale - sh
-
-                signal_i_shift = _interp(blanked_histogram_array[i, :], putative_new_x, x_orig)
-
-                corr_value = 0
-                for j in range(interp_blanked_histograms.shape[0]):
-                    if i == j:
-                        continue
-                    corr_value += _correlate(signal_i_shift,interp_blanked_histograms[j, :])
-
-                percent_diff = np.exp(-(np.abs(1 - np.sum(signal_i_shift) / np.sum(interp_blanked_histograms[i, :]))) ** 2 / 1.2 ** 2)  # ** 6
-                corr_value *= percent_diff # heavily penalise interpolation errors
-
-                # corr_value *= 1 - np.abs(sh - 0) / thr
-
-                if np.isnan(corr_value) or corr_value < 0:
-                    corr_value = 0
-
-                if corr_value > best_correlation:
-                    best_positions = putative_new_x
-                    best_correlation = corr_value
-                    best_si = signal_i_shift
-
-                    if False:
-                        plt.plot(signal_i_shift)
-                        for j in range(interp_blanked_histograms.shape[0]):
-                            if i == j:
-                                continue
-                            plt.plot(interp_blanked_histograms[j, :])
-                        plt.title(corr_value)
-                        plt.draw()
-                        plt.pause(0.1)
-                        plt.clf()
-
-        new_positions[i, ~fixed_windows[i, :]] = best_positions[~fixed_windows[i, :]]
-
-    return new_positions
-
-def get_threshold_array(num_bins, windows):
-    num_points = len(windows)
-    max = num_bins // 2  # TODO: should probably try both, and take maximmum!
-    min = windows[0].size // 5
-
-    k = -np.log(min / (max - min)) / (num_points - 1)
-    x_values = np.arange(num_points)
-    all_thr = (max - min) * np.exp(-1.2 * x_values) + min
-    return all_thr
-def get_shifts_pairwise(signal1, signal2, windows, plot=True):
-
-    import matplotlib.pyplot as plt
-
-    signal1_blanked = signal1.copy(signal1)
-    signal2_blanked = signal2.copy(signal2)
-
-    best_displacements = np.zeros_like(signal1)
-
-    x = np.arange(signal1_blanked.size)
-    x_orig = x.copy()
-
-    all_thr = get_threshold_array(signal1.size, windows)
-    for round in range(num_points):
-
-        thr = all_thr[round]
-
-        displacements = cross_correlate_with_scale(x, signal1_blanked, signal2_blanked, thr=thr, plot=plot, round=round)
-
-        interpf = scipy.interpolate.interp1d(
-            displacements, signal1_blanked, fill_value=0.0, bounds_error=False, kind=INTERP
-        )
-        signal1_blanked = interpf(x)
-
-        window_corrs = np.empty(len(windows))
-        for i, idx in enumerate(windows):
-            window_corrs[i] = _correlate(signal1_blanked[idx], signal2_blanked[idx])
-
-        window_corrs[np.isnan(window_corrs)] = 0
-        if np.any(window_corrs):
-            max_window = np.argmax(np.abs(window_corrs))  # TODO: cutoff!  TODO: note sure about the abs, very weird edge case...
-
-            best_displacements[windows[max_window]] = displacements[windows[max_window]]
-
-            signal1_blanked[windows[max_window]] = 0
-            signal2_blanked[windows[max_window]] = 0
-
-        x = displacements
-
-    return np.floor(best_displacements - x_orig)
-
-
-# TODO: try running loss
-# the nonlinear fundamentally doesn't work well for lots of units!
-def get_shifts_union(histogram_array, windows, plot=True):
-    """
-    """
-    x_orig = np.arange(histogram_array.shape[1])
-    new_positions = np.vstack([x_orig.copy()] * histogram_array.shape[0])
-    fixed_windows = np.zeros_like(histogram_array).astype(bool)
-
-    all_thr = get_threshold_array(histogram_array.shape[1], windows)
-
-    clipped_windows = []
-
-    for round in range(len(windows)):
-
-        thr = all_thr[round]
-
-
-        if round == 0:
-            shift_matrix = np.zeros((histogram_array.shape[0], histogram_array.shape[0], histogram_array.shape[1]))
-
-            for i in range(histogram_array.shape[0]):
-                for j in range(histogram_array.shape[0]):
-                    shift_matrix[i, j, :] = cross_correlate_with_scaled_fixed(
-                        x_orig, new_positions, fixed_windows, histogram_array, i, j, thr=thr, round_=round, plot=plot
-                    )
-            new_positions = np.mean(shift_matrix, axis=1)
-        else:
-            new_positions = cross_correlate_combined_loss(x_orig, new_positions, fixed_windows, histogram_array, thr, round, plot=True)
-
-
-        histogram_array_interp = np.zeros_like(histogram_array)
-        histogram_array_ = histogram_array.copy()
-        for i in range(histogram_array.shape[0]):
-            histogram_array_[i, fixed_windows[i, : ]] = 0
-            histogram_array_interp[i, :] = _interp(histogram_array_[i, :], new_positions[i, :], x_orig)
-
-
-        window_corrs = np.empty(len(windows))  # okay need to increase but shouldn't fail for one window
-        for i, idx in enumerate(windows):
-            window_corrs[i] = np.sum(np.triu(np.cov(histogram_array_interp[:, idx]), k=1))  # det doesn't work very well, too small
-
-        window_corrs[np.isnan(window_corrs)] = 0
-        window_corrs[window_corrs < 0] = 0
-        print(window_corrs)
-
-
-        # Now fix indices and blank in the originals space
-        if np.any(window_corrs):
-            max_window = np.argmax(np.abs(window_corrs))  # TODO: cutoff!  TODO: note sure about the abs, very weird edge case...
-            clipped_windows.append(max_window)
-
-            for i in range(histogram_array.shape[0]):
-                # this should never happen! this is because windows are allowd to move into frozen
-                # windows. This should be explicitly handled! We now have to iterative across
-                # all windows because some signal ends up going into previously closed windows
-                for mw in clipped_windows:
-                    if windows[mw][0] == 0:
-                        window_min = np.min(new_positions[i, :]) - 1
-                    else:
-                        window_min = windows[mw][0]
-
-                    if windows[mw][-1] == x_orig[-1]:
-                        window_max = np.max(new_positions[i, :]) + 1
-                    else:
-                        window_max = windows[mw][-1]
-
-                    fixed_indices = np.where(np.logical_and(np.ceil(new_positions[i, :]) >= window_min, np.floor(new_positions[i, :]) <= window_max))
-                    fixed_windows[i, fixed_indices] = True
-
-                window = fixed_windows[i, :]
-                histogram_array_copy = histogram_array.copy()
-                histogram_array_copy[i, window] = 0
-
-                # TODO: need to investigate the interpolation issiue
-                if False:
-                    print("ORIG")
-                    plt.plot(histogram_array_copy[i, :])
-                    plt.show()
-
-                    print("INTERP")
-                    new = _interp(histogram_array_copy[i, :], new_positions[i, :], x_orig)
-                    plt.plot(new)
-                    plt.show()
-
-                    breakpoint()
-
-
-            window_corrs[max_window] = 0
-
-        if np.any(window_corrs > 0.001):  # still not resolved, this is dependent on cov so changes every time. A running loss will be much better.
-            break
-
-    return np.ceil(x_orig - new_positions)  # or round?
-
-
-########################################################################################################################
-# Combine this with above, this uses many older techniques so basically just leverage the above
-# for this purpose
-########################################################################################################################
-
-
-def get_shifts_pairwise(signal1, signal2, windows, plot=True):
-
-    import matplotlib.pyplot as plt
-
-    signal1_blanked = signal1.copy(signal1)
-    signal2_blanked = signal2.copy(signal2)
-
-    best_displacements = np.zeros_like(signal1)
-
-    x = np.arange(signal1_blanked.size)
-    x_orig = x.copy()
-
-    all_thr = get_threshold_array(signal1.size, windows)
-    for round in range(num_points):
-
-        thr = all_thr[round]
-
-        displacements = cross_correlate_with_scale(x, signal1_blanked, signal2_blanked, thr=thr, plot=plot, round=round)
-
-        interpf = scipy.interpolate.interp1d(
-            displacements, signal1_blanked, fill_value=0.0, bounds_error=False, kind=INTERP
-        )
-        signal1_blanked = interpf(x)
-
-        window_corrs = np.empty(len(windows))
-        for i, idx in enumerate(windows):
-            window_corrs[i] = _correlate(signal1_blanked[idx], signal2_blanked[idx])
-
-        window_corrs[np.isnan(window_corrs)] = 0
-        if np.any(window_corrs):
-            max_window = np.argmax(np.abs(window_corrs))  # TODO: cutoff!  TODO: note sure about the abs, very weird edge case...
-
-            best_displacements[windows[max_window]] = displacements[windows[max_window]]
-
-            signal1_blanked[windows[max_window]] = 0
-            signal2_blanked[windows[max_window]] = 0
-
-        x = displacements
-
-    return np.floor(best_displacements - x_orig)
-
-
-def cross_correlate_with_scale(x, signal1_blanked, signal2_blanked, thr=100, plot=True, round=0):
-    """ """
-    best_correlation = 0
-    best_displacements = np.zeros_like(signal1_blanked)
-
-    # TODO: use kriging interp
-
-    xcorr = []
-
-    for scale in np.r_[np.linspace(0.85, 1, 10), np.linspace(1, 1.15, 10)]:  # TODO: double 1
-
-        nonzero = np.where(signal1_blanked > 0)[0]
-        if not np.any(nonzero):
-            continue
-
-        midpoint = nonzero[0]  + np.ptp(nonzero) / 2
-        x_scale = (x - midpoint) * scale + midpoint
-
-   #     interp_f = scipy.interpolate.interp1d(
-   #         x_scale, signal1_blanked, fill_value=0.0, bounds_error=False
-   #     )  # TODO: try cubic etc... or Kriging
-
-    #    scaled_func = interp_f(x)
-
-        for sh in np.arange(-thr, thr):  # TODO: we are off by one here
-
-            # shift_signal1_blanked = alignment_utils.shift_array_fill_zeros(scaled_func, sh)
-
-            x_shift = x_scale - sh
-
-            interp_f = scipy.interpolate.interp1d(
-                x_shift, signal1_blanked, fill_value=0.0, bounds_error=False, kind=INTERP
-            )
-            shift_signal1_blanked = interp_f(x)
-
-            from scipy.ndimage import gaussian_filter
-
-            corr_value = _correlate(
-                gaussian_filter(shift_signal1_blanked, 1.5),
-                gaussian_filter(signal2_blanked, 1.5)
-            )
-
-            if np.isnan(corr_value) or corr_value < 0:
-                corr_value = 0
-
-            if corr_value > best_correlation:
-                best_displacements = x_shift
-                best_correlation = corr_value
-
-    return best_displacements
-
-
 ########################################################################################################################
 
 
@@ -1314,7 +846,6 @@ def _compute_session_alignment(
         return rigid_shifts, non_rigid_windows, non_rigid_window_centers
 
     # For non-rigid, first shift the histograms according to the rigid shift
-
     # When there is non-rigid drift, the rigid drift can be very wrong!
     # So we depart from the kilosort approach for inter-session,
     # for non-rigid, it makes sense to start without rigid alignment
@@ -1328,55 +859,28 @@ def _compute_session_alignment(
                 array=orig_histogram, shift=int(rigid_shifts[ses_idx, 0])
             )
             shifted_histograms[ses_idx, :] = shifted_histogram
-
-    nonrigid_session_offsets_matrix = np.empty((shifted_histograms.shape[0], shifted_histograms.shape[0]))
-
-    num_windows = non_rigid_windows.shape[0]
-    windows = np.arange(shifted_histograms.shape[1])
-    windows = np.array_split(windows, num_windows)
-
-    nonrigid_session_offsets_matrix = np.empty(
-        (shifted_histograms.shape[0], shifted_histograms.shape[0], spatial_bin_centers.size)
-    )
-
-    mode = "centered"
-    if mode == "centered":
-        plot_ = False
-        non_rigid_shifts = get_shifts_union(shifted_histograms, windows, plot_)
     else:
-        for i in range(shifted_histograms.shape[0]):
-            for j in range(shifted_histograms.shape[0]):
-                plot_ = False
-                shifts1 = get_shifts_pairwise(shifted_histograms[i, :], shifted_histograms[j, :], windows, plot=plot_)
+        shifted_histograms = session_histogram_array
 
-                nonrigid_session_offsets_matrix[i, j, :] = shifts1
-
-    # TODO: there are gaps in between rect, rect seems weird,  they are non-overlapping :S
-
-    #     breakpoint()
     # Then compute the nonrigid shifts
-    # nonrigid_session_offsets_matrix = alignment_utils.compute_histogram_crosscorrelation(
-    #    shifted_histograms, non_rigid_windows, **compute_alignment_kwargs
-    # )
-        non_rigid_shifts = alignment_utils.get_shifts_from_session_matrix(alignment_order, -nonrigid_session_offsets_matrix)  # nonrigid_session_offsets_matrix[0, :, :]  #
+    nonrigid_session_offsets_matrix = alignment_utils.compute_histogram_crosscorrelation(
+        shifted_histograms, non_rigid_windows, **compute_alignment_kwargs
+    )
+    non_rigid_shifts = alignment_utils.get_shifts_from_session_matrix(alignment_order, nonrigid_session_offsets_matrix)
 
-    non_rigid_window_centers = spatial_bin_centers
-    shifts = non_rigid_shifts
+    # Akima interpolate the nonrigid bins if required.
+    if akima_interp_nonrigid:
+        interp_nonrigid_shifts = alignment_utils.akima_interpolate_nonrigid_shifts(
+            non_rigid_shifts, non_rigid_window_centers, spatial_bin_centers
+        )
+        shifts = interp_nonrigid_shifts  # rigid_shifts + interp_nonrigid_shifts
+        non_rigid_window_centers = spatial_bin_centers
+    else:
+        # TODO: so check + add a test, the interpolator will handle this?
+        shifts = non_rigid_shifts  # rigid_shifts + non_rigid_shifts
 
-    if False:
-        # Akima interpolate the nonrigid bins if required.
-        if akima_interp_nonrigid:
-            interp_nonrigid_shifts = alignment_utils.akima_interpolate_nonrigid_shifts(
-                non_rigid_shifts, non_rigid_window_centers, spatial_bin_centers
-            )
-            shifts = interp_nonrigid_shifts  # rigid_shifts + interp_nonrigid_shifts
-            non_rigid_window_centers = spatial_bin_centers
-        else:
-            # TODO: so check + add a test, the interpolator will handle this?
-            shifts = non_rigid_shifts  # rigid_shifts + non_rigid_shifts
-
-        if rigid_mode == "rigid_nonrigid":
-            shifts += rigid_shifts
+    if rigid_mode == "rigid_nonrigid":
+        shifts += rigid_shifts
 
     return shifts, non_rigid_windows, non_rigid_window_centers
 
