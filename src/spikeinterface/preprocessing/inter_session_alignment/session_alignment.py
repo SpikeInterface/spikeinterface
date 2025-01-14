@@ -15,10 +15,6 @@ from spikeinterface.sortingcomponents.motion.motion_utils import make_3d_motion_
 from spikeinterface.preprocessing.inter_session_alignment import alignment_utils
 from spikeinterface.preprocessing.motion import run_peak_detection_pipeline_node
 import copy
-import scipy
-import matplotlib.pyplot as plt
-from scipy.ndimage import gaussian_filter
-import matplotlib.pyplot as plt
 
 
 def get_estimate_histogram_kwargs() -> dict:
@@ -54,7 +50,8 @@ def get_estimate_histogram_kwargs() -> dict:
         "log_scale": False,
         "depth_smooth_um": None,
         "histogram_type": "activity_1d",
-        "weight_with_amplitude": True,
+        "weight_with_amplitude": False,
+        "avg_in_bin": False,  # TODO
     }
 
 
@@ -111,8 +108,12 @@ def get_interpolate_motion_kwargs():
     Settings to pass to `InterpolateMotionRecording`,
     see that class for parameter descriptions.
     """
-    return {"border_mode": "remove_channels", "spatial_interpolation_method": "kriging", "sigma_um": 20.0, "p": 2}
-
+    return {
+        "border_mode": "force_zeros", # fixed as this until can figure out probe
+        "spatial_interpolation_method": "kriging",
+        "sigma_um": 20.0,
+        "p": 2
+    }
 
 ###############################################################################
 # Public Entry Level Functions
@@ -221,7 +222,7 @@ def align_sessions(
 
     # Ensure list lengths match and all channel locations are the same across recordings.
     _check_align_sessions_inputs(
-        recordings_list, peaks_list, peak_locations_list, alignment_order, estimate_histogram_kwargs
+        recordings_list, peaks_list, peak_locations_list, alignment_order, estimate_histogram_kwargs, interpolate_motion_kwargs
     )
 
     print("Computing a single activity histogram from each session...")
@@ -400,6 +401,7 @@ def _compute_session_histograms(
     depth_smooth_um: float,
     log_scale: bool,
     weight_with_amplitude: bool,
+    avg_in_bin: bool,
 ) -> tuple[list[np.ndarray], list[np.ndarray], np.ndarray, np.ndarray, list[dict]]:
     """
     Compute a 1d activity histogram for the session. As
@@ -464,6 +466,7 @@ def _compute_session_histograms(
             chunked_bin_size_s,
             depth_smooth_um,
             weight_with_amplitude,
+            avg_in_bin,
         )
         temporal_bin_centers_list.append(temporal_bin_centers)
         session_histogram_list.append(session_hist)
@@ -489,6 +492,7 @@ def _get_single_session_activity_histogram(
     chunked_bin_size_s: float | "estimate",
     depth_smooth_um: float,
     weight_with_amplitude: bool,
+    avg_in_bin: bool,
 ) -> tuple[np.ndarray, np.ndarray, dict]:
     """
     Compute an activity histogram for a single session.
@@ -544,11 +548,12 @@ def _get_single_session_activity_histogram(
             bin_s=None,
             depth_smooth_um=None,
             scale_to_hz=False,
-            weight_with_amplitude=weight_with_amplitude,
+            weight_with_amplitude=False,
+            avg_in_bin=False,
         )
 
         # It is important that the passed histogram is scaled to firing rate in Hz
-        scaled_hist = one_bin_histogram / recording.get_duration()
+        scaled_hist = one_bin_histogram / recording.get_duration()  # TODO: why is this done here when have a scale_to_hz arg??!?
         chunked_bin_size_s = alignment_utils.estimate_chunk_size(scaled_hist)
         chunked_bin_size_s = np.min([chunked_bin_size_s, recording.get_duration()])
 
@@ -563,6 +568,7 @@ def _get_single_session_activity_histogram(
             bin_s=chunked_bin_size_s,
             depth_smooth_um=depth_smooth_um,
             weight_with_amplitude=weight_with_amplitude,
+            avg_in_bin=avg_in_bin,
             scale_to_hz=True,
         )
 
@@ -645,7 +651,14 @@ def _create_motion_recordings(
 
             corrected_recording = _add_displacement_to_interpolate_recording(recording, motion)
         else:
-            corrected_recording = InterpolateMotionRecording(recording, motion, **interpolate_motion_kwargs)
+            corrected_recording = InterpolateMotionRecording(
+                recording,
+                motion,
+                interpolation_time_bin_centers_s=motion.temporal_bins_s,
+                interpolation_time_bin_edges_s=[np.array(recording.get_times()[0], recording.get_times()[-1])],
+                **interpolate_motion_kwargs
+            )
+            corrected_recording = corrected_recording.set_probe(recording.get_probe())  # TODO: if this works, might need to do above
 
         corrected_recordings_list.append(corrected_recording)
 
@@ -780,6 +793,7 @@ def _correct_session_displacement(
             estimate_histogram_kwargs["chunked_bin_size_s"],
             estimate_histogram_kwargs["depth_smooth_um"],
             estimate_histogram_kwargs["weight_with_amplitude"],
+            estimate_histogram_kwargs["avg_in_bin"],
         )
         corrected_session_histogram_list.append(session_hist)
 
@@ -927,6 +941,7 @@ def _check_align_sessions_inputs(
     peak_locations_list: list[np.ndarray],
     alignment_order: str,
     estimate_histogram_kwargs: dict,
+    interpolate_motion_kwargs: dict,
 ):
     """
     Perform checks on the input of `align_sessions()`
@@ -946,12 +961,13 @@ def _check_align_sessions_inputs(
         )
 
     channel_locs = [rec.get_channel_locations() for rec in recordings_list]
-    if not all(np.array_equal(locs, channel_locs[0]) for locs in channel_locs):
+    if not all([np.array_equal(locs, channel_locs[0]) for locs in channel_locs]):
         raise ValueError(
             "The recordings in `recordings_list` do not all have "
             "the same channel locations. All recordings must be "
             "performed using the same probe."
         )
+
 
     accepted_hist_methods = [
         "entire_session",
@@ -981,3 +997,5 @@ def _check_align_sessions_inputs(
 
         if ses_num == 0:
             raise ValueError("`alignment_order` required the session number, not session index.")
+
+    assert interpolate_motion_kwargs["border_mode"] == "force_zeros", "InterpolateMotionRecording must be `force_zeros` until probe is figured out." # TODO: ask sam

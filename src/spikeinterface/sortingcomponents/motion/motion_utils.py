@@ -625,6 +625,14 @@ def ensure_time_bins(time_bin_centers_s=None, time_bin_edges_s=None):
     -------
     time_bin_centers_s, time_bin_edges_s
     """
+    if isinstance(time_bin_centers_s, list):
+        assert len(time_bin_centers_s) == 1, "multi-segment not supported"
+        time_bin_centers_s = time_bin_centers_s[0]
+
+    if isinstance(time_bin_edges_s, list):
+        assert len(time_bin_edges_s) == 1, "multi-segment not supported"
+        time_bin_edges_s = time_bin_edges_s[0]
+
     if time_bin_centers_s is None and time_bin_edges_s is None:
         raise ValueError("Need at least one of time_bin_centers_s or time_bin_edges_s.")
 
