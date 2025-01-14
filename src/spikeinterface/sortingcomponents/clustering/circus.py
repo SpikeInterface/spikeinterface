@@ -52,7 +52,7 @@ class CircusClustering:
         "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "recursive_kwargs": {
             "recursive": True,
-            "recursive_depth": 3,
+            #"recursive_depth": 3,
             "returns_split_count": True,
         },
         "radius_um": 100,
@@ -187,11 +187,11 @@ class CircusClustering:
             np.save(features_folder / "peaks.npy", peaks)
 
             original_labels = peaks["channel_index"]
-            from spikeinterface.sortingcomponents.clustering.split import split_clusters
+            from spikeinterface.sortingcomponents.clustering.split import split_clusters_alternative
 
             min_size = params["hdbscan_kwargs"].get("min_cluster_size", 50)
 
-            peak_labels, _ = split_clusters(
+            peak_labels, _ = split_clusters_alternative(
                 original_labels,
                 recording,
                 features_folder,
@@ -203,7 +203,7 @@ class CircusClustering:
                     waveforms_sparse_mask=sparse_mask,
                     min_size_split=min_size,
                     clusterer_kwargs=d["hdbscan_kwargs"],
-                    n_pca_features=[2, 4, 6, 8, 10],
+                    n_pca_features=[2, 4, 8, 16],
                 ),
                 **params["recursive_kwargs"],
                 **job_kwargs,
