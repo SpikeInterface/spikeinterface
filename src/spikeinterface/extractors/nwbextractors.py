@@ -1420,7 +1420,7 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
         If True, the time vector is loaded into the recording object. Useful when
         precise timing information is needed.
     samples_for_rate_estimation : int, default: 1000
-        The number of timestamp samples used for estimating the sampling rate when
+        The number of timestamps used for estimating the sampling rate when
         timestamps are used instead of a fixed rate.
     stream_mode : Literal["fsspec", "remfile", "zarr"] | None, default: None
         Determines the streaming mode for reading the file.
