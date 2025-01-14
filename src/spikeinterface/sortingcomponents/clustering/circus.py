@@ -52,7 +52,7 @@ class CircusClustering:
         "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "recursive_kwargs": {
             "recursive": True,
-            #"recursive_depth": 3,
+            # "recursive_depth": 3,
             "returns_split_count": True,
         },
         "radius_um": 100,

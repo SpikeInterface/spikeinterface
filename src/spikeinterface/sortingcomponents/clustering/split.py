@@ -184,16 +184,16 @@ def split_clusters_alternative(
         mp_context=get_context(method=mp_context),
         initargs=(recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process),
     ) as pool:
-        
+
         has_been_splitted = np.ones(len(peak_labels), dtype=bool)
         recursion_level = 1
 
-        while np.any(has_been_splitted):        
+        while np.any(has_been_splitted):
 
             labels_set = np.setdiff1d(peak_labels[has_been_splitted], [-1])
             if labels_set.size == 0:
                 break
-            
+
             current_max_label = np.max(labels_set) + 1
             jobs = []
 
@@ -229,7 +229,6 @@ def split_clusters_alternative(
         return peak_labels, split_count
     else:
         return peak_labels
-
 
 
 global _ctx
@@ -289,7 +288,7 @@ class LocalFeatureClustering:
         min_size_split=25,
         n_pca_features=2,
         minimum_overlap_ratio=0.25,
-        debug=False
+        debug=False,
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
@@ -385,10 +384,10 @@ class LocalFeatureClustering:
                     ax.set_xlabel("PCA features")
 
                 axs[0].set_title(f"{clusterer} {is_split} {peak_indices[0]} {n_pca}, recursion_level={recursion_level}")
-                #import time
-                #plt.savefig(f"split_{recursion_level}_{time.time()}.png")
-                #plt.close()
-                #plt.show()
+                # import time
+                # plt.savefig(f"split_{recursion_level}_{time.time()}.png")
+                # plt.close()
+                # plt.show()
 
             if is_split:
                 break
