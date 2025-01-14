@@ -346,6 +346,9 @@ spikeinterface.curation
     .. autofunction:: remove_redundant_units
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
+    .. autofunction:: load_model
+    .. autofunction:: auto_label_units
+    .. autofunction:: train_model
 
 Deprecated
 ~~~~~~~~~~
