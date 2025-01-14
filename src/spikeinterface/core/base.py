@@ -822,7 +822,11 @@ class BaseExtractor:
 
                 extractor = read_zarr(file_path)
             else:
-                raise NotImplementedError("Only zarr format is supported for remote files")
+                raise NotImplementedError(
+                    "Only zarr format is supported for remote files and you should provide a path to a .zarr "
+                    "remote path. You can save to a valid zarr folder using: "
+                    "`extractor.save(folder='path/to/folder', format='zarr')`"
+                )
 
         return extractor
 
