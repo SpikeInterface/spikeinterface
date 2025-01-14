@@ -761,6 +761,10 @@ class BaseExtractor:
           * save (...)  a folder which contain data  + json (or pickle) + metadata.
 
         """
+        error_msg = (
+            f"{file_path} is not a file or a folder. It should point to either a json, pickle file or a "
+            "folder that is the result of extractor.save(...)"
+        )
         if not is_path_remote(file_path):
             file_path = Path(file_path)
 
@@ -776,7 +780,8 @@ class BaseExtractor:
                     with open(file_path, "rb") as f:
                         d = pickle.load(f)
                 else:
-                    raise ValueError(f"Impossible to load {file_path}")
+                    raise ValueError(error_msg)
+
                 if "warning" in d:
                     print("The extractor was not serializable to file")
                     return None
@@ -793,27 +798,22 @@ class BaseExtractor:
 
                     extractor = read_zarr(folder)
                 else:
-                    # the is spikeinterface<=0.94.0
-                    # a folder came with 'cached.json'
+                    # For backward compatibility (v<=0.94) we check for the cached.json/pkl/pickle files
+                    # In later versions (v>0.94) we use the si_folder.json file
                     for dump_ext in ("json", "pkl", "pickle"):
                         f = folder / f"cached.{dump_ext}"
                         if f.is_file():
                             file = f
 
-                    # spikeinterface>=0.95.0
                     f = folder / f"si_folder.json"
                     if f.is_file():
                         file = f
 
                     if file is None:
-                        raise ValueError(f"This folder is not a cached folder {file_path}")
+                        raise ValueError(error_msg)
                     extractor = BaseExtractor.load(file, base_folder=folder)
 
             else:
-                error_msg = (
-                    f"{file_path} is not a file or a folder. It should point to either a json, pickle file or a "
-                    "folder that is the result of extractor.save(...)"
-                )
                 raise ValueError(error_msg)
         else:
             # remote case - zarr
