@@ -35,7 +35,7 @@ def get_neuropixels_sample_shifts(
         Neuropixels 1.0 probes have 13 cycles for AP (action potential) signals
         and 12 for LFP (local field potential) signals.
         Neuropixels 2.0 probes have 16 cycles.
-        If None, defaults to the value of num_channels_per_adc.
+        If None, defaults to the value of `num_channels_per_adc`.
 
     Returns
     -------
@@ -50,7 +50,7 @@ def get_neuropixels_sample_shifts(
         np.arange(num_channels), 2
     )
 
-    sample_shifts = np.zeros_like(adc_indices, dtype=float)
+    sample_shifts = np.zeros_like(adc_indices)
 
     for a in np.unique(adc_indices):
         channel_indices = np.where(adc_indices == a)[0]
