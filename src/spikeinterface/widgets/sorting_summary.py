@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
+import warnings
+
 from .base import BaseWidget, to_attr
 
 from .amplitudes import AmplitudesWidget
@@ -50,6 +52,8 @@ class SortingSummaryWidget(BaseWidget):
         analyzer.get_extension("quality_metrics").get_data().columns and
         analyzer.get_extension("template_metrics").get_data().columns.
         (sortingview backend)
+    extra_units_properties : None dict, default: None
+        A dict with extra units properties to display.
     curation_dict : dict or None
         When curation is True, optionaly the viewer can get a previous 'curation_dict'
         to continue/check  previous curations on this analyzer.
@@ -68,13 +72,21 @@ class SortingSummaryWidget(BaseWidget):
         max_amplitudes_per_unit=None,
         min_similarity_for_correlograms=0.2,
         curation=False,
-        unit_table_properties=None,
+        displayed_units_properties=None,
+        extra_units_properties=None,
         label_choices=None,
         curation_dict=None,
         label_definitions=None,
         backend=None,
+        unit_table_properties=None,
         **backend_kwargs,
     ):
+        
+        if unit_table_properties is not None:
+            warnings.warn("plot_sorting_summary() : unit_table_properties is deprecated, use displayed_units_properties instead")
+            displayed_units_properties = unit_table_properties
+
+
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
         self.check_extensions(
             sorting_analyzer, ["correlograms", "spike_amplitudes", "unit_locations", "template_similarity"]
@@ -87,12 +99,13 @@ class SortingSummaryWidget(BaseWidget):
         if curation_dict is not None and label_definitions is not None:
             raise ValueError("curation_dict and label_definitions are mutualy exclusive, they cannot be not None both")
 
-        plot_data = dict(
+        data_plot = dict(
             sorting_analyzer=sorting_analyzer,
             unit_ids=unit_ids,
             sparsity=sparsity,
             min_similarity_for_correlograms=min_similarity_for_correlograms,
-            unit_table_properties=unit_table_properties,
+            displayed_units_properties=displayed_units_properties,
+            extra_units_properties=extra_units_properties,
             curation=curation,
             label_choices=label_choices,
             max_amplitudes_per_unit=max_amplitudes_per_unit,
@@ -100,7 +113,7 @@ class SortingSummaryWidget(BaseWidget):
             label_definitions=label_definitions,
         )
 
-        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+        BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
@@ -171,7 +184,7 @@ class SortingSummaryWidget(BaseWidget):
 
         # unit ids
         v_units_table = generate_unit_table_view(
-            dp.sorting_analyzer, dp.unit_table_properties, similarity_scores=similarity_scores
+            dp.sorting_analyzer, dp.displayed_units_properties, similarity_scores=similarity_scores
         )
 
         if dp.curation:
@@ -205,15 +218,16 @@ class SortingSummaryWidget(BaseWidget):
     def plot_spikeinterface_gui(self, data_plot, **backend_kwargs):
         sorting_analyzer = data_plot["sorting_analyzer"]
 
-        import spikeinterface_gui
+        from spikeinterface_gui import run_mainwindow
 
-        app = spikeinterface_gui.mkQApp()
-        win = spikeinterface_gui.MainWindow(
+
+        run_mainwindow(
             sorting_analyzer,
-            curation=data_plot["curation"]
-            curation_data=data_plot["curation_dict"],
+            with_traces=True,
+            curation=data_plot["curation"],
+            curation_dict=data_plot["curation_dict"],
             label_definitions=data_plot["label_definitions"],
-            more_units_properties=data_plot["unit_table_properties"],
+            extra_units_properties=data_plot["extra_units_properties"],
+            displayed_units_properties=data_plot["displayed_units_properties"],
         )
-        win.show()
-        app.exec_()
+

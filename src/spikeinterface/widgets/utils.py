@@ -243,3 +243,77 @@ def array_to_image(
             output_image = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape(output_image.shape)
 
     return output_image
+
+
+
+def make_units_table_from_sorting(sorting, units_table=None):
+
+    if units_table is None:
+        import pandas as pd
+        units_table = pd.DataFrame(index=sorting.unit_ids)
+
+    for col in sorting.get_property_keys():
+        values = sorting.get_property(col)
+        if values.dtype.kind in "iuUSfb" and values.ndim == 1:
+            print(col, values, sorting.unit_ids)
+            print(col, len(values), len(sorting.unit_ids))
+            units_table.loc[:, col] = values
+
+    return units_table
+
+def make_units_table_from_analyzer(
+        analyzer,
+        extra_properties=None,
+    ):
+    """
+    Make a DataFrame by aggregating :
+      * quality metrics
+      * template metrics
+      * unit_position
+      * sorting properties
+      * extra columns
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer object
+    extra_properties : None | dict
+        Extra columns given as dict.
+
+    Returns
+    -------
+    units_table : pd.DataFrame
+        Table containing all columns.
+    """
+    import pandas as pd
+    all_df = []
+
+    if analyzer.get_extension("unit_locations") is not None:
+        locs = analyzer.get_extension("unit_locations").get_data()
+        df = pd.DataFrame(locs[:, :2], columns=["x", "y"], index=analyzer.unit_ids)
+        print(df.index, df.index.dtype)
+        all_df.append(df)
+
+    if analyzer.get_extension("quality_metrics") is not None:
+        df = analyzer.get_extension("quality_metrics").get_data()
+        print(df.index, df.index.dtype)
+        all_df.append(df)
+
+    if analyzer.get_extension("template_metrics") is not None:
+        all_df = analyzer.get_extension("template_metrics").get_data()
+        all_df.append(df)
+
+    if len(all_df) > 0:
+        units_table = pd.concat(all_df, axis=1)
+    else:
+        units_table = pd.DataFrame(index=analyzer.unit_ids)
+
+    print(units_table)
+    make_units_table_from_sorting(analyzer.sorting, units_table=units_table)
+
+    if extra_properties is not None:
+        for col, values in extra_properties.items():
+            if values.dtype.kind in "iuUSfb" and values.ndim == 1:
+                units_table.loc[:, col] = values
+
+    return units_table
