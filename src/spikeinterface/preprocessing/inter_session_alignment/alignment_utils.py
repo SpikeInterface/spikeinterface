@@ -26,6 +26,7 @@ def get_activity_histogram(
     depth_smooth_um: float | None,
     scale_to_hz: bool = False,
     weight_with_amplitude: bool = False,
+    avg_in_bin: bool = True,
 ):
     """
     Generate a 2D activity histogram for the session. Wraps the underlying
@@ -69,6 +70,7 @@ def get_activity_histogram(
         hist_margin_um=None,
         spatial_bin_edges=spatial_bin_edges,
         depth_smooth_um=depth_smooth_um,
+        avg_in_bin=avg_in_bin,
     )
     assert np.array_equal(generated_spatial_bin_edges, spatial_bin_edges), "TODO: remove soon after testing"
 
@@ -87,7 +89,6 @@ def get_activity_histogram(
         activity_histogram = np.log10(1 + activity_histogram)  # TODO: make_2d_motion_histogram uses log2
 
     return activity_histogram, temporal_bin_centers, spatial_bin_centers
-
 
 def get_bin_centers(bin_edges):
     return (bin_edges[1:] + bin_edges[:-1]) / 2
@@ -310,6 +311,14 @@ def compute_histogram_crosscorrelation(
                         windowed_histogram_j - np.mean(windowed_histogram_i),
                         mode="full",
                     )
+                    import os
+                    if "hello_world" in os.environ:
+                        plt.plot(windowed_histogram_i)
+                        plt.plot(windowed_histogram_j)
+                        plt.show()
+
+                        plt.plot(xcorr)
+                        plt.show()
 
                     if num_shifts:
                         window_indices = np.arange(center_bin - num_shifts, center_bin + num_shifts)
