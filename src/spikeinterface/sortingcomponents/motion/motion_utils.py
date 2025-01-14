@@ -359,3 +359,51 @@ def make_3d_motion_histograms(
         motion_histograms = np.log2(1 + motion_histograms)
 
     return motion_histograms, temporal_bin_edges, spatial_bin_edges
+<<<<<<< HEAD
+=======
+
+
+def ensure_time_bins(time_bin_centers_s=None, time_bin_edges_s=None):
+    """Ensure that both bin edges and bin centers are present
+
+    If either of the inputs are None but not both, the missing is reconstructed
+    from the present. Going from edges to centers is done by taking midpoints.
+    Going from centers to edges is done by taking midpoints and padding with the
+    left and rightmost centers.
+
+    Parameters
+    ----------
+    time_bin_centers_s : None or np.array
+    time_bin_edges_s : None or np.array
+
+    Returns
+    -------
+    time_bin_centers_s, time_bin_edges_s
+    """
+    if isinstance(time_bin_centers_s, list):
+        assert len(time_bin_centers_s) == 1, "multi-segment not supported"
+        time_bin_centers_s = time_bin_centers_s[0]
+
+    if isinstance(time_bin_edges_s, list):
+        assert len(time_bin_edges_s) == 1, "multi-segment not supported"
+        time_bin_edges_s = time_bin_edges_s[0]
+
+    if time_bin_centers_s is None and time_bin_edges_s is None:
+        raise ValueError("Need at least one of time_bin_centers_s or time_bin_edges_s.")
+
+    if time_bin_centers_s is None:
+        assert time_bin_edges_s.ndim == 1 and time_bin_edges_s.size >= 2
+        time_bin_centers_s = 0.5 * (time_bin_edges_s[1:] + time_bin_edges_s[:-1])
+
+    if time_bin_edges_s is None:
+        time_bin_edges_s = np.empty(time_bin_centers_s.shape[0] + 1, dtype=time_bin_centers_s.dtype)
+        time_bin_edges_s[[0, -1]] = time_bin_centers_s[[0, -1]]
+        if time_bin_centers_s.size > 2:
+            time_bin_edges_s[1:-1] = 0.5 * (time_bin_centers_s[1:] + time_bin_centers_s[:-1])
+
+    return time_bin_centers_s, time_bin_edges_s
+
+
+def ensure_time_bin_edges(time_bin_centers_s=None, time_bin_edges_s=None):
+    return ensure_time_bins(time_bin_centers_s, time_bin_edges_s)[1]
+>>>>>>> 119813d82 (Start adding tests.)
