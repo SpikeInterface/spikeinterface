@@ -261,7 +261,7 @@ class BaseRecording(BaseRecordingSnippets):
         float
             The duration in seconds
         """
-        duration = sum([self.get_duration(idx, use_times) for idx in range(self.get_num_segments())])
+        duration = sum([self.get_duration(segment_index, use_times) for segment_index in range(self.get_num_segments())])
         return duration
 
     def get_memory_size(self, segment_index=None) -> int:

@@ -761,7 +761,6 @@ class BaseExtractor:
           * save (...)  a folder which contain data  + json (or pickle) + metadata.
 
         """
-        print(file_path, is_path_remote(file_path))
         if not is_path_remote(file_path):
             file_path = Path(file_path)
 
