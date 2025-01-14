@@ -313,7 +313,6 @@ def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
         recording_slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
 
-
     rng = np.random.default_rng(seed)
     recording_slices = rng.permutation(recording_slices)
 
