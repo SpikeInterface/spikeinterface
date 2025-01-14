@@ -94,9 +94,17 @@ class ComputeCorrelograms(AnalyzerExtension):
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
     ):
+        """
+        When two units are merged, their cross-correlograms with other units become the sum
+        of the previous cross-correlograms. More precisely, if units i and j get merged into
+        unit k, then the new unit's cross-correlogram with any other unit l is:
+            C_{k,l} = C_{i,l} + C_{j,l}
+            C_{l,k} = C_{l,k} + C_{l,j}
+        Here, we apply this formula to quickly compute correlograms for merged units.
+        """
 
-        method = "keep_first"
-        cut_from = 1
+        need_to_append = False
+        delete_from = 1
 
         correlograms, new_bins = deepcopy(self.get_data())
 
@@ -113,10 +121,10 @@ class ComputeCorrelograms(AnalyzerExtension):
             correlograms[:, merge_unit_group_indices[1:], :] = 0
 
             if new_unit_id not in merge_unit_group:
-                method = "append"
-                cut_from = 0
+                need_to_append = True
+                delete_from = 0
 
-        if method == "append":
+        if need_to_append is True:
             old_num_units = np.shape(correlograms)[0]
             correlograms = np.pad(correlograms, ((0, len(new_unit_ids)), (0, len(new_unit_ids)), (0, 0)))
             for a, (new_unit_id, merge_unit_group) in enumerate(zip(new_unit_ids, merge_unit_groups)):
@@ -127,7 +135,7 @@ class ComputeCorrelograms(AnalyzerExtension):
                 correlograms[:, [old_loc, new_loc], :] = correlograms[:, [new_loc, old_loc], :]
                 correlograms[[old_loc, new_loc], :, :] = correlograms[[new_loc, old_loc], :, :]
 
-        units_to_delete = np.concatenate([merge_unit_group[cut_from:] for merge_unit_group in merge_unit_groups])
+        units_to_delete = np.concatenate([merge_unit_group[delete_from:] for merge_unit_group in merge_unit_groups])
         indices_to_delete = self.sorting_analyzer.sorting.ids_to_indices(units_to_delete)
 
         correlograms = np.delete(correlograms, indices_to_delete, axis=0)
