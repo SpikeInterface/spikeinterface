@@ -30,8 +30,8 @@ def setup_module(tmp_path_factory):
 
 def test_find_recording_folders(setup_module):
     cache_folder = setup_module
-    rec1 = si.load_extractor(cache_folder / "mono")
-    rec2 = si.load_extractor(cache_folder / "multi" / "binary.json", base_folder=cache_folder / "multi")
+    rec1 = si.load(cache_folder / "mono")
+    rec2 = si.load(cache_folder / "multi" / "binary.json", base_folder=cache_folder / "multi")
 
     d1 = rec1.to_dict()
     d2 = rec2.to_dict()
