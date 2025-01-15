@@ -87,6 +87,7 @@ def split_clusters(
         if debug_folder is not None:
             if debug_folder.exists():
                 import shutil
+
                 shutil.rmtree(debug_folder)
 
         for label in labels_set:
