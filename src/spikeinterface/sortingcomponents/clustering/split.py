@@ -84,10 +84,10 @@ def split_clusters(
         current_max_label = np.max(labels_set) + 1
         jobs = []
 
-        if debug_folder.exists():
-            import shutil
-
-            shutil.rmtree(debug_folder)
+        if debug_folder is not None:
+            if debug_folder.exists():
+                import shutil
+                shutil.rmtree(debug_folder)
 
         for label in labels_set:
             peak_indices = np.flatnonzero(peak_labels == label)
