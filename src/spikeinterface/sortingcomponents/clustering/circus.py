@@ -42,6 +42,7 @@ class CircusClustering:
     _default_params = {
         "hdbscan_kwargs": {
             "min_cluster_size": 25,
+            "min_samples": 1,
             "allow_single_cluster": True,
             "core_dist_n_jobs": -1,
             "cluster_selection_method": "eom",
@@ -205,6 +206,7 @@ class CircusClustering:
                     clusterer_kwargs=d["hdbscan_kwargs"],
                     n_pca_features=[2, 4, 8, 16],
                 ),
+                debug_folder=Path("split"),
                 **params["recursive_kwargs"],
                 **job_kwargs,
             )

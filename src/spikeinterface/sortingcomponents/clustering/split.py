@@ -29,6 +29,7 @@ def split_clusters(
     recursive=False,
     recursive_depth=None,
     returns_split_count=False,
+    debug_folder=None,
     **job_kwargs,
 ):
     """
@@ -70,7 +71,7 @@ def split_clusters(
     original_labels = peak_labels
     peak_labels = peak_labels.copy()
     split_count = np.zeros(peak_labels.size, dtype=int)
-
+    recursion_level = 1
     Executor = get_poolexecutor(n_jobs)
 
     with Executor(
@@ -83,16 +84,25 @@ def split_clusters(
         current_max_label = np.max(labels_set) + 1
         jobs = []
 
+        if debug_folder.exists():
+            import shutil
+            shutil.rmtree(debug_folder)
+
         for label in labels_set:
             peak_indices = np.flatnonzero(peak_labels == label)
+            if debug_folder is not None:
+                sub_folder = debug_folder / f"split_{label}"
+                sub_folder.mkdir(parents=True, exist_ok=True)
+            else:
+                sub_folder = None
             if peak_indices.size > 0:
-                jobs.append(pool.submit(split_function_wrapper, peak_indices, 1))
+                jobs.append(pool.submit(split_function_wrapper, peak_indices, recursion_level, sub_folder))
 
         if progress_bar:
             pbar = tqdm(desc=f"split_clusters with {method}", total=len(labels_set))
 
         for res in jobs:
-            is_split, local_labels, peak_indices = res.result()
+            is_split, local_labels, peak_indices, sub_folder = res.result()
 
             if progress_bar:
                 pbar.update(1)
@@ -119,9 +129,14 @@ def split_clusters(
                     new_labels_set = np.setdiff1d(peak_labels[peak_indices], [-1])
                     for label in new_labels_set:
                         peak_indices = np.flatnonzero(peak_labels == label)
+                        if sub_folder is not None:
+                            new_sub_folder = sub_folder / f"split_{label}"
+                            new_sub_folder.mkdir(parents=True, exist_ok=True)
+                        else:
+                            sub_folder = None
                         if peak_indices.size > 0:
-                            # print('Relaunched', label, len(peak_indices), recursion_level)
-                            jobs.append(pool.submit(split_function_wrapper, peak_indices, recursion_level))
+                            #print('Relaunched', label, len(peak_indices), recursion_level)
+                            jobs.append(pool.submit(split_function_wrapper, peak_indices, recursion_level, new_sub_folder))
                             if progress_bar:
                                 pbar.total += 1
 
@@ -155,13 +170,13 @@ def split_worker_init(
     _ctx["peaks"] = _ctx["features"]["peaks"]
 
 
-def split_function_wrapper(peak_indices, recursion_level):
+def split_function_wrapper(peak_indices, recursion_level, debug_folder):
     global _ctx
     with threadpool_limits(limits=_ctx["max_threads_per_process"]):
         is_split, local_labels = _ctx["method_class"].split(
-            peak_indices, _ctx["peaks"], _ctx["features"], recursion_level, **_ctx["method_kwargs"]
+            peak_indices, _ctx["peaks"], _ctx["features"], recursion_level, debug_folder, **_ctx["method_kwargs"]
         )
-    return is_split, local_labels, peak_indices
+    return is_split, local_labels, peak_indices, debug_folder
 
 
 class LocalFeatureClustering:
@@ -184,6 +199,7 @@ class LocalFeatureClustering:
         peaks,
         features,
         recursion_level=1,
+        debug_folder=None,
         clusterer="hdbscan",
         feature_name="sparse_tsvd",
         neighbours_mask=None,
@@ -191,8 +207,7 @@ class LocalFeatureClustering:
         clusterer_kwargs={"min_cluster_size": 25},
         min_size_split=25,
         n_pca_features=2,
-        minimum_overlap_ratio=0.25,
-        debug=False,
+        minimum_overlap_ratio=0.25
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
@@ -268,7 +283,7 @@ class LocalFeatureClustering:
             else:
                 raise ValueError(f"wrong clusterer {clusterer}. Possible options are 'hdbscan' or 'isocut5'.")
 
-            if debug:
+            if debug_folder is not None:
                 import matplotlib.pyplot as plt
 
                 labels_set = np.setdiff1d(possible_labels, [-1])
@@ -279,21 +294,22 @@ class LocalFeatureClustering:
 
                 flatten_wfs = aligned_wfs.swapaxes(1, 2).reshape(aligned_wfs.shape[0], -1)
 
-                sl = slice(None, None, 10)
+                sl = slice(None, None, 20)
                 for k in np.unique(possible_labels):
                     mask = possible_labels == k
                     ax = axs[0]
-                    ax.scatter(final_features[:, 0][mask][sl], final_features[:, 1][mask][sl], s=5, color=colors[k])
 
+                    centroid = final_features[:, :2][mask].mean(axis=0)
+
+                    ax.scatter(final_features[:, 0][mask], final_features[:, 1][mask], s=5, color=colors[k])
+                    ax.text(centroid[0], centroid[1], f'Label {k}', fontsize=10, color='k')
                     ax = axs[1]
                     ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
                     ax.set_xlabel("PCA features")
 
-                axs[0].set_title(f"{clusterer} {is_split} {peak_indices[0]} {n_pca}, recursion_level={recursion_level}")
-                # import time
-                # plt.savefig(f"split_{recursion_level}_{time.time()}.png")
-                # plt.close()
-                # plt.show()
+                axs[0].set_title(f"{clusterer} n_pca={n_pca}, level={recursion_level}")
+                plt.savefig(debug_folder / f"split_{n_pca}_{recursion_level}.png")
+                plt.close()
 
             if is_split:
                 break
