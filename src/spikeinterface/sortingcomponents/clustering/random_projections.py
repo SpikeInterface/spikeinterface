@@ -56,7 +56,7 @@ class RandomProjectionClustering:
         "noise_threshold": 4,
         "tmp_folder": None,
         "verbose": True,
-        "debug" : False
+        "debug": False,
     }
 
     @classmethod

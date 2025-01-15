@@ -65,7 +65,7 @@ class CircusClustering:
         "noise_levels": None,
         "tmp_folder": None,
         "verbose": True,
-        "debug" : False
+        "debug": False,
     }
 
     @classmethod
