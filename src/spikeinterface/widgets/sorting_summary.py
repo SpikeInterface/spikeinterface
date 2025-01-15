@@ -16,6 +16,8 @@ from .unit_templates import UnitTemplatesWidget
 from ..core import SortingAnalyzer
 
 
+_default_displayed_unit_properties = ["firing_rate", "num_spikes", "x", "y", "amplitude", "snr", "rp_violation"]
+
 class SortingSummaryWidget(BaseWidget):
     """
     Plots spike sorting summary.
@@ -44,14 +46,14 @@ class SortingSummaryWidget(BaseWidget):
     label_choices : list or None, default: None
         List of labels to be added to the curation table
         (sortingview backend)
-    displayed_units_properties : list or None, default: None
+    displayed_unit_properties : list or None, default: None
         List of properties to be added to the unit table.
         These may be drawn from the sorting extractor, and, if available,
         the quality_metrics/template_metrics/unit_locations extensions of the SortingAnalyzer.
         See all properties available with sorting.get_property_keys(), and, if available,
         analyzer.get_extension("quality_metrics").get_data().columns and
         analyzer.get_extension("template_metrics").get_data().columns.
-    extra_units_properties : None dict, default: None
+    extra_unit_properties : None dict, default: None
         A dict with extra units properties to display.
     curation_dict : dict or None
         When curation is True, optionaly the viewer can get a previous 'curation_dict'
@@ -71,8 +73,8 @@ class SortingSummaryWidget(BaseWidget):
         max_amplitudes_per_unit=None,
         min_similarity_for_correlograms=0.2,
         curation=False,
-        displayed_units_properties=None,
-        extra_units_properties=None,
+        displayed_unit_properties=None,
+        extra_unit_properties=None,
         label_choices=None,
         curation_dict=None,
         label_definitions=None,
@@ -82,8 +84,12 @@ class SortingSummaryWidget(BaseWidget):
     ):
         
         if unit_table_properties is not None:
-            warnings.warn("plot_sorting_summary() : unit_table_properties is deprecated, use displayed_units_properties instead")
-            displayed_units_properties = unit_table_properties
+            warnings.warn(
+                "plot_sorting_summary() : unit_table_properties is deprecated, use displayed_unit_properties instead",
+                category=DeprecationWarning,
+                stacklevel=2,
+                )
+            displayed_unit_properties = unit_table_properties
 
 
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
@@ -98,13 +104,18 @@ class SortingSummaryWidget(BaseWidget):
         if curation_dict is not None and label_definitions is not None:
             raise ValueError("curation_dict and label_definitions are mutualy exclusive, they cannot be not None both")
 
+        if displayed_unit_properties is None:
+            displayed_unit_properties = list(_default_displayed_unit_properties)
+            if extra_unit_properties is not None:
+                displayed_unit_properties += list(extra_unit_properties.keys())
+        
         data_plot = dict(
             sorting_analyzer=sorting_analyzer,
             unit_ids=unit_ids,
             sparsity=sparsity,
             min_similarity_for_correlograms=min_similarity_for_correlograms,
-            displayed_units_properties=displayed_units_properties,
-            extra_units_properties=extra_units_properties,
+            displayed_unit_properties=displayed_unit_properties,
+            extra_unit_properties=extra_unit_properties,
             curation=curation,
             label_choices=label_choices,
             max_amplitudes_per_unit=max_amplitudes_per_unit,
@@ -183,7 +194,7 @@ class SortingSummaryWidget(BaseWidget):
 
         # unit ids
         v_units_table = generate_unit_table_view(
-            dp.sorting_analyzer, dp.displayed_units_properties, similarity_scores=similarity_scores
+            dp.sorting_analyzer, dp.displayed_unit_properties, similarity_scores=similarity_scores
         )
 
         if dp.curation:
@@ -226,7 +237,7 @@ class SortingSummaryWidget(BaseWidget):
             curation=data_plot["curation"],
             curation_dict=data_plot["curation_dict"],
             label_definitions=data_plot["label_definitions"],
-            extra_units_properties=data_plot["extra_units_properties"],
-            displayed_units_properties=data_plot["displayed_units_properties"],
+            extra_unit_properties=data_plot["extra_unit_properties"],
+            displayed_unit_properties=data_plot["displayed_unit_properties"],
         )
 

@@ -59,11 +59,11 @@ def generate_unit_table_view(
 
     if isinstance(sorting_or_sorting_analyzer, SortingAnalyzer):
         analyzer = sorting_or_sorting_analyzer
-        units_tables = make_units_table_from_sorting(analyzer)
+        units_tables = make_units_table_from_analyzer(analyzer)
         sorting = analyzer.sorting
     else:
         sorting = sorting_or_sorting_analyzer
-        units_tables = make_units_table_from_analyzer(sorting)
+        units_tables = make_units_table_from_sorting(sorting)
         # analyzer = None
     
     if unit_properties is None:
@@ -79,7 +79,9 @@ def generate_unit_table_view(
         dtype_convertor = {"i": "int", "u": "int", "f": "float", "U": "str", "S": "str", "b": "bool"}
 
         ut_columns = []
-        for col in units_tables.columns:
+        for col in unit_properties:
+            if col not in units_tables.columns:
+                continue
             values = units_tables[col].to_numpy()
             if values.dtype.kind in dtype_convertor:
                 txt_dtype = dtype_convertor[values.dtype.kind]
@@ -88,7 +90,9 @@ def generate_unit_table_view(
         ut_rows = []
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             row_values = {}
-            for col in units_tables.columns:
+            for col in unit_properties:
+                if col not in units_tables.columns:
+                    continue
                 values = units_tables[col].to_numpy()
                 if values.dtype.kind in dtype_convertor:
                     value = values[unit_index]
