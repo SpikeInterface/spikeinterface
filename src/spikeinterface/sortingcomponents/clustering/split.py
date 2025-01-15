@@ -93,12 +93,12 @@ def split_clusters(
 
         for res in jobs:
             is_split, local_labels, peak_indices = res.result()
-            # print(is_split, local_labels, peak_indices)
-            if not is_split:
-                continue
-            
+
             if progress_bar:
                 pbar.update(1)
+
+            if not is_split:
+                continue
 
             mask = local_labels >= 0
             peak_labels[peak_indices[mask]] = local_labels[mask] + current_max_label
