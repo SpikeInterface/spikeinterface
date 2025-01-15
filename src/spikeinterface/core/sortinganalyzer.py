@@ -2092,6 +2092,13 @@ class AnalyzerExtension:
                     import pandas as pd
 
                     ext_data = pd.read_csv(ext_data_file, index_col=0)
+                    # we need to cast the index to the unit id dtype (int or str)
+                    unit_ids = self.sorting_analyzer.unit_ids
+                    if ext_data.shape[0] == unit_ids.size:
+                        # we force dtype to be the same as unit_ids
+                        if ext_data.index.dtype != unit_ids.dtype:
+                            ext_data.index = ext_data.index.astype(unit_ids.dtype)
+
                 elif ext_data_file.suffix == ".pkl":
                     with ext_data_file.open("rb") as f:
                         ext_data = pickle.load(f)
