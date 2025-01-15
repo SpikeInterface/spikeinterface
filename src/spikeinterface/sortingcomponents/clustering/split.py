@@ -242,9 +242,10 @@ class LocalFeatureClustering:
                 # tsvd = TruncatedSVD(n_pca_features)
                 tsvd = PCA(n_pca, whiten=True)
                 final_features = tsvd.fit_transform(flatten_features)
+                del tsvd
             else:
                 final_features = flatten_features
-
+            
             if clusterer == "hdbscan":
                 from hdbscan import HDBSCAN
 
@@ -252,6 +253,7 @@ class LocalFeatureClustering:
                 clust.fit(final_features)
                 possible_labels = clust.labels_
                 is_split = np.setdiff1d(possible_labels, [-1]).size > 1
+                del clust
             elif clusterer == "isocut5":
                 min_cluster_size = clusterer_kwargs["min_cluster_size"]
                 dipscore, cutpoint = isocut5(final_features[:, 0])
