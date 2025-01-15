@@ -61,7 +61,7 @@ def split_sorting_by_times(
         m = np.median(spikes[0][ind_mask]["sample_index"])
         time_mask = spikes[0][ind_mask]["sample_index"] > m
         mask = time_mask & (rng.rand(len(ind_mask)) <= partial_split_prob).astype(bool)
-        new_index = unit_id * np.ones(len(mask))
+        new_index = int(unit_id) * np.ones(len(mask), dtype=bool)
         new_index[mask] = max_index + 1
         new_spikes["unit_index"][ind_mask] = new_index
         new_unit_ids += [max_index + 1]
@@ -136,7 +136,7 @@ def split_sorting_by_amplitudes(
         thresh = np.median(amplitudes[ind_mask])
         amplitude_mask = amplitudes[ind_mask] > thresh
         mask = amplitude_mask & (rng.rand(len(ind_mask)) <= partial_split_prob).astype(bool)
-        new_index = unit_id * np.ones(len(mask))
+        new_index = int(unit_id) * np.ones(len(mask))
         new_index[mask] = max_index + 1
         new_spikes["unit_index"][ind_mask] = new_index
         new_unit_ids += [max_index + 1]
