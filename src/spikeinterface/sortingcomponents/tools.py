@@ -325,6 +325,7 @@ def create_sorting_analyzer_with_existing_templates(sorting, recording, template
     sa.extensions["templates"].data["std"] = np.zeros(templates_array.shape, dtype=np.float32)
     return sa
 
+
 def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):
     from spikeinterface.core.job_tools import ensure_chunk_size
     from spikeinterface.core.job_tools import divide_segment_into_chunks
