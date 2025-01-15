@@ -124,7 +124,7 @@ def split_clusters(
                             jobs.append(pool.submit(split_function_wrapper, peak_indices, recursion_level))
                             if progress_bar:
                                 pbar.total += 1
-            
+
         if progress_bar:
             pbar.close()
             del pbar
