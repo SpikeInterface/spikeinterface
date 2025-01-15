@@ -86,6 +86,7 @@ def split_clusters(
 
         if debug_folder.exists():
             import shutil
+
             shutil.rmtree(debug_folder)
 
         for label in labels_set:
@@ -135,8 +136,10 @@ def split_clusters(
                         else:
                             sub_folder = None
                         if peak_indices.size > 0:
-                            #print('Relaunched', label, len(peak_indices), recursion_level)
-                            jobs.append(pool.submit(split_function_wrapper, peak_indices, recursion_level, new_sub_folder))
+                            # print('Relaunched', label, len(peak_indices), recursion_level)
+                            jobs.append(
+                                pool.submit(split_function_wrapper, peak_indices, recursion_level, new_sub_folder)
+                            )
                             if progress_bar:
                                 pbar.total += 1
 
@@ -207,7 +210,7 @@ class LocalFeatureClustering:
         clusterer_kwargs={"min_cluster_size": 25},
         min_size_split=25,
         n_pca_features=2,
-        minimum_overlap_ratio=0.25
+        minimum_overlap_ratio=0.25,
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
@@ -302,7 +305,7 @@ class LocalFeatureClustering:
                     centroid = final_features[:, :2][mask].mean(axis=0)
 
                     ax.scatter(final_features[:, 0][mask], final_features[:, 1][mask], s=5, color=colors[k])
-                    ax.text(centroid[0], centroid[1], f'Label {k}', fontsize=10, color='k')
+                    ax.text(centroid[0], centroid[1], f"Label {k}", fontsize=10, color="k")
                     ax = axs[1]
                     ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
                     ax.set_xlabel("PCA features")
