@@ -2092,7 +2092,7 @@ class AnalyzerExtension:
                     import pandas as pd
 
                     ext_data = pd.read_csv(ext_data_file, index_col=0)
-                    # really sad hack here because csv was a bad choice for saving a DataFrame (maybe a npy per columns would have been better)
+                    # we need to cast the index to the unit id dtype (int or str)
                     unit_ids = self.sorting_analyzer.unit_ids
                     if ext_data.shape[0] == unit_ids.size:
                         # we force dtype to be the same as unit_ids
