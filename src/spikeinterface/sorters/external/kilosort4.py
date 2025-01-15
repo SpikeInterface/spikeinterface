@@ -66,7 +66,7 @@ class Kilosort4Sorter(BaseSorter):
         "do_correction": True,
         "keep_good_only": False,
         "skip_kilosort_preprocessing": False,
-        "use_binary_file": None,
+        "use_binary_file": True,
         "delete_recording_dat": True,
     }
 
@@ -116,7 +116,7 @@ class Kilosort4Sorter(BaseSorter):
         "keep_good_only": "If True, only the units labeled as 'good' by Kilosort are returned in the output. (spikeinterface parameter)",
         "use_binary_file": "If True then Kilosort is run using a binary file. In this case, if the input recording is not binary compatible, it is written to a binary file in the output folder. "
         "If False then Kilosort is run on the recording object directly using the RecordingExtractorAsArray object. If None, then if the recording is binary compatible, the sorter will use the binary file, otherwise the RecordingExtractorAsArray. "
-        "Default is None. (spikeinterface parameter)",
+        "Default is True. (spikeinterface parameter)",
         "delete_recording_dat": "If True, if a temporary binary file is created, it is deleted after the sorting is done. Default is True. (spikeinterface parameter)",
     }
 
