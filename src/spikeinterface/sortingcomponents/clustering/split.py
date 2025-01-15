@@ -260,7 +260,7 @@ class LocalFeatureClustering:
                 del tsvd
             else:
                 final_features = flatten_features
-            
+
             if clusterer == "hdbscan":
                 from hdbscan import HDBSCAN
 
