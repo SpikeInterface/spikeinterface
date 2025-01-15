@@ -76,25 +76,29 @@ def generate_unit_table_view(
         unit_properties = unit_properties[keep]
         units_tables = units_tables.loc[:, unit_properties]
 
+        dtype_convertor = {"i": "int", "u": "int", "f": "float", "U": "str", "S": "str", "b": "bool"}
+
         ut_columns = []
         for col in units_tables.columns:
             values = units_tables[col].to_numpy()
-            ut_columns.append(vv.UnitsTableColumn(key=col, label=col, dtype=values.dtype))
+            if values.dtype.kind in dtype_convertor:
+                txt_dtype = dtype_convertor[values.dtype.kind]
+                ut_columns.append(vv.UnitsTableColumn(key=col, label=col, dtype=txt_dtype))
 
         ut_rows = []
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             row_values = {}
             for col in units_tables.columns:
                 values = units_tables[col].to_numpy()
-                value = values[unit_index]
-                # Check for NaN values and round floats
-                if values.dtype.kind == "f":
-                    if np.isnan(values[unit_index]):
-                        continue
-                    value = np.format_float_positional(value, precision=4, fractional=False)
-                row_values[col] = value
+                if values.dtype.kind in dtype_convertor:
+                    value = values[unit_index]
+                    if values.dtype.kind == "f":
+                        # Check for NaN values and round floats
+                        if np.isnan(values[unit_index]):
+                            continue
+                        value = np.format_float_positional(value, precision=4, fractional=False)
+                    row_values[col] = value
             ut_rows.append(vv.UnitsTableRow(unit_id=unit_id, values=check_json(row_values)))
-
 
     v_units_table = vv.UnitsTable(rows=ut_rows, columns=ut_columns, similarity_scores=similarity_scores)
     

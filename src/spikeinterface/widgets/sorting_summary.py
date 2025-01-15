@@ -44,14 +44,13 @@ class SortingSummaryWidget(BaseWidget):
     label_choices : list or None, default: None
         List of labels to be added to the curation table
         (sortingview backend)
-    unit_table_properties : list or None, default: None
+    displayed_units_properties : list or None, default: None
         List of properties to be added to the unit table.
         These may be drawn from the sorting extractor, and, if available,
-        the quality_metrics and template_metrics extensions of the SortingAnalyzer.
+        the quality_metrics/template_metrics/unit_locations extensions of the SortingAnalyzer.
         See all properties available with sorting.get_property_keys(), and, if available,
         analyzer.get_extension("quality_metrics").get_data().columns and
         analyzer.get_extension("template_metrics").get_data().columns.
-        (sortingview backend)
     extra_units_properties : None dict, default: None
         A dict with extra units properties to display.
     curation_dict : dict or None

@@ -247,6 +247,22 @@ def array_to_image(
 
 
 def make_units_table_from_sorting(sorting, units_table=None):
+    """
+    Make a DataFrame from sorting properties.
+    Only for properties with ndim=1
+
+    Parameters
+    ----------
+    sorting : Sorting
+        The Sorting object
+    units_table : None | pd.DataFrame
+        Optionally a existing dataframe.
+
+    Returns
+    -------
+    units_table : pd.DataFrame
+        Table containing all columns.
+    """
 
     if units_table is None:
         import pandas as pd
@@ -255,8 +271,6 @@ def make_units_table_from_sorting(sorting, units_table=None):
     for col in sorting.get_property_keys():
         values = sorting.get_property(col)
         if values.dtype.kind in "iuUSfb" and values.ndim == 1:
-            print(col, values, sorting.unit_ids)
-            print(col, len(values), len(sorting.unit_ids))
             units_table.loc[:, col] = values
 
     return units_table
@@ -272,6 +286,8 @@ def make_units_table_from_analyzer(
       * unit_position
       * sorting properties
       * extra columns
+
+    This used in sortingview and spikeinterface-gui to display the units table in a flexible way.
 
     Parameters
     ----------
@@ -291,12 +307,10 @@ def make_units_table_from_analyzer(
     if analyzer.get_extension("unit_locations") is not None:
         locs = analyzer.get_extension("unit_locations").get_data()
         df = pd.DataFrame(locs[:, :2], columns=["x", "y"], index=analyzer.unit_ids)
-        print(df.index, df.index.dtype)
         all_df.append(df)
 
     if analyzer.get_extension("quality_metrics") is not None:
         df = analyzer.get_extension("quality_metrics").get_data()
-        print(df.index, df.index.dtype)
         all_df.append(df)
 
     if analyzer.get_extension("template_metrics") is not None:
@@ -308,11 +322,11 @@ def make_units_table_from_analyzer(
     else:
         units_table = pd.DataFrame(index=analyzer.unit_ids)
 
-    print(units_table)
     make_units_table_from_sorting(analyzer.sorting, units_table=units_table)
 
     if extra_properties is not None:
         for col, values in extra_properties.items():
+            # the ndim = 1 is important because we need  column only for the display in gui.
             if values.dtype.kind in "iuUSfb" and values.ndim == 1:
                 units_table.loc[:, col] = values
 
