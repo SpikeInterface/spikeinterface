@@ -118,7 +118,11 @@ def detect_peaks(
         squeeze_output = True
     else:
         squeeze_output = False
-        job_name += f" + {len(pipeline_nodes)} nodes"
+        if len(pipeline_nodes) == 1:
+            plural = ""
+        else:
+            plural = "s"
+        job_name += f" + {len(pipeline_nodes)} node{plural}"
 
         # because node are modified inplace (insert parent) they need to copy incase
         # the same pipeline is run several times
@@ -677,7 +681,6 @@ class DetectPeakMatchedFiltering(PeakDetector):
         medians = medians[:, None]
         noise_levels = np.median(np.abs(conv_random_data - medians), axis=1) / 0.6744897501960817
         self.abs_thresholds = noise_levels * detect_threshold
-
         self._dtype = np.dtype(base_peak_dtype + [("z", "float32")])
 
     def get_dtype(self):
@@ -727,8 +730,8 @@ class DetectPeakMatchedFiltering(PeakDetector):
             return (np.zeros(0, dtype=self._dtype),)
 
         peak_sample_ind += self.exclude_sweep_size + self.conv_margin + self.nbefore
-
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
+
         local_peaks = np.zeros(peak_sample_ind.size, dtype=self._dtype)
         local_peaks["sample_index"] = peak_sample_ind
         local_peaks["channel_index"] = peak_chan_ind

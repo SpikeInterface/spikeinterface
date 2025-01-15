@@ -40,13 +40,7 @@ class CircusClustering:
     """
 
     _default_params = {
-        "hdbscan_kwargs": {
-            "min_cluster_size": 25,
-            "allow_single_cluster": True,
-            "core_dist_n_jobs": -1,
-            "cluster_selection_method": "eom",
-            # "cluster_selection_epsilon" : 5 ## To be optimized
-        },
+        "hdbscan_kwargs": {"min_cluster_size": 10, "allow_single_cluster": True, "min_samples": 5},
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
         "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
@@ -57,8 +51,10 @@ class CircusClustering:
         },
         "radius_um": 100,
         "n_svd": [5, 2],
+        "few_waveforms": None,
         "ms_before": 0.5,
         "ms_after": 0.5,
+        "noise_threshold": 4,
         "rank": 5,
         "noise_levels": None,
         "tmp_folder": None,
@@ -86,12 +82,25 @@ class CircusClustering:
         tmp_folder.mkdir(parents=True, exist_ok=True)
 
         # SVD for time compression
-        few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=10000, margin=(nbefore, nafter))
-        few_wfs = extract_waveform_at_max_channel(
-            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
-        )
+        if params["few_waveforms"] is None:
+            few_peaks = select_peaks(
+                peaks, recording=recording, method="uniform", n_peaks=10000, margin=(nbefore, nafter)
+            )
+            few_wfs = extract_waveform_at_max_channel(
+                recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+            )
+            wfs = few_wfs[:, :, 0]
+        else:
+            offset = int(params["waveforms"]["ms_before"] * fs / 1000)
+            wfs = params["few_waveforms"][:, offset - nbefore : offset + nafter]
 
-        wfs = few_wfs[:, :, 0]
+        # Ensure all waveforms have a positive max
+        wfs *= np.sign(wfs[:, nbefore])[:, np.newaxis]
+
+        # Remove outliers
+        valid = np.argmax(np.abs(wfs), axis=1) == nbefore
+        wfs = wfs[valid]
+
         from sklearn.decomposition import TruncatedSVD
 
         tsvd = TruncatedSVD(params["n_svd"][0])
@@ -189,7 +198,7 @@ class CircusClustering:
             original_labels = peaks["channel_index"]
             from spikeinterface.sortingcomponents.clustering.split import split_clusters
 
-            min_size = params["hdbscan_kwargs"].get("min_cluster_size", 50)
+            min_size = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 10)
 
             peak_labels, _ = split_clusters(
                 original_labels,
@@ -225,9 +234,24 @@ class CircusClustering:
         nbefore = int(params["waveforms"]["ms_before"] * fs / 1000.0)
         nafter = int(params["waveforms"]["ms_after"] * fs / 1000.0)
 
+        if params["noise_levels"] is None:
+            params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
+
         templates_array = estimate_templates(
-            recording, spikes, unit_ids, nbefore, nafter, return_scaled=False, job_name=None, **job_kwargs
+            recording,
+            spikes,
+            unit_ids,
+            nbefore,
+            nafter,
+            return_scaled=False,
+            job_name=None,
+            **job_kwargs,
         )
+
+        best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
+        peak_snrs = np.abs(templates_array[:, nbefore, :])
+        best_snrs_ratio = (peak_snrs / params["noise_levels"])[np.arange(len(peak_snrs)), best_channels]
+        valid_templates = best_snrs_ratio > params["noise_threshold"]
 
         if d["rank"] is not None:
             from spikeinterface.sortingcomponents.matching.circus import compress_templates
@@ -235,28 +259,29 @@ class CircusClustering:
             _, _, _, templates_array = compress_templates(templates_array, d["rank"])
 
         templates = Templates(
-            templates_array=templates_array,
+            templates_array=templates_array[valid_templates],
             sampling_frequency=fs,
             nbefore=nbefore,
             sparsity_mask=None,
             channel_ids=recording.channel_ids,
-            unit_ids=unit_ids,
+            unit_ids=unit_ids[valid_templates],
             probe=recording.get_probe(),
             is_scaled=False,
         )
-
-        if params["noise_levels"] is None:
-            params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
 
         sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
         empty_templates = templates.sparsity_mask.sum(axis=1) == 0
         templates = remove_empty_templates(templates)
+
         mask = np.isin(peak_labels, np.where(empty_templates)[0])
         peak_labels[mask] = -1
 
+        mask = np.isin(peak_labels, np.where(~valid_templates)[0])
+        peak_labels[mask] = -1
+
         if verbose:
-            print("We found %d raw clusters, starting to clean with matching..." % (len(templates.unit_ids)))
+            print("Found %d raw clusters, starting to clean with matching" % (len(templates.unit_ids)))
 
         cleaning_job_kwargs = job_kwargs.copy()
         cleaning_job_kwargs["progress_bar"] = False
@@ -267,6 +292,6 @@ class CircusClustering:
         )
 
         if verbose:
-            print("We kept %d non-duplicated clusters..." % len(labels))
+            print("Kept %d non-duplicated clusters" % len(labels))
 
         return labels, peak_labels
