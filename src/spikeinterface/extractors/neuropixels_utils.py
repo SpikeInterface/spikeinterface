@@ -52,10 +52,8 @@ def get_neuropixels_sample_shifts(
 
     sample_shifts = np.zeros_like(adc_indices)
 
-    for a in np.unique(adc_indices):
-        channel_indices = np.where(adc_indices == a)[0]
-        sample_shifts[channel_indices] = np.arange(len(channel_indices)) / num_cycles
-
+    for adc_index in adc_indices:
+        sample_shifts[adc_indices == adc_index] = np.arange(num_channels_per_adc) / num_cycles
     return sample_shifts
 
 
