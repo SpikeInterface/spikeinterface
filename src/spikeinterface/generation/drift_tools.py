@@ -10,6 +10,7 @@ from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 from multiprocessing.shared_memory import SharedMemory
 from spikeinterface.core.core_tools import make_shared_array
 
+
 def interpolate_templates(templates_array, source_locations, dest_locations, interpolation_method="cubic"):
     """
     Interpolate templates_array to new positions.
@@ -266,10 +267,10 @@ class SharedMemoryDriftingTemplates(DriftingTemplates):
         shm_name,
         shape,
         dtype,
-        templates_array_moved=None, 
+        templates_array_moved=None,
         displacements=None,
         main_shm_owner=True,
-        **static_kwargs
+        **static_kwargs,
     ):
 
         assert len(shape) == 4
@@ -279,10 +280,7 @@ class SharedMemoryDriftingTemplates(DriftingTemplates):
         templates_array_moved = np.ndarray(shape=shape, dtype=dtype, buffer=self.shm.buf)
         self.static_kwargs = static_kwargs
         DriftingTemplates.__init__(
-            self,
-            templates_array_moved=templates_array_moved,
-            displacements=displacements,
-            **self.static_kwargs
+            self, templates_array_moved=templates_array_moved, displacements=displacements, **self.static_kwargs
         )
 
         # this is very important for the shm.unlink()
@@ -307,20 +305,26 @@ class SharedMemoryDriftingTemplates(DriftingTemplates):
 
     @staticmethod
     def from_drifting_templates(drifting_templates):
-        assert drifting_templates.templates_array_moved is not None, "drifting_templates must have precomputed displacements"
+        assert (
+            drifting_templates.templates_array_moved is not None
+        ), "drifting_templates must have precomputed displacements"
         data = drifting_templates.templates_array_moved
         shm_templates, shm = make_shared_array(data.shape, data.dtype)
         shm_templates[:] = data
         static_kwargs = drifting_templates.to_dict()
         init_kwargs = {
             "templates_array": np.asarray(static_kwargs["templates_array"]),
-            "sparsity_mask": None if static_kwargs["sparsity_mask"] is None else np.asarray(static_kwargs["sparsity_mask"]),
+            "sparsity_mask": (
+                None if static_kwargs["sparsity_mask"] is None else np.asarray(static_kwargs["sparsity_mask"])
+            ),
             "channel_ids": np.asarray(static_kwargs["channel_ids"]),
             "unit_ids": np.asarray(static_kwargs["unit_ids"]),
             "sampling_frequency": static_kwargs["sampling_frequency"],
             "nbefore": static_kwargs["nbefore"],
             "is_scaled": static_kwargs["is_scaled"],
-            "probe": static_kwargs["probe"] if static_kwargs["probe"] is None else Probe.from_dict(static_kwargs["probe"]),
+            "probe": (
+                static_kwargs["probe"] if static_kwargs["probe"] is None else Probe.from_dict(static_kwargs["probe"])
+            ),
         }
         shared_drifting_templates = SharedMemoryDriftingTemplates(
             shm.name,
@@ -329,7 +333,7 @@ class SharedMemoryDriftingTemplates(DriftingTemplates):
             shm_templates,
             drifting_templates.displacements,
             main_shm_owner=True,
-            **init_kwargs
+            **init_kwargs,
         )
         shm.close()
         return shared_drifting_templates

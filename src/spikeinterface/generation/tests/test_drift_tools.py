@@ -141,10 +141,9 @@ def test_SharedMemoryDriftingTemplates():
     drifting_templates.precompute_displacements(displacement)
     shm_drifting_templates = SharedMemoryDriftingTemplates.from_drifting_templates(drifting_templates)
 
-    assert np.array_equal(
-        shm_drifting_templates.templates_array_moved, drifting_templates.templates_array_moved
-    )
+    assert np.array_equal(shm_drifting_templates.templates_array_moved, drifting_templates.templates_array_moved)
     assert np.array_equal(shm_drifting_templates.displacements, drifting_templates.displacements)
+
 
 def test_InjectDriftingTemplatesRecording(create_cache_folder):
     cache_folder = create_cache_folder
