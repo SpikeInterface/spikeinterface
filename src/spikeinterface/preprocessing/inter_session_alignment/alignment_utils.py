@@ -16,7 +16,7 @@ from packaging.version import Version
 # #############################################################################
 
 
-def get_activity_histogram(
+def get_2d_activity_histogram(
     recording: BaseRecording,
     peaks: np.ndarray,
     peak_locations: np.ndarray,
@@ -74,9 +74,6 @@ def get_activity_histogram(
     )
     assert np.array_equal(generated_spatial_bin_edges, spatial_bin_edges), "TODO: remove soon after testing"
 
-    temporal_bin_centers = get_bin_centers(temporal_bin_edges)
-    spatial_bin_centers = get_bin_centers(spatial_bin_edges)
-
     if scale_to_hz:
         if bin_s is None:
             scaler = 1 / recording.get_duration()
@@ -88,7 +85,11 @@ def get_activity_histogram(
     if log_scale:
         activity_histogram = np.log10(1 + activity_histogram)  # TODO: make_2d_motion_histogram uses log2
 
+    temporal_bin_centers = get_bin_centers(temporal_bin_edges)
+    spatial_bin_centers = get_bin_centers(spatial_bin_edges)
+
     return activity_histogram, temporal_bin_centers, spatial_bin_centers
+
 
 def get_bin_centers(bin_edges):
     return (bin_edges[1:] + bin_edges[:-1]) / 2
@@ -151,9 +152,6 @@ def get_chunked_hist_mean(chunked_session_histograms):
 def get_chunked_hist_median(chunked_session_histograms):
     """ """
     median_hist = np.median(chunked_session_histograms, axis=0)
-
-    quartile_1 = np.percentile(chunked_session_histograms, 25, axis=0)
-    quartile_3 = np.percentile(chunked_session_histograms, 75, axis=0)
 
     return median_hist
 
@@ -311,15 +309,6 @@ def compute_histogram_crosscorrelation(
                         windowed_histogram_j - np.mean(windowed_histogram_i),
                         mode="full",
                     )
-                    import os
-                    if "hello_world" in os.environ:
-                        plt.plot(windowed_histogram_i)
-                        plt.plot(windowed_histogram_j)
-                        plt.show()
-
-                        plt.plot(xcorr)
-                        plt.show()
-
                     if num_shifts:
                         window_indices = np.arange(center_bin - num_shifts, center_bin + num_shifts)
                         xcorr = xcorr[window_indices]
@@ -436,7 +425,9 @@ def akima_interpolate_nonrigid_shifts(
         interpolated from the non-rigid shifts.
 
     """
-    if Version(scipy.__version__) >= Version("1.4.0"):
+    import scipy
+
+    if Version(scipy.__version__) < Version("1.14.0"):
         raise ImportError("Scipy version 14 or higher is required fro Akima interpolation.")
 
     from scipy.interpolate import Akima1DInterpolator
