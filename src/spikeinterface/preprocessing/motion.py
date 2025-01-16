@@ -446,6 +446,10 @@ def run_peak_detection_pipeline_node(recording, gather_mode, detect_kwargs, loca
     from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
     from spikeinterface.sortingcomponents.peak_localization import localize_peak_methods
 
+    # Don't modify the kwargs in place in case the caller requires them
+    detect_kwargs = copy.deepcopy(detect_kwargs)
+    localize_peaks_kwargs = copy.deepcopy(localize_peaks_kwargs)
+
     # node detect
     method = detect_kwargs.pop("method", "locally_exclusive")
     method_class = detect_peak_methods[method]
