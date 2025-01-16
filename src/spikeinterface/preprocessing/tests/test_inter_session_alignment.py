@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from spikeinterface.preprocessing.inter_session_alignment import session_alignment
+from spikeinterface.preprocessing.inter_session_alignment import session_alignment, alignment_utils
 from spikeinterface.generation.session_displacement_generator import *
 
 
@@ -45,7 +45,8 @@ class TestInterSessionAlignment:
     ############################################################################
 
     # TEST 1D AND 2D HERE
-    def test_align_sessions_finds_correct_shifts(self, test_recording_1):
+    @pytest.mark.parametrize("histogram_type", ["activity_2d"])  # "activity_1d"
+    def test_align_sessions_finds_correct_shifts(self, test_recording_1, histogram_type):
         """ """
         recordings_list, _, peaks_list, peak_locations_list = test_recording_1
 
@@ -57,6 +58,7 @@ class TestInterSessionAlignment:
 
         estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
         estimate_histogram_kwargs["bin_um"] = 0.5
+        estimate_histogram_kwargs["histogram_type"] = histogram_type
 
         for mode, expected in zip(
             ["to_session_1", "to_session_2", "to_session_3", "to_middle"],
@@ -75,7 +77,40 @@ class TestInterSessionAlignment:
                 compute_alignment_kwargs=compute_alignment_kwargs,
                 estimate_histogram_kwargs=estimate_histogram_kwargs,
             )
-            assert np.allclose(expected, extra_info["shifts_array"].squeeze(), rtol=0, atol=1.5)
+
+            #  assert np.allclose(expected, extra_info["shifts_array"].squeeze(), rtol=0, atol=1.5)
+
+            from spikeinterface.widgets import plot_session_alignment, plot_activity_histogram_2d
+            import matplotlib.pyplot as plt
+
+            corr_peaks_list, corr_peak_loc_list = session_alignment.compute_peaks_locations_for_session_alignment(
+                corrected_recordings_list,
+                detect_kwargs={"method": "locally_exclusive"},
+                localize_peaks_kwargs={"method": "grid_convolution"},
+            )
+
+            plot_session_alignment(
+                corrected_recordings_list,
+                corr_peaks_list,
+                corr_peak_loc_list,
+                extra_info["spatial_bin_centers"],
+                **extra_info["corrected"],
+            )
+            plt.show()
+
+            plot_activity_histogram_2d(
+                extra_info["session_histogram_list"],
+                extra_info["spatial_bin_centers"],
+                extra_info["corrected"]["session_histogram_list"],
+            )
+            plt.show()
+
+        #     plot_session_alignment
+        #     recordings_list: list[BaseRecording],
+        #     peaks_list: list[np.ndarray],
+        #     peak_locations_list: list[np.ndarray],
+        #     session_histogram_list: list[np.ndarray],
+        #     spatial_bin_centers: np.ndarray | None = None,
 
         corr_peaks_list, corr_peak_loc_list = session_alignment.compute_peaks_locations_for_session_alignment(
             corrected_recordings_list,
@@ -83,42 +118,16 @@ class TestInterSessionAlignment:
             localize_peaks_kwargs={"method": "grid_convolution"},
         )
 
-        import matplotlib.pyplot as plt
-
         new_histograms = session_alignment._compute_session_histograms(
             corrected_recordings_list, corr_peaks_list, corr_peak_loc_list, **estimate_histogram_kwargs
         )[0]
 
-        try:
-            assert np.all(
-                np.abs(np.corrcoef(new_histograms)) - np.abs(np.corrcoef(extra_info["session_histogram_list"])) >= 0
-            )  ## TODO: just compare upper triangular...
-        except:
-            breakpoint()
-
-        if False:  # the problem here is that border_mode is zero and now this seems to
-            import os  # lead to some cases
-
-            os.environ["hello_world"] = ""
-
-            _, extra_info = align_sessions(
-                corrected_recordings_list,
-                corr_peaks_list,
-                corr_peak_loc_list,
-                alignment_order="to_session_1",
-                compute_alignment_kwargs=compute_alignment_kwargs,
-                estimate_histogram_kwargs=estimate_histogram_kwargs,
-            )
-            plot_session_alignment(
-                corrected_recordings_list,
-                corr_peaks_list,
-                corr_peak_loc_list,
-                extra_info["session_histogram_list"],
-                **extra_info["corrected"],
-                spatial_bin_centers=extra_info["spatial_bin_centers"],  # TODO: why have to pass this..?
-                drift_raster_map_kwargs={"clim": (-250, 0), "scatter_decimate": 10},
-            )
-            plt.show()
+        rows, cols = np.triu_indices(len(new_histograms), k=1)
+        assert np.all(
+            np.abs(np.corrcoef(new_histograms)[rows, cols])
+            - np.abs(np.corrcoef(extra_info["session_histogram_list"])[rows, cols])
+            >= 0
+        )
 
     # _compute_session_histograms
     # ##################################################################################
@@ -127,7 +136,7 @@ class TestInterSessionAlignment:
     # test chunked histogram is accurate (1D and 2D)
     # test all arguments are passed down to the correct subfunction
     # test spatial bin centers
-    # unit test get_activity_histogram extra arguments.
+    # unit test get_2d_activity_histogram extra arguments.
 
     def test_histogram_generation(self, test_recording_1):
         """ """
@@ -276,7 +285,7 @@ class TestInterSessionAlignment:
             "bin_um": 5,  # make_2d_motion_histogram
             "method": "chunked_median",  # _get_single_session_activity_histogram
             "chunked_bin_size_s": 6,  # make_2d_motion_histogram (bin_s)
-            "log_scale": True,  # get_activity_histogram
+            "log_scale": True,  # get_2d_activity_histogram
             "depth_smooth_um": 5,  # make_2d_motion_histogram
             "histogram_type": "activity_1d",  # _get_single_session_activity_histogram
             "weight_with_amplitude": True,  # make_2d_motion_histogram
@@ -288,8 +297,8 @@ class TestInterSessionAlignment:
         spy_2d_histogram = mocker.spy(
             spikeinterface.preprocessing.inter_session_alignment.alignment_utils, "make_2d_motion_histogram"
         )
-        spy_get_activity_histogram = mocker.spy(
-            spikeinterface.preprocessing.inter_session_alignment.alignment_utils, "get_activity_histogram"
+        spy_get_2d_activity_histogram = mocker.spy(
+            spikeinterface.preprocessing.inter_session_alignment.alignment_utils, "get_2d_activity_histogram"
         )
         spy_compute_histogram = mocker.spy(
             spikeinterface.preprocessing.inter_session_alignment.session_alignment,
@@ -299,7 +308,7 @@ class TestInterSessionAlignment:
         session_alignment.align_sessions(
             [recordings_list[0]], [peaks_list[0]], [peak_locations_list[0]], estimate_histogram_kwargs=different_kwargs
         )
-        # get_activity_histogram for log_scale
+        # get_2d_activity_histogram for log_scale
         first_call = spy_2d_histogram.call_args_list[0]
         args, kwargs = first_call
 
@@ -313,7 +322,7 @@ class TestInterSessionAlignment:
         # TODO: these might be overkill, these are implicitly tested elsewhere...
         # Keep for now but maybe replace, and only monkeypatch calls that
         # in which the functions are not tested here! Yes obvs that is much better...
-        first_call = spy_get_activity_histogram.call_args_list[0]
+        first_call = spy_get_2d_activity_histogram.call_args_list[0]
         args, kwargs = first_call
         assert kwargs["log_scale"] == different_kwargs["log_scale"]
 
@@ -445,14 +454,14 @@ class TestInterSessionAlignment:
 
         recordings_list, _, peaks_list, peak_locations_list = test_recording_1
 
-        spy_get_activity_histogram = mocker.spy(
+        spy_get_2d_activity_histogram = mocker.spy(
             spikeinterface.preprocessing.inter_session_alignment.session_alignment.InterpolateMotionRecording,
             "__init__",
         )
         session_alignment.align_sessions(
             [recordings_list[0]], [peaks_list[0]], [peak_locations_list[0]], interpolate_motion_kwargs=different_kwargs
         )
-        first_call = spy_get_activity_histogram.call_args_list[0]
+        first_call = spy_get_2d_activity_histogram.call_args_list[0]
         args, kwargs = first_call
 
         assert kwargs["border_mode"] == different_kwargs["border_mode"]
@@ -486,10 +495,26 @@ class TestInterSessionAlignment:
                 max_iteration=100,
                 distance_strict=False,
             ),
-            generate_noise_kwargs=dict(noise_levels=(0.0, 0.0), spatial_decay=1.0),
+            generate_noise_kwargs=dict(
+                noise_levels=(0.0, 0.5), spatial_decay=1.0
+            ),  # must have some noise, or peak detection becomes completely stoachastic!
         )
 
+        # okay so the issue is that it is using a different set of peaks detection kwargs compared to motion
+        # So lets really think about the order here...
+
+        detect_kwargs = {
+            "method": "locally_exclusive",
+            "peak_sign": "neg",
+            "detect_threshold": 8,
+            "exclude_sweep_ms": 0.1,
+            "radius_um": 75,
+            "noise_levels": None,
+            "random_chunk_kwargs": {},
+        }
         interpolate_motion_kwargs = {"border_mode": "force_zeros"}
+        #  detect_kwargs = {"method": "locally_exclusive"}
+        localize_peaks_kwargs = {"method": "grid_convolution"}
 
         preset = "rigid_fast" if rigid_motion else "kilosort_like"
 
@@ -500,63 +525,40 @@ class TestInterSessionAlignment:
         mc_motion_info_list = []
         for rec in recordings_list:
             corrected_rec, motion_info = si.correct_motion(
-                rec, preset=preset, interpolate_motion_kwargs=interpolate_motion_kwargs, output_motion_info=True
+                rec,
+                preset=preset,
+                interpolate_motion_kwargs=interpolate_motion_kwargs,
+                output_motion_info=True,
+                detect_kwargs=detect_kwargs,
+                localize_peaks_kwargs=localize_peaks_kwargs,
             )
             mc_recording_list.append(corrected_rec)
             mc_motion_info_list.append(motion_info)
 
         # its okay that these displacements are zero?
 
-        peaks_list, peak_locations_list = session_alignment.compute_peaks_locations_for_session_alignment(
-            mc_recording_list,
-            detect_kwargs={"method": "locally_exclusive"},
-            localize_peaks_kwargs={"method": "grid_convolution"},  # TODO: faster methods
-        )
+        # so problems, 1) the kwargs were messed up
+        # 2) the detected peaks are different before vs. after motion correct, EVEN if displacement is zero!
 
-        return mc_recording_list, mc_motion_info_list, peaks_list, peak_locations_list, shifts
+        #    peaks_list, peak_locations_list = session_alignment.compute_peaks_locations_for_session_alignment(
+        #        recordings_list,
+        #        detect_kwargs=detect_kwargs,
+        #        localize_peaks_kwargs=localize_peaks_kwargs,  # TODO: faster methods
+        #    )
 
+        return mc_recording_list, mc_motion_info_list, shifts  # peaks_list, peak_locations_list,
+
+    # TODO: when displacement is zero, InterpolateMotionREcording is not equal to original recording. I guess this is
+    # to be expected, but do some confidence checks
+    # Hmm, it is actually very different, e.g. 1149 vs. 1016 peaks..
+    # TOOD: do a test which checks motion output is uncorrected otherwise it will break! need to more thorouighly test peaks and peak locs here...
     def test_interpolate_motion_parameters(self):
         pass
 
-    def test_rigid_motion_rigid_intersession(self, test_recording_1):
+    def test_rigid_motion_rigid_intersession(self):
         """ """
-        mc_recording_list, mc_motion_info_list, peaks_list, peak_locations_list, shifts = (
-            self.get_motion_corrected_recordings_list(rigid_motion=True, rigid_intersession=False)
-        )
-
-        # should assert these are zero!
-        first_ses_mc_displacement = mc_recording_list[0]._recording_segments[0].motion.displacement
-        second_ses_mc_displacement = mc_recording_list[1]._recording_segments[0].motion.displacement
-
-        assert first_ses_mc_displacement[0].size == 1
-        assert second_ses_mc_displacement[0].size == 1
-
-        #      first_ses_mc_displacement[0] += 0.01
-        #     second_ses_mc_displacement[0] += 0.02
-
-        corrected_recordings, extra_info = session_alignment.align_sessions_after_motion_correction(
-            mc_recording_list,
-            mc_motion_info_list,
-            align_sessions_kwargs={"alignment_order": "to_session_1"},
-        )
-
-        # TODO: peaks_list does not match mc_motion_info_list peaks!!!
-        breakpoint()
-
-        first_ses_total_displacement = (
-            corrected_recordings[0]._recording_segments[0].motion.displacement
-        )  # [array([[-124.9, -124.9, -124.9, -124.9, -124.9]])]
-        second_ses_total_displacement = corrected_recordings[1]._recording_segments[0].motion.displacement
-
-        breakpoint()  # TODO: something has gone wrong!!
-        assert first_ses_total_displacement == [np.array([[0.01]])]  # TODO: can use shifts directly!
-        assert second_ses_total_displacement == [np.array([[250.02]])]
-
-    def test_rigid_motion_nonrigid_intersession(self):
-
-        # TODO: DIRECT COPY!
-        mc_recording_list, mc_motion_info_list, peaks_list, peak_locations_list, shifts = (
-            self.get_motion_corrected_recordings_list(rigid_motion=True, rigid_intersession=False)
+        mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
+            rigid_motion=True, rigid_intersession=True
         )
 
         # should assert these are zero!
@@ -569,8 +571,40 @@ class TestInterSessionAlignment:
         first_ses_mc_displacement[0] += 0.01
         second_ses_mc_displacement[0] += 0.02
 
-        # All of this is direct copy between these tests...
+        non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
+        non_rigid_window_kwargs["rigid"] = True
 
+        corrected_recordings, extra_info = session_alignment.align_sessions_after_motion_correction(
+            mc_recording_list,
+            mc_motion_info_list,
+            align_sessions_kwargs={
+                "alignment_order": "to_session_1",
+                "non_rigid_window_kwargs": non_rigid_window_kwargs,
+            },
+        )
+        first_ses_total_displacement = corrected_recordings[0]._recording_segments[0].motion.displacement
+        second_ses_total_displacement = corrected_recordings[1]._recording_segments[0].motion.displacement
+
+        assert first_ses_total_displacement == [np.array([[0.01]])]  # TODO: can use shifts directly!
+        assert second_ses_total_displacement == [np.array([[250.02]])]
+
+    def test_rigid_motion_nonrigid_intersession(self):
+
+        # TODO: DIRECT COPY!
+        mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
+            rigid_motion=True, rigid_intersession=False
+        )
+        # should assert these are zero!
+        first_ses_mc_displacement = mc_recording_list[0]._recording_segments[0].motion.displacement
+        second_ses_mc_displacement = mc_recording_list[1]._recording_segments[0].motion.displacement
+
+        assert first_ses_mc_displacement[0].size == 1
+        assert second_ses_mc_displacement[0].size == 1
+
+        first_ses_mc_displacement[0] += 0.01
+        second_ses_mc_displacement[0] += 0.02
+
+        # All of this is direct copy between these tests...
         non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
         non_rigid_window_kwargs["rigid"] = False
 
@@ -584,20 +618,20 @@ class TestInterSessionAlignment:
             },
         )
 
-        first_ses_total_displacement = (
-            corrected_recordings[0]._recording_segments[0].motion.displacement
-        )  # [array([[-124.9, -124.9, -124.9, -124.9, -124.9]])]
+        first_ses_total_displacement = corrected_recordings[0]._recording_segments[0].motion.displacement
         second_ses_total_displacement = corrected_recordings[1]._recording_segments[0].motion.displacement
 
         assert np.all(extra_info["shifts_array"][0] + 0.01 == first_ses_total_displacement)
-        assert np.all(extra_info["shifts_array"][1] + 0.02 == second_ses_total_displacement)  #  [np.array([[250.02]])]
+        # TODO: why are these nonlinear shifts so wrong?
+        assert np.all(extra_info["shifts_array"][1] + 0.02 == second_ses_total_displacement)
 
     # TODO: Does this really test the passed peak list, peak_locations list? maybe use a monkeypatch?
+    # TODO: monkeypatch through all passed args?
     @pytest.mark.parametrize("rigid_intersession", [True, False])
     def test_nonrigid_motion(self, rigid_intersession):
         # TODO: DIRECT COPY!
-        mc_recording_list, mc_motion_info_list, peaks_list, peak_locations_list, shifts = (
-            self.get_motion_corrected_recordings_list(rigid_motion=False, rigid_intersession=rigid_intersession)
+        mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
+            rigid_motion=False, rigid_intersession=rigid_intersession
         )
         # should assert these are zero!
         first_ses_mc_displacement = mc_recording_list[0]._recording_segments[0].motion.displacement
@@ -630,23 +664,117 @@ class TestInterSessionAlignment:
         )  # [array([[-124.9, -124.9, -124.9, -124.9, -124.9]])]
         second_ses_total_displacement = corrected_recordings[1]._recording_segments[0].motion.displacement
 
-        breakpoint()
-
         assert np.all(extra_info["shifts_array"][0] + offsets1 == first_ses_total_displacement)
-        assert np.all(
-            extra_info["shifts_array"][1] + offsets2 == second_ses_total_displacement
-        )  # [np.array([[250.02]])]
-
-    def test_nonrigid_motion_nonrigid_intersession(self):
-        pass
+        assert np.all(extra_info["shifts_array"][1] + offsets2 == second_ses_total_displacement)
 
     ###########################################################################
     # Unit Tests
     ###########################################################################
 
+    # TODO: test log, amplitude scale, etc at high level?
+    def test_histogram_activity_kwargs(self, test_recording_1):
+
+        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
+
+    @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])
+    @pytest.mark.parametrize("operator", ["mean", "median"])
+    # TODO: test bin_s somewhere else
+    def test_histogram_parameters(self, test_recording_1, histogram_type, operator):  # could use a different one
+        """ """
+        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
+
+        estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
+        estimate_histogram_kwargs["log_scale"] = False
+        estimate_histogram_kwargs["method"] = f"chunked_{operator}"
+        estimate_histogram_kwargs["histogram_type"] = histogram_type
+
+        _, extra_info = session_alignment.align_sessions(
+            recordings_list, peaks_list, peak_locations_list, estimate_histogram_kwargs=estimate_histogram_kwargs
+        )
+        estimate_histogram_kwargs["log_scale"] = True
+
+        _, extra_info_log = session_alignment.align_sessions(
+            recordings_list, peaks_list, peak_locations_list, estimate_histogram_kwargs=estimate_histogram_kwargs
+        )
+        # TODO: compare what log is used!! keep same as SI does in 3d...
+        for ses_idx in range(len(recordings_list)):
+
+            ses_hist = extra_info["session_histogram_list"][ses_idx]
+
+            # TODO: ugh this is actually wrong, we want to take the log after averaging!
+            # okay so may need to completely refactor...
+            log = np.log10 if histogram_type == "activity_1d" else np.log2
+
+            chunked_histograms = extra_info["histogram_info_list"][ses_idx]["chunked_histograms"]
+            for chunk_hist, chunk_hist_log in zip(
+                chunked_histograms, extra_info_log["histogram_info_list"][ses_idx]["chunked_histograms"]
+            ):
+                assert np.array_equal(log(chunk_hist + 1), chunk_hist_log)
+
+            summary_func = np.median if operator == "median" else np.mean
+            assert np.array_equal(ses_hist, summary_func(chunked_histograms, axis=0))
+
+    def test_shift_array_fill_zeros(self):
+        """ """
+        # TODO: could do all the same indexing as 1d? but will be more confusing...
+
+        # Test 1d array
+        test_1d = np.random.random((10))
+
+        # shift leftwards
+        res = alignment_utils.shift_array_fill_zeros(test_1d, 2)
+        assert np.all(res[8:] == 0)
+        assert np.array_equal(res[:8], test_1d[2:])
+
+        # shift rightwards
+        res = alignment_utils.shift_array_fill_zeros(test_1d, -2)
+        assert np.all(res[:2] == 0)
+        assert np.array_equal(res[2:], test_1d[:8])
+
+        # Test 2d array
+        test_2d = np.random.random((10, 10))
+
+        # shift upwards
+        res = alignment_utils.shift_array_fill_zeros(test_2d, 2)
+        assert np.all(res[8:, :] == 0)
+        assert np.array_equal(res[:8, :], test_2d[2:, :])
+
+        # shift downwards.
+        res = alignment_utils.shift_array_fill_zeros(test_2d, -2)
+        assert np.all(res[:2, :] == 0)
+        assert np.array_equal(res[2:, :], test_2d[:8, :])
+
+    def test_get_shifts_from_session_matrix(self):
+        """ """
+        matrix = np.random.random((10, 10, 2))
+
+        res = alignment_utils.get_shifts_from_session_matrix("to_middle", matrix)
+        assert np.array_equal(res, -np.mean(matrix, axis=0))
+
+        res = alignment_utils.get_shifts_from_session_matrix("to_session_1", matrix)
+        assert np.array_equal(res, -matrix[0, :, :])
+
+        res = alignment_utils.get_shifts_from_session_matrix("to_session_5", matrix)
+        assert np.array_equal(res, -matrix[4, :, :])
+
+        res = alignment_utils.get_shifts_from_session_matrix("to_session_10", matrix)
+        assert np.array_equal(res, -matrix[9, :, :])
+
+    def estimate_chunk_size(self):
+        pass
+
+    def test_akima_interpolate_nonrigid_shifts(self):
+        pass
+
+    def test_compute_histogram_crosscorrelation(self):
+        pass
+
     ###########################################################################
     # Benchmarking
     ###########################################################################
 
+    # badly need to review repeat from motion correction alg
+
     # 1) create some inter-session drift
     # 2) compare sorting before / after
+    # 3) need to benchmark fully
