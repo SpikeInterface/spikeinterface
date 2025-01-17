@@ -41,8 +41,8 @@ class CircusClustering:
 
     _default_params = {
         "hdbscan_kwargs": {
-            "min_cluster_size": 25,
-            "cluster_selection_epsilon": 0.25,
+            "min_cluster_size": 20,
+            "cluster_selection_epsilon": 0.5,
             "cluster_selection_method": "leaf",
             "allow_single_cluster": True
         },
@@ -204,7 +204,7 @@ class CircusClustering:
             original_labels = peaks["channel_index"]
             from spikeinterface.sortingcomponents.clustering.split import split_clusters
 
-            min_size = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 25)
+            min_size = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 20)
 
             if params["debug"]:
                 debug_folder = tmp_folder / "split"

@@ -303,13 +303,14 @@ class LocalFeatureClustering:
                 for k in np.unique(possible_labels):
                     mask = possible_labels == k
                     ax = axs[0]
-
-                    centroid = final_features[:, :2][mask].mean(axis=0)
                     ax.scatter(final_features[:, 0][mask], final_features[:, 1][mask], s=5, color=colors[k])
-                    ax.text(centroid[0], centroid[1], f"Label {k}", fontsize=10, color="k")
+                    if k > -1:
+                        centroid = final_features[:, :2][mask].mean(axis=0)
+                        ax.text(centroid[0], centroid[1], f"Label {k}", fontsize=10, color="k")
                     ax = axs[1]
                     ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
-                    ax.plot(np.median(flatten_wfs[mask].T, axis=1), color=colors[k], lw=2)
+                    if k > -1:
+                        ax.plot(np.median(flatten_wfs[mask].T, axis=1), color=colors[k], lw=2)
                     ax.set_xlabel("PCA features")
                 ymin, ymax = ax.get_ylim()
                 ax.plot([n_pca, n_pca], [ymin, ymax], "k--")
