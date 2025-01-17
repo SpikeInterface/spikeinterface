@@ -1,39 +1,47 @@
 from __future__ import annotations
 
 import numpy as np
+from typing import Optional
 
 
-def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12, num_cycles=None):
+def get_neuropixels_sample_shifts(
+    num_channels: int = 384, num_channels_per_adc: int = 12, num_cycles: Optional[int] = None
+) -> np.ndarray:
     """
-    Calculates the relative sampling phase of each channel that results
-    from Neuropixels ADC multiplexing.
+    Calculate the relative sampling phase (inter-sample shifts) for each channel
+    in Neuropixels probes due to ADC multiplexing.
 
-    This information is needed to perform the preprocessing.phase_shift operation.
+    Neuropixels probes sample channels sequentially through multiple ADCs,
+    introducing slight temporal delays between channels within each sampling cycle.
+    These inter-sample shifts are fractions of the sampling period and are crucial
+    to consider during preprocessing steps, such as phase correction, to ensure
+    accurate alignment of the recorded signals.
 
-    See https://github.com/int-brain-lab/ibllib/blob/master/ibllib/ephys/neuropixel.py
-
-
-    for the original implementation.
+    This function computes these relative phase shifts, returning an array where
+    each value represents the fractional delay (ranging from 0 to 1) for the
+    corresponding channel.
 
     Parameters
     ----------
     num_channels : int, default: 384
-        The total number of channels in a recording.
-        All currently available Neuropixels variants have 384 channels.
+        Total number of channels in the recording.
+        Neuropixels probes typically have 384 channels.
     num_channels_per_adc : int, default: 12
-        The number of channels per ADC on the probe.
-        Neuropixels 1.0 probes have 12 ADCs.
+        Number of channels assigned to each ADC on the probe.
+        Neuropixels 1.0 probes have 12 ADCs, each handling 32 channels.
         Neuropixels 2.0 probes have 16 ADCs.
-    num_cycles: int or None, default: None
-        The number of cycles in the ADC on the probe.
-        Neuropixels 1.0 probes have 13 cycles for AP and 12 for LFP.
+    num_cycles : int or None, default: None
+        Number of cycles in the ADC sampling sequence.
+        Neuropixels 1.0 probes have 13 cycles for AP (action potential) signals
+        and 12 for LFP (local field potential) signals.
         Neuropixels 2.0 probes have 16 cycles.
-        If None, the num_channels_per_adc is used.
+        If None, defaults to the value of `num_channels_per_adc`.
 
     Returns
     -------
-    sample_shifts : ndarray
-        The relative phase (from 0-1) of each channel
+    sample_shifts : np.ndarray
+        Array of relative phase shifts for each channel, with values ranging from 0 to 1,
+        representing the fractional delay within the sampling period due to sequential ADC sampling.
     """
     if num_cycles is None:
         num_cycles = num_channels_per_adc
@@ -44,9 +52,8 @@ def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12, num
 
     sample_shifts = np.zeros_like(adc_indices)
 
-    for a in adc_indices:
-        sample_shifts[adc_indices == a] = np.arange(num_channels_per_adc) / num_cycles
-
+    for adc_index in adc_indices:
+        sample_shifts[adc_indices == adc_index] = np.arange(num_channels_per_adc) / num_cycles
     return sample_shifts
 
 
