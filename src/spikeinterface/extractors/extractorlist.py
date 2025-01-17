@@ -26,7 +26,15 @@ from .neoextractors import *
 from .neoextractors import NeuroScopeSortingExtractor, MaxwellEventExtractor
 
 # NWB sorting/recording/event
-from .nwbextractors import NwbRecordingExtractor, NwbSortingExtractor, read_nwb, read_nwb_recording, read_nwb_sorting
+from .nwbextractors import (
+    NwbRecordingExtractor,
+    NwbSortingExtractor,
+    NwbTimeSeriesExtractor,
+    read_nwb,
+    read_nwb_recording,
+    read_nwb_sorting,
+    read_nwb_timeseries,
+)
 
 from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
 from .iblextractors import IblRecordingExtractor, IblSortingExtractor, read_ibl_recording, read_ibl_sorting
