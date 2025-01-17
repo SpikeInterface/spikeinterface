@@ -250,6 +250,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 except:
                     warnings.warn(f"Could not load synchronized timestamps for {stream_name}")
 
+        self.annotate(experiment_name=f"experiment{exp_id}")
         self._stream_folders = stream_folders
 
         self._kwargs.update(
