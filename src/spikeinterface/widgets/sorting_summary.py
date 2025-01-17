@@ -54,7 +54,7 @@ class SortingSummaryWidget(BaseWidget):
         See all properties available with sorting.get_property_keys(), and, if available,
         analyzer.get_extension("quality_metrics").get_data().columns and
         analyzer.get_extension("template_metrics").get_data().columns.
-    extra_unit_properties : None dict, default: None
+    extra_unit_properties : dict or None, default: None
         A dict with extra units properties to display.
     curation_dict : dict or None, default: None
         When curation is True, optionaly the viewer can get a previous 'curation_dict'
