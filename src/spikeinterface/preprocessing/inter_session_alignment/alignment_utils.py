@@ -163,7 +163,7 @@ def get_chunked_hist_median(chunked_session_histograms):
 
 # TODO: a good test here is to give zero shift for even and off numbered hist and check the output is zero!
 def compute_histogram_crosscorrelation(
-    session_histogram_list: list[np.ndarray],
+    session_histogram_list: np.ndarray,
     non_rigid_windows: np.ndarray,
     num_shifts: int,
     interpolate: bool,
@@ -171,9 +171,9 @@ def compute_histogram_crosscorrelation(
     kriging_sigma: float,
     kriging_p: float,
     kriging_d: float,
-    smoothing_sigma_bin: float,
-    smoothing_sigma_window: float,
-):
+    smoothing_sigma_bin: None | float,
+    smoothing_sigma_window: None | float,
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Given a list of session activity histograms, cross-correlate
     all histograms returning the peak correlation shift (in indices)
@@ -185,7 +185,8 @@ def compute_histogram_crosscorrelation(
     Parameters
     ----------
 
-    session_histogram_list : list[np.ndarray]
+    session_histogram_list : list[np.ndarray]  TODO: change name!!
+        (num_sessions, num_bins) array of session activity histograms.
     non_rigid_windows : np.ndarray
         A (num windows x num_bins) binary of weights by which to window
         the activity histogram for non-rigid-registration. For example, if
@@ -258,7 +259,7 @@ def compute_histogram_crosscorrelation(
     """
     import matplotlib.pyplot as plt
 
-    num_sessions = len(session_histogram_list)
+    num_sessions = session_histogram_list.shape[0]
     num_bins = session_histogram_list.shape[1]  # all hists are same length
     num_windows = non_rigid_windows.shape[0]
 
@@ -266,15 +267,13 @@ def compute_histogram_crosscorrelation(
 
     center_bin = np.floor((num_bins * 2 - 1) / 2).astype(int)
 
+    # Create the (num windows, num_bins) matrix for this pair of sessions
+    num_iter = num_bins * 2 - 1 if not num_shifts else num_shifts * 2
+    shifts_array = np.arange(-(num_iter // 2), num_iter // 2 + 1)
+
     for i in range(num_sessions):
         for j in range(i, num_sessions):
 
-            # Create the (num windows, num_bins) matrix for this pair of sessions
-            num_iter = (
-                num_bins * 2 - 1
-                if not num_shifts
-                else num_shifts * 2  # num_shift_block with iterative alignment is 2x, the same, make note!
-            )
             xcorr_matrix = np.zeros((non_rigid_windows.shape[0], num_iter))
 
             # For each window, window the session histograms (`window` is binary)
@@ -292,12 +291,12 @@ def compute_histogram_crosscorrelation(
                     window_i = windowed_histogram_i - np.mean(windowed_histogram_i, axis=1)[:, np.newaxis]
                     window_j = windowed_histogram_j - np.mean(windowed_histogram_j, axis=1)[:, np.newaxis]
 
-                    xcorr = np.zeros(num_iter)
-                    for idx, shift in enumerate(range(-num_iter // 2, num_iter // 2)):
+                    xcorr = np.zeros(num_iter + 1)
+
+                    for idx, shift in enumerate(shifts_array):
                         shifted_i = shift_array_fill_zeros(window_i, shift)
 
                         xcorr[idx] = np.correlate(shifted_i.flatten(), window_j.flatten())
-
                 else:
                     # For a 1D histogram, compute the full cross-correlation and
                     # window the desired shifts ( this is faster than manual looping).
@@ -315,11 +314,6 @@ def compute_histogram_crosscorrelation(
 
                 xcorr_matrix[win_idx, :] = xcorr
 
-            if num_shifts:
-                shift_center_bin = num_shifts
-            else:
-                shift_center_bin = center_bin
-
             # Smooth the cross-correlations across the bins
             if smoothing_sigma_bin:
                 xcorr_matrix = gaussian_filter(xcorr_matrix, smoothing_sigma_bin, axes=1)
@@ -328,27 +322,58 @@ def compute_histogram_crosscorrelation(
             if num_windows > 1 and smoothing_sigma_window:
                 xcorr_matrix = gaussian_filter(xcorr_matrix, smoothing_sigma_window, axes=0)
 
+            shifts_array = np.arange(-(num_iter // 2), num_iter // 2 + 1)  # TODO: double check
             # Upsample the cross-correlation
             if interpolate:
-                shifts = np.arange(xcorr_matrix.shape[1])
-                shifts_upsampled = np.linspace(shifts[0], shifts[-1], shifts.size * interp_factor)
+
+                # shifts = np.arange(xcorr_matrix.shape[1])
+                shifts_upsampled = np.linspace(shifts_array[0], shifts_array[-1], shifts_array.size * interp_factor)
 
                 K = kriging_kernel(
-                    np.c_[np.ones_like(shifts), shifts],
+                    np.c_[np.ones_like(shifts_array), shifts_array],
                     np.c_[np.ones_like(shifts_upsampled), shifts_upsampled],
                     kriging_sigma,
                     kriging_p,
                     kriging_d,
                 )
-                xcorr_matrix = np.matmul(xcorr_matrix, K, axes=[(-2, -1), (-2, -1), (-2, -1)])
 
-                xcorr_peak = np.argmax(xcorr_matrix, axis=1) / interp_factor
+                #    breakpoint()
+
+                xcorr_matrix_old = np.matmul(xcorr_matrix, K, axes=[(-2, -1), (-2, -1), (-2, -1)])
+                xcorr_matrix_ = np.zeros(
+                    (xcorr_matrix.shape[0], shifts_upsampled.size)
+                )  # TODO: check in nonlinear case
+                for i_ in range(xcorr_matrix.shape[0]):
+                    xcorr_matrix_[i_, :] = np.matmul(xcorr_matrix[i_, :], K)
+
+                # breakpoint()
+
+                plt.plot(shifts_array, xcorr_matrix.T)
+                plt.show
+                plt.plot(shifts_upsampled, xcorr_matrix_.T)
+                plt.show()
+
+                xcorr_matrix = xcorr_matrix_
+
+                #    plt.plot(xcorr_matrix.T)
+                #   plt.plot(xcorr_matrix_old.T)
+                #  plt.show()
+                #
+
+                xcorr_peak = np.argmax(xcorr_matrix, axis=1)
+                shift = shifts_upsampled[xcorr_peak]
+
+            #   breakpoint()
+
             else:
                 xcorr_peak = np.argmax(xcorr_matrix, axis=1)
+                shift = shifts_array[xcorr_peak]
 
-            # Caclulate and save the shift for session i to j
-            shift = xcorr_peak - shift_center_bin
+            # x=i;y=j
+            # breakpoint()
             shift_matrix[i, j, :] = shift
+
+    breakpoint()
 
     # As xcorr shifts are symmetric, the shift matrix is skew symmetric, so fill
     # the (empty) lower triangular with the negative (already computed) upper triangular to save computation
@@ -357,7 +382,7 @@ def compute_histogram_crosscorrelation(
         upper_i, upper_j = np.triu_indices_from(shift_matrix[:, :, k], k=1)
         shift_matrix[lower_i, lower_j, k] = shift_matrix[upper_i, upper_j, k] * -1
 
-    return shift_matrix
+    return shift_matrix, xcorr_matrix
 
 
 def shift_array_fill_zeros(array: np.ndarray, shift: int) -> np.ndarray:

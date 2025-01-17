@@ -45,7 +45,8 @@ class TestInterSessionAlignment:
     ############################################################################
 
     # TEST 1D AND 2D HERE
-    @pytest.mark.parametrize("histogram_type", ["activity_2d"])  # "activity_1d"
+    # TODO: test shift blocks...
+    @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])  # "activity_1d" "activity_2d"
     def test_align_sessions_finds_correct_shifts(self, test_recording_1, histogram_type):
         """ """
         recordings_list, _, peaks_list, peak_locations_list = test_recording_1
@@ -57,8 +58,9 @@ class TestInterSessionAlignment:
         compute_alignment_kwargs["smoothing_sigma_window"] = None
 
         estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
-        estimate_histogram_kwargs["bin_um"] = 0.5
+        estimate_histogram_kwargs["bin_um"] = 2
         estimate_histogram_kwargs["histogram_type"] = histogram_type
+        estimate_histogram_kwargs["log_scale"] = True
 
         for mode, expected in zip(
             ["to_session_1", "to_session_2", "to_session_3", "to_middle"],
@@ -78,32 +80,7 @@ class TestInterSessionAlignment:
                 estimate_histogram_kwargs=estimate_histogram_kwargs,
             )
 
-            #  assert np.allclose(expected, extra_info["shifts_array"].squeeze(), rtol=0, atol=1.5)
-
-            from spikeinterface.widgets import plot_session_alignment, plot_activity_histogram_2d
-            import matplotlib.pyplot as plt
-
-            corr_peaks_list, corr_peak_loc_list = session_alignment.compute_peaks_locations_for_session_alignment(
-                corrected_recordings_list,
-                detect_kwargs={"method": "locally_exclusive"},
-                localize_peaks_kwargs={"method": "grid_convolution"},
-            )
-
-            plot_session_alignment(
-                corrected_recordings_list,
-                corr_peaks_list,
-                corr_peak_loc_list,
-                extra_info["spatial_bin_centers"],
-                **extra_info["corrected"],
-            )
-            plt.show()
-
-            plot_activity_histogram_2d(
-                extra_info["session_histogram_list"],
-                extra_info["spatial_bin_centers"],
-                extra_info["corrected"]["session_histogram_list"],
-            )
-            plt.show()
+            assert np.allclose(expected, extra_info["shifts_array"].squeeze(), rtol=0, atol=0.02)
 
         #     plot_session_alignment
         #     recordings_list: list[BaseRecording],
@@ -124,8 +101,8 @@ class TestInterSessionAlignment:
 
         rows, cols = np.triu_indices(len(new_histograms), k=1)
         assert np.all(
-            np.abs(np.corrcoef(new_histograms)[rows, cols])
-            - np.abs(np.corrcoef(extra_info["session_histogram_list"])[rows, cols])
+            np.abs(np.corrcoef([hist.flatten() for hist in new_histograms])[rows, cols])
+            - np.abs(np.corrcoef([hist.flatten() for hist in extra_info["session_histogram_list"]])[rows, cols])
             >= 0
         )
 
@@ -766,7 +743,81 @@ class TestInterSessionAlignment:
     def test_akima_interpolate_nonrigid_shifts(self):
         pass
 
-    def test_compute_histogram_crosscorrelation(self):
+    # TODO:
+    @pytest.mark.parametrize("shifts", [3])  # -2 #test and off and even shift
+    def test_compute_histogram_crosscorrelation(self, shifts):
+
+        even_hist = np.array([0, 0, 1, 1, 0, 1, 0, 1])
+        odd_hist = np.array([1, 0, 1, 1, 1, 0])
+
+        even_hist_shift = alignment_utils.shift_array_fill_zeros(even_hist, shifts)
+        odd_hist_shift = alignment_utils.shift_array_fill_zeros(odd_hist, shifts)
+
+        session_histogram_list = np.vstack([even_hist, even_hist_shift])
+
+        # Ut oh, is interpolate broken?
+        interpolate = True  # or False
+        interp_factor = 50
+
+        shifts_matrix, xcorr_matrix_unsmoothed = alignment_utils.compute_histogram_crosscorrelation(
+            session_histogram_list,
+            non_rigid_windows=np.ones((1, even_hist.size)),  # TODO: test non rigid!
+            num_shifts=None,  # TODO: test num shifts!
+            interpolate=interpolate,
+            interp_factor=interp_factor,
+            kriging_sigma=0.5,
+            kriging_p=2,
+            kriging_d=2,
+            smoothing_sigma_bin=None,
+            smoothing_sigma_window=None,
+        )
+        breakpoint()
+        assert alignment_utils.get_shifts_from_session_matrix("to_session_1", shifts_matrix)[-1] == -shifts
+
+        num_shifts = even_hist.size * 2 - 1
+        if interpolate:
+            assert xcorr_matrix_unsmoothed.shape[1] == num_shifts * interp_factor
+        else:
+            assert xcorr_matrix_unsmoothed.shape[1] == num_shifts
+
+        shifts_matrix_smoothed_bin, xcorr_matrix_smoothed_bin = alignment_utils.compute_histogram_crosscorrelation(
+            session_histogram_list,
+            non_rigid_windows=np.ones((1, even_hist.size)),  # TODO: test non rigid!
+            num_shifts=None,  # TODO: test num shifts!
+            interpolate=interpolate,
+            interp_factor=interp_factor,
+            kriging_sigma=1,
+            kriging_p=1,
+            kriging_d=1,
+            smoothing_sigma_bin=0.5,
+            smoothing_sigma_window=None,
+        )
+
+        shifts_matrix_smoothed_window, xcorr_matrix_smoothed_window = (
+            alignment_utils.compute_histogram_crosscorrelation(
+                session_histogram_list,
+                non_rigid_windows=np.ones((1, even_hist.size)),  # TODO: test non rigid!
+                num_shifts=None,  # TODO: test num shifts!
+                interpolate=interpolate,
+                interp_factor=interp_factor,
+                kriging_sigma=1,
+                kriging_p=1,
+                kriging_d=1,
+                smoothing_sigma_bin=None,
+                smoothing_sigma_window=0.5,
+            )
+        )
+
+        # make a histogram (odd and even length)
+        # shift it (odd and even shift)
+        # check smoothing across bins and time
+        # check interpolate
+        # thats it!
+
+    def test_compute_histogram_crosscorrelation_gaussian_filter_kwargs(self):  ## TODO: incorporate these above
+        pass
+
+    def test_compute_histogram_crosscorrelation_kriging_kwargs(self):
         pass
 
     ###########################################################################
