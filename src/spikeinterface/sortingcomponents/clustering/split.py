@@ -87,14 +87,14 @@ def split_clusters(
         if debug_folder is not None:
             if debug_folder.exists():
                 import shutil
-
                 shutil.rmtree(debug_folder)
+            debug_folder.mkdir(parents=True, exist_ok=True)
 
         for label in labels_set:
             peak_indices = np.flatnonzero(peak_labels == label)
             if debug_folder is not None:
-                sub_folder = debug_folder / f"split_{label}"
-                sub_folder.mkdir(parents=True, exist_ok=True)
+                sub_folder = str(debug_folder / f"split_{label}")
+
             else:
                 sub_folder = None
             if peak_indices.size > 0:
@@ -132,8 +132,7 @@ def split_clusters(
                     for label in new_labels_set:
                         peak_indices = np.flatnonzero(peak_labels == label)
                         if sub_folder is not None:
-                            new_sub_folder = sub_folder / f"split_{label}"
-                            new_sub_folder.mkdir(parents=True, exist_ok=True)
+                            new_sub_folder = sub_folder + f"_{label}"
                         else:
                             new_sub_folder = None
                         if peak_indices.size > 0:
@@ -287,7 +286,9 @@ class LocalFeatureClustering:
             else:
                 raise ValueError(f"wrong clusterer {clusterer}. Possible options are 'hdbscan' or 'isocut5'.")
 
-            if debug_folder is not None:
+            DEBUG = False #only for Sam or dirty hacking
+
+            if debug_folder is not None or DEBUG:
                 import matplotlib.pyplot as plt
 
                 labels_set = np.setdiff1d(possible_labels, [-1])
@@ -298,22 +299,27 @@ class LocalFeatureClustering:
 
                 flatten_wfs = aligned_wfs.swapaxes(1, 2).reshape(aligned_wfs.shape[0], -1)
 
-                sl = slice(None, None, 20)
+                sl = slice(None, None, 100)
                 for k in np.unique(possible_labels):
                     mask = possible_labels == k
                     ax = axs[0]
 
                     centroid = final_features[:, :2][mask].mean(axis=0)
-
                     ax.scatter(final_features[:, 0][mask], final_features[:, 1][mask], s=5, color=colors[k])
                     ax.text(centroid[0], centroid[1], f"Label {k}", fontsize=10, color="k")
                     ax = axs[1]
                     ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
+                    ax.plot(np.median(flatten_wfs[mask].T, axis=1), color=colors[k], lw=2)
                     ax.set_xlabel("PCA features")
+                ymin, ymax = ax.get_ylim()
+                ax.plot([n_pca, n_pca], [ymin, ymax], "k--")
 
-                axs[0].set_title(f"{clusterer} n_pca={n_pca}, level={recursion_level}")
-                plt.savefig(debug_folder / f"split_{n_pca}_{recursion_level}.png")
-                plt.close()
+                axs[0].set_title(f"{clusterer} level={recursion_level}")
+                if not DEBUG:
+                    fig.savefig(str(debug_folder) + ".png")
+                    plt.close(fig)
+                else:
+                    plt.show()
 
             if is_split:
                 break
