@@ -265,6 +265,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["ms_after"] = ms_after
             clustering_params["verbose"] = verbose
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
+            clustering_params["debug"] = params["debug"]
             clustering_params["noise_threshold"] = detection_params.get("detect_threshold", 4)
 
             legacy = clustering_params.get("legacy", True)
