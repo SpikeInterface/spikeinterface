@@ -47,7 +47,7 @@ def get_estimate_histogram_kwargs() -> dict:
         "bin_um": 2,
         "method": "chunked_mean",
         "chunked_bin_size_s": "estimate",
-        "log_scale": False,
+        "log_scale": True,
         "depth_smooth_um": None,
         "histogram_type": "activity_1d",
         "weight_with_amplitude": False,
@@ -881,8 +881,6 @@ def _compute_session_alignment(
         return rigid_shifts, non_rigid_windows, non_rigid_window_centers
 
     # For non-rigid, first shift the histograms according to the rigid shift
-    shifted_histograms = session_histogram_array.copy()
-
     shifted_histograms = np.zeros_like(session_histogram_array)
     for ses_idx, orig_histogram in enumerate(session_histogram_array):
 
@@ -892,7 +890,7 @@ def _compute_session_alignment(
         shifted_histograms[ses_idx, :] = shifted_histogram
 
     # Then compute the nonrigid shifts
-    nonrigid_session_offsets_matrix = alignment_utils.compute_histogram_crosscorrelation(
+    nonrigid_session_offsets_matrix, _ = alignment_utils.compute_histogram_crosscorrelation(
         shifted_histograms, non_rigid_windows, num_shifts=num_shifts_block, **compute_alignment_kwargs
     )
     non_rigid_shifts = alignment_utils.get_shifts_from_session_matrix(alignment_order, nonrigid_session_offsets_matrix)
@@ -940,7 +938,7 @@ def _estimate_rigid_alignment(
 
     rigid_window = np.ones(session_histogram_array.shape[1])[np.newaxis, :]
 
-    rigid_session_offsets_matrix = alignment_utils.compute_histogram_crosscorrelation(
+    rigid_session_offsets_matrix, _ = alignment_utils.compute_histogram_crosscorrelation(
         session_histogram_array,
         rigid_window,
         num_shifts=num_shifts,
