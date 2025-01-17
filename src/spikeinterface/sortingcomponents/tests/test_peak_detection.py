@@ -22,7 +22,7 @@ from spikeinterface.sortingcomponents.peak_detection import (
 )
 
 from spikeinterface.core.node_pipeline import run_node_pipeline
-from spikeinterface.sortingcomponents.tools import get_prototype_spike
+from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms_from_peaks
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
@@ -314,7 +314,9 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
 
     ms_before = 1.0
     ms_after = 1.0
-    prototype = get_prototype_spike(recording, peaks_by_channel_np, ms_before, ms_after, **job_kwargs)
+    prototype, _, _ = get_prototype_and_waveforms_from_peaks(
+        recording, peaks=peaks_by_channel_np, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+    )
 
     peaks_local_mf_filtering = detect_peaks(
         recording,

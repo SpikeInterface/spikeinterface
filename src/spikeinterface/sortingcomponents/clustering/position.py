@@ -25,18 +25,17 @@ class PositionClustering:
         "hdbscan_kwargs": {"min_cluster_size": 20, "allow_single_cluster": True, "core_dist_n_jobs": -1},
         "debug": False,
         "tmp_folder": None,
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M"},
     }
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         assert HAVE_HDBSCAN, "position clustering need hdbscan to be installed"
         d = params
 
         if d["peak_locations"] is None:
             from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
-            peak_locations = localize_peaks(recording, peaks, **d["peak_localization_kwargs"], **d["job_kwargs"])
+            peak_locations = localize_peaks(recording, peaks, **d["peak_localization_kwargs"], **job_kwargs)
         else:
             peak_locations = d["peak_locations"]
 
