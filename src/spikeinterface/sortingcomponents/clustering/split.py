@@ -87,6 +87,7 @@ def split_clusters(
         if debug_folder is not None:
             if debug_folder.exists():
                 import shutil
+
                 shutil.rmtree(debug_folder)
             debug_folder.mkdir(parents=True, exist_ok=True)
 
@@ -286,7 +287,7 @@ class LocalFeatureClustering:
             else:
                 raise ValueError(f"wrong clusterer {clusterer}. Possible options are 'hdbscan' or 'isocut5'.")
 
-            DEBUG = False #only for Sam or dirty hacking
+            DEBUG = False  # only for Sam or dirty hacking
 
             if debug_folder is not None or DEBUG:
                 import matplotlib.pyplot as plt

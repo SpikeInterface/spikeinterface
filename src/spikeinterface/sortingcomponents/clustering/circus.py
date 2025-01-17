@@ -44,7 +44,7 @@ class CircusClustering:
             "min_cluster_size": 20,
             "cluster_selection_epsilon": 0.5,
             "cluster_selection_method": "leaf",
-            "allow_single_cluster": True
+            "allow_single_cluster": True,
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
