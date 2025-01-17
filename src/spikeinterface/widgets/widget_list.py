@@ -9,6 +9,7 @@ from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 from .amplitudes import AmplitudesWidget
 from .autocorrelograms import AutoCorrelogramsWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
+from .inter_session_alignment import SessionAlignmentWidget, ActivityHistogram1DWidget, ActivityHistogram2DWidget
 from .isi_distribution import ISIDistributionWidget
 from .motion import DriftRasterMapWidget, MotionWidget, MotionInfoWidget
 from .multicomparison import MultiCompGraphWidget, MultiCompGlobalAgreementWidget, MultiCompAgreementBySorterWidget
@@ -37,6 +38,8 @@ from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformanc
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
 
 widget_list = [
+    ActivityHistogram1DWidget,
+    ActivityHistogram2DWidget,
     AgreementMatrixWidget,
     AllAmplitudesDistributionsWidget,
     AmplitudesWidget,
@@ -57,6 +60,7 @@ widget_list = [
     ProbeMapWidget,
     QualityMetricsWidget,
     RasterWidget,
+    SessionAlignmentWidget,
     SortingSummaryWidget,
     SpikeLocationsWidget,
     SpikesOnTracesWidget,
@@ -112,6 +116,8 @@ for wcls in widget_list:
 
 
 # make function for all widgets
+plot_activity_histogram_1d = ActivityHistogram1DWidget
+plot_activity_histogram_2d = ActivityHistogram2DWidget
 plot_agreement_matrix = AgreementMatrixWidget
 plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
 plot_amplitudes = AmplitudesWidget
@@ -132,6 +138,7 @@ plot_potential_merges = PotentialMergesWidget
 plot_probe_map = ProbeMapWidget
 plot_quality_metrics = QualityMetricsWidget
 plot_rasters = RasterWidget
+plot_session_alignment = SessionAlignmentWidget
 plot_sorting_summary = SortingSummaryWidget
 plot_spike_locations = SpikeLocationsWidget
 plot_spikes_on_traces = SpikesOnTracesWidget
