@@ -55,12 +55,12 @@ class SortingSummaryWidget(BaseWidget):
         analyzer.get_extension("template_metrics").get_data().columns.
     extra_unit_properties : None dict, default: None
         A dict with extra units properties to display.
-    curation_dict : dict or None
+    curation_dict : dict or None, default: None
         When curation is True, optionaly the viewer can get a previous 'curation_dict'
         to continue/check  previous curations on this analyzer.
         In this case label_definitions must be None beacuse it is already included in the curation_dict.
         (spikeinterface_gui backend)
-    label_definitions : dict or None
+    label_definitions : dict or None, default: None
         When curation is True, optionaly the user can provide a label_definitions dict.
         This replaces the label_choices in the curation_format.
         (spikeinterface_gui backend)
