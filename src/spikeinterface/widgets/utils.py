@@ -245,7 +245,6 @@ def array_to_image(
     return output_image
 
 
-
 def make_units_table_from_sorting(sorting, units_table=None):
     """
     Make a DataFrame from sorting properties.
@@ -266,6 +265,7 @@ def make_units_table_from_sorting(sorting, units_table=None):
 
     if units_table is None:
         import pandas as pd
+
         units_table = pd.DataFrame(index=sorting.unit_ids)
 
     for col in sorting.get_property_keys():
@@ -275,10 +275,11 @@ def make_units_table_from_sorting(sorting, units_table=None):
 
     return units_table
 
+
 def make_units_table_from_analyzer(
-        analyzer,
-        extra_properties=None,
-    ):
+    analyzer,
+    extra_properties=None,
+):
     """
     Make a DataFrame by aggregating :
       * quality metrics
@@ -302,6 +303,7 @@ def make_units_table_from_analyzer(
         Table containing all columns.
     """
     import pandas as pd
+
     all_df = []
 
     if analyzer.get_extension("unit_locations") is not None:

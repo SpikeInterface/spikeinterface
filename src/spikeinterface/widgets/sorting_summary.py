@@ -18,6 +18,7 @@ from ..core import SortingAnalyzer
 
 _default_displayed_unit_properties = ["firing_rate", "num_spikes", "x", "y", "amplitude", "snr", "rp_violation"]
 
+
 class SortingSummaryWidget(BaseWidget):
     """
     Plots spike sorting summary.
@@ -65,6 +66,7 @@ class SortingSummaryWidget(BaseWidget):
         This replaces the label_choices in the curation_format.
         (spikeinterface_gui backend)
     """
+
     def __init__(
         self,
         sorting_analyzer: SortingAnalyzer,
@@ -82,15 +84,14 @@ class SortingSummaryWidget(BaseWidget):
         unit_table_properties=None,
         **backend_kwargs,
     ):
-        
+
         if unit_table_properties is not None:
             warnings.warn(
                 "plot_sorting_summary() : unit_table_properties is deprecated, use displayed_unit_properties instead",
                 category=DeprecationWarning,
                 stacklevel=2,
-                )
+            )
             displayed_unit_properties = unit_table_properties
-
 
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
         self.check_extensions(
@@ -108,7 +109,7 @@ class SortingSummaryWidget(BaseWidget):
             displayed_unit_properties = list(_default_displayed_unit_properties)
             if extra_unit_properties is not None:
                 displayed_unit_properties += list(extra_unit_properties.keys())
-        
+
         data_plot = dict(
             sorting_analyzer=sorting_analyzer,
             unit_ids=unit_ids,
@@ -230,7 +231,6 @@ class SortingSummaryWidget(BaseWidget):
 
         from spikeinterface_gui import run_mainwindow
 
-
         run_mainwindow(
             sorting_analyzer,
             with_traces=True,
@@ -240,4 +240,3 @@ class SortingSummaryWidget(BaseWidget):
             extra_unit_properties=data_plot["extra_unit_properties"],
             displayed_unit_properties=data_plot["displayed_unit_properties"],
         )
-

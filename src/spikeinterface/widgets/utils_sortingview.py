@@ -9,7 +9,6 @@ from ..core.core_tools import check_json
 from .utils import make_units_table_from_sorting, make_units_table_from_analyzer
 
 
-
 def make_serializable(*args):
     dict_to_serialize = {int(i): a for i, a in enumerate(args)}
     serializable_dict = check_json(dict_to_serialize)
@@ -65,7 +64,7 @@ def generate_unit_table_view(
         sorting = sorting_or_sorting_analyzer
         units_tables = make_units_table_from_sorting(sorting)
         # analyzer = None
-    
+
     if unit_properties is None:
         ut_columns = []
         ut_rows = [vv.UnitsTableRow(unit_id=u, values={}) for u in sorting.unit_ids]
@@ -105,5 +104,5 @@ def generate_unit_table_view(
             ut_rows.append(vv.UnitsTableRow(unit_id=unit_id, values=check_json(row_values)))
 
     v_units_table = vv.UnitsTable(rows=ut_rows, columns=ut_columns, similarity_scores=similarity_scores)
-    
+
     return v_units_table
