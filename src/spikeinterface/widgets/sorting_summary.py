@@ -16,7 +16,7 @@ from .unit_templates import UnitTemplatesWidget
 from ..core import SortingAnalyzer
 
 
-_default_displayed_unit_properties = ["firing_rate", "num_spikes", "x", "y", "amplitude", "snr", "rp_violation"]
+_default_displayed_unit_properties = ["firing_rate", "num_spikes", "x", "y", "amplitude_median", "snr", "rp_violation"]
 
 
 class SortingSummaryWidget(BaseWidget):
