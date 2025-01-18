@@ -309,15 +309,15 @@ def make_units_table_from_analyzer(
     if analyzer.get_extension("unit_locations") is not None:
         locs = analyzer.get_extension("unit_locations").get_data()
         df = pd.DataFrame(locs[:, :2], columns=["x", "y"], index=analyzer.unit_ids)
-        all_df = pd.concat([all_df, df])
+        all_df.append(df)
 
     if analyzer.get_extension("quality_metrics") is not None:
         df = analyzer.get_extension("quality_metrics").get_data()
-        all_df = pd.concat([all_df, df])
+        all_df.append(df)
 
     if analyzer.get_extension("template_metrics") is not None:
-        all_df = analyzer.get_extension("template_metrics").get_data()
-        all_df = pd.concat([all_df, df])
+        df = analyzer.get_extension("template_metrics").get_data()
+        all_df.append(df)
 
     if len(all_df) > 0:
         units_table = pd.concat(all_df, axis=1)
