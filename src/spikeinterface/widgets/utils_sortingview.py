@@ -72,6 +72,8 @@ def generate_unit_table_view(
         # keep only selected columns
         unit_properties = np.array(unit_properties)
         keep = np.isin(unit_properties, units_tables.columns)
+        if sum(keep) < len(unit_properties):
+            warn(f"Some unit properties are not in the sorting: {unit_properties[~keep]}")
         unit_properties = unit_properties[keep]
         units_tables = units_tables.loc[:, unit_properties]
 
@@ -79,8 +81,6 @@ def generate_unit_table_view(
 
         ut_columns = []
         for col in unit_properties:
-            if col not in units_tables.columns:
-                continue
             values = units_tables[col].to_numpy()
             if values.dtype.kind in dtype_convertor:
                 txt_dtype = dtype_convertor[values.dtype.kind]
@@ -90,8 +90,6 @@ def generate_unit_table_view(
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             row_values = {}
             for col in unit_properties:
-                if col not in units_tables.columns:
-                    continue
                 values = units_tables[col].to_numpy()
                 if values.dtype.kind in dtype_convertor:
                     value = values[unit_index]

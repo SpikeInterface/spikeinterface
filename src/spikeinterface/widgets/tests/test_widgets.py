@@ -73,7 +73,9 @@ class TestWidgets(unittest.TestCase):
             spike_amplitudes=dict(),
             unit_locations=dict(),
             spike_locations=dict(),
-            quality_metrics=dict(metric_names=["snr", "isi_violation", "num_spikes", "amplitude_cutoff"]),
+            quality_metrics=dict(
+                metric_names=["snr", "isi_violation", "num_spikes", "firing_rate", "amplitude_cutoff"]
+            ),
             template_metrics=dict(),
             correlograms=dict(),
             template_similarity=dict(),
@@ -531,18 +533,29 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.SortingSummaryWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_sorting_summary(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_sorting_summary(self.sorting_analyzer_sparse, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_sorting_summary(
-                    self.sorting_analyzer_sparse,
-                    sparsity=self.sparsity_strict,
+                    self.sorting_analyzer_dense,
+                    displayed_unit_properties=[],
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                # add unit_properties
                 sw.plot_sorting_summary(
                     self.sorting_analyzer_sparse,
-                    unit_table_properties=["firing_rate", "snr"],
+                    displayed_unit_properties=[],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                sw.plot_sorting_summary(
+                    self.sorting_analyzer_sparse,
+                    sparsity=self.sparsity_strict,
+                    displayed_unit_properties=[],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                # select unit_properties
+                sw.plot_sorting_summary(
+                    self.sorting_analyzer_sparse,
+                    displayed_unit_properties=["firing_rate", "snr"],
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
@@ -550,7 +563,7 @@ class TestWidgets(unittest.TestCase):
                 with self.assertWarns(UserWarning):
                     sw.plot_sorting_summary(
                         self.sorting_analyzer_sparse,
-                        unit_table_properties=["missing_property"],
+                        displayed_unit_properties=["missing_property"],
                         backend=backend,
                         **self.backend_kwargs[backend],
                     )
