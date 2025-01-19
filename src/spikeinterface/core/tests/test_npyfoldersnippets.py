@@ -3,7 +3,7 @@ import pytest
 from pathlib import Path
 import shutil
 
-from spikeinterface.core import load_extractor
+from spikeinterface.core import load
 from spikeinterface.core import generate_snippets
 
 
@@ -25,7 +25,7 @@ def test_NpyFolderSnippets(cache_folder_creation):
     saved_snippets = snippets.save(folder=folder)
     print(snippets)
 
-    loaded_snippets = load_extractor(folder)
+    loaded_snippets = load(folder)
     print(loaded_snippets)
 
 

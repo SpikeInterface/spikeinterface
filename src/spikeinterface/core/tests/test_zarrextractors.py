@@ -8,7 +8,7 @@ from spikeinterface.core import (
     ZarrSortingExtractor,
     generate_recording,
     generate_sorting,
-    load_extractor,
+    load,
 )
 from spikeinterface.core.zarrextractors import add_sorting_to_zarr_group, get_default_zarr_compressor
 
@@ -63,7 +63,7 @@ def test_ZarrSortingExtractor(tmp_path):
     folder = tmp_path / "zarr_sorting"
     ZarrSortingExtractor.write_sorting(np_sorting, folder)
     sorting = ZarrSortingExtractor(folder)
-    sorting = load_extractor(sorting.to_dict())
+    sorting = load(sorting.to_dict())
 
     # store the sorting in a sub group (for instance SortingResult)
     folder = tmp_path / "zarr_sorting_sub_group"
@@ -72,7 +72,7 @@ def test_ZarrSortingExtractor(tmp_path):
     add_sorting_to_zarr_group(sorting, zarr_sorting_group)
     sorting = ZarrSortingExtractor(folder, zarr_group="sorting")
     # and reaload
-    sorting = load_extractor(sorting.to_dict())
+    sorting = load(sorting.to_dict())
 
 
 if __name__ == "__main__":

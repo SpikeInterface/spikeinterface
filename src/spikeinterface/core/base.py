@@ -16,7 +16,7 @@ import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import (
-    check_json,
+    is_path_remote,
     clean_zarr_folder_name,
     is_dict_extractor,
     SIJsonEncoder,
@@ -673,7 +673,7 @@ class BaseExtractor:
     ) -> None:
         """
         Dump recording extractor to json file.
-        The extractor can be re-loaded with load_extractor(json_file)
+        The extractor can be re-loaded with load(json_file)
 
         Parameters
         ----------
@@ -715,7 +715,7 @@ class BaseExtractor:
     ):
         """
         Dump recording extractor to a pickle file.
-        The extractor can be re-loaded with load_extractor(pickle_file)
+        The extractor can be re-loaded with load(pickle_file)
 
         Parameters
         ----------
@@ -752,7 +752,9 @@ class BaseExtractor:
         file_path.write_bytes(pickle.dumps(dump_dict))
 
     @staticmethod
-    def load(file_path: Union[str, Path], base_folder: Optional[Union[Path, str, bool]] = None) -> "BaseExtractor":
+    def load(
+        file_or_folder_path: Union[str, Path], base_folder: Optional[Union[Path, str, bool]] = None
+    ) -> "BaseExtractor":
         """
         Load extractor from file path (.json or .pkl)
 
@@ -761,62 +763,10 @@ class BaseExtractor:
           * save (...)  a folder which contain data  + json (or pickle) + metadata.
 
         """
+        # use loading.py and keep backward compatibility
+        from .loading import load
 
-        file_path = Path(file_path)
-        if base_folder is True:
-            base_folder = file_path.parent
-
-        if file_path.is_file():
-            # standard case based on a file (json or pickle)
-            if str(file_path).endswith(".json"):
-                with open(file_path, "r") as f:
-                    d = json.load(f)
-            elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-                with open(file_path, "rb") as f:
-                    d = pickle.load(f)
-            else:
-                raise ValueError(f"Impossible to load {file_path}")
-            if "warning" in d:
-                print("The extractor was not serializable to file")
-                return None
-
-            extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
-            return extractor
-
-        elif file_path.is_dir():
-            # case from a folder after a calling extractor.save(...)
-            folder = file_path
-            file = None
-
-            if folder.suffix == ".zarr":
-                from .zarrextractors import read_zarr
-
-                extractor = read_zarr(folder)
-            else:
-                # the is spikeinterface<=0.94.0
-                # a folder came with 'cached.json'
-                for dump_ext in ("json", "pkl", "pickle"):
-                    f = folder / f"cached.{dump_ext}"
-                    if f.is_file():
-                        file = f
-
-                # spikeinterface>=0.95.0
-                f = folder / f"si_folder.json"
-                if f.is_file():
-                    file = f
-
-                if file is None:
-                    raise ValueError(f"This folder is not a cached folder {file_path}")
-                extractor = BaseExtractor.load(file, base_folder=folder)
-
-            return extractor
-
-        else:
-            error_msg = (
-                f"{file_path} is not a file or a folder. It should point to either a json, pickle file or a "
-                "folder that is the result of extractor.save(...)"
-            )
-            raise ValueError(error_msg)
+        return load(file_or_folder_path, base_folder=base_folder)
 
     def __reduce__(self):
         """
@@ -1165,50 +1115,6 @@ def _check_same_version(class_string, version):
         return current_version.major == saved_version.major and current_version.minor == saved_version.minor
     except AttributeError:
         return "unknown"
-
-
-def load_extractor(file_or_folder_or_dict, base_folder=None) -> BaseExtractor:
-    """
-    Instantiate extractor from:
-      * a dict
-      * a json file
-      * a pickle file
-      * folder (after save)
-      * a zarr folder (after save)
-
-    Parameters
-    ----------
-    file_or_folder_or_dict : dictionary or folder or file (json, pickle)
-        The file path, folder path, or dictionary to load the extractor from
-    base_folder : str | Path | bool (optional)
-        The base folder to make relative paths absolute.
-        If True and file_or_folder_or_dict is a file, the parent folder of the file is used.
-
-    Returns
-    -------
-    extractor: Recording or Sorting
-        The loaded extractor object
-    """
-    if isinstance(file_or_folder_or_dict, dict):
-        assert not isinstance(base_folder, bool), "`base_folder` must be a string or Path when loading from dict"
-        return BaseExtractor.from_dict(file_or_folder_or_dict, base_folder=base_folder)
-    else:
-        return BaseExtractor.load(file_or_folder_or_dict, base_folder=base_folder)
-
-
-def load_extractor_from_dict(d, base_folder=None) -> BaseExtractor:
-    warnings.warn("Use load_extractor(..) instead")
-    return BaseExtractor.from_dict(d, base_folder=base_folder)
-
-
-def load_extractor_from_json(json_file, base_folder=None) -> "BaseExtractor":
-    warnings.warn("Use load_extractor(..) instead")
-    return BaseExtractor.load(json_file, base_folder=base_folder)
-
-
-def load_extractor_from_pickle(pkl_file, base_folder=None) -> "BaseExtractor":
-    warnings.warn("Use load_extractor(..) instead")
-    return BaseExtractor.load(pkl_file, base_folder=base_folder)
 
 
 class BaseSegment:

@@ -2,7 +2,7 @@ import unittest
 import pytest
 from pathlib import Path
 
-from spikeinterface import load_extractor, generate_ground_truth_recording
+from spikeinterface import load, generate_ground_truth_recording
 from spikeinterface.sorters import Kilosort4Sorter, run_sorter
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
@@ -15,7 +15,7 @@ class Kilosort4SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
     # 4 channels is to few for KS4
     def setUp(self):
         if (self.cache_folder / "rec").is_dir():
-            recording = load_extractor(self.cache_folder / "rec")
+            recording = load(self.cache_folder / "rec")
         else:
             recording, _ = generate_ground_truth_recording(num_channels=32, durations=[60], seed=0)
             recording = recording.save(folder=self.cache_folder / "rec", verbose=False, format="binary")

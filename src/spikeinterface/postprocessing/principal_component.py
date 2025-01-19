@@ -658,10 +658,6 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model):
     worker_ctx = {}
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-
-        recording = load_extractor(recording)
     worker_ctx["recording"] = recording
     worker_ctx["sorting"] = sorting
 
