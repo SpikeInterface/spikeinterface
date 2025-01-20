@@ -116,16 +116,12 @@ class RTSortSorter(BaseSorter):
     For more information see https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0312438"""
 
     installation_mesg = f"""\nTo use RTSort run:\n
-       >>> pip install git+https://github.com/braingeneers/braindance
+       >>> pip install git+https://github.com/braingeneers/braindance#egg=braindance[rt-sort]
 
-    And install the following additional dependencies:
-        >>> pip install {'torch' if os.name == 'nt' else 'torch_tensorrt'}
-        >>> pip install diptest
-        >>> pip install pynvml
-        >>> pip install scikit-learn
+    Additionally, install PyTorch (https://pytorch.org/get-started/locally/) with any version of CUDA as the compute platform.
+    If running on a Linux machine, install Torch-TensorRT (https://pytorch.org/TensorRT/getting_started/installation.html) for faster computations.
 
-    More information on RTSort at:
-        *https://github.com/braingeneers/braindance
+    More information on RTSort at: https://github.com/braingeneers/braindance
     """
 
     handle_multi_segment = False
@@ -134,10 +130,7 @@ class RTSortSorter(BaseSorter):
     def get_sorter_version(cls):
         import braindance
 
-        try:
-            return braindance.__version__
-        except AttributeError:
-            return "0.0.1"
+        return braindance.__version__
 
     @classmethod
     def is_installed(cls):
