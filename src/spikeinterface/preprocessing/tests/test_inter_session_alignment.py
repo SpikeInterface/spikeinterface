@@ -4,26 +4,32 @@ import pytest
 from spikeinterface.preprocessing.inter_session_alignment import session_alignment, alignment_utils
 from spikeinterface.generation.session_displacement_generator import *
 
+# TODO: this is going to be very slow. Speed it up.
+# TODO: finish implementing all NotImplementedError tests
+# TODO: tests require pytest mock, will fail without it in a strange way, check explicitly
+
+# TODO: CRITICAL: thoroughly test the motion wrapper, and tidy it up,  it looks jenky as hell!
+
 
 class TestInterSessionAlignment:
     """ """
 
     @pytest.fixture(scope="session")
     def test_recording_1(self):
-        """ """
+        """
+        # if this is say 20, then units go off the edge of the probe and are such low amplitude they are not picked up.
+        """
         shifts = ((0, 0), (0, -200), (0, 150))
 
         recordings_list, _ = generate_session_displacement_recordings(
             num_units=15,
             recording_durations=[9, 10, 11],
             recording_shifts=shifts,
-            # TODO: can see how well this is recaptured by comparing the displacements to the known displacement + gradient
-            non_rigid_gradient=None,  # 0.1, # 0.1,
+            non_rigid_gradient=None,
             seed=55,  # 52
             generate_sorting_kwargs=dict(firing_rates=(100, 250), refractory_period_ms=4.0),
             generate_unit_locations_kwargs=dict(
                 margin_um=0.0,
-                # if this is say 20, then units go off the edge of the probe and are such low amplitude they are not picked up.
                 minimum_z=0.0,
                 maximum_z=2.0,
                 minimum_distance=18.0,
@@ -44,9 +50,8 @@ class TestInterSessionAlignment:
     # Functional Tests
     ############################################################################
 
-    # TEST 1D AND 2D HERE
     # TODO: test shift blocks...
-    @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])  # "activity_1d" "activity_2d"
+    @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])
     def test_align_sessions_finds_correct_shifts(self, test_recording_1, histogram_type):
         """ """
         recordings_list, _, peaks_list, peak_locations_list = test_recording_1
@@ -82,13 +87,6 @@ class TestInterSessionAlignment:
 
             assert np.allclose(expected, extra_info["shifts_array"].squeeze(), rtol=0, atol=0.02)
 
-        #     plot_session_alignment
-        #     recordings_list: list[BaseRecording],
-        #     peaks_list: list[np.ndarray],
-        #     peak_locations_list: list[np.ndarray],
-        #     session_histogram_list: list[np.ndarray],
-        #     spatial_bin_centers: np.ndarray | None = None,
-
         corr_peaks_list, corr_peak_loc_list = session_alignment.compute_peaks_locations_for_session_alignment(
             corrected_recordings_list,
             detect_kwargs={"method": "locally_exclusive"},
@@ -106,106 +104,18 @@ class TestInterSessionAlignment:
             >= 0
         )
 
-    # _compute_session_histograms
-    # ##################################################################################
-
     # test histogram is accurate (1D and 2D) (TEST MEAN VS. MEDIAN FOR 1D AND 2D
     # test chunked histogram is accurate (1D and 2D)
     # test all arguments are passed down to the correct subfunction
     # test spatial bin centers
     # unit test get_2d_activity_histogram extra arguments.
+    # TODO: test the case where unit locations "y" are outside of the probe!
 
-    def test_histogram_generation(self, test_recording_1):
-        """ """
-        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
-
-        recording = recordings_list[0]
-
-        channel_locations = recording.get_channel_locations()
-        loc_start = np.min(channel_locations[:, 1])
-        loc_end = np.max(channel_locations[:, 1])
-
-        # TODO: test the case where unit locations "y" are outside of the probe!
-
-        chunk_time_window = 1  # parameterize
-        bin_um = 1  # parameterize
-
-        estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
-        estimate_histogram_kwargs["bin_um"] = bin_um
-        estimate_histogram_kwargs["chunked_bin_size_s"] = chunk_time_window  # TODO: maybe in separate?
-
-        (
-            session_histogram_list,
-            temporal_bin_centers_list,
-            spatial_bin_centers,  # X
-            spatial_bin_edges,  # X
-            histogram_info_list,
-        ) = session_alignment._compute_session_histograms(
-            recordings_list, peaks_list, peak_locations_list, **estimate_histogram_kwargs
-        )
-
-        num_bins = (loc_end - loc_start) / bin_um  ## TODO: what to do when this is not integer!? TEST CASE!
-
-        np.min(peak_locations_list[0]["y"])
-        np.max(peak_locations_list[0]["y"])  # TODO: compare against loc_end...
-
-        peak_locations = peak_locations_list[0]
-
-        bin_edges = np.linspace(loc_start, loc_end, int(num_bins) + 1)  # TODO: test non-integer case
-        bin_centers = bin_edges[:-1] + bin_um / 2
-
-        assert np.array_equal(bin_edges, spatial_bin_edges)
-        assert np.array_equal(bin_centers, spatial_bin_centers)
-
-        for recording, temporal_bin_center in zip(recordings_list, temporal_bin_centers_list):
-            times = recording.get_times()
-            centers = (np.max(times) - np.min(times)) / 2
-            assert temporal_bin_center == centers
-
-        # dict_keys(['chunked_histograms', 'chunked_temporal_bin_centers', 'chunked_bin_size_s'])
-
-        for ses_idx, (recording, chunked_histogram_info) in enumerate(zip(recordings_list, histogram_info_list)):
-
-            # TODO: this is direct copy from above, can merge
-            times = recording.get_times()
-
-            num_windows = (np.round(np.max(times)) - np.min(times)) / chunk_time_window  # round or ceil?
-            temp_bin_edges = np.linspace(np.min(times), np.round(np.max(times)), int(num_windows) + 1)
-            centers = temp_bin_edges[:-1] + bin_um / 2
-
-            assert chunked_histogram_info["chunked_bin_size_s"] == chunk_time_window
-            assert np.array_equal(chunked_histogram_info["chunked_temporal_bin_centers"], centers)
-
-            for edge_idx in range(len(temp_bin_edges) - 1):
-
-                lower = temp_bin_edges[edge_idx]
-                upper = temp_bin_edges[edge_idx + 1]
-
-                lower_idx = recording.time_to_sample_index(lower)
-                upper_idx = recording.time_to_sample_index(upper)
-
-                new_peak_locs = peak_locations_list[ses_idx][
-                    np.where(
-                        np.logical_and(
-                            peaks_list[ses_idx]["sample_index"] >= lower_idx,
-                            peaks_list[ses_idx]["sample_index"] < upper_idx,
-                        )
-                    )
-                ]
-
-                assert np.array_equal(
-                    np.histogram(new_peak_locs["y"], bins=bin_edges)[0] / (upper - lower),
-                    chunked_histogram_info["chunked_histograms"][edge_idx, :],
-                )
-
-        for ses_idx in range(len(session_histogram_list)):
-            assert np.array_equal(
-                session_histogram_list[ses_idx],
-                np.histogram(peak_locations_list[ses_idx]["y"], bins=bin_edges)[0]
-                / recordings_list[ses_idx].get_duration(),
-            )
-
-        # TODO: check median vs mean (simply compute on the chunked_histograms, which are tested here)
+    # TODO: bin edges - test non-integer case
+    # TODO: test bin_s somewhere else
+    # The full histogram from chunked histogram is tested in test_histogram_parameters().
+    # TODO: check median vs mean (simply compute on the chunked_histograms, which are tested here)
+    # TODO: test log, amplitude scale, etc at high level?
 
     # TODO:
     # test the main histogram (variable bin num)
@@ -235,6 +145,121 @@ class TestInterSessionAlignment:
 
     # test spatial bin centeres, with known probe, and different bin sizes
 
+    def test_histogram_generation(self, test_recording_1):
+        """ """
+        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
+
+        recording = recordings_list[0]
+
+        channel_locations = recording.get_channel_locations()
+        loc_start = np.min(channel_locations[:, 1])
+        loc_end = np.max(channel_locations[:, 1])
+
+        # Test some floats as slightly more complex than integer case
+        chunk_time_window = 1.5
+        bin_um = 1.5
+
+        estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
+        estimate_histogram_kwargs["bin_um"] = bin_um
+        estimate_histogram_kwargs["chunked_bin_size_s"] = chunk_time_window  # TODO: maybe in separate?
+        estimate_histogram_kwargs["log_scale"] = False  # TODO: maybe in separate?
+
+        (
+            session_histogram_list,
+            temporal_bin_centers_list,
+            spatial_bin_centers,
+            spatial_bin_edges,
+            histogram_info_list,
+        ) = session_alignment._compute_session_histograms(
+            recordings_list, peaks_list, peak_locations_list, **estimate_histogram_kwargs
+        )
+
+        num_bins = (loc_end - loc_start) / bin_um
+
+        bin_edges = np.linspace(loc_start, loc_end, int(num_bins) + 1)
+        bin_centers = bin_edges[:-1] + bin_um / 2
+
+        assert np.array_equal(bin_edges, spatial_bin_edges)
+        assert np.array_equal(bin_centers, spatial_bin_centers)
+
+        for recording, temporal_bin_center in zip(recordings_list, temporal_bin_centers_list):
+            times = recording.get_times()
+            centers = (np.max(times) - np.min(times)) / 2
+            assert temporal_bin_center == centers
+
+        for ses_idx, (recording, chunked_histogram_info) in enumerate(zip(recordings_list, histogram_info_list)):
+
+            # TODO: this is direct copy from above, can merge
+            times = recording.get_times()
+
+            num_windows = (np.ceil(np.max(times)) - np.min(times)) / chunk_time_window
+            temp_bin_edges = np.arange(np.ceil(num_windows) + 1) * chunk_time_window
+            centers = temp_bin_edges[:-1] + chunk_time_window / 2
+
+            assert chunked_histogram_info["chunked_bin_size_s"] == chunk_time_window
+            assert np.array_equal(chunked_histogram_info["chunked_temporal_bin_centers"], centers)
+
+            for edge_idx in range(len(temp_bin_edges) - 1):
+
+                lower = temp_bin_edges[edge_idx]
+                upper = temp_bin_edges[edge_idx + 1]
+
+                lower_idx = recording.time_to_sample_index(lower)
+                upper_idx = recording.time_to_sample_index(upper)
+
+                new_peak_locs = peak_locations_list[ses_idx][
+                    np.where(
+                        np.logical_and(
+                            peaks_list[ses_idx]["sample_index"] >= lower_idx,
+                            peaks_list[ses_idx]["sample_index"] < upper_idx,
+                        )
+                    )
+                ]
+                assert np.allclose(
+                    np.histogram(new_peak_locs["y"], bins=bin_edges)[0] / (upper - lower),
+                    chunked_histogram_info["chunked_histograms"][edge_idx, :],
+                    rtol=0,
+                    atol=1e-6,
+                )
+
+    @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])
+    @pytest.mark.parametrize("operator", ["mean", "median"])
+    # TODO: test bin_s somewhere else
+    def test_histogram_parameters(self, test_recording_1, histogram_type, operator):
+        """ """
+        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
+
+        estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
+        estimate_histogram_kwargs["log_scale"] = False
+        estimate_histogram_kwargs["method"] = f"chunked_{operator}"
+        estimate_histogram_kwargs["histogram_type"] = histogram_type
+
+        _, extra_info = session_alignment.align_sessions(
+            recordings_list, peaks_list, peak_locations_list, estimate_histogram_kwargs=estimate_histogram_kwargs
+        )
+        estimate_histogram_kwargs["log_scale"] = True
+
+        _, extra_info_log = session_alignment.align_sessions(
+            recordings_list, peaks_list, peak_locations_list, estimate_histogram_kwargs=estimate_histogram_kwargs
+        )
+        # TODO: compare what log is used!! keep same as SI does in 3d...
+        for ses_idx in range(len(recordings_list)):
+
+            ses_hist = extra_info["session_histogram_list"][ses_idx]
+
+            # TODO: ugh this is actually wrong, we want to take the log after averaging!
+            # okay so may need to completely refactor...
+            log = np.log10 if histogram_type == "activity_1d" else np.log2
+
+            chunked_histograms = extra_info["histogram_info_list"][ses_idx]["chunked_histograms"]
+            for chunk_hist, chunk_hist_log in zip(
+                chunked_histograms, extra_info_log["histogram_info_list"][ses_idx]["chunked_histograms"]
+            ):
+                assert np.array_equal(log(chunk_hist + 1), chunk_hist_log)
+
+            summary_func = np.median if operator == "median" else np.mean
+            assert np.array_equal(ses_hist, summary_func(chunked_histograms, axis=0))
+
     ###########################################################################
     # Kwargs Tests
     ###########################################################################
@@ -249,7 +274,7 @@ class TestInterSessionAlignment:
             "bin_um": 2,
             "method": "chunked_mean",
             "chunked_bin_size_s": "estimate",
-            "log_scale": False,
+            "log_scale": True,
             "depth_smooth_um": None,
             "histogram_type": "activity_1d",
             "weight_with_amplitude": False,
@@ -329,13 +354,13 @@ class TestInterSessionAlignment:
         assert session_alignment.get_compute_alignment_kwargs() == default_kwargs
 
         different_kwargs = {
-            "num_shifts_global": 1,
+            "num_shifts_global": None,
             "num_shifts_block": 5,
             "interpolate": True,
             "interp_factor": 15,
-            "kriging_sigma": 20,
-            "kriging_p": 21,
-            "kriging_d": 22,
+            "kriging_sigma": 1,
+            "kriging_p": 1,
+            "kriging_d": 1,
             "smoothing_sigma_bin": 1.2,
             "smoothing_sigma_window": 1.3,
             "akima_interp_nonrigid": True,  # TOOD: test elsewhere
@@ -648,49 +673,6 @@ class TestInterSessionAlignment:
     # Unit Tests
     ###########################################################################
 
-    # TODO: test log, amplitude scale, etc at high level?
-    def test_histogram_activity_kwargs(self, test_recording_1):
-
-        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
-
-    @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])
-    @pytest.mark.parametrize("operator", ["mean", "median"])
-    # TODO: test bin_s somewhere else
-    def test_histogram_parameters(self, test_recording_1, histogram_type, operator):  # could use a different one
-        """ """
-        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
-
-        estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
-        estimate_histogram_kwargs["log_scale"] = False
-        estimate_histogram_kwargs["method"] = f"chunked_{operator}"
-        estimate_histogram_kwargs["histogram_type"] = histogram_type
-
-        _, extra_info = session_alignment.align_sessions(
-            recordings_list, peaks_list, peak_locations_list, estimate_histogram_kwargs=estimate_histogram_kwargs
-        )
-        estimate_histogram_kwargs["log_scale"] = True
-
-        _, extra_info_log = session_alignment.align_sessions(
-            recordings_list, peaks_list, peak_locations_list, estimate_histogram_kwargs=estimate_histogram_kwargs
-        )
-        # TODO: compare what log is used!! keep same as SI does in 3d...
-        for ses_idx in range(len(recordings_list)):
-
-            ses_hist = extra_info["session_histogram_list"][ses_idx]
-
-            # TODO: ugh this is actually wrong, we want to take the log after averaging!
-            # okay so may need to completely refactor...
-            log = np.log10 if histogram_type == "activity_1d" else np.log2
-
-            chunked_histograms = extra_info["histogram_info_list"][ses_idx]["chunked_histograms"]
-            for chunk_hist, chunk_hist_log in zip(
-                chunked_histograms, extra_info_log["histogram_info_list"][ses_idx]["chunked_histograms"]
-            ):
-                assert np.array_equal(log(chunk_hist + 1), chunk_hist_log)
-
-            summary_func = np.median if operator == "median" else np.mean
-            assert np.array_equal(ses_hist, summary_func(chunked_histograms, axis=0))
-
     def test_shift_array_fill_zeros(self):
         """ """
         # TODO: could do all the same indexing as 1d? but will be more confusing...
@@ -737,66 +719,55 @@ class TestInterSessionAlignment:
         res = alignment_utils.get_shifts_from_session_matrix("to_session_10", matrix)
         assert np.array_equal(res, -matrix[9, :, :])
 
-    def estimate_chunk_size(self):
-        pass
+    @pytest.mark.parametrize("interpolate", [True, False])
+    @pytest.mark.parametrize("odd_hist_size", [True, False])
+    @pytest.mark.parametrize("shifts", [3, -2])
+    # TODO: return and test num_shifts
+    # TODO: test
+    def test_compute_histogram_crosscorrelation(self, interpolate, odd_hist_size, shifts):
 
-    def test_akima_interpolate_nonrigid_shifts(self):
-        pass
+        if odd_hist_size:
+            hist = np.array([1, 0, 1, 1, 1, 0])
+        else:
+            hist = np.array([0, 0, 1, 1, 0, 1, 0, 1])
 
-    # TODO:
-    @pytest.mark.parametrize("shifts", [3])  # -2 #test and off and even shift
-    def test_compute_histogram_crosscorrelation(self, shifts):
+        hist_shift = alignment_utils.shift_array_fill_zeros(hist, shifts)
 
-        even_hist = np.array([0, 0, 1, 1, 0, 1, 0, 1])
-        odd_hist = np.array([1, 0, 1, 1, 1, 0])
+        session_histogram_list = np.vstack([hist, hist_shift])
 
-        even_hist_shift = alignment_utils.shift_array_fill_zeros(even_hist, shifts)
-        odd_hist_shift = alignment_utils.shift_array_fill_zeros(odd_hist, shifts)
-
-        session_histogram_list = np.vstack([even_hist, even_hist_shift])
-
-        # Ut oh, is interpolate broken?
-        interpolate = True  # or False
-        interp_factor = 50
-
+        interp_factor = 50  # not used when interpolate = False
         shifts_matrix, xcorr_matrix_unsmoothed = alignment_utils.compute_histogram_crosscorrelation(
             session_histogram_list,
-            non_rigid_windows=np.ones((1, even_hist.size)),  # TODO: test non rigid!
-            num_shifts=None,  # TODO: test num shifts!
+            non_rigid_windows=np.ones((1, hist.size)),
+            num_shifts=None,
             interpolate=interpolate,
             interp_factor=interp_factor,
-            kriging_sigma=0.5,
+            kriging_sigma=0.2,
             kriging_p=2,
             kriging_d=2,
             smoothing_sigma_bin=None,
             smoothing_sigma_window=None,
         )
-        breakpoint()
-        assert alignment_utils.get_shifts_from_session_matrix("to_session_1", shifts_matrix)[-1] == -shifts
+        assert np.isclose(
+            alignment_utils.get_shifts_from_session_matrix("to_session_1", shifts_matrix)[-1],
+            -shifts,
+            rtol=0,
+            atol=0.01,
+        )
 
-        num_shifts = even_hist.size * 2 - 1
+        num_shifts = hist.size * 2 - 1
         if interpolate:
             assert xcorr_matrix_unsmoothed.shape[1] == num_shifts * interp_factor
         else:
             assert xcorr_matrix_unsmoothed.shape[1] == num_shifts
 
-        shifts_matrix_smoothed_bin, xcorr_matrix_smoothed_bin = alignment_utils.compute_histogram_crosscorrelation(
-            session_histogram_list,
-            non_rigid_windows=np.ones((1, even_hist.size)),  # TODO: test non rigid!
-            num_shifts=None,  # TODO: test num shifts!
-            interpolate=interpolate,
-            interp_factor=interp_factor,
-            kriging_sigma=1,
-            kriging_p=1,
-            kriging_d=1,
-            smoothing_sigma_bin=0.5,
-            smoothing_sigma_window=None,
-        )
-
+        """
+        TODO: test num shifts, test that smoothing is applied
+        TODO: test non-rigid
         shifts_matrix_smoothed_window, xcorr_matrix_smoothed_window = (
             alignment_utils.compute_histogram_crosscorrelation(
                 session_histogram_list,
-                non_rigid_windows=np.ones((1, even_hist.size)),  # TODO: test non rigid!
+                non_rigid_windows=np.ones((1, hist.size)),  # TODO: test non rigid!
                 num_shifts=None,  # TODO: test num shifts!
                 interpolate=interpolate,
                 interp_factor=interp_factor,
@@ -807,17 +778,20 @@ class TestInterSessionAlignment:
                 smoothing_sigma_window=0.5,
             )
         )
+        """
 
-        # make a histogram (odd and even length)
-        # shift it (odd and even shift)
-        # check smoothing across bins and time
-        # check interpolate
-        # thats it!
-
-    def test_compute_histogram_crosscorrelation_gaussian_filter_kwargs(self):  ## TODO: incorporate these above
+    def test_compute_histogram_crosscorrelation_gaussian_filter_kwargs(self):
+        ## TODO: incorporate these above
         pass
 
     def test_compute_histogram_crosscorrelation_kriging_kwargs(self):
+        # monkeypatch
+        pass
+
+    def estimate_chunk_size(self):
+        pass
+
+    def test_akima_interpolate_nonrigid_shifts(self):
         pass
 
     ###########################################################################
@@ -829,3 +803,6 @@ class TestInterSessionAlignment:
     # 1) create some inter-session drift
     # 2) compare sorting before / after
     # 3) need to benchmark fully
+
+
+# test_compute_alignment_kwargs
