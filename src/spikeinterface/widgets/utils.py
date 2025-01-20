@@ -316,7 +316,7 @@ def make_units_table_from_analyzer(
         all_df.append(df)
 
     if analyzer.get_extension("template_metrics") is not None:
-        all_df = analyzer.get_extension("template_metrics").get_data()
+        df = analyzer.get_extension("template_metrics").get_data()
         all_df.append(df)
 
     if len(all_df) > 0:
