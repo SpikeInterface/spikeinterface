@@ -646,7 +646,14 @@ class BaseExtractor:
         )
         return file_path
 
-    def dump(self, file_path: Union[str, Path], relative_to=None, folder_metadata=None) -> None:
+    def dump(
+        self,
+        file_path: Union[str, Path, None] = None,
+        relative_to: Union[str, Path, bool, None] = None,
+        include_annotations: bool = True,
+        include_properties: bool = True,
+        folder_metadata: Union[str, Path, None] = None,
+    ) -> None:
         """
         Dumps extractor to json or pickle
 
@@ -657,11 +664,28 @@ class BaseExtractor:
         relative_to: str, Path, True or None
             If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
+        include_annotations: bool, default: True
+            If True, all annotations are dumped
+        include_properties: bool, default: True
+            If True, all properties are dumped
+        folder_metadata: str, Path, or None
+            Folder with files containing additional information (e.g. probe in BaseRecording) and properties
         """
         if str(file_path).endswith(".json"):
-            self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
+            self.dump_to_json(
+                file_path,
+                relative_to=relative_to,
+                include_annotations=include_annotations,
+                include_properties=include_properties,
+                folder_metadata=folder_metadata,
+            )
         elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-            self.dump_to_pickle(file_path, folder_metadata=folder_metadata)
+            self.dump_to_pickle(
+                file_path,
+                include_annotations=include_annotations,
+                include_properties=include_properties,
+                folder_metadata=folder_metadata,
+            )
         else:
             raise ValueError("Dump: file must .json or .pkl")
 
@@ -669,6 +693,8 @@ class BaseExtractor:
         self,
         file_path: Union[str, Path, None] = None,
         relative_to: Union[str, Path, bool, None] = None,
+        include_annotations: bool = True,
+        include_properties: bool = True,
         folder_metadata: Union[str, Path, None] = None,
     ) -> None:
         """
@@ -682,6 +708,10 @@ class BaseExtractor:
         relative_to: str, Path, True or None
             If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
+        include_annotations: bool, default: True
+            If True, all annotations are dumped
+        include_properties: bool, default: True
+            If True, all properties are dumped
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties
         """
@@ -693,8 +723,8 @@ class BaseExtractor:
             relative_to = relative_to.resolve().absolute()
 
         dump_dict = self.to_dict(
-            include_annotations=True,
-            include_properties=False,
+            include_annotations=include_annotations,
+            include_properties=include_properties,
             relative_to=relative_to,
             folder_metadata=folder_metadata,
             recursive=True,
@@ -711,6 +741,7 @@ class BaseExtractor:
         file_path: Union[str, Path, None] = None,
         relative_to: Union[str, Path, bool, None] = None,
         include_properties: bool = True,
+        include_annotations: bool = True,
         folder_metadata: Union[str, Path, None] = None,
     ):
         """
@@ -724,8 +755,10 @@ class BaseExtractor:
         relative_to: str, Path, True or None
             If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
-        include_properties: bool
+        include_properties: bool, default: True
             If True, all properties are dumped
+        include_annotations: bool, default: True
+            If True, all annotations are dumped
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
@@ -741,7 +774,7 @@ class BaseExtractor:
             recursive = False
 
         dump_dict = self.to_dict(
-            include_annotations=True,
+            include_annotations=include_annotations,
             include_properties=include_properties,
             folder_metadata=folder_metadata,
             relative_to=relative_to,
