@@ -7,7 +7,7 @@ authors = [
 ]
 description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
 readme = "README.md"
-requires-python = ">=3.9,<4.0"
+requires-python = ">=3.9,<3.13"  # Only numpy 2.1 supported on python 3.13 for windows. We need to wait for fix on neo
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "License :: OSI Approved :: MIT License",
@@ -73,7 +73,7 @@ extractors = [
 ]
 
 streaming_extractors = [
-    "ONE-api>=2.7.0", # alf sorter and streaming IBL
+    "ONE-api>=2.7.0,<2.10.0", # alf sorter and streaming IBL
     "ibllib>=2.36.0", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
@@ -101,6 +101,8 @@ full = [
     "matplotlib>=3.6", # matplotlib.colormaps
     "cuda-python; platform_system != 'Darwin'",
     "numba",
+    "skops",
+    "huggingface_hub"
 ]
 
 widgets = [
@@ -171,6 +173,10 @@ test = [
     "torch",
     "pynndescent",
 
+    # curation
+    "skops",
+    "huggingface_hub",
+
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
@@ -192,6 +198,8 @@ docs = [
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "networkx",
+    "skops", # For auotmated curation
+    "scikit-learn", # For auotmated curation
     # Download data
     "pooch>=1.8.2",
     "datalad>=1.0.2",

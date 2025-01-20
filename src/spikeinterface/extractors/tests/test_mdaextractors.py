@@ -9,6 +9,12 @@ def test_mda_extractors(create_cache_folder):
     cache_folder = create_cache_folder
     rec, sort = generate_ground_truth_recording(durations=[10.0], num_units=10)
 
+    ids_as_integers = [id for id in range(rec.get_num_channels())]
+    rec = rec.rename_channels(new_channel_ids=ids_as_integers)
+
+    ids_as_integers = [id for id in range(sort.get_num_units())]
+    sort = sort.rename_units(new_unit_ids=ids_as_integers)
+
     MdaRecordingExtractor.write_recording(rec, cache_folder / "mdatest")
     rec_mda = MdaRecordingExtractor(cache_folder / "mdatest")
     probe = rec_mda.get_probe()

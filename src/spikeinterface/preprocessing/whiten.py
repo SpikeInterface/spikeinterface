@@ -19,6 +19,8 @@ class WhitenRecording(BasePreprocessor):
     recording : RecordingExtractor
         The recording extractor to be whitened.
     dtype : None or dtype, default: None
+        Datatype of the output recording (covariance matrix estimation
+        and whitening are performed in float32).
         If None the the parent dtype is kept.
         For integer dtype a int_scale must be also given.
     mode : "global" | "local", default: "global"
@@ -74,7 +76,9 @@ class WhitenRecording(BasePreprocessor):
         dtype_ = fix_dtype(recording, dtype)
 
         if dtype_.kind == "i":
-            assert int_scale is not None, "For recording with dtype=int you must set dtype=float32 OR set a int_scale"
+            assert (
+                int_scale is not None
+            ), "For recording with dtype=int you must set the output dtype to float OR set a int_scale"
 
         if W is not None:
             W = np.asarray(W)
@@ -124,7 +128,7 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
         traces_dtype = traces.dtype
-        # if uint --> force int
+        # if uint --> force float
         if traces_dtype.kind == "u":
             traces = traces.astype("float32")
 
@@ -185,6 +189,7 @@ def compute_whitening_matrix(
 
     """
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
+    random_data = random_data.astype(np.float32)
 
     regularize_kwargs = regularize_kwargs if regularize_kwargs is not None else {"method": "GraphicalLassoCV"}
 

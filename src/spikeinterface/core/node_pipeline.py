@@ -489,6 +489,7 @@ def run_node_pipeline(
     names=None,
     verbose=False,
     skip_after_n_peaks=None,
+    recording_slices=None,
 ):
     """
     Machinery to compute in parallel operations on peaks and traces.
@@ -540,6 +541,10 @@ def run_node_pipeline(
     skip_after_n_peaks : None | int
         Skip the computation after n_peaks.
         This is not an exact because internally this skip is done per worker in average.
+    recording_slices : None | list[tuple]
+        Optionaly give a list of slices to run the pipeline only on some chunks of the recording.
+        It must be a list of (segment_index, frame_start, frame_stop).
+        If None (default), the function iterates over the entire duration of the recording.
 
     Returns
     -------
@@ -578,7 +583,7 @@ def run_node_pipeline(
         **job_kwargs,
     )
 
-    processor.run()
+    processor.run(recording_slices=recording_slices)
 
     outs = gather_func.finalize_buffers(squeeze_output=squeeze_output)
     return outs
