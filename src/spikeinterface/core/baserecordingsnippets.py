@@ -11,6 +11,8 @@ from .recording_tools import check_probe_do_not_overlap
 
 from warnings import warn
 
+_minimal_probe_properties = ["_probe_x", "_probe_y"]
+
 
 class BaseRecordingSnippets(BaseExtractor):
     """
@@ -23,6 +25,8 @@ class BaseRecordingSnippets(BaseExtractor):
         BaseExtractor.__init__(self, channel_ids)
         self._sampling_frequency = float(sampling_frequency)
         self._dtype = np.dtype(dtype)
+        if self.get_property("contact_vector") is not None:
+            self._set_properties_from_contact_vector(self.get_property("contact_vector"))
 
     @property
     def channel_ids(self):
@@ -63,7 +67,7 @@ class BaseRecordingSnippets(BaseExtractor):
         return self.has_scaleable_traces()
 
     def has_probe(self) -> bool:
-        return "contact_vector" in self.get_property_keys()
+        return all(prop in self.get_property_keys() for prop in _minimal_probe_properties)
 
     def has_channel_location(self) -> bool:
         return self.has_probe() or "location" in self.get_property_keys()
@@ -197,7 +201,7 @@ class BaseRecordingSnippets(BaseExtractor):
                 sub_recording = self.select_channels(new_channel_ids)
 
         # create a vector that handle all contacts in property
-        sub_recording.set_property("contact_vector", probe_as_numpy_array, ids=None)
+        sub_recording._set_probe_numpy_array_to_properties(probe_as_numpy_array)
 
         # planar_contour is saved in annotations
         for probe_index, probe in enumerate(probegroup.probes):
@@ -262,7 +266,7 @@ class BaseRecordingSnippets(BaseExtractor):
         return probegroup.probes
 
     def get_probegroup(self):
-        arr = self.get_property("contact_vector")
+        arr = self._get_probe_numpy_array_from_properties()
         if arr is None:
             positions = self.get_property("location")
             if positions is None:
@@ -281,6 +285,35 @@ class BaseRecordingSnippets(BaseExtractor):
                     probe.set_planar_contour(contour)
         return probegroup
 
+    def _set_probe_numpy_array_to_properties(self, probe_as_numpy_array):
+        for key in probe_as_numpy_array.dtype.names:
+            self.set_property(f"_probe_{key}", probe_as_numpy_array[key], ids=None)
+
+    def _get_probe_numpy_array_from_properties(self):
+        # first construct numpy structured dtype from properties
+        structured_dtype = []
+        for key in self.get_property_keys():
+            if key.startswith("_probe_"):
+                values = self.get_property(key)
+                if values.dtype.kind == "SU":
+                    dtype = "U64"
+                elif values.dtype.kind == "f":
+                    dtype = "float64"
+                elif values.dtype.kind == "i":
+                    dtype = "int64"
+                else:
+                    dtype = values.dtype
+                structured_dtype.append((key[len("_probe_") :], dtype))
+        arr = np.zeros(self.get_num_channels(), dtype=structured_dtype)
+        for key in arr.dtype.names:
+            arr[key] = self.get_property(f"_probe_{key}")
+        return arr
+
+    def _set_properties_from_contact_vector(self, contact_vector):
+        for key in contact_vector.dtype.names:
+            self.set_property(f"_probe_{key}", contact_vector[key], ids=None)
+        self.delete_property("contact_vector")
+
     def _extra_metadata_from_folder(self, folder):
         # load probe
         folder = Path(folder)
@@ -290,7 +323,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def _extra_metadata_to_folder(self, folder):
         # save probe
-        if self.get_property("contact_vector") is not None:
+        if self.has_probe():
             probegroup = self.get_probegroup()
             write_probeinterface(folder / "probe.json", probegroup)
 
@@ -347,7 +380,7 @@ class BaseRecordingSnippets(BaseExtractor):
         self.set_probe(probe, in_place=True)
 
     def set_channel_locations(self, locations, channel_ids=None):
-        if self.get_property("contact_vector") is not None:
+        if self.has_probe():
             raise ValueError("set_channel_locations(..) destroys the probe description, prefer _set_probes(..)")
         self.set_property("location", locations, ids=channel_ids)
 
@@ -355,9 +388,9 @@ class BaseRecordingSnippets(BaseExtractor):
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
-        contact_vector = self.get_property("contact_vector")
-        if contact_vector is not None:
+        if self.has_probe():
             # here we bypass the probe reconstruction so this works both for probe and probegroup
+            contact_vector = self._get_probe_numpy_array_from_properties()
             ndim = len(axes)
             all_positions = np.zeros((contact_vector.size, ndim), dtype="float64")
             for i, dim in enumerate(axes):

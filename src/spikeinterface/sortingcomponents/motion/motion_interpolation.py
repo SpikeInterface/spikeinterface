@@ -375,10 +375,7 @@ class InterpolateMotionRecording(BasePreprocessor):
         if border_mode == "remove_channels":
             # change the wiring of the probe
             # TODO this is also done in ChannelSliceRecording, this should be done in a common place
-            contact_vector = self.get_property("contact_vector")
-            if contact_vector is not None:
-                contact_vector["device_channel_indices"] = np.arange(len(channel_ids), dtype="int64")
-                self.set_property("contact_vector", contact_vector)
+            self.set_property("_probe_device_channel_indices", np.arange(len(channel_ids), dtype="int64"))
 
         # handle manual interpolation_time_bin_centers_s
         # the case where interpolation_time_bin_size_s is set is handled per-segment below

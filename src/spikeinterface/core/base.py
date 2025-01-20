@@ -478,6 +478,7 @@ class BaseExtractor:
             dump_dict["annotations"] = {k: self._annotations.get(k, None) for k in self._main_annotations}
 
         if include_properties:
+            print(self._properties.keys())
             dump_dict["properties"] = self._properties
         else:
             # include only main properties
@@ -1169,6 +1170,7 @@ def _load_extractor_from_dict(dic) -> BaseExtractor:
 
     extractor._annotations.update(dic["annotations"])
     for k, v in dic["properties"].items():
+        print(f"Loading property {k}")
         extractor.set_property(k, v)
 
     return extractor

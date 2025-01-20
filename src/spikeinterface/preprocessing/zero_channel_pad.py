@@ -161,7 +161,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
                 "The new mapping cannot exceed total number of channels " "in the zero-chanenl-padded recording."
             )
         else:
-            if "locations" in recording.get_property_keys() or "contact_vector" in recording.get_property_keys():
+            if recording.has_probe():
                 self.channel_mapping = np.argsort(recording.get_channel_locations()[:, 1])
             else:
                 self.channel_mapping = np.arange(recording.get_num_channels())

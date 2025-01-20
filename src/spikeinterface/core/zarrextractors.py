@@ -420,7 +420,7 @@ def add_recording_to_zarr_group(
     )
 
     # save probe
-    if recording.get_property("contact_vector") is not None:
+    if recording.has_probe():
         probegroup = recording.get_probegroup()
         zarr_group.attrs["probe"] = check_json(probegroup.to_dict(array_as_list=True))
 
