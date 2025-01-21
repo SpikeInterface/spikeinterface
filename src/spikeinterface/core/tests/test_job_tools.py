@@ -283,7 +283,6 @@ def test_get_best_job_kwargs():
 # def quick_becnhmark():
 #     # keep this commented do not remove
 
-
 #     from spikeinterface.generation import generate_drifting_recording
 #     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 #     from spikeinterface import get_noise_levels

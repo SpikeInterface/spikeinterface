@@ -69,10 +69,23 @@ def get_best_job_kwargs():
     n_cpu = os.cpu_count()
 
     if platform.system() == "Linux":
-        # maybe we should test this more but with linux the fork is still faster than threading
         pool_engine = "process"
         mp_context = "fork"
 
+    elif platform.system() == "Darwin":
+        pool_engine = "process"
+        mp_context = "spawn"
+
+    else:  # windows
+        # on windows and macos the fork is forbidden and process+spwan is super slow at startup
+        # so let's go to threads
+        pool_engine = "thread"
+        mp_context = None
+        n_jobs = n_cpu
+        max_threads_per_worker = 1
+
+    if platform.system() in ("Linux", "Darwin"):
+        # here we try to balance between the number of workers (n_jobs) and the number of sub thread
         # this is totally empirical but this is a good start
         if n_cpu <= 16:
             # for small n_cpu let's make many process
@@ -82,14 +95,6 @@ def get_best_job_kwargs():
             # let's have fewer processes with more threads each
             n_cpu = int(n_cpu / 4)
             max_threads_per_worker = 8
-
-    else:  # windows and mac
-        # on windows and macos the fork is forbidden and process+spwan is super slow at startup
-        # so let's go to threads
-        pool_engine = "thread"
-        mp_context = None
-        n_jobs = n_cpu
-        max_threads_per_worker = 1
 
     return dict(
         pool_engine=pool_engine,
@@ -151,14 +156,14 @@ def fix_job_kwargs(runtime_job_kwargs):
     n_jobs = max(n_jobs, 1)
     job_kwargs["n_jobs"] = min(n_jobs, os.cpu_count())
 
-    if "n_jobs" not in runtime_job_kwargs and job_kwargs["n_jobs"] == 1 and not is_set_global_job_kwargs_set():
-        warnings.warn(
-            "`n_jobs` is not set so parallel processing is disabled! "
-            "To speed up computations, it is recommended to set n_jobs either "
-            "globally (with the `spikeinterface.set_global_job_kwargs()` function) or "
-            "locally (with the `n_jobs` argument). Use `spikeinterface.set_global_job_kwargs?` "
-            "for more information about job_kwargs."
-        )
+    # if "n_jobs" not in runtime_job_kwargs and job_kwargs["n_jobs"] == 1 and not is_set_global_job_kwargs_set():
+    #     warnings.warn(
+    #         "`n_jobs` is not set so parallel processing is disabled! "
+    #         "To speed up computations, it is recommended to set n_jobs either "
+    #         "globally (with the `spikeinterface.set_global_job_kwargs()` function) or "
+    #         "locally (with the `n_jobs` argument). Use `spikeinterface.set_global_job_kwargs?` "
+    #         "for more information about job_kwargs."
+    #     )
 
     return job_kwargs
 
@@ -465,7 +470,7 @@ class ChunkRecordingExecutor:
 
         if self.n_jobs == 1:
             if self.progress_bar:
-                recording_slices = tqdm(recording_slices, desc=self.job_name, total=len(recording_slices))
+                recording_slices = tqdm(recording_slices, desc=f"{self.job_name} (no parallelization)", total=len(recording_slices))
 
             worker_dict = self.init_func(*self.init_args)
             if self.need_worker_index:
@@ -510,7 +515,7 @@ class ChunkRecordingExecutor:
                     results = executor.map(process_function_wrapper, recording_slices)
 
                     if self.progress_bar:
-                        results = tqdm(results, desc=self.job_name, total=len(recording_slices))
+                        results = tqdm(results, desc=f"{self.job_name} (workers: {n_jobs} processes)", total=len(recording_slices))
 
                     for res in results:
                         if self.handle_returns:
@@ -528,7 +533,7 @@ class ChunkRecordingExecutor:
                 if self.progress_bar:
                     # here the tqdm threading do not work (maybe collision) so we need to create a pbar
                     # before thread spawning
-                    pbar = tqdm(desc=self.job_name, total=len(recording_slices))
+                    pbar = tqdm(desc=f"{self.job_name} (workers: {n_jobs} threads)", total=len(recording_slices))
 
                 if self.need_worker_index:
                     lock = threading.Lock()
