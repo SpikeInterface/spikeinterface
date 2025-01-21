@@ -17,6 +17,7 @@ from .quality_metric_list import (
     _misc_metric_name_to_func,
     _possible_pc_metric_names,
     qm_compute_name_to_column_names,
+    column_name_to_column_dtype,
 )
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
@@ -140,12 +141,19 @@ class ComputeQualityMetrics(AnalyzerExtension):
         all_unit_ids = new_sorting_analyzer.unit_ids
         not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
 
+        # this creates a new metrics dictionary, but the dtype for everything will be
+        # object. So we will need to fix this later after computing metrics
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
-
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
         metrics.loc[new_unit_ids, :] = self._compute_metrics(
             new_sorting_analyzer, new_unit_ids, verbose, metric_names, **job_kwargs
         )
+
+        # we need to fix the dtypes after we compute everything because we have nans
+        # we can iterate through the columns and convert them back to the dtype
+        # of the original quality dataframe.
+        for column in old_metrics.columns:
+            metrics[column] = metrics[column].astype(old_metrics[column].dtype)
 
         new_data = dict(metrics=metrics)
         return new_data
@@ -229,10 +237,20 @@ class ComputeQualityMetrics(AnalyzerExtension):
         # add NaN for empty units
         if len(empty_unit_ids) > 0:
             metrics.loc[empty_unit_ids] = np.nan
+            # num_spikes is an int and should be 0
+            if "num_spikes" in metrics.columns:
+                metrics.loc[empty_unit_ids, ["num_spikes"]] = 0
 
         # we use the convert_dtypes to convert the columns to the most appropriate dtype and avoid object columns
         # (in case of NaN values)
         metrics = metrics.convert_dtypes()
+
+        # we do this because the convert_dtypes infers the wrong types sometimes.
+        # the actual types for columns can be found in column_name_to_column_dtype dictionary.
+        for column in metrics.columns:
+            if column in column_name_to_column_dtype:
+                metrics[column] = metrics[column].astype(column_name_to_column_dtype[column])
+
         return metrics
 
     def _run(self, verbose=False, **job_kwargs):

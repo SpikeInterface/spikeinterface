@@ -101,6 +101,8 @@ full = [
     "matplotlib>=3.6", # matplotlib.colormaps
     "cuda-python; platform_system != 'Darwin'",
     "numba",
+    "skops",
+    "huggingface_hub"
 ]
 
 widgets = [
@@ -171,6 +173,10 @@ test = [
     "torch",
     "pynndescent",
 
+    # curation
+    "skops",
+    "huggingface_hub",
+
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
@@ -192,6 +198,8 @@ docs = [
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "networkx",
+    "skops", # For auotmated curation
+    "scikit-learn", # For auotmated curation
     # Download data
     "pooch>=1.8.2",
     "datalad>=1.0.2",

@@ -15,7 +15,7 @@ def test_rectify():
     rec2 = rectify(rec)
     rec2.save(verbose=False)
 
-    traces = rec2.get_traces(segment_index=0, channel_ids=[1])
+    traces = rec2.get_traces(segment_index=0, channel_ids=["1"])
     assert traces.shape[1] == 1
 
     # import matplotlib.pyplot as plt
