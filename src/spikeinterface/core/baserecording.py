@@ -233,7 +233,7 @@ class BaseRecording(BaseRecordingSnippets):
             The duration in seconds
         """
         segment_duration = (
-            self.get_stop_time(segment_index) - self.get_start_time(segment_index) + (1 / self.get_sampling_frequency())
+            self.get_end_time(segment_index) - self.get_start_time(segment_index) + (1 / self.get_sampling_frequency())
         )
         return segment_duration
 
@@ -456,7 +456,7 @@ class BaseRecording(BaseRecordingSnippets):
         rs = self._recording_segments[segment_index]
         return rs.get_start_time()
 
-    def get_stop_time(self, segment_index=None) -> float:
+    def get_end_time(self, segment_index=None) -> float:
         """Get the stop time of the recording segment.
 
         Parameters
@@ -471,7 +471,7 @@ class BaseRecording(BaseRecordingSnippets):
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
-        return rs.get_stop_time()
+        return rs.get_end_time()
 
     def has_time_vector(self, segment_index=None):
         """Check if the segment of the recording has a time vector.
@@ -937,11 +937,11 @@ class BaseRecordingSegment(BaseSegment):
         else:
             return self.t_start if self.t_start is not None else 0.0
 
-    def get_stop_time(self) -> float:
+    def get_end_time(self) -> float:
         if self.time_vector is not None:
             return self.time_vector[-1]
         else:
-            t_stop = self.get_num_samples() / self.sampling_frequency
+            t_stop = (self.get_num_samples() - 1) / self.sampling_frequency
             if self.t_start is not None:
                 t_stop += self.t_start
             return t_stop
