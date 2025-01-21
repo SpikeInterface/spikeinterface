@@ -132,7 +132,10 @@ class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
         # now, divide by the number of channels at that position
         traces /= self.n_chans_each_pos
 
-        return traces[:, channel_indices]
+        if channel_indices is not None:
+            traces = traces[:, channel_indices]
+
+        return traces
 
 
 # function for API
