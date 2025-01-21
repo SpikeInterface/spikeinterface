@@ -4,7 +4,6 @@ from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
 from spikeinterface.preprocessing.inter_session_alignment import (
     session_alignment,
-    plotting_session_alignment,
 )
 from spikeinterface.widgets import plot_session_alignment, plot_activity_histogram_2d
 import matplotlib.pyplot as plt
@@ -31,7 +30,6 @@ if __name__ == '__main__':
     # --------------------------------------------------------------------------------------
 
     # try num units 5 and 65
-
     recordings_list, _ = generate_session_displacement_recordings(
         num_units=5,
         recording_durations=[200, 200, 200],
@@ -85,8 +83,8 @@ if __name__ == '__main__':
 
     non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
     non_rigid_window_kwargs["rigid"] = False
-    non_rigid_window_kwargs["num_shifts_global"] = 500
-    non_rigid_window_kwargs["num_shifts_block"] = 24  # TODO: it makes no sense for this to be larger than the window
+#    non_rigid_window_kwargs["num_shifts_global"] = 500
+#    non_rigid_window_kwargs["num_shifts_block"] = 24  # TODO: it makes no sense for this to be larger than the window
     non_rigid_window_kwargs["win_step_um"] = 125
     non_rigid_window_kwargs["win_scale_um"] = 60
 
