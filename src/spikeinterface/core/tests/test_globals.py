@@ -57,7 +57,6 @@ def test_global_job_kwargs():
     set_global_job_kwargs(**job_kwargs)
     assert get_global_job_kwargs() == job_kwargs
 
-
     # test updating only one field
     partial_job_kwargs = dict(n_jobs=2)
     set_global_job_kwargs(**partial_job_kwargs)

@@ -470,7 +470,9 @@ class ChunkRecordingExecutor:
 
         if self.n_jobs == 1:
             if self.progress_bar:
-                recording_slices = tqdm(recording_slices, desc=f"{self.job_name} (no parallelization)", total=len(recording_slices))
+                recording_slices = tqdm(
+                    recording_slices, desc=f"{self.job_name} (no parallelization)", total=len(recording_slices)
+                )
 
             worker_dict = self.init_func(*self.init_args)
             if self.need_worker_index:
@@ -515,7 +517,9 @@ class ChunkRecordingExecutor:
                     results = executor.map(process_function_wrapper, recording_slices)
 
                     if self.progress_bar:
-                        results = tqdm(results, desc=f"{self.job_name} (workers: {n_jobs} processes)", total=len(recording_slices))
+                        results = tqdm(
+                            results, desc=f"{self.job_name} (workers: {n_jobs} processes)", total=len(recording_slices)
+                        )
 
                     for res in results:
                         if self.handle_returns:
