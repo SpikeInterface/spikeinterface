@@ -42,6 +42,9 @@ _default_params = dict(
         max_spikes=10000, min_spikes=10, min_fr=0.0, n_neighbors=4, n_components=10, radius_um=100, peak_sign="neg"
     ),
     silhouette=dict(method=("simplified",)),
+    isolation_distance=dict(),
+    l_ratio=dict(),
+    d_prime=dict(),
 )
 
 

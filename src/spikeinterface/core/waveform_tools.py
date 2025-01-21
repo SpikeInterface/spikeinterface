@@ -298,10 +298,12 @@ def _init_worker_distribute_buffers(
     # create a local dict per worker
     worker_dict = {}
     if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
+        from spikeinterface.core import load
 
-        recording = load_extractor(recording)
+        recording = load(recording)
+        
     worker_dict["recording"] = recording
+
 
     if mode == "memmap":
         # in memmap mode we have the "too many open file" problem with linux

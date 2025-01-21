@@ -12,7 +12,7 @@ from numpy.testing import assert_raises
 
 from probeinterface import Probe, ProbeGroup, generate_linear_probe
 
-from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor, get_default_zarr_compressor
+from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load, get_default_zarr_compressor
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_recordings_equal
 
@@ -84,38 +84,38 @@ def test_BaseRecording(create_cache_folder):
     # dump/load dict
     d = rec.to_dict(include_annotations=True, include_properties=True)
     rec2 = BaseExtractor.from_dict(d)
-    rec3 = load_extractor(d)
+    rec3 = load(d)
     check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True, check_properties=True)
     check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True, check_properties=True)
 
     # dump/load json
     rec.dump_to_json(cache_folder / "test_BaseRecording.json")
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording.json")
-    rec3 = load_extractor(cache_folder / "test_BaseRecording.json")
+    rec3 = load(cache_folder / "test_BaseRecording.json")
     check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True, check_properties=False)
     check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True, check_properties=False)
 
     # dump/load pickle
     rec.dump_to_pickle(cache_folder / "test_BaseRecording.pkl")
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording.pkl")
-    rec3 = load_extractor(cache_folder / "test_BaseRecording.pkl")
+    rec3 = load(cache_folder / "test_BaseRecording.pkl")
     check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True, check_properties=True)
     check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True, check_properties=True)
 
     # dump/load dict - relative
     d = rec.to_dict(relative_to=cache_folder, recursive=True)
     rec2 = BaseExtractor.from_dict(d, base_folder=cache_folder)
-    rec3 = load_extractor(d, base_folder=cache_folder)
+    rec3 = load(d, base_folder=cache_folder)
 
     # dump/load json - relative to
     rec.dump_to_json(cache_folder / "test_BaseRecording_rel.json", relative_to=cache_folder)
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
-    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
+    rec3 = load(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
 
     # dump/load relative=True
     rec.dump_to_json(cache_folder / "test_BaseRecording_rel_true.json", relative_to=True)
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
-    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
+    rec3 = load(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
     check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True)
     check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True)
     with open(cache_folder / "test_BaseRecording_rel_true.json") as json_file:
@@ -127,12 +127,12 @@ def test_BaseRecording(create_cache_folder):
     # dump/load pkl - relative to
     rec.dump_to_pickle(cache_folder / "test_BaseRecording_rel.pkl", relative_to=cache_folder)
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
-    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
+    rec3 = load(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
 
     # dump/load relative=True
     rec.dump_to_pickle(cache_folder / "test_BaseRecording_rel_true.pkl", relative_to=True)
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
-    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
+    rec3 = load(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
     check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True)
     check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True)
     with open(cache_folder / "test_BaseRecording_rel_true.pkl", "rb") as pkl_file:
@@ -195,7 +195,7 @@ def test_BaseRecording(create_cache_folder):
     # test save with probe
     folder = cache_folder / "simple_recording3"
     rec2 = rec_p.save(folder=folder, chunk_size=10, n_jobs=2)
-    rec2 = load_extractor(folder)
+    rec2 = load(folder)
     probe2 = rec2.get_probe()
     assert np.array_equal(probe2.contact_positions, [[0, 30.0], [0.0, 0.0]])
     positions2 = rec_p.get_channel_locations()
@@ -286,7 +286,7 @@ def test_BaseRecording(create_cache_folder):
     folder = cache_folder / "recording_with_times"
     rec2 = rec.save(folder=folder)
     assert np.allclose(times1, rec2.get_times(1))
-    rec3 = load_extractor(folder)
+    rec3 = load(folder)
     assert np.allclose(times1, rec3.get_times(1))
 
     # reset times
@@ -323,7 +323,7 @@ def test_BaseRecording(create_cache_folder):
     # test save to zarr
     compressor = get_default_zarr_compressor()
     rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
-    rec_zarr_loaded = load_extractor(cache_folder / "recording.zarr")
+    rec_zarr_loaded = load(cache_folder / "recording.zarr")
     # annotations is False because Zarr adds compression ratios
     check_recordings_equal(rec2, rec_zarr, return_scaled=False, check_annotations=False, check_properties=True)
     check_recordings_equal(
@@ -336,7 +336,7 @@ def test_BaseRecording(create_cache_folder):
     rec_zarr2 = rec2.save(
         format="zarr", folder=cache_folder / "recording_channel_chunk", compressor=compressor, channel_chunk_size=2
     )
-    rec_zarr2_loaded = load_extractor(cache_folder / "recording_channel_chunk.zarr")
+    rec_zarr2_loaded = load(cache_folder / "recording_channel_chunk.zarr")
 
     # annotations is False because Zarr adds compression ratios
     check_recordings_equal(rec2, rec_zarr2, return_scaled=False, check_annotations=False, check_properties=True)
