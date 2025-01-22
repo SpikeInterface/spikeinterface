@@ -247,9 +247,9 @@ def _init_memory_worker(recording, arrays, shm_names, shapes, dtype, cast_unsign
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
+        from spikeinterface.core import load
 
-        worker_ctx["recording"] = load_extractor(recording)
+        worker_ctx["recording"] = load(recording)
     else:
         worker_ctx["recording"] = recording
 
