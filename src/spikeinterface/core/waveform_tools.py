@@ -298,9 +298,9 @@ def _init_worker_distribute_buffers(
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
+        from spikeinterface.core import load
 
-        recording = load_extractor(recording)
+        recording = load(recording)
     worker_ctx["recording"] = recording
 
     if mode == "memmap":

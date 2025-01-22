@@ -128,7 +128,7 @@ class TestTimeHandling:
 
         if mode == "zarr":
             folder_name += ".zarr"
-        recording_load = si.load_extractor(tmp_path / folder_name)
+        recording_load = si.load(tmp_path / folder_name)
 
         self._check_times_match(recording_cache, all_times)
         self._check_times_match(recording_load, all_times)
@@ -369,7 +369,7 @@ class TestTimeHandling:
 
         times_recording.save(folder=tmp_path / "my_file")
 
-        loaded_recording = si.load_extractor(tmp_path / "my_file")
+        loaded_recording = si.load(tmp_path / "my_file")
 
         for idx in range(times_recording.get_num_segments()):
             assert np.array_equal(
