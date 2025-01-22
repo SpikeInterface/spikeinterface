@@ -15,7 +15,7 @@ import shutil
 import warnings
 
 
-from spikeinterface.core import load_extractor, BaseRecordingSnippets, BaseRecording
+from spikeinterface.core import load, BaseRecordingSnippets, BaseRecording
 from spikeinterface.core.core_tools import check_json
 from spikeinterface.core.globals import get_global_job_kwargs
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
@@ -210,9 +210,9 @@ class BaseSorter:
                 )
                 recording = None
             else:
-                recording = load_extractor(json_file, base_folder=output_folder)
+                recording = load(json_file, base_folder=output_folder)
         elif pickle_file.exists():
-            recording = load_extractor(pickle_file, base_folder=output_folder)
+            recording = load(pickle_file, base_folder=output_folder)
 
         return recording
 
