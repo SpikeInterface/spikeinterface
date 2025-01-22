@@ -104,7 +104,7 @@ def load(file_or_folder_or_dict, base_folder=None) -> BaseExtractor:
                 raise ValueError(error_msg)
         else:
             # remote case - zarr
-            if str(file_path).endswith(".zarr"):
+            if str(file_path).endswith(".zarr") or str(file_path).endswith(".zarr/"):
                 from .zarrextractors import read_zarr
 
                 extractor = read_zarr(file_path)
