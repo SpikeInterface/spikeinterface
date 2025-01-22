@@ -119,12 +119,15 @@ from sphinx_gallery.sorting import FileNameSortKey
 
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
-    'only_warn_on_example_error': True,
+    # This is the default but including here explicitly. Should build all docs and fail on gallery failures only.
+    # other option would be abort_on_example_error, but this fails on first failure. So we decided against this.
+    'only_warn_on_example_error': False,
     'examples_dirs': ['../examples/tutorials'],
     'gallery_dirs': ['tutorials' ],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
                                        '../examples/tutorials/core',
                                        '../examples/tutorials/extractors',
+                                       '../examples/tutorials/curation',
                                        '../examples/tutorials/qualitymetrics',
                                        '../examples/tutorials/comparison',
                                        '../examples/tutorials/widgets',
