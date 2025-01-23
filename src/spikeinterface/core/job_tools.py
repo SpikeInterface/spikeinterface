@@ -93,7 +93,7 @@ def get_best_job_kwargs():
             max_threads_per_worker = 1
         else:
             # let's have fewer processes with more threads each
-            n_cpu = int(n_cpu / 4)
+            n_jobs = int(n_cpu / 4)
             max_threads_per_worker = 8
 
     return dict(
