@@ -46,45 +46,6 @@ from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
 
 from .motion import correct_motion
 
-pp_name_to_function = {
-    # filter stuff
-    "filter": filter,
-    "bandpass_filter": bandpass_filter,
-    "notch_filter": notch_filter,
-    "highpass_filter": highpass_filter,
-    "gaussian_filter": gaussian_filter,
-    # gain offset stuff
-    "normalize_by_quantile": normalize_by_quantile,
-    "scale": scale,
-    "zscore": zscore,
-    "center": center,
-    # decorrelation stuff
-    "whiten": whiten,
-    # re-reference
-    "common_reference": common_reference,
-    "phase_shift": phase_shift,
-    # misc
-    "rectify": rectify,
-    "clip": clip,
-    "blank_staturation": blank_staturation,
-    "silence_periods": silence_periods,
-    "remove_artifacts": remove_artifacts,
-    "zero_channel_pad": zero_channel_pad,
-    "deepinterpolate": deepinterpolate,
-    "resample": resample,
-    "decimate": decimate,
-    "highpass_spatial_filter": highpass_spatial_filter,
-    "interpolate_bad_channels": interpolate_bad_channels,
-    "depth_order": depth_order,
-    "average_across_direction": average_across_direction,
-    "directional_derivative": directional_derivative,
-    "astype": astype,
-    "unsigned_to_signed": unsigned_to_signed,
-    "unsigned_to_signed": unsigned_to_signed,
-    # motion correction
-    "correct_motion": correct_motion,
-}
-
 pp_function_to_class = {
     # filter stuff
     "filter": FilterRecording,
@@ -119,6 +80,7 @@ pp_function_to_class = {
     "directional_derivative": DirectionalDerivativeRecording,
     "astype": AstypeRecording,
     "unsigned_to_signed": UnsignedToSignedRecording,
+    "correct_motion": correct_motion,
 }
 
 

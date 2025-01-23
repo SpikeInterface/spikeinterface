@@ -3,7 +3,7 @@ import json
 import inspect
 from copy import deepcopy
 from spikeinterface.core.core_tools import is_dict_extractor
-from spikeinterface.preprocessing.preprocessinglist import pp_function_to_class, preprocesser_dict, pp_name_to_function
+from spikeinterface.preprocessing.preprocessinglist import pp_function_to_class, preprocesser_dict
 
 
 class PreprocessingPipeline:
@@ -28,17 +28,17 @@ class PreprocessingPipeline:
 
     """
 
-    def __init__(self, preprocessor_list):
-        for preprocessor in preprocessor_list:
+    def __init__(self, preprocessor_dict):
+        for preprocessor in preprocessor_dict:
             assert _is_genuine_preprocessor(
                 preprocessor
             ), f"'{preprocessor}' is not a preprocessing step in spikeinterface. To see the full list run:\n\t>>> from spikeinterface.preprocessing import pp_function_to_class\n\t>>> print(pp_function_to_class.keys())"
 
-        self.preprocessor_list = preprocessor_list
+        self.preprocessor_dict = preprocessor_dict
 
     def __repr__(self):
         txt = "PreprocessingPipeline: \tRaw Recording \u2192 "
-        for preprocessor in self.preprocessor_list:
+        for preprocessor in self.preprocessor_dict:
             txt += str(preprocessor) + " \u2192 "
         txt += "Preprocessed Recording"
         return txt
@@ -90,9 +90,9 @@ class PreprocessingPipeline:
 
         """
 
-        preprocessor_list = self.preprocessor_list
+        preprocessor_dict = self.preprocessor_dict
 
-        for preprocessor, kwargs in preprocessor_list.items():
+        for preprocessor, kwargs in preprocessor_dict.items():
 
             kwargs.pop("recording", kwargs)
             kwargs.pop("parent_recording", kwargs)
@@ -101,7 +101,7 @@ class PreprocessingPipeline:
             if using_class_name is True:
                 pp_output = preprocesser_dict[preprocessor.split(".")[-1]](recording, **kwargs)
             else:
-                pp_output = pp_name_to_function[preprocessor.split(".")[-1]](recording, **kwargs)
+                pp_output = pp_function_to_class[preprocessor.split(".")[-1]](recording, **kwargs)
 
             if preprocessor == "motion_correct":
                 pp_output = pp_output[0]
@@ -111,7 +111,7 @@ class PreprocessingPipeline:
         return recording
 
 
-def create_preprocessed(recording=None, preprocessor_dict=None):
+def create_preprocessed(recording, preprocessor_dict=None):
     """
     Creates a preprocessed recording by applying the preprocessing steps in
     `preprocessor_dict` to `recording`.
@@ -134,9 +134,9 @@ def create_preprocessed(recording=None, preprocessor_dict=None):
 
     >>> from spikeinterface.preprocessing import create_preprocessed
     >>> from spikeinterface.generation import generate_recording
-    >>> rec = generate_recording()
+    >>> recording = generate_recording()
     >>> preprocessor_dict = {'bandpass_filter': {'freq_max': 3000}, 'common_reference': {}}
-    >>> preprocessed_rec = create_preprocessed(rec, preprocessor_dict)
+    >>> preprocessed_recording = create_preprocessed(recording, preprocessor_dict)
 
 
     """
@@ -205,7 +205,7 @@ def _is_genuine_preprocessor(preprocessor):
     if using_class_name:
         genuine_preprocessor = preprocessor in preprocesser_dict.keys()
     else:
-        genuine_preprocessor = preprocessor in pp_name_to_function.keys()
+        genuine_preprocessor = preprocessor in pp_function_to_class.keys()
 
     return genuine_preprocessor
 
@@ -234,10 +234,10 @@ def _load_pp_from_dict(prov_dict, kwargs_dict):
 def _get_all_kwargs_and_values(my_pipeline):
 
     all_kwargs = {}
-    for preprocessor in my_pipeline.preprocessor_list:
+    for preprocessor in my_pipeline.preprocessor_dict:
 
         preprocessor_name = preprocessor.split(".")[-1]
-        pp_function = pp_name_to_function[preprocessor.split(".")[-1]]
+        pp_function = pp_function_to_class[preprocessor.split(".")[-1]]
         signature = inspect.signature(pp_function)
 
         all_kwargs[preprocessor_name] = {}
@@ -254,7 +254,7 @@ def _get_all_kwargs_and_values(my_pipeline):
                 except:
                     default_value = None
 
-                pipeline_value = my_pipeline.preprocessor_list[preprocessor].get(par_name)
+                pipeline_value = my_pipeline.preprocessor_dict[preprocessor].get(par_name)
 
                 if pipeline_value is None:
                     if default_value != pipeline_value:
