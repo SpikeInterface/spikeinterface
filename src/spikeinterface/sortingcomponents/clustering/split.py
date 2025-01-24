@@ -307,7 +307,7 @@ class LocalFeatureClustering:
                     ax.plot(np.median(flatten_wfs[mask].T, axis=1), color=colors[k], lw=2)
                 ax.set_xlabel("PCA features")
             ymin, ymax = ax.get_ylim()
-            ax.plot([n_pca, n_pca], [ymin, ymax], "k--")
+            ax.plot([n_pca_features, n_pca_features], [ymin, ymax], "k--")
 
             axs[0].set_title(f"{clusterer} level={recursion_level}")
             if not DEBUG:
