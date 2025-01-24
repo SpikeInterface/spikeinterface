@@ -403,8 +403,7 @@ def final_cleaning_circus(
     # analyzer.compute("correlograms", **correlograms_kwargs)
 
     if debug_folder is not None:
-        analyzer.save_as(format='binary_folder', folder=debug_folder)
-
+        analyzer.save_as(format="binary_folder", folder=debug_folder)
 
     presets = ["x_contaminations"] * len(template_diff_thresh)
     steps_params = [
