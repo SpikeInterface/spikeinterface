@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-import shutil
-import pickle
 import warnings
-import tempfile
+import platform
 from pathlib import Path
 from tqdm.auto import tqdm
+
+from concurrent.futures import ProcessPoolExecutor
+import multiprocessing as mp
+from threadpoolctl import threadpool_limits
 
 import numpy as np
 
@@ -314,11 +316,13 @@ class ComputePrincipalComponents(AnalyzerExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
         n_jobs = job_kwargs["n_jobs"]
         progress_bar = job_kwargs["progress_bar"]
+        max_threads_per_worker = job_kwargs["max_threads_per_worker"]
+        mp_context = job_kwargs["mp_context"]
 
         # fit model/models
         # TODO : make parralel  for by_channel_global and concatenated
         if mode == "by_channel_local":
-            pca_models = self._fit_by_channel_local(n_jobs, progress_bar)
+            pca_models = self._fit_by_channel_local(n_jobs, progress_bar, max_threads_per_worker, mp_context)
             for chan_ind, chan_id in enumerate(self.sorting_analyzer.channel_ids):
                 self.data[f"pca_model_{mode}_{chan_id}"] = pca_models[chan_ind]
             pca_model = pca_models
@@ -411,11 +415,15 @@ class ComputePrincipalComponents(AnalyzerExtension):
         )
         processor.run()
 
-    def _fit_by_channel_local(self, n_jobs, progress_bar):
+    def _fit_by_channel_local(self, n_jobs, progress_bar, max_threads_per_worker, mp_context):
         from sklearn.decomposition import IncrementalPCA
-        from concurrent.futures import ProcessPoolExecutor
 
         p = self.params
+
+        if mp_context is not None and platform.system() == "Windows":
+            assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+        elif mp_context == "fork" and platform.system() == "Darwin":
+            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
 
         unit_ids = self.sorting_analyzer.unit_ids
         channel_ids = self.sorting_analyzer.channel_ids
@@ -436,13 +444,18 @@ class ComputePrincipalComponents(AnalyzerExtension):
                     pca = pca_models[chan_ind]
                     pca.partial_fit(wfs[:, :, wf_ind])
             else:
-                # parallel
+                # create list of args to parallelize. For convenience, the max_threads_per_worker is passed
+                # as last argument
                 items = [
-                    (chan_ind, pca_models[chan_ind], wfs[:, :, wf_ind]) for wf_ind, chan_ind in enumerate(channel_inds)
+                    (chan_ind, pca_models[chan_ind], wfs[:, :, wf_ind], max_threads_per_worker)
+                    for wf_ind, chan_ind in enumerate(channel_inds)
                 ]
                 n_jobs = min(n_jobs, len(items))
 
-                with ProcessPoolExecutor(max_workers=n_jobs) as executor:
+                with ProcessPoolExecutor(
+                    max_workers=n_jobs,
+                    mp_context=mp.get_context(mp_context),
+                ) as executor:
                     results = executor.map(_partial_fit_one_channel, items)
                     for chan_ind, pca_model_updated in results:
                         pca_models[chan_ind] = pca_model_updated
@@ -645,10 +658,6 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model):
     worker_ctx = {}
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-
-        recording = load_extractor(recording)
     worker_ctx["recording"] = recording
     worker_ctx["sorting"] = sorting
 
@@ -674,6 +683,12 @@ compute_principal_components = ComputePrincipalComponents.function_factory()
 
 
 def _partial_fit_one_channel(args):
-    chan_ind, pca_model, wf_chan = args
-    pca_model.partial_fit(wf_chan)
-    return chan_ind, pca_model
+    chan_ind, pca_model, wf_chan, max_threads_per_worker = args
+
+    if max_threads_per_worker is None:
+        pca_model.partial_fit(wf_chan)
+        return chan_ind, pca_model
+    else:
+        with threadpool_limits(limits=int(max_threads_per_worker)):
+            pca_model.partial_fit(wf_chan)
+            return chan_ind, pca_model

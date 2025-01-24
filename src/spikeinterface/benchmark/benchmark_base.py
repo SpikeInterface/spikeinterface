@@ -11,7 +11,7 @@ import time
 
 from spikeinterface.core import SortingAnalyzer
 
-from spikeinterface import load_extractor, create_sorting_analyzer, load_sorting_analyzer
+from spikeinterface import load, create_sorting_analyzer, load_sorting_analyzer
 from spikeinterface.widgets import get_some_colors
 
 
@@ -131,7 +131,7 @@ class BenchmarkStudy:
 
         return cls(study_folder)
 
-    def create_benchmark(self):
+    def create_benchmark(self, key):
         raise NotImplementedError
 
     def scan_folder(self):
@@ -150,13 +150,13 @@ class BenchmarkStudy:
             analyzer = load_sorting_analyzer(folder)
             self.analyzers[key] = analyzer
             # the sorting is in memory here we take the saved one because comparisons need to pickle it later
-            sorting = load_extractor(analyzer.folder / "sorting")
+            sorting = load(analyzer.folder / "sorting")
             self.datasets[key] = analyzer.recording, sorting
 
         # for rec_file in (self.folder / "datasets" / "recordings").glob("*.pickle"):
         #     key = rec_file.stem
-        #     rec = load_extractor(rec_file)
-        #     gt_sorting = load_extractor(self.folder / f"datasets" / "gt_sortings" / key)
+        #     rec = load(rec_file)
+        #     gt_sorting = load(self.folder / f"datasets" / "gt_sortings" / key)
         #     self.datasets[key] = (rec, gt_sorting)
 
         with open(self.folder / "cases.pickle", "rb") as f:
@@ -208,10 +208,11 @@ class BenchmarkStudy:
         for key in case_keys:
 
             result_folder = self.folder / "results" / self.key_to_str(key)
+            sorter_folder = self.folder / "sorters" / self.key_to_str(key)
 
             if keep and result_folder.exists():
                 continue
-            elif not keep and result_folder.exists():
+            elif not keep and (result_folder.exists() or sorter_folder.exists()):
                 self.remove_benchmark(key)
             job_keys.append(key)
 
@@ -258,25 +259,9 @@ class BenchmarkStudy:
         return df
 
     def plot_run_times(self, case_keys=None):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-        run_times = self.get_run_times(case_keys=case_keys)
+        from .benchmark_plot_tools import plot_run_times
 
-        colors = self.get_colors()
-        import matplotlib.pyplot as plt
-
-        fig, ax = plt.subplots()
-        labels = []
-        for i, key in enumerate(case_keys):
-            labels.append(self.cases[key]["label"])
-            rt = run_times.at[key, "run_times"]
-            ax.bar(i, rt, width=0.8, color=colors[key])
-        ax.set_xticks(np.arange(len(case_keys)))
-        ax.set_xticklabels(labels, rotation=45.0)
-        return fig
-
-        # ax = run_times.plot(kind="bar")
-        # return ax.figure
+        return plot_run_times(self, case_keys=case_keys)
 
     def compute_results(self, case_keys=None, verbose=False, **result_params):
         if case_keys is None:
@@ -443,7 +428,7 @@ class Benchmark:
             elif format == "sorting":
                 from spikeinterface.core import load_extractor
 
-                result[k] = load_extractor(folder / k)
+                result[k] = load(folder / k)
             elif format == "Motion":
                 from spikeinterface.sortingcomponents.motion import Motion
 
@@ -462,10 +447,3 @@ class Benchmark:
     def compute_result(self):
         # run becnhmark result
         raise NotImplementedError
-
-
-def _simpleaxis(ax):
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.get_xaxis().tick_bottom()
-    ax.get_yaxis().tick_left()

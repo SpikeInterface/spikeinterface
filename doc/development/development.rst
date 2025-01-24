@@ -192,6 +192,7 @@ Miscelleaneous Stylistic Conventions
 #. Avoid using abbreviations in variable names (e.g. use :code:`recording` instead of :code:`rec`). It is especially important to avoid single letter variables.
 #. Use index as singular and indices for plural following the NumPy convention. Avoid idx or indexes. Plus, id and ids are reserved for identifiers (i.e. channel_ids)
 #. We use file_path and folder_path (instead of file_name and folder_name) for clarity.
+#. For the titles of documentation pages, only capitalize the first letter of the first word and classes or software packages. For example, "How to use a SortingAnalyzer in SpikeInterface".
 #. For creating headers to divide sections of code we use the following convention (see issue `#3019 <https://github.com/SpikeInterface/spikeinterface/issues/3019>`_):
 
 
@@ -211,6 +212,25 @@ We use Sphinx to build the documentation. To build the documentation locally, yo
     sphinx-build -b html doc ./doc/_build/
 
 This will build the documentation in the :code:`doc/_build/html` folder. You can open the :code:`index.html` file in your browser to see the documentation.
+
+Adding new documentation
+------------------------
+
+Documentation can be added as a
+`sphinx-gallery <https://sphinx-gallery.github.io/stable/index.html>`_
+python file ('tutorials')
+or a
+`sphinx rst <https://sphinx-tutorial.readthedocs.io/step-1/>`_
+file (all other sections).
+
+To add a new tutorial, add your ``.py`` file to ``spikeinterface/examples``.
+Then, update the ``spikeinterface/doc/tutorials_custom_index.rst`` file
+to make a new card linking to the page and an optional image. See
+``tutorials_custom_index.rst`` header for more information.
+
+For other sections, write your documentation in ``.rst`` format and add
+the page to the appropriate ``index.rst`` file found in the relevant
+folder (e.g. ``how_to/index.rst``).
 
 How to run code coverage locally
 --------------------------------

@@ -10,6 +10,7 @@ from spikeinterface.core import (
     load_sorting_analyzer,
     get_available_analyzer_extensions,
     get_default_analyzer_extension_params,
+    get_default_zarr_compressor,
 )
 from spikeinterface.core.sortinganalyzer import (
     register_result_extension,
@@ -30,6 +31,14 @@ def get_dataset():
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
+
+    # TODO: the tests or the sorting analyzer make assumptions about the ids being integers
+    # So keeping this the way it was
+    integer_channel_ids = [int(id) for id in recording.get_channel_ids()]
+    integer_unit_ids = [int(id) for id in sorting.get_unit_ids()]
+
+    recording = recording.rename_channels(new_channel_ids=integer_channel_ids)
+    sorting = sorting.rename_units(new_unit_ids=integer_unit_ids)
     return recording, sorting
 
 
@@ -99,15 +108,24 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     recording, sorting = dataset
 
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
-    if folder.exists():
-        shutil.rmtree(folder)
 
+    default_compressor = get_default_zarr_compressor()
     sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
+        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None, overwrite=True
     )
     sorting_analyzer.compute(["random_spikes", "templates"])
     sorting_analyzer = load_sorting_analyzer(folder, format="auto")
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+
+    # check that compression is applied
+    assert (
+        sorting_analyzer._get_zarr_root()["extensions"]["random_spikes"]["random_spikes_indices"].compressor.codec_id
+        == default_compressor.codec_id
+    )
+    assert (
+        sorting_analyzer._get_zarr_root()["extensions"]["templates"]["average"].compressor.codec_id
+        == default_compressor.codec_id
+    )
 
     # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
     # this bug requires that we have an info.json file so we calculate templates above
@@ -117,11 +135,45 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     assert len(remove_units_sorting_analyer.unit_ids) == len(sorting_analyzer.unit_ids) - 1
     assert 1 not in remove_units_sorting_analyer.unit_ids
 
-    folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
-    if folder.exists():
-        shutil.rmtree(folder)
-    sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None, return_scaled=False
+    # test no compression
+    sorting_analyzer_no_compression = create_sorting_analyzer(
+        sorting,
+        recording,
+        format="zarr",
+        folder=folder,
+        sparse=False,
+        sparsity=None,
+        return_scaled=False,
+        overwrite=True,
+        backend_options={"saving_options": {"compressor": None}},
+    )
+    print(sorting_analyzer_no_compression._backend_options)
+    sorting_analyzer_no_compression.compute(["random_spikes", "templates"])
+    assert (
+        sorting_analyzer_no_compression._get_zarr_root()["extensions"]["random_spikes"][
+            "random_spikes_indices"
+        ].compressor
+        is None
+    )
+    assert sorting_analyzer_no_compression._get_zarr_root()["extensions"]["templates"]["average"].compressor is None
+
+    # test a different compressor
+    from numcodecs import LZMA
+
+    lzma_compressor = LZMA()
+    folder = tmp_path / "test_SortingAnalyzer_zarr_lzma.zarr"
+    sorting_analyzer_lzma = sorting_analyzer_no_compression.save_as(
+        format="zarr", folder=folder, backend_options={"saving_options": {"compressor": lzma_compressor}}
+    )
+    assert (
+        sorting_analyzer_lzma._get_zarr_root()["extensions"]["random_spikes"][
+            "random_spikes_indices"
+        ].compressor.codec_id
+        == LZMA.codec_id
+    )
+    assert (
+        sorting_analyzer_lzma._get_zarr_root()["extensions"]["templates"]["average"].compressor.codec_id
+        == LZMA.codec_id
     )
 
 
@@ -326,7 +378,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer5 = sorting_analyzer.merge_units(
-            merge_unit_groups=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, mode="hard"
+            merge_unit_groups=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, merging_mode="hard"
         )
 
     # test compute with extension-specific params
