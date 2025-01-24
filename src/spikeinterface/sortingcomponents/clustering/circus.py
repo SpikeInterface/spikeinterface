@@ -20,6 +20,7 @@ from .clustering_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
+from spikeinterface.sortingcomponents.waveforms.hanning_filter import HanningFilter
 from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.sortingcomponents.tools import remove_empty_templates
@@ -107,6 +108,12 @@ class CircusClustering:
         valid = np.argmax(np.abs(wfs), axis=1) == nbefore
         wfs = wfs[valid]
 
+        # Perform Hanning filtering
+        hanning_before = np.hanning(2 * nbefore)
+        hanning_after = np.hanning(2 * nafter)
+        hanning = np.concatenate((hanning_before[:nbefore], hanning_after[nafter:]))
+        wfs *= hanning
+
         from sklearn.decomposition import TruncatedSVD
 
         tsvd = TruncatedSVD(params["n_svd"])
@@ -140,11 +147,13 @@ class CircusClustering:
             radius_um=radius_um,
         )
 
-        node2 = TemporalPCAProjection(
-            recording, parents=[node0, node1], return_output=True, model_folder_path=model_folder
+        node2 = HanningFilter(recording, parents=[node0, node1], return_output=False)
+
+        node3 = TemporalPCAProjection(
+            recording, parents=[node0, node2], return_output=True, model_folder_path=model_folder
         )
 
-        pipeline_nodes = [node0, node1, node2]
+        pipeline_nodes = [node0, node1, node2, node3]
 
         if len(params["recursive_kwargs"]) == 0:
             from sklearn.decomposition import PCA

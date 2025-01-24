@@ -66,7 +66,7 @@ def split_clusters(
     n_jobs = job_kwargs["n_jobs"]
     mp_context = job_kwargs.get("mp_context", None)
     progress_bar = job_kwargs["progress_bar"]
-    max_threads_per_process = job_kwargs.get("max_threads_per_process", 1)
+    max_threads_per_worker = job_kwargs.get("max_threads_per_worker", 1)
 
     original_labels = peak_labels
     peak_labels = peak_labels.copy()
@@ -78,7 +78,7 @@ def split_clusters(
         max_workers=n_jobs,
         initializer=split_worker_init,
         mp_context=get_context(method=mp_context),
-        initargs=(recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process),
+        initargs=(recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_worker),
     ) as pool:
         labels_set = np.setdiff1d(peak_labels, [-1])
         current_max_label = np.max(labels_set) + 1
@@ -158,7 +158,7 @@ global _ctx
 
 
 def split_worker_init(
-    recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process
+    recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_worker
 ):
     global _ctx
     _ctx = {}
@@ -169,14 +169,14 @@ def split_worker_init(
     _ctx["method"] = method
     _ctx["method_kwargs"] = method_kwargs
     _ctx["method_class"] = split_methods_dict[method]
-    _ctx["max_threads_per_process"] = max_threads_per_process
+    _ctx["max_threads_per_worker"] = max_threads_per_worker
     _ctx["features"] = FeaturesLoader.from_dict_or_folder(features_dict_or_folder)
     _ctx["peaks"] = _ctx["features"]["peaks"]
 
 
 def split_function_wrapper(peak_indices, recursion_level, debug_folder):
     global _ctx
-    with threadpool_limits(limits=_ctx["max_threads_per_process"]):
+    with threadpool_limits(limits=_ctx["max_threads_per_worker"]):
         is_split, local_labels = _ctx["method_class"].split(
             peak_indices, _ctx["peaks"], _ctx["features"], recursion_level, debug_folder, **_ctx["method_kwargs"]
         )
