@@ -243,88 +243,78 @@ class LocalFeatureClustering:
             return False, None
 
         aligned_wfs = aligned_wfs[kept, :, :]
-
-        if not isinstance(n_pca_features, np.ndarray):
-            n_pca_features = np.array([n_pca_features])
-
-        n_pca_features = n_pca_features[n_pca_features <= aligned_wfs.shape[1]]
         flatten_features = aligned_wfs.reshape(aligned_wfs.shape[0], -1)
 
         is_split = False
 
-        for n_pca in n_pca_features:
+        if flatten_features.shape[1] > n_pca_features:
+            from sklearn.decomposition import PCA
 
-            if flatten_features.shape[1] > n_pca:
-                from sklearn.decomposition import PCA
+            # from sklearn.decomposition import TruncatedSVD
+            # tsvd = TruncatedSVD(n_pca_features)
+            tsvd = PCA(n_pca_features, whiten=True)
+            final_features = tsvd.fit_transform(flatten_features)
+            del tsvd
+        else:
+            final_features = flatten_features
 
-                # from sklearn.decomposition import TruncatedSVD
-                # tsvd = TruncatedSVD(n_pca_features)
-                tsvd = PCA(n_pca, whiten=True)
-                final_features = tsvd.fit_transform(flatten_features)
-                del tsvd
-            else:
-                final_features = flatten_features
+        if clusterer == "hdbscan":
+            from hdbscan import HDBSCAN
 
-            if clusterer == "hdbscan":
-                from hdbscan import HDBSCAN
-
-                clust = HDBSCAN(**clusterer_kwargs)
-                clust.fit(final_features)
-                possible_labels = clust.labels_
+            clust = HDBSCAN(**clusterer_kwargs)
+            clust.fit(final_features)
+            possible_labels = clust.labels_
+            is_split = np.setdiff1d(possible_labels, [-1]).size > 1
+            del clust
+        elif clusterer == "isocut5":
+            min_cluster_size = clusterer_kwargs["min_cluster_size"]
+            dipscore, cutpoint = isocut5(final_features[:, 0])
+            possible_labels = np.zeros(final_features.shape[0])
+            if dipscore > 1.5:
+                mask = final_features[:, 0] > cutpoint
+                if np.sum(mask) > min_cluster_size and np.sum(~mask):
+                    possible_labels[mask] = 1
                 is_split = np.setdiff1d(possible_labels, [-1]).size > 1
-                del clust
-            elif clusterer == "isocut5":
-                min_cluster_size = clusterer_kwargs["min_cluster_size"]
-                dipscore, cutpoint = isocut5(final_features[:, 0])
-                possible_labels = np.zeros(final_features.shape[0])
-                if dipscore > 1.5:
-                    mask = final_features[:, 0] > cutpoint
-                    if np.sum(mask) > min_cluster_size and np.sum(~mask):
-                        possible_labels[mask] = 1
-                    is_split = np.setdiff1d(possible_labels, [-1]).size > 1
-                else:
-                    is_split = False
             else:
-                raise ValueError(f"wrong clusterer {clusterer}. Possible options are 'hdbscan' or 'isocut5'.")
+                is_split = False
+        else:
+            raise ValueError(f"wrong clusterer {clusterer}. Possible options are 'hdbscan' or 'isocut5'.")
 
-            DEBUG = False  # only for Sam or dirty hacking
+        DEBUG = False  # only for Sam or dirty hacking
 
-            if debug_folder is not None or DEBUG:
-                import matplotlib.pyplot as plt
+        if debug_folder is not None or DEBUG:
+            import matplotlib.pyplot as plt
 
-                labels_set = np.setdiff1d(possible_labels, [-1])
-                colors = plt.colormaps["tab10"].resampled(len(labels_set))
-                colors = {k: colors(i) for i, k in enumerate(labels_set)}
-                colors[-1] = "k"
-                fig, axs = plt.subplots(nrows=2)
+            labels_set = np.setdiff1d(possible_labels, [-1])
+            colors = plt.colormaps["tab10"].resampled(len(labels_set))
+            colors = {k: colors(i) for i, k in enumerate(labels_set)}
+            colors[-1] = "k"
+            fig, axs = plt.subplots(nrows=2)
 
-                flatten_wfs = aligned_wfs.swapaxes(1, 2).reshape(aligned_wfs.shape[0], -1)
+            flatten_wfs = aligned_wfs.swapaxes(1, 2).reshape(aligned_wfs.shape[0], -1)
 
-                sl = slice(None, None, 100)
-                for k in np.unique(possible_labels):
-                    mask = possible_labels == k
-                    ax = axs[0]
-                    ax.scatter(final_features[:, 0][mask], final_features[:, 1][mask], s=5, color=colors[k])
-                    if k > -1:
-                        centroid = final_features[:, :2][mask].mean(axis=0)
-                        ax.text(centroid[0], centroid[1], f"Label {k}", fontsize=10, color="k")
-                    ax = axs[1]
-                    ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
-                    if k > -1:
-                        ax.plot(np.median(flatten_wfs[mask].T, axis=1), color=colors[k], lw=2)
-                    ax.set_xlabel("PCA features")
-                ymin, ymax = ax.get_ylim()
-                ax.plot([n_pca, n_pca], [ymin, ymax], "k--")
+            sl = slice(None, None, 100)
+            for k in np.unique(possible_labels):
+                mask = possible_labels == k
+                ax = axs[0]
+                ax.scatter(final_features[:, 0][mask], final_features[:, 1][mask], s=5, color=colors[k])
+                if k > -1:
+                    centroid = final_features[:, :2][mask].mean(axis=0)
+                    ax.text(centroid[0], centroid[1], f"Label {k}", fontsize=10, color="k")
+                ax = axs[1]
+                ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
+                if k > -1:
+                    ax.plot(np.median(flatten_wfs[mask].T, axis=1), color=colors[k], lw=2)
+                ax.set_xlabel("PCA features")
+            ymin, ymax = ax.get_ylim()
+            ax.plot([n_pca, n_pca], [ymin, ymax], "k--")
 
-                axs[0].set_title(f"{clusterer} level={recursion_level}")
-                if not DEBUG:
-                    fig.savefig(str(debug_folder) + ".png")
-                    plt.close(fig)
-                else:
-                    plt.show()
-
-            if is_split:
-                break
+            axs[0].set_title(f"{clusterer} level={recursion_level}")
+            if not DEBUG:
+                fig.savefig(str(debug_folder) + ".png")
+                plt.close(fig)
+            else:
+                plt.show()
 
         if not is_split:
             return is_split, None
