@@ -41,22 +41,9 @@ def test_benchmark_merging(create_cache_folder):
     if study_folder.exists():
         shutil.rmtree(study_folder)
     study = MergingStudy.create(study_folder, datasets=datasets, cases=cases)
-    print(study)
-
-    # this study needs analyzer
-    # study.create_sorting_analyzer_gt(**job_kwargs)
     study.compute_metrics()
-
-    study = MergingStudy(study_folder)
-
-    # run and result
     study.run(**job_kwargs)
     study.compute_results()
-
-    # load study to check persistency
-    study = MergingStudy(study_folder)
-    print(study)
-
     # plots
     # study.plot_performances_vs_snr()
     study.plot_agreements()
@@ -71,4 +58,5 @@ def test_benchmark_merging(create_cache_folder):
 
 
 if __name__ == "__main__":
-    test_benchmark_merging()
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks"
+    test_benchmark_merging(cache_folder)
