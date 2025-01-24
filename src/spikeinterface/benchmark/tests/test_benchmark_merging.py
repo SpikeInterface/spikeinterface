@@ -15,7 +15,7 @@ def test_benchmark_merging(create_cache_folder):
     cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="1s")
 
-    recording, gt_sorting, gt_analyzer = make_dataset()
+    recording, gt_sorting, gt_analyzer = make_dataset(job_kwargs)
 
     # create study
     study_folder = cache_folder / "study_clustering"
