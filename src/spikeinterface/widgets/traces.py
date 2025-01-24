@@ -145,7 +145,7 @@ class TracesWidget(BaseWidget):
         fs = rec0.get_sampling_frequency()
         if time_range is None:
             time_range = (t_start, t_start + 1.0)
-        time_range = np.array(time_range)
+        time_range = np.array(time_range, dtype=np.float64)
         if time_range[1] > t_end:
             warnings.warn(
                 "You have selected a time after the end of the segment. The range will be clipped to " f"{t_end}"
