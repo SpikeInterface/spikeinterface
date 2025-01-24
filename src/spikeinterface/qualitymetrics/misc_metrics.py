@@ -16,6 +16,7 @@ import math
 import numpy as np
 import warnings
 
+from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from ..postprocessing import correlogram_for_one_segment
 from ..core import SortingAnalyzer, get_noise_levels
 from ..core.template_tools import (
@@ -1470,6 +1471,9 @@ def compute_sd_ratio(
     import numba
     from ..curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
 
+    kwargs, job_kwargs = split_job_kwargs(kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
+
     sorting = sorting_analyzer.sorting
 
     censored_period = int(round(censored_period_ms * 1e-3 * sorting_analyzer.sampling_frequency))
@@ -1496,7 +1500,7 @@ def compute_sd_ratio(
         return {unit_id: np.nan for unit_id in unit_ids}
 
     noise_levels = get_noise_levels(
-        sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std"
+        sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std", **job_kwargs
     )
     best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
     n_spikes = sorting.count_num_spikes_per_unit()
