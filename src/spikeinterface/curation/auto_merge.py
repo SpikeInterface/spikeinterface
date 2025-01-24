@@ -963,8 +963,12 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float) -> int:
     peaks = peaks[keep]
 
     if peaks.size == 0:
-        # If none of the peaks crossed the threshold, redo with threshold/2.
-        return get_unit_adaptive_window(auto_corr, threshold / 2)
+        # If threshold is too small and no peaks, then the problem is not feasible
+        if threshold < 1e-5:
+            return 1
+        else:
+            # If none of the peaks crossed the threshold, redo with threshold/2.
+            return get_unit_adaptive_window(auto_corr, threshold / 2)
 
     # keep the last peak (nearest to center)
     win_size = auto_corr.shape[0] // 2 - peaks[-1]

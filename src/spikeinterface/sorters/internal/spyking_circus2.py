@@ -386,7 +386,6 @@ def final_cleaning_circus(
     templates,
     similarity_kwargs={"method": "l2", "support": "union", "max_lag_ms": 0.1},
     apply_merge_kwargs={"sparsity_overlap": 0.1, "censor_ms": 3.0},
-    # correlograms_kwargs={},
     max_distance_um=50,
     template_diff_thresh=np.arange(0.05, 0.5, 0.05),
     debug_folder=None,
@@ -400,7 +399,6 @@ def final_cleaning_circus(
     analyzer = create_sorting_analyzer_with_existing_templates(sorting, recording, templates)
     analyzer.compute("unit_locations", method="monopolar_triangulation")
     analyzer.compute("template_similarity", **similarity_kwargs)
-    # analyzer.compute("correlograms", **correlograms_kwargs)
 
     if debug_folder is not None:
         analyzer.save_as(format="binary_folder", folder=debug_folder)
