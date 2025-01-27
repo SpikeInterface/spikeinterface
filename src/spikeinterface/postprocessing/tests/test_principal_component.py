@@ -27,7 +27,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         )
         sorting_analyzer.compute("principal_components", mode="by_channel_local", n_jobs=2)
         sorting_analyzer.compute(
-            "principal_components", mode="by_channel_local", n_jobs=2, max_threads_per_process=4, mp_context="spawn"
+            "principal_components", mode="by_channel_local", n_jobs=2, max_threads_per_worker=4, mp_context="spawn"
         )
 
     def test_mode_concatenated(self):
