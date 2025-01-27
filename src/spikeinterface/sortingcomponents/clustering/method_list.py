@@ -17,7 +17,7 @@ clustering_methods = {
     "position_ptp_scaled": PositionPTPScaledClustering,
     "position_and_pca": PositionAndPCAClustering,
     "sliding_hdbscan": SlidingHdbscanClustering,
-    #"sliding_nn": SlidingNNClustering,
+    # "sliding_nn": SlidingNNClustering,
     "position_and_features": PositionAndFeaturesClustering,
     "random_projections": RandomProjectionClustering,
     "circus": CircusClustering,
