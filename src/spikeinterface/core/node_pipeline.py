@@ -663,7 +663,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
         )
         # compute the graph
         pipeline_outputs = {}
-        for i, node in enumerate(nodes):
+        for node in nodes:
             node_parents = node.parents if node.parents else list()
             node_input_args = tuple()
             for parent in node_parents:
