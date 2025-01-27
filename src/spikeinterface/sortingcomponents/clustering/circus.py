@@ -283,7 +283,7 @@ class CircusClustering:
             probe=recording.get_probe(),
             is_scaled=False,
         )
-        
+
         if params["debug"]:
             templates_folder = tmp_folder / "dense_templates"
             templates.to_zarr(folder_path=templates_folder)
