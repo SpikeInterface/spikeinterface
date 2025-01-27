@@ -20,6 +20,7 @@ from .clustering_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
+from spikeinterface.sortingcomponents.waveforms.hanning_filter import HanningFilter
 from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.sortingcomponents.tools import remove_empty_templates
@@ -40,7 +41,12 @@ class CircusClustering:
     """
 
     _default_params = {
-        "hdbscan_kwargs": {"min_cluster_size": 10, "allow_single_cluster": True, "min_samples": 5},
+        "hdbscan_kwargs": {
+            "min_cluster_size": 20,
+            "cluster_selection_epsilon": 0.5,
+            "cluster_selection_method": "leaf",
+            "allow_single_cluster": True,
+        },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
         "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
@@ -50,7 +56,7 @@ class CircusClustering:
             "returns_split_count": True,
         },
         "radius_um": 100,
-        "n_svd": [5, 2],
+        "n_svd": 5,
         "few_waveforms": None,
         "ms_before": 0.5,
         "ms_after": 0.5,
@@ -59,6 +65,7 @@ class CircusClustering:
         "noise_levels": None,
         "tmp_folder": None,
         "verbose": True,
+        "debug": False,
     }
 
     @classmethod
@@ -101,9 +108,15 @@ class CircusClustering:
         valid = np.argmax(np.abs(wfs), axis=1) == nbefore
         wfs = wfs[valid]
 
+        # Perform Hanning filtering
+        hanning_before = np.hanning(2 * nbefore)
+        hanning_after = np.hanning(2 * nafter)
+        hanning = np.concatenate((hanning_before[:nbefore], hanning_after[nafter:]))
+        wfs *= hanning
+
         from sklearn.decomposition import TruncatedSVD
 
-        tsvd = TruncatedSVD(params["n_svd"][0])
+        tsvd = TruncatedSVD(params["n_svd"])
         tsvd.fit(wfs)
 
         model_folder = tmp_folder / "tsvd_model"
@@ -134,11 +147,13 @@ class CircusClustering:
             radius_um=radius_um,
         )
 
-        node2 = TemporalPCAProjection(
-            recording, parents=[node0, node1], return_output=True, model_folder_path=model_folder
+        node2 = HanningFilter(recording, parents=[node0, node1], return_output=False)
+
+        node3 = TemporalPCAProjection(
+            recording, parents=[node0, node2], return_output=True, model_folder_path=model_folder
         )
 
-        pipeline_nodes = [node0, node1, node2]
+        pipeline_nodes = [node0, node1, node2, node3]
 
         if len(params["recursive_kwargs"]) == 0:
             from sklearn.decomposition import PCA
@@ -157,8 +172,8 @@ class CircusClustering:
                 sub_data = all_pc_data[mask]
                 sub_data = sub_data.reshape(len(sub_data), -1)
 
-                if all_pc_data.shape[1] > params["n_svd"][1]:
-                    tsvd = PCA(params["n_svd"][1], whiten=True)
+                if all_pc_data.shape[1] > params["n_svd"]:
+                    tsvd = PCA(params["n_svd"], whiten=True)
                 else:
                     tsvd = PCA(all_pc_data.shape[1], whiten=True)
 
@@ -198,7 +213,12 @@ class CircusClustering:
             original_labels = peaks["channel_index"]
             from spikeinterface.sortingcomponents.clustering.split import split_clusters
 
-            min_size = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 10)
+            min_size = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 20)
+
+            if params["debug"]:
+                debug_folder = tmp_folder / "split"
+            else:
+                debug_folder = None
 
             peak_labels, _ = split_clusters(
                 original_labels,
@@ -212,9 +232,9 @@ class CircusClustering:
                     waveforms_sparse_mask=sparse_mask,
                     min_size_split=min_size,
                     clusterer_kwargs=d["hdbscan_kwargs"],
-                    n_pca_features=params["n_svd"][1],
-                    scale_n_pca_by_depth=True,
+                    n_pca_features=5,
                 ),
+                debug_folder=debug_folder,
                 **params["recursive_kwargs"],
                 **job_kwargs,
             )
