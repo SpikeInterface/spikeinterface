@@ -152,7 +152,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         return_output=True,
         parents=None,
         templates=None,
-        amplitudes=[0.6, np.inf],
+        amplitudes=[0.7, np.inf],
         stop_criteria="max_failures",
         max_failures=5,
         omp_min_sps=0.1,

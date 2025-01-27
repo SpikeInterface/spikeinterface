@@ -25,7 +25,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 75},
-        "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
+        "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 1},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2, "margin_ms": 10},
         "whitening": {"mode": "local", "regularize": False},
         "detection": {"peak_sign": "neg", "detect_threshold": 5},
@@ -123,6 +123,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
         radius_um = params["general"].get("radius_um", 75)
+        peak_sign = params["detection"].get("peak_sign", "neg")
         exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after))
 
         ## First, we are filtering the data
@@ -244,7 +245,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             ## the fly from the snippets
             clustering_params = params["clustering"].copy()
             clustering_params["waveforms"] = {}
-            clustering_params["sparsity"] = params["sparsity"]
+            sparsity_kwargs = params["sparsity"].copy()
+            if "peak_sign" not in sparsity_kwargs:
+                sparsity_kwargs["peak_sign"] = peak_sign
+
+            clustering_params["sparsity"] = sparsity_kwargs
             clustering_params["radius_um"] = radius_um
             clustering_params["waveforms"]["ms_before"] = ms_before
             clustering_params["waveforms"]["ms_after"] = ms_after
@@ -300,7 +305,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 is_scaled=False,
             )
 
-            sparsity = compute_sparsity(templates, noise_levels, **params["sparsity"])
+            sparsity = compute_sparsity(templates, noise_levels, **sparsity_kwargs)
             templates = templates.to_sparse(sparsity)
             templates = remove_empty_templates(templates)
 
