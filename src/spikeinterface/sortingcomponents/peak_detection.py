@@ -57,6 +57,7 @@ def detect_peaks(
     folder=None,
     names=None,
     skip_after_n_peaks=None,
+    recording_slices=None,
     **kwargs,
 ):
     """Peak detection based on threshold crossing in term of k x MAD.
@@ -83,6 +84,10 @@ def detect_peaks(
     skip_after_n_peaks : None | int
         Skip the computation after n_peaks.
         This is not an exact because internally this skip is done per worker in average.
+    recording_slices : None | list[tuple]
+        Optionaly give a list of slices to run the pipeline only on some chunks of the recording.
+        It must be a list of (segment_index, frame_start, frame_stop).
+        If None (default), the function iterates over the entire duration of the recording.
 
     {method_doc}
     {job_doc}
@@ -113,7 +118,11 @@ def detect_peaks(
         squeeze_output = True
     else:
         squeeze_output = False
-        job_name += f"  + {len(pipeline_nodes)} nodes"
+        if len(pipeline_nodes) == 1:
+            plural = ""
+        else:
+            plural = "s"
+        job_name += f" + {len(pipeline_nodes)} node{plural}"
 
         # because node are modified inplace (insert parent) they need to copy incase
         # the same pipeline is run several times
@@ -135,6 +144,7 @@ def detect_peaks(
         folder=folder,
         names=names,
         skip_after_n_peaks=skip_after_n_peaks,
+        recording_slices=recording_slices,
     )
     return outs
 
@@ -671,7 +681,6 @@ class DetectPeakMatchedFiltering(PeakDetector):
         medians = medians[:, None]
         noise_levels = np.median(np.abs(conv_random_data - medians), axis=1) / 0.6744897501960817
         self.abs_thresholds = noise_levels * detect_threshold
-
         self._dtype = np.dtype(base_peak_dtype + [("z", "float32")])
 
     def get_dtype(self):
@@ -721,8 +730,8 @@ class DetectPeakMatchedFiltering(PeakDetector):
             return (np.zeros(0, dtype=self._dtype),)
 
         peak_sample_ind += self.exclude_sweep_size + self.conv_margin + self.nbefore
-
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
+
         local_peaks = np.zeros(peak_sample_ind.size, dtype=self._dtype)
         local_peaks["sample_index"] = peak_sample_ind
         local_peaks["channel_index"] = peak_chan_ind
