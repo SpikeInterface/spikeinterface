@@ -323,6 +323,8 @@ def create_sorting_analyzer_with_existing_templates(sorting, recording, template
     sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
     sa.extensions["templates"].data["average"] = templates_array
     sa.extensions["templates"].data["std"] = np.zeros(templates_array.shape, dtype=np.float32)
+    sa.extensions["templates"].run_info["run_completed"] = True
+    sa.extensions["templates"].run_info["runtime_s"] = 0
     return sa
 
 
