@@ -32,7 +32,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2, "margin_ms": 10},
         "whitening": {"mode": "local", "regularize": False},
-        "detection": {"peak_sign": "neg", "detect_threshold": 4},
+        "detection": {"peak_sign": "neg", "detect_threshold": 5},
         "selection": {
             "method": "uniform",
             "n_peaks_per_channel": 5000,
@@ -134,7 +134,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
         radius_um = params["general"].get("radius_um", 75)
-        exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after) / 2)
+        exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after))
 
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
@@ -265,6 +265,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_params["ms_after"] = ms_after
             clustering_params["verbose"] = verbose
             clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
+            clustering_params["debug"] = params["debug"]
             clustering_params["noise_threshold"] = detection_params.get("detect_threshold", 4)
 
             legacy = clustering_params.get("legacy", True)
