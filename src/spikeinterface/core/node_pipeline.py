@@ -621,7 +621,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     retriever_node = None
     peak_slice_by_retriever = {}
     for retriever in retrievers:
-        peak_slice = i0, i1 = retriever_node.get_peak_slice(segment_index, start_frame, end_frame, max_margin)
+        peak_slice = i0, i1 = retriever.get_peak_slice(segment_index, start_frame, end_frame, max_margin)
         peak_slice_by_retriever[retriever] = peak_slice
 
     if len(peak_slice_by_retriever) > 0:
