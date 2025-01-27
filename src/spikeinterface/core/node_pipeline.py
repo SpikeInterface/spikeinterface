@@ -191,7 +191,7 @@ class SpikeRetriever(PeakSource):
         self._dtype = spike_peak_dtype
 
         self.include_spikes_in_margin = include_spikes_in_margin
-        if include_spikes_in_margin is not None:
+        if include_spikes_in_margin:
             self._dtype = spike_peak_dtype + [("in_margin", "bool")]
 
         self.peaks = sorting_to_peaks(sorting, extremum_channel_inds, self._dtype)
@@ -228,12 +228,6 @@ class SpikeRetriever(PeakSource):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        # if self.include_spikes_in_margin:
-        #     i0, i1 = np.searchsorted(
-        #         peaks_in_segment["sample_index"], [start_frame - max_margin, end_frame + max_margin]
-        #     )
-        # else:
-        #     i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         i0, i1 = peak_slice
 
         local_peaks = peaks_in_segment[i0:i1]
@@ -452,6 +446,21 @@ def find_parent_of_type(list_of_parents, parent_type, unique=True):
         return None
 
 
+def find_parents_of_type(list_of_parents, parent_type):
+    if list_of_parents is None:
+        return None
+
+    parents = []
+    for parent in list_of_parents:
+        if isinstance(parent, parent_type):
+            parents.append(parent)
+
+    if len(parents) > 0:
+        return parents
+    else:
+        return None
+
+
 def check_graph(nodes):
     """
     Check that node list is orderd in a good (parents are before children)
@@ -471,7 +480,7 @@ def check_graph(nodes):
             assert parent in nodes, f"Node {node} has parent {parent} that was not passed in nodes"
             assert (
                 nodes.index(parent) < i
-            ), f"Node are ordered incorrectly: {node} before {parent} in the pipeline definition."
+            ), f"Node are ordered incorrectly: {node} before {parent} in the pipeline definition."
 
     return nodes
 
@@ -607,12 +616,17 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     skip_after_n_peaks_per_worker = worker_ctx["skip_after_n_peaks_per_worker"]
 
     recording_segment = recording._recording_segments[segment_index]
-    node0 = nodes[0]
+    retrievers = find_parents_of_type(nodes, (SpikeRetriever, PeakRetriever))
+    # get peak slices once for all retrievers
+    retriever_node = None
+    peak_slice_by_retriever = {}
+    for retriever in retrievers:
+        peak_slice = i0, i1 = retriever_node.get_peak_slice(segment_index, start_frame, end_frame, max_margin)
+        peak_slice_by_retriever[retriever] = peak_slice
 
-    if isinstance(node0, (SpikeRetriever, PeakRetriever)):
-        # in this case PeakSource could have no peaks and so no need to load traces just skip
-        peak_slice = i0, i1 = node0.get_peak_slice(segment_index, start_frame, end_frame, max_margin)
-        load_trace_and_compute = i0 < i1
+    if len(peak_slice_by_retriever) > 0:
+        # in this case the retrievers could have no peaks, so we test if any spikes are in the chunk
+        load_trace_and_compute = any(i0 < i1 for i0, i1 in peak_slice_by_retriever.values())
     else:
         # PeakDetector always need traces
         load_trace_and_compute = True
@@ -627,7 +641,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
         )
         # compute the graph
         pipeline_outputs = {}
-        for node in nodes:
+        for i, node in enumerate(nodes):
             node_parents = node.parents if node.parents else list()
             node_input_args = tuple()
             for parent in node_parents:
@@ -646,7 +660,8 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
                 node_output = node.compute(trace_detection, start_frame, end_frame, segment_index, max_margin)
                 # set sample index to local
                 node_output[0]["sample_index"] += extra_margin
-            elif isinstance(node, PeakSource):
+            elif isinstance(node, (PeakRetriever, SpikeRetriever)):
+                peak_slice = peak_slice_by_retriever[node]
                 node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, peak_slice)
             else:
                 # TODO later when in master: change the signature of all nodes (or maybe not!)
