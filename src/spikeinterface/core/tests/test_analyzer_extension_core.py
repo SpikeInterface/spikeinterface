@@ -2,6 +2,8 @@ import pytest
 
 import shutil
 
+from pathlib import Path
+
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.core import Templates
@@ -250,16 +252,17 @@ def test_compute_several(create_cache_folder):
 
 
 if __name__ == "__main__":
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "core"
+    # test_ComputeWaveforms(format="memory", sparse=True, create_cache_folder=cache_folder)
+    # test_ComputeWaveforms(format="memory", sparse=False, create_cache_folder=cache_folder)
+    # test_ComputeWaveforms(format="binary_folder", sparse=True, create_cache_folder=cache_folder)
+    # test_ComputeWaveforms(format="binary_folder", sparse=False, create_cache_folder=cache_folder)
+    # test_ComputeWaveforms(format="zarr", sparse=True, create_cache_folder=cache_folder)
+    # test_ComputeWaveforms(format="zarr", sparse=False, create_cache_folder=cache_folder)
+    # test_ComputeRandomSpikes(format="memory", sparse=True, create_cache_folder=cache_folder)
+    test_ComputeRandomSpikes(format="binary_folder", sparse=False, create_cache_folder=cache_folder)
+    test_ComputeTemplates(format="memory", sparse=True, create_cache_folder=cache_folder)
+    test_ComputeNoiseLevels(format="memory", sparse=False, create_cache_folder=cache_folder)
 
-    test_ComputeWaveforms(format="memory", sparse=True)
-    test_ComputeWaveforms(format="memory", sparse=False)
-    test_ComputeWaveforms(format="binary_folder", sparse=True)
-    test_ComputeWaveforms(format="binary_folder", sparse=False)
-    test_ComputeWaveforms(format="zarr", sparse=True)
-    test_ComputeWaveforms(format="zarr", sparse=False)
-    test_ComputeRandomSpikes(format="memory", sparse=True)
-    test_ComputeTemplates(format="memory", sparse=True)
-    test_ComputeNoiseLevels(format="memory", sparse=False)
-
-    test_get_children_dependencies()
-    test_delete_on_recompute()
+    # test_get_children_dependencies()
+    # test_delete_on_recompute(cache_folder)

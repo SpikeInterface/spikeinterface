@@ -50,7 +50,15 @@ TODO:
 
 
 def detect_peaks(
-    recording, method="locally_exclusive", pipeline_nodes=None, gather_mode="memory", folder=None, names=None, **kwargs
+    recording,
+    method="locally_exclusive",
+    pipeline_nodes=None,
+    gather_mode="memory",
+    folder=None,
+    names=None,
+    skip_after_n_peaks=None,
+    recording_slices=None,
+    **kwargs,
 ):
     """Peak detection based on threshold crossing in term of k x MAD.
 
@@ -73,6 +81,13 @@ def detect_peaks(
         If gather_mode is "npy", the folder where the files are created.
     names : list
         List of strings with file stems associated with returns.
+    skip_after_n_peaks : None | int
+        Skip the computation after n_peaks.
+        This is not an exact because internally this skip is done per worker in average.
+    recording_slices : None | list[tuple]
+        Optionaly give a list of slices to run the pipeline only on some chunks of the recording.
+        It must be a list of (segment_index, frame_start, frame_stop).
+        If None (default), the function iterates over the entire duration of the recording.
 
     {method_doc}
     {job_doc}
@@ -103,7 +118,11 @@ def detect_peaks(
         squeeze_output = True
     else:
         squeeze_output = False
-        job_name += f"  + {len(pipeline_nodes)} nodes"
+        if len(pipeline_nodes) == 1:
+            plural = ""
+        else:
+            plural = "s"
+        job_name += f" + {len(pipeline_nodes)} node{plural}"
 
         # because node are modified inplace (insert parent) they need to copy incase
         # the same pipeline is run several times
@@ -124,6 +143,8 @@ def detect_peaks(
         squeeze_output=squeeze_output,
         folder=folder,
         names=names,
+        skip_after_n_peaks=skip_after_n_peaks,
+        recording_slices=recording_slices,
     )
     return outs
 
@@ -592,13 +613,13 @@ class DetectPeakMatchedFiltering(PeakDetector):
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
-    radius_um: float
+    radius_um : float
         The radius to use to select neighbour channels for locally exclusive detection.
-    prototype: array
+    prototype : array
         The canonical waveform of action potentials
-    rank : int (default 1)
-        The rank for SVD convolution of spatiotemporal templates with the traces
-    weight_method: dict
+    ms_before : float
+        The time in ms before the maximial value of the absolute prototype
+    weight_method : dict
         Parameter that should be provided to the get_convolution_weights() function
         in order to know how to estimate the positions. One argument is mode that could
         be either gaussian_2d (KS like) or exponential_3d (default)
@@ -614,12 +635,12 @@ class DetectPeakMatchedFiltering(PeakDetector):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        rank=1,
         noise_levels=None,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
     ):
         PeakDetector.__init__(self, recording, return_output=True)
+        from scipy.sparse import csr_matrix
 
         if not HAVE_NUMBA:
             raise ModuleNotFoundError('matched_filtering" needs numba which is not installed')
@@ -653,14 +674,13 @@ class DetectPeakMatchedFiltering(PeakDetector):
             self.num_templates *= 2
 
         self.weights = self.weights.reshape(self.num_templates * self.num_z_factors, -1)
-
+        self.weights = csr_matrix(self.weights)
         random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
         conv_random_data = self.get_convolved_traces(random_data)
         medians = np.median(conv_random_data, axis=1)
         medians = medians[:, None]
         noise_levels = np.median(np.abs(conv_random_data - medians), axis=1) / 0.6744897501960817
         self.abs_thresholds = noise_levels * detect_threshold
-
         self._dtype = np.dtype(base_peak_dtype + [("z", "float32")])
 
     def get_dtype(self):
@@ -710,8 +730,8 @@ class DetectPeakMatchedFiltering(PeakDetector):
             return (np.zeros(0, dtype=self._dtype),)
 
         peak_sample_ind += self.exclude_sweep_size + self.conv_margin + self.nbefore
-
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
+
         local_peaks = np.zeros(peak_sample_ind.size, dtype=self._dtype)
         local_peaks["sample_index"] = peak_sample_ind
         local_peaks["channel_index"] = peak_chan_ind
@@ -723,10 +743,10 @@ class DetectPeakMatchedFiltering(PeakDetector):
         return (local_peaks,)
 
     def get_convolved_traces(self, traces):
-        import scipy.signal
+        from scipy.signal import oaconvolve
 
-        tmp = scipy.signal.oaconvolve(self.prototype[None, :], traces.T, axes=1, mode="valid")
-        scalar_products = np.dot(self.weights, tmp)
+        tmp = oaconvolve(self.prototype[None, :], traces.T, axes=1, mode="valid")
+        scalar_products = self.weights.dot(tmp)
         return scalar_products
 
 
