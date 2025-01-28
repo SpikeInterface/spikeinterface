@@ -438,7 +438,7 @@ def find_parent_of_type(list_of_parents, parent_type):
     ----------
     list_of_parents : list of PipelineNode
         List of parents to search through.
-    parent_type : type
+    parent_type : type | tuple of types
         The type of parent to search for.
 
     Returns
@@ -503,7 +503,7 @@ def check_graph(nodes):
             assert parent in nodes, f"Node {node} has parent {parent} that was not passed in nodes"
             assert (
                 nodes.index(parent) < i
-            ), f"Node are ordered incorrectly: {node} before {parent} in the pipeline definition."
+            ), f"Nodes are ordered incorrectly: {node} before {parent} in the pipeline definition."
 
     return nodes
 
