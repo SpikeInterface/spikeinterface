@@ -38,7 +38,9 @@ class PeakDetectionBenchmark(Benchmark):
     def compute_result(self, **result_params):
         result_params, job_kwargs = split_job_kwargs(result_params)
         job_kwargs = fix_job_kwargs(job_kwargs)
-        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False, **job_kwargs)
+        sorting_analyzer = create_sorting_analyzer(
+            self.gt_sorting, self.recording, format="memory", sparse=False, **job_kwargs
+        )
         sorting_analyzer.compute("random_spikes")
         sorting_analyzer.compute("templates", **job_kwargs)
         sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
