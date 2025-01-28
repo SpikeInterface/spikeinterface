@@ -20,6 +20,7 @@ from .quality_metrics import QualityMetricsWidget
 from .rasters import RasterWidget
 from .sorting_summary import SortingSummaryWidget
 from .spike_locations import SpikeLocationsWidget
+from .spike_locations_by_time import LocationsWidget
 from .spikes_on_traces import SpikesOnTracesWidget
 from .template_metrics import TemplateMetricsWidget
 from .template_similarity import TemplateSimilarityWidget
@@ -46,6 +47,7 @@ widget_list = [
     CrossCorrelogramsWidget,
     DriftRasterMapWidget,
     ISIDistributionWidget,
+    LocationsWidget,
     MotionWidget,
     MotionInfoWidget,
     MultiCompGlobalAgreementWidget,
@@ -121,6 +123,7 @@ plot_comparison_collision_by_similarity = ComparisonCollisionBySimilarityWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_drift_raster_map = DriftRasterMapWidget
 plot_isi_distribution = ISIDistributionWidget
+plot_locations = LocationsWidget
 plot_motion = MotionWidget
 plot_motion_info = MotionInfoWidget
 plot_multicomparison_agreement = MultiCompGlobalAgreementWidget
