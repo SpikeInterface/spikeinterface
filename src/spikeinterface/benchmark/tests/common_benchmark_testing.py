@@ -46,7 +46,7 @@ def make_dataset(job_kwargs={}):
     gt_analyzer.compute("random_spikes", method="uniform", max_spikes_per_unit=500)
     # analyzer.compute("waveforms")
     gt_analyzer.compute("templates", **job_kwargs)
-    gt_analyzer.compute("noise_levels")
+    gt_analyzer.compute("noise_levels", **job_kwargs)
 
     return recording, gt_sorting, gt_analyzer
 

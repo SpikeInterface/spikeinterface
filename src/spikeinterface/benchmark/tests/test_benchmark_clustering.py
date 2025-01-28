@@ -59,7 +59,7 @@ def test_benchmark_clustering(create_cache_folder):
 
     # run and result
     study.run(**job_kwargs)
-    study.compute_results()
+    study.compute_results(**job_kwargs)
 
     # load study to check persistency
     study = ClusteringStudy(study_folder)
