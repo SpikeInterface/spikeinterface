@@ -23,9 +23,6 @@ class LocationsWidget(BaseWidget):
         The segment index (or None if mono-segment)
     max_spikes_per_unit : int or None, default: None
         Number of max spikes per unit to display. Use None for all spikes
-    hide_unit_selector : bool, default: False
-        If True the unit selector is not displayed
-        (sortingview backend)
     plot_histogram : bool, default: False
         If True, an histogram of the locations is plotted on the right axis
         (matplotlib backend)
@@ -45,7 +42,6 @@ class LocationsWidget(BaseWidget):
         unit_colors=None,
         segment_index=None,
         max_spikes_per_unit=None,
-        hide_unit_selector=False,
         plot_histograms=False,
         bins=None,
         plot_legend=True,
@@ -114,7 +110,6 @@ class LocationsWidget(BaseWidget):
             total_duration=total_duration,
             plot_histograms=plot_histograms,
             bins=bins,
-            hide_unit_selector=hide_unit_selector,
             plot_legend=plot_legend,
         )
 
