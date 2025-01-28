@@ -49,7 +49,9 @@ class ClusteringBenchmark(Benchmark):
         gt_unit_locations = self.gt_sorting.get_property("gt_unit_locations")
         if gt_unit_locations is None:
             print("'gt_unit_locations' is not a property of the sorting so compute it")
-            gt_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=True, **job_kwargs)
+            gt_analyzer = create_sorting_analyzer(
+                self.gt_sorting, self.recording, format="memory", sparse=True, **job_kwargs
+            )
             gt_analyzer.compute("random_spikes")
             gt_analyzer.compute("templates", **job_kwargs)
             ext = gt_analyzer.compute("unit_locations", method="monopolar_triangulation")
