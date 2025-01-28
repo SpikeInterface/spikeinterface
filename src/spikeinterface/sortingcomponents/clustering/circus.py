@@ -44,7 +44,7 @@ class CircusClustering:
         "hdbscan_kwargs": {
             "min_cluster_size": 20,
             "min_samples": 1,
-            #"cluster_selection_epsilon": 0.1,
+            # "cluster_selection_epsilon": 0.1,
             "cluster_selection_method": "eom",
             "allow_single_cluster": True,
             "core_dist_n_jobs": 1,

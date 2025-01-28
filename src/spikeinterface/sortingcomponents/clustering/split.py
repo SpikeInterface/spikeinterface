@@ -124,7 +124,7 @@ def split_clusters(
                     # stop reccursivity when recursive_depth is reach
                     extra_ball = recursion_level < recursive_depth
                 else:
-                    # always reccursive 
+                    # always reccursive
                     extra_ball = True
 
                 if extra_ball:
@@ -212,7 +212,7 @@ class LocalFeatureClustering:
         n_pca_features=2,
         minimum_overlap_ratio=0.25,
         projection_mode="pca",
-        percentile_variance_explained=95
+        percentile_variance_explained=95,
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
@@ -252,11 +252,13 @@ class LocalFeatureClustering:
             nb_dimensions = min(flatten_features.shape[0], flatten_features.shape[1])
             if projection_mode == "pca":
                 from sklearn.decomposition import PCA
+
                 tsvd = PCA(nb_dimensions, whiten=True)
             elif projection_mode == "tsvd":
                 from sklearn.decomposition import TruncatedSVD
+
                 tsvd = TruncatedSVD(nb_dimensions)
-            
+
             final_features = tsvd.fit_transform(flatten_features)
             thr = np.percentile(tsvd.explained_variance_ratio_, percentile_variance_explained)
             indices = tsvd.explained_variance_ratio_ > thr
@@ -266,9 +268,11 @@ class LocalFeatureClustering:
             if flatten_features.shape[1] > n_pca_features:
                 if projection_mode == "pca":
                     from sklearn.decomposition import PCA
+
                     tsvd = PCA(n_pca_features, whiten=True)
                 elif projection_mode == "tsvd":
                     from sklearn.decomposition import TruncatedSVD
+
                     tsvd = TruncatedSVD(n_pca_features)
 
                 final_features = tsvd.fit_transform(flatten_features)
@@ -323,14 +327,12 @@ class LocalFeatureClustering:
                 if k > -1:
                     centroid = final_features[:, :2][mask].mean(axis=0)
                     ax.text(centroid[0], centroid[1], f"Label {k}", fontsize=10, color="k")
-                
+
                 ax = axs[1]
                 ax.plot(flatten_wfs[mask].T, color=colors[k], alpha=0.1)
                 if k > -1:
                     ax.plot(np.median(flatten_wfs[mask].T, axis=1), color=colors[k], lw=2)
                 ax.set_xlabel("PCA features")
-
-                
 
                 ax = axs[3]
                 ax.plot(final_features[mask].T, color=colors[k], alpha=0.1)
@@ -341,7 +343,7 @@ class LocalFeatureClustering:
             if tsvd is not None:
                 ax = axs[2]
                 sorted_components = np.argsort(tsvd.explained_variance_ratio_)[::-1]
-                ax.plot(tsvd.explained_variance_ratio_[sorted_components], c='k')
+                ax.plot(tsvd.explained_variance_ratio_[sorted_components], c="k")
                 del tsvd
 
             axs[0].set_title(f"{clusterer} level={recursion_level}")
