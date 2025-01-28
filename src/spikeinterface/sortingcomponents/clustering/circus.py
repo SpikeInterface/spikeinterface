@@ -46,7 +46,7 @@ class CircusClustering:
             "cluster_selection_epsilon": 0.5,
             "cluster_selection_method": "leaf",
             "allow_single_cluster": True,
-            "core_dist_n_jobs" : 1
+            "core_dist_n_jobs": 1,
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
