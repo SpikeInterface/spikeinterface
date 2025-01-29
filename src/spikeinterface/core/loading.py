@@ -138,7 +138,7 @@ def load(
                 raise ValueError(error_msg)
         else:
             # remote case - currently, only zarr is supported
-            if str(file_path).endswith(".zarr") or str(file_path).endswith(".zarr/"):
+            if str(file_path).endswith((".zarr", ".zarr/")):
                 # here we can have a zarr folder for extractor or SortingAnalyzer
                 # since the data is remote, we need to try and see if it is an extractor or a SortingAnalyzer
                 try:
