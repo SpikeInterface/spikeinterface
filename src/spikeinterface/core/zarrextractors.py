@@ -9,22 +9,10 @@ from probeinterface import ProbeGroup
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment, minimum_spike_dtype
-from .core_tools import define_function_from_class, check_json
+from .core_tools import define_function_from_class, check_json, anononymous_zarr_open
 from .job_tools import split_job_kwargs
 from .recording_tools import determine_cast_unsigned
 from .core_tools import is_path_remote
-
-
-def anononymous_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: dict | None = None):
-    if is_path_remote(str(folder_path)) and storage_options is None:
-        try:
-            root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
-        except Exception as e:
-            storage_options = {"anon": True}
-            root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
-    else:
-        root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
-    return root
 
 
 class ZarrRecordingExtractor(BaseRecording):

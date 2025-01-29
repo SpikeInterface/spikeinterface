@@ -149,12 +149,15 @@ def load(
                     )
                     si_object = read_zarr(file_path, storage_options=storage_options)
                 except Exception as e:
-                    # if it is not an extractor, it is a SortingAnalyzer
-                    from .sortinganalyzer import load_sorting_analyzer
+                    try:
+                        # if it is not an extractor, it is a SortingAnalyzer
+                        from .sortinganalyzer import load_sorting_analyzer
 
-                    si_object = load_sorting_analyzer(
-                        file_path, load_extensions=load_extensions, backend_options=backend_options
-                    )
+                        si_object = load_sorting_analyzer(
+                            file_path, load_extensions=load_extensions, backend_options=backend_options
+                        )
+                    except Exception as e:
+                        raise ValueError(f"Could not load the remote zarr folder at {file_path}")
             else:
                 raise NotImplementedError(
                     "Only zarr format is supported for remote files and you should provide a path to a .zarr "

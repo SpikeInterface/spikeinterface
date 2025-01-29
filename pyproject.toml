@@ -123,6 +123,7 @@ test_core = [
     "pytest",
     "pytest-dependency",
     "psutil",
+    "s3fs", # for streaming tests
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
