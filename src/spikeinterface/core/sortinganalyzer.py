@@ -24,7 +24,6 @@ import spikeinterface
 from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 
-from .loading import load
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
 from .core_tools import check_json, retrieve_importing_provenance, is_path_remote, clean_zarr_folder_name
 from .sorting_tools import generate_unit_ids_for_merge_group, _get_ids_after_merging
@@ -479,6 +478,8 @@ class SortingAnalyzer:
 
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None, backend_options=None):
+        from .loading import load
+
         folder = Path(folder)
         assert folder.is_dir(), f"This folder does not exists {folder}"
 
@@ -659,6 +660,7 @@ class SortingAnalyzer:
     @classmethod
     def load_from_zarr(cls, folder, recording=None, backend_options=None):
         import zarr
+        from .loading import load
 
         backend_options = {} if backend_options is None else backend_options
         storage_options = backend_options.get("storage_options", {})
@@ -1182,6 +1184,8 @@ class SortingAnalyzer:
         """
         Get the original sorting if possible otherwise return None
         """
+        from .loading import load
+
         if self.format == "memory":
             # the orginal sorting provenance is not keps in that case
             sorting_provenance = None
