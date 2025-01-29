@@ -335,8 +335,12 @@ class LocalFeatureClustering:
                 ax.set_xlabel("PCA features")
 
                 ax = axs[3]
-                ax.plot(final_features[mask].T, color=colors[k], alpha=0.1)
-                if k > -1:
+                if n_pca_features == 1:
+                    bins = np.linspace(final_features[:, 0].min(), final_features[:, 0].max(), 100)
+                    ax.hist(final_features[mask, 0], bins, color=colors[k], alpha=0.1)
+                else:
+                    ax.plot(final_features[mask].T, color=colors[k], alpha=0.1)
+                if k > -1 and n_pca_features > 1:
                     ax.plot(np.median(final_features[mask].T, axis=1), color=colors[k], lw=2)
                 ax.set_xlabel("Projected PCA features")
 

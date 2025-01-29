@@ -42,8 +42,7 @@ class CircusClustering:
 
     _default_params = {
         "hdbscan_kwargs": {
-            "min_cluster_size": 20,
-            "min_samples": 1,
+            "min_cluster_size": 50,
             "cluster_selection_method": "eom",
             "allow_single_cluster": True,
             "core_dist_n_jobs": 1,
@@ -218,7 +217,7 @@ class CircusClustering:
             split_kwargs = params["split_kwargs"].copy()
             split_kwargs["neighbours_mask"] = neighbours_mask
             split_kwargs["waveforms_sparse_mask"] = sparse_mask
-            split_kwargs["min_size_split"] = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 20)
+            split_kwargs["min_size_split"] = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 50)
 
             if params["debug"]:
                 debug_folder = tmp_folder / "split"
