@@ -212,7 +212,7 @@ class LocalFeatureClustering:
         n_pca_features=2,
         minimum_overlap_ratio=0.25,
         projection_mode="pca",
-        percentile_variance_explained=95,
+        percentile_variance_explained=None,
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 

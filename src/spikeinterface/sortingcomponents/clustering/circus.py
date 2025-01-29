@@ -44,7 +44,6 @@ class CircusClustering:
         "hdbscan_kwargs": {
             "min_cluster_size": 20,
             "min_samples": 1,
-            # "cluster_selection_epsilon": 0.1,
             "cluster_selection_method": "eom",
             "allow_single_cluster": True,
             "core_dist_n_jobs": 1,
@@ -57,6 +56,8 @@ class CircusClustering:
             "recursive_depth": 3,
             "returns_split_count": True,
         },
+        "split_kwargs": {"projection_mode" : "tsvd",
+                         "percentile_variance_explained" : 95},
         "radius_um": 100,
         "n_svd": 5,
         "few_waveforms": None,
@@ -215,7 +216,10 @@ class CircusClustering:
             original_labels = peaks["channel_index"]
             from spikeinterface.sortingcomponents.clustering.split import split_clusters
 
-            min_size = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 20)
+            split_kwargs = params["split_kwargs"].copy()
+            split_kwargs["neighbours_mask"] = neighbours_mask
+            split_kwargs["waveforms_sparse_mask"] = sparse_mask
+            split_kwargs["min_size_split"] = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 20)
 
             if params["debug"]:
                 debug_folder = tmp_folder / "split"
@@ -227,15 +231,7 @@ class CircusClustering:
                 recording,
                 features_folder,
                 method="local_feature_clustering",
-                method_kwargs=dict(
-                    clusterer="hdbscan",
-                    feature_name="sparse_tsvd",
-                    neighbours_mask=neighbours_mask,
-                    waveforms_sparse_mask=sparse_mask,
-                    min_size_split=min_size,
-                    clusterer_kwargs=d["hdbscan_kwargs"],
-                    n_pca_features=2,
-                ),
+                method_kwargs=split_kwargs,
                 debug_folder=debug_folder,
                 **params["recursive_kwargs"],
                 **job_kwargs,
