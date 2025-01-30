@@ -245,6 +245,7 @@ class PeakDetectionStudy(BenchmarkStudy):
 
                 if metric == "cosine":
                     import sklearn.metrics
+
                     distances[i] = sklearn.metrics.pairwise.cosine_similarity(a[None, :], b[None, :])[0, 0]
                 else:
                     distances[i] = sklearn.metrics.pairwise_distances(a[None, :], b[None, :], metric)[0, 0]
