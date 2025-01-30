@@ -596,12 +596,12 @@ def ensure_time_bins(time_bin_centers_s=None, time_bin_edges_s=None):
     -------
     time_bin_centers_s, time_bin_edges_s
     """
-    
+
     if isinstance(time_bin_centers_s, np.ndarray):
-            time_bin_centers_s = [time_bin_centers_s]
-    
+        time_bin_centers_s = [time_bin_centers_s]
+
     if isinstance(time_bin_edges_s, np.ndarray):
-            time_bin_edges_s = [time_bin_edges_s]
+        time_bin_edges_s = [time_bin_edges_s]
 
     if time_bin_centers_s is None and time_bin_edges_s is None:
         raise ValueError("Need at least one of time_bin_centers_s or time_bin_edges_s.")
@@ -613,13 +613,17 @@ def ensure_time_bins(time_bin_centers_s=None, time_bin_edges_s=None):
             time_bin_centers_s += [0.5 * (time_bin_edges_s[segment_index][1:] + time_bin_edges_s[segment_index][:-1])]
 
     if time_bin_edges_s is None:
-        
+
         time_bin_edges_s = []
         for segment_index in range(len(time_bin_centers_s)):
-            time_bin_edges_s += [np.empty(time_bin_centers_s[segment_index].shape[0] + 1, dtype=time_bin_centers_s[segment_index].dtype)]
+            time_bin_edges_s += [
+                np.empty(time_bin_centers_s[segment_index].shape[0] + 1, dtype=time_bin_centers_s[segment_index].dtype)
+            ]
             time_bin_edges_s[-1][[0, -1]] = time_bin_centers_s[segment_index][[0, -1]]
             if time_bin_centers_s[segment_index].size > 2:
-                time_bin_edges_s[-1][1:-1] = 0.5 * (time_bin_centers_s[segment_index][1:] + time_bin_centers_s[segment_index][:-1])
+                time_bin_edges_s[-1][1:-1] = 0.5 * (
+                    time_bin_centers_s[segment_index][1:] + time_bin_centers_s[segment_index][:-1]
+                )
 
     return time_bin_centers_s, time_bin_edges_s
 
