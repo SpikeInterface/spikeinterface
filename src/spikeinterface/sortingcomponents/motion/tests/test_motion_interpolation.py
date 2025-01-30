@@ -10,18 +10,26 @@ from spikeinterface.sortingcomponents.motion.motion_interpolation import (
     interpolate_motion_on_traces,
 )
 from spikeinterface.sortingcomponents.tests.common import make_dataset
-
+from spikeinterface.core import generate_ground_truth_recording
 
 def make_fake_motion(rec):
     # make a fake motion object
-    duration = rec.get_total_duration()
-    locs = rec.get_channel_locations()
-    temporal_bins = np.arange(0.5, duration - 0.49, 0.5)
-    spatial_bins = np.arange(locs[:, 1].min(), locs[:, 1].max(), 100)
-    displacement = np.zeros((temporal_bins.size, spatial_bins.size))
-    displacement[:, :] = np.linspace(-30, 30, temporal_bins.size)[:, None]
 
-    motion = Motion([displacement], [temporal_bins], spatial_bins, direction="y")
+    locs = rec.get_channel_locations()
+    spatial_bins = np.arange(locs[:, 1].min(), locs[:, 1].max(), 100)
+
+    displacement = []
+    temporal_bins = []
+    for segment_index in range(rec.get_num_segments()):
+        duration = rec.get_duration(segment_index=segment_index)
+        seg_time_bins = np.arange(0.5, duration - 0.49, 0.5)
+        seg_disp = np.zeros((seg_time_bins.size, spatial_bins.size))
+        seg_disp[:, :] = np.linspace(-30, 30, seg_time_bins.size)[:, None]
+        
+        temporal_bins.append(seg_time_bins)
+        displacement.append(seg_disp)
+
+    motion = Motion(displacement, temporal_bins, spatial_bins, direction="y")
 
     return motion
 
@@ -176,7 +184,27 @@ def test_cross_band_interpolation():
 
 
 def test_InterpolateMotionRecording():
-    rec, sorting = make_dataset()
+    # rec, sorting = make_dataset()
+
+    # 2 segments
+    rec, sorting = generate_ground_truth_recording(
+        durations=[30.0],
+        sampling_frequency=30000.0,
+        num_channels=32,
+        num_units=10,
+        generate_probe_kwargs=dict(
+            num_columns=2,
+            xpitch=20,
+            ypitch=20,
+            contact_shapes="circle",
+            contact_shape_params={"radius": 6},
+        ),
+        generate_sorting_kwargs=dict(firing_rates=6.0, refractory_period_ms=4.0),
+        noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
+        seed=2205,
+    )
+
+
     motion = make_fake_motion(rec)
 
     rec2 = InterpolateMotionRecording(rec, motion, border_mode="force_extrapolate")
@@ -187,14 +215,18 @@ def test_InterpolateMotionRecording():
 
     rec2 = InterpolateMotionRecording(rec, motion, border_mode="remove_channels")
     assert rec2.channel_ids.size == 24
-    for ch_id in (0, 1, 14, 15, 16, 17, 30, 31):
+    for ch_id in ("0", "1", "14", "15", "16", "17", "30", "31"):
         assert ch_id not in rec2.channel_ids
 
     traces = rec2.get_traces(segment_index=0, start_frame=0, end_frame=30000)
     assert traces.shape == (30000, 24)
 
-    traces = rec2.get_traces(segment_index=0, start_frame=0, end_frame=30000, channel_ids=[3, 4])
+    traces = rec2.get_traces(segment_index=0, start_frame=0, end_frame=30000, channel_ids=["3", "4"])
     assert traces.shape == (30000, 2)
+
+    # test dump.load when multi segments
+    rec2.dump("rec_motion_interp.pickle")
+    rec3 = sc.load("rec_motion_interp.pickle")
 
     # import matplotlib.pyplot as plt
     # import spikeinterface.widgets as sw
@@ -207,7 +239,7 @@ def test_InterpolateMotionRecording():
 
 if __name__ == "__main__":
     # test_correct_motion_on_peaks()
-    test_interpolate_motion_on_traces()
+    # test_interpolate_motion_on_traces()
     # test_interpolation_simple()
-    # test_InterpolateMotionRecording()
-    test_cross_band_interpolation()
+    test_InterpolateMotionRecording()
+    # test_cross_band_interpolation()

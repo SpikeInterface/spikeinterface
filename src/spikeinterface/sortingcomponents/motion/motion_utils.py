@@ -587,10 +587,14 @@ def ensure_time_bins(time_bin_centers_s=None, time_bin_edges_s=None):
     Going from centers to edges is done by taking midpoints and padding with the
     left and rightmost centers.
 
+    To handle multi segment, this function is working both:
+      * array/array input
+      * list[array]/list[array] input
+
     Parameters
     ----------
-    time_bin_centers_s : None or np.array
-    time_bin_edges_s : None or np.array
+    time_bin_centers_s : None or np.array or list[np.array]
+    time_bin_edges_s : None or np.array or list[np.array]
 
     Returns
     -------
@@ -600,16 +604,33 @@ def ensure_time_bins(time_bin_centers_s=None, time_bin_edges_s=None):
         raise ValueError("Need at least one of time_bin_centers_s or time_bin_edges_s.")
 
     if time_bin_centers_s is None:
-        assert time_bin_edges_s.ndim == 1 and time_bin_edges_s.size >= 2
-        time_bin_centers_s = 0.5 * (time_bin_edges_s[1:] + time_bin_edges_s[:-1])
+        if isinstance(time_bin_edges_s, list):
+            # multi segment cas
+            time_bin_centers_s = []
+            for be in time_bin_edges_s:
+                bc, _ = ensure_time_bins(time_bin_centers_s=None, time_bin_edges_s=be)
+                time_bin_centers_s.append(bc)
+        else:
+            # simple segment
+            assert time_bin_edges_s.ndim == 1 and time_bin_edges_s.size >= 2
+            time_bin_centers_s = 0.5 * (time_bin_edges_s[1:] + time_bin_edges_s[:-1])
 
     if time_bin_edges_s is None:
-        time_bin_edges_s = np.empty(time_bin_centers_s.shape[0] + 1, dtype=time_bin_centers_s.dtype)
-        time_bin_edges_s[[0, -1]] = time_bin_centers_s[[0, -1]]
-        if time_bin_centers_s.size > 2:
-            time_bin_edges_s[1:-1] = 0.5 * (time_bin_centers_s[1:] + time_bin_centers_s[:-1])
+        if isinstance(time_bin_centers_s, list):
+            # multi segment cas
+            time_bin_edges_s = []
+            for bc in time_bin_centers_s:
+                _, be = ensure_time_bins(time_bin_centers_s=bc, time_bin_edges_s=None)
+                time_bin_edges_s.append(be)
+        else:
+            # simple segment
+            time_bin_edges_s = np.empty(time_bin_centers_s.shape[0] + 1, dtype=time_bin_centers_s.dtype)
+            time_bin_edges_s[[0, -1]] = time_bin_centers_s[[0, -1]]
+            if time_bin_centers_s.size > 2:
+                time_bin_edges_s[1:-1] = 0.5 * (time_bin_centers_s[1:] + time_bin_centers_s[:-1])
 
     return time_bin_centers_s, time_bin_edges_s
+
 
 
 def ensure_time_bin_edges(time_bin_centers_s=None, time_bin_edges_s=None):
