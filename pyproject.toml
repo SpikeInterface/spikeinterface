@@ -150,7 +150,7 @@ test = [
     "pytest-dependency",
     "pytest-cov",
     "psutil",
-
+    "pytest-mock",
     "huggingface_hub",
 
     # preprocessing

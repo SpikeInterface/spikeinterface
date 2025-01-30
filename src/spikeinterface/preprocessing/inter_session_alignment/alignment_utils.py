@@ -3,9 +3,7 @@ import time
 from spikeinterface import BaseRecording
 import numpy as np
 
-from spikeinterface.preprocessing import center
 from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_histogram
-from scipy.optimize import minimize
 from scipy.ndimage import gaussian_filter
 from spikeinterface.sortingcomponents.motion.iterative_template import kriging_kernel
 from packaging.version import Version
@@ -83,7 +81,7 @@ def get_2d_activity_histogram(
         activity_histogram *= scaler
 
     if log_scale:
-        activity_histogram = np.log10(1 + activity_histogram)  # TODO: make_2d_motion_histogram uses log2
+        activity_histogram = np.log2(1 + activity_histogram)  # TODO: make_2d_motion_histogram uses log2
 
     temporal_bin_centers = get_bin_centers(temporal_bin_edges)
     spatial_bin_centers = get_bin_centers(spatial_bin_edges)
@@ -318,11 +316,11 @@ def compute_histogram_crosscorrelation(
 
             # Smooth the cross-correlations across the bins
             if smoothing_sigma_bin:
-                xcorr_matrix = gaussian_filter(xcorr_matrix, smoothing_sigma_bin, axes=1)
+                xcorr_matrix = gaussian_filter(xcorr_matrix, sigma=smoothing_sigma_bin, axes=1)
 
             # Smooth the cross-correlations across the windows
             if num_windows > 1 and smoothing_sigma_window:
-                xcorr_matrix = gaussian_filter(xcorr_matrix, smoothing_sigma_window, axes=0)
+                xcorr_matrix = gaussian_filter(xcorr_matrix, sigma=smoothing_sigma_window, axes=0)
 
             # Upsample the cross-correlation
             if interpolate:
@@ -333,9 +331,9 @@ def compute_histogram_crosscorrelation(
                 K = kriging_kernel(
                     np.c_[np.ones_like(shifts_array), shifts_array],
                     np.c_[np.ones_like(shifts_upsampled), shifts_upsampled],
-                    kriging_sigma,
-                    kriging_p,
-                    kriging_d,
+                    sigma=kriging_sigma,
+                    p=kriging_p,
+                    d=kriging_d,
                 )
 
                 xcorr_matrix = np.matmul(xcorr_matrix, K, axes=[(-2, -1), (-2, -1), (-2, -1)])
