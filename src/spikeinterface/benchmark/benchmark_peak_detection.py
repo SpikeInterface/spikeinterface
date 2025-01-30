@@ -94,7 +94,8 @@ class PeakDetectionBenchmark(Benchmark):
         sorting_analyzer = create_sorting_analyzer(
             self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False, **job_kwargs
         )
-        sorting_analyzer.compute({"random_spikes": {}, "templates": job_kwargs})
+        sorting_analyzer.compute("random_spikes")
+        sorting_analyzer.compute("templates", **job_kwargs)
 
         self.result["templates"] = sorting_analyzer.get_extension("templates").get_data()
 
@@ -243,6 +244,7 @@ class PeakDetectionStudy(BenchmarkStudy):
                 b = found_templates[i].flatten()
 
                 if metric == "cosine":
+                    import sklearn.metrics
                     distances[i] = sklearn.metrics.pairwise.cosine_similarity(a[None, :], b[None, :])[0, 0]
                 else:
                     distances[i] = sklearn.metrics.pairwise_distances(a[None, :], b[None, :], metric)[0, 0]
@@ -259,3 +261,4 @@ class PeakDetectionStudy(BenchmarkStudy):
         ax.legend()
         ax.set_xlabel("snr")
         ax.set_ylabel(metric)
+        return fig
