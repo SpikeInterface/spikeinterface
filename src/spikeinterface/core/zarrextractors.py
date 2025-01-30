@@ -57,7 +57,7 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
 
     # if storage_options is None, we try to open the folder with and without anonymous access
     # if storage_options is not None, we try to open the folder with the given storage options
-    if storage_options is None:
+    if storage_options is None or storage_options == {}:
         storage_options_to_test = ({"anon": True}, {"anon": False})
     else:
         storage_options_to_test = (storage_options,)
