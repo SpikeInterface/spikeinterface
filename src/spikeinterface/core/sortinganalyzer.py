@@ -30,14 +30,13 @@ from .core_tools import (
     retrieve_importing_provenance,
     is_path_remote,
     clean_zarr_folder_name,
-    anononymous_zarr_open,
 )
 from .sorting_tools import generate_unit_ids_for_merge_group, _get_ids_after_merging
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
-from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
+from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open
 from .node_pipeline import run_node_pipeline
 
 
@@ -197,14 +196,7 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto", backend_o
         The loaded SortingAnalyzer
 
     """
-    if is_path_remote(folder):
-        return SortingAnalyzer.load(
-            folder, load_extensions=load_extensions, format=format, backend_options=backend_options
-        )
-    else:
-        return SortingAnalyzer.load(
-            folder, load_extensions=load_extensions, format=format, backend_options=backend_options
-        )
+    return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format, backend_options=backend_options)
 
 
 class SortingAnalyzer:
@@ -560,7 +552,7 @@ class SortingAnalyzer:
         assert mode in ("r+", "a", "r"), "mode must be 'r+', 'a' or 'r'"
 
         storage_options = self._backend_options.get("storage_options", {})
-        zarr_root = anononymous_zarr_open(self.folder, mode=mode, storage_options=storage_options)
+        zarr_root = super_zarr_open(self.folder, mode=mode, storage_options=storage_options)
         return zarr_root
 
     @classmethod
@@ -655,7 +647,7 @@ class SortingAnalyzer:
         backend_options = {} if backend_options is None else backend_options
         storage_options = backend_options.get("storage_options", {})
 
-        zarr_root = anononymous_zarr_open(str(folder), mode="r", storage_options=storage_options)
+        zarr_root = super_zarr_open(str(folder), mode="r", storage_options=storage_options)
 
         si_info = zarr_root.attrs["spikeinterface_info"]
         if parse(si_info["version"]) < parse("0.101.1"):

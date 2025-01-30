@@ -141,23 +141,25 @@ def load(
             if str(file_path).endswith((".zarr", ".zarr/")):
                 # here we can have a zarr folder for extractor or SortingAnalyzer
                 # since the data is remote, we need to try and see if it is an extractor or a SortingAnalyzer
-                try:
+                from .zarrextractors import super_zarr_open
+
+                storage_options = backend_options.get("storage_options", None) if backend_options is not None else None
+                zarr_root = super_zarr_open(file_path, mode="r", storage_options=storage_options)
+                attrs = zarr_root.attrs.asdict()
+                spikeinterface_info = attrs.get("spikeinterface_info", None)
+                if spikeinterface_info and spikeinterface_info.get("object", None) == "SortingAnalyzer":
+                    from .sortinganalyzer import load_sorting_analyzer
+
+                    si_object = load_sorting_analyzer(
+                        file_path, load_extensions=load_extensions, backend_options=backend_options
+                    )
+                else:
                     from .zarrextractors import read_zarr
 
                     storage_options = (
                         backend_options.get("storage_options", None) if backend_options is not None else None
                     )
                     si_object = read_zarr(file_path, storage_options=storage_options)
-                except Exception as e:
-                    try:
-                        # if it is not an extractor, it is a SortingAnalyzer
-                        from .sortinganalyzer import load_sorting_analyzer
-
-                        si_object = load_sorting_analyzer(
-                            file_path, load_extensions=load_extensions, backend_options=backend_options
-                        )
-                    except Exception as e:
-                        raise ValueError(f"Could not load the remote zarr folder at {file_path}")
             else:
                 raise NotImplementedError(
                     "Only zarr format is supported for remote files and you should provide a path to a .zarr "
