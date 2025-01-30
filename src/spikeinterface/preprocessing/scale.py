@@ -34,7 +34,7 @@ def scale_to_uV(recording: BasePreprocessor) -> BasePreprocessor:
     gain = recording.get_channel_gains()
     offset = recording.get_channel_offsets()
 
-    scaled_to_uV_recording = ScaleRecording(recording, gain=gain, offset=offset, dtype="float32")
+    scaled_to_uV_recording = ScaleRecording(recording, gain=gain, offset=offset, dtype=recording.get_dtype())
 
     # We do this so when get_traces(return_scaled=True) is called, the return is the same.
     scaled_to_uV_recording.set_channel_gains(gains=1.0)
