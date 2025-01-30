@@ -54,7 +54,7 @@ class Motion:
         self.direction = direction
         self.dim = ["x", "y", "z"].index(direction)
         self.check_properties()
-        self.temporal_bin_edges_s = [ensure_time_bin_edges(tbins) for tbins in self.temporal_bins_s]
+        self.temporal_bin_edges_s = [ensure_time_bin_edges(tbins) for tbins in self.temporal_bins_s][0]
 
     def check_properties(self):
         assert all(d.ndim == 2 for d in self.displacement)
@@ -589,25 +589,37 @@ def ensure_time_bins(time_bin_centers_s=None, time_bin_edges_s=None):
 
     Parameters
     ----------
-    time_bin_centers_s : None or np.array
-    time_bin_edges_s : None or np.array
+    time_bin_centers_s : None or list of np.array
+    time_bin_edges_s : None or list of np.array
 
     Returns
     -------
     time_bin_centers_s, time_bin_edges_s
     """
+    
+    if isinstance(time_bin_centers_s, np.ndarray):
+            time_bin_centers_s = [time_bin_centers_s]
+    
+    if isinstance(time_bin_edges_s, np.ndarray):
+            time_bin_edges_s = [time_bin_edges_s]
+
     if time_bin_centers_s is None and time_bin_edges_s is None:
         raise ValueError("Need at least one of time_bin_centers_s or time_bin_edges_s.")
 
     if time_bin_centers_s is None:
-        assert time_bin_edges_s.ndim == 1 and time_bin_edges_s.size >= 2
-        time_bin_centers_s = 0.5 * (time_bin_edges_s[1:] + time_bin_edges_s[:-1])
+        time_bin_centers_s = []
+        for segment_index in range(len(time_bin_edges_s)):
+            assert time_bin_edges_s[segment_index].ndim == 1 and time_bin_edges_s[segment_index].size >= 2
+            time_bin_centers_s += [0.5 * (time_bin_edges_s[segment_index][1:] + time_bin_edges_s[segment_index][:-1])]
 
     if time_bin_edges_s is None:
-        time_bin_edges_s = np.empty(time_bin_centers_s.shape[0] + 1, dtype=time_bin_centers_s.dtype)
-        time_bin_edges_s[[0, -1]] = time_bin_centers_s[[0, -1]]
-        if time_bin_centers_s.size > 2:
-            time_bin_edges_s[1:-1] = 0.5 * (time_bin_centers_s[1:] + time_bin_centers_s[:-1])
+        
+        time_bin_edges_s = []
+        for segment_index in range(len(time_bin_centers_s)):
+            time_bin_edges_s += [np.empty(time_bin_centers_s[segment_index].shape[0] + 1, dtype=time_bin_centers_s[segment_index].dtype)]
+            time_bin_edges_s[-1][[0, -1]] = time_bin_centers_s[segment_index][[0, -1]]
+            if time_bin_centers_s[segment_index].size > 2:
+                time_bin_edges_s[-1][1:-1] = 0.5 * (time_bin_centers_s[segment_index][1:] + time_bin_centers_s[segment_index][:-1])
 
     return time_bin_centers_s, time_bin_edges_s
 

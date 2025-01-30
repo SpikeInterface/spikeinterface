@@ -84,10 +84,10 @@ def interpolate_motion_on_traces(
         The segment index.
     channel_inds : None or list
         If not None, interpolate only a subset of channels.
-    interpolation_time_bin_centers_s : None or np.array
+    interpolation_time_bin_centers_s : None or list of np.array
         Manually specify the time bins which the interpolation happens
         in for this segment. If None, these are the motion estimate's time bins.
-    interpolation_time_bin_edges_s : None or np.array
+    interpolation_time_bin_edges_s : None or list of np.array
         If present, interpolation chunks will be the time bins defined by these edges
         rather than interpolation_time_bin_centers_s or the motion's bins.
     spatial_interpolation_method : "idw" | "kriging", default: "kriging"
@@ -136,6 +136,8 @@ def interpolate_motion_on_traces(
         interpolation_time_bin_centers_s, interpolation_time_bin_edges_s = ensure_time_bins(
             interpolation_time_bin_centers_s, interpolation_time_bin_edges_s
         )
+        interpolation_time_bin_centers_s = interpolation_time_bin_centers_s[0]
+        interpolation_time_bin_edges_s = interpolation_time_bin_edges_s[0]
 
     # bin the frame times according to the interpolation time bins.
     # searchsorted(b, t, side="right") == i means that b[i-1] <= t < b[i]
