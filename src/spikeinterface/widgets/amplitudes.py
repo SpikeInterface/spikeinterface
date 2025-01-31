@@ -110,6 +110,7 @@ class AmplitudesWidget(BaseRasterWidget):
             unit_colors=unit_colors,
             plot_histograms=plot_histograms,
             bins=bins,
+            total_duration=total_duration,
             unit_ids=unit_ids,
             hide_unit_selector=hide_unit_selector,
             plot_legend=plot_legend,
