@@ -693,7 +693,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
         assert HAVE_NUMBA, "You need to install numba"
         conv_traces = self.get_convolved_traces(traces)
-        conv_traces -= self.medians
+        #conv_traces -= self.medians
         conv_traces /= self.abs_thresholds[:, None]
         conv_traces = conv_traces[:, self.conv_margin : -self.conv_margin]
         traces_center = conv_traces[:, self.exclude_sweep_size : -self.exclude_sweep_size]
