@@ -34,3 +34,21 @@ def test_correlograms_merge():
             # Then re-compute, and compare
             recomputed_correlograms = merged_sorting_analyzer.compute("correlograms").get_data()
             assert np.all(computed_correlograms[0] == recomputed_correlograms[0])
+
+    # test when `censor_ms` is not None. This merge does remove some spikes.
+    merged_sorting_analyzer_censored = sorting_analyzer.merge_units(
+        merge_unit_groups=trial_merges[2], new_id_strategy="take_first", censor_ms=5
+    )
+    computed_ccgs_censored = merged_sorting_analyzer_censored.get_extension("correlograms").get_data()
+
+    recomputed_ccgs_censored = merged_sorting_analyzer_censored.compute("correlograms").get_data()
+    assert np.all(computed_ccgs_censored[0] == recomputed_ccgs_censored[0])
+
+    # This `censor_ms` does not remove spikes, so can use the soft method
+    merged_sorting_analyzer_not_censored = sorting_analyzer.merge_units(
+        merge_unit_groups=trial_merges[0], new_id_strategy="take_first", censor_ms=0
+    )
+    computed_ccgs_not_censored = merged_sorting_analyzer_not_censored.get_extension("correlograms").get_data()
+
+    recomputed_ccgs_not_censored = merged_sorting_analyzer_not_censored.compute("correlograms").get_data()
+    assert np.all(computed_ccgs_not_censored[0] == recomputed_ccgs_not_censored[0])

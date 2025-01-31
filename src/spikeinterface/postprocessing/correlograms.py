@@ -103,45 +103,68 @@ class ComputeCorrelograms(AnalyzerExtension):
         Here, we apply this formula to quickly compute correlograms for merged units.
         """
 
-        need_to_append = False
-        delete_from = 1
+        can_apply_soft_method = True
+        if censor_ms is not None:
+            # if censor_ms has no effect, can apply "soft" method. Check if any spikes have been removed
+            for new_unit_id, merge_unit_group in zip(new_unit_ids, merge_unit_groups):
 
-        correlograms, new_bins = deepcopy(self.get_data())
+                merged_spike_train_length = len(new_sorting_analyzer.sorting.get_unit_spike_train(new_unit_id))
 
-        for new_unit_id, merge_unit_group in zip(new_unit_ids, merge_unit_groups):
+                old_spike_train_lengths = len(
+                    np.concatenate(
+                        [self.sorting_analyzer.sorting.get_unit_spike_train(unit_id) for unit_id in merge_unit_group]
+                    )
+                )
 
-            merge_unit_group_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_group)
+                if merged_spike_train_length != old_spike_train_lengths:
+                    can_apply_soft_method = False
+                    break
 
-            new_col = np.sum(correlograms[merge_unit_group_indices, :, :], axis=0)
-            correlograms[merge_unit_group_indices[0], :, :] = new_col
-            correlograms[merge_unit_group_indices[1:], :, :] = 0
+        if can_apply_soft_method is False:
+            new_ccgs, new_bins = _compute_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params)
+            new_data = dict(ccgs=new_ccgs, bins=new_bins)
+        else:
 
-            new_row = np.sum(correlograms[:, merge_unit_group_indices, :], axis=1)
-            correlograms[:, merge_unit_group_indices[0], :] = new_row
-            correlograms[:, merge_unit_group_indices[1:], :] = 0
+            need_to_append = False
+            delete_from = 1
 
-            if new_unit_id not in merge_unit_group:
-                need_to_append = True
-                delete_from = 0
+            correlograms, new_bins = deepcopy(self.get_data())
 
-        if need_to_append is True:
-            old_num_units = np.shape(correlograms)[0]
-            correlograms = np.pad(correlograms, ((0, len(new_unit_ids)), (0, len(new_unit_ids)), (0, 0)))
-            for a, (new_unit_id, merge_unit_group) in enumerate(zip(new_unit_ids, merge_unit_groups)):
+            for new_unit_id, merge_unit_group in zip(new_unit_ids, merge_unit_groups):
 
-                old_loc = self.sorting_analyzer.sorting.ids_to_indices([merge_unit_group[0]])[0]
-                new_loc = old_num_units + a
+                merge_unit_group_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_group)
 
-                correlograms[:, [old_loc, new_loc], :] = correlograms[:, [new_loc, old_loc], :]
-                correlograms[[old_loc, new_loc], :, :] = correlograms[[new_loc, old_loc], :, :]
+                new_col = np.sum(correlograms[merge_unit_group_indices, :, :], axis=0)
 
-        units_to_delete = np.concatenate([merge_unit_group[delete_from:] for merge_unit_group in merge_unit_groups])
-        indices_to_delete = self.sorting_analyzer.sorting.ids_to_indices(units_to_delete)
+                correlograms[merge_unit_group_indices[0], :, :] = new_col
+                correlograms[merge_unit_group_indices[1:], :, :] = 0
 
-        correlograms = np.delete(correlograms, indices_to_delete, axis=0)
-        correlograms = np.delete(correlograms, indices_to_delete, axis=1)
+                new_row = np.sum(correlograms[:, merge_unit_group_indices, :], axis=1)
+                correlograms[:, merge_unit_group_indices[0], :] = new_row
+                correlograms[:, merge_unit_group_indices[1:], :] = 0
 
-        new_data = dict(ccgs=correlograms, bins=new_bins)
+                if new_unit_id not in merge_unit_group:
+                    need_to_append = True
+                    delete_from = 0
+
+            if need_to_append is True:
+                old_num_units = np.shape(correlograms)[0]
+                correlograms = np.pad(correlograms, ((0, len(new_unit_ids)), (0, len(new_unit_ids)), (0, 0)))
+                for a, (new_unit_id, merge_unit_group) in enumerate(zip(new_unit_ids, merge_unit_groups)):
+
+                    old_loc = self.sorting_analyzer.sorting.ids_to_indices([merge_unit_group[0]])[0]
+                    new_loc = old_num_units + a
+
+                    correlograms[:, [old_loc, new_loc], :] = correlograms[:, [new_loc, old_loc], :]
+                    correlograms[[old_loc, new_loc], :, :] = correlograms[[new_loc, old_loc], :, :]
+
+            units_to_delete = np.concatenate([merge_unit_group[delete_from:] for merge_unit_group in merge_unit_groups])
+            indices_to_delete = self.sorting_analyzer.sorting.ids_to_indices(units_to_delete)
+
+            correlograms = np.delete(correlograms, indices_to_delete, axis=0)
+            correlograms = np.delete(correlograms, indices_to_delete, axis=1)
+
+            new_data = dict(ccgs=correlograms, bins=new_bins)
         return new_data
 
     def _run(self, verbose=False):
