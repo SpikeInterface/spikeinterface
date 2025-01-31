@@ -41,7 +41,7 @@ class AmplitudesWidget(BaseRasterWidget):
         (matplotlib backend)
     bins : int or None, default: None
         If plot_histogram is True, the number of bins for the amplitude histogram.
-        If None this is automatically adjusted
+        If None, use 100 bins.
     plot_legend : bool, default: True
         True includes legend in plot
     """
@@ -103,6 +103,9 @@ class AmplitudesWidget(BaseRasterWidget):
         else:
             spiketrains_to_plot = all_spiketrains
             amplitudes_to_plot = all_amplitudes
+
+        if plot_histograms and bins is None:
+            bins = 100
 
         plot_data = dict(
             spike_train_data=spiketrains_to_plot,

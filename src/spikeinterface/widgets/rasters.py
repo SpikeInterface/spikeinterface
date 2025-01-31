@@ -141,8 +141,8 @@ class BaseRasterWidget(BaseWidget):
             if dp.color_kwargs is None:
                 scatter_ax.scatter(unit_spike_train, unit_y_data, s=1, label=unit_id, color=unit_colors[unit_id])
             else:
-                if dp.scatter_decimate != 1:
-                    color_kwargs = dp.color_kwargs
+                color_kwargs = dp.color_kwargs
+                if dp.scatter_decimate != 1 and color_kwargs.get("c") is not None:
                     color_kwargs["c"] = dp.color_kwargs["c"][:: dp.scatter_decimate]
                 scatter_ax.scatter(unit_spike_train, unit_y_data, s=1, label=unit_id, **color_kwargs)
 
