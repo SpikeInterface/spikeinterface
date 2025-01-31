@@ -171,6 +171,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
         if sorting_analyzer is not None:
             if sorting_analyzer.has_recording():
                 recording = sorting_analyzer.recording
+                sampling_frequency = recording.sampling_frequency
             else:
                 recording = None
                 sampling_frequency = sorting_analyzer.sampling_frequency
