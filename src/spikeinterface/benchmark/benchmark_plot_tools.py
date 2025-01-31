@@ -303,3 +303,14 @@ def plot_performances_comparison(
     ax.legend(handles=patches)
     fig.tight_layout()
     return fig
+
+
+def sigmoid(x, x0, k, b):
+    return (1 / (1 + np.exp(-k * (x - x0)))) + b
+
+
+def fit_sigmoid(xdata, ydata, p0=None):
+    from scipy.optimize import curve_fit
+
+    popt, pcov = curve_fit(sigmoid, xdata, ydata, p0)
+    return popt

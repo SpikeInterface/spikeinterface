@@ -15,6 +15,7 @@ import numpy as np
 from .benchmark_base import Benchmark, BenchmarkStudy
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
+from .benchmark_plot_tools import fit_sigmoid, sigmoid
 
 
 class PeakDetectionBenchmark(Benchmark):
@@ -227,7 +228,7 @@ class PeakDetectionStudy(BenchmarkStudy):
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=figsize, squeeze=True)
         for key in case_keys:
 
-            import sklearn
+            import sklearn.metrics
 
             gt_templates = self.get_result(key)["gt_templates"]
             found_templates = self.get_result(key)["templates"]
@@ -244,14 +245,24 @@ class PeakDetectionStudy(BenchmarkStudy):
                 else:
                     distances[i] = sklearn.metrics.pairwise_distances(a[None, :], b[None, :], metric)[0, 0]
 
+
+            color = self.get_colors()[key]
+
             label = self.cases[key]["label"]
             analyzer = self.get_sorting_analyzer(key)
             metrics = analyzer.get_extension("quality_metrics").get_data()
             x = metrics["snr"].values
-            ax.scatter(x, distances, marker=".", label=label)
-            if detect_threshold is not None:
-                ymin, ymax = ax.get_ylim()
-                ax.plot([detect_threshold, detect_threshold], [ymin, ymax], "k--")
+            y = distances
+            ax.scatter(x, y, marker=".", label=label, color=color)
+
+            popt = fit_sigmoid(x, y, p0=None)
+            xfit = np.linspace(0,  metrics["snr"].values, 100)
+            ax.plot(xfit, sigmoid(xfit, *popt), color=color)
+
+        if detect_threshold is not None:
+            ymin, ymax = ax.get_ylim()
+            ax.plot([detect_threshold, detect_threshold], [ymin, ymax], "k--")
+
 
         ax.legend()
         ax.set_xlabel("snr")
