@@ -269,14 +269,19 @@ class BaseRasterWidget(BaseWidget):
         self.figure.canvas.flush_events()
 
 
-class RasterWidget(BaseWidget):
+import numpy as np
+
+
+class RasterWidget(BaseRasterWidget):
     """
     Plots spike train rasters.
 
     Parameters
     ----------
-    sorting : SortingExtractor
-        The sorting extractor object
+    sorting : SortingExtractor | None, default: None
+        A sorting object
+    sorting_analyzer : SortingAnalyzer  | None, default: None
+        A sorting analyzer object
     segment_index : None or int
         The segment index.
     unit_ids : list
@@ -288,8 +293,23 @@ class RasterWidget(BaseWidget):
     """
 
     def __init__(
-        self, sorting, segment_index=None, unit_ids=None, time_range=None, color="k", backend=None, **backend_kwargs
+        self,
+        sorting=None,
+        sorting_analyzer=None,
+        segment_index=None,
+        unit_ids=None,
+        time_range=None,
+        color="k",
+        backend=None,
+        **backend_kwargs,
     ):
+        if sorting is None and sorting_analyzer is None:
+            raise Exception("Must supply either a sorting or a sorting_analyzer")
+        if sorting is not None and sorting_analyzer is not None:
+            raise Exception("Should supply either a sorting or a sorting_analyzer, not both")
+        if sorting_analyzer is not None:
+            sorting = sorting_analyzer.sorting
+
         sorting = self.ensure_sorting(sorting)
 
         if segment_index is None:
@@ -297,55 +317,40 @@ class RasterWidget(BaseWidget):
                 raise ValueError("You must provide segment_index=...")
             segment_index = 0
 
-        if time_range is None:
-            frame_range = [0, sorting.to_spike_vector()[-1]["sample_index"]]
-            time_range = [f / sorting.sampling_frequency for f in frame_range]
-        else:
+        if unit_ids is None:
+            unit_ids = sorting.unit_ids
+
+        all_spiketrains = {
+            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=0, return_times=True) for unit_id in unit_ids
+        }
+
+        if time_range is not None:
             assert len(time_range) == 2, "'time_range' should be a list with start and end time in seconds"
-            frame_range = [int(t * sorting.sampling_frequency) for t in time_range]
+            for unit_id in unit_ids:
+                unit_st = all_spiketrains[unit_id]
+                all_spiketrains[unit_id] = unit_st[(time_range[0] < unit_st) & (unit_st < time_range[1])]
+
+        raster_locations = {
+            unit_id: unit_index * np.ones(len(all_spiketrains[unit_id])) for unit_index, unit_id in enumerate(unit_ids)
+        }
+
+        unit_indices = list(range(len(unit_ids)))
+
+        if color is None:
+            color = "black"
+
+        unit_colors = {unit_id: color for unit_id in unit_ids}
+        y_ticks = {"ticks": unit_indices, "labels": unit_ids}
 
         plot_data = dict(
-            sorting=sorting,
-            segment_index=segment_index,
+            spike_train_data=all_spiketrains,
+            y_axis_data=raster_locations,
+            x_lim=time_range,
+            y_label="Unit id",
             unit_ids=unit_ids,
-            color=color,
-            frame_range=frame_range,
-            time_range=time_range,
+            unit_colors=unit_colors,
+            plot_histograms=None,
+            y_ticks=y_ticks,
         )
-        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
-    def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
-        from .utils_matplotlib import make_mpl_figure
-
-        dp = to_attr(data_plot)
-        sorting = dp.sorting
-
-        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
-
-        units_ids = dp.unit_ids
-        if units_ids is None:
-            units_ids = sorting.unit_ids
-
-        with plt.rc_context({"axes.edgecolor": "gray"}):
-            for unit_index, unit_id in enumerate(units_ids):
-                spiketrain = sorting.get_unit_spike_train(
-                    unit_id,
-                    start_frame=dp.frame_range[0],
-                    end_frame=dp.frame_range[1],
-                    segment_index=dp.segment_index,
-                )
-                spiketimes = spiketrain / float(sorting.sampling_frequency)
-                self.ax.plot(
-                    spiketimes,
-                    unit_index * np.ones_like(spiketimes),
-                    marker="|",
-                    mew=1,
-                    markersize=3,
-                    ls="",
-                    color=dp.color,
-                )
-            self.ax.set_yticks(np.arange(len(units_ids)))
-            self.ax.set_yticklabels(units_ids)
-            self.ax.set_xlim(*dp.time_range)
-            self.ax.set_xlabel("time (s)")
+        BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
