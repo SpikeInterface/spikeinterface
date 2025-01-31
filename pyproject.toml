@@ -62,7 +62,7 @@ extractors = [
     "MEArec>=1.8",
     "pynwb>=2.6.0",
     "hdmf-zarr>=0.11.0",
-    "pyedflib>=0.1.30",
+    "pyedflib>=0.1.30,<0.1.39",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",

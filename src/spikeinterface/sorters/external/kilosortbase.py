@@ -96,7 +96,7 @@ class KilosortBase:
         ops["fbinary"] = str(binary_file_path.absolute())  # will be created for 'openEphys'
         ops["fproc"] = str((sorter_output_folder / "temp_wh.dat").absolute())  # residual from RAM of preprocessed data
         ops["root"] = str(sorter_output_folder.absolute())  # 'openEphys' only: where raw files are
-        ops["trange"] = [0, np.Inf]  #  time range to sort
+        ops["trange"] = [0, np.inf]  #  time range to sort
         ops["chanMap"] = str((sorter_output_folder / "chanMap.mat").absolute())
 
         ops["fs"] = recording.get_sampling_frequency()  # sample rate
