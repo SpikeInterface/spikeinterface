@@ -29,6 +29,10 @@ class AmplitudesWidget(BaseRasterWidget):
         The segment index (or None if mono-segment)
     max_spikes_per_unit : int or None, default: None
         Number of max spikes per unit to display. Use None for all spikes
+    y_lim : tuple or None, default: None
+        The min and max depth to display, if None (min and max of the amplitudes).
+    scatter_decimate : int, default: 1
+        If > 1, the scatter points are decimated.
     hide_unit_selector : bool, default: False
         If True the unit selector is not displayed
         (sortingview backend)
@@ -49,6 +53,8 @@ class AmplitudesWidget(BaseRasterWidget):
         unit_colors=None,
         segment_index=None,
         max_spikes_per_unit=None,
+        y_lim=None,
+        scatter_decimate=1,
         hide_unit_selector=False,
         plot_histograms=False,
         bins=None,
@@ -108,6 +114,8 @@ class AmplitudesWidget(BaseRasterWidget):
             hide_unit_selector=hide_unit_selector,
             plot_legend=plot_legend,
             y_label="Amplitude",
+            y_lim=y_lim,
+            scatter_decimate=scatter_decimate,
         )
 
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)

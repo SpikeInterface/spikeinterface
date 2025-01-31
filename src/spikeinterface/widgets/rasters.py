@@ -4,7 +4,7 @@ import numpy as np
 from warnings import warn
 
 from .base import BaseWidget, to_attr, default_backend_kwargs
-from . import get_some_colors
+from .utils import get_some_colors
 
 
 class BaseRasterWidget(BaseWidget):
@@ -188,7 +188,7 @@ class BaseRasterWidget(BaseWidget):
 
         import ipywidgets.widgets as W
         from IPython.display import display
-        from spikeinterface.widgets.utils_ipywidgets import check_ipywidget_backend, UnitSelector
+        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector
 
         check_ipywidget_backend()
 
