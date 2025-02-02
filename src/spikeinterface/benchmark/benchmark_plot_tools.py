@@ -1,5 +1,5 @@
 import numpy as np
-
+import warnings
 
 def _simpleaxis(ax):
     ax.spines["top"].set_visible(False)
@@ -305,8 +305,11 @@ def plot_performances_comparison(
     return fig
 
 
+
 def sigmoid(x, x0, k, b):
-    return (1 / (1 + np.exp(-k * (x - x0)))) + b
+    with warnings.catch_warnings(action="ignore"):
+        out = (1 / (1 + np.exp(-k * (x - x0)))) + b
+    return out
 
 
 def fit_sigmoid(xdata, ydata, p0=None):

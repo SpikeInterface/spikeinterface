@@ -127,7 +127,7 @@ class PeakDetectionStudy(BenchmarkStudy):
     def plot_agreements_by_channels(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -139,7 +139,7 @@ class PeakDetectionStudy(BenchmarkStudy):
     def plot_agreements_by_units(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -151,6 +151,8 @@ class PeakDetectionStudy(BenchmarkStudy):
     def plot_performances_vs_snr(self, case_keys=None, figsize=(15, 15), detect_threshold=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
+        
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
 
@@ -158,26 +160,36 @@ class PeakDetectionStudy(BenchmarkStudy):
 
             ax = axs[count]
             for key in case_keys:
+                color = self.get_colors()[key]
                 label = self.cases[key]["label"]
 
                 analyzer = self.get_sorting_analyzer(key)
                 metrics = analyzer.get_extension("quality_metrics").get_data()
                 x = metrics["snr"].values
                 y = self.get_result(key)["sliced_gt_comparison"].get_performance()[k].values
-                ax.scatter(x, y, marker=".", label=label)
+                ax.scatter(x, y, marker=".", label=label, color=color)
                 ax.set_title(k)
                 if detect_threshold is not None:
                     ymin, ymax = ax.get_ylim()
                     ax.plot([detect_threshold, detect_threshold], [ymin, ymax], "k--")
 
+                
+                popt = fit_sigmoid(x, y, p0=None)
+                xfit = np.linspace(0,  max(metrics["snr"].values), 100)
+                ax.plot(xfit, sigmoid(xfit, *popt), color=color)
+
+
             if count == 2:
                 ax.legend()
+
+
+
 
     def plot_detected_amplitudes(self, case_keys=None, figsize=(15, 5), detect_threshold=None):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -202,7 +214,7 @@ class PeakDetectionStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
         for count, key in enumerate(case_keys):
@@ -223,7 +235,7 @@ class PeakDetectionStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=figsize, squeeze=True)
         for key in case_keys:
@@ -256,7 +268,7 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.scatter(x, y, marker=".", label=label, color=color)
 
             popt = fit_sigmoid(x, y, p0=None)
-            xfit = np.linspace(0,  metrics["snr"].values, 100)
+            xfit = np.linspace(0,  max(metrics["snr"].values), 100)
             ax.plot(xfit, sigmoid(xfit, *popt), color=color)
 
         if detect_threshold is not None:
