@@ -15,7 +15,7 @@ matching_methods = {
 
 try:
     # kilosort licence (GPL 3) is forcing use to make an external package
-    from spikeinterface_kilosort_reshape import KiloSortMatching
+    from spikeinterface_kilosort_components import KiloSortMatching
 
     matching_methods["kilosort-matching"] = KiloSortMatching
 except ImportError:
