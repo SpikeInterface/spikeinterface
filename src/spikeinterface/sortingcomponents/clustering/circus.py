@@ -42,10 +42,9 @@ class CircusClustering:
 
     _default_params = {
         "hdbscan_kwargs": {
-            "min_cluster_size": 50,
+            "min_cluster_size" : 50,
             "cluster_selection_method": "eom",
             "allow_single_cluster": True,
-            "core_dist_n_jobs": 1,
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
@@ -67,6 +66,7 @@ class CircusClustering:
         "tmp_folder": None,
         "verbose": True,
         "debug": False,
+        "hanning_filter": True,
     }
 
     @classmethod
@@ -77,8 +77,8 @@ class CircusClustering:
         verbose = d["verbose"]
 
         fs = recording.get_sampling_frequency()
-        ms_before = params["ms_before"]
-        ms_after = params["ms_after"]
+        ms_before = params["waveforms"]["ms_before"]
+        ms_after = params["waveforms"]["ms_after"]
         nbefore = int(ms_before * fs / 1000.0)
         nafter = int(ms_after * fs / 1000.0)
         if params["tmp_folder"] is None:
@@ -99,8 +99,8 @@ class CircusClustering:
             )
             wfs = few_wfs[:, :, 0]
         else:
-            offset = int(params["waveforms"]["ms_before"] * fs / 1000)
-            wfs = params["few_waveforms"][:, offset - nbefore : offset + nafter]
+            #offset = int(params["waveforms"]["ms_before"] * fs / 1000)
+            wfs = params["few_waveforms"]#[:, offset - nbefore : offset + nafter]
 
         # Ensure all waveforms have a positive max
         wfs *= np.sign(wfs[:, nbefore])[:, np.newaxis]
@@ -110,10 +110,11 @@ class CircusClustering:
         wfs = wfs[valid]
 
         # Perform Hanning filtering
-        hanning_before = np.hanning(2 * nbefore)
-        hanning_after = np.hanning(2 * nafter)
-        hanning = np.concatenate((hanning_before[:nbefore], hanning_after[nafter:]))
-        wfs *= hanning
+        if params["hanning_filter"]:
+            hanning_before = np.hanning(2 * nbefore)
+            hanning_after = np.hanning(2 * nafter)
+            hanning = np.concatenate((hanning_before[:nbefore], hanning_after[nafter:]))
+            wfs *= hanning
 
         from sklearn.decomposition import TruncatedSVD
 
@@ -136,23 +137,25 @@ class CircusClustering:
             json.dump(model_params, f)
 
         # features
-        node0 = PeakRetriever(recording, peaks)
+        pipeline_nodes = [PeakRetriever(recording, peaks)]
 
         radius_um = params["radius_um"]
-        node1 = ExtractSparseWaveforms(
+        pipeline_nodes += [ExtractSparseWaveforms(
             recording,
-            parents=[node0],
+            parents=pipeline_nodes,
             return_output=False,
             ms_before=ms_before,
             ms_after=ms_after,
             radius_um=radius_um,
-        )
+        )]
 
-        node2 = HanningFilter(recording, parents=[node0, node1], return_output=False)
+        if params["hanning_filter"]:
+            pipeline_nodes += [HanningFilter(recording, parents=pipeline_nodes, return_output=False)]
 
-        node3 = TemporalPCAProjection(
-            recording, parents=[node0, node2], return_output=True, model_folder_path=model_folder
-        )
+        parents = [pipeline_nodes[0], pipeline_nodes[-1]]
+        pipeline_nodes += [TemporalPCAProjection(
+            recording, parents=parents, return_output=True, model_folder_path=model_folder
+        )]
 
         pipeline_nodes = [node0, node1, node2, node3]
 
@@ -218,6 +221,7 @@ class CircusClustering:
             split_kwargs["neighbours_mask"] = neighbours_mask
             split_kwargs["waveforms_sparse_mask"] = sparse_mask
             split_kwargs["min_size_split"] = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 50)
+            split_kwargs["clusterer_kwargs"] = params["hdbscan_kwargs"]
 
             if params["debug"]:
                 debug_folder = tmp_folder / "split"
@@ -246,9 +250,6 @@ class CircusClustering:
         spikes["unit_index"] = peak_labels[non_noise]
 
         unit_ids = labels
-
-        nbefore = int(params["waveforms"]["ms_before"] * fs / 1000.0)
-        nafter = int(params["waveforms"]["ms_after"] * fs / 1000.0)
 
         if params["noise_levels"] is None:
             params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
