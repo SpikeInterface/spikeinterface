@@ -40,7 +40,7 @@ class FilterRecording(BasePreprocessor):
     band : float or list, default: [300.0, 6000.0]
         If float, cutoff frequency in Hz for "highpass" filter type
         If list. band (low, high) in Hz for "bandpass" filter type
-    btype : "bandpass" | "highpass", default: "bandpass"
+    btype : "bandpass" | "highpass" | "lowpass", default: "bandpass"
         Type of the filter
     margin_ms : float, default: 5.0
         Margin in ms on border to avoid border effect
@@ -89,7 +89,7 @@ class FilterRecording(BasePreprocessor):
         assert filter_mode in ("sos", "ba"), "'filter' mode must be 'sos' or 'ba'"
         fs = recording.get_sampling_frequency()
         if coeff is None:
-            assert btype in ("bandpass", "highpass"), "'bytpe' must be 'bandpass' or 'highpass'"
+            assert btype in ("bandpass", "highpass", "lowpass"), "'bytpe' must be 'bandpass' , 'highpass' or 'lowpass'"
             # coefficient
             # self.coeff is 'sos' or 'ab' style
             filter_coeff = scipy.signal.iirfilter(
@@ -271,6 +271,36 @@ class HighpassFilterRecording(FilterRecording):
         self._kwargs.update(filter_kwargs)
 
 
+class LowpassFilterRecording(FilterRecording):
+    """
+    Lowpass filter of a recording
+
+    Parameters
+    ----------
+    recording : Recording
+        The recording extractor to be re-referenced
+    freq_max : float
+        The lowpass cutoff frequency in Hz
+    margin_ms : float
+        Margin in ms on border to avoid border effect
+    dtype : dtype or None
+        The dtype of the returned traces. If None, the dtype of the parent recording is used
+    {}
+
+    Returns
+    -------
+    filter_recording : LowpassFilterRecording
+        The lowpass-filtered recording extractor object
+    """
+
+    def __init__(self, recording, freq_max=300.0, margin_ms=5.0, dtype=None, **filter_kwargs):
+        FilterRecording.__init__(
+            self, recording, band=freq_max, margin_ms=margin_ms, dtype=dtype, btype="lowpass", **filter_kwargs
+        )
+        dtype = fix_dtype(recording, dtype)
+        self._kwargs = dict(recording=recording, freq_max=freq_max, margin_ms=margin_ms, dtype=dtype.str)
+        self._kwargs.update(filter_kwargs)
+
 class NotchFilterRecording(BasePreprocessor):
     """
     Parameters
@@ -326,7 +356,7 @@ filter = define_function_from_class(source_class=FilterRecording, name="filter")
 bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
 notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
 highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
-
+lowpass_filter = define_function_from_class(source_class=LowpassFilterRecording, name="lowpass_filter")
 
 def causal_filter(
     recording,
@@ -396,7 +426,7 @@ def causal_filter(
 
 bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
 highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
-
+lowpass_filter.__doc__ = lowpass_filter.__doc__.format(_common_filter_docs)
 
 def fix_dtype(recording, dtype):
     if dtype is None:
