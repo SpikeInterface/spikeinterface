@@ -211,7 +211,7 @@ def compute_whitening_matrix(
         assert radius_um is not None
         n = cov.shape[0]
         distances = get_channel_distances(recording)
-        W = np.zeros((n, n), dtype="float32")
+        W = np.zeros((n, n), dtype="float64")
         for c in range(n):
             (inds,) = np.nonzero(distances[c, :] <= radius_um)
             cov_local = cov[inds, :][:, inds]
