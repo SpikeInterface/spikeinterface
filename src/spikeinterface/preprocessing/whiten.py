@@ -211,7 +211,7 @@ def compute_whitening_matrix(
         assert radius_um is not None
         n = cov.shape[0]
         distances = get_channel_distances(recording)
-        W = np.zeros((n, n), dtype="float64")
+        W = np.zeros((n, n), dtype="float32")
         for c in range(n):
             (inds,) = np.nonzero(distances[c, :] <= radius_um)
             cov_local = cov[inds, :][:, inds]
@@ -257,6 +257,7 @@ def compute_covariance_matrix(recording, apply_mean, regularize, regularize_kwar
         cov = cov / data.shape[0]
     else:
         cov = compute_sklearn_covariance_matrix(data, regularize_kwargs)
+        cov = cov.astype("float32")
 
     return data, cov, M
 
@@ -277,7 +278,7 @@ def compute_sklearn_covariance_matrix(data, regularize_kwargs):
     regularize_kwargs["assume_centered"] = True
     estimator_class = getattr(sklearn.covariance, method)
     estimator = estimator_class(**regularize_kwargs)
-    estimator.fit(data)
+    estimator.fit(data.astype("float64"))  # sklearn covariance methods require float64
     cov = estimator.covariance_
 
     return cov
