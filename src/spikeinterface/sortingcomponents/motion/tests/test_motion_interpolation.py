@@ -12,6 +12,7 @@ from spikeinterface.sortingcomponents.motion.motion_interpolation import (
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 from spikeinterface.core import generate_ground_truth_recording
 
+
 def make_fake_motion(rec):
     # make a fake motion object
 
@@ -25,7 +26,7 @@ def make_fake_motion(rec):
         seg_time_bins = np.arange(0.5, duration - 0.49, 0.5)
         seg_disp = np.zeros((seg_time_bins.size, spatial_bins.size))
         seg_disp[:, :] = np.linspace(-30, 30, seg_time_bins.size)[:, None]
-        
+
         temporal_bins.append(seg_time_bins)
         displacement.append(seg_disp)
 
@@ -203,7 +204,6 @@ def test_InterpolateMotionRecording():
         noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
         seed=2205,
     )
-
 
     motion = make_fake_motion(rec)
 
