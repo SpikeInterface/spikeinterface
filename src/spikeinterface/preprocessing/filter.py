@@ -301,6 +301,7 @@ class LowpassFilterRecording(FilterRecording):
         self._kwargs = dict(recording=recording, freq_max=freq_max, margin_ms=margin_ms, dtype=dtype.str)
         self._kwargs.update(filter_kwargs)
 
+
 class NotchFilterRecording(BasePreprocessor):
     """
     Parameters
@@ -357,6 +358,7 @@ bandpass_filter = define_function_from_class(source_class=BandpassFilterRecordin
 notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
 highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
 lowpass_filter = define_function_from_class(source_class=LowpassFilterRecording, name="lowpass_filter")
+
 
 def causal_filter(
     recording,
@@ -427,6 +429,7 @@ def causal_filter(
 bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
 highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
 lowpass_filter.__doc__ = lowpass_filter.__doc__.format(_common_filter_docs)
+
 
 def fix_dtype(recording, dtype):
     if dtype is None:
