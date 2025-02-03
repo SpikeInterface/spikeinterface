@@ -311,7 +311,7 @@ Since these core extensions are important for all other extensions it is importa
   samples this can be a big data structure.
 * :code:`templates` are calculated from the raw waveform data and are used for downstream analyses
   (e.g. :code:`spike_amplitudes` are calculated based on the templates). This raises the question: if the :code:`templates` are all we need,
-  then why computing and saving the :code:`waveforms`? Well, there are two ways to obtain :code:`templates` data: 1) directly from the raw data (based on the
+  then why compute and save the :code:`waveforms`? Well, there are two ways to obtain :code:`templates` data: 1) directly from the raw data (based on the
   :code:`random_spikes`) or 2) from the :code:`waveforms` extension. When getting :code:`templates` from the raw data we are limited to obtaining averages
   and standard deviations. If we calculate the templates from the waveforms, however, we can also calculate the template medians or percentiles
   in addition to the average or standard deviations of the :code:`waveforms`. So it is important to think about the type of downstream analyses that
