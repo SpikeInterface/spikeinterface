@@ -140,7 +140,7 @@ class CircusClustering:
         pipeline_nodes = [PeakRetriever(recording, peaks)]
 
         radius_um = params["radius_um"]
-        pipeline_nodes += [
+        pipeline_nodes.append(
             ExtractSparseWaveforms(
                 recording,
                 parents=pipeline_nodes,
@@ -149,17 +149,15 @@ class CircusClustering:
                 ms_after=ms_after,
                 radius_um=radius_um,
             )
-        ]
+        )
 
         if params["hanning_filter"]:
-            pipeline_nodes += [HanningFilter(recording, parents=pipeline_nodes, return_output=False)]
+            pipeline_nodes.append(HanningFilter(recording, parents=pipeline_nodes, return_output=False))
 
         parents = [pipeline_nodes[0], pipeline_nodes[-1]]
-        pipeline_nodes += [
+        pipeline_nodes.append(
             TemporalPCAProjection(recording, parents=parents, return_output=True, model_folder_path=model_folder)
-        ]
-
-        pipeline_nodes = [node0, node1, node2, node3]
+        )
 
         if len(params["recursive_kwargs"]) == 0:
             from sklearn.decomposition import PCA
@@ -210,7 +208,7 @@ class CircusClustering:
                 names=["sparse_tsvd"],
             )
 
-            sparse_mask = node1.neighbours_mask
+            sparse_mask = pipeline_nodes[1].neighbours_mask
             neighbours_mask = get_channel_distances(recording) <= radius_um
 
             # np.save(features_folder / "sparse_mask.npy", sparse_mask)
