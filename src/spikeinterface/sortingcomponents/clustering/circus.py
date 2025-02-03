@@ -42,7 +42,7 @@ class CircusClustering:
 
     _default_params = {
         "hdbscan_kwargs": {
-            "min_cluster_size" : 50,
+            "min_cluster_size": 50,
             "cluster_selection_method": "eom",
             "allow_single_cluster": True,
         },
@@ -99,8 +99,8 @@ class CircusClustering:
             )
             wfs = few_wfs[:, :, 0]
         else:
-            #offset = int(params["waveforms"]["ms_before"] * fs / 1000)
-            wfs = params["few_waveforms"]#[:, offset - nbefore : offset + nafter]
+            # offset = int(params["waveforms"]["ms_before"] * fs / 1000)
+            wfs = params["few_waveforms"]  # [:, offset - nbefore : offset + nafter]
 
         # Ensure all waveforms have a positive max
         wfs *= np.sign(wfs[:, nbefore])[:, np.newaxis]
@@ -140,22 +140,24 @@ class CircusClustering:
         pipeline_nodes = [PeakRetriever(recording, peaks)]
 
         radius_um = params["radius_um"]
-        pipeline_nodes += [ExtractSparseWaveforms(
-            recording,
-            parents=pipeline_nodes,
-            return_output=False,
-            ms_before=ms_before,
-            ms_after=ms_after,
-            radius_um=radius_um,
-        )]
+        pipeline_nodes += [
+            ExtractSparseWaveforms(
+                recording,
+                parents=pipeline_nodes,
+                return_output=False,
+                ms_before=ms_before,
+                ms_after=ms_after,
+                radius_um=radius_um,
+            )
+        ]
 
         if params["hanning_filter"]:
             pipeline_nodes += [HanningFilter(recording, parents=pipeline_nodes, return_output=False)]
 
         parents = [pipeline_nodes[0], pipeline_nodes[-1]]
-        pipeline_nodes += [TemporalPCAProjection(
-            recording, parents=parents, return_output=True, model_folder_path=model_folder
-        )]
+        pipeline_nodes += [
+            TemporalPCAProjection(recording, parents=parents, return_output=True, model_folder_path=model_folder)
+        ]
 
         pipeline_nodes = [node0, node1, node2, node3]
 
