@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_from_class
+from ..core import BaseSorting
+from ..core.core_tools import define_function_from_class
 from .basecomparison import BasePairComparison, MixinSpikeTrainComparison, MixinTemplateComparison
 from .comparisontools import (
     do_count_event,
@@ -12,6 +13,7 @@ from .comparisontools import (
     do_confusion_matrix,
     do_count_score,
     compute_performance,
+    compute_distance_matrix,
 )
 from ..postprocessing import compute_template_similarity_by_pair
 
@@ -23,16 +25,17 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
 
     def __init__(
         self,
-        sorting1,
-        sorting2,
-        sorting1_name=None,
-        sorting2_name=None,
-        delta_time=0.4,
-        match_score=0.5,
-        chance_score=0.1,
-        ensure_symmetry=False,
-        n_jobs=1,
-        verbose=False,
+        sorting1: BaseSorting,
+        sorting2: BaseSorting,
+        sorting1_name: str | None = None,
+        sorting2_name: str | None = None,
+        delta_time: float = 0.4,
+        match_score: float = 0.5,
+        chance_score: float = 0.1,
+        ensure_symmetry: bool = False,
+        agreement_method: str = "from_count",
+        n_jobs: int = 1,
+        verbose: bool = False,
     ):
         if sorting1_name is None:
             sorting1_name = "sorting1"
@@ -59,6 +62,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
         self.unit2_ids = self.sorting2.get_unit_ids()
 
         self.ensure_symmetry = ensure_symmetry
+        self.agreement_method = agreement_method
 
         self._do_agreement()
         self._do_matching()
@@ -85,18 +89,30 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
 
         # common to GroundTruthComparison and SymmetricSortingComparison
         # spike count for each spike train
-        self.event_counts1 = do_count_event(self.sorting1)
-        self.event_counts2 = do_count_event(self.sorting2)
+        if self.agreement_method == "from_count":
+            self.event_counts1 = do_count_event(self.sorting1)
+            self.event_counts2 = do_count_event(self.sorting2)
 
-        # matrix of  event match count for each pair
-        self.match_event_count = make_match_count_matrix(
-            self.sorting1, self.sorting2, self.delta_frames, ensure_symmetry=self.ensure_symmetry
-        )
+            # matrix of  event match count for each pair
+            self.match_event_count = make_match_count_matrix(
+                self.sorting1, self.sorting2, self.delta_frames, ensure_symmetry=self.ensure_symmetry
+            )
 
-        # agreement matrix score for each pair
-        self.agreement_scores = make_agreement_scores_from_count(
-            self.match_event_count, self.event_counts1, self.event_counts2
-        )
+            # agreement matrix score for each pair
+            self.agreement_scores = make_agreement_scores_from_count(
+                self.match_event_count, self.event_counts1, self.event_counts2
+            )
+        elif self.agreement_method == "distance_function":
+            import pandas as pd
+
+            _, agreement_matrix = compute_distance_matrix(self.sorting1, self.sorting2, self.delta_frames)
+
+            self.agreement_scores = pd.DataFrame(
+                agreement_matrix, index=self.sorting1.unit_ids, columns=self.sorting2.unit_ids
+            )
+
+        else:
+            raise ValueError("agreement_method must be 'from_count' or 'distance_matrix'")
 
 
 class SymmetricSortingComparison(BasePairSorterComparison):
@@ -112,9 +128,9 @@ class SymmetricSortingComparison(BasePairSorterComparison):
 
     Parameters
     ----------
-    sorting1 : SortingExtractor
+    sorting1 : BaseSorting
         The first sorting for the comparison
-    sorting2 : SortingExtractor
+    sorting2 : BaseSorting
         The second sorting for the comparison
     sorting1_name : str, default: None
         The name of sorter 1
@@ -126,6 +142,9 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         Minimum agreement score to match units
     chance_score : float, default: 0.1
         Minimum agreement score to for a possible match
+    agreement_method : "from_count" | "distance_function", default: "from_count"
+        The method to compute agreement scores. The "from_count" method computes agreement scores from spike counts.
+        The "distance_function" method computes agreement scores from spike time distance functions.
     n_jobs : int, default: -1
         Number of cores to use in parallel. Uses all available if -1
     verbose : bool, default: False
@@ -139,15 +158,16 @@ class SymmetricSortingComparison(BasePairSorterComparison):
 
     def __init__(
         self,
-        sorting1,
-        sorting2,
-        sorting1_name=None,
-        sorting2_name=None,
-        delta_time=0.4,
-        match_score=0.5,
-        chance_score=0.1,
-        n_jobs=-1,
-        verbose=False,
+        sorting1: BaseSorting,
+        sorting2: BaseSorting,
+        sorting1_name: str | None = None,
+        sorting2_name: str | None = None,
+        delta_time: float = 0.4,
+        match_score: float = 0.5,
+        chance_score: float = 0.1,
+        agreement_method: str = "from_count",
+        n_jobs: int = -1,
+        verbose: bool = False,
     ):
         BasePairSorterComparison.__init__(
             self,
@@ -159,6 +179,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
             match_score=match_score,
             chance_score=chance_score,
             ensure_symmetry=True,
+            agreement_method=agreement_method,
             n_jobs=n_jobs,
             verbose=verbose,
         )
@@ -167,10 +188,13 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         return self.hungarian_match_12, self.hungarian_match_21
 
     def get_matching_event_count(self, unit1, unit2):
-        if (unit1 is not None) and (unit2 is not None):
-            return self.match_event_count.at[unit1, unit2]
+        if self.agreement_method == "from_count":
+            if (unit1 is not None) and (unit2 is not None):
+                return self.match_event_count.at[unit1, unit2]
+            else:
+                raise Exception("get_matching_event_count: unit1 and unit2 must not be None.")
         else:
-            raise Exception("get_matching_event_count: unit1 and unit2 must not be None.")
+            raise Exception("get_matching_event_count is valid only if agreement_method='from_count'")
 
     def get_best_unit_match1(self, unit1):
         return self.best_match_12[unit1]
@@ -215,9 +239,9 @@ class GroundTruthComparison(BasePairSorterComparison):
 
     Parameters
     ----------
-    gt_sorting : SortingExtractor
+    gt_sorting : BaseSorting
         The first sorting for the comparison
-    tested_sorting : SortingExtractor
+    tested_sorting : BaseSorting
         The second sorting for the comparison
     gt_name : str, default: None
         The name of sorter 1
@@ -243,6 +267,9 @@ class GroundTruthComparison(BasePairSorterComparison):
         For instance, MEArec simulated dataset have exhaustive_gt=True
     match_mode : "hungarian" | "best", default: "hungarian"
         The method to match units
+    agreement_method : "from_count" | "distance_function", default: "from_count"
+        The method to compute agreement scores. The "from_count" method computes agreement scores from spike counts.
+        The "distance_function" method computes agreement scores from spike time distance functions.
     n_jobs : int, default: -1
         Number of cores to use in parallel. Uses all available if -1
     compute_labels : bool, default: False
@@ -260,22 +287,23 @@ class GroundTruthComparison(BasePairSorterComparison):
 
     def __init__(
         self,
-        gt_sorting,
-        tested_sorting,
-        gt_name=None,
-        tested_name=None,
-        delta_time=0.4,
-        match_score=0.5,
-        well_detected_score=0.8,
-        redundant_score=0.2,
-        overmerged_score=0.2,
-        chance_score=0.1,
-        exhaustive_gt=False,
-        n_jobs=-1,
-        match_mode="hungarian",
-        compute_labels=False,
-        compute_misclassifications=False,
-        verbose=False,
+        gt_sorting: BaseSorting,
+        tested_sorting: BaseSorting,
+        gt_name: str | None = None,
+        tested_name: str | None = None,
+        delta_time: float = 0.4,
+        match_score: float = 0.5,
+        well_detected_score: float = 0.8,
+        redundant_score: float = 0.2,
+        overmerged_score: float = 0.2,
+        chance_score: float = 0.1,
+        exhaustive_gt: bool = False,
+        agreement_method: str = "from_count",
+        n_jobs: int = -1,
+        match_mode: str = "hungarian",
+        compute_labels: bool = False,
+        compute_misclassifications: bool = False,
+        verbose: bool = False,
     ):
         import pandas as pd
 
@@ -293,6 +321,7 @@ class GroundTruthComparison(BasePairSorterComparison):
             match_score=match_score,
             chance_score=chance_score,
             ensure_symmetry=False,
+            agreement_method=agreement_method,
             n_jobs=n_jobs,
             verbose=verbose,
         )

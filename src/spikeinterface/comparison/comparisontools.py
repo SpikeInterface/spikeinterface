@@ -72,7 +72,7 @@ def do_count_event(sorting):
 
     Parameters
     ----------
-    sorting : SortingExtractor
+    sorting : BaseSorting
         A sorting extractor
 
     Returns
@@ -345,9 +345,9 @@ def make_agreement_scores(
 
     Parameters
     ----------
-    sorting1 : SortingExtractor
+    sorting1 : BaseSorting
         The first sorting extractor
-    sorting2 : SortingExtractor
+    sorting2 : BaseSorting
         The second sorting extractor
     delta_frames : int
         Number of frames to consider spikes coincident
@@ -549,9 +549,9 @@ def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclass
 
     Parameters
     ----------
-    sorting1 : SortingExtractor instance
+    sorting1 : BaseSorting
         The ground truth sorting
-    sorting2 : SortingExtractor instance
+    sorting2 : BaseSorting
         The tested sorting
     delta_frames : int
         Number of frames to consider spikes coincident
@@ -902,7 +902,7 @@ def make_collision_events(sorting, delta):
 
     Parameters
     ----------
-    sorting : SortingExtractor
+    sorting : BaseSorting
         The sorting extractor object for counting collision events
     delta : int
         Number of frames for considering collision events
@@ -1297,9 +1297,10 @@ def compute_distance_matrix(sorting1: BaseSorting, sorting2: BaseSorting, delta_
         squared_norm_1_vector[:, np.newaxis] + squared_norm_2_vector[np.newaxis, :] - 2 * dot_product_matrix
     )
 
-    distance_metrix = np.sqrt(squared_distance_matrix)
+    distance_matrix = np.sqrt(squared_distance_matrix)
+    agreement_matrix = 1 / ((distance_matrix**2 / dot_product_matrix) + 1)
 
-    return distance_metrix
+    return distance_matrix, agreement_matrix
 
 
 def calculate_generalized_comparison_metrics(
