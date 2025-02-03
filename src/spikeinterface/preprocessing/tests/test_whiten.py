@@ -86,7 +86,7 @@ class TestWhiten:
         """
         The whitening matrix is computed as the
         inverse square root of the covariance matrix
-        (Sigma, 'S' below + some eps for regularising.
+        (Sigma, 'S' below + some eps for regularising.)
 
         Here the inverse process is performed to compute
         the covariance matrix from the whitening matrix
