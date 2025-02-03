@@ -7,7 +7,7 @@ import warnings
 
 import numpy as np
 
-from spikeinterface.core import load_extractor, BaseSorting, BaseSortingSegment
+from spikeinterface.core import load, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from .basecomparison import BaseMultiComparison, MixinSpikeTrainComparison, MixinTemplateComparison
 from .paircomparisons import SymmetricSortingComparison, TemplateComparison
@@ -230,7 +230,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         with (folder_path / "sortings.json").open() as f:
             dict_sortings = json.load(f)
         name_list = list(dict_sortings.keys())
-        sorting_list = [load_extractor(v, base_folder=folder_path) for v in dict_sortings.values()]
+        sorting_list = [load(v, base_folder=folder_path) for v in dict_sortings.values()]
         mcmp = MultiSortingComparison(sorting_list=sorting_list, name_list=list(name_list), do_matching=False, **kwargs)
         filename = str(folder_path / "multicomparison.gpickle")
         with open(filename, "rb") as f:

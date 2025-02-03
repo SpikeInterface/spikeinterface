@@ -15,7 +15,7 @@ import shutil
 import warnings
 
 
-from spikeinterface.core import load_extractor, BaseRecordingSnippets, BaseRecording
+from spikeinterface.core import load, BaseRecordingSnippets, BaseRecording
 from spikeinterface.core.core_tools import check_json
 from spikeinterface.core.globals import get_global_job_kwargs
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
@@ -145,9 +145,10 @@ class BaseSorter:
         elif recording.check_serializability("pickle"):
             recording.dump(output_folder / "spikeinterface_recording.pickle", relative_to=output_folder)
         else:
-            # TODO: deprecate and finally remove this after 0.100
-            d = {"warning": "The recording is not serializable to json"}
-            rec_file.write_text(json.dumps(d, indent=4), encoding="utf8")
+            raise RuntimeError(
+                "This recording is not serializable and so can not be sorted. Consider `recording.save()` to save a "
+                "compatible binary file."
+            )
 
         return output_folder
 
@@ -209,9 +210,9 @@ class BaseSorter:
                 )
                 recording = None
             else:
-                recording = load_extractor(json_file, base_folder=output_folder)
+                recording = load(json_file, base_folder=output_folder)
         elif pickle_file.exists():
-            recording = load_extractor(pickle_file, base_folder=output_folder)
+            recording = load(pickle_file, base_folder=output_folder)
 
         return recording
 

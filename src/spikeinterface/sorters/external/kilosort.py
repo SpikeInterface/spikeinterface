@@ -206,7 +206,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
         # options for posthoc merges (under construction)
         ops["fracse"] = 0.1  # binning step along discriminant axis for posthoc merges (in units of sd)
-        ops["epu"] = np.Inf
+        ops["epu"] = np.inf
 
         ops["ForceMaxRAMforDat"] = 20e9  # maximum RAM the algorithm will try to use; on Windows it will autodetect.
 
