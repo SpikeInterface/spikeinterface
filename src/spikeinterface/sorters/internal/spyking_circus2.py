@@ -391,7 +391,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if folder_to_delete is not None:
             shutil.rmtree(folder_to_delete)
 
-        sorting = sorting.save(folder=sorting_folder)
+        sorting = sorting.save(folder=sorting_folder, format="npz_folder")
 
         return sorting
 

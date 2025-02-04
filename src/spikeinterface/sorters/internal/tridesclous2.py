@@ -247,6 +247,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         final_spikes["segment_index"] = spikes["segment_index"]
 
         sorting = NumpySorting(final_spikes, sampling_frequency, labels_set)
-        sorting = sorting.save(folder=sorter_output_folder / "sorting")
+        sorting = sorting.save(folder=sorter_output_folder / "sorting", format="npz_folder")
 
         return sorting
