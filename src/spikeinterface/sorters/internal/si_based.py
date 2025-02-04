@@ -21,11 +21,7 @@ class ComponentsBasedSorter(BaseSorter):
     @classmethod
     def _get_result_from_folder(cls, output_folder):
         sorting = load(output_folder / "sorting")
-        from spikeinterface.core.numpyextractors import SharedMemorySorting
-
-        shm_sorting = SharedMemorySorting.from_sorting(sorting)
-        del sorting
-        return shm_sorting
+        return sorting
 
     @classmethod
     def _check_apply_filter_in_params(cls, params):
