@@ -24,8 +24,8 @@ def test_compare_two_sorters():
         ],
         [0, 0, 5],
     )
-    sc_from_counts = compare_two_sorters(sorting1, sorting2, agreement_method="from_count")
-    sc_from_distance = compare_two_sorters(sorting1, sorting2, agreement_method="distance_function")
+    sc_from_counts = compare_two_sorters(sorting1, sorting2, agreement_method="count")
+    sc_from_distance = compare_two_sorters(sorting1, sorting2, agreement_method="distance")
 
     np.testing.assert_array_equal(
         sc_from_counts.hungarian_match_12.to_numpy(),
@@ -50,8 +50,8 @@ def test_agreements():
     sorting2 = aggregate_units([sorting1, sorting_extra])
     sorting2 = sorting2.select_units(unit_ids=sorting2.unit_ids[np.random.permutation(len(sorting2.unit_ids))])
 
-    sc_from_counts = compare_two_sorters(sorting1, sorting2, agreement_method="from_count")
-    sc_from_distance = compare_two_sorters(sorting1, sorting2, agreement_method="distance_function")
+    sc_from_counts = compare_two_sorters(sorting1, sorting2, agreement_method="count")
+    sc_from_distance = compare_two_sorters(sorting1, sorting2, agreement_method="distance")
 
     np.testing.assert_array_equal(
         sc_from_counts.hungarian_match_12.to_numpy(),

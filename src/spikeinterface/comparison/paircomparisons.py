@@ -33,7 +33,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
         match_score: float = 0.5,
         chance_score: float = 0.1,
         ensure_symmetry: bool = False,
-        agreement_method: str = "from_count",
+        agreement_method: str = "count",
         n_jobs: int = 1,
         verbose: bool = False,
     ):
@@ -89,7 +89,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
 
         # common to GroundTruthComparison and SymmetricSortingComparison
         # spike count for each spike train
-        if self.agreement_method == "from_count":
+        if self.agreement_method == "count":
             self.event_counts1 = do_count_event(self.sorting1)
             self.event_counts2 = do_count_event(self.sorting2)
 
@@ -102,7 +102,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
             self.agreement_scores = make_agreement_scores_from_count(
                 self.match_event_count, self.event_counts1, self.event_counts2
             )
-        elif self.agreement_method == "distance_function":
+        elif self.agreement_method == "distance":
 
             self.agreement_scores = calculate_agreement_scores_with_distance(
                 self.sorting1,
@@ -141,9 +141,9 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         Minimum agreement score to match units
     chance_score : float, default: 0.1
         Minimum agreement score to for a possible match
-    agreement_method : "from_count" | "distance_function", default: "from_count"
-        The method to compute agreement scores. The "from_count" method computes agreement scores from spike counts.
-        The "distance_function" method computes agreement scores from spike time distance functions.
+    agreement_method : "count" | "distance", default: "count"
+        The method to compute agreement scores. The "count" method computes agreement scores from spike counts.
+        The "distance" method computes agreement scores from spike time distance functions.
     n_jobs : int, default: -1
         Number of cores to use in parallel. Uses all available if -1
     verbose : bool, default: False
@@ -164,7 +164,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         delta_time: float = 0.4,
         match_score: float = 0.5,
         chance_score: float = 0.1,
-        agreement_method: str = "from_count",
+        agreement_method: str = "count",
         n_jobs: int = -1,
         verbose: bool = False,
     ):
@@ -187,7 +187,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         return self.hungarian_match_12, self.hungarian_match_21
 
     def get_matching_event_count(self, unit1, unit2):
-        if self.agreement_method == "from_count":
+        if self.agreement_method == "count":
             if (unit1 is not None) and (unit2 is not None):
                 return self.match_event_count.at[unit1, unit2]
             else:
@@ -266,9 +266,9 @@ class GroundTruthComparison(BasePairSorterComparison):
         For instance, MEArec simulated dataset have exhaustive_gt=True
     match_mode : "hungarian" | "best", default: "hungarian"
         The method to match units
-    agreement_method : "from_count" | "distance_function", default: "from_count"
-        The method to compute agreement scores. The "from_count" method computes agreement scores from spike counts.
-        The "distance_function" method computes agreement scores from spike time distance functions.
+    agreement_method : "count" | "distance", default: "count"
+        The method to compute agreement scores. The "count" method computes agreement scores from spike counts.
+        The "distance" method computes agreement scores from spike time distance functions.
     n_jobs : int, default: -1
         Number of cores to use in parallel. Uses all available if -1
     compute_labels : bool, default: False
@@ -297,7 +297,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         overmerged_score: float = 0.2,
         chance_score: float = 0.1,
         exhaustive_gt: bool = False,
-        agreement_method: str = "from_count",
+        agreement_method: str = "count",
         n_jobs: int = -1,
         match_mode: str = "hungarian",
         compute_labels: bool = False,
