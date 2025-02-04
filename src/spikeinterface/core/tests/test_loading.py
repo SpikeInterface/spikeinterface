@@ -1,6 +1,8 @@
 import pytest
 
+import numpy as np
 from spikeinterface import generate_ground_truth_recording, create_sorting_analyzer, load, SortingAnalyzer, Templates
+from spikeinterface.core.motion import Motion
 from spikeinterface.core.generate import generate_unit_locations, generate_templates
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.core.zarrextractors import ZarrRecordingExtractor
@@ -66,6 +68,17 @@ def generate_templates_object():
         probe=probe,
     )
     return templates
+
+
+@pytest.fixture()
+def generate_motion_object():
+    num_spatial_bins = 10
+    num_temporal_bins = 100
+    temporal_bins_s = np.arange(num_temporal_bins)
+    spatial_bins_um = np.arange(num_spatial_bins)
+    displacements = np.random.randn(num_temporal_bins, num_spatial_bins)
+    motion = Motion(displacements, temporal_bins_s=temporal_bins_s, spatial_bins_um=spatial_bins_um)
+    return motion
 
 
 @pytest.mark.parametrize("output_format", ["binary", "zarr"])
@@ -147,6 +160,15 @@ def test_load_templates(tmp_path, generate_templates_object):
     templates_loaded = load(str(zarr_path))
 
     assert templates == templates_loaded
+
+
+def test_load_motion(tmp_path, generate_motion_object):
+    motion = generate_motion_object
+
+    motion.save(tmp_path / "motion")
+    motion_loaded = load(tmp_path / "motion")
+
+    assert motion == motion_loaded
 
 
 @pytest.mark.skipif(not HAVE_S3, reason="s3fs not installed")

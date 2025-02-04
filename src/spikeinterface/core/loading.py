@@ -37,7 +37,6 @@ def load(
             * WaveformExtractor folder (backward compatibility for v<0.101)
         - a `Motion` object from:
            * folder (after `Motion.save(folder)`)
-           * dictionary (after `Motion.to_dict()`)
         - a `Templates` object from:
            * zarr folder (after `Templates.add_templates_to_zarr_group()`)
            * dictionary (after `Templates.to_dict()`)
@@ -155,7 +154,7 @@ def _guess_object_from_dict(d):
 
     # Template
     is_template = True
-    for k in ("templates_array", "sparsity_mask", "channel_ids", "unit_ids"):
+    for k in "templates_array":
         if k not in d:
             is_template = False
             break
@@ -223,7 +222,7 @@ def _load_object_from_folder(folder, object_type, **kwargs):
         return analyzer
 
     elif object_type == "Motion":
-        from spikeinterface.sortingcomponents.motion import Motion
+        from spikeinterface.core.motion import Motion
 
         motion = Motion.load(folder)
         return motion

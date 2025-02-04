@@ -2,7 +2,8 @@ import warnings
 
 import numpy as np
 import spikeinterface.core as sc
-from spikeinterface.sortingcomponents.motion import Motion
+
+from spikeinterface.core.motion import Motion
 from spikeinterface.sortingcomponents.motion.motion_interpolation import (
     InterpolateMotionRecording,
     correct_motion_on_peaks,

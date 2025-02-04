@@ -75,7 +75,7 @@ class SIJsonEncoder(json.JSONEncoder):
 
     def default(self, obj):
         from spikeinterface.core.base import BaseExtractor
-        from spikeinterface.sortingcomponents.motion.motion_utils import Motion
+        from spikeinterface.core.motion import Motion
 
         # Over-write behaviors for datetime object
         if isinstance(obj, datetime.datetime):
