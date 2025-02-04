@@ -2,7 +2,6 @@ import warnings
 from pathlib import Path
 
 import json
-import pickle
 
 from .base import BaseExtractor
 from .core_tools import is_path_remote
@@ -31,17 +30,17 @@ def load(
             * binary folder (after `extractor.save(..., format='binary_folder')`)
             * zarr folder (after `extractor.save(..., format='zarr')`)
             * remote zarr folder
-        - a `SortingAnalyzer` object from :
+        - a `SortingAnalyzer` object from:
             * binary folder
             * zarr folder
             * remote zarr folder
             * WaveformExtractor folder (backward compatibility for v<0.101)
-        - a `Motion` after
-           * Motion.save(folder)
-           * Motion.to_dict()
-        - a `Templates` after
-           * Templates.add_templates_to_zarr_group()
-           * Templates.to_dict()
+        - a `Motion` object from:
+           * folder (after `Motion.save(folder)`)
+           * dictionary (after `Motion.to_dict()`)
+        - a `Templates` object from:
+           * zarr folder (after `Templates.add_templates_to_zarr_group()`)
+           * dictionary (after `Templates.to_dict()`)
 
     Parameters
     ----------
@@ -50,22 +49,26 @@ def load(
     base_folder : str | Path | bool | None, default: None
         The base folder to make relative paths absolute. Only used to load Recording/Sorting objects.
         If True and file_or_folder_or_dict is a file, the parent folder of the file is used.
-
-
-    # TODO discuss this kwargs or expicit ????
-    load_extensions : bool, default: True
-        If True, the SortingAnalyzer extensions are loaded. Only used to load SortingAnalyzer objects.
-    backend_options : dict | None, default: None
-        The backend options to use when loading the object. Only used to load SortingAnalyzer objects.
-        The dictionary can contain the following keys:
-        - storage_options: dict | None (fsspec storage options)
-        - saving_options: dict | None (additional saving options for creating and saving datasets)
+    kwargs : keyword arguments for various objects, including
+        * base_folder: str | Path | bool
+            The base folder to make relative paths absolute. Only used to load Recording/Sorting objects.
+            If True and file_or_folder_or_dict is a file, the parent folder of the file is used.
+        * load_extensions: bool, default: True
+            If True, the SortingAnalyzer extensions are loaded. Only used to load SortingAnalyzer objects.
+        * storage_options: dict | None, default: None
+            The storage options to use when loading the object. Only used to load Recording/Sorting objects.
+        * backend_options: dict | None, default: None
+            The backend options to use when loading the object. Only used to load SortingAnalyzer objects.
+            The dictionary can contain the following keys:
+            - storage_options: dict | None (fsspec storage options)
+            - saving_options: dict | None (additional saving options for creating and saving datasets)
 
     Returns
     -------
     spikeinterface object: Recording or Sorting or SortingAnalyzer or Motion or Templates
         The loaded spikeinterface object
     """
+    base_folder = kwargs.get("base_folder", base_folder)
     if isinstance(file_or_folder_or_dict, dict):
         # dict can be only Recording Sorting Motion Templates
         d = file_or_folder_or_dict
@@ -106,7 +109,7 @@ def load(
         folder = file_path
         if folder.suffix == ".zarr":
             # Local zarr can be
-            # Sorting Recording SortingAnalyzer Template
+            # Sorting / Recording / SortingAnalyzer / Motion
             object_type = _guess_object_from_zarr(folder)
             if object_type is None:
                 raise ValueError(_error_msg.format(file_path=file_path))
@@ -115,7 +118,7 @@ def load(
 
         else:
             # Local folder can be
-            # Sorting Recording SortingAnalyzer Motion
+            # Sorting / Recording / SortingAnalyzer / Motion
             object_type = _guess_object_from_local_folder(folder)
             if object_type is None:
                 raise ValueError(_error_msg.format(file_path=file_path))
@@ -257,7 +260,7 @@ def _guess_object_from_zarr(zarr_folder):
         return _guess_object_from_dict(spikeinterface_info)
 
     # here it is the old fashion and a bit ambiguous
-    if "channel_ids" in zarr_root.keys() and "unit_ids" in zarr_root.keys() and "nbefore" in zarr_root.keys():
+    if "unit_ids" in zarr_root.keys() and "templates_array" in zarr_root.keys():
         return "Templates"
     elif "channel_ids" in zarr_root.keys() and "unit_ids" not in zarr_root.keys():
         return "Recording"
@@ -267,34 +270,41 @@ def _guess_object_from_zarr(zarr_folder):
 
 def _load_object_from_zarr(folder_or_url, object_type, **kwargs):
 
-    storage_options = kwargs.get("storage_options", None)
-
     if object_type == "SortingAnalyzer":
         from .sortinganalyzer import load_sorting_analyzer
 
-        analyzer = load_sorting_analyzer(folder_or_url, **kwargs)
+        backend_options = kwargs.get("backend_options", None)
+        load_extensions = kwargs.get("load_extensions", True)
+        analyzer = load_sorting_analyzer(
+            folder_or_url, backend_options=backend_options, load_extensions=load_extensions
+        )
         return analyzer
 
     # elif object_type == "Motion":
     #     No Motion in zarr
 
-    # elif object_type == "Waveforms":
-    #     No Waveforms in zarr
+    elif object_type == "Templates":
+        from .template import Templates
 
+        templates = Templates.from_zarr(folder_or_url)
+        return templates
     elif object_type == "Recording":
         from .zarrextractors import read_zarr_recording
 
+        storage_options = kwargs.get("storage_options", None)
         recording = read_zarr_recording(folder_or_url, storage_options=storage_options)
         return recording
     elif object_type == "Sorting":
         from .zarrextractors import read_zarr_sorting
 
+        storage_options = kwargs.get("storage_options", None)
         sorting = read_zarr_sorting(folder_or_url, storage_options=storage_options)
         return sorting
     elif object_type == "Recording|Sorting":
         # This case shoudl deprecated soon because the read_zarr is ultra ambiguous
-        # just testing if the zarrot contains unit_ids or channel_ids but many object also contains it (see template)!!!!
+        # just testing if the zarr contains unit_ids or channel_ids but many object also contains it (see template)!!!!
         from .zarrextractors import read_zarr
 
+        storage_options = kwargs.get("storage_options", None)
         rec_or_sorting = read_zarr(folder_or_url, storage_options=storage_options)
         return rec_or_sorting

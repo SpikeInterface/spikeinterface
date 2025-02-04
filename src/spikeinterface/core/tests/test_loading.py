@@ -1,6 +1,7 @@
 import pytest
 
-from spikeinterface import generate_ground_truth_recording, create_sorting_analyzer, load, SortingAnalyzer
+from spikeinterface import generate_ground_truth_recording, create_sorting_analyzer, load, SortingAnalyzer, Templates
+from spikeinterface.core.generate import generate_unit_locations, generate_templates
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.core.zarrextractors import ZarrRecordingExtractor
 
@@ -28,6 +29,43 @@ def generate_sorting_analyzer(generate_recording_sorting):
     analyzer = create_sorting_analyzer(sort, recording=rec)
     analyzer.compute(computed_extensions)
     return analyzer
+
+
+@pytest.fixture()
+def generate_templates_object():
+    from probeinterface import generate_linear_probe
+
+    seed = 0
+
+    num_chans = 12
+    num_units = 10
+    margin_um = 15.0
+    probe = generate_linear_probe(num_chans)
+    channel_locations = probe.contact_positions[:, :2]
+    unit_locations = generate_unit_locations(num_units, channel_locations, margin_um=margin_um, seed=seed)
+
+    sampling_frequency = 30000.0
+    ms_before = 1.0
+    ms_after = 3.0
+
+    # standard case
+    templates_arr = generate_templates(
+        channel_locations,
+        unit_locations,
+        sampling_frequency,
+        ms_before,
+        ms_after,
+        upsample_factor=None,
+        seed=42,
+        dtype="float32",
+    )
+    templates = Templates(
+        templates_array=templates_arr,
+        sampling_frequency=sampling_frequency,
+        nbefore=int(ms_before * sampling_frequency / 1000),
+        probe=probe,
+    )
+    return templates
 
 
 @pytest.mark.parametrize("output_format", ["binary", "zarr"])
@@ -95,6 +133,20 @@ def test_load_sorting_analyzer(generate_sorting_analyzer, tmp_path, output_forma
 
     for ext in computed_extensions:
         assert ext in analyzer_loaded.extensions
+
+
+def test_load_templates(tmp_path, generate_templates_object):
+    templates = generate_templates_object
+    templates_dict = templates.to_dict()
+    templates_loaded = load(templates_dict)
+    assert templates == templates_loaded
+
+    zarr_path = tmp_path / "templates.zarr"
+    templates.to_zarr(str(zarr_path))
+    # Load from the Zarr archive
+    templates_loaded = load(str(zarr_path))
+
+    assert templates == templates_loaded
 
 
 @pytest.mark.skipif(not HAVE_S3, reason="s3fs not installed")
