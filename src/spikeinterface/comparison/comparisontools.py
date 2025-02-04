@@ -330,6 +330,23 @@ def make_match_count_matrix(
     return match_event_counts_df
 
 
+def calculate_agreement_scores_with_distance(sorting1, sorting2, delta_frames):
+
+    distance_matrix, dot_product_matrix = compute_distance_matrix(
+        sorting1,
+        sorting2,
+        delta_frames,
+        return_dot_product=True,
+    )
+
+    agreement_matrix = 1 / ((distance_matrix**2 / dot_product_matrix) + 1)
+    import pandas as pd
+
+    agreement_matrix_df = pd.DataFrame(agreement_matrix, index=sorting1.get_unit_ids(), columns=sorting2.get_unit_ids())
+
+    return agreement_matrix_df
+
+
 def make_agreement_scores(
     sorting1: BaseSorting,
     sorting2: BaseSorting,
@@ -1245,7 +1262,12 @@ def _compute_spike_vector_dot_product(
     return dot_product_matrix
 
 
-def compute_distance_matrix(sorting1: BaseSorting, sorting2: BaseSorting, delta_frames: int) -> np.ndarray:
+def compute_distance_matrix(
+    sorting1: BaseSorting,
+    sorting2: BaseSorting,
+    delta_frames: int,
+    return_dot_product: bool = False,
+) -> np.ndarray:
     """
     Computes a distance matrix between two sorting objects
 
@@ -1264,11 +1286,15 @@ def compute_distance_matrix(sorting1: BaseSorting, sorting2: BaseSorting, delta_
         The second spike train set to compare.
     delta_frames : int
         The frame width to consider in distance calculations.
-
+    return_dot_product : bool, optional
+        If True, the function will return the dot product matrix in addition to the distance matrix. Default is False.
     Returns
     -------
     distance_matrix : (num_units1, num_units2) ndarray (float)
         A matrix representing the pairwise L2 distances between units of sorting objects.
+    dot_product_matrix : (num_units1, num_units2) ndarray (float)
+        Only returned if `return_dot_product` is True.
+        A matrix representing the dot product between units of sorting objects.
     """
     num_units1 = sorting1.get_num_units()
     num_units2 = sorting2.get_num_units()
@@ -1298,9 +1324,11 @@ def compute_distance_matrix(sorting1: BaseSorting, sorting2: BaseSorting, delta_
     )
 
     distance_matrix = np.sqrt(squared_distance_matrix)
-    agreement_matrix = 1 / ((distance_matrix**2 / dot_product_matrix) + 1)
 
-    return distance_matrix, agreement_matrix
+    if not return_dot_product:
+        return distance_matrix
+    else:
+        return distance_matrix, dot_product_matrix
 
 
 def calculate_generalized_comparison_metrics(
@@ -1370,12 +1398,14 @@ def calculate_generalized_comparison_metrics(
     generalized_recall = dot_product / squared_norm1  # Assumes sorting1 is the ground truth
     generalized_precision = dot_product / squared_norm2  # Assumes sorting2 is the sorting that is being evaluated
 
-    # TODO: Maybe distance should be here? who wants a distance by itself?
+    distance = np.sqrt(squared_norm1[:, np.newaxis] + squared_norm2[np.newaxis, :] - 2 * dot_product)
 
     metrics = dict(
         accuracy=generalized_accuracy,
         recall=generalized_recall,
         precision=generalized_precision,
         cosine_similarity=cosine_similarity,
+        distance=distance,
+        dot_product=dot_product,
     )
     return metrics

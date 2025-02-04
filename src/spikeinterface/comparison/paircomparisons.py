@@ -9,11 +9,11 @@ from .comparisontools import (
     do_count_event,
     make_match_count_matrix,
     make_agreement_scores_from_count,
+    calculate_agreement_scores_with_distance,
     do_score_labels,
     do_confusion_matrix,
     do_count_score,
     compute_performance,
-    compute_distance_matrix,
 )
 from ..postprocessing import compute_template_similarity_by_pair
 
@@ -103,12 +103,11 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
                 self.match_event_count, self.event_counts1, self.event_counts2
             )
         elif self.agreement_method == "distance_function":
-            import pandas as pd
 
-            _, agreement_matrix = compute_distance_matrix(self.sorting1, self.sorting2, self.delta_frames)
-
-            self.agreement_scores = pd.DataFrame(
-                agreement_matrix, index=self.sorting1.unit_ids, columns=self.sorting2.unit_ids
+            self.agreement_scores = calculate_agreement_scores_with_distance(
+                self.sorting1,
+                self.sorting2,
+                self.delta_frames,
             )
 
         else:
