@@ -143,7 +143,7 @@ class CircusClustering:
         pipeline_nodes.append(
             ExtractSparseWaveforms(
                 recording,
-                parents=pipeline_nodes,
+                parents=[pipeline_nodes[0]],
                 return_output=False,
                 ms_before=ms_before,
                 ms_after=ms_after,
@@ -151,8 +151,9 @@ class CircusClustering:
             )
         )
 
+        parents = [pipeline_nodes[0], pipeline_nodes[1]]
         if params["hanning_filter"]:
-            pipeline_nodes.append(HanningFilter(recording, parents=pipeline_nodes, return_output=False))
+            pipeline_nodes.append(HanningFilter(recording, parents=parents, return_output=False))
 
         parents = [pipeline_nodes[0], pipeline_nodes[-1]]
         pipeline_nodes.append(
