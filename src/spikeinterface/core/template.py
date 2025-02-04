@@ -5,8 +5,9 @@ import json
 from dataclasses import dataclass, field, astuple, replace
 from probeinterface import Probe
 from pathlib import Path
-from .sparsity import ChannelSparsity
 from multiprocessing.shared_memory import SharedMemory
+
+from .sparsity import ChannelSparsity
 from .core_tools import make_shared_array
 
 
