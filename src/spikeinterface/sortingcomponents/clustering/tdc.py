@@ -40,18 +40,17 @@ class TdcClustering:
         },
         "svd": {"n_components": 6},
         "clustering": {
-            "recursive_depth":3,
+            "recursive_depth": 3,
             "split_radius_um": 40.0,
             "clusterer": "hdbscan",
             "clusterer_kwargs": {
-                    "min_cluster_size": 10,
-                    "min_samples": 1,
-                    "allow_single_cluster": True,
-                    "cluster_selection_method": "eom",
-            "do_merge": True,
-            "merge_radius_um": 40.0,
-            "threshold_diff": 1.5,
-
+                "min_cluster_size": 10,
+                "min_samples": 1,
+                "allow_single_cluster": True,
+                "cluster_selection_method": "eom",
+                "do_merge": True,
+                "merge_radius_um": 40.0,
+                "threshold_diff": 1.5,
             },
         },
     }
@@ -182,9 +181,7 @@ class TdcClustering:
             recursive=True,
             recursive_depth=params["clustering"]["recursive_depth"],
             returns_split_count=True,
-            
             debug_folder=clustering_folder / "figure_debug_split",
-            
             **job_kwargs,
         )
 

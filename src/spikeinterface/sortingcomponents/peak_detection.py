@@ -661,7 +661,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
         self.peak_sign = peak_sign
         self.prototype = np.flip(prototype) / np.linalg.norm(prototype)
-    
+
         contact_locations = recording.get_channel_locations()
         dist = np.linalg.norm(contact_locations[:, np.newaxis] - contact_locations[np.newaxis, :], axis=2)
         self.weights, self.z_factors = get_convolution_weights(dist, **weight_method)
@@ -693,7 +693,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
         assert HAVE_NUMBA, "You need to install numba"
         conv_traces = self.get_convolved_traces(traces)
-        #conv_traces -= self.medians
+        # conv_traces -= self.medians
         conv_traces /= self.abs_thresholds[:, None]
         conv_traces = conv_traces[:, self.conv_margin : -self.conv_margin]
         traces_center = conv_traces[:, self.exclude_sweep_size : -self.exclude_sweep_size]

@@ -12,3 +12,11 @@ matching_methods = {
     "circus-omp-svd": CircusOMPSVDPeeler,
     "wobble": WobbleMatch,
 }
+
+try:
+    # Kilosort licence (GPL 3) is forcing us to make and use an external package
+    from spikeinterface_kilosort_components import KiloSortMatching
+
+    matching_methods["kilosort-matching"] = KiloSortMatching
+except ImportError:
+    pass
