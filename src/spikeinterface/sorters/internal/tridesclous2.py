@@ -247,6 +247,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         final_spikes["segment_index"] = spikes["segment_index"]
 
         sorting = NumpySorting(final_spikes, sampling_frequency, labels_set)
+        # `numpy_folder` doesn't release the memmap on Windows see https://github.com/SpikeInterface/spikeinterface/pull/3664
         sorting = sorting.save(folder=sorter_output_folder / "sorting", format="npz_folder")
 
         return sorting

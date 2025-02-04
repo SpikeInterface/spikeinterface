@@ -391,6 +391,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if folder_to_delete is not None:
             shutil.rmtree(folder_to_delete)
 
+        # `numpy_folder` doesn't release the memmap on Windows see https://github.com/SpikeInterface/spikeinterface/pull/3664
         sorting = sorting.save(folder=sorting_folder, format="npz_folder")
 
         return sorting
