@@ -7,6 +7,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 from probeinterface import Probe
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, Templates
+from multiprocessing.shared_memory import SharedMemory
+from spikeinterface.core.core_tools import make_shared_array
 
 
 def interpolate_templates(templates_array, source_locations, dest_locations, interpolation_method="cubic"):
@@ -256,6 +258,85 @@ class DriftingTemplates(Templates):
             dense_static_templates, displacements, self.probe, **interpolation_kwargs
         )
         self.displacements = displacements
+
+
+class SharedMemoryDriftingTemplates(DriftingTemplates):
+
+    def __init__(
+        self,
+        shm_name,
+        shape,
+        dtype,
+        templates_array_moved=None,
+        displacements=None,
+        main_shm_owner=True,
+        **static_kwargs,
+    ):
+
+        assert len(shape) == 4
+        assert shape[0] > 0, "SharedMemoryTemplates only supported with no empty templates"
+
+        self.shm = SharedMemory(shm_name, create=False)
+        templates_array_moved = np.ndarray(shape=shape, dtype=dtype, buffer=self.shm.buf)
+        self.static_kwargs = static_kwargs
+        DriftingTemplates.__init__(
+            self, templates_array_moved=templates_array_moved, displacements=displacements, **self.static_kwargs
+        )
+
+        # this is very important for the shm.unlink()
+        # only the main instance need to call it
+        # all other instances that are loaded from dict are not the main owner
+        self.main_shm_owner = main_shm_owner
+
+        self._kwargs = dict(
+            shm_name=shm_name,
+            shape=shape,
+            displacements=self.displacements,
+            static_kwargs=self.static_kwargs,
+            channel_ids=self.channel_ids,
+            # this ensure that all dump/load will not be main shm owner
+            main_shm_owner=False,
+        )
+
+    def __del__(self):
+        self.shm.close()
+        if self.main_shm_owner:
+            self.shm.unlink()
+
+    @staticmethod
+    def from_drifting_templates(drifting_templates):
+        assert (
+            drifting_templates.templates_array_moved is not None
+        ), "drifting_templates must have precomputed displacements"
+        data = drifting_templates.templates_array_moved
+        shm_templates, shm = make_shared_array(data.shape, data.dtype)
+        shm_templates[:] = data
+        static_kwargs = drifting_templates.to_dict()
+        init_kwargs = {
+            "templates_array": np.asarray(static_kwargs["templates_array"]),
+            "sparsity_mask": (
+                None if static_kwargs["sparsity_mask"] is None else np.asarray(static_kwargs["sparsity_mask"])
+            ),
+            "channel_ids": np.asarray(static_kwargs["channel_ids"]),
+            "unit_ids": np.asarray(static_kwargs["unit_ids"]),
+            "sampling_frequency": static_kwargs["sampling_frequency"],
+            "nbefore": static_kwargs["nbefore"],
+            "is_scaled": static_kwargs["is_scaled"],
+            "probe": (
+                static_kwargs["probe"] if static_kwargs["probe"] is None else Probe.from_dict(static_kwargs["probe"])
+            ),
+        }
+        shared_drifting_templates = SharedMemoryDriftingTemplates(
+            shm.name,
+            data.shape,
+            data.dtype,
+            shm_templates,
+            drifting_templates.displacements,
+            main_shm_owner=True,
+            **init_kwargs,
+        )
+        shm.close()
+        return shared_drifting_templates
 
 
 def make_linear_displacement(start, stop, num_step=10):
