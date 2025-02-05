@@ -8,13 +8,14 @@ SpikeInterface 0.102.0 release notes
 Main changes:
 
 * Added auto-label functions in curation module (#2918)
-* Added `spikeinterface.load()` function to load any SpikeInterface object (#3613,)
+* Added `spikeinterface.load()` function to load any SpikeInterface object (#3613, #3651)
 * Improved handling of time in base recording (#3509, #3623)
 * Support for Numpy 2.0 (#3481)
 
 
 core:
 
+* Extend si.load capabilities (#3651)
 * Use process as default in global job kwargs (#3648)
 * Fix node pipeline when multiple retrievers (#3642)
 * Add `get_start_time`/`get_end_time` functions and use them in `get_duration` (#3623)
