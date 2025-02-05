@@ -2,7 +2,6 @@ from .drift_tools import (
     move_dense_templates,
     interpolate_templates,
     DriftingTemplates,
-    SharedMemoryDriftingTemplates,
     InjectDriftingTemplatesRecording,
     make_linear_displacement,
 )
