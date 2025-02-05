@@ -235,6 +235,15 @@ class Motion:
             interpolation_method=self.interpolation_method,
         )
 
+    def get_boundaries(self):
+        max_ = -np.inf
+        min_ = np.inf
+        for segment_index, displacement_array in enumerate(self.displacement):
+            min_ = min(min_, np.min(displacement_array))
+            max_ = max(max_, np.max(displacement_array))
+        return min_, max_
+
+
 
 def get_spatial_windows(
     contact_depths,

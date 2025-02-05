@@ -193,7 +193,7 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None):
         case_keys = list(study.cases.keys())
 
     num_axes = len(case_keys)
-    fig, axs = plt.subplots(ncols=num_axes)
+    fig, axs = plt.subplots(ncols=num_axes, squeeze=False)
 
     for count, key in enumerate(case_keys):
         ax = axs.flatten()[count]

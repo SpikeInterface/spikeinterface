@@ -474,6 +474,7 @@ def generate_drifting_recording(
             unit_locations=unit_locations,
             displacement_unit_factor=displacement_unit_factor,
             unit_displacements=unit_displacements,
+            templates=templates,
         )
         return static_recording, drifting_recording, sorting, extra_infos
     else:
