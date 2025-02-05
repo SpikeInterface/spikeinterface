@@ -97,12 +97,12 @@ def test_load_binary_recording(generate_recording_sorting, tmp_path, output_form
 @pytest.mark.parametrize("output_format", ["numpy_folder", "zarr"])
 def test_load_binary_sorting(generate_recording_sorting, tmp_path, output_format):
     _, sort = generate_recording_sorting
-    _ = sort.save(folder=tmp_path / "sorting", format=output_format, overwrite=True)
+    _ = sort.save(folder=tmp_path / "test_sorting", format=output_format, overwrite=True)
 
     if output_format == "zarr":
-        sort_loaded = load(tmp_path / "sorting.zarr")
+        sort_loaded = load(tmp_path / "test_sorting.zarr")
     else:
-        sort_loaded = load(tmp_path / "sorting")
+        sort_loaded = load(tmp_path / "test_sorting")
 
     check_sortings_equal(sort, sort_loaded)
     del sort
