@@ -15,7 +15,6 @@ _error_msg = (
 
 def load(
     file_or_folder_or_dict,
-    base_folder=None,
     **kwargs,
     # load_extensions=True, backend_options=None
 ) -> "BaseExtractor | SortingAnalyzer | Motion | Template":
@@ -45,9 +44,6 @@ def load(
     ----------
     file_or_folder_or_dict : dictionary or folder or file (json, pickle)
         The file path, folder path, or dictionary to load the Recording, Sorting, or SortingAnalyzer from
-    base_folder : str | Path | bool | None, default: None
-        The base folder to make relative paths absolute. Only used to load Recording/Sorting objects.
-        If True and file_or_folder_or_dict is a file, the parent folder of the file is used.
     kwargs : keyword arguments for various objects, including
         * base_folder: str | Path | bool
             The base folder to make relative paths absolute. Only used to load Recording/Sorting objects.
@@ -67,7 +63,7 @@ def load(
     spikeinterface object: Recording or Sorting or SortingAnalyzer or Motion or Templates
         The loaded spikeinterface object
     """
-    base_folder = kwargs.get("base_folder", base_folder)
+    base_folder = kwargs.get("base_folder", None)
     if isinstance(file_or_folder_or_dict, dict):
         # dict can be only Recording Sorting Motion Templates
         d = file_or_folder_or_dict
@@ -261,7 +257,7 @@ def _guess_object_from_zarr(zarr_folder):
         return _guess_object_from_dict(spikeinterface_info)
 
     # here it is the old fashion and a bit ambiguous
-    if "unit_ids" in zarr_root.keys() and "templates_array" in zarr_root.keys():
+    if "templates_array" in zarr_root.keys():
         return "Templates"
     elif "channel_ids" in zarr_root.keys() and "unit_ids" not in zarr_root.keys():
         return "Recording"
@@ -270,7 +266,6 @@ def _guess_object_from_zarr(zarr_folder):
 
 
 def _load_object_from_zarr(folder_or_url, object_type, **kwargs):
-
     if object_type == "SortingAnalyzer":
         from .sortinganalyzer import load_sorting_analyzer
 
@@ -280,10 +275,6 @@ def _load_object_from_zarr(folder_or_url, object_type, **kwargs):
             folder_or_url, backend_options=backend_options, load_extensions=load_extensions
         )
         return analyzer
-
-    # elif object_type == "Motion":
-    #     No Motion in zarr
-
     elif object_type == "Templates":
         from .template import Templates
 
