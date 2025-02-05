@@ -84,15 +84,14 @@ def generate_motion_object():
 @pytest.mark.parametrize("output_format", ["binary", "zarr"])
 def test_load_binary_recording(generate_recording_sorting, tmp_path, output_format):
     rec, _ = generate_recording_sorting
-    _ = rec.save(folder=tmp_path / "recording", format=output_format, overwrite=True)
+    _ = rec.save(folder=tmp_path / "test_recording", format=output_format, overwrite=True)
 
     if output_format == "zarr":
-        rec_loaded = load(tmp_path / "recording.zarr")
+        rec_loaded = load(tmp_path / "test_recording.zarr")
     else:
-        rec_loaded = load(tmp_path / "recording")
+        rec_loaded = load(tmp_path / "test_recording")
 
     check_recordings_equal(rec, rec_loaded)
-    del rec
 
 
 @pytest.mark.parametrize("output_format", ["numpy_folder", "zarr"])
