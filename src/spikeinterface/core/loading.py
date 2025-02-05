@@ -73,7 +73,7 @@ def load(
         d = file_or_folder_or_dict
         object_type = _guess_object_from_dict(d)
         if object_type is None:
-            raise ValueError(_error_msg.format(file_path=file_path))
+            raise ValueError(_error_msg.format(file_path="provided dictionary"))
         return _load_object_from_dict(d, object_type, base_folder=base_folder)
 
     is_local = not is_path_remote(file_or_folder_or_dict)
@@ -154,7 +154,7 @@ def _guess_object_from_dict(d):
 
     # Template
     is_template = True
-    for k in "templates_array":
+    for k in ("templates_array", "sampling_frequency", "nbefore"):
         if k not in d:
             is_template = False
             break
@@ -183,8 +183,10 @@ def _load_object_from_dict(d, object_type, base_folder=None):
 
         return Templates.from_dict(d)
 
-    # elif object_type == "Motion":
-    # TODO to be implemented in Motion.from_dict
+    elif object_type == "Motion":
+        from spikeinterface.core.motion import Motion
+
+        return Motion.from_dict(d)
 
 
 def _guess_object_from_local_folder(folder):

@@ -153,11 +153,22 @@ class Motion:
 
     def to_dict(self):
         return dict(
+            object="Motion",
             displacement=self.displacement,
             temporal_bins_s=self.temporal_bins_s,
             spatial_bins_um=self.spatial_bins_um,
             interpolation_method=self.interpolation_method,
             direction=self.direction,
+        )
+
+    @staticmethod
+    def from_dict(d):
+        return Motion(
+            d["displacement"],
+            d["temporal_bins_s"],
+            d["spatial_bins_um"],
+            direction=d["direction"],
+            interpolation_method=d["interpolation_method"],
         )
 
     def save(self, folder):

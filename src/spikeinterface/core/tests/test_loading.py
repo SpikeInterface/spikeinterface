@@ -165,6 +165,10 @@ def test_load_templates(tmp_path, generate_templates_object):
 def test_load_motion(tmp_path, generate_motion_object):
     motion = generate_motion_object
 
+    motion_dict = motion.to_dict()
+    motion_loaded = load(motion_dict)
+    assert motion == motion_loaded
+
     motion.save(tmp_path / "motion")
     motion_loaded = load(tmp_path / "motion")
 
