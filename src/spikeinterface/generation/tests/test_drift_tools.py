@@ -6,6 +6,7 @@ from spikeinterface.generation import (
     move_dense_templates,
     make_linear_displacement,
     DriftingTemplates,
+    SharedMemoryDriftingTemplates,
     InjectDriftingTemplatesRecording,
 )
 from spikeinterface.core.generate import generate_templates, generate_sorting, NoiseGeneratorRecording
@@ -131,6 +132,17 @@ def test_DriftingTemplates():
         drifting_templates_from_precomputed.templates_array_moved, drifting_templates.templates_array_moved
     )
     assert np.array_equal(drifting_templates_from_precomputed.displacements, drifting_templates.displacements)
+
+
+def test_SharedMemoryDriftingTemplates():
+    static_templates = make_some_templates()
+    drifting_templates = DriftingTemplates.from_static_templates(static_templates)
+    displacement = np.array([[5.0, 10.0]])
+    drifting_templates.precompute_displacements(displacement)
+    shm_drifting_templates = SharedMemoryDriftingTemplates.from_drifting_templates(drifting_templates)
+
+    assert np.array_equal(shm_drifting_templates.templates_array_moved, drifting_templates.templates_array_moved)
+    assert np.array_equal(shm_drifting_templates.displacements, drifting_templates.displacements)
 
 
 def test_InjectDriftingTemplatesRecording(create_cache_folder):

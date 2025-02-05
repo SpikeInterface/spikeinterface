@@ -2019,19 +2019,18 @@ class AnalyzerExtension:
         return None
 
     def load_run_info(self):
+        run_info = None
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             run_info_file = extension_folder / "run_info.json"
             if run_info_file.is_file():
                 with open(str(run_info_file), "r") as f:
                     run_info = json.load(f)
-            else:
-                warnings.warn(f"Found no run_info file for {self.extension_name}, extension should be re-computed.")
-                run_info = None
 
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
             run_info = extension_group.attrs.get("run_info", None)
+
         if run_info is None:
             warnings.warn(f"Found no run_info file for {self.extension_name}, extension should be re-computed.")
         self.run_info = run_info
