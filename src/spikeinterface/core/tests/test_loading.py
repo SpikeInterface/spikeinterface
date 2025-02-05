@@ -92,6 +92,7 @@ def test_load_binary_recording(generate_recording_sorting, tmp_path, output_form
         rec_loaded = load(tmp_path / "recording")
 
     check_recordings_equal(rec, rec_loaded)
+    del rec
 
 
 @pytest.mark.parametrize("output_format", ["numpy_folder", "zarr"])
@@ -105,6 +106,7 @@ def test_load_binary_sorting(generate_recording_sorting, tmp_path, output_format
         sort_loaded = load(tmp_path / "sorting")
 
     check_sortings_equal(sort, sort_loaded)
+    del sort
 
 
 @pytest.mark.parametrize("extension", [".pkl", ".json"])
