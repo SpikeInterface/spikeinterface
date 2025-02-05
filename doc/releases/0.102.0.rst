@@ -141,7 +141,6 @@ Contributors:
 * @OlivierPeron
 * @alejoe91
 * @anoushkajain
-* @app/pre-commit-ci
 * @chrishalcrow
 * @cwindolf
 * @guptadivyansh
