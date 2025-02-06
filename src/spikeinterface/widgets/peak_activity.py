@@ -58,7 +58,7 @@ class PeakActivityMapWidget(BaseWidget):
             with_interpolated_map=with_interpolated_map,
             with_channel_ids=with_channel_ids,
             with_color_bar=with_color_bar,
-            fixed_color_range=fixed_color_range
+            fixed_color_range=fixed_color_range,
         )
 
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
@@ -87,20 +87,34 @@ class PeakActivityMapWidget(BaseWidget):
             if type(dp.fixed_color_range) in [tuple, list]:
                 self.vmin, self.vmax = dp.fixed_color_range
                 self._plot_one_bin(
-                    rec, probe, peaks, duration, dp.with_channel_ids, dp.with_contact_color, dp.with_interpolated_map, dp.with_color_bar,
-                    vmin=self.vmin, 
-                    vmax=self.vmax
+                    rec,
+                    probe,
+                    peaks,
+                    duration,
+                    dp.with_channel_ids,
+                    dp.with_contact_color,
+                    dp.with_interpolated_map,
+                    dp.with_color_bar,
+                    vmin=self.vmin,
+                    vmax=self.vmax,
                 )
             else:
                 self._plot_one_bin(
-                    rec, probe, peaks, duration, dp.with_channel_ids, dp.with_contact_color, dp.with_interpolated_map, dp.with_color_bar
+                    rec,
+                    probe,
+                    peaks,
+                    duration,
+                    dp.with_channel_ids,
+                    dp.with_contact_color,
+                    dp.with_interpolated_map,
+                    dp.with_color_bar,
                 )
         else:
             bin_size = int(dp.bin_duration_s * fs)
             num_frames = int(duration / dp.bin_duration_s)
 
             # Compute max values across all time bins if needed
-            if type(dp.fixed_color_range)==bool and dp.fixed_color_range==True:
+            if type(dp.fixed_color_range) == bool and dp.fixed_color_range == True:
                 all_rates = []
                 for i in range(num_frames):
                     i0, i1 = np.searchsorted(peaks["sample_index"], [bin_size * i, bin_size * (i + 1)])
@@ -115,11 +129,11 @@ class PeakActivityMapWidget(BaseWidget):
                 self.vmin, self.vmax = None, None
 
             # Create a colorbar once
-            dummy_image = self.ax.imshow([[0, 1]], visible=False, aspect='auto')
-            self.cbar = self.figure.colorbar(dummy_image, ax=self.ax, label='Peaks (Hz)')
+            dummy_image = self.ax.imshow([[0, 1]], visible=False, aspect="auto")
+            self.cbar = self.figure.colorbar(dummy_image, ax=self.ax, label="Peaks (Hz)")
 
             # Create a text artist for displaying time
-            self.time_text = self.ax.text(0.02, 0.98, '', transform=self.ax.transAxes, va='top', ha='left')
+            self.time_text = self.ax.text(0.02, 0.98, "", transform=self.ax.transAxes, va="top", ha="left")
 
             def animate_func(i):
                 self.ax.clear()
@@ -135,18 +149,18 @@ class PeakActivityMapWidget(BaseWidget):
                     with_interpolated_map=dp.with_interpolated_map,
                     with_color_bar=False,
                     vmin=self.vmin,
-                    vmax=self.vmax
+                    vmax=self.vmax,
                 )
-                
+
                 # Update colorbar
                 if artists and isinstance(artists[-1], plt.matplotlib.image.AxesImage):
                     self.cbar.update_normal(artists[-1])
-                
+
                 # Update time text
                 current_time = i * dp.bin_duration_s
-                self.time_text.set_text(f'Time: {current_time:.2f} s')
+                self.time_text.set_text(f"Time: {current_time:.2f} s")
                 self.ax.add_artist(self.time_text)
-                
+
                 artists += (self.time_text,)
                 return artists
 
@@ -162,7 +176,19 @@ class PeakActivityMapWidget(BaseWidget):
             rates[chan_ind] = num_spike / duration
         return rates
 
-    def _plot_one_bin(self, rec, probe, peaks, duration, with_channel_ids, with_contact_color, with_interpolated_map, with_color_bar, vmin=None, vmax=None):
+    def _plot_one_bin(
+        self,
+        rec,
+        probe,
+        peaks,
+        duration,
+        with_channel_ids,
+        with_contact_color,
+        with_interpolated_map,
+        with_color_bar,
+        vmin=None,
+        vmax=None,
+    ):
         rates = self._compute_rates(rec, peaks, duration)
 
         self.artists = ()
@@ -180,7 +206,6 @@ class PeakActivityMapWidget(BaseWidget):
                 probe_shape_kwargs={"facecolor": "w", "alpha": 0.1},
                 contacts_kargs={"alpha": 1.0},
                 text_on_contact=text_on_contact,
-
             )
             poly.set_clim(self.vmin, self.vmax)
             self.artists = self.artists + (poly, poly_contour)
@@ -193,6 +218,6 @@ class PeakActivityMapWidget(BaseWidget):
             self.artists = self.artists + (im,)
 
         if with_color_bar:
-            self.cbar = self.figure.colorbar(im, ax=self.ax, label=f'Peak rate (Hz)')
+            self.cbar = self.figure.colorbar(im, ax=self.ax, label=f"Peak rate (Hz)")
 
         return self.artists
