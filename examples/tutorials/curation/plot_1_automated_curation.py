@@ -79,7 +79,7 @@ sorting_analyzer.compute('template_metrics', include_multi_channel_metrics=True)
 # We can check that this is true by accessing the extension data.
 
 all_metric_names = list(sorting_analyzer.get_extension('quality_metrics').get_data().keys()) + list(sorting_analyzer.get_extension('template_metrics').get_data().keys())
-print(set(all_metric_names) == set(model.feature_names_in_))
+print(set(model.feature_names_in_).issubset(set(all_metric_names)))
 
 ##############################################################################
 # Great! We can now use the model to predict labels. Here, we pass the HF repo id directly
