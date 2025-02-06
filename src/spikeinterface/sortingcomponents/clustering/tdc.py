@@ -150,7 +150,7 @@ class TdcClustering:
 
         min_cluster_size = 50
         # min_cluster_size = 10
-        clusterer = params["clustering"].get("clusterer", "hdbscan")   
+        clusterer = params["clustering"].get("clusterer", "hdbscan")
         clusterer_kwargs = params["clustering"].get("clusterer_kwargs", dict())
 
         post_split_label, split_count = split_clusters(
