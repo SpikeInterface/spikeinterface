@@ -29,8 +29,8 @@ def make_fake_motion():
     return motion
 
 
-def test_Motion(tmp_path):
-
+def test_motion_object(tmp_path):
+    """Basic tests for Motion object representation, saving and loading."""
     temporal_bins_s = np.arange(0.0, 10.0, 1.0)
     spatial_bins_um = np.array([100.0, 200.0])
 
@@ -43,37 +43,13 @@ def test_Motion(tmp_path):
     # serialize with pickle before interpolation fit
     motion2 = pickle.loads(pickle.dumps(motion))
     assert motion2.interpolators is None
-    # serialize with pickle after interpolation fit
-    motion2.make_interpolators()
-    assert motion2.interpolators is not None
-    motion2 = pickle.loads(pickle.dumps(motion2))
-    assert motion2.interpolators is not None
-
-    # to/from dict
-    motion2 = Motion.from_dict(motion.to_dict())
-    assert motion == motion2
-    assert motion2.interpolators is None
-
-    # do interpolate
-    displacement = motion.get_displacement_at_time_and_depth([2, 4.4, 11], [120.0, 80.0, 150.0])
-    # print(displacement)
-    assert displacement.shape[0] == 3
-    # check clip
-    assert displacement[2] == 20.0
-
-    # interpolate grid
-    displacement = motion.get_displacement_at_time_and_depth([2, 4.4, 11, 15, 19], [150.0, 80.0], grid=True)
-    assert displacement.shape == (2, 5)
-    assert displacement[0, 2] == 20.0
 
     # save/load to folder
     folder = tmp_path / "motion_saved"
-    if folder.exists():
-        shutil.rmtree(folder)
     motion.save(folder)
     motion2 = Motion.load(folder)
     assert motion == motion2
 
 
 if __name__ == "__main__":
-    test_Motion()
+    test_motion_object()

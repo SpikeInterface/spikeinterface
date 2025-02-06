@@ -176,6 +176,7 @@ def test_load_motion(tmp_path, generate_motion_object):
     assert motion == motion_loaded
 
 
+@pytest.mark.streaming_extractors
 @pytest.mark.skipif(not HAVE_S3, reason="s3fs not installed")
 def test_remote_recording():
     s3_path = "s3://spikeinterface-sorting-analyzer-test/recording_for_analyzer_short.zarr/"
@@ -183,6 +184,7 @@ def test_remote_recording():
     assert isinstance(rec, ZarrRecordingExtractor)
 
 
+@pytest.mark.streaming_extractors
 @pytest.mark.skipif(not HAVE_S3, reason="s3fs not installed")
 def test_remote_analyzer():
     s3_path = "s3://spikeinterface-sorting-analyzer-test/analyzer_remote_test.zarr/"
