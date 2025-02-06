@@ -50,6 +50,13 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         assert pca.ndim == 2
         assert pca.shape[1] == n_components
 
+        ext_rand = sorting_analyzer.get_extension("random_spikes")
+        num_rand_spikes = len(ext_rand.get_data())
+
+        some_projections = ext.get_some_projections()
+        assert some_projections[0].shape[0] == num_rand_spikes
+        assert some_projections[0].shape[1] == n_components
+
     @pytest.mark.parametrize("sparse", [True, False])
     def test_get_projections(self, sparse):
         """

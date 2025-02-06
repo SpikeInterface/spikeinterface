@@ -5,6 +5,7 @@ import json
 from dataclasses import dataclass, field, astuple, replace
 from probeinterface import Probe
 from pathlib import Path
+
 from .sparsity import ChannelSparsity
 
 

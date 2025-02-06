@@ -641,6 +641,5 @@ def ensure_time_bins(time_bin_centers_s=None, time_bin_edges_s=None):
     return time_bin_centers_s, time_bin_edges_s
 
 
-
 def ensure_time_bin_edges(time_bin_centers_s=None, time_bin_edges_s=None):
     return ensure_time_bins(time_bin_centers_s, time_bin_edges_s)[1]
