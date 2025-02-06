@@ -51,12 +51,12 @@ preprocessing:
 sorters:
 
 * Change to default value `use_binary_file=True` for KS4 (#3614)
-* Sc2 making use of new recording slices (#3518)
 * Remove Non-Serializable writing of json (#3482)
-* Sc2 fixes (#3250)
+* Sc2 fixes (#3250, #3518)
 
 postprocessing:
 
+* Add a fast correlogram merge (#3607)
 * Unify template and quality metrics (#3537)
 * Only load `template_metrics` extension on compute if keeping some metrics (#3478)
 * Unit localization (#3476)
@@ -95,7 +95,7 @@ sortingcomponents:
 * Adding SharedMemoryTemplates (#3580)
 * Fix use of keep during run_sorter benchmark (#3556)
 * Clustering components api (#3533)
-* kilosort-matching in si (#3488)
+* Kilosort-matching in SpikeInterface (#3488)
 * Matched filtering with both peak signs simultaneously (#2914)
 
 motion correction:
@@ -106,6 +106,7 @@ motion correction:
 
 documentation:
 
+* Fix plot_1_automated_curation.py (#3674)
 * Extend templates extension docs (#3663)
 * Use SpikeInterface-ported pre-trained models in doc (#3652)
 * Dev Doc touchup (#3641)
