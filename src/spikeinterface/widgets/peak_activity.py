@@ -31,10 +31,14 @@ class PeakActivityMapWidget(BaseWidget):
     with_channel_ids : bool, default: False
         Add channel ids text on the probe
     fixed_color_range : bool or tuple of length=2, default: False
-        Fixes the color bar range to min-max when animating or plotting
-        in case of a length 2 tuple [vmin,vmax], uses that to fix the colorbar range
-
-
+        Fixes the color bar range when animating or plotting
+        in case of a length 2 tuple [vmin,vmax], uses that to fixes the colorbar range
+        in case of bool
+            For Animation
+                True implies fixed range for all frames
+                False implies range changing based on min-max of each frame
+            For Plotting
+                True/False both use min-max of the entire time-series via imshow defaults
     """
 
     def __init__(
@@ -207,7 +211,8 @@ class PeakActivityMapWidget(BaseWidget):
                 contacts_kargs={"alpha": 1.0},
                 text_on_contact=text_on_contact,
             )
-            poly.set_clim(self.vmin, self.vmax)
+            if vmin is not None and vmax is not None:
+                poly.set_clim(self.vmin, self.vmax)
             self.artists = self.artists + (poly, poly_contour)
 
         if with_interpolated_map:
