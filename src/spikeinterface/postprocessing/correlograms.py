@@ -133,6 +133,42 @@ class ComputeCorrelograms(AnalyzerExtension):
             new_data = dict(ccgs=new_ccgs, bins=new_bins)
         else:
 
+            # First, we make a transformation matrix, which tells us how unit_indices from the
+            # old to the new sorter are mapped. The i-th original unit_index gets mapped to the
+            # j-th new unit_index; where j is the only non-zero element of the matrix. To help
+            # construct the matrix we first make a dictionary of the form {old_index: new_index}
+            old_to_new_unit_index_map = {}
+            for old_unit in self.sorting_analyzer.unit_ids:
+                unit_involved_in_merge = False
+                for merge_unit_group, new_unit_id in zip(merge_unit_groups, new_unit_ids):
+                    # check if the old_unit is involved in a merge
+                    if old_unit in merge_unit_group:
+                        # check if it is mapped to itself?
+                        if old_unit == new_unit_id:
+                            old_to_new_unit_index_map[self.sorting_analyzer.sorting.id_to_index(old_unit)] = (
+                                new_sorting_analyzer.sorting.id_to_index(new_unit_id)
+                            )
+                        # or to a unit_id outwith the old ones
+                        elif new_unit_id not in self.sorting_analyzer.unit_ids:
+                            if (
+                                new_sorting_analyzer.sorting.id_to_index(new_unit_id)
+                                not in old_to_new_unit_index_map.values()
+                            ):
+                                old_to_new_unit_index_map[self.sorting_analyzer.sorting.id_to_index(old_unit)] = (
+                                    new_sorting_analyzer.sorting.id_to_index(new_unit_id)
+                                )
+                        unit_involved_in_merge = True
+                if unit_involved_in_merge is False:
+                    old_to_new_unit_index_map[self.sorting_analyzer.sorting.id_to_index(old_unit)] = (
+                        new_sorting_analyzer.sorting.id_to_index(old_unit)
+                    )
+
+            transformation_matrix = np.zeros(
+                (len(new_sorting_analyzer.unit_ids), len(self.sorting_analyzer.unit_ids)), dtype="int"
+            )
+            for col, row in old_to_new_unit_index_map.items():
+                transformation_matrix[row][col] = 1
+
             need_to_append = False
             delete_from = 1
 
@@ -145,40 +181,22 @@ class ComputeCorrelograms(AnalyzerExtension):
                 # Sum unit rows of the correlogram matrix: C_{k,l} = C_{i,l} + C_{j,l}
                 # and place this sum in the first unit index from the merge group
                 new_col = np.sum(correlograms[merge_unit_group_indices, :, :], axis=0)
-                correlograms[merge_unit_group_indices[0], :, :] = new_col
-                correlograms[merge_unit_group_indices[1:], :, :] = 0
+                # correlograms[merge_unit_group_indices[0], :, :] = new_col
+                correlograms[merge_unit_group_indices, :, :] = new_col
+                # correlograms[merge_unit_group_indices[1:], :, :] = 0
 
                 # Sum unit columns of the correlogram matrix: C_{l,k} = C_{l,i} + C_{l,j}
                 # and put this sum in the first unit index from the merge group
                 new_row = np.sum(correlograms[:, merge_unit_group_indices, :], axis=1)
-                correlograms[:, merge_unit_group_indices[0], :] = new_row
-                correlograms[:, merge_unit_group_indices[1:], :] = 0
 
-                if new_unit_id not in merge_unit_group:
-                    need_to_append = True
-                    delete_from = 0
+                for merge_unit_group_index in merge_unit_group_indices:
+                    correlograms[:, merge_unit_group_index, :] = new_row
 
-            # When new_id_strategy='append' is used, the new summed rows/columns to the
-            # end of the correlogram matrix
-            if need_to_append is True:
-                old_num_units = np.shape(correlograms)[0]
-                correlograms = np.pad(correlograms, ((0, len(new_unit_ids)), (0, len(new_unit_ids)), (0, 0)))
-                for a, (new_unit_id, merge_unit_group) in enumerate(zip(new_unit_ids, merge_unit_groups)):
+            # The new correlograms are in the old unit_id order. Hence we must transform
+            # to the new unit_id order using a change of basis operation: C -> TCT^T
+            new_correlograms = np.einsum("ij,jkz,lk->ilz", transformation_matrix, correlograms, transformation_matrix)
 
-                    old_loc = self.sorting_analyzer.sorting.ids_to_indices([merge_unit_group[0]])[0]
-                    new_loc = old_num_units + a
-
-                    correlograms[:, [old_loc, new_loc], :] = correlograms[:, [new_loc, old_loc], :]
-                    correlograms[[old_loc, new_loc], :, :] = correlograms[[new_loc, old_loc], :, :]
-
-            # Delete the leftover units from the merge
-            units_to_delete = np.concatenate([merge_unit_group[delete_from:] for merge_unit_group in merge_unit_groups])
-            indices_to_delete = self.sorting_analyzer.sorting.ids_to_indices(units_to_delete)
-
-            correlograms = np.delete(correlograms, indices_to_delete, axis=0)
-            correlograms = np.delete(correlograms, indices_to_delete, axis=1)
-
-            new_data = dict(ccgs=correlograms, bins=new_bins)
+            new_data = dict(ccgs=new_correlograms, bins=new_bins)
         return new_data
 
     def _run(self, verbose=False):
