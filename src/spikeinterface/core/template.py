@@ -5,10 +5,8 @@ import json
 from dataclasses import dataclass, field, astuple, replace
 from probeinterface import Probe
 from pathlib import Path
-from multiprocessing.shared_memory import SharedMemory
 
 from .sparsity import ChannelSparsity
-from .core_tools import make_shared_array
 
 
 @dataclass
@@ -457,88 +455,3 @@ class Templates:
         assert self.probe is not None, "Templates.get_channel_locations() needs a probe to be set"
         channel_locations = self.probe.contact_positions
         return channel_locations
-
-
-class SharedMemoryTemplates(Templates):
-
-    def __init__(
-        self,
-        shm_name,
-        shape,
-        dtype,
-        sampling_frequency,
-        nbefore,
-        sparsity_mask,
-        channel_ids,
-        unit_ids,
-        probe,
-        is_scaled,
-        main_shm_owner=True,
-    ):
-
-        assert len(shape) == 3
-        assert shape[0] > 0, "SharedMemoryTemplates only supported with no empty templates"
-
-        self.shm = SharedMemory(shm_name, create=False)
-        templates_array = np.ndarray(shape=shape, dtype=dtype, buffer=self.shm.buf)
-
-        Templates.__init__(
-            self,
-            templates_array=templates_array,
-            sampling_frequency=sampling_frequency,
-            nbefore=nbefore,
-            sparsity_mask=sparsity_mask,
-            channel_ids=channel_ids,
-            unit_ids=unit_ids,
-            probe=probe,
-            is_scaled=is_scaled,
-        )
-
-        # self._serializability["memory"] = True
-        # self._serializability["json"] = False
-        # self._serializability["pickle"] = False
-
-        # this is very important for the shm.unlink()
-        # only the main instance need to call it
-        # all other instances that are loaded from dict are not the main owner
-        self.main_shm_owner = main_shm_owner
-
-        self._kwargs = dict(
-            shm_name=shm_name,
-            shape=shape,
-            sampling_frequency=sampling_frequency,
-            nbefore=self.nbefore,
-            sparsity_mask=self.sparsity_mask,
-            channel_ids=self.channel_ids,
-            unit_ids=self.unit_ids,
-            probe=self.probe,
-            is_scaled=self.is_scaled,
-            # this ensure that all dump/load will not be main shm owner
-            main_shm_owner=False,
-        )
-
-    def __del__(self):
-        self.shm.close()
-        if self.main_shm_owner:
-            self.shm.unlink()
-
-    @staticmethod
-    def from_templates(templates):
-        data = templates.get_dense_templates()
-        shm_templates, shm = make_shared_array(data.shape, data.dtype)
-        shm_templates[:] = data
-        shared_templates = SharedMemoryTemplates(
-            shm.name,
-            data.shape,
-            data.dtype,
-            templates.sampling_frequency,
-            templates.nbefore,
-            templates.sparsity_mask,
-            templates.channel_ids,
-            templates.unit_ids,
-            templates.probe,
-            templates.is_scaled,
-            main_shm_owner=True,
-        )
-        shm.close()
-        return shared_templates
