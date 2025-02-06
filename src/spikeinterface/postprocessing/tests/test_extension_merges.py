@@ -10,7 +10,7 @@ def test_correlograms_merge():
     sum as recomputing the correlograms from scratch.
     """
 
-    rec, sort = generate_ground_truth_recording()
+    rec, sort = generate_ground_truth_recording(durations=[10, 10])
 
     sorting_analyzer = create_sorting_analyzer(recording=rec, sorting=sort)
     sorting_analyzer.compute("correlograms")
