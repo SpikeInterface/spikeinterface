@@ -25,7 +25,7 @@ from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
 from spikeinterface.core.generate import generate_sorting
 
-from spikeinterface.core import generate_recording
+from spikeinterface.core import generate_recording, generate_ground_truth_recording
 
 
 def test_BaseSorting(create_cache_folder):
@@ -211,12 +211,27 @@ def test_empty_sorting():
 def test_time_slice():
 
     sampling_frequency = 10_000.0
-    recording = generate_recording(durations=[1.0], num_channels=3, sampling_frequency=sampling_frequency)
 
-    sliced_recording_times = recording.time_slice(start_time=0.1, end_time=0.8)
-    sliced_recording_frames = recording.frame_slice(start_frame=1000, end_frame=8000)
+    # no recording attached to sorting
+    sorting = generate_sorting(durations=[1.0], sampling_frequency=sampling_frequency)
 
-    assert np.allclose(sliced_recording_times.get_traces(), sliced_recording_frames.get_traces())
+    sliced_sorting_times = sorting.time_slice(start_time=0.1, end_time=0.8)
+    sliced_sorting_frames = sorting.frame_slice(start_frame=1000, end_frame=8000)
+
+    assert np.allclose(
+        sliced_sorting_times.to_spike_vector()["sample_index"], sliced_sorting_frames.to_spike_vector()["sample_index"]
+    )
+
+    # with recording
+    recording, sorting = generate_ground_truth_recording(durations=[1.0], sampling_frequency=sampling_frequency)
+    sorting.register_recording(recording)
+
+    sliced_sorting_times = sorting.time_slice(start_time=0.1, end_time=0.8)
+    sliced_sorting_frames = sorting.frame_slice(start_frame=1000, end_frame=8000)
+
+    assert np.allclose(
+        sliced_sorting_times.to_spike_vector()["sample_index"], sliced_sorting_frames.to_spike_vector()["sample_index"]
+    )
 
 
 if __name__ == "__main__":

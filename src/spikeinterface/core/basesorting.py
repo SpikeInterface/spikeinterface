@@ -472,15 +472,15 @@ class BaseSorting(BaseExtractor):
         )
         return sub_sorting
 
-    def time_slice(self, start_time: float | None, end_time: float) -> BaseSorting:
+    def time_slice(self, start_time: float | None, end_time: float | None) -> BaseSorting:
         """
         Returns a new sorting with sliced time. Note that this operation is not in place.
 
         Parameters
         ----------
-        start_time : float, optional
+        start_time : float | None, default: None
             The start time in seconds. If not provided it is set to 0.
-        end_time : float, optional
+        end_time : float | None, default: None
             The end time in seconds. If not provided it is set to the total duration.
 
         Returns
@@ -491,8 +491,14 @@ class BaseSorting(BaseExtractor):
 
         assert self.get_num_segments() == 1, "Time slicing is only supported for single segment sortings."
 
-        start_frame = self.time_to_sample_index(start_time) if start_time else None
-        end_frame = self.time_to_sample_index(end_time) if end_time else None
+        if self.has_recording():
+            start_frame = self._recording.time_to_sample_index(start_time) if start_time else None
+            end_frame = self._recording.time_to_sample_index(end_time) if end_time else None
+        else:
+            segment = self._sorting_segments[0]
+            t_start = segment._t_start if segment._t_start is not None else 0
+            start_frame = round((start_time - t_start) * self.get_sampling_frequency())
+            end_frame = round((end_time - t_start) * self.get_sampling_frequency())
 
         return self.frame_slice(start_frame=start_frame, end_frame=end_frame)
 
