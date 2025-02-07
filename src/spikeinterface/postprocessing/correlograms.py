@@ -139,29 +139,22 @@ class ComputeCorrelograms(AnalyzerExtension):
             # construct the matrix we first make a dictionary of the form {old_index: new_index}
             old_to_new_unit_index_map = {}
             for old_unit in self.sorting_analyzer.unit_ids:
+                old_unit_index = self.sorting_analyzer.sorting.id_to_index(old_unit)
                 unit_involved_in_merge = False
                 for merge_unit_group, new_unit_id in zip(merge_unit_groups, new_unit_ids):
+                    new_unit_index = new_sorting_analyzer.sorting.id_to_index(new_unit_id)
                     # check if the old_unit is involved in a merge
                     if old_unit in merge_unit_group:
-                        # check if it is mapped to itself?
+                        # check if it is mapped to itself
                         if old_unit == new_unit_id:
-                            old_to_new_unit_index_map[self.sorting_analyzer.sorting.id_to_index(old_unit)] = (
-                                new_sorting_analyzer.sorting.id_to_index(new_unit_id)
-                            )
+                            old_to_new_unit_index_map[old_unit_index] = new_unit_index
                         # or to a unit_id outwith the old ones
                         elif new_unit_id not in self.sorting_analyzer.unit_ids:
-                            if (
-                                new_sorting_analyzer.sorting.id_to_index(new_unit_id)
-                                not in old_to_new_unit_index_map.values()
-                            ):
-                                old_to_new_unit_index_map[self.sorting_analyzer.sorting.id_to_index(old_unit)] = (
-                                    new_sorting_analyzer.sorting.id_to_index(new_unit_id)
-                                )
+                            if new_unit_index not in old_to_new_unit_index_map.values():
+                                old_to_new_unit_index_map[old_unit_index] = new_unit_index
                         unit_involved_in_merge = True
                 if unit_involved_in_merge is False:
-                    old_to_new_unit_index_map[self.sorting_analyzer.sorting.id_to_index(old_unit)] = (
-                        new_sorting_analyzer.sorting.id_to_index(old_unit)
-                    )
+                    old_to_new_unit_index_map[old_unit_index] = new_sorting_analyzer.sorting.id_to_index(old_unit)
 
             transformation_matrix = np.zeros(
                 (len(new_sorting_analyzer.unit_ids), len(self.sorting_analyzer.unit_ids)), dtype="int"
@@ -179,14 +172,14 @@ class ComputeCorrelograms(AnalyzerExtension):
                 merge_unit_group_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_group)
 
                 # Sum unit rows of the correlogram matrix: C_{k,l} = C_{i,l} + C_{j,l}
-                # and place this sum in the first unit index from the merge group
+                # and place this sum in all indices from the merge group
                 new_col = np.sum(correlograms[merge_unit_group_indices, :, :], axis=0)
                 # correlograms[merge_unit_group_indices[0], :, :] = new_col
                 correlograms[merge_unit_group_indices, :, :] = new_col
                 # correlograms[merge_unit_group_indices[1:], :, :] = 0
 
                 # Sum unit columns of the correlogram matrix: C_{l,k} = C_{l,i} + C_{l,j}
-                # and put this sum in the first unit index from the merge group
+                # and put this sum in all indices from the merge group
                 new_row = np.sum(correlograms[:, merge_unit_group_indices, :], axis=1)
 
                 for merge_unit_group_index in merge_unit_group_indices:

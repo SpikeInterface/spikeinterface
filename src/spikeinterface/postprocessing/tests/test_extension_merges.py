@@ -22,7 +22,7 @@ def test_correlograms_merge():
         [["4", "1", "8"], ["2", "7", "0"], ["3", "9"], ["5", "6"]],
     ]
 
-    new_unit_ids = [["2"], ["4"], ["4", "2"], ["1", "2", "3", "100"]]
+    new_unit_ids = [["2"], ["4"], ["4", "2"], ["1", "2", "9", "100"]]
 
     for new_id_strategy in ["append", "take_first", "user"]:
         for merge_unit_groups, new_unit_id in zip(trial_merges, new_unit_ids):
