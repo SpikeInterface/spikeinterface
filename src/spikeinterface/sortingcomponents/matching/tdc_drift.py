@@ -93,9 +93,6 @@ class TridesclousDriftPeeler(BaseTemplateMatching):
         # TODO check with out copy
         # self.sparse_templates_array_short = templates.templates_array[:, slice(s0, s1), :].copy()
 
-
-
-
         self.peak_shift = int(peak_shift_ms / 1000 * sr)
 
         assert noise_levels is not None, "TridesclousPeeler : noise should be computed outside"
@@ -123,23 +120,20 @@ class TridesclousDriftPeeler(BaseTemplateMatching):
             self.drifting_templates = drifting_templates
 
 
+        # this is dense with shape (num_displacements, num_units, num_samples, num_channels)
         templates_array_moved = self.drifting_templates.templates_array_moved
-        num_units = templates_array_moved.shape[1]
         if templates.sparsity is not None:
+            # TODO later : move this logic into DriftingTemplate directly
             max_num_active_channels = max(np.sum(self.sparsity_mask, axis=1))
             sparsified_shape = templates_array_moved.shape[:-1] + (max_num_active_channels, )
             self.sparse_templates_array_moved = np.zeros(shape=sparsified_shape, dtype=templates_array_moved.dtype)
-
-            for unit_index in range(num_units):
+            for unit_index in range(unit_ids.size):
                 chans = np.flatnonzero(self.sparsity_mask[unit_index, :])
                 for d in range(templates_array_moved.shape[0]):
-                    sparsifyed = templates_array_moved[d, unit_index, :, :][:, chans]
-                    self.sparse_templates_array_moved[d, unit_index][:, :chans.size] = sparsifyed
-
+                    sparsified = templates_array_moved[d, unit_index, :, :][:, chans]
+                    self.sparse_templates_array_moved[d, unit_index, :, :chans.size] = sparsified
         else:
             self.sparse_templates_array_moved = templates_array_moved
-
-
 
 
 
@@ -288,7 +282,6 @@ class TridesclousDriftPeeler(BaseTemplateMatching):
                 channel_motions[:] = 0
 
 
-
             # quick search logic to find frames corresponding to this interpolation bin in the recording
             # quickly find the end of this bin, which is also the start of the next
             next_start_index = current_start_index + np.searchsorted(
@@ -357,6 +350,7 @@ class TridesclousDriftPeeler(BaseTemplateMatching):
 
         # print('peak_detector', peak_detector)
         detector_margin = peak_detector.get_trace_margin()
+
         if self.peeler_margin > detector_margin:
             margin_shift = self.peeler_margin - detector_margin
             sl = slice(margin_shift, -margin_shift)
@@ -402,7 +396,7 @@ class TridesclousDriftPeeler(BaseTemplateMatching):
             local_motion = np.zeros(2, dtype=self.channel_locations.dtype)
             local_motion[self.motion.dim] = channel_motions[chan_ind]
 
-            # move this channel in the original position
+            # move this channel to the original position
             peak_location_moved = self.channel_locations[chan_ind, :] - local_motion
             # print(self.channel_locations)
             chan_ind_moved = np.argmin(np.sum((self.channel_locations - peak_location_moved)**2, axis=1))
@@ -413,9 +407,10 @@ class TridesclousDriftPeeler(BaseTemplateMatching):
 
             possible_clusters = self.possible_clusters_by_channel[chan_ind_moved]
 
+
             # displacement_index
             displacement_index = np.argmin(np.sum((self.drifting_templates.displacements - local_motion)**2, axis=1))
-            # print("displacement_index", displacement_index, "channel_motions[0]", channel_motions[0])
+            # print("displacement_index", displacement_index, "channel_motions[chan_ind]", channel_motions[chan_ind], self.drifting_templates.displacements[displacement_index])
             # print(self.drifting_templates.displacements[displacement_index, :])
             templates_array = self.sparse_templates_array_moved[displacement_index, :, :, :]
 
@@ -438,7 +433,8 @@ class TridesclousDriftPeeler(BaseTemplateMatching):
                 # chans = np.any(self.sparsity_mask[possible_clusters, :], axis=0)
                 # wf = traces[sample_index - self.nbefore : sample_index + self.nafter][:, chans]
                 # ax.plot(wf.T.flatten(), color='k')
-                # dense_templates_array = self.templates.get_dense_templates()
+                # # dense_templates_array = self.templates.get_dense_templates()
+                # dense_templates_array = self.drifting_templates.templates_array_moved[displacement_index,:, :, :]
                 # for c_ind in possible_clusters:
                 #     template = dense_templates_array[c_ind, :, :][:, chans]
                 #     ax.plot(template.T.flatten())

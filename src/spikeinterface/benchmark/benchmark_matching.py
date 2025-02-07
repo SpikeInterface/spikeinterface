@@ -138,7 +138,7 @@ class MatchingStudy(BenchmarkStudy):
 
         plot_study_unit_counts(self, case_keys, figsize=figsize)
 
-    def plot_unit_losses(self, before, after, metric=["precision"], figsize=None):
+    def plot_unit_losses(self, before, after, metric=["accuracy"], figsize=None):
         import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=1, nrows=len(metric), figsize=figsize, squeeze=False)

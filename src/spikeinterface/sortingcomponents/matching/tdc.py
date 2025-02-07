@@ -280,6 +280,7 @@ class TridesclousPeeler(BaseTemplateMatching):
             chan_ind = peak_chan_ind[i]
             possible_clusters = self.possible_clusters_by_channel[chan_ind]
 
+
             if possible_clusters.size > 0:
                 cluster_index = get_most_probable_cluster(
                     traces,
