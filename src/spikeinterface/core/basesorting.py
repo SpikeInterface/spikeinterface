@@ -179,7 +179,9 @@ class BaseSorting(BaseExtractor):
             return spike_frames
 
     def register_recording(self, recording, check_spike_frames=True):
-        """Register a recording to the sorting.
+        """
+        Register a recording to the sorting. If the sorting and recording both contain
+        time information, the recording’s time information will be used.
 
         Parameters
         ----------
