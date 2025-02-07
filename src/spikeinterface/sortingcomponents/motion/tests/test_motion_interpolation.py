@@ -1,8 +1,12 @@
 import warnings
 
 import numpy as np
-import spikeinterface.core as sc
-from spikeinterface.sortingcomponents.motion import Motion
+import pickle
+
+from spikeinterface import NumpyRecording, load
+from spikeinterface.core import generate_ground_truth_recording
+from spikeinterface.core.motion import Motion
+from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.sortingcomponents.motion.motion_interpolation import (
     InterpolateMotionRecording,
     correct_motion_on_peaks,
@@ -10,7 +14,6 @@ from spikeinterface.sortingcomponents.motion.motion_interpolation import (
     interpolate_motion_on_traces,
 )
 from spikeinterface.sortingcomponents.tests.common import make_dataset
-from spikeinterface.core import generate_ground_truth_recording
 
 
 def make_fake_motion(rec):
@@ -35,12 +38,49 @@ def make_fake_motion(rec):
     return motion
 
 
+def test_motion_object_interpolators(tmp_path):
+    rec, sorting = make_dataset()
+    motion = make_fake_motion(rec)
+
+    # serialize with pickle after interpolation fit
+    motion.make_interpolators()
+    assert motion.interpolators is not None
+    motion2 = pickle.loads(pickle.dumps(motion))
+    assert motion2.interpolators is not None
+
+    # to/from dict
+    motion2 = Motion.from_dict(motion.to_dict())
+    assert motion == motion2
+    # serialization to/from dict loses interpolators
+    assert motion2.interpolators is None
+    motion2.make_interpolators()
+
+    # save/load to folder
+    folder = tmp_path / "motion_saved"
+    motion.save(folder)
+    motion3 = Motion.load(folder)
+    # save/load to folder loses interpolators
+    assert motion3.interpolators is None
+
+    # do interpolate
+    displacement = motion.get_displacement_at_time_and_depth([2, 4.4, 11], [120.0, 80.0, 150.0])
+    displacement2 = motion2.get_displacement_at_time_and_depth([2, 4.4, 11], [120.0, 80.0, 150.0])
+    displacement3 = motion3.get_displacement_at_time_and_depth([2, 4.4, 11], [120.0, 80.0, 150.0])
+    # print(displacement)
+    assert displacement.shape[0] == 3
+    # check interpolators reload
+    np.testing.assert_array_equal(displacement, displacement2)
+    np.testing.assert_array_equal(displacement, displacement3)
+
+    # interpolate grid
+    displacement = motion.get_displacement_at_time_and_depth([2, 4.4, 11, 15, 19], [150.0, 80.0], grid=True)
+    assert displacement.shape == (2, 5)
+
+
 def test_correct_motion_on_peaks():
     rec, sorting = make_dataset()
     peaks = sorting.to_spike_vector()
-    print(peaks.dtype)
     motion = make_fake_motion(rec)
-    # print(motion)
 
     # fake locations
     peak_locations = np.zeros((peaks.size), dtype=[("x", "float32"), ("y", "float")])
@@ -97,7 +137,7 @@ def test_interpolation_simple():
     num_chans_drifted = num_chans_orig + num_chans_orig - 1
     traces = np.zeros((n_samples, num_chans_drifted), dtype="float32")
     traces[:, :num_chans_orig] = np.eye(num_chans_orig)
-    rec = sc.NumpyRecording(traces, sampling_frequency=1)
+    rec = NumpyRecording(traces, sampling_frequency=1)
     rec.set_dummy_probe_from_locations(np.c_[np.zeros(num_chans_drifted), np.arange(num_chans_drifted)])
 
     true_motion = Motion(np.arange(n_samples)[:, None], 0.5 + np.arange(n_samples), np.zeros(1))
@@ -156,14 +196,14 @@ def test_cross_band_interpolation():
     traces_lfp = np.zeros((num_samples_lfp, num_chans))
     traces_lfp[: int(t_switch * fs_lfp), 5] = 1.0
     traces_lfp[int(t_switch * fs_lfp) :, 6] = 1.0
-    rec_lfp = sc.NumpyRecording(traces_lfp, sampling_frequency=fs_lfp)
+    rec_lfp = NumpyRecording(traces_lfp, sampling_frequency=fs_lfp)
     rec_lfp.set_dummy_probe_from_locations(geom)
 
     # same for AP
     traces_ap = np.zeros((num_samples_ap, num_chans))
     traces_ap[: int(t_switch * fs_ap) - halfbin_ap_lfp, 5] = 1.0
     traces_ap[int(t_switch * fs_ap) - halfbin_ap_lfp :, 6] = 1.0
-    rec_ap = sc.NumpyRecording(traces_ap, sampling_frequency=fs_ap)
+    rec_ap = NumpyRecording(traces_ap, sampling_frequency=fs_ap)
     rec_ap.set_dummy_probe_from_locations(geom)
 
     # set times for both, and silence the warning
@@ -226,7 +266,9 @@ def test_InterpolateMotionRecording():
 
     # test dump.load when multi segments
     rec2.dump("rec_motion_interp.pickle")
-    rec3 = sc.load("rec_motion_interp.pickle")
+    rec3 = load("rec_motion_interp.pickle")
+
+    check_recordings_equal(rec2, rec3)
 
     # import matplotlib.pyplot as plt
     # import spikeinterface.widgets as sw
