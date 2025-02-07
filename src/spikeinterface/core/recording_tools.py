@@ -1044,8 +1044,6 @@ def get_rec_attributes(recording):
         The rec_attributes dictionary
     """
     properties_to_attrs = deepcopy(recording._properties)
-    if "contact_vector" in properties_to_attrs:
-        del properties_to_attrs["contact_vector"]
     rec_attributes = dict(
         channel_ids=recording.channel_ids,
         sampling_frequency=recording.get_sampling_frequency(),
