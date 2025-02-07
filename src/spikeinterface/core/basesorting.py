@@ -501,7 +501,7 @@ class BaseSorting(BaseExtractor):
         Transform time in seconds into sample index
         """
         if self.has_recording():
-            sample_index = self._recording.time_to_sample_index(time)
+            sample_index = self._recording.time_to_sample_index(time, segment_index=segment_index)
         else:
             segment = self._sorting_segments[segment_index]
             t_start = segment._t_start if segment._t_start is not None else 0
