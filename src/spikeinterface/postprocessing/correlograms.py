@@ -133,10 +133,8 @@ class ComputeCorrelograms(AnalyzerExtension):
             new_data = dict(ccgs=new_ccgs, bins=new_bins)
         else:
 
-            # First, we make a transformation matrix, which tells us how unit_indices from the
-            # old to the new sorter are mapped. The i-th original unit_index gets mapped to the
-            # j-th new unit_index; where j is the only non-zero element of the matrix. To help
-            # construct the matrix we first make a dictionary of the form {old_index: new_index}
+            # Make a transformation dict, which tells us how unit_indices from the
+            # old to the new sorter are mapped.
             old_to_new_unit_index_map = {}
             for old_unit in self.sorting_analyzer.unit_ids:
                 old_unit_index = self.sorting_analyzer.sorting.id_to_index(old_unit)
@@ -155,12 +153,6 @@ class ComputeCorrelograms(AnalyzerExtension):
                         unit_involved_in_merge = True
                 if unit_involved_in_merge is False:
                     old_to_new_unit_index_map[old_unit_index] = new_sorting_analyzer.sorting.id_to_index(old_unit)
-
-            transformation_matrix = np.zeros(
-                (len(new_sorting_analyzer.unit_ids), len(self.sorting_analyzer.unit_ids)), dtype="int"
-            )
-            for col, row in old_to_new_unit_index_map.items():
-                transformation_matrix[row][col] = 1
 
             need_to_append = False
             delete_from = 1
@@ -185,9 +177,13 @@ class ComputeCorrelograms(AnalyzerExtension):
                 for merge_unit_group_index in merge_unit_group_indices:
                     correlograms[:, merge_unit_group_index, :] = new_row
 
-            # The new correlograms are in the old unit_id order. Hence we must transform
-            # to the new unit_id order using a change of basis operation: C -> TCT^T
-            new_correlograms = np.einsum("ij,jkz,lk->ilz", transformation_matrix, correlograms, transformation_matrix)
+            new_correlograms = np.zeros(
+                (len(new_sorting_analyzer.unit_ids), len(new_sorting_analyzer.unit_ids), correlograms.shape[2])
+            )
+            for old_index_1, new_index_1 in old_to_new_unit_index_map.items():
+                for old_index_2, new_index_2 in old_to_new_unit_index_map.items():
+                    new_correlograms[new_index_1, new_index_2, :] = correlograms[old_index_1, old_index_2, :]
+                    new_correlograms[new_index_2, new_index_1, :] = correlograms[old_index_2, old_index_1, :]
 
             new_data = dict(ccgs=new_correlograms, bins=new_bins)
         return new_data
