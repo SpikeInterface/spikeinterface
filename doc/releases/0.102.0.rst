@@ -8,8 +8,10 @@ SpikeInterface 0.102.0 release notes
 Main changes:
 
 * Added auto-label functions in curation module (#2918)
+* Refactored and improved auto-merge functions in curation module (#3435, #3601)
 * Added `spikeinterface.load()` function to load any SpikeInterface object (#3613, #3651)
 * Improved handling of time in base recording (#3509, #3623)
+* Multi-segment handling of motion interpolation (#3659)
 * Support for Numpy 2.0 (#3481)
 
 
@@ -92,7 +94,6 @@ sortingcomponents:
 
 * Split PCA (#3610)
 * Adding Hanning filtering (#3604)
-* Adding SharedMemoryTemplates (#3580)
 * Fix use of keep during run_sorter benchmark (#3556)
 * Clustering components api (#3533)
 * Kilosort-matching in SpikeInterface (#3488)
@@ -100,7 +101,7 @@ sortingcomponents:
 
 motion correction:
 
-* Multi segment handling in ensure_time_bins (#3659)
+* Multi-segment handling in motion interpolation (#3659)
 * MotionEstimationStudy : plot drift with the scatter plot (#3553)
 * Fix a cross-band interpolation bug, and allow time_vector in interpolate_motion (#3517)
 
@@ -148,6 +149,7 @@ Contributors:
 * @guptadivyansh
 * @h-mayorquin
 * @jakeswann1
+* @RobertoDF
 * @samuelgarcia
 * @yger
 * @zm711
