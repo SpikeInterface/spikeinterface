@@ -474,7 +474,7 @@ class BaseSorting(BaseExtractor):
 
     def time_slice(self, start_time: float | None, end_time: float | None) -> BaseSorting:
         """
-        Returns a new sorting with sliced time. Note that this operation is not in place.
+        Returns a new sorting object, restricted to the time interval [start_time, end_time].
 
         Parameters
         ----------
