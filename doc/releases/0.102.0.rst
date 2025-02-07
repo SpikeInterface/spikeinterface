@@ -12,7 +12,7 @@ Main changes:
 * Added `spikeinterface.load()` function to load any SpikeInterface object (#3613, #3651)
 * Improved handling of time in base recording (#3509, #3623)
 * Multi-segment handling of motion interpolation (#3659)
-* Support for Numpy 2.0 (#3481)
+* Support for Numpy 2.0 and Zarr<3.0 (#3481,#3598)
 
 
 core:
