@@ -25,6 +25,8 @@ from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
 from spikeinterface.core.generate import generate_sorting
 
+from spikeinterface.core import generate_recording
+
 
 def test_BaseSorting(create_cache_folder):
     cache_folder = create_cache_folder
@@ -204,6 +206,17 @@ def test_empty_sorting():
 
     spikes = sorting.to_spike_vector()
     assert spikes.shape == (0,)
+
+
+def test_time_slice():
+
+    sampling_frequency = 10_000.0
+    recording = generate_recording(durations=[1.0], num_channels=3, sampling_frequency=sampling_frequency)
+
+    sliced_recording_times = recording.time_slice(start_time=0.1, end_time=0.8)
+    sliced_recording_frames = recording.frame_slice(start_frame=1000, end_frame=8000)
+
+    assert np.allclose(sliced_recording_times.get_traces(), sliced_recording_frames.get_traces())
 
 
 if __name__ == "__main__":

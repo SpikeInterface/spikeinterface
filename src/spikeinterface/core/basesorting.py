@@ -472,6 +472,30 @@ class BaseSorting(BaseExtractor):
         )
         return sub_sorting
 
+    def time_slice(self, start_time: float | None, end_time: float) -> BaseSorting:
+        """
+        Returns a new sorting with sliced time. Note that this operation is not in place.
+
+        Parameters
+        ----------
+        start_time : float, optional
+            The start time in seconds. If not provided it is set to 0.
+        end_time : float, optional
+            The end time in seconds. If not provided it is set to the total duration.
+
+        Returns
+        -------
+        BaseSorting
+            A new sorting object with only samples between start_time and end_time
+        """
+
+        assert self.get_num_segments() == 1, "Time slicing is only supported for single segment sortings."
+
+        start_frame = self.time_to_sample_index(start_time) if start_time else None
+        end_frame = self.time_to_sample_index(end_time) if end_time else None
+
+        return self.frame_slice(start_frame=start_frame, end_frame=end_frame)
+
     def get_all_spike_trains(self, outputs="unit_id"):
         """
         Return all spike trains concatenated.
