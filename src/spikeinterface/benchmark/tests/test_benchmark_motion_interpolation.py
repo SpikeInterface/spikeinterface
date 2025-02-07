@@ -22,7 +22,7 @@ def test_benchmark_motion_interpolation(create_cache_folder):
     cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="1s")
 
-    data = make_drifting_dataset()
+    data = make_drifting_dataset(job_kwargs)
 
     datasets = {
         "data_static": (data["static_rec"], data["sorting"]),

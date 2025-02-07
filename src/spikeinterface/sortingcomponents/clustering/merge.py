@@ -294,8 +294,13 @@ def find_merge_pairs(
     template_locs = channel_locs[max_chans, :]
     template_dist = scipy.spatial.distance.cdist(template_locs, template_locs, metric="euclidean")
 
+    print("template_locs", template_locs.shape, template_locs)
+    print("template_locs", np.unique(template_locs[:, 1]).shape)
+    print("radius_um", radius_um)
+
     pair_mask = pair_mask & (template_dist <= radius_um)
     indices0, indices1 = np.nonzero(pair_mask)
+    print("ici", len(indices0), indices0, indices1)
 
     n_jobs = job_kwargs["n_jobs"]
     mp_context = job_kwargs.get("mp_context", None)
