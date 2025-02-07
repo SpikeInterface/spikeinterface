@@ -491,16 +491,23 @@ class BaseSorting(BaseExtractor):
 
         assert self.get_num_segments() == 1, "Time slicing is only supported for single segment sortings."
 
-        if self.has_recording():
-            start_frame = self._recording.time_to_sample_index(start_time) if start_time else None
-            end_frame = self._recording.time_to_sample_index(end_time) if end_time else None
-        else:
-            segment = self._sorting_segments[0]
-            t_start = segment._t_start if segment._t_start is not None else 0
-            start_frame = round((start_time - t_start) * self.get_sampling_frequency())
-            end_frame = round((end_time - t_start) * self.get_sampling_frequency())
+        start_frame = self.time_to_sample_index(start_time, segment_index=0) if start_time else None
+        end_frame = self.time_to_sample_index(end_time, segment_index=0) if end_time else None
 
         return self.frame_slice(start_frame=start_frame, end_frame=end_frame)
+
+    def time_to_sample_index(self, time, segment_index=0):
+        """
+        Transform time in seconds into sample index
+        """
+        if self.has_recording():
+            sample_index = self._recording.time_to_sample_index(time)
+        else:
+            segment = self._sorting_segments[segment_index]
+            t_start = segment._t_start if segment._t_start is not None else 0
+            sample_index = round((time - t_start) * self.get_sampling_frequency())
+
+        return sample_index
 
     def get_all_spike_trains(self, outputs="unit_id"):
         """
