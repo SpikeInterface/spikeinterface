@@ -492,7 +492,7 @@ def save_motion_info(motion_info, folder, overwrite=False):
 
 
 def load_motion_info(folder):
-    from spikeinterface.sortingcomponents.motion import Motion
+    from spikeinterface.core.motion import Motion
 
     folder = Path(folder)
 
