@@ -772,7 +772,7 @@ class BaseRecording(BaseRecordingSnippets):
 
     def time_slice(self, start_time: float | None, end_time: float) -> BaseRecording:
         """
-        Returns a new recording with sliced time. Note that this operation is not in place.
+        Returns a new recording object, restricted to the time interval [start_time, end_time].
 
         Parameters
         ----------
