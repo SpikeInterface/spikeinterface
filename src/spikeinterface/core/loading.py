@@ -197,8 +197,8 @@ def _guess_object_from_local_folder(folder):
             spikeinterface_info = json.load(f)
             return _guess_object_from_dict(spikeinterface_info)
     elif (folder / "waveforms").is_dir():
-        # before the SortingAnlazer, it was WaveformsExtractor (v<0.101)
-        return "WaveformsExtractor"
+        # before the SortingAnlazer, it was WaveformExtractor (v<0.101)
+        return "WaveformExtractor"
     elif (folder / f"si_folder.json").is_file():
         # In later versions (0.94<v<0.102) we use the si_folder.json file
         # This should be Recording | Sorting
@@ -225,7 +225,7 @@ def _load_object_from_folder(folder, object_type, **kwargs):
         motion = Motion.load(folder)
         return motion
 
-    elif object_type == "Waveforms":
+    elif object_type == "WaveformExtractor":
         from .waveforms_extractor_backwards_compatibility import load_waveforms
 
         analyzer = load_waveforms(folder, output="SortingAnalyzer")
