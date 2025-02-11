@@ -184,12 +184,23 @@ class TridesclousDriftPeeler(BaseTemplateMatching):
             self.possible_clusters_by_channel.append(cluster_inds)
 
         # precompute template norms ons sparse channels
-        self.template_norms = np.zeros(num_templates, dtype="float32")
-        for i in range(unit_ids.size):
-            chan_mask = self.sparsity_mask[i, :]
-            n = np.sum(chan_mask)
-            template = templates.templates_array[i, :, :n]
-            self.template_norms[i] = np.sum(template**2)
+        if self.motion_aware:
+            num_displacements = self.drifting_templates.displacements.shape[0]
+            self.template_norms_moved = np.zeros((num_displacements, num_templates), dtype="float32")
+            for d in range(num_displacements):
+                for i in range(unit_ids.size):
+                    chan_mask = self.sparsity_mask[i, :]
+                    n = np.sum(chan_mask)
+                    template = self.sparse_templates_array_moved[d, i, :, :n]
+                    self.template_norms_moved[d, i] = np.sum(template**2)
+
+        else:
+            self.template_norms_static = np.zeros(num_templates, dtype="float32")
+            for i in range(unit_ids.size):
+                chan_mask = self.sparsity_mask[i, :]
+                n = np.sum(chan_mask)
+                template = self.sparse_templates_array_static[i, :, :n]
+                self.template_norms_static[i] = np.sum(template**2)
 
         #
         distances = scipy.spatial.distance.cdist(channel_locations, channel_locations, metric="euclidean")
@@ -465,9 +476,13 @@ class TridesclousDriftPeeler(BaseTemplateMatching):
                 #     print("local_motion", local_motion, "chan_ind", chan_ind, "chan_ind_moved", chan_ind_moved)
                 displacement_index = np.argmin(np.sum((self.drifting_templates.displacements - local_motion)**2, axis=1))
                 templates_array = self.sparse_templates_array_moved[displacement_index, :, :, :]
+
+                template_norms = self.template_norms_moved[displacement_index, :]
             else:
                 chan_ind_moved = chan_ind
                 templates_array = self.sparse_templates_array_static
+
+                template_norms = self.template_norms_static
 
 
             possible_clusters = self.possible_clusters_by_channel[chan_ind_moved]
@@ -553,7 +568,7 @@ class TridesclousDriftPeeler(BaseTemplateMatching):
                         traces,
                         self.sparsity_mask,
                         templates_array,
-                        self.template_norms,
+                        template_norms,
                         self.nbefore,
                         self.nafter,
                     )
