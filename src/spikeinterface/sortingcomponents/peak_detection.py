@@ -551,7 +551,6 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         exclude_sweep_ms=0.1,
         radius_um=50,
         noise_levels=None,
-        remove_median=False,
         random_chunk_kwargs={},
     ):
         if not HAVE_NUMBA:
@@ -573,19 +572,19 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
-        if remove_median:
+        # if remove_median:
 
-            chunks = get_random_data_chunks(recording, return_scaled=False, concatenated=True, **random_chunk_kwargs)
-            medians = np.median(chunks, axis=0)
-            medians = medians[None, :]
-            print('medians', medians, noise_levels)
-        else:
-            medians = None
+        #     chunks = get_random_data_chunks(recording, return_scaled=False, concatenated=True, **random_chunk_kwargs)
+        #     medians = np.median(chunks, axis=0)
+        #     medians = medians[None, :]
+        #     print('medians', medians, noise_levels)
+        # else:
+        #     medians = None
 
 
         channel_distance = get_channel_distances(recording)
         neighbours_mask = channel_distance <= radius_um
-        return (peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, medians)
+        return (peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask)
 
     @classmethod
     def get_method_margin(cls, *args):
@@ -593,11 +592,11 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         return exclude_sweep_size
 
     @classmethod
-    def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, medians):
+    def detect_peaks(cls, traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask):
         assert HAVE_NUMBA, "You need to install numba"
 
-        if medians is not None:
-            traces = traces - medians
+        # if medians is not None:
+        #     traces = traces - medians
 
         traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
 
