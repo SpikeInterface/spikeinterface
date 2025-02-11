@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.motion import ensure_time_bin_edges, ensure_time_bins
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.preprocessing.filter import fix_dtype
-
-from .motion_utils import ensure_time_bin_edges, ensure_time_bins
 
 
 def correct_motion_on_peaks(peaks, peak_locations, motion, recording) -> np.ndarray:

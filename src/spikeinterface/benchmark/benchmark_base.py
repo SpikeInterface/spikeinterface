@@ -430,7 +430,7 @@ class Benchmark:
 
                 result[k] = load(folder / k)
             elif format == "Motion":
-                from spikeinterface.sortingcomponents.motion import Motion
+                from spikeinterface.core.motion import Motion
 
                 result[k] = Motion.load(folder / k)
             elif format == "zarr_templates":
