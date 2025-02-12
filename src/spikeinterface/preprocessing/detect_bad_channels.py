@@ -112,7 +112,7 @@ seed : int or None, default: None
             channel_ids=new_channel_ids,
         )
 
-        self._kwargs.update({"channel_labels": channel_labels})
+        self._kwargs.update({"bad_channel_ids": bad_channel_ids, "channel_labels": channel_labels})
         self._kwargs.update(updated_detect_bad_channels_kwargs)
 
 

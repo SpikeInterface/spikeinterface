@@ -4,8 +4,10 @@ import numpy as np
 from spikeinterface import NumpyRecording, get_random_data_chunks
 from probeinterface import generate_linear_probe
 
+from spikeinterface.generation import generate_recording
+
 from spikeinterface.core import generate_recording
-from spikeinterface.preprocessing import detect_bad_channels, highpass_filter
+from spikeinterface.preprocessing import detect_bad_channels, highpass_filter, remove_bad_channels
 
 try:
     # WARNING : this is not this package https://pypi.org/project/neurodsp/
@@ -16,6 +18,26 @@ try:
     HAVE_NPIX = True
 except:  # Catch relevant exception
     HAVE_NPIX = False
+
+
+def test_remove_bad_channel():
+    """
+    Generate a recording, then remove bad channels with a low noise threshold,
+    so that some units are removed. Then check that the new recording has none
+    of the bad channels still in it and that the one changed kwarg is successfully
+    propogated to the new recording.
+    """
+
+    recording = generate_recording(durations=[5, 6], seed=1205, num_channels=8)
+    recording.set_channel_offsets(0)
+    recording.set_channel_gains(1)
+    # set noisy_channel_threshold so that we do detect some bad channels
+    new_rec = remove_bad_channels(recording, noisy_channel_threshold=0)
+
+    # make sure they are removed
+    assert len(set(new_rec._kwargs["bad_channel_ids"]).intersection(new_rec.channel_ids)) == 0
+    # and that the kwarg is propogatged to the kwargs of new_rec.
+    assert new_rec._kwargs["noisy_channel_threshold"] == 0
 
 
 def test_detect_bad_channels_std_mad():
