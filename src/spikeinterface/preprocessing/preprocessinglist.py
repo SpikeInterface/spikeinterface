@@ -38,6 +38,7 @@ from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
 from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate, train_deepinterpolation
 from .highpass_spatial_filter import HighpassSpatialFilterRecording, highpass_spatial_filter
 from .interpolate_bad_channels import InterpolateBadChannelsRecording, interpolate_bad_channels
+from .detect_bad_channels import RemoveBadChannelsRecording, remove_bad_channels
 from .average_across_direction import AverageAcrossDirectionRecording, average_across_direction
 from .directional_derivative import DirectionalDerivativeRecording, directional_derivative
 from .depth_order import DepthOrderRecording, depth_order
@@ -79,6 +80,7 @@ preprocessers_full_list = [
     DirectionalDerivativeRecording,
     AstypeRecording,
     UnsignedToSignedRecording,
+    RemoveBadChannelsRecording,
 ]
 
 preprocesser_dict = {pp_class.name: pp_class for pp_class in preprocessers_full_list}
