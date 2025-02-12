@@ -31,13 +31,32 @@ def test_remove_bad_channel():
     recording = generate_recording(durations=[5, 6], seed=1205, num_channels=8)
     recording.set_channel_offsets(0)
     recording.set_channel_gains(1)
+
     # set noisy_channel_threshold so that we do detect some bad channels
-    new_rec = remove_bad_channels(recording, noisy_channel_threshold=0)
+    new_rec = remove_bad_channels(recording, noisy_channel_threshold=0, seed=1205)
 
     # make sure they are removed
-    assert len(set(new_rec._kwargs["bad_channel_ids"]).intersection(new_rec.channel_ids)) == 0
+    bad_channel_ids = new_rec._kwargs["bad_channel_ids"]
+    assert len(set(bad_channel_ids).intersection(new_rec.channel_ids)) == 0
+    # and the good ones are kept
+    good_channel_ids = recording.channel_ids[~np.isin(recording.channel_ids, bad_channel_ids)]
+    assert set(good_channel_ids) == set(new_rec.channel_ids)
+
     # and that the kwarg is propogatged to the kwargs of new_rec.
+    assert set(new_rec._kwargs["channel_ids"]) == set(good_channel_ids)
     assert new_rec._kwargs["noisy_channel_threshold"] == 0
+
+    # now apply `detec_bad_channels` directly and see that the outputs matches
+    bad_channel_ids_from_function, channel_labels_from_function = detect_bad_channels(
+        recording, noisy_channel_threshold=0, seed=1205
+    )
+
+    assert np.all(new_rec._kwargs["bad_channel_ids"] == bad_channel_ids_from_function)
+    assert np.all(new_rec._kwargs["channel_labels"] == channel_labels_from_function)
+
+    new_rec_from_function = recording.remove_channels(remove_channel_ids=bad_channel_ids_from_function)
+
+    assert np.all(new_rec_from_function.channel_ids == new_rec.channel_ids)
 
 
 def test_detect_bad_channels_std_mad():

@@ -101,7 +101,7 @@ seed : int or None, default: None
         updated_detect_bad_channels_kwargs = {k: v.default for k, v in sig.parameters.items() if k != "recording"}
         updated_detect_bad_channels_kwargs.update(detect_bad_channels_kwargs)
 
-        bad_channel_ids, channel_labels = detect_bad_channels(recording=recording, **updated_detect_bad_channels_kwargs)
+        bad_channel_ids, channel_labels = detect_bad_channels(recording=recording, **detect_bad_channels_kwargs)
 
         self._main_ids = recording.get_channel_ids()
         new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, bad_channel_ids)]
