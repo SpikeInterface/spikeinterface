@@ -260,7 +260,11 @@ class ComputePrincipalComponents(AnalyzerExtension):
         spike_unit_indices = some_spikes["unit_index"][selected_inds]
 
         if sparsity is None:
-            some_projections = all_projections[selected_inds, :, :][:, :, channel_indices]
+            if self.params["mode"] == "concatenated":
+                some_projections = all_projections[selected_inds, :]
+            else:
+                some_projections = all_projections[selected_inds, :, :][:, :, channel_indices]
+
         else:
             # need re-alignement
             some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
@@ -316,13 +320,13 @@ class ComputePrincipalComponents(AnalyzerExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
         n_jobs = job_kwargs["n_jobs"]
         progress_bar = job_kwargs["progress_bar"]
-        max_threads_per_process = job_kwargs["max_threads_per_process"]
+        max_threads_per_worker = job_kwargs["max_threads_per_worker"]
         mp_context = job_kwargs["mp_context"]
 
         # fit model/models
         # TODO : make parralel  for by_channel_global and concatenated
         if mode == "by_channel_local":
-            pca_models = self._fit_by_channel_local(n_jobs, progress_bar, max_threads_per_process, mp_context)
+            pca_models = self._fit_by_channel_local(n_jobs, progress_bar, max_threads_per_worker, mp_context)
             for chan_ind, chan_id in enumerate(self.sorting_analyzer.channel_ids):
                 self.data[f"pca_model_{mode}_{chan_id}"] = pca_models[chan_ind]
             pca_model = pca_models
@@ -415,7 +419,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         )
         processor.run()
 
-    def _fit_by_channel_local(self, n_jobs, progress_bar, max_threads_per_process, mp_context):
+    def _fit_by_channel_local(self, n_jobs, progress_bar, max_threads_per_worker, mp_context):
         from sklearn.decomposition import IncrementalPCA
 
         p = self.params
@@ -444,10 +448,10 @@ class ComputePrincipalComponents(AnalyzerExtension):
                     pca = pca_models[chan_ind]
                     pca.partial_fit(wfs[:, :, wf_ind])
             else:
-                # create list of args to parallelize. For convenience, the max_threads_per_process is passed
+                # create list of args to parallelize. For convenience, the max_threads_per_worker is passed
                 # as last argument
                 items = [
-                    (chan_ind, pca_models[chan_ind], wfs[:, :, wf_ind], max_threads_per_process)
+                    (chan_ind, pca_models[chan_ind], wfs[:, :, wf_ind], max_threads_per_worker)
                     for wf_ind, chan_ind in enumerate(channel_inds)
                 ]
                 n_jobs = min(n_jobs, len(items))
@@ -658,10 +662,6 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model):
     worker_ctx = {}
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-
-        recording = load_extractor(recording)
     worker_ctx["recording"] = recording
     worker_ctx["sorting"] = sorting
 
@@ -687,12 +687,12 @@ compute_principal_components = ComputePrincipalComponents.function_factory()
 
 
 def _partial_fit_one_channel(args):
-    chan_ind, pca_model, wf_chan, max_threads_per_process = args
+    chan_ind, pca_model, wf_chan, max_threads_per_worker = args
 
-    if max_threads_per_process is None:
+    if max_threads_per_worker is None:
         pca_model.partial_fit(wf_chan)
         return chan_ind, pca_model
     else:
-        with threadpool_limits(limits=int(max_threads_per_process)):
+        with threadpool_limits(limits=int(max_threads_per_worker)):
             pca_model.partial_fit(wf_chan)
             return chan_ind, pca_model

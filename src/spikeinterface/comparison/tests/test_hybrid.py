@@ -1,7 +1,7 @@
 import pytest
 import shutil
 from pathlib import Path
-from spikeinterface.core import extract_waveforms, load_waveforms, load_extractor
+from spikeinterface.core import extract_waveforms, load_waveforms, load
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.comparison import (
     create_hybrid_units_recording,
@@ -52,7 +52,7 @@ def test_hybrid_units_recording(setup_module):
     )
 
     # Check dumpability
-    saved_loaded = load_extractor(hybrid_units_recording.to_dict())
+    saved_loaded = load(hybrid_units_recording.to_dict())
     check_recordings_equal(hybrid_units_recording, saved_loaded, return_scaled=False)
 
     saved_1job = hybrid_units_recording.save(folder=cache_folder / "units_1job")
@@ -81,7 +81,7 @@ def test_hybrid_spikes_recording(setup_module):
     )
 
     # Check dumpability
-    saved_loaded = load_extractor(hybrid_spikes_recording.to_dict())
+    saved_loaded = load(hybrid_spikes_recording.to_dict())
     check_recordings_equal(hybrid_spikes_recording, saved_loaded, return_scaled=False)
 
     saved_1job = hybrid_spikes_recording.save(folder=cache_folder / "spikes_1job")

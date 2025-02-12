@@ -9,27 +9,21 @@ import shutil
 
 from spikeinterface.core import (
     get_channel_distances,
-    Templates,
-    compute_sparsity,
     get_global_tmp_folder,
 )
 
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
-    ExtractDenseWaveforms,
     ExtractSparseWaveforms,
     PeakRetriever,
 )
 
-from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel, cache_preprocessing
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks, DetectPeakLocallyExclusive
+from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
-from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass, LocalizeGridConvolution
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
 
 from spikeinterface.sortingcomponents.clustering.split import split_clusters
 from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
-from spikeinterface.sortingcomponents.clustering.tools import compute_template_from_sparse
 
 
 class TdcClustering:
@@ -50,14 +44,11 @@ class TdcClustering:
             "merge_radius_um": 40.0,
             "threshold_diff": 1.5,
         },
-        "job_kwargs": {},
     }
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         import hdbscan
-
-        job_kwargs = params["job_kwargs"]
 
         if params["folder"] is None:
             randname = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
@@ -171,7 +162,6 @@ class TdcClustering:
                 waveforms_sparse_mask=sparse_mask,
                 min_size_split=min_cluster_size,
                 n_pca_features=3,
-                scale_n_pca_by_depth=True,
             ),
             recursive=True,
             recursive_depth=3,

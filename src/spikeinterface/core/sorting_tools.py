@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-from spikeinterface.core import NumpySorting
 
 from .basesorting import BaseSorting
 from .numpyextractors import NumpySorting

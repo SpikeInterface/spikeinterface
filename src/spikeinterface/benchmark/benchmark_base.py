@@ -11,7 +11,7 @@ import time
 
 from spikeinterface.core import SortingAnalyzer
 
-from spikeinterface import load_extractor, create_sorting_analyzer, load_sorting_analyzer
+from spikeinterface import load, create_sorting_analyzer, load_sorting_analyzer
 from spikeinterface.widgets import get_some_colors
 
 
@@ -150,13 +150,13 @@ class BenchmarkStudy:
             analyzer = load_sorting_analyzer(folder)
             self.analyzers[key] = analyzer
             # the sorting is in memory here we take the saved one because comparisons need to pickle it later
-            sorting = load_extractor(analyzer.folder / "sorting")
+            sorting = load(analyzer.folder / "sorting")
             self.datasets[key] = analyzer.recording, sorting
 
         # for rec_file in (self.folder / "datasets" / "recordings").glob("*.pickle"):
         #     key = rec_file.stem
-        #     rec = load_extractor(rec_file)
-        #     gt_sorting = load_extractor(self.folder / f"datasets" / "gt_sortings" / key)
+        #     rec = load(rec_file)
+        #     gt_sorting = load(self.folder / f"datasets" / "gt_sortings" / key)
         #     self.datasets[key] = (rec, gt_sorting)
 
         with open(self.folder / "cases.pickle", "rb") as f:
@@ -208,10 +208,11 @@ class BenchmarkStudy:
         for key in case_keys:
 
             result_folder = self.folder / "results" / self.key_to_str(key)
+            sorter_folder = self.folder / "sorters" / self.key_to_str(key)
 
             if keep and result_folder.exists():
                 continue
-            elif not keep and result_folder.exists():
+            elif not keep and (result_folder.exists() or sorter_folder.exists()):
                 self.remove_benchmark(key)
             job_keys.append(key)
 
@@ -427,9 +428,9 @@ class Benchmark:
             elif format == "sorting":
                 from spikeinterface.core import load_extractor
 
-                result[k] = load_extractor(folder / k)
+                result[k] = load(folder / k)
             elif format == "Motion":
-                from spikeinterface.sortingcomponents.motion import Motion
+                from spikeinterface.core.motion import Motion
 
                 result[k] = Motion.load(folder / k)
             elif format == "zarr_templates":
