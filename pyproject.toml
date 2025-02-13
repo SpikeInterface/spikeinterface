@@ -165,15 +165,6 @@ test = [
     # for sortingview backend
     "sortingview",
 
-
-    ## install tridesclous for testing ##
-    "tridesclous>=1.6.8",
-
-    ## sliding_nn
-    "pymde",
-    "torch",
-    "pynndescent",
-
     # curation
     "skops",
     "huggingface_hub",
