@@ -90,6 +90,7 @@ def extract_peaks_svd(
         # gather_kwargs=dict(exist_ok=True),
         # folder=features_folder,
         names=["sparse_wfs", "sparse_tsvd"],
+        job_name="Extract peaks svd",
     )
     
     sparse_mask = node1.neighbours_mask

@@ -377,8 +377,8 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
                 peak_time = self.recording.sample_index_to_time(peak["sample_index"], segment_index=peak["segment_index"])
                 peak_depth = self.channel_locations[peak["channel_index"], self.motion.dim]
                 peak_motion = self.motion.get_displacement_at_time_and_depth(
-                    peak_time,
-                    peak_depth,
+                    np.array([peak_time]),
+                    np.array([peak_depth]),
                     segment_index=peak["segment_index"],
                 )
                 print(peak_motion)
