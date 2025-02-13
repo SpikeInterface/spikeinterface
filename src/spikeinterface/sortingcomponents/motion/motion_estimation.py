@@ -10,6 +10,7 @@ from ...core.motion import Motion
 from .decentralized import DecentralizedRegistration
 from .iterative_template import IterativeTemplateRegistration
 from .dredge import DredgeLfpRegistration, DredgeApRegistration
+from .medicine import MedicineRegistration
 
 
 # estimate_motion > infer_motion
@@ -129,7 +130,13 @@ def estimate_motion(
         return motion
 
 
-_methods_list = [DecentralizedRegistration, IterativeTemplateRegistration, DredgeLfpRegistration, DredgeApRegistration]
+_methods_list = [
+    DecentralizedRegistration,
+    IterativeTemplateRegistration,
+    DredgeLfpRegistration,
+    DredgeApRegistration,
+    MedicineRegistration,
+]
 estimate_motion_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
 estimate_motion.__doc__ = estimate_motion.__doc__.format(method_doc=method_doc)
