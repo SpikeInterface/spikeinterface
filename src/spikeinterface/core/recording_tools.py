@@ -571,7 +571,7 @@ def get_random_recording_slices(
         # check chunk size
         num_segments = recording.get_num_segments()
         for segment_index in range(num_segments):
-            chunk_size_limit = recording.get_num_frames(segment_index) - 2 * margin_frames
+            chunk_size_limit = recording.get_num_frames(segment_index) - 2 * margin_frames - 1
             if chunk_size > chunk_size_limit:
                 chunk_size = chunk_size_limit - 1
                 warnings.warn(
