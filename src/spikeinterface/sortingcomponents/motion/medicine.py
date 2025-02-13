@@ -1,11 +1,11 @@
 import numpy as np
 
-from .motion_utils import Motion
 import tempfile
 import shutil
 from pathlib import Path
 
-from .motion_utils import get_spatial_windows
+from spikeinterface.core.motion import Motion
+from spikeinterface.sortingcomponents.motion.motion_utils import get_spatial_windows
 
 
 class MedicineRegistration:
