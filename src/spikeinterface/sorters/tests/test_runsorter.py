@@ -32,7 +32,7 @@ def test_run_sorter_local(generate_recording, create_cache_folder):
     sorter_params = {"detect_threshold": 4.9}
 
     sorting = run_sorter(
-        "tridesclous",
+        "tridesclous2",
         recording,
         output_folder=cache_folder / "sorting_tdc_local",
         remove_existing_folder=True,
