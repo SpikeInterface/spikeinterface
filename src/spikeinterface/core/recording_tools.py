@@ -571,7 +571,7 @@ def get_random_recording_slices(
         # check chunk size
         num_segments = recording.get_num_segments()
         for segment_index in range(num_segments):
-            chunk_size_limit = recording.get_num_frames(segment_index) - 2 * margin_frames - 1
+            chunk_size_limit = recording.get_num_frames(segment_index) - 2 * margin_frames
             if chunk_size > chunk_size_limit:
                 chunk_size = chunk_size_limit - 1
                 warnings.warn(
@@ -585,12 +585,13 @@ def get_random_recording_slices(
         size = num_chunks_per_segment
         for segment_index in range(num_segments):
             num_frames = recording.get_num_frames(segment_index)
-            high = num_frames - chunk_size - margin_frames
+            high = num_frames - chunk_size - margin_frames + 1
             random_starts = rng.integers(low=low, high=high, size=size)
             random_starts = np.sort(random_starts)
             recording_slices += [
                 (segment_index, start_frame, (start_frame + chunk_size)) for start_frame in random_starts
             ]
+            print(recording_slices)
     else:
         raise ValueError(f"get_random_recording_slices : wrong method {method}")
 
