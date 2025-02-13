@@ -24,15 +24,19 @@ import spikeinterface
 from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 
-from .base import load_extractor
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
-from .core_tools import check_json, retrieve_importing_provenance, is_path_remote, clean_zarr_folder_name
+from .core_tools import (
+    check_json,
+    retrieve_importing_provenance,
+    is_path_remote,
+    clean_zarr_folder_name,
+)
 from .sorting_tools import generate_unit_ids_for_merge_group, _get_ids_after_merging
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
-from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
+from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open
 from .node_pipeline import run_node_pipeline
 
 
@@ -192,20 +196,7 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto", backend_o
         The loaded SortingAnalyzer
 
     """
-    if is_path_remote(folder) and backend_options is None:
-        try:
-            return SortingAnalyzer.load(
-                folder, load_extensions=load_extensions, format=format, backend_options=backend_options
-            )
-        except Exception as e:
-            backend_options = dict(storage_options=dict(anon=True))
-            return SortingAnalyzer.load(
-                folder, load_extensions=load_extensions, format=format, backend_options=backend_options
-            )
-    else:
-        return SortingAnalyzer.load(
-            folder, load_extensions=load_extensions, format=format, backend_options=backend_options
-        )
+    return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format, backend_options=backend_options)
 
 
 class SortingAnalyzer:
@@ -479,6 +470,8 @@ class SortingAnalyzer:
 
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None, backend_options=None):
+        from .loading import load
+
         folder = Path(folder)
         assert folder.is_dir(), f"This folder does not exists {folder}"
 
@@ -494,7 +487,7 @@ class SortingAnalyzer:
                 filename = folder / f"recording.{type}"
                 if filename.exists():
                     try:
-                        recording = load_extractor(filename, base_folder=folder)
+                        recording = load(filename, base_folder=folder)
                         break
                     except:
                         recording = None
@@ -556,20 +549,10 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     def _get_zarr_root(self, mode="r+"):
-        import zarr
-
         assert mode in ("r+", "a", "r"), "mode must be 'r+', 'a' or 'r'"
 
         storage_options = self._backend_options.get("storage_options", {})
-        # we open_consolidated only if we are in read mode
-        if mode in ("r+", "a"):
-            try:
-                zarr_root = zarr.open(str(self.folder), mode=mode, storage_options=storage_options)
-            except Exception as e:
-                # this could happen in remote mode, and it's a way to check if the folder is still there
-                zarr_root = zarr.open_consolidated(self.folder, mode=mode, storage_options=storage_options)
-        else:
-            zarr_root = zarr.open_consolidated(self.folder, mode=mode, storage_options=storage_options)
+        zarr_root = super_zarr_open(self.folder, mode=mode, storage_options=storage_options)
         return zarr_root
 
     @classmethod
@@ -659,11 +642,12 @@ class SortingAnalyzer:
     @classmethod
     def load_from_zarr(cls, folder, recording=None, backend_options=None):
         import zarr
+        from .loading import load
 
         backend_options = {} if backend_options is None else backend_options
         storage_options = backend_options.get("storage_options", {})
 
-        zarr_root = zarr.open_consolidated(str(folder), mode="r", storage_options=storage_options)
+        zarr_root = super_zarr_open(str(folder), mode="r", storage_options=storage_options)
 
         si_info = zarr_root.attrs["spikeinterface_info"]
         if parse(si_info["version"]) < parse("0.101.1"):
@@ -692,7 +676,7 @@ class SortingAnalyzer:
             if rec_field is not None:
                 rec_dict = rec_field[0]
                 try:
-                    recording = load_extractor(rec_dict, base_folder=folder)
+                    recording = load(rec_dict, base_folder=folder)
                 except:
                     recording = None
         else:
@@ -1182,6 +1166,8 @@ class SortingAnalyzer:
         """
         Get the original sorting if possible otherwise return None
         """
+        from .loading import load
+
         if self.format == "memory":
             # the orginal sorting provenance is not keps in that case
             sorting_provenance = None
@@ -1192,7 +1178,7 @@ class SortingAnalyzer:
                 sorting_provenance = None
                 if filename.exists():
                     try:
-                        sorting_provenance = load_extractor(filename, base_folder=self.folder)
+                        sorting_provenance = load(filename, base_folder=self.folder)
                         break
                     except:
                         pass
@@ -1202,7 +1188,7 @@ class SortingAnalyzer:
             zarr_root = self._get_zarr_root(mode="r")
             if "sorting_provenance" in zarr_root.keys():
                 sort_dict = zarr_root["sorting_provenance"][0]
-                sorting_provenance = load_extractor(sort_dict, base_folder=self.folder)
+                sorting_provenance = load(sort_dict, base_folder=self.folder)
             else:
                 sorting_provenance = None
 
@@ -2033,19 +2019,18 @@ class AnalyzerExtension:
         return None
 
     def load_run_info(self):
+        run_info = None
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             run_info_file = extension_folder / "run_info.json"
             if run_info_file.is_file():
                 with open(str(run_info_file), "r") as f:
                     run_info = json.load(f)
-            else:
-                warnings.warn(f"Found no run_info file for {self.extension_name}, extension should be re-computed.")
-                run_info = None
 
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
             run_info = extension_group.attrs.get("run_info", None)
+
         if run_info is None:
             warnings.warn(f"Found no run_info file for {self.extension_name}, extension should be re-computed.")
         self.run_info = run_info
@@ -2092,6 +2077,13 @@ class AnalyzerExtension:
                     import pandas as pd
 
                     ext_data = pd.read_csv(ext_data_file, index_col=0)
+                    # we need to cast the index to the unit id dtype (int or str)
+                    unit_ids = self.sorting_analyzer.unit_ids
+                    if ext_data.shape[0] == unit_ids.size:
+                        # we force dtype to be the same as unit_ids
+                        if ext_data.index.dtype != unit_ids.dtype:
+                            ext_data.index = ext_data.index.astype(unit_ids.dtype)
+
                 elif ext_data_file.suffix == ".pkl":
                     with ext_data_file.open("rb") as f:
                         ext_data = pickle.load(f)

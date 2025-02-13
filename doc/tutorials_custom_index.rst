@@ -119,8 +119,8 @@ The :code:`spikeinterface.qualitymetrics` module allows users to compute various
 
    .. grid-item-card:: Quality Metrics
       :link-type: ref
-      :link: sphx_glr_tutorials_qualitymetrics_plot_3_quality_mertics.py
-      :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_3_quality_mertics_thumb.png
+      :link: sphx_glr_tutorials_qualitymetrics_plot_3_quality_metrics.py
+      :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_3_quality_metrics_thumb.png
       :img-alt: Quality Metrics
       :class-card: gallery-card
       :text-align: center
@@ -130,6 +130,39 @@ The :code:`spikeinterface.qualitymetrics` module allows users to compute various
       :link: sphx_glr_tutorials_qualitymetrics_plot_4_curation.py
       :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_4_curation_thumb.png
       :img-alt: Curation Tutorial
+      :class-card: gallery-card
+      :text-align: center
+
+Automated curation tutorials
+----------------------------
+
+Learn how to curate your units using a trained machine learning model. Or how to create
+and share your own model.
+
+.. grid:: 1 2 2 3
+   :gutter: 2
+
+   .. grid-item-card:: Model-based curation
+      :link-type: ref
+      :link: sphx_glr_tutorials_curation_plot_1_automated_curation.py
+      :img-top: /tutorials/curation/images/sphx_glr_plot_1_automated_curation_002.png
+      :img-alt: Model-based curation
+      :class-card: gallery-card
+      :text-align: center
+
+   .. grid-item-card:: Train your own model
+      :link-type: ref
+      :link: sphx_glr_tutorials_curation_plot_2_train_a_model.py
+      :img-top: /tutorials/curation/images/thumb/sphx_glr_plot_2_train_a_model_thumb.png
+      :img-alt: Train your own model
+      :class-card: gallery-card
+      :text-align: center
+
+   .. grid-item-card:: Upload your model to HuggingFaceHub
+      :link-type: ref
+      :link: sphx_glr_tutorials_curation_plot_3_upload_a_model.py
+      :img-top: /images/hf-logo.svg
+      :img-alt: Upload your model
       :class-card: gallery-card
       :text-align: center
 

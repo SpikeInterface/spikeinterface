@@ -232,15 +232,9 @@ class BaseRecording(BaseRecordingSnippets):
         float
             The duration in seconds
         """
-        segment_index = self._check_segment_index(segment_index)
-
-        if self.has_time_vector(segment_index):
-            times = self.get_times(segment_index)
-            segment_duration = times[-1] - times[0] + (1 / self.get_sampling_frequency())
-        else:
-            segment_num_samples = self.get_num_samples(segment_index=segment_index)
-            segment_duration = segment_num_samples / self.get_sampling_frequency()
-
+        segment_duration = (
+            self.get_end_time(segment_index) - self.get_start_time(segment_index) + (1 / self.get_sampling_frequency())
+        )
         return segment_duration
 
     def get_total_duration(self) -> float:
@@ -252,7 +246,7 @@ class BaseRecording(BaseRecordingSnippets):
         float
             The duration in seconds
         """
-        duration = sum([self.get_duration(idx) for idx in range(self.get_num_segments())])
+        duration = sum([self.get_duration(segment_index) for segment_index in range(self.get_num_segments())])
         return duration
 
     def get_memory_size(self, segment_index=None) -> int:
@@ -444,6 +438,40 @@ class BaseRecording(BaseRecordingSnippets):
         rs = self._recording_segments[segment_index]
         times = rs.get_times()
         return times
+
+    def get_start_time(self, segment_index=None) -> float:
+        """Get the start time of the recording segment.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        float
+            The start time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        return rs.get_start_time()
+
+    def get_end_time(self, segment_index=None) -> float:
+        """Get the stop time of the recording segment.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        float
+            The stop time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        return rs.get_end_time()
 
     def has_time_vector(self, segment_index=None):
         """Check if the segment of the recording has a time vector.
@@ -744,7 +772,7 @@ class BaseRecording(BaseRecordingSnippets):
 
     def time_slice(self, start_time: float | None, end_time: float) -> BaseRecording:
         """
-        Returns a new recording with sliced time. Note that this operation is not in place.
+        Returns a new recording object, restricted to the time interval [start_time, end_time].
 
         Parameters
         ----------
@@ -902,6 +930,21 @@ class BaseRecordingSegment(BaseSegment):
             if self.t_start is not None:
                 time_vector += self.t_start
             return time_vector
+
+    def get_start_time(self) -> float:
+        if self.time_vector is not None:
+            return self.time_vector[0]
+        else:
+            return self.t_start if self.t_start is not None else 0.0
+
+    def get_end_time(self) -> float:
+        if self.time_vector is not None:
+            return self.time_vector[-1]
+        else:
+            t_stop = (self.get_num_samples() - 1) / self.sampling_frequency
+            if self.t_start is not None:
+                t_stop += self.t_start
+            return t_stop
 
     def get_times_kwargs(self) -> dict:
         """

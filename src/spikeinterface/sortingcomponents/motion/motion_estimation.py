@@ -6,8 +6,7 @@ import numpy as np
 
 from spikeinterface.sortingcomponents.tools import make_multi_method_doc
 
-
-from .motion_utils import Motion, get_spatial_windows, get_spatial_bin_edges
+from ...core.motion import Motion
 from .decentralized import DecentralizedRegistration
 from .iterative_template import IterativeTemplateRegistration
 from .dredge import DredgeLfpRegistration, DredgeApRegistration
