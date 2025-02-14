@@ -324,7 +324,7 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
         use false to suppress the output of this node in the pipeline
 
     """
-
+    _compute_has_extended_signature = True
     def __init__(
         self,
         recording: BaseRecording,
@@ -332,6 +332,7 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
         pca_model=None,
         model_folder_path=None,
         motion=None,
+        interpolation_method="cubic",
         dtype="float32",
         return_output=True,
     ):
@@ -342,10 +343,13 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
         self.n_components = self.pca_model.n_components
         self.dtype = np.dtype(dtype)
         self.motion = motion
+        self.interpolation_method = interpolation_method
 
         self.channel_locations = self.recording.get_channel_locations()
 
-    def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
+        self.neighbours_mask = self.parents[1].neighbours_mask
+
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peaks, waveforms) -> np.ndarray:
         """
         Projects the waveforms using the PCA model trained in the fit method or loaded from the model_folder_path.
 
@@ -365,27 +369,45 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
 
         """
 
+        import scipy.interpolate
+
+        # peak_motions = np.zeros(peaks.size, dtype="float32")
+        
         num_channels = waveforms.shape[2]
         if waveforms.shape[0] > 0:
             temporal_waveforms = to_temporal_representation(waveforms)
             projected_temporal_waveforms = self.pca_model.transform(temporal_waveforms)
-            projected_waveforms = from_temporal_representation(projected_temporal_waveforms, num_channels)
+            projected_waveforms_static = from_temporal_representation(projected_temporal_waveforms, num_channels)
 
-            for peak in peaks:
-                print(peak["channel_index"], peak["segment_index"])
-
-                peak_time = self.recording.sample_index_to_time(peak["sample_index"], segment_index=peak["segment_index"])
-                peak_depth = self.channel_locations[peak["channel_index"], self.motion.dim]
+            projected_waveforms = np.zeros_like(projected_waveforms_static)
+            
+            for i, peak in enumerate(peaks):
+                # print(peak["channel_index"], peak["segment_index"])
+                abs_sample_index = peak["sample_index"] + start_frame - max_margin
+                chan_index = peak["channel_index"]
+                peak_time = self.recording.sample_index_to_time(abs_sample_index, segment_index=peak["segment_index"])
+                peak_depth = self.channel_locations[chan_index, self.motion.dim]
                 peak_motion = self.motion.get_displacement_at_time_and_depth(
                     np.array([peak_time]),
                     np.array([peak_depth]),
                     segment_index=peak["segment_index"],
                 )
-                print(peak_motion)
+                peak_motion = peak_motion[0]
+                # peak_motions[i] = peak_motion
 
+                # interpolate the svd to the original position
+                local_chans = np.flatnonzero(self.neighbours_mask[chan_index, :])
+                source_locations = self.channel_locations[local_chans, :]
+                dest_locations = source_locations.copy()
+                # dest_locations[:, self.motion.dim] -= peak_motion
+                dest_locations[:, self.motion.dim] += peak_motion
 
-
+                for c in range(self.n_components):
+                    projected_waveforms[i, c, :local_chans.size] = scipy.interpolate.griddata(
+                        source_locations, projected_waveforms_static[i, c, :local_chans.size], dest_locations, method=self.interpolation_method, fill_value=0
+                    )
 
         else:
             projected_waveforms = np.zeros((0, self.n_components, num_channels), dtype=self.dtype)
-        return projected_waveforms.astype(self.dtype, copy=False)
+
+        return (projected_waveforms.astype(self.dtype, copy=False), )
