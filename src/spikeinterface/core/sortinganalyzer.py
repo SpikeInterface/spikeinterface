@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, Optional
+from typing import Literal, Optional, Any
 
 from pathlib import Path
 from itertools import chain
@@ -741,6 +741,53 @@ class SortingAnalyzer:
         if self._recording is not None:
             warnings.warn("SortingAnalyzer recording is already set. The current recording is temporarily replaced.")
         self._temporary_recording = recording
+
+    def set_unit_property(
+        self,
+        key,
+        values: list | np.ndarray | tuple,
+        ids: list | np.ndarray | tuple | None = None,
+        missing_value: Any = None,
+    ) -> None:
+        """
+        Set property vector for unit ids.
+
+        If the SortingAnalyzer backend is in memory, the property will be only set in memory.
+        If the SortingAnalyzer backend is in binary_folder or zarr, the property will also
+        be saved to to the backend.
+
+        Parameters
+        ----------
+        key : str
+            The property name
+        values : np.array
+            Array of values for the property
+        ids : list/np.array, default: None
+            List of subset of ids to set the values, default: None
+            if None which is the default all the ids are set or changed
+        missing_value : object, default: None
+            In case the property is set on a subset of values ("ids" not None),
+            it specifies the how the missing values should be filled.
+            The missing_value has to be specified for types int and unsigned int.
+        """
+        self.sorting.set_property(key, values, ids=ids, missing_value=missing_value)
+        if not self.is_read_only():
+            if self.format == "binary_folder":
+                np.save(self.folder / "sorting" / "properties" / f"{key}.npy", self.sorting.get_property(key))
+            elif self.format == "zarr":
+                import zarr
+
+                zarr_root = self._get_zarr_root(mode="r+")
+                prop_values = self.sorting.get_property(key)
+                if prop_values.dtype.kind == "O":
+                    warnings.warn(f"Property {key} not saved because it is a python Object type")
+                else:
+                    if key in zarr_root["sorting"]["properties"]:
+                        zarr_root["sorting"]["properties"][key][:] = prop_values
+                    else:
+                        zarr_root["sorting"]["properties"].create_dataset(name=key, data=prop_values, compressor=None)
+                    # IMPORTANT: we need to re-consolidate the zarr store!
+                    zarr.consolidate_metadata(zarr_root.store)
 
     def _save_or_select_or_merge(
         self,
