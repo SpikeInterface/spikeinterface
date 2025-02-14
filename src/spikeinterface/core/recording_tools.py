@@ -591,7 +591,6 @@ def get_random_recording_slices(
             recording_slices += [
                 (segment_index, start_frame, (start_frame + chunk_size)) for start_frame in random_starts
             ]
-            print(recording_slices)
     else:
         raise ValueError(f"get_random_recording_slices : wrong method {method}")
 
