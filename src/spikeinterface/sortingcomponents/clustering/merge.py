@@ -99,7 +99,7 @@ def merge_clusters(
         fig, ax = plt.subplots()
         clusterer = hdbscan.HDBSCAN(metric="precomputed", min_cluster_size=2, allow_single_cluster=True)
         clusterer.fit(pair_values)
-        print(clusterer.labels_)
+        # print(clusterer.labels_)
         clusterer.single_linkage_tree_.plot(cmap="viridis", colorbar=True)
         # ~ fig, ax = plt.subplots()
         # ~ clusterer.minimum_spanning_tree_.plot(edge_cmap='viridis',
@@ -293,6 +293,10 @@ def find_merge_pairs(
     channel_locs = recording.get_channel_locations()
     template_locs = channel_locs[max_chans, :]
     template_dist = scipy.spatial.distance.cdist(template_locs, template_locs, metric="euclidean")
+
+    # print("template_locs", template_locs.shape, template_locs)
+    # print("template_locs", np.unique(template_locs[:, 1]).shape)
+    # print("radius_um", radius_um)
 
     pair_mask = pair_mask & (template_dist <= radius_um)
     indices0, indices1 = np.nonzero(pair_mask)

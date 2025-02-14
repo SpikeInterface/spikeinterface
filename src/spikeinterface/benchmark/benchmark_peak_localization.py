@@ -31,11 +31,13 @@ class PeakLocalizationBenchmark(Benchmark):
             pass
 
     def run(self, **job_kwargs):
-        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
+        sorting_analyzer = create_sorting_analyzer(
+            self.gt_sorting, self.recording, format="memory", sparse=False, **job_kwargs
+        )
         sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("templates", **self.templates_params)
+        ext = sorting_analyzer.compute("templates", **self.templates_params, **job_kwargs)
         templates = ext.get_data(outputs="Templates")
-        ext = sorting_analyzer.compute("spike_locations", **self.params)
+        ext = sorting_analyzer.compute("spike_locations", **self.params, **job_kwargs)
         spikes_locations = ext.get_data(outputs="by_unit")
         self.result = {"spikes_locations": spikes_locations}
         self.result["templates"] = templates
@@ -166,10 +168,10 @@ class UnitLocalizationBenchmark(Benchmark):
             self.waveforms_params[key] = self.params.pop(key, 2)
 
     def run(self, **job_kwargs):
-        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory")
+        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", **job_kwargs)
         sorting_analyzer.compute("random_spikes")
         sorting_analyzer.compute("waveforms", **self.waveforms_params, **job_kwargs)
-        ext = sorting_analyzer.compute("templates")
+        ext = sorting_analyzer.compute("templates", **job_kwargs)
         templates = ext.get_data(outputs="Templates")
 
         if self.method == "center_of_mass":
