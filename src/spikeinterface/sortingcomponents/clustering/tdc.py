@@ -48,10 +48,10 @@ class TdcClustering:
                 "min_samples": 1,
                 "allow_single_cluster": True,
                 "cluster_selection_method": "eom",
-                "do_merge": True,
-                "merge_radius_um": 40.0,
-                "threshold_diff": 1.5,
             },
+            "do_merge": True,
+            "merge_radius_um": 40.0,
+            "threshold_diff": 1.5,
         },
     }
 
@@ -150,8 +150,9 @@ class TdcClustering:
 
         min_cluster_size = 50
         # min_cluster_size = 10
+
         clusterer = params["clustering"].get("clusterer", "hdbscan")
-        clusterer_kwargs = params["clustering"].get("clusterer_kwargs", dict())
+        clusterer_kwargs = params["clustering"].get("clusterer_kwargs", {})
 
         post_split_label, split_count = split_clusters(
             original_labels,
