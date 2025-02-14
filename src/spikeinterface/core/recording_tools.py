@@ -585,7 +585,7 @@ def get_random_recording_slices(
         size = num_chunks_per_segment
         for segment_index in range(num_segments):
             num_frames = recording.get_num_frames(segment_index)
-            high = num_frames - chunk_size - margin_frames
+            high = num_frames - chunk_size - margin_frames + 1
             random_starts = rng.integers(low=low, high=high, size=size)
             random_starts = np.sort(random_starts)
             recording_slices += [
