@@ -753,7 +753,7 @@ class SortingAnalyzer:
         Set property vector for unit ids.
 
         If the SortingAnalyzer backend is in memory, the property will be only set in memory.
-        If the SortingAnalyzer backend is in binary_folder or zarr, the property will also
+        If the SortingAnalyzer backend is `binary_folder` or `zarr`, the property will also
         be saved to to the backend.
 
         Parameters
@@ -763,12 +763,12 @@ class SortingAnalyzer:
         values : np.array
             Array of values for the property
         ids : list/np.array, default: None
-            List of subset of ids to set the values, default: None
-            if None which is the default all the ids are set or changed
-        missing_value : object, default: None
+            List of subset of ids to set the values.
+            if None all the ids are set or changed
+        missing_value : Any, default: None
             In case the property is set on a subset of values ("ids" not None),
-            it specifies the how the missing values should be filled.
-            The missing_value has to be specified for types int and unsigned int.
+           This argument specifies how to fill missing values
+            The `missing_value` is required for types int and unsigned int.
         """
         self.sorting.set_property(key, values, ids=ids, missing_value=missing_value)
         if not self.is_read_only():
