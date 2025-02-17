@@ -211,7 +211,7 @@ class MdaSortingExtractor(BaseSorting):
             label = segment._labels[spike_event_index]
             max_channel = segment._max_channels[spike_event_index]
             label_to_channel[label] = max_channel
-        
+
         # Put channels into a list in the same order as labels, and set as property
         # NOTE: The max_channel values (1-indexed) index the channels given as input to the sorter
         # If sorting was run on a subset of channels of the recording, then the max_channel values are
