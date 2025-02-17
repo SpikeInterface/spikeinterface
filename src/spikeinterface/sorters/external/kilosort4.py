@@ -25,6 +25,9 @@ class Kilosort4Sorter(BaseSorter):
 
     _si_default_params = {
         "do_CAR": True,
+        "invert_sign": False,
+        "save_extra_vars": False,
+        "save_preprocessed_copy": False,
         "torch_device": "auto",
         "do_correction": True,
         "skip_kilosort_preprocessing": False,
@@ -35,7 +38,10 @@ class Kilosort4Sorter(BaseSorter):
 
     _si_params_description = {
         "do_CAR": "If True, common average reference is performed. Default is True. (run_kilosrt parameter)",
-        "torch_device": "Select the torch device auto/cuda/cpu. Default is 'auto'. (spikeinterface parameter)",
+        "invert_sign": "If True, inverts the sign of the traces. Default is False. (run_kilosort parameter)",
+        "save_extra_vars": "If True, additional spike information is saved. Default is False. (run_kilosort parameter)",
+        "save_preprocessed_copy": "If True, a preprocessed binary file is saved. Default is False. (run_kilosort parameter)",
+        "torch_device": "Select the torch device auto/cuda/cpu. Default is 'auto'. (run_kilosort parameter)",
         "do_correction": "If True, drift correction is performed. Default is True. (spikeinterface parameter)",
         "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing. (spikeinterface parameter)",
         "keep_good_only": "If True, only the units labeled as 'good' by Kilosort are returned in the output. (spikeinterface parameter)",
