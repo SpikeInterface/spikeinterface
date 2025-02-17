@@ -84,8 +84,6 @@ PARAMS_TO_TEST_DICT = {
     "duplicate_spike_ms": 0.3,
 }
 
-PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
-
 PARAMETERS_NOT_AFFECTING_RESULTS = [
     "artifact_threshold",
     "ccg_threshold",
@@ -99,19 +97,18 @@ PARAMETERS_NOT_AFFECTING_RESULTS = [
 # Add/Remove version specific parameters
 if parse(kilosort.__version__) >= parse("4.0.22"):
     PARAMS_TO_TEST_DICT.update(
-        [
-            {"position_limit": 50},
-        ]
+        {"position_limit": 50}
     )
     # Position limit only affects computing spike locations after sorting
     PARAMETERS_NOT_AFFECTING_RESULTS.append("position_limit")
 
 if parse(kilosort.__version__) >= parse("4.0.24"):
     PARAMS_TO_TEST_DICT.update(
-        [
-            {"max_peels": 101},
-        ]
+        {"max_peels": 101},
     )
+
+
+PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
 
 
 class TestKilosort4Long:
