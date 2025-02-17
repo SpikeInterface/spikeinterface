@@ -1247,6 +1247,9 @@ class SortingAnalyzer:
                 filename = self.folder / f"sorting_provenance.{type}"
                 sorting_provenance = None
                 if filename.exists():
+                    # try-except here is because it's not required to be able
+                    # to load the sorting provenance, as the user might have deleted
+                    # the original sorting folder
                     try:
                         sorting_provenance = load(filename, base_folder=self.folder)
                         break
@@ -1256,11 +1259,16 @@ class SortingAnalyzer:
 
         elif self.format == "zarr":
             zarr_root = self._get_zarr_root(mode="r")
+            sorting_provenance = None
             if "sorting_provenance" in zarr_root.keys():
-                sort_dict = zarr_root["sorting_provenance"][0]
-                sorting_provenance = load(sort_dict, base_folder=self.folder)
-            else:
-                sorting_provenance = None
+                # try-except here is because it's not required to be able
+                # to load the sorting provenance, as the user might have deleted
+                # the original sorting folder
+                try:
+                    sort_dict = zarr_root["sorting_provenance"][0]
+                    sorting_provenance = load(sort_dict, base_folder=self.folder)
+                except:
+                    pass
 
         return sorting_provenance
 
