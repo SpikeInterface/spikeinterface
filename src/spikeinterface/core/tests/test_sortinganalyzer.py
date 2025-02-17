@@ -66,6 +66,12 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     )
     assert not sorting_analyzer.return_scaled
 
+    # test set_sorting_property
+    sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
+    sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
+    assert "quality" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
+
 
 def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     recording, sorting = dataset
@@ -102,6 +108,15 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     )
     assert not sorting_analyzer.return_scaled
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+
+    # test set_sorting_property
+    sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
+    sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
+    assert "quality" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
+    sorting_analyzer_reloded = load_sorting_analyzer(folder, format="auto")
+    assert "quality" in sorting_analyzer_reloded.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
 
 
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
@@ -175,6 +190,15 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
         sorting_analyzer_lzma._get_zarr_root()["extensions"]["templates"]["average"].compressor.codec_id
         == LZMA.codec_id
     )
+
+    # test set_sorting_property
+    sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
+    sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
+    assert "quality" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
+    sorting_analyzer_reloded = load_sorting_analyzer(sorting_analyzer.folder, format="auto")
+    assert "quality" in sorting_analyzer_reloded.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
 
 
 def test_load_without_runtime_info(tmp_path, dataset):
@@ -261,9 +285,6 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
     assert "channel_ids" in sorting_analyzer.rec_attributes
     assert "sampling_frequency" in sorting_analyzer.rec_attributes
     assert "num_samples" in sorting_analyzer.rec_attributes
-
-    probe = sorting_analyzer.get_probe()
-    sparsity = sorting_analyzer.sparsity
 
     # compute
     sorting_analyzer.compute("dummy", param1=5.5)
@@ -367,6 +388,9 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer4 = sorting_analyzer.merge_units(merge_unit_groups=[[0, 1]], format=format, folder=folder)
+        assert 0 not in sorting_analyzer4.unit_ids
+        assert 1 not in sorting_analyzer4.unit_ids
+        assert len(sorting_analyzer4.unit_ids) == len(sorting_analyzer.unit_ids) - 1
 
         if format != "memory":
             if format == "zarr":
@@ -380,6 +404,10 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         sorting_analyzer5 = sorting_analyzer.merge_units(
             merge_unit_groups=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, merging_mode="hard"
         )
+        assert 0 not in sorting_analyzer5.unit_ids
+        assert 1 not in sorting_analyzer5.unit_ids
+        assert len(sorting_analyzer5.unit_ids) == len(sorting_analyzer.unit_ids) - 1
+        assert 50 in sorting_analyzer5.unit_ids
 
     # test compute with extension-specific params
     sorting_analyzer.compute(["dummy"], extension_params={"dummy": {"param1": 5.5}})
