@@ -85,9 +85,13 @@ class Kilosort4Sorter(BaseSorter):
             for param, param_value in ks_params.items():
                 if param not in skip_main:
                     default_params[param] = param_value["default"]
-                    desc = param_value["description"]
-                    desc = desc[: desc.find("Default value:")]
-                    default_params_descriptions[param] = " ".join(desc.replace("\n", "").split())
+                    desc = param_value.get("description")
+                    if desc is None:
+                        desc = ""
+                    else:
+                        # get rid of escape characters and extra spaces
+                        desc = " ".join(desc.replace("\n", "").split())
+                    default_params_descriptions[param] = desc
             default_params.update(cls._si_default_params)
             default_params_descriptions.update(cls._si_params_description)
             return default_params, default_params_descriptions
