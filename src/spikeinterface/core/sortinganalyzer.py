@@ -743,7 +743,7 @@ class SortingAnalyzer:
             warnings.warn("SortingAnalyzer recording is already set. The current recording is temporarily replaced.")
         self._temporary_recording = recording
 
-    def set_unit_property(
+    def set_sorting_property(
         self,
         key,
         values: list | np.ndarray | tuple,
@@ -792,6 +792,25 @@ class SortingAnalyzer:
                         zarr_root["sorting"]["properties"].create_dataset(name=key, data=prop_values, compressor=None)
                     # IMPORTANT: we need to re-consolidate the zarr store!
                     zarr.consolidate_metadata(zarr_root.store)
+
+    def get_sorting_property(self, key: str, ids: Optional[Iterable] = None) -> np.ndarray:
+        """
+        Get property vector for unit ids.
+
+        Parameters
+        ----------
+        key : str
+            The property name
+        ids : list/np.array, default: None
+            List of subset of ids to get the values.
+            if None all the ids are returned
+
+        Returns
+        -------
+        values : np.array
+            Array of values for the property
+        """
+        return self.sorting.get_property(key, ids=ids)
 
     def _save_or_select_or_merge(
         self,

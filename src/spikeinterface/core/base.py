@@ -145,7 +145,7 @@ class BaseExtractor:
             non_existent_ids = [id for id in ids if id not in self._main_ids]
             if non_existent_ids:
                 error_msg = (
-                    f"IDs {non_existent_ids} are not channel ids of the extractor. \n"
+                    f"IDs {non_existent_ids} are not ids of the extractor. \n"
                     f"Available ids are {self._main_ids} with dtype {self._main_ids.dtype}"
                 )
                 raise ValueError(error_msg)
@@ -293,6 +293,11 @@ class BaseExtractor:
                     ), f"Mismatch between existing property dtype {existing_property.kind} and provided values dtype {dtype_kind}."
 
                 indices = self.ids_to_indices(ids)
+                if dtype_kind == "U":
+                    # re-adjust the size of the property
+                    existing_unicode_size = max(len(s) for s in self._properties[key])
+                    new_unicode_size = max(max(len(s) for s in values), existing_unicode_size)
+                    self._properties[key] = self._properties[key].astype(f"<U{new_unicode_size}")
                 self._properties[key][indices] = values
             else:
                 indices = self.ids_to_indices(ids)

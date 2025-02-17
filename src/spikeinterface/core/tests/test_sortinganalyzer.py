@@ -66,9 +66,9 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     )
     assert not sorting_analyzer.return_scaled
 
-    # test set_unit_property
-    sorting_analyzer.set_unit_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
-    sorting_analyzer.set_unit_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
+    # test set_sorting_property
+    sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
+    sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
     assert "quality" in sorting_analyzer.sorting.get_property_keys()
     assert "number" in sorting_analyzer.sorting.get_property_keys()
 
@@ -109,9 +109,9 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     assert not sorting_analyzer.return_scaled
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
-    # test set_unit_property
-    sorting_analyzer.set_unit_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
-    sorting_analyzer.set_unit_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
+    # test set_sorting_property
+    sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
+    sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
     assert "quality" in sorting_analyzer.sorting.get_property_keys()
     assert "number" in sorting_analyzer.sorting.get_property_keys()
     sorting_analyzer_reloded = load_sorting_analyzer(folder, format="auto")
@@ -191,9 +191,9 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
         == LZMA.codec_id
     )
 
-    # test set_unit_property
-    sorting_analyzer.set_unit_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
-    sorting_analyzer.set_unit_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
+    # test set_sorting_property
+    sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
+    sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
     assert "quality" in sorting_analyzer.sorting.get_property_keys()
     assert "number" in sorting_analyzer.sorting.get_property_keys()
     sorting_analyzer_reloded = load_sorting_analyzer(sorting_analyzer.folder, format="auto")
