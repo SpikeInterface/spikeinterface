@@ -145,7 +145,7 @@ class BaseExtractor:
             non_existent_ids = [id for id in ids if id not in self._main_ids]
             if non_existent_ids:
                 error_msg = (
-                    f"IDs {non_existent_ids} are not channel ids of the extractor. \n"
+                    f"IDs {non_existent_ids} are not ids of the extractor. \n"
                     f"Available ids are {self._main_ids} with dtype {self._main_ids.dtype}"
                 )
                 raise ValueError(error_msg)
@@ -231,10 +231,10 @@ class BaseExtractor:
         ids : list/np.array, default: None
             List of subset of ids to set the values, default: None
             if None which is the default all the ids are set or changed
-        missing_value : object, default: None
+        missing_value : Any, default: None
             In case the property is set on a subset of values ("ids" not None),
-            it specifies the how the missing values should be filled.
-            The missing_value has to be specified for types int and unsigned int.
+            This argument specifies how to fill missing values.
+            The `missing_value` is required for types int and unsigned int.
         """
 
         if values is None:
@@ -293,6 +293,11 @@ class BaseExtractor:
                     ), f"Mismatch between existing property dtype {existing_property.kind} and provided values dtype {dtype_kind}."
 
                 indices = self.ids_to_indices(ids)
+                if dtype_kind == "U":
+                    # re-adjust the size of the property
+                    existing_unicode_size = max(len(s) for s in self._properties[key])
+                    new_unicode_size = max(max(len(s) for s in values), existing_unicode_size)
+                    self._properties[key] = self._properties[key].astype(f"<U{new_unicode_size}")
                 self._properties[key][indices] = values
             else:
                 indices = self.ids_to_indices(ids)
