@@ -202,6 +202,25 @@ class MdaSortingExtractor(BaseSorting):
         sorting_segment = MdaSortingSegment(firings)
         self.add_sorting_segment(sorting_segment)
 
+        # Store the max channel for each unit
+        # Every spike assigned to a unit (label) has the same max channel
+        # ref: https://github.com/SpikeInterface/spikeinterface/issues/3695#issuecomment-2663329006
+        label_to_channel = dict()
+        segment = self._sorting_segments[0]
+        for spike_event_index in range(len(segment._labels)):
+            label = segment._labels[spike_event_index]
+            max_channel = segment._max_channels[spike_event_index]
+            label_to_channel[label] = max_channel
+        
+        # Put channels into a list in the same order as labels, and set as property
+        # NOTE: The max_channel values (1-indexed) index the channels given as input to the sorter
+        # If sorting was run on a subset of channels of the recording, then the max_channel values are
+        # based on that subset, so care must be taken when associating these values with a recording.
+        # NOTE: if additional sorting segments are added to this sorting extractor, then max_channel
+        # will not be updated
+        max_channels = [value for key, value in sorted(d.items())]
+        self.set_property(key="max_channel", values=max_channels)
+
         self._kwargs = {
             "file_path": str(Path(file_path).absolute()),
             "sampling_frequency": sampling_frequency,
@@ -209,7 +228,7 @@ class MdaSortingExtractor(BaseSorting):
 
     @staticmethod
     def write_sorting(sorting, save_path, write_primary_channels=False):
-        assert sorting.get_num_segments() == 1, "MdaSorting.write_sorting() can only write a single segment " "sorting"
+        assert sorting.get_num_segments() == 1, "MdaSorting.write_sorting() can only write a single segment sorting"
         unit_ids = sorting.get_unit_ids()
         times_list = []
         labels_list = []
