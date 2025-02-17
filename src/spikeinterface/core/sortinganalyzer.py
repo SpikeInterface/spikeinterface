@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, Optional
+from typing import Literal, Optional, Any
 
 from pathlib import Path
 from itertools import chain
@@ -223,13 +223,13 @@ class SortingAnalyzer:
 
     def __init__(
         self,
-        sorting=None,
-        recording=None,
-        rec_attributes=None,
-        format=None,
-        sparsity=None,
-        return_scaled=True,
-        backend_options=None,
+        sorting: BaseSorting,
+        recording: BaseRecording | None = None,
+        rec_attributes: dict | None = None,
+        format: str | None = None,
+        sparsity: ChannelSparsity | None = None,
+        return_scaled: bool = True,
+        backend_options: dict | None = None,
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
@@ -239,6 +239,7 @@ class SortingAnalyzer:
         self.format = format
         self.sparsity = sparsity
         self.return_scaled = return_scaled
+        self.folder: str | Path | None = None
 
         # this is used to store temporary recording
         self._temporary_recording = None
@@ -742,6 +743,75 @@ class SortingAnalyzer:
             warnings.warn("SortingAnalyzer recording is already set. The current recording is temporarily replaced.")
         self._temporary_recording = recording
 
+    def set_sorting_property(
+        self,
+        key,
+        values: list | np.ndarray | tuple,
+        ids: list | np.ndarray | tuple | None = None,
+        missing_value: Any = None,
+        save: bool = True,
+    ) -> None:
+        """
+        Set property vector for unit ids.
+
+        If the SortingAnalyzer backend is in memory, the property will be only set in memory.
+        If the SortingAnalyzer backend is `binary_folder` or `zarr`, the property will also
+        be saved to to the backend.
+
+        Parameters
+        ----------
+        key : str
+            The property name
+        values : np.array
+            Array of values for the property
+        ids : list/np.array, default: None
+            List of subset of ids to set the values.
+            if None all the ids are set or changed
+        missing_value : Any, default: None
+            In case the property is set on a subset of values ("ids" not None),
+            This argument specifies how to fill missing values.
+            The `missing_value` is required for types int and unsigned int.
+        save : bool, default: True
+            If True, the property is saved to the backend if possible.
+        """
+        self.sorting.set_property(key, values, ids=ids, missing_value=missing_value)
+        if not self.is_read_only() and save:
+            if self.format == "binary_folder":
+                np.save(self.folder / "sorting" / "properties" / f"{key}.npy", self.sorting.get_property(key))
+            elif self.format == "zarr":
+                import zarr
+
+                zarr_root = self._get_zarr_root(mode="r+")
+                prop_values = self.sorting.get_property(key)
+                if prop_values.dtype.kind == "O":
+                    warnings.warn(f"Property {key} not saved because it is a python Object type")
+                else:
+                    if key in zarr_root["sorting"]["properties"]:
+                        zarr_root["sorting"]["properties"][key][:] = prop_values
+                    else:
+                        zarr_root["sorting"]["properties"].create_dataset(name=key, data=prop_values, compressor=None)
+                    # IMPORTANT: we need to re-consolidate the zarr store!
+                    zarr.consolidate_metadata(zarr_root.store)
+
+    def get_sorting_property(self, key: str, ids: Optional[Iterable] = None) -> np.ndarray:
+        """
+        Get property vector for unit ids.
+
+        Parameters
+        ----------
+        key : str
+            The property name
+        ids : list/np.array, default: None
+            List of subset of ids to get the values.
+            if None all the ids are returned
+
+        Returns
+        -------
+        values : np.array
+            Array of values for the property
+        """
+        return self.sorting.get_property(key, ids=ids)
+
     def _save_or_select_or_merge(
         self,
         format="binary_folder",
@@ -1177,6 +1247,9 @@ class SortingAnalyzer:
                 filename = self.folder / f"sorting_provenance.{type}"
                 sorting_provenance = None
                 if filename.exists():
+                    # try-except here is because it's not required to be able
+                    # to load the sorting provenance, as the user might have deleted
+                    # the original sorting folder
                     try:
                         sorting_provenance = load(filename, base_folder=self.folder)
                         break
@@ -1186,11 +1259,16 @@ class SortingAnalyzer:
 
         elif self.format == "zarr":
             zarr_root = self._get_zarr_root(mode="r")
+            sorting_provenance = None
             if "sorting_provenance" in zarr_root.keys():
-                sort_dict = zarr_root["sorting_provenance"][0]
-                sorting_provenance = load(sort_dict, base_folder=self.folder)
-            else:
-                sorting_provenance = None
+                # try-except here is because it's not required to be able
+                # to load the sorting provenance, as the user might have deleted
+                # the original sorting folder
+                try:
+                    sort_dict = zarr_root["sorting_provenance"][0]
+                    sorting_provenance = load(sort_dict, base_folder=self.folder)
+                except:
+                    pass
 
         return sorting_provenance
 
