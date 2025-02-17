@@ -91,7 +91,10 @@ class Kilosort4Sorter(BaseSorter):
         if cls.is_installed():
             import kilosort as ks
 
-            skip_main = ["n_chan_bin", "sampling_frequency"]
+            # we skip some parameters that are not relevant for the user
+            # n_chan_bin/sampling_frequency: retrieved from the recording
+            # tmin/tmax: same ase time/frame_slice in SpikeInterface
+            skip_main = ["n_chan_bin", "sampling_frequency", "tmin", "tmax"]
             default_params = {}
             default_params_descriptions = {}
             ks_params = ks.parameters.MAIN_PARAMETERS
