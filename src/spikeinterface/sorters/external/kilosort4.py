@@ -24,6 +24,7 @@ class Kilosort4Sorter(BaseSorter):
     requires_binary_data = False
 
     _si_default_params = {
+        "torch_device": "auto",
         "do_correction": True,
         "skip_kilosort_preprocessing": False,
         "keep_good_only": False,
@@ -32,6 +33,7 @@ class Kilosort4Sorter(BaseSorter):
     }
 
     _si_params_description = {
+        "torch_device": "Select the torch device auto/cuda/cpu. Default is 'auto'. (spikeinterface parameter)",
         "do_correction": "If True, drift correction is performed. Default is True. (spikeinterface parameter)",
         "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing. (spikeinterface parameter)",
         "keep_good_only": "If True, only the units labeled as 'good' by Kilosort are returned in the output. (spikeinterface parameter)",
