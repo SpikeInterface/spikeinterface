@@ -223,13 +223,13 @@ class SortingAnalyzer:
 
     def __init__(
         self,
-        sorting=None,
-        recording=None,
-        rec_attributes=None,
-        format=None,
-        sparsity=None,
-        return_scaled=True,
-        backend_options=None,
+        sorting: BaseSorting,
+        recording: BaseRecording | None = None,
+        rec_attributes: dict | None = None,
+        format: str | None = None,
+        sparsity: ChannelSparsity | None = None,
+        return_scaled: bool = True,
+        backend_options: dict | None = None,
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
@@ -239,6 +239,7 @@ class SortingAnalyzer:
         self.format = format
         self.sparsity = sparsity
         self.return_scaled = return_scaled
+        self.folder: str | Path | None = None
 
         # this is used to store temporary recording
         self._temporary_recording = None
@@ -748,6 +749,7 @@ class SortingAnalyzer:
         values: list | np.ndarray | tuple,
         ids: list | np.ndarray | tuple | None = None,
         missing_value: Any = None,
+        save: bool = True,
     ) -> None:
         """
         Set property vector for unit ids.
@@ -767,11 +769,13 @@ class SortingAnalyzer:
             if None all the ids are set or changed
         missing_value : Any, default: None
             In case the property is set on a subset of values ("ids" not None),
-           This argument specifies how to fill missing values
+            This argument specifies how to fill missing values.
             The `missing_value` is required for types int and unsigned int.
+        save : bool, default: True
+            If True, the property is saved to the backend if possible.
         """
         self.sorting.set_property(key, values, ids=ids, missing_value=missing_value)
-        if not self.is_read_only():
+        if not self.is_read_only() and save:
             if self.format == "binary_folder":
                 np.save(self.folder / "sorting" / "properties" / f"{key}.npy", self.sorting.get_property(key))
             elif self.format == "zarr":

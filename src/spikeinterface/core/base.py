@@ -231,10 +231,10 @@ class BaseExtractor:
         ids : list/np.array, default: None
             List of subset of ids to set the values, default: None
             if None which is the default all the ids are set or changed
-        missing_value : object, default: None
+        missing_value : Any, default: None
             In case the property is set on a subset of values ("ids" not None),
-            it specifies the how the missing values should be filled.
-            The missing_value has to be specified for types int and unsigned int.
+            This argument specifies how to fill missing values.
+            The `missing_value` is required for types int and unsigned int.
         """
 
         if values is None:
