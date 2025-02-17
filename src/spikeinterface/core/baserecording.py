@@ -89,7 +89,7 @@ class BaseRecording(BaseRecordingSnippets):
 
         return txt
 
-    def _repr_header(self):
+    def _repr_header(self, display_name=True):
         num_segments = self.get_num_segments()
         num_channels = self.get_num_channels()
         dtype = self.get_dtype()
@@ -105,8 +105,13 @@ class BaseRecording(BaseRecordingSnippets):
             # Khz for high sampling rate and Hz for LFP
             sampling_frequency_repr = f"{(sf_hz/1000.0):0.1f}kHz" if sf_hz > 10_000.0 else f"{sf_hz:0.1f}Hz"
 
+        if display_name:
+            name = f"{self.name} ({self.__class__.__name__})"
+        else:
+            name = self.__class__.__name__
+
         txt = (
-            f"{self.name}: "
+            f"{name}: "
             f"{num_channels} channels - "
             f"{sampling_frequency_repr} - "
             f"{num_segments} segments - "
@@ -118,11 +123,11 @@ class BaseRecording(BaseRecordingSnippets):
 
         return txt
 
-    def _repr_html_(self):
+    def _repr_html_(self, display_name=True):
         common_style = "margin-left: 10px;"
         border_style = "border:1px solid #ddd; padding:10px;"
 
-        html_header = f"<div style='{border_style}'><strong>{self._repr_header()}</strong></div>"
+        html_header = f"<div style='{border_style}'><strong>{self._repr_header(display_name)}</strong></div>"
 
         html_segments = ""
         if self.get_num_segments() > 1:
@@ -154,8 +159,13 @@ class BaseRecording(BaseRecordingSnippets):
             value_formatted = np.asarray(value)
             html_properties += f"<details><summary> <strong> {key} </strong> </summary>{value_formatted}</details>"
         html_properties += "</ul></details>"
+        if self.get_parent():
+            html_parent = f"<details style='{common_style}'>  <summary><strong>Parent</strong></summary>"
+            html_parent += self.get_parent()._repr_html_(display_name=False)
+        else:
+            html_parent = ""
 
-        html_repr = html_header + html_segments + html_channel_ids + html_annotations + html_properties
+        html_repr = html_header + html_segments + html_channel_ids + html_annotations + html_properties + html_parent
         return html_repr
 
     def get_num_segments(self) -> int:
