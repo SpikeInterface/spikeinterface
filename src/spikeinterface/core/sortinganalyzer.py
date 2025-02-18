@@ -642,6 +642,9 @@ class SortingAnalyzer:
 
     @classmethod
     def load_from_zarr(cls, folder, recording=None, backend_options=None):
+
+        assert Path(folder).is_dir(), f"This folder does not exists {folder}"
+
         import zarr
         from .loading import load
 
