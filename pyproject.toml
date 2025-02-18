@@ -159,7 +159,8 @@ test = [
     "s3fs",
 
     # tridesclous
-    "numba",
+    "numba<0.61.0;python_version<'3.13'",
+    "numba>=0.61.0;python_version>='3.13'",
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
 
     # for sortingview backend
