@@ -97,7 +97,7 @@ class Kilosort4Sorter(BaseSorter):
             skip_main = ["n_chan_bin", "sampling_frequency", "tmin", "tmax"]
             default_params = {}
             default_params_descriptions = {}
-            ks_params = ks.parameters.MAIN_PARAMETERS
+            ks_params = ks.parameters.MAIN_PARAMETERS.copy()
             ks_params.update(ks.parameters.EXTRA_PARAMETERS)
             for param, param_value in ks_params.items():
                 if param not in skip_main:
