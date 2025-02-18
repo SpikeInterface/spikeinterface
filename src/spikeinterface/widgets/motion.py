@@ -5,8 +5,8 @@ import numpy as np
 from .base import BaseWidget, to_attr
 
 from spikeinterface.core import BaseRecording, SortingAnalyzer
-from spikeinterface.sortingcomponents.motion import Motion
 from .rasters import BaseRasterWidget
+from spikeinterface.core.motion import Motion
 
 
 class MotionWidget(BaseWidget):
