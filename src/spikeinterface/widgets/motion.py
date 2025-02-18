@@ -128,7 +128,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
     depth_lim : tuple or None, default: None
         The min and max depth to display, if None (min and max of the recording).
     scatter_decimate : int, default: None
-        If > 1, the scatter points are decimated.
+        If equal to n, each nth spike is kept for plotting.
     color_amplitude : bool, default: True
         If True, the color of the scatter points is the amplitude of the peaks.
     cmap : str, default: "inferno"
@@ -264,7 +264,7 @@ class MotionInfoWidget(BaseWidget):
     motion_lim : tuple or None, default: None
         The min and max motion to display, if None (min and max of the motion).
     scatter_decimate : int, default: None
-        If > 1, the scatter points are decimated.
+        If equal to n, each nth spike is kept for plotting.
     color_amplitude : bool, default: False
         If True, the color of the scatter points is the amplitude of the peaks.
     amplitude_cmap : str, default: "inferno"

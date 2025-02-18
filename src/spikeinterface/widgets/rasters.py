@@ -28,7 +28,7 @@ class BaseRasterWidget(BaseWidget):
     bins : int | None, default: None
         Number of bins to use in histogram. If None, use 1/30 of spike train sample length.
     scatter_decimate : int | None, default: None
-        If > 1, the scatter points are decimated.
+        If equal to n, each nth spike is kept for plotting.
     unit_colors : dict | None, default: None
         Dict of colors with key : unit, value : color. If None, uses `get_some_colors` to
         generate colors.
@@ -312,16 +312,15 @@ class RasterWidget(BaseRasterWidget):
 
         sorting = self.ensure_sorting(sorting)
 
-        if segment_index is None:
-            if sorting.get_num_segments() != 1:
-                raise ValueError("You must provide segment_index=...")
-            segment_index = 0
+        if segment_index is None and sorting.get_num_segments() != 1:
+            raise ValueError("You must provide segment_index=...")
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
         all_spiketrains = {
-            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=0, return_times=True) for unit_id in unit_ids
+            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index, return_times=True)
+            for unit_id in unit_ids
         }
 
         if time_range is not None:
