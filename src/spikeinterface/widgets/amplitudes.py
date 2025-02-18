@@ -73,6 +73,13 @@ class AmplitudesWidget(BaseRasterWidget):
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
+        if sorting.get_num_segments() > 1:
+            if segment_index is None:
+                warn("More than one segment available! Using `segment_index = 0`.")
+                segment_index = 0
+        else:
+            segment_index = 0
+
         amplitudes_segment = amplitudes[segment_index]
         total_duration = sorting_analyzer.get_num_samples(segment_index) / sorting_analyzer.sampling_frequency
 

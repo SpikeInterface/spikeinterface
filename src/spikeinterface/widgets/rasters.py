@@ -305,15 +305,19 @@ class RasterWidget(BaseRasterWidget):
     ):
         if sorting is None and sorting_analyzer is None:
             raise Exception("Must supply either a sorting or a sorting_analyzer")
-        if sorting is not None and sorting_analyzer is not None:
+        elif sorting is not None and sorting_analyzer is not None:
             raise Exception("Should supply either a sorting or a sorting_analyzer, not both")
-        if sorting_analyzer is not None:
+        elif sorting_analyzer is not None:
             sorting = sorting_analyzer.sorting
 
         sorting = self.ensure_sorting(sorting)
 
-        if segment_index is None and sorting.get_num_segments() != 1:
-            raise ValueError("You must provide segment_index=...")
+        if sorting.get_num_segments() > 1:
+            if segment_index is None:
+                warn("More than one segment available! Using `segment_index = 0`.")
+                segment_index = 0
+        else:
+            segment_index = 0
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
