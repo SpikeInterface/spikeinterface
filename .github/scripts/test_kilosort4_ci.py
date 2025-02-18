@@ -106,6 +106,8 @@ if parse(kilosort.__version__) >= parse("4.0.24"):
     PARAMS_TO_TEST_DICT.update(
         {"max_peels": 200},
     )
+    # max_peels is not affecting the results in this short dataset
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("max_peels")
 
 
 PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
