@@ -180,6 +180,13 @@ class MdaRecordingSegment(BaseRecordingSegment):
 class MdaSortingExtractor(BaseSorting):
     """Load MDA format data as a sorting extractor.
 
+    NOTE: As in the MDA format, the max_channel property indexes the channels that are given as input
+    to the sorter.
+    If sorting was run on a subset of channels of the recording, then the max_channel values are
+    based on that subset, so care must be taken when associating these values with a recording.
+    If additional sorting segments are added to this sorting extractor after initialization,
+    then max_channel will not be updated. The max_channel indices begin at 1.
+
     Parameters
     ----------
     file_path : str or Path
