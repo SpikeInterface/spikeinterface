@@ -113,7 +113,7 @@ class Kilosort4Sorter(BaseSorter):
             default_params_descriptions.update(cls._si_params_description)
             return default_params, default_params_descriptions
         else:
-            warnings.warn("Kilosort4 is not installed. Please install kilosort4 to get the dynamic parameters.")
+            warnings.warn("Kilosort4 is not installed. Please install kilosort4 to get the parameters.")
             return {}, {}
 
     @classmethod
