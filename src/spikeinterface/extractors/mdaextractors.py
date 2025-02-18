@@ -213,13 +213,6 @@ class MdaSortingExtractor(BaseSorting):
             max_channel = segment._max_channels[label_mask][0]
             max_channels.append(max_channel)
 
-        # Put channels into a list in the same order as labels, and set as property
-        # NOTE: The max_channel values (1-indexed) index the channels given as input to the sorter
-        # If sorting was run on a subset of channels of the recording, then the max_channel values are
-        # based on that subset, so care must be taken when associating these values with a recording.
-        # NOTE: if additional sorting segments are added to this sorting extractor, then max_channel
-        # will not be updated
-        max_channels = [value for key, value in sorted(label_to_channel.items())]
         self.set_property(key="max_channel", values=max_channels)
 
         self._kwargs = {
