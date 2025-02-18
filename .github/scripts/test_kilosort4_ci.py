@@ -104,7 +104,7 @@ if parse(kilosort.__version__) >= parse("4.0.22"):
 
 if parse(kilosort.__version__) >= parse("4.0.24"):
     PARAMS_TO_TEST_DICT.update(
-        {"max_peels": 50},
+        {"max_peels": 200},
     )
 
 
