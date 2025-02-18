@@ -243,7 +243,7 @@ class MdaSortingExtractor(BaseSorting):
             else:
                 labels_list.append(np.ones(times.shape, dtype=int) * unit_index)
             if write_primary_channels:
-                if "max_channel" in sorting.get_unit_property_names(unit_id):
+                if "max_channel" in sorting.get_property_keys():
                     primary_channels_list.append([sorting.get_unit_property(unit_id, "max_channel")] * times.shape[0])
                 else:
                     raise ValueError(
