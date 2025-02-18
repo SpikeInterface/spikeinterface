@@ -32,11 +32,11 @@ class BaseSorting(BaseExtractor):
     def __repr__(self):
         return self._repr_header()
 
-    def _repr_header(self, parent_name=None):
+    def _repr_header(self, display_name=True):
         nseg = self.get_num_segments()
         nunits = self.get_num_units()
         sf_khz = self.get_sampling_frequency() / 1000.0
-        if parent_name is None or parent_name != self.name:
+        if display_name and self.name != self.__class__.__name__:
             name = f"{self.name} ({self.__class__.__name__})"
         else:
             name = self.__class__.__name__
@@ -45,37 +45,18 @@ class BaseSorting(BaseExtractor):
             txt += "\n  file_path: {}".format(self._kwargs["file_path"])
         return txt
 
-    def _repr_html_(self, parent_name=None):
+    def _repr_html_(self, display_name=True):
         common_style = "margin-left: 10px;"
         border_style = "border:1px solid #ddd; padding:10px;"
 
-        html_header = f"<div style='{border_style}'><strong>{self._repr_header(parent_name)}</strong></div>"
+        html_header = f"<div style='{border_style}'><strong>{self._repr_header(display_name)}</strong></div>"
 
         html_unit_ids = f"<details style='{common_style}'>  <summary><strong>Unit IDs</strong></summary><ul>"
         html_unit_ids += f"{self.unit_ids} </details>"
 
-        html_annotations = f"<details style='{common_style}'>  <summary><strong>Annotations</strong></summary><ul>"
-        for key, value in self._annotations.items():
-            html_annotations += f"<li> <strong> {key} </strong>: {value}</li>"
-        html_annotations += f"</details>"
+        html_extra = self._get_common_repr_html(common_style)
 
-        html_unit_properties = (
-            f"<details style='{common_style}'><summary><strong>Unit Properties</strong></summary><ul>"
-        )
-        for key, value in self._properties.items():
-            # Add a further indent for each property
-            value_formatted = np.asarray(value)
-            html_unit_properties += f"<details><summary><strong>{key}</strong></summary>{value_formatted}</details>"
-        html_unit_properties += "</ul></details>"
-
-        if self.get_parent():
-            html_parent = f"<details style='{common_style}'>  <summary><strong>Parent</strong></summary><ul>"
-            html_parent += self.get_parent()._repr_html_(parent_name=self.name)
-            html_parent += "</ul></details>"
-        else:
-            html_parent = ""
-
-        html_repr = html_header + html_unit_ids + html_annotations + html_unit_properties + html_parent
+        html_repr = html_header + html_unit_ids + html_extra
         return html_repr
 
     @property
