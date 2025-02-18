@@ -218,7 +218,7 @@ class MdaSortingExtractor(BaseSorting):
         # based on that subset, so care must be taken when associating these values with a recording.
         # NOTE: if additional sorting segments are added to this sorting extractor, then max_channel
         # will not be updated
-        max_channels = [value for key, value in sorted(d.items())]
+        max_channels = [value for key, value in sorted(label_to_channel.items())]
         self.set_property(key="max_channel", values=max_channels)
 
         self._kwargs = {
