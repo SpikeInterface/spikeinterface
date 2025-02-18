@@ -159,9 +159,11 @@ class BaseRecording(BaseRecordingSnippets):
             value_formatted = np.asarray(value)
             html_properties += f"<details><summary> <strong> {key} </strong> </summary>{value_formatted}</details>"
         html_properties += "</ul></details>"
+
         if self.get_parent():
-            html_parent = f"<details style='{common_style}'>  <summary><strong>Parent</strong></summary>"
+            html_parent = f"<details style='{common_style}'>  <summary><strong>Parent</strong></summary><ul>"
             html_parent += self.get_parent()._repr_html_(parent_name=self.name)
+            html_parent += "</ul></details>"
         else:
             html_parent = ""
 
