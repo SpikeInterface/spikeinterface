@@ -89,7 +89,7 @@ class BaseRecording(BaseRecordingSnippets):
 
         return txt
 
-    def _repr_header(self, display_name=True):
+    def _repr_header(self, parent_name=None):
         num_segments = self.get_num_segments()
         num_channels = self.get_num_channels()
         dtype = self.get_dtype()
@@ -105,7 +105,7 @@ class BaseRecording(BaseRecordingSnippets):
             # Khz for high sampling rate and Hz for LFP
             sampling_frequency_repr = f"{(sf_hz/1000.0):0.1f}kHz" if sf_hz > 10_000.0 else f"{sf_hz:0.1f}Hz"
 
-        if display_name:
+        if parent_name is None or parent_name != self.name:
             name = f"{self.name} ({self.__class__.__name__})"
         else:
             name = self.__class__.__name__
@@ -123,11 +123,11 @@ class BaseRecording(BaseRecordingSnippets):
 
         return txt
 
-    def _repr_html_(self, display_name=True):
+    def _repr_html_(self, parent_name=None):
         common_style = "margin-left: 10px;"
         border_style = "border:1px solid #ddd; padding:10px;"
 
-        html_header = f"<div style='{border_style}'><strong>{self._repr_header(display_name)}</strong></div>"
+        html_header = f"<div style='{border_style}'><strong>{self._repr_header(parent_name)}</strong></div>"
 
         html_segments = ""
         if self.get_num_segments() > 1:
@@ -161,7 +161,7 @@ class BaseRecording(BaseRecordingSnippets):
         html_properties += "</ul></details>"
         if self.get_parent():
             html_parent = f"<details style='{common_style}'>  <summary><strong>Parent</strong></summary>"
-            html_parent += self.get_parent()._repr_html_(display_name=False)
+            html_parent += self.get_parent()._repr_html_(parent_name=self.name)
         else:
             html_parent = ""
 

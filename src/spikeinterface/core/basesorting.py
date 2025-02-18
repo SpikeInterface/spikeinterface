@@ -30,19 +30,26 @@ class BaseSorting(BaseExtractor):
         self._cached_spike_trains = {}
 
     def __repr__(self):
+        return self._repr_header()
+
+    def _repr_header(self, parent_name=None):
         nseg = self.get_num_segments()
         nunits = self.get_num_units()
         sf_khz = self.get_sampling_frequency() / 1000.0
-        txt = f"{self.name}: {nunits} units - {nseg} segments - {sf_khz:0.1f}kHz"
+        if parent_name is None or parent_name != self.name:
+            name = f"{self.name} ({self.__class__.__name__})"
+        else:
+            name = self.__class__.__name__
+        txt = f"{name}: {nunits} units - {nseg} segments - {sf_khz:0.1f}kHz"
         if "file_path" in self._kwargs:
             txt += "\n  file_path: {}".format(self._kwargs["file_path"])
         return txt
 
-    def _repr_html_(self):
+    def _repr_html_(self, parent_name=None):
         common_style = "margin-left: 10px;"
         border_style = "border:1px solid #ddd; padding:10px;"
 
-        html_header = f"<div style='{border_style}'><strong>{self.__repr__()}</strong></div>"
+        html_header = f"<div style='{border_style}'><strong>{self._repr_header(parent_name)}</strong></div>"
 
         html_unit_ids = f"<details style='{common_style}'>  <summary><strong>Unit IDs</strong></summary><ul>"
         html_unit_ids += f"{self.unit_ids} </details>"
@@ -61,7 +68,13 @@ class BaseSorting(BaseExtractor):
             html_unit_properties += f"<details><summary><strong>{key}</strong></summary>{value_formatted}</details>"
         html_unit_properties += "</ul></details>"
 
-        html_repr = html_header + html_unit_ids + html_annotations + html_unit_properties
+        if self.get_parent():
+            html_parent = f"<details style='{common_style}'>  <summary><strong>Parent</strong></summary>"
+            html_parent += self.get_parent()._repr_html_(parent_name=self.name)
+        else:
+            html_parent = ""
+
+        html_repr = html_header + html_unit_ids + html_annotations + html_unit_properties + html_parent
         return html_repr
 
     @property
