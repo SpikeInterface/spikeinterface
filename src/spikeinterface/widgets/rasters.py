@@ -10,7 +10,7 @@ from .utils import get_some_colors
 class BaseRasterWidget(BaseWidget):
     """
     Make a raster plot with spike times on the x axis and arbritary data on the y axis.
-    Can customise plot with histograms, title, labels, ticks etc.
+    Can customize plot with histograms, title, labels, ticks etc.
 
 
     Parameters
