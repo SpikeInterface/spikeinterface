@@ -165,6 +165,9 @@ test = [
     # for sortingview backend
     "sortingview",
 
+    # for motion and sortingcomponents
+    "torch",
+
     # curation
     "skops",
     "huggingface_hub",
