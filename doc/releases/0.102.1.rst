@@ -18,11 +18,11 @@ core:
 
 sorters:
 
-* Add BaseSorter._dynamic_params to be to retrieve parameters dynamically (#3697)
+* Add `BaseSorter._dynamic_params()` to be to retrieve parameters dynamically (#3697)
 
 continuous integration:
 
-* Add torch to test installation (#3706)
+* Add `torch` to test installation (#3706)
 
 testing:
 
