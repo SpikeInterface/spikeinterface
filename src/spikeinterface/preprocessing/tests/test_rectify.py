@@ -9,21 +9,13 @@ from spikeinterface.preprocessing import rectify
 import numpy as np
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
-
-
 def test_rectify():
     rec = generate_recording()
 
     rec2 = rectify(rec)
     rec2.save(verbose=False)
 
-    traces = rec2.get_traces(segment_index=0, channel_ids=[1])
+    traces = rec2.get_traces(segment_index=0, channel_ids=["1"])
     assert traces.shape[1] == 1
 
     # import matplotlib.pyplot as plt

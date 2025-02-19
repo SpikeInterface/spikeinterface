@@ -1,15 +1,11 @@
 from re import escape
-from tkinter import ON
 from unittest import TestCase
 
 import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
-import requests
 
 from spikeinterface.extractors import read_ibl_recording, read_ibl_sorting, IblRecordingExtractor
-from spikeinterface.extractors import read_ibl_sorting
-from spikeinterface.core import generate_sorting
 
 EID = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
 PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
@@ -19,15 +15,19 @@ PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
 class TestDefaultIblRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
+        import requests
         from one.api import ONE
 
         cls.eid = EID
-        cls.one = ONE(
-            base_url="https://openalyx.internationalbrainlab.org",
-            password="international",
-            silent=True,
-            cache_dir=None,
-        )
+        try:
+            cls.one = ONE(
+                base_url="https://openalyx.internationalbrainlab.org",
+                password="international",
+                silent=True,
+                cache_dir=None,
+            )
+        except:
+            pytest.skip("Skipping test due to server being down.")
         try:
             cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", one=cls.one)
         except requests.exceptions.HTTPError as e:
@@ -112,12 +112,15 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
         from one.api import ONE
 
         cls.eid = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
-        cls.one = ONE(
-            base_url="https://openalyx.internationalbrainlab.org",
-            password="international",
-            silent=True,
-            cache_dir=None,
-        )
+        try:
+            cls.one = ONE(
+                base_url="https://openalyx.internationalbrainlab.org",
+                password="international",
+                silent=True,
+                cache_dir=None,
+            )
+        except:
+            pytest.skip("Skipping test due to server being down.")
         cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", load_sync_channel=True, one=cls.one)
         cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
         cls.small_unscaled_trace = cls.recording.get_traces(
@@ -185,12 +188,15 @@ class TestIblSortingExtractor(TestCase):
         """
         from one.api import ONE
 
-        one = ONE(
-            base_url="https://openalyx.internationalbrainlab.org",
-            password="international",
-            silent=True,
-            cache_dir=None,
-        )
+        try:
+            one = ONE(
+                base_url="https://openalyx.internationalbrainlab.org",
+                password="international",
+                silent=True,
+                cache_dir=None,
+            )
+        except:
+            pytest.skip("Skipping test due to server being down.")
         sorting = read_ibl_sorting(pid=PID, one=one)
         assert len(sorting.unit_ids) == 733
         sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True)

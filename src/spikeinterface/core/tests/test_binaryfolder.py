@@ -5,17 +5,12 @@ import shutil
 
 import numpy as np
 
-from spikeinterface.core import BinaryFolderRecording, read_binary_folder, load_extractor
+from spikeinterface.core import load
 from spikeinterface.core import generate_recording
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
-
-
-def test_BinaryFolderRecording():
+def test_BinaryFolderRecording(create_cache_folder):
+    cache_folder = create_cache_folder
     rec = generate_recording(num_channels=10, durations=[2.0, 2.0])
     folder = cache_folder / "binary_folder_1"
 
@@ -25,7 +20,7 @@ def test_BinaryFolderRecording():
     saved_rec = rec.save(folder=folder)
     print(saved_rec)
 
-    loaded_rec = load_extractor(folder)
+    loaded_rec = load(folder)
     print(loaded_rec)
 
 

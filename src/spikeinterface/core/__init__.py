@@ -1,9 +1,10 @@
-from .base import load_extractor  # , load_extractor_from_dict, load_extractor_from_json, load_extractor_from_pickle
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment, SpikeVectorSortingSegment
 from .baseevent import BaseEvent, BaseEventSegment
 from .basesnippets import BaseSnippets, BaseSnippetsSegment
 from .baserecordingsnippets import BaseRecordingSnippets
+
+from .loading import load, load_extractor
 
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
@@ -90,7 +91,14 @@ from .core_tools import (
     write_python,
     normal_pdf,
 )
-from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor, split_job_kwargs, fix_job_kwargs
+from .job_tools import (
+    get_best_job_kwargs,
+    ensure_n_jobs,
+    ensure_chunk_size,
+    ChunkRecordingExecutor,
+    split_job_kwargs,
+    fix_job_kwargs,
+)
 from .recording_tools import (
     write_binary_recording,
     write_to_h5_dataset_format,
@@ -101,7 +109,7 @@ from .recording_tools import (
     get_chunk_with_margin,
     order_channels_by_depth,
 )
-from .sorting_tools import spike_vector_to_spike_trains, random_spikes_selection
+from .sorting_tools import spike_vector_to_spike_trains, random_spikes_selection, apply_merges_to_sorting
 
 from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_with_accumulator
 from .snippets_tools import snippets_from_sorting
@@ -166,4 +174,8 @@ from .analyzer_extension_core import (
 
 # Important not for compatibility!!
 # This wil be uncommented after 0.100
-from .waveforms_extractor_backwards_compatibility import extract_waveforms, load_waveforms
+from .waveforms_extractor_backwards_compatibility import (
+    extract_waveforms,
+    load_waveforms,
+    load_sorting_analyzer_or_waveforms,
+)

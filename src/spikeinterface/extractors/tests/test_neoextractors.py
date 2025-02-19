@@ -31,13 +31,12 @@ def has_plexon2_dependencies():
         # On Windows, no need for additional dependencies
         return True
 
-    elif os_type == "Linux":
-        # Check for 'wine' using dpkg
-        try:
-            result_wine = subprocess.run(
-                ["dpkg", "-l", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-            )
-        except subprocess.CalledProcessError:
+    elif os_type == "Linux" or os_type == "Darwin":
+        # Check for 'wine' using which. "which" works for both mac and linux
+        # if package exists it returns a 0. Anything else is an error code.
+
+        result_wine = subprocess.run(["which", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+        if result_wine.returncode != 0:
             return False
 
         # Check for 'zugbruecke' using pip
@@ -48,7 +47,6 @@ def has_plexon2_dependencies():
         except ImportError:
             return False
     else:
-        # Not sure about MacOS
         raise ValueError(f"Unsupported OS: {os_type}")
 
 
@@ -183,6 +181,14 @@ class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class NeuroNexusRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroNexusRecordingExtractor
+    downloads = ["neuronexus"]
+    entities = [
+        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "0"}),
+    ]
+
+
 class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = PlexonRecordingExtractor
     downloads = ["plexon"]
@@ -236,7 +242,7 @@ class BlackrockSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = BlackrockSortingExtractor
     downloads = ["blackrock"]
     entities = [
-        "blackrock/FileSpec2.3001.nev",
+        dict(file_path=local_folder / "blackrock/FileSpec2.3001.nev", sampling_frequency=30_000.0),
         dict(file_path=local_folder / "blackrock/blackrock_2_1/l101210-001.nev", sampling_frequency=30_000.0),
     ]
 
@@ -280,8 +286,8 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 @pytest.mark.skipif(
-    version.parse(platform.python_version()) >= version.parse("3.10"),
-    reason="Sonpy only testing with Python < 3.10!",
+    version.parse(platform.python_version()) >= version.parse("3.10") or platform.system() == "Darwin",
+    reason="Sonpy only testing with Python < 3.10 and not supported on macOS!",
 )
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = CedRecordingExtractor
@@ -295,6 +301,7 @@ class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+@pytest.mark.skipif(platform.system() == "Darwin", reason="Maxwell plugin not supported on macOS")
 class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MaxwellRecordingExtractor
     downloads = ["maxwell"]
@@ -353,16 +360,19 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         pass
 
 
-# We run plexon2 tests only if we have dependencies (wine)
-@pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
+# TODO solve plexon bug
+@pytest.mark.skipif(
+    not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug on windows"
+)
 class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2RecordingExtractor
     downloads = ["plexon"]
     entities = [
-        ("plexon/4chDemoPL2.pl2", {"stream_id": "3"}),
+        ("plexon/4chDemoPL2.pl2", {"stream_name": "WB-Wideband"}),
     ]
 
 
+@pytest.mark.skipif(not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug")
 @pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
 class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2EventExtractor
@@ -372,7 +382,7 @@ class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
+@pytest.mark.skipif(not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug")
 class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2SortingExtractor
     downloads = ["plexon"]

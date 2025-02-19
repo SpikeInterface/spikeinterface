@@ -18,7 +18,6 @@ def read_file_from_backend(
     cache: bool = False,
     stream_cache_path: str | Path | None = None,
     storage_options: dict | None = None,
-    backend: Literal["hdf5", "zarr"] | None = None,
 ):
     """
     Reads a file from a hdf5 or zarr backend.
@@ -87,7 +86,7 @@ def read_file_from_backend(
     else:
         import h5py
 
-        assert file is not None, "Unexpected, file is None"
+        assert file is not None, "Both file_path and file are None"
         open_file = h5py.File(file, "r")
 
     return open_file
@@ -114,7 +113,7 @@ def read_nwbfile(
         The file-like object to read from. Either provide this or file_path.
     stream_mode : "fsspec" | "remfile" | None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
-    cache: bool, default: False
+    cache : bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
     stream_cache_path : str or None, default: None
@@ -124,11 +123,6 @@ def read_nwbfile(
     -------
     nwbfile : NWBFile
         The NWBFile object.
-
-    Raises
-    ------
-    AssertionError
-        If ROS3 support is not enabled.
 
     Notes
     -----
@@ -164,6 +158,9 @@ def read_nwbfile(
 
     nwbfile = io.read()
     return nwbfile
+
+
+1
 
 
 def _retrieve_electrical_series_pynwb(
@@ -277,14 +274,17 @@ def _retrieve_unit_table_pynwb(nwbfile: "NWBFile", unit_table_path: Optional[str
 
 
 def _is_hdf5_file(filename_or_file):
-    # Source for magic numbers https://www.loc.gov/preservation/digital/formats/fdd/fdd000229.shtml
-    # We should find a better one though
     if isinstance(filename_or_file, (str, Path)):
-        with open(filename_or_file, "rb") as f:
-            file_signature = f.read(8)
+        import h5py
+
+        filename = str(filename_or_file)
+        is_hdf5 = h5py.h5f.is_hdf5(filename.encode("utf-8"))
     else:
         file_signature = filename_or_file.read(8)
-    return file_signature == b"\x89HDF\r\n\x1a\n"
+        # Source of the magic number https://docs.hdfgroup.org/hdf5/develop/_f_m_t3.html
+        is_hdf5 = file_signature == b"\x89HDF\r\n\x1a\n"
+
+    return is_hdf5
 
 
 def _get_backend_from_local_file(file_path: str | Path) -> str:
@@ -404,17 +404,50 @@ def _retrieve_electrodes_indices_from_electrical_series_backend(open_file, elect
     return electrodes_indices
 
 
-class NwbRecordingExtractor(BaseRecording):
+class _BaseNWBExtractor:
+    "A class for common methods for NWB extractors."
+
+    def _close_hdf5_file(self):
+        has_hdf5_backend = hasattr(self, "_file")
+        if has_hdf5_backend:
+            import h5py
+
+            main_file_id = self._file.id
+            open_object_ids_main = h5py.h5f.get_obj_ids(main_file_id, types=h5py.h5f.OBJ_ALL)
+            for object_id in open_object_ids_main:
+                object_name = h5py.h5i.get_name(object_id).decode("utf-8")
+                try:
+                    object_id.close()
+                except:
+                    import warnings
+
+                    warnings.warn(f"Error closing object {object_name}")
+
+    def __del__(self):
+        # backend mode
+        if hasattr(self, "_file"):
+            if hasattr(self._file, "store"):
+                self._file.store.close()
+            else:
+                self._close_hdf5_file()
+        # pynwb mode
+        elif hasattr(self, "_nwbfile"):
+            io = self._nwbfile.get_read_io()
+            if io is not None:
+                io.close()
+
+
+class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
     """Load an NWBFile as a RecordingExtractor.
 
     Parameters
     ----------
-    file_path: str, Path, or None
+    file_path : str, Path, or None
         Path to the NWB file or an s3 URL. Use this parameter to specify the file location
         if not using the `file` parameter.
-    electrical_series_name: str or None, default: None
+    electrical_series_name : str or None, default: None
         Deprecated, use `electrical_series_path` instead.
-    electrical_series_path: str or None, default: None
+    electrical_series_path : str or None, default: None
         The name of the ElectricalSeries object within the NWB file. This parameter is crucial
         when the NWB file contains multiple ElectricalSeries objects. It helps in identifying
         which specific series to extract data from. If there is only one ElectricalSeries and
@@ -422,29 +455,30 @@ class NwbRecordingExtractor(BaseRecording):
         If multiple ElectricalSeries are present and this parameter is not set, an error is raised.
         The `electrical_series_path` corresponds to the path within the NWB file, e.g.,
         'acquisition/MyElectricalSeries`.
-    load_time_vector: bool, default: False
+    load_time_vector : bool, default: False
         If set to True, the time vector is also loaded into the recording object. Useful for
         cases where precise timing information is required.
-    samples_for_rate_estimation: int, default: 1000
+    samples_for_rate_estimation : int, default: 1000
         The number of timestamp samples used for estimating the sampling rate. This is relevant
         when the 'rate' attribute is not available in the ElectricalSeries.
     stream_mode : "fsspec" | "remfile" | "zarr" | None, default: None
         Determines the streaming mode for reading the file. Use this for optimized reading from
         different sources, such as local disk or remote servers.
-    load_channel_properties: bool, default: True
+    load_channel_properties : bool, default: True
         If True, all the channel properties are loaded from the NWB file and stored as properties.
         For streaming purposes, it can be useful to set this to False to speed up streaming.
-    file: file-like object or None, default: None
+    file : file-like object or None, default: None
         A file-like object representing the NWB file. Use this parameter if you have an in-memory
         representation of the NWB file instead of a file path.
-    cache: bool, default: False
+    cache : bool, default: False
         Indicates whether to cache the file locally when using streaming. Caching can improve performance for
         remote files.
-    stream_cache_path: str, Path, or None, default: None
+    stream_cache_path : str, Path, or None, default: None
         Specifies the local path for caching the file. Relevant only if `cache` is True.
-    storage_options: dict | None = None,
-        Additional parameters for the storage backend (e.g. AWS credentials) used for "zarr" stream_mode.
-    use_pynwb: bool, default: False
+    storage_options : dict | None = None,
+        These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
+        This is only used on the "zarr" stream_mode.
+    use_pynwb : bool, default: False
         Uses the pynwb library to read the NWB file. Setting this to False, the default, uses h5py
         to read the file. Using h5py can improve performance by bypassing some of the PyNWB validations.
 
@@ -466,17 +500,15 @@ class NwbRecordingExtractor(BaseRecording):
     >>> from dandi.dandiapi import DandiAPIClient
     >>>
     >>> # get s3 path
-    >>> dandiset_id, filepath = "101116", "sub-001/sub-001_ecephys.nwb"
-    >>> with DandiAPIClient("https://api-staging.dandiarchive.org/api") as client:
-    >>>     asset = client.get_dandiset(dandiset_id, "draft").get_asset_by_path(filepath)
+    >>> dandiset_id = "001054"
+    >>> filepath = "sub-Dory/sub-Dory_ses-2020-09-14-004_ecephys.nwb"
+    >>> with DandiAPIClient() as client:
+    >>>     asset = client.get_dandiset(dandiset_id).get_asset_by_path(filepath)
     >>>     s3_url = asset.get_content_url(follow_redirects=1, strip_query=True)
     >>>
-    >>> rec = NwbRecordingExtractor(s3_url, stream_mode="fsspec", stream_cache_path="cache")
+    >>> rec = NwbRecordingExtractor(s3_url, stream_mode="remfile")
     """
 
-    extractor_name = "NwbRecording"
-    mode = "file"
-    name = "nwb"
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
 
     def __init__(
@@ -556,6 +588,7 @@ class NwbRecordingExtractor(BaseRecording):
                 segment_data,
                 times_kwargs,
             ) = self._fetch_recording_segment_info_backend(file, cache, load_time_vector, samples_for_rate_estimation)
+
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
         recording_segment = NwbRecordingSegment(
             electrical_series_data=segment_data,
@@ -566,10 +599,9 @@ class NwbRecordingExtractor(BaseRecording):
         # fetch and add main recording properties
         if use_pynwb:
             gains, offsets, locations, groups = self._fetch_main_properties_pynwb()
-            self.extra_requirements.append("pynwb")
         else:
             gains, offsets, locations, groups = self._fetch_main_properties_backend()
-            self.extra_requirements.append("h5py")
+
         self.set_channel_gains(gains)
         self.set_channel_offsets(offsets)
         if locations is not None:
@@ -628,18 +660,18 @@ class NwbRecordingExtractor(BaseRecording):
             "file": file,
         }
 
-    def __del__(self):
-        # backend mode
-        if hasattr(self, "_file"):
-            if hasattr(self._file, "store"):
-                self._file.store.close()
-            else:
-                self._file.close()
-        # pynwb mode
-        elif hasattr(self, "_nwbfile"):
-            io = self._nwbfile.get_read_io()
-            if io is not None:
-                io.close()
+        # Set extra requirements for the extractor, so they can be installed when using docker
+        if use_pynwb:
+            self.extra_requirements.append("pynwb")
+        else:
+            if self.backend == "hdf5":
+                self.extra_requirements.append("h5py")
+            if self.backend == "zarr":
+                self.extra_requirements.append("zarr")
+        if self.stream_mode == "fsspec":
+            self.extra_requirements.append("fsspec")
+        if self.stream_mode == "remfile":
+            self.extra_requirements.append("remfile")
 
     def _fetch_recording_segment_info_pynwb(self, file, cache, load_time_vector, samples_for_rate_estimation):
         self._nwbfile = read_nwbfile(
@@ -680,7 +712,6 @@ class NwbRecordingExtractor(BaseRecording):
 
     def _fetch_recording_segment_info_backend(self, file, cache, load_time_vector, samples_for_rate_estimation):
         open_file = read_file_from_backend(
-            backend=self.backend,
             file_path=self.file_path,
             file=file,
             stream_mode=self.stream_mode,
@@ -734,7 +765,7 @@ class NwbRecordingExtractor(BaseRecording):
             sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
 
         if load_time_vector and timestamps is not None:
-            times_kwargs = dict(time_vector=electrical_series.timestamps)
+            times_kwargs = dict(time_vector=electrical_series["timestamps"])
         else:
             times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
 
@@ -863,6 +894,62 @@ class NwbRecordingExtractor(BaseRecording):
 
         return gains, offsets, locations, groups
 
+    @staticmethod
+    def fetch_available_electrical_series_paths(
+        file_path: str | Path,
+        stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None,
+        storage_options: dict | None = None,
+    ) -> list[str]:
+        """
+        Retrieves the paths to all ElectricalSeries objects within a neurodata file.
+
+        Parameters
+        ----------
+        file_path : str | Path
+            The path to the neurodata file to be analyzed.
+        stream_mode : "fsspec" | "remfile" | "zarr" | None, optional
+            Determines the streaming mode for reading the file. Use this for optimized reading from
+            different sources, such as local disk or remote servers.
+        storage_options : dict | None = None,
+            These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
+            This is only used on the "zarr" stream_mode.
+        Returns
+        -------
+        list of str
+            A list of paths to all ElectricalSeries objects found in the file.
+
+
+        Notes
+        -----
+        The paths are returned as strings, and can be used to load the desired ElectricalSeries object.
+        Examples of paths are:
+            - "acquisition/ElectricalSeries1"
+            - "acquisition/ElectricalSeries2"
+            - "processing/ecephys/LFP/ElectricalSeries1"
+            - "processing/my_custom_module/MyContainer/ElectricalSeries2"
+        """
+
+        if stream_mode is None:
+            backend = _get_backend_from_local_file(file_path)
+        else:
+            if stream_mode == "zarr":
+                backend = "zarr"
+            else:
+                backend = "hdf5"
+
+        file_handle = read_file_from_backend(
+            file_path=file_path,
+            stream_mode=stream_mode,
+            storage_options=storage_options,
+        )
+
+        electrical_series_paths = _find_neurodata_type_from_backend(
+            file_handle,
+            neurodata_type="ElectricalSeries",
+            backend=backend,
+        )
+        return electrical_series_paths
+
 
 class NwbRecordingSegment(BaseRecordingSegment):
     def __init__(self, electrical_series_data, times_kwargs):
@@ -874,16 +961,11 @@ class NwbRecordingSegment(BaseRecordingSegment):
         """Returns the number of samples in this signal block
 
         Returns:
-            SampleIndex: Number of samples in the signal block
+            SampleIndex : Number of samples in the signal block
         """
         return self._num_samples
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
-
         electrical_series_data = self.electrical_series_data
         if electrical_series_data.ndim == 1:
             traces = electrical_series_data[start_frame:end_frame][:, np.newaxis]
@@ -904,28 +986,28 @@ class NwbRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-class NwbSortingExtractor(BaseSorting):
+class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
     """Load an NWBFile as a SortingExtractor.
     Parameters
     ----------
-    file_path: str or Path
+    file_path : str or Path
         Path to NWB file.
-    electrical_series_path: str or None, default: None
+    electrical_series_path : str or None, default: None
         The name of the ElectricalSeries (if multiple ElectricalSeries are present).
-    sampling_frequency: float or None, default: None
+    sampling_frequency : float or None, default: None
         The sampling frequency in Hz (required if no ElectricalSeries is available).
-    unit_table_path: str or None, default: "units"
+    unit_table_path : str or None, default: "units"
         The path of the unit table in the NWB file.
-    samples_for_rate_estimation: int, default: 100000
+    samples_for_rate_estimation : int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if "rate" is not specified in the ElectricalSeries.
     stream_mode : "fsspec" | "remfile" | "zarr" | None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
-    stream_cache_path: str or Path or None, default: None
+    stream_cache_path : str or Path or None, default: None
         Local path for caching. If None it uses the system temporary directory.
-    load_unit_properties: bool, default: True
+    load_unit_properties : bool, default: True
         If True, all the unit properties are loaded from the NWB file and stored as properties.
-    t_start: float or None, default: None
+    t_start : float or None, default: None
         This is the time at which the corresponding ElectricalSeries start. NWB stores its spikes as times
         and the `t_start` is used to convert the times to seconds. Concrently, the returned frames are computed as:
 
@@ -937,25 +1019,23 @@ class NwbSortingExtractor(BaseSorting):
         When a `t_start` is not provided it will be inferred from the corresponding ElectricalSeries with name equal
         to `electrical_series_path`. The `t_start` then will be either the `ElectricalSeries.starting_time` or the
         first timestamp in the `ElectricalSeries.timestamps`.
-    cache: bool, default: False
+    cache : bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
-    storage_options: dict | None = None,
-        Additional parameters for the storage backend (e.g. AWS credentials) used for "zarr" stream_mode.
-    use_pynwb: bool, default: False
+    storage_options : dict | None = None,
+        These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
+        This is only used on the "zarr" stream_mode.
+    use_pynwb : bool, default: False
         Uses the pynwb library to read the NWB file. Setting this to False, the default, uses h5py
         to read the file. Using h5py can improve performance by bypassing some of the PyNWB validations.
 
     Returns
     -------
-    sorting: NwbSortingExtractor
+    sorting : NwbSortingExtractor
         The sorting extractor for the NWB file.
     """
 
-    extractor_name = "NwbSorting"
-    mode = "file"
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
-    name = "nwb"
 
     def __init__(
         self,
@@ -1036,6 +1116,8 @@ class NwbSortingExtractor(BaseSorting):
             for property_name, property_values in properties.items():
                 values = [x.decode("utf-8") if isinstance(x, bytes) else x for x in property_values]
                 self.set_property(property_name, values)
+        if stream_mode is not None:
+            self.extra_requirements.append(stream_mode)
 
         if stream_mode is None and file_path is not None:
             file_path = str(Path(file_path).resolve())
@@ -1061,19 +1143,6 @@ class NwbSortingExtractor(BaseSorting):
             "load_unit_properties": load_unit_properties,
             "t_start": self.t_start,
         }
-
-    def __del__(self):
-        # backend mode
-        if hasattr(self, "_file"):
-            if hasattr(self._file, "store"):
-                self._file.store.close()
-            else:
-                self._file.close()
-        # pynwb mode
-        elif hasattr(self, "_nwbfile"):
-            io = self._nwbfile.get_read_io()
-            if io is not None:
-                io.close()
 
     def _fetch_sorting_segment_info_pynwb(
         self, unit_table_path: str = None, samples_for_rate_estimation: int = 1000, cache: bool = False
@@ -1132,7 +1201,6 @@ class NwbSortingExtractor(BaseSorting):
         self, unit_table_path: str = None, samples_for_rate_estimation: int = 1000, cache: bool = False
     ):
         open_file = read_file_from_backend(
-            backend=self.backend,
             file_path=self.file_path,
             stream_mode=self.stream_mode,
             cache=cache,
@@ -1310,8 +1378,372 @@ class NwbSortingSegment(BaseSortingSegment):
         return frames[start_index:end_index].astype("int64", copy=False)
 
 
+def _find_timeseries_from_backend(group, path="", result=None, backend="hdf5"):
+    """
+    Recursively searches for groups with TimeSeries neurodata_type in hdf5 or zarr object,
+    and returns a list with their paths.
+    """
+    if backend == "hdf5":
+        import h5py
+
+        group_class = h5py.Group
+    else:
+        import zarr
+
+        group_class = zarr.Group
+
+    if result is None:
+        result = []
+
+    for name, value in group.items():
+        if isinstance(value, group_class):
+            current_path = f"{path}/{name}" if path else name
+            if value.attrs.get("neurodata_type") == "TimeSeries":
+                result.append(current_path)
+            _find_timeseries_from_backend(value, current_path, result, backend)
+    return result
+
+
+class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
+    """Load a TimeSeries from an NWBFile as a RecordingExtractor.
+
+    Parameters
+    ----------
+    file_path : str | Path | None
+        Path to NWB file or an s3 URL. Use this parameter to specify the file location
+        if not using the `file` parameter.
+    timeseries_path : str | None
+        The path to the TimeSeries object within the NWB file. This parameter is required
+        when the NWB file contains multiple TimeSeries objects. The path corresponds to
+        the location within the NWB file hierarchy, e.g. 'acquisition/MyTimeSeries'.
+    load_time_vector : bool, default: False
+        If True, the time vector is loaded into the recording object. Useful when
+        precise timing information is needed.
+    samples_for_rate_estimation : int, default: 1000
+        The number of timestamps used for estimating the sampling rate when
+        timestamps are used instead of a fixed rate.
+    stream_mode : Literal["fsspec", "remfile", "zarr"] | None, default: None
+        Determines the streaming mode for reading the file.
+    file : BinaryIO | None, default: None
+        A file-like object representing the NWB file. Use this parameter if you have
+        an in-memory representation of the NWB file instead of a file path given by `file_path`.
+    cache : bool, default: False
+        If True, the file is cached locally when using streaming.
+    stream_cache_path : str | Path | None, default: None
+        Local path for caching. Only used if `cache` is True.
+    storage_options : dict | None, default: None
+        Additional kwargs (e.g. AWS credentials) passed to zarr.open. Only used with
+        "zarr" stream_mode.
+    use_pynwb : bool, default: False
+        If True, uses pynwb library to read the NWB file. Default False uses h5py/zarr
+        directly for better performance.
+
+    Returns
+    -------
+    recording : NwbTimeSeriesExtractor
+        A recording extractor containing the TimeSeries data.
+    """
+
+    installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
+
+    def __init__(
+        self,
+        file_path: str | Path | None = None,
+        timeseries_path: str | None = None,
+        load_time_vector: bool = False,
+        samples_for_rate_estimation: int = 1_000,
+        stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None,
+        stream_cache_path: str | Path | None = None,
+        *,
+        file: BinaryIO | None = None,
+        cache: bool = False,
+        storage_options: dict | None = None,
+        use_pynwb: bool = False,
+    ):
+        if file_path is not None and file is not None:
+            raise ValueError("Provide either file_path or file, not both")
+        if file_path is None and file is None:
+            raise ValueError("Provide either file_path or file")
+
+        self.file_path = file_path
+        self.stream_mode = stream_mode
+        self.stream_cache_path = stream_cache_path
+        self.storage_options = storage_options
+        self.timeseries_path = timeseries_path
+
+        if self.stream_mode is None and file is None:
+            self.backend = _get_backend_from_local_file(file_path)
+        else:
+            self.backend = "zarr" if self.stream_mode == "zarr" else "hdf5"
+
+        if use_pynwb:
+            try:
+                import pynwb
+            except ImportError:
+                raise ImportError(self.installation_mesg)
+
+            channel_ids, sampling_frequency, dtype, segment_data, times_kwargs = self._fetch_recording_segment_info(
+                file, cache, load_time_vector, samples_for_rate_estimation
+            )
+        else:
+            channel_ids, sampling_frequency, dtype, segment_data, times_kwargs = (
+                self._fetch_recording_segment_info_backend(file, cache, load_time_vector, samples_for_rate_estimation)
+            )
+
+        BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
+        recording_segment = NwbTimeSeriesSegment(
+            timeseries_data=segment_data,
+            times_kwargs=times_kwargs,
+        )
+        self.add_recording_segment(recording_segment)
+
+        if storage_options is not None and stream_mode == "zarr":
+            warnings.warn(
+                "The `storage_options` parameter will not be propagated to JSON or pickle files "
+                "for security reasons, so this extractor will not be JSON/pickle serializable."
+            )
+            self._serializability["json"] = False
+            self._serializability["pickle"] = False
+
+        self._kwargs = {
+            "file_path": file_path,
+            "timeseries_path": self.timeseries_path,
+            "load_time_vector": load_time_vector,
+            "samples_for_rate_estimation": samples_for_rate_estimation,
+            "stream_mode": stream_mode,
+            "storage_options": storage_options,
+            "cache": cache,
+            "stream_cache_path": stream_cache_path,
+            "file": file,
+        }
+
+        if use_pynwb:
+            self.extra_requirements.append("pynwb")
+        else:
+            if self.backend == "hdf5":
+                self.extra_requirements.append("h5py")
+            if self.backend == "zarr":
+                self.extra_requirements.append("zarr")
+
+        if self.stream_mode == "fsspec":
+            self.extra_requirements.append("fsspec")
+        elif self.stream_mode == "remfile":
+            self.extra_requirements.append("remfile")
+
+    def _fetch_recording_segment_info(self, file, cache, load_time_vector, samples_for_rate_estimation):
+        self._nwbfile = read_nwbfile(
+            backend=self.backend,
+            file_path=self.file_path,
+            file=file,
+            stream_mode=self.stream_mode,
+            cache=cache,
+            stream_cache_path=self.stream_cache_path,
+            storage_options=self.storage_options,
+        )
+
+        from pynwb.base import TimeSeries
+
+        time_series_dict: dict[str, TimeSeries] = {}
+
+        for item in self._nwbfile.all_children():
+            if isinstance(item, TimeSeries):
+                time_series_dict[item.data.name.replace("/data", "")[1:]] = item
+
+        if self.timeseries_path is not None:
+            if self.timeseries_path not in time_series_dict:
+                raise ValueError(f"TimeSeries {self.timeseries_path} not found in file")
+
+        else:
+            if len(time_series_dict) == 1:
+                self.timeseries_path = list(time_series_dict.keys())[0]
+            else:
+                raise ValueError(
+                    f"Multiple TimeSeries found! Specify 'timeseries_path'. Options: {list(time_series_dict.keys())}"
+                )
+
+        timeseries = time_series_dict[self.timeseries_path]
+
+        # Get sampling frequency and timing info
+        if hasattr(timeseries, "rate") and timeseries.rate is not None:
+            sampling_frequency = timeseries.rate
+            t_start = timeseries.starting_time if hasattr(timeseries, "starting_time") else 0
+            timestamps = None
+        elif hasattr(timeseries, "timestamps"):
+            timestamps = timeseries.timestamps
+            sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
+            t_start = timestamps[0]
+
+        if load_time_vector and timestamps is not None:
+            times_kwargs = dict(time_vector=timestamps)
+        else:
+            times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
+
+        # Create channel IDs based on data shape
+        data = timeseries.data
+        if data.ndim == 1:
+            num_channels = 1
+        else:
+            num_channels = data.shape[1]
+        channel_ids = np.arange(num_channels)
+        dtype = data.dtype
+
+        return channel_ids, sampling_frequency, dtype, data, times_kwargs
+
+    def _fetch_recording_segment_info_backend(self, file, cache, load_time_vector, samples_for_rate_estimation):
+        open_file = read_file_from_backend(
+            file_path=self.file_path,
+            file=file,
+            stream_mode=self.stream_mode,
+            cache=cache,
+            stream_cache_path=self.stream_cache_path,
+            storage_options=self.storage_options,
+        )
+
+        # If timeseries_path not provided, find all TimeSeries objects
+        if self.timeseries_path is None:
+            available_timeseries = _find_timeseries_from_backend(open_file, backend=self.backend)
+            if len(available_timeseries) == 1:
+                self.timeseries_path = available_timeseries[0]
+            else:
+                raise ValueError(
+                    f"Multiple TimeSeries found! Specify 'timeseries_path'. Options: {available_timeseries}"
+                )
+
+        # Get TimeSeries object
+        try:
+            timeseries = open_file[self.timeseries_path]
+        except KeyError:
+            available_timeseries = _find_timeseries_from_backend(open_file, backend=self.backend)
+            raise ValueError(f"{self.timeseries_path} not found! Available options: {available_timeseries}")
+
+        # Get timing information
+        if "starting_time" in timeseries:
+            t_start = timeseries["starting_time"][()]
+            sampling_frequency = timeseries["starting_time"].attrs["rate"]
+            timestamps = None
+        elif "timestamps" in timeseries:
+            timestamps = timeseries["timestamps"][:]
+            sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
+            t_start = timestamps[0]
+        else:
+            raise ValueError("TimeSeries must have either starting_time or timestamps")
+
+        if load_time_vector and timestamps is not None:
+            times_kwargs = dict(time_vector=timestamps)
+        else:
+            times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
+
+        # Create channel IDs based on data shape
+        data = timeseries["data"]
+        if data.ndim == 1:
+            num_channels = 1
+        else:
+            num_channels = data.shape[1]
+        channel_ids = np.arange(num_channels)
+        dtype = data.dtype
+
+        # Store for later use
+        self.timeseries = timeseries
+        self._file = open_file
+
+        return channel_ids, sampling_frequency, dtype, data, times_kwargs
+
+    @staticmethod
+    def fetch_available_timeseries_paths(
+        file_path: str | Path,
+        stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None,
+        storage_options: dict | None = None,
+    ) -> list[str]:
+        """
+        Get paths to all TimeSeries objects in a neurodata file.
+
+        Parameters
+        ----------
+        file_path : str | Path
+            Path to the NWB file.
+        stream_mode : str | None
+            Streaming mode for reading remote files.
+        storage_options : dict | None
+            Additional options for zarr storage.
+
+        Returns
+        -------
+        list[str]
+            List of paths to TimeSeries objects.
+        """
+        if stream_mode is None:
+            backend = _get_backend_from_local_file(file_path)
+        else:
+            backend = "zarr" if stream_mode == "zarr" else "hdf5"
+
+        file_handle = read_file_from_backend(
+            file_path=file_path,
+            stream_mode=stream_mode,
+            storage_options=storage_options,
+        )
+
+        timeseries_paths = _find_timeseries_from_backend(
+            file_handle,
+            backend=backend,
+        )
+        return timeseries_paths
+
+
+class NwbTimeSeriesSegment(BaseRecordingSegment):
+    """Segment class for NwbTimeSeriesExtractor."""
+
+    def __init__(self, timeseries_data, times_kwargs):
+        BaseRecordingSegment.__init__(self, **times_kwargs)
+        self.timeseries_data = timeseries_data
+        self._num_samples = self.timeseries_data.shape[0]
+
+    def get_num_samples(self):
+        """Returns the number of samples in this signal block."""
+        return self._num_samples
+
+    def get_traces(self, start_frame, end_frame, channel_indices):
+        """
+        Extract traces from the TimeSeries between start_frame and end_frame for specified channels.
+
+        Parameters
+        ----------
+        start_frame : int
+            Start frame of the slice to extract.
+        end_frame : int
+            End frame of the slice to extract.
+        channel_indices : array-like
+            Channel indices to extract.
+
+        Returns
+        -------
+        traces : np.ndarray
+            Extracted traces of shape (num_frames, num_channels)
+        """
+        if self.timeseries_data.ndim == 1:
+            traces = self.timeseries_data[start_frame:end_frame][:, np.newaxis]
+        elif isinstance(channel_indices, slice):
+            traces = self.timeseries_data[start_frame:end_frame, channel_indices]
+        else:
+            # channel_indices is np.ndarray
+            if np.array(channel_indices).size > 1 and np.any(np.diff(channel_indices) < 0):
+                # get around h5py constraint that it does not allow datasets
+                # to be indexed out of order
+                sorted_channel_indices = np.sort(channel_indices)
+                resorted_indices = np.array([list(sorted_channel_indices).index(ch) for ch in channel_indices])
+                recordings = self.timeseries_data[start_frame:end_frame, sorted_channel_indices]
+                traces = recordings[:, resorted_indices]
+            else:
+                traces = self.timeseries_data[start_frame:end_frame, channel_indices]
+
+        return traces
+
+
+# Create the reading function
+
+
 read_nwb_recording = define_function_from_class(source_class=NwbRecordingExtractor, name="read_nwb_recording")
 read_nwb_sorting = define_function_from_class(source_class=NwbSortingExtractor, name="read_nwb_sorting")
+read_nwb_timeseries = define_function_from_class(source_class=NwbTimeSeriesExtractor, name="read_nwb_timeseries")
 
 
 def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_series_path=None):
@@ -1319,18 +1751,18 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
 
     Parameters
     ----------
-    file_path: str or Path
+    file_path : str or Path
         Path to NWB file.
     load_recording : bool, default: True
         If True, the recording object is loaded.
     load_sorting : bool, default: False
         If True, the recording object is loaded.
-    electrical_series_path: str or None, default: None
+    electrical_series_path : str or None, default: None
         The name of the ElectricalSeries (if multiple ElectricalSeries are present)
 
     Returns
     -------
-    extractors: extractor or tuple
+    extractors : extractor or tuple
         Single RecordingExtractor/SortingExtractor or tuple with both
         (depending on "load_recording"/"load_sorting") arguments.
     """

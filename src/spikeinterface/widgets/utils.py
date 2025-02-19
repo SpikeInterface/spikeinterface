@@ -1,26 +1,11 @@
 from __future__ import annotations
 
 import numpy as np
-import random
-
-from ..core import ChannelSparsity
-
-try:
-    import distinctipy
-
-    HAVE_DISTINCTIPY = True
-except ImportError:
-    HAVE_DISTINCTIPY = False
-
-try:
-    import matplotlib.pyplot as plt
-
-    HAVE_MPL = True
-except ImportError:
-    HAVE_MPL = False
 
 
-def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None):
+def get_some_colors(
+    keys, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None, margin=None
+):
     """
     Return a dict of colors for given keys
 
@@ -39,6 +24,8 @@ def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGB
         * set to False for distinctipy
     seed: int or None, default: None
         Set the seed
+    margin: None or int
+        If None, put a margin to remove colors on borders of some colomap of matplotlib.
 
     Returns
     -------
@@ -46,6 +33,20 @@ def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGB
         A dict of colors for given keys.
 
     """
+    try:
+        import matplotlib.pyplot as plt
+
+        HAVE_MPL = True
+    except ImportError:
+        HAVE_MPL = False
+
+    try:
+        import distinctipy
+
+        HAVE_DISTINCTIPY = True
+    except ImportError:
+        HAVE_DISTINCTIPY = False
+
     assert color_engine in ("auto", "distinctipy", "matplotlib", "colorsys")
 
     possible_formats = ("RGBA",)
@@ -75,8 +76,10 @@ def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGB
 
     elif color_engine == "matplotlib":
         # some map have black or white at border so +10
-        margin = max(4, int(N * 0.08))
-        cmap = plt.get_cmap(map_name, N + 2 * margin)
+
+        if margin is None:
+            margin = max(4, int(N * 0.08))
+        cmap = plt.colormaps[map_name].resampled(N + 2 * margin)
         colors = [cmap(i + margin) for i, key in enumerate(keys)]
 
     elif color_engine == "colorsys":
@@ -95,12 +98,19 @@ def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGB
     return dict_colors
 
 
-def get_unit_colors(sorting, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None):
+def get_unit_colors(
+    sorting_or_analyzer_or_templates, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None
+):
     """
     Return a dict colors per units.
     """
     colors = get_some_colors(
-        sorting.unit_ids, color_engine=color_engine, map_name=map_name, format=format, shuffle=shuffle, seed=seed
+        sorting_or_analyzer_or_templates.unit_ids,
+        color_engine=color_engine,
+        map_name=map_name,
+        format=format,
+        shuffle=shuffle,
+        seed=seed,
     )
     return colors
 
@@ -141,6 +151,7 @@ def array_to_image(
     output_image : 3D numpy array
 
     """
+    import matplotlib.pyplot as plt
 
     from scipy.ndimage import zoom
 
@@ -153,7 +164,7 @@ def array_to_image(
     num_channels = data.shape[1]
     spacing = int(num_channels * spatial_zoom[1] * row_spacing)
 
-    cmap = plt.get_cmap(colormap)
+    cmap = plt.colormaps[colormap]
     zoomed_data = zoom(data, spatial_zoom)
     num_timepoints_after_scaling, num_channels_after_scaling = zoomed_data.shape
     num_timepoints_per_row_after_scaling = int(np.min([num_timepoints_per_row, num_timepoints]) * spatial_zoom[0])
@@ -232,3 +243,93 @@ def array_to_image(
             output_image = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape(output_image.shape)
 
     return output_image
+
+
+def make_units_table_from_sorting(sorting, units_table=None):
+    """
+    Make a DataFrame from sorting properties.
+    Only for properties with ndim=1
+
+    Parameters
+    ----------
+    sorting : Sorting
+        The Sorting object
+    units_table : None | pd.DataFrame
+        Optionally a existing dataframe.
+
+    Returns
+    -------
+    units_table : pd.DataFrame
+        Table containing all columns.
+    """
+
+    if units_table is None:
+        import pandas as pd
+
+        units_table = pd.DataFrame(index=sorting.unit_ids)
+
+    for col in sorting.get_property_keys():
+        values = sorting.get_property(col)
+        if values.dtype.kind in "iuUSfb" and values.ndim == 1:
+            units_table.loc[:, col] = values
+
+    return units_table
+
+
+def make_units_table_from_analyzer(
+    analyzer,
+    extra_properties=None,
+):
+    """
+    Make a DataFrame by aggregating :
+      * quality metrics
+      * template metrics
+      * unit_position
+      * sorting properties
+      * extra columns
+
+    This used in sortingview and spikeinterface-gui to display the units table in a flexible way.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer object
+    extra_properties : None | dict
+        Extra columns given as dict.
+
+    Returns
+    -------
+    units_table : pd.DataFrame
+        Table containing all columns.
+    """
+    import pandas as pd
+
+    all_df = []
+
+    if analyzer.get_extension("unit_locations") is not None:
+        locs = analyzer.get_extension("unit_locations").get_data()
+        df = pd.DataFrame(locs[:, :2], columns=["x", "y"], index=analyzer.unit_ids)
+        all_df.append(df)
+
+    if analyzer.get_extension("quality_metrics") is not None:
+        df = analyzer.get_extension("quality_metrics").get_data()
+        all_df.append(df)
+
+    if analyzer.get_extension("template_metrics") is not None:
+        df = analyzer.get_extension("template_metrics").get_data()
+        all_df.append(df)
+
+    if len(all_df) > 0:
+        units_table = pd.concat(all_df, axis=1)
+    else:
+        units_table = pd.DataFrame(index=analyzer.unit_ids)
+
+    make_units_table_from_sorting(analyzer.sorting, units_table=units_table)
+
+    if extra_properties is not None:
+        for col, values in extra_properties.items():
+            # the ndim = 1 is important because we need  column only for the display in gui.
+            if values.dtype.kind in "iuUSfb" and values.ndim == 1:
+                units_table.loc[:, col] = values
+
+    return units_table

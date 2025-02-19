@@ -62,7 +62,7 @@ def _split_waveforms(
         local_feature_plot = local_feature
 
         unique_lab = np.unique(local_labels_with_noise)
-        cmap = plt.get_cmap("jet", unique_lab.size)
+        cmap = plt.colormaps["jet"].resampled(unique_lab.size)
         cmap = {k: cmap(l) for l, k in enumerate(unique_lab)}
         cmap[-1] = "k"
         active_ind = np.arange(local_feature.shape[0])
@@ -145,7 +145,7 @@ def _split_waveforms_nested(
             local_feature_plot = reducer.fit_transform(local_feature)
 
             unique_lab = np.unique(active_labels_with_noise)
-            cmap = plt.get_cmap("jet", unique_lab.size)
+            cmap = plt.colormaps["jet"].resampled(unique_lab.size)
             cmap = {k: cmap(l) for l, k in enumerate(unique_lab)}
             cmap[-1] = "k"
             cmap[-2] = "b"
@@ -276,7 +276,7 @@ def auto_split_clustering(
 
             fig, ax = plt.subplots()
             plot_labels_set = np.unique(local_labels_with_noise)
-            cmap = plt.get_cmap("jet", plot_labels_set.size)
+            cmap = plt.colormaps["jet"].resampled(plot_labels_set.size)
             cmap = {k: cmap(l) for l, k in enumerate(plot_labels_set)}
             cmap[-1] = "k"
             cmap[-2] = "b"
@@ -536,7 +536,7 @@ def remove_duplicates(
     return labels, new_labels
 
 
-def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None, rank=5, multiple_passes=False):
+def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None, multiple_passes=False):
 
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, SharedMemoryRecording
@@ -551,19 +551,6 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
 
     fs = templates.sampling_frequency
     num_chans = len(templates.channel_ids)
-
-    if rank is not None:
-        templates_array = templates.get_dense_templates().copy()
-        templates_array -= templates_array.mean(axis=(1, 2))[:, None, None]
-
-        # Then we keep only the strongest components
-        temporal, singular, spatial = np.linalg.svd(templates_array, full_matrices=False)
-        temporal = temporal[:, :, :rank]
-        singular = singular[:, :rank]
-        spatial = spatial[:, :rank, :]
-
-        templates_array = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
-
     norms = np.linalg.norm(templates_array, axis=(1, 2))
     margin = max(templates.nbefore, templates.nafter)
     tmp_filename = None
@@ -583,7 +570,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
         )
     else:
         recording = NumpyRecording(zdata, sampling_frequency=fs)
-        recording = SharedMemoryRecording.from_recording(recording)
+        recording = SharedMemoryRecording.from_recording(recording, **job_kwargs)
 
     recording = recording.set_probe(templates.probe)
     recording.annotate(is_filtered=True)
@@ -591,21 +578,23 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
     local_params = method_kwargs.copy()
     amplitudes = [0.95, 1.05]
 
-    local_params.update(
-        {"templates": templates, "amplitudes": amplitudes, "stop_criteria": "omp_min_sps", "omp_min_sps": 0.5}
-    )
+    local_params.update({"templates": templates, "amplitudes": amplitudes})
 
-    ignore_ids = []
+    unit_ids = templates.unit_ids
+
+    ignore_inds = []
     similar_templates = [[], []]
 
     keep_searching = True
+
+    local_job_kargs = {"n_jobs": 1, "progress_bar": False}
 
     DEBUG = False
     while keep_searching:
 
         keep_searching = False
 
-        for i in list(set(range(nb_templates)).difference(ignore_ids)):
+        for i in list(set(range(nb_templates)).difference(ignore_inds)):
 
             ## Could be speed up by only computing the values for templates that are
             ## nearby
@@ -614,22 +603,16 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
             t_stop = margin + (i + 1) * (duration + margin)
 
             sub_recording = recording.frame_slice(t_start, t_stop)
-            local_params.update({"ignored_ids": ignore_ids + [i]})
-            spikes, computed = find_spikes_from_templates(
-                sub_recording, method="circus-omp-svd", method_kwargs=local_params, extra_outputs=True, **job_kwargs
+            local_params.update({"ignore_inds": ignore_inds + [i]})
+
+            spikes, more_outputs = find_spikes_from_templates(
+                sub_recording,
+                method="circus-omp-svd",
+                method_kwargs=local_params,
+                extra_outputs=True,
+                **local_job_kargs,
             )
-            local_params.update(
-                {
-                    "overlaps": computed["overlaps"],
-                    "normed_templates": computed["normed_templates"],
-                    "norms": computed["norms"],
-                    "temporal": computed["temporal"],
-                    "spatial": computed["spatial"],
-                    "singular": computed["singular"],
-                    "units_overlaps": computed["units_overlaps"],
-                    "unit_overlaps_indices": computed["unit_overlaps_indices"],
-                }
-            )
+            local_params["precomputed"] = more_outputs
             valid = (spikes["sample_index"] >= 0) * (spikes["sample_index"] < duration + 2 * margin)
 
             if np.sum(valid) > 0:
@@ -644,18 +627,17 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
 
                 tgt_norm = np.linalg.norm(sum)
                 ratio = tgt_norm / ref_norm
-
                 if (amplitudes[0] < ratio) and (ratio < amplitudes[1]):
                     if multiple_passes:
                         keep_searching = True
                     if np.sum(valid) == 1:
-                        ignore_ids += [i]
-                        similar_templates[1] += [i]
-                        similar_templates[0] += [j]
+                        ignore_inds += [i]
+                        similar_templates[1] += [unit_ids[i]]
+                        similar_templates[0] += [unit_ids[j]]
                     elif np.sum(valid) > 1:
                         similar_templates[0] += [-1]
-                        ignore_ids += [i]
-                        similar_templates[1] += [i]
+                        ignore_inds += [i]
+                        similar_templates[1] += [unit_ids[i]]
 
                     if DEBUG:
                         import pylab as plt
@@ -663,7 +645,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
                         fig, axes = plt.subplots(1, 2)
                         from spikeinterface.widgets import plot_traces
 
-                        plot_traces(sub_recording, ax=axes[0])
+                        # plot_traces(sub_recording, ax=axes[0])
                         axes[1].plot(templates_array[i].flatten(), label=f"{ref_norm}")
                         axes[1].plot(sum.flatten(), label=f"{tgt_norm}")
                         axes[1].legend()
@@ -678,13 +660,12 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
 
 
 def remove_duplicates_via_matching(
-    templates, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None, rank=5, multiple_passes=False
+    templates, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None, multiple_passes=False
 ):
 
     similar_templates = detect_mixtures(
-        templates, method_kwargs, job_kwargs, tmp_folder=tmp_folder, rank=rank, multiple_passes=multiple_passes
+        templates, method_kwargs, job_kwargs, tmp_folder=tmp_folder, multiple_passes=multiple_passes
     )
-
     new_labels = peak_labels.copy()
 
     labels = np.unique(new_labels)
@@ -698,72 +679,6 @@ def remove_duplicates_via_matching(
     labels = labels[labels >= 0]
 
     return labels, new_labels
-
-
-def resolve_merging_graph(sorting, potential_merges):
-    """
-    Function to provide, given a list of potential_merges, a resolved merging
-    graph based on the connected components.
-    """
-    from scipy.sparse.csgraph import connected_components
-    from scipy.sparse import lil_matrix
-
-    n = len(sorting.unit_ids)
-    graph = lil_matrix((n, n))
-    for i, j in potential_merges:
-        graph[sorting.id_to_index(i), sorting.id_to_index(j)] = 1
-
-    n_components, labels = connected_components(graph, directed=True, connection="weak", return_labels=True)
-    final_merges = []
-    for i in range(n_components):
-        merges = labels == i
-        if merges.sum() > 1:
-            final_merges += [list(sorting.unit_ids[np.flatnonzero(merges)])]
-
-    return final_merges
-
-
-def apply_merges_to_sorting(sorting, merges, censor_ms=0.4):
-    """
-    Function to apply a resolved representation of the merges to a sorting object. If censor_ms is not None,
-    duplicated spikes violating the censor_ms refractory period are removed
-    """
-    spikes = sorting.to_spike_vector().copy()
-    to_keep = np.ones(len(spikes), dtype=bool)
-
-    segment_slices = {}
-    for segment_index in range(sorting.get_num_segments()):
-        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
-        segment_slices[segment_index] = (s0, s1)
-
-    if censor_ms is not None:
-        rpv = int(sorting.sampling_frequency * censor_ms / 1000)
-
-    for connected in merges:
-        mask = np.in1d(spikes["unit_index"], sorting.ids_to_indices(connected))
-        spikes["unit_index"][mask] = sorting.id_to_index(connected[0])
-
-        if censor_ms is not None:
-            for segment_index in range(sorting.get_num_segments()):
-                s0, s1 = segment_slices[segment_index]
-                (indices,) = s0 + np.nonzero(mask[s0:s1])
-                to_keep[indices[1:]] = np.logical_or(
-                    to_keep[indices[1:]], np.diff(spikes[indices]["sample_index"]) > rpv
-                )
-
-    times_list = []
-    labels_list = []
-    for segment_index in range(sorting.get_num_segments()):
-        s0, s1 = segment_slices[segment_index]
-        if censor_ms is not None:
-            times_list += [spikes["sample_index"][s0:s1][to_keep[s0:s1]]]
-            labels_list += [spikes["unit_index"][s0:s1][to_keep[s0:s1]]]
-        else:
-            times_list += [spikes["sample_index"][s0:s1]]
-            labels_list += [spikes["unit_index"][s0:s1]]
-
-    sorting = NumpySorting.from_times_labels(times_list, labels_list, sorting.sampling_frequency)
-    return sorting
 
 
 def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_threshold=None):

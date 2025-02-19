@@ -9,6 +9,7 @@ from .maxwell import MaxwellRecordingExtractor, MaxwellEventExtractor, read_maxw
 from .mearec import MEArecRecordingExtractor, MEArecSortingExtractor, read_mearec
 from .mcsraw import MCSRawRecordingExtractor, read_mcsraw
 from .neuralynx import NeuralynxRecordingExtractor, NeuralynxSortingExtractor, read_neuralynx, read_neuralynx_sorting
+from .neuronexus import NeuroNexusRecordingExtractor, read_neuronexus
 from .neuroscope import (
     NeuroScopeRecordingExtractor,
     NeuroScopeSortingExtractor,
@@ -36,7 +37,7 @@ from .plexon2 import (
 )
 from .spike2 import Spike2RecordingExtractor, read_spike2
 from .spikegadgets import SpikeGadgetsRecordingExtractor, read_spikegadgets
-from .spikeglx import SpikeGLXRecordingExtractor, read_spikeglx
+from .spikeglx import SpikeGLXRecordingExtractor, SpikeGLXEventExtractor, read_spikeglx, read_spikeglx_event
 from .tdt import TdtRecordingExtractor, read_tdt
 
 from .neo_utils import get_neo_streams, get_neo_num_blocks
@@ -54,6 +55,7 @@ neo_recording_extractors_list = [
     MCSRawRecordingExtractor,
     NeuralynxRecordingExtractor,
     NeuroScopeRecordingExtractor,
+    NeuroNexusRecordingExtractor,
     NixRecordingExtractor,
     OpenEphysBinaryRecordingExtractor,
     OpenEphysLegacyRecordingExtractor,
@@ -73,4 +75,9 @@ neo_sorting_extractors_list = [
     Plexon2SortingExtractor,
 ]
 
-neo_event_extractors_list = [AlphaOmegaEventExtractor, OpenEphysBinaryEventExtractor, Plexon2EventExtractor]
+neo_event_extractors_list = [
+    AlphaOmegaEventExtractor,
+    OpenEphysBinaryEventExtractor,
+    Plexon2EventExtractor,
+    SpikeGLXEventExtractor,
+]

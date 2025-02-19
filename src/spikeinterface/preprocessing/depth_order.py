@@ -12,7 +12,7 @@ class DepthOrderRecording(ChannelSliceRecording):
 
     Parameters
     ----------
-    recording : BaseRecording
+    parent_recording : BaseRecording
         The recording to re-order.
     channel_ids : list/array or None
         If given, a subset of channels to order locations for
@@ -20,13 +20,10 @@ class DepthOrderRecording(ChannelSliceRecording):
         If str, it needs to be "x", "y", "z".
         If tuple or list, it sorts the locations in two dimensions using lexsort.
         This approach is recommended since there is less ambiguity
-    flip: bool, default: False
+    flip : bool, default: False
         If flip is False then the order is bottom first (starting from tip of the probe).
         If flip is True then the order is upper first.
     """
-
-    name = "depth_order"
-    installed = True
 
     def __init__(self, parent_recording, channel_ids=None, dimensions=("x", "y"), flip=False):
         order_f, order_r = order_channels_by_depth(

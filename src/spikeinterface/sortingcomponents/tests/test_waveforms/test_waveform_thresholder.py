@@ -37,7 +37,7 @@ def test_waveform_thresholder_ptp(
         recording, peaks, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs
     )
 
-    data = tresholded_waveforms.ptp(axis=1) / noise_levels
+    data = np.ptp(tresholded_waveforms, axis=1) / noise_levels
     assert np.all(data[data != 0] > 3)
 
 

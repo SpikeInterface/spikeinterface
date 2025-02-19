@@ -5,10 +5,6 @@ import pytest
 from numpy.testing import assert_raises
 
 from spikeinterface.core import (
-    AppendSegmentRecording,
-    AppendSegmentSorting,
-    ConcatenateSegmentRecording,
-    ConcatenateSegmentSorting,
     NumpyRecording,
     NumpySorting,
     append_recordings,

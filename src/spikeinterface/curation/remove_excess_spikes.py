@@ -13,14 +13,14 @@ class RemoveExcessSpikesSorting(BaseSorting):
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The parent sorting.
-    recording: BaseRecording
+    recording : BaseRecording
         The recording to use to get the number of samples.
 
     Returns
     -------
-    sorting_without_excess_spikes: RemoveExcessSpikesSorting
+    sorting_without_excess_spikes : RemoveExcessSpikesSorting
         The sorting without any excess spikes.
     """
 
@@ -85,24 +85,24 @@ class RemoveExcessSpikesSortingSegment(BaseSortingSegment):
         return spike_train[min_spike:max_spike]
 
 
-def remove_excess_spikes(sorting, recording):
+def remove_excess_spikes(sorting: BaseSorting, recording: BaseRecording):
     """
     Remove excess spikes from the spike trains.
     Excess spikes are the ones exceeding a recording number of samples, for each segment.
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The parent sorting.
-    recording: BaseRecording
+    recording : BaseRecording
         The recording to use to get the number of samples.
 
     Returns
     -------
-    sorting_without_excess_spikes: Sorting
+    sorting_without_excess_spikes : Sorting
         The sorting without any excess spikes.
     """
-    if has_exceeding_spikes(recording=recording, sorting=sorting):
+    if has_exceeding_spikes(sorting=sorting, recording=recording):
         return RemoveExcessSpikesSorting(sorting=sorting, recording=recording)
     else:
         return sorting

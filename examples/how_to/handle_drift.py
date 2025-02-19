@@ -2,12 +2,12 @@
 # jupyter:
 #   jupytext:
 #     cell_metadata_filter: -all
-#     formats: py,ipynb
+#     formats: py:light,ipynb
 #     text_representation:
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.14.6
+#       jupytext_version: 1.16.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -55,6 +55,8 @@ import shutil
 
 import spikeinterface.full as si
 
+from spikeinterface.preprocessing import get_motion_parameters_preset, get_motion_presets
+
 # -
 
 base_folder = Path("/mnt/data/sam/DataSpikeSorting/imposed_motion_nick")
@@ -70,6 +72,7 @@ raw_rec
 
 
 def preprocess_chain(rec):
+    rec = rec.astype('float32')
     rec = si.bandpass_filter(rec, freq_min=300.0, freq_max=6000.0)
     rec = si.common_reference(rec, reference="global", operator="median")
     return rec
@@ -79,33 +82,46 @@ rec = preprocess_chain(raw_rec)
 
 job_kwargs = dict(n_jobs=40, chunk_duration="1s", progress_bar=True)
 
-# ### Run motion correction with one function!
+#
 #
 # Correcting for drift is easy! You just need to run a single function.
-# We will try this function with 3 presets.
+# We will try this function with some presets.
 #
 # Internally a preset is a dictionary of dictionaries containing all parameters for every steps.
 #
 # Here we also save the motion correction results into a folder to be able to load them later.
 
-# internally, we can explore a preset like this
-# every parameter can be overwritten at runtime
-from spikeinterface.preprocessing.motion import motion_options_preset
+# ### preset and parameters
+#
+# Motion correction has some steps and eevry step can be controlled by a method and related parameters.
+#
+# A preset is a nested dict that contains theses methods/parameters.
 
-motion_options_preset["kilosort_like"]
+preset_keys = get_motion_presets()
+preset_keys
 
-# lets try theses 3 presets
-some_presets = ("rigid_fast", "kilosort_like", "nonrigid_accurate")
-# some_presets = ('kilosort_like',  )
+one_preset_params = get_motion_parameters_preset("kilosort_like")
+one_preset_params
 
-# compute motion with 3 presets
+# ### Run motion correction with one function!
+#
+# Correcting for drift is easy! You just need to run a single function.
+# We will try this function with some presets.
+#
+# Here we also save the motion correction results into a folder to be able to load them later.
+
+# lets try theses presets
+some_presets = ("rigid_fast", "kilosort_like",  "nonrigid_accurate", "nonrigid_fast_and_accurate", "dredge", "dredge_fast")
+
+
+# compute motion with theses presets
 for preset in some_presets:
     print("Computing with", preset)
     folder = base_folder / "motion_folder_dataset1" / preset
     if folder.exists():
         shutil.rmtree(folder)
-    recording_corrected, motion_info = si.correct_motion(
-        rec, preset=preset, folder=folder, output_motion_info=True, **job_kwargs
+    recording_corrected, motion, motion_info = si.correct_motion(
+        rec, preset=preset, folder=folder, output_motion=True, output_motion_info=True, **job_kwargs
     )
 
 # ### Plot the results
@@ -127,11 +143,20 @@ for preset in some_presets:
 #   The motion vector is computed for different depths.
 #   The corrected peak locations are flatter than the rigid case.
 #   The motion vector map is still be a bit noisy at some depths (e.g around 1000um).
-# * The preset **nonrigid_accurate** seems to give the best results on this recording.
-#   The motion vector seems less noisy globally, but it is not "perfect" (see at the top of the probe 3200um to 3800um).
-#   Also note that in the first part of the recording before the imposed motion (0-600s) we clearly have a non-rigid motion:
+# * The preset **dredge** is offcial DREDge re-implementation in spikeinterface.
+#   It give the best result : very fast and smooth motion estimation. Very few noise.
+#   This method also capture very well the non rigid motion gradient along the probe.
+#   The best method on the market at the moement.
+#   An enormous thanks to the dream team :  Charlie Windolf, Julien Boussard, Erdem Varol, Liam Paninski.
+#   Note that in the first part of the recording before the imposed motion (0-600s) we clearly have a non-rigid motion:
 #   the upper part of the probe (2000-3000um) experience some drifts, but the lower part (0-1000um) is relatively stable.
 #   The method defined by this preset is able to capture this.
+# * The preset **nonrigid_accurate** this is the ancestor of "dredge" before it was published.
+#   It seems to give the good results on this recording but with bit more noise.
+# * The preset **dredge_fast** similar than dredge but faster (using grid_convolution).
+# * The preset **nonrigid_fast_and_accurate** a variant of nonrigid_accurate but faster (using grid_convolution).
+#
+#
 
 for preset in some_presets:
     # load
@@ -140,8 +165,8 @@ for preset in some_presets:
 
     # and plot
     fig = plt.figure(figsize=(14, 8))
-    si.plot_motion(
-        motion_info,
+    si.plot_motion_info(
+        motion_info, rec,
         figure=fig,
         depth_lim=(400, 600),
         color_amplitude=True,
@@ -167,11 +192,13 @@ for preset in some_presets:
 # Case 1 is used before running a spike sorter and the case 2 is used here to display the results.
 
 # +
-from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
+from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 
 for preset in some_presets:
     folder = base_folder / "motion_folder_dataset1" / preset
     motion_info = si.load_motion_info(folder)
+
+    motion = motion_info["motion"]
 
     fig, axs = plt.subplots(ncols=2, figsize=(12, 8), sharey=True)
 
@@ -190,24 +217,16 @@ for preset in some_presets:
 
     color_kargs = dict(alpha=0.2, s=2, c=c)
 
-    loc = motion_info["peak_locations"]
+    peak_locations = motion_info["peak_locations"]
     # color='black',
-    ax.scatter(loc["x"][mask][sl], loc["y"][mask][sl], **color_kargs)
+    ax.scatter(peak_locations["x"][mask][sl], peak_locations["y"][mask][sl], **color_kargs)
 
-    loc2 = correct_motion_on_peaks(
-        motion_info["peaks"],
-        motion_info["peak_locations"],
-        rec.sampling_frequency,
-        motion_info["motion"],
-        motion_info["temporal_bins"],
-        motion_info["spatial_bins"],
-        direction="y",
-    )
+    peak_locations2 = correct_motion_on_peaks(peaks, peak_locations, motion,rec)
 
     ax = axs[1]
     si.plot_probe_map(rec, ax=ax)
     #  color='black',
-    ax.scatter(loc2["x"][mask][sl], loc2["y"][mask][sl], **color_kargs)
+    ax.scatter(peak_locations2["x"][mask][sl], peak_locations2["y"][mask][sl], **color_kargs)
 
     ax.set_ylim(400, 600)
     fig.suptitle(f"{preset=}")
@@ -228,7 +247,7 @@ for preset in some_presets:
 keys = run_times[0].keys()
 
 bottom = np.zeros(len(run_times))
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(14, 6))
 for k in keys:
     rtimes = np.array([rt[k] for rt in run_times])
     if np.any(rtimes > 0.0):

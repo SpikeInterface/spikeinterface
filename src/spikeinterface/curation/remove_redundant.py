@@ -1,5 +1,6 @@
 from __future__ import annotations
 import numpy as np
+from spikeinterface import BaseSorting
 
 from spikeinterface import SortingAnalyzer
 
@@ -20,7 +21,7 @@ def remove_redundant_units(
     remove_strategy="minimum_shift",
     peak_sign="neg",
     extra_outputs=False,
-):
+) -> BaseSorting:
     """
     Removes redundant or duplicate units by comparing the sorting output with itself.
 
@@ -46,18 +47,22 @@ def remove_redundant_units(
     duplicate_threshold : float, default: 0.8
         Final threshold on the portion of coincident events over the number of spikes above which the
         unit is removed
-    remove_strategy: "minimum_shift" | "highest_amplitude" | "max_spikes", default: "minimum_shift"
+    remove_strategy : "minimum_shift" | "highest_amplitude" | "max_spikes", default: "minimum_shift"
         Which strategy to remove one of the two duplicated units:
 
-            * "minimum_shift": keep the unit with best peak alignment (minimum shift)
+            * "minimum_shift" : keep the unit with best peak alignment (minimum shift)
                              If shifts are equal then the "highest_amplitude" is used
-            * "highest_amplitude": keep the unit with the best amplitude on unshifted max.
-            * "max_spikes": keep the unit with more spikes
+            * "highest_amplitude" : keep the unit with the best amplitude on unshifted max.
+            * "max_spikes" : keep the unit with more spikes
 
-    peak_sign: "neg" | "pos" | "both", default: "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         Used when remove_strategy="highest_amplitude"
-    extra_outputs: bool, default: False
+    extra_outputs : bool, default: False
         If True, will return the redundant pairs.
+    unit_peak_shifts : dict
+        Dictionary mapping the unit_id to the unit's shift (in number of samples).
+        A positive shift means the spike train is shifted back in time, while
+        a negative shift means the spike train is shifted forward.
 
     Returns
     -------
@@ -70,6 +75,8 @@ def remove_redundant_units(
         sorting_analyzer = sorting_or_sorting_analyzer
     else:
         assert not align, "The 'align' option is only available when a SortingAnalyzer is used as input"
+        # other remove strategies rely on sorting analyzer looking at templates
+        assert remove_strategy == "max_spikes", "For a Sorting input the remove_strategy must be 'max_spikes'"
         sorting = sorting_or_sorting_analyzer
         sorting_analyzer = None
 

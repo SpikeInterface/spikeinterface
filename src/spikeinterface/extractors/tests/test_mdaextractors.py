@@ -1,16 +1,19 @@
 import pytest
 from pathlib import Path
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
-from spikeinterface.extractors import toy_example, MdaRecordingExtractor, MdaSortingExtractor
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "extractors"
-else:
-    cache_folder = Path("cache_folder") / "extractors"
+from spikeinterface.core import generate_ground_truth_recording
+from spikeinterface.extractors import MdaRecordingExtractor, MdaSortingExtractor
 
 
-def test_mda_extractors():
-    rec, sort = toy_example(num_segments=1, num_units=10)
+def test_mda_extractors(create_cache_folder):
+    cache_folder = create_cache_folder
+    rec, sort = generate_ground_truth_recording(durations=[10.0], num_units=10)
+
+    ids_as_integers = [id for id in range(rec.get_num_channels())]
+    rec = rec.rename_channels(new_channel_ids=ids_as_integers)
+
+    ids_as_integers = [id for id in range(sort.get_num_units())]
+    sort = sort.rename_units(new_unit_ids=ids_as_integers)
 
     MdaRecordingExtractor.write_recording(rec, cache_folder / "mdatest")
     rec_mda = MdaRecordingExtractor(cache_folder / "mdatest")

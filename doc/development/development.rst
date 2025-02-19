@@ -61,7 +61,7 @@ for the :code:`spikeinterface.extractors` module, you can use the following comm
 
 The markers are located in the :code:`pyproject.toml` file in the root of the repository.
 
-Note that you should install the package before running the tests. You can do this by running the following command:
+Note that you should install spikeinterface before running the tests. You can do this by running the following command:
 
 .. code-block:: bash
 
@@ -72,7 +72,7 @@ You can change the :code:`[test,extractors,full]` to install only the dependenci
 The specific environment for the CI is specified in the :code:`.github/actions/build-test-environment/action.yml` and you can
 find the full tests in the :code:`.github/workflows/full_test.yml` file.
 
-The extractor tests require datalad for some of the tests. Here are instructions for installing datalad:
+Some of the extractor tests require datalad. Here are instructions for installing datalad:
 
 Installing Datalad
 ------------------
@@ -87,13 +87,13 @@ Stylistic conventions
 
 SpikeInterface maintains a consistent coding style across the project. This helps to ensure readability and
 maintainability of the code, making it easier for contributors to collaborate. To facilitate code style
-for the developer we use the follwing tools and conventions:
+for the developer we use the following tools and conventions:
 
 
 Install Black and pre-commit
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We use the python formatter Black, with defaults set in the :code:`pyproject.toml`. This allows for
+We use the Python formatter Black, with defaults set in the :code:`pyproject.toml`. This allows for
 easy local formatting of code.
 
 To install Black, you can use pip, the Python package installer. Run the following command in your terminal:
@@ -152,7 +152,7 @@ for providing parameters, however is a little different. The project prefers the
 
 .. code-block:: bash
 
-    parameter_name: type, default: default_value
+    parameter_name : type, default: default_value
 
 
 This allows users to quickly understand the type of data that should be input into a function as well as whether a default is supplied. A full example would be:
@@ -165,21 +165,22 @@ This allows users to quickly understand the type of data that should be input in
 
         Parameters
         ----------
-        param_a: dict
+        param_a : dict
             A dictionary containing the data
-        param_b: int, default: 5
+        param_b : int, default: 5
             A scaling factor to be applied to the data
-        param_c: "mean" | "median", default: "mean"
+        param_c : "mean" | "median", default: "mean"
             What to calculate on the data
 
         Returns
         -------
-        great_data: dict
+        great_data : dict
             A dictionary of the processed data
         """
 
 
-Note that in this example we demonstrate two other docstring conventions followed by SpikeInterface. First, that all string arguments should be presented
+There should be a space between each parameter and the colon following it. This is neccessary for using the `numpydoc validator <https://numpydoc.readthedocs.io/en/latest/validation.html>`_.
+In the above example we demonstrate two other docstring conventions followed by SpikeInterface. First, that all string arguments should be presented
 with double quotes. This is the same stylistic convention followed by Black and enforced by the pre-commit for the repo. Second, when a parameter is a
 string with a limited number of values (e.g. :code:`mean` and :code:`median`), rather than give the type a value of :code:`str`, please list the possible strings
 so that the user knows what the options are.
@@ -188,9 +189,18 @@ so that the user knows what the options are.
 Miscelleaneous Stylistic Conventions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-#. Avoid using abreviations in variable names (e.g., use :code:`recording` instead of :code:`rec`). It is especially important to avoid single letter variables.
+#. Avoid using abbreviations in variable names (e.g. use :code:`recording` instead of :code:`rec`). It is especially important to avoid single letter variables.
 #. Use index as singular and indices for plural following the NumPy convention. Avoid idx or indexes. Plus, id and ids are reserved for identifiers (i.e. channel_ids)
 #. We use file_path and folder_path (instead of file_name and folder_name) for clarity.
+#. For the titles of documentation pages, only capitalize the first letter of the first word and classes or software packages. For example, "How to use a SortingAnalyzer in SpikeInterface".
+#. For creating headers to divide sections of code we use the following convention (see issue `#3019 <https://github.com/SpikeInterface/spikeinterface/issues/3019>`_):
+
+
+.. code:: python
+
+    #########################################
+    # A header
+    #########################################
 
 
 How to build the documentation
@@ -203,6 +213,25 @@ We use Sphinx to build the documentation. To build the documentation locally, yo
 
 This will build the documentation in the :code:`doc/_build/html` folder. You can open the :code:`index.html` file in your browser to see the documentation.
 
+Adding new documentation
+------------------------
+
+Documentation can be added as a
+`sphinx-gallery <https://sphinx-gallery.github.io/stable/index.html>`_
+Python file ('tutorials')
+or a
+`sphinx rst <https://sphinx-tutorial.readthedocs.io/step-1/>`_
+file (all other sections).
+
+To add a new tutorial, add your ``.py`` file to ``spikeinterface/examples``.
+Then, update the ``spikeinterface/doc/tutorials_custom_index.rst`` file
+to make a new card linking to the page and an optional image. See
+``tutorials_custom_index.rst`` header for more information.
+
+For other sections, write your documentation in ``.rst`` format and add
+the page to the appropriate ``index.rst`` file found in the relevant
+folder (e.g. ``how_to/index.rst``).
+
 How to run code coverage locally
 --------------------------------
 To run code coverage locally, you can use the following command:
@@ -213,7 +242,7 @@ To run code coverage locally, you can use the following command:
 
 This will run the tests and generate a report in the :code:`htmlcov` folder. You can open the :code:`index.html` file in your browser to see the report.
 
-Note, however, that the running time of the command above will be slow. If you want to run the tests for a specific module, you can use the following command:
+Note, however, that the running time of the command above will be quite long. If you want to run the tests for a specific module, you can use the following command:
 
 .. code-block:: bash
 
@@ -223,7 +252,7 @@ Implement a new extractor
 -------------------------
 
 SpikeInterface already supports over 30 file formats, but the acquisition system you use might not be among the
-supported formats list (***ref***). Most of the extractors rely on the `NEO <https://github.com/NeuralEnsemble/python-neo>`_
+supported formats list (****ref****). Most of the extractors rely on the `NEO <https://github.com/NeuralEnsemble/python-neo>`_
 package to read information from files.
 Therefore, to implement a new extractor to handle the unsupported format, we recommend making a new :code:`neo.rawio.BaseRawIO` class (see `example <https://github.com/NeuralEnsemble/python-neo/blob/master/neo/rawio/examplerawio.py#L44>`_).
 Once that is done, the new class can be easily wrapped into SpikeInterface as an extension of the
@@ -231,13 +260,13 @@ Once that is done, the new class can be easily wrapped into SpikeInterface as an
 (for :py:class:`~spikeinterface.core.BaseRecording` objects) or
 :py:class:`~spikeinterface.extractors.neoextractors.neobaseextractors.NeoBaseRecordingExtractor`
 (for :py:class:`~spikeinterface.core.BaseSorting` objects) or with a few lines of
-code (e.g., see reader for `SpikeGLX <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/neoextractors/spikeglx.py>`_
-or `Neuralynx <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/neoextractors/neuralynx.py>`_).
+code (e.g., see reader for `SpikeGLX <https://github.com/SpikeInterface/spikeinterface/blob/main/src/spikeinterface/extractors/neoextractors/spikeglx.py>`_
+or `Neuralynx <https://github.com/SpikeInterface/spikeinterface/blob/main/src/spikeinterface/extractors/neoextractors/neuralynx.py>`_).
 
-**NOTE:** implementing a `neo.rawio` Class is not required, but recommended. Several extractors (especially) for :code:`Sorting`
+**NOTE:** implementing a `neo.rawio` class is not required, but recommended. Several extractors (especially) for :code:`Sorting`
 objects are implemented directly in SpikeInterface and inherit from the base classes.
-As examples, see the `CompressedBinaryIblExtractor <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/cbin_ibl.py>`_
-for a :py:class:`~spikeinterface.core.BaseRecording` object, or the `SpykingCircusSortingExtractor <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/spykingcircusextractors.py>`_
+As examples, see the `IblRecordingExtractor <https://github.com/SpikeInterface/spikeinterface/blob/main/src/spikeinterface/extractors/iblextractors.py>`_
+for a :py:class:`~spikeinterface.core.BaseRecording` object, or the `SpykingCircusSortingExtractor <https://github.com/SpikeInterface/spikeinterface/blob/main/src/spikeinterface/extractors/spykingcircusextractors.py>`_
 for a a :py:class:`~spikeinterface.core.BaseSorting` object.
 
 
@@ -280,7 +309,7 @@ Then, you can start creating a new class:
 
     class MySpikeSorter(BaseSorter):
     """
-    Brief description (optional)
+    Brief description
     """
 
     sorter_name = 'myspikesorter'
@@ -338,7 +367,7 @@ Now you can start filling out the required methods:
     def _check_apply_filter_in_params(cls, params):
         return False
 
-        #  optional
+        # optional
         # can be implemented in subclass to check if the filter will be applied
 
 
@@ -359,10 +388,12 @@ Now you can start filling out the required methods:
         return sorting
 
 When your spike sorter class is implemented, you have to add it to the list of available spike sorters in the
-`sorterlist.py`. Then you need to write a test in **tests/test_myspikesorter.py**. In order to be tested, you can
-install the required packages by changing the **pyproject.toml**. Note that MATLAB based tests cannot be run at the moment,
-but we recommend testing the implementation locally.
+`sorterlist.py <https://github.com/SpikeInterface/spikeinterface/blob/main/src/spikeinterface/sorters/sorterlist.py>`_ .
+Then you need to write a test in **tests/test_myspikesorter.py**. In order to be tested, you can
+install the required packages by changing the `pyproject.toml <https://github.com/SpikeInterface/spikeinterface/blob/main/pyproject.toml>`_.
+Note that MATLAB based tests cannot be run at the moment,but we recommend testing the implementation locally.
 
-After this you need to add a block in **doc/sorters_info.rst** to describe your sorter.
+After this you need to add a block in `Install Sorters <https://github.com/SpikeInterface/spikeinterface/blob/main/doc/get_started/install_sorters.rst>`_
+to describe your sorter.
 
 Finally, make a pull request so we can review the code and incorporate into the sorters module of SpikeInterface!

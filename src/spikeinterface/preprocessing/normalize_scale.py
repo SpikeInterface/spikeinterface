@@ -46,29 +46,27 @@ class NormalizeByQuantileRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be transformed
-    scale: float, default: 1.0
+    scale : float, default: 1.0
         Scale for the output distribution
-    median: float, default: 0.0
+    median : float, default: 0.0
         Median for the output distribution
-    q1: float, default: 0.01
+    q1 : float, default: 0.01
         Lower quantile used for measuring the scale
-    q1: float, default: 0.99
+    q2 : float, default: 0.99
         Upper quantile used for measuring the
-    mode: "by_channel" | "pool_channel", default: "by_channel"
+    mode : "by_channel" | "pool_channel", default: "by_channel"
         If "by_channel" each channel is rescaled independently.
-    dtype: str or np.dtype, default: "float32"
+    dtype : str or np.dtype, default: "float32"
         The dtype of the output traces
-    **random_chunk_kwargs: Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
+    **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
     -------
-    rescaled_traces: NormalizeByQuantileRecording
+    rescaled_traces : NormalizeByQuantileRecording
         The rescaled traces recording extractor object
     """
-
-    name = "normalize_by_quantile"
 
     def __init__(
         self,
@@ -130,22 +128,20 @@ class ScaleRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be transformed
-    gain: float or array
+    gain : float or array
         Scalar for the traces of the recording extractor or array with scalars for each channel
-    offset: float or array
+    offset : float or array
         Offset for the traces of the recording extractor or array with offsets for each channel
-    dtype: str or np.dtype, default: "float32"
+    dtype : str or np.dtype, default: "float32"
         The dtype of the output traces
 
     Returns
     -------
-    transform_traces: ScaleRecording
+    transform_traces : ScaleRecording
         The transformed traces recording extractor object
     """
-
-    name = "scale"
 
     def __init__(self, recording, gain=1.0, offset=0.0, dtype="float32"):
         if dtype is None:
@@ -190,21 +186,19 @@ class CenterRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be centered
-    mode: "median" | "mean", default: "median"
+    mode : "median" | "mean", default: "median"
         The method used to center the traces
-    dtype: str or np.dtype, default: "float32"
+    dtype : str or np.dtype, default: "float32"
         The dtype of the output traces
-    **random_chunk_kwargs: Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
+    **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
     -------
-    centered_traces: ScaleRecording
+    centered_traces : ScaleRecording
         The centered traces recording extractor object
     """
-
-    name = "center"
 
     def __init__(self, recording, mode="median", dtype="float32", **random_chunk_kwargs):
         assert mode in ("median", "mean")
@@ -238,11 +232,11 @@ class ZScoreRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be centered
-    mode: "median+mad" | "mean+std", default: "median+mad"
+    mode : "median+mad" | "mean+std", default: "median+mad"
         The mode to compute the zscore
-    dtype: None or dtype
+    dtype : None or dtype
         If None the the parent dtype is kept.
         For integer dtype a int_scale must be also given.
     gain : None or np.array
@@ -253,15 +247,13 @@ class ZScoreRecording(BasePreprocessor):
         Apply a scaling factor to fit the integer range.
         This is used when the dtype is an integer, so that the output is scaled.
         For example, a value of `int_scale=200` will scale the zscore value to a standard deviation of 200.
-    **random_chunk_kwargs: Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
+    **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
     -------
-    centered_traces: ScaleRecording
+    centered_traces : ScaleRecording
         The centered traces recording extractor object
     """
-
-    name = "zscore"
 
     def __init__(
         self,

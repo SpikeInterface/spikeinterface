@@ -21,11 +21,7 @@ from .spike_amplitudes import compute_spike_amplitudes, ComputeSpikeAmplitudes
 from .correlograms import (
     ComputeCorrelograms,
     compute_correlograms,
-    compute_autocorrelogram_from_spiketrain,
-    compute_crosscorrelogram_from_spiketrain,
     correlogram_for_one_segment,
-    compute_correlograms_numba,
-    compute_correlograms_numpy,
 )
 
 from .isi import (
@@ -37,10 +33,9 @@ from .isi import (
 
 from .spike_locations import compute_spike_locations, ComputeSpikeLocations
 
-from .unit_localization import (
+from .unit_locations import (
     compute_unit_locations,
     ComputeUnitLocations,
-    compute_center_of_mass,
 )
 
 from .amplitude_scalings import compute_amplitude_scalings, ComputeAmplitudeScalings

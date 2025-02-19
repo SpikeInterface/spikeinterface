@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 import numpy as np
 import zarr
@@ -11,6 +12,79 @@ from .basesorting import BaseSorting, SpikeVectorSortingSegment, minimum_spike_d
 from .core_tools import define_function_from_class, check_json
 from .job_tools import split_job_kwargs
 from .recording_tools import determine_cast_unsigned
+from .core_tools import is_path_remote
+
+
+def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: dict | None = None):
+    """
+    Open a zarr folder with super powers.
+
+    The function tries to open a zarr folder with the following options:
+    - zarr.open_consolidated (if mode is not "a" or "r+")
+    - zarr.open
+
+    For remote paths, the function tries to open the folder with:
+    - the provided storage options (if storage_options is not None)
+    - anon=True/False is storage_options is None
+
+    Parameters
+    ----------
+    folder_path : str | Path
+        The path to the zarr folder
+    mode : str, optional
+        The mode to open the zarr folder in, default: "r"
+    storage_options : dict | None, optional
+        The storage options to use when opening the zarr folder, default: None
+
+    Returns
+    -------
+    root: zarr.hierarchy.Group
+        The zarr root group object
+
+    Raises
+    ------
+    ValueError
+        Raised if the folder cannot be opened in the specified mode with the given storage options.
+    """
+    import zarr
+
+    # if mode is append or read/write, we try to open the folder with zarr.open
+    # since zarr.open_consolidated does not support creating new groups/datasets
+    if mode in ("a", "r+"):
+        open_funcs = (zarr.open,)
+    else:
+        open_funcs = (zarr.open_consolidated, zarr.open)
+
+    # if storage_options is None, we try to open the folder with and without anonymous access
+    # if storage_options is not None, we try to open the folder with the given storage options
+    if storage_options is None or storage_options == {}:
+        storage_options_to_test = ({"anon": True}, {"anon": False})
+    else:
+        storage_options_to_test = (storage_options,)
+
+    root = None
+    if is_path_remote(str(folder_path)):
+        for open_func in open_funcs:
+            if root is not None:
+                break
+            for storage_options in storage_options_to_test:
+                try:
+                    root = open_func(str(folder_path), mode=mode, storage_options=storage_options)
+                    break
+                except Exception as e:
+                    pass
+    else:
+        if not Path(folder_path).is_dir():
+            raise ValueError(f"Folder {folder_path} does not exist")
+        for open_func in open_funcs:
+            try:
+                root = open_func(str(folder_path), mode=mode, storage_options=storage_options)
+                break
+            except Exception as e:
+                pass
+    if root is None:
+        raise ValueError(f"Cannot open {folder_path} in mode {mode} with storage_options {storage_options}")
+    return root
 
 
 class ZarrRecordingExtractor(BaseRecording):
@@ -19,29 +93,26 @@ class ZarrRecordingExtractor(BaseRecording):
 
     Parameters
     ----------
-    folder_path: str or Path
-        Path to the zarr root folder
-    storage_options: dict or None
+    folder_path : str or Path
+        Path to the zarr root folder. This can be a local path or a remote path (s3:// or gcs://).
+        If the path is a remote path, the storage_options can be provided to specify credentials.
+        If the remote path is not accessible and backend_options is not provided,
+        the function will try to load the object in anonymous mode (anon=True),
+        which enables to load data from open buckets.
+    storage_options : dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
 
     Returns
     -------
-    recording: ZarrRecordingExtractor
+    recording : ZarrRecordingExtractor
         The recording Extractor
     """
 
-    extractor_name = "ZarrRecording"
-    installed = True
-    mode = "folder"
-    installation_mesg = ""
-    name = "zarr"
-
     def __init__(self, folder_path: Path | str, storage_options: dict | None = None):
-        assert self.installed, self.installation_mesg
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
-        self._root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+        self._root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
 
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
@@ -87,7 +158,10 @@ class ZarrRecordingExtractor(BaseRecording):
 
             nbytes_segment = self._root[trace_name].nbytes
             nbytes_stored_segment = self._root[trace_name].nbytes_stored
-            cr_by_segment[segment_index] = nbytes_segment / nbytes_stored_segment
+            if nbytes_stored_segment > 0:
+                cr_by_segment[segment_index] = nbytes_segment / nbytes_stored_segment
+            else:
+                cr_by_segment[segment_index] = np.nan
 
             total_nbytes += nbytes_segment
             total_nbytes_stored += nbytes_stored_segment
@@ -111,7 +185,10 @@ class ZarrRecordingExtractor(BaseRecording):
         if annotations is not None:
             self.annotate(**annotations)
         # annotate compression ratios
-        cr = total_nbytes / total_nbytes_stored
+        if total_nbytes_stored > 0:
+            cr = total_nbytes / total_nbytes_stored
+        else:
+            cr = np.nan
         self.annotate(compression_ratio=cr, compression_ratio_segments=cr_by_segment)
 
         self._kwargs = {"folder_path": folder_path_kwarg, "storage_options": storage_options}
@@ -133,7 +210,7 @@ class ZarrRecordingSegment(BaseRecordingSegment):
         """Returns the number of samples in this signal block
 
         Returns:
-            SampleIndex: Number of samples in the signal block
+            SampleIndex : Number of samples in the signal block
         """
         return self._timeseries.shape[0]
 
@@ -155,30 +232,28 @@ class ZarrSortingExtractor(BaseSorting):
 
     Parameters
     ----------
-    folder_path: str or Path
-        Path to the zarr root file
-    storage_options: dict or None
+    folder_path : str or Path
+        Path to the zarr root file. This can be a local path or a remote path (s3:// or gcs://).
+        If the path is a remote path, the storage_options can be provided to specify credentials.
+        If the remote path is not accessible and backend_options is not provided,
+        the function will try to load the object in anonymous mode (anon=True),
+        which enables to load data from open buckets.
+    storage_options : dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
-    zarr_group: str or None, default: None
+    zarr_group : str or None, default: None
         Optional zarr group path to load the sorting from. This can be used when the sorting is not stored at the root, but in sub group.
     Returns
     -------
-    sorting: ZarrSortingExtractor
+    sorting : ZarrSortingExtractor
         The sorting Extractor
     """
 
-    extractor_name = "ZarrSorting"
-    installed = True
-    mode = "folder"
-    installation_mesg = ""
-    name = "zarr"
-
     def __init__(self, folder_path: Path | str, storage_options: dict | None = None, zarr_group: str | None = None):
-        assert self.installed, self.installation_mesg
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
-        zarr_root = self._root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+        zarr_root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
+
         if zarr_group is None:
             self._root = zarr_root
         else:
@@ -244,19 +319,19 @@ def read_zarr(
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         Path to the zarr root file
-    storage_options: dict or None
+    storage_options : dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
 
     Returns
     -------
-    extractor: ZarrExtractor
+    extractor : ZarrExtractor
         The loaded extractor
     """
     # TODO @alessio : we should have something more explicit in our zarr format to tell which object it is.
     # for the futur SortingAnalyzer we will have this 2 fields!!!
-    root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+    root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
     if "channel_ids" in root.keys():
         return read_zarr_recording(folder_path, storage_options=storage_options)
     elif "unit_ids" in root.keys():
@@ -308,13 +383,14 @@ def get_default_zarr_compressor(clevel: int = 5):
     return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)
 
 
-def add_properties_and_annotations(
-    zarr_group: zarr.hierarchy.Group, recording_or_sorting: Union[BaseRecording, BaseSorting]
-):
+def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_or_sorting: BaseRecording | BaseSorting):
     # save properties
     prop_group = zarr_group.create_group("properties")
     for key in recording_or_sorting.get_property_keys():
         values = recording_or_sorting.get_property(key)
+        if values.dtype.kind == "O":
+            warnings.warn(f"Property {key} not saved because it is a python Object type")
+            continue
         prop_group.create_dataset(name=key, data=values, compressor=None)
 
     # save annotations
@@ -327,11 +403,11 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The sorting extractor object to be added to the zarr group
-    zarr_group: zarr.hierarchy.Group
+    zarr_group : zarr.hierarchy.Group
         The zarr group
-    kwargs: dict
+    kwargs : dict
         Other arguments passed to the zarr compressor
     """
     from numcodecs import Delta
@@ -341,8 +417,7 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
     zarr_group.attrs["num_segments"] = int(num_segments)
     zarr_group.create_dataset(name="unit_ids", data=sorting.unit_ids, compressor=None)
 
-    if "compressor" not in kwargs:
-        compressor = get_default_zarr_compressor()
+    compressor = kwargs.get("compressor", get_default_zarr_compressor())
 
     # save sub fields
     spikes_group = zarr_group.create_group(name="spikes")
@@ -451,23 +526,23 @@ def add_traces_to_zarr(
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object to be saved in .dat format
-    zarr_group: zarr.Group
+    zarr_group : zarr.Group
         The zarr group to add traces to
-    dataset_paths: list
+    dataset_paths : list
         List of paths to traces datasets in the zarr group
-    channel_chunk_size: int or None, default: None (chunking in time only)
+    channel_chunk_size : int or None, default: None (chunking in time only)
         Channels per chunk
-    dtype: dtype, default: None
+    dtype : dtype, default: None
         Type of the saved data
-    compressor: zarr compressor or None, default: None
+    compressor : zarr compressor or None, default: None
         Zarr compressor
-    filters: list, default: None
+    filters : list, default: None
         List of zarr filters
-    verbose: bool, default: False
+    verbose : bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool, default: True
+    auto_cast_uint : bool, default: True
         If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
     """

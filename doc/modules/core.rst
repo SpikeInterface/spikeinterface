@@ -162,7 +162,6 @@ Internally, any sorting object can construct 2 internal caches:
   2. a unique numpy.array with structured dtype aka "spikes vector". This is useful for processing by small chunks of
      time, like for extracting amplitudes from a recording.
 
-
 SortingAnalyzer
 ---------------
 
@@ -178,10 +177,9 @@ to perform further analysis, such as calculating :code:`waveforms` and :code:`te
 
 Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* and the physical *scaling*.
 Sparsity defines the channels on which waveforms and templates are calculated using, for example,  a
-physical distance from the channel with the largest peak amplitude (see the :ref:`Sparsity` section). Scaling, set by
-the :code:`return_scaled` argument, says whether the data has been converted from integer values to physical units such as
-Voltage (see the end of the :ref:`Recording` section).
-
+physical distance from the channel with the largest peak amplitude (see the :ref:`modules/core:Sparsity` section). Scaling, set by
+the :code:`return_scaled` argument, determines whether the data is converted from integer values to :math:`\mu V` or not.
+By default, :code:`return_scaled` is true and all processed data voltage values are in :math:`\mu V` (e.g., waveforms, templates, spike amplitudes, etc.).
 
 Now we will create a :code:`SortingAnalyzer` called :code:`sorting_analyzer`.
 
@@ -208,7 +206,7 @@ Now we will create a :code:`SortingAnalyzer` called :code:`sorting_analyzer`.
 The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in memory*, but it can be saved at any time
 (or upon instantiation) to one of the following backends:
 
-* | :code:`zarr`: the sorting analyzer is saved to a `Zarr <https://zarr.dev/>`_  folder, and each extension is a Zarr group. This is the recommended backend, since Zarr files can be written to/read from the cloud and compression is applied.
+* | :code:`zarr`: the sorting analyzer is saved to a `Zarr <https://zarr.dev/>`__  folder, and each extension is a Zarr group. This is the recommended backend, since Zarr files can be written to/read from the cloud and compression is applied.
 * | :code:`binary_folder`: the sorting analyzer is saved to a folder, and each extension creates a sub-folder. The extension data are saved to either :code:`npy` (for arrays), :code:`csv` (for dataframes), or :code:`pickle` (for everything else).
 
 If the sorting analyzer is in memory, the :code:`SortingAnalyzer.save_as` function can be used to save it
@@ -312,12 +310,13 @@ Since these core extensions are important for all other extensions it is importa
   and the time after (:code:`ms_after`) to ensure that you have a full waveform. Because waveforms occur on multiple channels with multiple
   samples this can be a big data structure.
 * :code:`templates` are calculated from the raw waveform data and are used for downstream analyses
-  (e.g. :code:`spike_amplitudes` are calculated based on the templates). This raises the question: if the :code:`templates` are what are used,
-  then why save the :code:`waveforms`? Well, there are two ways to obtain :code:`templates` data: 1) directly from the raw data (based on the
-  :code:`random_spikes`) or 2) from the :code:`waveforms`. When getting :code:`templates` from the raw data we are limited to obtaining averages
-  and standard deviations. If we calculate the templates from the waveforms, however, we can also calculate the templates as medians or percentiles
+  (e.g. :code:`spike_amplitudes` are calculated based on the templates). This raises the question: if the :code:`templates` are all we need,
+  then why compute and save the :code:`waveforms`? Well, there are two ways to obtain :code:`templates` data: 1) directly from the raw data (based on the
+  :code:`random_spikes`) or 2) from the :code:`waveforms` extension. When getting :code:`templates` from the raw data we are limited to obtaining averages
+  and standard deviations. If we calculate the templates from the waveforms, however, we can also calculate the template medians or percentiles
   in addition to the average or standard deviations of the :code:`waveforms`. So it is important to think about the type of downstream analyses that
-  you may want to do in deciding whether to calculate :code:`templates` with :code:`random_spikes` or using :code:`waveforms`.
+  you may want to do in deciding whether to calculate :code:`templates` with :code:`random_spikes` or using :code:`waveforms`. Note that if the :code:`waveforms`
+  extension is available, :code:`templates` will be calculated from it (the :code:`ms_before` and :code:`ms_after` parameters are also inherited from the :code:`waveforms`).
 * :code:`noise_levels` compute noise-levels in a channel-wise fashion. This provides important information about the specific recording session
   and is important for some downstream quality analyses.
 
@@ -361,6 +360,15 @@ examples is seen below:
         ["random_spikes", "waveforms", "templates", "noise_levels"]
     )
 
+Note that any extension entered into the :code:`compute` function will be computed. Thus, even if an extension has already been computed
+it will be recomputed when :code:`compute` is called even if the parameters are the same.
+To check if an extension has already been computed and reload it, you can simply do:
+
+.. code-block:: python
+
+    if sorting_analyzer.has_extension("templates"):
+        templates_extension = sorting_analyzer.get_extension("templates")
+
 It is important when calculating extensions to remember which backend you are using. :code:`compute` accepts an argument
 :code:`save` which will write results to disk if using the :code:`zarr` or :code:`binary_folder` backends. If your :code:`SortingAnalyzer`
 is in memory using :code:`save=True` **will not** write to disk since spikeinterface does not know where to save it.
@@ -369,6 +377,20 @@ The reason to use :code:`save=False` is it allows you to test parameters with th
 backends without writing to disk. So, you can compute an extension *in-memory* with different parameters and then when
 you have decided on your desired parameters you can either use :code:`compute` with :code:`save=True` or use :code:`save_as`
 to write everything out to disk.
+
+
+Finally, the :code:`SortingAnalyzer` object can be used directly to curate a spike sorting output by selecting/removing units
+and merging unit groups.
+
+.. code-block:: python
+
+    sorting_analyzer_select = sorting_analyzer.select_units(unit_ids=[0, 1, 2, 3])
+    sorting_analyzer_remove = sorting_analyzer.remove_units(remove_unit_ids=[0])
+    sorting_analyzer_merge = sorting_analyzer.merge_units([[0, 1], [2, 3]])
+
+All computed extensions will be automatically propagated or merged when curating. Please refer to the
+:ref:`modules/curation:Curation module` documentation for more information.
+
 
 Event
 -----
@@ -497,19 +519,21 @@ Sparsity
 In several cases, it is not necessary to have waveforms on all channels. This is especially true for high-density
 probes, such as Neuropixels, because the waveforms of a unit will only appear on a small set of channels.
 Sparsity is defined as the subset of channels on which waveforms (and related information) are defined. Of course,
-sparsity is not global, but it is unit-specific.
+sparsity is not global, but it is unit-specific. Importantly, saving sparse waveforms, especially for high-density probes,
+dramatically reduces the size of the waveforms extension if computed.
 
-**NOTE** As of version :code:`0.99.0` the default for a :code:`extract_waveforms()` has :code:`sparse=True`, i.e. every :code:`waveform_extractor`
-will be sparse by default. Thus for users that wish to have dense waveforms they must set :code:`sparse=False`. Keyword arguments
-can still be input into the :code:`extract_wavforms()` to generate the desired sparsity as explained below.
+**NOTE** As of :code:`0.101.0` all :code:`SortingAnalyzer`'s have a default of :code:`sparse=True`. This was first
+introduced in :code:`0.99.0` for :code:`WaveformExtractor`'s and will be the default going forward. To obtain dense
+waveforms you will need to set :code:`sparse=False` at the creation of the :code:`SortingAnalyzer`.
 
-Sparsity can be computed from a :py:class:`~spikeinterface.core.WaveformExtractor` object with the
-:py:func:`~spikeinterface.core.compute_sparsity` function:
+
+Sparsity can be computed from a :py:class:`~spikeinterface.core.SortingAnalyzer` object with the
+:py:func:`~spikeinterface.core.estimate_sparsity` function:
 
 .. code-block:: python
 
-    # in this case 'we' should be a dense waveform_extractor
-    sparsity = compute_sparsity(we, method="radius", radius_um=40)
+    # in this case 'analyzer' should be a dense SortingAnalyzer
+    sparsity = compute_sparsity(analyzer, method="radius", radius_um=40)
 
 The returned :code:`sparsity` is a :py:class:`~spikeinterface.core.ChannelSparsity` object, which has convenient
 methods to access the sparsity information in several ways:
@@ -530,17 +554,19 @@ There are several methods to compute sparsity, including:
 * | :code:`method="by_property"`: selects channels based on a property, such as :code:`group`. This method is recommended
   | when working with tetrodes.
 
-The computed sparsity can be used in several postprocessing and visualization functions. In addition, a "dense"
-:py:class:`~spikeinterface.core.WaveformExtractor` can be saved as "sparse" as follows:
+The computed sparsity can be used in several postprocessing and visualization functions. In addition, this sparsity can be
+used when creating a :py:class:`~spikeinterface.core.SortingAnalyzer` which cause the :code:`sparse` boolean to be ignored.
 
 .. code-block:: python
 
-    we_sparse = we.save(sparsity=sparsity, folder="waveforms_sparse")
+    analyzer_sparse = si.create_sorting_analyzer(
+        sorting=sorting,
+        recording=recording,
+        sparsity=sparsity,
+        format='binary_folder',
+        folder="sparse_analyzer"
+    )
 
-The :code:`we_sparse` object will now have an associated sparsity (:code:`we.sparsity`), which is automatically taken
-into consideration for downstream analysis (with the :py:meth:`~spikeinterface.core.WaveformExtractor.is_sparse`
-method). Importantly, saving sparse waveforms, especially for high-density probes, dramatically reduces the size of the
-waveforms folder.
 
 .. _save_load:
 
@@ -556,7 +582,7 @@ re-instantiate the object from scratch (this is true for all objects except in-m
 
 The :code:`save()` function allows to easily store SI objects to a folder on disk.
 :py:class:`~spikeinterface.core.BaseRecording` objects are stored in binary (.raw) or
-`Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`_ (.zarr) format and
+`Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`__ (.zarr) format and
 :py:class:`~spikeinterface.core.BaseSorting` and :py:class:`~spikeinterface.core.BaseSnippets` object in numpy (.npz)
 format. With the actual data, the :code:`save()` function also stores the provenance dictionary and all the properties
 and annotations associated to the object.
@@ -910,7 +936,7 @@ The :py:class:`~spikeinterface.core.WaveformExtractor` allows us to:
 * extract waveforms
 * sub-sample spikes for waveform extraction
 * compute templates (i.e. average extracellular waveforms) with different modes
-* save waveforms in a folder (in numpy / `Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`_) for easy retrieval
+* save waveforms in a folder (in numpy / `Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`__) for easy retrieval
 * save sparse waveforms or *sparsify* dense waveforms
 * select units and associated waveforms
 

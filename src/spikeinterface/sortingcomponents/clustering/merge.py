@@ -1,23 +1,24 @@
 from __future__ import annotations
 
-from pathlib import Path
 from multiprocessing import get_context
-from concurrent.futures import ProcessPoolExecutor
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
-import scipy.spatial
-from sklearn.decomposition import PCA
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 import numpy as np
-import networkx as nx
 
 from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
+try:
+    import numba
+    import networkx as nx
+    import scipy.spatial
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
-from .isocut5 import isocut5
+    from .isocut5 import isocut5
 
+except:
+    pass
 from .tools import aggregate_sparse_features, FeaturesLoader, compute_template_from_sparse
 
 
@@ -260,7 +261,7 @@ def find_merge_pairs(
     **job_kwargs,
     # n_jobs=1,
     # mp_context="fork",
-    # max_threads_per_process=1,
+    # max_threads_per_worker=1,
     # progress_bar=True,
 ):
     """
@@ -298,7 +299,7 @@ def find_merge_pairs(
 
     n_jobs = job_kwargs["n_jobs"]
     mp_context = job_kwargs.get("mp_context", None)
-    max_threads_per_process = job_kwargs.get("max_threads_per_process", 1)
+    max_threads_per_worker = job_kwargs.get("max_threads_per_worker", 1)
     progress_bar = job_kwargs["progress_bar"]
 
     Executor = get_poolexecutor(n_jobs)
@@ -315,7 +316,7 @@ def find_merge_pairs(
             templates,
             method,
             method_kwargs,
-            max_threads_per_process,
+            max_threads_per_worker,
         ),
     ) as pool:
         jobs = []
@@ -353,7 +354,7 @@ def find_pair_worker_init(
     templates,
     method,
     method_kwargs,
-    max_threads_per_process,
+    max_threads_per_worker,
 ):
     global _ctx
     _ctx = {}
@@ -365,7 +366,7 @@ def find_pair_worker_init(
     _ctx["method"] = method
     _ctx["method_kwargs"] = method_kwargs
     _ctx["method_class"] = find_pair_method_dict[method]
-    _ctx["max_threads_per_process"] = max_threads_per_process
+    _ctx["max_threads_per_worker"] = max_threads_per_worker
 
     # if isinstance(features_dict_or_folder, dict):
     #     _ctx["features"] = features_dict_or_folder
@@ -379,7 +380,7 @@ def find_pair_worker_init(
 
 def find_pair_function_wrapper(label0, label1):
     global _ctx
-    with threadpool_limits(limits=_ctx["max_threads_per_process"]):
+    with threadpool_limits(limits=_ctx["max_threads_per_worker"]):
         is_merge, label0, label1, shift, merge_value = _ctx["method_class"].merge(
             label0,
             label1,

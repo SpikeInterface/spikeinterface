@@ -23,22 +23,23 @@ class PhaseShiftRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: Recording
+    recording : Recording
         The recording. It need to have  "inter_sample_shift" in properties.
-    margin_ms: float, default: 40.0
+    margin_ms : float, default: 40.0
         Margin in ms for computation.
         40ms ensure a very small error when doing chunk processing
-    inter_sample_shift: None or numpy array, default: None
+    inter_sample_shift : None or numpy array, default: None
         If "inter_sample_shift" is not in recording properties,
         we can externally provide one.
+    dtype : None | str | dtype, default: None
+        Dtype of input and output `recording` objects.
+
 
     Returns
     -------
-    filter_recording: PhaseShiftRecording
+    filter_recording : PhaseShiftRecording
         The phase shifted recording object
     """
-
-    name = "phase_shift"
 
     def __init__(self, recording, margin_ms=40.0, inter_sample_shift=None, dtype=None):
         if inter_sample_shift is None:
@@ -81,10 +82,6 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         self.tmp_dtype = tmp_dtype
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
         if channel_indices is None:
             channel_indices = slice(None)
 
@@ -99,9 +96,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             add_zeros=True,
             window_on_margin=True,
         )
-
-        traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts[channel_indices], axis=0)
-        # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
+        traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
         if self.tmp_dtype is not None:
@@ -116,28 +111,66 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 phase_shift = define_function_from_class(source_class=PhaseShiftRecording, name="phase_shift")
 
 
-def apply_fshift_sam(sig, sample_shifts, axis=0):
+def apply_frequency_shift(signal, shift_samples, axis=0):
     """
-    Apply the shift on a traces buffer.
+    Apply frequency shift to a signal buffer. This allow for shifting that are sub-sample accurate.
+
+    Parameters
+    ----------
+    signal : ndarray
+        Input signal array to be shifted.
+    shift_samples : ndarray
+        Array of sample shifts for each channel. Phase shifts are in units of 1/sampling_rate.
+    axis : int, optional
+        Axis along which to perform the shift. Currently, only axis=0 is supported.
+
+    Returns
+    -------
+    shifted_signal : ndarray
+        Signal array with the applied frequency shifts.
+
+    Notes
+    -----
+    The function works by transforming the signal to the frequency domain using the real FFT (rFFT),
+    applying phase shifts, and then transforming back to the time domain using the inverse real FFT (irFFT).
+    The phase shifts are calculated based on the frequency grid obtained from the FFT.
+
+    The key steps are:
+    1. Compute the rFFT of the input signal.
+    2. Calculate the frequency grid and use it to compute the phase shifts.
+    3. Apply the phase shifts in the frequency domain.
+    4. Perform the inverse rFFT to obtain the shifted signal in the time domain.
+
+    This method leverages the properties of the Fourier transform, where a phase shift in the frequency domain
+    corresponds to a time shift in the time domain.
     """
-    n = sig.shape[axis]
-    sig_f = np.fft.rfft(sig, axis=axis)
-    if n % 2 == 0:
-        # n is even sig_f[-1] is nyquist and so pi
-        omega = np.linspace(0, np.pi, sig_f.shape[axis])
-    else:
-        # n is odd sig_f[-1] is exactly nyquist!! we need (n-1) / n factor!!
-        omega = np.linspace(0, np.pi * (n - 1) / n, sig_f.shape[axis])
-    # broadcast omega and sample_shifts depend the axis
+    import scipy.fft
+
+    signal_length = signal.shape[axis]
+    num_channels = shift_samples.size
+    fourier_signal_size = signal_length // 2 + 1
+
+    frequency_domain_signal = scipy.fft.rfft(signal, n=signal_length, axis=axis, overwrite_x=True)
+    fourier_signal_size = frequency_domain_signal.shape[0]
+
     if axis == 0:
-        shifts = omega[:, np.newaxis] * sample_shifts[np.newaxis, :]
+        frequency_grid = np.empty(shape=(fourier_signal_size, num_channels))
+        # Note that np.fft.rfttfreq handles both even and odd signal lengths
+        frequency_grid[:, :] = 2 * np.pi * np.fft.rfftfreq(signal_length)[:, np.newaxis]
+        shifts = np.multiply(frequency_grid, shift_samples[np.newaxis, :], out=frequency_grid)
     else:
-        shifts = omega[np.newaxis, :] * sample_shifts[:, np.newaxis]
-    sig_shift = np.fft.irfft(sig_f * np.exp(-1j * shifts), n=n, axis=axis)
-    return sig_shift
+        raise NotImplementedError("Axis != 0 is not implemented yet")
+
+    # Rotate the signal in the frequency domain
+    rotations = np.exp(-1j * shifts)
+    phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
+
+    # Inverse FFT to get the translated signal
+    shifted_signal = scipy.fft.irfft(phase_shifted_signal, n=signal_length, axis=axis, overwrite_x=True)
+    return shifted_signal
 
 
-apply_fshift = apply_fshift_sam
+apply_fshift = apply_frequency_shift
 
 
 def apply_fshift_ibl(w, s, axis=0, ns=None):

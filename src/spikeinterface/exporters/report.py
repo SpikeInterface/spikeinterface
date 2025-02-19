@@ -6,8 +6,7 @@ import shutil
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 import spikeinterface.widgets as sw
 from spikeinterface.core import get_template_extremum_channel, get_template_extremum_amplitude
-from spikeinterface.postprocessing import compute_spike_amplitudes, compute_unit_locations, compute_correlograms
-from spikeinterface.qualitymetrics import compute_quality_metrics
+from spikeinterface.postprocessing import compute_correlograms
 
 
 def export_report(
@@ -21,26 +20,26 @@ def export_report(
     **job_kwargs,
 ):
     """
-    Exports a SI spike sorting report. The report includes summary figures of the spike sorting output
-    (e.g. amplitude distributions, unit localization and depth VS amplitude) as well as unit-specific reports,
-    that include waveforms, templates, template maps, ISI distributions, and more.
-
+    Exports a SI spike sorting report. The report includes summary figures of the spike sorting output.
+    What is plotted depends on what has been calculated. Unit locations and unit waveforms are always included.
+    Unit waveform densities, correlograms and spike amplitudes are plotted if `waveforms`, `correlograms`,
+    and `spike_amplitudes` have been computed for the given `sorting_analyzer`.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    output_folder: str
+    output_folder : str
         The output folder where the report files are saved
-    remove_if_exists: bool, default: False
+    remove_if_exists : bool, default: False
         If True and the output folder exists, it is removed
-    format: str, default: "png"
+    format : str, default: "png"
         The output figure format (any format handled by matplotlib)
-    peak_sign: "neg" or "pos", default: "neg"
+    peak_sign : "neg" or "pos", default: "neg"
         used to compute amplitudes and metrics
-    show_figures: bool, default: False
+    show_figures : bool, default: False
         If True, figures are shown. If False, figures are closed after saving
-    force_computation:  bool, default: False
+    force_computation :  bool, default: False
         Force or not some heavy computaion before exporting
     {}
     """
@@ -112,7 +111,7 @@ def export_report(
     # global figures
     fig = plt.figure(figsize=(20, 10))
     w = sw.plot_unit_locations(sorting_analyzer, figure=fig, unit_colors=unit_colors)
-    fig.savefig(output_folder / f"unit_localization.{format}")
+    fig.savefig(output_folder / f"unit_locations.{format}")
     if not show_figures:
         plt.close(fig)
 

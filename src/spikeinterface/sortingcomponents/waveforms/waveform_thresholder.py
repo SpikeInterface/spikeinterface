@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
-import json
 from typing import List, Optional
-import scipy.signal
 import numpy as np
 import operator
 from typing import Literal
@@ -81,7 +78,7 @@ class WaveformThresholder(WaveformsNode):
 
     def compute(self, traces, peaks, waveforms):
         if self.feature == "ptp":
-            wf_data = waveforms.ptp(axis=1) / self.noise_levels
+            wf_data = np.ptp(waveforms, axis=1) / self.noise_levels
         elif self.feature == "mean":
             wf_data = waveforms.mean(axis=1) / self.noise_levels
         elif self.feature == "energy":

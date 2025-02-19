@@ -2,29 +2,22 @@
 
 from __future__ import annotations
 
-
+import warnings
 from copy import deepcopy
+import platform
+from tqdm.auto import tqdm
+from warnings import warn
 
 import numpy as np
-from tqdm.auto import tqdm
+
+import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
-
-try:
-    import scipy.stats
-    import scipy.spatial.distance
-    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-    from sklearn.neighbors import NearestNeighbors
-    from sklearn.decomposition import IncrementalPCA
-except:
-    pass
-
-import warnings
+from threadpoolctl import threadpool_limits
 
 from .misc_metrics import compute_num_spikes, compute_firing_rates
 
 from ..core import get_random_data_chunks, compute_sparsity
 from ..core.template_tools import get_template_extremum_channel
-
 
 _possible_pc_metric_names = [
     "isolation_distance",
@@ -49,6 +42,9 @@ _default_params = dict(
         max_spikes=10000, min_spikes=10, min_fr=0.0, n_neighbors=4, n_components=10, radius_um=100, peak_sign="neg"
     ),
     silhouette=dict(method=("simplified",)),
+    isolation_distance=dict(),
+    l_ratio=dict(),
+    d_prime=dict(),
 )
 
 
@@ -57,19 +53,29 @@ def get_quality_pca_metric_list():
     return deepcopy(_possible_pc_metric_names)
 
 
-def calculate_pc_metrics(
-    sorting_analyzer, metric_names=None, qm_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
-):
-    """Calculate principal component derived metrics.
+def compute_pc_metrics(
+    sorting_analyzer,
+    metric_names=None,
+    metric_params=None,
+    qm_params=None,
+    unit_ids=None,
+    seed=None,
+    n_jobs=1,
+    progress_bar=False,
+    mp_context=None,
+    max_threads_per_worker=None,
+) -> dict:
+    """
+    Calculate principal component derived metrics.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     metric_names : list of str, default: None
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
-    qm_params : dict or None
+    metric_params : dict or None
         Dictionary with parameters for each PC metric function.
     unit_ids : list of int or None
         List of unit ids to compute metrics for.
@@ -85,15 +91,23 @@ def calculate_pc_metrics(
     pc_metrics : dict
         The computed PC metrics.
     """
+
+    if qm_params is not None and metric_params is None:
+        deprecation_msg = (
+            "`qm_params` is deprecated and will be removed in version 0.104.0. Please use metric_params instead"
+        )
+        warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
+        metric_params = qm_params
+
     pca_ext = sorting_analyzer.get_extension("principal_components")
     assert pca_ext is not None, "calculate_pc_metrics() need extension 'principal_components'"
 
     sorting = sorting_analyzer.sorting
 
     if metric_names is None:
-        metric_names = _possible_pc_metric_names
-    if qm_params is None:
-        qm_params = _default_params
+        metric_names = _possible_pc_metric_names.copy()
+    if metric_params is None:
+        metric_params = _default_params
 
     extremum_channels = get_template_extremum_channel(sorting_analyzer)
 
@@ -111,8 +125,13 @@ def calculate_pc_metrics(
     if "nn_isolation" in metric_names:
         pc_metrics["nn_unit_id"] = {}
 
+    possible_nn_metrics = ["nn_isolation", "nn_noise_overlap"]
+
+    nn_metrics = list(set(metric_names).intersection(possible_nn_metrics))
+    non_nn_metrics = list(set(metric_names).difference(possible_nn_metrics))
+
     # Compute nspikes and firing rate outside of main loop for speed
-    if any([n in metric_names for n in ["nn_isolation", "nn_noise_overlap"]]):
+    if nn_metrics:
         n_spikes_all_units = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
         fr_all_units = compute_firing_rates(sorting_analyzer, unit_ids=unit_ids)
     else:
@@ -120,9 +139,6 @@ def calculate_pc_metrics(
         fr_all_units = None
 
     run_in_parallel = n_jobs > 1
-
-    if run_in_parallel:
-        parallel_functions = []
 
     # this get dense projection for selected unit_ids
     dense_projections, spike_unit_indices = pca_ext.get_some_projections(channel_ids=None, unit_ids=unit_ids)
@@ -141,33 +157,35 @@ def calculate_pc_metrics(
         neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
 
         labels = all_labels[np.isin(all_labels, neighbor_unit_ids)]
-        pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
+        if pca_ext.params["mode"] == "concatenated":
+            pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)]
+        else:
+            pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
 
-        func_args = (
-            pcs_flat,
-            labels,
-            metric_names,
-            unit_id,
-            unit_ids,
-            qm_params,
-            seed,
-            n_spikes_all_units,
-            fr_all_units,
-        )
+        func_args = (pcs_flat, labels, non_nn_metrics, unit_id, unit_ids, metric_params, max_threads_per_worker)
+
         items.append(func_args)
 
-    if not run_in_parallel:
+    if not run_in_parallel and non_nn_metrics:
         units_loop = enumerate(unit_ids)
         if progress_bar:
-            units_loop = tqdm(units_loop, desc="calculate_pc_metrics", total=len(unit_ids))
+            units_loop = tqdm(units_loop, desc="calculate pc_metrics", total=len(unit_ids))
 
-        for unit_ind, unit_id in units_loop:
-            pca_metrics_unit = pca_metrics_one_unit(items[unit_ind])
+        for i, unit_id in units_loop:
+            pca_metrics_unit = pca_metrics_one_unit(items[i])
             for metric_name, metric in pca_metrics_unit.items():
                 pc_metrics[metric_name][unit_id] = metric
-    else:
-        with ProcessPoolExecutor(n_jobs) as executor:
+    elif run_in_parallel and non_nn_metrics:
+        if mp_context is not None and platform.system() == "Windows":
+            assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+        elif mp_context == "fork" and platform.system() == "Darwin":
+            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
+
+        with ProcessPoolExecutor(
+            max_workers=n_jobs,
+            mp_context=mp.get_context(mp_context),
+        ) as executor:
             results = executor.map(pca_metrics_one_unit, items)
             if progress_bar:
                 results = tqdm(results, total=len(unit_ids), desc="calculate_pc_metrics")
@@ -177,6 +195,59 @@ def calculate_pc_metrics(
                 for metric_name, metric in pca_metrics_unit.items():
                     pc_metrics[metric_name][unit_id] = metric
 
+    for metric_name in nn_metrics:
+        units_loop = enumerate(unit_ids)
+        if progress_bar:
+            units_loop = tqdm(units_loop, desc=f"calculate {metric_name} metric", total=len(unit_ids))
+
+        func = _nn_metric_name_to_func[metric_name]
+        metric_params = metric_params[metric_name] if metric_name in metric_params else {}
+
+        for _, unit_id in units_loop:
+            try:
+                res = func(
+                    sorting_analyzer,
+                    unit_id,
+                    seed=seed,
+                    n_spikes_all_units=n_spikes_all_units,
+                    fr_all_units=fr_all_units,
+                    **metric_params,
+                )
+            except:
+                if metric_name == "nn_isolation":
+                    res = (np.nan, np.nan)
+                elif metric_name == "nn_noise_overlap":
+                    res = np.nan
+
+            if metric_name == "nn_isolation":
+                nn_isolation, nn_unit_id = res
+                pc_metrics["nn_isolation"][unit_id] = nn_isolation
+                pc_metrics["nn_unit_id"][unit_id] = nn_unit_id
+            elif metric_name == "nn_noise_overlap":
+                pc_metrics["nn_noise_overlap"][unit_id] = res
+
+    return pc_metrics
+
+
+def calculate_pc_metrics(
+    sorting_analyzer, metric_names=None, metric_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
+):
+    warnings.warn(
+        "The `calculate_pc_metrics` function is deprecated and will be removed in 0.103.0. Please use compute_pc_metrics instead",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
+
+    pc_metrics = compute_pc_metrics(
+        sorting_analyzer,
+        metric_names=metric_names,
+        metric_params=metric_params,
+        unit_ids=unit_ids,
+        seed=seed,
+        n_jobs=n_jobs,
+        progress_bar=progress_bar,
+    )
+
     return pc_metrics
 
 
@@ -185,7 +256,8 @@ def calculate_pc_metrics(
 
 
 def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
-    """Calculates isolation distance and L-ratio (metrics computed from Mahalanobis distance)
+    """
+    Calculate isolation distance and L-ratio (metrics computed from Mahalanobis distance).
 
     Parameters
     ----------
@@ -207,6 +279,8 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
     ----------
     Based on metrics described in [Schmitzer-Torbert]_
     """
+    import scipy.stats
+    import scipy.spatial.distance
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
     pcs_for_other_units = all_pcs[all_labels != this_unit_id, :]
@@ -239,8 +313,9 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
     return isolation_distance, l_ratio
 
 
-def lda_metrics(all_pcs, all_labels, this_unit_id):
-    """Calculates d-prime based on Linear Discriminant Analysis.
+def lda_metrics(all_pcs, all_labels, this_unit_id) -> float:
+    """
+    Calculate d-prime based on Linear Discriminant Analysis.
 
     Parameters
     ----------
@@ -260,6 +335,7 @@ def lda_metrics(all_pcs, all_labels, this_unit_id):
     ----------
     Based on metric described in [Hill]_
     """
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
     X = all_pcs
 
@@ -282,7 +358,7 @@ def lda_metrics(all_pcs, all_labels, this_unit_id):
 
 def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_neighbors):
     """
-    Calculates unit contamination based on NearestNeighbors search in PCA space.
+    Calculate unit contamination based on NearestNeighbors search in PCA space.
 
     Parameters
     ----------
@@ -317,6 +393,7 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
     ----------
     Based on metrics described in [Chung]_
     """
+    from sklearn.neighbors import NearestNeighbors
 
     total_spikes = all_pcs.shape[0]
     ratio = max_spikes / total_spikes
@@ -365,18 +442,19 @@ def nearest_neighbors_isolation(
     min_spatial_overlap: float = 0.5,
     seed=None,
 ):
-    """Calculates unit isolation based on NearestNeighbors search in PCA space.
+    """
+    Calculate unit isolation based on NearestNeighbors search in PCA space.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     this_unit_id : int | str
         The ID for the unit to calculate these metrics for.
-    n_spikes_all_units: dict, default: None
+    n_spikes_all_units : dict, default: None
         Dictionary of the form ``{<unit_id>: <n_spikes>}`` for the waveform extractor.
         Recomputed if None.
-    fr_all_units: dict, default: None
+    fr_all_units : dict, default: None
         Dictionary of the form ``{<unit_id>: <firing_rate>}`` for the waveform extractor.
         Recomputed if None.
     max_spikes : int, default: 1000
@@ -395,12 +473,12 @@ def nearest_neighbors_isolation(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: "neg" | "pos" | "both", default: "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The peak_sign used to compute sparsity and neighbor units. Used if sorting_analyzer
         is not sparse already.
     min_spatial_overlap : float, default: 100
         In case sorting_analyzer is sparse, other units are selected if they share at least
-        `min_spatial_overlap` times `n_target_unit_channels` with the target unit
+        `min_spatial_overlap` times `n_target_unit_channels` with the target unit.
     seed : int, default: None
         Seed for random subsampling of spikes.
 
@@ -410,7 +488,7 @@ def nearest_neighbors_isolation(
         The calculation nearest neighbor isolation metric for `this_unit_id`.
         If the unit has fewer than `min_spikes`, returns numpy.NaN instead.
     nn_unit_id : np.int16
-        Id of the "nearest neighbor" unit (unit with lowest isolation score from `this_unit_id`)
+        Id of the "nearest neighbor" unit (unit with lowest isolation score from `this_unit_id`).
 
     Notes
     -----
@@ -442,6 +520,8 @@ def nearest_neighbors_isolation(
     ----------
     Based on isolation metric described in [Chung]_
     """
+    from sklearn.decomposition import IncrementalPCA
+
     rng = np.random.default_rng(seed=seed)
 
     waveforms_ext = sorting_analyzer.get_extension("waveforms")
@@ -578,18 +658,19 @@ def nearest_neighbors_noise_overlap(
     peak_sign: str = "neg",
     seed=None,
 ):
-    """Calculates unit noise overlap based on NearestNeighbors search in PCA space.
+    """
+    Calculate unit noise overlap based on NearestNeighbors search in PCA space.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
     this_unit_id : int | str
         The ID of the unit to calculate this metric on.
-    n_spikes_all_units: dict, default: None
+    n_spikes_all_units : dict, default: None
         Dictionary of the form ``{<unit_id>: <n_spikes>}`` for the waveform extractor.
         Recomputed if None.
-    fr_all_units: dict, default: None
+    fr_all_units : dict, default: None
         Dictionary of the form ``{<unit_id>: <firing_rate>}`` for the waveform extractor.
         Recomputed if None.
     max_spikes : int, default: 1000
@@ -606,7 +687,7 @@ def nearest_neighbors_noise_overlap(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: "neg" | "pos" | "both", default: "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The peak_sign used to compute sparsity and neighbor units. Used if sorting_analyzer
         is not sparse already.
     seed : int, default: 0
@@ -636,6 +717,8 @@ def nearest_neighbors_noise_overlap(
     ----------
     Based on noise overlap metric described in [Chung]_
     """
+    from sklearn.decomposition import IncrementalPCA
+
     rng = np.random.default_rng(seed=seed)
 
     waveforms_ext = sorting_analyzer.get_extension("waveforms")
@@ -643,6 +726,14 @@ def nearest_neighbors_noise_overlap(
 
     templates_ext = sorting_analyzer.get_extension("templates")
     assert templates_ext is not None, "nearest_neighbors_isolation() need extension 'templates'"
+
+    try:
+        sorting_analyzer.get_extension("templates").get_data(operator="median")
+    except KeyError:
+        warnings.warn(
+            "nearest_neighbors_isolation() need extension 'templates' calculated with the 'median' operator."
+            "You can run sorting_analyzer.compute('templates', operators=['average', 'median']) to calculate templates based on both average and median modes."
+        )
 
     if n_spikes_all_units is None:
         n_spikes_all_units = compute_num_spikes(sorting_analyzer)
@@ -740,7 +831,8 @@ def nearest_neighbors_noise_overlap(
 
 
 def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
-    """Calculates the simplified silhouette score for each cluster. The value ranges
+    """
+    Calculate the simplified silhouette score for each cluster. The value ranges
     from -1 (bad clustering) to 1 (good clustering). The simplified silhoutte score
     utilizes the centroids for distance calculations rather than pairwise calculations.
 
@@ -756,12 +848,13 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
     Returns
     -------
     unit_silhouette_score : float
-        Simplified Silhouette Score for this unit
+        Simplified Silhouette Score for this unit.
 
     References
     ----------
     Based on simplified silhouette score suggested by [Hruschka]_
     """
+    import scipy.spatial.distance
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
     centroid_for_this_unit = np.expand_dims(np.mean(pcs_for_this_unit, 0), 0)
@@ -789,7 +882,8 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
 
 
 def silhouette_score(all_pcs, all_labels, this_unit_id):
-    """Calculates the silhouette score which is a marker of cluster quality ranging from
+    """
+    Calculate the silhouette score which is a marker of cluster quality ranging from
     -1 (bad clustering) to 1 (good clustering). Distances are all calculated as pairwise
     comparisons of all data points.
 
@@ -805,12 +899,13 @@ def silhouette_score(all_pcs, all_labels, this_unit_id):
     Returns
     -------
     unit_silhouette_score : float
-        Silhouette Score for this unit
+        Silhouette Score for this unit.
 
     References
     ----------
     Based on [Rousseeuw]_
     """
+    import scipy.spatial.distance
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
     distances_for_this_unit = scipy.spatial.distance.cdist(pcs_for_this_unit, pcs_for_this_unit)
@@ -845,7 +940,7 @@ def _subtract_clip_component(clip1, component):
 
 def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
     """
-    Computes the isolation score used for nn_isolation and nn_noise_overlap
+    Compute the isolation score used for nn_isolation and nn_noise_overlap.
 
     Parameters
     ----------
@@ -870,6 +965,7 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
         (1) ranges from 0 to 1; and
         (2) is symmetric, i.e. Isolation(A, B) = Isolation(B, A)
     """
+    from sklearn.neighbors import NearestNeighbors
 
     # get lengths
     n_spikes_target = pcs_target_unit.shape[0]
@@ -898,22 +994,17 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
 
 
 def pca_metrics_one_unit(args):
-    (
-        pcs_flat,
-        labels,
-        metric_names,
-        unit_id,
-        unit_ids,
-        qm_params,
-        seed,
-        # we_folder,
-        n_spikes_all_units,
-        fr_all_units,
-    ) = args
 
-    # if "nn_isolation" in metric_names or "nn_noise_overlap" in metric_names:
-    #     we = load_waveforms(we_folder)
+    (pcs_flat, labels, metric_names, unit_id, unit_ids, metric_params, max_threads_per_worker) = args
 
+    if max_threads_per_worker is None:
+        return _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, metric_params)
+    else:
+        with threadpool_limits(limits=int(max_threads_per_worker)):
+            return _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, metric_params)
+
+
+def _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, metric_params):
     pc_metrics = {}
     # metrics
     if "isolation_distance" in metric_names or "l_ratio" in metric_names:
@@ -922,6 +1013,7 @@ def pca_metrics_one_unit(args):
         except:
             isolation_distance = np.nan
             l_ratio = np.nan
+
         if "isolation_distance" in metric_names:
             pc_metrics["isolation_distance"] = isolation_distance
         if "l_ratio" in metric_names:
@@ -935,12 +1027,13 @@ def pca_metrics_one_unit(args):
                 d_prime = lda_metrics(pcs_flat, labels, unit_id)
             except:
                 d_prime = np.nan
+
         pc_metrics["d_prime"] = d_prime
 
     if "nearest_neighbor" in metric_names:
         try:
             nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(
-                pcs_flat, labels, unit_id, **qm_params["nearest_neighbor"]
+                pcs_flat, labels, unit_id, **metric_params["nearest_neighbor"]
             )
         except:
             nn_hit_rate = np.nan
@@ -948,38 +1041,8 @@ def pca_metrics_one_unit(args):
         pc_metrics["nn_hit_rate"] = nn_hit_rate
         pc_metrics["nn_miss_rate"] = nn_miss_rate
 
-    if "nn_isolation" in metric_names:
-        try:
-            nn_isolation, nn_unit_id = nearest_neighbors_isolation(
-                we,
-                unit_id,
-                seed=seed,
-                n_spikes_all_units=n_spikes_all_units,
-                fr_all_units=fr_all_units,
-                **qm_params["nn_isolation"],
-            )
-        except:
-            nn_isolation = np.nan
-            nn_unit_id = np.nan
-        pc_metrics["nn_isolation"] = nn_isolation
-        pc_metrics["nn_unit_id"] = nn_unit_id
-
-    if "nn_noise_overlap" in metric_names:
-        try:
-            nn_noise_overlap = nearest_neighbors_noise_overlap(
-                we,
-                unit_id,
-                n_spikes_all_units=n_spikes_all_units,
-                fr_all_units=fr_all_units,
-                seed=seed,
-                **qm_params["nn_noise_overlap"],
-            )
-        except:
-            nn_noise_overlap = np.nan
-        pc_metrics["nn_noise_overlap"] = nn_noise_overlap
-
     if "silhouette" in metric_names:
-        silhouette_method = qm_params["silhouette"]["method"]
+        silhouette_method = metric_params["silhouette"]["method"]
         if "simplified" in silhouette_method:
             try:
                 unit_silhouette_score = simplified_silhouette_score(pcs_flat, labels, unit_id)
@@ -994,3 +1057,9 @@ def pca_metrics_one_unit(args):
             pc_metrics["silhouette_full"] = unit_silhouette_score
 
     return pc_metrics
+
+
+_nn_metric_name_to_func = {
+    "nn_isolation": nearest_neighbors_isolation,
+    "nn_noise_overlap": nearest_neighbors_noise_overlap,
+}

@@ -15,22 +15,20 @@ class ClipRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be transformed
-    a_min: float or None, default: None
+    a_min : float or None, default: None
         Minimum value. If `None`, clipping is not performed on lower
         interval edge.
-    a_max: float or None, default: None
+    a_max : float or None, default: None
         Maximum value. If `None`, clipping is not performed on upper
         interval edge.
 
     Returns
     -------
-    rescaled_traces: ClipTracesRecording
+    rescaled_traces : ClipTracesRecording
         The clipped traces recording extractor object
     """
-
-    name = "clip"
 
     def __init__(self, recording, a_min=None, a_max=None):
         value_min = a_min
@@ -57,36 +55,34 @@ class BlankSaturationRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor to be transformed
         Minimum value. If `None`, clipping is not performed on lower
         interval edge.
-    abs_threshold: float or None, default: None
+    abs_threshold : float or None, default: None
         The absolute value for considering that the signal is saturating
-    quantile_threshold: float or None, default: None
+    quantile_threshold : float or None, default: None
         Tha value in [0, 1] used if abs_threshold is None to automatically set the
         abs_threshold given the data. Must be provided if abs_threshold is None
-    direction: "upper" | "lower" | "both", default: "upper"
+    direction : "upper" | "lower" | "both", default: "upper"
         Only values higher than the detection threshold are set to fill_value ("higher"),
         or only values lower than the detection threshold ("lower"), or both ("both")
-    fill_value: float or None, default: None
+    fill_value : float or None, default: None
         The value to write instead of the saturating signal. If None, then the value is
         automatically computed as the median signal value
-    num_chunks_per_segment: int, default: 50
+    num_chunks_per_segment : int, default: 50
         The number of chunks per segments to consider to estimate the threshold/fill_values
-    chunk_size: int, default: 500
+    chunk_size : int, default: 500
         The chunk size to estimate the threshold/fill_values
-    seed: int, default: 0
+    seed : int, default: 0
         The seed to select the random chunks
 
     Returns
     -------
-    rescaled_traces: BlankSaturationRecording
+    rescaled_traces : BlankSaturationRecording
         The filtered traces recording extractor object
 
     """
-
-    name = "blank_staturation"
 
     def __init__(
         self,

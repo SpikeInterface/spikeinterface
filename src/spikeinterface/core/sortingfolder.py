@@ -22,7 +22,6 @@ class NumpyFolderSorting(BaseSorting):
 
     """
 
-    extractor_name = "NumpyFolderSorting"
     mode = "folder"
     name = "NumpyFolder"
 
@@ -38,7 +37,7 @@ class NumpyFolderSorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self.spikes = np.load(folder_path / "spikes.npy", mmap_mode="r")
+        self.spikes = np.load(folder_path / "spikes.npy")
 
         for segment_index in range(num_segments):
             self.add_sorting_segment(SpikeVectorSortingSegment(self.spikes, segment_index, unit_ids))
@@ -83,15 +82,14 @@ class NpzFolderSorting(NpzSortingExtractor):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
 
     Returns
     -------
-    sorting: NpzFolderSorting
+    sorting : NpzFolderSorting
         The sorting
     """
 
-    extractor_name = "NpzFolder"
     mode = "folder"
     name = "npzfolder"
 

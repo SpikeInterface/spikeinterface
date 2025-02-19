@@ -15,7 +15,7 @@ results.
 **Note** : :py:func:`~spikeinterface.exporters.export_to_phy` speed and the size of the folder will highly depend
 on the sparsity of the :code:`SortingAnalyzer` itself or the external specified sparsity.
 The Phy viewer enables one to explore PCA projections, spike amplitudes, waveforms and quality of spike sorting results.
-So if these pieces of information have already been computed as extensions (see :ref:`analyzer_extensions`),
+So if these pieces of information have already been computed as extensions (see :ref:`modules/postprocessing:Extensions as AnalyzerExtensions`),
 then exporting to Phy should be fast (and the user has better control of the parameters for the extensions).
 If not pre-computed, then the required extensions (e.g., :code:`spike_amplitudes`, :code:`principal_components`)
 can be computed directly at export time.

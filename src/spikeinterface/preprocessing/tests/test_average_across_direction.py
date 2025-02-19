@@ -8,13 +8,6 @@ from spikeinterface.preprocessing import AverageAcrossDirectionRecording, averag
 
 import numpy as np
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
-
 
 def test_average_across_direction():
     # gradient recording with 100 samples and 10 channels
@@ -43,6 +36,13 @@ def test_average_across_direction():
     geom_avgy = rec_avgy.get_channel_locations()
     assert np.all(geom_avgy[:2, 0] == 0)
     assert np.all(geom_avgy[2, 0] == 1.5)
+
+    # test with channel ids
+    # use chans at y in (1, 2)
+    traces = rec_avgy.get_traces(channel_ids=["0-1", "2-3"])
+    assert traces.shape == (100, 2)
+    assert np.all(traces[:, 0] == 0.5)
+    assert np.all(traces[:, 1] == 2.5)
 
     # test averaging across x
     rec_avgx = average_across_direction(rec, direction="x")
