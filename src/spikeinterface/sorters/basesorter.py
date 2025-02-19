@@ -153,8 +153,15 @@ class BaseSorter:
         return output_folder
 
     @classmethod
+    def _dynamic_params(cls):
+        # optional
+        # can be implemented in subclass for dynamic default parameters
+        return cls._default_params, cls._params_description
+
+    @classmethod
     def default_params(cls):
-        p = copy.deepcopy(cls._default_params)
+        default_params, _ = cls._dynamic_params()
+        p = copy.deepcopy(default_params)
         if cls.requires_binary_data:
             job_kwargs = get_global_job_kwargs()
             p.update(job_kwargs)
@@ -162,7 +169,8 @@ class BaseSorter:
 
     @classmethod
     def params_description(cls):
-        p = copy.deepcopy(cls._params_description)
+        _, default_params_description = cls._dynamic_params()
+        p = copy.deepcopy(default_params_description)
         if cls.requires_binary_data:
             p.update(default_job_kwargs_description)
         return p
