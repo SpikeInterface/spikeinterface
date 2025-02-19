@@ -9,7 +9,6 @@ class BasePreprocessor(BaseRecording):
     def __init__(self, recording, sampling_frequency=None, channel_ids=None, dtype=None):
         assert isinstance(recording, BaseRecording), "'recording' must be a RecordingExtractor"
 
-        self._parent_recording = recording
         if sampling_frequency is None:
             sampling_frequency = recording.get_sampling_frequency()
         if channel_ids is None:

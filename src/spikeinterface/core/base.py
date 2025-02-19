@@ -79,6 +79,31 @@ class BaseExtractor:
         # preferred context for multiprocessing
         self._preferred_mp_context = None
 
+    def _repr_html_(self, display_name=True):
+        pass
+
+    def _get_common_repr_html(self, common_style):
+        html_annotations = f"<details style='{common_style}'>  <summary><strong>Annotations</strong></summary><ul>"
+        for key, value in self._annotations.items():
+            html_annotations += f"<li> <strong> {key} </strong>: {value}</li>"
+        html_annotations += f"</details>"
+
+        html_properties = f"<details style='{common_style}'><summary><strong>Properties</strong></summary><ul>"
+        for key, value in self._properties.items():
+            # Add a further indent for each property
+            value_formatted = np.asarray(value)
+            html_properties += f"<details><summary><strong>{key}</strong></summary>{value_formatted}</details>"
+        html_properties += "</ul></details>"
+
+        if self.get_parent():
+            html_parent = f"<details style='{common_style}'>  <summary><strong>Parent</strong></summary><ul>"
+            display_name = self.name != self.get_parent().name
+            html_parent += self.get_parent()._repr_html_(display_name=display_name)
+            html_parent += "</ul></details>"
+        else:
+            html_parent = ""
+        return html_annotations + html_properties + html_parent
+
     @property
     def name(self):
         name = self._annotations.get("name", None)
