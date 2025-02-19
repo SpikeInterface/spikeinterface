@@ -194,7 +194,7 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None):
         case_keys = list(study.cases.keys())
 
     num_axes = len(case_keys)
-    fig, axs = plt.subplots(ncols=num_axes)
+    fig, axs = plt.subplots(ncols=num_axes, squeeze=False)
 
     for count, key in enumerate(case_keys):
         ax = axs.flatten()[count]
@@ -215,7 +215,9 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None):
         ax.set_xticks([])
 
 
-def plot_performances_vs_snr(study, case_keys=None, figsize=None, metrics=["accuracy", "recall", "precision"]):
+def plot_performances_vs_snr(
+    study, case_keys=None, figsize=None, metrics=["accuracy", "recall", "precision"], snr_dataset_reference=None
+):
     import matplotlib.pyplot as plt
 
     if case_keys is None:
@@ -229,7 +231,13 @@ def plot_performances_vs_snr(study, case_keys=None, figsize=None, metrics=["accu
         for key in case_keys:
             label = study.cases[key]["label"]
 
-            analyzer = study.get_sorting_analyzer(key)
+            if snr_dataset_reference is None:
+                # use the SNR of each dataset
+                analyzer = study.get_sorting_analyzer(key)
+            else:
+                # use the same SNR from a reference dataset
+                analyzer = study.get_sorting_analyzer(dataset_key=snr_dataset_reference)
+
             metrics = analyzer.get_extension("quality_metrics").get_data()
             x = metrics["snr"].values
             y = study.get_result(key)["gt_comparison"].get_performance()[k].values
