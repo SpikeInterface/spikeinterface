@@ -225,7 +225,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 if self.get_num_channels() != total_channels:
                     # need slice because not all channel are saved
                     chans = probeinterface.get_saved_channel_indices_from_openephys_settings(settings_file, oe_stream)
-                    # leOpenEphysBinaryRecordingExtractorts clip to 384 because this contains also the synchro channel
+                    # lets clip to 384 because this contains also the synchro channel
                     chans = chans[chans < total_channels]
                     sample_shifts = sample_shifts[chans]
                 self.set_property("inter_sample_shift", sample_shifts)
@@ -251,7 +251,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     warnings.warn(f"Could not load synchronized timestamps for {stream_name}")
 
         self.annotate(experiment_name=f"experiment{exp_id}")
-        self._stream_folOpenEphysBinaryRecordingExtractorders = stream_folders
+        self._stream_folders = stream_folders
 
         self._kwargs.update(
             dict(
