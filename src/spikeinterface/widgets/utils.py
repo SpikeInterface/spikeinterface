@@ -4,7 +4,14 @@ import numpy as np
 
 
 def get_some_colors(
-    keys, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None, margin=None, resample=True,
+    keys,
+    color_engine="auto",
+    map_name="gist_ncar",
+    format="RGBA",
+    shuffle=None,
+    seed=None,
+    margin=None,
+    resample=True,
 ):
     """
     Return a dict of colors for given keys

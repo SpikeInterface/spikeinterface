@@ -1,6 +1,7 @@
 import numpy as np
 import warnings
 
+
 def _simpleaxis(ax):
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -303,7 +304,6 @@ def plot_performances_comparison(
     ax.legend(handles=patches)
     fig.tight_layout()
     return fig
-
 
 
 def sigmoid(x, x0, k, b):

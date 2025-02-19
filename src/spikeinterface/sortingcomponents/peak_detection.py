@@ -581,7 +581,6 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         # else:
         #     medians = None
 
-
         channel_distance = get_channel_distances(recording)
         neighbours_mask = channel_distance <= radius_um
         return (peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask)
@@ -599,7 +598,6 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         #     traces = traces - medians
 
         traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
-
 
         if peak_sign in ("pos", "both"):
             peak_mask = traces_center > abs_thresholds[None, :]

@@ -291,9 +291,6 @@ def remove_empty_templates(templates):
     )
 
 
-
-
-
 def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):
     from spikeinterface.core.job_tools import ensure_chunk_size
     from spikeinterface.core.job_tools import divide_segment_into_chunks

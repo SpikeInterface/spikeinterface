@@ -151,7 +151,7 @@ class PeakDetectionStudy(BenchmarkStudy):
     def plot_performances_vs_snr(self, case_keys=None, figsize=(15, 15), detect_threshold=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        
+
         import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
@@ -173,17 +173,12 @@ class PeakDetectionStudy(BenchmarkStudy):
                     ymin, ymax = ax.get_ylim()
                     ax.plot([detect_threshold, detect_threshold], [ymin, ymax], "k--")
 
-                
                 popt = fit_sigmoid(x, y, p0=None)
-                xfit = np.linspace(0,  max(metrics["snr"].values), 100)
+                xfit = np.linspace(0, max(metrics["snr"].values), 100)
                 ax.plot(xfit, sigmoid(xfit, *popt), color=color)
-
 
             if count == 2:
                 ax.legend()
-
-
-
 
     def plot_detected_amplitudes(self, case_keys=None, figsize=(15, 5), detect_threshold=None):
 
@@ -257,7 +252,6 @@ class PeakDetectionStudy(BenchmarkStudy):
                 else:
                     distances[i] = sklearn.metrics.pairwise_distances(a[None, :], b[None, :], metric)[0, 0]
 
-
             color = self.get_colors()[key]
 
             label = self.cases[key]["label"]
@@ -268,13 +262,12 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.scatter(x, y, marker=".", label=label, color=color)
 
             popt = fit_sigmoid(x, y, p0=None)
-            xfit = np.linspace(0,  max(metrics["snr"].values), 100)
+            xfit = np.linspace(0, max(metrics["snr"].values), 100)
             ax.plot(xfit, sigmoid(xfit, *popt), color=color)
 
         if detect_threshold is not None:
             ymin, ymax = ax.get_ylim()
             ax.plot([detect_threshold, detect_threshold], [ymin, ymax], "k--")
-
 
         ax.legend()
         ax.set_xlabel("snr")
