@@ -372,24 +372,24 @@ def compute_merge_unit_groups(
 
 
 def resolve_pairs(existing_merges, new_merges):
-    """ 
+    """
     Convenient function used to resolve nested merges when merging units recursively.
 
     Parameters
     ----------
 
-    existing_merges : dict 
+    existing_merges : dict
         The keys are the unit ids and the values are the list of unit ids to merge with
     new_merges : dict
         The keys are the new units ids that are merged, and the values are the list of unit ids to merge with
-    
-    Returns
-    -------    
 
-    resolved_merges : dict 
+    Returns
+    -------
+
+    resolved_merges : dict
         The keys are the unit_ids, and the values are the list of unit_ids to merge with, solving the potential
         nested merges.
-    
+
 
     """
 
@@ -726,7 +726,7 @@ def auto_merge_units(
     have a finer control on these values, please precompute the extensions before applying the auto_merge
 
     If you have errors on sparsity_threshold, this is because you are trying to perform soft_merges for units
-    that are barely overlapping. While in theory this should not happen, if this is the case, it means that either 
+    that are barely overlapping. While in theory this should not happen, if this is the case, it means that either
     you are trying to perform too aggressive merges (and thus check params), and/or that you should switch to hard merges.
 
     Returns
