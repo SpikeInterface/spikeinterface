@@ -55,7 +55,7 @@ class TridesclousPeeler(BaseTemplateMatching):
         motion_aware=False,
         motion=None,
         drifting_templates=None,
-        motion_step_um = 2.0,
+        motion_step_um=2.0,
         use_fine_detector=True,
         # TODO optimize theses radius
         detection_radius_um=80.0,
@@ -69,7 +69,6 @@ class TridesclousPeeler(BaseTemplateMatching):
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output, parents=parents)
-
 
         self.motion_aware = motion_aware
 
@@ -123,9 +122,9 @@ class TridesclousPeeler(BaseTemplateMatching):
             if drifting_templates is None:
                 # drifting template can be done externally to fasten the startup
                 self.drifting_templates = DriftingTemplates.from_static_templates(templates)
-                
+
                 min_, max_ = self.motion.get_boundaries()
-                steps = np.arange(min_, max_+motion_step_um/2, motion_step_um)
+                steps = np.arange(min_, max_ + motion_step_um / 2, motion_step_um)
                 displacements = np.zeros((steps.size, 2), dtype="float64")
                 displacements[:, self.motion.dim] = steps
                 interpolation_kwargs = dict(interpolation_method="cubic")
@@ -138,20 +137,20 @@ class TridesclousPeeler(BaseTemplateMatching):
             if templates.sparsity is not None:
                 # TODO later : move this logic into DriftingTemplate directly
                 max_num_active_channels = max(np.sum(self.sparsity_mask, axis=1))
-                sparsified_shape = templates_array_moved.shape[:-1] + (max_num_active_channels, )
+                sparsified_shape = templates_array_moved.shape[:-1] + (max_num_active_channels,)
                 self.sparse_templates_array_moved = np.zeros(shape=sparsified_shape, dtype=templates_array_moved.dtype)
                 for unit_index in range(unit_ids.size):
                     chans = np.flatnonzero(self.sparsity_mask[unit_index, :])
                     for d in range(templates_array_moved.shape[0]):
                         sparsified = templates_array_moved[d, unit_index, :, :][:, chans]
-                        self.sparse_templates_array_moved[d, unit_index, :, :chans.size] = sparsified
+                        self.sparse_templates_array_moved[d, unit_index, :, : chans.size] = sparsified
             else:
                 self.sparse_templates_array_moved = templates_array_moved
 
             self.sparse_templates_array_static = None
 
             # interpolation bins edges
-            interpolation_time_bin_size_s = 1.
+            interpolation_time_bin_size_s = 1.0
             self.interpolation_time_bins_s = []
             self.interpolation_time_bin_edges_s = []
             for segment_index, parent_segment in enumerate(recording._recording_segments):
@@ -171,7 +170,6 @@ class TridesclousPeeler(BaseTemplateMatching):
             self.interpolation_time_bins_s = None
             self.interpolation_time_bin_edges_s = None
             self.sparse_templates_array_static = templates.templates_array
-
 
         extremum_chan = get_template_extremum_channel(templates, peak_sign=peak_sign, outputs="index")
         # as numpy vector
@@ -266,9 +264,6 @@ class TridesclousPeeler(BaseTemplateMatching):
         self.peeler_margin = max(self.nbefore, self.nafter) * 2
         self.margin = max(self.peeler_margin, self.detector_margin0, self.detector_margin1)
 
-
-
-
     def get_trace_margin(self):
         return self.margin
 
@@ -277,15 +272,13 @@ class TridesclousPeeler(BaseTemplateMatching):
         # TODO check if this is usefull
         residuals = traces.copy()
 
-
         if self.motion_aware:
             # we need to split [start_frame, end_frame] into sub bins to match the motion
 
             # see also interpolate_motion_on_traces() maybe factorize this trick
             times = self.recording.sample_index_to_time(np.arange(start_frame, end_frame), segment_index=segment_index)
             # print(traces.shape, times.shape, start_frame, end_frame, self.margin)
-            assert times.shape[0] == (traces.shape[0] - 2 *self.margin)
-
+            assert times.shape[0] == (traces.shape[0] - 2 * self.margin)
 
             time_bin_edge = self.interpolation_time_bin_edges_s[segment_index]
             interpolation_bin_inds = np.searchsorted(time_bin_edge, times, side="right") - 1
@@ -294,9 +287,6 @@ class TridesclousPeeler(BaseTemplateMatching):
             n_bins = time_bin_edge.shape[0] - 1
             np.clip(interpolation_bin_inds, 0, n_bins - 1, out=interpolation_bin_inds)
 
-
-            
-            
             total_num_chans = self.channel_locations.shape[0]
             interp_times = np.empty(total_num_chans)
             interpolation_bins_here = np.arange(interpolation_bin_inds[0], interpolation_bin_inds[-1] + 1)
@@ -319,7 +309,6 @@ class TridesclousPeeler(BaseTemplateMatching):
                 #     # TODO REMOVE this hack
                 #     channel_motions[:] = 0
 
-
                 # quick search logic to find frames corresponding to this interpolation bin in the recording
                 # quickly find the end of this bin, which is also the start of the next
                 next_start_index = current_start_index + np.searchsorted(
@@ -327,9 +316,9 @@ class TridesclousPeeler(BaseTemplateMatching):
                 )
                 # frames_in_bin = slice(current_start_index, next_start_index)
                 # times vector is WITHOUT margin so need a shift in the slice
-                local_residuals = residuals[current_start_index:next_start_index+2*self.margin]
+                local_residuals = residuals[current_start_index : next_start_index + 2 * self.margin]
 
-                loop.append( (current_start_index, next_start_index+2*self.margin, channel_motions) )
+                loop.append((current_start_index, next_start_index + 2 * self.margin, channel_motions))
 
                 current_start_index = next_start_index
 
@@ -338,7 +327,6 @@ class TridesclousPeeler(BaseTemplateMatching):
             stop = residuals.shape[0]
             channel_motions = None
             loop = [(start, stop, channel_motions)]
-
 
         # # LOOP over interpolation bins
         # for count, interp_bin_ind in enumerate(interpolation_bins_here):
@@ -355,7 +343,6 @@ class TridesclousPeeler(BaseTemplateMatching):
         #     if not self.motion_aware:
         #         # TODO REMOVE this hack
         #         channel_motions[:] = 0
-
 
         #     # quick search logic to find frames corresponding to this interpolation bin in the recording
         #     # quickly find the end of this bin, which is also the start of the next
@@ -377,7 +364,9 @@ class TridesclousPeeler(BaseTemplateMatching):
             use_fine_detector_level = False
             while True:
                 # print('level', level)
-                spikes = self._find_spikes_one_level(local_residuals, spikes_prev_loop, use_fine_detector_level, level, channel_motions)
+                spikes = self._find_spikes_one_level(
+                    local_residuals, spikes_prev_loop, use_fine_detector_level, level, channel_motions
+                )
                 if spikes.size > 0:
                     spikes_in_time_bin.append(spikes)
 
@@ -394,14 +383,12 @@ class TridesclousPeeler(BaseTemplateMatching):
                         continue
                     else:
                         break
-            
+
             for spikes in spikes_in_time_bin:
                 spikes["sample_index"] += start
-            
+
             all_spikes.extend(spikes_in_time_bin)
 
-            
-            
         if len(all_spikes) > 0:
             all_spikes = np.concatenate(all_spikes)
             order = np.argsort(all_spikes["sample_index"])
@@ -412,7 +399,6 @@ class TridesclousPeeler(BaseTemplateMatching):
         return all_spikes
 
     def _find_spikes_one_level(self, traces, spikes_prev_loop, use_fine_detector, level, channel_motions):
-        
 
         # print(use_fine_detector, level)
 
@@ -480,10 +466,12 @@ class TridesclousPeeler(BaseTemplateMatching):
                 # move this channel to the original position
                 peak_location_moved = self.channel_locations[chan_ind, :] - local_motion
                 # print(self.channel_locations)
-                chan_ind_moved = np.argmin(np.sum((self.channel_locations - peak_location_moved)**2, axis=1))
+                chan_ind_moved = np.argmin(np.sum((self.channel_locations - peak_location_moved) ** 2, axis=1))
                 # if np.sum(local_motion) != 0:
                 #     print("local_motion", local_motion, "chan_ind", chan_ind, "chan_ind_moved", chan_ind_moved)
-                displacement_index = np.argmin(np.sum((self.drifting_templates.displacements - local_motion)**2, axis=1))
+                displacement_index = np.argmin(
+                    np.sum((self.drifting_templates.displacements - local_motion) ** 2, axis=1)
+                )
                 templates_array = self.sparse_templates_array_moved[displacement_index, :, :, :]
 
                 template_norms = self.template_norms_moved[displacement_index, :]
@@ -492,7 +480,6 @@ class TridesclousPeeler(BaseTemplateMatching):
                 templates_array = self.sparse_templates_array_static
 
                 template_norms = self.template_norms_static
-
 
             possible_clusters = self.possible_clusters_by_channel[chan_ind_moved]
 
