@@ -291,6 +291,7 @@ def remove_empty_templates(templates):
         is_scaled=templates.is_scaled,
     )
 
+
 def create_sorting_analyzer_with_existing_templates(sorting, recording, templates, remove_empty=True):
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
