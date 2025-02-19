@@ -13,6 +13,29 @@ from collections import namedtuple
 import numpy as np
 
 
+def _is_documented_by(original):
+    def wrapper(target):
+        target.__doc__ = original.__doc__
+        return target
+
+    return wrapper
+
+
+def _make_pp_from_rec_or_dict(recording_or_dict_of_recordings, source_class, **args):
+    from spikeinterface.core.baserecording import BaseRecording
+
+    if isinstance(recording_or_dict_of_recordings, dict):
+        pp_dict = {
+            property_id: source_class(recording, **args)
+            for property_id, recording in recording_or_dict_of_recordings.items()
+        }
+        return pp_dict
+    elif isinstance(recording_or_dict_of_recordings, BaseRecording):
+        return source_class(recording_or_dict_of_recordings, **args)
+    else:
+        raise TypeError("You must supply a recording or a dictionary of recordings")
+
+
 def define_function_from_class(source_class, name):
     "Wrapper to change the name of a class"
 
