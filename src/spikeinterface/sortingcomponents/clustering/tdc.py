@@ -179,15 +179,15 @@ class TdcClustering:
                 n_pca_features=3,
             ),
             recursive=True,
-            recursive_depth=params["clustering"].get("recursive_depth", 3),
+            recursive_depth=params["clustering"]["recursive_depth"],
             returns_split_count=True,
             debug_folder=clustering_folder / "figure_debug_split",
             **job_kwargs,
         )
 
-        if params["clustering"].get("do_merge", True):
-            merge_radius_um = params["clustering"].get("merge_radius_um", 40)
-            threshold_diff = params["clustering"].get("threshold_diff", 1.5)
+        if params["clustering"]["do_merge"]:
+            merge_radius_um = params["clustering"]["merge_radius_um"]
+            threshold_diff = params["clustering"]["threshold_diff"]
 
             post_merge_label, peak_shifts = merge_clusters(
                 peaks,
