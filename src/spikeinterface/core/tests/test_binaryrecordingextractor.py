@@ -96,7 +96,7 @@ def test_sequential_reading_of_small_traces(folder_with_binary_files):
     # `num_chan` is kept for backward compatibility so including it at least one test
     # run is good to ensure that it is appropriately accepted as an argument
     recording = BinaryRecordingExtractor(
-        num_chan=num_channels,
+        num_channels=num_channels,
         file_paths=file_paths,
         sampling_frequency=sampling_frequency,
         dtype=dtype,
