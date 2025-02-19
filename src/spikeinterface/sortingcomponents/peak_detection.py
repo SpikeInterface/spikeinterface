@@ -698,8 +698,8 @@ class DetectPeakMatchedFiltering(PeakDetector):
         random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
         conv_random_data = self.get_convolved_traces(random_data)
         medians = np.median(conv_random_data, axis=1)
-        medians = medians[:, None]
-        noise_levels = np.median(np.abs(conv_random_data - medians), axis=1) / 0.6744897501960817
+        self.medians = medians[:, None]
+        noise_levels = np.median(np.abs(conv_random_data - self.medians), axis=1) / 0.6744897501960817
         self.abs_thresholds = noise_levels * detect_threshold
         self._dtype = np.dtype(base_peak_dtype + [("z", "float32")])
 
@@ -713,6 +713,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
         assert HAVE_NUMBA, "You need to install numba"
         conv_traces = self.get_convolved_traces(traces)
+        # conv_traces -= self.medians
         conv_traces /= self.abs_thresholds[:, None]
         conv_traces = conv_traces[:, self.conv_margin : -self.conv_margin]
         traces_center = conv_traces[:, self.exclude_sweep_size : -self.exclude_sweep_size]
