@@ -372,6 +372,27 @@ def compute_merge_unit_groups(
 
 
 def resolve_pairs(existing_merges, new_merges):
+    """ 
+    Convenient function used to resolve nested merges when merging units recursively.
+
+    Parameters
+    ----------
+
+    existing_merges : dict 
+        The keys are the unit ids and the values are the list of unit ids to merge with
+    new_merges : dict
+        The keys are the new units ids that are merged, and the values are the list of unit ids to merge with
+    
+    Returns
+    -------    
+
+    resolved_merges : dict 
+        The keys are the unit_ids, and the values are the list of unit_ids to merge with, solving the potential
+        nested merges.
+    
+
+    """
+
     if existing_merges is None:
         return new_merges.copy()
     else:
@@ -390,7 +411,7 @@ def resolve_pairs(existing_merges, new_merges):
         return resolved_merges
 
 
-def auto_merge_units_internal(
+def _auto_merge_units_single_iteration(
     sorting_analyzer: SortingAnalyzer,
     compute_merge_kwargs: dict = {},
     apply_merge_kwargs: dict = {},
@@ -400,25 +421,8 @@ def auto_merge_units_internal(
     **job_kwargs,
 ) -> SortingAnalyzer:
     """
-    Compute merge unit groups and apply it on a SortingAnalyzer.
+    Compute merge unit groups and apply it on a SortingAnalyzer. Used by auto_merge_units, see documentation there.
     Internally uses `compute_merge_unit_groups()`
-
-    Parameters
-    ----------
-    sorting_analyzer : SortingAnalyzer
-        The SortingAnalyzer
-    compute_merge_kwargs : dict
-        The params that should be given to auto_merge_units
-    apply_merge_kwargs : dict
-        The paramaters that should be used while merging units after each preset
-    recursive : bool, default: False
-        If True, then merges are performed recursively until no more merges can be performed, given the
-        compute_merge_kwargs
-    extra_outputs : bool, default: False
-        If True, additional list of merges applied, and dictionary (`outs`) with processed data are returned.
-    force_copy : boolean, default: True
-        When new extensions are computed, the default is to make a copy of the analyzer, to avoid overwriting
-        already computed extensions. False if you want to overwrite
 
     Returns
     -------
@@ -691,7 +695,8 @@ def auto_merge_units(
     """
     Wrapper to conveniently be able to launch several presets for auto_merge_units in a row, as a list.
     Merges are applied sequentially or until no more merges are done, one preset at a time, and extensions
-    are not recomputed thanks to the merging units.
+    are not recomputed thanks to the merging units. Internally, the function uses _auto_merge_units_single_iteration()
+    that is called for every preset and/or combinations of steps
 
     Parameters
     ----------
@@ -701,12 +706,12 @@ def auto_merge_units(
         A single preset or a list of presets, that should be applied iteratively to the data
     steps_params : dict or list of dict, default None
         The params that should be used for the steps or presets. Should be a single dict if only one steps,
-        or a list of dict is multiples steps (same size as presets)
+        or a list of dict if multiples steps (same size as presets)
     steps : list or list of list, default None
         The list of steps that should be applied. If list of list is provided, then these lists will be applied
         iteratively. Mutually exclusive with presets
     apply_merge_kwargs : dict
-        The paramaters that should be used while merging units after each preset
+        The paramaters that should be used while merging units after each preset/sequences of steps
     recursive : bool, default: False
         If True, then each presets of the list is applied until no further merges can be done, before trying
         the next one
@@ -721,7 +726,8 @@ def auto_merge_units(
     have a finer control on these values, please precompute the extensions before applying the auto_merge
 
     If you have errors on sparsity_threshold, this is because you are trying to perform soft_merges for units
-    that are barely overlapping. While in theory this should
+    that are barely overlapping. While in theory this should not happen, if this is the case, it means that either 
+    you are trying to perform too aggressive merges (and thus check params), and/or that you should switch to hard merges.
 
     Returns
     -------
@@ -767,7 +773,7 @@ def auto_merge_units(
 
         compute_merge_kwargs.update({"steps_params": params})
         # print(compute_merge_kwargs)
-        sorting_analyzer = auto_merge_units_internal(
+        sorting_analyzer = _auto_merge_units_single_iteration(
             sorting_analyzer,
             compute_merge_kwargs,
             apply_merge_kwargs=apply_merge_kwargs,
