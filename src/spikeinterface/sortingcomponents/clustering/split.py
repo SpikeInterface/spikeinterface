@@ -205,7 +205,7 @@ class LocalFeatureClustering:
         recursion_level=1,
         debug_folder=None,
         clusterer="hdbscan",
-        clusterer_kwargs={"min_cluster_size": 25, "min_samples":5},
+        clusterer_kwargs={"min_cluster_size": 25, "min_samples": 5},
         feature_name="sparse_tsvd",
         neighbours_mask=None,
         waveforms_sparse_mask=None,

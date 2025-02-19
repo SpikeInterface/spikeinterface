@@ -125,7 +125,6 @@ def merge_clusters(
     merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="partial")
     # merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full")
 
-
     group_shifts = resolve_final_shifts(labels_set, merges, pair_mask, pair_shift)
 
     # apply final label and shift

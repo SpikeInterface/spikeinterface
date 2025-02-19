@@ -41,7 +41,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
         "svd": {"n_components": 6},
         "clustering": {
-            "recursive_depth":3,
+            "recursive_depth": 3,
             "split_radius_um": 40.0,
             "clusterer": "hdbscan",
             "clusterer_kwargs": {
