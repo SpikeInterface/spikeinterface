@@ -4,7 +4,14 @@ import numpy as np
 
 
 def get_some_colors(
-    keys, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None, margin=None
+    keys,
+    color_engine="auto",
+    map_name="gist_ncar",
+    format="RGBA",
+    shuffle=None,
+    seed=None,
+    margin=None,
+    resample=True,
 ):
     """
     Return a dict of colors for given keys
@@ -26,6 +33,8 @@ def get_some_colors(
         Set the seed
     margin: None or int
         If None, put a margin to remove colors on borders of some colomap of matplotlib.
+    resample : bool, dafult True
+        For matplotlib, only resample the cmap to the number of keys + eventualy maring
 
     Returns
     -------
@@ -77,9 +86,11 @@ def get_some_colors(
     elif color_engine == "matplotlib":
         # some map have black or white at border so +10
 
-        if margin is None:
-            margin = max(4, int(N * 0.08))
-        cmap = plt.colormaps[map_name].resampled(N + 2 * margin)
+        cmap = plt.colormaps[map_name]
+        if resample:
+            if margin is None:
+                margin = max(4, int(N * 0.08))
+            cmap = cmap.resampled(N + 2 * margin)
         colors = [cmap(i + margin) for i, key in enumerate(keys)]
 
     elif color_engine == "colorsys":
