@@ -2,7 +2,7 @@ from __future__ import annotations
 import numpy as np
 from typing import Optional, Literal
 
-from spikeinterface.core.core_tools import _make_pp_from_rec_or_dict, is_documented_by
+from spikeinterface.core.core_tools import _make_pp_from_rec_or_dict, _is_documented_by
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from ..core import get_closest_channels
