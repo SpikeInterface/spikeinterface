@@ -30,8 +30,8 @@ class BaseRasterWidget(BaseWidget):
     scatter_decimate : int | None, default: None
         If equal to n, each nth spike is kept for plotting.
     unit_colors : dict | None, default: None
-        Dict of colors with key : unit, value : color. If None, uses `get_some_colors` to
-        generate colors.
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colours are chosen using the `get_some_colors` function.
     color_kwargs : dict | None, default: None
         More color control for e.g. colouring spikes by property. Passed to `maplotlib.scatter`.
     plot_legend : bool, default: False

@@ -23,8 +23,8 @@ class AmplitudesWidget(BaseRasterWidget):
     unit_ids : list or None, default: None
         List of unit ids
     unit_colors : dict | None, default: None
-        Dict of colors with key : unit, value : color. If None, uses `get_some_colors` to
-        generate colors.
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colours are chosen using the `get_some_colors` function.
     segment_index : int or None, default: None
         The segment index (or None if mono-segment)
     max_spikes_per_unit : int or None, default: None
