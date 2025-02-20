@@ -812,6 +812,55 @@ class SortingAnalyzer:
         """
         return self.sorting.get_property(key, ids=ids)
 
+    def can_perform_merges(self, 
+                           merge_unit_groups, 
+                           new_unit_ids=None,
+                           merging_mode="soft",
+                           sparsity_overlap=0.75,
+                           new_id_strategy="append",
+                           **kwargs):
+        """
+        Check if merges can be performed given merging params
+
+        Parameters
+        ----------
+        merge_unit_groups : list/tuple of lists/tuples
+            A list of lists for every merge group. Each element needs to have at least two elements
+            (two units to merge).
+        sparsity_overlap : float
+            The percentage of overlap that units should share in order to accept merges.
+
+        Returns
+        -------
+        can_perform_merges : bool
+            If soft merging can be performed.
+        """
+        assert merging_mode in ["hard", "soft"], "merging_mode must be 'hard' or 'soft'"
+
+        new_unit_ids = generate_unit_ids_for_merge_group(
+            self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy
+        )
+        all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
+
+        if merging_mode == "hard":
+            return True
+        elif merging_mode == "soft":
+            if self.sparsity is None:
+                return True
+            else:
+                for unit_index, unit_id in enumerate(all_unit_ids):
+                    if unit_id in new_unit_ids:
+                        # This is a new unit, and the sparsity mask will be the intersection of the
+                        # ones of all merges
+                        current_merge_group = merge_unit_groups[list(new_unit_ids).index(unit_id)]
+                        merge_unit_indices = self.sorting.ids_to_indices(current_merge_group)
+                        union_mask = np.sum(self.sparsity.mask[merge_unit_indices], axis=0) > 0
+                        intersection_mask = np.prod(self.sparsity.mask[merge_unit_indices], axis=0) > 0
+                        thr = np.sum(intersection_mask) / np.sum(union_mask)
+                        if thr < sparsity_overlap:
+                            return False
+                return True
+
     def _save_or_select_or_merge(
         self,
         format="binary_folder",
