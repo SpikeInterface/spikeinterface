@@ -16,6 +16,7 @@ def extract_peaks_svd(
         peaks,
         ms_before=0.5,
         ms_after=1.5,
+        svd_model=None,
         n_components=5,
         radius_um=120.,
         motion_aware=False,
@@ -42,17 +43,21 @@ def extract_peaks_svd(
     nafter = int(ms_after * recording.sampling_frequency / 1000.0)
 
     # Step 1 : select a few peaks to fit the SVD
-    few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=5000, margin=(nbefore, nafter))
-    few_wfs = extract_waveform_at_max_channel(
-        recording, few_peaks, ms_before=ms_before, ms_after=ms_after,
-        job_name="Fit peaks svd", **job_kwargs
-    )
+    if svd_model is None:
+        few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=5000, margin=(nbefore, nafter))
+        few_wfs = extract_waveform_at_max_channel(
+            recording, few_peaks, ms_before=ms_before, ms_after=ms_after,
+            job_name="Fit peaks svd", **job_kwargs
+        )
 
-    wfs = few_wfs[:, :, 0]
-    from sklearn.decomposition import TruncatedSVD
+        wfs = few_wfs[:, :, 0]
+        from sklearn.decomposition import TruncatedSVD
 
-    svd_model = TruncatedSVD(n_components=n_components)
-    svd_model.fit(wfs)
+        svd_model = TruncatedSVD(n_components=n_components)
+        svd_model.fit(wfs)
+        need_save_model = True
+    else:
+        need_save_model = False
 
     if folder is None:
         gather_mode = "memory"
@@ -63,17 +68,18 @@ def extract_peaks_svd(
         folder = Path(folder)
 
         # save the model
-        model_folder = folder / "svd_model"
-        model_folder.mkdir(exist_ok=True, parents=True)
-        with open(model_folder / "pca_model.pkl", "wb") as f:
-            pickle.dump(svd_model, f)
-        model_params = {
-            "ms_before": ms_before,
-            "ms_after": ms_after,
-            "sampling_frequency": float(recording.sampling_frequency),
-        }
-        with open(model_folder / "params.json", "w") as f:
-            json.dump(model_params, f)
+        if need_save_model:
+            model_folder = folder / "svd_model"
+            model_folder.mkdir(exist_ok=True, parents=True)
+            with open(model_folder / "pca_model.pkl", "wb") as f:
+                pickle.dump(svd_model, f)
+            model_params = {
+                "ms_before": ms_before,
+                "ms_after": ms_after,
+                "sampling_frequency": float(recording.sampling_frequency),
+            }
+            with open(model_folder / "params.json", "w") as f:
+                json.dump(model_params, f)
 
         # save the features
         features_folder = folder / "features"
