@@ -35,7 +35,6 @@ def compute_peak_displacements(peaks, motion, recording, peak_locations=None):
 
     peak_displacements = np.zeros(peaks.size, dtype="float32")
 
-
     for segment_index in range(motion.num_segments):
         i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
         sl = slice(i0, i1)
@@ -50,6 +49,7 @@ def compute_peak_displacements(peaks, motion, recording, peak_locations=None):
         )
 
     return peak_displacements
+
 
 def correct_motion_on_peaks(peaks, peak_locations, motion, recording) -> np.ndarray:
     """

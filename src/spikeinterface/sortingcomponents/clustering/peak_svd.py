@@ -6,24 +6,26 @@ import numpy as np
 
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
-from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection, MotionAwareTemporalPCAProjection
+from spikeinterface.sortingcomponents.waveforms.temporal_pca import (
+    TemporalPCAProjection,
+    MotionAwareTemporalPCAProjection,
+)
 from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractSparseWaveforms, PeakRetriever
 
 
-
 def extract_peaks_svd(
-        recording,
-        peaks,
-        ms_before=0.5,
-        ms_after=1.5,
-        svd_model=None,
-        n_components=5,
-        radius_um=120.,
-        motion_aware=False,
-        motion=None,
-        folder=None,
-        **job_kwargs
-    ):
+    recording,
+    peaks,
+    ms_before=0.5,
+    ms_after=1.5,
+    svd_model=None,
+    n_components=5,
+    radius_um=120.0,
+    motion_aware=False,
+    motion=None,
+    folder=None,
+    **job_kwargs,
+):
     """
     Extract the sparse waveform compress to SVD (PCA) on a local set of channel per peak.
     So importantly, the output buffer have unaligned channel on shape[2].
@@ -31,11 +33,11 @@ def extract_peaks_svd(
     This is done in 2 steps:
       * fit a TruncatedSVD model on a few peaks on max channel
       * tranform each peaks in parralel on a sparse channel set with this model
-    
+
     The recording have a drift, hen, optionally, the motion object can be given.
     In that case all the svd features are moved back using cubi interpolation.
     This avoid the use of interpolating the traces iself (with krigging).
-    
+
     The output shape is (num_peaks, n_components, max_sparse_channel)
     """
 
@@ -46,8 +48,7 @@ def extract_peaks_svd(
     if svd_model is None:
         few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=5000, margin=(nbefore, nafter))
         few_wfs = extract_waveform_at_max_channel(
-            recording, few_peaks, ms_before=ms_before, ms_after=ms_after,
-            job_name="Fit peaks svd", **job_kwargs
+            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, job_name="Fit peaks svd", **job_kwargs
         )
 
         wfs = few_wfs[:, :, 0]
@@ -109,7 +110,10 @@ def extract_peaks_svd(
         )
     else:
         node2 = TemporalPCAProjection(
-            recording, parents=[node0, node1], return_output=True, pca_model=svd_model,
+            recording,
+            parents=[node0, node1],
+            return_output=True,
+            pca_model=svd_model,
         )
 
     pipeline_nodes = [node0, node1, node2]
@@ -124,7 +128,7 @@ def extract_peaks_svd(
         names=["sparse_svd"],
         job_name="Transform peaks svd",
     )
-    
+
     sparse_mask = node1.neighbours_mask
 
     return peaks_svd, sparse_mask, svd_model
