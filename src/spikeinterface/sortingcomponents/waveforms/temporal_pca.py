@@ -18,7 +18,12 @@ from .waveform_utils import to_temporal_representation, from_temporal_representa
 
 class TemporalPCBaseNode(WaveformsNode):
     def __init__(
-        self, recording: BaseRecording, parents: List[PipelineNode], pca_model=None, model_folder_path=None, return_output=True
+        self,
+        recording: BaseRecording,
+        parents: List[PipelineNode],
+        pca_model=None,
+        model_folder_path=None,
+        return_output=True,
     ):
         """
         Base class for PCA projection nodes. Contains the logic of the fit method that should be inherited by all the
@@ -40,7 +45,6 @@ class TemporalPCBaseNode(WaveformsNode):
         if pca_model is None:
             self.model_folder_path = model_folder_path
 
-
             if model_folder_path is None or not Path(model_folder_path).is_dir():
                 exception_string = (
                     f"model_path folder is not a folder or does not exist. \n"
@@ -59,8 +63,6 @@ class TemporalPCBaseNode(WaveformsNode):
             self.assert_model_and_waveform_temporal_match(waveform_extractor)
         else:
             self.pca_model = pca_model
-
-        
 
     def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformsNode):
         """
@@ -205,8 +207,12 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         return_output=True,
     ):
         TemporalPCBaseNode.__init__(
-            self, recording=recording, parents=parents, return_output=return_output,
-            pca_model=pca_model, model_folder_path=model_folder_path
+            self,
+            recording=recording,
+            parents=parents,
+            return_output=return_output,
+            pca_model=pca_model,
+            model_folder_path=model_folder_path,
         )
         self.n_components = self.pca_model.n_components
         self.dtype = np.dtype(dtype)
@@ -264,10 +270,20 @@ class TemporalPCADenoising(TemporalPCBaseNode):
     """
 
     def __init__(
-        self, recording: BaseRecording, parents: List[PipelineNode], pca_model=None, model_folder_path=None, return_output=True
+        self,
+        recording: BaseRecording,
+        parents: List[PipelineNode],
+        pca_model=None,
+        model_folder_path=None,
+        return_output=True,
     ):
         TemporalPCBaseNode.__init__(
-            self, recording=recording, parents=parents, return_output=return_output, pca_model=pca_model, model_folder_path=model_folder_path
+            self,
+            recording=recording,
+            parents=parents,
+            return_output=return_output,
+            pca_model=pca_model,
+            model_folder_path=model_folder_path,
         )
 
     def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
@@ -302,7 +318,6 @@ class TemporalPCADenoising(TemporalPCBaseNode):
         return denoised_waveforms
 
 
-
 class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
     """
     Similar to TemporalPCAProjection but also apply interpolation to revert a motion.
@@ -324,7 +339,9 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
         use false to suppress the output of this node in the pipeline
 
     """
+
     _compute_has_extended_signature = True
+
     def __init__(
         self,
         recording: BaseRecording,
@@ -337,8 +354,12 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
         return_output=True,
     ):
         TemporalPCBaseNode.__init__(
-            self, recording=recording, parents=parents, return_output=return_output,
-            pca_model=pca_model, model_folder_path=model_folder_path
+            self,
+            recording=recording,
+            parents=parents,
+            return_output=return_output,
+            pca_model=pca_model,
+            model_folder_path=model_folder_path,
         )
         self.n_components = self.pca_model.n_components
         self.dtype = np.dtype(dtype)
@@ -372,7 +393,7 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
         import scipy.interpolate
 
         # peak_motions = np.zeros(peaks.size, dtype="float32")
-        
+
         num_channels = waveforms.shape[2]
         if waveforms.shape[0] > 0:
             temporal_waveforms = to_temporal_representation(waveforms)
@@ -380,7 +401,7 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
             projected_waveforms_static = from_temporal_representation(projected_temporal_waveforms, num_channels)
 
             projected_waveforms = np.zeros_like(projected_waveforms_static)
-            
+
             for i, peak in enumerate(peaks):
                 # print(peak["channel_index"], peak["segment_index"])
                 abs_sample_index = peak["sample_index"] + start_frame - max_margin
@@ -403,11 +424,15 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
                 dest_locations[:, self.motion.dim] += peak_motion
 
                 for c in range(self.n_components):
-                    projected_waveforms[i, c, :local_chans.size] = scipy.interpolate.griddata(
-                        source_locations, projected_waveforms_static[i, c, :local_chans.size], dest_locations, method=self.interpolation_method, fill_value=0
+                    projected_waveforms[i, c, : local_chans.size] = scipy.interpolate.griddata(
+                        source_locations,
+                        projected_waveforms_static[i, c, : local_chans.size],
+                        dest_locations,
+                        method=self.interpolation_method,
+                        fill_value=0,
                     )
 
         else:
             projected_waveforms = np.zeros((0, self.n_components, num_channels), dtype=self.dtype)
 
-        return (projected_waveforms.astype(self.dtype, copy=False), )
+        return (projected_waveforms.astype(self.dtype, copy=False),)

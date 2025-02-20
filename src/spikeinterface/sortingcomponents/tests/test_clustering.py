@@ -73,12 +73,7 @@ def test_find_cluster_from_peaks(clustering_method, recording, peaks, peak_locat
 
 
 def test_extract_peaks_svd(recording, peaks, job_kwargs):
-    peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
-        recording,
-        peaks,
-        n_components=5,
-        **job_kwargs
-    )
+    peaks_svd, sparse_mask, svd_model = extract_peaks_svd(recording, peaks, n_components=5, **job_kwargs)
     assert peaks_svd.shape[0] == peaks.shape[0]
     assert peaks_svd.shape[1] == 5
     assert peaks_svd.shape[2] == np.max(np.sum(sparse_mask, axis=1))

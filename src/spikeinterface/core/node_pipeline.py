@@ -29,7 +29,7 @@ spike_peak_dtype = base_peak_dtype + [
 
 
 class PipelineNode:
-    
+
     # If False (general case) then compute(traces_chunk, *node_input_args)
     # If True then compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args)
     _compute_has_extended_signature = False
@@ -692,7 +692,9 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
                 if not node._compute_has_extended_signature:
                     node_output = node.compute(traces_chunk, *node_input_args)
                 else:
-                    node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args)
+                    node_output = node.compute(
+                        traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args
+                    )
 
             pipeline_outputs[node] = node_output
 
