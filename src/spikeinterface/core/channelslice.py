@@ -25,11 +25,10 @@ class ChannelSliceRecording(BaseRecording):
                 np.unique(renamed_channel_ids)
             ), "renamed_channel_ids must be unique!"
 
-        self._parent_recording = parent_recording
         self._channel_ids = np.asarray(channel_ids)
         self._renamed_channel_ids = np.asarray(renamed_channel_ids)
 
-        parents_chan_ids = self._parent_recording.get_channel_ids()
+        parents_chan_ids = parent_recording.get_channel_ids()
 
         # some checks
         assert all(
@@ -54,7 +53,7 @@ class ChannelSliceRecording(BaseRecording):
         self._parent_channel_indices = parent_recording.ids_to_indices(self._channel_ids)
 
         # link recording segment
-        for parent_segment in self._parent_recording._recording_segments:
+        for parent_segment in parent_recording._recording_segments:
             sub_segment = ChannelSliceRecordingSegment(parent_segment, self._parent_channel_indices)
             self.add_recording_segment(sub_segment)
 

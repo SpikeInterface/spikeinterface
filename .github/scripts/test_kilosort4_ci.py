@@ -20,7 +20,7 @@ of the tests are:
 
 import pytest
 import copy
-from typing import Any
+from packaging.version import parse
 from inspect import signature
 
 import numpy as np
@@ -84,8 +84,6 @@ PARAMS_TO_TEST_DICT = {
     "duplicate_spike_ms": 0.3,
 }
 
-PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
-
 PARAMETERS_NOT_AFFECTING_RESULTS = [
     "artifact_threshold",
     "ccg_threshold",
@@ -95,13 +93,24 @@ PARAMETERS_NOT_AFFECTING_RESULTS = [
     "duplicate_spike_ms",  # this is because ground-truth spikes don't have violations
 ]
 
-# THIS IS A PLACEHOLDER FOR FUTURE PARAMS TO TEST
-# if parse(version("kilosort")) >= parse("4.0.X"):
-#     PARAMS_TO_TEST_DICT.update(
-#         [
-#             {"new_param": new_value},
-#         ]
-#     )
+
+# Add/Remove version specific parameters
+if parse(kilosort.__version__) >= parse("4.0.22"):
+    PARAMS_TO_TEST_DICT.update(
+        {"position_limit": 50}
+    )
+    # Position limit only affects computing spike locations after sorting
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("position_limit")
+
+if parse(kilosort.__version__) >= parse("4.0.24"):
+    PARAMS_TO_TEST_DICT.update(
+        {"max_peels": 200},
+    )
+    # max_peels is not affecting the results in this short dataset
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("max_peels")
+
+
+PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
 
 
 class TestKilosort4Long:
