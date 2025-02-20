@@ -776,7 +776,7 @@ def auto_merge_units(
         found_merges = True
 
         while found_merges:
-            
+
             num_units = len(sorting_analyzer.unit_ids)
             sorting_analyzer = _auto_merge_units_single_iteration(
                 sorting_analyzer,
@@ -793,7 +793,7 @@ def auto_merge_units(
                 all_merging_groups += [merge_unit_groups]
                 resolved_merges = resolve_pairs(resolved_merges, new_merges)
                 all_outs += [outs]
-            
+
             if not recursive:
                 found_merges = False
             else:

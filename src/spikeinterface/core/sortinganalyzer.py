@@ -812,13 +812,15 @@ class SortingAnalyzer:
         """
         return self.sorting.get_property(key, ids=ids)
 
-    def can_perform_merges(self, 
-                           merge_unit_groups, 
-                           new_unit_ids=None,
-                           merging_mode="soft",
-                           sparsity_overlap=0.75,
-                           new_id_strategy="append",
-                           **kwargs):
+    def can_perform_merges(
+        self,
+        merge_unit_groups,
+        new_unit_ids=None,
+        merging_mode="soft",
+        sparsity_overlap=0.75,
+        new_id_strategy="append",
+        **kwargs,
+    ):
         """
         Check if merges can be performed given merging params
 
