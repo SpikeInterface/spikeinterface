@@ -1,3 +1,7 @@
+from pathlib import Path
+import pickle
+import json
+
 import numpy as np
 
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
@@ -16,10 +20,22 @@ def extract_peaks_svd(
         radius_um=120.,
         motion_aware=False,
         motion=None,
+        folder=None,
         **job_kwargs
     ):
     """
-    Extract SVD feature from peaks from all channels or sparse channel.
+    Extract the sparse waveform compress to SVD (PCA) on a local set of channel per peak.
+    So importantly, the output buffer have unaligned channel on shape[2].
+
+    This is done in 2 steps:
+      * fit a TruncatedSVD model on a few peaks on max channel
+      * tranform each peaks in parralel on a sparse channel set with this model
+    
+    The recording have a drift, hen, optionally, the motion object can be given.
+    In that case all the svd features are moved back using cubi interpolation.
+    This avoid the use of interpolating the traces iself (with krigging).
+    
+    The output shape is (num_peaks, n_components, max_sparse_channel)
     """
 
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
@@ -29,32 +45,40 @@ def extract_peaks_svd(
     few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=5000, margin=(nbefore, nafter))
     few_wfs = extract_waveform_at_max_channel(
         recording, few_peaks, ms_before=ms_before, ms_after=ms_after,
-        job_name="extract some waveforms for fitting svd", **job_kwargs
+        job_name="Fit peaks svd", **job_kwargs
     )
 
     wfs = few_wfs[:, :, 0]
     from sklearn.decomposition import TruncatedSVD
 
-    tsvd = TruncatedSVD(n_components=n_components)
-    tsvd.fit(wfs)
+    svd_model = TruncatedSVD(n_components=n_components)
+    svd_model.fit(wfs)
 
-    # model_folder = clustering_folder / "tsvd_model"
+    if folder is None:
+        gather_mode = "memory"
+        features_folder = None
+        gather_kwargs = dict()
+    else:
+        gather_mode = "npy"
+        folder = Path(folder)
 
-    # model_folder.mkdir(exist_ok=True)
-    # with open(model_folder / "pca_model.pkl", "wb") as f:
-    #     pickle.dump(tsvd, f)
+        # save the model
+        model_folder = folder / "svd_model"
+        model_folder.mkdir(exist_ok=True, parents=True)
+        with open(model_folder / "pca_model.pkl", "wb") as f:
+            pickle.dump(svd_model, f)
+        model_params = {
+            "ms_before": ms_before,
+            "ms_after": ms_after,
+            "sampling_frequency": float(recording.sampling_frequency),
+        }
+        with open(model_folder / "params.json", "w") as f:
+            json.dump(model_params, f)
 
-    # model_params = {
-    #     "ms_before": ms_before,
-    #     "ms_after": ms_after,
-    #     "sampling_frequency": float(sampling_frequency),
-    # }
-    # with open(model_folder / "params.json", "w") as f:
-    #     json.dump(model_params, f)
+        # save the features
+        features_folder = folder / "features"
+        gather_kwargs = dict(exist_ok=True)
 
-    # features
-
-    # features_folder = clustering_folder / "features"
     node0 = PeakRetriever(recording, peaks)
 
     node1 = ExtractSparseWaveforms(
@@ -66,17 +90,15 @@ def extract_peaks_svd(
         radius_um=radius_um,
     )
 
-    # model_folder_path = clustering_folder / "tsvd_model"
-
     if motion_aware:
         if motion is None:
             raise ValueError("For motion aware PCA motion must provided")
         node2 = MotionAwareTemporalPCAProjection(
-            recording, parents=[node0, node1], return_output=True, pca_model=tsvd, motion=motion
+            recording, parents=[node0, node1], return_output=True, pca_model=svd_model, motion=motion
         )
     else:
         node2 = TemporalPCAProjection(
-            recording, parents=[node0, node1], return_output=True, pca_model=tsvd,
+            recording, parents=[node0, node1], return_output=True, pca_model=svd_model,
         )
 
     pipeline_nodes = [node0, node1, node2]
@@ -85,14 +107,13 @@ def extract_peaks_svd(
         recording,
         pipeline_nodes,
         job_kwargs,
-        # gather_mode="npy",
-        gather_mode="memory",
-        # gather_kwargs=dict(exist_ok=True),
-        # folder=features_folder,
-        names=["sparse_wfs", "sparse_tsvd"],
-        job_name="Extract peaks svd",
+        gather_mode=gather_mode,
+        gather_kwargs=gather_kwargs,
+        folder=features_folder,
+        names=["sparse_svd"],
+        job_name="Transform peaks svd",
     )
     
     sparse_mask = node1.neighbours_mask
 
-    return peaks_svd, sparse_mask
+    return peaks_svd, sparse_mask, svd_model
