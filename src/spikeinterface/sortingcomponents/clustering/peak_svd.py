@@ -87,6 +87,11 @@ def extract_peaks_svd(
 
     node0 = PeakRetriever(recording, peaks)
 
+    if motion_aware:
+        # we need to increase the radius by the max motion
+        max_motion = max(abs(e) for e in motion.get_boundaries())
+        radius_um = radius_um + max_motion
+
     node1 = ExtractSparseWaveforms(
         recording,
         parents=[node0],
