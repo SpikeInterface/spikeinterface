@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from warnings import warn
 import numpy as np
 
 
@@ -342,5 +343,9 @@ def make_units_table_from_analyzer(
             # the ndim = 1 is important because we need  column only for the display in gui.
             if values.dtype.kind in "iuUSfb" and values.ndim == 1:
                 units_table.loc[:, col] = values
+            else:
+                warn(
+                    f"Extra property {col} not added to the units table because it has ndim > 1 or dtype not supported",
+                )
 
     return units_table
