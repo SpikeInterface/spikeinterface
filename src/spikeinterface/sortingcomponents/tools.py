@@ -291,17 +291,6 @@ def remove_empty_templates(templates):
     )
 
 
-def sigmoid(x, x0, k, b):
-    return (1 / (1 + np.exp(-k * (x - x0)))) + b
-
-
-def fit_sigmoid(xdata, ydata, p0=None):
-    from scipy.optimize import curve_fit
-
-    popt, pcov = curve_fit(sigmoid, xdata, ydata, p0)
-    return popt
-
-
 def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):
     from spikeinterface.core.job_tools import ensure_chunk_size
     from spikeinterface.core.job_tools import divide_segment_into_chunks

@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.102.1"
+version = "0.102.2"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -165,6 +165,9 @@ test = [
 
     # for sortingview backend
     "sortingview",
+
+    # for motion and sortingcomponents
+    "torch",
 
     # curation
     "skops",

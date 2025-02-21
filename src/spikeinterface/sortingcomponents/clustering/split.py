@@ -205,10 +205,10 @@ class LocalFeatureClustering:
         recursion_level=1,
         debug_folder=None,
         clusterer="hdbscan",
+        clusterer_kwargs={"min_cluster_size": 25, "min_samples": 5},
         feature_name="sparse_tsvd",
         neighbours_mask=None,
         waveforms_sparse_mask=None,
-        clusterer_kwargs={"min_cluster_size": 25},
         min_size_split=25,
         n_pca_features=2,
         minimum_overlap_ratio=0.25,
@@ -261,7 +261,7 @@ class LocalFeatureClustering:
         if clusterer == "hdbscan":
             from hdbscan import HDBSCAN
 
-            clust = HDBSCAN(**clusterer_kwargs)
+            clust = HDBSCAN(**clusterer_kwargs, core_dist_n_jobs=1)
             clust.fit(final_features)
             possible_labels = clust.labels_
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
