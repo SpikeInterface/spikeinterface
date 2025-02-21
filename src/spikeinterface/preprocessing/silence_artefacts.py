@@ -7,17 +7,18 @@ from .silence_periods import SilencedPeriodsRecording
 from .rectify import RectifyRecording
 from .filter_gaussian import GaussianFilterRecording
 from ..core.job_tools import split_job_kwargs, fix_job_kwargs
-from ..core import  get_noise_levels
+from ..core import get_noise_levels
 
 
 from ..core.node_pipeline import PeakDetector, base_peak_dtype
 import numpy as np
 
+
 class DetectThresholdCrossing(PeakDetector):
-    
+
     name = "threshold_crossings"
     preferred_mp_context = None
-    
+
     def __init__(
         self,
         recording,
@@ -36,16 +37,16 @@ class DetectThresholdCrossing(PeakDetector):
 
     def get_dtype(self):
         return self._dtype
-    
+
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
-        z =  (traces - self.abs_thresholds).mean(1)
+        z = (traces - self.abs_thresholds).mean(1)
         threshold_mask = np.diff((z > 0) != 0, axis=0)
-        indices  = np.flatnonzero(threshold_mask)
+        indices = np.flatnonzero(threshold_mask)
         local_peaks = np.zeros(indices.size, dtype=self._dtype)
         local_peaks["sample_index"] = indices
         local_peaks["onset"][::2] = True
         local_peaks["onset"][1::2] = False
-        return (local_peaks, )
+        return (local_peaks,)
 
 
 def detect_onsets(recording, detect_threshold=5, **extra_kwargs):
@@ -54,17 +55,17 @@ def detect_onsets(recording, detect_threshold=5, **extra_kwargs):
         run_node_pipeline,
     )
 
-    random_chunk_kwargs, job_kwargs  = split_job_kwargs(extra_kwargs)
+    random_chunk_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     node0 = DetectThresholdCrossing(recording, detect_threshold, **random_chunk_kwargs)
-    
+
     peaks = run_node_pipeline(
         recording,
         [node0],
         job_kwargs,
         job_name="detect threshold crossings",
-        )
+    )
 
     periods = []
     num_seg = recording.get_num_segments()
@@ -72,21 +73,21 @@ def detect_onsets(recording, detect_threshold=5, **extra_kwargs):
         sub_periods = []
         mask = peaks["segment_index"] == 0
         sub_peaks = peaks[mask]
-        onsets = sub_peaks[sub_peaks['onset']]
-        offsets = sub_peaks[~sub_peaks['onset']]
-        
-        if onsets['sample_index'][0] > offsets['sample_index'][0]:
-            sub_periods += [(0, offsets['sample_index'][0])]
+        onsets = sub_peaks[sub_peaks["onset"]]
+        offsets = sub_peaks[~sub_peaks["onset"]]
+
+        if onsets["sample_index"][0] > offsets["sample_index"][0]:
+            sub_periods += [(0, offsets["sample_index"][0])]
             offsets = offsets[1:]
-        
+
         for i in range(min(len(onsets), len(offsets))):
-            sub_periods += [(onsets['sample_index'][i], offsets['sample_index'][i])]
+            sub_periods += [(onsets["sample_index"][i], offsets["sample_index"][i])]
 
         if len(onsets) > len(offsets):
-            sub_periods += [(onsets['sample_index'][0], recording.get_num_samples(seg_index))]
+            sub_periods += [(onsets["sample_index"][0], recording.get_num_samples(seg_index))]
 
         periods.append(sub_periods)
-        
+
     return periods
 
 
@@ -95,7 +96,7 @@ class SilencedArtefactsRecording(SilencedPeriodsRecording):
     Silence user-defined periods from recording extractor traces. The code will construct
     an enveloppe of the recording (as a low pass filtered version of the traces) and detect
     threshold crossings to identify the periods to silence. The periods are then silenced either
-    on a per channel basis or across all channels by replacing the values by zeros or by 
+    on a per channel basis or across all channels by replacing the values by zeros or by
     adding gaussian noise with the same variance as the one in the recordings
 
     Parameters
@@ -127,33 +128,29 @@ class SilencedArtefactsRecording(SilencedPeriodsRecording):
         The recording extractor after silencing detected artefacts
     """
 
-    def __init__(self, 
-                 recording,
-                 detect_threshold=5,
-                 freq_max=20., 
-                 mode="noise", 
-                 noise_levels=None,
-                 seed=None,
-                 list_periods=None,
-                 **random_chunk_kwargs):
+    def __init__(
+        self,
+        recording,
+        detect_threshold=5,
+        freq_max=20.0,
+        mode="noise",
+        noise_levels=None,
+        seed=None,
+        list_periods=None,
+        **random_chunk_kwargs,
+    ):
 
         enveloppe = RectifyRecording(recording)
         enveloppe = GaussianFilterRecording(enveloppe, freq_min=None, freq_max=freq_max)
 
         if list_periods is None:
-            list_periods = detect_onsets(enveloppe, 
-                                detect_threshold=detect_threshold, 
-                                **random_chunk_kwargs)
+            list_periods = detect_onsets(enveloppe, detect_threshold=detect_threshold, **random_chunk_kwargs)
 
-        SilencedPeriodsRecording.__init__(self, 
-                                          recording, 
-                                          list_periods, 
-                                          mode=mode, 
-                                          noise_levels=noise_levels, 
-                                          seed=seed, 
-                                          **random_chunk_kwargs)
+        SilencedPeriodsRecording.__init__(
+            self, recording, list_periods, mode=mode, noise_levels=noise_levels, seed=seed, **random_chunk_kwargs
+        )
 
-        self._kwargs.update({'detect_threshold' : detect_threshold, 'freq_max' : freq_max})
+        self._kwargs.update({"detect_threshold": detect_threshold, "freq_max": freq_max})
 
 
 # function for API
