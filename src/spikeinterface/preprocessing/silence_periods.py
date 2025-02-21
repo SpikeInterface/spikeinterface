@@ -5,7 +5,7 @@ import numpy as np
 from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-from ..core import get_random_data_chunks, get_noise_levels
+from ..core import get_noise_levels
 from ..core.generate import NoiseGeneratorRecording
 
 
