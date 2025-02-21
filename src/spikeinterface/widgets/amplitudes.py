@@ -24,7 +24,7 @@ class AmplitudesWidget(BaseRasterWidget):
         List of unit ids
     unit_colors : dict | None, default: None
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
-        by matplotlib. If None, default colours are chosen using the `get_some_colors` function.
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     segment_index : int or None, default: None
         The segment index (or None if mono-segment)
     max_spikes_per_unit : int or None, default: None
@@ -41,7 +41,7 @@ class AmplitudesWidget(BaseRasterWidget):
         (matplotlib backend)
     bins : int or None, default: None
         If plot_histogram is True, the number of bins for the amplitude histogram.
-        If None, use 100 bins.
+        If None, uses 100 bins.
     plot_legend : bool, default: True
         True includes legend in plot
     """

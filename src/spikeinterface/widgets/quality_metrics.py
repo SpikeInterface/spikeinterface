@@ -20,7 +20,7 @@ class QualityMetricsWidget(MetricsBaseWidget):
         If given, a list of quality metrics to skip
     unit_colors : dict | None, default: None
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
-        by matplotlib. If None, default colours are chosen using the `get_some_colors` function.
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
     """

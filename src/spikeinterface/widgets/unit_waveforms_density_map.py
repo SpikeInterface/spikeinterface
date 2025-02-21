@@ -29,7 +29,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         Used to detect max channel only when use_max_channel=True
     unit_colors : dict | None, default: None
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
-        by matplotlib. If None, default colours are chosen using the `get_some_colors` function.
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     same_axis : bool, default: False
         If True then all density are plot on the same axis and then channels is the union
         all channel per units

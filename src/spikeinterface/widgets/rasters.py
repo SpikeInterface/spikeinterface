@@ -9,7 +9,7 @@ from .utils import get_some_colors
 
 class BaseRasterWidget(BaseWidget):
     """
-    Make a raster plot with spike times on the x axis and arbritary data on the y axis.
+    Make a raster plot with spike times on the x axis and arbitrary data on the y axis.
     Can customize plot with histograms, title, labels, ticks etc.
 
 
@@ -31,9 +31,9 @@ class BaseRasterWidget(BaseWidget):
         If equal to n, each nth spike is kept for plotting.
     unit_colors : dict | None, default: None
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
-        by matplotlib. If None, default colours are chosen using the `get_some_colors` function.
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     color_kwargs : dict | None, default: None
-        More color control for e.g. colouring spikes by property. Passed to `maplotlib.scatter`.
+        More color control for e.g. coloring spikes by property. Passed to `matplotlib.scatter`.
     plot_legend : bool, default: False
         If True, the legend is plotted
     x_lim : tuple or None, default: None

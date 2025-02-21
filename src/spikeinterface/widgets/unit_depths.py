@@ -20,7 +20,7 @@ class UnitDepthsWidget(BaseWidget):
         The SortingAnalyzer object
     unit_colors : dict | None, default: None
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
-        by matplotlib. If None, default colours are chosen using the `get_some_colors` function.
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     depth_axis : int, default: 1
         The dimension of unit_locations that is depth
     peak_sign : "neg" | "pos" | "both", default: "neg"

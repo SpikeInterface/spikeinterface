@@ -24,7 +24,7 @@ class UnitLocationsWidget(BaseWidget):
         Add channel ids text on the probe
     unit_colors : dict | None, default: None
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
-        by matplotlib. If None, default colours are chosen using the `get_some_colors` function.
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     hide_unit_selector : bool, default: False
         If True, the unit selector is not displayed (sortingview backend)
     plot_all_units : bool, default: True
