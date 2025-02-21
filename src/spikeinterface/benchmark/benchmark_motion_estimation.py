@@ -86,7 +86,7 @@ class MotionEstimationBenchmark(Benchmark):
     def run(self, **job_kwargs):
         p = self.params
 
-        noise_levels = get_noise_levels(self.recording, return_scaled=False)
+        noise_levels = get_noise_levels(self.recording, return_scaled=False, **job_kwargs)
 
         t0 = time.perf_counter()
         peaks = detect_peaks(self.recording, noise_levels=noise_levels, **p["detect_kwargs"], **job_kwargs)

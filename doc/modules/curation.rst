@@ -120,9 +120,9 @@ the unit (among the redundant ones), with a better template alignment.
 Auto-merging units
 ^^^^^^^^^^^^^^^^^^
 
-The :py:func:`~spikeinterface.curation.get_potential_auto_merge` function returns a list of potential merges.
+The :py:func:`~spikeinterface.curation.compute_merge_unit_groups` function returns a list of potential merges.
 The list of potential merges can be then applied to the sorting output.
-:py:func:`~spikeinterface.curation.get_potential_auto_merge` has many internal tricks and steps to identify potential
+:py:func:`~spikeinterface.curation.compute_merge_unit_groups` has many internal tricks and steps to identify potential
 merges. It offers multiple "presets" and the flexibility to apply individual steps, with different parameters.
 **Read the function documentation carefully and do not apply it blindly!**
 
@@ -130,7 +130,7 @@ merges. It offers multiple "presets" and the flexibility to apply individual ste
 .. code-block:: python
 
     from spikeinterface import create_sorting_analyzer
-    from spikeinterface.curation import get_potential_auto_merge
+    from spikeinterface.curation import compute_merge_unit_groups
 
     analyzer = create_sorting_analyzer(sorting=sorting, recording=recording)
 
@@ -138,13 +138,13 @@ merges. It offers multiple "presets" and the flexibility to apply individual ste
     analyzer.compute(["random_spikes", "templates", "template_similarity", "correlograms"])
 
     # merges is a list of unit pairs, with unit_ids to be merged.
-    merge_unit_pairs = get_potential_auto_merge(
+    merge_unit_pairs = compute_merge_unit_groups(
         analyzer=analyzer,
         preset="similarity_correlograms",
     )
     # with resolve_graph=True, merges_resolved is a list of merge groups,
     # which can contain more than two units
-    merge_unit_groups = get_potential_auto_merge(
+    merge_unit_groups = compute_merge_unit_groups(
         analyzer=analyzer,
         preset="similarity_correlograms",
         resolve_graph=True
@@ -152,6 +152,44 @@ merges. It offers multiple "presets" and the flexibility to apply individual ste
 
     # here we apply the merges
     analyzer_merged = analyzer.merge_units(merge_unit_groups=merge_unit_groups)
+
+There is also the convenient :py:func:`~spikeinterface.curation.auto_merge_units` function that combines the
+:py:func:`~spikeinterface.curation.compute_merge_unit_groups` and :py:func:`~spikeinterface.core.SortingAnalyzer.merge_units` functions.
+This is a high level function that allows you to apply either one or several presets/lists of steps in one go. For example, let's
+assume you want to apply the "x_contamination" preset, but iteratively and with slightly different parameters: first,
+you want to focus on the templates that are very similar, according to their template similarities, before
+considering those that might be more distant. Such a greedy and iterative scheme has been proved to be less
+prone to wrong merges. To do so, you'll need to do the following:
+
+.. code-block:: python
+
+    from spikeinterface import create_sorting_analyzer
+    from spikeinterface.curation import auto_merge_units
+
+    analyzer = create_sorting_analyzer(sorting=sorting, recording=recording)
+
+    # some extensions are required
+    analyzer.compute(["random_spikes", "templates", "template_similarity", "correlograms"])
+    analyzer.compute("unit_locations", method="monopolar_triangulation")
+
+    template_diff_thresh = [0.05, 0.15, 0.25]
+    presets = ["x_contaminations"] * len(template_diff_thresh)
+    steps_params = [
+        {"template_similarity": {"template_diff_thresh": i}}
+        for i in template_diff_thresh
+    ]
+
+    analyzer_merged = auto_merge_units(
+        analyzer,
+        presets=presets,
+        steps_params=steps_params,
+        recursive=True,
+        **job_kwargs,
+    )
+
+The extra keyword ``recursive`` specifies that for each presets/sequences of steps, merges are performed
+until no further merges are possible. The ``job_kwargs`` are the parameters for the parallelization.
+**Be careful that the merges can not be reverted, so be sure to not erase your analyzer and create a new variable**
 
 
 Manual curation

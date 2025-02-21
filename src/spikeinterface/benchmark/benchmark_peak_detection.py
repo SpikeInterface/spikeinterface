@@ -11,7 +11,7 @@ from spikeinterface.core import get_noise_levels
 
 
 import numpy as np
-
+from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .benchmark_base import Benchmark, BenchmarkStudy
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
@@ -37,11 +37,14 @@ class PeakDetectionBenchmark(Benchmark):
         self.result["peaks"] = peaks
 
     def compute_result(self, **result_params):
-
-        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
+        result_params, job_kwargs = split_job_kwargs(result_params)
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        sorting_analyzer = create_sorting_analyzer(
+            self.gt_sorting, self.recording, format="memory", sparse=False, **job_kwargs
+        )
         sorting_analyzer.compute("random_spikes")
-        sorting_analyzer.compute("templates")
-        sorting_analyzer.compute("spike_amplitudes")
+        sorting_analyzer.compute("templates", **job_kwargs)
+        sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
         self.result["gt_amplitudes"] = sorting_analyzer.get_extension("spike_amplitudes").get_data()
         self.result["gt_templates"] = sorting_analyzer.get_extension("templates").get_data()
 
@@ -90,9 +93,10 @@ class PeakDetectionBenchmark(Benchmark):
         print("Only {0:.2f}% of gt peaks are matched to detected peaks".format(ratio))
 
         sorting_analyzer = create_sorting_analyzer(
-            self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False
+            self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False, **job_kwargs
         )
-        sorting_analyzer.compute({"random_spikes": {}, "templates": {}})
+        sorting_analyzer.compute("random_spikes")
+        sorting_analyzer.compute("templates", **job_kwargs)
 
         self.result["templates"] = sorting_analyzer.get_extension("templates").get_data()
 
@@ -248,6 +252,8 @@ class PeakDetectionStudy(BenchmarkStudy):
                 b = found_templates[i].flatten()
 
                 if metric == "cosine":
+                    import sklearn.metrics
+
                     distances[i] = sklearn.metrics.pairwise.cosine_similarity(a[None, :], b[None, :])[0, 0]
                 else:
                     distances[i] = sklearn.metrics.pairwise_distances(a[None, :], b[None, :], metric)[0, 0]
@@ -272,3 +278,4 @@ class PeakDetectionStudy(BenchmarkStudy):
         ax.legend()
         ax.set_xlabel("snr")
         ax.set_ylabel(metric)
+        return fig
