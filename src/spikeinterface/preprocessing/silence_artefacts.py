@@ -3,9 +3,9 @@ from __future__ import annotations
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_from_class
-from silence_periods import SilencedPeriodsRecording
-from rectify import RectifyRecording
-from filter_gaussian import FilterGaussianRecording
+from .silence_periods import SilencedPeriodsRecording
+from .rectify import RectifyRecording
+from .filter_gaussian import GaussianFilterRecording
 from ..core.job_tools import split_job_kwargs, fix_job_kwargs
 
 from ..core import  get_noise_levels
@@ -41,58 +41,61 @@ class DetectThresholdCrossing(PeakDetector):
         return self._dtype
     
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
-        z =  (traces - self.abs_thresholds)
+        z =  (traces - self.abs_thresholds).mean(1)
         threshold_mask = np.diff((z > 0) != 0, axis=0)
-        indices = np.where(threshold_mask)
-        local_peaks = np.zeros(indices[0].size, dtype=self._dtype)
-        local_peaks["sample_index"] = indices[0]
-        local_peaks["channel_index"] = indices[1]
-        for channel_ind in np.unique(indices[1]):
-            mask = np.flatnonzero(indices[1] == channel_ind)
-            local_peaks["onset"][mask[::2]] = True
-            local_peaks["onset"][mask[1::2]] = False
-        idx = np.argsort(local_peaks["sample_index"])
-        local_peaks = local_peaks[idx]
+        indices,  = np.where(threshold_mask)
+        local_peaks = np.zeros(indices.size, dtype=self._dtype)
+        local_peaks["sample_index"] = indices
+        #local_peaks["channel_index"] = indices[-1]
+        #for channel_ind in np.unique(indices[1]):
+        #    mask = np.flatnonzero(indices[1] == channel_ind)
+        #    local_peaks["onset"][mask[::2]] = True
+        #    local_peaks["onset"][mask[1::2]] = False
+        #idx = np.argsort(local_peaks["sample_index"])
+        #local_peaks = local_peaks[idx]
+        local_peaks["onset"][::2] = True
+        local_peaks["onset"][1::2] = False
         return (local_peaks, )
 
 
-def detect_onsets(enveloppe, detect_threshold=5, **job_kwargs):
+def detect_onsets(recording, detect_threshold=5, **job_kwargs):
 
     from spikeinterface.core.node_pipeline import (
         run_node_pipeline,
     )
 
-    node0 = DetectThresholdCrossing(enveloppe)
+    node0 = DetectThresholdCrossing(recording, detect_threshold, **job_kwargs)
     
     peaks = run_node_pipeline(
-        enveloppe,
+        recording,
         [node0],
         job_kwargs,
         job_name="detecting threshold crossings",
         )
 
-    results = {}
-    for channel_ind, channel_id in enumerate(enveloppe.channel_ids):
+    results = []
+    print(peaks)
+    # for channel_ind, channel_id in enumerate(recording.channel_ids):
 
-        mask = peaks["channel_index"] == channel_ind
-        sub_peaks = peaks[mask]
-        onset_mask = sub_peaks["onset"] == 1
-        onsets = sub_peaks[onset_mask]
-        offsets = sub_peaks[~onset_mask]
-        periods = []
+    #     mask = peaks["channel_index"] == channel_ind
+    #     sub_peaks = peaks[mask]
+    #     onset_mask = sub_peaks["onset"] == 1
+    #     onsets = sub_peaks[onset_mask]
+    #     offsets = sub_peaks[~onset_mask]
+    #     periods = []
 
-        if len(onsets) > 0:
-            if onsets['sample_index'][0] > offsets['sample_index'][0]:
-                periods += [(0, offsets['sample_index'][0])]
-                offsets = offsets[1:]
+    #     # if len(onsets) > 0:
+    #     #     if onsets['sample_index'][0] > offsets['sample_index'][0]:
+    #     #         periods += [(0, offsets['sample_index'][0])]
+    #     #         offsets = offsets[1:]
                 
-            for i in range(len(onsets)):
-                periods += [(onsets['sample_index'][i], offsets['sample_index'][i])]
+    #     #     for i in range(len(onsets)):
+    #     #         periods += [(onsets['sample_index'][i], offsets['sample_index'][i])]
             
-            if len(onsets) > len(offsets):
-               periods += [(onsets['sample_index'][0], enveloppe.get_num_samples())]
+    #     #     if len(onsets) > len(offsets):
+    #     #        periods += [(onsets['sample_index'][0], recording.get_num_samples())]
                 
-        results[channel_id] = periods
+    #     results[channel_id] = periods
         
     return results
 
@@ -109,9 +112,6 @@ class SilencedArtefactsRecording(SilencedPeriodsRecording):
     ----------
     recording : RecordingExtractor
         The recording extractor to silence putative artefacts
-    per_channel : bool, default: True
-        If True, the periods are silenced on a per channel basis. If False, the periods are silenced
-        across all channels
     detect_threshold : float, default: 5
         The threshold to detect artefacts. The threshold is computed as `detect_threshold * noise_level`
     freq_max : float, default: 20
@@ -151,49 +151,20 @@ class SilencedArtefactsRecording(SilencedPeriodsRecording):
         _, job_kwargs  = split_job_kwargs(random_chunk_kwargs)
         job_kwargs = fix_job_kwargs(job_kwargs)
 
-        available_modes = ("zeros", "noise")
         recording = RectifyRecording(recording)
-        recording = FilterGaussianRecording(recording, freq_min=0, freq_max=20)
+        recording = GaussianFilterRecording(recording, freq_min=None, freq_max=freq_max)
 
         periods = detect_onsets(recording, 
                                 detect_threshold=detect_threshold, 
                                 **random_chunk_kwargs)
 
-        # some checks
-        assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
-
-        if mode in ["noise"]:
-            if noise_levels is None:
-                random_slices_kwargs = random_chunk_kwargs.copy()
-                random_slices_kwargs["seed"] = seed
-                noise_levels = get_noise_levels(
-                    recording, return_scaled=False, random_slices_kwargs=random_slices_kwargs
-                )
-            noise_generator = NoiseGeneratorRecording(
-                num_channels=recording.get_num_channels(),
-                sampling_frequency=recording.sampling_frequency,
-                durations=[recording.select_segments(i).get_duration() for i in range(recording.get_num_segments())],
-                dtype=recording.dtype,
-                seed=seed,
-                noise_levels=noise_levels,
-                strategy="on_the_fly",
-                noise_block_size=int(recording.sampling_frequency),
-            )
-        else:
-            noise_generator = None
-
-
-
-        BasePreprocessor.__init__(self, recording)
-        for seg_index, parent_segment in enumerate(recording._recording_segments):
-            periods = list_periods[seg_index]
-            periods = np.asarray(periods, dtype="int64")
-            periods = np.sort(periods, axis=0)
-            rec_segment = SilencedArtefactsRecording(parent_segment, periods, mode, noise_generator, seg_index)
-            self.add_recording_segment(rec_segment)
-
-        self._kwargs = dict(recording=recording, list_periods=list_periods, mode=mode, seed=seed)
-        self._kwargs.update(random_chunk_kwargs)
+        SilencedPeriodsRecording.__init__(self, 
+                                          recording, 
+                                          periods, 
+                                          mode=mode, 
+                                          noise_levels=noise_levels, 
+                                          seed=seed, 
+                                          **random_chunk_kwargs)
 
 
 # function for API
