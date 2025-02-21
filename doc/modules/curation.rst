@@ -188,6 +188,7 @@ prone to wrong merges. To do so, you'll need to do the following:
 
 The extra keyword ``recursive`` specifies that for each presets/sequences of steps, merges are performed
 until no further merges are possible. The ``job_kwargs`` are the parameters for the parallelization.
+**Be careful that the merges can not be reverted, so be sure to not erase your analyzer and create a new variable**
 
 
 Manual curation
