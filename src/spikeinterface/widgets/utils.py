@@ -284,10 +284,6 @@ def make_units_table_from_sorting(sorting, units_table=None):
         values = sorting.get_property(col)
         if values.dtype.kind in "iuUSfb" and values.ndim == 1:
             units_table.loc[:, col] = values
-        else:
-            warn(
-                f"Property {col} not added to the units table because it has ndim > 1 or dtype not supported",
-            )
 
     return units_table
 

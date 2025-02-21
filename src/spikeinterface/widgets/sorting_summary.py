@@ -109,7 +109,7 @@ class SortingSummaryWidget(BaseWidget):
         if displayed_unit_properties is None:
             displayed_unit_properties = list(_default_displayed_unit_properties)
         if extra_unit_properties is not None:
-            displayed_unit_properties += list(extra_unit_properties.keys())
+            displayed_unit_properties = displayed_unit_properties + list(extra_unit_properties.keys())
 
         data_plot = dict(
             sorting_analyzer=sorting_analyzer,
