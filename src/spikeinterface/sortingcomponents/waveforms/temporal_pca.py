@@ -414,13 +414,11 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
                     segment_index=peak["segment_index"],
                 )
                 peak_motion = peak_motion[0]
-                # peak_motions[i] = peak_motion
 
                 # interpolate the svd to the original position
                 local_chans = np.flatnonzero(self.neighbours_mask[chan_index, :])
                 source_locations = self.channel_locations[local_chans, :]
                 dest_locations = source_locations.copy()
-                # dest_locations[:, self.motion.dim] -= peak_motion
                 dest_locations[:, self.motion.dim] += peak_motion
 
                 for c in range(self.n_components):
