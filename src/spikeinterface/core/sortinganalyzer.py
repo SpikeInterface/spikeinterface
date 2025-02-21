@@ -812,7 +812,7 @@ class SortingAnalyzer:
         """
         return self.sorting.get_property(key, ids=ids)
 
-    def can_perform_merges(
+    def is_mergeable(
         self,
         merge_unit_groups,
         new_unit_ids=None,

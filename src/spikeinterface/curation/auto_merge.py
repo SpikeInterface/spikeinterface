@@ -355,8 +355,6 @@ def compute_merge_unit_groups(
             )
             outs["pairs_decreased_score"] = pairs_decreased_score
 
-        # ind1, ind2 = np.nonzero(pair_mask)
-        # print(step, len(ind1))
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
@@ -373,7 +371,10 @@ def compute_merge_unit_groups(
 
 def resolve_pairs(existing_merges, new_merges):
     """
-    Convenient function used to resolve nested merges when merging units recursively.
+    Convenient function used to resolve nested merges when merging units recursively. This is mostly only
+    used internally by auto_merge_units, to get a condensed representation of all the merges that
+    have been done. Thus, one can use the plot_potential_merge widget written by Alessio to visualize
+    the merges that have been done.
 
     Parameters
     ----------
@@ -464,8 +465,8 @@ def _auto_merge_units_single_iteration(
 
     merged_units = len(merge_unit_groups) > 0
     if merged_units:
-        can_do_merges = sorting_analyzer.can_perform_merges(merge_unit_groups, **apply_merge_kwargs)
-        if can_do_merges:
+        is_mergeable = sorting_analyzer.is_mergeable(merge_unit_groups, **apply_merge_kwargs)
+        if is_mergeable:
             merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
                 merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
             )
