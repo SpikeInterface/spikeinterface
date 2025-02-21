@@ -156,7 +156,7 @@ merges. It offers multiple "presets" and the flexibility to apply individual ste
 There is also the convenient :py:func:`~spikeinterface.curation.auto_merge_units` function that combines the
 :py:func:`~spikeinterface.curation.compute_merge_unit_groups` and :py:func:`~spikeinterface.core.SortingAnalyzer.merge_units` functions.
 This is a high level function that allows you to apply either one or several presets/lists of steps in one go. For example, let's
-assume you want to apply the "x_contamination" preset, but iteratively and with slightly different parameters: first, 
+assume you want to apply the "x_contamination" preset, but iteratively and with slightly different parameters: first,
 you want to focus on the templates that are very similar, according to their template similarities, before
 considering those that might be more distant. Such a greedy and iterative scheme has been proved to be less
 prone to wrong merges. To do so, you'll need to do the following:
