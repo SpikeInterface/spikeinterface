@@ -111,7 +111,7 @@ class SilencedArtefactsRecording(SilencedPeriodsRecording):
     seed : int | None, default: None
         Random seed for `get_noise_levels` and `NoiseGeneratorRecording`.
         If none, `get_noise_levels` uses `seed=0` and `NoiseGeneratorRecording` generates a random seed using `numpy.random.default_rng`.
-    mode : "zeros" | "noise, default: "zeros"
+    mode : "zeros" | "noise", default: "zeros"
         Determines what periods are replaced by. Can be one of the following:
 
         - "zeros": Artifacts are replaced by zeros.
@@ -131,28 +131,29 @@ class SilencedArtefactsRecording(SilencedPeriodsRecording):
                  recording,
                  detect_threshold=5,
                  freq_max=20., 
-                 mode="zeros", 
+                 mode="noise", 
                  noise_levels=None,
-                 seed=None, 
+                 seed=None,
+                 list_periods=None,
                  **random_chunk_kwargs):
 
-        recording = RectifyRecording(recording)
-        recording = GaussianFilterRecording(recording, freq_min=None, freq_max=freq_max)
+        enveloppe = RectifyRecording(recording)
+        enveloppe = GaussianFilterRecording(enveloppe, freq_min=None, freq_max=freq_max)
 
-        periods = detect_onsets(recording, 
+        if list_periods is None:
+            list_periods = detect_onsets(enveloppe, 
                                 detect_threshold=detect_threshold, 
                                 **random_chunk_kwargs)
 
         SilencedPeriodsRecording.__init__(self, 
                                           recording, 
-                                          periods, 
+                                          list_periods, 
                                           mode=mode, 
                                           noise_levels=noise_levels, 
                                           seed=seed, 
                                           **random_chunk_kwargs)
 
-        #self._kwargs = dict(recording=recording, list_periods=list_periods, mode=mode, seed=seed)
-        #self._kwargs.update(random_chunk_kwargs)
+        self._kwargs.update({'detect_threshold' : detect_threshold, 'freq_max' : freq_max})
 
 
 # function for API
