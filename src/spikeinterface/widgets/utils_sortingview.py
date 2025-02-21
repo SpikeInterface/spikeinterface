@@ -53,12 +53,13 @@ def generate_unit_table_view(
     sorting_or_sorting_analyzer: SortingAnalyzer | BaseSorting,
     unit_properties: list[str] | None = None,
     similarity_scores: np.ndarray | None = None,
+    extra_unit_properties: dict | None = None,
 ):
     import sortingview.views as vv
 
     if isinstance(sorting_or_sorting_analyzer, SortingAnalyzer):
         analyzer = sorting_or_sorting_analyzer
-        units_tables = make_units_table_from_analyzer(analyzer)
+        units_tables = make_units_table_from_analyzer(analyzer, extra_unit_properties=extra_unit_properties)
         sorting = analyzer.sorting
     else:
         sorting = sorting_or_sorting_analyzer
@@ -78,6 +79,8 @@ def generate_unit_table_view(
         units_tables = units_tables.loc[:, unit_properties]
 
         dtype_convertor = {"i": "int", "u": "int", "f": "float", "U": "str", "S": "str", "b": "bool"}
+        # we add "O": "str" because pandas automatically converts strings to Object dtype
+        dtype_convertor["O"] = "str"
 
         ut_columns = []
         for col in unit_properties:
