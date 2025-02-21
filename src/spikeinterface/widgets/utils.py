@@ -286,7 +286,7 @@ def make_units_table_from_sorting(sorting, units_table=None):
             units_table.loc[:, col] = values
         else:
             warn(
-                f"Property {col} not added to the units table because it has ndim > 1 or dtype not in 'iuUSfb'",
+                f"Property {col} not added to the units table because it has ndim > 1 or dtype not supported",
             )
 
     return units_table
@@ -349,7 +349,7 @@ def make_units_table_from_analyzer(
                 units_table.loc[:, col] = values
             else:
                 warn(
-                    f"Extra property {col} not added to the units table because it has ndim > 1 or dtype not in 'iuUSfb'",
+                    f"Extra property {col} not added to the units table because it has ndim > 1 or dtype not supported",
                 )
 
     return units_table
