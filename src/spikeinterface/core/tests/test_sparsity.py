@@ -195,6 +195,21 @@ def test_estimate_sparsity():
     )
     assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
 
+    # closest_channels : the mask should exactly 3 channels per units
+    sparsity = estimate_sparsity(
+        sorting,
+        recording,
+        num_spikes_for_sparsity=50,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="closest_channels",
+        num_channels=3,
+        chunk_duration="1s",
+        progress_bar=True,
+        n_jobs=1,
+    )
+    assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
+
     # by_property
     sparsity = estimate_sparsity(
         sorting,

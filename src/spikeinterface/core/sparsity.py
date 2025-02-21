@@ -15,6 +15,8 @@ _sparsity_doc = """
     method : str
         * "best_channels" : N best channels with the largest amplitude. Use the "num_channels" argument to specify the
                            number of channels.
+        * "closest_channels" : N closest channels according to the distance. Use the "num_channels" argument to specify the
+                           number of channels.
         * "radius" : radius around the best channel. Use the "radius_um" argument to specify the radius in um.
         * "snr" : threshold based on template signal-to-noise ratio. Use the "threshold" argument
                  to specify the SNR threshold (in units of noise levels) and the "amplitude_mode" argument
@@ -320,6 +322,41 @@ class ChannelSparsity:
             mask[unit_ind, chan_inds] = True
         return cls(mask, templates_or_sorting_analyzer.unit_ids, templates_or_sorting_analyzer.channel_ids)
 
+    ## Some convinient function to compute sparsity from several strategy
+    @classmethod
+    def from_closest_channels(
+        cls, templates_or_sorting_analyzer, num_channels
+    ):
+        """
+        Construct sparsity from N closest channels
+        Use the "num_channels" argument to specify the number of channels.
+
+        Parameters
+        ----------
+        templates_or_sorting_analyzer : Templates | SortingAnalyzer
+            A Templates or a SortingAnalyzer object.
+        num_channels : int
+            Number of channels for "best_channels" method.
+
+        Returns
+        -------
+        sparsity : ChannelSparsity
+            The estimated sparsity
+        """
+        from .template_tools import get_template_amplitudes
+
+        mask = np.zeros(
+            (templates_or_sorting_analyzer.unit_ids.size, templates_or_sorting_analyzer.channel_ids.size), dtype="bool"
+        )
+        channel_locations = templates_or_sorting_analyzer.get_channel_locations()
+        distances = np.linalg.norm(channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
+    
+        for unit_ind, unit_id in enumerate(templates_or_sorting_analyzer.unit_ids):
+            chan_inds = np.argsort(distances[unit_ind])
+            chan_inds = chan_inds[:num_channels]
+            mask[unit_ind, chan_inds] = True
+        return cls(mask, templates_or_sorting_analyzer.unit_ids, templates_or_sorting_analyzer.channel_ids)
+
     @classmethod
     def from_radius(cls, templates_or_sorting_analyzer, radius_um, peak_sign="neg"):
         """
@@ -600,7 +637,7 @@ class ChannelSparsity:
 def compute_sparsity(
     templates_or_sorting_analyzer: "Templates | SortingAnalyzer",
     noise_levels: np.ndarray | None = None,
-    method: "radius" | "best_channels" | "snr" | "amplitude" | "energy" | "by_property" | "ptp" = "radius",
+    method: "radius" | "best_channels" | "closest_channels" | "snr" | "amplitude" | "energy" | "by_property" | "ptp" = "radius",
     peak_sign: "neg" | "pos" | "both" = "neg",
     num_channels: int | None = 5,
     radius_um: float | None = 100.0,
@@ -635,7 +672,7 @@ def compute_sparsity(
         # to keep backward compatibility
         templates_or_sorting_analyzer = templates_or_sorting_analyzer.sorting_analyzer
 
-    if method in ("best_channels", "radius", "snr", "amplitude", "ptp"):
+    if method in ("best_channels", "closest_channels", "radius", "snr", "amplitude", "ptp"):
         assert isinstance(
             templates_or_sorting_analyzer, (Templates, SortingAnalyzer)
         ), f"compute_sparsity(method='{method}') need Templates or SortingAnalyzer"
@@ -647,6 +684,9 @@ def compute_sparsity(
     if method == "best_channels":
         assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"
         sparsity = ChannelSparsity.from_best_channels(templates_or_sorting_analyzer, num_channels, peak_sign=peak_sign)
+    elif method == "closest_channels":
+        assert num_channels is not None, "For the 'closest_channels' method, 'num_channels' needs to be given"
+        sparsity = ChannelSparsity.from_radius(templates_or_sorting_analyzer, num_channels)
     elif method == "radius":
         assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
         sparsity = ChannelSparsity.from_radius(templates_or_sorting_analyzer, radius_um, peak_sign=peak_sign)
@@ -698,7 +738,7 @@ def estimate_sparsity(
     num_spikes_for_sparsity: int = 100,
     ms_before: float = 1.0,
     ms_after: float = 2.5,
-    method: "radius" | "best_channels" | "amplitude" | "snr" | "by_property" | "ptp" = "radius",
+    method: "radius" | "best_channels" | "closest_channels" | "amplitude" | "snr" | "by_property" | "ptp" = "radius",
     peak_sign: "neg" | "pos" | "both" = "neg",
     radius_um: float = 100.0,
     num_channels: int = 5,
@@ -747,7 +787,7 @@ def estimate_sparsity(
     # Can't be done at module because this is a cyclic import, too bad
     from .template import Templates
 
-    assert method in ("radius", "best_channels", "snr", "amplitude", "by_property", "ptp"), (
+    assert method in ("radius", "best_channels", "closest_channels", "snr", "amplitude", "by_property", "ptp"), (
         f"method={method} is not available for `estimate_sparsity()`. "
         "Available methods are 'radius', 'best_channels', 'snr', 'amplitude', 'by_property', 'ptp' (deprecated)"
     )
@@ -801,6 +841,11 @@ def estimate_sparsity(
             assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"
             sparsity = ChannelSparsity.from_best_channels(
                 templates, num_channels, peak_sign=peak_sign, amplitude_mode=amplitude_mode
+            )
+        elif method == "closest_channels":
+            assert num_channels is not None, "For the 'closest_channels' method, 'num_channels' needs to be given"
+            sparsity = ChannelSparsity.from_best_channels(
+                templates, num_channels
             )
         elif method == "radius":
             assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
