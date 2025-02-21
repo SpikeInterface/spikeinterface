@@ -38,9 +38,9 @@ class DetectThresholdCrossing(PeakDetector):
         return self._dtype
     
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
-        z =  (traces - self.abs_thresholds).mean(1)
+        z = (traces - self.abs_thresholds).mean(1)
         threshold_mask = np.diff((z > 0) != 0, axis=0)
-        indices  = np.flatnonzero(threshold_mask)
+        indices = np.flatnonzero(threshold_mask)
         local_peaks = np.zeros(indices.size, dtype=self._dtype)
         local_peaks["sample_index"] = indices
         local_peaks["onset"][::2] = True
@@ -75,6 +75,10 @@ def detect_onsets(recording, detect_threshold=5, **extra_kwargs):
         onsets = sub_peaks[sub_peaks['onset']]
         offsets = sub_peaks[~sub_peaks['onset']]
         
+        if len(onsets) == 0 and len(offsets) == 0:
+            periods.append([])
+            continue
+
         if onsets['sample_index'][0] > offsets['sample_index'][0]:
             sub_periods += [(0, offsets['sample_index'][0])]
             offsets = offsets[1:]
@@ -130,20 +134,26 @@ class SilencedArtefactsRecording(SilencedPeriodsRecording):
     def __init__(self, 
                  recording,
                  detect_threshold=5,
-                 freq_max=20., 
-                 mode="noise", 
+                 verbose=False,
+                 freq_max=5., 
+                 mode="zeros", 
                  noise_levels=None,
                  seed=None,
                  list_periods=None,
                  **random_chunk_kwargs):
 
-        enveloppe = RectifyRecording(recording)
-        enveloppe = GaussianFilterRecording(enveloppe, freq_min=None, freq_max=freq_max)
+        self.enveloppe = RectifyRecording(recording)
+        self.enveloppe = GaussianFilterRecording(self.enveloppe, freq_min=None, freq_max=freq_max)
 
         if list_periods is None:
-            list_periods = detect_onsets(enveloppe, 
+            list_periods = detect_onsets(self.enveloppe, 
                                 detect_threshold=detect_threshold, 
                                 **random_chunk_kwargs)
+            if verbose:
+                for i, periods in enumerate(list_periods):
+                    total_time = np.sum([end-start for start, end in periods])
+                    percentage = 100 * total_time / recording.get_num_samples(i)
+                    print(f"{percentage}% of segment {i} has been flagged as artefactual")
 
         SilencedPeriodsRecording.__init__(self, 
                                           recording, 
@@ -153,7 +163,7 @@ class SilencedArtefactsRecording(SilencedPeriodsRecording):
                                           seed=seed, 
                                           **random_chunk_kwargs)
 
-        self._kwargs.update({'detect_threshold' : detect_threshold, 'freq_max' : freq_max})
+        self._kwargs.update({'detect_threshold' : detect_threshold, 'freq_max' : freq_max, "verbose" : verbose, 'enveloppe' : self.enveloppe})
 
 
 # function for API
