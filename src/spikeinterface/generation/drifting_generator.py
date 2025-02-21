@@ -52,15 +52,6 @@ _toy_probes = {
         contact_shapes="circle",
         contact_shape_params={"radius": 8},
     ),
-    "MicroMacro": dict(
-        num_columns=1,
-        num_contact_per_column=[8],
-        xpitch=300,
-        ypitch=300,
-        y_shift_per_column=[0],
-        contact_shapes="circle",
-        contact_shape_params={"radius": 8},
-    ),
 }
 
 

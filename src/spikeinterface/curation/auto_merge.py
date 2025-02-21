@@ -415,77 +415,74 @@ def _auto_merge_units_single_iteration(
     sorting_analyzer: SortingAnalyzer,
     compute_merge_kwargs: dict = {},
     apply_merge_kwargs: dict = {},
-    recursive: bool = False,
     extra_outputs: bool = False,
     force_copy: bool = True,
+    merging_strategy: str = "warning",
     **job_kwargs,
 ) -> SortingAnalyzer:
     """
     Compute merge unit groups and apply it on a SortingAnalyzer. Used by auto_merge_units, see documentation there.
     Internally uses `compute_merge_unit_groups()`
 
+    Parameters
+    ----------
+
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer to be merged
+    compute_merge_kwargs : dict
+        The parameters to be passed to compute_merge_unit_groups()
+    apply_merge_kwargs : dict
+        The parameters to be passed to merge_units()
+    extra_outputs : bool, default: False
+        If True, additional outputs are returned
+    force_copy : bool, default: True
+        If True, the sorting_analyzer is copied before applying the merges
+    merging_strategy : str, default: "warning"
+        The strategy to use when merging units. Can be "warning" or "strict". If "warning", the merging will
+        stop with a warning if soft merges can not be done. Otherwise, if "strict", an error is thrown
+
     Returns
     -------
     sorting_analyzer:
         The new sorting analyzer where all the merges from all the presets have been applied
 
-    merges, outs:
+    resolved_merges, merge_unit_groups, outs:
         Returned only when extra_outputs=True
         A list with the merges performed, and dictionaries that contains data for debugging and plotting.
-        Note that if recursive, then you are receiving list of lists (for all merges and outs at every step)
     """
 
     if force_copy:
         # To avoid erasing the extensions of the user
         sorting_analyzer = sorting_analyzer.copy()
 
-    if not recursive:
-        merge_unit_groups = compute_merge_unit_groups(
-            sorting_analyzer, **compute_merge_kwargs, extra_outputs=extra_outputs, force_copy=False, **job_kwargs
-        )
+    merge_unit_groups = compute_merge_unit_groups(
+        sorting_analyzer, **compute_merge_kwargs, extra_outputs=extra_outputs, force_copy=False, **job_kwargs
+    )
 
-        if extra_outputs:
-            merge_unit_groups, outs = merge_unit_groups
+    if extra_outputs:
+        merge_unit_groups, outs = merge_unit_groups
 
-        merged_units = len(merge_unit_groups) > 0
-        if merged_units:
+    merged_units = len(merge_unit_groups) > 0
+    if merged_units:
+        can_do_merges = sorting_analyzer.can_perform_merges(merge_unit_groups, **apply_merge_kwargs)
+        if can_do_merges:
             merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
                 merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
             )
         else:
-            merged_analyzer = sorting_analyzer
-            new_unit_ids = []
-
-        resolved_merges = {key: value for (key, value) in zip(new_unit_ids, merge_unit_groups)}
-    else:
-        merged_units = True
-        merged_analyzer = sorting_analyzer
-
-        if extra_outputs:
-            all_merging_groups = []
-            resolved_merges = {}
-            all_outs = []
-
-        while merged_units:
-            merge_unit_groups = compute_merge_unit_groups(
-                merged_analyzer, **compute_merge_kwargs, extra_outputs=extra_outputs, force_copy=False, **job_kwargs
-            )
-
-            if extra_outputs:
-                merge_unit_groups, outs = merge_unit_groups
-
-            merged_units = len(merge_unit_groups) > 0
-
-            if merged_units:
-                merged_analyzer, new_unit_ids = merged_analyzer.merge_units(
-                    merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
-                )
-
+            if merging_strategy == "warning":
+                warnings.warn("Some merges can not be done. Merging is stopped", UserWarning)
                 if extra_outputs:
-                    all_merging_groups += [merge_unit_groups]
-                    new_merges = {key: value for (key, value) in zip(new_unit_ids, merge_unit_groups)}
-                    resolved_merges = resolve_pairs(resolved_merges, new_merges)
-                    all_outs += [outs]
+                    return merged_analyzer, {}, merge_unit_groups, outs
+                else:
+                    return merged_analyzer
+            elif merging_strategy == "strict":
+                raise ValueError("Some merges can not be done. Merging is stopped")
+    else:
+        merged_analyzer = sorting_analyzer
+        new_unit_ids = []
+
+    resolved_merges = {key: value for (key, value) in zip(new_unit_ids, merge_unit_groups)}
 
     if extra_outputs:
         return merged_analyzer, resolved_merges, merge_unit_groups, outs
@@ -688,6 +685,7 @@ def auto_merge_units(
     steps: list[str] | None = None,
     apply_merge_kwargs: dict = {},
     recursive: bool = False,
+    merging_strategy: str = "warning",
     extra_outputs: bool = False,
     force_copy: bool = True,
     **job_kwargs,
@@ -715,6 +713,9 @@ def auto_merge_units(
     recursive : bool, default: False
         If True, then each presets of the list is applied until no further merges can be done, before trying
         the next one
+    merging_strategy : str, default: "warning"
+        The strategy to use when merging units. Can be "warning" or "strict". If "warning", the merging will
+        stop with a warning if soft merges can not be done. Otherwise, if "strict", an error is thrown
     extra_outputs : bool, default: False
         If True, additional list of merges applied at every preset, and dictionary (`outs`) with processed data are returned.
     force_copy : boolean, default: True
@@ -772,22 +773,29 @@ def auto_merge_units(
             compute_merge_kwargs = {"steps": to_launch}
 
         compute_merge_kwargs.update({"steps_params": params})
-        # print(compute_merge_kwargs)
-        sorting_analyzer = _auto_merge_units_single_iteration(
-            sorting_analyzer,
-            compute_merge_kwargs,
-            apply_merge_kwargs=apply_merge_kwargs,
-            recursive=recursive,
-            extra_outputs=extra_outputs,
-            force_copy=False,
-            **job_kwargs,
-        )
+        found_merges = True
 
-        if extra_outputs:
-            sorting_analyzer, new_merges, merge_unit_groups, outs = sorting_analyzer
-            all_merging_groups += [merge_unit_groups]
-            resolved_merges = resolve_pairs(resolved_merges, new_merges)
-            all_outs += [outs]
+        while found_merges:
+            num_units = len(sorting_analyzer.unit_ids)
+            sorting_analyzer = _auto_merge_units_single_iteration(
+                sorting_analyzer,
+                compute_merge_kwargs,
+                apply_merge_kwargs=apply_merge_kwargs,
+                extra_outputs=extra_outputs,
+                merging_strategy=merging_strategy,
+                force_copy=False,
+                **job_kwargs,
+            )
+
+            if extra_outputs:
+                sorting_analyzer, new_merges, merge_unit_groups, outs = sorting_analyzer
+                all_merging_groups += [merge_unit_groups]
+                resolved_merges = resolve_pairs(resolved_merges, new_merges)
+                all_outs += [outs]
+            if not recursive:
+                found_merges = False
+            else:
+                found_merges = len(sorting_analyzer.unit_ids) < num_units
 
     if extra_outputs:
         return sorting_analyzer, resolved_merges, merge_unit_groups, all_outs
