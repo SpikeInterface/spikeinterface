@@ -56,6 +56,7 @@ class SortingSummaryWidget(BaseWidget):
         analyzer.get_extension("template_metrics").get_data().columns.
     extra_unit_properties : dict or None, default: None
         A dict with extra units properties to display.
+        The key is the property name and the value must be a numpy.array.
     curation_dict : dict or None, default: None
         When curation is True, optionaly the viewer can get a previous 'curation_dict'
         to continue/check  previous curations on this analyzer.
