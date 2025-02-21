@@ -59,7 +59,7 @@ def generate_unit_table_view(
 
     if isinstance(sorting_or_sorting_analyzer, SortingAnalyzer):
         analyzer = sorting_or_sorting_analyzer
-        units_tables = make_units_table_from_analyzer(analyzer, extra_unit_properties=extra_unit_properties)
+        units_tables = make_units_table_from_analyzer(analyzer, extra_properties=extra_unit_properties)
         sorting = analyzer.sorting
     else:
         sorting = sorting_or_sorting_analyzer
