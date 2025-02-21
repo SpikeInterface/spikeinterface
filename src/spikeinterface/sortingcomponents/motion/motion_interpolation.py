@@ -10,7 +10,7 @@ from spikeinterface.preprocessing.filter import fix_dtype
 
 def compute_peak_displacements(peaks, motion, recording, peak_locations=None):
     """
-    Compute the local motion for each peak give a motion object.
+    Compute the local motion for each peak given a motion object.
 
     Parameters
     ----------
