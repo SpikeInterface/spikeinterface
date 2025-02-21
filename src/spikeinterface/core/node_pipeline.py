@@ -29,6 +29,11 @@ spike_peak_dtype = base_peak_dtype + [
 
 
 class PipelineNode:
+
+    # If False (general case) then compute(traces_chunk, *node_input_args)
+    # If True then compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args)
+    _compute_has_extended_signature = False
+
     def __init__(
         self,
         recording: BaseRecording,
@@ -684,7 +689,13 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
                 node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, peak_slice)
             else:
                 # TODO later when in master: change the signature of all nodes (or maybe not!)
-                node_output = node.compute(traces_chunk, *node_input_args)
+                if not node._compute_has_extended_signature:
+                    node_output = node.compute(traces_chunk, *node_input_args)
+                else:
+                    node_output = node.compute(
+                        traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args
+                    )
+
             pipeline_outputs[node] = node_output
 
             if skip_after_n_peaks_per_worker is not None and isinstance(node, PeakSource):

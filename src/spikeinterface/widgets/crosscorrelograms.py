@@ -118,6 +118,10 @@ class CrossCorrelogramsWidget(BaseWidget):
                     color = "k"
                 ax.bar(x=bins[:-1], height=ccg, width=bin_width, color=color, align="edge")
 
+                if i < len(self.axes) - 1:
+                    self.axes[i, j].set_xticks([], [])
+        plt.tight_layout()
+
         for i, unit_id in enumerate(unit_ids):
             self.axes[0, i].set_title(str(unit_id))
             self.axes[-1, i].set_xlabel("CCG (ms)")
