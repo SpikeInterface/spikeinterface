@@ -172,10 +172,11 @@ prone to wrong merges. To do so, you'll need to do the following:
     analyzer.compute(["random_spikes", "templates", "template_similarity", "correlograms"])
     analyzer.compute("unit_locations", method="monopolar_triangulation")
 
+    template_diff_thresh = [0.05,0.15,0.25]
     presets = ["x_contaminations"] * len(template_diff_thresh)
     steps_params = [
         {"template_similarity": {"template_diff_thresh": i}}
-        for i in [0.05,0.15,0.25]
+        for i in template_diff_thresh
     ]
 
     analyzer_merged = auto_merge_units(
