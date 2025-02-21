@@ -228,11 +228,11 @@ class BenchmarkStudy:
             benchmark.result["run_time"] = float(t1 - t0)
             benchmark.save_main(bench_folder)
 
-    def set_colors(self, colors=None, map_name="tab20"):
+    def set_colors(self, colors=None, map_name="tab10"):
         if colors is None:
             case_keys = list(self.cases.keys())
             self.colors = get_some_colors(
-                case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0
+                case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0, resample=False
             )
         else:
             self.colors = colors

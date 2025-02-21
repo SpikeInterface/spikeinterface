@@ -32,7 +32,7 @@ def make_multi_method_doc(methods, ident="    "):
     return doc
 
 
-def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **job_kwargs):
+def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job_name=None, **job_kwargs):
     """
     Helper function to extract waveforms at the max channel from a peak list
 
@@ -63,6 +63,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
         sparsity_mask=sparsity_mask,
         copy=True,
         verbose=False,
+        job_name=job_name,
         **job_kwargs,
     )
 
@@ -289,17 +290,6 @@ def remove_empty_templates(templates):
         probe=templates.probe,
         is_scaled=templates.is_scaled,
     )
-
-
-def sigmoid(x, x0, k, b):
-    return (1 / (1 + np.exp(-k * (x - x0)))) + b
-
-
-def fit_sigmoid(xdata, ydata, p0=None):
-    from scipy.optimize import curve_fit
-
-    popt, pcov = curve_fit(sigmoid, xdata, ydata, p0)
-    return popt
 
 
 def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):
