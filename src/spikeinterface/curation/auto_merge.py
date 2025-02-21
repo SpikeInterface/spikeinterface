@@ -355,7 +355,6 @@ def compute_merge_unit_groups(
             )
             outs["pairs_decreased_score"] = pairs_decreased_score
 
-
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
     merge_unit_groups = list(zip(unit_ids[ind1], unit_ids[ind2]))
