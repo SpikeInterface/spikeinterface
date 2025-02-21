@@ -5,6 +5,7 @@ import numpy as np
 from .base import BaseWidget, to_attr
 
 from spikeinterface.core import BaseRecording, SortingAnalyzer
+from .rasters import BaseRasterWidget
 from spikeinterface.core.motion import Motion
 
 
@@ -97,7 +98,7 @@ class MotionWidget(BaseWidget):
             ax.set_ylabel("Depth [um]")
 
 
-class DriftRasterMapWidget(BaseWidget):
+class DriftRasterMapWidget(BaseRasterWidget):
     """
     Plot the drift raster map from peaks or a SortingAnalyzer.
     The drift raster map is a scatter plot of the estimated peak depth vs time and it is
@@ -127,7 +128,7 @@ class DriftRasterMapWidget(BaseWidget):
     depth_lim : tuple or None, default: None
         The min and max depth to display, if None (min and max of the recording).
     scatter_decimate : int, default: None
-        If > 1, the scatter points are decimated.
+        If equal to n, each nth spike is kept for plotting.
     color_amplitude : bool, default: True
         If True, the color of the scatter points is the amplitude of the peaks.
     cmap : str, default: "inferno"
@@ -170,6 +171,7 @@ class DriftRasterMapWidget(BaseWidget):
         if sorting_analyzer is not None:
             if sorting_analyzer.has_recording():
                 recording = sorting_analyzer.recording
+                sampling_frequency = recording.sampling_frequency
             else:
                 recording = None
                 sampling_frequency = sorting_analyzer.sampling_frequency
@@ -200,56 +202,14 @@ class DriftRasterMapWidget(BaseWidget):
             if peak_amplitudes is not None:
                 peak_amplitudes = peak_amplitudes[peak_mask]
 
-        plot_data = dict(
-            peaks=peaks,
-            peak_locations=peak_locations,
-            peak_amplitudes=peak_amplitudes,
-            direction=direction,
-            sampling_frequency=sampling_frequency,
-            segment_index=segment_index,
-            depth_lim=depth_lim,
-            color_amplitude=color_amplitude,
-            color=color,
-            scatter_decimate=scatter_decimate,
-            cmap=cmap,
-            clim=clim,
-            alpha=alpha,
-            recording=recording,
-        )
-        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+        from matplotlib.pyplot import colormaps
 
-    def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
-        from matplotlib.colors import Normalize
-        from .utils_matplotlib import make_mpl_figure
-
-        from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
-
-        dp = to_attr(data_plot)
-
-        assert backend_kwargs["axes"] is None, "axes argument is not allowed in DriftRasterMapWidget. Use ax instead."
-
-        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
-
-        if dp.recording is None:
-            peak_times = dp.peaks["sample_index"] / dp.sampling_frequency
-        else:
-            peak_times = dp.recording.sample_index_to_time(dp.peaks["sample_index"], segment_index=dp.segment_index)
-
-        peak_locs = dp.peak_locations[dp.direction]
-        if dp.scatter_decimate is not None:
-            peak_times = peak_times[:: dp.scatter_decimate]
-            peak_locs = peak_locs[:: dp.scatter_decimate]
-
-        if dp.color_amplitude:
-            amps = dp.peak_amplitudes
+        if color_amplitude:
+            amps = peak_amplitudes
             amps_abs = np.abs(amps)
             q_95 = np.quantile(amps_abs, 0.95)
-            if dp.scatter_decimate is not None:
-                amps = amps[:: dp.scatter_decimate]
-                amps_abs = amps_abs[:: dp.scatter_decimate]
-            cmap = plt.colormaps[dp.cmap]
-            if dp.clim is None:
+            cmap = colormaps[cmap]
+            if clim is None:
                 amps = amps_abs
                 amps /= q_95
                 c = cmap(amps)
@@ -259,17 +219,26 @@ class DriftRasterMapWidget(BaseWidget):
             color_kwargs = dict(
                 color=None,
                 c=c,
-                alpha=dp.alpha,
+                alpha=alpha,
             )
         else:
-            color_kwargs = dict(color=dp.color, c=None, alpha=dp.alpha)
+            color_kwargs = dict(color=color, c=None, alpha=alpha)
 
-        self.ax.scatter(peak_times, peak_locs, s=1, **color_kwargs)
-        if dp.depth_lim is not None:
-            self.ax.set_ylim(*dp.depth_lim)
-        self.ax.set_title("Peak depth")
-        self.ax.set_xlabel("Times [s]")
-        self.ax.set_ylabel("Depth [$\\mu$m]")
+        # convert data into format that `BaseRasterWidget` can take it in
+        spike_train_data = {0: peaks["sample_index"] / sampling_frequency}
+        y_axis_data = {0: peak_locations[direction]}
+
+        plot_data = dict(
+            spike_train_data=spike_train_data,
+            y_axis_data=y_axis_data,
+            y_lim=depth_lim,
+            color_kwargs=color_kwargs,
+            scatter_decimate=scatter_decimate,
+            title="Peak depth",
+            y_label="Depth [um]",
+        )
+
+        BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
 
 
 class MotionInfoWidget(BaseWidget):
@@ -295,7 +264,7 @@ class MotionInfoWidget(BaseWidget):
     motion_lim : tuple or None, default: None
         The min and max motion to display, if None (min and max of the motion).
     scatter_decimate : int, default: None
-        If > 1, the scatter points are decimated.
+        If equal to n, each nth spike is kept for plotting.
     color_amplitude : bool, default: False
         If True, the color of the scatter points is the amplitude of the peaks.
     amplitude_cmap : str, default: "inferno"
