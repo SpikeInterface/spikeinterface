@@ -55,7 +55,7 @@ class BinaryRecordingExtractor(BaseRecording):
         file_paths,
         sampling_frequency,
         dtype,
-        num_channels=None,
+        num_channels: int,
         t_starts=None,
         channel_ids=None,
         time_axis=0,
@@ -64,11 +64,6 @@ class BinaryRecordingExtractor(BaseRecording):
         offset_to_uV=None,
         is_filtered=None,
     ):
-        # This assigns num_channels if num_channels is not None, otherwise num_chan is assigned
-        # num_chan needs to be be kept for backward compatibility but should not be used by the
-        # end user
-        num_channels = num_channels or num_chan
-        assert num_channels is not None, "You must provide num_channels or num_chan"
 
         if channel_ids is None:
             channel_ids = list(range(num_channels))

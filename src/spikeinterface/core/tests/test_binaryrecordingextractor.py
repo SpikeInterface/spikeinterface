@@ -93,8 +93,6 @@ def test_sequential_reading_of_small_traces(folder_with_binary_files):
     dtype = "float32"
 
     file_paths = [folder / "traces_cached_seg0.raw"]
-    # `num_chan` is kept for backward compatibility so including it at least one test
-    # run is good to ensure that it is appropriately accepted as an argument
     recording = BinaryRecordingExtractor(
         num_channels=num_channels,
         file_paths=file_paths,
