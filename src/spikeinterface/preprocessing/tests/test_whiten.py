@@ -56,7 +56,7 @@ class TestWhiten:
 
         return means, cov_mat, recording
 
-    def get_test_data_with_known_distribution(self, num_samples, dtype, means=None):
+    def get_test_data_with_known_distribution(self, num_samples, dtype, means=None, seed=0):
         """
         Create multivariate normal data with known means and covariance matrixs.
         If `dtype` is int16, scale to full range of int16 before cast.
@@ -68,7 +68,8 @@ class TestWhiten:
 
         cov_mat = np.array([[1, 0.5, 0], [0.5, 1, -0.25], [0, -0.25, 1]])
 
-        data = np.random.multivariate_normal(means, cov_mat, num_samples)
+        rng = np.random.RandomState(seed)
+        data = rng.multivariate_normal(means, cov_mat, num_samples)
 
         # Set the dtype, if `int16`, first scale to +/- 1 then cast to int16 range.
         if dtype == np.float32:
