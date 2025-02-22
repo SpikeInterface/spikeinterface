@@ -2,19 +2,17 @@
 import numpy as np
 
 
-from scipy.sparse import csr_matrix, bsr_matrix, coo_matrix
-from scipy.spatial.distance import pdist, cdist, squareform
 
 from spikeinterface.sortingcomponents.clustering.tools import aggregate_sparse_features
 
 
 
 def create_graph_from_peak_features(
+    recording,
     peaks,
-    peak_feats,
+    peak_features,
     sparse_mask,
-    peak_locs,
-    channel_locations,
+    peak_locations=None,
     bin_um=20.,
     dim=1,
     mode="full_connected_bin",
@@ -23,19 +21,42 @@ def create_graph_from_peak_features(
 ):
     """
     Create a sparse garph of peaks distances.
-    This is done. This done using a binarization along an axis.
-    Each peaks can connect to peaks of the same bin and neibour bins.
+    This done using a binarization along the depth axis.
+    Each peaks can connect to peaks of the same bin and neighbour bins.
 
+    The distances are locally computed on a local sparse set of channels that depend on thev detph.
+    So the original features sparsity must be big enougth to cover local channel (actual bin+neighbour).
 
+    2 possible modes:
+      * "full_connected_bin" : compute the distances from all peaks in a bin to all peaks in the same bin + neighbour
+      * "knn" : keep the k neareast neighbour for each peaks in bin + neighbour
+    
+    Important, peak_locations can be:
+      * the peak location from the channel (fast)
+      * the estimated peak location
+      * the corrected peak location if the peak_features is computed with motion_awre in mind
+
+    Note : the binarization works for linear probe only. This need to be extended to 2d grid binarization for planar mea.
     """
 
-    loc0 = min(channel_locations[:, dim])
-    loc1 = max(channel_locations[:, dim])
+    from scipy.sparse import csr_matrix
+    from scipy.spatial.distance import cdist
 
+    
 
     dim = "xyz".index(direction)
+    channel_locations = recording.get_channel_locations()
+    channel_depth = channel_locations[:, dim]
+
+    if peak_locations is None:
+        # we use the max channel location instead
+        peak_depths = channel_depth[peaks["channel_index"]]
+    else:
+        peak_depths = peak_locations[direction]
 
     # todo center this bons like in peak localization
+    loc0 = min(channel_depth)
+    loc1 = max(channel_depth)
     eps = bin_um/10.
     bins = np.arange(loc0-bin_um/2, loc1+bin_um/2+eps, bin_um)
 
@@ -46,25 +67,25 @@ def create_graph_from_peak_features(
         
         # limits for peaks
         l0, l1 = bins[b], bins[b+1]
-        mask = (peak_locs["y"] > l0) & (peak_locs["y"] <= l1)
-        # in_bin_indices = np.flatnonzero(mask)
-
+        mask = (peak_depths> l0) & (peak_depths<= l1)
 
         # limits for features
         b0, b1 = l0 - bin_um, l1 + bin_um
         local_chans = np.flatnonzero((channel_locations[:, dim] > (b0 )) & (channel_locations[:, dim] <= (b1)))
 
-        mask = (peak_locs["y"] > b0) & (peak_locs["y"] <= b1)
+        mask = (peak_depths> b0) & (peak_depths<= b1)
         peak_indices = np.flatnonzero(mask)
 
-        local_locs = peak_locs[peak_indices]
+        local_depths = peak_depths[peak_indices]
 
-        target_mask = (local_locs["y"] > l0) & (local_locs["y"] <= l1)
+        target_mask = (local_depths > l0) & (local_depths <= l1)
         target_indices = peak_indices[target_mask]
 
+        if target_indices.size == 0:
+            continue
 
         local_feats, dont_have_channels = aggregate_sparse_features(peaks, peak_indices,
-                                                                 peak_feats, sparse_mask, local_chans)
+                                                                 peak_features, sparse_mask, local_chans)
         # print(b)
         # print("dont_have_channels", np.sum(dont_have_channels))
         dont_have_channels_target = dont_have_channels[target_mask]
@@ -83,7 +104,7 @@ def create_graph_from_peak_features(
                 data.append(local_dists[i, :])
 
         elif mode == "knn":
-            # TODO use a better KNN tools (like pynndescnedt)
+            # TODO use a better KNN tools (like pynndescent)
             # here we do brut force at the moment
             local_dists = cdist(flatten_feat[target_mask], flatten_feat)
             n = peak_indices.size
@@ -100,7 +121,7 @@ def create_graph_from_peak_features(
                 data.append(local_dists[i, order])
 
         else:
-            raise ValueError("create_graph_from_peak_features wrong mode")
+            raise ValueError("create_graph_from_peak_features() wrong mode")
             
     indices0 = np.concatenate(indices0)
     indices1 = np.concatenate(indices1)
