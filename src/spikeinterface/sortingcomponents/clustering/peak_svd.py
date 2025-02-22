@@ -66,6 +66,9 @@ def extract_peaks_svd(
         gather_kwargs = dict()
     else:
         gather_mode = "npy"
+        if folder is None:
+            raise ValueError("For gather_mode=npy a folder must be given")
+
         folder = Path(folder)
 
         # save the model
