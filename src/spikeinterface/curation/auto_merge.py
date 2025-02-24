@@ -690,6 +690,7 @@ def auto_merge_units(
     censor_ms=None,
     sparsity_threshold=0.75,
     merging_mode="soft",
+    new_id_strategy="append",
     raise_error: bool = False,
     extra_outputs: bool = False,
     force_copy: bool = True,
@@ -724,6 +725,10 @@ def auto_merge_units(
     sparsity_overlap : float, default 0.75
         The percentage of overlap that units should share in order to accept merges. If this criteria is not
         achieved, soft merging will not be performed.
+    new_id_strategy : "append" | "take_first", default: "append"
+            The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+                * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
+                * "take_first" : new_unit_ids will be the first unit_id of every list of merges
     raise_error : bool, default: False
         If True, an error is raised if the merges can not be done. Otherwise, warning are displayed
     extra_outputs : bool, default: False
@@ -786,6 +791,7 @@ def auto_merge_units(
         "censor_ms": censor_ms,
         "sparsity_threshold": sparsity_threshold,
         "merging_mode": merging_mode,
+        "new_id_strategy": new_id_strategy,
     }
 
     for to_launch, params in zip(to_be_launched, steps_params):
