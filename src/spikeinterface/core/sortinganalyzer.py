@@ -848,7 +848,7 @@ class SortingAnalyzer:
 
         if all_unit_ids is None:
             all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
-        
+
         mergeables = {}
         masks = {}
 
@@ -945,19 +945,23 @@ class SortingAnalyzer:
         elif self.sparsity is not None and merge_unit_groups is not None:
             all_unit_ids = unit_ids
             sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
-            is_mergeable, masks = self.are_units_mergeable(merge_unit_groups, 
-                                                           new_unit_ids=new_unit_ids,
-                                                           all_unit_ids=all_unit_ids,
-                                                           merging_mode=merging_mode,
-                                                           sparsity_overlap=sparsity_overlap,
-                                                           return_masks=True)
+            is_mergeable, masks = self.are_units_mergeable(
+                merge_unit_groups,
+                new_unit_ids=new_unit_ids,
+                all_unit_ids=all_unit_ids,
+                merging_mode=merging_mode,
+                sparsity_overlap=sparsity_overlap,
+                return_masks=True,
+            )
 
             for unit_index, unit_id in enumerate(all_unit_ids):
                 if unit_id in new_unit_ids:
                     if not is_mergeable[unit_id]:
-                        raise Exception(f"The sparsity of {unit_id} do not overlap enough for a soft merge using "
+                        raise Exception(
+                            f"The sparsity of {unit_id} do not overlap enough for a soft merge using "
                             f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
-                            "a hard merge.")
+                            "a hard merge."
+                        )
                     else:
                         sparsity_mask[unit_index] = masks[unit_id]
                 else:

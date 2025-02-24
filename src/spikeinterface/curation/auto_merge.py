@@ -468,9 +468,14 @@ def _auto_merge_units_single_iteration(
         for new_unit_id, merge_group in zip(mergeable_units.keys(), merge_unit_groups):
             if not mergeable_units[new_unit_id]:
                 if raise_error:
-                    raise ValueError(f"Units {merge_group} can not be merged with the current sparsity_threshold. Merging is stopped")
+                    raise ValueError(
+                        f"Units {merge_group} can not be merged with the current sparsity_threshold. Merging is stopped"
+                    )
                 else:
-                    warnings.warn("Units {merge_group} can not be merged with the current sparisty_threshold. Merging is skipped", UserWarning)
+                    warnings.warn(
+                        "Units {merge_group} can not be merged with the current sparisty_threshold. Merging is skipped",
+                        UserWarning,
+                    )
                     merge_unit_groups.remove(merge_group)
 
         merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
@@ -682,9 +687,9 @@ def auto_merge_units(
     steps_params: dict = None,
     steps: list[str] | None = None,
     recursive: bool = False,
-    censor_ms = None,
-    sparsity_threshold = 0.75,
-    merging_mode = "soft",
+    censor_ms=None,
+    sparsity_threshold=0.75,
+    merging_mode="soft",
     raise_error: bool = False,
     extra_outputs: bool = False,
     force_copy: bool = True,
@@ -777,9 +782,11 @@ def auto_merge_units(
     if force_copy:
         sorting_analyzer = sorting_analyzer.copy()
 
-    apply_merge_kwargs = {"censor_ms" : censor_ms,
-                          "sparsity_threshold" : sparsity_threshold,
-                          "merging_mode" : merging_mode}
+    apply_merge_kwargs = {
+        "censor_ms": censor_ms,
+        "sparsity_threshold": sparsity_threshold,
+        "merging_mode": merging_mode,
+    }
 
     for to_launch, params in zip(to_be_launched, steps_params):
 
@@ -790,7 +797,6 @@ def auto_merge_units(
 
         compute_merge_kwargs.update({"steps_params": params})
         found_merges = True
-
 
         while found_merges:
             num_units = len(sorting_analyzer.unit_ids)
