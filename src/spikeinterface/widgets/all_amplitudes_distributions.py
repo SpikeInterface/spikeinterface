@@ -19,8 +19,9 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
         The SortingAnalyzer
     unit_ids : list
         List of unit ids, default None
-    unit_colors : None or dict
-        Dict of colors with key : unit, value : color, default None
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     """
 
     def __init__(
