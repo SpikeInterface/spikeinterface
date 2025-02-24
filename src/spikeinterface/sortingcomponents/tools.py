@@ -33,7 +33,7 @@ def make_multi_method_doc(methods, ident="    "):
     return doc
 
 
-def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **job_kwargs):
+def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job_name=None, **job_kwargs):
     """
     Helper function to extract waveforms at the max channel from a peak list
 
@@ -64,6 +64,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
         sparsity_mask=sparsity_mask,
         copy=True,
         verbose=False,
+        job_name=job_name,
         **job_kwargs,
     )
 
