@@ -198,9 +198,9 @@ class TestIblSortingExtractor(TestCase):
         except:
             pytest.skip("Skipping test due to server being down.")
         sorting = read_ibl_sorting(pid=PID, one=one)
-        assert len(sorting.unit_ids) == 733
+        assert len(sorting.unit_ids) == 1091
         sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True)
-        assert len(sorting_good.unit_ids) == 108
+        assert len(sorting_good.unit_ids) == 155
 
         # check properties
         assert "firing_rate" in sorting.get_property_keys()
@@ -214,8 +214,8 @@ class TestIblSortingExtractor(TestCase):
 
 
 if __name__ == "__main__":
-    TestDefaultIblStreamingRecordingExtractorApBand.setUpClass()
-    test1 = TestDefaultIblStreamingExtractorApBand()
+    TestDefaultIblRecordingExtractorApBand.setUpClass()
+    test1 = TestDefaultIblRecordingExtractorApBand()
     test1.setUp()
     test1.test_get_stream_names()
     test1.test_dtype()
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     test1.test_unscaled_trace_dtype()
 
     TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel.setUpClass()
-    test2 = TestIblStreamingExtractorApBandWithLoadSyncChannel()
+    test2 = TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel()
     test2.setUp()
     test2.test_get_stream_names()
     test2.test_get_stream_names()
