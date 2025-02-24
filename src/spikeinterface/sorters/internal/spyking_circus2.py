@@ -391,7 +391,8 @@ def final_cleaning_circus(
     sorting,
     templates,
     similarity_kwargs={"method": "l2", "support": "union", "max_lag_ms": 0.1},
-    apply_merge_kwargs={"sparsity_overlap": 0.5, "censor_ms": 3.0},
+    sparsity_overlap=0.5, 
+    censor_ms = 3.0,
     max_distance_um=50,
     template_diff_thresh=np.arange(0.05, 0.5, 0.05),
     debug_folder=None,
@@ -418,8 +419,9 @@ def final_cleaning_circus(
         analyzer,
         presets=presets,
         steps_params=steps_params,
-        apply_merge_kwargs=apply_merge_kwargs,
         recursive=True,
+        censor_ms=censor_ms,
+        sparsity_overlap=sparsity_overlap
         **job_kwargs,
     )
     return final_sa.sorting
