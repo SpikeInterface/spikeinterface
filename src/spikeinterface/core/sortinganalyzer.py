@@ -812,13 +812,15 @@ class SortingAnalyzer:
         """
         return self.sorting.get_property(key, ids=ids)
 
-    def is_mergeable(
+    def are_units_mergeable(
         self,
         merge_unit_groups,
         new_unit_ids=None,
+        all_unit_ids=None,
         merging_mode="soft",
         sparsity_overlap=0.75,
         new_id_strategy="append",
+        return_masks=False,
         **kwargs,
     ):
         """
@@ -839,29 +841,40 @@ class SortingAnalyzer:
         """
         assert merging_mode in ["hard", "soft"], "merging_mode must be 'hard' or 'soft'"
 
-        new_unit_ids = generate_unit_ids_for_merge_group(
-            self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy
-        )
-        all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
+        if new_unit_ids is None:
+            new_unit_ids = generate_unit_ids_for_merge_group(
+                self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy
+            )
 
-        if merging_mode == "hard":
-            return True
-        elif merging_mode == "soft":
-            if self.sparsity is None:
-                return True
-            else:
-                for unit_index, unit_id in enumerate(all_unit_ids):
-                    if unit_id in new_unit_ids:
-                        # This is a new unit, and the sparsity mask will be the intersection of the
-                        # ones of all merges
-                        current_merge_group = merge_unit_groups[list(new_unit_ids).index(unit_id)]
-                        merge_unit_indices = self.sorting.ids_to_indices(current_merge_group)
-                        union_mask = np.sum(self.sparsity.mask[merge_unit_indices], axis=0) > 0
-                        intersection_mask = np.prod(self.sparsity.mask[merge_unit_indices], axis=0) > 0
-                        thr = np.sum(intersection_mask) / np.sum(union_mask)
-                        if thr < sparsity_overlap:
-                            return False
-                return True
+        if all_unit_ids is None:
+            all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
+        
+        mergeables = {}
+        masks = {}
+
+        for unit_index, unit_id in enumerate(all_unit_ids):
+            if unit_id in new_unit_ids:
+                current_merge_group = merge_unit_groups[list(new_unit_ids).index(unit_id)]
+                merge_unit_indices = self.sorting.ids_to_indices(current_merge_group)
+                union_mask = np.sum(self.sparsity.mask[merge_unit_indices], axis=0) > 0
+                intersection_mask = np.prod(self.sparsity.mask[merge_unit_indices], axis=0) > 0
+                thr = np.sum(intersection_mask) / np.sum(union_mask)
+
+                if merging_mode == "hard":
+                    mergeables[unit_id] = True
+                    masks[unit_id] = union_mask
+                elif merging_mode == "soft":
+                    if self.sparsity is None:
+                        mergeables[unit_id] = True
+                        masks[unit_id] = union_mask
+                    else:
+                        mergeables[unit_id] = thr >= sparsity_overlap
+                        masks[unit_id] = intersection_mask
+
+        if return_masks:
+            return mergeables, masks
+        else:
+            return mergeables
 
     def _save_or_select_or_merge(
         self,
@@ -932,24 +945,21 @@ class SortingAnalyzer:
         elif self.sparsity is not None and merge_unit_groups is not None:
             all_unit_ids = unit_ids
             sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
+            is_mergeable, masks = self.are_units_mergeable(merge_unit_groups, 
+                                                           new_unit_ids=new_unit_ids,
+                                                           all_unit_ids=all_unit_ids,
+                                                           merging_mode=merging_mode,
+                                                           sparsity_overlap=sparsity_overlap,
+                                                           return_masks=True)
+
             for unit_index, unit_id in enumerate(all_unit_ids):
                 if unit_id in new_unit_ids:
-                    # This is a new unit, and the sparsity mask will be the intersection of the
-                    # ones of all merges
-                    current_merge_group = merge_unit_groups[list(new_unit_ids).index(unit_id)]
-                    merge_unit_indices = self.sorting.ids_to_indices(current_merge_group)
-                    union_mask = np.sum(self.sparsity.mask[merge_unit_indices], axis=0) > 0
-                    if merging_mode == "soft":
-                        intersection_mask = np.prod(self.sparsity.mask[merge_unit_indices], axis=0) > 0
-                        thr = np.sum(intersection_mask) / np.sum(union_mask)
-                        assert thr > sparsity_overlap, (
-                            f"The sparsities of {current_merge_group} do not overlap enough for a soft merge using "
+                    if not is_mergeable[unit_id]:
+                        raise Exception(f"The sparsity of {unit_id} do not overlap enough for a soft merge using "
                             f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
-                            "a hard merge."
-                        )
-                        sparsity_mask[unit_index] = intersection_mask
-                    elif merging_mode == "hard":
-                        sparsity_mask[unit_index] = union_mask
+                            "a hard merge.")
+                    else:
+                        sparsity_mask[unit_index] = masks[unit_id]
                 else:
                     # This means that the unit is already in the previous sorting
                     index = self.sorting.id_to_index(unit_id)
