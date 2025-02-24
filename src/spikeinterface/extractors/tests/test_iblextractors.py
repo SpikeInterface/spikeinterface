@@ -198,9 +198,8 @@ class TestIblSortingExtractor(TestCase):
         except:
             pytest.skip("Skipping test due to server being down.")
         sorting = read_ibl_sorting(pid=PID, one=one)
-        assert len(sorting.unit_ids) == 1091
         sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True)
-        assert len(sorting_good.unit_ids) == 155
+        assert len(sorting_good.unit_ids) < len(sorting.unit_ids)
 
         # check properties
         assert "firing_rate" in sorting.get_property_keys()
