@@ -421,6 +421,7 @@ def final_cleaning_circus(
         steps_params=steps_params,
         recursive=True,
         censor_ms=censor_ms,
-        sparsity_overlap=sparsity_overlap**job_kwargs,
+        sparsity_overlap=sparsity_overlap,
+        **job_kwargs,
     )
     return final_sa.sorting
