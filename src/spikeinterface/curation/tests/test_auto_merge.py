@@ -143,6 +143,15 @@ def test_auto_merge_units(sorting_analyzer_for_curation):
     merged_analyzer = auto_merge_units(new_sorting_analyzer, presets="x_contaminations", **job_kwargs)
     assert len(merged_analyzer.unit_ids) < len(new_sorting_analyzer.unit_ids)
 
+    step_merged_analyzer = auto_merge_units(new_sorting_analyzer, 
+                                            presets=None,
+                                            steps = ["num_spikes", "remove_contaminated", 
+                                                     "unit_locations", "template_similarity", 
+                                                     "quality_score"], 
+                                            steps_params ={"num_spikes" : {"min_spikes" : 150}}, 
+                                            **job_kwargs)
+    assert len(step_merged_analyzer.unit_ids) < len(new_sorting_analyzer.unit_ids)
+
 
 def test_auto_merge_units_iterative(sorting_analyzer_for_curation):
     recording = sorting_analyzer_for_curation.recording

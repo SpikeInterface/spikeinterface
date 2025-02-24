@@ -749,8 +749,15 @@ def auto_merge_units(
         to_be_launched = presets
         launch_mode = "presets"
     elif steps is not None:
+        all_lists = np.all([isinstance(el, list) for el in steps])
         to_be_launched = steps
+        if not all_lists:
+            to_be_launched = [to_be_launched]
         launch_mode = "steps"
+
+    if launch_mode == "steps":
+        if not isinstance(steps_params, list):
+            steps_params = [steps_params]
 
     if steps_params is not None:
         assert len(steps_params) == len(to_be_launched), f"steps params should have the same size as {launch_mode}"
