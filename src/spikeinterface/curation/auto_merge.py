@@ -476,9 +476,9 @@ def _auto_merge_units_single_iteration(
                     )
                 else:
                     warnings.warn(
-                        f"Units {merge_unit_group} can not be merged with the current sparisty_threshold. Merging is skipped",
+                        f"Units {merge_unit_group} can not be merged with the current sparsity_threshold. Merging is skipped",
                     )
-                    merge_unit_groups.remove(merge_unit_group)
+                    merge_unit_groups.remove(list(merge_unit_group))
 
         merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
             merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
