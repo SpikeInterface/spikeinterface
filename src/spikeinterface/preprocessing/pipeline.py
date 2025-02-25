@@ -53,21 +53,27 @@ class PreprocessingPipeline:
             for a in range(0, num_titles + 1)
         ]
 
-        html_text = "<div style='width: 260px; text-align: center'>"
+        html_text = "<div'>"
 
-        html_text += f"<div style='font-size: 20px; border: 1px solid; background-color: rgb({colors[1][0]}, {colors[1][1]}, {colors[1][2]});'><strong>Raw Recording</strong></div>"
+        html_text += "<strong>PreprocessingPipeline:</strong>"
+
+        html_text += f"<div style='border:1px solid #ddd; padding:10px;'><strong>Initial Recording</strong></div>"
 
         html_text += "<div style='margin: auto'>&#x2193;</div>"
 
         for a, (preprocessor, kwargs) in enumerate(all_kwargs.items()):
-            html_text += "<details style='width: 240px; border: 1px solid; text-align: center; margin: auto;'>"
-            html_text += f"<summary style='background-color: rgb({colors[a+2][0]}, {colors[a+2][1]}, {colors[a+2][2]});'><strong>{preprocessor}</strong></summary>"
+            html_text += "<details>"
+            html_text += (
+                f"<summary style='border:1px solid #eee; padding:5px;'><strong>{preprocessor}</strong></summary>"
+            )
+            html_text += "<ul>"
             for kwarg, value in kwargs.items():
-                html_text += f"{kwarg}: {value}<br />"
+                html_text += f"<li><strong>{kwarg}</strong>: {value}</li>"
+            html_text += "</ul>"
             html_text += "</details>"
-            html_text += """<p style="margin: auto; text-align:center;">&#x2193;</p>"""
+            html_text += """<div">&#x2193;</div>"""
 
-        html_text += f"<div style='font-size: 20px; border: 1px solid; background-color: rgb({colors[num_titles][0]}, {colors[num_titles][1]}, {colors[num_titles][2]});'><strong>Preprocessed Recording</strong></div>"
+        html_text += f"<div style='border:1px solid #ddd; padding:10px;'><strong>Preprocessed Recording</strong></div>"
 
         html_text += "</div>"
 
@@ -237,6 +243,7 @@ def _get_all_kwargs_and_values(my_pipeline):
     for preprocessor in my_pipeline.preprocessor_dict:
 
         preprocessor_name = preprocessor.split(".")[-1]
+        # preprocessor_name = preprocessor.split(".")[-1]
         pp_function = pp_function_to_class[preprocessor.split(".")[-1]]
         signature = inspect.signature(pp_function)
 
