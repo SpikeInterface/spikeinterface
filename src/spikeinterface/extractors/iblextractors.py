@@ -312,12 +312,14 @@ class IblSortingExtractor(BaseSorting):
 
     installation_mesg = "IBL extractors require ibllib as a dependency." " To install, run: \n\n pip install ibllib\n\n"
 
-    def __init__(self, pid: str, good_clusters_only: bool = False, load_unit_properties: bool = True, one=None, **kwargs):
+    def __init__(
+        self, pid: str, good_clusters_only: bool = False, load_unit_properties: bool = True, one=None, **kwargs
+    ):
         try:
             from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader
 
-            assert one is not None, ("one is a required parameter.")
+            assert one is not None, "one is a required parameter."
             if isinstance(one, dict):
                 one = ONE(**one)
             else:
