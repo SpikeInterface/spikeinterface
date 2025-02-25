@@ -214,8 +214,8 @@ class TestIblSortingExtractor(TestCase):
 
 
 if __name__ == "__main__":
-    TestDefaultIblStreamingRecordingExtractorApBand.setUpClass()
-    test1 = TestDefaultIblStreamingExtractorApBand()
+    TestDefaultIblRecordingExtractorApBand.setUpClass()
+    test1 = TestDefaultIblRecordingExtractorApBand()
     test1.setUp()
     test1.test_get_stream_names()
     test1.test_dtype()
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     test1.test_unscaled_trace_dtype()
 
     TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel.setUpClass()
-    test2 = TestIblStreamingExtractorApBandWithLoadSyncChannel()
+    test2 = TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel()
     test2.setUp()
     test2.test_get_stream_names()
     test2.test_get_stream_names()
