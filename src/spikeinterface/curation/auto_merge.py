@@ -472,11 +472,11 @@ def _auto_merge_units_single_iteration(
             if not is_mergeable:
                 if raise_error:
                     raise ValueError(
-                        f"Units {merge_unit_group} can not be merged with the current sparsity_threshold. Merging is stopped"
+                        f"Units {merge_unit_group} can not be merged with the current sparsity_overlap. Merging is stopped"
                     )
                 else:
                     warnings.warn(
-                        f"Units {merge_unit_group} can not be merged with the current sparsity_threshold. Merging is skipped",
+                        f"Units {merge_unit_group} can not be merged with the current sparsity_overlap. Merging is skipped",
                     )
                     merge_unit_groups.remove(list(merge_unit_group))
 
@@ -690,7 +690,7 @@ def auto_merge_units(
     steps: list[str] | None = None,
     recursive: bool = False,
     censor_ms=None,
-    sparsity_threshold=0.75,
+    sparsity_overlap=0.75,
     merging_mode="soft",
     new_id_strategy="append",
     raise_error: bool = False,
@@ -745,7 +745,7 @@ def auto_merge_units(
     with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to
     have a finer control on these values, please precompute the extensions before applying the auto_merge
 
-    If you have errors on sparsity_threshold, this is because you are trying to perform soft_merges for units
+    If you have errors on sparsity_overlap, this is because you are trying to perform soft_merges for units
     that are barely overlapping. While in theory this should not happen, if this is the case, it means that either
     you are trying to perform too aggressive merges (and thus check params), and/or that you should switch to hard merges.
 
@@ -793,7 +793,7 @@ def auto_merge_units(
 
     apply_merge_kwargs = {
         "censor_ms": censor_ms,
-        "sparsity_threshold": sparsity_threshold,
+        "sparsity_overlap": sparsity_overlap,
         "merging_mode": merging_mode,
         "new_id_strategy": new_id_strategy,
     }
