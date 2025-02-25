@@ -15,7 +15,7 @@ def test_benchmark_peak_detection(create_cache_folder):
     job_kwargs = dict(n_jobs=0.8, chunk_duration="100ms")
 
     # recording, gt_sorting = make_dataset()
-    recording, gt_sorting, gt_analyzer = make_dataset()
+    recording, gt_sorting, gt_analyzer = make_dataset(job_kwargs)
 
     # create study
     study_folder = cache_folder / "study_peak_detection"
@@ -27,8 +27,9 @@ def test_benchmark_peak_detection(create_cache_folder):
 
         recording, gt_sorting = datasets[dataset]
 
-        sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="memory", sparse=False)
-        sorting_analyzer.compute(["random_spikes", "templates"])
+        sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="memory", sparse=False, **job_kwargs)
+        sorting_analyzer.compute("random_spikes")
+        sorting_analyzer.compute("templates", **job_kwargs)
         extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
         spikes = gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
         peaks[dataset] = spikes
@@ -48,11 +49,11 @@ def test_benchmark_peak_detection(create_cache_folder):
 
     # this study needs analyzer
     study.create_sorting_analyzer_gt(**job_kwargs)
-    study.compute_metrics()
+    study.compute_metrics(**job_kwargs)
 
     # run and result
     study.run(**job_kwargs)
-    study.compute_results()
+    study.compute_results(**job_kwargs)
 
     # load study to check persistency
     study = PeakDetectionStudy(study_folder)

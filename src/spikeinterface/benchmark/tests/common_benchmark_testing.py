@@ -7,6 +7,7 @@ This only a local testing.
 import pytest
 from pathlib import Path
 import os
+from spikeinterface.core.job_tools import fix_job_kwargs
 
 import numpy as np
 
@@ -21,7 +22,9 @@ from spikeinterface.generation import generate_drifting_recording
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
 
-def make_dataset():
+def make_dataset(job_kwargs={}):
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
     recording, gt_sorting = generate_ground_truth_recording(
         durations=[60.0],
         sampling_frequency=30000.0,
@@ -39,11 +42,11 @@ def make_dataset():
         seed=2205,
     )
 
-    gt_analyzer = create_sorting_analyzer(gt_sorting, recording, sparse=True, format="memory")
+    gt_analyzer = create_sorting_analyzer(gt_sorting, recording, sparse=True, format="memory", **job_kwargs)
     gt_analyzer.compute("random_spikes", method="uniform", max_spikes_per_unit=500)
     # analyzer.compute("waveforms")
-    gt_analyzer.compute("templates")
-    gt_analyzer.compute("noise_levels")
+    gt_analyzer.compute("templates", **job_kwargs)
+    gt_analyzer.compute("noise_levels", **job_kwargs)
 
     return recording, gt_sorting, gt_analyzer
 

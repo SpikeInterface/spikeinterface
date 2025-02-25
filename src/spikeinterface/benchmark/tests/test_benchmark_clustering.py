@@ -16,7 +16,7 @@ def test_benchmark_clustering(create_cache_folder):
     cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="1s")
 
-    recording, gt_sorting, gt_analyzer = make_dataset()
+    recording, gt_sorting, gt_analyzer = make_dataset(job_kwargs)
 
     num_spikes = gt_sorting.to_spike_vector().size
     spike_indices = np.arange(0, num_spikes, 5)
@@ -59,7 +59,7 @@ def test_benchmark_clustering(create_cache_folder):
 
     # run and result
     study.run(**job_kwargs)
-    study.compute_results()
+    study.compute_results(**job_kwargs)
 
     # load study to check persistency
     study = ClusteringStudy(study_folder)
