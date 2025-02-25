@@ -40,7 +40,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
         "clustering": {"legacy": True},
-        "matching": {"method": "circus-omp-svd"},
+        "matching": {"method": "circus-omp-svd", "gather_mode": "memory"},
         "apply_preprocessing": True,
         "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
@@ -315,14 +315,22 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
             matching_method = params["matching"].pop("method")
-            matching_params = params["matching"].copy()
+            gather_mode = params["matching"].pop("gather_mode", "memory")
+            gather_kwargs = params["matching"].pop("gather_kwargs", {})
+            matching_params = params["matching"].get("method_kwargs", {}).copy()
             matching_params["templates"] = templates
 
             if matching_method is not None:
+                if gather_mode == "npy":
+                    gather_kwargs["folder"] = gather_kwargs.get("folder", sorter_output_folder / "matching")
                 spikes = find_spikes_from_templates(
-                    recording_w, matching_method, method_kwargs=matching_params, **job_kwargs
+                    recording_w,
+                    matching_method,
+                    method_kwargs=matching_params,
+                    gather_mode=gather_mode,
+                    gather_kwargs=gather_kwargs,
+                    **job_kwargs,
                 )
-
                 if params["debug"]:
                     fitting_folder = sorter_output_folder / "fitting"
                     fitting_folder.mkdir(parents=True, exist_ok=True)

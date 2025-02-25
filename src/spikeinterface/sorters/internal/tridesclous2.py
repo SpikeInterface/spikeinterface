@@ -63,7 +63,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         },
         # "matching": {"method": "tridesclous", "method_kwargs": {"peak_shift_ms": 0.2, "radius_um": 100.0}},
         # "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
-        "matching": {"method": "wobble", "method_kwargs": {}},
+        "matching": {"method": "wobble", "method_kwargs": {}, "gather_mode": "memory"},
         "job_kwargs": {"n_jobs": -1},
         "save_array": True,
     }
@@ -232,13 +232,22 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         templates = remove_empty_templates(templates)
 
         ## peeler
-        matching_method = params["matching"]["method"]
-        matching_params = params["matching"]["method_kwargs"].copy()
+        matching_method = params["matching"].pop("method")
+        gather_mode = params["matching"].pop("gather_mode", "memory")
+        gather_kwargs = params["matching"].pop("gather_kwargs", {})
+        matching_params = params["matching"].get("matching_kwargs", {}).copy()
         matching_params["templates"] = templates
-        if params["matching"]["method"] in ("tdc-peeler",):
+        if matching_method in ("tdc-peeler",):
             matching_params["noise_levels"] = noise_levels
+        if gather_mode == "npy":
+            gather_kwargs = {"folder": gather_kwargs.get("folder", sorter_output_folder / "matching")}
         spikes = find_spikes_from_templates(
-            recording_for_peeler, method=matching_method, method_kwargs=matching_params, **job_kwargs
+            recording_for_peeler,
+            method=matching_method,
+            method_kwargs=matching_params,
+            gather_mode=gather_mode,
+            gather_kwargs=gather_kwargs,
+            **job_kwargs,
         )
 
         if params["save_array"]:
