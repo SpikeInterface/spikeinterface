@@ -461,22 +461,24 @@ def _auto_merge_units_single_iteration(
     if extra_outputs:
         merge_unit_groups, outs = merge_unit_groups
 
-    merged_units = len(merge_unit_groups) > 0
-    if merged_units:
-        mergeable_units = sorting_analyzer.are_units_mergeable(merge_unit_groups, **apply_merge_kwargs)
+    if len(merge_unit_groups) > 0:
+        merging_mode = apply_merge_kwargs.get("merging_mode", "soft")
+        sparsity_overlap = apply_merge_kwargs.get("sparsity_overlap", 0.75)
+        mergeable = sorting_analyzer.are_units_mergeable(
+            merge_unit_groups, merging_mode=merging_mode, sparsity_overlap=sparsity_overlap
+        )
         ## Removes units that can not be merged
-        for new_unit_id, merge_group in zip(mergeable_units.keys(), merge_unit_groups):
-            if not mergeable_units[new_unit_id]:
+        for merge_unit_group, is_mergeable in mergeable.items():
+            if not is_mergeable:
                 if raise_error:
                     raise ValueError(
-                        f"Units {merge_group} can not be merged with the current sparsity_threshold. Merging is stopped"
+                        f"Units {merge_unit_group} can not be merged with the current sparsity_threshold. Merging is stopped"
                     )
                 else:
                     warnings.warn(
-                        "Units {merge_group} can not be merged with the current sparisty_threshold. Merging is skipped",
-                        UserWarning,
+                        f"Units {merge_unit_group} can not be merged with the current sparisty_threshold. Merging is skipped",
                     )
-                    merge_unit_groups.remove(merge_group)
+                    merge_unit_groups.remove(merge_unit_group)
 
         merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
             merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
