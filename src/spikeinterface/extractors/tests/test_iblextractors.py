@@ -197,9 +197,10 @@ class TestIblSortingExtractor(TestCase):
             )
         except:
             pytest.skip("Skipping test due to server being down.")
-        sorting = read_ibl_sorting(pid=PID, one=one)
-        sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True)
-        assert len(sorting_good.unit_ids) < len(sorting.unit_ids)
+        sorting = read_ibl_sorting(pid=PID, one=one, revision='2023-12-05')
+        assert len(sorting.unit_ids) == 733
+        sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True, one=one, revision='2023-12-05')
+        assert len(sorting_good.unit_ids) == 108
 
         # check properties
         assert "firing_rate" in sorting.get_property_keys()
@@ -207,7 +208,7 @@ class TestIblSortingExtractor(TestCase):
         assert "brain_area" in sorting_good.get_property_keys()
 
         # load without properties
-        sorting_no_properties = read_ibl_sorting(pid=PID, load_unit_properties=False)
+        sorting_no_properties = read_ibl_sorting(pid=PID, one=one, load_unit_properties=False, revision='2023-12-05')
         # check properties
         assert "firing_rate" not in sorting_no_properties.get_property_keys()
 
