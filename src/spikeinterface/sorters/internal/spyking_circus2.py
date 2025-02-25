@@ -15,7 +15,7 @@ from spikeinterface.sortingcomponents.tools import (
     cache_preprocessing,
     get_prototype_and_waveforms_from_recording,
     get_shuffled_recording_slices,
-    set_optimal_chunk_size
+    set_optimal_chunk_size,
 )
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
@@ -87,7 +87,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
                          memory_limit will control how much RAM can be used. In case of folder or zarr, delete_cache controls if cache is cleaned after sorting",
         "chunk_preprocessing": "How much RAM (approximately) should be devoted to load data chunks. memory_limit will control how much RAM can be used\
-                         as a fraction of available memory. Otherwise, use total_memory to fix a hard limit", 
+                         as a fraction of available memory. Otherwise, use total_memory to fix a hard limit",
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "seed": "An int to control how chunks are shuffled while detecting peaks",
@@ -140,7 +140,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         radius_um = params["general"].get("radius_um", 75)
         exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after))
 
-        
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
         if params["apply_preprocessing"]:
