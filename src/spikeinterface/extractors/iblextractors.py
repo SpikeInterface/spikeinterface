@@ -294,15 +294,16 @@ class IblSortingExtractor(BaseSorting):
         >>> one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True)
         >>> pids, _ = one.eid2pid("session_eid")
         >>> pid = pids[0]
+    one: One | dict, required
+        Instance of ONE.api or dict to use for data loading.
+        For multi-processing applications, this can also be a dictionary of ONE.api arguments
+        For example: one=dict(base_url='https://alyx.internationalbrainlab.org', mode='remote')
     good_clusters_only: bool, default: False
         If True, only load the good clusters
     load_unit_properties: bool, default: True
         If True, load the unit properties from the IBL database
-    one: One | dict, default: None
-        Instance of ONE.api or dict to use for data loading.
-        For multi-processing applications, this can also be a dictionary of ONE.api arguments
-        For example: one={} or one=dict(base_url='https://alyx.internationalbrainlab.org', mode='remote')
-
+    kwargs: dict, optional
+        Additional keyword arguments to pass to the IBL SpikeSortingLoader constructor.
     Returns
     -------
     extractor : IBLSortingExtractor
@@ -311,13 +312,12 @@ class IblSortingExtractor(BaseSorting):
 
     installation_mesg = "IBL extractors require ibllib as a dependency." " To install, run: \n\n pip install ibllib\n\n"
 
-    def __init__(self, pid: str, good_clusters_only: bool = False, load_unit_properties: bool = True, one=None):
+    def __init__(self, pid: str, good_clusters_only: bool = False, load_unit_properties: bool = True, one=None, **kwargs):
         try:
             from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader
 
-            if one is None:
-                one = {}
+            assert one is not None, ("one is a required parameter.")
             if isinstance(one, dict):
                 one = ONE(**one)
             else:
@@ -327,12 +327,11 @@ class IblSortingExtractor(BaseSorting):
         self.ssl = SpikeSortingLoader(one=one, pid=pid)
         sr = self.ssl.raw_electrophysiology(band="ap", stream=True)
         self._folder_path = self.ssl.session_path
-        spikes, clusters, channels = self.ssl.load_spike_sorting(dataset_types=["spikes.samples"])
+        spikes, clusters, channels = self.ssl.load_spike_sorting(dataset_types=["spikes.samples"], **kwargs)
         clusters = self.ssl.merge_clusters(spikes, clusters, channels)
 
         if good_clusters_only:
             good_cluster_slice = clusters["cluster_id"][clusters["label"] == 1]
-            unit_ids = clusters["cluster_id"][good_cluster_slice]
         else:
             good_cluster_slice = slice(None)
         unit_ids = clusters["cluster_id"][good_cluster_slice]
