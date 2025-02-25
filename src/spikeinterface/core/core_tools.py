@@ -9,8 +9,47 @@ from copy import deepcopy
 import importlib
 from math import prod
 from collections import namedtuple
+import inspect
 
 import numpy as np
+
+
+def dict_of_source_classes(rec_or_dict_of_recs, source_class, *args, **kwargs):
+    preprocessed_recordings_dict = {
+        property_id: source_class(recording, *args, **kwargs) for property_id, recording in rec_or_dict_of_recs.items()
+    }
+    return preprocessed_recordings_dict
+
+
+def define_rec_or_dict_function(source_class, name):
+
+    from spikeinterface.core import BaseRecording
+
+    def source_class_or_dict_of_sources_classes(*args, **kwargs):
+
+        recording_in_kwargs = False
+        if rec_or_dict_of_recs := kwargs.get("recording"):
+            recording_in_kwargs = True
+        else:
+            rec_or_dict_of_recs = args[0]
+
+        if isinstance(rec_or_dict_of_recs, BaseRecording):
+            return source_class(*args, **kwargs)
+        else:
+            # Edit args & kwargs to pass the dict of recordings but _not_ the original recording
+            new_kwargs = {key: kwarg for key, kwarg in kwargs.items() if key != "recording"}
+            if recording_in_kwargs:
+                new_args = args
+            else:
+                new_args = args[1:]
+
+            return dict_of_source_classes(rec_or_dict_of_recs, source_class, *new_args, **new_kwargs)
+
+    source_class_or_dict_of_sources_classes.__signature__ = inspect.signature(source_class)
+    source_class_or_dict_of_sources_classes.__doc__ = source_class.__doc__
+    source_class_or_dict_of_sources_classes.__name__ = name
+
+    return source_class_or_dict_of_sources_classes
 
 
 def define_function_from_class(source_class, name):
