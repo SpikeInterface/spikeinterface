@@ -303,7 +303,7 @@ class IblSortingExtractor(BaseSorting):
     load_unit_properties: bool, default: True
         If True, load the unit properties from the IBL database
     kwargs: dict, optional
-        Additional keyword arguments to pass to the IBL SpikeSortingLoader constructor.
+        Additional keyword arguments to pass to the IBL SpikeSortingLoader constructor, such as `revision`.
     Returns
     -------
     extractor : IBLSortingExtractor
