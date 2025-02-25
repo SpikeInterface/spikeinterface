@@ -844,7 +844,7 @@ def estimate_sparsity(
             )
         elif method == "closest_channels":
             assert num_channels is not None, "For the 'closest_channels' method, 'num_channels' needs to be given"
-            sparsity = ChannelSparsity.from_best_channels(templates, num_channels)
+            sparsity = ChannelSparsity.from_closest_channels(templates, num_channels)
         elif method == "radius":
             assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
             sparsity = ChannelSparsity.from_radius(templates, radius_um, peak_sign=peak_sign)
