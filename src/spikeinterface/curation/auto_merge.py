@@ -697,7 +697,9 @@ def auto_merge_units(
     **job_kwargs,
 ) -> SortingAnalyzer:
     """
-    Wrapper to conveniently be able to launch several presets for auto_merge_units in a row, as a list.
+    Automatically finds and apply merges.
+    This function enables one to launch several merging presets in sequence and also to apply each
+    step recursively.
     Merges are applied sequentially or until no more merges are done, one preset at a time, and extensions
     are not recomputed thanks to the merging units. Internally, the function uses _auto_merge_units_single_iteration()
     that is called for every preset and/or combinations of steps
