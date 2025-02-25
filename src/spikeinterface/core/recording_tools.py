@@ -541,7 +541,7 @@ def get_random_recording_slices(
     chunk_duration : str | float | None, default "500ms"
         The duration of each chunk in 's' or 'ms'
     chunk_size : int | None
-        Size of a chunk in number of frames. This is ued only if chunk_duration is None.
+        Size of a chunk in number of frames. This is used only if chunk_duration is None.
         This is kept for backward compatibility, you should prefer 'chunk_duration=500ms' instead.
     concatenated : bool, default: True
         If True chunk are concatenated along time axis
