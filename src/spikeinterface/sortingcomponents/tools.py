@@ -320,8 +320,8 @@ def get_optimal_n_jobs(job_kwargs, ram_requested, memory_limit=0.25):
     if HAVE_PSUTIL:
         assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
         memory_usage = memory_limit * psutil.virtual_memory().available
-        n_jobs = min(n_jobs, memory_usage // ram_requested)
-        job_kwargs = fix_job_kwargs(dict(n_jobs=n_jobs))
+        n_jobs = int(min(n_jobs, memory_usage // ram_requested))
+        job_kwargs.update(dict(n_jobs=n_jobs))
     else:
         print("psutil is required to use only a fraction of available memory")
     return job_kwargs
