@@ -15,6 +15,7 @@ from spikeinterface.sortingcomponents.tools import (
     cache_preprocessing,
     get_prototype_and_waveforms_from_recording,
     get_shuffled_recording_slices,
+    set_optimal_chunk_size,
 )
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
@@ -44,8 +45,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": True,
         "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
+        "chunk_preprocessing": {"memory_limit": 0.01},
         "multi_units_only": False,
-        "job_kwargs": {"n_jobs": 0.5},
+        "job_kwargs": {"n_jobs": 0.75},
         "seed": 42,
         "debug": False,
     }
@@ -73,6 +75,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matched_filtering": "Boolean to specify whether circus 2 should detect peaks via matched filtering (slightly slower)",
         "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
                          memory_limit will control how much RAM can be used. In case of folder or zarr, delete_cache controls if cache is cleaned after sorting",
+        "chunk_preprocessing": "How much RAM (approximately) should be devoted to load data chunks. memory_limit will control how much RAM can be used\
+                         as a fraction of available memory. Otherwise, use total_memory to fix a hard limit",
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "seed": "An int to control how chunks are shuffled while detecting peaks",
@@ -115,8 +119,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
         job_kwargs.update({"progress_bar": verbose})
-
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
+        job_kwargs = set_optimal_chunk_size(recording, job_kwargs, **params["chunk_preprocessing"])
 
         sampling_frequency = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
