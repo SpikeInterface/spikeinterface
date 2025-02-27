@@ -295,6 +295,7 @@ def set_optimal_chunk_size(recording, job_kwargs, memory_limit=0.5, total_memory
         job_kwargs = fix_job_kwargs(dict(chunk_duration=f"{chunk_duration}s"))
     return job_kwargs
 
+
 def get_optimal_n_jobs(job_kwargs, ram_requested, memory_limit=0.25):
     """
     Set the optimal chunk size for a job given the memory_limit and the number of jobs
