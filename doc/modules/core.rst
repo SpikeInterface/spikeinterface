@@ -711,7 +711,7 @@ In this example, we create a recording and a sorting object from numpy objects:
         spike_trains += spike_trains_i
         labels += labels_i
 
-    sorting_memory = NumpySorting.from_times_labels(times=spike_trains, labels=labels,
+    sorting_memory = NumpySorting.from_samples_labels(times=spike_trains, labels=labels,
                                                     sampling_frequency=sampling_frequency)
 
 
