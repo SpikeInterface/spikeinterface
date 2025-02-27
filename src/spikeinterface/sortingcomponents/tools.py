@@ -295,6 +295,37 @@ def set_optimal_chunk_size(recording, job_kwargs, memory_limit=0.5, total_memory
         job_kwargs = fix_job_kwargs(dict(chunk_duration=f"{chunk_duration}s"))
     return job_kwargs
 
+def get_optimal_n_jobs(job_kwargs, ram_requested, memory_limit=0.25):
+    """
+    Set the optimal chunk size for a job given the memory_limit and the number of jobs
+
+    Parameters
+    ----------
+
+    recording: Recording
+        The recording object
+    ram_requested: dict
+        The amount of RAM (in bytes) requested for the job
+    memory_limit: float
+        The memory limit in fraction of available memory
+
+    Returns
+    -------
+
+    job_kwargs: dict
+        The updated job kwargs
+    """
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    n_jobs = job_kwargs["n_jobs"]
+    if HAVE_PSUTIL:
+        assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
+        memory_usage = memory_limit * psutil.virtual_memory().available
+        n_jobs = min(n_jobs, memory_usage // ram_requested)
+        job_kwargs = fix_job_kwargs(dict(n_jobs=n_jobs))
+    else:
+        print("psutil is required to use only a fraction of available memory")
+    return job_kwargs
+
 
 def cache_preprocessing(
     recording, mode="memory", memory_limit=0.5, total_memory=None, delete_cache=True, **extra_kwargs
