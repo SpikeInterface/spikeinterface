@@ -509,7 +509,7 @@ class TransformSorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_times_labels(
+    def from_samples_labels(
         sorting1, times_list, labels_list, sampling_frequency, unit_ids=None, refractory_period_ms=None
     ) -> "NumpySorting":
         """
@@ -537,7 +537,7 @@ class TransformSorting(BaseSorting):
             discarded.
         """
 
-        sorting2 = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency, unit_ids)
+        sorting2 = NumpySorting.from_samples_labels(times_list, labels_list, sampling_frequency, unit_ids)
         sorting = TransformSorting.add_from_sorting(sorting1, sorting2, refractory_period_ms)
         return sorting
 

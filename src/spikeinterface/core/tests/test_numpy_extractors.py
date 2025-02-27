@@ -2,7 +2,6 @@ import pytest
 import numpy as np
 
 from spikeinterface.core import (
-    BaseRecording,
     NumpyRecording,
     SharedMemoryRecording,
     NumpySorting,
@@ -15,6 +14,7 @@ from spikeinterface.core import (
 )
 
 from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.testing import check_sortings_equal
 
 
 @pytest.fixture(scope="module")
@@ -61,16 +61,20 @@ def test_NumpySorting(setup_NumpyRecording):
     # print(sorting)
 
     # 2 columns
-    times = np.arange(0, 1000, 10)
-    labels = np.zeros(times.size, dtype="int64")
+    samples = np.arange(0, 1000, 10)
+    labels = np.zeros(samples.size, dtype="int64")
     labels[0::3] = 0
     labels[1::3] = 1
     labels[2::3] = 2
-    sorting = NumpySorting.from_times_labels(times, labels, sampling_frequency)
+    sorting = NumpySorting.from_samples_labels(samples, labels, sampling_frequency)
     # print(sorting)
     assert sorting.get_num_segments() == 1
 
-    sorting = NumpySorting.from_times_labels([times] * 3, [labels] * 3, sampling_frequency)
+    times = samples / sampling_frequency
+    sorting_from_times = NumpySorting.from_times_labels(times, labels, sampling_frequency)
+    check_sortings_equal(sorting, sorting_from_times)
+
+    sorting = NumpySorting.from_samples_labels([samples] * 3, [labels] * 3, sampling_frequency)
     # print(sorting)
     assert sorting.get_num_segments() == 3
 
