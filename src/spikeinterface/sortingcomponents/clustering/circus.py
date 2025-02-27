@@ -259,7 +259,7 @@ class CircusClustering:
             params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
 
         job_kwargs_local = job_kwargs.copy()
-        ram_requested = recording.get_num_channels() *(nbefore + nafter) * len(unit_ids) * 4
+        ram_requested = recording.get_num_channels() * (nbefore + nafter) * len(unit_ids) * 4
         job_kwargs_local = get_optimal_n_jobs(job_kwargs_local, ram_requested, params["memory_limit"])
 
         templates_array = estimate_templates(
