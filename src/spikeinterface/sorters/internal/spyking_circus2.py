@@ -347,8 +347,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             shutil.rmtree(sorting_folder)
 
         merging_params = params["merging"].copy()
-        if params["debug"]:
-            merging_params["debug_folder"] = sorter_output_folder / "merging"
+        merging_params["debug_folder"] = sorter_output_folder / "merging"
 
         if len(merging_params) > 0:
             if params["motion_correction"] and motion_folder is not None:
@@ -369,7 +368,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting.save(folder=curation_folder)
                 # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
-            sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params, **job_kwargs)
+            final_analyzer = final_cleaning_circus(recording_w, sorting, templates, **merging_params, **job_kwargs)
+            final_analyzer.save_as(format="binary_folder", folder=sorter_output_folder / "final_analyzer")
+
+            sorting = final_analyzer.sorting
 
             if verbose:
                 print(f"Kept {len(sorting.unit_ids)} units after final merging")
@@ -428,4 +430,5 @@ def final_cleaning_circus(
         sparsity_overlap=sparsity_overlap,
         **job_kwargs,
     )
-    return final_sa.sorting
+
+    return final_sa
