@@ -57,9 +57,9 @@ def compress_templates(
 
     for i in range(num_templates):
         i_temporal, i_singular, i_spatial = np.linalg.svd(templates_array[i], full_matrices=False)
-        temporal[i, :, :min(approx_rank, num_channels)] = i_temporal[:, :approx_rank]
-        spatial[i, :min(approx_rank, num_channels), :] = i_spatial[:approx_rank, :]
-        singular[i, :min(approx_rank, num_channels)] = i_singular[:approx_rank]
+        temporal[i, :, : min(approx_rank, num_channels)] = i_temporal[:, :approx_rank]
+        spatial[i, : min(approx_rank, num_channels), :] = i_spatial[:approx_rank, :]
+        singular[i, : min(approx_rank, num_channels)] = i_singular[:approx_rank]
 
     if return_new_templates:
         templates_array = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
