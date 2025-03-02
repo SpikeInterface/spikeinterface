@@ -283,7 +283,8 @@ def set_optimal_chunk_size(recording, job_kwargs, memory_limit=0.5, total_memory
             chunk_duration = chunk_size / recording.get_sampling_frequency()
             job_kwargs = fix_job_kwargs(dict(chunk_duration=f"{chunk_duration}s"))
         else:
-            print("psutil is required to use only a fraction of available memory")
+            import warnings
+            warnings.warn("psutil is required to use only a fraction of available memory")
     else:
         from spikeinterface.core.job_tools import convert_string_to_bytes
 
