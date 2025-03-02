@@ -75,8 +75,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matched_filtering": "Boolean to specify whether circus 2 should detect peaks via matched filtering (slightly slower)",
         "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
                          memory_limit will control how much RAM can be used. In case of folder or zarr, delete_cache controls if cache is cleaned after sorting",
-        "chunk_preprocessing": "How much RAM (approximately) should be devoted to load data chunks. memory_limit will control how much RAM can be used\
-                         as a fraction of available memory. Otherwise, use total_memory to fix a hard limit",
+        "chunk_preprocessing": "How much RAM (approximately) should be devoted to load all data chunks (given n_jobs).\
+                memory_limit will control how much RAM can be used as a fraction of available memory. Otherwise, use total_memory to fix a hard limit, with\
+                a string syntax  (e.g. '1G', '500M')",
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "seed": "An int to control how chunks are shuffled while detecting peaks",
