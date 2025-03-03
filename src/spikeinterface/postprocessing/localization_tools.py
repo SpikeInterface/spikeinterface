@@ -357,7 +357,6 @@ def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance
     import scipy.optimize
 
     x0, bounds = make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um)
-
     if optimizer == "least_square":
         args = (wf_data, local_contact_locations)
         try:
