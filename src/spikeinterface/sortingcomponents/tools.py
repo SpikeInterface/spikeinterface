@@ -283,7 +283,9 @@ def set_optimal_chunk_size(recording, job_kwargs, memory_limit=0.5, total_memory
             chunk_duration = chunk_size / recording.get_sampling_frequency()
             job_kwargs = fix_job_kwargs(dict(chunk_duration=f"{chunk_duration}s"))
         else:
-            print("psutil is required to use only a fraction of available memory")
+            import warnings
+
+            warnings.warn("psutil is required to use only a fraction of available memory")
     else:
         from spikeinterface.core.job_tools import convert_string_to_bytes
 
@@ -305,7 +307,7 @@ def get_optimal_n_jobs(job_kwargs, ram_requested, memory_limit=0.25):
 
     recording: Recording
         The recording object
-    ram_requested: dict
+    ram_requested: int
         The amount of RAM (in bytes) requested for the job
     memory_limit: float
         The memory limit in fraction of available memory
@@ -324,7 +326,9 @@ def get_optimal_n_jobs(job_kwargs, ram_requested, memory_limit=0.25):
         n_jobs = int(min(n_jobs, memory_usage // ram_requested))
         job_kwargs.update(dict(n_jobs=n_jobs))
     else:
-        print("psutil is required to use only a fraction of available memory")
+        import warnings
+
+        warnings.warn("psutil is required to use only a fraction of available memory")
     return job_kwargs
 
 
@@ -367,14 +371,20 @@ def cache_preprocessing(
                 if recording.get_total_memory_size() < memory_usage:
                     recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
                 else:
-                    print("Recording too large to be preloaded in RAM...")
+                    import warnings
+
+                    warnings.warn("Recording too large to be preloaded in RAM...")
             else:
-                print("psutil is required to preload in memory given only a fraction of available memory")
+                import warnings
+
+                warnings.warn("psutil is required to preload in memory given only a fraction of available memory")
         else:
             if recording.get_total_memory_size() < total_memory:
                 recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
             else:
-                print("Recording too large to be preloaded in RAM...")
+                import warnings
+
+                warnings.warn("Recording too large to be preloaded in RAM...")
     elif mode == "folder":
         recording = recording.save_to_folder(**extra_kwargs)
     elif mode == "zarr":
