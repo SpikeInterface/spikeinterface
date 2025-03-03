@@ -229,6 +229,7 @@ def plot_performances_vs_snr(
 
         ax = axs[count, 0]
         for key in case_keys:
+            color = study.get_colors()[key]
             label = study.cases[key]["label"]
 
             if snr_dataset_reference is None:
@@ -241,8 +242,13 @@ def plot_performances_vs_snr(
             metrics = analyzer.get_extension("quality_metrics").get_data()
             x = metrics["snr"].values
             y = study.get_result(key)["gt_comparison"].get_performance()[k].values
-            ax.scatter(x, y, marker=".", label=label)
+            ax.scatter(x, y, marker=".", label=label, color=color)
             ax.set_title(k)
+
+            popt = fit_sigmoid(x, y, p0=None)
+            xfit = np.linspace(0, max(metrics["snr"].values), 100)
+            ax.plot(xfit, sigmoid(xfit, *popt), color=color)
+
 
         ax.set_ylim(-0.05, 1.05)
 
