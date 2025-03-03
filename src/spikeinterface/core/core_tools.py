@@ -14,14 +14,20 @@ import inspect
 import numpy as np
 
 
-def dict_of_source_classes(rec_or_dict_of_recs, source_class, *args, **kwargs):
+def create_dict_of_source_classes(dict_of_recs, source_class, *args, **kwargs):
+    """Given a dict of recordings, return a dict of recordings with `source_class` applied to them."""
     preprocessed_recordings_dict = {
-        property_id: source_class(recording, *args, **kwargs) for property_id, recording in rec_or_dict_of_recs.items()
+        property_id: source_class(recording, *args, **kwargs) for property_id, recording in dict_of_recs.items()
     }
     return preprocessed_recordings_dict
 
 
-def define_rec_or_dict_function(source_class, name):
+def define_function_or_dict_from_class(source_class, name):
+    """
+    Depending on whether `source_class` is passed a `Recording` object or a dict of
+    `Recording` objects, this function will return `source_class` or a dict of
+    `source_class` objects to match the input.
+    """
 
     from spikeinterface.core import BaseRecording
 
@@ -43,7 +49,7 @@ def define_rec_or_dict_function(source_class, name):
             else:
                 new_args = args[1:]
 
-            return dict_of_source_classes(rec_or_dict_of_recs, source_class, *new_args, **new_kwargs)
+            return create_dict_of_source_classes(rec_or_dict_of_recs, source_class, *new_args, **new_kwargs)
 
     source_class_or_dict_of_sources_classes.__signature__ = inspect.signature(source_class)
     source_class_or_dict_of_sources_classes.__doc__ = source_class.__doc__
