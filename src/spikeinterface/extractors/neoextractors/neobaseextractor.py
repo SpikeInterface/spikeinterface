@@ -264,6 +264,9 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         self.has_non_standard_units = False
         if not np.all(np.isin(units, list(standard_units_and_additional_gains.keys()))):
             self.has_non_standard_units = True
+            warnings.warn(
+                f"The raw file has non standard units: {np.unique(units)}. Standard units are: {list(standard_units_and_additional_gains.keys())}. 'uV' are assumed."
+            )
 
         additional_gain = np.ones(units.size, dtype="float")
         for key, value in standard_units_and_additional_gains.items():
