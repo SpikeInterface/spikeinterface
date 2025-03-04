@@ -145,6 +145,5 @@ class MatchingStudy(BenchmarkStudy):
         warnings.warn("plot_unit_losses() is now plot_performances_losses()")
         return plot_performances_losses(self, *args, **kwargs)
 
-
     def plot_performances_losses(self, *args, **kwargs):
         return plot_performances_losses(self, *args, **kwargs)

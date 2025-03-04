@@ -365,7 +365,7 @@ class BenchmarkStudy:
 
     def get_result(self, key):
         return self.benchmarks[key].result
-    
+
     def get_pairs_by_level(self, level):
         """
         usefull for function like plot_performances_losses() where you need to plot one pair of results
@@ -396,11 +396,8 @@ class BenchmarkStudy:
 
             if pair not in pairs:
                 pairs.append(pair)
-        
+
         return pairs
-
-
-
 
 
 class Benchmark:

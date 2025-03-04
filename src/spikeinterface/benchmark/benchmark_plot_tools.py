@@ -249,7 +249,6 @@ def plot_performances_vs_snr(
             xfit = np.linspace(0, max(metrics["snr"].values), 100)
             ax.plot(xfit, sigmoid(xfit, *popt), color=color)
 
-
         ax.set_ylim(-0.05, 1.05)
 
         if count == 2:
@@ -349,11 +348,7 @@ def plot_performances_losses(study, case0, case1, metric=["accuracy"], figsize=N
         ax.set_title(k)
         ax.set_ylabel("snr")
 
-
     return fig
-
-
-
 
 
 def sigmoid(x, x0, k, b):
