@@ -257,26 +257,37 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         else:
             self.inverted_gain = False
 
-        units = signal_channels["units"]
+        channel_units = signal_channels["units"]
 
-        # mark that units are V, mV or uV
-        standard_units_to_additional_gains = {"V": 1e6, "Volt": 1e6, "Volts": 1e6, "mV": 1e3, "uV": 1.0}
-        self.has_non_standard_units = False
-        if not np.all(np.isin(units, list(standard_units_to_additional_gains.keys()))):
-            self.has_non_standard_units = True
-            warnings.warn(
-                f"The raw file has non standard units: {np.unique(units)}. Standard units are: {list(standard_units_to_additional_gains.keys())}. 'uV' are assumed."
+        # Define standard voltage units and their conversion factors to uV
+        voltage_units_to_gains = {"V": 1e6, "Volt": 1e6, "Volts": 1e6, "mV": 1e3, "uV": 1.0}
+        supported_voltage_units = list(voltage_units_to_gains.keys())
+
+        is_channel_in_voltage = np.isin(channel_units, supported_voltage_units)
+        has_voltage_channels = np.any(is_channel_in_voltage)
+        has_non_voltage_channels = not np.all(is_channel_in_voltage)
+
+        # Streams with mixed units are to be used with caution
+        has_mixed_units = has_non_voltage_channels and has_voltage_channels
+        if has_mixed_units:
+            self.set_property("neo_units", channel_units)
+            warning_msg = (
+                "Found a mix of voltage and non-voltage units. "
+                'Proceed with caution. Check channel units with `recording.get_property("neo_units")`.'
             )
+            warnings.warn(warning_msg)
 
-        additional_gain = np.ones(units.size, dtype="float")
-        for key, value in standard_units_to_additional_gains.items():
-            additional_gain[units == key] = value
+        # We assume gains of 1.0 by default and modify that for voltage channels
+        additional_gain = np.ones(channel_units.size, dtype="float")
+        for unit, gain in voltage_units_to_gains.items():
+            additional_gain[channel_units == unit] = gain
 
         final_gains = gains * additional_gain
         final_offsets = offsets * additional_gain
 
         self.set_property("gain_to_uV", final_gains)
         self.set_property("offset_to_uV", final_offsets)
+
         if not use_names_as_ids:
             self.set_property("channel_names", signal_channels["name"])
 
