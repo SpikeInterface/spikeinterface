@@ -363,7 +363,7 @@ def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance
             output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args=args)
             return tuple(output["x"])
         except Exception as e:
-            print(f"scipy.optimize.least_squares error: {e}")
+            warnings.warn(f"scipy.optimize.least_squares error: {e}")
             return (np.nan, np.nan, np.nan, np.nan)
 
     if optimizer == "minimize_with_log_penality":
