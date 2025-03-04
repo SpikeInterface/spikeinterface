@@ -17,7 +17,7 @@ def create_graph_from_peak_features(
     dim=1,
     mode="full_connected_bin",
     direction="y",
-    nn=20,
+    n_neighbors=20,
 ):
     """
     Create a sparse garph of peaks distances.
@@ -60,6 +60,7 @@ def create_graph_from_peak_features(
     eps = bin_um/10.
     bins = np.arange(loc0-bin_um/2, loc1+bin_um/2+eps, bin_um)
 
+
     indices0 = []
     indices1 = []
     data = []
@@ -73,21 +74,26 @@ def create_graph_from_peak_features(
         b0, b1 = l0 - bin_um, l1 + bin_um
         local_chans = np.flatnonzero((channel_locations[:, dim] > (b0 )) & (channel_locations[:, dim] <= (b1)))
 
+        # print(l0, l1, b0, b1)
+
         mask = (peak_depths> b0) & (peak_depths<= b1)
         peak_indices = np.flatnonzero(mask)
+        # print(peak_indices.size)
 
         local_depths = peak_depths[peak_indices]
 
         target_mask = (local_depths > l0) & (local_depths <= l1)
         target_indices = peak_indices[target_mask]
 
+        # print(local_chans)
         if target_indices.size == 0:
             continue
 
         local_feats, dont_have_channels = aggregate_sparse_features(peaks, peak_indices,
                                                                  peak_features, sparse_mask, local_chans)
         # print(b)
-        # print("dont_have_channels", np.sum(dont_have_channels))
+        if np.sum(dont_have_channels) > 0:
+            print("dont_have_channels", np.sum(dont_have_channels), "for n=", peak_indices.sze, "bin", b0, b1)
         dont_have_channels_target = dont_have_channels[target_mask]
 
         flatten_feat = local_feats.reshape(local_feats.shape[0], -1)
@@ -113,7 +119,7 @@ def create_graph_from_peak_features(
                     # this spike is not valid because do not have local chans
                     continue
                 order = np.argsort(local_dists[i, :])
-                final_nn = min(nn, n)
+                final_nn = min(n_neighbors, n)
                 order = order[:final_nn]
 
                 indices0.append(np.full(final_nn, ind0, dtype='int64'))
@@ -122,10 +128,11 @@ def create_graph_from_peak_features(
 
         else:
             raise ValueError("create_graph_from_peak_features() wrong mode")
-            
-    indices0 = np.concatenate(indices0)
-    indices1 = np.concatenate(indices1)
-    data = np.concatenate(data)
+    
+    if len(indices0) > 0:
+        indices0 = np.concatenate(indices0)
+        indices1 = np.concatenate(indices1)
+        data = np.concatenate(data)
     distances = csr_matrix((data, (indices0, indices1)), shape=(peaks.size, peaks.size))
 
     return distances
