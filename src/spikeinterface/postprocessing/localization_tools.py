@@ -378,7 +378,7 @@ def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance
             alpha = (wf_data * q).sum() / np.square(q).sum()
             return (*output["x"], alpha)
         except Exception as e:
-            print(f"scipy.optimize.minimize error: {e}")
+            warnings.warn(f"scipy.optimize.minimize error: {e}")
             return (np.nan, np.nan, np.nan, np.nan)
 
 
