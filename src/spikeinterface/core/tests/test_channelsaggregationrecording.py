@@ -118,5 +118,19 @@ def test_channel_aggregation_does_not_preserve_ids_not_the_same_type():
     assert list(aggregated_recording.get_channel_ids()) == ["0", "1", "2", "3", "4"]
 
 
+def test_channel_aggregation_with_string_dtypes_of_different_size():
+    recording1 = generate_recording(num_channels=2, durations=[10], set_probe=False)
+    recording1 = recording1.rename_channels(new_channel_ids=np.array(["8", "9"], dtype="<U1"))
+
+    recording2 = generate_recording(num_channels=2, durations=[10], set_probe=False)
+    recording2 = recording2.rename_channels(new_channel_ids=np.array(["10", "11"], dtype="<U2"))
+
+    aggregated_recording = aggregate_channels([recording1, recording2])
+    assert aggregated_recording.get_num_channels() == 4
+    aggregated_recording_channel_ids = list(aggregated_recording.get_channel_ids())
+    assert aggregated_recording_channel_ids == ["8", "9", "10", "11"]
+    assert aggregated_recording.channel_ids.dtype == np.dtype("<U2")
+
+
 if __name__ == "__main__":
     test_channelsaggregationrecording()
