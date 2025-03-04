@@ -186,13 +186,10 @@ class ClusteringStudy(BenchmarkStudy):
 
         return plot_performances_comparison(self, *args, **kwargs)
 
-
     def plot_performance_losses(self, *args, **kwargs):
         from .benchmark_plot_tools import plot_performance_losses
 
         return plot_performance_losses(self, *args, **kwargs)
-    
-
 
     def plot_error_metrics(self, metric="cosine", case_keys=None, figsize=(15, 5)):
 
@@ -363,7 +360,6 @@ class ClusteringStudy(BenchmarkStudy):
         fig.colorbar(im, cax=cbar_ax, label=metric)
 
         return fig
-
 
     def plot_some_over_merged(self, case_keys=None, overmerged_score=0.05, max_units=5, figsize=None):
         if case_keys is None:
