@@ -283,7 +283,7 @@ def plot_performances_comparison(
     study,
     case_keys=None,
     figsize=None,
-    metrics=["accuracy", "recall", "precision"],
+    performance_names=("accuracy", "recall", "precision"),
     colors=["g", "b", "r"],
     ylim=(-0.1, 1.1),
 ):
@@ -305,7 +305,7 @@ def plot_performances_comparison(
                 comp1 = study.get_result(key1)["gt_comparison"]
                 comp2 = study.get_result(key2)["gt_comparison"]
 
-                for performance, color in zip(metrics, colors):
+                for performance, color in zip(performance_names, colors):
                     perf1 = comp1.get_performance()[performance]
                     perf2 = comp2.get_performance()[performance]
                     ax.scatter(perf2, perf1, marker=".", label=performance, color=color)
@@ -334,7 +334,7 @@ def plot_performances_comparison(
     patches = []
     from matplotlib.patches import Patch
 
-    for color, name in zip(colors, metrics):
+    for color, name in zip(colors, performance_names):
         patches.append(Patch(color=color, label=name))
     ax.legend(handles=patches)
     fig.tight_layout()
