@@ -94,8 +94,6 @@ def plot_unit_counts(study, case_keys=None):
     return fig
 
 
-
-
 def plot_agreement_matrix(study, ordered=True, case_keys=None):
     """
     Plot agreement matri ces for cases in a study.
@@ -170,8 +168,13 @@ def plot_performances(study, mode="ordered", performance_names=("accuracy", "pre
     else:
         raise ValueError("plot_performances() : wrong mode ")
 
+
 def plot_performances_vs_snr(
-    study, case_keys=None, figsize=None, performance_names=("accuracy", "recall", "precision"), snr_dataset_reference=None
+    study,
+    case_keys=None,
+    figsize=None,
+    performance_names=("accuracy", "recall", "precision"),
+    snr_dataset_reference=None,
 ):
     import matplotlib.pyplot as plt
 
@@ -212,7 +215,12 @@ def plot_performances_vs_snr(
     return fig
 
 
-def plot_performances_ordered(study, case_keys=None, performance_names=("accuracy", "recall", "precision"), figsize=None, ):
+def plot_performances_ordered(
+    study,
+    case_keys=None,
+    performance_names=("accuracy", "recall", "precision"),
+    figsize=None,
+):
     import matplotlib.pyplot as plt
 
     num_axes = len(performance_names)
@@ -221,10 +229,8 @@ def plot_performances_ordered(study, case_keys=None, performance_names=("accurac
     if case_keys is None:
         case_keys = list(study.cases.keys())
 
-
     perfs = study.get_performance_by_unit(case_keys=case_keys)
     colors = study.get_colors()
-
 
     for count, performance_name in enumerate(performance_names):
         ax = axs[count, 0]
@@ -240,8 +246,9 @@ def plot_performances_ordered(study, case_keys=None, performance_names=("accurac
         ax.set_title(performance_name)
         if count == len(performance_names) - 1:
             ax.legend(bbox_to_anchor=(0.05, 0.05), loc="lower left", framealpha=0.8)
-    
+
     return fig
+
 
 def plot_performances_swarm(study, case_keys=None, performance_names=("accuracy", "recall", "precision"), figsize=None):
 
@@ -258,7 +265,7 @@ def plot_performances_swarm(study, case_keys=None, performance_names=("accuracy"
     fig, ax = plt.subplots()
 
     levels = perfs.index.names
-    
+
     df = pd.melt(
         perfs.reset_index(),
         id_vars=levels,
@@ -270,7 +277,6 @@ def plot_performances_swarm(study, case_keys=None, performance_names=("accuracy"
     sns.swarmplot(data=df, x="x", y="Score", hue="Metric", dodge=True, ax=ax)
 
     return fig
-
 
 
 def plot_performances_comparison(
@@ -343,8 +349,6 @@ def plot_performances_losses(study, case0, case1, performance_names=["accuracy"]
     for count, perf_name in enumerate(performance_names):
 
         ax = axs[0, count]
-
-        
 
         positions = study.get_result(case0)["gt_comparison"].sorting1.get_property("gt_unit_locations")
 
