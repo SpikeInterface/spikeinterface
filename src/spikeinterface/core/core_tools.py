@@ -14,14 +14,6 @@ import inspect
 import numpy as np
 
 
-def create_dict_of_source_classes(dict_of_recs, source_class, *args, **kwargs):
-    """Given a dict of recordings, return a dict of recordings with `source_class` applied to them."""
-    preprocessed_recordings_dict = {
-        property_id: source_class(recording, *args, **kwargs) for property_id, recording in dict_of_recs.items()
-    }
-    return preprocessed_recordings_dict
-
-
 def define_function_or_dict_from_class(source_class, name):
     """
     Depending on whether `source_class` is passed a `Recording` object or a dict of
@@ -41,7 +33,7 @@ def define_function_or_dict_from_class(source_class, name):
 
         if isinstance(rec_or_dict_of_recs, BaseRecording):
             return source_class(*args, **kwargs)
-        else:
+        elif isinstance(rec_or_dict_of_recs, dict):
             # Edit args & kwargs to pass the dict of recordings but _not_ the original recording
             new_kwargs = {key: kwarg for key, kwarg in kwargs.items() if key != "recording"}
             if recording_in_kwargs:
@@ -49,7 +41,14 @@ def define_function_or_dict_from_class(source_class, name):
             else:
                 new_args = args[1:]
 
-            return create_dict_of_source_classes(rec_or_dict_of_recs, source_class, *new_args, **new_kwargs)
+            preprocessed_recordings_dict = {
+                property_id: source_class(recording, *new_args, **new_kwargs)
+                for property_id, recording in rec_or_dict_of_recs.items()
+            }
+
+            return preprocessed_recordings_dict
+        else:
+            raise TypeError(f"The function `{name}` only accepts a recording or a dict of recordings.")
 
     source_class_or_dict_of_sources_classes.__signature__ = inspect.signature(source_class)
     source_class_or_dict_of_sources_classes.__doc__ = source_class.__doc__
