@@ -30,6 +30,7 @@ class ChannelsAggregationRecording(BaseRecording):
             ), "'renamed_channel_ids' doesn't have the right size or has duplicates!"
             channel_ids = list(renamed_channel_ids)
         else:
+
             # Explicitly check if all channel_ids arrays are either all integers or all strings.
             all_int_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.integer) for rec in recording_list)
             all_str_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.str_) for rec in recording_list)
