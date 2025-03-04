@@ -27,8 +27,6 @@ class GraphClustering:
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
 
-        import networkx as nx
-
         radius_um = params["radius_um"]
         bin_um = params["bin_um"]
         motion = params["motion"]
@@ -83,19 +81,26 @@ class GraphClustering:
         distances_bool = distances.copy()
         distances_bool.data[:] = 1
 
-        G = nx.Graph(distances_bool)
-        communities = nx.community.louvain_communities(G, seed=seed)
-
-        peak_labels = np.zeros(ordered_peaks.size, dtype=int)
-        peak_labels[:] = -1
-
-        k = 0
-        for community in communities:
-            if len(community) == 1:
-                continue
-            peak_labels[list(community)] = k
-            k += 1
+        # using networkx : very slow (possible backend with cude  backend="cugraph",)
+        # import networkx as nx
+        # G = nx.Graph(distances_bool)
+        # communities = nx.community.louvain_communities(G, seed=seed)
+        # peak_labels = np.zeros(ordered_peaks.size, dtype=int)
+        # peak_labels[:] = -1
+        # k = 0
+        # for community in communities:
+        #     if len(community) == 1:
+        #         continue
+        #     peak_labels[list(community)] = k
+        #     k += 1
         # print(peak_labels)
+
+
+
+        from sknetwork.clustering import Louvain
+        classifier = Louvain()
+        peak_labels = classifier.fit_predict(distances_bool)
+
 
         labels_set = np.unique(peak_labels)
         labels_set = labels_set[labels_set >= 0]
