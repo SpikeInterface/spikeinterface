@@ -137,7 +137,7 @@ class SorterStudy(BenchmarkStudy):
         from .benchmark_plot_tools import plot_performances
 
         return plot_performances(self, **kwargs)
-    
+
     def plot_performances_vs_snr(self, **kwargs):
         from .benchmark_plot_tools import plot_performances_vs_snr
 
