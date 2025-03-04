@@ -8,7 +8,7 @@ from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_g
 from spikeinterface.widgets import (
     plot_agreement_matrix,
     plot_comparison_collision_by_similarity,
-    plot_performances_losses,
+    plot_performance_losses,
 )
 
 import numpy as np
@@ -142,8 +142,8 @@ class MatchingStudy(BenchmarkStudy):
         return plot_unit_counts(self, case_keys, **kwargs)
 
     def plot_unit_losses(self, *args, **kwargs):
-        warnings.warn("plot_unit_losses() is now plot_performances_losses()")
-        return plot_performances_losses(self, *args, **kwargs)
+        warnings.warn("plot_unit_losses() is now plot_performance_losses()")
+        return plot_performance_losses(self, *args, **kwargs)
 
-    def plot_performances_losses(self, *args, **kwargs):
-        return plot_performances_losses(self, *args, **kwargs)
+    def plot_performance_losses(self, *args, **kwargs):
+        return plot_performance_losses(self, *args, **kwargs)

@@ -335,7 +335,7 @@ def plot_performances_comparison(
     return fig
 
 
-def plot_performances_losses(study, case0, case1, performance_names=["accuracy"], figsize=None):
+def plot_performance_losses(study, case0, case1, performance_names=["accuracy"], figsize=None):
     import matplotlib.pyplot as plt
 
     fig, axs = plt.subplots(ncols=1, nrows=len(performance_names), figsize=figsize, squeeze=False)

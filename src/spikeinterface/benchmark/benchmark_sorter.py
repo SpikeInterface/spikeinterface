@@ -158,7 +158,7 @@ class SorterStudy(BenchmarkStudy):
 
         return plot_agreement_matrix(self, **kwargs)
 
-    def plot_performances_losses(self, *args, **kwargs):
-        from .benchmark_plot_tools import plot_performances_losses
+    def plot_performance_losses(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performance_losses
 
-        return plot_performances_losses(self, *args, **kwargs)
+        return plot_performance_losses(self, *args, **kwargs)

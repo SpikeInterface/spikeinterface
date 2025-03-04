@@ -368,7 +368,7 @@ class BenchmarkStudy:
 
     def get_pairs_by_level(self, level):
         """
-        usefull for function like plot_performances_losses() where you need to plot one pair of results
+        usefull for function like plot_performance_losses() where you need to plot one pair of results
         This generate list of pairs for a given level.
         """
 
