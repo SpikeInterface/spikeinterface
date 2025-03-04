@@ -274,7 +274,7 @@ def plot_performances_comparison(
     num_methods = len(case_keys)
     assert num_methods >= 2, "plot_performances_comparison need at least 2 cases!"
 
-    fig, axs = plt.subplots(ncols=num_methods - 1, nrows=num_methods - 1, figsize=(10, 10), squeeze=False)
+    fig, axs = plt.subplots(ncols=num_methods - 1, nrows=num_methods - 1, figsize=figsize, squeeze=False)
     for i, key1 in enumerate(case_keys):
         for j, key2 in enumerate(case_keys):
 
@@ -318,6 +318,42 @@ def plot_performances_comparison(
     ax.legend(handles=patches)
     fig.tight_layout()
     return fig
+
+
+def plot_performances_losses(study, case0, case1, metric=["accuracy"], figsize=None):
+    import matplotlib.pyplot as plt
+
+    fig, axs = plt.subplots(ncols=1, nrows=len(metric), figsize=figsize, squeeze=False)
+
+    for count, k in enumerate(metric):
+
+        ax = axs[0, count]
+
+        label = study.cases[case1]["label"]
+
+        positions = study.get_result(case0)["gt_comparison"].sorting1.get_property("gt_unit_locations")
+
+        analyzer = study.get_sorting_analyzer(case0)
+        metrics_case0 = analyzer.get_extension("quality_metrics").get_data()
+        x = metrics_case0["snr"].values
+
+        y_case0 = study.get_result(case0)["gt_comparison"].get_performance()[k].values
+        y_case1 = study.get_result(case1)["gt_comparison"].get_performance()[k].values
+        # if count < 2:
+        # ax.set_xticks([], [])
+        # elif count == 2:
+        ax.set_xlabel("depth (um)")
+        im = ax.scatter(positions[:, 1], x, c=(y_case1 - y_case0), cmap="coolwarm")
+        fig.colorbar(im, ax=ax, label=k)
+        im.set_clim(-1, 1)
+        ax.set_title(k)
+        ax.set_ylabel("snr")
+
+
+    return fig
+
+
+
 
 
 def sigmoid(x, x0, k, b):

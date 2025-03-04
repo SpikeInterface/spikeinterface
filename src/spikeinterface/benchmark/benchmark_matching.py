@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import warnings
+
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth
 from spikeinterface.widgets import (
     plot_agreement_matrix,
     plot_comparison_collision_by_similarity,
+    plot_performances_losses,
 )
 
 import numpy as np
@@ -138,39 +141,10 @@ class MatchingStudy(BenchmarkStudy):
 
         return plot_unit_counts(self, case_keys, **kwargs)
 
-    def plot_unit_losses(self, before, after, metric=["accuracy"], figsize=None):
-        import matplotlib.pyplot as plt
+    def plot_unit_losses(self, *args, **kwargs):
+        warnings.warn("plot_unit_losses() is now plot_performances_losses()")
+        return plot_performances_losses(self, *args, **kwargs)
 
-        fig, axs = plt.subplots(ncols=1, nrows=len(metric), figsize=figsize, squeeze=False)
 
-        for count, k in enumerate(metric):
-
-            ax = axs[0, count]
-
-            label = self.cases[after]["label"]
-
-            positions = self.get_result(before)["gt_comparison"].sorting1.get_property("gt_unit_locations")
-
-            analyzer = self.get_sorting_analyzer(before)
-            metrics_before = analyzer.get_extension("quality_metrics").get_data()
-            x = metrics_before["snr"].values
-
-            y_before = self.get_result(before)["gt_comparison"].get_performance()[k].values
-            y_after = self.get_result(after)["gt_comparison"].get_performance()[k].values
-            # if count < 2:
-            # ax.set_xticks([], [])
-            # elif count == 2:
-            ax.set_xlabel("depth (um)")
-            im = ax.scatter(positions[:, 1], x, c=(y_after - y_before), cmap="coolwarm")
-            fig.colorbar(im, ax=ax, label=k)
-            im.set_clim(-1, 1)
-            ax.set_title(k)
-            ax.set_ylabel("snr")
-
-        # fig.subplots_adjust(right=0.85)
-        # cbar_ax = fig.add_axes([0.9, 0.1, 0.025, 0.75])
-        # cbar = fig.colorbar(im, cax=cbar_ax, label=metric)
-
-        # if count == 2:
-        #    ax.legend()
-        return fig
+    def plot_performances_losses(self, *args, **kwargs):
+        return plot_performances_losses(self, *args, **kwargs)
