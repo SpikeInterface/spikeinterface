@@ -32,15 +32,15 @@ class ChannelsAggregationRecording(BaseRecording):
         else:
 
             # Explicitly check if all channel_ids arrays are either all integers or all strings.
-            all_int_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.integer) for rec in recording_list)
-            all_str_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.str_) for rec in recording_list)
+            all_ids_are_int_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.integer) for rec in recording_list)
+            all_ids_are_str_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.str_) for rec in recording_list)
 
-            all_channels_have_same_type = all_int_dtype or all_str_dtype
-            if all_channels_have_same_type:
+            all_ids_have_same_dtype = all_ids_are_int_dtype or all_ids_are_str_dtype
+            if all_ids_have_same_dtype:
                 combined_ids = np.concatenate([rec.channel_ids for rec in recording_list])
                 all_channel_ids_are_unique = np.unique(combined_ids).size == num_all_channels
 
-            if all_channels_have_same_type and all_channel_ids_are_unique:
+            if all_ids_have_same_dtype and all_channel_ids_are_unique:
                 channel_ids = combined_ids
             else:
                 # If IDs are not unique or not of the same type, use default as stringify IDs
