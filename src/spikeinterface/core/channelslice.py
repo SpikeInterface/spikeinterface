@@ -31,8 +31,11 @@ class ChannelSliceRecording(BaseRecording):
         parents_chan_ids = parent_recording.get_channel_ids()
 
         # some checks
-        is_channel_in_parent = [chan_id in parents_chan_ids.tolist() for chan_id in self._channel_ids.tolist()]
-        assert all(is_channel_in_parent), "ChannelSliceRecording : channel ids are not all in parents"
+        # We use lists to compare numpy scalar types as their python versions (e.g. int vs int64())
+        channel_ids_not_in_parents = [id for id in self._channel_ids.tolist() if id not in parents_chan_ids.tolist()]
+        assert (
+            len(channel_ids_not_in_parents) == 0
+        ), f"ChannelSliceRecording : channel ids {channel_ids_not_in_parents} are not all in parent ids {parents_chan_ids}"
 
         assert len(self._channel_ids) == len(
             self._renamed_channel_ids
@@ -42,6 +45,7 @@ class ChannelSliceRecording(BaseRecording):
         ), "ChannelSliceRecording : channel_ids are not unique"
 
         sampling_frequency = parent_recording.get_sampling_frequency()
+        assert sampling_frequency > 0, "Sampling frequency must be positive."
 
         BaseRecording.__init__(
             self,

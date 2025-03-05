@@ -119,6 +119,12 @@ def test_channel_aggregation_does_not_preserve_ids_not_the_same_type():
 
 
 def test_channel_aggregation_with_string_dtypes_of_different_size():
+    """
+    Fixes issue https://github.com/SpikeInterface/spikeinterface/issues/3733
+
+    This tests that the channel ids are propagated in the aggregation even if they are strings of different
+    string dtype sizes.
+    """
     recording1 = generate_recording(num_channels=2, durations=[10], set_probe=False)
     recording1 = recording1.rename_channels(new_channel_ids=np.array(["8", "9"], dtype="<U1"))
 
