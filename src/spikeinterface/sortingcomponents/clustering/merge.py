@@ -94,10 +94,10 @@ def merge_clusters(
 
         pair_values[~pair_mask] = 20
 
-        from sklearn.cluster import HDBSCAN
+        import hdbscan
 
         fig, ax = plt.subplots()
-        clusterer = HDBSCAN(metric="precomputed", min_cluster_size=2, allow_single_cluster=True)
+        clusterer = hdbscan.HDBSCAN(metric="precomputed", min_cluster_size=2, allow_single_cluster=True)
         clusterer.fit(pair_values)
         # print(clusterer.labels_)
         clusterer.single_linkage_tree_.plot(cmap="viridis", colorbar=True)

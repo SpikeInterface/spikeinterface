@@ -2,9 +2,15 @@ from __future__ import annotations
 
 # """Sorting components: clustering"""
 from pathlib import Path
-from sklearn.cluster import HDBSCAN
 
 import numpy as np
+
+try:
+    import hdbscan
+
+    HAVE_HDBSCAN = True
+except:
+    HAVE_HDBSCAN = False
 
 
 class PositionClustering:
@@ -23,7 +29,7 @@ class PositionClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
-
+        assert HAVE_HDBSCAN, "position clustering need hdbscan to be installed"
         d = params
 
         if d["peak_locations"] is None:
@@ -45,9 +51,9 @@ class PositionClustering:
         else:
             to_cluster_from = locations
 
-        clusterer = HDBSCAN(**d["hdbscan_kwargs"])
-        clusterer.fit(to_cluster_from)
-        peak_labels = clusterer.labels_
+        clustering = hdbscan.hdbscan(to_cluster_from, **d["hdbscan_kwargs"])
+        peak_labels = clustering[0]
+
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
 
