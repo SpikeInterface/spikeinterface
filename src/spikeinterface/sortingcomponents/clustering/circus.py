@@ -4,14 +4,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-
-try:
-    import hdbscan
-
-    HAVE_HDBSCAN = True
-except:
-    HAVE_HDBSCAN = False
-
 import random, string
 from spikeinterface.core import get_global_tmp_folder
 from spikeinterface.core.basesorting import minimum_spike_dtype
@@ -30,6 +22,7 @@ from spikeinterface.core.node_pipeline import (
     ExtractSparseWaveforms,
     PeakRetriever,
 )
+from sklearn.cluster import HDBSCAN
 
 
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
@@ -71,7 +64,6 @@ class CircusClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
-        assert HAVE_HDBSCAN, "random projections clustering needs hdbscan to be installed"
 
         d = params
         verbose = d["verbose"]
@@ -180,8 +172,9 @@ class CircusClustering:
 
                 hdbscan_data = tsvd.fit_transform(sub_data)
                 try:
-                    clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
-                    local_labels = clustering[0]
+                    clusterer = HDBSCAN(**d["hdbscan_kwargs"])
+                    clusterer.fit(hdbscan_data)
+                    local_labels = clusterer.labels_
                 except Exception:
                     local_labels = np.zeros(len(hdbscan_data))
                 valid_clusters = local_labels > -1

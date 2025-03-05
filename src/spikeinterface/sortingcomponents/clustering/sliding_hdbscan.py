@@ -5,16 +5,10 @@ from pathlib import Path
 import time
 import random
 import string
+from sklearn.cluster import HDBSCAN
 
 
 import numpy as np
-
-try:
-    import hdbscan
-
-    HAVE_HDBSCAN = True
-except:
-    HAVE_HDBSCAN = False
 
 
 from spikeinterface.core import (
@@ -59,7 +53,6 @@ class SlidingHdbscanClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
-        assert HAVE_HDBSCAN, "sliding_hdbscan clustering need hdbscan to be installed"
         params = cls._check_params(recording, peaks, params)
         wfs_arrays, sparsity_mask, noise = cls._initialize_folder(recording, peaks, params)
         peak_labels = cls._find_clusters(recording, peaks, wfs_arrays, sparsity_mask, noise, params)
@@ -275,7 +268,7 @@ class SlidingHdbscanClustering:
 
             # find some clusters
             # ~ t0 = time.perf_counter()
-            clusterer = hdbscan.HDBSCAN(min_cluster_size=d["min_cluster_size"], allow_single_cluster=True, metric="l2")
+            clusterer = HDBSCAN(min_cluster_size=d["min_cluster_size"], allow_single_cluster=True, metric="l2")
             all_labels = clusterer.fit_predict(local_feature)
             # ~ t1 = time.perf_counter()
             # ~ print('HDBSCAN time',  t1 - t0)

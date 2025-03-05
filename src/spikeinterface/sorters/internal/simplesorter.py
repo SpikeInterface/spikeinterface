@@ -12,6 +12,7 @@ import pickle
 import json
 
 
+
 class SimpleSorter(ComponentsBasedSorter):
     """
     Implementation of a very simple sorter usefull for teaching.
@@ -181,13 +182,12 @@ class SimpleSorter(ComponentsBasedSorter):
         clust_method = clust_params.pop("method", "hdbscan")
 
         if clust_method == "hdbscan":
-            import hdbscan
-
-            out = hdbscan.hdbscan(features_flat, **clust_params)
-            peak_labels = out[0]
+            from sklearn.cluster import HDBSCAN
+            clusterer = HDBSCAN(**clust_params)
+            clusterer.fit(features_flat)
+            peak_labels = clusterer.labels_
         elif clust_method in ("kmeans"):
             from sklearn.cluster import MiniBatchKMeans
-
             peak_labels = MiniBatchKMeans(**clust_params).fit_predict(features_flat)
         elif clust_method in ("mean_shift"):
             from sklearn.cluster import MeanShift

@@ -5,13 +5,7 @@ from pathlib import Path
 
 import shutil
 import numpy as np
-
-try:
-    import hdbscan
-
-    HAVE_HDBSCAN = True
-except:
-    HAVE_HDBSCAN = False
+from sklearn.cluster import HDBSCAN
 
 import random, string, os
 from spikeinterface.core import get_global_tmp_folder, get_noise_levels
@@ -48,8 +42,6 @@ class PositionAndFeaturesClustering:
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         from sklearn.preprocessing import QuantileTransformer
 
-        assert HAVE_HDBSCAN, "twisted clustering needs hdbscan to be installed"
-
         d = params
 
         peak_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
@@ -82,7 +74,7 @@ class PositionAndFeaturesClustering:
         preprocessing = QuantileTransformer(output_distribution="uniform")
         hdbscan_data = preprocessing.fit_transform(hdbscan_data)
 
-        clusterer = hdbscan.HDBSCAN(**d["hdbscan_kwargs"])
+        clusterer = HDBSCAN(**d["hdbscan_kwargs"])
         clusterer.fit(X=hdbscan_data)
         peak_labels = clusterer.labels_
 

@@ -57,7 +57,7 @@ class TdcClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
-        import hdbscan
+        from sklearn.cluster import HDBSCAN
 
         if params["folder"] is None:
             randname = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
