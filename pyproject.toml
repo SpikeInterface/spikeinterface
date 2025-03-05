@@ -162,6 +162,8 @@ test = [
     "numba<0.61.0;python_version<'3.13'",
     "numba>=0.61.0;python_version>='3.13'",
 
+    "scikit-learn",
+
     # for sortingview backend
     "sortingview",
 
@@ -185,6 +187,7 @@ docs = [
     "sphinx-design",
     "numpydoc",
     "ipython",
+    "scikit-learn",
     "sphinxcontrib-jquery",
 
     # for notebooks in the gallery
