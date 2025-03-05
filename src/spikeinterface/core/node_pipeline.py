@@ -416,12 +416,13 @@ class ExtractSparseWaveforms(WaveformsNode):
             return_output=return_output,
         )
 
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+
         if sparsity_mask is not None:
-            self.neighbours_mask = self.sparsity_mask
+            self.neighbours_mask = sparsity_mask
         else:
             self.radius_um = radius_um
-            self.contact_locations = recording.get_channel_locations()
-            self.channel_distance = get_channel_distances(recording)
             self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
 
