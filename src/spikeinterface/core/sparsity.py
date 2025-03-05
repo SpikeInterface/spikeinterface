@@ -324,9 +324,7 @@ class ChannelSparsity:
 
     ## Some convinient function to compute sparsity from several strategy
     @classmethod
-    def from_closest_channels(
-        cls, templates_or_sorting_analyzer, num_channels
-    ):
+    def from_closest_channels(cls, templates_or_sorting_analyzer, num_channels):
         """
         Construct sparsity from N closest channels
         Use the "num_channels" argument to specify the number of channels.
@@ -350,7 +348,7 @@ class ChannelSparsity:
         )
         channel_locations = templates_or_sorting_analyzer.get_channel_locations()
         distances = np.linalg.norm(channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
-    
+
         for unit_ind, unit_id in enumerate(templates_or_sorting_analyzer.unit_ids):
             chan_inds = np.argsort(distances[unit_ind])
             chan_inds = chan_inds[:num_channels]
@@ -637,7 +635,9 @@ class ChannelSparsity:
 def compute_sparsity(
     templates_or_sorting_analyzer: "Templates | SortingAnalyzer",
     noise_levels: np.ndarray | None = None,
-    method: "radius" | "best_channels" | "closest_channels" | "snr" | "amplitude" | "energy" | "by_property" | "ptp" = "radius",
+    method: (
+        "radius" | "best_channels" | "closest_channels" | "snr" | "amplitude" | "energy" | "by_property" | "ptp"
+    ) = "radius",
     peak_sign: "neg" | "pos" | "both" = "neg",
     num_channels: int | None = 5,
     radius_um: float | None = 100.0,
@@ -844,9 +844,7 @@ def estimate_sparsity(
             )
         elif method == "closest_channels":
             assert num_channels is not None, "For the 'closest_channels' method, 'num_channels' needs to be given"
-            sparsity = ChannelSparsity.from_best_channels(
-                templates, num_channels
-            )
+            sparsity = ChannelSparsity.from_best_channels(templates, num_channels)
         elif method == "radius":
             assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
             sparsity = ChannelSparsity.from_radius(templates, radius_um, peak_sign=peak_sign)
