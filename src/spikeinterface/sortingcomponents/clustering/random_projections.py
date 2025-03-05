@@ -55,7 +55,7 @@ class RandomProjectionClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
-        
+
         d = params
         verbose = d["verbose"]
 

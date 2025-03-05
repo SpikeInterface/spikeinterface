@@ -95,7 +95,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
-        
+
         try:
             import torch
         except ImportError:
