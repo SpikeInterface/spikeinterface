@@ -22,6 +22,7 @@ class GraphClustering:
         "motion": None,
         "seed": None,
         "n_neighbors": 100,
+        "clustering_method": "networkx-louvain",
     }
 
     @classmethod
@@ -32,6 +33,7 @@ class GraphClustering:
         motion = params["motion"]
         seed = params["seed"]
         n_neighbors = params["n_neighbors"]
+        clustering_method = params["clustering_method"]
 
         motion_aware = motion is not None
 
@@ -81,26 +83,51 @@ class GraphClustering:
         distances_bool = distances.copy()
         distances_bool.data[:] = 1
 
-        # using networkx : very slow (possible backend with cude  backend="cugraph",)
-        # import networkx as nx
-        # G = nx.Graph(distances_bool)
-        # communities = nx.community.louvain_communities(G, seed=seed)
-        # peak_labels = np.zeros(ordered_peaks.size, dtype=int)
-        # peak_labels[:] = -1
-        # k = 0
-        # for community in communities:
-        #     if len(community) == 1:
-        #         continue
-        #     peak_labels[list(community)] = k
-        #     k += 1
-        # print(peak_labels)
+        if clustering_method == "networkx-louvain":
+            # using networkx : very slow (possible backend with cude  backend="cugraph",)
+            import networkx as nx
+            G = nx.Graph(distances_bool)
+            communities = nx.community.louvain_communities(G, seed=seed)
+            peak_labels = np.zeros(ordered_peaks.size, dtype=int)
+            peak_labels[:] = -1
+            k = 0
+            for community in communities:
+                if len(community) == 1:
+                    continue
+                peak_labels[list(community)] = k
+                k += 1
+        
+        elif clustering_method == "sknetwork-louvain":
+            from sknetwork.clustering import Louvain
+            classifier = Louvain()
+            peak_labels = classifier.fit_predict(distances_bool)
+            _remove_small_cluster(peak_labels, min_size=1)
 
+        elif clustering_method == "sknetwork-leiden":
+            from sknetwork.clustering import Leiden
+            classifier = Leiden()
+            peak_labels = classifier.fit_predict(distances_bool)
+            _remove_small_cluster(peak_labels, min_size=1)
 
+        elif clustering_method == "leidenalg":
+            import leidenalg
+            import igraph
+            graph = igraph.Graph.Weighted_Adjacency(distances.tocoo(), mode='directed',)
+            clusters = leidenalg.find_partition(graph, leidenalg.ModularityVertexPartition)
+            peak_labels = np.array(clusters.membership)
+            _remove_small_cluster(peak_labels, min_size=1)
 
-        from sknetwork.clustering import Louvain
-        classifier = Louvain()
-        peak_labels = classifier.fit_predict(distances_bool)
+        elif "igraph-label-propagation":
+            import igraph
 
+            graph = igraph.Graph.Weighted_Adjacency(distances.tocoo(), mode='directed',)
+
+            clusters = graph.community_label_propagation()
+            peak_labels = np.array(clusters.membership)
+            _remove_small_cluster(peak_labels, min_size=1)
+
+        else:
+            raise ValueError("GraphClustering : wrong clustering_method")
 
         labels_set = np.unique(peak_labels)
         labels_set = labels_set[labels_set >= 0]
@@ -110,3 +137,12 @@ class GraphClustering:
         peak_labels = peak_labels[reverse_order]
         
         return labels_set, peak_labels
+
+
+
+def _remove_small_cluster(peak_labels, min_size=1):
+    for k in np.unique(peak_labels):
+        inds = np.flatnonzero(peak_labels == k)
+        if inds.size <= min_size:
+            peak_labels[inds] = -1            
+
