@@ -376,7 +376,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         parents: Optional[list[PipelineNode]] = None,
         return_output: bool = False,
         radius_um: float = 100.0,
-        sparsity_mask: np.array = None,
+        sparsity_mask: np.ndarray = None,
     ):
         """
         Extract sparse waveforms from a recording. The strategy in this specific node is to reshape the waveforms
