@@ -376,7 +376,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         parents: Optional[list[PipelineNode]] = None,
         return_output: bool = False,
         radius_um: float = 100.0,
-        sparsity_mask: np.array = None,
+        sparsity_mask: np.ndarray = None,
     ):
         """
         Extract sparse waveforms from a recording. The strategy in this specific node is to reshape the waveforms
@@ -403,7 +403,7 @@ class ExtractSparseWaveforms(WaveformsNode):
             Whether or not the output of the node is returned by the pipeline
         radius_um : float, default: 100.0
             The radius to determine the neighborhood of channels to extract waveforms from.
-        sparsity_mask : np.array, default: None
+        sparsity_mask : np.ndarray, default: None
             Optional mask to specify the sparsity of the waveforms. If provided, it should be a boolean array of shape
             (num_channels, num_channels) where True indicates that the channel is active in the neighborhood.
         """
