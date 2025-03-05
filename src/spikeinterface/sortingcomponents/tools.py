@@ -372,18 +372,15 @@ def cache_preprocessing(
                     recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
                 else:
                     import warnings
-
                     warnings.warn("Recording too large to be preloaded in RAM...")
             else:
                 import warnings
-
                 warnings.warn("psutil is required to preload in memory given only a fraction of available memory")
         else:
             if recording.get_total_memory_size() < total_memory:
                 recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
             else:
                 import warnings
-
                 warnings.warn("Recording too large to be preloaded in RAM...")
     elif mode == "folder":
         recording = recording.save_to_folder(**extra_kwargs)
