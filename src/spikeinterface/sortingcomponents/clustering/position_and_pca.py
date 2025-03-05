@@ -7,7 +7,13 @@ import string
 import os
 
 import numpy as np
-from sklearn.cluster import HDBSCAN
+
+try:
+    import hdbscan
+
+    HAVE_HDBSCAN = True
+except:
+    HAVE_HDBSCAN = False
 
 from spikeinterface.core import get_global_tmp_folder
 from spikeinterface.core.recording_tools import get_channel_distances, get_random_data_chunks
@@ -69,6 +75,8 @@ class PositionAndPCAClustering:
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         # res = PositionClustering(recording, peaks, params)
 
+        assert HAVE_HDBSCAN, "position_and_pca clustering need hdbscan to be installed"
+
         params = cls._check_params(recording, peaks, params)
         # wfs_arrays, sparsity_mask, noise = cls._initialize_folder(recording, peaks, params)
 
@@ -88,7 +96,7 @@ class PositionAndPCAClustering:
         else:
             to_cluster_from = locations
 
-        clusterer = HDBSCAN(**params["hdbscan_global_kwargs"])
+        clusterer = hdbscan.HDBSCAN(**params["hdbscan_global_kwargs"])
         clusterer.fit(X=to_cluster_from)
         spatial_peak_labels = clusterer.labels_
 

@@ -4,7 +4,12 @@ from __future__ import annotations
 from pathlib import Path
 import numpy as np
 
-from sklearn.cluster import HDBSCAN
+try:
+    import hdbscan
+
+    HAVE_HDBSCAN = True
+except:
+    HAVE_HDBSCAN = False
 
 from spikeinterface.sortingcomponents.features_from_peaks import (
     compute_features_from_peaks,
@@ -33,7 +38,7 @@ class PositionPTPScaledClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
-
+        assert HAVE_HDBSCAN, "position clustering need hdbscan to be installed"
         d = params
 
         if d["peak_locations"] is None:
@@ -65,7 +70,7 @@ class PositionPTPScaledClustering:
         to_cluster_from = np.hstack((locations, logmaxptps[:, np.newaxis]))
         to_cluster_from = to_cluster_from * d["scales"]
 
-        clusterer = HDBSCAN(**d["hdbscan_kwargs"])
+        clusterer = hdbscan.HDBSCAN(**d["hdbscan_kwargs"])
         clusterer.fit(X=to_cluster_from)
         peak_labels = clusterer.labels_
 

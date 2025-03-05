@@ -95,7 +95,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        try:
+            import hdbscan
 
+            HAVE_HDBSCAN = True
+        except:
+            HAVE_HDBSCAN = False
+
+        assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
+        
         try:
             import torch
         except ImportError:

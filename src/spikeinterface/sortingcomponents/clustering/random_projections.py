@@ -5,7 +5,13 @@ from pathlib import Path
 
 import shutil
 import numpy as np
-from sklearn.cluster import HDBSCAN
+
+try:
+    import hdbscan
+
+    HAVE_HDBSCAN = True
+except:
+    HAVE_HDBSCAN = False
 
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.waveform_tools import estimate_templates
@@ -55,6 +61,7 @@ class RandomProjectionClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
+        assert HAVE_HDBSCAN, "random projections clustering need hdbscan to be installed"
 
         d = params
         verbose = d["verbose"]
@@ -107,9 +114,8 @@ class RandomProjectionClustering:
             recording, pipeline_nodes, job_kwargs=job_kwargs, job_name="extracting features"
         )
 
-        clusterer = HDBSCAN(**d["hdbscan_kwargs"])
-        clusterer.fit(hdbscan_data)
-        peak_labels = clusterer.labels_
+        clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
+        peak_labels = clustering[0]
 
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
