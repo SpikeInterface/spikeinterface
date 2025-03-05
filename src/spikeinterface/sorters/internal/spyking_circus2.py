@@ -103,7 +103,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             HAVE_HDBSCAN = False
 
         assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
-        
+
         try:
             import torch
         except ImportError:
