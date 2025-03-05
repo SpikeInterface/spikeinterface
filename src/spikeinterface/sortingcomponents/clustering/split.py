@@ -259,7 +259,7 @@ class LocalFeatureClustering:
             final_features = flatten_features
 
         if clusterer == "hdbscan":
-            from hdbscan import HDBSCAN
+            from sklearn.cluster import HDBSCAN
 
             clust = HDBSCAN(**clusterer_kwargs, core_dist_n_jobs=1)
             clust.fit(final_features)

@@ -21,14 +21,6 @@ from spikeinterface.core import get_channel_distances
 from tqdm.auto import tqdm
 
 try:
-    import hdbscan
-
-    HAVE_HDBSCAN = True
-except:
-    HAVE_HDBSCAN = False
-
-
-try:
     import pymde
 
     HAVE_PYMDE = True
@@ -79,7 +71,6 @@ class SlidingNNClustering:
         assert HAVE_TORCH, "SlidingNN needs torch to work"
         assert HAVE_NNDESCENT, "SlidingNN needs pynndescent to work"
         assert HAVE_PYMDE, "SlidingNN needs pymde to work"
-        assert HAVE_HDBSCAN, "SlidingNN needs hdbscan to work"
 
         d = params
         tmp_folder = params["tmp_folder"]
@@ -294,7 +285,7 @@ class SlidingNNClustering:
                         "Clustering MDE embeddings (n={}): {}".format(embeddings_chunk.shape, datetime.datetime.now())
                     )
                     # TODO HDBSCAN can be done on GPU with NVIDIA RAPIDS for speed
-                    clusterer = hdbscan.HDBSCAN(
+                    clusterer = HDBSCAN(
                         prediction_data=True,
                         core_dist_n_jobs=job_kwargs["n_jobs"],
                         **d["hdbscan_kwargs"],

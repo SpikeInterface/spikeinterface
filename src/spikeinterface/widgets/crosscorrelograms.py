@@ -119,7 +119,7 @@ class CrossCorrelogramsWidget(BaseWidget):
 
                 if i < len(self.axes) - 1:
                     self.axes[i, j].set_xticks([], [])
-        plt.tight_layout()
+        self.figure.tight_layout()
 
         for i, unit_id in enumerate(unit_ids):
             self.axes[0, i].set_title(str(unit_id))

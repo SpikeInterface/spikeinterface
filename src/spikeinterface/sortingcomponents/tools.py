@@ -12,7 +12,7 @@ except:
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.template import Templates
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
-from spikeinterface.core.job_tools import split_job_kwargs
+from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
@@ -249,19 +249,142 @@ def check_probe_for_drift_correction(recording, dist_x_max=60):
         return True
 
 
-def cache_preprocessing(recording, mode="memory", memory_limit=0.5, delete_cache=True, **extra_kwargs):
-    save_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
+def set_optimal_chunk_size(recording, job_kwargs, memory_limit=0.5, total_memory=None):
+    """
+    Set the optimal chunk size for a job given the memory_limit and the number of jobs
 
-    if mode == "memory":
+    Parameters
+    ----------
+
+    recording: Recording
+        The recording object
+    job_kwargs: dict
+        The job kwargs
+    memory_limit: float
+        The memory limit in fraction of available memory
+    total_memory: str, Default None
+        The total memory to use for the job in bytes
+
+    Returns
+    -------
+
+    job_kwargs: dict
+        The updated job kwargs
+    """
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    n_jobs = job_kwargs["n_jobs"]
+    if total_memory is None:
         if HAVE_PSUTIL:
             assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
             memory_usage = memory_limit * psutil.virtual_memory().available
-            if recording.get_total_memory_size() < memory_usage:
+            num_channels = recording.get_num_channels()
+            dtype_size_bytes = recording.get_dtype().itemsize
+            chunk_size = memory_usage / ((num_channels * dtype_size_bytes) * n_jobs)
+            chunk_duration = chunk_size / recording.get_sampling_frequency()
+            job_kwargs = fix_job_kwargs(dict(chunk_duration=f"{chunk_duration}s"))
+        else:
+            import warnings
+
+            warnings.warn("psutil is required to use only a fraction of available memory")
+    else:
+        from spikeinterface.core.job_tools import convert_string_to_bytes
+
+        total_memory = convert_string_to_bytes(total_memory)
+        num_channels = recording.get_num_channels()
+        dtype_size_bytes = recording.get_dtype().itemsize
+        chunk_size = (num_channels * dtype_size_bytes) * n_jobs / total_memory
+        chunk_duration = chunk_size / recording.get_sampling_frequency()
+        job_kwargs = fix_job_kwargs(dict(chunk_duration=f"{chunk_duration}s"))
+    return job_kwargs
+
+
+def get_optimal_n_jobs(job_kwargs, ram_requested, memory_limit=0.25):
+    """
+    Set the optimal chunk size for a job given the memory_limit and the number of jobs
+
+    Parameters
+    ----------
+
+    recording: Recording
+        The recording object
+    ram_requested: int
+        The amount of RAM (in bytes) requested for the job
+    memory_limit: float
+        The memory limit in fraction of available memory
+
+    Returns
+    -------
+
+    job_kwargs: dict
+        The updated job kwargs
+    """
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    n_jobs = job_kwargs["n_jobs"]
+    if HAVE_PSUTIL:
+        assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
+        memory_usage = memory_limit * psutil.virtual_memory().available
+        n_jobs = int(min(n_jobs, memory_usage // ram_requested))
+        job_kwargs.update(dict(n_jobs=n_jobs))
+    else:
+        import warnings
+
+        warnings.warn("psutil is required to use only a fraction of available memory")
+    return job_kwargs
+
+
+def cache_preprocessing(
+    recording, mode="memory", memory_limit=0.5, total_memory=None, delete_cache=True, **extra_kwargs
+):
+    """
+    Cache the preprocessing of a recording object
+
+    Parameters
+    ----------
+
+    recording: Recording
+        The recording object
+    mode: str
+        The mode to cache the preprocessing, can be 'memory', 'folder', 'zarr' or 'no-cache'
+    memory_limit: float
+        The memory limit in fraction of available memory
+    total_memory: str, Default None
+        The total memory to use for the job in bytes
+    delete_cache: bool
+        If True, delete the cache after the job
+    **extra_kwargs: dict
+        The extra kwargs for the job
+
+    Returns
+    -------
+
+    recording: Recording
+        The cached recording object
+    """
+
+    save_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
+
+    if mode == "memory":
+        if total_memory is None:
+            if HAVE_PSUTIL:
+                assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
+                memory_usage = memory_limit * psutil.virtual_memory().available
+                if recording.get_total_memory_size() < memory_usage:
+                    recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
+                else:
+                    import warnings
+
+                    warnings.warn("Recording too large to be preloaded in RAM...")
+            else:
+                import warnings
+
+                warnings.warn("psutil is required to preload in memory given only a fraction of available memory")
+        else:
+            if recording.get_total_memory_size() < total_memory:
                 recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
             else:
-                print("Recording too large to be preloaded in RAM...")
-        else:
-            print("psutil is required to preload in memory")
+                import warnings
+
+                warnings.warn("Recording too large to be preloaded in RAM...")
     elif mode == "folder":
         recording = recording.save_to_folder(**extra_kwargs)
     elif mode == "zarr":

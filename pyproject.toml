@@ -161,7 +161,8 @@ test = [
     # tridesclous
     "numba<0.61.0;python_version<'3.13'",
     "numba>=0.61.0;python_version>='3.13'",
-    "hdbscan>=0.8.33",  # Previous version had a broken wheel
+
+    "scikit-learn",
 
     # for sortingview backend
     "sortingview",
@@ -186,12 +187,12 @@ docs = [
     "sphinx-design",
     "numpydoc",
     "ipython",
+    "scikit-learn",
     "sphinxcontrib-jquery",
 
     # for notebooks in the gallery
     "MEArec", # Use as an example
     "pandas", # in the modules gallery comparison tutorial
-    "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "networkx",
     "skops", # For auotmated curation

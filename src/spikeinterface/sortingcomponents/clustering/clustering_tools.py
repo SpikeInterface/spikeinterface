@@ -15,7 +15,7 @@ def _split_waveforms(
     wfs_and_noise, noise_size, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug
 ):
     import sklearn.decomposition
-    import hdbscan
+    from sklearn.cluster import HDBSCAN
 
     valid_size = wfs_and_noise.shape[0] - noise_size
 
@@ -30,9 +30,10 @@ def _split_waveforms(
     local_feature = pca.fit_transform(local_feature)
 
     # hdbscan on pca
-    clustering = hdbscan.hdbscan(local_feature, **hdbscan_params)
-    local_labels_with_noise = clustering[0]
-    cluster_probability = clustering[2]
+    clusterer = HDBSCAN(**hdbscan_params)
+    clusterer.fit(local_feature)
+    local_labels_with_noise = clusterer.labels_
+    cluster_probability = clusterer.probabilities_
     (persistent_clusters,) = np.nonzero(cluster_probability > probability_thr)
     local_labels_with_noise[~np.isin(local_labels_with_noise, persistent_clusters)] = -1
 
@@ -95,7 +96,7 @@ def _split_waveforms_nested(
     wfs_and_noise, noise_size, nbefore, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug
 ):
     import sklearn.decomposition
-    import hdbscan
+    from sklearn.cluster import HDBSCAN
 
     valid_size = wfs_and_noise.shape[0] - noise_size
 
@@ -123,9 +124,10 @@ def _split_waveforms_nested(
         # ~ local_feature = pca.fit_transform(local_feature)
 
         # hdbscan on pca
-        clustering = hdbscan.hdbscan(local_feature, **hdbscan_params)
-        active_labels_with_noise = clustering[0]
-        cluster_probability = clustering[2]
+        clusterer = HDBSCAN(**hdbscan_params)
+        clusterer.fit(local_feature)
+        active_labels_with_noise = clusterer.labels_
+        cluster_probability = clusterer.probabilities_
         (persistent_clusters,) = np.nonzero(clustering[2] > probability_thr)
         active_labels_with_noise[~np.isin(active_labels_with_noise, persistent_clusters)] = -1
 
@@ -233,7 +235,7 @@ def auto_split_clustering(
     """
 
     import sklearn.decomposition
-    import hdbscan
+    from sklearn.cluster import HDBSCAN
 
     split_peak_labels = -1 * np.ones(peak_labels.size, dtype=np.int64)
     nb_clusters = 0
