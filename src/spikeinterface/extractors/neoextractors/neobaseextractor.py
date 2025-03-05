@@ -260,16 +260,17 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         units = signal_channels["units"]
 
         # mark that units are V, mV or uV
+        standard_units_to_additional_gains = {"V": 1e6, "Volt": 1e6, "Volts": 1e6, "mV": 1e3, "uV": 1.0}
         self.has_non_standard_units = False
-        if not np.all(np.isin(units, ["V", "Volt", "mV", "uV"])):
+        if not np.all(np.isin(units, list(standard_units_to_additional_gains.keys()))):
             self.has_non_standard_units = True
+            warnings.warn(
+                f"The raw file has non standard units: {np.unique(units)}. Standard units are: {list(standard_units_to_additional_gains.keys())}. 'uV' are assumed."
+            )
 
         additional_gain = np.ones(units.size, dtype="float")
-        additional_gain[units == "V"] = 1e6
-        additional_gain[units == "Volt"] = 1e6
-        additional_gain[units == "mV"] = 1e3
-        additional_gain[units == "uV"] = 1.0
-        additional_gain = additional_gain
+        for key, value in standard_units_to_additional_gains.items():
+            additional_gain[units == key] = value
 
         final_gains = gains * additional_gain
         final_offsets = offsets * additional_gain

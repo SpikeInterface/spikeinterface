@@ -56,6 +56,7 @@ class SortingSummaryWidget(BaseWidget):
         analyzer.get_extension("template_metrics").get_data().columns.
     extra_unit_properties : dict or None, default: None
         A dict with extra units properties to display.
+        The key is the property name and the value must be a numpy.array.
     curation_dict : dict or None, default: None
         When curation is True, optionaly the viewer can get a previous 'curation_dict'
         to continue/check  previous curations on this analyzer.
@@ -107,8 +108,8 @@ class SortingSummaryWidget(BaseWidget):
 
         if displayed_unit_properties is None:
             displayed_unit_properties = list(_default_displayed_unit_properties)
-            if extra_unit_properties is not None:
-                displayed_unit_properties += list(extra_unit_properties.keys())
+        if extra_unit_properties is not None:
+            displayed_unit_properties = displayed_unit_properties + list(extra_unit_properties.keys())
 
         data_plot = dict(
             sorting_analyzer=sorting_analyzer,
@@ -195,7 +196,10 @@ class SortingSummaryWidget(BaseWidget):
 
         # unit ids
         v_units_table = generate_unit_table_view(
-            dp.sorting_analyzer, dp.displayed_unit_properties, similarity_scores=similarity_scores
+            dp.sorting_analyzer,
+            dp.displayed_unit_properties,
+            similarity_scores=similarity_scores,
+            extra_unit_properties=dp.extra_unit_properties,
         )
 
         if dp.curation:
