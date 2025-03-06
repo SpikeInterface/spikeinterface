@@ -88,9 +88,10 @@ def create_sorting_analyzer(
         If True, overwrite the folder if it already exists.
     backend_options : dict | None, default: None
         Keyword arguments for the backend specified by format. It can contain the:
-        - storage_options: dict | None (fsspec storage options)
-        - saving_options: dict | None (additional saving options for creating and saving datasets,
-                                       e.g. compression/filters for zarr)
+
+            * storage_options: dict | None (fsspec storage options)
+            * saving_options: dict | None (additional saving options for creating and saving datasets, e.g. compression/filters for zarr)
+
     sparsity_kwargs : keyword arguments
 
     Returns
@@ -187,8 +188,9 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto", backend_o
     backend_options : dict | None, default: None
         The backend options for the backend.
         The dictionary can contain the following keys:
-        - storage_options: dict | None (fsspec storage options)
-        - saving_options: dict | None (additional saving options for creating and saving datasets)
+
+            * storage_options: dict | None (fsspec storage options)
+            * saving_options: dict | None (additional saving options for creating and saving datasets)
 
     Returns
     -------
@@ -908,9 +910,9 @@ class SortingAnalyzer:
             If True, output is verbose.
         backend_options : dict | None, default: None
             Keyword arguments for the backend specified by format. It can contain the:
-            - storage_options: dict | None (fsspec storage options)
-            - saving_options: dict | None (additional saving options for creating and saving datasets,
-                                           e.g. compression/filters for zarr)
+
+                * storage_options: dict | None (fsspec storage options)
+                * saving_options: dict | None (additional saving options for creating and saving datasets, e.g. compression/filters for zarr)
         job_kwargs : keyword arguments
             Keyword arguments for the job parallelization.
 
@@ -1073,9 +1075,9 @@ class SortingAnalyzer:
             The new backend format to use
         backend_options : dict | None, default: None
             Keyword arguments for the backend specified by format. It can contain the:
-            - storage_options: dict | None (fsspec storage options)
-            - saving_options: dict | None (additional saving options for creating and saving datasets,
-                                           e.g. compression/filters for zarr)
+
+                * storage_options: dict | None (fsspec storage options)
+                * saving_options: dict | None (additional saving options for creating and saving datasets, e.g. compression/filters for zarr)
         """
         if format == "zarr":
             folder = clean_zarr_folder_name(folder)
@@ -1151,7 +1153,7 @@ class SortingAnalyzer:
         **job_kwargs,
     ) -> "SortingAnalyzer":
         """
-        This method is equivalent to `save_as()`but with a list of merges that have to be achieved.
+        This method is equivalent to `save_as()` but with a list of merges that have to be achieved.
         Merges units by creating a new SortingAnalyzer object with the appropriate merges
 
         Extensions are also updated to display the merged `unit_ids`.
@@ -1175,6 +1177,7 @@ class SortingAnalyzer:
             achieved, soft merging will not be possible and an error will be raised
         new_id_strategy : "append" | "take_first", default: "append"
             The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+
                 * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
                 * "take_first" : new_unit_ids will be the first unit_id of every list of merges
         return_new_unit_ids : bool, default False
@@ -1978,6 +1981,7 @@ class AnalyzerExtension:
     It also enables any custom computation on top of the SortingAnalyzer to be implemented by the user.
 
     An extension needs to inherit from this class and implement some attributes and abstract methods:
+
       * extension_name
       * depend_on
       * need_recording

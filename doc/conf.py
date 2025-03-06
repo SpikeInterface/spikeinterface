@@ -31,14 +31,12 @@ if not os.path.isdir('sources'):
 folders =  [
     '../examples/tutorials/core/my_recording',
     '../examples/tutorials/core/my_sorting',
-    '../examples/tutorials/core/waveform_folder',
-    '../examples/tutorials/core/waveform_folder_parallel',
-    '../examples/tutorials/core/waveform_folder_sparse',
-    '../examples/tutorials/core/waveform_folder_sparse_direct',
-    '../examples/tutorials/core/waveform_folder2',
-    '../examples/tutorials/core/waveform_folder',
-    '../examples/tutorials/qualitymetrics/waveforms_mearec',
-    '../examples/tutorials/qualitymetrics/wfs_mearec',
+    '../examples/tutorials/core/analyzer_folder',
+    '../examples/tutorials/core/analyzer_some_units',
+    '../examples/tutorials/core/analyzer.zarr',
+    '../examples/tutorials/curation/my_folder',
+    '../examples/tutorials/qualitymetrics/curated_sorting',
+    '../examples/tutorials/qualitymetrics/clean_analyzer.zarr',
     '../examples/tutorials/widgets/waveforms_mearec',
 
 ]
@@ -101,7 +99,6 @@ try:
     import sphinx_rtd_theme
 
     html_theme = "sphinx_rtd_theme"
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 except ImportError:
     print("RTD theme not installed, using default")
     html_theme = 'alabaster'
@@ -109,9 +106,10 @@ except ImportError:
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
-html_favicon = "_static/spikeinterface.ico"
-html_logo = "_static/spikeinterface.png"
+# html_static_path = ['_static']
+# html_css_files = ['custom.css']
+html_favicon = "images/logo.png"
+html_logo = "images/logo.png"
 
 
 from sphinx_gallery.sorting import ExplicitOrder
