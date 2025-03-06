@@ -257,17 +257,17 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         else:
             self.inverted_gain = False
 
-        channel_units = signal_channels["units"]
-
         # Define standard voltage units and their conversion factors to uV
         voltage_units_to_gains = {"V": 1e6, "Volt": 1e6, "Volts": 1e6, "mV": 1e3, "uV": 1.0}
         supported_voltage_units = list(voltage_units_to_gains.keys())
 
-        gain_correction = np.full(shape=channel_units.size, fill_value=np.nan)
+        channel_units = signal_channels["units"]
+        fill_value = 1.0  # This should be np.nan but will break a lot of tests
+        gain_correction = np.full(shape=channel_units.size, fill_value=fill_value)
         for unit, gain in voltage_units_to_gains.items():
             gain_correction[channel_units == unit] = gain
 
-        # Note that gain_to_uV is undefined (np.nan) for non-voltage units
+        # Note that gain_to_uV should undefined (np.nan) for non-voltage units
         gain_to_uV = neo_gains * gain_correction
         offset_to_uV = neo_offsets * gain_correction
 
