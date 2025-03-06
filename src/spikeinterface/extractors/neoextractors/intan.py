@@ -1,10 +1,10 @@
 from __future__ import annotations
-
 from pathlib import Path
 
-from spikeinterface.core.core_tools import define_function_from_class
+import numpy as np
 
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
+from spikeinterface.core.core_tools import define_function_from_class
+from .neobaseextractor import NeoBaseRecordingExtractor
 
 
 class IntanRecordingExtractor(NeoBaseRecordingExtractor):
@@ -64,7 +64,7 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
             **neo_kwargs,
         )
 
-        # self.set_channel_groups()
+        self._add_channel_groups()
 
         self._kwargs.update(
             dict(file_path=str(Path(file_path).resolve()), ignore_integrity_checks=ignore_integrity_checks),
@@ -75,6 +75,26 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
 
         neo_kwargs = {"filename": str(file_path), "ignore_integrity_checks": ignore_integrity_checks}
         return neo_kwargs
+
+    def _add_channel_groups(self):
+
+        analog_ports = ["A", "B", "C", "D", "E", "F"]
+        num_channels = self.get_num_channels()
+        original_ids = self.neo_reader.header["signal_channels"]["id"][:num_channels]
+        groups = np.zeros(shape=num_channels, dtype="int")
+        group_names = np.zeros(shape=num_channels, dtype="str")
+
+        # The hard-coded IDS of intan ids is "Port-Number" for amplifier channels
+        channel_ports = [id[:1] for id in original_ids if id[1] == "-"]
+
+        for port in analog_ports:
+            channel_index = np.where(np.array(channel_ports) == port)
+            if channel_index[0].size > 0:
+                group_names[channel_index] = port
+                groups[channel_index] = analog_ports.index(port) + 1
+
+        self.set_channel_groups(groups)
+        self.set_property(key="group_names", values=group_names)
 
 
 read_intan = define_function_from_class(source_class=IntanRecordingExtractor, name="read_intan")
