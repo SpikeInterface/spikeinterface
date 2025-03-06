@@ -662,7 +662,7 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
     if y_chans.size > 1:
         y = channel_locations[:, 0] + channel_locations[:, 1] * 1j
         y = y - np.mean(y)
-        cor = np.correlate(y, y, mode='full')[len(y):]
+        cor = np.correlate(y, y, mode="full")[len(y) :]
         p = find_peaks(cor)[0]
         delta_y = np.min(p)
     else:
