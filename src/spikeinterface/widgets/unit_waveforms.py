@@ -658,9 +658,17 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
     else:
         delta_x = 40.0
 
-    y_chans = np.unique(channel_locations[:, 1])
+    y_chans, inds = np.unique(channel_locations[:, 1], return_inverse=True)
     if y_chans.size > 1:
-        delta_y = np.min(np.diff(y_chans))
+        delta_y = 0
+        weight = 0
+        for i, y_diff in enumerate(np.diff(y_chans)):
+            x1 = channel_locations[inds == i, 0]
+            x2 = channel_locations[inds == i + 1, 0]
+            x_diff = np.min(np.abs(x1[:, np.newaxis] - x2[np.newaxis, :]))
+            delta_y += y_diff / (x_diff + 1)
+            weight += 1 / (x_diff + 1)
+        delta_y = delta_y / weight
     else:
         delta_y = 40.0
 
