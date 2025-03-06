@@ -80,7 +80,7 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
 
     def _add_channel_groups(self):
 
-        analog_ports = ["A", "B", "C", "D", "E", "F"]
+        analog_ports = ["A", "B", "C", "D", "E", "F", "G", "H"]
         num_channels = self.get_num_channels()
         original_ids = self.neo_reader.header["signal_channels"]["id"][:num_channels]
         groups = np.zeros(shape=num_channels, dtype="int")
