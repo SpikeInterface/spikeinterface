@@ -248,7 +248,6 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         # find the gain to uV
         neo_gains = signal_channels["gain"]
         neo_offsets = signal_channels["offset"]
-
         if dtype.kind == "i" and np.all(neo_gains < 0) and np.all(neo_offsets == 0):
             # special hack when all channel have negative gain: we put back the gain positive
             # this help the end user experience
@@ -259,7 +258,6 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         # Define standard voltage units and their conversion factors to uV
         voltage_units_to_gains = {"V": 1e6, "Volt": 1e6, "Volts": 1e6, "mV": 1e3, "uV": 1.0}
-        supported_voltage_units = list(voltage_units_to_gains.keys())
 
         channel_units = signal_channels["units"]
         fill_value = 1.0  # This should be np.nan but will break a lot of tests
@@ -267,7 +265,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         for unit, gain in voltage_units_to_gains.items():
             gain_correction[channel_units == unit] = gain
 
-        # Note that gain_to_uV should undefined (np.nan) for non-voltage units
+        # Note that gain_to_uV should be undefined (np.nan) for non-voltage units
         gain_to_uV = neo_gains * gain_correction
         offset_to_uV = neo_offsets * gain_correction
 
@@ -282,6 +280,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         # Streams with mixed units are to be used with caution
         # We warn the user when this is the case
         # Eventually, this should not be allowed as streams should have the same units
+        supported_voltage_units = list(voltage_units_to_gains.keys())
         is_channel_in_voltage = np.isin(channel_units, supported_voltage_units)
         has_voltage_channels = np.any(is_channel_in_voltage)
         has_non_voltage_channels = not np.all(is_channel_in_voltage)
