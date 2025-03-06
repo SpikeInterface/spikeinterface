@@ -64,22 +64,16 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
             **neo_kwargs,
         )
 
-        self._kwargs.update(dict(file_path=str(Path(file_path).absolute())))
-        if "ignore_integrity_checks" in neo_kwargs:
-            self._kwargs["ignore_integrity_checks"] = neo_kwargs["ignore_integrity_checks"]
+        # self.set_channel_groups()
+
+        self._kwargs.update(
+            dict(file_path=str(Path(file_path).resolve()), ignore_integrity_checks=ignore_integrity_checks),
+        )
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path, ignore_integrity_checks: bool = False):
 
-        # Only propagate the argument if the version is greater than 0.13.1
-        import packaging
-        import neo
-
-        neo_version = packaging.version.parse(neo.__version__)
-        if neo_version > packaging.version.parse("0.13.1"):
-            neo_kwargs = {"filename": str(file_path), "ignore_integrity_checks": ignore_integrity_checks}
-        else:
-            neo_kwargs = {"filename": str(file_path)}
+        neo_kwargs = {"filename": str(file_path), "ignore_integrity_checks": ignore_integrity_checks}
         return neo_kwargs
 
 
