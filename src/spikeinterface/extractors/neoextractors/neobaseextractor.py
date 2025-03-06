@@ -206,7 +206,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         if stream_id is None and stream_name is None:
             if stream_channels.size > 1:
                 raise ValueError(
-                    f"This reader have several streams: \nNames: {stream_names}\nIDs: {stream_ids}. \n"
+                    f"This reader have several streams: \nstream_names: {stream_names}\stream_ids: {stream_ids}. \n"
                     f"Specify it from the options above with the 'stream_name' or 'stream_id' arguments"
                 )
             else:
