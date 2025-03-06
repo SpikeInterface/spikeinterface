@@ -64,7 +64,9 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
             **neo_kwargs,
         )
 
-        self._add_channel_groups()
+        amplifier_streams = ["RHS2000 amplifier channel", "RHD2000 amplifier channel"]
+        if self.stream_name in amplifier_streams:
+            self._add_channel_groups()
 
         self._kwargs.update(
             dict(file_path=str(Path(file_path).resolve()), ignore_integrity_checks=ignore_integrity_checks),
