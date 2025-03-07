@@ -37,6 +37,7 @@ def plot_run_times(study, case_keys=None):
         ax.bar(i, rt, width=0.8, color=colors[key])
     ax.set_xticks(np.arange(len(case_keys)))
     ax.set_xticklabels(labels, rotation=45.0)
+    ax.set_ylabel("run time (s)")
     return fig
 
 
@@ -341,7 +342,7 @@ def plot_performances_comparison(
     return fig
 
 
-def plot_performances_vs_depth_and_snr(study, performance_name="agreement", case_keys=None, figsize=None):
+def plot_performances_vs_depth_and_snr(study, performance_name="accuracy", case_keys=None, figsize=None):
 
     import pylab as plt
 
