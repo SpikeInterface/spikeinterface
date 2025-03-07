@@ -344,13 +344,6 @@ class BaseRecording(BaseRecordingSnippets):
                 traces = traces.astype(f"int{dtype.itemsize * 8}")
 
         if return_scaled:
-            if hasattr(self, "NeoRawIOClass"):
-                if self.has_non_standard_units:
-                    message = (
-                        f"This extractor based on neo.{self.NeoRawIOClass} has channels with units not in (V, mV, uV)"
-                    )
-                    warnings.warn(message)
-
             if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
                     # here we do not truely have scale but we assume this is scaled
