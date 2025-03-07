@@ -421,6 +421,7 @@ class ExtractSparseWaveforms(WaveformsNode):
 
         if sparsity_mask is not None:
             self.neighbours_mask = sparsity_mask
+            self.radius_um = None
         else:
             self.radius_um = radius_um
             self.neighbours_mask = self.channel_distance <= radius_um
