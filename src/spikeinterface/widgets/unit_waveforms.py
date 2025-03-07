@@ -652,17 +652,17 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
 
     # use Fourier space to determine the spatial interval
     corr2d = autocorrelation2d(points_to_image(channel_locations))
-    upper_right = np.triu(corr2d)
-    upper_left = np.fliplr(np.triu(np.fliplr(corr2d)))
-    lower_right = np.tril(corr2d)
-    lower_left = np.fliplr(np.tril(np.fliplr(corr2d)))
+    arr = np.ones_like(corr2d, dtype=bool)
+    upper_right = np.triu(arr, k=1)
+    upper_left = np.fliplr(np.triu(np.fliplr(arr), k=1))
+    lower_left = np.tril(arr, k=1)
+    lower_right = np.fliplr(np.tril(np.fliplr(arr), k=1))
 
     # x interval considering angles only x shift > y shift
     arr = corr2d.copy()
-    arr[~(upper_left & upper_right)] = 0
-    arr[~(lower_left & lower_right)] = 0
+    arr[upper_left & lower_left | upper_right & lower_right] = 0
     arr = arr.sum(axis=1)
-    # call 1st prominent peaks
+    # call 1st prominent peak
     peaks = []
     for i in range(1, len(arr) - 1):
         if arr[i] > arr[i - 1] and arr[i] > arr[i + 1]:
@@ -673,8 +673,7 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
 
     # y interval considering angles only y shift > x shift
     arr = corr2d.copy()
-    arr[~(upper_left & lower_left)] = 0
-    arr[~(upper_right & lower_right)] = 0
+    arr[upper_left & upper_right | lower_left & lower_right] = 0
     arr = arr.sum(axis=0)
     # call 1st prominent peak
     peaks = []
