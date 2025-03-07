@@ -4,7 +4,7 @@ import numpy as np
 import warnings
 
 from spikeinterface.core.core_tools import (
-    define_function_from_class,
+    define_function_handling_dict_from_class,
     recursive_key_finder,
 )
 
@@ -154,7 +154,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         return resampled_traces.astype(self._dtype)
 
 
-resample = define_function_from_class(source_class=ResampleRecording, name="resample")
+resample = define_function_handling_dict_from_class(source_class=ResampleRecording, name="resample")
 
 
 # Some helpers to do checks

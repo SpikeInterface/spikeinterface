@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from spikeinterface.preprocessing import preprocessing_tools
 
 
@@ -113,6 +113,6 @@ def estimate_recommended_sigma_um(recording):
     return scipy.stats.mode(np.diff(np.unique(y_sorted)), keepdims=False)[0]
 
 
-interpolate_bad_channels = define_function_from_class(
+interpolate_bad_channels = define_function_handling_dict_from_class(
     source_class=InterpolateBadChannelsRecording, name="interpolate_bad_channels"
 )
