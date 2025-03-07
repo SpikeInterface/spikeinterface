@@ -283,9 +283,10 @@ class MixinSpikeTrainComparison:
        * n_jobs
     """
 
-    def __init__(self, delta_time=0.4, n_jobs=-1):
+    def __init__(self, delta_time=0.4, agreement_method="count", n_jobs=-1):
         self.delta_time = delta_time
         self.n_jobs = n_jobs
+        self.agreement_method = agreement_method
         self.sampling_frequency = None
         self.delta_frames = None
 

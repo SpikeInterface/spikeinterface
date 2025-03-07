@@ -1199,7 +1199,10 @@ class SortingAnalyzer:
 
         if len(merge_unit_groups) == 0:
             # TODO I think we should raise an error or at least make a copy and not return itself
-            return self
+            if return_new_unit_ids:
+                return self, []
+            else:
+                return self
 
         for units in merge_unit_groups:
             # TODO more checks like one units is only in one group
