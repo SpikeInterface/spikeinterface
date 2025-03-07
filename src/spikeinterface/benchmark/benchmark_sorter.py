@@ -138,7 +138,27 @@ class SorterStudy(BenchmarkStudy):
 
         return plot_performances(self, **kwargs)
 
+    def plot_performances_vs_snr(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_snr
+
+        return plot_performances_vs_snr(self, **kwargs)
+
+    def plot_performances_ordered(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_ordered
+
+        return plot_performances_ordered(self, **kwargs)
+
+    def plot_performances_swarm(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_swarm
+
+        return plot_performances_swarm(self, **kwargs)
+
     def plot_agreement_matrix(self, **kwargs):
         from .benchmark_plot_tools import plot_agreement_matrix
 
         return plot_agreement_matrix(self, **kwargs)
+
+    def plot_performance_losses(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performance_losses
+
+        return plot_performance_losses(self, *args, **kwargs)
