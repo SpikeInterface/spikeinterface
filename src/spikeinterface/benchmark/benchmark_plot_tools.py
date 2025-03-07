@@ -341,14 +341,12 @@ def plot_performances_comparison(
     return fig
 
 
-
 def plot_performances_vs_depth_and_snr(study, performance_name="agreement", case_keys=None, figsize=None):
 
     import pylab as plt
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
-    
 
     fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -363,7 +361,7 @@ def plot_performances_vs_depth_and_snr(study, performance_name="agreement", case
         metrics = analyzer.get_extension("quality_metrics").get_data()
         snr = metrics["snr"]
         perfs = result["gt_comparison"].get_performance()[performance_name].values
-        
+
         ax = axs[0, count]
         points = ax.scatter(depth, snr, c=perfs, label="matched")
         points.set_clim(0, 1)
@@ -380,6 +378,7 @@ def plot_performances_vs_depth_and_snr(study, performance_name="agreement", case
     fig.colorbar(points, cax=cbar_ax, label=performance_name)
 
     return fig
+
 
 def plot_performance_losses(study, case0, case1, performance_names=["accuracy"], figsize=None):
     import matplotlib.pyplot as plt
