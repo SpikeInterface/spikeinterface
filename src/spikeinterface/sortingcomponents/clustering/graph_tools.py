@@ -152,7 +152,7 @@ def create_graph_from_peak_features(
             # t0 = time.perf_counter()
             # local_graph = scipy.sparse.csr_matrix((data, (indices0, indices1)), shape=(target_indices.size, peaks.size))
 
-            data = local_dists.flatten()
+            data = local_dists.flatten().astype("float32")
             indptr = np.arange(0, local_dists.size + 1, local_dists.shape[1])
             indices = np.concatenate([peak_indices] * target_indices.size )
             local_graph = scipy.sparse.csr_matrix((data, indices, indptr), shape=(target_indices.size, peaks.size))
@@ -174,7 +174,7 @@ def create_graph_from_peak_features(
 
             # remap to all columns
             # t0 = time.perf_counter()
-            data = local_sparse_dist.data
+            data = local_sparse_dist.data.astype("float32")
             indptr = local_sparse_dist.indptr
             indices = peak_indices[local_sparse_dist.indices]
             local_graph = scipy.sparse.csr_matrix((data, indices, indptr), shape=(target_indices.size, peaks.size))
@@ -206,6 +206,6 @@ def create_graph_from_peak_features(
             # print("final csr", t1 - t0)
         
     else:
-        distances = scipy.sparse.csr_matrix(([], ([], [])), shape=(peaks.size, peaks.size))
+        distances = scipy.sparse.csr_matrix(([], ([], [])), shape=(peaks.size, peaks.size), dtype="float32")
 
     return distances

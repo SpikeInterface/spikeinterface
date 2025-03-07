@@ -22,7 +22,8 @@ class GraphClustering:
         "motion": None,
         "seed": None,
         "n_neighbors": 30,
-        "clustering_method": "leidenalg",
+        # "clustering_method": "leidenalg",
+        "clustering_method": "sknetwork-leiden",        
     }
 
     @classmethod
@@ -80,7 +81,9 @@ class GraphClustering:
         # print("sparsity: ", distances.indices.size / (distances.shape[0]**2))        
 
         distances_bool = distances.copy()
-        distances_bool.data[:] = 1
+        # distances_bool.data[:] = 1
+
+        print("clustering_method", clustering_method)
 
         if clustering_method == "networkx-louvain":
             # using networkx : very slow (possible backend with cude  backend="cugraph",)
