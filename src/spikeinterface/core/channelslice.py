@@ -45,7 +45,6 @@ class ChannelSliceRecording(BaseRecording):
         ), "ChannelSliceRecording : channel_ids are not unique"
 
         sampling_frequency = parent_recording.get_sampling_frequency()
-        assert sampling_frequency > 0, "Sampling frequency must be positive."
 
         BaseRecording.__init__(
             self,
