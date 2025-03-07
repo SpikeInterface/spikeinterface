@@ -660,7 +660,7 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
 
     # x interval considering angles only x shift > y shift
     arr = corr2d.copy()
-    arr[upper_left & lower_left | upper_right & lower_right] = 0
+    arr[upper_left & upper_right | lower_left & lower_right] = 0
     arr = arr.sum(axis=1)
     # call 1st prominent peak
     peaks = []
@@ -668,12 +668,15 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
         if arr[i] > arr[i - 1] and arr[i] > arr[i + 1]:
             peaks.append(i)
     thr = np.mean([arr[i] for i in peaks])
-    peaks = [i for i in peaks if arr[i] > thr]
-    delta_x = peaks[0]
+    peaks = [i for i in peaks if arr[i] >= thr]
+    if len(peaks) == 0:
+        delta_x = len(arr)
+    else:
+        delta_x = peaks[0]
 
     # y interval considering angles only y shift > x shift
     arr = corr2d.copy()
-    arr[upper_left & upper_right | lower_left & lower_right] = 0
+    arr[upper_left & lower_left | upper_right & lower_right] = 0
     arr = arr.sum(axis=0)
     # call 1st prominent peak
     peaks = []
@@ -681,8 +684,11 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
         if arr[i] > arr[i - 1] and arr[i] > arr[i + 1]:
             peaks.append(i)
     thr = np.mean([arr[i] for i in peaks])
-    peaks = [i for i in peaks if arr[i] > thr]
-    delta_y = peaks[0]
+    peaks = [i for i in peaks if arr[i] >= thr]
+    if len(peaks) == 0:
+        delta_y = len(arr)
+    else:
+        delta_y = peaks[0]
 
     m = max(np.abs(wf_max), np.abs(wf_min))
     y_scale = delta_y / m * 0.7
@@ -726,8 +732,8 @@ def points_to_image(points):
     x_min, x_max = x.min(), x.max()
     y_min, y_max = y.min(), y.max()
     # Calculate the number of bins (ensuring coverage up to the maximum)
-    nbins_x = int(np.ceil((x_max - x_min)))
-    nbins_y = int(np.ceil((y_max - y_min)))
+    nbins_x = max(1, int(np.ceil((x_max - x_min))))
+    nbins_y = max(1, int(np.ceil((y_max - y_min))))
     # Create bin edges.
     x_edges = np.linspace(x_min, x_min + nbins_x, nbins_x + 1)
     y_edges = np.linspace(y_min, y_min + nbins_y, nbins_y + 1)
