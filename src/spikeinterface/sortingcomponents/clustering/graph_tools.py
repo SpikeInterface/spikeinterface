@@ -1,7 +1,7 @@
 
 import numpy as np
 
-
+from tqdm.auto import tqdm
 
 from spikeinterface.sortingcomponents.clustering.tools import aggregate_sparse_features
 
@@ -18,6 +18,7 @@ def create_graph_from_peak_features(
     mode="full_connected_bin",
     direction="y",
     n_neighbors=20,
+    progress_bar=True,
 ):
     """
     Create a sparse garph of peaks distances.
@@ -39,7 +40,7 @@ def create_graph_from_peak_features(
     Note : the binarization works for linear probe only. This need to be extended to 2d grid binarization for planar mea.
     """
 
-    from scipy.sparse import csr_matrix
+    import scipy.sparse
     from scipy.spatial.distance import cdist
 
     
@@ -60,11 +61,18 @@ def create_graph_from_peak_features(
     eps = bin_um/10.
     bins = np.arange(loc0-bin_um/2, loc1+bin_um/2+eps, bin_um)
 
+    bins[0] = -np.inf
+    bins[-1] = np.inf
 
-    indices0 = []
-    indices1 = []
-    data = []
-    for b in range(bins.size-1):
+    loop = range(bins.size-1)
+    if progress_bar:
+        loop = tqdm(loop, desc="Construct distance graph")
+
+    # indices0 = []
+    # indices1 = []
+    # data = []
+    local_graphs = []
+    for b in loop:
         
         # limits for peaks
         l0, l1 = bins[b], bins[b+1]
@@ -73,6 +81,7 @@ def create_graph_from_peak_features(
         # limits for features
         b0, b1 = l0 - bin_um, l1 + bin_um
         local_chans = np.flatnonzero((channel_locations[:, dim] > (b0 )) & (channel_locations[:, dim] <= (b1)))
+
 
         # print(l0, l1, b0, b1)
 
@@ -93,46 +102,52 @@ def create_graph_from_peak_features(
                                                                  peak_features, sparse_mask, local_chans)
         # print(b)
         if np.sum(dont_have_channels) > 0:
-            print("dont_have_channels", np.sum(dont_have_channels), "for n=", peak_indices.sze, "bin", b0, b1)
+            print("dont_have_channels", np.sum(dont_have_channels), "for n=", peak_indices.size, "bin", b0, b1)
         dont_have_channels_target = dont_have_channels[target_mask]
 
         flatten_feat = local_feats.reshape(local_feats.shape[0], -1)
 
         if mode == "full_connected_bin":
             local_dists = cdist(flatten_feat[target_mask], flatten_feat)
+            indices0 = []
+            indices1 = []
+            data = []
             n = peak_indices.size
             for i, ind0 in enumerate(target_indices):
                 if dont_have_channels_target[i]:
                     # this spike is not valid because do not have local chans
                     continue
-                indices0.append(np.full(n, ind0, dtype='int64'))
+                indices0.append(np.full(n, i, dtype='int64'))
                 indices1.append(peak_indices)
                 data.append(local_dists[i, :])
+            if len(indices0) > 0:
+                indices0 = np.concatenate(indices0)
+                indices1 = np.concatenate(indices1)
+                data = np.concatenate(data)
+            local_graph = scipy.sparse.csr_matrix((data, (indices0, indices1)), shape=(target_indices.size, peaks.size))
+            local_graphs.append(local_graph)
 
         elif mode == "knn":
-            # TODO use a better KNN tools (like pynndescent)
-            # here we do brut force at the moment
-            local_dists = cdist(flatten_feat[target_mask], flatten_feat)
-            n = peak_indices.size
-            for i, ind0 in enumerate(target_indices):
-                if dont_have_channels_target[i]:
-                    # this spike is not valid because do not have local chans
-                    continue
-                order = np.argsort(local_dists[i, :])
-                final_nn = min(n_neighbors, n)
-                order = order[:final_nn]
 
-                indices0.append(np.full(final_nn, ind0, dtype='int64'))
-                indices1.append(peak_indices[order])
-                data.append(local_dists[i, order])
+            from sklearn.neighbors import NearestNeighbors
+            nn_tree = NearestNeighbors(n_neighbors=n_neighbors)
+            nn_tree.fit(flatten_feat)
+            local_sparse_dist = nn_tree.kneighbors_graph(flatten_feat[target_mask], mode='distance')
+
+
+            local_graph = scipy.sparse.lil_matrix((target_indices.size, peaks.size))
+            local_graph[:, peak_indices] = local_sparse_dist
+            local_graph = scipy.sparse.csr_matrix(local_graph)
+
+            local_graphs.append(local_graph)
 
         else:
             raise ValueError("create_graph_from_peak_features() wrong mode")
     
-    if len(indices0) > 0:
-        indices0 = np.concatenate(indices0)
-        indices1 = np.concatenate(indices1)
-        data = np.concatenate(data)
-    distances = csr_matrix((data, (indices0, indices1)), shape=(peaks.size, peaks.size))
+    # stack all local distances in a big sparse one
+    if len(local_graphs) > 0:
+        distances = scipy.sparse.vstack(local_graphs)
+    else:
+        distances = scipy.sparse.csr_matrix(([], ([], [])), shape=(peaks.size, peaks.size))
 
     return distances
