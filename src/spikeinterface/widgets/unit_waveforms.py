@@ -650,19 +650,41 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
     wf_max = np.max(templates)
     wf_min = np.min(templates)
 
-    x_chans = np.unique(channel_locations[:, 0])
-    if x_chans.size > 1:
-        delta_x = np.min(np.diff(x_chans))
-        if delta_x < 5:
-            delta_x = 20.0
-    else:
-        delta_x = 40.0
+    # use Fourier space to determine the spatial interval
+    corr2d = autocorrelation2d(points_to_image(channel_locations))
+    arr = np.ones_like(corr2d, dtype=bool)
+    upper_right = np.triu(arr, k=1)
+    upper_left = np.fliplr(np.triu(np.fliplr(arr), k=1))
+    lower_left = np.tril(arr, k=1)
+    lower_right = np.fliplr(np.tril(np.fliplr(arr), k=1))
 
-    y_chans = np.unique(channel_locations[:, 1])
-    if y_chans.size > 1:
-        delta_y = np.min(np.diff(y_chans))
+    # x interval considering angles only x shift > y shift
+    arr = corr2d.copy()
+    arr[upper_left & upper_right | lower_left & lower_right] = 0
+    arr = arr.sum(axis=1)
+    # call 1st prominent peak
+    peaks = []
+    for i in range(1, len(arr) - 1):
+        if arr[i] > arr[i - 1] and arr[i] > arr[i + 1]:
+            peaks.append(i)
+    if len(peaks) == 0:
+        delta_x = len(arr)
     else:
-        delta_y = 40.0
+        delta_x = peaks[0]
+
+    # y interval considering angles only y shift > x shift
+    arr = corr2d.copy()
+    arr[upper_left & lower_left | upper_right & lower_right] = 0
+    arr = arr.sum(axis=0)
+    # call 1st prominent peak
+    peaks = []
+    for i in range(1, len(arr) - 1):
+        if arr[i] > arr[i - 1] and arr[i] > arr[i + 1]:
+            peaks.append(i)
+    if len(peaks) == 0:
+        delta_y = len(arr)
+    else:
+        delta_y = peaks[0]
 
     m = max(np.abs(wf_max), np.abs(wf_min))
     y_scale = delta_y / m * 0.7
@@ -684,3 +706,33 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
     xvectors[-1, :] = np.nan
 
     return xvectors, y_scale, y_offset, delta_x
+
+
+def autocorrelation2d(data):
+    """
+    Compute the 2D autocorrelation of a 2D array using FFT.
+    """
+    F = np.fft.fft2(data)
+    power_spectrum = np.abs(F) ** 2
+    ac = np.fft.ifft2(power_spectrum)
+    return ac.real.astype(int)  # Autocorrelation is real-valued integer
+
+
+def points_to_image(points):
+    """
+    Convert a list of 2D points into a 2D histogram (image).
+    """
+    x = points[:, 0]
+    y = points[:, 1]
+    # Determine the bounds for x and y.
+    x_min, x_max = x.min(), x.max()
+    y_min, y_max = y.min(), y.max()
+    # Calculate the number of bins (ensuring coverage up to the maximum)
+    nbins_x = max(1, int(np.ceil((x_max - x_min))))
+    nbins_y = max(1, int(np.ceil((y_max - y_min))))
+    # Create bin edges.
+    x_edges = np.linspace(x_min, x_min + nbins_x, nbins_x + 1)
+    y_edges = np.linspace(y_min, y_min + nbins_y, nbins_y + 1)
+    # Create a 2D histogram: note that np.histogram2d returns an array with shape (nbins_x, nbins_y).
+    image, _, _ = np.histogram2d(x, y, bins=[x_edges, y_edges])
+    return image
