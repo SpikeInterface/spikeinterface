@@ -90,13 +90,15 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
 
         # The hard-coded IDS of intan ids is "Port-Number" (e.g. A-001, C-017, B-020, etc) for amplifier channels
         channel_ports = [id[:1] for id in original_ids if id[1] == "-"]
-        analog_ports = np.unique(channel_ports).tolist()
 
-        for port in analog_ports:
+        # This should be A, B, C, D, ...
+        amplifier_ports = np.unique(channel_ports).tolist()
+
+        for port in amplifier_ports:
             channel_index = np.where(np.array(channel_ports) == port)
             if channel_index[0].size > 0:
                 group_names[channel_index] = port
-                groups[channel_index] = analog_ports.index(port)
+                groups[channel_index] = amplifier_ports.index(port)
 
         self.set_channel_groups(groups)
         self.set_property(key="group_names", values=group_names)
