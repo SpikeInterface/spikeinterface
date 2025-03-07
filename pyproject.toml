@@ -1,13 +1,13 @@
 [project]
 name = "spikeinterface"
-version = "0.102.0"
+version = "0.102.2"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
 ]
 description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
 readme = "README.md"
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.9,<3.14"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "License :: OSI Approved :: MIT License",
@@ -20,7 +20,8 @@ classifiers = [
 
 
 dependencies = [
-    "numpy>=1.20",
+    "numpy>=1.20;python_version<'3.13'",
+    "numpy>=2.0.0;python_version>='3.13'",
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.18,<3",
@@ -158,20 +159,15 @@ test = [
     "s3fs",
 
     # tridesclous
-    "numba",
+    "numba<0.61.0;python_version<'3.13'",
+    "numba>=0.61.0;python_version>='3.13'",
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
 
     # for sortingview backend
     "sortingview",
 
-
-    ## install tridesclous for testing ##
-    "tridesclous>=1.6.8",
-
-    ## sliding_nn
-    "pymde",
+    # for motion and sortingcomponents
     "torch",
-    "pynndescent",
 
     # curation
     "skops",

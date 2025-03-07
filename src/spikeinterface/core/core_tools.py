@@ -75,7 +75,7 @@ class SIJsonEncoder(json.JSONEncoder):
 
     def default(self, obj):
         from spikeinterface.core.base import BaseExtractor
-        from spikeinterface.sortingcomponents.motion.motion_utils import Motion
+        from spikeinterface.core.motion import Motion
 
         # Over-write behaviors for datetime object
         if isinstance(obj, datetime.datetime):
@@ -461,7 +461,6 @@ def make_paths_absolute(input_dict, base_folder) -> dict:
     path_elements_in_dict = [e for e in extractor_dict_iterator(input_dict) if element_is_path(e)]
     output_dict = deepcopy(input_dict)
 
-    output_dict = deepcopy(input_dict)
     for element in path_elements_in_dict:
         absolute_path = (base_folder / element.value).resolve()
         if Path(absolute_path).exists():

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, Optional
+from typing import Literal, Optional, Any
 
 from pathlib import Path
 from itertools import chain
@@ -24,15 +24,19 @@ import spikeinterface
 from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 
-from .loading import load
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
-from .core_tools import check_json, retrieve_importing_provenance, is_path_remote, clean_zarr_folder_name
+from .core_tools import (
+    check_json,
+    retrieve_importing_provenance,
+    is_path_remote,
+    clean_zarr_folder_name,
+)
 from .sorting_tools import generate_unit_ids_for_merge_group, _get_ids_after_merging
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
-from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor
+from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open
 from .node_pipeline import run_node_pipeline
 
 
@@ -192,20 +196,7 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto", backend_o
         The loaded SortingAnalyzer
 
     """
-    if is_path_remote(folder) and backend_options is None:
-        try:
-            return SortingAnalyzer.load(
-                folder, load_extensions=load_extensions, format=format, backend_options=backend_options
-            )
-        except Exception as e:
-            backend_options = dict(storage_options=dict(anon=True))
-            return SortingAnalyzer.load(
-                folder, load_extensions=load_extensions, format=format, backend_options=backend_options
-            )
-    else:
-        return SortingAnalyzer.load(
-            folder, load_extensions=load_extensions, format=format, backend_options=backend_options
-        )
+    return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format, backend_options=backend_options)
 
 
 class SortingAnalyzer:
@@ -232,13 +223,13 @@ class SortingAnalyzer:
 
     def __init__(
         self,
-        sorting=None,
-        recording=None,
-        rec_attributes=None,
-        format=None,
-        sparsity=None,
-        return_scaled=True,
-        backend_options=None,
+        sorting: BaseSorting,
+        recording: BaseRecording | None = None,
+        rec_attributes: dict | None = None,
+        format: str | None = None,
+        sparsity: ChannelSparsity | None = None,
+        return_scaled: bool = True,
+        backend_options: dict | None = None,
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
@@ -248,6 +239,7 @@ class SortingAnalyzer:
         self.format = format
         self.sparsity = sparsity
         self.return_scaled = return_scaled
+        self.folder: str | Path | None = None
 
         # this is used to store temporary recording
         self._temporary_recording = None
@@ -479,6 +471,8 @@ class SortingAnalyzer:
 
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None, backend_options=None):
+        from .loading import load
+
         folder = Path(folder)
         assert folder.is_dir(), f"This folder does not exists {folder}"
 
@@ -556,20 +550,10 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     def _get_zarr_root(self, mode="r+"):
-        import zarr
-
         assert mode in ("r+", "a", "r"), "mode must be 'r+', 'a' or 'r'"
 
         storage_options = self._backend_options.get("storage_options", {})
-        # we open_consolidated only if we are in read mode
-        if mode in ("r+", "a"):
-            try:
-                zarr_root = zarr.open(str(self.folder), mode=mode, storage_options=storage_options)
-            except Exception as e:
-                # this could happen in remote mode, and it's a way to check if the folder is still there
-                zarr_root = zarr.open_consolidated(self.folder, mode=mode, storage_options=storage_options)
-        else:
-            zarr_root = zarr.open_consolidated(self.folder, mode=mode, storage_options=storage_options)
+        zarr_root = super_zarr_open(self.folder, mode=mode, storage_options=storage_options)
         return zarr_root
 
     @classmethod
@@ -659,11 +643,12 @@ class SortingAnalyzer:
     @classmethod
     def load_from_zarr(cls, folder, recording=None, backend_options=None):
         import zarr
+        from .loading import load
 
         backend_options = {} if backend_options is None else backend_options
         storage_options = backend_options.get("storage_options", {})
 
-        zarr_root = zarr.open_consolidated(str(folder), mode="r", storage_options=storage_options)
+        zarr_root = super_zarr_open(str(folder), mode="r", storage_options=storage_options)
 
         si_info = zarr_root.attrs["spikeinterface_info"]
         if parse(si_info["version"]) < parse("0.101.1"):
@@ -758,6 +743,128 @@ class SortingAnalyzer:
             warnings.warn("SortingAnalyzer recording is already set. The current recording is temporarily replaced.")
         self._temporary_recording = recording
 
+    def set_sorting_property(
+        self,
+        key,
+        values: list | np.ndarray | tuple,
+        ids: list | np.ndarray | tuple | None = None,
+        missing_value: Any = None,
+        save: bool = True,
+    ) -> None:
+        """
+        Set property vector for unit ids.
+
+        If the SortingAnalyzer backend is in memory, the property will be only set in memory.
+        If the SortingAnalyzer backend is `binary_folder` or `zarr`, the property will also
+        be saved to to the backend.
+
+        Parameters
+        ----------
+        key : str
+            The property name
+        values : np.array
+            Array of values for the property
+        ids : list/np.array, default: None
+            List of subset of ids to set the values.
+            if None all the ids are set or changed
+        missing_value : Any, default: None
+            In case the property is set on a subset of values ("ids" not None),
+            This argument specifies how to fill missing values.
+            The `missing_value` is required for types int and unsigned int.
+        save : bool, default: True
+            If True, the property is saved to the backend if possible.
+        """
+        self.sorting.set_property(key, values, ids=ids, missing_value=missing_value)
+        if not self.is_read_only() and save:
+            if self.format == "binary_folder":
+                np.save(self.folder / "sorting" / "properties" / f"{key}.npy", self.sorting.get_property(key))
+            elif self.format == "zarr":
+                import zarr
+
+                zarr_root = self._get_zarr_root(mode="r+")
+                prop_values = self.sorting.get_property(key)
+                if prop_values.dtype.kind == "O":
+                    warnings.warn(f"Property {key} not saved because it is a python Object type")
+                else:
+                    if key in zarr_root["sorting"]["properties"]:
+                        zarr_root["sorting"]["properties"][key][:] = prop_values
+                    else:
+                        zarr_root["sorting"]["properties"].create_dataset(name=key, data=prop_values, compressor=None)
+                    # IMPORTANT: we need to re-consolidate the zarr store!
+                    zarr.consolidate_metadata(zarr_root.store)
+
+    def get_sorting_property(self, key: str, ids: Optional[Iterable] = None) -> np.ndarray:
+        """
+        Get property vector for unit ids.
+
+        Parameters
+        ----------
+        key : str
+            The property name
+        ids : list/np.array, default: None
+            List of subset of ids to get the values.
+            if None all the ids are returned
+
+        Returns
+        -------
+        values : np.array
+            Array of values for the property
+        """
+        return self.sorting.get_property(key, ids=ids)
+
+    def are_units_mergeable(
+        self,
+        merge_unit_groups: list[str | int],
+        merging_mode: str = "soft",
+        sparsity_overlap: float = 0.75,
+        return_masks: bool = False,
+    ):
+        """
+        Check if soft merges can be performed given sparsity_overlap param.
+
+        Parameters
+        ----------
+        merge_unit_groups : list/tuple of lists/tuples
+            A list of lists for every merge group. Each element needs to have at least two elements
+            (two units to merge).
+        merging_mode : "soft" | "hard", default: "soft"
+            How merges are performed. In the "soft" mode, merges will be approximated, with no smart merging
+            of the extension data.
+        sparsity_overlap : float, default: 0.75
+            The percentage of overlap that units should share in order to accept merges.
+        return_masks : bool, default: False
+            If True, return the masks used for the merge.
+
+        Returns
+        -------
+        mergeable : dict[bool]
+            Dictionary of of mergeable units. The keys are the merge unit groups (as tuple), and boolean
+            values indicate if the merge is possible.
+        masks : dict[np.array]
+            Dictionary of masks used for the merge. The keys are the merge unit groups, and the values
+            are the masks used for the merge.
+        """
+        mergeable = {}
+        masks = {}
+
+        for merge_unit_group in merge_unit_groups:
+            merge_unit_indices = self.sorting.ids_to_indices(merge_unit_group)
+            union_mask = np.sum(self.sparsity.mask[merge_unit_indices], axis=0) > 0
+            intersection_mask = np.prod(self.sparsity.mask[merge_unit_indices], axis=0) > 0
+            thr = np.sum(intersection_mask) / np.sum(union_mask)
+
+            if self.sparsity is None or merging_mode == "hard":
+                mergeable[tuple(merge_unit_group)] = True
+                masks[tuple(merge_unit_group)] = union_mask
+            else:
+                mergeable[tuple(merge_unit_group)] = thr >= sparsity_overlap
+                masks[tuple(merge_unit_group)] = intersection_mask
+
+        if return_masks:
+            return mergeable, masks
+        else:
+            return mergeable
+
     def _save_or_select_or_merge(
         self,
         format="binary_folder",
@@ -827,24 +934,23 @@ class SortingAnalyzer:
         elif self.sparsity is not None and merge_unit_groups is not None:
             all_unit_ids = unit_ids
             sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
+            mergeable, masks = self.are_units_mergeable(
+                merge_unit_groups,
+                sparsity_overlap=sparsity_overlap,
+                return_masks=True,
+            )
+
             for unit_index, unit_id in enumerate(all_unit_ids):
                 if unit_id in new_unit_ids:
-                    # This is a new unit, and the sparsity mask will be the intersection of the
-                    # ones of all merges
-                    current_merge_group = merge_unit_groups[list(new_unit_ids).index(unit_id)]
-                    merge_unit_indices = self.sorting.ids_to_indices(current_merge_group)
-                    union_mask = np.sum(self.sparsity.mask[merge_unit_indices], axis=0) > 0
-                    if merging_mode == "soft":
-                        intersection_mask = np.prod(self.sparsity.mask[merge_unit_indices], axis=0) > 0
-                        thr = np.sum(intersection_mask) / np.sum(union_mask)
-                        assert thr > sparsity_overlap, (
-                            f"The sparsities of {current_merge_group} do not overlap enough for a soft merge using "
+                    merge_unit_group = tuple(merge_unit_groups[new_unit_ids.index(unit_id)])
+                    if not mergeable[merge_unit_group]:
+                        raise Exception(
+                            f"The sparsity of {merge_unit_group} do not overlap enough for a soft merge using "
                             f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
                             "a hard merge."
                         )
-                        sparsity_mask[unit_index] = intersection_mask
-                    elif merging_mode == "hard":
-                        sparsity_mask[unit_index] = union_mask
+                    else:
+                        sparsity_mask[unit_index] = masks[merge_unit_group]
                 else:
                     # This means that the unit is already in the previous sorting
                     index = self.sorting.id_to_index(unit_id)
@@ -1093,7 +1199,10 @@ class SortingAnalyzer:
 
         if len(merge_unit_groups) == 0:
             # TODO I think we should raise an error or at least make a copy and not return itself
-            return self
+            if return_new_unit_ids:
+                return self, []
+            else:
+                return self
 
         for units in merge_unit_groups:
             # TODO more checks like one units is only in one group
@@ -1182,6 +1291,8 @@ class SortingAnalyzer:
         """
         Get the original sorting if possible otherwise return None
         """
+        from .loading import load
+
         if self.format == "memory":
             # the orginal sorting provenance is not keps in that case
             sorting_provenance = None
@@ -1191,6 +1302,9 @@ class SortingAnalyzer:
                 filename = self.folder / f"sorting_provenance.{type}"
                 sorting_provenance = None
                 if filename.exists():
+                    # try-except here is because it's not required to be able
+                    # to load the sorting provenance, as the user might have deleted
+                    # the original sorting folder
                     try:
                         sorting_provenance = load(filename, base_folder=self.folder)
                         break
@@ -1200,11 +1314,16 @@ class SortingAnalyzer:
 
         elif self.format == "zarr":
             zarr_root = self._get_zarr_root(mode="r")
+            sorting_provenance = None
             if "sorting_provenance" in zarr_root.keys():
-                sort_dict = zarr_root["sorting_provenance"][0]
-                sorting_provenance = load(sort_dict, base_folder=self.folder)
-            else:
-                sorting_provenance = None
+                # try-except here is because it's not required to be able
+                # to load the sorting provenance, as the user might have deleted
+                # the original sorting folder
+                try:
+                    sort_dict = zarr_root["sorting_provenance"][0]
+                    sorting_provenance = load(sort_dict, base_folder=self.folder)
+                except:
+                    pass
 
         return sorting_provenance
 
@@ -2033,19 +2152,18 @@ class AnalyzerExtension:
         return None
 
     def load_run_info(self):
+        run_info = None
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
             run_info_file = extension_folder / "run_info.json"
             if run_info_file.is_file():
                 with open(str(run_info_file), "r") as f:
                     run_info = json.load(f)
-            else:
-                warnings.warn(f"Found no run_info file for {self.extension_name}, extension should be re-computed.")
-                run_info = None
 
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
             run_info = extension_group.attrs.get("run_info", None)
+
         if run_info is None:
             warnings.warn(f"Found no run_info file for {self.extension_name}, extension should be re-computed.")
         self.run_info = run_info

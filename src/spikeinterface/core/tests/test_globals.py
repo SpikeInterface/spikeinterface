@@ -37,7 +37,7 @@ def test_global_tmp_folder(create_cache_folder):
 
 def test_global_job_kwargs():
     job_kwargs = dict(
-        pool_engine="thread",
+        pool_engine="process",
         n_jobs=4,
         chunk_duration="1s",
         progress_bar=True,
@@ -47,7 +47,7 @@ def test_global_job_kwargs():
     global_job_kwargs = get_global_job_kwargs()
 
     assert global_job_kwargs == dict(
-        pool_engine="thread",
+        pool_engine="process",
         n_jobs=1,
         chunk_duration="1s",
         progress_bar=True,
@@ -62,7 +62,7 @@ def test_global_job_kwargs():
     set_global_job_kwargs(**partial_job_kwargs)
     global_job_kwargs = get_global_job_kwargs()
     assert global_job_kwargs == dict(
-        pool_engine="thread",
+        pool_engine="process",
         n_jobs=2,
         chunk_duration="1s",
         progress_bar=True,

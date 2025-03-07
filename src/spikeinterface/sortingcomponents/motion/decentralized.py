@@ -2,8 +2,8 @@ import numpy as np
 
 from tqdm.auto import tqdm, trange
 
-
-from .motion_utils import Motion, get_spatial_windows, get_spatial_bin_edges, make_2d_motion_histogram, scipy_conv1d
+from ...core.motion import Motion
+from .motion_utils import get_spatial_windows, get_spatial_bin_edges, make_2d_motion_histogram, scipy_conv1d
 
 from .dredge import normxcorr1d
 

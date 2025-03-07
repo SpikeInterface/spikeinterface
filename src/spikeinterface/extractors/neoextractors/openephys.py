@@ -164,7 +164,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             **neo_kwargs,
         )
         # get streams to find correct probe
-        stream_names, stream_ids = self.get_streams(folder_path, experiment_names)
+        stream_names, stream_ids = self.get_streams(folder_path, load_sync_channel, experiment_names)
         if stream_name is None and stream_id is None:
             stream_name = stream_names[0]
         elif stream_name is None:

@@ -8,15 +8,15 @@ import time
 import numpy as np
 
 from spikeinterface.core import get_noise_levels
-from .benchmark_base import Benchmark, BenchmarkStudy
-from .benchmark_plot_tools import _simpleaxis
+from spikeinterface.core.motion import Motion
 from spikeinterface.sortingcomponents.motion import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.widgets import plot_probe_map
 
-from spikeinterface.sortingcomponents.motion import Motion
+from .benchmark_base import Benchmark, BenchmarkStudy
+from .benchmark_plot_tools import _simpleaxis
 
 # import MEArec as mr
 
@@ -86,7 +86,7 @@ class MotionEstimationBenchmark(Benchmark):
     def run(self, **job_kwargs):
         p = self.params
 
-        noise_levels = get_noise_levels(self.recording, return_scaled=False)
+        noise_levels = get_noise_levels(self.recording, return_scaled=False, **job_kwargs)
 
         t0 = time.perf_counter()
         peaks = detect_peaks(self.recording, noise_levels=noise_levels, **p["detect_kwargs"], **job_kwargs)

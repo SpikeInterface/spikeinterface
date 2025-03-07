@@ -157,7 +157,10 @@ def compute_pc_metrics(
         neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
 
         labels = all_labels[np.isin(all_labels, neighbor_unit_ids)]
-        pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
+        if pca_ext.params["mode"] == "concatenated":
+            pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)]
+        else:
+            pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
 
         func_args = (pcs_flat, labels, non_nn_metrics, unit_id, unit_ids, metric_params, max_threads_per_worker)

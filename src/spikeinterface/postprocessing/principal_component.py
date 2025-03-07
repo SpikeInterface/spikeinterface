@@ -260,7 +260,11 @@ class ComputePrincipalComponents(AnalyzerExtension):
         spike_unit_indices = some_spikes["unit_index"][selected_inds]
 
         if sparsity is None:
-            some_projections = all_projections[selected_inds, :, :][:, :, channel_indices]
+            if self.params["mode"] == "concatenated":
+                some_projections = all_projections[selected_inds, :]
+            else:
+                some_projections = all_projections[selected_inds, :, :][:, :, channel_indices]
+
         else:
             # need re-alignement
             some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
