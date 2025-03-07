@@ -191,6 +191,11 @@ class ClusteringStudy(BenchmarkStudy):
 
         return plot_performance_losses(self, *args, **kwargs)
 
+    def plot_performances_vs_depth_and_snr(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_depth_and_snr
+
+        return plot_performances_vs_depth_and_snr(self, *args, **kwargs)
+
     def plot_error_metrics(self, metric="cosine", case_keys=None, figsize=(15, 5)):
 
         if case_keys is None:
