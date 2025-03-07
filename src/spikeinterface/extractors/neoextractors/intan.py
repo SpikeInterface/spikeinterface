@@ -96,9 +96,8 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
 
         for port in amplifier_ports:
             channel_index = np.where(np.array(channel_ports) == port)
-            if channel_index[0].size > 0:
-                group_names[channel_index] = port
-                groups[channel_index] = amplifier_ports.index(port)
+            group_names[channel_index] = port
+            groups[channel_index] = amplifier_ports.index(port)
 
         self.set_channel_groups(groups)
         self.set_property(key="group_names", values=group_names)
