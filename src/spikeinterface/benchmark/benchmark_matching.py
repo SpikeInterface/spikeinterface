@@ -80,6 +80,11 @@ class MatchingStudy(BenchmarkStudy):
 
         return plot_performances_comparison(self, **kwargs)
 
+    def plot_performances_vs_depth_and_snr(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_depth_and_snr
+
+        return plot_performances_vs_depth_and_snr(self, *args, **kwargs)
+
     def plot_collisions(self, case_keys=None, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
