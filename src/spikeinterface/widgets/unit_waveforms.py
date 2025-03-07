@@ -48,9 +48,9 @@ class UnitWaveformsWidget(BaseWidget):
         Line width for the waveforms, (matplotlib backend)
     lw_templates : float, default: 2
         Line width for the templates, (matplotlib backend)
-    unit_colors : None or dict, default: None
-        A dict key is unit_id and value is any color format handled by matplotlib.
-        If None, then the get_unit_colors() is internally used. (matplotlib / ipywidgets backend)
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     alpha_waveforms : float, default: 0.5
         Alpha value for waveforms (matplotlib backend)
     alpha_templates : float, default: 1
