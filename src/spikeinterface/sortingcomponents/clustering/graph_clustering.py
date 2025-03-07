@@ -21,7 +21,7 @@ class GraphClustering:
         "bin_um": 60.,
         "motion": None,
         "seed": None,
-        "n_neighbors": 100,
+        "n_neighbors": 30,
         "clustering_method": "networkx-louvain",
     }
 

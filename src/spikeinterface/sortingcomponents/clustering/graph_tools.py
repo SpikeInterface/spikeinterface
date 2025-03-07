@@ -42,7 +42,8 @@ def create_graph_from_peak_features(
 
     import scipy.sparse
     from scipy.spatial.distance import cdist
-
+    if mode == "knn":
+        from sklearn.neighbors import NearestNeighbors
     
 
     dim = "xyz".index(direction)
@@ -72,6 +73,7 @@ def create_graph_from_peak_features(
     # indices1 = []
     # data = []
     local_graphs = []
+    row_indices = []
     for b in loop:
         
         # limits for peaks
@@ -81,6 +83,8 @@ def create_graph_from_peak_features(
         # limits for features
         b0, b1 = l0 - bin_um, l1 + bin_um
         local_chans = np.flatnonzero((channel_locations[:, dim] > (b0 )) & (channel_locations[:, dim] <= (b1)))
+
+        
 
 
         # print(l0, l1, b0, b1)
@@ -94,12 +98,24 @@ def create_graph_from_peak_features(
         target_mask = (local_depths > l0) & (local_depths <= l1)
         target_indices = peak_indices[target_mask]
 
+
+        row_indices.append(target_indices)
+
+        # print()
+        # print(target_indices.size, peak_indices.size)
+
+        # print(local_chans, sparse_mask.shape, peak_features.shape)
+
         # print(local_chans)
         if target_indices.size == 0:
             continue
-
+        
+        # import time
+        # t0 = time.perf_counter()
         local_feats, dont_have_channels = aggregate_sparse_features(peaks, peak_indices,
                                                                  peak_features, sparse_mask, local_chans)
+        # t1 = time.perf_counter()
+        # print("aggregate", t1-t0)
         # print(b)
         if np.sum(dont_have_channels) > 0:
             print("dont_have_channels", np.sum(dont_have_channels), "for n=", peak_indices.size, "bin", b0, b1)
@@ -108,36 +124,62 @@ def create_graph_from_peak_features(
         flatten_feat = local_feats.reshape(local_feats.shape[0], -1)
 
         if mode == "full_connected_bin":
+            # t0 = time.perf_counter()
             local_dists = cdist(flatten_feat[target_mask], flatten_feat)
-            indices0 = []
-            indices1 = []
-            data = []
-            n = peak_indices.size
-            for i, ind0 in enumerate(target_indices):
-                if dont_have_channels_target[i]:
-                    # this spike is not valid because do not have local chans
-                    continue
-                indices0.append(np.full(n, i, dtype='int64'))
-                indices1.append(peak_indices)
-                data.append(local_dists[i, :])
-            if len(indices0) > 0:
-                indices0 = np.concatenate(indices0)
-                indices1 = np.concatenate(indices1)
-                data = np.concatenate(data)
-            local_graph = scipy.sparse.csr_matrix((data, (indices0, indices1)), shape=(target_indices.size, peaks.size))
+            # t1 = time.perf_counter()
+            # print("cdist", t1-t0)
+            
+            
+            # t0 = time.perf_counter()
+            # indices0 = []
+            # indices1 = []
+            # data = []
+            # n = peak_indices.size
+            # for i, ind0 in enumerate(target_indices):
+            #     if dont_have_channels_target[i]:
+            #         # this spike is not valid because do not have local chans
+            #         continue
+            #     indices0.append(np.full(n, i, dtype='int64'))
+            #     indices1.append(peak_indices)
+            #     data.append(local_dists[i, :])
+            # if len(indices0) > 0:
+            #     indices0 = np.concatenate(indices0)
+            #     indices1 = np.concatenate(indices1)
+            #     data = np.concatenate(data)
+            # t1 = time.perf_counter()
+            # print("sparse loop", t1-t0)
+            
+            # t0 = time.perf_counter()
+            # local_graph = scipy.sparse.csr_matrix((data, (indices0, indices1)), shape=(target_indices.size, peaks.size))
+
+            data = local_dists.flatten()
+            indptr = np.arange(0, local_dists.size + 1, local_dists.shape[1])
+            indices = np.concatenate([peak_indices] * target_indices.size )
+            local_graph = scipy.sparse.csr_matrix((data, indices, indptr), shape=(target_indices.size, peaks.size))
+            # t1 = time.perf_counter()
+            # print("make sparse", t1-t0)
+
             local_graphs.append(local_graph)
 
         elif mode == "knn":
 
-            from sklearn.neighbors import NearestNeighbors
+
+            # t0 = time.perf_counter()
+            # from sklearn.neighbors import NearestNeighbors
             nn_tree = NearestNeighbors(n_neighbors=n_neighbors)
             nn_tree.fit(flatten_feat)
             local_sparse_dist = nn_tree.kneighbors_graph(flatten_feat[target_mask], mode='distance')
+            # t1 = time.perf_counter()
+            # print("knn", t1-t0)
 
-
-            local_graph = scipy.sparse.lil_matrix((target_indices.size, peaks.size))
-            local_graph[:, peak_indices] = local_sparse_dist
-            local_graph = scipy.sparse.csr_matrix(local_graph)
+            # remap to all columns
+            # t0 = time.perf_counter()
+            data = local_sparse_dist.data
+            indptr = local_sparse_dist.indptr
+            indices = peak_indices[local_sparse_dist.indices]
+            local_graph = scipy.sparse.csr_matrix((data, indices, indptr), shape=(target_indices.size, peaks.size))
+            # t1 = time.perf_counter()
+            # print("make local sparse csr", t1-t0)
 
             local_graphs.append(local_graph)
 
@@ -147,6 +189,21 @@ def create_graph_from_peak_features(
     # stack all local distances in a big sparse one
     if len(local_graphs) > 0:
         distances = scipy.sparse.vstack(local_graphs)
+        row_indices = np.concatenate(row_indices)
+        # print(np.unique(np.diff(row_indices)))
+        row_order = np.argsort(row_indices)
+        # print(np.unique(np.diff(row_indices[row_order])))
+
+        # t0 = time.perf_counter()
+        distances = distances[row_order]
+        # t1 = time.perf_counter()
+        # print("row_order", t1 - t0)
+
+        if mode == "knn":
+            # t0 = time.perf_counter()
+            distances = scipy.sparse.csr_matrix(distances)
+            # t1 = time.perf_counter()
+            # print("final csr", t1 - t0)
     else:
         distances = scipy.sparse.csr_matrix(([], ([], [])), shape=(peaks.size, peaks.size))
 
