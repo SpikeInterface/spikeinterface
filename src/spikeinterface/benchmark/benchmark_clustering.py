@@ -60,7 +60,7 @@ class ClusteringBenchmark(Benchmark):
 
         self.result["sliced_gt_sorting"].set_property("gt_unit_locations", gt_unit_locations)
 
-        self.result["clustering"] = NumpySorting.from_times_labels(
+        self.result["clustering"] = NumpySorting.from_samples_and_labels(
             data["sample_index"], self.result["peak_labels"][~self.noise], self.recording.sampling_frequency
         )
 
