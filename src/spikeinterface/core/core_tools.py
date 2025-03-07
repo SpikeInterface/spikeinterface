@@ -14,7 +14,7 @@ import inspect
 import numpy as np
 
 
-def define_function_or_dict_from_class(source_class, name):
+def define_function_handling_dict_from_class(source_class, name):
     """
     Depending on whether `source_class` is passed a `Recording` object or a dict of
     `Recording` objects, this function will return `source_class` or a dict of
