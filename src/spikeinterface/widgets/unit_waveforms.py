@@ -667,8 +667,6 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
     for i in range(1, len(arr) - 1):
         if arr[i] > arr[i - 1] and arr[i] > arr[i + 1]:
             peaks.append(i)
-    thr = np.mean([arr[i] for i in peaks])
-    peaks = [i for i in peaks if arr[i] >= thr]
     if len(peaks) == 0:
         delta_x = len(arr)
     else:
@@ -683,8 +681,6 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
     for i in range(1, len(arr) - 1):
         if arr[i] > arr[i - 1] and arr[i] > arr[i + 1]:
             peaks.append(i)
-    thr = np.mean([arr[i] for i in peaks])
-    peaks = [i for i in peaks if arr[i] >= thr]
     if len(peaks) == 0:
         delta_y = len(arr)
     else:
