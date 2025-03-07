@@ -277,8 +277,6 @@ spikeinterface.comparison
 
     .. autoclass:: CollisionGTComparison
     .. autoclass:: CorrelogramGTComparison
-    .. autoclass:: CollisionGTStudy
-    .. autoclass:: CorrelogramGTStudy
 
 
 
