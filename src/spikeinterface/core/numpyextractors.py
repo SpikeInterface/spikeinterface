@@ -368,7 +368,7 @@ class NumpySorting(BaseSorting):
     @staticmethod
     def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
         warnings.warn(
-            "from_times_labels is deprecated, use from_sample_and_labels instead",
+            "from_times_labels is deprecated and will be removed in 0.104.0, use from_sample_and_labels instead",
             DeprecationWarning,
             stacklevel=2,
         )
