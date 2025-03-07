@@ -27,3 +27,11 @@ clustering_methods = {
     "graph_clustering": GraphClustering,
 
 }
+
+try:
+    # Kilosort licence (GPL 3) is forcing us to make and use an external package
+    from spikeinterface_kilosort_components import KiloSortClustering
+
+    clustering_methods["kilosort_clustering"] = KiloSortClustering
+except ImportError:
+    pass
