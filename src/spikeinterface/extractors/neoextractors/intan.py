@@ -80,20 +80,23 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
 
     def _add_channel_groups(self):
 
-        analog_ports = ["A", "B", "C", "D", "E", "F", "G", "H"]
         num_channels = self.get_num_channels()
-        original_ids = self.neo_reader.header["signal_channels"]["id"][:num_channels]
-        groups = np.zeros(shape=num_channels, dtype="int")
+        groups = np.zeros(shape=num_channels, dtype="uint16")
         group_names = np.zeros(shape=num_channels, dtype="str")
 
-        # The hard-coded IDS of intan ids is "Port-Number" for amplifier channels
+        signal_header = self.neo_reader.header["signal_channels"]
+        amplifier_signal_header = signal_header[signal_header["stream_id"] == self.stream_id]
+        original_ids = amplifier_signal_header["id"]
+
+        # The hard-coded IDS of intan ids is "Port-Number" (e.g. A-001, C-017, B-020, etc) for amplifier channels
         channel_ports = [id[:1] for id in original_ids if id[1] == "-"]
+        analog_ports = np.unique(channel_ports).tolist()
 
         for port in analog_ports:
             channel_index = np.where(np.array(channel_ports) == port)
             if channel_index[0].size > 0:
                 group_names[channel_index] = port
-                groups[channel_index] = analog_ports.index(port) + 1
+                groups[channel_index] = analog_ports.index(port)
 
         self.set_channel_groups(groups)
         self.set_property(key="group_names", values=group_names)
