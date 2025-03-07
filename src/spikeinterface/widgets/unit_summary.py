@@ -34,11 +34,13 @@ class UnitSummaryWidget(BaseWidget):
         If SortingAnalyzer is already sparse, the argument is ignored
     subwidget_kwargs : dict or None, default: None
         Parameters for the subwidgets in a nested dictionary
-            unit_locations : UnitLocationsWidget (see UnitLocationsWidget for details)
-            unit_waveforms : UnitWaveformsWidget (see UnitWaveformsWidget for details)
-            unit_waveform_density_map : UnitWaveformDensityMapWidget (see UnitWaveformDensityMapWidget for details)
-            autocorrelograms : AutoCorrelogramsWidget (see AutoCorrelogramsWidget for details)
-            amplitudes : AmplitudesWidget (see AmplitudesWidget for details)
+
+            * unit_locations : UnitLocationsWidget (see UnitLocationsWidget for details)
+            * unit_waveforms : UnitWaveformsWidget (see UnitWaveformsWidget for details)
+            * unit_waveform_density_map : UnitWaveformDensityMapWidget (see UnitWaveformDensityMapWidget for details)
+            * autocorrelograms : AutoCorrelogramsWidget (see AutoCorrelogramsWidget for details)
+            * amplitudes : AmplitudesWidget (see AmplitudesWidget for details)
+
         Please note that the unit_colors should not be set in subwidget_kwargs, but directly as a parameter of plot_unit_summary.
     """
 
