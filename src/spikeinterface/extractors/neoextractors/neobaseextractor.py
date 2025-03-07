@@ -73,8 +73,8 @@ class _NeoBaseExtractor:
         neo_reader = cls.get_neo_io_reader(cls.NeoRawIOClass, **neo_kwargs)
 
         stream_channels = neo_reader.header["signal_streams"]
-        stream_names = list(stream_channels["name"])
-        stream_ids = list(stream_channels["id"])
+        stream_names = stream_channels["name"].tolist()
+        stream_ids = stream_channels["id"].tolist()
         return stream_names, stream_ids
 
     def build_stream_id_to_sampling_frequency_dict(self) -> Dict[str, float]:
@@ -200,13 +200,13 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             use_names_as_ids = False
 
         stream_channels = self.neo_reader.header["signal_streams"]
-        stream_names = list(stream_channels["name"])
-        stream_ids = list(stream_channels["id"])
+        stream_names = stream_channels["name"].tolist()
+        stream_ids = stream_channels["id"].tolist()
 
         if stream_id is None and stream_name is None:
             if stream_channels.size > 1:
                 raise ValueError(
-                    f"This reader have several streams: \nNames: {stream_names}\nIDs: {stream_ids}. \n"
+                    f"This reader have several streams: \n`stream_names`: {stream_names}\n`stream_ids`: {stream_ids}. \n"
                     f"Specify it from the options above with the 'stream_name' or 'stream_id' arguments"
                 )
             else:
