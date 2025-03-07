@@ -10,7 +10,7 @@ from spikeinterface.widgets import (
 
 
 import numpy as np
-
+from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .benchmark_base import Benchmark, BenchmarkStudy
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.template_tools import get_template_extremum_channel
@@ -36,6 +36,8 @@ class ClusteringBenchmark(Benchmark):
         self.result["peak_labels"] = peak_labels
 
     def compute_result(self, **result_params):
+        result_params, job_kwargs = split_job_kwargs(result_params)
+        job_kwargs = fix_job_kwargs(job_kwargs)
         self.noise = self.result["peak_labels"] < 0
         spikes = self.gt_sorting.to_spike_vector()
         self.result["sliced_gt_sorting"] = NumpySorting(
@@ -47,8 +49,11 @@ class ClusteringBenchmark(Benchmark):
         gt_unit_locations = self.gt_sorting.get_property("gt_unit_locations")
         if gt_unit_locations is None:
             print("'gt_unit_locations' is not a property of the sorting so compute it")
-            gt_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=True)
-            gt_analyzer.compute(["random_spikes", "templates"])
+            gt_analyzer = create_sorting_analyzer(
+                self.gt_sorting, self.recording, format="memory", sparse=True, **job_kwargs
+            )
+            gt_analyzer.compute("random_spikes")
+            gt_analyzer.compute("templates", **job_kwargs)
             ext = gt_analyzer.compute("unit_locations", method="monopolar_triangulation")
             gt_unit_locations = ext.get_data()
             self.gt_sorting.set_property("gt_unit_locations", gt_unit_locations)
@@ -64,17 +69,17 @@ class ClusteringBenchmark(Benchmark):
         )
 
         sorting_analyzer = create_sorting_analyzer(
-            self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False
+            self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False, **job_kwargs
         )
         sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("templates")
+        ext = sorting_analyzer.compute("templates", **job_kwargs)
         self.result["sliced_gt_templates"] = ext.get_data(outputs="Templates")
 
         sorting_analyzer = create_sorting_analyzer(
-            self.result["clustering"], self.recording, format="memory", sparse=False
+            self.result["clustering"], self.recording, format="memory", sparse=False, **job_kwargs
         )
         sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("templates")
+        ext = sorting_analyzer.compute("templates", **job_kwargs)
         self.result["clustering_templates"] = ext.get_data(outputs="Templates")
 
     _run_key_saved = [("peak_labels", "npy")]

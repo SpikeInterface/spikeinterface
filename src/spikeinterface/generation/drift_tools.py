@@ -5,7 +5,6 @@ from typing import Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
-from probeinterface import Probe
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, Templates
 
 

@@ -23,6 +23,10 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_sc
         The dense templates (num_units, num_samples, num_channels)
     """
     if isinstance(one_object, Templates):
+        if return_scaled != one_object.is_scaled:
+            raise ValueError(
+                f"get_dense_templates_array: return_scaled={return_scaled} is not possible Templates has the reverse"
+            )
         templates_array = one_object.get_dense_templates()
     elif isinstance(one_object, SortingAnalyzer):
         if return_scaled != one_object.return_scaled:
