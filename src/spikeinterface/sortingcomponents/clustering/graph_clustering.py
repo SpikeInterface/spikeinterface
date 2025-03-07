@@ -22,7 +22,7 @@ class GraphClustering:
         "motion": None,
         "seed": None,
         "n_neighbors": 30,
-        "clustering_method": "networkx-louvain",
+        "clustering_method": "leidenalg",
     }
 
     @classmethod
