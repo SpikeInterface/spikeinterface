@@ -8,8 +8,8 @@ from spikeinterface.comparison import compare_sorter_to_ground_truth
 
 def make_sorting(times1, labels1, times2, labels2):
     sampling_frequency = 30000.0
-    gt_sorting = NumpySorting.from_samples_labels([times1], [labels1], sampling_frequency)
-    tested_sorting = NumpySorting.from_samples_labels([times2], [labels2], sampling_frequency)
+    gt_sorting = NumpySorting.from_samples_and_labels([times1], [labels1], sampling_frequency)
+    tested_sorting = NumpySorting.from_samples_and_labels([times2], [labels2], sampling_frequency)
     return gt_sorting, tested_sorting
 
 

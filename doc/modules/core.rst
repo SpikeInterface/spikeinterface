@@ -711,8 +711,13 @@ In this example, we create a recording and a sorting object from numpy objects:
         spike_trains += spike_trains_i
         labels += labels_i
 
-    sorting_memory = NumpySorting.from_samples_labels(times=spike_trains, labels=labels,
-                                                    sampling_frequency=sampling_frequency)
+    # construct a mono-segment
+    samples_list = [np.array(spike_trains)]
+    labels_list = [np.array(labels)]
+
+    sorting_memory = NumpySorting.from_samples_and_labels(
+        samples_list=samples_list, labels_list=labels_list, sampling_frequency=sampling_frequency
+    )
 
 
 Any sorting object can be transformed into a :py:class:`~spikeinterface.core.NumpySorting` or

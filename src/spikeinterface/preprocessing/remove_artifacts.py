@@ -168,7 +168,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
                 assert (
                     ms_before is not None and ms_after is not None
                 ), f"ms_before/after should not be None for mode {mode}"
-                sorting = NumpySorting.from_samples_labels(
+                sorting = NumpySorting.from_samples_and_labels(
                     list_triggers, list_labels, recording.get_sampling_frequency()
                 )
 

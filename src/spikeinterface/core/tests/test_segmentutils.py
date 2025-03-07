@@ -109,8 +109,8 @@ def test_append_concatenate_sortings():
     labels1[2::3] = 2
 
     # Multisegment sortings
-    sorting0 = NumpySorting.from_samples_labels([times0] * 3, [labels0] * 3, sampling_frequency)
-    sorting1 = NumpySorting.from_samples_labels([times1] * 2, [labels1] * 2, sampling_frequency)
+    sorting0 = NumpySorting.from_samples_and_labels([times0] * 3, [labels0] * 3, sampling_frequency)
+    sorting1 = NumpySorting.from_samples_and_labels([times1] * 2, [labels1] * 2, sampling_frequency)
     sorting_list = [sorting0, sorting1]
     # Associated multisegment recordings
     traces0 = np.zeros((nsamp0, 5), dtype="float64")
@@ -118,8 +118,8 @@ def test_append_concatenate_sortings():
     rec0 = NumpyRecording([traces0] * 3, sampling_frequency)
     rec1 = NumpyRecording([traces1] * 2, sampling_frequency)
     # Monosegemnt sortings
-    sorting0_mono = NumpySorting.from_samples_labels([times0], [labels0], sampling_frequency)
-    sorting1_mono = NumpySorting.from_samples_labels([times1], [labels1], sampling_frequency)
+    sorting0_mono = NumpySorting.from_samples_and_labels([times0], [labels0], sampling_frequency)
+    sorting1_mono = NumpySorting.from_samples_and_labels([times1], [labels1], sampling_frequency)
     sorting_list_mono = [sorting0_mono, sorting1_mono]
     # Associated multisegment recordings
     traces0 = np.zeros((nsamp0, 5), dtype="float64")
@@ -266,8 +266,8 @@ def test_append_concatenate_sortings():
     assert np.array_equal(sorting.get_unit_spike_train(unit_id=0, return_times=True), unit_0_train / sampling_frequency)
 
     # Time conversion with non-trivial t_start/time_vector
-    sorting0 = NumpySorting.from_samples_labels([[0, 1]], [[0, 0]], sampling_frequency)
-    sorting1 = NumpySorting.from_samples_labels([[0, 1]], [[0, 0]], sampling_frequency)
+    sorting0 = NumpySorting.from_samples_and_labels([[0, 1]], [[0, 0]], sampling_frequency)
+    sorting1 = NumpySorting.from_samples_and_labels([[0, 1]], [[0, 0]], sampling_frequency)
     traces = np.zeros((2, 5), dtype="float64")
     rec0 = NumpyRecording([traces], sampling_frequency)
     rec1 = NumpyRecording([traces], sampling_frequency)

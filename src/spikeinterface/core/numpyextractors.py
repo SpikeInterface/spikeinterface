@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 import numpy as np
 from spikeinterface.core import (
     BaseRecording,
@@ -236,8 +237,8 @@ class NumpySorting(BaseSorting):
 
     But we have convenient class methods to instantiate from:
       * other sorting object: `NumpySorting.from_sorting()`
-      * from samples+labels: `NumpySorting.from_samples_labels()`
-      * from times+labels: `NumpySorting.from_times_labels()`
+      * from samples+labels: `NumpySorting.from_samples_and_labels()`
+      * from times+labels: `NumpySorting.from_times_and_labels()`
       * from dict of list: `NumpySorting.from_unit_dict()`
       * from neo: `NumpySorting.from_neo_spiketrain_list()`
 
@@ -288,7 +289,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_samples_labels(samples_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+    def from_samples_and_labels(samples_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
         """
         Construct NumpySorting extractor from:
           * an array of spike samples
@@ -339,7 +340,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+    def from_times_and_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
         """
         Construct NumpySorting extractor from:
           * an array of spike times (in s)
@@ -362,7 +363,16 @@ class NumpySorting(BaseSorting):
             labels_list = [labels_list]
 
         sample_list = [np.round(t * sampling_frequency).astype("int64") for t in times_list]
-        return NumpySorting.from_samples_labels(sample_list, labels_list, sampling_frequency, unit_ids)
+        return NumpySorting.from_samples_and_labels(sample_list, labels_list, sampling_frequency, unit_ids)
+
+    @staticmethod
+    def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+        warnings.warn(
+            "from_times_labels is deprecated, use from_sample_and_labels instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return NumpySorting.from_times_and_labels(times_list, labels_list, sampling_frequency, unit_ids)
 
     @staticmethod
     def from_unit_dict(units_dict_list, sampling_frequency) -> "NumpySorting":

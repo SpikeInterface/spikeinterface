@@ -316,7 +316,7 @@ def _sorting_violation():
     spike_labels = spike_labels[mask]
 
     unit_ids = ["a", "b", "c"]
-    sorting = NumpySorting.from_samples_labels(spike_times, spike_labels, sampling_frequency, unit_ids=unit_ids)
+    sorting = NumpySorting.from_samples_and_labels(spike_times, spike_labels, sampling_frequency, unit_ids=unit_ids)
 
     return sorting
 

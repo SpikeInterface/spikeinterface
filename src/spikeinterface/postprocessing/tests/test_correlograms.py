@@ -193,11 +193,11 @@ def test_compute_correlograms(fill_all_bins, on_time_bin, multi_segment):
     )
 
     if multi_segment:
-        sorting = NumpySorting.from_samples_labels(
+        sorting = NumpySorting.from_samples_and_labels(
             samples_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
         )
     else:
-        sorting = NumpySorting.from_samples_labels(
+        sorting = NumpySorting.from_samples_and_labels(
             samples_list=[spike_times, spike_times],
             labels_list=[spike_unit_indices, spike_unit_indices],
             sampling_frequency=sampling_frequency,
@@ -239,7 +239,7 @@ def test_compute_correlograms_different_units(method):
     window_ms = 40
     bin_ms = 5
 
-    sorting = NumpySorting.from_samples_labels(
+    sorting = NumpySorting.from_samples_and_labels(
         samples_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
     )
 

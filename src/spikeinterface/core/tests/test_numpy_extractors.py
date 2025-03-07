@@ -66,15 +66,15 @@ def test_NumpySorting(setup_NumpyRecording):
     labels[0::3] = 0
     labels[1::3] = 1
     labels[2::3] = 2
-    sorting = NumpySorting.from_samples_labels(samples, labels, sampling_frequency)
+    sorting = NumpySorting.from_samples_and_labels(samples, labels, sampling_frequency)
     # print(sorting)
     assert sorting.get_num_segments() == 1
 
     times = samples / sampling_frequency
-    sorting_from_times = NumpySorting.from_times_labels(times, labels, sampling_frequency)
+    sorting_from_times = NumpySorting.from_times_and_labels(times, labels, sampling_frequency)
     check_sortings_equal(sorting, sorting_from_times)
 
-    sorting = NumpySorting.from_samples_labels([samples] * 3, [labels] * 3, sampling_frequency)
+    sorting = NumpySorting.from_samples_and_labels([samples] * 3, [labels] * 3, sampling_frequency)
     # print(sorting)
     assert sorting.get_num_segments() == 3
 
