@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
@@ -326,9 +326,9 @@ class ZScoreRecording(BasePreprocessor):
 
 
 # functions for API
-normalize_by_quantile = define_function_from_class(
+normalize_by_quantile = define_function_handling_dict_from_class(
     source_class=NormalizeByQuantileRecording, name="normalize_by_quantile"
 )
-scale = define_function_from_class(source_class=ScaleRecording, name="scale")
-center = define_function_from_class(source_class=CenterRecording, name="center")
-zscore = define_function_from_class(source_class=ZScoreRecording, name="zscore")
+scale = define_function_handling_dict_from_class(source_class=ScaleRecording, name="scale")
+center = define_function_handling_dict_from_class(source_class=CenterRecording, name="center")
+zscore = define_function_handling_dict_from_class(source_class=ZScoreRecording, name="zscore")

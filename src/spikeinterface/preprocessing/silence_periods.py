@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_or_dict_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from ..core import get_random_data_chunks, get_noise_levels
@@ -137,4 +137,4 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-silence_periods = define_function_or_dict_from_class(SilencedPeriodsRecording, name="silence_periods")
+silence_periods = define_function_handling_dict_from_class(SilencedPeriodsRecording, name="silence_periods")
