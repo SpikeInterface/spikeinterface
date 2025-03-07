@@ -21,6 +21,7 @@ def extract_peaks_svd(
     svd_model=None,
     n_components=5,
     radius_um=120.0,
+    sparsity_mask=None,
     motion_aware=False,
     motion=None,
     folder=None,
@@ -92,6 +93,7 @@ def extract_peaks_svd(
     node0 = PeakRetriever(recording, peaks)
 
     if motion_aware:
+        assert sparsity_mask is None
         # we need to increase the radius by the max motion
         max_motion = max(abs(e) for e in motion.get_boundaries())
         radius_um = radius_um + max_motion
@@ -103,6 +105,7 @@ def extract_peaks_svd(
         ms_before=ms_before,
         ms_after=ms_after,
         radius_um=radius_um,
+        sparsity_mask=sparsity_mask,
     )
 
     if motion_aware:

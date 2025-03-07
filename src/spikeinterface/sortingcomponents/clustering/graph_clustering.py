@@ -79,7 +79,6 @@ class GraphClustering:
         # print(distances.shape)
         # print("sparsity: ", distances.indices.size / (distances.shape[0]**2))        
 
-
         distances_bool = distances.copy()
         distances_bool.data[:] = 1
 

@@ -204,6 +204,7 @@ def create_graph_from_peak_features(
             distances = scipy.sparse.csr_matrix(distances)
             # t1 = time.perf_counter()
             # print("final csr", t1 - t0)
+        
     else:
         distances = scipy.sparse.csr_matrix(([], ([], [])), shape=(peaks.size, peaks.size))
 
