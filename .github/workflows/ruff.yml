@@ -13,8 +13,11 @@ concurrency:  # Cancel previous workflows on the same pull request
 jobs:
   run:
     name: Ruff Linting
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
     steps:
+      - uses: actions/checkout@v4
       - uses: astral-sh/ruff-action@v3
-      - run: ruff check
+        with:
+          args: check
