@@ -11,7 +11,7 @@ concurrency:  # Cancel previous workflows on the same pull request
     cancel-in-progress: true
 
 jobs:
-  ruff-linting:
+  run:
     name: Ruff Linting
     strategy:
       fail-fast: false
