@@ -17,3 +17,4 @@ jobs:
       fail-fast: false
     steps:
       - uses: astral-sh/ruff-action@v3
+      - run: ruff check
