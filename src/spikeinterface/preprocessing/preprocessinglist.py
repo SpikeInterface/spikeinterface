@@ -43,7 +43,7 @@ from .directional_derivative import DirectionalDerivativeRecording, directional_
 from .depth_order import DepthOrderRecording, depth_order
 from .astype import AstypeRecording, astype
 from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
-from .silence_artefacts import SilencedArtefactsRecording, silence_artefacts
+from .silence_artifacts import SilencedArtifactsRecording, silence_artifacts
 
 
 preprocessers_full_list = [
@@ -80,7 +80,7 @@ preprocessers_full_list = [
     DirectionalDerivativeRecording,
     AstypeRecording,
     UnsignedToSignedRecording,
-    SilencedArtefactsRecording,
+    SilencedArtifactsRecording,
 ]
 
 preprocesser_dict = {pp_class.name: pp_class for pp_class in preprocessers_full_list}
