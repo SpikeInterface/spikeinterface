@@ -95,7 +95,7 @@ def detect_onsets(recording, detect_threshold=5, **extra_kwargs):
     return periods
 
 
-class SilencedArtefactsRecording(SilencedPeriodsRecording):
+class SilencedArtifactsRecording(SilencedPeriodsRecording):
     """
     Silence user-defined periods from recording extractor traces. The code will construct
     an enveloppe of the recording (as a low pass filtered version of the traces) and detect
@@ -106,9 +106,9 @@ class SilencedArtefactsRecording(SilencedPeriodsRecording):
     Parameters
     ----------
     recording : RecordingExtractor
-        The recording extractor to silence putative artefacts
+        The recording extractor to silence putative artifacts
     detect_threshold : float, default: 5
-        The threshold to detect artefacts. The threshold is computed as `detect_threshold * noise_level`
+        The threshold to detect artifacts. The threshold is computed as `detect_threshold * noise_level`
     freq_max : float, default: 20
         The maximum frequency for the low pass filter used
     noise_levels : array
@@ -128,8 +128,8 @@ class SilencedArtefactsRecording(SilencedPeriodsRecording):
 
     Returns
     -------
-    silenced_recording : SilencedArtefactsRecording
-        The recording extractor after silencing detected artefacts
+    silenced_recording : SilencedArtifactsRecording
+        The recording extractor after silencing detected artifacts
     """
 
     def __init__(
@@ -154,7 +154,7 @@ class SilencedArtefactsRecording(SilencedPeriodsRecording):
                 for i, periods in enumerate(list_periods):
                     total_time = np.sum([end - start for start, end in periods])
                     percentage = 100 * total_time / recording.get_num_samples(i)
-                    print(f"{percentage}% of segment {i} has been flagged as artefactual")
+                    print(f"{percentage}% of segment {i} has been flagged as artifactual")
 
         SilencedPeriodsRecording.__init__(
             self, recording, list_periods, mode=mode, noise_levels=noise_levels, seed=seed, **random_chunk_kwargs
@@ -171,4 +171,4 @@ class SilencedArtefactsRecording(SilencedPeriodsRecording):
 
 
 # function for API
-silence_artefacts = define_function_from_class(source_class=SilencedArtefactsRecording, name="silence_artefacts")
+silence_artifacts = define_function_from_class(source_class=SilencedArtifactsRecording, name="silence_artifacts")
