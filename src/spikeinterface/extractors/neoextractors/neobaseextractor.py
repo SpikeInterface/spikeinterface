@@ -73,8 +73,8 @@ class _NeoBaseExtractor:
         neo_reader = cls.get_neo_io_reader(cls.NeoRawIOClass, **neo_kwargs)
 
         stream_channels = neo_reader.header["signal_streams"]
-        stream_names = list(stream_channels["name"])
-        stream_ids = list(stream_channels["id"])
+        stream_names = stream_channels["name"].tolist()
+        stream_ids = stream_channels["id"].tolist()
         return stream_names, stream_ids
 
     def build_stream_id_to_sampling_frequency_dict(self) -> Dict[str, float]:
@@ -200,13 +200,13 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             use_names_as_ids = False
 
         stream_channels = self.neo_reader.header["signal_streams"]
-        stream_names = list(stream_channels["name"])
-        stream_ids = list(stream_channels["id"])
+        stream_names = stream_channels["name"].tolist()
+        stream_ids = stream_channels["id"].tolist()
 
         if stream_id is None and stream_name is None:
             if stream_channels.size > 1:
                 raise ValueError(
-                    f"This reader have several streams: \nNames: {stream_names}\nIDs: {stream_ids}. \n"
+                    f"This reader have several streams: \n`stream_names`: {stream_names}\n`stream_ids`: {stream_ids}. \n"
                     f"Specify it from the options above with the 'stream_name' or 'stream_id' arguments"
                 )
             else:
@@ -260,16 +260,17 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         units = signal_channels["units"]
 
         # mark that units are V, mV or uV
+        standard_units_to_additional_gains = {"V": 1e6, "Volt": 1e6, "Volts": 1e6, "mV": 1e3, "uV": 1.0}
         self.has_non_standard_units = False
-        if not np.all(np.isin(units, ["V", "Volt", "mV", "uV"])):
+        if not np.all(np.isin(units, list(standard_units_to_additional_gains.keys()))):
             self.has_non_standard_units = True
+            warnings.warn(
+                f"The raw file has non standard units: {np.unique(units)}. Standard units are: {list(standard_units_to_additional_gains.keys())}. 'uV' are assumed."
+            )
 
         additional_gain = np.ones(units.size, dtype="float")
-        additional_gain[units == "V"] = 1e6
-        additional_gain[units == "Volt"] = 1e6
-        additional_gain[units == "mV"] = 1e3
-        additional_gain[units == "uV"] = 1.0
-        additional_gain = additional_gain
+        for key, value in standard_units_to_additional_gains.items():
+            additional_gain[units == key] = value
 
         final_gains = gains * additional_gain
         final_offsets = offsets * additional_gain
