@@ -26,18 +26,21 @@ class UnitSummaryWidget(BaseWidget):
         The SortingAnalyzer object
     unit_id : int or str
         The unit id to plot the summary of
-    unit_colors : dict or None, default: None
-        If given, a dictionary with unit ids as keys and colors as values,
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply.
         If SortingAnalyzer is already sparse, the argument is ignored
     subwidget_kwargs : dict or None, default: None
         Parameters for the subwidgets in a nested dictionary
-            unit_locations : UnitLocationsWidget (see UnitLocationsWidget for details)
-            unit_waveforms : UnitWaveformsWidget (see UnitWaveformsWidget for details)
-            unit_waveform_density_map : UnitWaveformDensityMapWidget (see UnitWaveformDensityMapWidget for details)
-            autocorrelograms : AutoCorrelogramsWidget (see AutoCorrelogramsWidget for details)
-            amplitudes : AmplitudesWidget (see AmplitudesWidget for details)
+
+            * unit_locations : UnitLocationsWidget (see UnitLocationsWidget for details)
+            * unit_waveforms : UnitWaveformsWidget (see UnitWaveformsWidget for details)
+            * unit_waveform_density_map : UnitWaveformDensityMapWidget (see UnitWaveformDensityMapWidget for details)
+            * autocorrelograms : AutoCorrelogramsWidget (see AutoCorrelogramsWidget for details)
+            * amplitudes : AmplitudesWidget (see AmplitudesWidget for details)
+
         Please note that the unit_colors should not be set in subwidget_kwargs, but directly as a parameter of plot_unit_summary.
     """
 
