@@ -282,9 +282,9 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         # Eventually, this should not be allowed as streams should have the same units
         supported_voltage_units = list(voltage_units_to_gains.keys())
         is_channel_in_voltage = np.isin(channel_units, supported_voltage_units)
-        has_voltage_channels = np.any(is_channel_in_voltage)
-        has_non_voltage_channels = not np.all(is_channel_in_voltage)
-        has_mixed_units = has_non_voltage_channels and has_voltage_channels
+        self.has_voltage_channels = np.any(is_channel_in_voltage)
+        self.has_non_voltage_channels = not np.all(is_channel_in_voltage)
+        has_mixed_units = self.has_non_voltage_channels and self.has_voltage_channels
         if has_mixed_units:
             warning_msg = (
                 "Found a mix of voltage and non-voltage units. "
