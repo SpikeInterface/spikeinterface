@@ -149,6 +149,7 @@ test = [
     "pytest",
     "pytest-dependency",
     "pytest-cov",
+    "psutil",
 
     "huggingface_hub",
 
