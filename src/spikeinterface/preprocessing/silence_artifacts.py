@@ -151,9 +151,9 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
                     percentage = 100 * total_time / recording.get_num_samples(i)
                     print(f"{percentage}% of segment {i} has been flagged as artifactual")
 
-        if 'enveloppe' in random_chunk_kwargs:
-            random_chunk_kwargs.pop('enveloppe')
-    
+        if "enveloppe" in random_chunk_kwargs:
+            random_chunk_kwargs.pop("enveloppe")
+
         SilencedPeriodsRecording.__init__(
             self, recording, list_periods, mode=mode, noise_levels=noise_levels, seed=seed, **random_chunk_kwargs
         )
