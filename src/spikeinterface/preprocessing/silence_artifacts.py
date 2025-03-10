@@ -79,19 +79,14 @@ def detect_onsets(recording, detect_threshold=5, **extra_kwargs):
         if len(onsets) == 0 and len(offsets) == 0:
             periods.append([])
             continue
-
-        if onsets["sample_index"][0] > offsets["sample_index"][0]:
-            sub_periods += [(0, offsets["sample_index"][0])]
-            offsets = offsets[1:]
+        elif len(onsets) > 0 and len(offsets) == 0:
+            periods.append([(onsets["sample_index"][0], recording.get_num_samples(seg_index))])
+            continue
 
         for i in range(min(len(onsets), len(offsets))):
             sub_periods += [(onsets["sample_index"][i], offsets["sample_index"][i])]
 
-        if len(onsets) > len(offsets):
-            sub_periods += [(onsets["sample_index"][0], recording.get_num_samples(seg_index))]
-
         periods.append(sub_periods)
-
     return periods
 
 
@@ -156,6 +151,9 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
                     percentage = 100 * total_time / recording.get_num_samples(i)
                     print(f"{percentage}% of segment {i} has been flagged as artifactual")
 
+        if 'enveloppe' in random_chunk_kwargs:
+            random_chunk_kwargs.pop('enveloppe')
+    
         SilencedPeriodsRecording.__init__(
             self, recording, list_periods, mode=mode, noise_levels=noise_levels, seed=seed, **random_chunk_kwargs
         )
