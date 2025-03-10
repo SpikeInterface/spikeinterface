@@ -227,7 +227,7 @@ class SimpleSorter(ComponentsBasedSorter):
 
         # keep positive labels
         keep = peak_labels >= 0
-        sorting_final = NumpySorting.from_times_labels(
+        sorting_final = NumpySorting.from_samples_and_labels(
             peaks["sample_index"][keep], peak_labels[keep], sampling_frequency
         )
         sorting_final = sorting_final.save(folder=sorter_output_folder / "sorting")
