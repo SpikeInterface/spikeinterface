@@ -39,6 +39,8 @@ jobs:
           restore-keys: ${{ runner.os }}-datasets
       - name: Install packages
         uses: ./.github/actions/build-test-environment
+      - name: Pip list
+        run: pip list
       - name: run tests
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
