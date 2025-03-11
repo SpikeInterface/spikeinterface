@@ -74,6 +74,9 @@ jobs:
           pip install -e .[test_core]
         shell: bash
 
+      - name: Pip list
+        run: pip list
+
       - name: Test core
         run: pytest -m "core"
         shell: bash
