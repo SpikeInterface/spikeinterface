@@ -232,8 +232,13 @@ def random_spikes_selection(
 
 
 def apply_merges_to_sorting(
-    sorting, merge_unit_groups, new_unit_ids=None, censor_ms=None, return_extra=False, new_id_strategy="append"
-):
+    sorting: BaseSorting,
+    merge_unit_groups: list[list[int | str]] | list[tuple[int | str]],
+    new_unit_ids: list[int | str] | None = None,
+    censor_ms: float | None = None,
+    return_extra: bool = False,
+    new_id_strategy: str = "append",
+) -> NumpySorting | tuple[NumpySorting, np.ndarray, list[int | str]]:
     """
     Apply a resolved representation of the merges to a sorting object.
 
@@ -245,9 +250,9 @@ def apply_merges_to_sorting(
 
     Parameters
     ----------
-    sorting : Sorting
+    sorting : BaseSorting
         The Sorting object to apply merges.
-    merge_unit_groups : list/tuple of lists/tuples
+    merge_unit_groups : list of lists/tuples
         A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
         but it can also have more (merge multiple units at once).
     new_unit_ids : list | None, default: None

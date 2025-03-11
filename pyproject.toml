@@ -97,6 +97,7 @@ full = [
     "pandas",
     "scipy",
     "scikit-learn",
+    "pydantic",
     "networkx",
     "distinctipy",
     "matplotlib>=3.6", # matplotlib.colormaps
