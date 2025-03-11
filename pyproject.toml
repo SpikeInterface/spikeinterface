@@ -28,6 +28,7 @@ dependencies = [
     "neo>=0.14.0",
     "probeinterface>=0.2.23",
     "packaging",
+    "pydantic",
 ]
 
 [build-system]
@@ -97,7 +98,6 @@ full = [
     "pandas",
     "scipy",
     "scikit-learn",
-    "pydantic",
     "networkx",
     "distinctipy",
     "matplotlib>=3.6", # matplotlib.colormaps
