@@ -112,7 +112,8 @@ def test_parallel():
     elapsed_N_jobs = t_stop - t_start
     print(f"Elapsed N jobs: {elapsed_N_jobs}")
 
-    assert elapsed_N_jobs < elapsed_1_job
+    # there is no guarantee there are more than 1 CPU on GH actions. Let's comment it out
+    # assert elapsed_N_jobs < elapsed_1_job
     # check if the results are the same
     for k, cmp in msc_1_job.comparisons.items():
         cmp_N_jobs = msc_N_jobs.comparisons[k]
