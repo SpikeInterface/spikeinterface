@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 
 import json
+import warnings
 import numpy as np
 from pathlib import Path
 
@@ -13,6 +14,24 @@ from .curation_format import (
     curation_label_to_vectors,
     clean_curation_dict,
 )
+
+
+def get_kachery():
+    try:
+        import kachery as ka
+
+        return ka
+    except ImportError:
+        try:
+            import kachery_cloud as kcl
+
+            warnings.warn("kachery is deprecated, use kachery_cloud instead", DeprecationWarning, stacklevel=2)
+            return kcl
+        except ImportError:
+            raise ImportError(
+                "To apply a SortingView manual curation, you need to have kachery installed:\n"
+                ">>> pip install kachery\n(kachery-cloud is also supported, but deprecated)"
+            )
 
 
 def apply_sortingview_curation(
@@ -56,16 +75,10 @@ def apply_sortingview_curation(
         with open(uri_or_json, "r") as f:
             curation_dict = json.load(f)
     else:
-        try:
-            import kachery_cloud as kcl
-        except ImportError:
-            raise ImportError(
-                "To apply a SortingView manual curation, you need to have sortingview installed: "
-                ">>> pip install sortingview"
-            )
+        ka = get_kachery()
 
         try:
-            curation_dict = kcl.load_json(uri=uri_or_json)
+            curation_dict = ka.load_json(uri=uri_or_json)
         except:
             raise Exception(f"Could not retrieve curation from SortingView uri: {uri_or_json}")
 
@@ -140,13 +153,7 @@ def apply_sortingview_curation_legacy(
     sorting_curated : BaseSorting
         The curated sorting
     """
-    try:
-        import kachery_cloud as kcl
-    except ImportError:
-        raise ImportError(
-            "To apply a SortingView manual curation, you need to have sortingview installed: "
-            ">>> pip install sortingview"
-        )
+    ka = get_kachery()
     curation_sorting = CurationSorting(sorting, make_graph=False, properties_policy="keep")
 
     # get sorting view curation
@@ -155,7 +162,7 @@ def apply_sortingview_curation_legacy(
             sortingview_curation_dict = json.load(f)
     else:
         try:
-            sortingview_curation_dict = kcl.load_json(uri=uri_or_json)
+            sortingview_curation_dict = ka.load_json(uri=uri_or_json)
         except:
             raise Exception(f"Could not retrieve curation from SortingView uri: {uri_or_json}")
 
