@@ -9,7 +9,51 @@ def _simpleaxis(ax):
     ax.get_yaxis().tick_left()
 
 
-def plot_run_times(study, case_keys=None):
+def aggregate_levels(df, study, case_keys, levels):
+    """
+    Aggregate a DataFrame by levels.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A DataFrame with a MultiIndex.
+    study : BenchmarkStudy
+        A study object.
+    case_keys : list
+        A list of case keys.
+    levels : list
+        A list of levels to keep.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        The aggregated DataFrame.
+    case_keys : list
+        The aggregated case keys.
+    labels : dict
+        A dictionary of labels.
+    """
+    import pandas as pd
+
+    if case_keys is None:
+        case_keys = list(study.cases.keys())
+    labels = {key: study.cases[key]["label"] for key in case_keys}
+
+    if levels is not None:
+        drop_levels = [l for l in study.levels if l not in levels]
+        df = df.droplevel(drop_levels).sort_index()
+        if len(levels) > 1:
+            df = df.reorder_levels(levels)
+        case_keys = list(np.unique(df.index))
+        if isinstance(df.index, pd.MultiIndex):
+            labels = {key: "-".join(key) for key in case_keys}
+        else:
+            labels = {key: key for key in case_keys}
+
+    return df, case_keys, labels
+
+
+def plot_run_times(study, case_keys=None, levels=None):
     """
     Plot run times for a BenchmarkStudy.
 
