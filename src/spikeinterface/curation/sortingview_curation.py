@@ -25,7 +25,7 @@ def get_kachery():
         try:
             import kachery_cloud as kcl
 
-            warnings.warn("kachery is deprecated, use kachery_cloud instead", DeprecationWarning, stacklevel=2)
+            warnings.warn("kachery-cloud is deprecated, use kachery instead", DeprecationWarning, stacklevel=2)
             return kcl
         except ImportError:
             raise ImportError(
