@@ -1,7 +1,5 @@
 import pytest
 
-from pydantic import BaseModel, ValidationError, field_validator
-
 
 from pathlib import Path
 import json
