@@ -6,9 +6,7 @@ on:
     - cron: "0 12 * * *"  # Daily at noon UTC
 
 env:
-  KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
-  KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
-  KACHERY_ZONE: ${{ secrets.KACHERY_ZONE }}
+  KACHERY_API_KEY: ${{ secrets.KACHERY_API_KEY }}
 
 jobs:
   full-tests-with-codecov:

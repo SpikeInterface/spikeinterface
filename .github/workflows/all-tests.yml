@@ -10,9 +10,7 @@ on:
       - main
 
 env:
-  KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
-  KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
-  KACHERY_ZONE: ${{ secrets.KACHERY_ZONE }}
+  KACHERY_API_KEY: ${{ secrets.KACHERY_API_KEY }}
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -202,6 +200,8 @@ jobs:
       - name: Test widgets
         shell: bash
         if: env.RUN_WIDGETS_TESTS == 'true'
+        env:
+          KACHERY_ZONE: "scratch"
         run: |
           pip install -e .[full,widgets]
           ./.github/run_tests.sh widgets --no-virtual-env
