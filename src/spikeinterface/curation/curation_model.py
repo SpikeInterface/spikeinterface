@@ -38,8 +38,7 @@ class CurationModel(BaseModel):
         if v is None:
             v = {}
         else:
-            v_copy = v.copy()
-            for key in v_copy.keys():
+            for key in list(v.keys()):
                 v[key]["name"] = key
         return v
 
