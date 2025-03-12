@@ -171,5 +171,5 @@ class ClipRecordingSegment(BasePreprocessorSegment):
 
 clip = define_function_handling_dict_from_class(source_class=ClipRecording, name="clip")
 blank_staturation = define_function_handling_dict_from_class(
-    source_class=BlankSaturationRecording, name="blank_staturation"
+    source_class=BlankSaturationRecording, name="blank_saturation"
 )
