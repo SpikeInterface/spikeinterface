@@ -89,7 +89,9 @@ class PeakActivityMapWidget(BaseWidget):
 
         if dp.bin_duration_s is None:
             if type(dp.fixed_color_range) in [tuple, list]:
-                assert length(dp.fixed_color_range) == 2, "fixed_color_range must be a tuple/list of length 2 representing range"
+                assert (
+                    length(dp.fixed_color_range) == 2
+                ), "fixed_color_range must be a tuple/list of length 2 representing range"
                 self._plot_one_bin(
                     rec,
                     probe,
