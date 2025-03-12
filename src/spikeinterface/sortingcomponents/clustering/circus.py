@@ -23,7 +23,7 @@ from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAP
 from spikeinterface.sortingcomponents.waveforms.hanning_filter import HanningFilter
 from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.sortingcomponents.tools import remove_empty_templates
+from spikeinterface.sortingcomponents.tools import remove_empty_templates, get_optimal_n_jobs
 import pickle, json
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
@@ -257,6 +257,10 @@ class CircusClustering:
         if params["noise_levels"] is None:
             params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
 
+        job_kwargs_local = job_kwargs.copy()
+        ram_requested = recording.get_num_channels() * (nbefore + nafter) * len(unit_ids) * 4
+        job_kwargs_local = get_optimal_n_jobs(job_kwargs_local, ram_requested, params["memory_limit"])
+
         templates_array = estimate_templates(
             recording,
             spikes,
@@ -265,7 +269,7 @@ class CircusClustering:
             nafter,
             return_scaled=False,
             job_name=None,
-            **job_kwargs,
+            **job_kwargs_local,
         )
 
         best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
