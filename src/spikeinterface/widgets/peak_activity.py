@@ -30,7 +30,7 @@ class PeakActivityMapWidget(BaseWidget):
         Plot rates with interpolated map
     with_channel_ids : bool, default: False
         Add channel ids text on the probe
-    fixed_color_range : bool or tuple of length=2, default: False
+    fixed_color_range : bool or tuple/list of length=2, default: False
         Fixes the color bar range when animating or plotting
         in case of a length 2 tuple [vmin,vmax], uses that to fixes the colorbar range
         in case of bool
@@ -89,7 +89,7 @@ class PeakActivityMapWidget(BaseWidget):
 
         if dp.bin_duration_s is None:
             if type(dp.fixed_color_range) in [tuple, list]:
-                self.vmin, self.vmax = dp.fixed_color_range
+                assert length(dp.fixed_color_range) == 2, "fixed_color_range must be a tuple/list of length 2 representing range"
                 self._plot_one_bin(
                     rec,
                     probe,
@@ -99,8 +99,8 @@ class PeakActivityMapWidget(BaseWidget):
                     dp.with_contact_color,
                     dp.with_interpolated_map,
                     dp.with_color_bar,
-                    vmin=self.vmin,
-                    vmax=self.vmax,
+                    vmin=dp.fixed_color_range[0],
+                    vmax=dp.fixed_color_range[1],
                 )
             else:
                 self._plot_one_bin(
@@ -195,7 +195,7 @@ class PeakActivityMapWidget(BaseWidget):
     ):
         rates = self._compute_rates(rec, peaks, duration)
 
-        self.artists = ()
+        artists = ()
         if with_contact_color:
             text_on_contact = None
             if with_channel_ids:
@@ -213,16 +213,16 @@ class PeakActivityMapWidget(BaseWidget):
             )
             if vmin is not None and vmax is not None:
                 poly.set_clim(self.vmin, self.vmax)
-            self.artists = self.artists + (poly, poly_contour)
+            artists = artists + (poly, poly_contour)
 
         if with_interpolated_map:
             image, xlims, ylims = probe.to_image(
                 rates, pixel_size=0.5, num_pixel=None, method="linear", xlims=None, ylims=None
             )
             im = self.ax.imshow(image, extent=xlims + ylims, origin="lower", alpha=0.5, vmin=vmin, vmax=vmax)
-            self.artists = self.artists + (im,)
+            artists = artists + (im,)
 
         if with_color_bar:
             self.cbar = self.figure.colorbar(im, ax=self.ax, label=f"Peak rate (Hz)")
 
-        return self.artists
+        return artists
