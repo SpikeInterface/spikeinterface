@@ -281,7 +281,8 @@ def set_optimal_chunk_size(recording, job_kwargs, memory_limit=0.5, total_memory
             dtype_size_bytes = recording.get_dtype().itemsize
             chunk_size = memory_usage / ((num_channels * dtype_size_bytes) * n_jobs)
             chunk_duration = chunk_size / recording.get_sampling_frequency()
-            job_kwargs = fix_job_kwargs(dict(chunk_duration=f"{chunk_duration}s"))
+            job_kwargs.update(dict(chunk_duration=f"{chunk_duration}s"))
+            job_kwargs = fix_job_kwargs(job_kwargs)
         else:
             import warnings
 
@@ -294,7 +295,8 @@ def set_optimal_chunk_size(recording, job_kwargs, memory_limit=0.5, total_memory
         dtype_size_bytes = recording.get_dtype().itemsize
         chunk_size = (num_channels * dtype_size_bytes) * n_jobs / total_memory
         chunk_duration = chunk_size / recording.get_sampling_frequency()
-        job_kwargs = fix_job_kwargs(dict(chunk_duration=f"{chunk_duration}s"))
+        job_kwargs.update(dict(chunk_duration=f"{chunk_duration}s"))
+        job_kwargs = fix_job_kwargs(job_kwargs)
     return job_kwargs
 
 
