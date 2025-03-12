@@ -43,11 +43,37 @@ class BenchmarkStudy:
         self.analyzers = {}
         self.cases = {}
         self.benchmarks = {}
-        self.scan_folder()
+        self.levels = None
         self.colors = None
+        self.map_name = "tab10"
+        self.scan_folder()
 
     @classmethod
     def create(cls, study_folder, datasets={}, cases={}, levels=None):
+        """
+        Create a BenchmarkStudy from a dict of datasets and cases.
+
+        Parameters
+        ----------
+        study_folder : str | Path
+            The folder where the study will be saved.
+        datasets : dict
+            A dict of datasets. The keys are the dataset names and the values are `SortingAnalyzer` objects.
+            Values can also be tuples with (recording, gt_sorting), but this is deprecated.
+        cases : dict
+            A dict of cases. The keys are the cases (str, or tuples) and the values are dictionaries containing:
+
+                * dataset
+                * label
+                * params
+        levels : list | None
+            If the keys of the cases are tuples, this is the list of levels names.
+
+        Returns
+        -------
+        study : BenchmarkStudy
+            The created study.
+        """
         # check that cases keys are homogeneous
         key0 = list(cases.keys())[0]
         if isinstance(key0, str):
@@ -234,13 +260,27 @@ class BenchmarkStudy:
             self.colors = get_some_colors(
                 case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0, resample=False
             )
+            self.map_name = map_name
         else:
             self.colors = colors
 
-    def get_colors(self):
-        if self.colors is None:
-            self.set_colors()
-        return self.colors
+    def get_colors(self, levels_to_group_by=None, map_name="tab10"):
+        map_name = map_name or self.map_name
+        if levels_to_group_by is None:
+            if self.colors is None or self.map_name != map_name:
+                self.set_colors(map_name=map_name)
+            colors = self.colors
+        else:
+            grouped_keys, _ = self.get_grouped_keys_mapping(levels_to_group_by)
+            colors = get_some_colors(
+                list(grouped_keys.keys()),
+                map_name=map_name,
+                color_engine="matplotlib",
+                shuffle=False,
+                margin=0,
+                resample=False,
+            )
+        return colors
 
     def get_run_times(self, case_keys=None):
         if case_keys is None:
@@ -258,10 +298,57 @@ class BenchmarkStudy:
             df.index.names = self.levels
         return df
 
-    def plot_run_times(self, case_keys=None):
+    def get_grouped_keys_mapping(self, levels_to_group_by=None):
+        """
+        Return a dictionary of grouped keys.
+
+        Parameters
+        ----------
+        levels_to_group_by : list
+            A list of levels to group by.
+
+        Returns
+        -------
+        grouped_keys : dict
+            A dictionary of grouped keys, with the new keys as keys and the list of cases
+            associated to new keys as values.
+        labels : dict
+            A dictionary of labels, with the new keys as keys and the labels as values.
+        """
+        cases = list(self.cases.keys())
+        if levels_to_group_by is None or self.levels is None:
+            keys_mapping = {key: [key] for key in cases}
+        elif len(self.levels) == 1:
+            keys_mapping = {key: [key] for key in cases}
+        else:
+            study_levels = self.levels
+            assert np.all(
+                [l in study_levels for l in levels_to_group_by]
+            ), f"levels_to_group_by must be in {study_levels}, got {levels_to_group_by}"
+            keys_mapping = {}
+            for key in cases:
+                new_key = tuple(key[list(study_levels).index(level)] for level in levels_to_group_by)
+                if len(new_key) == 1:
+                    new_key = new_key[0]
+                if new_key not in keys_mapping:
+                    keys_mapping[new_key] = []
+                keys_mapping[new_key].append(key)
+
+        if levels_to_group_by is None:
+            labels = {key: self.cases[key]["label"] for key in cases}
+        else:
+            key0 = list(keys_mapping.keys())[0]
+            if isinstance(key0, tuple):
+                labels = {key: "-".join(key) for key in keys_mapping}
+            else:
+                labels = {key: key for key in keys_mapping}
+
+        return keys_mapping, labels
+
+    def plot_run_times(self, case_keys=None, **kwargs):
         from .benchmark_plot_tools import plot_run_times
 
-        return plot_run_times(self, case_keys=case_keys)
+        return plot_run_times(self, case_keys=case_keys, **kwargs)
 
     def compute_results(self, case_keys=None, verbose=False, **result_params):
 
@@ -304,6 +391,13 @@ class BenchmarkStudy:
         # folder = self.folder / "sorting_analyzer" / self.key_to_str(dataset_key)
         # sorting_analyzer = load_sorting_analyzer(folder)
         # return sorting_analyzer
+
+    def compute_gt_unit_locations(self, dataset_keys=None, **method_kwargs):
+        if dataset_keys is None:
+            dataset_keys = list(self.datasets.keys())
+        for dataset_key in dataset_keys:
+            sorting_analyzer = self.get_sorting_analyzer(dataset_key=dataset_key)
+            sorting_analyzer.compute("unit_locations", **method_kwargs)
 
     def get_templates(self, key, operator="average"):
         sorting_analyzer = self.get_sorting_analyzer(case_key=key)
