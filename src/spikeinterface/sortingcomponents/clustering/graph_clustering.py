@@ -77,7 +77,8 @@ class GraphClustering:
             direction="y",
             n_neighbors=n_neighbors,
             apply_local_svd=True,
-            n_components=10,
+            # apply_local_svd=False,
+            n_components=8,
             normed_distances=True,
         )
 
@@ -86,7 +87,7 @@ class GraphClustering:
         # print("sparsity: ", distances.indices.size / (distances.shape[0]**2))        
 
         distances_bool = distances.copy()
-        # distances_bool.data[:] = 1
+        distances_bool.data[:] = 1
 
         print("clustering_method", clustering_method)
 
@@ -119,20 +120,11 @@ class GraphClustering:
         elif clustering_method == "leidenalg":
             import leidenalg
             import igraph
-            graph = igraph.Graph.Weighted_Adjacency(distances.tocoo(), mode='directed',)
+            graph = igraph.Graph.Weighted_Adjacency(distances_bool.tocoo(), mode='directed',)
             clusters = leidenalg.find_partition(graph, leidenalg.ModularityVertexPartition)
             peak_labels = np.array(clusters.membership)
             _remove_small_cluster(peak_labels, min_size=1)
 
-        elif clustering_method == "igraph-label-propagation":
-            import igraph
-
-            graph = igraph.Graph.Weighted_Adjacency(distances.tocoo(), mode='directed',)
-
-            clusters = graph.community_label_propagation()
-            peak_labels = np.array(clusters.membership)
-            _remove_small_cluster(peak_labels, min_size=1)
-        
         elif clustering_method == "hdbscan":
             from hdbscan import HDBSCAN
             # from fast_hdbscan import HDBSCAN
@@ -154,7 +146,6 @@ class GraphClustering:
                 if len(rows) == 1:
                     continue
                 
-                print(len(rows))
                 local_dist = distances[rows, :][:, rows]
 
                 has_neibhor = np.array(np.sum(local_dist>0, axis=1) > 1)
@@ -174,40 +165,23 @@ class GraphClustering:
                 max_dist=(local_dist.max() - local_dist.min()) * 1000
 
                 clusterer = HDBSCAN(
-                    min_cluster_size=50,
-                    # min_samples=1,
-                    # cluster_selection_epsilon=0,
-                    # max_cluster_size=1,
                     metric="precomputed",
-                    # alpha= 0.99,
-                    # max_dist=max_dist,
-                    
-                    # p=None,
-                    # algorithm="best",
-                    # leaf_size=40,
-                    # memory: Memory = Memory(None, verbose=0), 
-                    # approx_min_span_tree= True,
-                    # gen_min_span_tree= False,
-                    # core_dist_n_jobs=40,
+                    min_cluster_size=50,
                     cluster_selection_method= "eom",
-                    # cluster_selection_method= "leaf",
                     allow_single_cluster= True,
-                    # prediction_data= False,
-                    # branch_detection_data= False,
-                    # match_reference_implementation= False,
                     metric_params=dict(
                         max_distance=max_dist,
-                    )
+                    ),
+                    core_dist_n_jobs=-1,
                 )
-                res = clusterer.fit_predict(local_dist)
-
-                local_labels = res[0]
+                local_labels = clusterer.fit_predict(local_dist)
 
                 mask = local_labels>=0
+                if np.sum(mask):
 
-                peak_labels[rows[mask]] = local_labels[mask] + label_count
+                    peak_labels[rows[mask]] = local_labels[mask] + label_count
 
-                label_count += max(np.max(local_labels), 0)
+                    label_count += max(np.max(local_labels), 0)
 
 
         else:

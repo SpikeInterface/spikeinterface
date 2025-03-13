@@ -101,8 +101,8 @@ def create_graph_from_peak_features(
         local_depths = peak_depths[peak_indices]
 
         target_mask = (local_depths >= l0) & (local_depths < l1)
-        target = np.flatnonzero(target_mask)
-        target_indices = peak_indices[target_mask]
+        target_local_inds = np.flatnonzero(target_mask)
+        target_indices = peak_indices[target_local_inds]
 
 
         row_indices.append(target_indices)
@@ -158,7 +158,7 @@ def create_graph_from_peak_features(
             # t0 = time.perf_counter()
             # from sklearn.neighbors import NearestNeighbors
 
-            nn_tree = NearestNeighbors(n_neighbors=n_neighbors, metric="minkowski", p=2) # euclidean
+            nn_tree = NearestNeighbors(n_neighbors=min(n_neighbors, target_local_inds.size), metric="minkowski", p=2) # euclidean
             nn_tree.fit(flatten_feat)
             local_sparse_dist = nn_tree.kneighbors_graph(flatten_feat[target_mask], mode='distance')
 
@@ -174,7 +174,7 @@ def create_graph_from_peak_features(
             indptr = local_sparse_dist.indptr
             if normed_distances:
                 for i in range(local_sparse_dist.shape[0]):
-                    src = flatten_feat[target[i]]
+                    src = flatten_feat[target_local_inds[i]]
                     a, b = indptr[i], indptr[i+1]
                     tgt = flatten_feat[local_sparse_dist.indices[a:b]]
                     norm = (np.linalg.norm(src, 1) + np.linalg.norm(tgt, 1, axis=1))
