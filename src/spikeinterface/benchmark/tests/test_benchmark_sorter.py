@@ -273,22 +273,33 @@ if __name__ == "__main__":
     test_get_grouped_keys_mapping(study_folder_complex)
     test_SorterStudy(study_folder_complex)
 
-    # test out all plots and levels
+    # # test out all plots and levels
     # import matplotlib.pyplot as plt
 
     # from spikeinterface.benchmark.benchmark_plot_tools import (
     #     plot_run_times, plot_performances_ordered, plot_performances_swarm,
-    #     plot_performances_vs_snr, plot_performances_vs_depth_and_snr
+    #     plot_performances_vs_snr, plot_performances_vs_depth_and_snr,
+    #     plot_performances_comparison
     # )
 
     # study = SorterStudy(study_folder_complex)
 
-    # plot_funcs = [plot_run_times, plot_performances_ordered, plot_performances_swarm, plot_performances_vs_snr, plot_performances_vs_depth_and_snr]
+    # study.compute_metrics()
+
+    # plot_funcs = [
+    #     plot_run_times,
+    #     plot_performances_ordered,
+    #     plot_performances_swarm,
+    #     plot_performances_vs_snr,
+    #     plot_performances_vs_depth_and_snr,
+    #     plot_performances_comparison
+    # ]
     # levels = [["sorter_name"], ["sorter_name", "processing"]]
 
     # for plot_func in plot_funcs:
     #     for level in levels:
-    #         plot_func(study, levels_to_keep=level)
+    #         fig = plot_func(study, levels_to_keep=level)
+    #         fig.suptitle(f"{plot_func.__name__} - {level}")
 
     # plt.ion()
     # plt.show()

@@ -392,12 +392,25 @@ class BenchmarkStudy:
         # sorting_analyzer = load_sorting_analyzer(folder)
         # return sorting_analyzer
 
-    def compute_gt_unit_locations(self, dataset_keys=None, **method_kwargs):
+    def compute_analyzer_extension(self, extensions, dataset_keys=None, **extension_kwargs):
         if dataset_keys is None:
             dataset_keys = list(self.datasets.keys())
+        if not isinstance(dataset_keys, list):
+            dataset_keys = [dataset_keys]
         for dataset_key in dataset_keys:
             sorting_analyzer = self.get_sorting_analyzer(dataset_key=dataset_key)
-            sorting_analyzer.compute("unit_locations", **method_kwargs)
+            sorting_analyzer.compute(extensions, **extension_kwargs)
+
+    def get_gt_unit_locations(self, case_key):
+        dataset_key = self.cases[case_key]["dataset"]
+        sorting_analyzer = self.get_sorting_analyzer(dataset_key=dataset_key)
+        if "gt_unit_locations" in sorting_analyzer.sorting.get_property_keys():
+            return sorting_analyzer.get_sorting_property("gt_unit_locations")
+        else:
+            if not sorting_analyzer.has_extension("unit_locations"):
+                self.compute_analyzer_extension(["unit_locations"], dataset_keys=dataset_key)
+            unit_locations_ext = sorting_analyzer.get_extension("unit_locations")
+            return unit_locations_ext.get_data()
 
     def get_templates(self, key, operator="average"):
         sorting_analyzer = self.get_sorting_analyzer(case_key=key)

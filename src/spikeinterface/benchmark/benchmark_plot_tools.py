@@ -9,7 +9,7 @@ def despine(ax_or_axes):
 
     if not isinstance(ax_or_axes, (list, tuple, np.ndarray)):
         ax_or_axes = [ax_or_axes]
-    for ax in np.flatten(ax_or_axes):
+    for ax in np.array(ax_or_axes).flatten():
         sns.despine(ax=ax)
 
 
@@ -93,7 +93,9 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10")
         case_keys = list(study.cases.keys())
 
     run_times = study.get_run_times(case_keys=case_keys)
-    run_times, case_keys, labels, _ = aggregate_levels(run_times, study, case_keys, levels_to_keep, map_name=map_name)
+    run_times, case_keys, labels, colors = aggregate_levels(
+        run_times, study, case_keys, levels_to_keep, map_name=map_name
+    )
 
     fig, ax = plt.subplots()
     if levels_to_keep is None:
@@ -105,6 +107,8 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10")
         hue = levels_to_keep[0]
         plt_fun = sns.boxplot
     elif len(levels_to_keep) == 2:
+        # here we need to override the colors, since we are using x and hue
+        # to displaye the 2 levels. We need to set the colors for the hue level alone
         x, hue = levels_to_keep
         hues = np.unique([c[1] for c in case_keys])
         colors = get_some_colors(hues, map_name=map_name, color_engine="matplotlib", shuffle=True, margin=1)
@@ -605,11 +609,7 @@ def plot_performances_vs_depth_and_snr(
         for sub_key in key_list:
             result = study.get_result(sub_key)
             analyzer = study.get_sorting_analyzer(sub_key)
-
-            unit_loc_ext = analyzer.get_extension("unit_locations")
-            if unit_loc_ext is None:
-                raise ValueError("unit_location extension is required for this plot")
-            positions = unit_loc_ext.get_data()
+            positions = study.get_gt_unit_locations(sub_key)
             depth = positions[:, 1]
 
             metrics = analyzer.get_extension("quality_metrics").get_data()
