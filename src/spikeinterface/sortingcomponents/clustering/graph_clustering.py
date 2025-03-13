@@ -21,9 +21,9 @@ class GraphClustering:
         "bin_um": 60.,
         "motion": None,
         "seed": None,
-        "n_neighbors": 30,
+        "n_neighbors": 100,
         # "clustering_method": "leidenalg",
-        "clustering_method": "sknetwork-leiden",        
+        "clustering_method": "sknetwork-leiden",
     }
 
     @classmethod
@@ -35,6 +35,7 @@ class GraphClustering:
         seed = params["seed"]
         n_neighbors = params["n_neighbors"]
         clustering_method = params["clustering_method"]
+        normed_distances = params["normed_distances"]
 
         motion_aware = motion is not None
 
@@ -75,7 +76,11 @@ class GraphClustering:
             mode="knn",
             direction="y",
             n_neighbors=n_neighbors,
+            apply_local_svd=True,
+            n_components=10,
+            normed_distances=True,
         )
+
         # print(distances)
         # print(distances.shape)
         # print("sparsity: ", distances.indices.size / (distances.shape[0]**2))        
@@ -119,7 +124,7 @@ class GraphClustering:
             peak_labels = np.array(clusters.membership)
             _remove_small_cluster(peak_labels, min_size=1)
 
-        elif "igraph-label-propagation":
+        elif clustering_method == "igraph-label-propagation":
             import igraph
 
             graph = igraph.Graph.Weighted_Adjacency(distances.tocoo(), mode='directed',)
@@ -127,6 +132,83 @@ class GraphClustering:
             clusters = graph.community_label_propagation()
             peak_labels = np.array(clusters.membership)
             _remove_small_cluster(peak_labels, min_size=1)
+        
+        elif clustering_method == "hdbscan":
+            from hdbscan import HDBSCAN
+            # from fast_hdbscan import HDBSCAN
+
+            import scipy.sparse
+
+            
+            # need to make subgraph
+            n_graph, connected_labels = scipy.sparse.csgraph.connected_components(distances)
+
+            # print(np.unique(connected_labels))
+            # print("n_graph", n_graph)
+            peak_labels = np.zeros(ordered_peaks.size, dtype='int64')
+            peak_labels[:] = -1
+
+            label_count = 0
+            for g in range(n_graph):
+                rows = np.flatnonzero(connected_labels == g)
+                if len(rows) == 1:
+                    continue
+                
+                print(len(rows))
+                local_dist = distances[rows, :][:, rows]
+
+                has_neibhor = np.array(np.sum(local_dist>0, axis=1) > 1)
+                has_neibhor = has_neibhor[:, 0]
+
+                rows = rows[has_neibhor]
+                local_dist = distances[rows, :][:, rows]
+
+                # make symetric
+                local_dist = local_dist.maximum(local_dist.T)
+
+                # # print(local_dist)
+                # res = hdbscan.hdbscan(local_dist, metric="precomputed")
+                # print(res[0])
+                # fig, ax = plt.subplots()
+                # ax.matshow(local_dist)
+                max_dist=(local_dist.max() - local_dist.min()) * 1000
+
+                clusterer = HDBSCAN(
+                    min_cluster_size=50,
+                    # min_samples=1,
+                    # cluster_selection_epsilon=0,
+                    # max_cluster_size=1,
+                    metric="precomputed",
+                    # alpha= 0.99,
+                    # max_dist=max_dist,
+                    
+                    # p=None,
+                    # algorithm="best",
+                    # leaf_size=40,
+                    # memory: Memory = Memory(None, verbose=0), 
+                    # approx_min_span_tree= True,
+                    # gen_min_span_tree= False,
+                    # core_dist_n_jobs=40,
+                    cluster_selection_method= "eom",
+                    # cluster_selection_method= "leaf",
+                    allow_single_cluster= True,
+                    # prediction_data= False,
+                    # branch_detection_data= False,
+                    # match_reference_implementation= False,
+                    metric_params=dict(
+                        max_distance=max_dist,
+                    )
+                )
+                res = clusterer.fit_predict(local_dist)
+
+                local_labels = res[0]
+
+                mask = local_labels>=0
+
+                peak_labels[rows[mask]] = local_labels[mask] + label_count
+
+                label_count += max(np.max(local_labels), 0)
+
 
         else:
             raise ValueError("GraphClustering : wrong clustering_method")

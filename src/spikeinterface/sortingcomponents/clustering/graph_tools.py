@@ -16,8 +16,12 @@ def create_graph_from_peak_features(
     bin_um=20.,
     dim=1,
     mode="full_connected_bin",
+    apply_local_svd=False,
+    n_components=10,
+    normed_distances=False,
     direction="y",
     n_neighbors=20,
+    enforce_diagonal_to_zero=True,
     progress_bar=True,
 ):
     """
@@ -44,7 +48,8 @@ def create_graph_from_peak_features(
     from scipy.spatial.distance import cdist
     if mode == "knn":
         from sklearn.neighbors import NearestNeighbors
-    
+    if apply_local_svd:
+        from sklearn.decomposition import TruncatedSVD    
 
     dim = "xyz".index(direction)
     channel_locations = recording.get_channel_locations()
@@ -78,24 +83,25 @@ def create_graph_from_peak_features(
         
         # limits for peaks
         l0, l1 = bins[b], bins[b+1]
-        mask = (peak_depths> l0) & (peak_depths<= l1)
+        # mask = (peak_depths> l0) & (peak_depths<= l1)
 
         # limits for features
         b0, b1 = l0 - bin_um, l1 + bin_um
-        local_chans = np.flatnonzero((channel_locations[:, dim] > (b0 )) & (channel_locations[:, dim] <= (b1)))
+        local_chans = np.flatnonzero((channel_locations[:, dim] >= (b0 )) & (channel_locations[:, dim] <= (b1)))
 
         
 
 
         # print(l0, l1, b0, b1)
 
-        mask = (peak_depths> b0) & (peak_depths<= b1)
+        mask = (peak_depths>= b0) & (peak_depths< b1)
         peak_indices = np.flatnonzero(mask)
         # print(peak_indices.size)
 
         local_depths = peak_depths[peak_indices]
 
-        target_mask = (local_depths > l0) & (local_depths <= l1)
+        target_mask = (local_depths >= l0) & (local_depths < l1)
+        target = np.flatnonzero(target_mask)
         target_indices = peak_indices[target_mask]
 
 
@@ -123,34 +129,19 @@ def create_graph_from_peak_features(
 
         flatten_feat = local_feats.reshape(local_feats.shape[0], -1)
 
+
+        if apply_local_svd:
+            n_components = min(n_components, flatten_feat.shape[1])
+            tsvd = TruncatedSVD(n_components)
+            flatten_feat = tsvd.fit_transform(flatten_feat)
+
         if mode == "full_connected_bin":
             # t0 = time.perf_counter()
             local_dists = cdist(flatten_feat[target_mask], flatten_feat)
-            # t1 = time.perf_counter()
-            # print("cdist", t1-t0)
-            
-            
-            # t0 = time.perf_counter()
-            # indices0 = []
-            # indices1 = []
-            # data = []
-            # n = peak_indices.size
-            # for i, ind0 in enumerate(target_indices):
-            #     if dont_have_channels_target[i]:
-            #         # this spike is not valid because do not have local chans
-            #         continue
-            #     indices0.append(np.full(n, i, dtype='int64'))
-            #     indices1.append(peak_indices)
-            #     data.append(local_dists[i, :])
-            # if len(indices0) > 0:
-            #     indices0 = np.concatenate(indices0)
-            #     indices1 = np.concatenate(indices1)
-            #     data = np.concatenate(data)
-            # t1 = time.perf_counter()
-            # print("sparse loop", t1-t0)
-            
-            # t0 = time.perf_counter()
-            # local_graph = scipy.sparse.csr_matrix((data, (indices0, indices1)), shape=(target_indices.size, peaks.size))
+
+            if normed_distances:
+                norm = np.linalg.norm(flatten_feat, axis=1)
+                local_dists /= (norm[target_mask, None] + norm[None, :])
 
             data = local_dists.flatten().astype("float32")
             indptr = np.arange(0, local_dists.size + 1, local_dists.shape[1])
@@ -166,18 +157,32 @@ def create_graph_from_peak_features(
 
             # t0 = time.perf_counter()
             # from sklearn.neighbors import NearestNeighbors
-            nn_tree = NearestNeighbors(n_neighbors=n_neighbors)
+
+            nn_tree = NearestNeighbors(n_neighbors=n_neighbors, metric="minkowski", p=2) # euclidean
             nn_tree.fit(flatten_feat)
             local_sparse_dist = nn_tree.kneighbors_graph(flatten_feat[target_mask], mode='distance')
+
+
             # t1 = time.perf_counter()
             # print("knn", t1-t0)
+
+
 
             # remap to all columns
             # t0 = time.perf_counter()
             data = local_sparse_dist.data.astype("float32")
             indptr = local_sparse_dist.indptr
+            if normed_distances:
+                for i in range(local_sparse_dist.shape[0]):
+                    src = flatten_feat[target[i]]
+                    a, b = indptr[i], indptr[i+1]
+                    tgt = flatten_feat[local_sparse_dist.indices[a:b]]
+                    norm = (np.linalg.norm(src, 1) + np.linalg.norm(tgt, 1, axis=1))
+                    data[a:b] /= norm
             indices = peak_indices[local_sparse_dist.indices]
             local_graph = scipy.sparse.csr_matrix((data, indices, indptr), shape=(target_indices.size, peaks.size))
+
+
             # t1 = time.perf_counter()
             # print("make local sparse csr", t1-t0)
 
@@ -204,7 +209,11 @@ def create_graph_from_peak_features(
             distances = scipy.sparse.csr_matrix(distances)
             # t1 = time.perf_counter()
             # print("final csr", t1 - t0)
-        
+
+        if enforce_diagonal_to_zero:
+            ind0, ind1 = distances.tocoo().coords
+            distances.data[ind0 == ind1] = 0.
+
     else:
         distances = scipy.sparse.csr_matrix(([], ([], [])), shape=(peaks.size, peaks.size), dtype="float32")
 
