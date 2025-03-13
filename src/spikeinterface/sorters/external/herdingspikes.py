@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from packaging import version
 
-from ..basesorter import BaseSorter
+from spikeinterface.sorters.basesorter import BaseSorter
 
 from spikeinterface.extractors import HerdingspikesSortingExtractor
 
