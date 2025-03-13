@@ -8,8 +8,8 @@ from numpy.lib.format import open_memmap
 import sys
 
 from spikeinterface.extractors import SpykingCircusSortingExtractor
-from ..basesorter import BaseSorter
-from ..utils import ShellScript
+from spikeinterface.sorters.basesorter import BaseSorter
+from spikeinterface.sorters.utils import ShellScript
 
 from probeinterface import write_prb
 
