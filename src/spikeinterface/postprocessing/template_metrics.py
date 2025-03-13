@@ -10,9 +10,9 @@ import numpy as np
 import warnings
 from copy import deepcopy
 
-from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from ..core.template_tools import get_template_extremum_channel
-from ..core.template_tools import get_dense_templates_array
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
+from spikeinterface.core.template_tools import get_template_extremum_channel
+from spikeinterface.core.template_tools import get_dense_templates_array
 
 # DEBUG = False
 

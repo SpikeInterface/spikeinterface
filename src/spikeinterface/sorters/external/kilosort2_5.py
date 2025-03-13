@@ -4,9 +4,9 @@ from pathlib import Path
 import os
 from typing import Union
 
-from ..basesorter import BaseSorter
+from spikeinterface.sorters.basesorter import BaseSorter
 from .kilosortbase import KilosortBase
-from ..utils import get_git_commit
+from spikeinterface.sorters.utils import get_git_commit
 
 
 PathType = Union[str, Path]
