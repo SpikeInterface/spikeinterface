@@ -13,8 +13,15 @@ class ChannelsAggregationRecording(BaseRecording):
 
     """
 
-    def __init__(self, recording_list, renamed_channel_ids=None):
+    def __init__(self, recording_list_or_dict, renamed_channel_ids=None):
 
+        if isinstance(recording_list_or_dict, dict):
+            recording_list = list(recording_list_or_dict.values())
+        elif isinstance(recording_list_or_dict, list):
+            recording_list = recording_list_or_dict
+        else:
+            raise TypeError("`aggregate_channels` only accepts a list of recordings or a dict whose values are all recordings.")
+        
         self._recordings = recording_list
 
         self._perform_consistency_checks()
@@ -207,8 +214,8 @@ def aggregate_channels(recording_list, renamed_channel_ids=None):
 
     Parameters
     ----------
-    recording_list: list
-        List of BaseRecording objects to aggregate
+    recording_list: list | dict
+        List or dict of BaseRecording objects to aggregate
     renamed_channel_ids: array-like
         If given, channel ids are renamed as provided.
 
