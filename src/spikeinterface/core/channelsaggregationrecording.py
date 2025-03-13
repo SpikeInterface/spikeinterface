@@ -25,7 +25,10 @@ class ChannelsAggregationRecording(BaseRecording):
                 # If default 'group'ing (all equal 0), we label the recordings using the 'group' property
                 recording_groups = []
                 for recording in recording_list:
-                    recording_groups.extend(recording.get_property("group"))
+                    if (group_property := recording.get_property("group")) is not None:
+                        recording_groups.extend(group_property)
+                    else:
+                        recording_groups.extend([0])
                 if np.all(np.unique(recording_groups) == np.array([0])):
                     for group_id, recording in enumerate(recording_list):
                         recording.set_property("group", group_id * np.ones(recording.get_num_channels()))
