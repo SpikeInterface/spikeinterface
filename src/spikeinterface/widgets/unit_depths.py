@@ -7,7 +7,7 @@ from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
 
-from ..core.template_tools import get_template_extremum_amplitude
+from spikeinterface.core.template_tools import get_template_extremum_amplitude
 
 
 class UnitDepthsWidget(BaseWidget):
