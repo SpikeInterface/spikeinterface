@@ -5,7 +5,7 @@ import numpy as np
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-from ..core import get_chunk_with_margin
+from spikeinterface.core import get_chunk_with_margin
 
 
 _common_filter_docs = """**filter_kwargs : dict

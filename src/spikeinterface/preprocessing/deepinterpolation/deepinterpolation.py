@@ -5,8 +5,8 @@ from typing import Optional
 from packaging.version import parse
 
 from .tf_utils import has_tf, import_tf
-from ...core.core_tools import define_function_handling_dict_from_class
-from ..basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
 class DeepInterpolatedRecording(BasePreprocessor):

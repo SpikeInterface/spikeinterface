@@ -5,7 +5,7 @@ import numpy as np
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
-from ..core import get_random_data_chunks, get_channel_distances
+from spikeinterface.core import get_random_data_chunks, get_channel_distances
 from .filter import fix_dtype
 
 

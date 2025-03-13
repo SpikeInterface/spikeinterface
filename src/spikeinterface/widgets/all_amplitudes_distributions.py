@@ -6,7 +6,7 @@ from warnings import warn
 from .base import BaseWidget, to_attr
 from .utils import get_some_colors
 
-from ..core import SortingAnalyzer
+from spikeinterface.core import SortingAnalyzer
 
 
 class AllAmplitudesDistributionsWidget(BaseWidget):
