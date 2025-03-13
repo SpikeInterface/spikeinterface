@@ -21,8 +21,8 @@ def test_channelsaggregationrecording():
     recording3.set_channel_locations([[40.0, 20.0], [40.0, 40.0], [40.0, 60.0]])
 
     recordings_list_possibilities = [
-        [recording1, recording2, recording3], 
-        {0: recording1, 1: recording2, 2: recording3}
+        [recording1, recording2, recording3],
+        {0: recording1, 1: recording2, 2: recording3},
     ]
 
     for recordings_list in recordings_list_possibilities:
@@ -42,7 +42,9 @@ def test_channelsaggregationrecording():
             traces2_0 = recording2.get_traces(channel_ids=[channel_ids[0]], segment_index=seg)
             traces3_2 = recording3.get_traces(channel_ids=[channel_ids[2]], segment_index=seg)
 
-            assert np.allclose(traces1_1, recording_agg.get_traces(channel_ids=[str(channel_ids[1])], segment_index=seg))
+            assert np.allclose(
+                traces1_1, recording_agg.get_traces(channel_ids=[str(channel_ids[1])], segment_index=seg)
+            )
             assert np.allclose(
                 traces2_0,
                 recording_agg.get_traces(channel_ids=[str(num_channels + int(channel_ids[0]))], segment_index=seg),
@@ -62,9 +64,7 @@ def test_channelsaggregationrecording():
 
             # test rename channels
             renamed_channel_ids = [f"#Channel {i}" for i in range(3 * num_channels)]
-            recording_agg_renamed = aggregate_channels(
-                recordings_list, renamed_channel_ids=renamed_channel_ids
-            )
+            recording_agg_renamed = aggregate_channels(recordings_list, renamed_channel_ids=renamed_channel_ids)
             assert all(chan in renamed_channel_ids for chan in recording_agg_renamed.get_channel_ids())
 
             # test properties
@@ -87,28 +87,29 @@ def test_channelsaggregationrecording():
             assert "quality" not in recording_agg_prop.get_property_keys()
             print(recording_agg_prop.get_property("brain_area"))
 
+
 def test_split_then_aggreate_preserve_user_property():
     """
     Checks that splitting then aggregating a recording preserves the unit_id to property mapping.
     """
 
     num_channels = 10
-    durations = [10,5]
+    durations = [10, 5]
     recording = generate_recording(num_channels=num_channels, durations=durations, set_probe=False)
-    
-    recording.set_property(key='group', values=[2,0,1,1,1,0,1,0,1,2])
 
-    old_properties = recording.get_property(key='group')
+    recording.set_property(key="group", values=[2, 0, 1, 1, 1, 0, 1, 0, 1, 2])
+
+    old_properties = recording.get_property(key="group")
     old_channel_ids = recording.channel_ids
-    old_properties_ids_dict = dict(zip(old_channel_ids,old_properties))
+    old_properties_ids_dict = dict(zip(old_channel_ids, old_properties))
 
-    split_recordings = recording.split_by('group')
+    split_recordings = recording.split_by("group")
 
     aggregated_recording = aggregate_channels(split_recordings)
 
-    new_properties = aggregated_recording.get_property(key='group')
+    new_properties = aggregated_recording.get_property(key="group")
     new_channel_ids = aggregated_recording.channel_ids
-    new_properties_ids_dict = dict(zip(new_channel_ids,new_properties))
+    new_properties_ids_dict = dict(zip(new_channel_ids, new_properties))
 
     assert np.all(old_properties_ids_dict == new_properties_ids_dict)
 
@@ -123,6 +124,37 @@ def test_channel_aggregation_preserve_ids():
     aggregated_recording = aggregate_channels([recording1, recording2])
     assert aggregated_recording.get_num_channels() == 5
     assert list(aggregated_recording.get_channel_ids()) == ["a", "b", "c", "d", "e"]
+
+
+def test_aggretion_labelling_for_lists():
+    """Aggregated lists of recordings get different labels depending on their underlying labels"""
+
+    recording1 = generate_recording(num_channels=4, durations=[20], set_probe=False)
+    recording2 = generate_recording(num_channels=2, durations=[20], set_probe=False)
+
+    # If we don't label at all, aggregation will add a 'group' label
+    recording1.set_property("group", [0, 0, 0, 0])
+    recording2.set_property("group", [0, 0])
+    aggregated_recording = aggregate_channels([recording1, recording2])
+    group_property = aggregated_recording.get_property("group")
+    assert np.all(group_property == [0, 0, 0, 0, 1, 1])
+
+    # If we have different group labels, these should be respected
+    recording1.set_property("group", [2, 2, 2, 2])
+    recording2.set_property("group", [6, 6])
+    aggregated_recording = aggregate_channels([recording1, recording2])
+    group_property = aggregated_recording.get_property("group")
+    assert np.all(group_property == [2, 2, 2, 2, 6, 6])
+
+    # If we use `split_by`, aggregation should retain the split_by property, even if we only pass the list
+    recording1.set_property("user_group", [6, 7, 6, 7])
+    recording_list = list(recording1.split_by("user_group").values())
+    aggregated_recording = aggregate_channels(recording_list)
+    group_property = aggregated_recording.get_property("group")
+    assert np.all(group_property == [2, 2, 2, 2])
+    user_group_property = aggregated_recording.get_property("user_group")
+    # Note, aggregation reorders the channel_ids into the order of the ids of each individual recording
+    assert np.all(user_group_property == [6, 6, 7, 7])
 
 
 def test_channel_aggregation_does_not_preserve_ids_if_not_unique():

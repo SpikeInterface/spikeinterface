@@ -19,9 +19,21 @@ class ChannelsAggregationRecording(BaseRecording):
             recording_list = list(recording_list_or_dict.values())
         elif isinstance(recording_list_or_dict, list):
             recording_list = recording_list_or_dict
+
+            # Check if the recordings were previously split using `split_by`
+            if recording_list[0].get_annotation("split_by_property") is None:
+                # If default 'group'ing (all equal 0), we label the recordings using the 'group' property
+                recording_groups = []
+                for recording in recording_list:
+                    recording_groups.extend(recording.get_property("group"))
+                if np.all(np.unique(recording_groups) == np.array([0])):
+                    for group_id, recording in enumerate(recording_list):
+                        recording.set_property("group", group_id * np.ones(recording.get_num_channels()))
         else:
-            raise TypeError("`aggregate_channels` only accepts a list of recordings or a dict whose values are all recordings.")
-        
+            raise TypeError(
+                "`aggregate_channels` only accepts a list of recordings or a dict whose values are all recordings."
+            )
+
         self._recordings = recording_list
 
         self._perform_consistency_checks()
@@ -215,7 +227,7 @@ def aggregate_channels(recording_list, renamed_channel_ids=None):
     Parameters
     ----------
     recording_list: list | dict
-        List or dict of BaseRecording objects to aggregate
+        List or dict of BaseRecording objects to aggregate.
     renamed_channel_ids: array-like
         If given, channel ids are renamed as provided.
 
