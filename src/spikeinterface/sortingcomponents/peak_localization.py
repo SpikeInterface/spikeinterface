@@ -23,7 +23,12 @@ from spikeinterface.core import get_channel_distances
 
 from spikeinterface.postprocessing.unit_locations import dtype_localize_by_method, possible_localization_methods
 
-from spikeinterface.postprocessing.localization_tools import make_radial_order_parents, solve_monopolar_triangulation, enforce_decrease_shells_data, get_grid_convolution_templates_and_weights
+from spikeinterface.postprocessing.localization_tools import (
+    make_radial_order_parents,
+    solve_monopolar_triangulation,
+    enforce_decrease_shells_data,
+    get_grid_convolution_templates_and_weights,
+)
 
 from .tools import get_prototype_and_waveforms_from_peaks
 

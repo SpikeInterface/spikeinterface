@@ -19,7 +19,11 @@ import warnings
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface.postprocessing import correlogram_for_one_segment
 from spikeinterface.core import SortingAnalyzer, get_noise_levels
-from spikeinterface.core.template_tools import get_template_extremum_channel, get_template_extremum_amplitude, get_dense_templates_array
+from spikeinterface.core.template_tools import (
+    get_template_extremum_channel,
+    get_template_extremum_amplitude,
+    get_dense_templates_array,
+)
 
 
 try:

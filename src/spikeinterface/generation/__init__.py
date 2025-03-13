@@ -31,4 +31,20 @@ from .template_database import (
 )
 
 # expose the core generate functions
-from spikeinterface.core.generate import generate_recording, generate_sorting, generate_snippets, generate_templates, generate_recording_by_size, generate_ground_truth_recording, add_synchrony_to_sorting, synthesize_random_firings, inject_some_duplicate_units, inject_some_split_units, synthetize_spike_train_bad_isi, NoiseGeneratorRecording, noise_generator_recording, InjectTemplatesRecording, inject_templates
+from spikeinterface.core.generate import (
+    generate_recording,
+    generate_sorting,
+    generate_snippets,
+    generate_templates,
+    generate_recording_by_size,
+    generate_ground_truth_recording,
+    add_synchrony_to_sorting,
+    synthesize_random_firings,
+    inject_some_duplicate_units,
+    inject_some_split_units,
+    synthetize_spike_train_bad_isi,
+    NoiseGeneratorRecording,
+    noise_generator_recording,
+    InjectTemplatesRecording,
+    inject_templates,
+)
