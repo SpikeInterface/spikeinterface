@@ -21,12 +21,9 @@ from .tools import make_multi_method_doc
 
 from spikeinterface.core import get_channel_distances
 
-from ..postprocessing.unit_locations import (
-    dtype_localize_by_method,
-    possible_localization_methods,
-)
+from spikeinterface.postprocessing.unit_locations import dtype_localize_by_method, possible_localization_methods
 
-from ..postprocessing.localization_tools import (
+from spikeinterface.postprocessing.localization_tools import (
     make_radial_order_parents,
     solve_monopolar_triangulation,
     enforce_decrease_shells_data,
