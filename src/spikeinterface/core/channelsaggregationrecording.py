@@ -20,8 +20,10 @@ class ChannelsAggregationRecording(BaseRecording):
         elif isinstance(recording_list_or_dict, list):
             recording_list = recording_list_or_dict
         else:
-            raise TypeError("`aggregate_channels` only accepts a list of recordings or a dict whose values are all recordings.")
-        
+            raise TypeError(
+                "`aggregate_channels` only accepts a list of recordings or a dict whose values are all recordings."
+            )
+
         self._recordings = recording_list
 
         self._perform_consistency_checks()
