@@ -68,7 +68,7 @@ def aggregate_levels(df, study, case_keys=None, levels_to_keep=None, map_name=No
     return df, new_case_keys, labels, colors
 
 
-def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10"):
+def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10", colors=None):
     """
     Plot run times for a BenchmarkStudy.
 
@@ -80,6 +80,10 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10")
         A selection of cases to plot, if None, then all.
     levels_to_keep : list | None, default: None
         A list of levels to keep. Run times are aggregated by these levels.
+    map_name : str, default: "tab10"
+        The name of the map to use for colors.
+    colors : dict | None, default: None
+        A dictionary of colors to use for each case key.
 
     Returns
     -------
@@ -93,11 +97,11 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10")
         case_keys = list(study.cases.keys())
 
     run_times = study.get_run_times(case_keys=case_keys)
-    run_times, case_keys, labels, colors = aggregate_levels(
+    run_times, case_keys, labels, colors_ = aggregate_levels(
         run_times, study, case_keys, levels_to_keep, map_name=map_name
     )
+    palette_keys = case_keys
 
-    fig, ax = plt.subplots()
     if levels_to_keep is None:
         x = None
         hue = case_keys
@@ -111,10 +115,18 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10")
         # to displaye the 2 levels. We need to set the colors for the hue level alone
         x, hue = levels_to_keep
         hues = np.unique([c[1] for c in case_keys])
-        colors = get_some_colors(hues, map_name=map_name, color_engine="matplotlib", shuffle=True, margin=1)
+        colors_ = get_some_colors(hues, map_name=map_name, color_engine="matplotlib", shuffle=True, margin=1)
         plt_fun = sns.boxplot
+        palette_keys = hues
     else:
         raise ValueError("plot_run_times(): more than 2 levels to keep is not supported")
+
+    colors = colors or colors_
+    assert all(
+        [key in colors for key in palette_keys]
+    ), f"colors must have a color for each palette key: {palette_keys}"
+
+    fig, ax = plt.subplots()
 
     plt_fun(data=run_times, y="run_times", x=x, hue=hue, ax=ax, palette=colors)
 
@@ -234,6 +246,8 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None):
             ax.set_yticks([])
         ax.set_xticks([])
 
+    return fig
+
 
 def plot_performances(study, mode="ordered", performance_names=("accuracy", "precision", "recall"), case_keys=None):
     """
@@ -260,13 +274,25 @@ def plot_performances(study, mode="ordered", performance_names=("accuracy", "pre
         The resulting figure containing the plots
     """
     if mode == "snr":
-        warnings.warn("Use study.plot_performances_vs_snr() instead")
+        warnings.warn(
+            "Use study.plot_performances_vs_snr() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return plot_performances_vs_snr(study, case_keys=case_keys, performance_names=performance_names)
     elif mode == "ordered":
-        warnings.warn("Use study.plot_performances_ordered() instead")
+        warnings.warn(
+            "Use study.plot_performances_ordered() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return plot_performances_ordered(study, case_keys=case_keys, performance_names=performance_names)
     elif mode == "swarm":
-        warnings.warn("Use study.plot_performances_swarm() instead")
+        warnings.warn(
+            "Use study.plot_performances_swarm() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return plot_performances_swarm(study, case_keys=case_keys, performance_names=performance_names)
     else:
         raise ValueError("plot_performances() : wrong mode ")
@@ -280,6 +306,7 @@ def plot_performances_vs_snr(
     snr_dataset_reference=None,
     levels_to_keep=None,
     map_name="tab10",
+    colors=None,
 ):
     """
     Plots performance metrics against signal-to-noise ratio (SNR) for different cases in a study.
@@ -288,18 +315,20 @@ def plot_performances_vs_snr(
     ----------
     study : object
         The study object containing the cases and results.
-    case_keys : list, optional
+    case_keys : list | None, default: None
         List of case keys to include in the plot. If None, all cases in the study are included.
-    figsize : tuple, optional
+    figsize : tuple | None, default: None
         Size of the figure.
-    performance_names : tuple, optional
+    performance_names : tuple, default: ("accuracy", "recall", "precision")
         Names of the performance metrics to plot. Default is ("accuracy", "recall", "precision").
-    snr_dataset_reference : str, optional
+    snr_dataset_reference : str | None, default: None
         Reference dataset key to use for SNR. If None, the SNR of each dataset is used.
-    levels_to_keep : list, optional
+    levels_to_keep : list | None, default: None
         Levels to group by when mapping case keys.
-    map_name : str, optional
+    map_name : str, default: "tab10"
         Name of the colormap to use for plotting. Default is "tab10".
+    colors : dict | None, default: None
+        A dictionary of colors to use for each case key.
 
     Returns
     -------
@@ -317,7 +346,9 @@ def plot_performances_vs_snr(
 
         ax = axs[count, 0]
         case_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_keep)
-        colors = study.get_colors(map_name=map_name, levels_to_group_by=levels_to_keep)
+        colors_ = study.get_colors(map_name=map_name, levels_to_group_by=levels_to_keep)
+        colors = colors or colors_
+        assert all([key in colors for key in case_keys]), f"colors must have a color for each case key: {case_keys}"
 
         for key, key_list in case_keys.items():
             color = colors[key]
@@ -367,6 +398,7 @@ def plot_performances_ordered(
     orientation="vertical",
     figsize=None,
     map_name="tab10",
+    colors=None,
 ):
     """
     Plot performances ordered by decreasing performance.
@@ -387,6 +419,8 @@ def plot_performances_ordered(
         The size of the figure.
     map_name : str | None, default: "tab10"
         The name of the map to use for colors.
+    colors : dict | None, default: None
+        A dictionary of colors to use for each case key.
 
     Returns
     -------
@@ -396,21 +430,24 @@ def plot_performances_ordered(
     import matplotlib.pyplot as plt
 
     num_axes = len(performance_names)
-    if orientation == "vertical":
-        fig, axs = plt.subplots(nrows=num_axes, figsize=figsize, squeeze=False)
-    elif orientation == "horizontal":
-        fig, axs = plt.subplots(ncols=num_axes, figsize=figsize, squeeze=False)
-    else:
-        raise ValueError("orientation must be 'vertical' or 'horizontal'")
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
 
     perfs = study.get_performance_by_unit(case_keys=case_keys)
-    perfs, case_keys, labels, colors = aggregate_levels(perfs, study, case_keys, levels_to_keep, map_name=map_name)
+    perfs, case_keys, labels, colors_ = aggregate_levels(perfs, study, case_keys, levels_to_keep, map_name=map_name)
+    colors = colors or colors_
+    assert all([key in colors for key in case_keys]), f"colors must have a color for each case key: {case_keys}"
+
+    if orientation == "vertical":
+        fig, axs = plt.subplots(nrows=num_axes, figsize=figsize, squeeze=True)
+    elif orientation == "horizontal":
+        fig, axs = plt.subplots(ncols=num_axes, figsize=figsize, squeeze=True)
+    else:
+        raise ValueError("orientation must be 'vertical' or 'horizontal'")
 
     for count, performance_name in enumerate(performance_names):
-        ax = axs[count, 0]
+        ax = axs[count]
 
         for key in case_keys:
             color = colors[key]
@@ -434,6 +471,8 @@ def plot_performances_swarm(
     case_keys=None,
     performance_names=("accuracy", "recall", "precision"),
     levels_to_keep=None,
+    map_name=None,
+    colors=None,
 ):
     """
     Plot performances as a swarm plot.
@@ -448,6 +487,10 @@ def plot_performances_swarm(
         A list of performance names to plot.
     levels_to_keep : list | None, default: None
         A list of levels to keep. Performances are aggregated by these levels.
+    map_name : str | None, default: None
+        The name of the map to use for colors.
+    colors : dict | None, default: None
+        A dictionary of colors to use for each case key.
 
     Returns
     -------
@@ -462,7 +505,14 @@ def plot_performances_swarm(
         case_keys = list(study.cases.keys())
 
     perfs = study.get_performance_by_unit(case_keys=case_keys)
-    perfs, case_keys, labels, colors = aggregate_levels(perfs, study, case_keys, levels_to_keep)
+    perfs, case_keys, _, _ = aggregate_levels(perfs, study, case_keys, levels_to_keep)
+
+    if colors is not None:
+        assert all(
+            [key in colors for key in performance_names]
+        ), f"colors must have a color for each performance name: {performance_names}"
+
+    palette = colors or map_name
 
     fig, ax = plt.subplots()
 
@@ -476,7 +526,7 @@ def plot_performances_swarm(
         value_vars=performance_names,
     )
     df["x"] = df.apply(lambda r: " ".join([str(r[col]) for col in levels]), axis=1)
-    sns.swarmplot(data=df, x="x", y="Score", hue="Metric", dodge=True, ax=ax)
+    sns.swarmplot(data=df, x="x", y="Score", hue="Metric", dodge=True, ax=ax, palette=palette)
 
     despine(ax)
 
@@ -571,7 +621,7 @@ def plot_performances_comparison(
 
 
 def plot_performances_vs_depth_and_snr(
-    study, performance_name="accuracy", case_keys=None, levels_to_keep=None, figsize=None
+    study, performance_name="accuracy", case_keys=None, levels_to_keep=None, map_name="viridis", figsize=None
 ):
     """
     Plot performances vs depth and snr for a study.
@@ -586,6 +636,8 @@ def plot_performances_vs_depth_and_snr(
         A selection of cases to plot, if None, then all.
     levels_to_keep : list | None, default: None
         A list of levels to keep. Performances are aggregated by these levels.
+    map_name : str | None, default: "viridis"
+        The name of the map to use for colors.
     figsize : tuple | None, default: None
         The size of the figure.
 
@@ -624,7 +676,7 @@ def plot_performances_vs_depth_and_snr(
         depth = np.concatenate(all_depths)
 
         ax = axs[0, count]
-        points = ax.scatter(depth, snr, c=perfs, label="matched")
+        points = ax.scatter(depth, snr, c=perfs, label="matched", cmap=map_name)
         points.set_clim(0, 1)
         ax.set_xlabel("depth")
         ax.set_ylabel("snr")
@@ -643,7 +695,7 @@ def plot_performances_vs_depth_and_snr(
     return fig
 
 
-def plot_performance_losses(study, case0, case1, performance_names=["accuracy"], figsize=None):
+def plot_performance_losses(study, case0, case1, performance_names=["accuracy"], map_name="coolwarm", figsize=None):
     """
     Plot performance losses between two cases.
 
@@ -657,7 +709,10 @@ def plot_performance_losses(study, case0, case1, performance_names=["accuracy"],
         The second case key.
     performance_names : list | tuple, default: ["accuracy"]
         A list of performance names to plot.
+    map_name : str, default: "coolwarm"
+        The name of the map to use for colors.
     figsize : tuple | None, default: None
+        The size of the figure.
 
     Returns
     -------
@@ -672,7 +727,7 @@ def plot_performance_losses(study, case0, case1, performance_names=["accuracy"],
 
         ax = axs[0, count]
 
-        positions = study.get_result(case0)["gt_comparison"].sorting1.get_property("gt_unit_locations")
+        positions = study.get_gt_unit_locations(case0)
 
         analyzer = study.get_sorting_analyzer(case0)
         metrics_case0 = analyzer.get_extension("quality_metrics").get_data()
@@ -682,7 +737,7 @@ def plot_performance_losses(study, case0, case1, performance_names=["accuracy"],
         y_case1 = study.get_result(case1)["gt_comparison"].get_performance()[perf_name].values
 
         ax.set_xlabel("depth (um)")
-        im = ax.scatter(positions[:, 1], x, c=(y_case1 - y_case0), cmap="coolwarm")
+        im = ax.scatter(positions[:, 1], x, c=(y_case1 - y_case0), cmap=map_name)
         fig.colorbar(im, ax=ax, label=perf_name)
         im.set_clim(-1, 1)
 
@@ -696,6 +751,7 @@ def plot_performance_losses(study, case0, case1, performance_names=["accuracy"],
     return fig
 
 
+### UTILS ###
 def sigmoid(x, x0, k, b):
     with warnings.catch_warnings(action="ignore"):
         out = (1 / (1 + np.exp(-k * (x - x0)))) + b

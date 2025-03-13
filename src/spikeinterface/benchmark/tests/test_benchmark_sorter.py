@@ -263,7 +263,7 @@ if __name__ == "__main__":
     if study_folder_simple.exists():
         shutil.rmtree(study_folder_simple)
     _create_simple_study(study_folder_simple)
-    # test_SorterStudy(study_folder_simple)
+    test_SorterStudy(study_folder_simple)
     study_folder_complex = (
         Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_SorterStudy_complex"
     )
