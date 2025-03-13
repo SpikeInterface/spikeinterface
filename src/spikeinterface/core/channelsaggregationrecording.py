@@ -17,27 +17,21 @@ class ChannelsAggregationRecording(BaseRecording):
 
         if isinstance(recording_list_or_dict, dict):
             recording_list = list(recording_list_or_dict.values())
+            recording_ids = list(recording_list_or_dict.keys())
         elif isinstance(recording_list_or_dict, list):
             recording_list = recording_list_or_dict
-
-            # Check if the recordings were previously split using `split_by`
-            if recording_list[0].get_annotation("split_by_property") is None:
-                # If default 'group'ing (all equal 0), we label the recordings using the 'group' property
-                recording_groups = []
-                for recording in recording_list:
-                    if (group_property := recording.get_property("group")) is not None:
-                        recording_groups.extend(group_property)
-                    else:
-                        recording_groups.extend([0])
-                if np.all(np.unique(recording_groups) == np.array([0])):
-                    for group_id, recording in enumerate(recording_list):
-                        recording.set_property("group", group_id * np.ones(recording.get_num_channels()))
+            recording_ids = range(len(recording_list))
         else:
             raise TypeError(
                 "`aggregate_channels` only accepts a list of recordings or a dict whose values are all recordings."
             )
 
         self._recordings = recording_list
+
+        splitting_known = self._is_splitting_known()
+        if not splitting_known:
+            for group_id, recording in zip(recording_ids, recording_list):
+                recording.set_property("group", [group_id] * recording.get_num_channels())
 
         self._perform_consistency_checks()
         sampling_frequency = recording_list[0].get_sampling_frequency()
@@ -122,6 +116,25 @@ class ChannelsAggregationRecording(BaseRecording):
     @property
     def recordings(self):
         return self._recordings
+
+    def _is_splitting_known(self):
+
+        # If we have the `split_by_property` annotation, we know how the recording was split
+        if self._recordings[0].get_annotation("split_by_property") is not None:
+            return True
+
+        # Check if all 'group' properties are equal to 0
+        recording_groups = []
+        for recording in self._recordings:
+            if (group_labels := recording.get_property("group")) is not None:
+                recording_groups.extend(group_labels)
+            else:
+                recording_groups.extend([0])
+        # If so, we don't know the splitting
+        if np.all(np.unique(recording_groups) == np.array([0])):
+            return False
+        else:
+            return True
 
     def _perform_consistency_checks(self):
 

@@ -127,14 +127,12 @@ def test_channel_aggregation_preserve_ids():
 
 
 def test_aggretion_labelling_for_lists():
-    """Aggregated lists of recordings get different labels depending on their underlying labels"""
+    """Aggregated lists of recordings get different labels depending on their underlying `property`s"""
 
     recording1 = generate_recording(num_channels=4, durations=[20], set_probe=False)
     recording2 = generate_recording(num_channels=2, durations=[20], set_probe=False)
 
     # If we don't label at all, aggregation will add a 'group' label
-    recording1.set_property("group", [0, 0, 0, 0])
-    recording2.set_property("group", [0, 0])
     aggregated_recording = aggregate_channels([recording1, recording2])
     group_property = aggregated_recording.get_property("group")
     assert np.all(group_property == [0, 0, 0, 0, 1, 1])
@@ -150,6 +148,35 @@ def test_aggretion_labelling_for_lists():
     recording1.set_property("user_group", [6, 7, 6, 7])
     recording_list = list(recording1.split_by("user_group").values())
     aggregated_recording = aggregate_channels(recording_list)
+    group_property = aggregated_recording.get_property("group")
+    assert np.all(group_property == [2, 2, 2, 2])
+    user_group_property = aggregated_recording.get_property("user_group")
+    # Note, aggregation reorders the channel_ids into the order of the ids of each individual recording
+    assert np.all(user_group_property == [6, 6, 7, 7])
+
+
+def test_aggretion_labelling_for_dicts():
+    """Aggregated dicts of recordings get different labels depending on their underlying `property`s"""
+
+    recording1 = generate_recording(num_channels=4, durations=[20], set_probe=False)
+    recording2 = generate_recording(num_channels=2, durations=[20], set_probe=False)
+
+    # If we don't label at all, aggregation will add a 'group' label based on the dict keys
+    aggregated_recording = aggregate_channels({0: recording1, "cat": recording2})
+    group_property = aggregated_recording.get_property("group")
+    assert np.all(group_property == [0, 0, 0, 0, "cat", "cat"])
+
+    # If we have different group labels, these should be respected
+    recording1.set_property("group", [2, 2, 2, 2])
+    recording2.set_property("group", [6, 6])
+    aggregated_recording = aggregate_channels({0: recording1, "cat": recording2})
+    group_property = aggregated_recording.get_property("group")
+    assert np.all(group_property == [2, 2, 2, 2, 6, 6])
+
+    # If we use `split_by`, aggregation should retain the split_by property, even if we pass a different dict
+    recording1.set_property("user_group", [6, 7, 6, 7])
+    recordings_dict = recording1.split_by("user_group")
+    aggregated_recording = aggregate_channels(recordings_dict)
     group_property = aggregated_recording.get_property("group")
     assert np.all(group_property == [2, 2, 2, 2])
     user_group_property = aggregated_recording.get_property("user_group")
