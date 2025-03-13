@@ -5,7 +5,7 @@ from typing import Optional, Literal
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from ..core import get_closest_channels
+from spikeinterface.core import get_closest_channels
 from spikeinterface.core.baserecording import BaseRecording
 
 from .filter import fix_dtype

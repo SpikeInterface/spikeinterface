@@ -8,7 +8,7 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from .filter import fix_dtype
 
-from ..core import get_random_data_chunks
+from spikeinterface.core import get_random_data_chunks
 
 
 class ScaleRecordingSegment(BasePreprocessorSegment):
