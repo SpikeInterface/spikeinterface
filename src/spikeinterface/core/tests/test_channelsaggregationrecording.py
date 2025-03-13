@@ -126,7 +126,7 @@ def test_channel_aggregation_preserve_ids():
     assert list(aggregated_recording.get_channel_ids()) == ["a", "b", "c", "d", "e"]
 
 
-def test_aggretion_labelling_for_lists():
+def test_aggregation_labeling_for_lists():
     """Aggregated lists of recordings get different labels depending on their underlying `property`s"""
 
     recording1 = generate_recording(num_channels=4, durations=[20], set_probe=False)
