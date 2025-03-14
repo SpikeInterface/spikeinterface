@@ -96,7 +96,6 @@ def generate_sorting(
     add_spikes_on_borders=False,
     num_spikes_per_border=3,
     border_size_samples=20,
-    extra_outputs=False,
     seed=None,
 ):
     """
