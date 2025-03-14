@@ -782,7 +782,8 @@ def plot_performance_losses(study, case0, case1, performance_names=["accuracy"],
 
 ### UTILS ###
 def sigmoid(x, x0, k, b):
-    with warnings.catch_warnings(action="ignore"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
         out = (1 / (1 + np.exp(-k * (x - x0)))) + b
     return out
 
