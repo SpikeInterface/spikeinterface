@@ -453,10 +453,6 @@ class BenchmarkStudy:
             # metrics.to_csv(filename, sep="\t", index=True)
 
     def get_metrics(self, key):
-        import pandas as pd
-
-        dataset_key = self.cases[key]["dataset"]
-
         analyzer = self.get_sorting_analyzer(key)
         ext = analyzer.get_extension("quality_metrics")
         if ext is None:
@@ -466,14 +462,25 @@ class BenchmarkStudy:
         metrics = ext.get_data()
         return metrics
 
-        # filename = self.folder / "metrics" / f"{self.key_to_str(dataset_key)}.csv"
-        # if not filename.exists():
-        #     return
-        # metrics = pd.read_csv(filename, sep="\t", index_col=0)
-        # dataset_key = self.cases[key]["dataset"]
-        # recording, gt_sorting = self.datasets[dataset_key]
-        # metrics.index = gt_sorting.unit_ids
-        # return metrics
+    def get_all_metrics(self, case_keys=None):
+        """
+        Return a DataFrame with concatented metrics for multiple cases.
+        """
+        import pandas as pd
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+        if isinstance(case_keys[0], str):
+            index = pd.Index(case_keys, name=self.levels)
+        else:
+            index = pd.MultiIndex.from_tuples(case_keys, names=self.levels)
+        assert all(key in self.cases for key in case_keys), "Some case keys are not in cases"
+        metrics = []
+        for key in case_keys:
+            metrics.append(self.get_metrics(key))
+        metrics = pd.concat(metrics)
+        metrics.index = index
+        return metrics
 
     def get_units_snr(self, key):
         """ """
