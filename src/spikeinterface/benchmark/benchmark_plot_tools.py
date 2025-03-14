@@ -68,7 +68,7 @@ def aggregate_levels(df, study, case_keys=None, levels_to_keep=None, map_name=No
     return df, new_case_keys, labels, colors
 
 
-def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10", colors=None):
+def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10", colors=None, figsize=None):
     """
     Plot run times for a BenchmarkStudy.
 
@@ -84,6 +84,8 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10",
         The name of the map to use for colors.
     colors : dict | None, default: None
         A dictionary of colors to use for each case key.
+    figsize : tuple | None, default: None
+        The size of the figure.
 
     Returns
     -------
@@ -134,7 +136,7 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10",
         [key in colors for key in palette_keys]
     ), f"colors must have a color for each palette key: {palette_keys}"
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
 
     plt_fun(data=run_times, y="run_times", x=x, hue=hue, ax=ax, palette=colors)
 
@@ -146,7 +148,7 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10",
     return fig
 
 
-def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None):
+def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, figsize=None):
     """
     Plot unit counts for a study: "num_well_detected", "num_false_positive", "num_redundant", "num_overmerged"
 
@@ -160,7 +162,8 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None):
         A list of levels to keep. Unit counts are aggregated by these levels.
     colors : dict | None, default: None
         A dictionary of colors to use for each class ("Well Detected", "False Positive", "Redundant", "Overmerged").
-
+    figsize : tuple | None, default: None
+        The size of the figure.
 
     Returns
     -------
@@ -177,7 +180,6 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None):
 
     count_units = study.get_count_units(case_keys=case_keys)
     count_units, case_keys, _, _ = aggregate_levels(count_units, study, case_keys, levels_to_keep)
-    fig, ax = plt.subplots()
     count_units = count_units.drop(columns=["num_gt", "num_sorter", "num_bad"])
 
     for col in count_units.columns:
@@ -191,6 +193,8 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None):
     columns = count_units.columns.tolist()
     colors = get_some_colors(columns, color_engine="auto", map_name="hot")
     colors["Well Detected"] = "green"
+
+    fig, ax = plt.subplots(figsize=figsize)
 
     df = pd.melt(
         count_units.reset_index(),
@@ -495,6 +499,7 @@ def plot_performances_swarm(
     levels_to_keep=None,
     map_name=None,
     colors=None,
+    figsize=None,
 ):
     """
     Plot performances as a swarm plot.
@@ -513,6 +518,8 @@ def plot_performances_swarm(
         The name of the map to use for colors.
     colors : dict | None, default: None
         A dictionary of colors to use for each case key.
+    figsize : tuple | None, default: None
+        The size of the figure.
 
     Returns
     -------
@@ -536,7 +543,7 @@ def plot_performances_swarm(
 
     palette = colors or map_name
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
 
     levels = perfs.index.names
 
