@@ -78,7 +78,7 @@ jobs:
         run: pip list
 
       - name: Test core
-        run: pytest -m "core"
+        run: pytest -m "core" -n auto  --dist loadfile
         shell: bash
 
       - name: Install Dependencies for Timing Display
