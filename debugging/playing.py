@@ -32,46 +32,17 @@ if __name__ == '__main__':
     # try num units 5 and 65
     recordings_list, _ = generate_session_displacement_recordings(
         num_units=5,
-        recording_durations=[200, 200, 200],
-        recording_shifts=((0, 0), (0, -200), (0, 150)),  # TODO: can see how well this is recaptured by comparing the displacements to the known displacement + gradient
-        non_rigid_gradient=None, # 0.1, # 0.1,
-        seed=55,  # 52
+        recording_durations=[25, 25, 25],
+        recording_shifts=((0, 0), (0, -200), (0, 150)),
+        non_rigid_gradient=None,
+        seed=55,
     )
 
-    if False:
-        import numpy as np
-
-        recordings_list = [
-            si.read_zarr(r"C:\Users\Joe\Downloads\M25_D18_2024-11-05_12-38-28_VR1.zarr\M25_D18_2024-11-05_12-38-28_VR1.zarr"),
-            si.read_zarr(r"C:\Users\Joe\Downloads\M25_D18_2024-11-05_12-08-47_OF1.zarr\M25_D18_2024-11-05_12-08-47_OF1.zarr"),
-        ]
-
-        recordings_list = [si.astype(rec, np.float32) for rec in recordings_list]
-        recordings_list = [si.bandpass_filter(rec) for rec in recordings_list]
-        recordings_list = [si.common_reference(rec, operator="median") for rec in recordings_list]
-
-    # --------------------------------------------------------------------------------------
-    # Compute the peaks / locations with your favourite method
-    # --------------------------------------------------------------------------------------
-    # Note if you did motion correction the peaks are on the motion object.
-    # There is a function 'session_alignment.align_sessions_after_motion_correction()
-    # you can use instead of the below.
-    if False:
-        peaks_list, peak_locations_list = session_alignment.compute_peaks_locations_for_session_alignment(
-            recordings_list,
-            detect_kwargs={"method": "locally_exclusive"},
-            localize_peaks_kwargs={"method": "grid_convolution"},
-        )
-        np.save("peaks_1.npy", peaks_list[0])
-        np.save("peaks_2.npy", peaks_list[1])
-        np.save("peaks_3.npy", peaks_list[2])
-        np.save("peak_locs_1.npy", peak_locations_list[0])
-        np.save("peak_locs_2.npy", peak_locations_list[1])
-        np.save("peak_locs_3.npy", peak_locations_list[2])
-
-           # if False:
-    peaks_list = [np.load("peaks_1.npy"), np.load("peaks_2.npy"), np.load("peaks_3.npy")]
-    peak_locations_list = [np.load("peak_locs_1.npy"), np.load("peak_locs_2.npy"), np.load("peak_locs_3.npy")]
+    peaks_list, peak_locations_list = session_alignment.compute_peaks_locations_for_session_alignment(
+        recordings_list,
+        detect_kwargs={"method": "locally_exclusive"},
+        localize_peaks_kwargs={"method": "grid_convolution"},
+    )
 
     # --------------------------------------------------------------------------------------
     # Do the estimation
@@ -84,13 +55,13 @@ if __name__ == '__main__':
     non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
     non_rigid_window_kwargs["rigid"] = False
 #    non_rigid_window_kwargs["num_shifts_global"] = 500
-#    non_rigid_window_kwargs["num_shifts_block"] = 24  # TODO: it makes no sense for this to be larger than the window
+#    non_rigid_window_kwargs["num_shifts_block"] = 24  # TODO: it makes no sense for this to be larger than the windo
     non_rigid_window_kwargs["win_step_um"] = 125
     non_rigid_window_kwargs["win_scale_um"] = 60
 
     estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
     estimate_histogram_kwargs["method"] = "chunked_median"
-    estimate_histogram_kwargs["histogram_type"] = "activity_2d"  # TODO: investigate this case thoroughly
+    estimate_histogram_kwargs["histogram_type"] = "activity_2d"
     estimate_histogram_kwargs["bin_um"] = 2
     estimate_histogram_kwargs["log_scale"] = True
     estimate_histogram_kwargs["weight_with_amplitude"] = False

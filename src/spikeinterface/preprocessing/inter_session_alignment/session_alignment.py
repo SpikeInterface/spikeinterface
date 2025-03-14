@@ -1,8 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-from numpy.lib.histograms import histogram
-
 if TYPE_CHECKING:
     from spikeinterface.core.baserecording import BaseRecording
 
