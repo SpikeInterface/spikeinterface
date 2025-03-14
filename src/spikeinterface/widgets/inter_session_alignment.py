@@ -5,7 +5,6 @@ import numpy as np
 from spikeinterface.widgets.base import BaseWidget
 from spikeinterface.widgets.base import to_attr
 from spikeinterface.widgets.motion import DriftRasterMapWidget
-from matplotlib.animation import FuncAnimation
 
 
 class SessionAlignmentWidget(BaseWidget):
