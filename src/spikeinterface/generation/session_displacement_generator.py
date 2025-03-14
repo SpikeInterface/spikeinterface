@@ -65,7 +65,7 @@ def generate_session_displacement_recordings(
         The number of units in the generated recordings.
     recording_durations : list
         An array of length (num_recordings,) specifying the
-        duration that each created recording should be.
+        duration that each created recording should be, in seconds.
     recording_shifts : list
         An array of length (num_recordings,) in which each element
         is a 2-element array specifying the (x, y) shift for the recording.
