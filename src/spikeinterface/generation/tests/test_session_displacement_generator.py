@@ -249,6 +249,27 @@ class TestSessionDisplacementGenerator:
             shifts_rigid_2 = self._get_shifts(nonrigid_none_info, rec_idx, dim_idx, initial_locations)
             assert np.array_equal(shifts_rigid, np.round(shifts_rigid_2, 5))
 
+    def test_non_rigid_shifts_list(self, options):
+        """
+        Quick check that non-rigid gradients are indeed different across
+        recordings when a list of different gradients is passed.
+        """
+        options["kwargs"]["recording_shifts"] = ((0, 0), (0, 10), (0, 10), (0, 10))
+        options["kwargs"]["seed"] = 42
+
+        _, _, same_info = generate_session_displacement_recordings(
+            **options["kwargs"],
+            non_rigid_gradient=0.50,
+        )
+        _, _, different_info = generate_session_displacement_recordings(
+            **options["kwargs"],
+            non_rigid_gradient=[0.25, 0.50, 0.75, 1.0],
+        )
+
+        # Just check the first two recordings
+        assert np.array_equal(same_info["unit_locations"][1], same_info["unit_locations"][2])
+        assert not np.array_equal(different_info["unit_locations"][1], different_info["unit_locations"][2])
+
     def _get_shifts(self, extras_dict, rec_idx, dim_idx, initial_locations):
         return extras_dict["unit_locations"][rec_idx][:, dim_idx] - initial_locations[:, dim_idx]
 

@@ -73,9 +73,10 @@ def generate_session_displacement_recordings(
         recordings are shifted relative to it. e.g. to create two recordings,
         the second shifted by 50 um in the x-direction and 250 um in the y
         direction : ((0, 0), (50, 250)).
-    non_rigid_gradient : float
+    non_rigid_gradient : None | float | list[float]
         Factor which sets the level of non-rigidty in the displacement.
         See `calculate_displacement_unit_factor` for details.
+        `None` is linear gradient.
     recording_amplitude_scalings : dict
         A dict with keys:
             "method" - order by which to apply the scalings.
@@ -133,7 +134,12 @@ def generate_session_displacement_recordings(
     generate_noise_kwargs = copy.deepcopy(generate_noise_kwargs)
 
     _check_generate_session_displacement_arguments(
-        num_units, recording_durations, recording_shifts, recording_amplitude_scalings, shift_units_outside_probe
+        num_units,
+        recording_durations,
+        recording_shifts,
+        recording_amplitude_scalings,
+        shift_units_outside_probe,
+        non_rigid_gradient,
     )
 
     probe = generate_probe(generate_probe_kwargs, probe_name)
@@ -188,7 +194,7 @@ def generate_session_displacement_recordings(
 
         displacement_vector, displacement_unit_factor = _get_inter_session_displacements(
             shift,
-            non_rigid_gradient,
+            non_rigid_gradient[rec_idx] if isinstance(non_rigid_gradient, list) else non_rigid_gradient,
             num_units,
             unit_locations,
         )
@@ -204,7 +210,6 @@ def generate_session_displacement_recordings(
             sampling_frequency=sampling_frequency,
             durations=[duration],
             **fixed_generate_sorting_kwargs,
-            extra_outputs=True,
             seed=seed,
         )
         sorting.set_property("gt_unit_locations", unit_locations_moved)
@@ -384,7 +389,12 @@ def _amplitude_scale_templates_in_place(
 
 
 def _check_generate_session_displacement_arguments(
-    num_units, recording_durations, recording_shifts, recording_amplitude_scalings, shift_units_outside_probe
+    num_units,
+    recording_durations,
+    recording_shifts,
+    recording_amplitude_scalings,
+    shift_units_outside_probe,
+    non_rigid_gradient,
 ):
     """
     Function to check the input arguments related to recording
@@ -427,6 +437,10 @@ def _check_generate_session_displacement_arguments(
                 "The entry for each recording in `recording_amplitude_scalings` "
                 "must have the same length as the number of units."
             )
+
+    if isinstance(non_rigid_gradient, list):
+        if not len(non_rigid_gradient) == expected_num_recs:
+            raise ValueError("If `non_rigid_gradient` is a list, it must " "contain one value for each recording.")
 
 
 def _update_kwargs_for_extended_units(
