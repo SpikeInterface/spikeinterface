@@ -5,7 +5,7 @@ from typing import Optional
 from packaging.version import parse
 
 from .tf_utils import has_tf, import_tf
-from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
