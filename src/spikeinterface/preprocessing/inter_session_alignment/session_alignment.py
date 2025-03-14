@@ -8,9 +8,10 @@ if TYPE_CHECKING:
 
 import numpy as np
 from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
-from spikeinterface.sortingcomponents.motion.motion_utils import get_spatial_windows, Motion, get_spatial_bins
+from spikeinterface.sortingcomponents.motion.motion_utils import get_spatial_windows, get_spatial_bins
 from spikeinterface.sortingcomponents.motion.motion_interpolation import correct_motion_on_peaks
 from spikeinterface.sortingcomponents.motion.motion_utils import make_3d_motion_histograms
+from spikeinterface.core.motion import Motion
 
 from spikeinterface.preprocessing.inter_session_alignment import alignment_utils
 from spikeinterface.preprocessing.motion import run_peak_detection_pipeline_node
