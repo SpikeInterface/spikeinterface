@@ -1,7 +1,6 @@
 import warnings
 
 import numpy as np
-import pandas as pd
 from spikeinterface.widgets import get_some_colors
 
 
@@ -169,6 +168,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None):
         The resulting figure containing the plots
     """
     import matplotlib.pyplot as plt
+    import pandas as pd
     import seaborn as sns
     from spikeinterface.widgets.utils import get_some_colors
 
