@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from .basepreprocessor import BasePreprocessorSegment
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 
 class AverageAcrossDirectionRecording(BaseRecording):
@@ -139,7 +139,7 @@ class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-average_across_direction = define_function_from_class(
+average_across_direction = define_function_handling_dict_from_class(
     source_class=AverageAcrossDirectionRecording,
     name="average_across_direction",
 )

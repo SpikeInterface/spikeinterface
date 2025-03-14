@@ -5,7 +5,7 @@ import numpy as np
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from .filter import fix_dtype
 from spikeinterface.core import order_channels_by_depth, get_chunk_with_margin
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 
 class HighpassSpatialFilterRecording(BasePreprocessor):
@@ -245,7 +245,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
 
 
 # function for API
-highpass_spatial_filter = define_function_from_class(
+highpass_spatial_filter = define_function_handling_dict_from_class(
     source_class=HighpassSpatialFilterRecording, name="highpass_spatial_filter"
 )
 

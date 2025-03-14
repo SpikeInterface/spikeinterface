@@ -29,7 +29,7 @@ from .scale import scale_to_uV
 
 from .whiten import WhitenRecording, whiten, compute_whitening_matrix
 from .rectify import RectifyRecording, rectify
-from .clip import BlankSaturationRecording, blank_staturation, ClipRecording, clip
+from .clip import BlankSaturationRecording, blank_saturation, ClipRecording, clip
 from .common_reference import CommonReferenceRecording, common_reference
 from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
 from .silence_periods import SilencedPeriodsRecording, silence_periods

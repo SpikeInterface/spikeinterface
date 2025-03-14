@@ -5,7 +5,7 @@ from typing import Iterable, Union
 import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, get_chunk_with_margin, normal_pdf
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
@@ -136,4 +136,4 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         return gaussian
 
 
-gaussian_filter = define_function_from_class(source_class=GaussianFilterRecording, name="gaussian_filter")
+gaussian_filter = define_function_handling_dict_from_class(source_class=GaussianFilterRecording, name="gaussian_filter")

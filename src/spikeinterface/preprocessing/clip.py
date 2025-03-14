@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from spikeinterface.core import get_random_data_chunks
@@ -169,5 +169,7 @@ class ClipRecordingSegment(BasePreprocessorSegment):
         return traces
 
 
-clip = define_function_from_class(source_class=ClipRecording, name="clip")
-blank_staturation = define_function_from_class(source_class=BlankSaturationRecording, name="blank_staturation")
+clip = define_function_handling_dict_from_class(source_class=ClipRecording, name="clip")
+blank_saturation = define_function_handling_dict_from_class(
+    source_class=BlankSaturationRecording, name="blank_saturation"
+)

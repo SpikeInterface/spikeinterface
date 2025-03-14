@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 from spikeinterface.core.core_tools import (
-    define_function_from_class,
+    define_function_handling_dict_from_class,
 )
 
 from .basepreprocessor import BasePreprocessor
@@ -136,4 +136,4 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         ].astype(self._dtype)
 
 
-decimate = define_function_from_class(source_class=DecimateRecording, name="decimate")
+decimate = define_function_handling_dict_from_class(source_class=DecimateRecording, name="decimate")
