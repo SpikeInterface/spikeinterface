@@ -115,7 +115,6 @@ class PeakActivityMapWidget(BaseWidget):
                     all_rates.append(rates)
                 all_rates = np.concatenate(all_rates)
                 vmin, vmax = np.min(all_rates), np.max(all_rates)
-            self.vmin, self.vmax = vmin, vmax
 
             # Create a colorbar once
             dummy_image = self.ax.imshow([[0, 1]], visible=False, aspect="auto")
@@ -137,8 +136,8 @@ class PeakActivityMapWidget(BaseWidget):
                     with_contact_color=dp.with_contact_color,
                     with_interpolated_map=dp.with_interpolated_map,
                     with_color_bar=False,
-                    vmin=self.vmin,
-                    vmax=self.vmax,
+                    vmin=vmin,
+                    vmax=vmax,
                 )
 
                 # Update colorbar
@@ -197,7 +196,7 @@ class PeakActivityMapWidget(BaseWidget):
                 text_on_contact=text_on_contact,
             )
             if vmin is not None and vmax is not None:
-                poly.set_clim(self.vmin, self.vmax)
+                poly.set_clim(vmin, vmax)
             artists = artists + (poly, poly_contour)
 
         if with_interpolated_map:
