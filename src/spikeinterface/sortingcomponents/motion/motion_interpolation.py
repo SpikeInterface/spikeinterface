@@ -419,13 +419,9 @@ class InterpolateMotionRecording(BasePreprocessor):
                 interpolation_time_bin_centers_s = motion.temporal_bins_s
                 interpolation_time_bin_edges_s = motion.temporal_bin_edges_s
         else:
-            interpolation_time_bin_centers_s, interpolation_time_bin_edges_s = (
-                ensure_time_bins(  # TODO: something is very wrong here with the typing
-                    interpolation_time_bin_centers_s, interpolation_time_bin_edges_s
-                )
+            interpolation_time_bin_centers_s, interpolation_time_bin_edges_s = ensure_time_bins(
+                interpolation_time_bin_centers_s, interpolation_time_bin_edges_s
             )
-
-        assert len(recording._recording_segments) == 1, "multi segment not supported"  # ??
 
         for segment_index, parent_segment in enumerate(recording._recording_segments):
             # finish the per-segment part of the time bin logic
@@ -440,8 +436,8 @@ class InterpolateMotionRecording(BasePreprocessor):
                 )
                 assert segment_interpolation_time_bin_edges_s.shape == (segment_interpolation_time_bins_s.shape[0] + 1,)
             else:
-                segment_interpolation_time_bins_s = interpolation_time_bin_centers_s  # [segment_index]
-                segment_interpolation_time_bin_edges_s = interpolation_time_bin_edges_s  # [segment_index]
+                segment_interpolation_time_bins_s = interpolation_time_bin_centers_s[segment_index]
+                segment_interpolation_time_bin_edges_s = interpolation_time_bin_edges_s[segment_index]
 
             rec_segment = InterpolateMotionRecordingSegment(
                 parent_segment,
