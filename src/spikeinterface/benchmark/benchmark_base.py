@@ -470,14 +470,16 @@ class BenchmarkStudy:
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        if isinstance(case_keys[0], str):
-            index = pd.Index(case_keys, name=self.levels)
-        else:
-            index = pd.MultiIndex.from_tuples(case_keys, names=self.levels)
         assert all(key in self.cases for key in case_keys), "Some case keys are not in cases"
         metrics = []
+        indices = []
         for key in case_keys:
             metrics.append(self.get_metrics(key))
+            indices.extend([key] * len(metrics[-1]))
+        if isinstance(case_keys[0], str):
+            index = pd.Index(indices, name=self.levels)
+        else:
+            index = pd.MultiIndex.from_tuples(indices, names=self.levels)
         metrics = pd.concat(metrics)
         metrics.index = index
         return metrics
