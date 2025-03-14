@@ -513,14 +513,14 @@ def load_motion_info(folder):
         else:
             motion_info[name] = None
 
-    try:
+    if (folder / "motion").is_dir():
         motion = Motion.load(folder / "motion")
-    except IOError as e:
-        warnings.warn("The Motion object could not be loaded. Trying to load the legacy format")
+    else:
+        warnings.warn("Trying to load Motion from the legacy format")
         required_files = ["spatial_bins.npy", "temporal_bins.npy", "motion.npy"]
         for required_file in required_files:
             if not (folder / required_file).is_file():
-                raise IOError("The provided folder is not a valid legacy motion folder")
+                raise IOError("The provided folder is not a valid motion folder")
         spatial_bins_um = np.load(folder / "spatial_bins.npy")
         temporal_bins_s = [np.load(folder / "temporal_bins.npy")]
         displacement = [np.load(folder / "motion.npy")]
