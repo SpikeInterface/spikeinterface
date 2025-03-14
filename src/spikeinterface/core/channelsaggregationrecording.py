@@ -1,4 +1,5 @@
 from __future__ import annotations
+import warnings
 
 import numpy as np
 
@@ -236,13 +237,17 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
         return np.concatenate(traces, axis=1)
 
 
-def aggregate_channels(recording_list, renamed_channel_ids=None):
+def aggregate_channels(
+    recording_list_or_dict=None,
+    renamed_channel_ids=None,
+    recording_list=None,
+):
     """
     Aggregates channels of multiple recording into a single recording object
 
     Parameters
     ----------
-    recording_list: list | dict
+    recording_list_or_dict: list | dict
         List or dict of BaseRecording objects to aggregate.
     renamed_channel_ids: array-like
         If given, channel ids are renamed as provided.
@@ -252,4 +257,13 @@ def aggregate_channels(recording_list, renamed_channel_ids=None):
     aggregate_recording: ChannelsAggregationRecording
         The aggregated recording object
     """
-    return ChannelsAggregationRecording(recording_list, renamed_channel_ids)
+
+    if recording_list is not None:
+        warnings.warn(
+            "`recording_list` is deprecated and will be removed in 0.105.0. Please use `recording_list_or_dict` instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        recording_list_or_dict = recording_list
+
+    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids)
