@@ -650,19 +650,13 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
     wf_max = np.max(templates)
     wf_min = np.min(templates)
 
-    x_chans = np.unique(channel_locations[:, 0])
-    if x_chans.size > 1:
-        delta_x = np.min(np.diff(x_chans))
-        if delta_x < 5:
-            delta_x = 20.0
-    else:
-        delta_x = 40.0
-
-    y_chans = np.unique(channel_locations[:, 1])
-    if y_chans.size > 1:
-        delta_y = np.min(np.diff(y_chans))
-    else:
-        delta_y = 40.0
+    direc = np.abs(channel_locations[None, :] - channel_locations[:, None])
+    scx = direc[..., 0].mean()
+    scy = direc[..., 1].mean()
+    base = max(scx, scy)
+    gap = np.linalg.norm(direc, axis=2).min()
+    delta_x = max(gap * scx / base, 20)
+    delta_y = max(gap * scy / base, 20)
 
     m = max(np.abs(wf_max), np.abs(wf_min))
     y_scale = delta_y / m * 0.7
