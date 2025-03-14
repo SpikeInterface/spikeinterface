@@ -2,6 +2,7 @@ import warnings
 
 import numpy as np
 from spikeinterface.widgets import get_some_colors
+from .benchmark_tools import sigmoid, fit_sigmoid
 
 
 def despine(ax_or_axes):
@@ -798,18 +799,3 @@ def plot_performance_losses(study, case0, case1, performance_names=["accuracy"],
     despine(axs)
 
     return fig
-
-
-### UTILS ###
-def sigmoid(x, x0, k, b):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        out = (1 / (1 + np.exp(-k * (x - x0)))) + b
-    return out
-
-
-def fit_sigmoid(xdata, ydata, p0=None):
-    from scipy.optimize import curve_fit
-
-    popt, pcov = curve_fit(sigmoid, xdata, ydata, p0)
-    return popt

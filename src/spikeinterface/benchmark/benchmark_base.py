@@ -460,6 +460,9 @@ class BenchmarkStudy:
             return None
 
         metrics = ext.get_data()
+        # add GT unit id column
+        gt_unit_ids = analyzer.sorting.unit_ids
+        metrics.loc[:, "gt_unit_id"] = gt_unit_ids
         return metrics
 
     def get_all_metrics(self, case_keys=None):
