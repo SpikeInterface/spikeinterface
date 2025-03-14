@@ -137,14 +137,10 @@ def generate_sorting(
     num_segments = len(durations)
     unit_ids = [str(idx) for idx in np.arange(num_units)]
 
-    extra_outputs_dict = {
-        "firing_rates": [],
-    }
-
     spikes = []
     for segment_index in range(num_segments):
         num_samples = int(sampling_frequency * durations[segment_index])
-        samples, labels, firing_rates_array = synthesize_poisson_spike_vector(
+        samples, labels = synthesize_poisson_spike_vector(
             num_units=num_units,
             sampling_frequency=sampling_frequency,
             duration=durations[segment_index],
@@ -178,17 +174,12 @@ def generate_sorting(
             )
             spikes.append(spikes_on_borders)
 
-        extra_outputs_dict["firing_rates"].append(firing_rates_array)
-
     spikes = np.concatenate(spikes)
     spikes = spikes[np.lexsort((spikes["sample_index"], spikes["segment_index"]))]
 
     sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
-    if extra_outputs:
-        return sorting, extra_outputs_dict
-    else:
-        return sorting
+    return sorting
 
 
 def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
@@ -796,7 +787,7 @@ def synthesize_poisson_spike_vector(
     unit_indices = unit_indices[sort_indices]
     spike_frames = spike_frames[sort_indices]
 
-    return spike_frames, unit_indices, firing_rates
+    return spike_frames, unit_indices
 
 
 def synthesize_random_firings(

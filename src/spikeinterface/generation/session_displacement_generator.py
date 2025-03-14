@@ -198,7 +198,8 @@ def generate_session_displacement_recordings(
         unit_locations_moved[:, :2] += displacement_vector[0, :][np.newaxis, :] * displacement_unit_factor
 
         # Generate the sorting (e.g. spike times) for the recording
-        sorting, sorting_extra_outputs = generate_sorting(
+
+        sorting = generate_sorting(
             num_units=num_units,
             sampling_frequency=sampling_frequency,
             durations=[duration],
@@ -232,7 +233,11 @@ def generate_session_displacement_recordings(
                 templates_array_moved if rec_idx == 0 else extra_outputs_dict["templates_array_moved"][0]
             )
             _amplitude_scale_templates_in_place(
-                first_rec_templates, templates_array_moved, recording_amplitude_scalings, sorting_extra_outputs, rec_idx
+                first_rec_templates,
+                templates_array_moved,
+                recording_amplitude_scalings,
+                fixed_generate_sorting_kwargs,
+                rec_idx,
             )
 
         # Bring it all together in a `InjectTemplatesRecording` and
@@ -260,7 +265,7 @@ def generate_session_displacement_recordings(
         output_sortings.append(sorting)
         extra_outputs_dict["unit_locations"].append(unit_locations_moved)
         extra_outputs_dict["templates_array_moved"].append(templates_array_moved)
-        extra_outputs_dict["firing_rates"].append(sorting_extra_outputs["firing_rates"][0])
+        extra_outputs_dict["firing_rates"].append(fixed_generate_sorting_kwargs["firing_rates"])
 
     if extra_outputs:
         return output_recordings, output_sortings, extra_outputs_dict
@@ -314,7 +319,7 @@ def _get_inter_session_displacements(shift, non_rigid_gradient, num_units, unit_
 
 
 def _amplitude_scale_templates_in_place(
-    first_rec_templates, moved_templates, recording_amplitude_scalings, sorting_extra_outputs, rec_idx
+    first_rec_templates, moved_templates, recording_amplitude_scalings, fixed_generate_sorting_kwargs, rec_idx
 ):
     """
     Scale a set of templates given a set of scaling values. The scaling
@@ -334,8 +339,8 @@ def _amplitude_scale_templates_in_place(
         current recording, that will be scaled.
     recording_amplitude_scalings : dict
         see `generate_session_displacement_recordings()`.
-    sorting_extra_outputs : dict
-        Extra output of `generate_sorting` holding the firing frequency of all units.
+    fixed_generate_sorting_kwargs : dict
+        Dict holding the firing frequency of all units.
         The unit order is assumed to match the templates.
     rec_idx : int
         The index of the recording for which the templates are being scaled.
@@ -356,7 +361,7 @@ def _amplitude_scale_templates_in_place(
 
     if method in ["by_amplitude_and_firing_rate", "by_firing_rate"]:
 
-        firing_rates_hz = sorting_extra_outputs["firing_rates"][0]
+        firing_rates_hz = fixed_generate_sorting_kwargs["firing_rates"]
 
         if method == "by_amplitude_and_firing_rate":
             neg_ampl = np.min(np.min(first_rec_templates, axis=2), axis=1)

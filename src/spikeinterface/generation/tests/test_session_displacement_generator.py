@@ -2,6 +2,7 @@ import pytest
 
 from spikeinterface.generation.session_displacement_generator import generate_session_displacement_recordings
 from spikeinterface.generation.drifting_generator import generate_drifting_recording
+from spikeinterface.core.generate import _ensure_firing_rates
 from spikeinterface.core import order_channels_by_depth
 import numpy as np
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -158,12 +159,12 @@ class TestSessionDisplacementGenerator:
 
                 # Exact spike times are not preserved when seed is None
                 assert np.array_equal(
-                    output_sortings_same[0].get_unit_spike_train(unit_idx),
-                    output_sortings_same[rec_idx].get_unit_spike_train(unit_idx),
+                    output_sortings_same[0].get_unit_spike_train(str(unit_idx)),
+                    output_sortings_same[rec_idx].get_unit_spike_train(str(unit_idx)),
                 )
                 assert not np.array_equal(
-                    output_sortings_different[0].get_unit_spike_train(unit_idx),
-                    output_sortings_different[rec_idx].get_unit_spike_train(unit_idx),
+                    output_sortings_different[0].get_unit_spike_train(str(unit_idx)),
+                    output_sortings_different[rec_idx].get_unit_spike_train(str(unit_idx)),
                 )
                 # Firing rates should always be preserved.
                 assert np.array_equal(
@@ -174,6 +175,15 @@ class TestSessionDisplacementGenerator:
                     extra_outputs_different["firing_rates"][0][unit_idx],
                     extra_outputs_different["firing_rates"][rec_idx][unit_idx],
                 )
+
+    def test_ensure_unit_params_assumption(self):
+        """
+        Test the assumption that `_ensure_unit_params` does not
+        change an array of firing rates, otherwise `generate_sorting`
+        will internally change our firing rates.
+        """
+        array = np.random.randn(5)
+        assert np.array_equal(_ensure_firing_rates(array, 5, None), array)
 
     @pytest.mark.parametrize("dim_idx", [0, 1])
     def test_x_y_shift_non_rigid(self, options, dim_idx):
