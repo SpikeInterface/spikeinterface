@@ -199,6 +199,8 @@ class TestInterSessionAlignment:
             # TODO: this is direct copy from above, can merge
             times = recording.get_times()
 
+            chunk_time_window = chunked_histogram_info["chunked_bin_size_s"]
+
             num_windows = (np.ceil(np.max(times)) - np.min(times)) / chunk_time_window
             temp_bin_edges = np.arange(np.ceil(num_windows) + 1) * chunk_time_window
             centers = temp_bin_edges[:-1] + chunk_time_window / 2
