@@ -281,7 +281,7 @@ def generate_session_displacement_recordings(
 def _get_inter_session_displacements(shift, non_rigid_gradient, num_units, unit_locations):
     """
     Get the formatted `displacement_vector` and `displacement_unit_factor`
-    used to shift the `unit_locations`..
+    used to shift the `unit_locations`.
 
     Parameters
     ---------
