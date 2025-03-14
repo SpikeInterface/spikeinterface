@@ -37,7 +37,7 @@ class BenchmarkStudy:
 
     benchmark_class = None
 
-    def __init__(self, study_folder):
+    def __init__(self, study_folder, benchmark_kwargs=None):
         self.folder = Path(study_folder)
         self.datasets = {}
         self.analyzers = {}
@@ -46,10 +46,11 @@ class BenchmarkStudy:
         self.levels = None
         self.colors = None
         self.map_name = "tab10"
+        self.benchmark_kwargs = benchmark_kwargs
         self.scan_folder()
 
     @classmethod
-    def create(cls, study_folder, datasets={}, cases={}, levels=None):
+    def create(cls, study_folder, datasets={}, cases={}, levels=None, benchmark_kwargs=None):
         """
         Create a BenchmarkStudy from a dict of datasets and cases.
 
@@ -68,6 +69,8 @@ class BenchmarkStudy:
                 * params
         levels : list | None
             If the keys of the cases are tuples, this is the list of levels names.
+        benchmark_kwargs : dict | None, default: None
+            The kwargs for the Benchmark class.
 
         Returns
         -------
@@ -155,9 +158,12 @@ class BenchmarkStudy:
         # cases is dumped to a pickle file, json is not possible because of the tuple key
         (study_folder / "cases.pickle").write_bytes(pickle.dumps(cases))
 
-        return cls(study_folder)
+        return cls(study_folder, benchmark_kwargs=benchmark_kwargs)
 
     def create_benchmark(self, key):
+        """
+        Create a benchmark for a given key.
+        """
         raise NotImplementedError
 
     def scan_folder(self):
@@ -193,7 +199,10 @@ class BenchmarkStudy:
             result_folder = self.folder / "results" / self.key_to_str(key)
             if result_folder.exists():
                 result = self.benchmark_class.load_folder(result_folder)
-                benchmark = self.create_benchmark(key)
+                benchmark_kwargs = {"key": key}
+                if self.benchmark_kwargs is not None:
+                    benchmark_kwargs.update(self.benchmark_kwargs)
+                benchmark = self.create_benchmark(**benchmark_kwargs)
                 benchmark.result.update(result)
                 self.benchmarks[key] = benchmark
             else:

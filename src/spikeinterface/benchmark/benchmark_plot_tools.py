@@ -331,6 +331,7 @@ def plot_performances_vs_snr(
     performance_names=("accuracy", "recall", "precision"),
     snr_dataset_reference=None,
     levels_to_keep=None,
+    orientation="vertical",
     map_name="tab10",
     colors=None,
 ):
@@ -351,6 +352,8 @@ def plot_performances_vs_snr(
         Reference dataset key to use for SNR. If None, the SNR of each dataset is used.
     levels_to_keep : list | None, default: None
         Levels to group by when mapping case keys.
+    orientation : "vertical" | "horizontal", default: "vertical"
+        The orientation of the plot.
     map_name : str, default: "tab10"
         Name of the colormap to use for plotting. Default is "tab10".
     colors : dict | None, default: None
@@ -366,11 +369,20 @@ def plot_performances_vs_snr(
     if case_keys is None:
         case_keys = list(study.cases.keys())
 
-    fig, axs = plt.subplots(ncols=1, nrows=len(performance_names), figsize=figsize, squeeze=False)
+    if orientation == "vertical":
+        ncols = 1
+        nrows = len(performance_names)
+    elif orientation == "horizontal":
+        ncols = len(performance_names)
+        nrows = 1
+    else:
+        raise ValueError("orientation must be 'vertical' or 'horizontal'")
+
+    fig, axs = plt.subplots(ncols=ncols, nrows=nrows, figsize=figsize, squeeze=True)
 
     for count, performance_name in enumerate(performance_names):
 
-        ax = axs[count, 0]
+        ax = axs[count]
         case_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_keep)
         colors_ = study.get_colors(map_name=map_name, levels_to_group_by=levels_to_keep)
         colors = colors or colors_
