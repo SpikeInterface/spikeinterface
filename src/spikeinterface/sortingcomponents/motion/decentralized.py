@@ -3,7 +3,15 @@ import numpy as np
 from tqdm.auto import tqdm, trange
 
 from spikeinterface.core.motion import Motion
-from .motion_utils import get_spatial_windows, get_spatial_bin_edges, make_2d_motion_histogram, scipy_conv1d
+
+from .motion_utils import (
+    get_spatial_windows,
+    get_spatial_bin_edges,
+    make_2d_motion_histogram,
+    scipy_conv1d,
+    get_spatial_bins,
+)
+
 
 from .dredge import normxcorr1d
 
@@ -135,13 +143,9 @@ class DecentralizedRegistration:
         lsqr_robust_n_iter=20,
         weight_with_amplitude=False,
     ):
-
-        dim = ["x", "y", "z"].index(direction)
-        contact_depths = recording.get_channel_locations()[:, dim]
-
-        # spatial histogram bins
-        spatial_bin_edges = get_spatial_bin_edges(recording, direction, hist_margin_um, bin_um)
-        spatial_bin_centers = 0.5 * (spatial_bin_edges[1:] + spatial_bin_edges[:-1])
+        spatial_bin_centers, spatial_bin_edges, contact_depths = get_spatial_bins(
+            recording, direction, hist_margin_um, bin_um
+        )
 
         # get spatial windows
         non_rigid_windows, non_rigid_window_centers = get_spatial_windows(
