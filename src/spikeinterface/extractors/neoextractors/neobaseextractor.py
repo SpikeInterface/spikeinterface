@@ -73,8 +73,8 @@ class _NeoBaseExtractor:
         neo_reader = cls.get_neo_io_reader(cls.NeoRawIOClass, **neo_kwargs)
 
         stream_channels = neo_reader.header["signal_streams"]
-        stream_names = stream_channels["name"].tolist()
-        stream_ids = stream_channels["id"].tolist()
+        stream_names = list(stream_channels["name"])
+        stream_ids = list(stream_channels["id"])
         return stream_names, stream_ids
 
     def build_stream_id_to_sampling_frequency_dict(self) -> Dict[str, float]:
@@ -200,13 +200,13 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             use_names_as_ids = False
 
         stream_channels = self.neo_reader.header["signal_streams"]
-        stream_names = stream_channels["name"].tolist()
-        stream_ids = stream_channels["id"].tolist()
+        stream_names = list(stream_channels["name"])
+        stream_ids = list(stream_channels["id"])
 
         if stream_id is None and stream_name is None:
             if stream_channels.size > 1:
                 raise ValueError(
-                    f"This reader have several streams: \n`stream_names`: {stream_names}\n`stream_ids`: {stream_ids}. \n"
+                    f"This reader have several streams: \nNames: {stream_names}\nIDs: {stream_ids}. \n"
                     f"Specify it from the options above with the 'stream_name' or 'stream_id' arguments"
                 )
             else:
@@ -246,52 +246,36 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         self.extra_requirements.append("neo")
 
         # find the gain to uV
-        neo_gains = signal_channels["gain"]
-        neo_offsets = signal_channels["offset"]
-        if dtype.kind == "i" and np.all(neo_gains < 0) and np.all(neo_offsets == 0):
+        gains = signal_channels["gain"]
+        offsets = signal_channels["offset"]
+
+        if dtype.kind == "i" and np.all(gains < 0) and np.all(offsets == 0):
             # special hack when all channel have negative gain: we put back the gain positive
             # this help the end user experience
             self.inverted_gain = True
-            neo_gains = -neo_gains
+            gains = -gains
         else:
             self.inverted_gain = False
 
-        # Define standard voltage units and their conversion factors to uV
-        voltage_units_to_gains = {"V": 1e6, "Volt": 1e6, "Volts": 1e6, "mV": 1e3, "uV": 1.0}
+        units = signal_channels["units"]
 
-        channel_units = signal_channels["units"]
-        fill_value = 1.0  # This should be np.nan but will break a lot of tests
-        gain_correction = np.full(shape=channel_units.size, fill_value=fill_value)
-        for unit, gain in voltage_units_to_gains.items():
-            gain_correction[channel_units == unit] = gain
+        # mark that units are V, mV or uV
+        self.has_non_standard_units = False
+        if not np.all(np.isin(units, ["V", "Volt", "mV", "uV"])):
+            self.has_non_standard_units = True
 
-        # Note that gain_to_uV should be undefined (np.nan) for non-voltage units
-        gain_to_uV = neo_gains * gain_correction
-        offset_to_uV = neo_offsets * gain_correction
+        additional_gain = np.ones(units.size, dtype="float")
+        additional_gain[units == "V"] = 1e6
+        additional_gain[units == "Volt"] = 1e6
+        additional_gain[units == "mV"] = 1e3
+        additional_gain[units == "uV"] = 1.0
+        additional_gain = additional_gain
 
-        self.set_property("gain_to_uV", gain_to_uV)
-        self.set_property("offset_to_uV", offset_to_uV)
+        final_gains = gains * additional_gain
+        final_offsets = offsets * additional_gain
 
-        # Add machinery to keep the neo units for downstream users
-        self.set_property("original_unit", channel_units)
-        self.set_property("original_gain", neo_gains)
-        self.set_property("original_offset", neo_offsets)
-
-        # Streams with mixed units are to be used with caution
-        # We warn the user when this is the case
-        # Eventually, this should not be allowed as streams should have the same units
-        supported_voltage_units = list(voltage_units_to_gains.keys())
-        is_channel_in_voltage = np.isin(channel_units, supported_voltage_units)
-        self.has_voltage_channels = np.any(is_channel_in_voltage)
-        self.has_non_voltage_channels = not np.all(is_channel_in_voltage)
-        has_mixed_units = self.has_non_voltage_channels and self.has_voltage_channels
-        if has_mixed_units:
-            warning_msg = (
-                "Found a mix of voltage and non-voltage units. "
-                'Proceed with caution. Check channel units with `recording.get_property("original_unit")`.'
-            )
-            warnings.warn(warning_msg)
-
+        self.set_property("gain_to_uV", final_gains)
+        self.set_property("offset_to_uV", final_offsets)
         if not use_names_as_ids:
             self.set_property("channel_names", signal_channels["name"])
 

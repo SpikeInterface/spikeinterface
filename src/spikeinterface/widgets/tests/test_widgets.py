@@ -480,30 +480,6 @@ class TestWidgets(unittest.TestCase):
                     self.sorting_analyzer_sparse, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
                 )
 
-    def test_plot_locations(self):
-        possible_backends = list(sw.LocationsWidget.get_possible_backends())
-        for backend in possible_backends:
-            if backend not in self.skip_backends:
-                sw.plot_locations(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
-                unit_ids = self.sorting_analyzer_dense.unit_ids[:4]
-                sw.plot_locations(
-                    self.sorting_analyzer_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
-                )
-                sw.plot_locations(
-                    self.sorting_analyzer_dense,
-                    unit_ids=unit_ids,
-                    plot_histograms=True,
-                    backend=backend,
-                    **self.backend_kwargs[backend],
-                )
-                sw.plot_locations(
-                    self.sorting_analyzer_sparse,
-                    unit_ids=unit_ids,
-                    plot_histograms=True,
-                    backend=backend,
-                    **self.backend_kwargs[backend],
-                )
-
     def test_plot_similarity(self):
         possible_backends = list(sw.TemplateSimilarityWidget.get_possible_backends())
         for backend in possible_backends:

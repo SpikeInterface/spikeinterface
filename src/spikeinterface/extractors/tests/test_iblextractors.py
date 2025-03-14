@@ -12,7 +12,6 @@ PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
 
 
 @pytest.mark.streaming_extractors
-@pytest.mark.xfail(reason="We need to fix ibllib/one-api dependency")
 class TestDefaultIblRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -107,7 +106,6 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
 
 
 @pytest.mark.streaming_extractors
-@pytest.mark.xfail(reason="We need to fix ibllib/one-api dependency")
 class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -182,7 +180,6 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
 
 
 @pytest.mark.streaming_extractors
-@pytest.mark.xfail(reason="We need to fix ibllib/one-api dependency")
 class TestIblSortingExtractor(TestCase):
     def test_ibl_sorting_extractor(self):
         """
@@ -200,9 +197,9 @@ class TestIblSortingExtractor(TestCase):
             )
         except:
             pytest.skip("Skipping test due to server being down.")
-        sorting = read_ibl_sorting(pid=PID, one=one, revision="2023-12-05")
+        sorting = read_ibl_sorting(pid=PID, one=one)
         assert len(sorting.unit_ids) == 733
-        sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True, one=one, revision="2023-12-05")
+        sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True)
         assert len(sorting_good.unit_ids) == 108
 
         # check properties
@@ -211,14 +208,14 @@ class TestIblSortingExtractor(TestCase):
         assert "brain_area" in sorting_good.get_property_keys()
 
         # load without properties
-        sorting_no_properties = read_ibl_sorting(pid=PID, one=one, load_unit_properties=False, revision="2023-12-05")
+        sorting_no_properties = read_ibl_sorting(pid=PID, load_unit_properties=False)
         # check properties
         assert "firing_rate" not in sorting_no_properties.get_property_keys()
 
 
 if __name__ == "__main__":
-    TestDefaultIblRecordingExtractorApBand.setUpClass()
-    test1 = TestDefaultIblRecordingExtractorApBand()
+    TestDefaultIblStreamingRecordingExtractorApBand.setUpClass()
+    test1 = TestDefaultIblStreamingExtractorApBand()
     test1.setUp()
     test1.test_get_stream_names()
     test1.test_dtype()
@@ -233,7 +230,7 @@ if __name__ == "__main__":
     test1.test_unscaled_trace_dtype()
 
     TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel.setUpClass()
-    test2 = TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel()
+    test2 = TestIblStreamingExtractorApBandWithLoadSyncChannel()
     test2.setUp()
     test2.test_get_stream_names()
     test2.test_get_stream_names()

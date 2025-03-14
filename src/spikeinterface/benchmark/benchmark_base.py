@@ -366,39 +366,6 @@ class BenchmarkStudy:
     def get_result(self, key):
         return self.benchmarks[key].result
 
-    def get_pairs_by_level(self, level):
-        """
-        usefull for function like plot_performance_losses() where you need to plot one pair of results
-        This generate list of pairs for a given level.
-        """
-
-        level_index = self.levels.index(level)
-
-        possible_values = []
-        for key in self.cases.keys():
-            assert isinstance(key, tuple), "get_pairs_by_level need tuple keys"
-            level_value = key[level_index]
-            if level_value not in possible_values:
-                possible_values.append(level_value)
-        assert len(possible_values) == 2, "get_pairs_by_level() : you need exactly 2 value for this levels"
-
-        pairs = []
-        for key in self.cases.keys():
-
-            case0 = list(key)
-            case1 = list(key)
-            case0[level_index] = possible_values[0]
-            case1[level_index] = possible_values[1]
-            case0 = tuple(case0)
-            case1 = tuple(case1)
-
-            pair = (case0, case1)
-
-            if pair not in pairs:
-                pairs.append(pair)
-
-        return pairs
-
 
 class Benchmark:
     """

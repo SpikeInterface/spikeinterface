@@ -17,4 +17,3 @@ Modules documentation
     sortingcomponents
     motion_correction
     generation
-    benchmark

@@ -195,21 +195,6 @@ def test_estimate_sparsity():
     )
     assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
 
-    # closest_channels : the mask should exactly 3 channels per units
-    sparsity = estimate_sparsity(
-        sorting,
-        recording,
-        num_spikes_for_sparsity=50,
-        ms_before=1.0,
-        ms_after=2.0,
-        method="closest_channels",
-        num_channels=3,
-        chunk_duration="1s",
-        progress_bar=True,
-        n_jobs=1,
-    )
-    assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
-
     # by_property
     sparsity = estimate_sparsity(
         sorting,
@@ -302,7 +287,6 @@ def test_compute_sparsity():
     # using object SortingAnalyzer
     sparsity = compute_sparsity(sorting_analyzer, method="best_channels", num_channels=2, peak_sign="neg")
     sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=50.0, peak_sign="neg")
-    sparsity = compute_sparsity(sorting_analyzer, method="closest_channels", num_channels=2)
     sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=5, peak_sign="neg")
     sparsity = compute_sparsity(
         sorting_analyzer, method="snr", threshold=5, peak_sign="neg", amplitude_mode="peak_to_peak"
@@ -320,7 +304,6 @@ def test_compute_sparsity():
     sparsity = compute_sparsity(templates, method="radius", radius_um=50.0, peak_sign="neg")
     sparsity = compute_sparsity(templates, method="snr", noise_levels=noise_levels, threshold=5, peak_sign="neg")
     sparsity = compute_sparsity(templates, method="amplitude", threshold=5, amplitude_mode="peak_to_peak")
-    sparsity = compute_sparsity(templates, method="closest_channels", num_channels=2)
 
     with pytest.warns(DeprecationWarning):
         sparsity = compute_sparsity(templates, method="ptp", noise_levels=noise_levels, threshold=5)

@@ -191,7 +191,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         new_peaks["sample_index"] -= peak_shifts
 
         mask = clustering_label >= 0
-        sorting_pre_peeler = NumpySorting.from_samples_and_labels(
+        sorting_pre_peeler = NumpySorting.from_times_labels(
             new_peaks["sample_index"][mask],
             clustering_label[mask],
             sampling_frequency,

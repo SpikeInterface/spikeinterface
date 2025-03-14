@@ -24,9 +24,8 @@ class MetricsBaseWidget(BaseWidget):
         If given, a list of quality metrics to skip, default: None
     include_metrics: list or None, default: None
         If given, a list of quality metrics to include, default: None
-    unit_colors : dict | None, default: None
-        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
-        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
+    unit_colors :  dict or None, default: None
+        If given, a dictionary with unit ids as keys and colors as values
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
     include_metrics_data : bool, default: True

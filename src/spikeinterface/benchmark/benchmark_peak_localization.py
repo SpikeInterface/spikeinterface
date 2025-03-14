@@ -403,7 +403,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 #     ax2.spines["top"].set_visible(False)
 #     ax2.spines["right"].set_visible(False)
 #     ax2.set_xlim(xmin, xmax)
-#     ax2.set_xlabel(r"x ($\\mu$m)")
+#     ax2.set_xlabel(r"x ($\mu$m)")
 #     ax2.set_ylabel("# spikes")
 
 

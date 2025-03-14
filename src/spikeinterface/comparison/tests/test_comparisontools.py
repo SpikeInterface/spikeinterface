@@ -20,8 +20,8 @@ from spikeinterface.core.generate import generate_sorting
 
 def make_sorting(times1, labels1, times2, labels2):
     sampling_frequency = 30000.0
-    sorting1 = NumpySorting.from_samples_and_labels([times1], [labels1], sampling_frequency)
-    sorting2 = NumpySorting.from_samples_and_labels([times2], [labels2], sampling_frequency)
+    sorting1 = NumpySorting.from_times_labels([times1], [labels1], sampling_frequency)
+    sorting2 = NumpySorting.from_times_labels([times2], [labels2], sampling_frequency)
     return sorting1, sorting2
 
 

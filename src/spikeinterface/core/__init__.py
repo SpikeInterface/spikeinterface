@@ -172,8 +172,6 @@ from .analyzer_extension_core import (
     compute_noise_levels,
 )
 
-from .motion import Motion
-
 # Important not for compatibility!!
 # This wil be uncommented after 0.100
 from .waveforms_extractor_backwards_compatibility import (

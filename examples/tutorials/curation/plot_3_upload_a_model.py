@@ -136,4 +136,4 @@ Upload a pipeline to Hugging Face Hub
 #
 #     Chris Halcrow
 #
-# You can see the repo with this `Model card <https://huggingface.co/SpikeInterface/toy_tetrode_model>`_.
+# You can see the repo with this Model card `here <https://huggingface.co/SpikeInterface/toy_tetrode_model>`_.

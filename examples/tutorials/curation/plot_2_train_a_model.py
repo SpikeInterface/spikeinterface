@@ -1,6 +1,6 @@
 """
 Training a model for automated curation
-=======================================
+=============================
 
 If the pretrained models do not give satisfactory performance on your data, it is easy to train your own classifier using SpikeInterface.
 """
@@ -57,7 +57,7 @@ analyzer.compute(['noise_levels','random_spikes','waveforms','templates'])
 sw.plot_unit_templates(analyzer, unit_ids=["0", "5"])
 
 ##############################################################################
-# This is as expected: great! (Find out more about plotting `using widgets <https://spikeinterface.readthedocs.io/en/latest/modules/widgets.html>`_.)
+# This is as expected: great! (Find out more about plotting using widgets `here <https://spikeinterface.readthedocs.io/en/latest/modules/widgets.html>`_.)
 # We've set up our system so that the first five units are 'good' and the next five are 'bad'.
 # So we can make a list of labels which contain this information. For real data, you could
 # use a manual curation tool to make your own list.
@@ -129,8 +129,8 @@ accuracies.head()
 # half were pure noise and half were not.
 #
 # The model also contains some more information, such as which features are "important",
-# as defined by sklearn (learn about feature importance of a
-# `Random Forest Classifier <https://scikit-learn.org/1.5/auto_examples/ensemble/plot_forest_importances.html>`_.)
+# as defined by sklearn (learn about feature importance of a Random Forest Classifier
+# `here <https://scikit-learn.org/1.5/auto_examples/ensemble/plot_forest_importances.html>`_.)
 # We can plot these:
 
 # Plot feature importances

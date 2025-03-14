@@ -102,7 +102,7 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
 
         gt_sorting = sorting_analyzer.sorting
 
-        sorting = NumpySorting.from_samples_and_labels(
+        sorting = NumpySorting.from_times_labels(
             spikes["sample_index"], spikes["cluster_index"], recording.sampling_frequency
         )
 
