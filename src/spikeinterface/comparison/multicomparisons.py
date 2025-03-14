@@ -77,11 +77,10 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             name_list=name_list,
             match_score=match_score,
             chance_score=chance_score,
+            n_jobs=n_jobs,
             verbose=verbose,
         )
-        MixinSpikeTrainComparison.__init__(
-            self, delta_time=delta_time, agreement_method=agreement_method, n_jobs=n_jobs
-        )
+        MixinSpikeTrainComparison.__init__(self, delta_time=delta_time, agreement_method=agreement_method)
         self.set_frames_and_frequency(self.object_list)
         self._spiketrain_mode = spiketrain_mode
         self._spiketrains = None
@@ -101,7 +100,6 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             match_score=self.match_score,
             chance_score=self.chance_score,
             agreement_method=self.agreement_method,
-            n_jobs=self.n_jobs,
             verbose=False,
         )
         return comp
