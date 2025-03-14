@@ -1,5 +1,4 @@
 from __future__ import annotations
-import warnings
 
 import numpy as np
 
@@ -14,25 +13,9 @@ class ChannelsAggregationRecording(BaseRecording):
 
     """
 
-    def __init__(self, recording_list_or_dict, renamed_channel_ids=None):
-
-        if isinstance(recording_list_or_dict, dict):
-            recording_list = list(recording_list_or_dict.values())
-            recording_ids = list(recording_list_or_dict.keys())
-        elif isinstance(recording_list_or_dict, list):
-            recording_list = recording_list_or_dict
-            recording_ids = range(len(recording_list))
-        else:
-            raise TypeError(
-                "`aggregate_channels` only accepts a list of recordings or a dict whose values are all recordings."
-            )
+    def __init__(self, recording_list, renamed_channel_ids=None):
 
         self._recordings = recording_list
-
-        splitting_known = self._is_splitting_known()
-        if not splitting_known:
-            for group_id, recording in zip(recording_ids, recording_list):
-                recording.set_property("group", [group_id] * recording.get_num_channels())
 
         self._perform_consistency_checks()
         sampling_frequency = recording_list[0].get_sampling_frequency()
@@ -117,25 +100,6 @@ class ChannelsAggregationRecording(BaseRecording):
     @property
     def recordings(self):
         return self._recordings
-
-    def _is_splitting_known(self):
-
-        # If we have the `split_by_property` annotation, we know how the recording was split
-        if self._recordings[0].get_annotation("split_by_property") is not None:
-            return True
-
-        # Check if all 'group' properties are equal to 0
-        recording_groups = []
-        for recording in self._recordings:
-            if (group_labels := recording.get_property("group")) is not None:
-                recording_groups.extend(group_labels)
-            else:
-                recording_groups.extend([0])
-        # If so, we don't know the splitting
-        if np.all(np.unique(recording_groups) == np.array([0])):
-            return False
-        else:
-            return True
 
     def _perform_consistency_checks(self):
 
@@ -237,18 +201,14 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
         return np.concatenate(traces, axis=1)
 
 
-def aggregate_channels(
-    recording_list_or_dict=None,
-    renamed_channel_ids=None,
-    recording_list=None,
-):
+def aggregate_channels(recording_list, renamed_channel_ids=None):
     """
     Aggregates channels of multiple recording into a single recording object
 
     Parameters
     ----------
-    recording_list_or_dict: list | dict
-        List or dict of BaseRecording objects to aggregate.
+    recording_list: list
+        List of BaseRecording objects to aggregate
     renamed_channel_ids: array-like
         If given, channel ids are renamed as provided.
 
@@ -257,13 +217,4 @@ def aggregate_channels(
     aggregate_recording: ChannelsAggregationRecording
         The aggregated recording object
     """
-
-    if recording_list is not None:
-        warnings.warn(
-            "`recording_list` is deprecated and will be removed in 0.105.0. Please use `recording_list_or_dict` instead.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        recording_list_or_dict = recording_list
-
-    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids)
+    return ChannelsAggregationRecording(recording_list, renamed_channel_ids)

@@ -156,7 +156,6 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
-        from kilosort import __version__ as ks_version
         from kilosort.run_kilosort import (
             set_files,
             initialize_ops,
@@ -179,9 +178,9 @@ class Kilosort4Sorter(BaseSorter):
 
             logging.basicConfig(level=logging.INFO)
 
-        if version.parse(cls.get_sorter_version()) < version.parse("4.0.16"):
+        if version.parse(cls.get_sorter_version()) < version.parse("4.0.5"):
             raise RuntimeError(
-                "Kilosort versions before 4.0.16 are not supported"
+                "Kilosort versions before 4.0.5 are not supported"
                 "in SpikeInterface. "
                 "Please upgrade Kilosort version."
             )
@@ -315,7 +314,8 @@ class Kilosort4Sorter(BaseSorter):
             print("Skipping drift correction.")
             ops["nblocks"] = 0
 
-        drift_kwargs = dict(
+        # this function applies both preprocessing and drift correction
+        ops, bfile, st0 = compute_drift_correction(
             ops=ops,
             device=device,
             tic0=tic0,
@@ -323,29 +323,16 @@ class Kilosort4Sorter(BaseSorter):
             file_object=file_object,
             clear_cache=clear_cache,
         )
-        if version.parse(ks_version) >= version.parse("4.0.28"):
-            drift_kwargs.update(dict(verbose=verbose))
-
-        # this function applies both preprocessing and drift correction
-        ops, bfile, st0 = compute_drift_correction(**drift_kwargs)
 
         if save_preprocessed_copy:
             save_preprocessing(results_dir / "temp_wh.dat", ops, bfile)
 
         # Sort spikes and save results
-        detect_spikes_kwargs = dict(
-            ops=ops,
-            device=device,
-            bfile=bfile,
-            tic0=tic0,
-            progress_bar=progress_bar,
-            clear_cache=clear_cache,
+        st, tF, _, _ = detect_spikes(
+            ops=ops, device=device, bfile=bfile, tic0=tic0, progress_bar=progress_bar, clear_cache=clear_cache
         )
-        if version.parse(ks_version) >= version.parse("4.0.28"):
-            detect_spikes_kwargs.update(dict(verbose=verbose))
-        st, tF, _, _ = detect_spikes(**detect_spikes_kwargs)
 
-        cluster_spikes_kwargs = dict(
+        clu, Wall = cluster_spikes(
             st=st,
             tF=tF,
             ops=ops,
@@ -355,9 +342,6 @@ class Kilosort4Sorter(BaseSorter):
             progress_bar=progress_bar,
             clear_cache=clear_cache,
         )
-        if version.parse(ks_version) >= version.parse("4.0.28"):
-            cluster_spikes_kwargs.update(dict(verbose=verbose))
-        clu, Wall = cluster_spikes(**cluster_spikes_kwargs)
 
         if params["skip_kilosort_preprocessing"]:
             ops["preprocessing"] = dict(
