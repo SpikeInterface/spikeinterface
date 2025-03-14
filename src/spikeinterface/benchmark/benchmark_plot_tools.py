@@ -180,7 +180,15 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
 
     count_units = study.get_count_units(case_keys=case_keys)
     count_units, case_keys, _, _ = aggregate_levels(count_units, study, case_keys, levels_to_keep)
-    count_units = count_units.drop(columns=["num_gt", "num_sorter", "num_bad"])
+    count_units = count_units.drop(columns=["num_gt", "num_sorter"])
+    if "num_bad" in count_units.columns:
+        count_units = count_units.drop(columns=["num_bad"])
+
+    # set hue based on exhaustive GT
+    if "num_overmerged" in count_units.columns:
+        hue_order = ["Well Detected", "False Positive", "Redundant", "Overmerged"]
+    else:
+        hue_order = ["Well Detected"]
 
     for col in count_units.columns:
         vals = count_units[col].values
@@ -216,7 +224,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
         y="Count",
         hue="Unit class",
         ax=ax,
-        hue_order=["Well Detected", "False Positive", "Redundant", "Overmerged"],
+        hue_order=hue_order,
         palette=colors,
     )
 
