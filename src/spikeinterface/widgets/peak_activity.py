@@ -16,11 +16,8 @@ class PeakActivityMapWidget(BaseWidget):
     ----------
     recording : RecordingExtractor
         The recording extractor object.
-    peaks : None or numpy array
-        Optionally can give already detected peaks
-        to avoid multiple computation.
-    detect_peaks_kwargs : None or dict, default: None
-        If peaks is None here the kwargs for detect_peak function.
+    peaks : numpy array with peak_dtype
+        The pre detected peaks (with the `detect_peaks()` function).
     bin_duration_s : None or float, default: None
         If None then static image
         If not None then it is an animation per bin.
@@ -30,15 +27,10 @@ class PeakActivityMapWidget(BaseWidget):
         Plot rates with interpolated map
     with_channel_ids : bool, default: False
         Add channel ids text on the probe
-    fixed_color_range : bool or tuple/list of length=2, default: False
-        Fixes the color bar range when animating or plotting
-        in case of a length 2 tuple [vmin,vmax], uses that to fixes the colorbar range
-        in case of bool
-            For Animation
-                True implies fixed range for all frames
-                False implies range changing based on min-max of each frame
-            For Plotting
-                True/False both use min-max of the entire time-series via imshow defaults
+    color_range : tuple | list | None, default: None
+        Sets the color bar range when animating or plotting.
+        When None, uses the min-max of the entire time-series via imshow defaults.
+        If tuple/list, the length must be 2 representing the range.
     """
 
     def __init__(
@@ -50,7 +42,7 @@ class PeakActivityMapWidget(BaseWidget):
         with_interpolated_map=True,
         with_channel_ids=False,
         with_color_bar=True,
-        fixed_color_range=True,
+        color_range=None,
         backend=None,
         **backend_kwargs,
     ):
@@ -62,7 +54,7 @@ class PeakActivityMapWidget(BaseWidget):
             with_interpolated_map=with_interpolated_map,
             with_channel_ids=with_channel_ids,
             with_color_bar=with_color_bar,
-            fixed_color_range=fixed_color_range,
+            color_range=color_range,
         )
 
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
@@ -87,40 +79,34 @@ class PeakActivityMapWidget(BaseWidget):
         )
         probe = probes[0]
 
-        if dp.bin_duration_s is None:
-            if type(dp.fixed_color_range) in [tuple, list]:
-                assert (
-                    length(dp.fixed_color_range) == 2
-                ), "fixed_color_range must be a tuple/list of length 2 representing range"
-                self._plot_one_bin(
-                    rec,
-                    probe,
-                    peaks,
-                    duration,
-                    dp.with_channel_ids,
-                    dp.with_contact_color,
-                    dp.with_interpolated_map,
-                    dp.with_color_bar,
-                    vmin=dp.fixed_color_range[0],
-                    vmax=dp.fixed_color_range[1],
-                )
-            else:
-                self._plot_one_bin(
-                    rec,
-                    probe,
-                    peaks,
-                    duration,
-                    dp.with_channel_ids,
-                    dp.with_contact_color,
-                    dp.with_interpolated_map,
-                    dp.with_color_bar,
-                )
+        if dp.color_range is not None:
+            assert isinstance(dp.color_range, (tuple, list)), "color_range must be a tuple/list"
+            assert len(dp.color_range) == 2, "color_range must be a tuple/list of length 2 representing range"
+            vmin, vmax = dp.color_range
         else:
+            vmin, vmax = None, None
+
+        if dp.bin_duration_s is None:
+            # plot aggregated activity map
+            self._plot_one_bin(
+                rec,
+                probe,
+                peaks,
+                duration,
+                dp.with_channel_ids,
+                dp.with_contact_color,
+                dp.with_interpolated_map,
+                dp.with_color_bar,
+                vmin=vmin,
+                vmax=vmax,
+            )
+        else:
+            # plot animated activity map
             bin_size = int(dp.bin_duration_s * fs)
             num_frames = int(duration / dp.bin_duration_s)
 
             # Compute max values across all time bins if needed
-            if type(dp.fixed_color_range) == bool and dp.fixed_color_range == True:
+            if vmin is None:
                 all_rates = []
                 for i in range(num_frames):
                     i0, i1 = np.searchsorted(peaks["sample_index"], [bin_size * i, bin_size * (i + 1)])
@@ -128,11 +114,8 @@ class PeakActivityMapWidget(BaseWidget):
                     rates = self._compute_rates(rec, local_peaks, dp.bin_duration_s)
                     all_rates.append(rates)
                 all_rates = np.concatenate(all_rates)
-                self.vmin, self.vmax = np.min(all_rates), np.max(all_rates)
-            if type(dp.fixed_color_range) in [tuple, list]:
-                self.vmin, self.vmax = dp.fixed_color_range
-            else:
-                self.vmin, self.vmax = None, None
+                vmin, vmax = np.min(all_rates), np.max(all_rates)
+            self.vmin, self.vmax = vmin, vmax
 
             # Create a colorbar once
             dummy_image = self.ax.imshow([[0, 1]], visible=False, aspect="auto")
