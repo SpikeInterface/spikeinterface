@@ -271,35 +271,41 @@ if __name__ == "__main__":
         shutil.rmtree(study_folder_complex)
     _create_complex_study(study_folder_complex)
     test_get_grouped_keys_mapping(study_folder_complex)
-    test_SorterStudy(study_folder_complex)
 
-    # # test out all plots and levels
-    # import matplotlib.pyplot as plt
+# # test out all plots and levels
+# import matplotlib.pyplot as plt
 
-    # from spikeinterface.benchmark.benchmark_plot_tools import (
-    #     plot_run_times, plot_performances_ordered, plot_performances_swarm,
-    #     plot_performances_vs_snr, plot_performances_vs_depth_and_snr,
-    #     plot_performances_comparison
-    # )
+# from spikeinterface.benchmark.benchmark_plot_tools import (
+#     plot_run_times, plot_performances_ordered, plot_performances_swarm,
+#     plot_performances_vs_snr, plot_performances_vs_depth_and_snr,
+#     plot_performances_comparison,
+#     plot_unit_counts
+# )
 
-    # study = SorterStudy(study_folder_complex)
+# study_folder_complex = (
+#     Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_SorterStudy_complex"
+# )
+# if not study_folder_complex.is_dir():
+#     _create_complex_study(study_folder_complex)
+# study = SorterStudy(study_folder_complex)
 
-    # study.compute_metrics()
+# study.compute_metrics()
 
-    # plot_funcs = [
-    #     plot_run_times,
-    #     plot_performances_ordered,
-    #     plot_performances_swarm,
-    #     plot_performances_vs_snr,
-    #     plot_performances_vs_depth_and_snr,
-    #     plot_performances_comparison
-    # ]
-    # levels = [["sorter_name"], ["sorter_name", "processing"]]
+# plot_funcs = [
+#     plot_run_times,
+#     plot_performances_ordered,
+#     plot_performances_swarm,
+#     plot_performances_vs_snr,
+#     plot_performances_vs_depth_and_snr,
+#     plot_performances_comparison,
+#     plot_unit_counts
+# ]
+# levels = [["sorter_name"], ["sorter_name", "processing"], ["sorter_name", "processing", "probe_type"]]
 
-    # for plot_func in plot_funcs:
-    #     for level in levels:
-    #         fig = plot_func(study, levels_to_keep=level)
-    #         fig.suptitle(f"{plot_func.__name__} - {level}")
+# for plot_func in plot_funcs:
+#     for level in levels:
+#         fig = plot_func(study, levels_to_keep=level)
+#         fig.suptitle(f"{plot_func.__name__} - {level}")
 
-    # plt.ion()
-    # plt.show()
+# plt.ion()
+# plt.show()

@@ -1,6 +1,7 @@
 import warnings
 
 import numpy as np
+import pandas as pd
 from spikeinterface.widgets import get_some_colors
 
 
@@ -119,7 +120,15 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10",
         plt_fun = sns.boxplot
         palette_keys = hues
     else:
-        raise ValueError("plot_run_times(): more than 2 levels to keep is not supported")
+        # we aggregate levels into the same column and use the last level as hue
+        levels_to_aggregate = levels_to_keep[:-1]
+        hue = levels_to_keep[-1]
+        x = " / ".join(levels_to_aggregate)
+        run_times.loc[:, x] = run_times.index.map(lambda x: " / ".join(map(str, x[:-1])))
+        hues = np.unique([c[-1] for c in case_keys])
+        colors_ = get_some_colors(hues, map_name=map_name, color_engine="matplotlib", shuffle=True, margin=1)
+        plt_fun = sns.barplot
+        palette_keys = hues
 
     colors = colors or colors_
     assert all(
@@ -138,7 +147,7 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, map_name="tab10",
     return fig
 
 
-def plot_unit_counts(study, case_keys=None):
+def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None):
     """
     Plot unit counts for a study: "num_well_detected", "num_false_positive", "num_redundant", "num_overmerged"
 
@@ -148,6 +157,11 @@ def plot_unit_counts(study, case_keys=None):
         A study object.
     case_keys : list or None
         A selection of cases to plot, if None, then all.
+    levels_to_keep : list | None, default: None
+        A list of levels to keep. Unit counts are aggregated by these levels.
+    colors : dict | None, default: None
+        A dictionary of colors to use for each class ("Well Detected", "False Positive", "Redundant", "Overmerged").
+
 
     Returns
     -------
@@ -155,44 +169,52 @@ def plot_unit_counts(study, case_keys=None):
         The resulting figure containing the plots
     """
     import matplotlib.pyplot as plt
+    import seaborn as sns
     from spikeinterface.widgets.utils import get_some_colors
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
 
     count_units = study.get_count_units(case_keys=case_keys)
-
+    count_units, case_keys, _, _ = aggregate_levels(count_units, study, case_keys, levels_to_keep)
     fig, ax = plt.subplots()
+    count_units = count_units.drop(columns=["num_gt", "num_sorter", "num_bad"])
+
+    for col in count_units.columns:
+        vals = count_units[col].values
+        if not "well_detected" in col:
+            vals = -vals
+        col_name = col.replace("num_", "").replace("_", " ").title()
+        count_units.loc[:, col_name] = vals
+        del count_units[col]
 
     columns = count_units.columns.tolist()
-    columns.remove("num_gt")
-    columns.remove("num_sorter")
-
-    ncol = len(columns)
-
     colors = get_some_colors(columns, color_engine="auto", map_name="hot")
-    colors["num_well_detected"] = "green"
+    colors["Well Detected"] = "green"
 
-    xticklabels = []
-    for i, key in enumerate(case_keys):
-        for c, col in enumerate(columns):
-            x = i + 1 + c / (ncol + 1)
-            y = count_units.loc[key, col]
-            if not "well_detected" in col:
-                y = -y
+    df = pd.melt(
+        count_units.reset_index(),
+        id_vars=levels_to_keep,
+        value_vars=columns,
+        var_name="Unit class",
+        value_name="Count",
+    )
+    if len(levels_to_keep) > 1:
+        x = " / ".join(levels_to_keep)
+        df.loc[:, x] = df.apply(lambda r: " / ".join([str(r[col]) for col in levels_to_keep]), axis=1)
+        df = df.drop(columns=levels_to_keep)
+    else:
+        x = levels_to_keep[0]
 
-            if i == 0:
-                label = col.replace("num_", "").replace("_", " ").title()
-            else:
-                label = None
-
-            ax.bar([x], [y], width=1 / (ncol + 2), label=label, color=colors[col])
-
-        xticklabels.append(study.cases[key]["label"])
-
-    ax.set_xticks(np.arange(len(case_keys)) + 1)
-    ax.set_xticklabels(xticklabels)
-    ax.legend()
+    sns.barplot(
+        data=df,
+        x=x,
+        y="Count",
+        hue="Unit class",
+        ax=ax,
+        hue_order=["Well Detected", "False Positive", "Redundant", "Overmerged"],
+        palette=colors,
+    )
 
     despine(ax)
 
