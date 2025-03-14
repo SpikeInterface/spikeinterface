@@ -31,7 +31,7 @@ from .template_database import (
 )
 
 # expose the core generate functions
-from spikeinterface.core.generate import (
+from ..core.generate import (
     generate_recording,
     generate_sorting,
     generate_snippets,

@@ -5,7 +5,7 @@ import scipy.signal
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-from spikeinterface.core import get_chunk_with_margin
+from ..core import get_chunk_with_margin
 
 try:
     import pyopencl

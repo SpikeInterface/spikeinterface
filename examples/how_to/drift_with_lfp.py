@@ -47,7 +47,7 @@ from spikeinterface.sortingcomponents.motion import estimate_motion
 
 # the dataset has been downloaded locally
 base_folder = Path("/mnt/data/sam/DataSpikeSorting/")
-np_data_drift = base_folder / "human_neuropixel" / "Pt02"
+np_data_drift = base_folder / 'human_neuropixel" / "Pt02"
 
 # ### Read the spikeglx file
 

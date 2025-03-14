@@ -3,9 +3,9 @@ This replace the previous `GroundTruthStudy`
 """
 
 import numpy as np
-from spikeinterface.core import NumpySorting
+from ..core import NumpySorting
 from .benchmark_base import Benchmark, BenchmarkStudy
-from spikeinterface.sorters import run_sorter
+from ..sorters import run_sorter
 from spikeinterface.comparison import compare_sorter_to_ground_truth
 
 

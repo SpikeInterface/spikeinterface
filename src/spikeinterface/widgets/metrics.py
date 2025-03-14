@@ -5,7 +5,7 @@ import numpy as np
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
-from spikeinterface.core.core_tools import check_json
+from ..core.core_tools import check_json
 
 
 class MetricsBaseWidget(BaseWidget):

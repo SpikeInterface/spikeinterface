@@ -6,7 +6,7 @@ from packaging.version import parse
 
 from spikeinterface.preprocessing import bandpass_filter, whiten
 
-from spikeinterface.sorters.basesorter import BaseSorter
+from ..basesorter import BaseSorter
 from spikeinterface.core.old_api_utils import NewToOldRecording
 from spikeinterface.core import load_extractor
 

@@ -10,7 +10,7 @@ from spikeinterface.core.core_tools import (
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
-from spikeinterface.core import get_chunk_with_margin, BaseRecordingSegment
+from ..core import get_chunk_with_margin, BaseRecordingSegment
 
 
 class ResampleRecording(BasePreprocessor):

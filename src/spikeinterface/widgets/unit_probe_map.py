@@ -8,8 +8,8 @@ from typing import Union
 from .base import BaseWidget, to_attr
 
 # from .utils import get_unit_colors
-from spikeinterface.core.sortinganalyzer import SortingAnalyzer
-from spikeinterface.core.template_tools import get_dense_templates_array
+from ..core.sortinganalyzer import SortingAnalyzer
+from ..core.template_tools import get_dense_templates_array
 
 
 class UnitProbeMapWidget(BaseWidget):

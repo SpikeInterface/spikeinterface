@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 
 from .normalize_scale import scale
-from spikeinterface.core import get_random_data_chunks
+from ..core import get_random_data_chunks
 
 
 def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=None, verbose=False):

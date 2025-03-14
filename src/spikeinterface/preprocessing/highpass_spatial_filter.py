@@ -4,8 +4,8 @@ import numpy as np
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from .filter import fix_dtype
-from spikeinterface.core import order_channels_by_depth, get_chunk_with_margin
-from spikeinterface.core.core_tools import define_function_from_class
+from ..core import order_channels_by_depth, get_chunk_with_margin
+from ..core.core_tools import define_function_handling_dict_from_class
 
 
 class HighpassSpatialFilterRecording(BasePreprocessor):

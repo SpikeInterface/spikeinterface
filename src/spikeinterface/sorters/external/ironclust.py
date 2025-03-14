@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Union
 import sys
 
-from spikeinterface.sorters.utils import ShellScript
-from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
+from ..utils import ShellScript
+from ..basesorter import BaseSorter, get_job_kwargs
 
 from spikeinterface.extractors import MdaRecordingExtractor, MdaSortingExtractor
 

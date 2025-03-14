@@ -882,7 +882,7 @@ class BaseRecording(BaseRecordingSnippets):
         return True
 
     def astype(self, dtype, round: bool | None = None):
-        from spikeinterface.preprocessing.astype import astype
+        from ..preprocessing.astype import astype
 
         return astype(self, dtype=dtype, round=round)
 

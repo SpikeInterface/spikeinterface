@@ -7,7 +7,7 @@ from .rasters import BaseRasterWidget
 from .base import BaseWidget, to_attr
 from .utils import get_some_colors
 
-from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+from ..core.sortinganalyzer import SortingAnalyzer
 
 from spikeinterface.core import SortingAnalyzer
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from .base import BaseWidget, to_attr
-from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+from ..core.sortinganalyzer import SortingAnalyzer
 
 
 class TemplateSimilarityWidget(BaseWidget):

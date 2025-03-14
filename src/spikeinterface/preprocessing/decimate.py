@@ -7,7 +7,7 @@ from spikeinterface.core.core_tools import (
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
-from spikeinterface.core import BaseRecordingSegment
+from ..core import BaseRecordingSegment
 
 
 class DecimateRecording(BasePreprocessor):

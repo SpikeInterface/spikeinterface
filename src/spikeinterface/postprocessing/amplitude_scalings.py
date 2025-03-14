@@ -11,7 +11,7 @@ from spikeinterface.core.sortinganalyzer import register_result_extension, Analy
 
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
 
-from spikeinterface.core.template_tools import get_dense_templates_array, _get_nbefore
+from ..core.template_tools import get_dense_templates_array, _get_nbefore
 
 
 class ComputeAmplitudeScalings(AnalyzerExtension):

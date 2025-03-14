@@ -13,11 +13,11 @@ from spikeinterface import DEV_MODE
 import spikeinterface
 
 
-from spikeinterface import __version__ as si_version
+from .. import __version__ as si_version
 
 
-from spikeinterface.core import BaseRecording, NumpySorting, load
-from spikeinterface.core.core_tools import check_json, is_editable_mode
+from ..core import BaseRecording, NumpySorting, load
+from ..core.core_tools import check_json, is_editable_mode
 from .sorterlist import sorter_dict
 from .utils import (
     SpikeSortingError,

@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Optional
 import numpy as np
 
-from spikeinterface.core import concatenate_recordings, BaseRecording, BaseRecordingSegment
+from ...core import concatenate_recordings, BaseRecording, BaseRecordingSegment
 
 from deepinterpolation.generator_collection import SequentialGenerator
 

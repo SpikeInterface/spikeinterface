@@ -5,7 +5,7 @@ import numpy as np
 from typing import Literal
 
 from .filter import highpass_filter
-from spikeinterface.core import get_random_data_chunks, order_channels_by_depth, BaseRecording
+from ..core import get_random_data_chunks, order_channels_by_depth, BaseRecording
 
 
 def detect_bad_channels(

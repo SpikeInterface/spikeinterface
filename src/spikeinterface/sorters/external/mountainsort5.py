@@ -10,7 +10,7 @@ from warnings import warn
 from spikeinterface.preprocessing import bandpass_filter, whiten
 
 from spikeinterface.core.baserecording import BaseRecording
-from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
+from ..basesorter import BaseSorter, get_job_kwargs
 
 from spikeinterface.extractors import NpzSortingExtractor
 

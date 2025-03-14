@@ -13,7 +13,7 @@ from .unit_locations import UnitLocationsWidget
 from .unit_templates import UnitTemplatesWidget
 
 
-from spikeinterface.core import SortingAnalyzer
+from ..core import SortingAnalyzer
 
 
 _default_displayed_unit_properties = ["firing_rate", "num_spikes", "x", "y", "amplitude_median", "snr", "rp_violation"]

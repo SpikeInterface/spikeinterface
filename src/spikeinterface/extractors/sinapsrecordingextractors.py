@@ -6,8 +6,8 @@ import numpy as np
 
 from probeinterface import get_probe
 
-from spikeinterface.core import BaseRecording, BaseRecordingSegment, BinaryRecordingExtractor, ChannelSliceRecording
-from spikeinterface.core.core_tools import define_function_from_class
+from ..core import BaseRecording, BaseRecordingSegment, BinaryRecordingExtractor, ChannelSliceRecording
+from ..core.core_tools import define_function_from_class
 
 
 class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
@@ -24,7 +24,7 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
     """
 
     def __init__(self, file_path: str | Path, stream_name: str = "filt"):
-        from spikeinterface.preprocessing import UnsignedToSignedRecording
+        from ..preprocessing import UnsignedToSignedRecording
 
         file_path = Path(file_path)
         meta_file = file_path.parent / f"metadata_{file_path.stem}.txt"

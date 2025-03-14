@@ -4,8 +4,8 @@ from warnings import warn
 
 import numpy as np
 
-from spikeinterface.core import SortingAnalyzer, BaseSorting
-from spikeinterface.core.core_tools import check_json
+from ..core import SortingAnalyzer, BaseSorting
+from ..core.core_tools import check_json
 from .utils import make_units_table_from_sorting, make_units_table_from_analyzer
 
 

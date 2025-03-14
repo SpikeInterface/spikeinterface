@@ -6,8 +6,8 @@ from warnings import warn
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
-from spikeinterface.core import ChannelSparsity, SortingAnalyzer, Templates
-from spikeinterface.core.basesorting import BaseSorting
+from ..core import ChannelSparsity, SortingAnalyzer, Templates
+from ..core.basesorting import BaseSorting
 
 
 class UnitWaveformsWidget(BaseWidget):

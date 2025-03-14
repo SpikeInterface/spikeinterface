@@ -9,8 +9,8 @@ import sys
 import numpy as np
 
 from spikeinterface.core import write_to_h5_dataset_format
-from spikeinterface.sorters.basesorter import BaseSorter
-from spikeinterface.sorters.utils import ShellScript
+from ..basesorter import BaseSorter
+from ..utils import ShellScript
 
 # from spikeinterface.extractors import MaxOneRecordingExtractor
 from spikeinterface.extractors import HDSortSortingExtractor

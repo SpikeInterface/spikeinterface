@@ -6,10 +6,10 @@ import warnings
 from packaging import version
 
 
-from spikeinterface.core import write_binary_recording
-from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
+from ...core import write_binary_recording
+from ..basesorter import BaseSorter, get_job_kwargs
 from .kilosortbase import KilosortBase
-from spikeinterface.sorters.basesorter import get_job_kwargs
+from ..basesorter import get_job_kwargs
 from importlib.metadata import version as importlib_version
 
 PathType = Union[str, Path]

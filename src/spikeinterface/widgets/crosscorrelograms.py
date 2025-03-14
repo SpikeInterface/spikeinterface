@@ -4,9 +4,9 @@ import numpy as np
 from typing import Union
 
 from .base import BaseWidget, to_attr
-from spikeinterface.core.sortinganalyzer import SortingAnalyzer
-from spikeinterface.core.basesorting import BaseSorting
-from spikeinterface.postprocessing import compute_correlograms
+from ..core.sortinganalyzer import SortingAnalyzer
+from ..core.basesorting import BaseSorting
+from ..postprocessing import compute_correlograms
 
 
 class CrossCorrelogramsWidget(BaseWidget):

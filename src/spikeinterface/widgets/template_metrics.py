@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .metrics import MetricsBaseWidget
-from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+from ..core.sortinganalyzer import SortingAnalyzer
 
 
 class TemplateMetricsWidget(MetricsBaseWidget):

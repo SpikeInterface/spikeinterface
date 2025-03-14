@@ -5,8 +5,8 @@ import os
 import numpy as np
 import sys
 
-from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
-from spikeinterface.sorters.utils import ShellScript
+from ..basesorter import BaseSorter, get_job_kwargs
+from ..utils import ShellScript
 
 from spikeinterface.core import write_binary_recording
 from spikeinterface.extractors import YassSortingExtractor

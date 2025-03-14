@@ -5,8 +5,8 @@ from pathlib import Path
 import sys
 import shutil
 
-from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
-from spikeinterface.sorters.utils import ShellScript
+from ..basesorter import BaseSorter, get_job_kwargs
+from ..utils import ShellScript
 
 from probeinterface import write_prb
 

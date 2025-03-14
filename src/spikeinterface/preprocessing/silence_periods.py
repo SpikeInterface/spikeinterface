@@ -5,8 +5,8 @@ import numpy as np
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-from spikeinterface.core import get_random_data_chunks, get_noise_levels
-from spikeinterface.core.generate import NoiseGeneratorRecording
+from ..core import get_random_data_chunks, get_noise_levels
+from ..core.generate import NoiseGeneratorRecording
 
 
 class SilencedPeriodsRecording(BasePreprocessor):
