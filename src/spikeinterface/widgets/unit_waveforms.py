@@ -653,7 +653,7 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
     manh = np.abs(channel_locations[None, :] - channel_locations[:, None])
     eucl = np.linalg.norm(manh, axis=2)
     np.fill_diagonal(eucl, np.inf)
-    gaus = np.exp(-.5 * (eucl / eucl.min()) ** 2)
+    gaus = np.exp(-0.5 * (eucl / eucl.min()) ** 2)
 
     weight = manh[..., 0] / eucl * gaus
     if weight.sum() == 0:
