@@ -10,9 +10,9 @@ from spikeinterface.sortingcomponents.motion.motion_utils import get_spatial_win
 from spikeinterface.sortingcomponents.motion.motion_interpolation import correct_motion_on_peaks
 from spikeinterface.sortingcomponents.motion.motion_utils import make_3d_motion_histograms
 from spikeinterface.core.motion import Motion
-
-from spikeinterface.preprocessing.inter_session_alignment import alignment_utils
 from spikeinterface.preprocessing.motion import run_peak_detection_pipeline_node
+from spikeinterface.preprocessing.inter_session_alignment import alignment_utils
+
 import copy
 
 
@@ -992,9 +992,6 @@ def _check_align_sessions_inputs(
         "entire_session",
         "chunked_mean",
         "chunked_median",
-        "chunked_supremum",
-        "first_eigenvector",
-        "chunked_gp",
     ]
     method = estimate_histogram_kwargs["method"]
     if method not in accepted_hist_methods:
@@ -1005,7 +1002,7 @@ def _check_align_sessions_inputs(
         split_name = alignment_order.split("_")
         if not "_".join(split_name[:2]) == "to_session":
             raise ValueError(
-                "`alignment_order` must take the form 'to_session_X' where X is the session number to align to."
+                "`alignment_order` must take be 'to_middle' or take the form 'to_session_X' where X is the session number to align to."
             )
 
         ses_num = int(split_name[-1])

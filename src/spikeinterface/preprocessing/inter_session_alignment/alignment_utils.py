@@ -288,26 +288,76 @@ def compute_histogram_crosscorrelation(
                     windowed_histogram_i = session_histogram_list[i, :] * window[:, np.newaxis]
                     windowed_histogram_j = session_histogram_list[j, :] * window[:, np.newaxis]
 
-                    window_i = windowed_histogram_i - np.mean(windowed_histogram_i, axis=1)[:, np.newaxis]
-                    window_j = windowed_histogram_j - np.mean(windowed_histogram_j, axis=1)[:, np.newaxis]
-
                     xcorr = np.zeros(num_iter)
 
-                    for idx, shift in enumerate(shifts_array):
-                        shifted_i = shift_array_fill_zeros(window_i, shift)
+                    import matplotlib.pyplot as plt
 
-                        xcorr[idx] = np.correlate(shifted_i.flatten(), window_j.flatten())
+                    xcorrs = []
+                    for idx, shift in enumerate(shifts_array):
+
+                        shifted_i = shift_array_fill_zeros(windowed_histogram_i, shift)
+
+                        flattened_i = shifted_i.flatten()
+                        flattened_j = windowed_histogram_j.flatten()
+
+                        norm_flatted_i = (flattened_i - np.mean(flattened_i)) / (np.std(flattened_i) + 1e-8)
+                        norm_flatted_j = (flattened_j - np.mean(flattened_j)) / (np.std(flattened_j) + 1e-8)
+
+                        xcorr[idx] = np.correlate(norm_flatted_i, norm_flatted_j) / norm_flatted_i.size
+
+                        xcorrs.append(xcorr[idx])
+                        import matplotlib.pyplot as plt
+
+                        if False and xcorr[idx] > 0.01 and i == 0 and j == 1:
+                            # Create a figure with 5 subplots (2 rows, 3 columns)
+                            fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+
+                            # First row: Images
+                            axes[0, 0].imshow(windowed_histogram_i, aspect="auto")
+                            axes[0, 0].set_title("Windowed Histogram I")
+
+                            axes[0, 1].imshow(shifted_i, aspect="auto")
+                            axes[0, 1].set_title("Shift Histogram I")
+
+                            axes[0, 2].imshow(windowed_histogram_j, aspect="auto")
+                            axes[0, 2].set_title("Windowed Histogram J")
+
+                            # Second row: Line plots
+                            axes[1, 0].plot(np.mean(shifted_i, axis=1))
+                            axes[1, 0].set_ylim(0, 1)
+                            axes[1, 0].set_title("Normalized I")
+
+                            axes[1, 1].plot(np.mean(windowed_histogram_j, axis=1))
+                            axes[1, 1].plot(np.mean(shifted_i, axis=1))
+                            axes[1, 1].set_ylim(0, 1)
+                            axes[1, 1].set_title("Normalized J")
+
+                            axes[1, 2].plot(np.array(xcorrs))
+                            axes[1, 2].set_title("Cross-Correlations")
+
+                            # Adjust layout
+                            plt.tight_layout()
+                            plt.show()
+
                 else:
                     # For a 1D histogram, compute the full cross-correlation and
                     # window the desired shifts ( this is faster than manual looping).
                     windowed_histogram_i = session_histogram_list[i, :] * window
                     windowed_histogram_j = session_histogram_list[j, :] * window
 
-                    xcorr = np.correlate(
-                        windowed_histogram_i - np.mean(windowed_histogram_i),
-                        windowed_histogram_j - np.mean(windowed_histogram_i),
-                        mode="full",
+                    windowed_histogram_i = (windowed_histogram_i - np.mean(windowed_histogram_i)) / (
+                        np.std(windowed_histogram_i) + 1e-8
                     )
+                    windowed_histogram_j = (windowed_histogram_j - np.mean(windowed_histogram_j)) / (
+                        np.std(windowed_histogram_j) + 1e-8
+                    )
+
+                    xcorr = np.correlate(
+                        windowed_histogram_i,
+                        windowed_histogram_j,
+                        mode="full",
+                    ) / (windowed_histogram_i.size)
+
                     if num_shifts:
                         window_indices = np.arange(center_bin - num_shifts, center_bin + num_shifts + 1)
                         xcorr = xcorr[window_indices]
@@ -325,7 +375,6 @@ def compute_histogram_crosscorrelation(
             # Upsample the cross-correlation
             if interpolate:
 
-                # shifts = np.arange(xcorr_matrix.shape[1])
                 shifts_upsampled = np.linspace(shifts_array[0], shifts_array[-1], shifts_array.size * interp_factor)
 
                 K = kriging_kernel(
@@ -337,12 +386,19 @@ def compute_histogram_crosscorrelation(
                 )
 
                 xcorr_matrix = np.matmul(xcorr_matrix, K, axes=[(-2, -1), (-2, -1), (-2, -1)])
-
                 xcorr_peak = np.argmax(xcorr_matrix, axis=1)
-                shift = shifts_upsampled[xcorr_peak]
+                xcorr_value = np.max(xcorr_matrix, axis=1)
+                shifts_to_idx = shifts_upsampled
             else:
                 xcorr_peak = np.argmax(xcorr_matrix, axis=1)
-                shift = shifts_array[xcorr_peak]
+                xcorr_value = np.max(xcorr_matrix, axis=1)
+                shifts_to_idx = shifts_array
+
+            shift = shifts_to_idx[xcorr_peak]
+
+            shift[np.where(xcorr_value < 0.001)] = (
+                0  # TODO: expose this threshold, ask charlie / see his paper on this threshold value.
+            )
 
             shift_matrix[i, j, :] = shift
 

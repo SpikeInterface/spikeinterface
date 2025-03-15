@@ -17,19 +17,10 @@ si.set_global_job_kwargs(n_jobs=10)
 
 if __name__ == '__main__':
 
- #   recordings_list, _ = generate_session_displacement_recordings(
- #       num_units=25,
- #       recording_durations=[800, 800, 800],
- #       recording_shifts=((0, 0), (0, -400), (0, 200)),  # TODO: can see how well this is recaptured by comparing the displacements to the known displacement + gradient
- #       non_rigid_gradient=0.3,
- #       seed=57,  # 52
- #   )
-
     # --------------------------------------------------------------------------------------
     # Load / generate some recordings
     # --------------------------------------------------------------------------------------
 
-    # try num units 5 and 65
     recordings_list, _ = generate_session_displacement_recordings(
         num_units=5,
         recording_durations=[25, 25, 25],
@@ -50,14 +41,13 @@ if __name__ == '__main__':
     # For each session, an 'activity histogram' is generated. This can be `entire_session`
     # or the session can be chunked into segments and some summary generated taken over then.
     # This might be useful if periods of the recording have weird kinetics or noise.
-    # See `session_alignment.py` for docs on these settings.
 
     non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
     non_rigid_window_kwargs["rigid"] = False
 #    non_rigid_window_kwargs["num_shifts_global"] = 500
-#    non_rigid_window_kwargs["num_shifts_block"] = 24  # TODO: it makes no sense for this to be larger than the windo
-    non_rigid_window_kwargs["win_step_um"] = 125
-    non_rigid_window_kwargs["win_scale_um"] = 60
+#    non_rigid_window_kwargs["num_shifts_block"] = 24
+ #   non_rigid_window_kwargs["win_step_um"] = 125
+ #   non_rigid_window_kwargs["win_scale_um"] = 60
 
     estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
     estimate_histogram_kwargs["method"] = "chunked_median"
