@@ -288,6 +288,13 @@ def compute_histogram_crosscorrelation(
                     windowed_histogram_i = session_histogram_list[i, :] * window[:, np.newaxis]
                     windowed_histogram_j = session_histogram_list[j, :] * window[:, np.newaxis]
 
+                    windowed_histogram_i = (windowed_histogram_i - np.mean(windowed_histogram_i)) / (
+                        np.std(windowed_histogram_i) + 1e-12
+                    )
+                    windowed_histogram_j = (windowed_histogram_j - np.mean(windowed_histogram_j)) / (
+                        np.std(windowed_histogram_j) + 1e-12
+                    )
+
                     xcorr = np.zeros(num_iter)
 
                     import matplotlib.pyplot as plt
@@ -297,13 +304,13 @@ def compute_histogram_crosscorrelation(
 
                         shifted_i = shift_array_fill_zeros(windowed_histogram_i, shift)
 
-                        flattened_i = shifted_i.flatten()
-                        flattened_j = windowed_histogram_j.flatten()
+                        #                    flattened_i = shifted_i.flatten()
+                        #                     flattened_j = windowed_histogram_j.flatten()
+                        flatten_i = shifted_i.flatten()
+                        #                    norm_flatted_i = (flattened_i - np.mean(flattened_i)) / (np.std(flattened_i) + 1e-12)
+                        #                   norm_flatted_j = (flattened_j - np.mean(flattened_j)) / (np.std(flattened_j) + 1e-12)
 
-                        norm_flatted_i = (flattened_i - np.mean(flattened_i)) / (np.std(flattened_i) + 1e-8)
-                        norm_flatted_j = (flattened_j - np.mean(flattened_j)) / (np.std(flattened_j) + 1e-8)
-
-                        xcorr[idx] = np.correlate(norm_flatted_i, norm_flatted_j) / norm_flatted_i.size
+                        xcorr[idx] = np.correlate(flatten_i, windowed_histogram_j.flatten()) / flatten_i.size
 
                         xcorrs.append(xcorr[idx])
                         import matplotlib.pyplot as plt

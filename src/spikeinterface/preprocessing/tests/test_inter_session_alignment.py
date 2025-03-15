@@ -6,9 +6,8 @@ from spikeinterface.generation.session_displacement_generator import *
 import spikeinterface  # required for monkeypatching
 import spikeinterface.full as si
 
-DEBUG = True
+DEBUG = False
 
-# TODO: this is going to be very slow. Speed it up.
 # TODO: CRITICAL: thoroughly test the motion wrapper, and tidy it up,  it looks jenky as hell!
 # TODO: need to handle the force-zeros etc.
 # TODO: write a test that now xcorr is 1 for the things.
@@ -19,6 +18,8 @@ DEBUG = True
 # 'get_traces' is never tested here.
 # do need some kind of real-data test case?
 # need to expose 0.001!
+# TODO: test shift blocks...
+
 
 """
 TODO: major
@@ -34,21 +35,23 @@ TODO: TEST:
 
 
 class TestInterSessionAlignment:
-    """ """
 
     @pytest.fixture(scope="session")
     def test_recording_1(self):
         """
-        # if this is say 20, then units go off the edge of the probe and are such low amplitude they are not picked up.
+        Generate a set of session recordings with displacement.
+        These parameters are chosen such that simulated AP signal is strong
+        on the probe to avoid  noise in the AP positions. This is important
+        for checking that the estimated shift matches the known shift.
         """
         shifts = ((0, 0), (0, -200), (0, 150))
 
         recordings_list, _ = generate_session_displacement_recordings(
             num_units=15,
-            recording_durations=[9, 10, 11],
+            recording_durations=[0.1, 0.2, 0.3],
             recording_shifts=shifts,
             non_rigid_gradient=None,
-            seed=55,  # 52
+            seed=55,
             generate_sorting_kwargs=dict(firing_rates=(100, 250), refractory_period_ms=4.0),
             generate_unit_locations_kwargs=dict(
                 margin_um=0.0,
@@ -68,21 +71,88 @@ class TestInterSessionAlignment:
         )
         return (recordings_list, shifts, peaks_list, peak_locations_list)
 
+    # TODO: need to make this a fixtures somehow, I guess rigid or nonrigid case.
+    @pytest.fixture(scope="session")
+    def recording_2(self):
+        """
+        Get a shifted inter-session alignment recording. First, interpolate-motion
+        within session. The purpose of these tests is then to run inter-session alignment
+        and check the displacements are properly added.
+        """
+        shifts = ((0, 0), (0, 250))
+
+        recordings_list, _ = generate_session_displacement_recordings(
+            num_units=5,
+            recording_durations=[0.3, 0.3],
+            recording_shifts=shifts,
+            non_rigid_gradient=0.2,
+            seed=55,  # 52
+            generate_sorting_kwargs=dict(firing_rates=(100, 250), refractory_period_ms=4.0),
+            generate_unit_locations_kwargs=dict(
+                margin_um=0.0,
+                minimum_z=0.0,
+                maximum_z=2.0,
+                minimum_distance=18.0,
+                max_iteration=100,
+                distance_strict=False,
+            ),
+            generate_noise_kwargs=dict(noise_levels=(0.0, 0.5), spatial_decay=1.0),
+            # must have some noise, or peak detection becomes completely stoachastic
+            # because it relies on the std to set the threshold.
+        )
+
+        peaks_list, peak_locations_list = session_alignment.compute_peaks_locations_for_session_alignment(
+            recordings_list,
+            detect_kwargs={"method": "locally_exclusive"},
+            localize_peaks_kwargs={"method": "grid_convolution"},
+        )
+
+        return (recordings_list, shifts, peaks_list, peak_locations_list)
+
+    def motion_correct_recordings_list(self, recordings_list, rigid_motion):
+        # Unfortunately this is necessary only in the test environemnt
+        # to avoid some issues with reinitialising the motion object.
+        interpolate_motion_kwargs = {"border_mode": "force_zeros"}
+        localize_peaks_kwargs = {"method": "grid_convolution"}
+
+        preset = "rigid_fast" if rigid_motion else "kilosort_like"
+
+        # Perform a motion correction, note this is just to make the
+        # motion correction object with the correct displacment, but
+        # the displacements should be zero here. These are manulally
+        # added in the tetsts.
+        mc_recording_list = []
+        mc_motion_info_list = []
+        for rec in recordings_list:
+            corrected_rec, motion_info = si.correct_motion(
+                rec,
+                preset=preset,
+                interpolate_motion_kwargs=interpolate_motion_kwargs,
+                output_motion_info=True,
+                localize_peaks_kwargs=localize_peaks_kwargs,
+            )
+            mc_recording_list.append(corrected_rec)
+            mc_motion_info_list.append(motion_info)
+
+        return mc_recording_list, mc_motion_info_list  # , shifts
+
     ###########################################################################
     # Functional Tests
     ############################################################################
 
-    # TODO: test shift blocks...
     @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])
     @pytest.mark.parametrize("num_shifts_global", [None, 200])
     def test_align_sessions_finds_correct_shifts(self, num_shifts_global, test_recording_1, histogram_type):
         """
-
-        Note - hard coding of expected shifts. 200*bin_um
+        Test that `align_sessions` recovers the correct (linear) shifts.
         """
         recordings_list, shifts, peaks_list, peak_locations_list = test_recording_1
 
-        assert shifts == ((0, 0), (0, -200), (0, 150)), "expected shifts are hard-coded into this test."
+        assert shifts == (
+            (0, 0),
+            (0, -200),
+            (0, 150),
+        ), "expected shifts are hard-coded into this test ahould should be set in the fixture.."
 
         compute_alignment_kwargs = session_alignment.get_compute_alignment_kwargs()
         compute_alignment_kwargs["smoothing_sigma_bin"] = None
@@ -111,6 +181,21 @@ class TestInterSessionAlignment:
                 compute_alignment_kwargs=compute_alignment_kwargs,
                 estimate_histogram_kwargs=estimate_histogram_kwargs,
             )
+
+            if False:
+                from spikeinterface.widgets import plot_session_alignment, plot_activity_histogram_2d
+                import matplotlib.pyplot as plt
+
+                plot = plot_session_alignment(
+                    recordings_list,
+                    peaks_list,
+                    peak_locations_list,
+                    extra_info["session_histogram_list"],
+                    **extra_info["corrected"],
+                    spatial_bin_centers=extra_info["spatial_bin_centers"],
+                    drift_raster_map_kwargs={"clim": (-250, 0), "scatter_decimate": 10},
+                )
+                plt.show()
 
             assert np.allclose(expected, extra_info["shifts_array"].squeeze(), rtol=0, atol=0.02)
 
@@ -248,17 +333,19 @@ class TestInterSessionAlignment:
     # These tests check that the displacement found by the inter-session alignment
     # is correctly added to any existing motion-correction results.
 
-    def test_rigid_motion_rigid_intersession(self):
+    def test_rigid_motion_rigid_intersession(self, test_recording_1):
         """
         Create an inter-session alignment recording and motion correct it so that
         it is an InterpolateMotion recording. Add some shifts to the existing displacement
         on the InterpolateMotion recordings and check the inter-session alignment shifts
         are properly added to this.
         """
-        mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
-            rigid_motion=True, rigid_intersession=True
-        )
+        recordings_list, shifts, _, _ = test_recording_1
 
+        mc_recording_list, mc_motion_info_list = self.motion_correct_recordings_list(
+            recordings_list,
+            rigid_motion=True,
+        )
         first_ses_mc_displacement = mc_recording_list[0]._recording_segments[0].motion.displacement
         second_ses_mc_displacement = mc_recording_list[1]._recording_segments[0].motion.displacement
 
@@ -288,13 +375,16 @@ class TestInterSessionAlignment:
         assert first_ses_total_displacement == [np.array([[shifts[0][1] + 0.01]])]
         assert second_ses_total_displacement == [np.array([[shifts[1][1] + 0.02]])]
 
-    def test_rigid_motion_nonrigid_intersession(self):
+    def test_rigid_motion_nonrigid_intersession(self, recording_2):
         """
         Test that non-rigid shifts estimated in inter-session alignment are properly
         added to rigid shifts estimated in motion correction.
         """
-        mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
-            rigid_motion=True, rigid_intersession=False
+        recordings_list, _, peaks_list, _ = recording_2
+
+        mc_recording_list, mc_motion_info_list = self.motion_correct_recordings_list(
+            recordings_list,
+            rigid_motion=True,
         )
 
         first_ses_mc_displacement = mc_recording_list[0]._recording_segments[0].motion.displacement
@@ -332,13 +422,19 @@ class TestInterSessionAlignment:
         assert np.all(extra_info["shifts_array"][1] + 0.02 == second_ses_total_displacement)
 
     @pytest.mark.parametrize("rigid_intersession", [True, False])
-    def test_nonrigid_motion(self, rigid_intersession):
+    def test_nonrigid_motion(self, rigid_intersession, test_recording_1, recording_2):
         """
         Now test that non-rigid motion estimates are properly combined with the
         rigid or non-rigid inter-session alignment estimates.
         """
-        mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
-            rigid_motion=False, rigid_intersession=rigid_intersession
+        if rigid_intersession:
+            recordings_list, _, peaks_list, _ = test_recording_1
+        else:
+            recordings_list, _, peaks_list, _ = recording_2
+
+        mc_recording_list, mc_motion_info_list = self.motion_correct_recordings_list(
+            recordings_list,
+            rigid_motion=False,
         )
 
         # Now the motion data has multiple displcements (per probe segment window).
@@ -372,61 +468,6 @@ class TestInterSessionAlignment:
 
         assert np.all(extra_info["shifts_array"][0] + offsets1 == first_ses_total_displacement)
         assert np.all(extra_info["shifts_array"][1] + offsets2 == second_ses_total_displacement)
-
-    # TODO: need to make this a fixtures somehow, I guess rigid or nonrigid case.
-    def get_motion_corrected_recordings_list(self, rigid_motion=True, rigid_intersession=True):
-        """
-        Get a shifted inter-session alignment recording. First, interpolate-motion
-        within session. The purpose of these tests is then to run inter-session alignment
-        and check the displacements are properly added.
-        """
-        shifts = ((0, 0), (0, 250))
-        non_rigid_gradient = None if rigid_intersession else 0.2
-        recordings_list, _ = generate_session_displacement_recordings(
-            num_units=5,
-            recording_durations=[1, 1],
-            recording_shifts=shifts,
-            non_rigid_gradient=non_rigid_gradient,
-            seed=55,  # 52
-            generate_sorting_kwargs=dict(firing_rates=(100, 250), refractory_period_ms=4.0),
-            generate_unit_locations_kwargs=dict(
-                margin_um=0.0,
-                minimum_z=0.0,
-                maximum_z=2.0,
-                minimum_distance=18.0,
-                max_iteration=100,
-                distance_strict=False,
-            ),
-            generate_noise_kwargs=dict(noise_levels=(0.0, 0.5), spatial_decay=1.0),
-            # must have some noise, or peak detection becomes completely stoachastic
-            # because it relies on the std to set the threshold.
-        )
-
-        # Unfortunately this is necessary only in the test environemnt
-        # to avoid some issues with reinitialising the motion object.
-        interpolate_motion_kwargs = {"border_mode": "force_zeros"}
-        localize_peaks_kwargs = {"method": "grid_convolution"}
-
-        preset = "rigid_fast" if rigid_motion else "kilosort_like"
-
-        # Perform a motion correction, note this is just to make the
-        # motion correction object with the correct displacment, but
-        # the displacements should be zero here. These are manulally
-        # added in the tetsts.
-        mc_recording_list = []
-        mc_motion_info_list = []
-        for rec in recordings_list:
-            corrected_rec, motion_info = si.correct_motion(
-                rec,
-                preset=preset,
-                interpolate_motion_kwargs=interpolate_motion_kwargs,
-                output_motion_info=True,
-                localize_peaks_kwargs=localize_peaks_kwargs,
-            )
-            mc_recording_list.append(corrected_rec)
-            mc_motion_info_list.append(motion_info)
-
-        return mc_recording_list, mc_motion_info_list, shifts
 
     ###########################################################################
     # Unit Tests
@@ -726,7 +767,7 @@ class TestInterSessionAlignment:
         assert kwargs["p"] == different_kwargs["p"]
 
     @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])
-    def test_interesting_debug_case(self, histogram_type):
+    def test_interesting_debug_case(self, histogram_type, recording_2):
         """
         This is an interseting debug case that is included in the tests to act as
         both a regression test and highlight how the alignment works and can lead
@@ -745,9 +786,9 @@ class TestInterSessionAlignment:
         But, in the real world it is necessary to interpolate channels like this
         or shifting whole windows would end up with very strange results!
         """
-        mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
-            rigid_motion=True, rigid_intersession=False
-        )
+        recording_list, _, _, _ = recording_2
+
+        mc_recording_list, mc_motion_info_list = self.motion_correct_recordings_list(recording_list, rigid_motion=True)
 
         # Run alignment
         non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
@@ -758,7 +799,6 @@ class TestInterSessionAlignment:
 
         compute_alignment_kwargs = session_alignment.get_compute_alignment_kwargs()
         compute_alignment_kwargs["num_shifts_block"] = 75
-        compute_alignment_kwargs["num_shifts_global"] = 300
         compute_alignment_kwargs["smoothing_sigma_bin"] = None
         compute_alignment_kwargs["smoothing_sigma_window"] = None
 
@@ -821,10 +861,10 @@ class TestInterSessionAlignment:
         # In this case, the values can be changed or the regression part of this test removed, the
         # main value is in the debugging explaination.
         if histogram_type == "activity_1d":
-            assert np.isclose(np.corrcoef(correced_hist_list[0], correced_hist_list[1])[0, 1], 0.272, atol=1e-3)
+            assert np.isclose(np.corrcoef(correced_hist_list[0], correced_hist_list[1])[0, 1], 0.283, atol=1e-3)
         else:
             assert np.isclose(
                 np.corrcoef(np.mean(correced_hist_list[0], axis=1), np.mean(correced_hist_list[1], axis=1))[0, 1],
-                0.454,
+                0.372,
                 atol=1e-3,
             )
