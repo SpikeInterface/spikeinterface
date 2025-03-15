@@ -25,7 +25,7 @@ if __name__ == '__main__':
         num_units=5,
         recording_durations=[25, 25, 25],
         recording_shifts=((0, 0), (0, -200), (0, 150)),
-        non_rigid_gradient=None,
+        non_rigid_gradient=0.1,
         seed=55,
     )
 
