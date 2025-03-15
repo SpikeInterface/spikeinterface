@@ -6,38 +6,19 @@ from spikeinterface.generation.session_displacement_generator import *
 import spikeinterface  # required for monkeypatching
 import spikeinterface.full as si
 
+DEBUG = True
 
 # TODO: this is going to be very slow. Speed it up.
-# TODO: finish implementing all NotImplementedError tests
-# TODO: tests require pytest mock, will fail without it in a strange way, check explicitly
-
 # TODO: CRITICAL: thoroughly test the motion wrapper, and tidy it up,  it looks jenky as hell!
-
 # TODO: need to handle the force-zeros etc.
-
-# test histogram is accurate (1D and 2D) (TEST MEAN VS. MEDIAN FOR 1D AND 2D
-# test chunked histogram is accurate (1D and 2D)
-# test all arguments are passed down to the correct subfunction
-# test spatial bin centers
-# unit test get_2d_activity_histogram extra arguments.
-# TODO: test the case where unit locations "y" are outside of the probe!
-
-# The full histogram from chunked histogram is tested in test_histogram_parameters().
-# TODO: check median vs mean (simply compute on the chunked_histograms, which are tested here)
-# TODO: test log, amplitude scale, etc at high level?
-
-# TODO:
-# test the main histogram (variable bin num)
-# test the chunked histogram (split the peak locs based on the sample idx!)
-# find peaks list within bin_edges
-# scale to Hz :)
-
-# 1) test all sub-functions are called with the correct arguments:
-# do this by getter
-
-# test histogram generation from known peaks, peak locations
-# test temporal histogram bin size (chunked), in general histogram_info
-# but test main histogram time window too
+# TODO: write a test that now xcorr is 1 for the things.
+# TODO: does 'to-middle' work okay?
+# TODO: rename "activity_1d" to 1d and 2d ...
+# "avg_in_bin": False,  # TODO
+# TODO: non-rigid bins is not tested!
+# 'get_traces' is never tested here.
+# do need some kind of real-data test case?
+# need to expose 0.001!
 
 """
 TODO: major
@@ -49,8 +30,6 @@ TODO: TEST:
  - non-rigid, including num shifts
  - smoothing is applied
  - ask log2 vs. log10 (e.g. for 3d histogram)
- - test the case where unit locations "y" are outside of the probe! (think about if this is really necessary)
- - concat data and see if it imporves sorting. this is more benchmarking...
 """
 
 
@@ -264,17 +243,304 @@ class TestInterSessionAlignment:
             assert np.array_equal(ses_hist, summary_func(chunked_histograms, axis=0))
 
     ###########################################################################
+    # Following Motion Correction
+    ###########################################################################
+    # These tests check that the displacement found by the inter-session alignment
+    # is correctly added to any existing motion-correction results.
+
+    def test_rigid_motion_rigid_intersession(self):
+        """
+        Create an inter-session alignment recording and motion correct it so that
+        it is an InterpolateMotion recording. Add some shifts to the existing displacement
+        on the InterpolateMotion recordings and check the inter-session alignment shifts
+        are properly added to this.
+        """
+        mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
+            rigid_motion=True, rigid_intersession=True
+        )
+
+        first_ses_mc_displacement = mc_recording_list[0]._recording_segments[0].motion.displacement
+        second_ses_mc_displacement = mc_recording_list[1]._recording_segments[0].motion.displacement
+
+        # Ensure the motion was generated rigid by the test suite
+        assert first_ses_mc_displacement[0].size == 1
+        assert second_ses_mc_displacement[0].size == 1
+
+        # Add some shifts to represent an existing motion correction
+        first_ses_mc_displacement[0] += 0.01
+        second_ses_mc_displacement[0] += 0.02
+
+        non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
+        non_rigid_window_kwargs["rigid"] = True
+
+        corrected_recordings, extra_info = session_alignment.align_sessions_after_motion_correction(
+            mc_recording_list,
+            mc_motion_info_list,
+            align_sessions_kwargs={
+                "alignment_order": "to_session_1",
+                "non_rigid_window_kwargs": non_rigid_window_kwargs,
+            },
+        )
+        first_ses_total_displacement = corrected_recordings[0]._recording_segments[0].motion.displacement
+        second_ses_total_displacement = corrected_recordings[1]._recording_segments[0].motion.displacement
+
+        # Check that the shift is the existing motion correction + the inter-session shift
+        assert first_ses_total_displacement == [np.array([[shifts[0][1] + 0.01]])]
+        assert second_ses_total_displacement == [np.array([[shifts[1][1] + 0.02]])]
+
+    def test_rigid_motion_nonrigid_intersession(self):
+        """
+        Test that non-rigid shifts estimated in inter-session alignment are properly
+        added to rigid shifts estimated in motion correction.
+        """
+        mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
+            rigid_motion=True, rigid_intersession=False
+        )
+
+        first_ses_mc_displacement = mc_recording_list[0]._recording_segments[0].motion.displacement
+        second_ses_mc_displacement = mc_recording_list[1]._recording_segments[0].motion.displacement
+
+        # Ensure the motion was generated rigid by the test suite
+        assert first_ses_mc_displacement[0].size == 1
+        assert second_ses_mc_displacement[0].size == 1
+
+        # Add some shifts to represent an existing motion correction
+        first_ses_mc_displacement[0] += 0.01
+        second_ses_mc_displacement[0] += 0.02
+
+        # All of this is direct copy between these tests...
+        non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
+        non_rigid_window_kwargs["rigid"] = False
+
+        # TODO: can we take this mc_motion_info_list directly from the recordings? double check...
+        corrected_recordings, extra_info = session_alignment.align_sessions_after_motion_correction(
+            mc_recording_list,
+            mc_motion_info_list,
+            align_sessions_kwargs={
+                "alignment_order": "to_session_1",
+                "non_rigid_window_kwargs": non_rigid_window_kwargs,
+            },
+        )
+
+        first_ses_total_displacement = corrected_recordings[0]._recording_segments[0].motion.displacement
+        second_ses_total_displacement = corrected_recordings[1]._recording_segments[0].motion.displacement
+
+        # The shift themselves are not expected to be correct to align this tricky test case
+        # (see test_interesting_debug_case) but the shift on the motion objects should
+        # match the estimateed shifts from inter-session alignment + the motion shifts set above
+        assert np.all(extra_info["shifts_array"][0] + 0.01 == first_ses_total_displacement)
+        assert np.all(extra_info["shifts_array"][1] + 0.02 == second_ses_total_displacement)
+
+    @pytest.mark.parametrize("rigid_intersession", [True, False])
+    def test_nonrigid_motion(self, rigid_intersession):
+        """
+        Now test that non-rigid motion estimates are properly combined with the
+        rigid or non-rigid inter-session alignment estimates.
+        """
+        mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
+            rigid_motion=False, rigid_intersession=rigid_intersession
+        )
+
+        # Now the motion data has multiple displcements (per probe segment window).
+        # Add offsets to these different windows.
+        first_ses_mc_displacement = mc_recording_list[0]._recording_segments[0].motion.displacement
+        second_ses_mc_displacement = mc_recording_list[1]._recording_segments[0].motion.displacement
+
+        offsets1 = np.linspace(0, 0.1, first_ses_mc_displacement[0].size)
+        offsets2 = np.linspace(0, 0.1, first_ses_mc_displacement[0].size)
+
+        first_ses_mc_displacement[0] += offsets1
+        second_ses_mc_displacement[0] += offsets2
+
+        # Now run inter-session alignment (either rigid or non-rigid). Check that
+        # the final displacement on the motion objects is a combination of the
+        # nonrigid motion estimate and rigid or nonrigid inter-session alignment estimate.
+        non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
+        non_rigid_window_kwargs["rigid"] = rigid_intersession
+
+        corrected_recordings, extra_info = session_alignment.align_sessions_after_motion_correction(
+            mc_recording_list,
+            mc_motion_info_list,
+            align_sessions_kwargs={
+                "alignment_order": "to_session_1",
+                "non_rigid_window_kwargs": non_rigid_window_kwargs,
+            },
+        )
+
+        first_ses_total_displacement = corrected_recordings[0]._recording_segments[0].motion.displacement
+        second_ses_total_displacement = corrected_recordings[1]._recording_segments[0].motion.displacement
+
+        assert np.all(extra_info["shifts_array"][0] + offsets1 == first_ses_total_displacement)
+        assert np.all(extra_info["shifts_array"][1] + offsets2 == second_ses_total_displacement)
+
+    # TODO: need to make this a fixtures somehow, I guess rigid or nonrigid case.
+    def get_motion_corrected_recordings_list(self, rigid_motion=True, rigid_intersession=True):
+        """
+        Get a shifted inter-session alignment recording. First, interpolate-motion
+        within session. The purpose of these tests is then to run inter-session alignment
+        and check the displacements are properly added.
+        """
+        shifts = ((0, 0), (0, 250))
+        non_rigid_gradient = None if rigid_intersession else 0.2
+        recordings_list, _ = generate_session_displacement_recordings(
+            num_units=5,
+            recording_durations=[1, 1],
+            recording_shifts=shifts,
+            non_rigid_gradient=non_rigid_gradient,
+            seed=55,  # 52
+            generate_sorting_kwargs=dict(firing_rates=(100, 250), refractory_period_ms=4.0),
+            generate_unit_locations_kwargs=dict(
+                margin_um=0.0,
+                minimum_z=0.0,
+                maximum_z=2.0,
+                minimum_distance=18.0,
+                max_iteration=100,
+                distance_strict=False,
+            ),
+            generate_noise_kwargs=dict(noise_levels=(0.0, 0.5), spatial_decay=1.0),
+            # must have some noise, or peak detection becomes completely stoachastic
+            # because it relies on the std to set the threshold.
+        )
+
+        # Unfortunately this is necessary only in the test environemnt
+        # to avoid some issues with reinitialising the motion object.
+        interpolate_motion_kwargs = {"border_mode": "force_zeros"}
+        localize_peaks_kwargs = {"method": "grid_convolution"}
+
+        preset = "rigid_fast" if rigid_motion else "kilosort_like"
+
+        # Perform a motion correction, note this is just to make the
+        # motion correction object with the correct displacment, but
+        # the displacements should be zero here. These are manulally
+        # added in the tetsts.
+        mc_recording_list = []
+        mc_motion_info_list = []
+        for rec in recordings_list:
+            corrected_rec, motion_info = si.correct_motion(
+                rec,
+                preset=preset,
+                interpolate_motion_kwargs=interpolate_motion_kwargs,
+                output_motion_info=True,
+                localize_peaks_kwargs=localize_peaks_kwargs,
+            )
+            mc_recording_list.append(corrected_rec)
+            mc_motion_info_list.append(motion_info)
+
+        return mc_recording_list, mc_motion_info_list, shifts
+
+    ###########################################################################
+    # Unit Tests
+    ###########################################################################
+
+    def test_shift_array_fill_zeros(self):
+        """
+        The tested function shifts a 1d array or 2d array (along a certain axis)
+        and fills space with zero. Check that arrays are shifted as expected.
+        """
+        # Test 1d array
+        test_1d = np.random.random((10))
+
+        # shift leftwards
+        res = alignment_utils.shift_array_fill_zeros(test_1d, 2)
+        assert np.all(res[8:] == 0)
+        assert np.array_equal(res[:8], test_1d[2:])
+
+        # shift rightwards
+        res = alignment_utils.shift_array_fill_zeros(test_1d, -2)
+        assert np.all(res[:2] == 0)
+        assert np.array_equal(res[2:], test_1d[:8])
+
+        # Test 2d array
+        test_2d = np.random.random((10, 10))
+
+        # shift upwards
+        res = alignment_utils.shift_array_fill_zeros(test_2d, 2)
+        assert np.all(res[8:, :] == 0)
+        assert np.array_equal(res[:8, :], test_2d[2:, :])
+
+        # shift downwards.
+        res = alignment_utils.shift_array_fill_zeros(test_2d, -2)
+        assert np.all(res[:2, :] == 0)
+        assert np.array_equal(res[2:, :], test_2d[:8, :])
+
+    def test_get_shifts_from_session_matrix(self):
+        """
+        Given a 'session matrix' of shifts (a matrix Mij where each element
+        is the shift to get from session i to session j). It is skew-symmetric.
+        """
+        matrix = np.random.random((10, 10, 2))
+
+        res = alignment_utils.get_shifts_from_session_matrix("to_middle", matrix)
+        assert np.array_equal(res, -np.mean(matrix, axis=0))
+
+        res = alignment_utils.get_shifts_from_session_matrix("to_session_1", matrix)
+        assert np.array_equal(res, -matrix[0, :, :])
+
+        res = alignment_utils.get_shifts_from_session_matrix("to_session_5", matrix)
+        assert np.array_equal(res, -matrix[4, :, :])
+
+        res = alignment_utils.get_shifts_from_session_matrix("to_session_10", matrix)
+        assert np.array_equal(res, -matrix[9, :, :])
+
+    @pytest.mark.parametrize("interpolate", [True, False])
+    @pytest.mark.parametrize("odd_hist_size", [True, False])
+    @pytest.mark.parametrize("shifts", [3, -2])
+    def test_compute_histogram_crosscorrelation(self, interpolate, odd_hist_size, shifts):
+        """
+        Create some toy array and shift it, then check that the cross-correlattion
+        correctly finds the shifts, under a number of conditions.
+        """
+        if odd_hist_size:
+            hist = np.array([1, 0, 1, 1, 1, 0])
+        else:
+            hist = np.array([0, 0, 1, 1, 0, 1, 0, 1])
+
+        hist_shift = alignment_utils.shift_array_fill_zeros(hist, shifts)
+
+        session_histogram_list = np.vstack([hist, hist_shift])
+
+        interp_factor = 50  # not used when interpolate = False
+        shifts_matrix, xcorr_matrix_unsmoothed = alignment_utils.compute_histogram_crosscorrelation(
+            session_histogram_list,
+            non_rigid_windows=np.ones((1, hist.size)),
+            num_shifts=None,
+            interpolate=interpolate,
+            interp_factor=interp_factor,
+            kriging_sigma=0.2,
+            kriging_p=2,
+            kriging_d=2,
+            smoothing_sigma_bin=None,
+            smoothing_sigma_window=None,
+        )
+        assert np.isclose(
+            alignment_utils.get_shifts_from_session_matrix("to_session_1", shifts_matrix)[-1],
+            -shifts,
+            rtol=0,
+            atol=0.01,
+        )
+
+        num_shifts = hist.size * 2 - 1
+        if interpolate:
+            assert xcorr_matrix_unsmoothed.shape[1] == num_shifts * interp_factor
+        else:
+            assert xcorr_matrix_unsmoothed.shape[1] == num_shifts
+
+    def test_compute_histogram_crosscorrelation_gaussian_filter_kwargs(self):
+        pass
+
+    def estimate_chunk_size(self):
+        pass
+
+    def test_akima_interpolate_nonrigid_shifts(self):
+        pass
+
+    # TEST:
+
+    ###########################################################################
     # Kwargs Tests
     ###########################################################################
 
-    #             "histogram_type": "activity_1d",  # _get_single_session_activity_histogram
-    # "log_scale": True,  # get_2d_activity_histogram
-    # "bin_um": 5,  # make_2d_motion_histogram
-    # "method": "chunked_median",  # _get_single_session_activity_histogram
-
     def test_get_estimate_histogram_kwargs(self, mocker, test_recording_1):
-        #  breakpoint()
-        # to make_2d_motion_histogram
 
         recordings_list, _, peaks_list, peak_locations_list = test_recording_1
 
@@ -459,276 +725,106 @@ class TestInterSessionAlignment:
         assert kwargs["sigma_um"] == different_kwargs["sigma_um"]
         assert kwargs["p"] == different_kwargs["p"]
 
-    ###########################################################################
-    # Following Motion Correction
-    ###########################################################################
+    @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])
+    def test_interesting_debug_case(self, histogram_type):
+        """
+        This is an interseting debug case that is included in the tests to act as
+        both a regression test and highlight how the alignment works and can lead
+        to imperfect results in the test setting.
 
-    def test_rigid_motion_rigid_intersession(self):
-        """ """
-        mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
-            rigid_motion=True, rigid_intersession=True
-        )
+        In this case we take a non-rigid alignment, and we see that the right-edge
+        of the histogram is aligned well, but the middle area (which lies within
+        the same nonrigid window) is not well aligned. This is in spite of the
+        shifts being estimated correctly for that segment.
 
-        # should assert these are zero!
-        first_ses_mc_displacement = mc_recording_list[0]._recording_segments[0].motion.displacement
-        second_ses_mc_displacement = mc_recording_list[1]._recording_segments[0].motion.displacement
-
-        assert first_ses_mc_displacement[0].size == 1
-        assert second_ses_mc_displacement[0].size == 1
-
-        first_ses_mc_displacement[0] += 0.01
-        second_ses_mc_displacement[0] += 0.02
-
-        non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
-        non_rigid_window_kwargs["rigid"] = True
-
-        corrected_recordings, extra_info = session_alignment.align_sessions_after_motion_correction(
-            mc_recording_list,
-            mc_motion_info_list,
-            align_sessions_kwargs={
-                "alignment_order": "to_session_1",
-                "non_rigid_window_kwargs": non_rigid_window_kwargs,
-            },
-        )
-        first_ses_total_displacement = corrected_recordings[0]._recording_segments[0].motion.displacement
-        second_ses_total_displacement = corrected_recordings[1]._recording_segments[0].motion.displacement
-
-        assert first_ses_total_displacement == [np.array([[0.01]])]  # TODO: can use shifts directly!
-        assert second_ses_total_displacement == [np.array([[250.02]])]
-
-    def test_rigid_motion_nonrigid_intersession(self):
-
-        # TODO: DIRECT COPY!
+        The problem is that the nonrigid bins are interpolated to get the shifts
+        for each channel. In this case, the histogram peak being aligned
+        lies in between two nonrigid window middle points, and so is interpolated.
+        It is in the window with shift ~144 but next to a window with ~190
+        and so ends up around ~170, resulting in the incorrect shift for this segment.
+        But, in the real world it is necessary to interpolate channels like this
+        or shifting whole windows would end up with very strange results!
+        """
         mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
             rigid_motion=True, rigid_intersession=False
         )
-        # should assert these are zero!
-        first_ses_mc_displacement = mc_recording_list[0]._recording_segments[0].motion.displacement
-        second_ses_mc_displacement = mc_recording_list[1]._recording_segments[0].motion.displacement
 
-        assert first_ses_mc_displacement[0].size == 1
-        assert second_ses_mc_displacement[0].size == 1
-
-        first_ses_mc_displacement[0] += 0.01
-        second_ses_mc_displacement[0] += 0.02
-
-        # All of this is direct copy between these tests...
+        # Run alignment
         non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
         non_rigid_window_kwargs["rigid"] = False
+        non_rigid_window_kwargs["win_shape"] = "rect"
+        non_rigid_window_kwargs["win_step_um"] = 250
+        non_rigid_window_kwargs["win_scale_um"] = 250
 
-        # TODO: can we take this mc_motion_info_list directly from the recordings? double check...
+        compute_alignment_kwargs = session_alignment.get_compute_alignment_kwargs()
+        compute_alignment_kwargs["num_shifts_block"] = 75
+        compute_alignment_kwargs["num_shifts_global"] = 300
+        compute_alignment_kwargs["smoothing_sigma_bin"] = None
+        compute_alignment_kwargs["smoothing_sigma_window"] = None
+
+        estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
+        estimate_histogram_kwargs["histogram_type"] = histogram_type
+
         corrected_recordings, extra_info = session_alignment.align_sessions_after_motion_correction(
             mc_recording_list,
             mc_motion_info_list,
             align_sessions_kwargs={
-                "alignment_order": "to_session_1",
+                "alignment_order": "to_session_1",  # to_center
                 "non_rigid_window_kwargs": non_rigid_window_kwargs,
+                "compute_alignment_kwargs": compute_alignment_kwargs,
+                "estimate_histogram_kwargs": estimate_histogram_kwargs,
             },
         )
 
-        first_ses_total_displacement = corrected_recordings[0]._recording_segments[0].motion.displacement
-        second_ses_total_displacement = corrected_recordings[1]._recording_segments[0].motion.displacement
+        if DEBUG:
+            from spikeinterface.widgets import plot_session_alignment, plot_activity_histogram_2d
+            import matplotlib.pyplot as plt
 
-        assert np.all(extra_info["shifts_array"][0] + 0.01 == first_ses_total_displacement)
-        # TODO: why are these nonlinear shifts so wrong?
-        assert np.all(extra_info["shifts_array"][1] + 0.02 == second_ses_total_displacement)
-
-    # TODO: Does this really test the passed peak list, peak_locations list? maybe use a monkeypatch?
-    # TODO: monkeypatch through all passed args?
-    @pytest.mark.parametrize("rigid_intersession", [True, False])
-    def test_nonrigid_motion(self, rigid_intersession):
-        # TODO: DIRECT COPY!
-        mc_recording_list, mc_motion_info_list, shifts = self.get_motion_corrected_recordings_list(
-            rigid_motion=False, rigid_intersession=rigid_intersession
-        )
-        # should assert these are zero!
-        first_ses_mc_displacement = mc_recording_list[0]._recording_segments[0].motion.displacement
-        second_ses_mc_displacement = mc_recording_list[1]._recording_segments[0].motion.displacement
-
-        offsets1 = np.linspace(0, 0.1, first_ses_mc_displacement[0].size)
-        offsets2 = np.linspace(0, 0.1, first_ses_mc_displacement[0].size)
-
-        first_ses_mc_displacement[0] += offsets1
-        second_ses_mc_displacement[0] += offsets2
-
-        # All of this is direct copy between these tests...
-
-        non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
-        non_rigid_window_kwargs["rigid"] = rigid_intersession
-
-        corrected_recordings, extra_info = (
-            session_alignment.align_sessions_after_motion_correction(  # TODO: check it is interepolate motion recording, tell them to use other function if it is !
+            # Plot the results, as well as the shift non-rigid window centers and
+            # the shifts amount. You can see where the shift is reduced to align
+            # the peaks in the middle of the histogram, the orange peak is
+            # not sufficiently moved (because of the interpolation).
+            peaks_list = [info["peaks"] for info in mc_motion_info_list]
+            peak_locations_list = [info["peak_locations"] for info in mc_motion_info_list]
+            plot = plot_session_alignment(
                 mc_recording_list,
-                mc_motion_info_list,
-                align_sessions_kwargs={
-                    "alignment_order": "to_session_1",
-                    "non_rigid_window_kwargs": non_rigid_window_kwargs,
-                },
+                peaks_list,
+                peak_locations_list,
+                extra_info["session_histogram_list"],
+                **extra_info["corrected"],
+                spatial_bin_centers=extra_info["spatial_bin_centers"],
+                drift_raster_map_kwargs={"clim": (-250, 0), "scatter_decimate": 10},
             )
-        )
 
-        first_ses_total_displacement = corrected_recordings[0]._recording_segments[0].motion.displacement
-        second_ses_total_displacement = corrected_recordings[1]._recording_segments[0].motion.displacement
+            window_edges = np.r_[0, np.cumsum(np.diff(extra_info["non_rigid_window_centers"]))]
+            window_edges[:-1] += np.diff(window_edges) / 2
 
-        assert np.all(extra_info["shifts_array"][0] + offsets1 == first_ses_total_displacement)
-        assert np.all(extra_info["shifts_array"][1] + offsets2 == second_ses_total_displacement)
+            y_window = extra_info["shifts_array"][1]
+            x_bin = extra_info["non_rigid_window_centers"]
 
-    def get_motion_corrected_recordings_list(self, rigid_motion=True, rigid_intersession=True):
-        # TODO: these kwargs are copied from abvove. I guess this can't be a fixure because of the arguments.
+            ax4_twin = plot.figure.axes[4].twinx()
+            ax5_twin = plot.figure.axes[5].twinx()
+            ax4_twin.scatter(x_bin, y_window, color="red", s=100, edgecolor="black", zorder=3, label="Points")
+            ax5_twin.scatter(x_bin, y_window, color="red", s=100, edgecolor="black", zorder=3, label="Points")
 
-        shifts = ((0, 0), (0, 250))
-        non_rigid_gradient = None if rigid_intersession else 0.2
-        recordings_list, _ = generate_session_displacement_recordings(
-            num_units=5,
-            recording_durations=[1, 1],
-            recording_shifts=shifts,
-            non_rigid_gradient=non_rigid_gradient,
-            seed=55,  # 52
-            generate_sorting_kwargs=dict(firing_rates=(100, 250), refractory_period_ms=4.0),
-            generate_unit_locations_kwargs=dict(
-                margin_um=0.0,
-                minimum_z=0.0,
-                maximum_z=2.0,
-                minimum_distance=18.0,
-                max_iteration=100,
-                distance_strict=False,
-            ),
-            generate_noise_kwargs=dict(noise_levels=(0.0, 0.5), spatial_decay=1.0),
-            # must have some noise, or peak detection becomes completely stoachastic!
-        )
+            for x_n, y_n in zip(x_bin, y_window):
+                ax4_twin.plot([x_n, x_n], [0, y_n], color="black", linestyle="--", linewidth=1.5, zorder=2)
+                ax5_twin.plot([x_n, x_n], [0, y_n], color="black", linestyle="--", linewidth=1.5, zorder=2)
 
-        interpolate_motion_kwargs = {
-            "border_mode": "force_zeros"
-        }  # TODO: unfortunately this is necessary for now until fixed
-        localize_peaks_kwargs = {"method": "grid_convolution"}
+            plt.suptitle("test_interesting_debug_case")
+            plt.show()
 
-        preset = "rigid_fast" if rigid_motion else "kilosort_like"
+        correced_hist_list = extra_info["corrected"]["corrected_session_histogram_list"]
 
-        mc_recording_list = []
-        mc_motion_info_list = []
-        for rec in recordings_list:
-            corrected_rec, motion_info = si.correct_motion(
-                rec,
-                preset=preset,
-                interpolate_motion_kwargs=interpolate_motion_kwargs,
-                output_motion_info=True,
-                localize_peaks_kwargs=localize_peaks_kwargs,
+        # This is a basic regression test to check this case does not change across versions.
+        # Ideally this would be maintained, but it may be that these values need to change slightly.
+        # In this case, the values can be changed or the regression part of this test removed, the
+        # main value is in the debugging explaination.
+        if histogram_type == "activity_1d":
+            assert np.isclose(np.corrcoef(correced_hist_list[0], correced_hist_list[1])[0, 1], 0.272, atol=1e-3)
+        else:
+            assert np.isclose(
+                np.corrcoef(np.mean(correced_hist_list[0], axis=1), np.mean(correced_hist_list[1], axis=1))[0, 1],
+                0.454,
+                atol=1e-3,
             )
-            mc_recording_list.append(corrected_rec)
-            mc_motion_info_list.append(motion_info)
-
-        return mc_recording_list, mc_motion_info_list, shifts  #
-
-    ###########################################################################
-    # Unit Tests
-    ###########################################################################
-
-    def test_shift_array_fill_zeros(self):
-        """ """
-        # TODO: could do all the same indexing as 1d? but will be more confusing...
-
-        # Test 1d array
-        test_1d = np.random.random((10))
-
-        # shift leftwards
-        res = alignment_utils.shift_array_fill_zeros(test_1d, 2)
-        assert np.all(res[8:] == 0)
-        assert np.array_equal(res[:8], test_1d[2:])
-
-        # shift rightwards
-        res = alignment_utils.shift_array_fill_zeros(test_1d, -2)
-        assert np.all(res[:2] == 0)
-        assert np.array_equal(res[2:], test_1d[:8])
-
-        # Test 2d array
-        test_2d = np.random.random((10, 10))
-
-        # shift upwards
-        res = alignment_utils.shift_array_fill_zeros(test_2d, 2)
-        assert np.all(res[8:, :] == 0)
-        assert np.array_equal(res[:8, :], test_2d[2:, :])
-
-        # shift downwards.
-        res = alignment_utils.shift_array_fill_zeros(test_2d, -2)
-        assert np.all(res[:2, :] == 0)
-        assert np.array_equal(res[2:, :], test_2d[:8, :])
-
-    def test_get_shifts_from_session_matrix(self):
-        """ """
-        matrix = np.random.random((10, 10, 2))
-
-        res = alignment_utils.get_shifts_from_session_matrix("to_middle", matrix)
-        assert np.array_equal(res, -np.mean(matrix, axis=0))
-
-        res = alignment_utils.get_shifts_from_session_matrix("to_session_1", matrix)
-        assert np.array_equal(res, -matrix[0, :, :])
-
-        res = alignment_utils.get_shifts_from_session_matrix("to_session_5", matrix)
-        assert np.array_equal(res, -matrix[4, :, :])
-
-        res = alignment_utils.get_shifts_from_session_matrix("to_session_10", matrix)
-        assert np.array_equal(res, -matrix[9, :, :])
-
-    @pytest.mark.parametrize("interpolate", [True, False])
-    @pytest.mark.parametrize("odd_hist_size", [True, False])
-    @pytest.mark.parametrize("shifts", [3, -2])
-    # TODO: return and test num_shifts
-    # TODO: test
-    def test_compute_histogram_crosscorrelation(self, interpolate, odd_hist_size, shifts):
-
-        if odd_hist_size:
-            hist = np.array([1, 0, 1, 1, 1, 0])
-        else:
-            hist = np.array([0, 0, 1, 1, 0, 1, 0, 1])
-
-        hist_shift = alignment_utils.shift_array_fill_zeros(hist, shifts)
-
-        session_histogram_list = np.vstack([hist, hist_shift])
-
-        interp_factor = 50  # not used when interpolate = False
-        shifts_matrix, xcorr_matrix_unsmoothed = alignment_utils.compute_histogram_crosscorrelation(
-            session_histogram_list,
-            non_rigid_windows=np.ones((1, hist.size)),
-            num_shifts=None,
-            interpolate=interpolate,
-            interp_factor=interp_factor,
-            kriging_sigma=0.2,
-            kriging_p=2,
-            kriging_d=2,
-            smoothing_sigma_bin=None,
-            smoothing_sigma_window=None,
-        )
-        assert np.isclose(
-            alignment_utils.get_shifts_from_session_matrix("to_session_1", shifts_matrix)[-1],
-            -shifts,
-            rtol=0,
-            atol=0.01,
-        )
-
-        num_shifts = hist.size * 2 - 1
-        if interpolate:
-            assert xcorr_matrix_unsmoothed.shape[1] == num_shifts * interp_factor
-        else:
-            assert xcorr_matrix_unsmoothed.shape[1] == num_shifts
-
-    def test_compute_histogram_crosscorrelation_gaussian_filter_kwargs(self):
-        pass
-
-    def estimate_chunk_size(self):
-        pass
-
-    def test_akima_interpolate_nonrigid_shifts(self):
-        pass
-
-    ###########################################################################
-    # Benchmarking
-    ###########################################################################
-
-    # badly need to review repeat from motion correction alg
-
-    # 1) create some inter-session drift
-    # 2) compare sorting before / after
-    # 3) need to benchmark fully
-
-
-# test_compute_alignment_kwargs

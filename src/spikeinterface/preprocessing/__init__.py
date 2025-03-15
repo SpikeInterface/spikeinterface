@@ -9,7 +9,10 @@ from .motion import (
     compute_motion,
 )
 
-"""
+""" For this to work, I think `get_spatial_interpolation_kernel` could go to core
+    (or elsewhere) to avoid circular imports. Currently  sortingcomponents.motion
+    requires it but  inter-session-alignment requires sortingcomponents.motion.
+
 from .inter_session_alignment.session_alignment import (
     get_estimate_histogram_kwargs,
     get_compute_alignment_kwargs,
