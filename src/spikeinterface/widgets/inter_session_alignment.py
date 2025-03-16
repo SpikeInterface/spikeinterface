@@ -54,7 +54,7 @@ class SessionAlignmentWidget(BaseWidget):
         recordings_list: list[BaseRecording],
         peaks_list: list[np.ndarray],
         peak_locations_list: list[np.ndarray],
-        session_histogram_list: list[np.ndarray],
+        session_histogram_list: list[np.ndarray] | None = None,
         spatial_bin_centers: np.ndarray | None = None,
         corrected_peak_locations_list: list[np.ndarray] | None = None,
         corrected_session_histogram_list: list[np.ndarray] = None,
@@ -195,46 +195,47 @@ class SessionAlignmentWidget(BaseWidget):
         # If we only have uncorrected, plot taking up two columns.
         # Otherwise, uncorrected histogram on the left column and
         # corrected histgoram on the right column
-        num_sessions = len(dp.session_histogram_list)
+        if dp.session_histogram_list:
+            num_sessions = len(dp.session_histogram_list)
 
-        if "legend" not in dp.session_alignment_histogram_kwargs:
-            sessions = [f"session {i + 1}" for i in range(num_sessions)]
-            dp.session_alignment_histogram_kwargs["legend"] = sessions
+            if "legend" not in dp.session_alignment_histogram_kwargs:
+                sessions = [f"session {i + 1}" for i in range(num_sessions)]
+                dp.session_alignment_histogram_kwargs["legend"] = sessions
 
-        if not dp.corrected_session_histogram_list:
+            if not dp.corrected_session_histogram_list:
 
-            ax = fig.add_subplot(gs[num_rows, :])
+                ax = fig.add_subplot(gs[num_rows, :])
 
-            ActivityHistogram1DWidget(
-                dp.session_histogram_list,
-                dp.spatial_bin_centers,
-                ax=ax,
-                **dp.session_alignment_histogram_kwargs,
-            )
-            ax.legend(loc="upper left")
-        else:
+                ActivityHistogram1DWidget(
+                    dp.session_histogram_list,
+                    dp.spatial_bin_centers,
+                    ax=ax,
+                    **dp.session_alignment_histogram_kwargs,
+                )
+                ax.legend(loc="upper left")
+            else:
 
-            gs_sub = gs[num_rows, :].subgridspec(1, 2)
+                gs_sub = gs[num_rows, :].subgridspec(1, 2)
 
-            ax_left = fig.add_subplot(gs_sub[0])
-            ax_right = fig.add_subplot(gs_sub[1])
+                ax_left = fig.add_subplot(gs_sub[0])
+                ax_right = fig.add_subplot(gs_sub[1])
 
-            ActivityHistogram1DWidget(
-                dp.session_histogram_list,
-                dp.spatial_bin_centers,
-                ax=ax_left,
-                **dp.session_alignment_histogram_kwargs,
-            )
-            ActivityHistogram1DWidget(
-                dp.corrected_session_histogram_list,
-                dp.spatial_bin_centers,
-                ax=ax_right,
-                **dp.session_alignment_histogram_kwargs,
-            )
-            ax_left.get_legend().set_loc("upper right")
-            ax_left.set_title("Original Histogram")
-            ax_right.get_legend().set_loc("upper right")
-            ax_right.set_title("Corrected Histogram")
+                ActivityHistogram1DWidget(
+                    dp.session_histogram_list,
+                    dp.spatial_bin_centers,
+                    ax=ax_left,
+                    **dp.session_alignment_histogram_kwargs,
+                )
+                ActivityHistogram1DWidget(
+                    dp.corrected_session_histogram_list,
+                    dp.spatial_bin_centers,
+                    ax=ax_right,
+                    **dp.session_alignment_histogram_kwargs,
+                )
+                ax_left.get_legend().set_loc("upper right")
+                ax_left.set_title("Original Histogram")
+                ax_right.get_legend().set_loc("upper right")
+                ax_right.set_title("Corrected Histogram")
 
 
 class ActivityHistogram1DWidget(BaseWidget):
