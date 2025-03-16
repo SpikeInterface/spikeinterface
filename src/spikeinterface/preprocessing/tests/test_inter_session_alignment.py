@@ -5,32 +5,22 @@ from spikeinterface.preprocessing.inter_session_alignment import session_alignme
 from spikeinterface.generation.session_displacement_generator import *
 import spikeinterface  # required for monkeypatching
 import spikeinterface.full as si
+from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
 
 DEBUG = False
-
-# TODO: CRITICAL: thoroughly test the motion wrapper, and tidy it up,  it looks jenky as hell!
-# TODO: need to handle the force-zeros etc.
-# TODO: write a test that now xcorr is 1 for the things.
-# TODO: does 'to-middle' work okay?
-# TODO: rename "activity_1d" to 1d and 2d ...
-# "avg_in_bin": False,  # TODO
-# TODO: non-rigid bins is not tested!
-# 'get_traces' is never tested here.
-# do need some kind of real-data test case?
-# need to expose 0.001!
-# TODO: test shift blocks...
 
 
 """
 TODO: major
 - should probably take log after averaging not before.
-- fix issue leading to "force_zeros"
-- fix bug with motion correction type
 
 TODO: TEST:
- - non-rigid, including num shifts
+ - CRITICAL: thoroughly test the motion wrapper, and tidy it up,  it looks jenky as hell!
+ - non-rigid bins is not tested! & test shift blocks
+ - 'get_traces' is never tested here. Can try once after motion?
  - smoothing is applied
  - ask log2 vs. log10 (e.g. for 3d histogram)
+ - ask charlie about threshold
 """
 
 
@@ -182,7 +172,7 @@ class TestInterSessionAlignment:
                 estimate_histogram_kwargs=estimate_histogram_kwargs,
             )
 
-            if False:
+            if DEBUG:
                 from spikeinterface.widgets import plot_session_alignment, plot_activity_histogram_2d
                 import matplotlib.pyplot as plt
 
@@ -375,6 +365,8 @@ class TestInterSessionAlignment:
         assert first_ses_total_displacement == [np.array([[shifts[0][1] + 0.01]])]
         assert second_ses_total_displacement == [np.array([[shifts[1][1] + 0.02]])]
 
+        self.assert_interpolate_recording_not_duplicate(corrected_recordings[0])
+
     def test_rigid_motion_nonrigid_intersession(self, recording_2):
         """
         Test that non-rigid shifts estimated in inter-session alignment are properly
@@ -402,7 +394,6 @@ class TestInterSessionAlignment:
         non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
         non_rigid_window_kwargs["rigid"] = False
 
-        # TODO: can we take this mc_motion_info_list directly from the recordings? double check...
         corrected_recordings, extra_info = session_alignment.align_sessions_after_motion_correction(
             mc_recording_list,
             mc_motion_info_list,
@@ -420,6 +411,8 @@ class TestInterSessionAlignment:
         # match the estimateed shifts from inter-session alignment + the motion shifts set above
         assert np.all(extra_info["shifts_array"][0] + 0.01 == first_ses_total_displacement)
         assert np.all(extra_info["shifts_array"][1] + 0.02 == second_ses_total_displacement)
+
+        self.assert_interpolate_recording_not_duplicate(corrected_recordings[0])
 
     @pytest.mark.parametrize("rigid_intersession", [True, False])
     def test_nonrigid_motion(self, rigid_intersession, test_recording_1, recording_2):
@@ -468,6 +461,107 @@ class TestInterSessionAlignment:
 
         assert np.all(extra_info["shifts_array"][0] + offsets1 == first_ses_total_displacement)
         assert np.all(extra_info["shifts_array"][1] + offsets2 == second_ses_total_displacement)
+
+        self.assert_interpolate_recording_not_duplicate(corrected_recordings[0])
+
+    def assert_interpolate_recording_not_duplicate(self, recording):
+        """
+        Do a quick check that indeed the interpolate recording is not duplicate
+        (i.e. only one interpolate recording, and the previous is the generated simulation
+        recording.
+        """
+        assert (
+            isinstance(recording, InterpolateMotionRecording)
+            and recording._parent.name == "InterSessionDisplacementRecording"
+        )
+
+    def test_motion_correction_peaks_are_converted(self, mocker, test_recording_1):
+        """
+        When `align_sessions_after_motion_correction` is run, the peaks locations
+        used should be those that are already motion corrected, which requires
+        correcting the peak locations in the function.
+
+        Therefore, check that the final peak locations passed to `align_sessions`
+        are motion-corrected.
+        """
+        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
+
+        # Motion correct recordings, and add a known motion-displacement
+        mc_recording_list, mc_motion_info_list = self.motion_correct_recordings_list(
+            recordings_list,
+            rigid_motion=True,
+        )
+
+        first_ses_mc_displacement = mc_recording_list[0]._recording_segments[0].motion.displacement
+        second_ses_mc_displacement = mc_recording_list[1]._recording_segments[0].motion.displacement
+
+        first_ses_mc_displacement[0] += 0.1
+        second_ses_mc_displacement[0] += 0.2
+
+        # mock the `align_sessions` function to check what was passed
+        spy_align_sessions = mocker.spy(
+            spikeinterface.preprocessing.inter_session_alignment.session_alignment, "align_sessions"
+        )
+
+        # Call the function, and check that the passed peak-locations are corrected
+        corrected_recordings, _ = session_alignment.align_sessions_after_motion_correction(
+            mc_recording_list, mc_motion_info_list, None
+        )
+
+        passed_peak_locations_1 = spy_align_sessions.call_args_list[0][0][2][0]
+        passed_peak_locations_2 = spy_align_sessions.call_args_list[0][0][2][1]
+
+        assert np.allclose(
+            passed_peak_locations_1["y"], mc_motion_info_list[0]["peak_locations"]["y"] - 0.1, rtol=0, atol=1e-4
+        )
+        assert np.allclose(
+            passed_peak_locations_2["y"], mc_motion_info_list[1]["peak_locations"]["y"] - 0.2, rtol=0, atol=1e-4
+        )
+
+    def test_motion_correction_kwargs(self, mocker, recording_1):
+        """
+        For `align_sessions_after_motion_correction`, if the motion-correct is non-rigid
+        then the non-rigid window kwargs must match for inter-session alignment,
+        otherwise it will not be possible to add the displacement.
+        """
+        recordings_list, _, _, _ = recording_1
+
+        mc_recording_list, mc_motion_info_list = self.motion_correct_recordings_list(
+            recordings_list,
+            rigid_motion=False,
+        )
+
+        spy_align_sessions = mocker.spy(
+            spikeinterface.preprocessing.inter_session_alignment.session_alignment, "align_sessions"
+        )
+
+        # Run `align_sessions_after_motion_correction` with non-rigid window kwargs
+        # that do not mach those used for motion correction
+        changed = session_alignment.get_non_rigid_window_kwargs()
+        changed["rigid"] = False
+        changed["win_step_um"] = 51
+
+        session_alignment.align_sessions_after_motion_correction(
+            mc_recording_list, mc_motion_info_list, {"non_rigid_window_kwargs": changed}
+        )
+
+        # Now remove kwargs from the motion-correct and inter-session alignment (passed) non-rigid
+        # window kwargs that don't match (Some from motion are not relevant for inter-session alignment,
+        # some for inter-session and not set on motion (they may? predate their introduction).
+        # Check that these core kwargs match (i.e. align_sessions is using the non-rigid-window
+        # settings that motion uses.
+        non_rigid_windows = mc_motion_info_list[0]["parameters"]["estimate_motion_kwargs"]
+        non_rigid_windows.pop("method")
+        non_rigid_windows.pop("bin_s")
+        non_rigid_windows.pop(
+            "hist_margin_um"
+        )  # TODO: I think some kwargs are not exposed, this is probably okay, could mention to Sam
+
+        passed_non_rigid_windows = spy_align_sessions.call_args_list[0][1]["non_rigid_window_kwargs"]
+        passed_non_rigid_windows.pop("zero_threshold")
+        passed_non_rigid_windows.pop("win_margin_um")
+
+        assert sorted(passed_non_rigid_windows) == sorted(non_rigid_windows)
 
     ###########################################################################
     # Unit Tests
@@ -552,6 +646,7 @@ class TestInterSessionAlignment:
             kriging_d=2,
             smoothing_sigma_bin=None,
             smoothing_sigma_window=None,
+            min_crosscorr_threshold=0.001,
         )
         assert np.isclose(
             alignment_utils.get_shifts_from_session_matrix("to_session_1", shifts_matrix)[-1],
@@ -575,15 +670,13 @@ class TestInterSessionAlignment:
     def test_akima_interpolate_nonrigid_shifts(self):
         pass
 
-    # TEST:
-
     ###########################################################################
     # Kwargs Tests
     ###########################################################################
 
-    def test_get_estimate_histogram_kwargs(self, mocker, test_recording_1):
+    def test_get_estimate_histogram_kwargs(self, mocker, recording_1):
 
-        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
+        recordings_list, _, peaks_list, peak_locations_list = recording_1
 
         default_kwargs = {
             "bin_um": 2,
@@ -626,13 +719,9 @@ class TestInterSessionAlignment:
         assert kwargs["weight_with_amplitude"] == different_kwargs["weight_with_amplitude"]
         assert kwargs["avg_in_bin"] == different_kwargs["avg_in_bin"]
 
-    # akima_interp_nonrigid
-    # assert kwargs["num_shifts"] == different_kwargs["num_shifts_global"]
-    # assert kwargs["interpolate"] == different_kwargs["interpolate"]
-    # assert kwargs["interp_factor"] == different_kwargs["interp_factor"]
-    def test_compute_alignment_kwargs(self, mocker, test_recording_1):
+    def test_compute_alignment_kwargs(self, mocker, recording_1):
 
-        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
+        recordings_list, _, peaks_list, peak_locations_list = recording_1
 
         default_kwargs = {
             "num_shifts_global": None,
@@ -645,6 +734,7 @@ class TestInterSessionAlignment:
             "smoothing_sigma_bin": 0.5,
             "smoothing_sigma_window": 0.5,
             "akima_interp_nonrigid": False,
+            "min_crosscorr_threshold": 0.001,
         }
         assert (
             session_alignment.get_compute_alignment_kwargs() == default_kwargs
@@ -688,7 +778,7 @@ class TestInterSessionAlignment:
         kwargs = spy_gaussian_filter.call_args_list[2][1]
         assert kwargs["sigma"] == different_kwargs["smoothing_sigma_window"]
 
-    def test_non_rigid_window_kwargs(self, mocker, test_recording_1):
+    def test_non_rigid_window_kwargs(self, mocker, recording_1):
 
         import spikeinterface  # TODO: place up top with a note
 
@@ -713,7 +803,7 @@ class TestInterSessionAlignment:
             "zero_threshold": 4,
         }
 
-        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
+        recordings_list, _, peaks_list, peak_locations_list = recording_1
 
         spy_get_spatial_windows = mocker.spy(
             spikeinterface.preprocessing.inter_session_alignment.session_alignment, "get_spatial_windows"
@@ -729,11 +819,11 @@ class TestInterSessionAlignment:
         assert kwargs["win_margin_um"] == different_kwargs["win_margin_um"]
         assert kwargs["zero_threshold"] == different_kwargs["zero_threshold"]
 
-    def test_interpolate_motion_kwargs(self, mocker, test_recording_1):
-        # InterpolateMotionRecording <- check times on this created object
+    def test_interpolate_motion_kwargs(self, mocker, recording_1):
+        """ """
 
         default_kwargs = {
-            "border_mode": "force_zeros",  # fixed as this until can figure out probe
+            "border_mode": "force_zeros",
             "spatial_interpolation_method": "kriging",
             "sigma_um": 20.0,
             "p": 2,
@@ -743,13 +833,13 @@ class TestInterSessionAlignment:
         ), "Default `get_non_rigid_window_kwargs` were changed."
 
         different_kwargs = {
-            "border_mode": "force_zeros",  # fixed as this until can figure out probe
+            "border_mode": "force_zeros",
             "spatial_interpolation_method": "nearest",
             "sigma_um": 25.0,
             "p": 3,
         }
 
-        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
+        recordings_list, _, peaks_list, peak_locations_list = recording_1
 
         spy_get_2d_activity_histogram = mocker.spy(
             spikeinterface.preprocessing.inter_session_alignment.session_alignment.InterpolateMotionRecording,
