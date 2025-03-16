@@ -15,10 +15,9 @@ TODO: major
 - should probably take log after averaging not before.
 
 TODO: TEST:
- - CRITICAL: thoroughly test the motion wrapper, and tidy it up,  it looks jenky as hell!
- - non-rigid bins is not tested! & test shift blocks
  - 'get_traces' is never tested here. Can try once after motion?
  - smoothing is applied
+
  - ask log2 vs. log10 (e.g. for 3d histogram)
  - ask charlie about threshold
 """
@@ -27,7 +26,7 @@ TODO: TEST:
 class TestInterSessionAlignment:
 
     @pytest.fixture(scope="session")
-    def test_recording_1(self):
+    def recording_1(self):
         """
         Generate a set of session recordings with displacement.
         These parameters are chosen such that simulated AP signal is strong
@@ -101,7 +100,7 @@ class TestInterSessionAlignment:
 
     def motion_correct_recordings_list(self, recordings_list, rigid_motion):
         # Unfortunately this is necessary only in the test environemnt
-        # to avoid some issues with reinitialising the motion object.
+        # because adding offsets means copying the motion object does not work
         interpolate_motion_kwargs = {"border_mode": "force_zeros"}
         localize_peaks_kwargs = {"method": "grid_convolution"}
 
@@ -132,11 +131,11 @@ class TestInterSessionAlignment:
 
     @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])
     @pytest.mark.parametrize("num_shifts_global", [None, 200])
-    def test_align_sessions_finds_correct_shifts(self, num_shifts_global, test_recording_1, histogram_type):
+    def test_align_sessions_finds_correct_shifts(self, num_shifts_global, recording_1, histogram_type):
         """
         Test that `align_sessions` recovers the correct (linear) shifts.
         """
-        recordings_list, shifts, peaks_list, peak_locations_list = test_recording_1
+        recordings_list, shifts, peaks_list, peak_locations_list = recording_1
 
         assert shifts == (
             (0, 0),
@@ -206,9 +205,9 @@ class TestInterSessionAlignment:
             >= 0
         )
 
-    def test_histogram_generation(self, test_recording_1):
+    def test_histogram_generation(self, recording_1):
         """ """
-        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
+        recordings_list, _, peaks_list, peak_locations_list = recording_1
 
         recording = recordings_list[0]
 
@@ -287,9 +286,9 @@ class TestInterSessionAlignment:
 
     @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])
     @pytest.mark.parametrize("operator", ["mean", "median"])
-    def test_histogram_parameters(self, test_recording_1, histogram_type, operator):
+    def test_histogram_parameters(self, recording_1, histogram_type, operator):
         """ """
-        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
+        recordings_list, _, peaks_list, peak_locations_list = recording_1
 
         estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
         estimate_histogram_kwargs["log_scale"] = False
@@ -323,14 +322,14 @@ class TestInterSessionAlignment:
     # These tests check that the displacement found by the inter-session alignment
     # is correctly added to any existing motion-correction results.
 
-    def test_rigid_motion_rigid_intersession(self, test_recording_1):
+    def test_rigid_motion_rigid_intersession(self, recording_1):
         """
         Create an inter-session alignment recording and motion correct it so that
         it is an InterpolateMotion recording. Add some shifts to the existing displacement
         on the InterpolateMotion recordings and check the inter-session alignment shifts
         are properly added to this.
         """
-        recordings_list, shifts, _, _ = test_recording_1
+        recordings_list, shifts, _, _ = recording_1
 
         mc_recording_list, mc_motion_info_list = self.motion_correct_recordings_list(
             recordings_list,
@@ -415,13 +414,13 @@ class TestInterSessionAlignment:
         self.assert_interpolate_recording_not_duplicate(corrected_recordings[0])
 
     @pytest.mark.parametrize("rigid_intersession", [True, False])
-    def test_nonrigid_motion(self, rigid_intersession, test_recording_1, recording_2):
+    def test_nonrigid_motion(self, rigid_intersession, recording_1, recording_2):
         """
         Now test that non-rigid motion estimates are properly combined with the
         rigid or non-rigid inter-session alignment estimates.
         """
         if rigid_intersession:
-            recordings_list, _, peaks_list, _ = test_recording_1
+            recordings_list, _, peaks_list, _ = recording_1
         else:
             recordings_list, _, peaks_list, _ = recording_2
 
@@ -475,7 +474,7 @@ class TestInterSessionAlignment:
             and recording._parent.name == "InterSessionDisplacementRecording"
         )
 
-    def test_motion_correction_peaks_are_converted(self, mocker, test_recording_1):
+    def test_motion_correction_peaks_are_converted(self, mocker, recording_1):
         """
         When `align_sessions_after_motion_correction` is run, the peaks locations
         used should be those that are already motion corrected, which requires
@@ -484,7 +483,7 @@ class TestInterSessionAlignment:
         Therefore, check that the final peak locations passed to `align_sessions`
         are motion-corrected.
         """
-        recordings_list, _, peaks_list, peak_locations_list = test_recording_1
+        recordings_list, _, peaks_list, peak_locations_list = recording_1
 
         # Motion correct recordings, and add a known motion-displacement
         mc_recording_list, mc_motion_info_list = self.motion_correct_recordings_list(
@@ -620,7 +619,7 @@ class TestInterSessionAlignment:
     @pytest.mark.parametrize("interpolate", [True, False])
     @pytest.mark.parametrize("odd_hist_size", [True, False])
     @pytest.mark.parametrize("shifts", [3, -2])
-    def test_compute_histogram_crosscorrelation(self, interpolate, odd_hist_size, shifts):
+    def test_compute_histogram_crosscorrelation_rigid(self, interpolate, odd_hist_size, shifts):
         """
         Create some toy array and shift it, then check that the cross-correlattion
         correctly finds the shifts, under a number of conditions.
@@ -661,14 +660,44 @@ class TestInterSessionAlignment:
         else:
             assert xcorr_matrix_unsmoothed.shape[1] == num_shifts
 
-    def test_compute_histogram_crosscorrelation_gaussian_filter_kwargs(self):
-        pass
+    @pytest.mark.parametrize("histogram_mode", ["activity_1d", "activity_2d"])
+    def test_compute_histogram_crosscorrelation_nonrigid(self, histogram_mode):
+        """ """
+        # fmt: off
+        #                 Window 1       | Window 2       | Window 3
+        hist_1 = np.array([0.5, 1, 0, 0,   0, 1e-3, 0, 0,       0, 0, 0, 1])
+        hist_2 = np.array([0, 0, 0.5, 1,   1e-12, 0, 0, 0,   1, 0, 0, 0])
 
-    def estimate_chunk_size(self):
-        pass
+        if histogram_mode == "activity_2d":
+            hist_1 = np.vstack([hist_1, hist_1 * 2]).T
+            hist_2 = np.vstack([hist_2, hist_2 * 2]).T
 
-    def test_akima_interpolate_nonrigid_shifts(self):
-        pass
+        winds = np.array([[ 1, 1, 1, 1,     0, 0, 0, 0,       0, 0, 0, 0],
+                          [ 0, 0, 0, 0,     1, 1, 1, 1,       0, 0, 0, 0],
+                          [ 0, 0, 0, 0,     0, 0, 0, 0,       1, 1, 1, 1]])
+
+        shifts_matrix, xcorr_matrix_unsmoothed = alignment_utils.compute_histogram_crosscorrelation(
+            np.stack([hist_1, hist_2], axis=0),
+            non_rigid_windows=winds,
+            num_shifts=None,
+            interpolate=None,
+            interp_factor=1.0,
+            kriging_sigma=0.2,
+            kriging_p=2,
+            kriging_d=2,
+            smoothing_sigma_bin=None,
+            smoothing_sigma_window=None,
+            min_crosscorr_threshold=0.001,
+        )
+        # fmt: on
+
+        wind_1_shift = shifts_matrix[1, 0][0]
+        wind_2_shift = shifts_matrix[1, 0][1]
+        wind_3_shift = shifts_matrix[1, 0][2]
+
+        assert wind_1_shift == 2  # the first window is shifted +2
+        assert wind_2_shift == 0  # the second window has poor correlation under 0.001, so set to 0
+        assert wind_3_shift == -3  # the third window is shifted -3
 
     ###########################################################################
     # Kwargs Tests

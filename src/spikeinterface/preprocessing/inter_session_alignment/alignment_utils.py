@@ -184,8 +184,9 @@ def compute_histogram_crosscorrelation(
     Parameters
     ----------
 
-    session_histogram_list : list[np.ndarray]  TODO: change name!!
-        (num_sessions, num_bins) array of session activity histograms.
+    session_histogram_list : np.ndarray
+        (num_sessions, num_bins) (1d histogram) or (num_sessions, num_bins, 2) (2d histogram)
+         array of session activity histograms.
     non_rigid_windows : np.ndarray
         A (num windows x num_bins) binary of weights by which to window
         the activity histogram for non-rigid-registration. For example, if
@@ -288,10 +289,10 @@ def compute_histogram_crosscorrelation(
                     windowed_histogram_j = session_histogram_list[j, :] * window[:, np.newaxis]
 
                     windowed_histogram_i = (windowed_histogram_i - np.mean(windowed_histogram_i)) / (
-                        np.std(windowed_histogram_i) + 1e-12
+                        np.std(windowed_histogram_i) + 1e-8
                     )
                     windowed_histogram_j = (windowed_histogram_j - np.mean(windowed_histogram_j)) / (
-                        np.std(windowed_histogram_j) + 1e-12
+                        np.std(windowed_histogram_j) + 1e-8
                     )
 
                     xcorr = np.zeros(num_iter)
@@ -302,6 +303,7 @@ def compute_histogram_crosscorrelation(
                         flatten_i = shifted_i.flatten()
 
                         xcorr[idx] = np.correlate(flatten_i, windowed_histogram_j.flatten()) / flatten_i.size
+
                 else:
                     # For a 1D histogram, compute the full cross-correlation and
                     # window the desired shifts ( this is faster than manual looping).
