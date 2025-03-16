@@ -309,6 +309,12 @@ def align_sessions_after_motion_correction(
 
     """
     # Check motion kwargs are the same across all recordings
+    if not all(isinstance(rec, InterpolateMotionRecording) for rec in recordings_list):
+        raise ValueError(
+            "All passed recordings have been run with motion correction as the last step. "
+            "They must be InterpolateMotionRecording."
+        )
+
     motion_kwargs_list = [info["parameters"]["estimate_motion_kwargs"] for info in motion_info_list]
     if not all(kwargs == motion_kwargs_list[0] for kwargs in motion_kwargs_list):
         raise ValueError(
@@ -347,6 +353,14 @@ def align_sessions_after_motion_correction(
 
                 align_sessions_kwargs = copy.deepcopy(align_sessions_kwargs)
                 align_sessions_kwargs["non_rigid_window_kwargs"] = non_rigid_window_kwargs
+
+    if "interpolate_motion_kwargs" in align_sessions_kwargs:
+        raise ValueError(
+            "Cannot set `interpolate_motion_kwargs` when using this function. "
+            "The interpolate kwargs from the original motion recording will be used."
+        )
+    # This does not do anything, just makes it explicit these are not used.
+    align_sessions_kwargs["interpolate_motion_kwargs"] = None
 
     corrected_peak_locations = [
         correct_motion_on_peaks(info["peaks"], info["peak_locations"], info["motion"], recording)
@@ -1009,15 +1023,3 @@ def _check_align_sessions_inputs(
 
         if ses_num == 0:
             raise ValueError("`alignment_order` required the session number, not session index.")
-
-    if interpolate_motion_kwargs and any(isistance(rec, InterpolateMotionRecording) for rec in recordings_list):
-        raise ValueError(
-            "Cannot set `interpolate_motion_kwargs` when passing "
-            "InterpolateMotionRecording, as the interpolate motion already on the "
-            "InterpolateMotionRecording will be used. Set as `None` here."
-        )
-
-    # TODO: test remove channels!
-    assert (
-        interpolate_motion_kwargs["border_mode"] == "force_zeros"
-    ), "InterpolateMotionRecording must be `force_zeros` until probe is figured out."  # TODO: ask sam
