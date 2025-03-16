@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from spikeinterface.core.baserecording import BaseRecording
 
+import warnings
 import numpy as np
 from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
 from spikeinterface.sortingcomponents.motion.motion_utils import get_spatial_windows, get_spatial_bins
@@ -50,7 +51,7 @@ def get_estimate_histogram_kwargs() -> dict:
         "depth_smooth_um": None,
         "histogram_type": "activity_1d",
         "weight_with_amplitude": False,
-        "avg_in_bin": False,  # TODO
+        "avg_in_bin": False,
     }
 
 
@@ -80,6 +81,7 @@ def get_compute_alignment_kwargs() -> dict:
         "smoothing_sigma_bin": 0.5,
         "smoothing_sigma_window": 0.5,
         "akima_interp_nonrigid": False,
+        "min_crosscorr_threshold": 0.001,
     }
 
 
@@ -128,7 +130,7 @@ def align_sessions(
     non_rigid_window_kwargs: dict = get_non_rigid_window_kwargs(),
     estimate_histogram_kwargs: dict = get_estimate_histogram_kwargs(),
     compute_alignment_kwargs: dict = get_compute_alignment_kwargs(),
-    interpolate_motion_kwargs: dict = get_interpolate_motion_kwargs(),
+    interpolate_motion_kwargs: None | dict = get_interpolate_motion_kwargs(),
 ) -> tuple[list[BaseRecording], dict]:
     """
     Estimate probe displacement across recording sessions and
@@ -167,7 +169,9 @@ def align_sessions(
     compute_alignment_kwargs : dict
         see `get_compute_alignment_kwargs()`
     interpolate_motion_kwargs : dict
-        see `get_interpolate_motion_kwargs()`
+        see `get_interpolate_motion_kwargs()` Will not be used if passed
+        recording is InterpolateMotionRecording (in which case, do not
+        use this function but use `compute_peaks_locations_for_session_alignment`.
 
     Returns
     -------
@@ -303,10 +307,6 @@ def align_sessions_after_motion_correction(
     align_sessions_kwargs : dict
         A dictionary of keyword arguments passed to `align_sessions`.
 
-    TODO
-    ----
-    add a test that checks the output of motion_info created
-    by correct_motion is as expected.
     """
     # Check motion kwargs are the same across all recordings
     motion_kwargs_list = [info["parameters"]["estimate_motion_kwargs"] for info in motion_info_list]
@@ -317,40 +317,36 @@ def align_sessions_after_motion_correction(
 
     motion_window_kwargs = copy.deepcopy(motion_kwargs_list[0])
 
-    if (
-        "direction" in motion_window_kwargs and motion_window_kwargs["direction"] != "y"
-    ):  # TODO: why is this not in all?
+    if "direction" in motion_window_kwargs and motion_window_kwargs["direction"] != "y":
         raise ValueError("motion correct must have been performed along the 'y' dimension.")
 
     if align_sessions_kwargs is None:
-        align_sessions_kwargs = get_compute_alignment_kwargs()
+        align_sessions_kwargs = {}
+    else:
+        # If motion correction was nonrigid, we must use the same settings for
+        # inter-session alignment, or we will not be able to add the nonrigid
+        # shifts together.
+        if (
+            "non_rigid_window_kwargs" in align_sessions_kwargs
+            and not align_sessions_kwargs["non_rigid_window_kwargs"]["rigid"]
+        ):
+            if not motion_window_kwargs["rigid"]:
+                warnings.warn(
+                    "Nonrigid inter-session alignment must use the motion correct "
+                    "nonrigid settings.\n!Now overwriting any passed `non_rigid_window_kwargs` "
+                    "with the motion object's non_rigid_window_kwargs !"
+                )
+                non_rigid_window_kwargs = get_non_rigid_window_kwargs()
 
-    # If motion correction was nonrigid, we must use the same settings for
-    # inter-session alignment, or we will not be able to add the nonrigid
-    # shifts together.
-    if (
-        "non_rigid_window_kwargs" in align_sessions_kwargs
-        and not align_sessions_kwargs["non_rigid_window_kwargs"]["rigid"]
-    ):
-        # TODO: carefully walk through this function! and test all assumptions...
-        if not motion_window_kwargs["rigid"]:
-            print(  # TODO: make a warning
-                "Nonrigid inter-session alignment must use the motion correct "
-                "nonrigid settings. Overwriting any passed `non_rigid_window_kwargs` "
-                "with the motion object non_rigid_window_kwargs."
-            )
-            non_rigid_window_kwargs = get_non_rigid_window_kwargs()
+                for (
+                    key,
+                    value,
+                ) in motion_window_kwargs.items():
+                    if key in non_rigid_window_kwargs:
+                        non_rigid_window_kwargs[key] = value
 
-            # TODO: generate function for replacing one dict into another?
-            for (
-                k,
-                v,
-            ) in motion_window_kwargs.items():  # TODO: can get tighter alignment here with original implementation?
-                if k in non_rigid_window_kwargs:
-                    non_rigid_window_kwargs[k] = v
-
-            align_sessions_kwargs = copy.deepcopy(align_sessions_kwargs)
-            align_sessions_kwargs["non_rigid_window_kwargs"] = non_rigid_window_kwargs
+                align_sessions_kwargs = copy.deepcopy(align_sessions_kwargs)
+                align_sessions_kwargs["non_rigid_window_kwargs"] = non_rigid_window_kwargs
 
     corrected_peak_locations = [
         correct_motion_on_peaks(info["peaks"], info["peak_locations"], info["motion"], recording)
@@ -1014,6 +1010,14 @@ def _check_align_sessions_inputs(
         if ses_num == 0:
             raise ValueError("`alignment_order` required the session number, not session index.")
 
+    if interpolate_motion_kwargs and any(isistance(rec, InterpolateMotionRecording) for rec in recordings_list):
+        raise ValueError(
+            "Cannot set `interpolate_motion_kwargs` when passing "
+            "InterpolateMotionRecording, as the interpolate motion already on the "
+            "InterpolateMotionRecording will be used. Set as `None` here."
+        )
+
+    # TODO: test remove channels!
     assert (
         interpolate_motion_kwargs["border_mode"] == "force_zeros"
     ), "InterpolateMotionRecording must be `force_zeros` until probe is figured out."  # TODO: ask sam
