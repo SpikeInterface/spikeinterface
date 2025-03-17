@@ -100,33 +100,24 @@ class BaseMultiComparison(BaseComparison):
 
         self.comparisons = {}
 
+        n_jobs = fix_job_kwargs({"n_jobs": self.n_jobs})["n_jobs"]
+        job_list = []
+        job_names = []
+        for i in range(len(self.object_list)):
+            for j in range(i + 1, len(self.object_list)):
+                if self.name_list is not None:
+                    name_i = self.name_list[i]
+                    name_j = self.name_list[j]
+                else:
+                    name_i = "object i"
+                    name_j = "object j"
+                job_list.append((i, j))
+                job_names.append((name_i, name_j))
+
         if self.n_jobs == 1:
-            for i in range(len(self.object_list)):
-                for j in range(i + 1, len(self.object_list)):
-                    if self.name_list is not None:
-                        name_i = self.name_list[i]
-                        name_j = self.name_list[j]
-                    else:
-                        name_i = "object i"
-                        name_j = "object j"
-                    if self._verbose:
-                        print(f"  Comparing: {name_i} and {name_j}")
-                    comp = self._compare_ij(i, j)
-                    self.comparisons[(name_i, name_j)] = comp
+            for job_name, job in zip(job_names, job_list):
+                self.comparisons[job_name] = self._compare_ij(*job)
         else:
-            n_jobs = fix_job_kwargs({"n_jobs": self.n_jobs})["n_jobs"]
-            job_list = []
-            job_names = []
-            for i in range(len(self.object_list)):
-                for j in range(i + 1, len(self.object_list)):
-                    if self.name_list is not None:
-                        name_i = self.name_list[i]
-                        name_j = self.name_list[j]
-                    else:
-                        name_i = "object i"
-                        name_j = "object j"
-                    job_list.append((i, j))
-                    job_names.append((name_i, name_j))
             with ProcessPoolExecutor(max_workers=n_jobs) as executor:
                 results = list(executor.map(self._compare_ij, *zip(*job_list)))
             for job_name, result in zip(job_names, results):

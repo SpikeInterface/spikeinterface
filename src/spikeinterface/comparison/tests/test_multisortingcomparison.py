@@ -1,3 +1,4 @@
+import os
 import shutil
 
 import pytest
@@ -7,6 +8,9 @@ import time
 from spikeinterface.core import generate_sorting
 from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import compare_multiple_sorters, MultiSortingComparison
+
+
+ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
 
 @pytest.fixture(scope="module")
@@ -98,22 +102,23 @@ def test_compare_multi_segment():
 
 
 def test_parallel():
-    sorting = generate_sorting(durations=[300])
+    sorting = generate_sorting(durations=[3000])
 
     t_start = time.perf_counter()
-    msc_1_job = compare_multiple_sorters([sorting] * 10, n_jobs=1)
+    msc_1_job = compare_multiple_sorters([sorting] * 20, n_jobs=1)
     t_stop = time.perf_counter()
     elapsed_1_job = t_stop - t_start
     print(f"Elapsed 1 job: {elapsed_1_job}")
 
     t_start = time.perf_counter()
-    msc_N_jobs = compare_multiple_sorters([sorting] * 10, n_jobs=-1)
+    msc_N_jobs = compare_multiple_sorters([sorting] * 20, n_jobs=-1)
     t_stop = time.perf_counter()
     elapsed_N_jobs = t_stop - t_start
     print(f"Elapsed N jobs: {elapsed_N_jobs}")
 
     # there is no guarantee there are more than 1 CPU on GH actions. Let's comment it out
-    # assert elapsed_N_jobs < elapsed_1_job
+    if not ON_GITHUB and os.cpu_count() > 1:
+        assert elapsed_N_jobs < elapsed_1_job
     # check if the results are the same
     for k, cmp in msc_1_job.comparisons.items():
         cmp_N_jobs = msc_N_jobs.comparisons[k]
