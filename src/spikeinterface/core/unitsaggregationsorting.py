@@ -77,30 +77,28 @@ class UnitsAggregationSorting(BaseSorting):
             if np.all(annotations == annotations[0]):
                 self.set_annotation(annotation_name, sorting_list[0].get_annotation(annotation_name))
 
+        # Check if all the sortings properties have the same dtype
         property_keys = {}
         property_dict = {}
         deleted_keys = []
+        np_dtypes = [np.integer, np.floating, np.str_, np.bool]
         for sort in sorting_list:
             for prop_name in sort.get_property_keys():
-                if prop_name in deleted_keys:
-                    continue
-                if prop_name in property_keys:
-                    existing_property_dtype = sort.get_property(prop_name).dtype
-                    new_property_dtype = property_keys[prop_name].dtype
+                if prop_name not in property_keys:
+                    property_keys[prop_name] = sort.get_property(prop_name).dtype
+                else:
+                    existing_prop_dtype = sort.get_property(prop_name).dtype
+                    new_prop_dtype = property_keys[prop_name]
 
-                    both_are_ints = np.issubdtype(existing_property_dtype, np.integer) and np.issubdtype(
-                        new_property_dtype, np.integer
-                    )
-                    both_are_floats = np.issubdtype(existing_property_dtype, np.floating) and np.issubdtype(
-                        new_property_dtype, np.floating
-                    )
-                    both_are_strings = np.issubdtype(existing_property_dtype, np.str_) and np.issubdtype(
-                        new_property_dtype, np.str_
-                    )
+                    for np_dtype in np_dtypes:
+                        props_have_same_dtype = np.issubdtype(existing_prop_dtype, np_dtype) and np.issubdtype(
+                            new_prop_dtype, np_dtype
+                        )
+                        if props_have_same_dtype:
+                            break
 
-                    if both_are_ints or both_are_floats or both_are_strings:
-                        property_keys[prop_name] = sort.get_property(prop_name).dtype
-                    else:
+                    # If non-matching dtypes were found, delete this property from aggregated sorting
+                    if not props_have_same_dtype:
                         print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
                         del property_keys[prop_name]
                         deleted_keys.append(prop_name)

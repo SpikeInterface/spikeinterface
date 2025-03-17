@@ -78,9 +78,9 @@ def test_unitsaggregationsorting(create_cache_folder):
     sorting1.set_property("template", np.zeros((num_units, 20, 50)))
     sorting1.set_property("template", np.zeros((num_units, 2, 10)))
 
-    # incomplete property (str can't be propagated)
+    # incomplete property (cannot mix strings and ints)
     sorting1.set_property("quality", ["good"] * num_units)
-    sorting2.set_property("quality", ["bad"] * num_units)
+    sorting2.set_property("quality", [1] * num_units)
 
     # incomplete property (object can be propagated)
     sorting1.set_property("rand", np.random.rand(num_units))
