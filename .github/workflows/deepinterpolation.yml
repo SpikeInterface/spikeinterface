@@ -43,7 +43,12 @@ jobs:
           pip install tensorflow==2.7.0
           pip install deepinterpolation@git+https://github.com/AllenInstitute/deepinterpolation.git
           pip install protobuf==3.20.*
+          pip install numpy==1.26.4
           pip install -e .[full,test_core]
+      - name: Pip list
+        if: ${{ steps.modules-changed.outputs.DEEPINTERPOLATION_CHANGED == 'true' }}
+        run: |
+          pip list
       - name: Test DeepInterpolation with pytest
         if: ${{ steps.modules-changed.outputs.DEEPINTERPOLATION_CHANGED == 'true' }}
         run: |

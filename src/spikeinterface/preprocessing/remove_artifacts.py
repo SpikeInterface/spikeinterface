@@ -4,7 +4,7 @@ import warnings
 
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core import NumpySorting, estimate_templates
@@ -446,4 +446,6 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-remove_artifacts = define_function_from_class(source_class=RemoveArtifactsRecording, name="remove_artifacts")
+remove_artifacts = define_function_handling_dict_from_class(
+    source_class=RemoveArtifactsRecording, name="remove_artifacts"
+)
