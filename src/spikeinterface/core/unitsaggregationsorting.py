@@ -81,7 +81,7 @@ class UnitsAggregationSorting(BaseSorting):
         property_keys = {}
         property_dict = {}
         deleted_keys = []
-        np_dtypes = [np.integer, np.floating, np.str_, np.bool]
+        np_dtypes = [np.integer, np.floating, np.str_, bool]
         for sort in sorting_list:
             for prop_name in sort.get_property_keys():
                 if prop_name not in property_keys:
