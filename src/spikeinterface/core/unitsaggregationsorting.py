@@ -85,12 +85,26 @@ class UnitsAggregationSorting(BaseSorting):
                 if prop_name in deleted_keys:
                     continue
                 if prop_name in property_keys:
-                    if property_keys[prop_name] != sort.get_property(prop_name).dtype:
+                    existing_property_dtype = sort.get_property(prop_name).dtype
+                    new_property_dtype = property_keys[prop_name].dtype
+
+                    both_are_ints = np.issubdtype(existing_property_dtype, np.integer) and np.issubdtype(
+                        new_property_dtype, np.integer
+                    )
+                    both_are_floats = np.issubdtype(existing_property_dtype, np.floating) and np.issubdtype(
+                        new_property_dtype, np.floating
+                    )
+                    both_are_strings = np.issubdtype(existing_property_dtype, np.str_) and np.issubdtype(
+                        new_property_dtype, np.str_
+                    )
+
+                    if both_are_ints or both_are_floats or both_are_strings:
+                        property_keys[prop_name] = sort.get_property(prop_name).dtype
+                    else:
                         print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
                         del property_keys[prop_name]
                         deleted_keys.append(prop_name)
-                else:
-                    property_keys[prop_name] = sort.get_property(prop_name).dtype
+
         for prop_name in property_keys:
             dtype = property_keys[prop_name]
             property_dict[prop_name] = np.array([], dtype=dtype)
