@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..core import BaseSorting
-from ..core.core_tools import define_function_from_class
+from spikeinterface.core import BaseSorting
+from spikeinterface.core.core_tools import define_function_from_class
 from .basecomparison import BasePairComparison, MixinSpikeTrainComparison, MixinTemplateComparison
 from .comparisontools import (
     do_count_event,
@@ -15,7 +15,7 @@ from .comparisontools import (
     do_count_score,
     compute_performance,
 )
-from ..postprocessing import compute_template_similarity_by_pair
+from spikeinterface.postprocessing import compute_template_similarity_by_pair
 
 
 class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
