@@ -197,7 +197,7 @@ The whitened traces are then the dot product between the traces and the :code:`W
 * :py:func:`~spikeinterface.preprocessing.whiten()`
 
 clip() / blank_saturation()
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We can limit traces between a user-defined minimum and maximum using :code:`clip()` function.
 The :code:`blank_saturation()` function is similar, but it automatically estimates the limits by using quantiles.
