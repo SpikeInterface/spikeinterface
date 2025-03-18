@@ -85,10 +85,15 @@ class UnitsAggregationSorting(BaseSorting):
                 if prop_name in deleted_keys:
                     continue
                 if prop_name in property_keys:
-                    if property_keys[prop_name] != sort.get_property(prop_name).dtype:
-                        print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
-                        del property_keys[prop_name]
-                        deleted_keys.append(prop_name)
+                    existing_dtype = property_keys[prop_name]
+                    new_dtype = sort.get_property(prop_name).dtype
+                    if existing_dtype != new_dtype:
+                        existing_is_unicode = existing_dtype.kind == 'U'
+                        new_is_unicode = new_dtype.kind == 'U'
+                        if not (existing_is_unicode and new_is_unicode):
+                            print(f"Skipping property '{prop_name}': difference in dtype between sortings")
+                            del property_keys[prop_name]
+                            deleted_keys.append(prop_name)
                 else:
                     property_keys[prop_name] = sort.get_property(prop_name).dtype
         for prop_name in property_keys:
