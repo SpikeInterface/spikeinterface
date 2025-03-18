@@ -100,6 +100,7 @@ class WhitenRecording(BasePreprocessor):
             )
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
+        self._precomputable_kwargs = ["W", "M"]
 
         for parent_segment in recording._recording_segments:
             rec_segment = WhitenRecordingSegment(parent_segment, W, M, dtype_, int_scale)

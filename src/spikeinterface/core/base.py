@@ -54,6 +54,9 @@ class BaseExtractor:
         # store init kwargs for nested serialisation
         self._kwargs = {}
 
+        # kwargs which can be precomputed before being used by the extractor
+        self._precomputable_kwargs = []
+
         # "main_ids" will either be channel_ids or units_ids
         # They are used for properties
         self._main_ids = np.array(main_ids)
