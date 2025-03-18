@@ -78,7 +78,7 @@ class UnitsAggregationSorting(BaseSorting):
                 self.set_annotation(annotation_name, sorting_list[0].get_annotation(annotation_name))
 
         # Check if all the sortings have the same properties
-        properties_set = set(np.concat([sorting.get_property_keys() for sorting in sorting_list]))
+        properties_set = set(np.concatenate([sorting.get_property_keys() for sorting in sorting_list]))
         for prop_name in properties_set:
 
             dtypes_per_sorting = []
