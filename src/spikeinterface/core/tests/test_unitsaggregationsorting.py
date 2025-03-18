@@ -81,12 +81,14 @@ def test_unitsaggregationsorting(create_cache_folder):
     # incomplete property (cannot mix strings and ints)
     sorting1.set_property("quality", ["good"] * num_units)
     sorting2.set_property("quality", [1] * num_units)
+    sorting3.set_property("quality", [2] * num_units)
 
     # complete property (can mix strings of different lengths)
     sorting1.set_property("quality_2", ["good"] * num_units)
     sorting2.set_property("quality_2", ["bad"] * num_units)
+    sorting3.set_property("quality_2", ["bad"] * num_units)
 
-    # incomplete property (object can be propagated)
+    # incomplete property (sorting3 does not have a `rand` property)
     sorting1.set_property("rand", np.random.rand(num_units))
     sorting2.set_property("rand", np.random.rand(num_units))
 
@@ -94,7 +96,7 @@ def test_unitsaggregationsorting(create_cache_folder):
     assert "brain_area" in sorting_agg_prop.get_property_keys()
     assert "quality" not in sorting_agg_prop.get_property_keys()
     assert "quality_2" in sorting_agg_prop.get_property_keys()
-    assert "rand" in sorting_agg_prop.get_property_keys()
+    assert "rand" not in sorting_agg_prop.get_property_keys()
     print(sorting_agg_prop.get_property("brain_area"))
 
 

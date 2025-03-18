@@ -77,34 +77,37 @@ class UnitsAggregationSorting(BaseSorting):
             if np.all(annotations == annotations[0]):
                 self.set_annotation(annotation_name, sorting_list[0].get_annotation(annotation_name))
 
-        # Check if all the sortings properties have the same dtype
-        property_keys = {}
-        property_dict = {}
-        deleted_keys = []
-        np_dtypes = [np.integer, np.floating, np.str_, bool]
-        for sort in sorting_list:
-            for prop_name in sort.get_property_keys():
-                if prop_name not in property_keys:
-                    property_keys[prop_name] = sort.get_property(prop_name).dtype
+        # Check if all the sortings have the same properties
+        property_dtypes = {}
+        properties_set = set(np.concat([sorting.get_property_keys() for sorting in sorting_list]))
+
+        for prop_name in properties_set:
+
+            property_in_all_sortings = np.all(
+                np.array([prop_name in sort.get_property_keys() for sort in sorting_list])
+            )
+            if not property_in_all_sortings:
+                print(f"Skipping property '{prop_name}: not a property of all sortings.'")
+                continue
+
+            dtypes_per_sort = [sort.get_property(prop_name).dtype for sort in sorting_list]
+
+            if len(set(dtypes_per_sort)) == 1:
+                consistent_property_dtype = dtypes_per_sort[0]
+            else:
+                property_is_a_string = np.all(
+                    np.array([np.issubdtype(property_dtype, np.str_) for property_dtype in dtypes_per_sort])
+                )
+                if property_is_a_string:
+                    consistent_property_dtype = np.str_
                 else:
-                    existing_prop_dtype = sort.get_property(prop_name).dtype
-                    new_prop_dtype = property_keys[prop_name]
+                    print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
+                    continue
 
-                    for np_dtype in np_dtypes:
-                        props_have_same_dtype = np.issubdtype(existing_prop_dtype, np_dtype) and np.issubdtype(
-                            new_prop_dtype, np_dtype
-                        )
-                        if props_have_same_dtype:
-                            break
+            property_dtypes[prop_name] = consistent_property_dtype
 
-                    # If non-matching dtypes were found, delete this property from aggregated sorting
-                    if not props_have_same_dtype:
-                        print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
-                        del property_keys[prop_name]
-                        deleted_keys.append(prop_name)
-
-        for prop_name in property_keys:
-            dtype = property_keys[prop_name]
+        property_dict = {}
+        for prop_name, dtype in property_dtypes.items():
             property_dict[prop_name] = np.array([], dtype=dtype)
 
             for sort in sorting_list:
