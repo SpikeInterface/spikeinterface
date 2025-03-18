@@ -78,57 +78,51 @@ class UnitsAggregationSorting(BaseSorting):
                 self.set_annotation(annotation_name, sorting_list[0].get_annotation(annotation_name))
 
         # Check if all the sortings have the same properties
-        property_dtypes = {}
         properties_set = set(np.concat([sorting.get_property_keys() for sorting in sorting_list]))
-
         for prop_name in properties_set:
 
-            property_in_all_sortings = np.all(
-                np.array([prop_name in sort.get_property_keys() for sort in sorting_list])
-            )
-            if not property_in_all_sortings:
-                print(f"Skipping property '{prop_name}: not a property of all sortings.'")
-                continue
+            dtypes_per_sorting = []
+            for sort in sorting_list:
+                if prop_name in sort.get_property_keys():
+                    dtypes_per_sorting.append(sort.get_property(prop_name).dtype)
 
-            dtypes_per_sort = [sort.get_property(prop_name).dtype for sort in sorting_list]
-
-            if len(set(dtypes_per_sort)) == 1:
-                consistent_property_dtype = dtypes_per_sort[0]
+            # if there only one dtype, use it
+            if len(set(dtypes_per_sorting)) == 1:
+                consistent_property_dtype = dtypes_per_sorting[0]
             else:
+                # if all dtypes are subtypes of string, we set the dtype to be a string
                 property_is_a_string = np.all(
-                    np.array([np.issubdtype(property_dtype, np.str_) for property_dtype in dtypes_per_sort])
+                    np.array([np.issubdtype(property_dtype, np.str_) for property_dtype in dtypes_per_sorting])
                 )
                 if property_is_a_string:
                     consistent_property_dtype = np.str_
                 else:
-                    print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
+                    warnings.warn(f"Skipping property '{prop_name}: difference in dtype between sortings'")
                     continue
 
-            property_dtypes[prop_name] = consistent_property_dtype
-
-        property_dict = {}
-        for prop_name, dtype in property_dtypes.items():
-            property_dict[prop_name] = np.array([], dtype=dtype)
-
+            all_property_values = []
             for sort in sorting_list:
+
+                # If one of the sortings doesn't have the property, use the default missing property value
                 if prop_name in sort.get_property_keys():
                     values = sort.get_property(prop_name)
                 else:
-                    if dtype.kind not in BaseExtractor.default_missing_property_values:
-                        del property_dict[prop_name]
+                    if consistent_property_dtype.kind not in BaseExtractor.default_missing_property_values:
                         break
-                    values = np.full(
-                        sort.get_num_units(), BaseExtractor.default_missing_property_values[dtype.kind], dtype=dtype
-                    )
+                    else:
+                        values = np.full(
+                            sort.get_num_units(),
+                            BaseExtractor.default_missing_property_values[consistent_property_dtype.kind],
+                            dtype=consistent_property_dtype,
+                        )
 
-                try:
-                    property_dict[prop_name] = np.concatenate((property_dict[prop_name], values))
-                except Exception as e:
-                    print(f"Skipping property '{prop_name}' due to shape inconsistency")
-                    del property_dict[prop_name]
-                    break
-        for prop_name, prop_values in property_dict.items():
-            self.set_property(key=prop_name, values=prop_values)
+                all_property_values.append(values)
+
+            try:
+                prop_values = np.concatenate(all_property_values)
+                self.set_property(key=prop_name, values=prop_values)
+            except:
+                warnings.warn(f"Skipping property '{prop_name}' due to inconsistency")
 
         # add segments
         for i_seg in range(num_segments):

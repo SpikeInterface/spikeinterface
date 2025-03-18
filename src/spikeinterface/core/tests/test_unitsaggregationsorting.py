@@ -96,8 +96,7 @@ def test_unitsaggregationsorting(create_cache_folder):
     assert "brain_area" in sorting_agg_prop.get_property_keys()
     assert "quality" not in sorting_agg_prop.get_property_keys()
     assert "quality_2" in sorting_agg_prop.get_property_keys()
-    assert "rand" not in sorting_agg_prop.get_property_keys()
-    print(sorting_agg_prop.get_property("brain_area"))
+    assert "rand" in sorting_agg_prop.get_property_keys()
 
 
 def test_unit_aggregation_preserve_ids():
