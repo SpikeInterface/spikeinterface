@@ -5,7 +5,7 @@ import numpy as np
 from typing import Literal
 
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.preprocessing.filter import highpass_filter
+from .filter import highpass_filter
 from spikeinterface.core import get_random_data_chunks, order_channels_by_depth, BaseRecording
 from spikeinterface.core.channelslice import ChannelSliceRecording
 

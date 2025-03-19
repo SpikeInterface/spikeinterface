@@ -83,7 +83,7 @@ class CurationModelTrainer:
     metric_names : list of str, default: None
         A list of metrics to use for training. If None, default metrics will be used.
     imputation_strategies : list of str | None, default: None
-        A list of imputation strategies to try. Can be "knn”, "iterative" or any allowed
+        A list of imputation strategies to try. Can be "knn", "iterative" or any allowed
         strategy passable to the sklearn `SimpleImputer`. If None, the default strategies
         `["median", "most_frequent", "knn", "iterative"]` will be used.
     scaling_techniques : list of str | None, default: None
@@ -110,7 +110,7 @@ class CurationModelTrainer:
     labels : list of lists, default: None
         List of curated labels for each `sorting_analyzer` and each unit; must be in the same order as the metrics data.
     imputation_strategies : list of str | None, default: None
-        A list of imputation strategies to try. Can be "knn”, "iterative" or any allowed
+        A list of imputation strategies to try. Can be "knn", "iterative" or any allowed
         strategy passable to the sklearn `SimpleImputer`. If None, the default strategies
         `["median", "most_frequent", "knn", "iterative"]` will be used.
     scaling_techniques : list of str | None, default: None
@@ -665,53 +665,55 @@ def train_model(
     """
     Trains and evaluates machine learning models for spike sorting curation.
 
-    This function initializes a `CurationModelTrainer` object, loads and preprocesses the data,
+    This function initializes a ``CurationModelTrainer`` object, loads and preprocesses the data,
     and evaluates the specified combinations of imputation strategies, scaling techniques, and classifiers.
     The evaluation results, including the best model and its parameters, are saved to the output folder.
 
     Parameters
     ----------
-    mode : "analyzers" | "csv", default: "analyzers"
+    mode : ``"analyzers"`` | ``"csv"``, default: ``"analyzers"``
         Mode to use for training.
-    analyzers : list of SortingAnalyzer | None, default: None
-         List of SortingAnalyzer objects containing the quality metrics and labels to use for training, if using 'analyzers' mode.
+    analyzers : list of ``SortingAnalyzer`` | None, default: None
+        List of ``SortingAnalyzer`` objects containing the quality metrics and labels to use for training,
+        if using ``"analyzers"`` mode.
     labels : list of list | None, default: None
         List of curated labels for each unit; must be in the same order as the metrics data.
     metrics_paths : list of str or None, default: None
-        List of paths to the CSV files containing the metrics data if using 'csv' mode.
+        List of paths to the CSV files containing the metrics data if using ``"csv"`` mode.
     folder : str | None, default: None
         The folder where outputs such as models and evaluation metrics will be saved.
     metric_names : list of str | None, default: None
         A list of metrics to use for training. If None, default metrics will be used.
     imputation_strategies : list of str | None, default: None
-        A list of imputation strategies to try. Can be "knn”, "iterative" or any allowed
-        strategy passable to the sklearn `SimpleImputer`. If None, the default strategies
-        `["median", "most_frequent", "knn", "iterative"]` will be used.
+        A list of imputation strategies to try. Can be ``"knn"``, ``"iterative"``, or any allowed
+        strategy passable to the ``sklearn.SimpleImputer``. If None, the default strategies
+        ``["median", "most_frequent", "knn", "iterative"]`` will be used.
     scaling_techniques : list of str | None, default: None
-        A list of scaling techniques to try. Can be "standard_scaler", "min_max_scaler",
-        or "robust_scaler", If None, all techniques will be used.
+        A list of scaling techniques to try. Can be ``"standard_scaler"``, ``"min_max_scaler"``,
+        or ``"robust_scaler"``. If None, all techniques will be used.
     classifiers : list of str | dict | None, default: None
-        A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their hyperparameter search spaces can be provided. If None, default classifiers will be used. Check the `get_classifier_search_space` method for the default search spaces & format for custom spaces.
+        A list of classifiers to evaluate. Optionally, a dictionary of classifiers and their
+        hyperparameter search spaces can be provided. If None, default classifiers will be used.
+        Check the ``get_classifier_search_space`` method for the default search spaces & format for custom spaces.
     test_size : float, default: 0.2
-        Proportion of the dataset to include in the test split, passed to `train_test_split` from `sklear`.
+        Proportion of the dataset to include in the test split, passed to ``train_test_split`` from ``sklearn``.
     overwrite : bool, default: False
-        Overwrites the `folder` if it already exists
+        Overwrites the ``folder`` if it already exists.
     seed : int | None, default: None
         Random seed for reproducibility. If None, a random seed will be generated.
     search_kwargs : dict or None, default: None
-        Keyword arguments passed to `BayesSearchCV` or `RandomizedSearchCV` from `sklearn`. If None, use
-        `search_kwargs = {'cv': 3, 'scoring': 'balanced_accuracy', 'n_iter': 25}`.
+        Keyword arguments passed to ``BayesSearchCV`` or ``RandomizedSearchCV`` from ``sklearn``. If None, use
+        ``search_kwargs = {'cv': 3, 'scoring': 'balanced_accuracy', 'n_iter': 25}``.
     verbose : bool, default: True
         If True, useful information is printed during training.
     enforce_metric_params : bool, default: False
-        If True and metric parameters used to calculate metrics for different `sorting_analyzer`s are
+        If True and metric parameters used to calculate metrics for different ``sorting_analyzer`` objects are
         different, an error will be raised.
-
 
     Returns
     -------
     CurationModelTrainer
-        The `CurationModelTrainer` object used for training and evaluation.
+        The ``CurationModelTrainer`` object used for training and evaluation.
 
     Notes
     -----

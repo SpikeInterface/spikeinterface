@@ -22,6 +22,8 @@ spikeinterface.core
     .. autofunction:: estimate_sparsity
     .. autoclass:: ChannelSparsity
         :members:
+    .. autoclass:: Motion
+        :members:
     .. autoclass:: BinaryRecordingExtractor
     .. autoclass:: ZarrRecordingExtractor
     .. autoclass:: BinaryFolderRecording
@@ -166,7 +168,7 @@ spikeinterface.preprocessing
     .. autofunction:: astype
     .. autofunction:: average_across_direction
     .. autofunction:: bandpass_filter
-    .. autofunction:: blank_staturation
+    .. autofunction:: blank_saturation
     .. autofunction:: center
     .. autofunction:: clip
     .. autofunction:: common_reference
@@ -277,8 +279,6 @@ spikeinterface.comparison
 
     .. autoclass:: CollisionGTComparison
     .. autoclass:: CorrelogramGTComparison
-    .. autoclass:: CollisionGTStudy
-    .. autoclass:: CorrelogramGTStudy
 
 
 
@@ -449,7 +449,6 @@ Motion Correction
 ~~~~~~~~~~~~~~~~~
 .. automodule:: spikeinterface.sortingcomponents.motion
 
-    .. autoclass:: Motion
     .. autofunction:: estimate_motion
     .. autofunction:: interpolate_motion
     .. autofunction:: correct_motion_on_peaks

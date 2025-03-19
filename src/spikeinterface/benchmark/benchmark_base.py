@@ -10,7 +10,7 @@ import time
 
 
 from spikeinterface.core import SortingAnalyzer
-
+from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface import load, create_sorting_analyzer, load_sorting_analyzer
 from spikeinterface.widgets import get_some_colors
 
@@ -219,7 +219,7 @@ class BenchmarkStudy:
         for key in job_keys:
             benchmark = self.create_benchmark(key)
             t0 = time.perf_counter()
-            benchmark.run()
+            benchmark.run(**job_kwargs)
             t1 = time.perf_counter()
             self.benchmarks[key] = benchmark
             bench_folder = self.folder / "results" / self.key_to_str(key)
@@ -228,11 +228,11 @@ class BenchmarkStudy:
             benchmark.result["run_time"] = float(t1 - t0)
             benchmark.save_main(bench_folder)
 
-    def set_colors(self, colors=None, map_name="tab20"):
+    def set_colors(self, colors=None, map_name="tab10"):
         if colors is None:
             case_keys = list(self.cases.keys())
             self.colors = get_some_colors(
-                case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0
+                case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0, resample=False
             )
         else:
             self.colors = colors
@@ -264,6 +264,7 @@ class BenchmarkStudy:
         return plot_run_times(self, case_keys=case_keys)
 
     def compute_results(self, case_keys=None, verbose=False, **result_params):
+
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
@@ -309,7 +310,7 @@ class BenchmarkStudy:
         templates = sorting_analyzer.get_extenson("templates").get_data(operator=operator)
         return templates
 
-    def compute_metrics(self, case_keys=None, metric_names=["snr", "firing_rate"], force=False):
+    def compute_metrics(self, case_keys=None, metric_names=["snr", "firing_rate"], force=False, **job_kwargs):
         if case_keys is None:
             case_keys = self.cases.keys()
 
@@ -329,7 +330,7 @@ class BenchmarkStudy:
             sorting_analyzer = self.get_sorting_analyzer(key)
             qm_ext = sorting_analyzer.get_extension("quality_metrics")
             if qm_ext is None or force:
-                qm_ext = sorting_analyzer.compute("quality_metrics", metric_names=metric_names)
+                qm_ext = sorting_analyzer.compute("quality_metrics", metric_names=metric_names, **job_kwargs)
 
             # TODO remove this metics CSV file!!!!
             metrics = qm_ext.get_data()
@@ -364,6 +365,39 @@ class BenchmarkStudy:
 
     def get_result(self, key):
         return self.benchmarks[key].result
+
+    def get_pairs_by_level(self, level):
+        """
+        usefull for function like plot_performance_losses() where you need to plot one pair of results
+        This generate list of pairs for a given level.
+        """
+
+        level_index = self.levels.index(level)
+
+        possible_values = []
+        for key in self.cases.keys():
+            assert isinstance(key, tuple), "get_pairs_by_level need tuple keys"
+            level_value = key[level_index]
+            if level_value not in possible_values:
+                possible_values.append(level_value)
+        assert len(possible_values) == 2, "get_pairs_by_level() : you need exactly 2 value for this levels"
+
+        pairs = []
+        for key in self.cases.keys():
+
+            case0 = list(key)
+            case1 = list(key)
+            case0[level_index] = possible_values[0]
+            case1[level_index] = possible_values[1]
+            case0 = tuple(case0)
+            case1 = tuple(case1)
+
+            pair = (case0, case1)
+
+            if pair not in pairs:
+                pairs.append(pair)
+
+        return pairs
 
 
 class Benchmark:
