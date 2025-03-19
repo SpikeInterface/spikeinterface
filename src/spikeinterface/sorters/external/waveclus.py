@@ -8,8 +8,8 @@ import sys
 import json
 
 
-from ..basesorter import BaseSorter
-from ..utils import ShellScript
+from spikeinterface.sorters.basesorter import BaseSorter
+from spikeinterface.sorters.utils import ShellScript
 
 from spikeinterface.core import write_to_h5_dataset_format
 from spikeinterface.extractors import WaveClusSortingExtractor

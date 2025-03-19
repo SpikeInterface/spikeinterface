@@ -258,17 +258,22 @@ class TestKilosort4Long:
         self._check_arguments(compute_preprocessing, ["ops", "device", "tic0", "file_object"])
 
     def test_compute_drift_location_arguments(self):
-        self._check_arguments(
-            compute_drift_correction, ["ops", "device", "tic0", "progress_bar", "file_object", "clear_cache"]
-        )
+        expected_arguments = ["ops", "device", "tic0", "progress_bar", "file_object", "clear_cache"]
+        if parse(kilosort.__version__) >= parse("4.0.28"):
+            expected_arguments += ["verbose"]
+        self._check_arguments(compute_drift_correction, expected_arguments)
 
     def test_detect_spikes_arguments(self):
-        self._check_arguments(detect_spikes, ["ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"])
+        expected_arguments = ["ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
+        if parse(kilosort.__version__) >= parse("4.0.28"):
+            expected_arguments += ["verbose"]
+        self._check_arguments(detect_spikes, expected_arguments)
 
     def test_cluster_spikes_arguments(self):
-        self._check_arguments(
-            cluster_spikes, ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
-        )
+        expected_arguments = ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
+        if parse(kilosort.__version__) >= parse("4.0.28"):
+            expected_arguments += ["verbose"]
+        self._check_arguments(cluster_spikes, expected_arguments)
 
     def test_save_sorting_arguments(self):
         expected_arguments = ["ops", "results_dir", "st", "clu", "tF", "Wall", "imin", "tic0", "save_extra_vars"]

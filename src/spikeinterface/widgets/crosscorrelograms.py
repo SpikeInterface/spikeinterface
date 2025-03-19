@@ -4,9 +4,9 @@ import numpy as np
 from typing import Union
 
 from .base import BaseWidget, to_attr
-from ..core.sortinganalyzer import SortingAnalyzer
-from ..core.basesorting import BaseSorting
-from ..postprocessing import compute_correlograms
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+from spikeinterface.core.basesorting import BaseSorting
+from spikeinterface.postprocessing import compute_correlograms
 
 
 class CrossCorrelogramsWidget(BaseWidget):
@@ -31,8 +31,9 @@ class CrossCorrelogramsWidget(BaseWidget):
         this argument is ignored
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
-    unit_colors : dict or None, default: None
-        If given, a dictionary with unit ids as keys and colors as values
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     """
 
     def __init__(

@@ -560,10 +560,11 @@ class BaseRecordingSnippets(BaseExtractor):
             recordings = []
         elif outputs == "dict":
             recordings = {}
-        for value in np.unique(values):
+        for value in np.unique(values).tolist():
             (inds,) = np.nonzero(values == value)
             new_channel_ids = self.get_channel_ids()[inds]
             subrec = self.select_channels(new_channel_ids)
+            subrec.set_annotation("split_by_property", value=property)
             if outputs == "list":
                 recordings.append(subrec)
             elif outputs == "dict":

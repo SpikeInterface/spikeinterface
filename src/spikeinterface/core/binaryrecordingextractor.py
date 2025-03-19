@@ -23,8 +23,6 @@ class BinaryRecordingExtractor(BaseRecording):
         The sampling frequency
     num_channels : int
         Number of channels
-    num_chan : int [deprecated, use num_channels instead, will be removed as early as v0.100.0]
-        Number of channels
     dtype : str or dtype
         The dtype of the binary file
     time_axis : int, default: 0
@@ -57,7 +55,7 @@ class BinaryRecordingExtractor(BaseRecording):
         file_paths,
         sampling_frequency,
         dtype,
-        num_channels=None,
+        num_channels: int,
         t_starts=None,
         channel_ids=None,
         time_axis=0,
@@ -65,15 +63,7 @@ class BinaryRecordingExtractor(BaseRecording):
         gain_to_uV=None,
         offset_to_uV=None,
         is_filtered=None,
-        num_chan=None,
     ):
-        # This assigns num_channels if num_channels is not None, otherwise num_chan is assigned
-        # num_chan needs to be be kept for backward compatibility but should not be used by the
-        # end user
-        num_channels = num_channels or num_chan
-        assert num_channels is not None, "You must provide num_channels or num_chan"
-        if num_chan is not None:
-            warnings.warn("`num_chan` is to be deprecated as of version 0.100, please use `num_channels` instead")
 
         if channel_ids is None:
             channel_ids = list(range(num_channels))

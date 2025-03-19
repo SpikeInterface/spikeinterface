@@ -11,10 +11,11 @@ except:
 
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.template import Templates
-
-from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractSparseWaveforms, PeakRetriever
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 from spikeinterface.core.job_tools import split_job_kwargs
+from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
+from spikeinterface.core.sparsity import ChannelSparsity
+from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
 
 def make_multi_method_doc(methods, ident="    "):
@@ -32,7 +33,7 @@ def make_multi_method_doc(methods, ident="    "):
     return doc
 
 
-def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **job_kwargs):
+def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job_name=None, **job_kwargs):
     """
     Helper function to extract waveforms at the max channel from a peak list
 
@@ -63,6 +64,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **j
         sparsity_mask=sparsity_mask,
         copy=True,
         verbose=False,
+        job_name=job_name,
         **job_kwargs,
     )
 
@@ -289,6 +291,31 @@ def remove_empty_templates(templates):
         probe=templates.probe,
         is_scaled=templates.is_scaled,
     )
+
+
+def create_sorting_analyzer_with_existing_templates(sorting, recording, templates, remove_empty=True):
+    sparsity = templates.sparsity
+    templates_array = templates.get_dense_templates().copy()
+
+    if remove_empty:
+        non_empty_unit_ids = sorting.get_non_empty_unit_ids()
+        non_empty_sorting = sorting.remove_empty_units()
+        non_empty_unit_indices = sorting.ids_to_indices(non_empty_unit_ids)
+        templates_array = templates_array[non_empty_unit_indices]
+        sparsity_mask = sparsity.mask[non_empty_unit_indices, :]
+        sparsity = ChannelSparsity(sparsity_mask, non_empty_unit_ids, sparsity.channel_ids)
+    else:
+        non_empty_sorting = sorting
+
+    sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
+    sa.compute("random_spikes")
+    sa.extensions["templates"] = ComputeTemplates(sa)
+    sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
+    sa.extensions["templates"].data["average"] = templates_array
+    sa.extensions["templates"].data["std"] = np.zeros(templates_array.shape, dtype=np.float32)
+    sa.extensions["templates"].run_info["run_completed"] = True
+    sa.extensions["templates"].run_info["runtime_s"] = 0
+    return sa
 
 
 def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):

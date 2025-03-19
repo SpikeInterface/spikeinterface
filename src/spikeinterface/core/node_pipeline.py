@@ -29,6 +29,11 @@ spike_peak_dtype = base_peak_dtype + [
 
 
 class PipelineNode:
+
+    # If False (general case) then compute(traces_chunk, *node_input_args)
+    # If True then compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args)
+    _compute_has_extended_signature = False
+
     def __init__(
         self,
         recording: BaseRecording,
@@ -371,6 +376,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         parents: Optional[list[PipelineNode]] = None,
         return_output: bool = False,
         radius_um: float = 100.0,
+        sparsity_mask: np.ndarray = None,
     ):
         """
         Extract sparse waveforms from a recording. The strategy in this specific node is to reshape the waveforms
@@ -395,6 +401,11 @@ class ExtractSparseWaveforms(WaveformsNode):
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline
+        radius_um : float, default: 100.0
+            The radius to determine the neighborhood of channels to extract waveforms from.
+        sparsity_mask : np.ndarray, default: None
+            Optional mask to specify the sparsity of the waveforms. If provided, it should be a boolean array of shape
+            (num_channels, num_channels) where True indicates that the channel is active in the neighborhood.
         """
         WaveformsNode.__init__(
             self,
@@ -405,10 +416,15 @@ class ExtractSparseWaveforms(WaveformsNode):
             return_output=return_output,
         )
 
-        self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance <= radius_um
+
+        if sparsity_mask is not None:
+            self.neighbours_mask = sparsity_mask
+            self.radius_um = None
+        else:
+            self.radius_um = radius_um
+            self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
 
     def get_trace_margin(self):
@@ -684,7 +700,13 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
                 node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, peak_slice)
             else:
                 # TODO later when in master: change the signature of all nodes (or maybe not!)
-                node_output = node.compute(traces_chunk, *node_input_args)
+                if not node._compute_has_extended_signature:
+                    node_output = node.compute(traces_chunk, *node_input_args)
+                else:
+                    node_output = node.compute(
+                        traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args
+                    )
+
             pipeline_outputs[node] = node_output
 
             if skip_after_n_peaks_per_worker is not None and isinstance(node, PeakSource):
