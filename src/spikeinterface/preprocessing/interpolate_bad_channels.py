@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import numpy as np
 
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment, BaseRecording
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from spikeinterface.preprocessing import preprocessing_tools
+from .detect_bad_channels import _bad_channel_detection_kwargs_doc, detect_bad_channels
+from inspect import signature
 
 
 class InterpolateBadChannelsRecording(BasePreprocessor):
@@ -80,6 +82,60 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
 
         if recording.get_probe().si_units != "um":
             raise NotImplementedError("Channel spacing units must be um")
+
+
+class DetectAndInterpolateBadChannelsRecording(InterpolateBadChannelsRecording):
+    """
+    Detects and interpolates bad channels. If `bad_channel_ids` are given,
+    the detection is skipped and uses these instead.
+
+    {}
+    bad_channel_ids : np.array | list | None, default: None
+        If given, these are used rather than being dected.
+
+    Returns
+    -------
+    interpolated_bad_channels_recording : DetectAndInterpolateBadChannelsRecording
+        The recording with bad channels removed
+    """
+
+    def __init__(
+        self,
+        recording: BaseRecording,
+        bad_channel_ids=None,
+        **detect_bad_channels_kwargs,
+    ):
+
+        # get the default parameters from `detect_bad_channels`, and update with any user-specified parameters.
+        sig = signature(detect_bad_channels)
+        updated_detect_bad_channels_kwargs = {k: v.default for k, v in sig.parameters.items() if k != "recording"}
+        updated_detect_bad_channels_kwargs.update(detect_bad_channels_kwargs)
+
+        if bad_channel_ids is None:
+            bad_channel_ids, channel_labels = detect_bad_channels(recording=recording, **detect_bad_channels_kwargs)
+        else:
+            channel_labels = None
+
+        self._main_ids = recording.get_channel_ids()
+
+        InterpolateBadChannelsRecording.__init__(
+            self,
+            recording,
+            bad_channel_ids=bad_channel_ids,
+        )
+
+        self._kwargs.update({"bad_channel_ids": bad_channel_ids})
+        if channel_labels is not None:
+            self._kwargs.update({"channel_labels": channel_labels})
+        self._kwargs.update(updated_detect_bad_channels_kwargs)
+
+
+detect_and_interpolate_bad_channels = define_function_handling_dict_from_class(
+    source_class=DetectAndInterpolateBadChannelsRecording, name="detect_and_interpolate_bad_channels"
+)
+DetectAndInterpolateBadChannelsRecording.__doc__ = DetectAndInterpolateBadChannelsRecording.__doc__.format(
+    _bad_channel_detection_kwargs_doc
+)
 
 
 class InterpolateBadChannelsSegment(BasePreprocessorSegment):
