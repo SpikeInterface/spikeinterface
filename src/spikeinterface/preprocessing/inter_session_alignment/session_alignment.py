@@ -32,7 +32,7 @@ def get_estimate_histogram_kwargs() -> dict:
     "bin_um" : number of spatial histogram bins. As the estimated peak
         locations are continuous (i.e. real numbers) this is not constrained
         by the number of channels.
-    "method" : may be "chunked_mean", "chunked_median", "chunked_supremum",
+    "method" : may be "chunked_mean", "chunked_median"
         "chunked_poisson". Determines the summary statistic used over
         the histograms computed across a session. See `alignment_utils.py
         for details on each method.

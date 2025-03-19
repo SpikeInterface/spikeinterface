@@ -69,6 +69,32 @@ if __name__ == '__main__':
         compute_alignment_kwargs=compute_alignment_kwargs,
     )
 
+    estimate_histogram_kwargs["histogram_type"] = "activity_1d"
+
+    corrected_recordings_list, extra_info = session_alignment.align_sessions(
+        recordings_list,
+        peaks_list,
+        peak_locations_list,
+        alignment_order="to_session_1",  # "to_session_X" or "to_middle"
+        non_rigid_window_kwargs=non_rigid_window_kwargs,
+        estimate_histogram_kwargs=estimate_histogram_kwargs,
+        compute_alignment_kwargs=compute_alignment_kwargs,
+    )
+
+    breakpoint()
+    extra_info["histogram_info_list"][0]["chunked_histograms"]
+    plt.plot(extra_info["histogram_info_list"][0]["chunked_histograms"].T)
+
+    plt.plot(extra_info["session_histogram_list"][0])
+    plt.plot(extra_info["session_histogram_list"][1])
+    plt.plot(extra_info["non_rigid_windows"].T)
+    plt.show()
+
+    plt.plot(extra_info["session_histogram_list"][0])
+    plt.plot(extra_info["session_histogram_list"][1])
+    plt.plot(extra_info["non_rigid_windows"][0])
+    plt.show()
+
     plot_session_alignment(
         recordings_list,
         peaks_list,

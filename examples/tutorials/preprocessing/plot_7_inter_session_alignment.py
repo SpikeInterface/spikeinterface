@@ -36,9 +36,10 @@ import matplotlib.pyplot as plt
 # and then generating the test recordings:
 
 recordings_list, _ = generate_session_displacement_recordings(  # TODO: add to spikeinterface.full ?
-    num_units=5,
+    num_units=8,
     recording_durations=[10, 10],
     recording_shifts=((0, 0), (0, 200)),  # (x offset, y offset) pairs
+    seed=42
 )
 
 # %%
@@ -89,7 +90,7 @@ corrected_recordings_list, extra_info = session_alignment.align_sessions(
 # To assess the performance of inter-session alignment, ``plot_session_alignment()``
 # will plot both the original and corrected recordings:
 
-plot_session_alignment(  # TODO: is this signature confusing?
+plot_session_alignment(
     recordings_list,
     peaks_list,
     peak_locations_list,
@@ -101,7 +102,15 @@ plot_session_alignment(  # TODO: is this signature confusing?
 plt.show()
 
 # %%
-# As we have used 2d histograms for alignment, we can also plot these with ``plot_activity_histogram_2d()``.
+# As we have used 2d histograms for alignment, we can also plot these with ``plot_activity_histogram_2d()``:
+
+plot_activity_histogram_2d(
+    extra_info["session_histogram_list"],
+    extra_info["spatial_bin_centers"],
+    extra_info["corrected"]["corrected_session_histogram_list"]
+)
+plt.show()
+
 #
 # .. _with_motion_correction:
 
@@ -153,13 +162,13 @@ recording_part2 = motion_recording.time_slice(start_time=split_time, end_time=to
 # Next, motion correction is performed, storing the results in a list:
 
 # perform motion correction on each session, storing the outputs in lists
-recordings_list = []
+recordings_list_motion = []
 motion_info_list = []
 for recording in [recording_part1, recording_part2]:
 
     rec, motion_info = si.correct_motion(recording, output_motion_info=True, preset="rigid_fast")
 
-    recordings_list.append(rec)
+    recordings_list_motion.append(rec)
     motion_info_list.append(motion_info)
 
 # %%
@@ -175,8 +184,8 @@ estimate_histogram_kwargs["histogram_type"] = "activity_2d"  # TODO: RENAME
 
 align_sessions_kwargs = {"estimate_histogram_kwargs": estimate_histogram_kwargs}
 
-corrected_recordings_list, extra_info = session_alignment.align_sessions_after_motion_correction(
-    recordings_list, motion_info_list, align_sessions_kwargs
+corrected_recordings_list_motion, _ = session_alignment.align_sessions_after_motion_correction(
+    recordings_list_motion, motion_info_list, align_sessions_kwargs
 )
 
 # %%
@@ -186,6 +195,137 @@ corrected_recordings_list, extra_info = session_alignment.align_sessions_after_m
 # Inter-session alignment settings
 # --------------------------------
 #
+# Estimate Histogram Kwargs
+# ~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-# TODO: do a bit of the exploration of the outputs, how the inter-session alignment works
-# and how changing the kwargs changes key features. Also double-check the
+# The settings control how the activity histogram (used for alignment) is estimated
+# for each session. LINK TO: get_estimate_histogram_kwargs
+#
+# The ``"bin_um"`` parameter controls the bin-size of the activity histogram.
+# Along the probe's y-axis, spatial bins will be generated according to the bin-size.
+# set with ``bin_um``.
+#
+# To compute the histogram, the session is split into chunks across time, and either
+# the mean or median taken bin-size across chunks, to generate a summary histogram.
+# The ``"method"`` parameter controls whether the mean (``"chunked_mean"``)
+# or median (``"chunked_median"``) is used. The idea is to exclude periods of the
+# recording which may be outliers due to noise or other signal contamination.
+# ``"chunked_bin_size_s"`` sets the size of the temporal chunks. By default is
+# ``"estimate"`` which estimates the chunk size based on firing frequency
+# (see XXXX). Otherwise, can taFke a float for chunk size in seconds.
+# The ``histogram_type`` can be ``"activity_1d`"` or ``"activity_2d"``,
+# if 1D the firing rate x spatial bin histogram is generated. Otherwise
+# a firing rate x amplitude x spatial bin histogram is generated.
+#
+# The histogram used can be obtained from the extra information:. Going back to
+# the data from our previous example (before motion correction), we can plot
+# the chunked histogram for the first session (0 index).
+# Each line is a histogram estimated on a temporal chunk.
+
+estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
+estimate_histogram_kwargs["histogram_type"] = "activity_1d"  # TODO: RENAME  chunked_bin_size_s
+estimate_histogram_kwargs["chunked_bin_size_s"] = 1.0
+
+_, extra_info_rigid = session_alignment.align_sessions(
+    recordings_list,
+    peaks_list,
+    peak_locations_list,
+    estimate_histogram_kwargs=estimate_histogram_kwargs,
+)
+
+plt.plot(extra_info_rigid["histogram_info_list"][0]["chunked_histograms"].T)
+plt.xlabel("Spatial bim (um)")
+plt.show()
+
+# %%
+# Compute Alignment Kwargs
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Once the histograms have been generated for each session, the alignment
+# between sessions is computed. ``compute_alignmen_kwargs()`` LINK are used to
+# determine how this is performed. Alignment estimation proceeds similar
+# to the Kilosort motion-correction method (see also Kilosort-like). Breifly,
+# the cross-correlation of activity histograms is performed and the peak used
+# as a linear estimate of the displacement. For-non rigid alignment, first linear alignment
+# is performed, then the probe y-axis is binned and linear estimation performed in each bin.
+# Then, shifts located at each bin center are interpolated acoss channels (see below).
+#
+# Most compute-alignment kwargs are similar to those used in motion correcion
+# and can be read about HERE. Key arguments and those related to inter-session alignment
+# include:
+#
+# ``"num_shifts_global"``: This is the number of shifts to perform cross-correlation across for linear alignment.
+# Put differently, this is the maximum allowed displacement to consider for rigid alignment.
+# ``"num_shifts_block"``: The number of shifts to perform cross-correlation across for non-linear alignment (within each spatial bin).
+# ``"akima_interp_nonrigid"``: If ``True``, perform akima interpolation across non-rigid spatial bins (rather than linear).
+# ``"min_crosscorr_threshold"``: To estimate alignment, normalised cross-correlation is performed. In some cases, particularly
+# for non-rigid alignment, there may be little correlation within a bin. To stop aberrant shifts estimated on poor correlations,
+# this sets a minimum value for the correlation used to estimate the shift. If less than this value, the shift will be set to zero.
+#
+# Compute Alignment Kwargs
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+# Non-rigid window kwargs determine how the non-rigid alignment is performed,
+# in particular around how the y-axis of the probe is segmented into blocks
+# (each which will be aligned using rigid alignment). TODO. ``compute_alignment_kwargs``
+# are found here.
+#
+# We can see how the ``compute_alignment_kwargs`` control the non-rigid alignment
+# by inspecting the output of inter-session alignment. By default, the non-rigid
+# alignment is computed with Gaussian windows:
+
+# TODO: RENAME
+
+recordings_list, _ = generate_session_displacement_recordings(  # TODO: add to spikeinterface.full ?
+    num_units=8,
+    recording_durations=[10, 10],
+    recording_shifts=((0, 0), (0, 200)),  # (x offset, y offset) pairs
+    non_rigid_gradient=0.1,
+    seed=42
+)
+
+peaks_list, peak_locations_list = session_alignment.compute_peaks_locations_for_session_alignment(
+            recordings_list,
+            detect_kwargs={"method": "locally_exclusive"},
+            localize_peaks_kwargs={"method": "grid_convolution"},
+)
+
+
+non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
+non_rigid_window_kwargs["rigid"] = True
+
+_, extra_info_rigid = session_alignment.align_sessions(
+    recordings_list,
+    peaks_list,
+    peak_locations_list,
+    estimate_histogram_kwargs=estimate_histogram_kwargs,
+    non_rigid_window_kwargs=non_rigid_window_kwargs,
+)
+
+plt.plot(extra_info_rigid["corrected"]["corrected_session_histogram_list"][0])
+plt.plot(extra_info_rigid["corrected"]["corrected_session_histogram_list"][1])
+plt.show()
+
+# %%
+
+non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
+non_rigid_window_kwargs["rigid"] = False
+non_rigid_window_kwargs["win_step_um"] = 200
+non_rigid_window_kwargs["win_scale_um"] = 100
+
+compute_alignment_kwargs = session_alignment.get_compute_alignment_kwargs()
+compute_alignment_kwargs["akima_interp_nonrigid"] = True
+
+_, extra_info_nonrigid = session_alignment.align_sessions(
+    recordings_list,
+    peaks_list,
+    peak_locations_list,
+    estimate_histogram_kwargs=estimate_histogram_kwargs,
+    non_rigid_window_kwargs=non_rigid_window_kwargs,
+)
+
+# %%
+
+plt.plot(extra_info_nonrigid["corrected"]["corrected_session_histogram_list"][0])
+plt.plot(extra_info_nonrigid["corrected"]["corrected_session_histogram_list"][1])
+plt.plot(extra_info_nonrigid["non_rigid_windows"].T)
+plt.show()
