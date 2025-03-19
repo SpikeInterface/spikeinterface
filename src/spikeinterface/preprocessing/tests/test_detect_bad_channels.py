@@ -7,7 +7,7 @@ from probeinterface import generate_linear_probe
 from spikeinterface.generation import generate_recording
 
 from spikeinterface.core import generate_recording
-from spikeinterface.preprocessing import detect_bad_channels, highpass_filter, remove_bad_channels
+from spikeinterface.preprocessing import detect_bad_channels, highpass_filter, detect_and_remove_bad_channels
 
 try:
     # WARNING : this is not this package https://pypi.org/project/neurodsp/
@@ -33,7 +33,7 @@ def test_remove_bad_channel():
     recording.set_channel_gains(1)
 
     # set noisy_channel_threshold so that we do detect some bad channels
-    new_rec = remove_bad_channels(recording, noisy_channel_threshold=0, seed=1205)
+    new_rec = detect_and_remove_bad_channels(recording, noisy_channel_threshold=0, seed=1205)
 
     # make sure they are removed
     bad_channel_ids = new_rec._kwargs["bad_channel_ids"]

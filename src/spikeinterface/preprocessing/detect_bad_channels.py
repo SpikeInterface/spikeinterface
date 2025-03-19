@@ -4,27 +4,14 @@ import warnings
 import numpy as np
 from typing import Literal
 
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .filter import highpass_filter
 from spikeinterface.core import get_random_data_chunks, order_channels_by_depth, BaseRecording
 from spikeinterface.core.channelslice import ChannelSliceRecording
 
 from inspect import signature
 
-
-class RemoveBadChannelsRecording(ChannelSliceRecording):
-    """
-    Removes bad channels.
-
-    {}
-
-    Returns
-    -------
-    removed_bad_channels_recording : RemoveBadChannelsRecording
-        The recording with bad channels removed
-    """
-
-    params_doc = """Different methods are implemented:
+_bad_channel_detection_kwargs_doc = """Different methods are implemented:
 
 * std : threhshold on channel standard deviations
     If the standard deviation of a channel is greater than `std_mad_threshold` times the median of all
@@ -87,12 +74,28 @@ neighborhood_r2_radius_um : float, default: 30
     Spatial radius below which two channels are considered neighbors in the neighborhood_r2 method.
 seed : int or None, default: None
     The random seed to extract chunks
+"""
 
+
+class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
+    """
+    Detects and removes bad channels. If `bad_channel_ids` are given,
+    the detection is skipped and uses these instead.
+
+    {}
+    bad_channel_ids : np.array | list | None, default: None
+        If given, these are used rather than being dected.
+
+    Returns
+    -------
+    removed_bad_channels_recording : DetectAndRemoveBadChannelsRecording
+        The recording with bad channels removed
     """
 
     def __init__(
         self,
         recording: BaseRecording,
+        bad_channel_ids=None,
         **detect_bad_channels_kwargs,
     ):
 
@@ -101,7 +104,10 @@ seed : int or None, default: None
         updated_detect_bad_channels_kwargs = {k: v.default for k, v in sig.parameters.items() if k != "recording"}
         updated_detect_bad_channels_kwargs.update(detect_bad_channels_kwargs)
 
-        bad_channel_ids, channel_labels = detect_bad_channels(recording=recording, **detect_bad_channels_kwargs)
+        if bad_channel_ids is None:
+            bad_channel_ids, channel_labels = detect_bad_channels(recording=recording, **detect_bad_channels_kwargs)
+        else:
+            channel_labels = None
 
         self._main_ids = recording.get_channel_ids()
         new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, bad_channel_ids)]
@@ -112,14 +118,18 @@ seed : int or None, default: None
             channel_ids=new_channel_ids,
         )
 
-        self._kwargs.update({"bad_channel_ids": bad_channel_ids, "channel_labels": channel_labels})
+        self._kwargs.update({"bad_channel_ids": bad_channel_ids})
+        if channel_labels is not None:
+            self._kwargs.update({"channel_labels": channel_labels})
         self._kwargs.update(updated_detect_bad_channels_kwargs)
 
 
-remove_bad_channels = define_function_from_class(source_class=RemoveBadChannelsRecording, name="remove_bad_channels")
-
-
-RemoveBadChannelsRecording.__doc__ = RemoveBadChannelsRecording.__doc__.format(RemoveBadChannelsRecording.params_doc)
+detect_and_remove_bad_channels = define_function_handling_dict_from_class(
+    source_class=DetectAndRemoveBadChannelsRecording, name="detect_and_remove_bad_channels"
+)
+DetectAndRemoveBadChannelsRecording.__doc__ = DetectAndRemoveBadChannelsRecording.__doc__.format(
+    _bad_channel_detection_kwargs_doc
+)
 
 
 def detect_bad_channels(
@@ -321,7 +331,7 @@ def detect_bad_channels(
     return bad_channel_ids, channel_labels
 
 
-detect_bad_channels.__doc__ = detect_bad_channels.__doc__.format(RemoveBadChannelsRecording.params_doc)
+detect_bad_channels.__doc__ = detect_bad_channels.__doc__.format(_bad_channel_detection_kwargs_doc)
 
 
 # ----------------------------------------------------------------------------------------------
