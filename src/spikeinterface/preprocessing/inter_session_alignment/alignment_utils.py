@@ -18,7 +18,6 @@ def get_2d_activity_histogram(
     peaks: np.ndarray,
     peak_locations: np.ndarray,
     spatial_bin_edges: np.ndarray,
-    log_scale: bool,
     bin_s: float | None,
     depth_smooth_um: float | None,
     scale_to_hz: bool = False,
@@ -41,8 +40,6 @@ def get_2d_activity_histogram(
         A SpikeInterface `peak_locations` array.
     spatial_bin_edges: np.ndarray,
         A (1 x n_bins + 1) array of spatial (probe y dimension) bin edges.
-    log_scale: bool,
-        If `True`, histogram is log scaled.
     bin_s | None: float,
         If `None`, a single histogram will be generated from all session
         peaks. Otherwise, multiple histograms will be generated, one for
@@ -53,7 +50,6 @@ def get_2d_activity_histogram(
 
     TODO
     ----
-    - assumes 1-segment recording
     - ask Sam whether it makes sense to integrate this function with `make_2d_motion_histogram`.
     """
     activity_histogram, temporal_bin_edges, generated_spatial_bin_edges = make_2d_motion_histogram(
@@ -69,7 +65,6 @@ def get_2d_activity_histogram(
         depth_smooth_um=depth_smooth_um,
         avg_in_bin=avg_in_bin,
     )
-    assert np.array_equal(generated_spatial_bin_edges, spatial_bin_edges), "TODO: remove soon after testing"
 
     if scale_to_hz:
         if bin_s is None:
@@ -78,9 +73,6 @@ def get_2d_activity_histogram(
             scaler = 1 / np.diff(temporal_bin_edges)[:, np.newaxis]
 
         activity_histogram *= scaler
-
-    if log_scale:
-        activity_histogram = np.log2(1 + activity_histogram)  # TODO: make_2d_motion_histogram uses log2
 
     temporal_bin_centers = get_bin_centers(temporal_bin_edges)
     spatial_bin_centers = get_bin_centers(spatial_bin_edges)
@@ -96,7 +88,7 @@ def estimate_chunk_size(scaled_activity_histogram):
     """
     Estimate a chunk size based on the firing rate. Intuitively, we
     want longer chunk size to better estimate low firing rates. The
-    estimation computes a summary of the the firing rates for the session
+    estimation computes a summary of the firing rates for the session
     by taking the value 25% of the max of the activity histogram.
 
     Then, the chunk size that will accurately estimate this firing rate
@@ -108,10 +100,6 @@ def estimate_chunk_size(scaled_activity_histogram):
 
     scaled_activity_histogram: np.ndarray
         The activity histogram scaled to firing rate in Hz.
-
-    TODO
-    ----
-    - make the details available.
     """
     print("scaled max", np.max(scaled_activity_histogram))
 

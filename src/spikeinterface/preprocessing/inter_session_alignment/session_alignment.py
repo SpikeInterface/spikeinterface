@@ -39,7 +39,7 @@ def get_estimate_histogram_kwargs() -> dict:
     "chunked_bin_size_s" : The length in seconds (float) to chunk the recording
         for estimating the chunked histograms. Can be set to "estimate" (str),
         and the size is estimated from firing frequencies.
-    "log_scale" : if `True`, histograms are log transformed.
+    "log_transform" : if `True`, histograms are log transformed.
     "depth_smooth_um" : if `None`, no smoothing is applied. See
         `make_2d_motion_histogram`.
     """
@@ -47,7 +47,7 @@ def get_estimate_histogram_kwargs() -> dict:
         "bin_um": 2,
         "method": "chunked_mean",
         "chunked_bin_size_s": "estimate",
-        "log_scale": True,
+        "log_transform": True,
         "depth_smooth_um": None,
         "histogram_type": "1d",
         "weight_with_amplitude": False,
@@ -430,7 +430,7 @@ def _compute_session_histograms(
     method: str,
     chunked_bin_size_s: float | "estimate",
     depth_smooth_um: float,
-    log_scale: bool,
+    log_transform: bool,
     weight_with_amplitude: bool,
     avg_in_bin: bool,
 ) -> tuple[list[np.ndarray], list[np.ndarray], np.ndarray, np.ndarray, list[dict]]:
@@ -493,7 +493,7 @@ def _compute_session_histograms(
             histogram_type=histogram_type,
             spatial_bin_edges=spatial_bin_edges,
             method=method,
-            log_scale=log_scale,
+            log_transform=log_transform,
             chunked_bin_size_s=chunked_bin_size_s,
             depth_smooth_um=depth_smooth_um,
             weight_with_amplitude=weight_with_amplitude,
@@ -519,7 +519,7 @@ def _get_single_session_activity_histogram(
     histogram_type,
     spatial_bin_edges: np.ndarray,
     method: str,
-    log_scale: bool,
+    log_transform: bool,
     chunked_bin_size_s: float | "estimate",
     depth_smooth_um: float,
     weight_with_amplitude: bool,
@@ -575,7 +575,6 @@ def _get_single_session_activity_histogram(
             peaks,
             peak_locations,
             spatial_bin_edges,
-            log_scale=False,
             bin_s=None,
             depth_smooth_um=None,
             scale_to_hz=True,
@@ -594,7 +593,6 @@ def _get_single_session_activity_histogram(
             peaks,
             peak_locations,
             spatial_bin_edges,
-            log_scale=log_scale,
             bin_s=chunked_bin_size_s,
             depth_smooth_um=depth_smooth_um,
             weight_with_amplitude=weight_with_amplitude,
@@ -614,8 +612,8 @@ def _get_single_session_activity_histogram(
                 bin_s=chunked_bin_size_s,
                 bin_um=None,
                 hist_margin_um=50,
-                num_amp_bins=20,  #
-                log_transform=log_scale,
+                num_amp_bins=20,
+                log_transform=False,
                 spatial_bin_edges=spatial_bin_edges,
             )
 
@@ -626,6 +624,9 @@ def _get_single_session_activity_histogram(
 
     elif method == "chunked_median":
         session_histogram = alignment_utils.get_chunked_hist_median(chunked_histograms)
+
+    if log_transform:
+        session_histogram = np.log2(1 + session_histogram)
 
     histogram_info = {
         "chunked_histograms": chunked_histograms,
@@ -821,7 +822,7 @@ def _correct_session_displacement(
             estimate_histogram_kwargs["histogram_type"],
             spatial_bin_edges,
             estimate_histogram_kwargs["method"],
-            estimate_histogram_kwargs["log_scale"],
+            estimate_histogram_kwargs["log_transform"],
             estimate_histogram_kwargs["chunked_bin_size_s"],
             estimate_histogram_kwargs["depth_smooth_um"],
             estimate_histogram_kwargs["weight_with_amplitude"],
