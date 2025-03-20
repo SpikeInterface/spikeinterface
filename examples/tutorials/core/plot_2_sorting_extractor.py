@@ -40,7 +40,7 @@ labels1 = np.random.randint(1, num_units + 1, size=num_spikes)
 ##############################################################################
 # And instantiate a :py:class:`~spikeinterface.core.NumpySorting` object:
 
-sorting = se.NumpySorting.from_times_labels([times0, times1], [labels0, labels1], sampling_frequency)
+sorting = se.NumpySorting.from_samples_and_labels([times0, times1], [labels0, labels1], sampling_frequency)
 print(sorting)
 
 ##############################################################################

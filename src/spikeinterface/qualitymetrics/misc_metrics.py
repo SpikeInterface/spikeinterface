@@ -16,9 +16,10 @@ import math
 import numpy as np
 import warnings
 
-from ..postprocessing import correlogram_for_one_segment
-from ..core import SortingAnalyzer, get_noise_levels
-from ..core.template_tools import (
+from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
+from spikeinterface.postprocessing import correlogram_for_one_segment
+from spikeinterface.core import SortingAnalyzer, get_noise_levels
+from spikeinterface.core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
     get_dense_templates_array,
@@ -1468,7 +1469,10 @@ def compute_sd_ratio(
         The number of spikes, across all segments, for each unit ID.
     """
     import numba
-    from ..curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
+    from spikeinterface.curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
+
+    kwargs, job_kwargs = split_job_kwargs(kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     sorting = sorting_analyzer.sorting
 
@@ -1496,7 +1500,7 @@ def compute_sd_ratio(
         return {unit_id: np.nan for unit_id in unit_ids}
 
     noise_levels = get_noise_levels(
-        sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std"
+        sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std", **job_kwargs
     )
     best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
     n_spikes = sorting.count_num_spikes_per_unit()

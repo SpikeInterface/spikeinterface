@@ -3,14 +3,14 @@ from __future__ import annotations
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_from_class
-from .silence_periods import SilencedPeriodsRecording
-from .rectify import RectifyRecording
-from .filter_gaussian import GaussianFilterRecording
-from ..core.job_tools import split_job_kwargs, fix_job_kwargs
-from ..core import get_noise_levels
+from spikeinterface.preprocessing.silence_periods import SilencedPeriodsRecording
+from spikeinterface.preprocessing.rectify import RectifyRecording
+from spikeinterface.preprocessing.filter_gaussian import GaussianFilterRecording
+from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
+from spikeinterface.core import get_noise_levels
 
 
-from ..core.node_pipeline import PeakDetector, base_peak_dtype
+from spikeinterface.core.node_pipeline import PeakDetector, base_peak_dtype
 import numpy as np
 
 
