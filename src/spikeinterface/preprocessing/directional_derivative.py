@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 
 class DirectionalDerivativeRecording(BasePreprocessor):
@@ -136,6 +136,6 @@ class DirectionalDerivativeRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-directional_derivative = define_function_from_class(
+directional_derivative = define_function_handling_dict_from_class(
     source_class=DirectionalDerivativeRecording, name="directional_derivative"
 )
