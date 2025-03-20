@@ -37,20 +37,19 @@ class BenchmarkStudy:
 
     benchmark_class = None
 
-    def __init__(self, study_folder, benchmark_kwargs=None):
+    def __init__(self, study_folder):
         self.folder = Path(study_folder)
         self.datasets = {}
         self.analyzers = {}
         self.cases = {}
         self.benchmarks = {}
         self.levels = None
-        self.colors = None
-        self.map_name = "tab10"
-        self.benchmark_kwargs = benchmark_kwargs
+        self.colors_by_case = None
+        self.colors_by_levels = {}
         self.scan_folder()
 
     @classmethod
-    def create(cls, study_folder, datasets={}, cases={}, levels=None, benchmark_kwargs=None):
+    def create(cls, study_folder, datasets={}, cases={}, levels=None):
         """
         Create a BenchmarkStudy from a dict of datasets and cases.
 
@@ -69,8 +68,6 @@ class BenchmarkStudy:
                 * params
         levels : list | None
             If the keys of the cases are tuples, this is the list of levels names.
-        benchmark_kwargs : dict | None, default: None
-            The kwargs for the Benchmark class.
 
         Returns
         -------
@@ -158,7 +155,7 @@ class BenchmarkStudy:
         # cases is dumped to a pickle file, json is not possible because of the tuple key
         (study_folder / "cases.pickle").write_bytes(pickle.dumps(cases))
 
-        return cls(study_folder, benchmark_kwargs=benchmark_kwargs)
+        return cls(study_folder)
 
     def create_benchmark(self, key):
         """
@@ -199,10 +196,7 @@ class BenchmarkStudy:
             result_folder = self.folder / "results" / self.key_to_str(key)
             if result_folder.exists():
                 result = self.benchmark_class.load_folder(result_folder)
-                benchmark_kwargs = {"key": key}
-                if self.benchmark_kwargs is not None:
-                    benchmark_kwargs.update(self.benchmark_kwargs)
-                benchmark = self.create_benchmark(**benchmark_kwargs)
+                benchmark = self.create_benchmark(key=key)
                 benchmark.result.update(result)
                 self.benchmarks[key] = benchmark
             else:
@@ -263,22 +257,15 @@ class BenchmarkStudy:
             benchmark.result["run_time"] = float(t1 - t0)
             benchmark.save_main(bench_folder)
 
-    def set_colors(self, colors=None, map_name="tab10"):
-        if colors is None:
-            case_keys = list(self.cases.keys())
-            self.colors = get_some_colors(
-                case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0, resample=False
-            )
-            self.map_name = map_name
-        else:
-            self.colors = colors
-
-    def get_colors(self, levels_to_group_by=None, map_name="tab10"):
-        map_name = map_name or self.map_name
+    def set_colors(self, colors=None, map_name="tab10", levels_to_group_by=None):
         if levels_to_group_by is None:
-            if self.colors is None or self.map_name != map_name:
-                self.set_colors(map_name=map_name)
-            colors = self.colors
+            if colors is None:
+                case_keys = list(self.cases.keys())
+                self.colors_by_case = get_some_colors(
+                    case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0, resample=False
+                )
+            else:
+                self.colors_by_case = colors
         else:
             grouped_keys, _ = self.get_grouped_keys_mapping(levels_to_group_by)
             colors = get_some_colors(
@@ -289,7 +276,18 @@ class BenchmarkStudy:
                 margin=0,
                 resample=False,
             )
-        return colors
+            self.colors_by_levels[tuple(levels_to_group_by)] = colors
+
+    def get_colors(self, levels_to_group_by=None):
+        if levels_to_group_by is None:
+            if self.colors_by_case is None:
+                self.set_colors()
+            return self.colors_by_case
+        else:
+            levels_key = tuple(levels_to_group_by)
+            if levels_key not in self.colors_by_levels:
+                self.set_colors(levels_to_group_by=levels_to_group_by)
+            return self.colors_by_levels[levels_key]
 
     def get_run_times(self, case_keys=None):
         if case_keys is None:
