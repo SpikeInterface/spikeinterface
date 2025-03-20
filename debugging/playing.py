@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
     estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
     estimate_histogram_kwargs["method"] = "chunked_median"
-    estimate_histogram_kwargs["histogram_type"] = "activity_2d"
+    estimate_histogram_kwargs["histogram_type"] = "2d"
     estimate_histogram_kwargs["bin_um"] = 2
     estimate_histogram_kwargs["log_scale"] = True
     estimate_histogram_kwargs["weight_with_amplitude"] = False
@@ -69,7 +69,7 @@ if __name__ == '__main__':
         compute_alignment_kwargs=compute_alignment_kwargs,
     )
 
-    estimate_histogram_kwargs["histogram_type"] = "activity_1d"
+    estimate_histogram_kwargs["histogram_type"] = "2d"
 
     corrected_recordings_list, extra_info = session_alignment.align_sessions(
         recordings_list,
@@ -81,7 +81,6 @@ if __name__ == '__main__':
         compute_alignment_kwargs=compute_alignment_kwargs,
     )
 
-    breakpoint()
     extra_info["histogram_info_list"][0]["chunked_histograms"]
     plt.plot(extra_info["histogram_info_list"][0]["chunked_histograms"].T)
 
@@ -106,7 +105,7 @@ if __name__ == '__main__':
     )
     plt.show()
 
-    if estimate_histogram_kwargs["histogram_type"]  == "activity_2d":
+    if estimate_histogram_kwargs["histogram_type"]  == "2d":
         plot_activity_histogram_2d(
             extra_info["session_histogram_list"],
             extra_info["spatial_bin_centers"],

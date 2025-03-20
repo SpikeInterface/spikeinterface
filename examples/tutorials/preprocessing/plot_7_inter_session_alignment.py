@@ -2,8 +2,8 @@
 How to perform inter-session alignment
 ======================================
 
-In this how-to, we will assess and correct changes in probe position across multiple experimental sessions
-using `inter-session alignment`.
+In this tutorial we will assess and correct changes in probe position across
+multiple experimental sessions using `inter-session alignment`.
 
 This is often valuable for chronic-recording experiments, where the goal is to track units across sessions
 
@@ -12,7 +12,9 @@ Running inter-session alignment
 -------------------------------
 
 In SpikeInterface, it is recommended to perform inter-session alignment
-following within-session motion correction (if used) and before whitening.
+following within-session motion correction (if used) and before whitening / sorting.
+If you are running inter-session alignment after motion correction, see
+:ref:`inter-session alignment after motion correction <with_motion_correction>`.
 
 Preprocessed recordings should first be stored in a list:
 
@@ -20,7 +22,7 @@ Preprocessed recordings should first be stored in a list:
 
     recordings_list = [prepro_session_1, prepro_session_2, ...]
 
-Here, we will simulate such an experiment by generating a pair of sessions in
+Here, we will simulate an experiment with two sessions by generating a pair of sessions in
 which the probe is displaced 200 micrometers (μm) along its y-axis (depth).
 First, we will import all required packages and functions:
 """
@@ -33,7 +35,7 @@ import matplotlib.pyplot as plt
 
 
 # %%
-# and then generating the test recordings:
+# and then generate the test recordings:
 
 recordings_list, _ = generate_session_displacement_recordings(  # TODO: add to spikeinterface.full ?
     num_units=8,
@@ -43,17 +45,17 @@ recordings_list, _ = generate_session_displacement_recordings(  # TODO: add to s
 )
 
 # %%
-# We won't explicitly preprocess these recordings in this how-to, but you can imagine
+# We won't preprocess the simulated recordings in this tutorial, but you can imagine
 # preprocessing steps have already been run (e.g. filtering, common reference etc.).
 #
 # To run inter-session alignment, peaks must be detected and localised
-# as the locations of firing neurons are used to anchor the sessions alignment.
+# as the locations of firing neurons are used to anchor the sessions' alignment.
 #
 # If you are **running inter-session alignment following motion correction**, the peaks will
 # already be detected and localised. In this case, please jump to
 # :ref:`inter-session alignment after motion correction <with_motion_correction>`.
 #
-# In this section we will assume motion correction was not run, so we need to compute the peaks:
+# In this section of the tutorial, we will assume motion correction was not run, so we need to compute the peaks:
 
 peaks_list, peak_locations_list = session_alignment.compute_peaks_locations_for_session_alignment(
             recordings_list,
@@ -72,12 +74,12 @@ plot_session_alignment(
 plt.show()
 
 # %%
-# Now, we are ready to perform inter-session alignment. There are many options associated
-# with this method—the simplest way to edit these is to fetch the default options
-# with the getter function and make select changes as required:
+# we are now ready to perform inter-session alignment. There are many options associated
+# with this method (see sections below). To edit the configurations, fetch the default options
+# with the available getters function and make select changes as required:
 
 estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
-estimate_histogram_kwargs["histogram_type"] = "activity_2d"  # TODO: RENAME
+estimate_histogram_kwargs["histogram_type"] = "2d"
 
 corrected_recordings_list, extra_info = session_alignment.align_sessions(
     recordings_list,
@@ -172,15 +174,11 @@ for recording in [recording_part1, recording_part2]:
     motion_info_list.append(motion_info)
 
 # %%
-# Now, we are ready to use ``align_sessions_after_motion_correction()``
-# to align the motion-corrected sessions. This function should always be used
-# for aligning motion-corrected sessions, as it ensures the alignment
-# parameters are properly matched.
-#
+# Now, we are ready to use ``align_sessions_after_motion_correction()``.
 # We can pass any arguments directly to ``align_sessions`` using the ``align_sessions_kwargs`` argument:
 
 estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
-estimate_histogram_kwargs["histogram_type"] = "activity_2d"  # TODO: RENAME
+estimate_histogram_kwargs["histogram_type"] = "2d"
 
 align_sessions_kwargs = {"estimate_histogram_kwargs": estimate_histogram_kwargs}
 
@@ -195,35 +193,42 @@ corrected_recordings_list_motion, _ = session_alignment.align_sessions_after_mot
 # Inter-session alignment settings
 # --------------------------------
 #
+# Below, the settings that control how inter-session alignment is performed
+# are explored. These configs can be accessed by the getter functions
+# ``get_estimate_histogram_kwargs``, ``get_compute_alignment_kwargs``,
+# ``get_non_rigid_window_kwargs``, ``get_interpolate_motion_kwargs``.
+#
+# TODO: cannot add inter-session alignment to imports due to circular import error
+#
 # Estimate Histogram Kwargs
 # ~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # The settings control how the activity histogram (used for alignment) is estimated
-# for each session. LINK TO: get_estimate_histogram_kwargs
+# for each session. They can be obtained with ``get_estimate_histogram_kwargs``.
 #
 # The ``"bin_um"`` parameter controls the bin-size of the activity histogram.
-# Along the probe's y-axis, spatial bins will be generated according to the bin-size.
-# set with ``bin_um``.
+# Along the probe's y-axis, spatial bins will be generated according to this bin size.
 #
 # To compute the histogram, the session is split into chunks across time, and either
-# the mean or median taken bin-size across chunks, to generate a summary histogram.
+# the mean or median (bin-wise) taken across chunks. This generates the summary
+# histgoram for that session to be used to estimate inter-session displacement.
+#
 # The ``"method"`` parameter controls whether the mean (``"chunked_mean"``)
-# or median (``"chunked_median"``) is used. The idea is to exclude periods of the
-# recording which may be outliers due to noise or other signal contamination.
+# or median (``"chunked_median"``) is used. The idea of using the median is to
+# reduce the effect periods of the recording which may be outliers
+# due to noise or other signal contamination.
 # ``"chunked_bin_size_s"`` sets the size of the temporal chunks. By default is
 # ``"estimate"`` which estimates the chunk size based on firing frequency
 # (see XXXX). Otherwise, can taFke a float for chunk size in seconds.
-# The ``histogram_type`` can be ``"activity_1d`"` or ``"activity_2d"``,
+#
+# The ``histogram_type`` can be ``"1d"` or ``"2d"``,
 # if 1D the firing rate x spatial bin histogram is generated. Otherwise
 # a firing rate x amplitude x spatial bin histogram is generated.
 #
-# The histogram used can be obtained from the extra information:. Going back to
-# the data from our previous example (before motion correction), we can plot
-# the chunked histogram for the first session (0 index).
-# Each line is a histogram estimated on a temporal chunk.
+# We can visualise the histograms for each time chunk with:
 
 estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
-estimate_histogram_kwargs["histogram_type"] = "activity_1d"  # TODO: RENAME  chunked_bin_size_s
+estimate_histogram_kwargs["histogram_type"] = "1d"
 estimate_histogram_kwargs["chunked_bin_size_s"] = 1.0
 
 _, extra_info_rigid = session_alignment.align_sessions(
@@ -241,17 +246,18 @@ plt.show()
 # Compute Alignment Kwargs
 # ~~~~~~~~~~~~~~~~~~~~~~~~
 #
-# Once the histograms have been generated for each session, the alignment
-# between sessions is computed. ``compute_alignmen_kwargs()`` LINK are used to
-# determine how this is performed. Alignment estimation proceeds similar
-# to the Kilosort motion-correction method (see also Kilosort-like). Breifly,
-# the cross-correlation of activity histograms is performed and the peak used
-# as a linear estimate of the displacement. For-non rigid alignment, first linear alignment
-# is performed, then the probe y-axis is binned and linear estimation performed in each bin.
-# Then, shifts located at each bin center are interpolated acoss channels (see below).
+# Once the histograms have been generated for each session, the displacement
+# between sessions is computed. ``get_compute_alignment_kwargs()`` set how this
+# displacement is estimated.
 #
-# Most compute-alignment kwargs are similar to those used in motion correcion
-# and can be read about HERE. Key arguments and those related to inter-session alignment
+# The estimation proceeds similar to the `Kilosort motion-correction <https://pubmed.ncbi.nlm.nih.gov/33859006/>`_
+# method (see also the "kilosort-like" option in `:func:`correct_motion``.). Briefly, the cross-correlation
+# of activity histograms is performed and the peak position used as a linear estimate of the displacement.
+# For-non rigid alignment, first linear alignment is performed, then the probe y-axis is split into segments
+# and linear estimation performed in each bin. Then, the displacement set at each bin center are interpolated acoss channels.
+#
+# Most compute-alignment kwargs are similar to those used in motion correction.
+# Key arguments and those related to inter-session alignment
 # include:
 #
 # ``"num_shifts_global"``: This is the number of shifts to perform cross-correlation across for linear alignment.
@@ -262,20 +268,18 @@ plt.show()
 # for non-rigid alignment, there may be little correlation within a bin. To stop aberrant shifts estimated on poor correlations,
 # this sets a minimum value for the correlation used to estimate the shift. If less than this value, the shift will be set to zero.
 #
-# Compute Alignment Kwargs
-# ~~~~~~~~~~~~~~~~~~~~~~~~
+# Non-rigid window kwargs
+# ~~~~~~~~~~~~~~~~~~~~~~~
 # Non-rigid window kwargs determine how the non-rigid alignment is performed,
 # in particular around how the y-axis of the probe is segmented into blocks
-# (each which will be aligned using rigid alignment). TODO. ``compute_alignment_kwargs``
-# are found here.
+# (each which will be aligned using rigid alignment) are found here.
+# (and see ``get_non_rigid_window_kwargs()``.
 #
 # We can see how the ``compute_alignment_kwargs`` control the non-rigid alignment
-# by inspecting the output of inter-session alignment. By default, the non-rigid
-# alignment is computed with Gaussian windows:
+# by inspecting the output of inter-session alignment. First, we generate a
+# pair of recordings with non-rigid displacement and perform rigid alignment:
 
-# TODO: RENAME
-
-recordings_list, _ = generate_session_displacement_recordings(  # TODO: add to spikeinterface.full ?
+recordings_list, _ = generate_session_displacement_recordings(
     num_units=8,
     recording_durations=[10, 10],
     recording_shifts=((0, 0), (0, 200)),  # (x offset, y offset) pairs
@@ -306,6 +310,12 @@ plt.plot(extra_info_rigid["corrected"]["corrected_session_histogram_list"][1])
 plt.show()
 
 # %%
+# Above, you can see there rigid alignemnt has well-matched one peak but
+# the second peak is offset. Next, we can apply non-rigid alignment,
+# and visualise the non-rigid segments that the probe is split into.
+# Note that by default, Gaussian windows are used:
+
+# %%
 
 non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
 non_rigid_window_kwargs["rigid"] = False
@@ -323,9 +333,17 @@ _, extra_info_nonrigid = session_alignment.align_sessions(
     non_rigid_window_kwargs=non_rigid_window_kwargs,
 )
 
-# %%
-
 plt.plot(extra_info_nonrigid["corrected"]["corrected_session_histogram_list"][0])
 plt.plot(extra_info_nonrigid["corrected"]["corrected_session_histogram_list"][1])
 plt.plot(extra_info_nonrigid["non_rigid_windows"].T)
 plt.show()
+
+# %%
+# It is notable that the non-rigid alignment is not perfect in this case. This
+# is because for each bin, the displacement is computed and we can imagine
+# its value being 'positioned' in the center of the bin. Then, the bin center
+# values are interpolates across all channels. This leads to non-perfect alignment.
+#
+# This is in part because this is a simulated test case with only a few peaks and
+# the spatial footprint of the APs is small. Nonetheless, the non-rigid window kwargs
+# may be adjusting to maximise the performance of non-rigid alignment in the real world case.

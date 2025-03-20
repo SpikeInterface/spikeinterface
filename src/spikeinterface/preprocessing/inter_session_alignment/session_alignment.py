@@ -49,7 +49,7 @@ def get_estimate_histogram_kwargs() -> dict:
         "chunked_bin_size_s": "estimate",
         "log_scale": True,
         "depth_smooth_um": None,
-        "histogram_type": "activity_1d",
+        "histogram_type": "1d",
         "weight_with_amplitude": False,
         "avg_in_bin": False,
     }
@@ -587,7 +587,7 @@ def _get_single_session_activity_histogram(
         chunked_bin_size_s = alignment_utils.estimate_chunk_size(scaled_hist)
         chunked_bin_size_s = np.min([chunked_bin_size_s, recording.get_duration()])
 
-    if histogram_type == "activity_1d":
+    if histogram_type == "1d":
 
         chunked_histograms, chunked_temporal_bin_centers, _ = alignment_utils.get_2d_activity_histogram(
             recording,
@@ -602,9 +602,9 @@ def _get_single_session_activity_histogram(
             scale_to_hz=True,
         )
 
-    elif histogram_type in ["activity_2d"]:
+    elif histogram_type in ["2d"]:
 
-        if histogram_type == "activity_2d":
+        if histogram_type == "2d":
 
             chunked_histograms, chunked_temporal_bin_edges, _ = make_3d_motion_histograms(
                 recording,
