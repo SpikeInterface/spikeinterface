@@ -47,15 +47,15 @@ class BaseExtractor:
     # these properties are skipped by default in copy_metadata
     _skip_properties = []
 
+    # kwargs which can be precomputed before being used by the extractor
+    _precomputable_kwargs = []
+
     installation_mesg = ""
     installed = True
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
         self._kwargs = {}
-
-        # kwargs which can be precomputed before being used by the extractor
-        self._precomputable_kwargs = []
 
         # "main_ids" will either be channel_ids or units_ids
         # They are used for properties
