@@ -129,7 +129,7 @@ class TestInterSessionAlignment:
     # Functional Tests
     ############################################################################
 
-    @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])
+    @pytest.mark.parametrize("histogram_type", ["1d", "2d"])
     @pytest.mark.parametrize("num_shifts_global", [None, 200])
     def test_align_sessions_finds_correct_shifts(self, num_shifts_global, recording_1, histogram_type):
         """
@@ -284,7 +284,7 @@ class TestInterSessionAlignment:
                     atol=1e-6,
                 )
 
-    @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])
+    @pytest.mark.parametrize("histogram_type", ["1d", "2d"])
     @pytest.mark.parametrize("operator", ["mean", "median"])
     def test_histogram_parameters(self, recording_1, histogram_type, operator):
         """ """
@@ -660,7 +660,7 @@ class TestInterSessionAlignment:
         else:
             assert xcorr_matrix_unsmoothed.shape[1] == num_shifts
 
-    @pytest.mark.parametrize("histogram_mode", ["activity_1d", "activity_2d"])
+    @pytest.mark.parametrize("histogram_mode", ["1d", "2d"])
     def test_compute_histogram_crosscorrelation_nonrigid(self, histogram_mode):
         """ """
         # fmt: off
@@ -668,7 +668,7 @@ class TestInterSessionAlignment:
         hist_1 = np.array([0.5, 1, 0, 0,   0, 1e-3, 0, 0,       0, 0, 0, 1])
         hist_2 = np.array([0, 0, 0.5, 1,   1e-12, 0, 0, 0,   1, 0, 0, 0])
 
-        if histogram_mode == "activity_2d":
+        if histogram_mode == "2d":
             hist_1 = np.vstack([hist_1, hist_1 * 2]).T
             hist_2 = np.vstack([hist_2, hist_2 * 2]).T
 
@@ -713,7 +713,7 @@ class TestInterSessionAlignment:
             "chunked_bin_size_s": "estimate",
             "log_scale": True,
             "depth_smooth_um": None,
-            "histogram_type": "activity_1d",
+            "histogram_type": "1d",
             "weight_with_amplitude": False,
             "avg_in_bin": False,
         }
@@ -885,7 +885,7 @@ class TestInterSessionAlignment:
         assert kwargs["sigma_um"] == different_kwargs["sigma_um"]
         assert kwargs["p"] == different_kwargs["p"]
 
-    @pytest.mark.parametrize("histogram_type", ["activity_1d", "activity_2d"])
+    @pytest.mark.parametrize("histogram_type", ["1d", "2d"])
     def test_interesting_debug_case(self, histogram_type, recording_2):
         """
         This is an interseting debug case that is included in the tests to act as
@@ -979,7 +979,7 @@ class TestInterSessionAlignment:
         # Ideally this would be maintained, but it may be that these values need to change slightly.
         # In this case, the values can be changed or the regression part of this test removed, the
         # main value is in the debugging explaination.
-        if histogram_type == "activity_1d":
+        if histogram_type == "1d":
             assert np.isclose(np.corrcoef(correced_hist_list[0], correced_hist_list[1])[0, 1], 0.283, atol=1e-3)
         else:
             assert np.isclose(
