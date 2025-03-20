@@ -13,6 +13,7 @@ from .external.pykilosort import PyKilosortSorter
 from .external.klusta import KlustaSorter
 from .external.mountainsort4 import Mountainsort4Sorter
 from .external.mountainsort5 import Mountainsort5Sorter
+from .external.rt_sort import RTSortSorter
 from .external.spyking_circus import SpykingcircusSorter
 from .external.tridesclous import TridesclousSorter
 from .external.waveclus import WaveClusSorter
@@ -39,6 +40,7 @@ sorter_full_list = [
     KlustaSorter,
     Mountainsort4Sorter,
     Mountainsort5Sorter,
+    RTSortSorter,
     SpykingcircusSorter,
     TridesclousSorter,
     WaveClusSorter,
