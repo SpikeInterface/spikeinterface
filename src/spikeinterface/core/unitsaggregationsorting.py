@@ -84,45 +84,35 @@ class UnitsAggregationSorting(BaseSorting):
             dtypes_per_sorting = []
             for sort in sorting_list:
                 if prop_name in sort.get_property_keys():
-                    dtypes_per_sorting.append(sort.get_property(prop_name).dtype)
+                    dtypes_per_sorting.append(sort.get_property(prop_name).dtype.kind)
 
-            # if there only one dtype, use it
-            if len(set(dtypes_per_sorting)) == 1:
-                consistent_property_dtype = dtypes_per_sorting[0]
-            else:
-                # if all dtypes are subtypes of string, we set the dtype to be a string
-                property_is_a_string = np.all(
-                    np.array([np.issubdtype(property_dtype, np.str_) for property_dtype in dtypes_per_sorting])
-                )
-                if property_is_a_string:
-                    consistent_property_dtype = np.str_
-                else:
-                    warnings.warn(f"Skipping property '{prop_name}: difference in dtype between sortings'")
-                    continue
+            if len(set(dtypes_per_sorting)) != 1:
+                warnings.warn(f"Skipping property '{prop_name}: difference in dtype between sortings'")
+                continue
 
             all_property_values = []
             for sort in sorting_list:
 
                 # If one of the sortings doesn't have the property, use the default missing property value
-                if prop_name in sort.get_property_keys():
-                    values = sort.get_property(prop_name)
-                else:
-                    if consistent_property_dtype.kind not in BaseExtractor.default_missing_property_values:
-                        break
-                    else:
+                if prop_name not in sort.get_property_keys():
+                    try:
                         values = np.full(
                             sort.get_num_units(),
-                            BaseExtractor.default_missing_property_values[consistent_property_dtype.kind],
-                            dtype=consistent_property_dtype,
+                            BaseExtractor.default_missing_property_values[dtypes_per_sorting[0]],
                         )
+                    except:
+                        warnings.warn(f"Skipping property '{prop_name}: cannot inpute missing property values.'")
+                        break
+                else:
+                    values = sort.get_property(prop_name)
 
                 all_property_values.append(values)
 
             try:
                 prop_values = np.concatenate(all_property_values)
                 self.set_property(key=prop_name, values=prop_values)
-            except:
-                warnings.warn(f"Skipping property '{prop_name}' due to inconsistency")
+            except Exception as ext:
+                warnings.warn(f"Skipping property '{prop_name}' as numpy cannot concatente.\n{ext}")
 
         # add segments
         for i_seg in range(num_segments):
