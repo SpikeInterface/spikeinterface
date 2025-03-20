@@ -4,7 +4,6 @@ from spikeinterface import BaseRecording
 import numpy as np
 
 from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_histogram
-from scipy.ndimage import gaussian_filter
 from spikeinterface.sortingcomponents.motion.iterative_template import kriging_kernel
 from packaging.version import Version
 
@@ -257,6 +256,9 @@ def compute_histogram_crosscorrelation(
     Note that kilosort method does not work because creating a
     mean does not make sense over sessions.
     """
+    # scipy is not a core dependency
+    from scipy.ndimage import gaussian_filter
+
     num_sessions = session_histogram_list.shape[0]
     num_bins = session_histogram_list.shape[1]  # all hists are same length
     num_windows = non_rigid_windows.shape[0]
