@@ -99,11 +99,6 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
         **detect_bad_channels_kwargs,
     ):
 
-        # get the default parameters from `detect_bad_channels`, and update with any user-specified parameters.
-        sig = signature(detect_bad_channels)
-        updated_detect_bad_channels_kwargs = {k: v.default for k, v in sig.parameters.items() if k != "recording"}
-        updated_detect_bad_channels_kwargs.update(detect_bad_channels_kwargs)
-
         if bad_channel_ids is None:
             bad_channel_ids, channel_labels = detect_bad_channels(recording=recording, **detect_bad_channels_kwargs)
         else:
@@ -121,7 +116,9 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
         self._kwargs.update({"bad_channel_ids": bad_channel_ids})
         if channel_labels is not None:
             self._kwargs.update({"channel_labels": channel_labels})
-        self._kwargs.update(updated_detect_bad_channels_kwargs)
+
+        all_bad_channels_kwargs = _get_all_detect_bad_channel_kwargs(detect_bad_channels_kwargs)
+        self._kwargs.update(all_bad_channels_kwargs)
 
 
 detect_and_remove_bad_channels = define_function_handling_dict_from_class(
@@ -130,6 +127,15 @@ detect_and_remove_bad_channels = define_function_handling_dict_from_class(
 DetectAndRemoveBadChannelsRecording.__doc__ = DetectAndRemoveBadChannelsRecording.__doc__.format(
     _bad_channel_detection_kwargs_doc
 )
+
+
+def _get_all_detect_bad_channel_kwargs(detect_bad_channels_kwargs):
+    """Get the default parameters from `detect_bad_channels`, and update with any user-specified parameters."""
+
+    sig = signature(detect_bad_channels)
+    all_detect_bad_channels_kwargs = {k: v.default for k, v in sig.parameters.items() if k != "recording"}
+    all_detect_bad_channels_kwargs.update(detect_bad_channels_kwargs)
+    return all_detect_bad_channels_kwargs
 
 
 def detect_bad_channels(

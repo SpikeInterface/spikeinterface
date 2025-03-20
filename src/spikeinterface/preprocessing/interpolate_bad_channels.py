@@ -5,7 +5,11 @@ import numpy as np
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment, BaseRecording
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from spikeinterface.preprocessing import preprocessing_tools
-from .detect_bad_channels import _bad_channel_detection_kwargs_doc, detect_bad_channels
+from .detect_bad_channels import (
+    _bad_channel_detection_kwargs_doc,
+    detect_bad_channels,
+    _get_all_detect_bad_channel_kwargs,
+)
 from inspect import signature
 
 
@@ -106,11 +110,6 @@ class DetectAndInterpolateBadChannelsRecording(InterpolateBadChannelsRecording):
         **detect_bad_channels_kwargs,
     ):
 
-        # get the default parameters from `detect_bad_channels`, and update with any user-specified parameters.
-        sig = signature(detect_bad_channels)
-        updated_detect_bad_channels_kwargs = {k: v.default for k, v in sig.parameters.items() if k != "recording"}
-        updated_detect_bad_channels_kwargs.update(detect_bad_channels_kwargs)
-
         if bad_channel_ids is None:
             bad_channel_ids, channel_labels = detect_bad_channels(recording=recording, **detect_bad_channels_kwargs)
         else:
@@ -127,7 +126,9 @@ class DetectAndInterpolateBadChannelsRecording(InterpolateBadChannelsRecording):
         self._kwargs.update({"bad_channel_ids": bad_channel_ids})
         if channel_labels is not None:
             self._kwargs.update({"channel_labels": channel_labels})
-        self._kwargs.update(updated_detect_bad_channels_kwargs)
+
+        all_bad_channels_kwargs = _get_all_detect_bad_channel_kwargs(detect_bad_channels_kwargs)
+        self._kwargs.update(all_bad_channels_kwargs)
 
 
 detect_and_interpolate_bad_channels = define_function_handling_dict_from_class(
