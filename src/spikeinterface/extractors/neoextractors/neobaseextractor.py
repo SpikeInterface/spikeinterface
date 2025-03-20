@@ -288,7 +288,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         if has_mixed_units:
             warning_msg = (
                 "Found a mix of voltage and non-voltage units. "
-                'Proceed with caution. Check channel units with `recording.get_property("original_unit")`.'
+                'Proceed with caution. Check channel units with `recording.get_property("physical_unit")`.'
             )
             warnings.warn(warning_msg)
 
