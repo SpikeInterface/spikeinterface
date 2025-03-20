@@ -10,19 +10,6 @@ from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
 DEBUG = False
 
 
-"""
-TODO: major
-- should probably take log after averaging not before.
-
-TODO: TEST:
- - 'get_traces' is never tested here. Can try once after motion?
- - smoothing is applied
-
- - ask log2 vs. log10 (e.g. for 3d histogram)
- - ask charlie about threshold
-"""
-
-
 class TestInterSessionAlignment:
 
     @pytest.fixture(scope="session")
@@ -151,7 +138,7 @@ class TestInterSessionAlignment:
         estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
         estimate_histogram_kwargs["bin_um"] = 2
         estimate_histogram_kwargs["histogram_type"] = histogram_type
-        estimate_histogram_kwargs["log_scale"] = True
+        estimate_histogram_kwargs["log_transform"] = True
 
         for mode, expected in zip(
             ["to_session_1", "to_session_2", "to_session_3", "to_middle"],
@@ -222,7 +209,7 @@ class TestInterSessionAlignment:
         estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
         estimate_histogram_kwargs["bin_um"] = bin_um
         estimate_histogram_kwargs["chunked_bin_size_s"] = bin_s
-        estimate_histogram_kwargs["log_scale"] = False
+        estimate_histogram_kwargs["log_transform"] = False
 
         (
             session_histogram_list,
@@ -286,35 +273,38 @@ class TestInterSessionAlignment:
 
     @pytest.mark.parametrize("histogram_type", ["1d", "2d"])
     @pytest.mark.parametrize("operator", ["mean", "median"])
-    def test_histogram_parameters(self, recording_1, histogram_type, operator):
+    def test_histogram_log_tranform(self, recording_1, histogram_type, operator):
         """ """
+        # Run histogram compute with a set of kwargs
         recordings_list, _, peaks_list, peak_locations_list = recording_1
 
         estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
-        estimate_histogram_kwargs["log_scale"] = False
+        estimate_histogram_kwargs["log_transform"] = False
         estimate_histogram_kwargs["method"] = f"chunked_{operator}"
         estimate_histogram_kwargs["histogram_type"] = histogram_type
 
-        _, extra_info = session_alignment.align_sessions(
+        _, extra_info_log_false = session_alignment.align_sessions(
             recordings_list, peaks_list, peak_locations_list, estimate_histogram_kwargs=estimate_histogram_kwargs
         )
-        estimate_histogram_kwargs["log_scale"] = True
 
-        _, extra_info_log = session_alignment.align_sessions(
+        # Now, run it again with log transform and check the
+        # summary histogram is indeed the log-transformed mean / median
+        # of the chunked histograms.
+        estimate_histogram_kwargs["log_transform"] = True
+
+        _, extra_info_log_true = session_alignment.align_sessions(
             recordings_list, peaks_list, peak_locations_list, estimate_histogram_kwargs=estimate_histogram_kwargs
         )
         for ses_idx in range(len(recordings_list)):
 
-            ses_hist = extra_info["session_histogram_list"][ses_idx]
+            summary_hist_log_false = extra_info_log_false["session_histogram_list"][ses_idx]
+            summary_hist_log_true = extra_info_log_true["session_histogram_list"][ses_idx]
+            chunked_histograms_log_true = extra_info_log_true["histogram_info_list"][ses_idx]["chunked_histograms"]
 
-            chunked_histograms = extra_info["histogram_info_list"][ses_idx]["chunked_histograms"]
-            for chunk_hist, chunk_hist_log in zip(
-                chunked_histograms, extra_info_log["histogram_info_list"][ses_idx]["chunked_histograms"]
-            ):
-                assert np.array_equal(np.log2(chunk_hist + 1), chunk_hist_log)
+            assert np.array_equal(np.log2(summary_hist_log_false + 1), summary_hist_log_true)
 
             summary_func = np.median if operator == "median" else np.mean
-            assert np.array_equal(ses_hist, summary_func(chunked_histograms, axis=0))
+            assert np.array_equal(summary_hist_log_true, np.log2(1 + summary_func(chunked_histograms_log_true, axis=0)))
 
     ###########################################################################
     # Following Motion Correction
@@ -711,7 +701,7 @@ class TestInterSessionAlignment:
             "bin_um": 2,
             "method": "chunked_mean",
             "chunked_bin_size_s": "estimate",
-            "log_scale": True,
+            "log_transform": True,
             "depth_smooth_um": None,
             "histogram_type": "1d",
             "weight_with_amplitude": False,
@@ -780,10 +770,10 @@ class TestInterSessionAlignment:
                 "smoothing_sigma_window": 1.3,
             }
         )
+        import scipy
+
         spy_kriging = mocker.spy(spikeinterface.preprocessing.inter_session_alignment.alignment_utils, "kriging_kernel")
-        spy_gaussian_filter = mocker.spy(
-            spikeinterface.preprocessing.inter_session_alignment.alignment_utils, "gaussian_filter"
-        )
+        spy_gaussian_filter = mocker.spy(scipy.ndimage, "gaussian_filter")
         non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
         non_rigid_window_kwargs["rigid"] = False
 
@@ -972,18 +962,3 @@ class TestInterSessionAlignment:
 
             plt.suptitle("test_interesting_debug_case")
             plt.show()
-
-        correced_hist_list = extra_info["corrected"]["corrected_session_histogram_list"]
-
-        # This is a basic regression test to check this case does not change across versions.
-        # Ideally this would be maintained, but it may be that these values need to change slightly.
-        # In this case, the values can be changed or the regression part of this test removed, the
-        # main value is in the debugging explaination.
-        if histogram_type == "1d":
-            assert np.isclose(np.corrcoef(correced_hist_list[0], correced_hist_list[1])[0, 1], 0.283, atol=1e-3)
-        else:
-            assert np.isclose(
-                np.corrcoef(np.mean(correced_hist_list[0], axis=1), np.mean(correced_hist_list[1], axis=1))[0, 1],
-                0.372,
-                atol=1e-3,
-            )
