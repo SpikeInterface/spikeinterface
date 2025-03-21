@@ -1,5 +1,8 @@
 import pytest
 
+from pydantic import BaseModel, ValidationError, field_validator
+
+
 from pathlib import Path
 import json
 import numpy as np
@@ -183,10 +186,11 @@ def test_apply_curation():
 
 
 if __name__ == "__main__":
-    # test_curation_format_validation()
-    # test_to_from_json()
-    # test_convert_from_sortingview_curation_format_v0()
-    # test_curation_label_to_vectors()
-    # test_curation_label_to_dataframe()
+    test_curation_format_validation()
+    test_curation_format_validation()
+    test_to_from_json()
+    test_convert_from_sortingview_curation_format_v0()
+    test_curation_label_to_vectors()
+    test_curation_label_to_dataframe()
 
     test_apply_curation()
