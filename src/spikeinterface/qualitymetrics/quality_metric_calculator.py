@@ -108,10 +108,10 @@ class ComputeQualityMetrics(AnalyzerExtension):
         if delete_existing_metrics is False and qm_extension is not None:
 
             existing_metric_names = qm_extension.params["metric_names"]
-            existing_metric_names_propogated = [
+            existing_metric_names_propagated = [
                 metric_name for metric_name in existing_metric_names if metric_name not in metrics_to_compute
             ]
-            metric_names = metrics_to_compute + existing_metric_names_propogated
+            metric_names = metrics_to_compute + existing_metric_names_propagated
 
         params = dict(
             metric_names=metric_names,

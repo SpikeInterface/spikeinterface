@@ -98,7 +98,7 @@ def test_compute_new_template_metrics(small_sorting_analyzer):
 
 def test_metric_names_in_same_order(small_sorting_analyzer):
     """
-    Computes sepecified template metrics and checks order is propogated.
+    Computes sepecified template metrics and checks order is propagated.
     """
     specified_metric_names = ["peak_trough_ratio", "num_negative_peaks", "half_width"]
     small_sorting_analyzer.compute("template_metrics", metric_names=specified_metric_names)
