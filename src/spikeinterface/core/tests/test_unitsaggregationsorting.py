@@ -49,21 +49,21 @@ def test_unitsaggregationsorting_spiketrains(three_sortings):
 
 
 def test_unitsaggregationsorting_annotations(three_sortings):
-    """Aggregates a sorting and check if annotations were correctly propogated."""
+    """Aggregates a sorting and check if annotations were correctly propagated."""
 
     sorting1, sorting2, sorting3 = three_sortings
 
-    # Annotations the same, so can be propogated to aggregated sorting
+    # Annotations the same, so can be propagated to aggregated sorting
     sorting1.annotate(organ="brain")
     sorting2.annotate(organ="brain")
     sorting3.annotate(organ="brain")
 
-    # Annotations are not equal, so cannot be propogated to aggregated sorting
+    # Annotations are not equal, so cannot be propagated to aggregated sorting
     sorting1.annotate(area="CA1")
     sorting2.annotate(area="CA2")
     sorting3.annotate(area="CA3")
 
-    # Annotations are not known for all sortings, so cannot be propogated to aggregated sorting
+    # Annotations are not known for all sortings, so cannot be propagated to aggregated sorting
     sorting1.annotate(date="2022-10-13")
     sorting2.annotate(date="2022-10-13")
 
@@ -74,33 +74,33 @@ def test_unitsaggregationsorting_annotations(three_sortings):
 
 
 def test_unitsaggregationsorting_properties(three_sortings):
-    """Aggregates a sorting and check if properties were correctly propogated."""
+    """Aggregates a sorting and check if properties were correctly propagated."""
 
     sorting1, sorting2, sorting3 = three_sortings
     num_units = sorting1.get_num_units()
     # test properties
 
-    # Can propogate property
+    # Can propagated property
     sorting1.set_property("brain_area", ["CA1"] * num_units)
     sorting2.set_property("brain_area", ["CA2"] * num_units)
     sorting3.set_property("brain_area", ["CA3"] * num_units)
 
-    # Can propogate, even though the dtype is different, since dtype.kind is the same
+    # Can propagated, even though the dtype is different, since dtype.kind is the same
     sorting1.set_property("quality_string", ["good"] * num_units)
     sorting2.set_property("quality_string", ["bad"] * num_units)
     sorting3.set_property("quality_string", ["bad"] * num_units)
 
-    # Can propogate. Although we don't know the "rand" property for sorting3, we can
+    # Can propagated. Although we don't know the "rand" property for sorting3, we can
     # use the Extractor's `default_missing_property_values`
     sorting1.set_property("rand", np.random.rand(num_units))
     sorting2.set_property("rand", np.random.rand(num_units))
 
-    # Cannot propogate as arrays are different shapes for each sorting
+    # Cannot propagate as arrays are different shapes for each sorting
     sorting1.set_property("template", np.zeros((num_units, 4, 30)))
     sorting2.set_property("template", np.zeros((num_units, 20, 50)))
     sorting3.set_property("template", np.zeros((num_units, 2, 10)))
 
-    # Cannot propogate as dtypes are different
+    # Cannot propagate as dtypes are different
     sorting1.set_property("quality_mixed", ["good"] * num_units)
     sorting2.set_property("quality_mixed", [1] * num_units)
     sorting3.set_property("quality_mixed", [2] * num_units)
