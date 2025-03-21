@@ -430,4 +430,4 @@ The signature of the script is:
 
 Where the start date is the date of the last release and the end date is the current date.
 
-The date of the last release can be found from PyPI.
+The date of the last release can be found on PyPI.
