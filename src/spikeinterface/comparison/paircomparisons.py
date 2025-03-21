@@ -34,7 +34,6 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
         chance_score: float = 0.1,
         ensure_symmetry: bool = False,
         agreement_method: str = "count",
-        n_jobs: int = 1,
         verbose: bool = False,
     ):
         if sorting1_name is None:
@@ -55,7 +54,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
             chance_score=chance_score,
             verbose=verbose,
         )
-        MixinSpikeTrainComparison.__init__(self, delta_time=delta_time, n_jobs=n_jobs)
+        MixinSpikeTrainComparison.__init__(self, delta_time=delta_time)
         self.set_frames_and_frequency(self.object_list)
 
         self.unit1_ids = self.sorting1.get_unit_ids()
@@ -144,8 +143,6 @@ class SymmetricSortingComparison(BasePairSorterComparison):
     agreement_method : "count" | "distance", default: "count"
         The method to compute agreement scores. The "count" method computes agreement scores from spike counts.
         The "distance" method computes agreement scores from spike time distance functions.
-    n_jobs : int, default: -1
-        Number of cores to use in parallel. Uses all available if -1
     verbose : bool, default: False
         If True, output is verbose
 
@@ -165,7 +162,6 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         match_score: float = 0.5,
         chance_score: float = 0.1,
         agreement_method: str = "count",
-        n_jobs: int = -1,
         verbose: bool = False,
     ):
         BasePairSorterComparison.__init__(
@@ -179,7 +175,6 @@ class SymmetricSortingComparison(BasePairSorterComparison):
             chance_score=chance_score,
             ensure_symmetry=True,
             agreement_method=agreement_method,
-            n_jobs=n_jobs,
             verbose=verbose,
         )
 
@@ -269,8 +264,6 @@ class GroundTruthComparison(BasePairSorterComparison):
     agreement_method : "count" | "distance", default: "count"
         The method to compute agreement scores. The "count" method computes agreement scores from spike counts.
         The "distance" method computes agreement scores from spike time distance functions.
-    n_jobs : int, default: -1
-        Number of cores to use in parallel. Uses all available if -1
     compute_labels : bool, default: False
         If True, labels are computed at instantiation
     compute_misclassifications : bool, default: False
@@ -298,7 +291,6 @@ class GroundTruthComparison(BasePairSorterComparison):
         chance_score: float = 0.1,
         exhaustive_gt: bool = False,
         agreement_method: str = "count",
-        n_jobs: int = -1,
         match_mode: str = "hungarian",
         compute_labels: bool = False,
         compute_misclassifications: bool = False,
@@ -321,7 +313,6 @@ class GroundTruthComparison(BasePairSorterComparison):
             chance_score=chance_score,
             ensure_symmetry=False,
             agreement_method=agreement_method,
-            n_jobs=n_jobs,
             verbose=verbose,
         )
         self.exhaustive_gt = exhaustive_gt

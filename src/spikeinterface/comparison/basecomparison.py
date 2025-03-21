@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from copy import deepcopy
 from typing import OrderedDict
+from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 
+from spikeinterface.core.job_tools import fix_job_kwargs
 from .comparisontools import make_possible_match, make_best_match, make_hungarian_match
 
 
@@ -27,7 +29,7 @@ class BaseMultiComparison(BaseComparison):
     It handles graph operations, comparisons, and agreements.
     """
 
-    def __init__(self, object_list, name_list, match_score=0.5, chance_score=0.1, verbose=False):
+    def __init__(self, object_list, name_list, match_score=0.5, chance_score=0.1, verbose=False, n_jobs=1):
         import networkx as nx
 
         BaseComparison.__init__(
@@ -41,6 +43,7 @@ class BaseMultiComparison(BaseComparison):
         self.graph = None
         self.subgraphs = None
         self.clean_graph = None
+        self.n_jobs = n_jobs
 
     def _compute_all(self):
         self._do_comparison()
@@ -96,6 +99,10 @@ class BaseMultiComparison(BaseComparison):
             print("Multicomparison step 1: pairwise comparison")
 
         self.comparisons = {}
+
+        n_jobs = fix_job_kwargs({"n_jobs": self.n_jobs})["n_jobs"]
+        job_list = []
+        job_names = []
         for i in range(len(self.object_list)):
             for j in range(i + 1, len(self.object_list)):
                 if self.name_list is not None:
@@ -104,10 +111,17 @@ class BaseMultiComparison(BaseComparison):
                 else:
                     name_i = "object i"
                     name_j = "object j"
-                if self._verbose:
-                    print(f"  Comparing: {name_i} and {name_j}")
-                comp = self._compare_ij(i, j)
-                self.comparisons[(name_i, name_j)] = comp
+                job_list.append((i, j))
+                job_names.append((name_i, name_j))
+
+        if self.n_jobs == 1:
+            for job_name, job in zip(job_names, job_list):
+                self.comparisons[job_name] = self._compare_ij(*job)
+        else:
+            with ProcessPoolExecutor(max_workers=n_jobs) as executor:
+                results = list(executor.map(self._compare_ij, *zip(*job_list)))
+            for job_name, result in zip(job_names, results):
+                self.comparisons[job_name] = result
 
     def _do_graph(self):
         if self._verbose:
@@ -280,12 +294,11 @@ class MixinSpikeTrainComparison:
     Mixin for spike train comparisons to define:
        * delta_time / delta_frames
        * sampling frequency
-       * n_jobs
+       * agreement method
     """
 
-    def __init__(self, delta_time=0.4, agreement_method="count", n_jobs=-1):
+    def __init__(self, delta_time=0.4, agreement_method="count"):
         self.delta_time = delta_time
-        self.n_jobs = n_jobs
         self.agreement_method = agreement_method
         self.sampling_frequency = None
         self.delta_frames = None
