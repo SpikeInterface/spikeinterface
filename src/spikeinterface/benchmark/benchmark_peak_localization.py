@@ -442,7 +442,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 #     ax.legend()
 #     ax.set_ylabel("error (um)")
 #     ax.set_xticks(np.arange(3), ["x", "y", "z"])
-#     _simpleaxis(ax)
+#     despine(ax)
 
 #     x_means = []
 #     x_stds = []
@@ -454,7 +454,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 #     # ax.set_ylim(ymin, ymax)
 
 #     ax = axes[0, 1]
-#     _simpleaxis(ax)
+#     despine(ax)
 
 #     y_means = []
 #     y_stds = []
