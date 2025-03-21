@@ -256,8 +256,9 @@ spike_locations
 
 This extension estimates the location of each spike in the sorting output. Spike location estimates can be done
 with center of mass (:code:`method="center_of_mass"` - fast, but less accurate), a monopolar triangulation
-(:code:`method="monopolar_triangulation"` - slow, but more accurate), or with the method of grid convolution
-(:code:`method="grid_convolution"`)
+(:code:`method="monopolar_triangulation"` - slow, but more accurate), the method of grid convolution
+(:code:`method="grid_convolution"`), or by finding the location of the channel containing the extremum amplitude
+(:code:`method="peak_channel"`).
 
 **NOTE:** computing spike locations is required to compute :ref:`drift_metrics`.
 
@@ -285,7 +286,7 @@ unit_locations
 
 This extension is similar to the :code:`spike_locations`, but instead of estimating a location for each spike
 based on individual waveforms, it calculates at the unit level using templates. The same localization methods
-(:code:`method="center_of_mass" | "monopolar_triangulation" | "grid_convolution"`) are available.
+(:code:`method="center_of_mass" | "monopolar_triangulation" | "grid_convolution" | "max_channel"`) are available.
 
 
 .. code-block:: python

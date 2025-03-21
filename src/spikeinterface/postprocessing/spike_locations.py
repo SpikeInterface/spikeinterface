@@ -35,7 +35,7 @@ class ComputeSpikeLocations(AnalyzerExtension):
               In case channel_from_template=False, this is the radius to get the true peak
           * peak_sign, default: "neg"
               In case channel_from_template=False, this is the peak sign.
-    method : "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
+    method : "center_of_mass" | "monopolar_triangulation" | "grid_convolution" | "peak_channel", default: "center_of_mass"
         The localization method to use
     method_kwargs : dict, default: dict()
         Other kwargs depending on the method.
