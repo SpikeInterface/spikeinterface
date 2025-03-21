@@ -48,7 +48,7 @@ class BaseExtractor:
     _skip_properties = []
 
     # kwargs which can be precomputed before being used by the extractor
-    _precomputable_kwargs = []
+    _precomputable_kwarg_names = []
 
     installation_mesg = ""
     installed = True
