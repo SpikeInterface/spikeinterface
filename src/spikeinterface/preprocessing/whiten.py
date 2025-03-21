@@ -239,7 +239,7 @@ def compute_covariance_matrix(recording, apply_mean, regularize, regularize_kwar
     Compute the covariance matrix from randomly sampled data chunsk.
     See `compute_whitening_matrix()` for parameters.
     """
-    random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
+    random_data = get_random_data_chunks(recording, concatenated=True, return_in_uV=False, **random_chunk_kwargs)
     random_data = random_data.astype(np.float32)
 
     regularize_kwargs = regularize_kwargs if regularize_kwargs is not None else {"method": "GraphicalLassoCV"}

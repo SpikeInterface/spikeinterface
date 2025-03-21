@@ -369,7 +369,7 @@ def correct_motion(
         motion_info = None
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-    noise_levels = get_noise_levels(recording, return_scaled=False)
+    noise_levels = get_noise_levels(recording, return_in_uV=False)
     progress_bar = job_kwargs.get("progress_bar", False)
 
     if folder is not None:
