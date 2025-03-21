@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import copy
-import numpy as np
+import warnings
 import json
 import shutil
-from pathlib import Path
 import time
 import inspect
+from pathlib import Path
+import numpy as np
+
 
 from spikeinterface.core import get_noise_levels, fix_job_kwargs
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
@@ -511,6 +513,19 @@ def load_motion_info(folder):
         else:
             motion_info[name] = None
 
-    motion_info["motion"] = Motion.load(folder / "motion")
+    if (folder / "motion").is_dir():
+        motion = Motion.load(folder / "motion")
+    else:
+        warnings.warn("Trying to load Motion from the legacy format")
+        required_files = ["spatial_bins.npy", "temporal_bins.npy", "motion.npy"]
+        for required_file in required_files:
+            if not (folder / required_file).is_file():
+                raise IOError("The provided folder is not a valid motion folder")
+        spatial_bins_um = np.load(folder / "spatial_bins.npy")
+        temporal_bins_s = [np.load(folder / "temporal_bins.npy")]
+        displacement = [np.load(folder / "motion.npy")]
 
+        motion = Motion(displacement=displacement, temporal_bins_s=temporal_bins_s, spatial_bins_um=spatial_bins_um)
+
+    motion_info["motion"] = motion
     return motion_info
