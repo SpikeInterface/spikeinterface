@@ -397,3 +397,37 @@ After this you need to add a block in `Install Sorters <https://github.com/Spike
 to describe your sorter.
 
 Finally, make a pull request so we can review the code and incorporate into the sorters module of SpikeInterface!
+
+
+
+How to make a release
+---------------------
+
+Checklist
+^^^^^^^^^
+* Pyproject: check that the version is ahead of currently release. Also, comment out the @ (git dependencies)
+* In the top level ``__init__`` uncomment ``DEV_MODE`` (this is used for the docker installations)
+* Create a new release note for the appropriate version on doc/releases/new_version_tag.
+
+There can be large releases like:
+``doc/releases/0.101.0.rst``
+
+Which contain a section called "Main Changes" and minor releases which include only bug fixes like:
+
+``doc/releases/0.101.2.rst``
+
+To collect all the PRs and bug fixes we have a script in:
+``doc/scripts/``
+called ``auto-release-notes.sh``. Run it with ``bash auto-release-notes.sh`` and it will create the release notes for the module specific changes.
+
+To run the script you will need to authorize to GitHub for the first time.
+
+The signature of the script is:
+
+.. code-block:: bash
+
+    bash auto-release-notes.sh <start_date> <end_date>
+
+Where the start date is the date of the last release and the end date is the current date.
+
+The date of the last release can be found from PyPI.
