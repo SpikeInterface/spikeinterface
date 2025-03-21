@@ -405,7 +405,7 @@ How to make a release
 
 Checklist
 ^^^^^^^^^
-* Pyproject: check that the version is ahead of currently release. Also, comment out the @ (git dependencies)
+* pyproject.toml: check that the version is ahead of currently release. Also, comment out the @ (git dependencies)
 * In the top level ``__init__`` uncomment ``DEV_MODE`` (this is used for the docker installations)
 * Create a new release note for the appropriate version on doc/releases/new_version_tag.
 
