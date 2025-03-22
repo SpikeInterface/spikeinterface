@@ -650,17 +650,26 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
     wf_max = np.max(templates)
     wf_min = np.min(templates)
 
-    manh = np.abs(channel_locations[None, :] - channel_locations[:, None])
-    eucl = np.linalg.norm(manh, axis=2)
-    np.fill_diagonal(eucl, np.inf)
-    gaus = np.exp(-0.5 * (eucl / eucl.min()) ** 2)
+    # estimating x and y interval from a weighted average of the distance matrix, factors include:
+    # 1. gaussian distance penalty: penalize far distances
+    # 2. trigonometric angular penalty: penalize distances unparallel to the corresponding interval
+    manh = np.abs(channel_locations[None, :] - channel_locations[:, None])  # vertical and horizontal distances between each channel
+    eucl = np.linalg.norm(manh, axis=2)     # Euclidean distance matrix
+    np.fill_diagonal(eucl, np.inf)          # the distance of a channel to itself is not considered
+    gaus = np.exp(-0.5 * (eucl / eucl.min()) ** 2)      # sigma uses the min distance between channels
 
+    # horizontal interval
+    # penalize vertically inclined distances
+    # weights can be 0 when there is one column
     weight = manh[..., 0] / eucl * gaus
     if weight.sum() == 0:
         delta_x = 10
     else:
         delta_x = (manh[..., 0] * weight).sum() / weight.sum()
 
+    # vertical interval
+    # penalize horizontally inclined distances
+    # weights can be 0 when there is one row
     weight = manh[..., 1] / eucl * gaus
     if weight.sum() == 0:
         delta_y = 10
