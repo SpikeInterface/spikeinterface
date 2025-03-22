@@ -21,7 +21,7 @@ class Kilosort4Sorter(BaseSorter):
     sorter_name: str = "kilosort4"
     requires_locations = True
     gpu_capability = "nvidia-optional"
-    requires_binary_data = False
+    requires_binary_data = True
 
     _si_default_params = {
         "do_CAR": True,
