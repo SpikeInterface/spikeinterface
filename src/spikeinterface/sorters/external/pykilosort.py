@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-import numpy as np
 import warnings
+import json
 
-from spikeinterface.core import load_extractor
+import numpy as np
+
 from spikeinterface.extractors import KiloSortSortingExtractor
 from spikeinterface.core import write_binary_recording
-import json
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 
 
@@ -120,11 +120,12 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import pykilosort
+        import importlib.util
 
+        pyks_spec = importlib.util.find_spec("pykilosort")
+        if pyks_spec is not None:
             HAVE_PYKILOSORT = True
-        except ImportError:
+        else:
             HAVE_PYKILOSORT = False
 
         return HAVE_PYKILOSORT

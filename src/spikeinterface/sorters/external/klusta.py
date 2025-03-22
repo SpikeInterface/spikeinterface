@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 from pathlib import Path
 import sys
 import shutil
@@ -12,14 +11,6 @@ from probeinterface import write_prb
 
 from spikeinterface.core import write_binary_recording
 from spikeinterface.extractors import KlustaSortingExtractor
-
-try:
-    import klusta
-    import klustakwik2
-
-    HAVE_KLUSTA = True
-except ImportError:
-    HAVE_KLUSTA = False
 
 
 class KlustaSorter(BaseSorter):
@@ -69,6 +60,14 @@ class KlustaSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
+        import importlib.util
+
+        klusta_spec = importlib.util.find_spec("klusta")
+        klustakwik2_spec = importlib.util.find_spec("klustakwik2")
+        if klusta_spec is not None and klustakwik2_spec is not None:
+            HAVE_KLUSTA = True
+        else:
+            HAVE_KLUSTA = False
         return HAVE_KLUSTA
 
     @classmethod

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 from pathlib import Path
 import os
 import numpy as np
@@ -64,11 +63,12 @@ class SpykingcircusSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import circus
+        import importlib.util
 
+        circus_spec = importlib.util.find_spec("circus")
+        if circus_spec is not None:
             HAVE_SC = True
-        except ImportError:
+        else:
             HAVE_SC = False
         return HAVE_SC
 
