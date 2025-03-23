@@ -35,7 +35,7 @@ else:
     HAVE_NUMBA = False
 
 torch_spec = importlib.util.find_spec("torch")
-torch_nn_functional_spec = importlib.util.find_spec("torch.nn.functional")
+torch_nn_functional_spec = importlib.util.find_spec("torch.nn")
 if torch_spec is not None and torch_nn_functional_spec is not None:
     HAVE_TORCH = True
 else:
