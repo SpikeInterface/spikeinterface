@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 import shutil
+import importlib.util
+from importlib.metadata import version
 
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from spikeinterface.sorters.utils import ShellScript
@@ -60,8 +62,6 @@ class KlustaSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        import importlib.util
-
         klusta_spec = importlib.util.find_spec("klusta")
         klustakwik2_spec = importlib.util.find_spec("klustakwik2")
         if klusta_spec is not None and klustakwik2_spec is not None:
@@ -72,7 +72,7 @@ class KlustaSorter(BaseSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return klusta.__version__
+        return version("klusta")
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):

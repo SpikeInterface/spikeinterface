@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 import warnings
 import json
+import importlib.util
+from importlib.metadata import version
 
 import numpy as np
 
@@ -120,7 +122,6 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        import importlib.util
 
         pyks_spec = importlib.util.find_spec("pykilosort")
         if pyks_spec is not None:
@@ -132,9 +133,8 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        import pykilosort
 
-        return pykilosort.__version__
+        return version("pykilosort")
 
     @classmethod
     def _check_params(cls, recording, sorter_output_folder, params):

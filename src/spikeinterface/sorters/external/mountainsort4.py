@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from packaging.version import parse
+import importlib.util
 
 from spikeinterface.preprocessing import bandpass_filter, whiten
 from spikeinterface.sorters.basesorter import BaseSorter
@@ -59,7 +60,6 @@ class Mountainsort4Sorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        import importlib.util
 
         ms4_spec = importlib.util.find_spec("mountainsort4")
         if ms4_spec is not None:

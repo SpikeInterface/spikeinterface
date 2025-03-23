@@ -1,5 +1,4 @@
 from __future__ import annotations
-import warnings
 import numpy as np
 
 from .core_tools import define_function_from_class
