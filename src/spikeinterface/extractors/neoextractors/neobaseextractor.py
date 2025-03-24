@@ -273,9 +273,9 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         self.set_property("offset_to_uV", offset_to_uV)
 
         # Add machinery to keep the neo units for downstream users
-        self.set_property("original_unit", channel_units)
-        self.set_property("original_gain", neo_gains)
-        self.set_property("original_offset", neo_offsets)
+        self.set_property("physical_unit", channel_units)
+        self.set_property("gain_to_physical_unit", neo_gains)
+        self.set_property("offset_to_physical_unit", neo_offsets)
 
         # Streams with mixed units are to be used with caution
         # We warn the user when this is the case
@@ -288,7 +288,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         if has_mixed_units:
             warning_msg = (
                 "Found a mix of voltage and non-voltage units. "
-                'Proceed with caution. Check channel units with `recording.get_property("original_unit")`.'
+                'Proceed with caution. Check channel units with `recording.get_property("physical_unit")`.'
             )
             warnings.warn(warning_msg)
 
