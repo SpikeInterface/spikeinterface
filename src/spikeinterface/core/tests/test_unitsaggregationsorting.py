@@ -1,43 +1,43 @@
 import pytest
 import numpy as np
 
-from spikeinterface.core import aggregate_units
-
-from spikeinterface.core import NpzSortingExtractor
-from spikeinterface.core import create_sorting_npz
-from spikeinterface.core import generate_sorting
+from spikeinterface.core import aggregate_units, generate_sorting
 
 
-def test_unitsaggregationsorting(create_cache_folder):
-    cache_folder = create_cache_folder
+def create_three_sortings(num_units):
+    sorting1 = generate_sorting(seed=1205, num_units=num_units)
+    sorting2 = generate_sorting(seed=1206, num_units=num_units)
+    sorting3 = generate_sorting(seed=1207, num_units=num_units)
 
-    num_seg = 2
-    file_path = cache_folder / "test_BaseSorting.npz"
+    return (sorting1, sorting2, sorting3)
 
-    create_sorting_npz(num_seg, file_path)
 
-    sorting1 = NpzSortingExtractor(file_path)
-    sorting2 = sorting1.clone()
-    sorting3 = sorting1.clone()
-    print(sorting1)
-    num_units = len(sorting1.get_unit_ids())
+def test_unitsaggregationsorting_spiketrains():
+    """Aggregates three sortings, then checks that the number of units and spike trains are equal
+    for pre-aggregated sorting and the aggregated sorting."""
+
+    num_units = 5
+    sorting1, sorting2, sorting3 = create_three_sortings(num_units=num_units)
 
     # test num units
     sorting_agg = aggregate_units([sorting1, sorting2, sorting3])
-    print(sorting_agg)
-    assert len(sorting_agg.get_unit_ids()) == 3 * num_units
+    unit_ids = sorting_agg.get_unit_ids()
+    assert len(unit_ids) == 3 * num_units
 
     # test spike trains
-    unit_ids = sorting1.get_unit_ids()
+    for segment_index in range(sorting1.get_num_segments()):
 
-    for seg in range(num_seg):
-        spiketrain1_1 = sorting1.get_unit_spike_train(unit_ids[1], segment_index=seg)
-        spiketrains2_0 = sorting2.get_unit_spike_train(unit_ids[0], segment_index=seg)
-        spiketrains3_2 = sorting3.get_unit_spike_train(unit_ids[2], segment_index=seg)
-        assert np.allclose(spiketrain1_1, sorting_agg.get_unit_spike_train(unit_ids[1], segment_index=seg))
-        assert np.allclose(spiketrains2_0, sorting_agg.get_unit_spike_train(num_units + unit_ids[0], segment_index=seg))
-        assert np.allclose(
-            spiketrains3_2, sorting_agg.get_unit_spike_train(2 * num_units + unit_ids[2], segment_index=seg)
+        spiketrain1 = sorting1.get_unit_spike_train(unit_ids[1], segment_index=segment_index)
+        assert np.all(spiketrain1 == sorting_agg.get_unit_spike_train(unit_ids[1], segment_index=segment_index))
+
+        spiketrain2 = sorting2.get_unit_spike_train(unit_ids[0], segment_index=segment_index)
+        assert np.all(
+            spiketrain2 == sorting_agg.get_unit_spike_train(unit_ids[0 + num_units], segment_index=segment_index)
+        )
+
+        spiketrain3 = sorting3.get_unit_spike_train(unit_ids[2], segment_index=segment_index)
+        assert np.all(
+            spiketrain3 == sorting_agg.get_unit_spike_train(unit_ids[2 + num_units * 2], segment_index=segment_index)
         )
 
     # test rename units
@@ -45,19 +45,24 @@ def test_unitsaggregationsorting(create_cache_folder):
     sorting_agg_renamed = aggregate_units([sorting1, sorting2, sorting3], renamed_unit_ids=renamed_unit_ids)
     assert all(unit in renamed_unit_ids for unit in sorting_agg_renamed.get_unit_ids())
 
-    # test annotations
 
-    # matching annotation
+def test_unitsaggregationsorting_annotations():
+    """Aggregates a sorting and check if annotations were correctly propagated."""
+
+    num_units = 5
+    sorting1, sorting2, sorting3 = create_three_sortings(num_units=num_units)
+
+    # Annotations the same, so can be propagated to aggregated sorting
     sorting1.annotate(organ="brain")
     sorting2.annotate(organ="brain")
     sorting3.annotate(organ="brain")
 
-    # not matching annotation
+    # Annotations are not equal, so cannot be propagated to aggregated sorting
     sorting1.annotate(area="CA1")
     sorting2.annotate(area="CA2")
     sorting3.annotate(area="CA3")
 
-    # incomplete annotation
+    # Annotations are not known for all sortings, so cannot be propagated to aggregated sorting
     sorting1.annotate(date="2022-10-13")
     sorting2.annotate(date="2022-10-13")
 
@@ -66,31 +71,45 @@ def test_unitsaggregationsorting(create_cache_folder):
     assert "area" not in sorting_agg_prop.get_annotation_keys()
     assert "date" not in sorting_agg_prop.get_annotation_keys()
 
-    # test properties
 
-    # complete property
+def test_unitsaggregationsorting_properties():
+    """Aggregates a sorting and check if properties were correctly propagated."""
+
+    num_units = 5
+    sorting1, sorting2, sorting3 = create_three_sortings(num_units=num_units)
+
+    # Can propagated property
     sorting1.set_property("brain_area", ["CA1"] * num_units)
     sorting2.set_property("brain_area", ["CA2"] * num_units)
     sorting3.set_property("brain_area", ["CA3"] * num_units)
 
-    # skip for inconsistency
-    sorting1.set_property("template", np.zeros((num_units, 4, 30)))
-    sorting1.set_property("template", np.zeros((num_units, 20, 50)))
-    sorting1.set_property("template", np.zeros((num_units, 2, 10)))
+    # Can propagated, even though the dtype is different, since dtype.kind is the same
+    sorting1.set_property("quality_string", ["good"] * num_units)
+    sorting2.set_property("quality_string", ["bad"] * num_units)
+    sorting3.set_property("quality_string", ["bad"] * num_units)
 
-    # incomplete property (str can't be propagated)
-    sorting1.set_property("quality", ["good"] * num_units)
-    sorting2.set_property("quality", ["bad"] * num_units)
-
-    # incomplete property (object can be propagated)
+    # Can propagated. Although we don't know the "rand" property for sorting3, we can
+    # use the Extractor's `default_missing_property_values`
     sorting1.set_property("rand", np.random.rand(num_units))
     sorting2.set_property("rand", np.random.rand(num_units))
 
+    # Cannot propagate as arrays are different shapes for each sorting
+    sorting1.set_property("template", np.zeros((num_units, 4, 30)))
+    sorting2.set_property("template", np.zeros((num_units, 20, 50)))
+    sorting3.set_property("template", np.zeros((num_units, 2, 10)))
+
+    # Cannot propagate as dtypes are different
+    sorting1.set_property("quality_mixed", ["good"] * num_units)
+    sorting2.set_property("quality_mixed", [1] * num_units)
+    sorting3.set_property("quality_mixed", [2] * num_units)
+
     sorting_agg_prop = aggregate_units([sorting1, sorting2, sorting3])
+
     assert "brain_area" in sorting_agg_prop.get_property_keys()
-    assert "quality" not in sorting_agg_prop.get_property_keys()
+    assert "quality_string" in sorting_agg_prop.get_property_keys()
     assert "rand" in sorting_agg_prop.get_property_keys()
-    print(sorting_agg_prop.get_property("brain_area"))
+    assert "template" not in sorting_agg_prop.get_property_keys()
+    assert "quality_mixed" not in sorting_agg_prop.get_property_keys()
 
 
 def test_unit_aggregation_preserve_ids():
