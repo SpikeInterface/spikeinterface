@@ -13,7 +13,7 @@ There are various ways to contribute to SpikeInterface as a user or developer. S
 * Crafting tutorials for common workflows (e.g., spike sorting, post-processing, etc.).
 * Writing unit tests to expand code coverage and use case scenarios.
 * Reporting bugs and issues.
-
+o
 We use a forking workflow `<https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow>`_ to manage contributions. Here's a summary of the steps involved, with more details available in the provided link:
 
 * Fork the SpikeInterface repository.
@@ -406,7 +406,7 @@ How to make a release
 Checklist
 ^^^^^^^^^
 * pyproject.toml: check that the version is ahead of current release. Also, comment out the @ (git dependencies)
-* In the top level ``__init__`` uncomment ``DEV_MODE`` (this is used for the docker installations)
+* In the top level ``__init__`` (located on ``src/spikeinterface/__init__.py``) uncomment ``DEV_MODE`` (this is used for the docker installations)
 * Create a new release note for the appropriate version on doc/releases/new_version_tag.
 
 There can be large releases like:
@@ -431,4 +431,10 @@ The signature of the script is:
 
 Where the start date is the date of the last release and the end date is the current date.
 
-The date of the last release can be found on PyPI.
+The date of the last release can be found on `PyPI <https://pypi.org/project/spikeinterface/>`_.
+
+
+As an specific example:
+.. code-block:: bash
+
+    bash auto-release-notes.sh 2025-02-19 2025-03-24
