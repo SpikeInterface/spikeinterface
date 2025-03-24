@@ -405,11 +405,12 @@ How to make a release
 
 Checklist
 ^^^^^^^^^
-* pyproject.toml: check that the version is ahead of currently release. Also, comment out the @ (git dependencies)
+* pyproject.toml: check that the version is ahead of current release. Also, comment out the @ (git dependencies)
 * In the top level ``__init__`` uncomment ``DEV_MODE`` (this is used for the docker installations)
 * Create a new release note for the appropriate version on doc/releases/new_version_tag.
 
 There can be large releases like:
+
 ``doc/releases/0.101.0.rst``
 
 Which contain a section called "Main Changes" and minor releases which include only bug fixes like:
@@ -420,7 +421,7 @@ To collect all the PRs and bug fixes we have a script in:
 ``doc/scripts/``
 called ``auto-release-notes.sh``. Run it with ``bash auto-release-notes.sh`` and it will create the release notes for the module specific changes.
 
-To run the script you will need to authorize to GitHub for the first time.
+The first time you run the script, GitHub will guide you through an authorization process if you've not already done so.
 
 The signature of the script is:
 
