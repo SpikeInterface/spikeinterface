@@ -3,9 +3,9 @@ from __future__ import annotations
 import numpy as np
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
-from ..core import get_random_data_chunks, get_channel_distances
+from spikeinterface.core import get_random_data_chunks, get_channel_distances
 from .filter import fix_dtype
 
 
@@ -285,4 +285,4 @@ def compute_sklearn_covariance_matrix(data, regularize_kwargs):
 
 
 # function for API
-whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")
+whiten = define_function_handling_dict_from_class(source_class=WhitenRecording, name="whiten")

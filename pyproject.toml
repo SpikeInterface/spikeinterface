@@ -111,7 +111,7 @@ widgets = [
     "matplotlib",
     "ipympl",
     "ipywidgets",
-    "sortingview>=0.12.0,<0.14.0",
+    "sortingview>=0.12.0",
 ]
 
 qualitymetrics = [
@@ -166,7 +166,7 @@ test = [
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
 
     # for sortingview backend
-    "sortingview>=0.12.0,<0.14.0",
+    "sortingview>=0.12.0",
 
     # for motion and sortingcomponents
     "torch",

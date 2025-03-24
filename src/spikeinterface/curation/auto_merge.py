@@ -13,8 +13,8 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
-from ..core import SortingAnalyzer
-from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
+from spikeinterface.core import SortingAnalyzer
+from spikeinterface.qualitymetrics import compute_refrac_period_violations, compute_firing_rates
 
 from .mergeunitssorting import MergeUnitsSorting
 from .curation_tools import resolve_merging_graph
