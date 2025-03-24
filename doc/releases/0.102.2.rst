@@ -13,12 +13,14 @@ core:
 * Explicit sparsity mask for SparseWaveform (#3742)
 * Renaming: `from_time_labels` -> `from_samples_and_labels` (#3724)
 * New sparsity (to add Ks clustering in components) (#3717)
+* Update sorting property dtype check on unit aggregation to allow for different string types (#3778)
 
 extractors:
 
 * Add Intan port groups by default (#3753)
 * Fix stream names and ids representation in numpy 2.0 (#3751)
 * Add warning message for streams with mixed units (#3739)
+* Added `physical_unit", "gain_to_physical_unit" and "offset_to_physical_unit"` to `RecordingExtractor` as properties (#3788)
 * Fix: get_streams call in OpenEphysBinaryRecordingExtractor completed (#3738)
 * Fix gain inference for "Volts" unit in Plexon2 files (#3728)
 * Fix IBL streaming tests (#3718)
