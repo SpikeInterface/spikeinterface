@@ -87,7 +87,9 @@ class UnitsAggregationSorting(BaseSorting):
                     dtypes_per_sorting.append(sort.get_property(prop_name).dtype.kind)
 
             if len(set(dtypes_per_sorting)) != 1:
-                warnings.warn(f"Skipping property '{prop_name}: difference in dtype between sortings'")
+                warnings.warn(
+                    f"Skipping property '{prop_name}'. Difference in dtype.kind between sortings: {dtypes_per_sorting}"
+                )
                 continue
 
             all_property_values = []
@@ -112,7 +114,7 @@ class UnitsAggregationSorting(BaseSorting):
                 prop_values = np.concatenate(all_property_values)
                 self.set_property(key=prop_name, values=prop_values)
             except Exception as ext:
-                warnings.warn(f"Skipping property '{prop_name}' as numpy cannot concatente.\n{ext}")
+                warnings.warn(f"Skipping property '{prop_name}' as numpy cannot concatente. Numpy error: {ext}")
 
         # add segments
         for i_seg in range(num_segments):

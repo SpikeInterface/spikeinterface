@@ -4,9 +4,7 @@ import numpy as np
 from spikeinterface.core import aggregate_units, generate_sorting
 
 
-@pytest.fixture
-def three_sortings():
-    num_units = 5
+def create_three_sortings(num_units):
     sorting1 = generate_sorting(seed=1205, num_units=num_units)
     sorting2 = generate_sorting(seed=1206, num_units=num_units)
     sorting3 = generate_sorting(seed=1207, num_units=num_units)
@@ -14,12 +12,12 @@ def three_sortings():
     return (sorting1, sorting2, sorting3)
 
 
-def test_unitsaggregationsorting_spiketrains(three_sortings):
+def test_unitsaggregationsorting_spiketrains():
     """Aggregates three sortings, then checks that the number of units and spike trains are equal
     for pre-aggregated sorting and the aggregated sorting."""
 
-    sorting1, sorting2, sorting3 = three_sortings
-    num_units = sorting1.get_num_units()
+    num_units = 5
+    sorting1, sorting2, sorting3 = create_three_sortings(num_units=num_units)
 
     # test num units
     sorting_agg = aggregate_units([sorting1, sorting2, sorting3])
@@ -48,10 +46,11 @@ def test_unitsaggregationsorting_spiketrains(three_sortings):
     assert all(unit in renamed_unit_ids for unit in sorting_agg_renamed.get_unit_ids())
 
 
-def test_unitsaggregationsorting_annotations(three_sortings):
+def test_unitsaggregationsorting_annotations():
     """Aggregates a sorting and check if annotations were correctly propagated."""
 
-    sorting1, sorting2, sorting3 = three_sortings
+    num_units = 5
+    sorting1, sorting2, sorting3 = create_three_sortings(num_units=num_units)
 
     # Annotations the same, so can be propagated to aggregated sorting
     sorting1.annotate(organ="brain")
@@ -73,12 +72,11 @@ def test_unitsaggregationsorting_annotations(three_sortings):
     assert "date" not in sorting_agg_prop.get_annotation_keys()
 
 
-def test_unitsaggregationsorting_properties(three_sortings):
+def test_unitsaggregationsorting_properties():
     """Aggregates a sorting and check if properties were correctly propagated."""
 
-    sorting1, sorting2, sorting3 = three_sortings
-    num_units = sorting1.get_num_units()
-    # test properties
+    num_units = 5
+    sorting1, sorting2, sorting3 = create_three_sortings(num_units=num_units)
 
     # Can propagated property
     sorting1.set_property("brain_area", ["CA1"] * num_units)
