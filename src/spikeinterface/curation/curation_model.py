@@ -5,6 +5,14 @@ from itertools import combinations
 supported_curation_format_versions = {"1"}
 
 
+# TODO: splitting
+# - add split_units to curation model
+# - add split_mode to curation model
+# - add split to apply_curation
+# - add split_units to SortingAnalyzer
+# - add _split_units to extensions
+
+
 class LabelDefinition(BaseModel):
     name: str = Field(..., description="Name of the label")
     label_options: List[str] = Field(..., description="List of possible label options")
@@ -21,10 +29,13 @@ class CurationModel(BaseModel):
     unit_ids: List[Union[int, str]] = Field(..., description="List of unit IDs")
     label_definitions: Dict[str, LabelDefinition] = Field(..., description="Dictionary of label definitions")
     manual_labels: List[ManualLabel] = Field(..., description="List of manual labels")
-    merge_unit_groups: List[List[Union[int, str]]] = Field(..., description="List of groups of units to be merged")
     removed_units: List[Union[int, str]] = Field(..., description="List of removed unit IDs")
+    merge_unit_groups: List[List[Union[int, str]]] = Field(..., description="List of groups of units to be merged")
     merge_new_unit_ids: Optional[List[Union[int, str]]] = Field(
         default=None, description="List of new unit IDs after merging"
+    )
+    split_units: Optional[Dict[Union[int, str], List[List[int]]]] = Field(
+        default=None, description="Dictionary of units to be split"
     )
 
     @field_validator("format_version")
