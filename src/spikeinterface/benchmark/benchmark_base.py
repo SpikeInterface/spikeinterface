@@ -258,25 +258,37 @@ class BenchmarkStudy:
             benchmark.save_main(bench_folder)
 
     def set_colors(self, colors=None, map_name="tab10", levels_to_group_by=None):
-        if levels_to_group_by is None:
-            if colors is None:
-                case_keys = list(self.cases.keys())
-                self.colors_by_case = get_some_colors(
-                    case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0, resample=False
-                )
-            else:
-                self.colors_by_case = colors
-        else:
-            grouped_keys, _ = self.get_grouped_keys_mapping(levels_to_group_by)
+        """
+        Set colors for the study cases or for a given levels_to_group_by.
+
+        Parmeters
+        ---------
+        colors : dict | None, default: None
+            A user-defined dictionary with the case keys as keys and the colors as values.
+            Note that the case keys depend on the levels_to_group_by.
+        map_name : str, default: 'tab10'
+            The name of the colormap to use.
+        levels_to_group_by : list | None, default: None
+            The levels to group by. If None, the colors are set for the cases.
+        """
+        case_keys, _ = self.get_grouped_keys_mapping(levels_to_group_by)
+
+        if colors is None:
             colors = get_some_colors(
-                list(grouped_keys.keys()),
-                map_name=map_name,
-                color_engine="matplotlib",
-                shuffle=False,
-                margin=0,
-                resample=False,
+                case_keys, map_name=map_name, color_engine="matplotlib", shuffle=False, margin=0, resample=False
             )
-            self.colors_by_levels[tuple(levels_to_group_by)] = colors
+            if levels_to_group_by is None:
+                self.colors_by_case = colors
+            else:
+                level_key = tuple(levels_to_group_by) if len(levels_to_group_by) > 1 else levels_to_group_by[0]
+                self.colors_by_levels[level_key] = colors
+        else:
+            assert all([key in colors for key in case_keys]), f"You must provide colors for all cases keys: {case_keys}"
+            if levels_to_group_by is None:
+                self.colors_by_case = colors
+            else:
+                level_key = tuple(levels_to_group_by) if len(levels_to_group_by) > 1 else levels_to_group_by[0]
+                self.colors_by_levels[level_key] = colors
 
     def get_colors(self, levels_to_group_by=None):
         if levels_to_group_by is None:
@@ -284,10 +296,10 @@ class BenchmarkStudy:
                 self.set_colors()
             return self.colors_by_case
         else:
-            levels_key = tuple(levels_to_group_by)
-            if levels_key not in self.colors_by_levels:
+            level_key = tuple(levels_to_group_by) if len(levels_to_group_by) > 1 else levels_to_group_by[0]
+            if level_key not in self.colors_by_levels:
                 self.set_colors(levels_to_group_by=levels_to_group_by)
-            return self.colors_by_levels[levels_key]
+            return self.colors_by_levels[level_key]
 
     def get_run_times(self, case_keys=None):
         if case_keys is None:
