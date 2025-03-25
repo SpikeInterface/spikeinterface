@@ -160,6 +160,7 @@ class IblRecordingExtractor(BaseRecording):
             assert stream_type is not None, "When providing a PID, you must also provide a stream type."
             eid, _ = one.pid2eid(pid)
             pids, probes = one.eid2pid(eid)
+            pids = [str(p) for p in pids]
             pname = probes[pids.index(pid)]
             stream_name = f"{pname}.{stream_type}"
         else:
@@ -318,11 +319,9 @@ class IblSortingExtractor(BaseSorting):
         try:
             from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader
-
-            assert one is not None, "one is a required parameter."
             if isinstance(one, dict):
                 one = ONE(**one)
-            else:
+            elif one is None:
                 one = IblRecordingExtractor._get_default_one()
         except ImportError:
             raise ImportError(self.installation_mesg)
