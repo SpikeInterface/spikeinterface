@@ -12,7 +12,6 @@ PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
 
 
 @pytest.mark.streaming_extractors
-@pytest.mark.xfail(reason="We need to fix ibllib/one-api dependency")
 class TestDefaultIblRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -107,7 +106,6 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
 
 
 @pytest.mark.streaming_extractors
-@pytest.mark.xfail(reason="We need to fix ibllib/one-api dependency")
 class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -182,7 +180,6 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
 
 
 @pytest.mark.streaming_extractors
-@pytest.mark.xfail(reason="We need to fix ibllib/one-api dependency")
 class TestIblSortingExtractor(TestCase):
     def test_ibl_sorting_extractor(self):
         """
