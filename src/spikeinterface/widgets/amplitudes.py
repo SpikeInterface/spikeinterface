@@ -75,7 +75,7 @@ class AmplitudesWidget(BaseRasterWidget):
             unit_ids = sorting.unit_ids
 
         num_segments = sorting.get_num_segments()
-        
+
         # Handle segment_index input
         if num_segments > 1:
             if segment_index is None:
@@ -83,15 +83,15 @@ class AmplitudesWidget(BaseRasterWidget):
                 segment_index = 0
         else:
             segment_index = 0
-        
+
         # Check for SortingView backend
         is_sortingview = backend == "sortingview"
-        
+
         # For SortingView, ensure we're only using a single segment
         if is_sortingview and isinstance(segment_index, list) and len(segment_index) > 1:
             warn("SortingView backend currently supports only single segment. Using first segment.")
             segment_index = segment_index[0]
-        
+
         # Convert segment_index to list for consistent processing
         if isinstance(segment_index, int):
             segment_indices = [segment_index]
@@ -99,7 +99,7 @@ class AmplitudesWidget(BaseRasterWidget):
             segment_indices = segment_index
         else:
             raise ValueError("segment_index must be an int or a list of ints")
-        
+
         # Validate segment indices
         for idx in segment_indices:
             if not isinstance(idx, int):
@@ -110,23 +110,23 @@ class AmplitudesWidget(BaseRasterWidget):
         # Create multi-segment data structure (dict of dicts)
         spiketrains_by_segment = {}
         amplitudes_by_segment = {}
-        
+
         for idx in segment_indices:
             amplitudes_segment = amplitudes[idx]
-            
+
             # Initialize for this segment
             spiketrains_by_segment[idx] = {}
             amplitudes_by_segment[idx] = {}
-            
+
             for unit_id in unit_ids:
                 # Get spike times for this unit in this segment
                 spike_times = sorting.get_unit_spike_train(unit_id, segment_index=idx, return_times=True)
                 amps = amplitudes_segment[unit_id]
-                
+
                 # Store data in dict of dicts format
                 spiketrains_by_segment[idx][unit_id] = spike_times
                 amplitudes_by_segment[idx][unit_id] = amps
-        
+
         # Apply max_spikes_per_unit limit if specified
         if max_spikes_per_unit is not None:
             for idx in segment_indices:
@@ -138,7 +138,7 @@ class AmplitudesWidget(BaseRasterWidget):
                         # to ensure we have max_spikes_per_unit total after concatenation
                         segment_count = len(segment_indices)
                         segment_max = max(1, max_spikes_per_unit // segment_count)
-                        
+
                         if len(st) > segment_max:
                             random_idxs = np.random.choice(len(st), size=segment_max, replace=False)
                             spiketrains_by_segment[idx][unit_id] = st[random_idxs]
@@ -152,7 +152,7 @@ class AmplitudesWidget(BaseRasterWidget):
         for idx in segment_indices:
             duration = sorting_analyzer.get_num_samples(idx) / sorting_analyzer.sampling_frequency
             total_duration += duration
-        
+
         # Build the plot data with the full dict of dicts structure
         plot_data = dict(
             unit_colors=unit_colors,
@@ -166,7 +166,7 @@ class AmplitudesWidget(BaseRasterWidget):
             y_lim=y_lim,
             scatter_decimate=scatter_decimate,
         )
-        
+
         # If using SortingView, extract just the first segment's data as flat dicts
         if is_sortingview:
             first_segment = segment_indices[0]
@@ -177,9 +177,9 @@ class AmplitudesWidget(BaseRasterWidget):
             plot_data["spike_train_data"] = spiketrains_by_segment
             plot_data["y_axis_data"] = amplitudes_by_segment
             plot_data["segment_index"] = segment_indices
-        
+
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
-                              
+
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
         from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url

@@ -162,9 +162,9 @@ class DriftRasterMapWidget(BaseRasterWidget):
     ):
         from matplotlib.pyplot import colormaps
         from matplotlib.colors import Normalize
-        
+
         assert peaks is not None or sorting_analyzer is not None
-        
+
         if peaks is not None:
             assert peak_locations is not None
             if recording is None:
@@ -172,7 +172,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
             else:
                 sampling_frequency = recording.sampling_frequency
             peak_amplitudes = peaks["amplitude"]
-            
+
         if sorting_analyzer is not None:
             if sorting_analyzer.has_recording():
                 recording = sorting_analyzer.recording
@@ -196,7 +196,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
                 peak_amplitudes = None
 
         unique_segments = np.unique(peaks["segment_index"])
-        
+
         if segment_index is None:
             if len(unique_segments) == 1:
                 segment_indices = [int(unique_segments[0])]
@@ -208,12 +208,12 @@ class DriftRasterMapWidget(BaseRasterWidget):
             segment_indices = segment_index
         else:
             raise ValueError("segment_index must be an int or a list of ints")
-        
+
         # Validate all segment indices exist in the data
         for idx in segment_indices:
             if idx not in unique_segments:
                 raise ValueError(f"segment_index {idx} not found in peaks data")
-        
+
         # Filter data for the selected segments
         # Note: For simplicity, we'll filter all data first, then construct dict of dicts
         segment_mask = np.isin(peaks["segment_index"], segment_indices)
@@ -221,24 +221,24 @@ class DriftRasterMapWidget(BaseRasterWidget):
         filtered_locations = peak_locations[segment_mask]
         if peak_amplitudes is not None:
             filtered_amplitudes = peak_amplitudes[segment_mask]
-        
+
         # Create dict of dicts structure for the base class
         spike_train_data = {}
         y_axis_data = {}
-        
+
         # Process each segment separately
         for seg_idx in segment_indices:
             segment_mask = filtered_peaks["segment_index"] == seg_idx
             segment_peaks = filtered_peaks[segment_mask]
             segment_locations = filtered_locations[segment_mask]
-            
+
             # Convert peak times to seconds
             spike_times = segment_peaks["sample_index"] / sampling_frequency
-            
+
             # Store in dict of dicts format (using 0 as the "unit" id)
             spike_train_data[seg_idx] = {0: spike_times}
             y_axis_data[seg_idx] = {0: segment_locations[direction]}
-        
+
         if color_amplitude and peak_amplitudes is not None:
             amps = filtered_amplitudes
             amps_abs = np.abs(amps)
@@ -258,7 +258,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
             )
         else:
             color_kwargs = dict(color=color, c=None, alpha=alpha)
-        
+
         # Calculate total duration for x-axis limits
         total_duration = 0
         for seg_idx in segment_indices:
@@ -274,7 +274,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
                 else:
                     duration = 0
             total_duration += duration
-        
+
         plot_data = dict(
             spike_train_data=spike_train_data,
             y_axis_data=y_axis_data,

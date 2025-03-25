@@ -87,11 +87,11 @@ class BaseRasterWidget(BaseWidget):
         # Set default segment boundary kwargs if not provided
         if segment_boundary_kwargs is None:
             segment_boundary_kwargs = {"color": "gray", "linestyle": "--", "alpha": 0.7}
-        
+
         # Process the data
         available_segments = list(spike_train_data.keys())
         available_segments.sort()  # Ensure consistent ordering
-        
+
         # Determine which segments to use
         if segment_index is None:
             # Use all segments by default
@@ -109,14 +109,14 @@ class BaseRasterWidget(BaseWidget):
             segments_to_use = segment_index
         else:
             raise ValueError("segment_index must be int, list, or None")
-        
+
         # Get all unit IDs present in any segment if not specified
         if unit_ids is None:
             all_units = set()
             for seg_idx in segments_to_use:
                 all_units.update(spike_train_data[seg_idx].keys())
             unit_ids = list(all_units)
-        
+
         # Calculate segment durations and boundaries
         segment_durations = []
         for seg_idx in segments_to_use:
@@ -127,52 +127,54 @@ class BaseRasterWidget(BaseWidget):
                     if len(unit_times) > 0:
                         max_time = max(max_time, np.max(unit_times))
             segment_durations.append(max_time)
-        
+
         # Calculate cumulative durations for segment boundaries
         cumulative_durations = [0]
         for duration in segment_durations[:-1]:
             cumulative_durations.append(cumulative_durations[-1] + duration)
-        
+
         # Segment boundaries for visualization (only internal boundaries)
         segment_boundaries = cumulative_durations[1:] if len(segments_to_use) > 1 else None
-        
+
         # Concatenate data across segments with proper time offsets
         concatenated_spike_trains = {unit_id: [] for unit_id in unit_ids}
         concatenated_y_axis = {unit_id: [] for unit_id in unit_ids}
-        
+
         for i, seg_idx in enumerate(segments_to_use):
             offset = cumulative_durations[i]
-            
+
             for unit_id in unit_ids:
                 if unit_id in spike_train_data[seg_idx]:
                     # Get spike times for this unit in this segment
                     spike_times = spike_train_data[seg_idx][unit_id]
-                    
+
                     # Adjust spike times by adding cumulative duration of previous segments
                     if offset > 0:
                         adjusted_times = spike_times + offset
                     else:
                         adjusted_times = spike_times
-                    
+
                     # Get y-axis data for this unit in this segment
                     y_values = y_axis_data[seg_idx][unit_id]
-                    
+
                     # Concatenate with any existing data
                     if len(concatenated_spike_trains[unit_id]) > 0:
-                        concatenated_spike_trains[unit_id] = np.concatenate([concatenated_spike_trains[unit_id], adjusted_times])
+                        concatenated_spike_trains[unit_id] = np.concatenate(
+                            [concatenated_spike_trains[unit_id], adjusted_times]
+                        )
                         concatenated_y_axis[unit_id] = np.concatenate([concatenated_y_axis[unit_id], y_values])
                     else:
                         concatenated_spike_trains[unit_id] = adjusted_times
                         concatenated_y_axis[unit_id] = y_values
-        
+
         # Update spike train and y-axis data with concatenated values
         processed_spike_train_data = concatenated_spike_trains
         processed_y_axis_data = concatenated_y_axis
-        
+
         # Calculate total duration from the data if not provided
         if total_duration is None:
             total_duration = cumulative_durations[-1] + segment_durations[-1]
-        
+
         plot_data = dict(
             spike_train_data=processed_spike_train_data,
             y_axis_data=processed_y_axis_data,
@@ -236,7 +238,7 @@ class BaseRasterWidget(BaseWidget):
         for unit_id in unit_ids:
             if unit_id not in spike_train_data:
                 continue  # Skip this unit if not in data
-                
+
             unit_spike_train = spike_train_data[unit_id][:: dp.scatter_decimate]
             unit_y_data = y_axis_data[unit_id][:: dp.scatter_decimate]
 
@@ -258,7 +260,7 @@ class BaseRasterWidget(BaseWidget):
                 ax_hist.plot(count, bins[:-1], color=unit_colors[unit_id], alpha=0.8)
 
         # Add segment boundary lines if provided
-        if getattr(dp, 'segment_boundaries', None) is not None:
+        if getattr(dp, "segment_boundaries", None) is not None:
             for boundary in dp.segment_boundaries:
                 scatter_ax.axvline(boundary, **dp.segment_boundary_kwargs)
 
@@ -423,7 +425,7 @@ class RasterWidget(BaseRasterWidget):
         sorting = self.ensure_sorting(sorting)
 
         num_segments = sorting.get_num_segments()
-        
+
         # Handle segment_index input
         if num_segments > 1:
             if segment_index is None:
@@ -431,7 +433,7 @@ class RasterWidget(BaseRasterWidget):
                 segment_index = 0
         else:
             segment_index = 0
-        
+
         # Convert segment_index to list for consistent processing
         if isinstance(segment_index, int):
             segment_indices = [segment_index]
@@ -439,7 +441,7 @@ class RasterWidget(BaseRasterWidget):
             segment_indices = segment_index
         else:
             raise ValueError("segment_index must be an int or a list of ints")
-        
+
         # Validate segment indices
         for idx in segment_indices:
             if not isinstance(idx, int):
@@ -453,10 +455,10 @@ class RasterWidget(BaseRasterWidget):
         # Create dict of dicts structure
         spike_train_data = {}
         y_axis_data = {}
-        
+
         # Create a lookup dictionary for unit indices
         unit_indices_map = {unit_id: i for i, unit_id in enumerate(unit_ids)}
-        
+
         # Calculate total duration across all segments
         total_duration = 0
         for seg_idx in segment_indices:
@@ -471,20 +473,20 @@ class RasterWidget(BaseRasterWidget):
                     if len(st) > 0:
                         max_time = max(max_time, np.max(st))
                 duration = max_time
-            
+
             total_duration += duration
-            
+
             # Initialize dicts for this segment
             spike_train_data[seg_idx] = {}
             y_axis_data[seg_idx] = {}
-            
+
             # Get spike trains for each unit in this segment
             for unit_id in unit_ids:
                 spike_times = sorting.get_unit_spike_train(unit_id, segment_index=seg_idx, return_times=True)
-                
+
                 # Store spike trains
                 spike_train_data[seg_idx][unit_id] = spike_times
-                
+
                 # Create raster locations (y-values for plotting)
                 unit_index = unit_indices_map[unit_id]
                 y_axis_data[seg_idx][unit_id] = unit_index * np.ones(len(spike_times))
