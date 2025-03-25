@@ -13,12 +13,11 @@ from spikeinterface.comparison import compare_sorter_to_ground_truth
 
 
 class SorterBenchmark(Benchmark):
-    def __init__(self, recording, gt_sorting, params, sorter_folder, exhaustive_gt=True):
+    def __init__(self, recording, gt_sorting, params, sorter_folder):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.params = params
         self.sorter_folder = sorter_folder
-        self.exhaustive_gt = exhaustive_gt
         self.result = {}
 
     def run(self):
@@ -27,10 +26,10 @@ class SorterBenchmark(Benchmark):
         sorting = NumpySorting.from_sorting(raw_sorting)
         self.result = {"sorting": sorting}
 
-    def compute_result(self):
+    def compute_result(self, exhaustive_gt=True):
         # run becnhmark result
         sorting = self.result["sorting"]
-        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
+        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt)
         self.result["gt_comparison"] = comp
 
     _run_key_saved = [
@@ -49,12 +48,12 @@ class SorterStudy(BenchmarkStudy):
 
     benchmark_class = SorterBenchmark
 
-    def create_benchmark(self, key, exhaustive_gt=True):
+    def create_benchmark(self, key):
         dataset_key = self.cases[key]["dataset"]
         recording, gt_sorting = self.datasets[dataset_key]
         params = self.cases[key]["params"]
         sorter_folder = self.folder / "sorters" / self.key_to_str(key)
-        benchmark = SorterBenchmark(recording, gt_sorting, params, sorter_folder, exhaustive_gt=exhaustive_gt)
+        benchmark = SorterBenchmark(recording, gt_sorting, params, sorter_folder)
         return benchmark
 
     def remove_benchmark(self, key):
