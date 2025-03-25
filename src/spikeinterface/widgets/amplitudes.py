@@ -25,8 +25,9 @@ class AmplitudesWidget(BaseRasterWidget):
     unit_colors : dict | None, default: None
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
         by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
-    segment_index : int or None, default: None
-        The segment index (or None if mono-segment)
+    segment_index : int or list of int or None, default: None
+        Segment index or indices to plot. If None and there are multiple segments, defaults to 0.
+        If list, spike trains and amplitudes are concatenated across the specified segments.
     max_spikes_per_unit : int or None, default: None
         Number of max spikes per unit to display. Use None for all spikes
     y_lim : tuple or None, default: None
@@ -64,10 +65,10 @@ class AmplitudesWidget(BaseRasterWidget):
     ):
 
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
-
         sorting = sorting_analyzer.sorting
         self.check_extensions(sorting_analyzer, "spike_amplitudes")
 
+        # Get amplitudes by segment
         amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data(outputs="by_unit")
 
         if unit_ids is None:
@@ -98,70 +99,57 @@ class AmplitudesWidget(BaseRasterWidget):
             if idx < 0 or idx >= num_segments:
                 raise ValueError(f"segment_index {idx} out of range (0 to {num_segments - 1})")
 
-        # Initialize dictionaries for concatenated data
-        all_spiketrains = {unit_id: [] for unit_id in unit_ids}
-        all_amplitudes = {unit_id: [] for unit_id in unit_ids}
+        # Create multi-segment data structure (dict of dicts)
+        spiketrains_by_segment = {}
+        amplitudes_by_segment = {}
         
-        # Calculate cumulative durations for spike time adjustments
-        cumulative_durations = [0]
-        for i in range(len(segment_indices) - 1):
-            segment_idx = segment_indices[i]
-            duration = sorting_analyzer.get_num_samples(segment_idx) / sorting_analyzer.sampling_frequency
-            cumulative_durations.append(cumulative_durations[-1] + duration)
-        
-        # Calculate total duration across all segments
-        total_duration = cumulative_durations[-1]
-        if segment_indices:  # Check if there are any segments
-            total_duration += sorting_analyzer.get_num_samples(segment_indices[-1]) / sorting_analyzer.sampling_frequency
-        
-        # Concatenate spike trains and amplitudes across segments
-        for i, segment_idx in enumerate(segment_indices):
-            amplitudes_segment = amplitudes[segment_idx]
-            offset = cumulative_durations[i]
+        for idx in segment_indices:
+            amplitudes_segment = amplitudes[idx]
+            
+            # Initialize for this segment
+            spiketrains_by_segment[idx] = {}
+            amplitudes_by_segment[idx] = {}
             
             for unit_id in unit_ids:
                 # Get spike times for this unit in this segment
-                spike_times = sorting.get_unit_spike_train(unit_id, segment_index=segment_idx, return_times=True)
-                
-                # Adjust spike times by adding cumulative duration of previous segments
-                if offset > 0:
-                    spike_times = spike_times + offset
-                
-                # Get amplitudes for this unit in this segment
+                spike_times = sorting.get_unit_spike_train(unit_id, segment_index=idx, return_times=True)
                 amps = amplitudes_segment[unit_id]
                 
-                # Concatenate with any existing data
-                if len(all_spiketrains[unit_id]) > 0:
-                    all_spiketrains[unit_id] = np.concatenate([all_spiketrains[unit_id], spike_times])
-                    all_amplitudes[unit_id] = np.concatenate([all_amplitudes[unit_id], amps])
-                else:
-                    all_spiketrains[unit_id] = spike_times
-                    all_amplitudes[unit_id] = amps
-
+                # Store data in dict of dicts format
+                spiketrains_by_segment[idx][unit_id] = spike_times
+                amplitudes_by_segment[idx][unit_id] = amps
+        
+        # Apply max_spikes_per_unit limit if specified
         if max_spikes_per_unit is not None:
-            spiketrains_to_plot = dict()
-            amplitudes_to_plot = dict()
-            for unit_id in unit_ids:
-                st = all_spiketrains[unit_id]
-                amps = all_amplitudes[unit_id]
-                if len(st) > max_spikes_per_unit:
-                    random_idxs = np.random.choice(len(st), size=max_spikes_per_unit, replace=False)
-                    spiketrains_to_plot[unit_id] = st[random_idxs]
-                    amplitudes_to_plot[unit_id] = amps[random_idxs]
-                else:
-                    spiketrains_to_plot[unit_id] = st
-                    amplitudes_to_plot[unit_id] = amps
-        else:
-            spiketrains_to_plot = all_spiketrains
-            amplitudes_to_plot = all_amplitudes
+            for idx in segment_indices:
+                for unit_id in unit_ids:
+                    st = spiketrains_by_segment[idx][unit_id]
+                    amps = amplitudes_by_segment[idx][unit_id]
+                    if len(st) > max_spikes_per_unit:
+                        # Scale down the number of spikes proportionally per segment
+                        # to ensure we have max_spikes_per_unit total after concatenation
+                        segment_count = len(segment_indices)
+                        segment_max = max(1, max_spikes_per_unit // segment_count)
+                        
+                        if len(st) > segment_max:
+                            random_idxs = np.random.choice(len(st), size=segment_max, replace=False)
+                            spiketrains_by_segment[idx][unit_id] = st[random_idxs]
+                            amplitudes_by_segment[idx][unit_id] = amps[random_idxs]
 
         if plot_histograms and bins is None:
             bins = 100
 
+        # Calculate total duration across all segments for x-axis limits
+        total_duration = 0
+        for idx in segment_indices:
+            duration = sorting_analyzer.get_num_samples(idx) / sorting_analyzer.sampling_frequency
+            total_duration += duration
+
         plot_data = dict(
-            spike_train_data=spiketrains_to_plot,
-            y_axis_data=amplitudes_to_plot,
+            spike_train_data=spiketrains_by_segment,
+            y_axis_data=amplitudes_by_segment,
             unit_colors=unit_colors,
+            segment_index=segment_indices,
             plot_histograms=plot_histograms,
             bins=bins,
             total_duration=total_duration,
