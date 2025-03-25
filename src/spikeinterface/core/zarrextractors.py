@@ -63,7 +63,6 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
         storage_options_to_test = (storage_options,)
 
     root = None
-    exception = None
     if is_path_remote(str(folder_path)):
         for open_func in open_funcs:
             if root is not None:
@@ -73,7 +72,6 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
                     root = open_func(str(folder_path), mode=mode, storage_options=storage_options)
                     break
                 except Exception as e:
-                    exception = e
                     pass
     else:
         if not Path(folder_path).is_dir():
@@ -83,12 +81,9 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
                 root = open_func(str(folder_path), mode=mode, storage_options=storage_options)
                 break
             except Exception as e:
-                exception = e
                 pass
     if root is None:
-        raise ValueError(
-            f"Cannot open {folder_path} in mode {mode} with storage_options {storage_options}.\nException: {exception}"
-        )
+        raise ValueError(f"Cannot open {folder_path} in mode {mode} with storage_options {storage_options}")
     return root
 
 
