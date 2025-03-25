@@ -140,7 +140,7 @@ test_extractors = [
 ]
 
 test_preprocessing = [
-    "ibllib>=2.36.0", # for IBL
+    # "ibllib>=2.36.0", # for IBL
     "torch",
 ]
 
