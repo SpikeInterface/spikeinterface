@@ -84,6 +84,14 @@ class AmplitudesWidget(BaseRasterWidget):
         else:
             segment_index = 0
         
+        # Check for SortingView backend
+        is_sortingview = backend == "sortingview"
+        
+        # For SortingView, ensure we're only using a single segment
+        if is_sortingview and isinstance(segment_index, list) and len(segment_index) > 1:
+            warn("SortingView backend currently supports only single segment. Using first segment.")
+            segment_index = segment_index[0]
+        
         # Convert segment_index to list for consistent processing
         if isinstance(segment_index, int):
             segment_indices = [segment_index]
@@ -144,12 +152,10 @@ class AmplitudesWidget(BaseRasterWidget):
         for idx in segment_indices:
             duration = sorting_analyzer.get_num_samples(idx) / sorting_analyzer.sampling_frequency
             total_duration += duration
-
+        
+        # Build the plot data with the full dict of dicts structure
         plot_data = dict(
-            spike_train_data=spiketrains_by_segment,
-            y_axis_data=amplitudes_by_segment,
             unit_colors=unit_colors,
-            segment_index=segment_indices,
             plot_histograms=plot_histograms,
             bins=bins,
             total_duration=total_duration,
@@ -160,7 +166,18 @@ class AmplitudesWidget(BaseRasterWidget):
             y_lim=y_lim,
             scatter_decimate=scatter_decimate,
         )
-
+        
+        # If using SortingView, extract just the first segment's data as flat dicts
+        if is_sortingview:
+            first_segment = segment_indices[0]
+            plot_data["spike_train_data"] = spiketrains_by_segment[first_segment]
+            plot_data["y_axis_data"] = amplitudes_by_segment[first_segment]
+        else:
+            # Otherwise use the full dict of dicts structure with all segments
+            plot_data["spike_train_data"] = spiketrains_by_segment
+            plot_data["y_axis_data"] = amplitudes_by_segment
+            plot_data["segment_index"] = segment_indices
+        
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
                               
     def plot_sortingview(self, data_plot, **backend_kwargs):
