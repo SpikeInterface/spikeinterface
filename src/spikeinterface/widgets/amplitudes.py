@@ -73,34 +73,84 @@ class AmplitudesWidget(BaseRasterWidget):
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
-        if sorting.get_num_segments() > 1:
+        num_segments = sorting.get_num_segments()
+        
+        # Handle segment_index input
+        if num_segments > 1:
             if segment_index is None:
                 warn("More than one segment available! Using `segment_index = 0`.")
                 segment_index = 0
         else:
             segment_index = 0
+        
+        # Convert segment_index to list for consistent processing
+        if isinstance(segment_index, int):
+            segment_indices = [segment_index]
+        elif isinstance(segment_index, list):
+            segment_indices = segment_index
+        else:
+            raise ValueError("segment_index must be an int or a list of ints")
+        
+        # Validate segment indices
+        for idx in segment_indices:
+            if not isinstance(idx, int):
+                raise ValueError(f"Each segment index must be an integer, got {type(idx)}")
+            if idx < 0 or idx >= num_segments:
+                raise ValueError(f"segment_index {idx} out of range (0 to {num_segments - 1})")
 
-        amplitudes_segment = amplitudes[segment_index]
-        total_duration = sorting_analyzer.get_num_samples(segment_index) / sorting_analyzer.sampling_frequency
+        # Initialize dictionaries for concatenated data
+        all_spiketrains = {unit_id: [] for unit_id in unit_ids}
+        all_amplitudes = {unit_id: [] for unit_id in unit_ids}
+        
+        # Calculate cumulative durations for spike time adjustments
+        cumulative_durations = [0]
+        for i in range(len(segment_indices) - 1):
+            segment_idx = segment_indices[i]
+            duration = sorting_analyzer.get_num_samples(segment_idx) / sorting_analyzer.sampling_frequency
+            cumulative_durations.append(cumulative_durations[-1] + duration)
+        
+        # Calculate total duration across all segments
+        total_duration = cumulative_durations[-1]
+        if segment_indices:  # Check if there are any segments
+            total_duration += sorting_analyzer.get_num_samples(segment_indices[-1]) / sorting_analyzer.sampling_frequency
+        
+        # Concatenate spike trains and amplitudes across segments
+        for i, segment_idx in enumerate(segment_indices):
+            amplitudes_segment = amplitudes[segment_idx]
+            offset = cumulative_durations[i]
+            
+            for unit_id in unit_ids:
+                # Get spike times for this unit in this segment
+                spike_times = sorting.get_unit_spike_train(unit_id, segment_index=segment_idx, return_times=True)
+                
+                # Adjust spike times by adding cumulative duration of previous segments
+                if offset > 0:
+                    spike_times = spike_times + offset
+                
+                # Get amplitudes for this unit in this segment
+                amps = amplitudes_segment[unit_id]
+                
+                # Concatenate with any existing data
+                if len(all_spiketrains[unit_id]) > 0:
+                    all_spiketrains[unit_id] = np.concatenate([all_spiketrains[unit_id], spike_times])
+                    all_amplitudes[unit_id] = np.concatenate([all_amplitudes[unit_id], amps])
+                else:
+                    all_spiketrains[unit_id] = spike_times
+                    all_amplitudes[unit_id] = amps
 
-        all_spiketrains = {
-            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index, return_times=True)
-            for unit_id in sorting.unit_ids
-        }
-
-        all_amplitudes = amplitudes_segment
         if max_spikes_per_unit is not None:
             spiketrains_to_plot = dict()
             amplitudes_to_plot = dict()
-            for unit, st in all_spiketrains.items():
-                amps = all_amplitudes[unit]
+            for unit_id in unit_ids:
+                st = all_spiketrains[unit_id]
+                amps = all_amplitudes[unit_id]
                 if len(st) > max_spikes_per_unit:
                     random_idxs = np.random.choice(len(st), size=max_spikes_per_unit, replace=False)
-                    spiketrains_to_plot[unit] = st[random_idxs]
-                    amplitudes_to_plot[unit] = amps[random_idxs]
+                    spiketrains_to_plot[unit_id] = st[random_idxs]
+                    amplitudes_to_plot[unit_id] = amps[random_idxs]
                 else:
-                    spiketrains_to_plot[unit] = st
-                    amplitudes_to_plot[unit] = amps
+                    spiketrains_to_plot[unit_id] = st
+                    amplitudes_to_plot[unit_id] = amps
         else:
             spiketrains_to_plot = all_spiketrains
             amplitudes_to_plot = all_amplitudes
@@ -124,7 +174,7 @@ class AmplitudesWidget(BaseRasterWidget):
         )
 
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
-
+                              
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
         from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
