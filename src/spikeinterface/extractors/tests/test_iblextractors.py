@@ -1,3 +1,4 @@
+import sys
 from re import escape
 from unittest import TestCase
 
@@ -9,6 +10,9 @@ from spikeinterface.extractors import read_ibl_recording, read_ibl_sorting, IblR
 
 EID = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
 PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
+
+if sys.version_info < (3, 10):
+    pytest.skip("IBL support requires Python 3.10 or higher", allow_module_level=True)
 
 
 @pytest.mark.streaming_extractors
