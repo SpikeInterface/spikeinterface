@@ -48,7 +48,7 @@ for changed_file in changed_files_in_the_pull_request_paths:
     elif changed_file.name == "nwbextractors.py":
         extractors_changed = True  # There are NWB tests that are not streaming
         stream_extractors_changed = True
-    elif changed_file.name == "iblextractors.py":
+    elif changed_file.name == "iblextractors.py" or changed_file.name == "test_iblextractors.py":
         stream_extractors_changed = True
     elif "core" in changed_file.parts:
         core_changed = True
