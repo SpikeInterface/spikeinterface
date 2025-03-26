@@ -19,7 +19,7 @@ In this code example, we build a preprocessing chain with two steps:
 
 .. code-block:: python
 
-    import spikeinterface.preprocessing import bandpass_filter, common_reference
+    from spikeinterface.preprocessing import bandpass_filter, common_reference
 
     # recording is a RecordingExtractor object
     recording_f = bandpass_filter(recording=recording, freq_min=300, freq_max=6000)
