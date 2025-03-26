@@ -87,6 +87,16 @@ curation_ids_str = {
     "removed_units": ["u31", "u42"],  # Can not be  in the merged_units
 }
 
+curation_with_split = {
+    "format_version": "1",
+    "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
+    "split_units": {
+        1: np.arange(10),
+        2: np.arange(10, 20),
+    },
+}
+
+
 # This is a failure example with duplicated merge
 duplicate_merge = curation_ids_int.copy()
 duplicate_merge["merge_unit_groups"] = [[3, 6, 10], [10, 14, 20]]
@@ -173,7 +183,7 @@ def test_curation_label_to_dataframe():
 
 def test_apply_curation():
     recording, sorting = generate_ground_truth_recording(durations=[10.0], num_units=9, seed=2205)
-    sorting._main_ids = np.array([1, 2, 3, 6, 10, 14, 20, 31, 42])
+    sorting = sorting.rename_units(np.array([1, 2, 3, 6, 10, 14, 20, 31, 42]))
     analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
 
     sorting_curated = apply_curation(sorting, curation_ids_int)
@@ -183,6 +193,20 @@ def test_apply_curation():
 
     analyzer_curated = apply_curation(analyzer, curation_ids_int)
     assert "quality" in analyzer_curated.sorting.get_property_keys()
+
+
+def test_apply_curation_with_split():
+    recording, sorting = generate_ground_truth_recording(durations=[10.0], num_units=9, seed=2205)
+    sorting = sorting.rename_units(np.array([1, 2, 3, 6, 10, 14, 20, 31, 42]))
+    analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
+
+    sorting_curated = apply_curation(sorting, curation_with_split)
+    assert len(sorting_curated.unit_ids) == len(sorting.unit_ids) + 2
+
+    assert 1 not in sorting_curated.unit_ids
+    assert 2 not in sorting_curated.unit_ids
+    assert 43 in sorting_curated.unit_ids
+    assert 44 in sorting_curated.unit_ids
 
 
 if __name__ == "__main__":

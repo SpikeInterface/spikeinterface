@@ -231,6 +231,7 @@ def random_spikes_selection(
     return random_spikes_indices
 
 
+### MERGING ZONE ###
 def apply_merges_to_sorting(
     sorting: BaseSorting,
     merge_unit_groups: list[list[int | str]] | list[tuple[int | str]],
@@ -443,5 +444,133 @@ def generate_unit_ids_for_merge_group(old_unit_ids, merge_unit_groups, new_unit_
                 new_unit_ids = list(max(old_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
         else:
             raise ValueError("wrong new_id_strategy")
+
+    return new_unit_ids
+
+
+### SPLITTING ZONE ###
+def apply_splits_to_sorting(sorting, unit_splits, new_unit_ids=None, return_extra=False, new_id_strategy="append"):
+    spikes = sorting.to_spike_vector().copy()
+
+    num_spikes = sorting.count_num_spikes_per_unit()
+
+    # take care of single-list splits
+    full_unit_splits = {}
+    for unit_id, split_indices in unit_splits.items():
+        if not isinstance(split_indices[0], (list, np.ndarray)):
+            split_2 = np.arange(num_spikes[unit_id])
+            split_2 = split_2[~np.isin(split_2, split_indices)]
+            new_split_indices = [split_indices, split_2]
+        else:
+            new_split_indices = split_indices
+        full_unit_splits[unit_id] = new_split_indices
+
+    new_unit_ids = generate_unit_ids_for_split(
+        sorting.unit_ids, full_unit_splits, new_unit_ids=new_unit_ids, new_id_strategy=new_id_strategy
+    )
+    old_unit_ids = sorting.unit_ids
+    all_unit_ids = list(old_unit_ids)
+    for split_unit, split_new_units in zip(full_unit_splits, new_unit_ids):
+        all_unit_ids.remove(split_unit)
+        all_unit_ids.extend(split_new_units)
+
+    num_seg = sorting.get_num_segments()
+    assert num_seg == 1
+    seg_lims = np.searchsorted(spikes["segment_index"], np.arange(0, num_seg + 2))
+    segment_slices = [(seg_lims[i], seg_lims[i + 1]) for i in range(num_seg)]
+
+    # using this function vaoid to use the mask approach and simplify a lot the algo
+    spike_vector_list = [spikes[s0:s1] for s0, s1 in segment_slices]
+    spike_indices = spike_vector_to_indices(spike_vector_list, sorting.unit_ids, absolute_index=True)
+
+    # TODO deal with segments in splits
+    for unit_id in old_unit_ids:
+        if unit_id in full_unit_splits:
+            split_indices = full_unit_splits[unit_id]
+            new_split_ids = new_unit_ids[list(full_unit_splits.keys()).index(unit_id)]
+
+            for split, new_unit_id in zip(split_indices, new_split_ids):
+                new_unit_index = all_unit_ids.index(new_unit_id)
+                for segment_index in range(num_seg):
+                    spike_inds = spike_indices[segment_index][unit_id]
+                    spikes["unit_index"][spike_inds[split]] = new_unit_index
+        else:
+            new_unit_index = all_unit_ids.index(unit_id)
+            for segment_index in range(num_seg):
+                spike_inds = spike_indices[segment_index][unit_id]
+                spikes["unit_index"][spike_inds] = new_unit_index
+    sorting = NumpySorting(spikes, sorting.sampling_frequency, all_unit_ids)
+
+    if return_extra:
+        return sorting, new_unit_ids
+    else:
+        return sorting
+
+
+def generate_unit_ids_for_split(old_unit_ids, unit_splits, new_unit_ids=None, new_id_strategy="append"):
+    """
+    Function to generate new units ids during a merging procedure. If new_units_ids
+    are provided, it will return these unit ids, checking that they have the the same
+    length as `merge_unit_groups`.
+
+    Parameters
+    ----------
+    old_unit_ids : np.array
+        The old unit_ids.
+    unit_splits : dict
+
+    new_unit_ids : list | None, default: None
+        Optional new unit_ids for merged units. If given, it needs to have the same length as `merge_unit_groups`.
+        If None, new ids will be generated.
+    new_id_strategy : "append" | "take_first" | "join", default: "append"
+        The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+
+            * "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
+            * "split" : new_unit_ids will join unit_ids of groups with a "-".
+                       Only works if unit_ids are str otherwise switch to "append"
+
+    Returns
+    -------
+    new_unit_ids : list of lists
+        The new units_ids associated with the merges.
+    """
+    assert new_id_strategy in ["append", "split"], "new_id_strategy should be 'append' or 'split'"
+    old_unit_ids = np.asarray(old_unit_ids)
+
+    if new_unit_ids is not None:
+        for split_unit, new_split_ids in zip(unit_splits.values(), new_unit_ids):
+            # then only doing a consistency check
+            assert len(split_unit) == len(new_split_ids), "new_unit_ids should have the same len as unit_splits.values"
+            # new_unit_ids can also be part of old_unit_ids only inside the same group:
+            assert all(
+                new_split_id not in old_unit_ids for new_split_id in new_split_ids
+            ), "new_unit_ids already exists but outside the split groups"
+    else:
+        dtype = old_unit_ids.dtype
+        new_unit_ids = []
+        for unit_to_split, split_indices in unit_splits.items():
+            num_splits = len(split_indices)
+            # select new_unit_ids greater that the max id, event greater than the numerical str ids
+            if new_id_strategy == "append":
+                if np.issubdtype(dtype, np.character):
+                    # dtype str
+                    if all(p.isdigit() for p in old_unit_ids):
+                        # All str are digit : we can generate a max
+                        m = max(int(p) for p in old_unit_ids) + 1
+                        new_unit_ids.append([str(m + i) for i in range(num_splits)])
+                    else:
+                        # we cannot automatically find new names
+                        new_unit_ids.append([f"split{i}" for i in range(num_splits)])
+                else:
+                    # dtype int
+                    new_unit_ids.append(list(max(old_unit_ids) + 1 + np.arange(num_splits, dtype=dtype)))
+                old_unit_ids = np.concatenate([old_unit_ids, new_unit_ids[-1]])
+            elif new_id_strategy == "split":
+                if np.issubdtype(dtype, np.character):
+                    new_unit_ids.append([f"{unit_to_split}-{i}" for i in np.arange(len(split_indices))])
+                else:
+                    # dtype int
+                    new_unit_ids.append(list(max(old_unit_ids) + 1 + np.arange(num_splits, dtype=dtype)))
+                    old_unit_ids = np.concatenate([old_unit_ids, new_unit_ids[-1]])
 
     return new_unit_ids
