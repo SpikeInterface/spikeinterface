@@ -452,23 +452,14 @@ def generate_unit_ids_for_merge_group(old_unit_ids, merge_unit_groups, new_unit_
 def apply_splits_to_sorting(sorting, unit_splits, new_unit_ids=None, return_extra=False, new_id_strategy="append"):
     spikes = sorting.to_spike_vector().copy()
 
-    num_spikes = sorting.count_num_spikes_per_unit()
-
     # take care of single-list splits
-    full_unit_splits = {}
-    for unit_id, split_indices in unit_splits.items():
-        if not isinstance(split_indices[0], (list, np.ndarray)):
-            split_2 = np.arange(num_spikes[unit_id])
-            split_2 = split_2[~np.isin(split_2, split_indices)]
-            new_split_indices = [split_indices, split_2]
-        else:
-            new_split_indices = split_indices
-        full_unit_splits[unit_id] = new_split_indices
+    full_unit_splits = _get_full_unit_splits(unit_splits, sorting)
 
     new_unit_ids = generate_unit_ids_for_split(
         sorting.unit_ids, full_unit_splits, new_unit_ids=new_unit_ids, new_id_strategy=new_id_strategy
     )
     all_unit_ids = _get_ids_after_splitting(sorting.unit_ids, full_unit_splits, new_unit_ids)
+    all_unit_ids = list(all_unit_ids)
 
     num_seg = sorting.get_num_segments()
     assert num_seg == 1
@@ -480,7 +471,7 @@ def apply_splits_to_sorting(sorting, unit_splits, new_unit_ids=None, return_extr
     spike_indices = spike_vector_to_indices(spike_vector_list, sorting.unit_ids, absolute_index=True)
 
     # TODO deal with segments in splits
-    for unit_id in old_unit_ids:
+    for unit_id in sorting.unit_ids:
         if unit_id in full_unit_splits:
             split_indices = full_unit_splits[unit_id]
             new_split_ids = new_unit_ids[list(full_unit_splits.keys()).index(unit_id)]
@@ -570,6 +561,21 @@ def generate_unit_ids_for_split(old_unit_ids, unit_splits, new_unit_ids=None, ne
                     old_unit_ids = np.concatenate([old_unit_ids, new_unit_ids[-1]])
 
     return new_unit_ids
+
+
+def _get_full_unit_splits(unit_splits, sorting):
+    # take care of single-list splits
+    full_unit_splits = {}
+    num_spikes = sorting.count_num_spikes_per_unit()
+    for unit_id, split_indices in unit_splits.items():
+        if not isinstance(split_indices[0], (list, np.ndarray)):
+            split_2 = np.arange(num_spikes[unit_id])
+            split_2 = split_2[~np.isin(split_2, split_indices)]
+            new_split_indices = [split_indices, split_2]
+        else:
+            new_split_indices = split_indices
+        full_unit_splits[unit_id] = new_split_indices
+    return full_unit_splits
 
 
 def _get_ids_after_splitting(old_unit_ids, split_units, new_unit_ids):

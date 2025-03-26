@@ -36,6 +36,7 @@ from .sorting_tools import (
     _get_ids_after_merging,
     generate_unit_ids_for_split,
     _get_ids_after_splitting,
+    _get_full_unit_splits,
 )
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
@@ -939,36 +940,63 @@ class SortingAnalyzer:
         else:
             recording = None
 
-        if self.sparsity is not None and unit_ids is None and merge_unit_groups is None:
-            sparsity = self.sparsity
-        elif self.sparsity is not None and unit_ids is not None and merge_unit_groups is None:
-            sparsity_mask = self.sparsity.mask[np.isin(self.unit_ids, unit_ids), :]
-            sparsity = ChannelSparsity(sparsity_mask, unit_ids, self.channel_ids)
-        elif self.sparsity is not None and merge_unit_groups is not None:
-            all_unit_ids = unit_ids
-            sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
-            mergeable, masks = self.are_units_mergeable(
-                merge_unit_groups,
-                sparsity_overlap=sparsity_overlap,
-                return_masks=True,
-            )
+        has_removed = unit_ids is not None
+        has_merges = merge_unit_groups is not None
+        has_splits = split_units is not None
+        assert not has_merges if has_splits else True, "Cannot merge and split at the same time"
 
-            for unit_index, unit_id in enumerate(all_unit_ids):
-                if unit_id in merge_new_unit_ids:
-                    merge_unit_group = tuple(merge_unit_groups[merge_new_unit_ids.index(unit_id)])
-                    if not mergeable[merge_unit_group]:
-                        raise Exception(
-                            f"The sparsity of {merge_unit_group} do not overlap enough for a soft merge using "
-                            f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
-                            "a hard merge."
-                        )
+        if self.sparsity is not None:
+            if not has_removed and not has_merges and not has_splits:
+                # no changes in units
+                sparsity = self.sparsity
+            elif has_removed and not has_merges and not has_splits:
+                # remove units
+                sparsity_mask = self.sparsity.mask[np.isin(self.unit_ids, unit_ids), :]
+                sparsity = ChannelSparsity(sparsity_mask, unit_ids, self.channel_ids)
+            elif has_merges:
+                # merge units
+                all_unit_ids = unit_ids
+                sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
+                mergeable, masks = self.are_units_mergeable(
+                    merge_unit_groups,
+                    sparsity_overlap=sparsity_overlap,
+                    return_masks=True,
+                )
+
+                for unit_index, unit_id in enumerate(all_unit_ids):
+                    if unit_id in merge_new_unit_ids:
+                        merge_unit_group = tuple(merge_unit_groups[merge_new_unit_ids.index(unit_id)])
+                        if not mergeable[merge_unit_group]:
+                            raise Exception(
+                                f"The sparsity of {merge_unit_group} do not overlap enough for a soft merge using "
+                                f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
+                                "a hard merge."
+                            )
+                        else:
+                            sparsity_mask[unit_index] = masks[merge_unit_group]
                     else:
-                        sparsity_mask[unit_index] = masks[merge_unit_group]
-                else:
-                    # This means that the unit is already in the previous sorting
-                    index = self.sorting.id_to_index(unit_id)
-                    sparsity_mask[unit_index] = self.sparsity.mask[index]
-            sparsity = ChannelSparsity(sparsity_mask, list(all_unit_ids), self.channel_ids)
+                        # This means that the unit is already in the previous sorting
+                        index = self.sorting.id_to_index(unit_id)
+                        sparsity_mask[unit_index] = self.sparsity.mask[index]
+                sparsity = ChannelSparsity(sparsity_mask, list(all_unit_ids), self.channel_ids)
+            elif has_splits:
+                # split units
+                all_unit_ids = unit_ids
+                original_unit_ids = self.unit_ids
+                sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
+                for unit_index, unit_id in enumerate(all_unit_ids):
+                    if unit_id not in original_unit_ids:
+                        # then it is a new unit
+                        # we assign the original sparsity
+                        for split_unit, new_unit_ids in zip(split_units, split_new_unit_ids):
+                            if unit_id in new_unit_ids:
+                                original_unit_index = self.sorting.id_to_index(split_unit)
+                                sparsity_mask[unit_index] = self.sparsity.mask[original_unit_index]
+                                break
+                    else:
+                        original_unit_index = self.sorting.id_to_index(unit_id)
+                        sparsity_mask[unit_index] = self.sparsity.mask[original_unit_index]
+                sparsity = ChannelSparsity(sparsity_mask, list(all_unit_ids), self.channel_ids)
         else:
             sparsity = None
 
@@ -1002,7 +1030,7 @@ class SortingAnalyzer:
 
             sorting_provenance = apply_splits_to_sorting(
                 sorting=sorting_provenance,
-                split_units=split_units,
+                unit_splits=split_units,
                 new_unit_ids=split_new_unit_ids,
             )
         # TODO: sam/pierre would create a curation field / curation.json with the applied merges.
@@ -1075,13 +1103,14 @@ class SortingAnalyzer:
                     recompute_dict[extension_name] = extension.params
             else:
                 # split
-                # TODO
-                print("Splitting extension needs to be implemented")
-                # new_sorting_analyzer.extensions[extension_name] = extension.split(
-                #     new_sorting_analyzer, split_units=split_units, new_unit_ids=split_new_unit_ids, verbose=verbose
-                # )
+                try:
+                    new_sorting_analyzer.extensions[extension_name] = extension.split(
+                        new_sorting_analyzer, split_units=split_units, new_unit_ids=split_new_unit_ids, verbose=verbose
+                    )
+                except NotImplementedError:
+                    recompute_dict[extension_name] = extension.params
 
-        if merge_unit_groups is not None and merging_mode == "hard" and len(recompute_dict) > 0:
+        if len(recompute_dict) > 0:
             new_sorting_analyzer.compute_several_extensions(recompute_dict, save=True, verbose=verbose, **job_kwargs)
 
         return new_sorting_analyzer
@@ -1322,6 +1351,7 @@ class SortingAnalyzer:
                 return self
 
         # TODO: add some checks
+        split_units = _get_full_unit_splits(split_units, self.sorting)
 
         new_unit_ids = generate_unit_ids_for_split(self.unit_ids, split_units, new_unit_ids, new_id_strategy)
         all_unit_ids = _get_ids_after_splitting(self.unit_ids, split_units, new_unit_ids=new_unit_ids)
