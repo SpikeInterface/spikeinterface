@@ -356,8 +356,15 @@ def apply_curation(
                 **job_kwargs,
             )
             curation_model.merge_new_unit_ids = new_unit_ids
-        else:
-            new_unit_ids = []
+        if len(curation_model.split_units) > 0:
+            analyzer, new_unit_ids = analyzer.split_units(
+                curation_model.split_units,
+                new_id_strategy=new_id_strategy,
+                return_new_unit_ids=True,
+                format="memory",
+                verbose=verbose,
+            )
+            curation_model.split_new_unit_ids = new_unit_ids
         apply_curation_labels(analyzer.sorting, curation_model)
         return analyzer
     else:

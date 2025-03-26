@@ -5,14 +5,6 @@ from itertools import combinations, chain
 supported_curation_format_versions = {"1"}
 
 
-# TODO: splitting
-# - add split_units to curation model done V
-# - add split_mode to curation model X
-# - add split to apply_curation V
-# - add split_units to SortingAnalyzer
-# - add _split_units to extensions
-
-
 class LabelDefinition(BaseModel):
     name: str = Field(..., description="Name of the label")
     label_options: List[str] = Field(..., description="List of possible label options")
