@@ -1,12 +1,11 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import List, Dict, Union, Optional
-from itertools import combinations
-
+from itertools import combinations, chain
 supported_curation_format_versions = {"1"}
 
 
 # TODO: splitting
-# - add split_units to curation model
+# - add split_units to curation model done
 # - add split_mode to curation model
 # - add split to apply_curation
 # - add split_units to SortingAnalyzer
@@ -27,16 +26,19 @@ class ManualLabel(BaseModel):
 class CurationModel(BaseModel):
     format_version: str = Field(..., description="Version of the curation format")
     unit_ids: List[Union[int, str]] = Field(..., description="List of unit IDs")
-    label_definitions: Dict[str, LabelDefinition] = Field(..., description="Dictionary of label definitions")
-    manual_labels: List[ManualLabel] = Field(..., description="List of manual labels")
-    removed_units: List[Union[int, str]] = Field(..., description="List of removed unit IDs")
-    merge_unit_groups: List[List[Union[int, str]]] = Field(..., description="List of groups of units to be merged")
+    label_definitions: Optional[Dict[str, LabelDefinition]] = Field(default = None, description="Dictionary of label definitions")
+    manual_labels: Optional[List[ManualLabel]]= Field(default = None, description="List of manual labels")
+    removed_units: Optional[List[Union[int, str]]] = Field(default = None, description="List of removed unit IDs")
+    merge_unit_groups: Optional[List[List[Union[int, str]]]] = Field(default = None, description="List of groups of units to be merged")
     merge_new_unit_ids: Optional[List[Union[int, str]]] = Field(
         default=None, description="List of new unit IDs after merging"
     )
-    split_units: Optional[Dict[Union[int, str], List[List[int]]]] = Field(
+    split_units: Optional[Dict[Union[int, str], Union[List[List[int]], List[int]]]] = Field(
         default=None, description="Dictionary of units to be split"
     )
+
+    
+
 
     @field_validator("format_version")
     def check_format_version(cls, v):
@@ -56,7 +58,7 @@ class CurationModel(BaseModel):
     @model_validator(mode="before")
     def check_manual_labels(cls, values):
         unit_ids = values["unit_ids"]
-        manual_labels = values["manual_labels"]
+        manual_labels = values.get("manual_labels")
         if manual_labels is None:
             values["manual_labels"] = []
         else:
@@ -84,6 +86,8 @@ class CurationModel(BaseModel):
                     raise ValueError(f"Merge unit group unit_id {unit_id} is not in the unit list")
             if len(merge_group) < 2:
                 raise ValueError("Merge unit groups must have at least 2 elements")
+        else:
+            values["merge_unit_groups"] = merge_unit_groups
         return values
 
     @model_validator(mode="before")
@@ -101,19 +105,60 @@ class CurationModel(BaseModel):
                         raise ValueError(f"New unit ID {new_unit_id} is already in the unit list")
         return values
 
+
+
+    @model_validator(mode="before")
+    def check_split_units(cls, values):
+        # we want to get split_units as a dictionary
+        # if method 1 Union[List[List[int] is used we want to check there no duplicates in any list of split_units: contacenate the list number of unique elements should be equal to the length of the list 
+        # if method 2 Union[List[int] is used we want to check list dont have duplicate
+        # both these methods are possible
+
+        split_units = values.get("split_units", {})
+        unit_ids = values["unit_ids"]
+        for unit_id, split in split_units.items():
+            if unit_id not in unit_ids:
+                raise ValueError(f"Split unit_id {unit_id} is not in the unit list")
+            if len(split) == 0:
+                raise ValueError(f"Split unit_id {unit_id} has no split")
+            if not isinstance(split[0], list): # uses method 1
+                split = [split]
+            if len(split) > 1: # uses method 2
+                # concatenate the list and check if the number of unique elements is equal to the length of the list
+                flatten = list(chain.from_iterable(split))
+                if len(flatten) != len(set(flatten)):
+                    raise ValueError(f"Split unit_id {unit_id} has duplicate units in the split")
+                # if len(set(sum(split))) != len(sum(split)):
+                #     raise ValueError(f"Split unit_id {unit_id} has duplicate units in the split")
+            elif len(split) == 1: # uses method 1
+                # check the list dont have duplicates
+                if len(split[0]) != len(set(split[0])):
+                    raise ValueError(f"Split unit_id {unit_id} has duplicate units in the split")
+        return values
+       
+
     @model_validator(mode="before")
     def check_removed_units(cls, values):
         unit_ids = values["unit_ids"]
         removed_units = values.get("removed_units", [])
-        for unit_id in removed_units:
-            if unit_id not in unit_ids:
-                raise ValueError(f"Removed unit_id {unit_id} is not in the unit list")
+        if removed_units is None:
+        
+            for unit_id in removed_units:
+                if unit_id not in unit_ids:
+                    raise ValueError(f"Removed unit_id {unit_id} is not in the unit list")
+                
+        else:
+            values["removed_units"] = removed_units
+
         return values
 
     @model_validator(mode="after")
     def validate_curation_dict(cls, values):
         labeled_unit_set = set([lbl.unit_id for lbl in values.manual_labels])
-        merged_units_set = set(sum(values.merge_unit_groups, []))
+        if len(values.merge_unit_groups)>0:
+            merged_units_set = set(sum(values.merge_unit_groups))
+        else:
+            merged_units_set = set()
         removed_units_set = set(values.removed_units)
         unit_ids = values.unit_ids
 
