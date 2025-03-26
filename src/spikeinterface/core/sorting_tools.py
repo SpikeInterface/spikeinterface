@@ -468,11 +468,7 @@ def apply_splits_to_sorting(sorting, unit_splits, new_unit_ids=None, return_extr
     new_unit_ids = generate_unit_ids_for_split(
         sorting.unit_ids, full_unit_splits, new_unit_ids=new_unit_ids, new_id_strategy=new_id_strategy
     )
-    old_unit_ids = sorting.unit_ids
-    all_unit_ids = list(old_unit_ids)
-    for split_unit, split_new_units in zip(full_unit_splits, new_unit_ids):
-        all_unit_ids.remove(split_unit)
-        all_unit_ids.extend(split_new_units)
+    all_unit_ids = _get_ids_after_splitting(sorting.unit_ids, full_unit_splits, new_unit_ids)
 
     num_seg = sorting.get_num_segments()
     assert num_seg == 1
@@ -574,3 +570,45 @@ def generate_unit_ids_for_split(old_unit_ids, unit_splits, new_unit_ids=None, ne
                     old_unit_ids = np.concatenate([old_unit_ids, new_unit_ids[-1]])
 
     return new_unit_ids
+
+
+def _get_ids_after_splitting(old_unit_ids, split_units, new_unit_ids):
+    """
+    Function to get the list of unique unit_ids after some splits, with given new_units_ids would
+    be provided.
+
+    Every new unit_id will be added at the end if not already present.
+
+    Parameters
+    ----------
+    old_unit_ids : np.array
+        The old unit_ids.
+    split_units : dict
+        A dict of split units. Each element needs to have at least two elements (two units to split).
+    new_unit_ids : list | None
+        A new unit_ids for split units. If given, it needs to have the same length as `split_units` values.
+
+    Returns
+    -------
+
+    all_unit_ids :  The unit ids in the split sorting
+        The units_ids that will be present after splits
+
+    """
+    old_unit_ids = np.asarray(old_unit_ids)
+    dtype = old_unit_ids.dtype
+    if dtype.kind == "U":
+        # the new dtype can be longer
+        dtype = "U"
+
+    assert len(new_unit_ids) == len(split_units), "new_unit_ids should have the same len as merge_unit_groups"
+    for new_unit_in_split, unit_to_split in zip(new_unit_ids, split_units.keys()):
+        assert len(new_unit_in_split) == len(
+            split_units[unit_to_split]
+        ), "new_unit_ids should have the same len as split_units values"
+
+    all_unit_ids = list(old_unit_ids.copy())
+    for split_unit, split_new_units in zip(split_units, new_unit_ids):
+        all_unit_ids.remove(split_unit)
+        all_unit_ids.extend(split_new_units)
+    return np.array(all_unit_ids, dtype=dtype)
