@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import warnings
+import importlib.util
 
 import numpy as np
+
 from spikeinterface.core import SortingAnalyzer, Templates, compute_sparsity
 from spikeinterface.core.template_tools import _get_nbefore, get_dense_templates_array, get_template_extremum_channel
 
-try:
-    import numba
-
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ImportError:
+else:
     HAVE_NUMBA = False
 
 
@@ -652,7 +653,9 @@ def get_convolution_weights(
 
 
 if HAVE_NUMBA:
-    enforce_decrease_shells = numba.jit(enforce_decrease_shells_data, nopython=True)
+    from numba import jit
+
+    enforce_decrease_shells = jit(enforce_decrease_shells_data, nopython=True)
 
 
 def compute_location_max_channel(

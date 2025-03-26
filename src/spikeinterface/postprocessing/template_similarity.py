@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import numpy as np
 import warnings
+import importlib.util
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.template_tools import get_dense_templates_array
 from spikeinterface.core.sparsity import ChannelSparsity
 
-try:
-    import numba
 
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ImportError:
+else:
     HAVE_NUMBA = False
 
 
@@ -216,6 +217,7 @@ def _compute_similarity_matrix_numpy(templates_array, other_templates_array, num
 if HAVE_NUMBA:
 
     from math import sqrt
+    import numba
 
     @numba.jit(nopython=True, parallel=True, fastmath=True, nogil=True)
     def _compute_similarity_matrix_numba(templates_array, other_templates_array, num_shifts, mask, method):

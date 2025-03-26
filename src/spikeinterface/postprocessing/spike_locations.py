@@ -5,9 +5,7 @@ import numpy as np
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.template_tools import get_template_extremum_channel
-
 from spikeinterface.core.sorting_tools import spike_vector_to_indices
-
 from spikeinterface.core.node_pipeline import SpikeRetriever, run_node_pipeline
 
 

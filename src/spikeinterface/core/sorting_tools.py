@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+import importlib.util
+
 import numpy as np
 
 from .basesorting import BaseSorting
 from .numpyextractors import NumpySorting
+
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
+    HAVE_NUMBA = True
+else:
+    HAVE_NUMBA = False
 
 
 def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.array) -> dict[dict[str, np.array]]:
@@ -25,13 +33,6 @@ def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.arra
         A dict containing, for each segment, the spike trains of all units
         (as a dict: unit_id --> spike_train).
     """
-
-    try:
-        import numba
-
-        HAVE_NUMBA = True
-    except:
-        HAVE_NUMBA = False
 
     if HAVE_NUMBA:
         # the trick here is to have a function getter
@@ -75,12 +76,6 @@ def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, ab
         A dict containing, for each segment, the spike indices of all units
         (as a dict: unit_id --> index).
     """
-    try:
-        import numba
-
-        HAVE_NUMBA = True
-    except:
-        HAVE_NUMBA = False
 
     if HAVE_NUMBA:
         # the trick here is to have a function getter

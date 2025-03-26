@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+
+import importlib.util
+
 import numpy as np
 from spikeinterface.core import (
     get_channel_distances,
@@ -12,12 +15,10 @@ from .base import BaseTemplateMatching, _base_matching_dtype
 from spikeinterface.generation.drift_tools import DriftingTemplates
 
 
-try:
-    import numba
-    from numba import jit, prange
-
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ImportError:
+else:
     HAVE_NUMBA = False
 
 
@@ -807,6 +808,7 @@ def fit_one_amplitude_with_neighbors(
 
 
 if HAVE_NUMBA:
+    from numba import jit, prange
 
     @jit(nopython=True)
     def construct_prediction_sparse(
