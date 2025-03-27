@@ -11,8 +11,46 @@ from spikeinterface import (
 )
 from spikeinterface.core.generate import inject_some_split_units
 
+# even if this is in postprocessing, we make an extension for quality metrics
+extension_dict = {
+    "noise_levels": dict(),
+    "random_spikes": dict(),
+    "waveforms": dict(),
+    "templates": dict(),
+    "principal_components": dict(),
+    "spike_amplitudes": dict(),
+    "template_similarity": dict(),
+    "correlograms": dict(),
+    "isi_histograms": dict(),
+    "amplitude_scalings": dict(handle_collisions=False),  # otherwise hard mode could fail due to dropped spikes
+    "spike_locations": dict(method="center_of_mass"),  # trick to avoid UserWarning
+    "unit_locations": dict(),
+    "template_metrics": dict(),
+    "quality_metrics": dict(metric_names=["firing_rate", "isi_violation", "snr"]),
+}
+extension_data_type = {
+    "noise_levels": None,
+    "templates": "unit",
+    "isi_histograms": "unit",
+    "unit_locations": "unit",
+    "spike_amplitudes": "spike",
+    "amplitude_scalings": "spike",
+    "spike_locations": "spike",
+    "quality_metrics": "pandas",
+    "template_metrics": "pandas",
+    "correlograms": "matrix",
+    "template_similarity": "matrix",
+    "principal_components": "random",
+    "waveforms": "random",
+    "random_spikes": "random_spikes",
+}
+data_with_miltiple_returns = ["isi_histograms", "correlograms"]
+# due to incremental PCA, hard computation could result in different results for PCA
+# the model is differents always
+random_computation = ["principal_components"]
 
-def get_dataset():
+
+def get_dataset_with_splits():
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],
         sampling_frequency=16000.0,
@@ -36,15 +74,15 @@ def get_dataset():
     sort_by_amp = np.argsort(list(get_template_extremum_amplitude(analyzer_raw).values()))[::-1]
     split_ids = sorting.unit_ids[sort_by_amp][:3]
 
-    sorting_with_splits, other_ids = inject_some_split_units(
+    sorting_with_splits, split_unit_ids = inject_some_split_units(
         sorting, num_split=3, split_ids=split_ids, output_ids=True, seed=0
     )
-    return recording, sorting_with_splits, other_ids
+    return recording, sorting_with_splits, split_unit_ids
 
 
 @pytest.fixture(scope="module")
 def dataset():
-    return get_dataset()
+    return get_dataset_with_splits()
 
 
 @pytest.mark.parametrize("sparse", [False, True])
@@ -54,52 +92,14 @@ def test_SortingAnalyzer_merge_all_extensions(dataset, sparse):
     recording, sorting, other_ids = dataset
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=sparse)
+    extension_dict_merge = extension_dict.copy()
 
     # we apply the merges according to the artificial splits
     merges = [list(v) for v in other_ids.values()]
     split_unit_ids = np.ravel(merges)
     unmerged_unit_ids = sorting_analyzer.unit_ids[~np.isin(sorting_analyzer.unit_ids, split_unit_ids)]
 
-    # even if this is in postprocessing, we make an extension for quality metrics
-    extension_dict = {
-        "noise_levels": dict(),
-        "random_spikes": dict(),
-        "waveforms": dict(),
-        "templates": dict(),
-        "principal_components": dict(),
-        "spike_amplitudes": dict(),
-        "template_similarity": dict(),
-        "correlograms": dict(),
-        "isi_histograms": dict(),
-        "amplitude_scalings": dict(handle_collisions=False),  # otherwise hard mode could fail due to dropped spikes
-        "spike_locations": dict(method="center_of_mass"),  # trick to avoid UserWarning
-        "unit_locations": dict(),
-        "template_metrics": dict(),
-        "quality_metrics": dict(metric_names=["firing_rate", "isi_violation", "snr"]),
-    }
-    extension_data_type = {
-        "noise_levels": None,
-        "templates": "unit",
-        "isi_histograms": "unit",
-        "unit_locations": "unit",
-        "spike_amplitudes": "spike",
-        "amplitude_scalings": "spike",
-        "spike_locations": "spike",
-        "quality_metrics": "pandas",
-        "template_metrics": "pandas",
-        "correlograms": "matrix",
-        "template_similarity": "matrix",
-        "principal_components": "random",
-        "waveforms": "random",
-        "random_spikes": "random_spikes",
-    }
-    data_with_miltiple_returns = ["isi_histograms", "correlograms"]
-
-    # due to incremental PCA, hard computation could result in different results for PCA
-    # the model is differents always
-    random_computation = ["principal_components"]
-
-    sorting_analyzer.compute(extension_dict, n_jobs=1)
+    sorting_analyzer.compute(extension_dict_merge, n_jobs=1)
 
     # TODO: still some UserWarnings for n_jobs, where from?
     t0 = time.perf_counter()
@@ -165,6 +165,74 @@ def test_SortingAnalyzer_merge_all_extensions(dataset, sparse):
                     assert np.allclose(data_hard_merged[f], data_soft_merged[f], rtol=0.1)
 
 
+@pytest.mark.parametrize("sparse", [False, True])
+def test_SortingAnalyzer_split_all_extensions(dataset, sparse):
+    set_global_job_kwargs(n_jobs=1)
+
+    recording, sorting, _ = dataset
+
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=sparse)
+    extension_dict_split = extension_dict.copy()
+    sorting_analyzer.compute(extension_dict, n_jobs=1)
+
+    # we randomly apply splits (at half of spiketrain)
+    num_spikes = sorting.count_num_spikes_per_unit()
+
+    units_to_split = [sorting_analyzer.unit_ids[1], sorting_analyzer.unit_ids[5]]
+    unsplit_unit_ids = sorting_analyzer.unit_ids[~np.isin(sorting_analyzer.unit_ids, units_to_split)]
+    splits = {}
+    for unit in units_to_split:
+        splits[unit] = np.arange(num_spikes[unit] // 2)
+
+    analyzer_split, split_unit_ids = sorting_analyzer.split_units(split_units=splits, return_new_unit_ids=True)
+    split_unit_ids = list(np.concatenate(split_unit_ids))
+
+    # also do a full recopute
+    analyzer_hard = create_sorting_analyzer(analyzer_split.sorting, recording, format="memory", sparse=sparse)
+    # we propagate random spikes to avoid random spikes to be recomputed
+    extension_dict_ = extension_dict_split.copy()
+    extension_dict_.pop("random_spikes")
+    analyzer_hard.extensions["random_spikes"] = analyzer_split.extensions["random_spikes"]
+    analyzer_hard.compute(extension_dict_, n_jobs=1)
+
+    for ext in extension_dict:
+        # 1. check that data are exactly the same for unchanged units between original/split
+        data_original = sorting_analyzer.get_extension(ext).get_data()
+        data_split = analyzer_split.get_extension(ext).get_data()
+        data_recompute = analyzer_hard.get_extension(ext).get_data()
+        if ext in data_with_miltiple_returns:
+            data_original = data_original[0]
+            data_split = data_split[0]
+            data_recompute = data_recompute[0]
+        data_original_unsplit = get_extension_data_for_units(
+            sorting_analyzer, data_original, unsplit_unit_ids, extension_data_type[ext]
+        )
+        data_split_unsplit = get_extension_data_for_units(
+            analyzer_split, data_split, unsplit_unit_ids, extension_data_type[ext]
+        )
+
+        np.testing.assert_array_equal(data_original_unsplit, data_split_unsplit)
+
+        # 2. check that split data are the same for extension split and recompute
+        data_split_soft = get_extension_data_for_units(
+            analyzer_split, data_split, split_unit_ids, extension_data_type[ext]
+        )
+        data_split_hard = get_extension_data_for_units(
+            analyzer_hard, data_recompute, split_unit_ids, extension_data_type[ext]
+        )
+        # TODO: fix amplitude scalings
+        failing_extensions = []
+        if ext not in random_computation + failing_extensions:
+            if extension_data_type[ext] == "pandas":
+                data_split_soft = data_split_soft.dropna().to_numpy().astype("float")
+                data_split_hard = data_split_hard.dropna().to_numpy().astype("float")
+            if data_split_hard.dtype.fields is None:
+                assert np.allclose(data_split_hard, data_split_soft, rtol=0.1)
+            else:
+                for f in data_split_hard.dtype.fields:
+                    assert np.allclose(data_split_hard[f], data_split_soft[f], rtol=0.1)
+
+
 def get_extension_data_for_units(sorting_analyzer, data, unit_ids, ext_data_type):
     unit_indices = sorting_analyzer.sorting.ids_to_indices(unit_ids)
     spike_vector = sorting_analyzer.sorting.to_spike_vector()
@@ -191,5 +259,5 @@ def get_extension_data_for_units(sorting_analyzer, data, unit_ids, ext_data_type
 
 
 if __name__ == "__main__":
-    dataset = get_dataset()
+    dataset = get_dataset_with_splits()
     test_SortingAnalyzer_merge_all_extensions(dataset, False)
