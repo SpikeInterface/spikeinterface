@@ -208,6 +208,14 @@ def test_apply_curation_with_split():
     assert 43 in sorting_curated.unit_ids
     assert 44 in sorting_curated.unit_ids
 
+    analyzer_curated = apply_curation(analyzer, curation_with_split)
+    assert len(analyzer_curated.sorting.unit_ids) == len(analyzer.sorting.unit_ids) + 2
+
+    assert 1 not in analyzer_curated.unit_ids
+    assert 2 not in analyzer_curated.unit_ids
+    assert 43 in analyzer_curated.unit_ids
+    assert 44 in analyzer_curated.unit_ids
+
 
 if __name__ == "__main__":
     test_curation_format_validation()
