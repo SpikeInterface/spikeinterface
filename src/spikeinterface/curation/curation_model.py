@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Union, Optional, Literal
 from itertools import combinations, chain
 import numpy as np
+
 
 supported_curation_format_versions = {"1"}
 
@@ -15,6 +16,21 @@ class LabelDefinition(BaseModel):
 class ManualLabel(BaseModel):
     unit_id: Union[int, str] = Field(..., description="ID of the unit")
     labels: Dict[str, List[str]] = Field(..., description="Dictionary of labels for the unit")
+
+
+class Merges(BaseModel):
+    merge_unit_groups: List[List[Union[int, str]]] = Field(..., description="List of groups of units to be merged")
+    merge_new_unit_ids: List[Union[int, str]] = Field(..., description="List of new unit IDs for each merge group")
+
+
+class Split(BaseModel):
+    unit_id: Union[int, str] = Field(..., description="ID of the unit")
+    split_mode: Literal["indices", "labels"] = Field(default="indices", description="Mode of the split")
+    split_indices: Optional[Union[List[List[int]]]] = Field(default=None, description="Information about the split")
+    split_labels = Optional[List[int]] = Field(default=None, description="List of labels for the split")
+    split_new_unit_ids: Optional[List[Union[int, str]]] = Field(
+        default=None, description="List of new unit IDs for each unit split"
+    )
 
 
 class CurationModel(BaseModel):
