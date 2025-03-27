@@ -3,9 +3,8 @@ from __future__ import annotations
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-
-from spikeinterface.core import get_noise_levels
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
