@@ -182,11 +182,12 @@ def apply_curation(
     censor_ms : float | None, default: None
         When applying the merges, any consecutive spikes within the `censor_ms` are removed. This can be thought of
         as the desired refractory period. If `censor_ms=None`, no spikes are discarded.
-    new_id_strategy : "append" | "take_first", default: "append"
+    new_id_strategy : "append" | "take_first" | "join", default: "append"
         The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
 
             * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
             * "take_first" : new_unit_ids will be the first unit_id of every list of merges
+            * "join" : new_unit_ids will be the concatenation of all unit_ids of every list of merges
     merging_mode : "soft" | "hard", default: "soft"
         How merges are performed for SortingAnalyzer. If the `merge_mode` is "soft" , merges will be approximated, with no reloading of
         the waveforms. This will lead to approximations. If `merge_mode` is "hard", recomputations are accurately

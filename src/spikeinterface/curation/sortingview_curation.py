@@ -11,7 +11,7 @@ from .curation_format import (
     apply_curation,
     curation_label_to_vectors,
 )
-from .curation_model import CurationModel
+from .curation_model import CurationModel, Merge
 
 
 def get_kachery():
@@ -32,7 +32,6 @@ def get_kachery():
             )
 
 
-# TODO: fix sortingview curation with new format
 def apply_sortingview_curation(
     sorting_or_analyzer, uri_or_json, exclude_labels=None, include_labels=None, skip_merge=False, verbose=None
 ):
@@ -85,14 +84,8 @@ def apply_sortingview_curation(
     curation_dict["unit_ids"] = unit_ids
     curation_model = CurationModel(**curation_dict)
 
-    if not skip_merge:
-        sorting_curated = apply_curation(sorting_or_analyzer, curation_model)
-    else:
-        sorting_curated = sorting_or_analyzer
-
-    # now remove units based on labels
-    curation_model.merges = []
-    curation_model.unit_ids = sorting_curated.unit_ids
+    if skip_merge:
+        curation_model.merges = []
 
     # this is a hack because it was not in the old format
     if exclude_labels is not None:
@@ -114,7 +107,19 @@ def apply_sortingview_curation(
         removed_units = np.unique(removed_units)
         curation_model.removed = removed_units
 
+    # make merges and removed units
     if len(curation_model.removed) > 0:
-        sorting_curated = apply_curation(sorting_curated, curation_model)
+        clean_merges = []
+        for merge in curation_model.merges:
+            clean_merge = []
+            for unit_id in merge.merge_unit_group:
+                if unit_id not in curation_model.removed:
+                    clean_merge.append(unit_id)
+            if len(clean_merge) > 1:
+                clean_merges.append(Merge(merge_unit_group=clean_merge))
+        curation_model.merges = clean_merges
+
+    # apply curation
+    sorting_curated = apply_curation(sorting_or_analyzer, curation_model, new_id_strategy="join")
 
     return sorting_curated
