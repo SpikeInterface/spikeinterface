@@ -1,13 +1,14 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import List, Dict, Union, Optional
 from itertools import combinations, chain
+import numpy as np
 
 supported_curation_format_versions = {"1"}
 
 
 class LabelDefinition(BaseModel):
     name: str = Field(..., description="Name of the label")
-    label_options: List[str] = Field(..., description="List of possible label options")
+    label_options: List[str] = Field(..., description="List of possible label options", min_length=2)
     exclusive: bool = Field(..., description="Whether the label is exclusive")
 
 
@@ -47,11 +48,16 @@ class CurationModel(BaseModel):
     def add_label_definition_name(cls, values):
         label_definitions = values.get("label_definitions")
         if label_definitions is None:
-            label_definitions = {}
-        else:
-            for key in list(label_definitions.keys()):
-                label_definitions[key]["name"] = key
-        values["label_definitions"] = label_definitions
+            values["label_definitions"] = {}
+            return values
+        if isinstance(values["label_definitions"], dict):
+            if label_definitions is None:
+                label_definitions = {}
+            else:
+                for key in list(label_definitions.keys()):
+                    if isinstance(label_definitions[key], dict):
+                        label_definitions[key]["name"] = key
+            values["label_definitions"] = label_definitions
         return values
 
     @model_validator(mode="before")
@@ -70,7 +76,11 @@ class CurationModel(BaseModel):
                 for label in labels:
                     if label not in values["label_definitions"]:
                         raise ValueError(f"Manual label {unit_id} has an unknown label {label}")
-                    manual_label["labels"][label] = manual_label[label]
+                    if label not in manual_label["labels"]:
+                        if label in manual_label:
+                            manual_label["labels"][label] = manual_label[label]
+                        else:
+                            raise ValueError(f"Manual label {unit_id} has no value for label {label}")
                 if unit_id not in unit_ids:
                     raise ValueError(f"Manual label unit_id {unit_id} is not in the unit list")
         return values
@@ -114,7 +124,7 @@ class CurationModel(BaseModel):
                 raise ValueError(f"Split unit_id {unit_id} is not in the unit list")
             if len(split) == 0:
                 raise ValueError(f"Split unit_id {unit_id} has no split")
-            if not isinstance(split[0], list):  # uses method 1
+            if not isinstance(split[0], (list, np.ndarray)):  # uses method 1
                 split = [split]
             if len(split) > 1:  # uses method 2
                 # concatenate the list and check if the number of unique elements is equal to the length of the list
@@ -123,7 +133,7 @@ class CurationModel(BaseModel):
                     raise ValueError(f"Split unit_id {unit_id} has duplicate units in the split")
             elif len(split) == 1:  # uses method 1
                 # check the list dont have duplicates
-                if len(split[0]) != len(set(split[0])):
+                if len(split[0]) != len(set(list(split[0]))):
                     raise ValueError(f"Split unit_id {unit_id} has duplicate units in the split")
         values["split_units"] = split_units
         return values
