@@ -67,7 +67,7 @@ def detect_onsets(recording, detect_threshold=5, min_duration_ms=50, **extra_kwa
 
     periods = []
     fs = recording.sampling_frequency
-    max_duration_samples = int(min_duration_ms*fs/1000)
+    max_duration_samples = int(min_duration_ms * fs / 1000)
     num_seg = recording.get_num_segments()
     for seg_index in range(num_seg):
         sub_periods = []
@@ -81,14 +81,14 @@ def detect_onsets(recording, detect_threshold=5, min_duration_ms=50, **extra_kwa
 
         while onset_time < offset_time:
             pass
-        
+
         if len(onsets) == 0 and len(offsets) == 0:
             periods.append([])
             continue
         elif len(onsets) > 0 and len(offsets) == 0:
             offset = recording.get_num_samples(seg_index)
             if (offset - onsets["sample_index"][0]) > max_duration_samples:
-                periods.append([( onsets["sample_index"][0], offset)])
+                periods.append([(onsets["sample_index"][0], offset)])
             continue
 
         max_size = min(len(onsets), len(offsets))
@@ -98,7 +98,7 @@ def detect_onsets(recording, detect_threshold=5, min_duration_ms=50, **extra_kwa
             sub_periods += [(onsets["sample_index"][i], offsets["sample_index"][i])]
 
         periods.append(sub_periods)
-    #print(periods)
+    # print(periods)
     return periods
 
 
@@ -159,10 +159,12 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
         self.enveloppe = GaussianFilterRecording(self.enveloppe, freq_min=None, freq_max=freq_max)
 
         if list_periods is None:
-            list_periods = detect_onsets(self.enveloppe, 
-                                         detect_threshold=detect_threshold, 
-                                         min_duration_ms=min_duration_ms,
-                                         **random_chunk_kwargs)
+            list_periods = detect_onsets(
+                self.enveloppe,
+                detect_threshold=detect_threshold,
+                min_duration_ms=min_duration_ms,
+                **random_chunk_kwargs,
+            )
             if verbose:
                 for i, periods in enumerate(list_periods):
                     total_time = np.sum([end - start for start, end in periods])
@@ -188,4 +190,6 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
 
 
 # function for API
-silence_artifacts = define_function_handling_dict_from_class(source_class=SilencedArtifactsRecording, name="silence_artifacts")
+silence_artifacts = define_function_handling_dict_from_class(
+    source_class=SilencedArtifactsRecording, name="silence_artifacts"
+)

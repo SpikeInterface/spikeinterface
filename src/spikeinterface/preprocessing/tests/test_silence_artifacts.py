@@ -11,7 +11,7 @@ def test_silence_artifacts():
     rec = generate_recording(durations=[10.0])
 
     rec_rmart_mean = silence_artifacts(rec)
-    
+
 
 if __name__ == "__main__":
     test_remove_artifacts()
