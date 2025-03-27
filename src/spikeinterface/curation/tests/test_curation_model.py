@@ -109,6 +109,15 @@ def test_merge_units():
     merge_new_ids = {merge.merge_new_unit_ids for merge in model.merges}
     assert merge_new_ids == {5, 6}
 
+    # Test list format
+    valid_merge_list = {
+        "format_version": "1",
+        "unit_ids": [1, 2, 3, 4],
+        "merges": [[1, 2], [3, 4]],  # Merge each pair into a new unit
+    }
+    model = CurationModel(**valid_merge_list)
+    assert len(model.merges) == 2
+
     # Test invalid merge group (single unit)
     invalid_merge_group = {
         "format_version": "1",
