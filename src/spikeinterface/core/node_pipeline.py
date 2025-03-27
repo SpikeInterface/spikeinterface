@@ -548,7 +548,7 @@ def run_node_pipeline(
     Here a "spike" is a spike with any a label so already sorted.
 
     The main idea is to have a graph of nodes.
-    Every node is doing a computaion of some peaks and related traces.
+    Every node is doing a computation of some peaks and related traces.
     The first node is PeakSource so either a peak detector PeakDetector or peak/spike replay (PeakRetriever/SpikeRetriever)
 
     Every node can have one or several output that can be directed to other nodes (aka nodes have parents).
@@ -587,7 +587,7 @@ def run_node_pipeline(
         Skip the computation after n_peaks.
         This is not an exact because internally this skip is done per worker in average.
     recording_slices : None | list[tuple]
-        Optionaly give a list of slices to run the pipeline only on some chunks of the recording.
+        Optionally give a list of slices to run the pipeline only on some chunks of the recording.
         It must be a list of (segment_index, frame_start, frame_stop).
         If None (default), the function iterates over the entire duration of the recording.
 

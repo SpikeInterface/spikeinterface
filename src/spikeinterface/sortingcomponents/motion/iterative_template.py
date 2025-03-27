@@ -289,6 +289,8 @@ def iterative_template_registration(
     return optimal_shift_indices, target_spikecount_hist, shift_covs_block
 
 
+# TODO: this is duplicate of get_kriging_kernel_distance() but that
+# doesnt expose d parameter, could combine?
 def kriging_kernel(source_location, target_location, sigma=1, p=2, d=2):
     from scipy.spatial.distance import cdist
 
