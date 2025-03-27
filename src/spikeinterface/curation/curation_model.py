@@ -1,13 +1,15 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import List, Dict, Union, Optional
-from itertools import combinations
+from typing import List, Dict, Union, Optional, Literal
+from itertools import combinations, chain
+import numpy as np
+
 
 supported_curation_format_versions = {"1"}
 
 
 class LabelDefinition(BaseModel):
     name: str = Field(..., description="Name of the label")
-    label_options: List[str] = Field(..., description="List of possible label options")
+    label_options: List[str] = Field(..., description="List of possible label options", min_length=2)
     exclusive: bool = Field(..., description="Whether the label is exclusive")
 
 
@@ -16,16 +18,39 @@ class ManualLabel(BaseModel):
     labels: Dict[str, List[str]] = Field(..., description="Dictionary of labels for the unit")
 
 
+class Merge(BaseModel):
+    merge_unit_group: List[Union[int, str]] = Field(..., description="List of groups of units to be merged")
+    merge_new_unit_ids: Optional[Union[int, str]] = Field(default=None, description="New unit IDs for the merge group")
+
+
+class Split(BaseModel):
+    unit_id: Union[int, str] = Field(..., description="ID of the unit")
+    split_mode: Literal["indices", "labels"] = Field(
+        default="indices",
+        description=(
+            "Mode of the split. The split can be defined by indices or labels. "
+            "If indices, the split is defined by the a list of lists of indices of spikes within spikes "
+            "belonging to the unit (`split_indices`). "
+            "If labels, the split is defined by a list of labels for each spike (`split_labels`). "
+        ),
+    )
+    split_indices: Optional[Union[List[List[int]]]] = Field(default=None, description="List of indices for the split")
+    split_labels: Optional[List[int]] = Field(default=None, description="List of labels for the split")
+    split_new_unit_ids: Optional[List[Union[int, str]]] = Field(
+        default=None, description="List of new unit IDs for each split"
+    )
+
+
 class CurationModel(BaseModel):
     format_version: str = Field(..., description="Version of the curation format")
     unit_ids: List[Union[int, str]] = Field(..., description="List of unit IDs")
-    label_definitions: Dict[str, LabelDefinition] = Field(..., description="Dictionary of label definitions")
-    manual_labels: List[ManualLabel] = Field(..., description="List of manual labels")
-    merge_unit_groups: List[List[Union[int, str]]] = Field(..., description="List of groups of units to be merged")
-    removed_units: List[Union[int, str]] = Field(..., description="List of removed unit IDs")
-    merge_new_unit_ids: Optional[List[Union[int, str]]] = Field(
-        default=None, description="List of new unit IDs after merging"
+    label_definitions: Optional[Dict[str, LabelDefinition]] = Field(
+        default=None, description="Dictionary of label definitions"
     )
+    manual_labels: Optional[List[ManualLabel]] = Field(default=None, description="List of manual labels")
+    removed: Optional[List[Union[int, str]]] = Field(default=None, description="List of removed unit IDs")
+    merges: Optional[List[Merge]] = Field(default=None, description="List of merges")
+    splits: Optional[List[Split]] = Field(default=None, description="List of splits")
 
     @field_validator("format_version")
     def check_format_version(cls, v):
@@ -33,19 +58,26 @@ class CurationModel(BaseModel):
             raise ValueError(f"Format version ({v}) not supported. Only {supported_curation_format_versions} are valid")
         return v
 
-    @field_validator("label_definitions", mode="before")
-    def add_label_definition_name(cls, v):
-        if v is None:
-            v = {}
-        else:
-            for key in list(v.keys()):
-                v[key]["name"] = key
-        return v
+    @model_validator(mode="before")
+    def add_label_definition_name(cls, values):
+        label_definitions = values.get("label_definitions")
+        if label_definitions is None:
+            values["label_definitions"] = {}
+            return values
+        if isinstance(values["label_definitions"], dict):
+            if label_definitions is None:
+                label_definitions = {}
+            else:
+                for key in list(label_definitions.keys()):
+                    if isinstance(label_definitions[key], dict):
+                        label_definitions[key]["name"] = key
+            values["label_definitions"] = label_definitions
+        return values
 
     @model_validator(mode="before")
     def check_manual_labels(cls, values):
         unit_ids = values["unit_ids"]
-        manual_labels = values["manual_labels"]
+        manual_labels = values.get("manual_labels")
         if manual_labels is None:
             values["manual_labels"] = []
         else:
@@ -58,52 +90,148 @@ class CurationModel(BaseModel):
                 for label in labels:
                     if label not in values["label_definitions"]:
                         raise ValueError(f"Manual label {unit_id} has an unknown label {label}")
-                    manual_label["labels"][label] = manual_label[label]
+                    if label not in manual_label["labels"]:
+                        if label in manual_label:
+                            manual_label["labels"][label] = manual_label[label]
+                        else:
+                            raise ValueError(f"Manual label {unit_id} has no value for label {label}")
                 if unit_id not in unit_ids:
                     raise ValueError(f"Manual label unit_id {unit_id} is not in the unit list")
         return values
 
     @model_validator(mode="before")
-    def check_merge_unit_groups(cls, values):
+    def check_merges(cls, values):
         unit_ids = values["unit_ids"]
-        merge_unit_groups = values.get("merge_unit_groups", [])
-        for merge_group in merge_unit_groups:
-            for unit_id in merge_group:
+        merges = values.get("merges")
+        if merges is None:
+            values["merges"] = []
+            return values
+        elif isinstance(merges, list):
+            # Convert list of lists to Merge objects
+            for i, merge in enumerate(merges):
+                if isinstance(merge, list):
+                    merges[i] = Merge(merge_unit_group=merge)
+        elif isinstance(merges, dict):
+            # Convert dict format to list of Merge objects if needed
+            merge_list = []
+            for merge_new_id, merge_group in merges.items():
+                merge_list.append({"merge_unit_group": merge_group, "merge_new_unit_ids": merge_new_id})
+            merges = merge_list
+            values["merges"] = merges
+
+        # Convert dict items to Merge objects if needed
+        for i, merge in enumerate(merges):
+            if isinstance(merge, dict):
+                merges[i] = Merge(**merge)
+
+        for merge in merges:
+            # Check unit ids exist
+            for unit_id in merge.merge_unit_group:
                 if unit_id not in unit_ids:
                     raise ValueError(f"Merge unit group unit_id {unit_id} is not in the unit list")
-            if len(merge_group) < 2:
+
+            # Check minimum group size
+            if len(merge.merge_unit_group) < 2:
                 raise ValueError("Merge unit groups must have at least 2 elements")
+
+            # Check new unit id not already used
+            if merge.merge_new_unit_ids is not None:
+                if merge.merge_new_unit_ids in unit_ids:
+                    raise ValueError(f"New unit ID {merge.merge_new_unit_ids} is already in the unit list")
+
         return values
 
     @model_validator(mode="before")
-    def check_merge_new_unit_ids(cls, values):
+    def check_splits(cls, values):
         unit_ids = values["unit_ids"]
-        merge_new_unit_ids = values.get("merge_new_unit_ids")
-        if merge_new_unit_ids is not None:
-            merge_unit_groups = values.get("merge_unit_groups")
-            assert merge_unit_groups is not None, "Merge unit groups must be defined if merge new unit ids are defined"
-            if len(merge_unit_groups) != len(merge_new_unit_ids):
-                raise ValueError("Merge unit groups and new unit ids must have the same length")
-            if len(merge_new_unit_ids) > 0:
-                for new_unit_id in merge_new_unit_ids:
-                    if new_unit_id in unit_ids:
-                        raise ValueError(f"New unit ID {new_unit_id} is already in the unit list")
+        splits = values.get("splits")
+        if splits is None:
+            values["splits"] = []
+            return values
+
+        # Convert dict format to list of Split objects if needed
+        if isinstance(splits, dict):
+            split_list = []
+            for unit_id, split_data in splits.items():
+                # If split_data is a list of indices, assume indices mode
+                if isinstance(split_data[0], (list, np.ndarray)) if split_data else False:
+                    split_list.append({"unit_id": unit_id, "split_mode": "indices", "split_indices": split_data})
+                # Otherwise assume it's a list of labels
+                else:
+                    split_list.append({"unit_id": unit_id, "split_mode": "labels", "split_labels": split_data})
+            splits = split_list
+            values["splits"] = splits
+
+        # Convert dict items to Split objects if needed
+        for i, split in enumerate(splits):
+            if isinstance(split, dict):
+                splits[i] = Split(**split)
+
+        for split in splits:
+            # Check unit exists
+            if split.unit_id not in unit_ids:
+                raise ValueError(f"Split unit_id {split.unit_id} is not in the unit list")
+
+            # Check split definition based on mode
+            if split.split_mode == "indices":
+                if split.split_indices is None:
+                    raise ValueError(f"Split unit {split.unit_id} has no split_indices defined")
+                if len(split.split_indices) < 1:
+                    raise ValueError(f"Split unit {split.unit_id} has empty split_indices")
+                # Check no duplicate indices across splits
+                all_indices = list(chain.from_iterable(split.split_indices))
+                if len(all_indices) != len(set(all_indices)):
+                    raise ValueError(f"Split unit {split.unit_id} has duplicate indices")
+
+            elif split.split_mode == "labels":
+                if split.split_labels is None:
+                    raise ValueError(f"Split unit {split.unit_id} has no split_labels defined")
+                if len(split.split_labels) == 0:
+                    raise ValueError(f"Split unit {split.unit_id} has empty split_labels")
+
+            # Check new unit ids if provided
+            if split.split_new_unit_ids is not None:
+                if split.split_mode == "indices":
+                    if len(split.split_new_unit_ids) != len(split.split_indices):
+                        raise ValueError(
+                            f"Number of new unit IDs does not match number of splits for unit {split.unit_id}"
+                        )
+                elif split.split_mode == "labels":
+                    if len(split.split_new_unit_ids) != len(set(split.split_labels)):
+                        raise ValueError(
+                            f"Number of new unit IDs does not match number of unique labels for unit {split.unit_id}"
+                        )
+
+                # Check new ids not already used
+                for new_id in split.split_new_unit_ids:
+                    if new_id in unit_ids:
+                        raise ValueError(f"New unit ID {new_id} is already in the unit list")
+
         return values
 
     @model_validator(mode="before")
-    def check_removed_units(cls, values):
+    def check_removed(cls, values):
         unit_ids = values["unit_ids"]
-        removed_units = values.get("removed_units", [])
-        for unit_id in removed_units:
-            if unit_id not in unit_ids:
-                raise ValueError(f"Removed unit_id {unit_id} is not in the unit list")
+        removed = values.get("removed", [])
+        if removed is None:
+
+            for unit_id in removed:
+                if unit_id not in unit_ids:
+                    raise ValueError(f"Removed unit_id {unit_id} is not in the unit list")
+
+        else:
+            values["removed"] = removed
+
         return values
 
     @model_validator(mode="after")
     def validate_curation_dict(cls, values):
-        labeled_unit_set = set([lbl.unit_id for lbl in values.manual_labels])
-        merged_units_set = set(sum(values.merge_unit_groups, []))
-        removed_units_set = set(values.removed_units)
+        labeled_unit_set = set([lbl.unit_id for lbl in values.manual_labels]) if values.manual_labels else set()
+        merged_units_set = (
+            set(chain.from_iterable(merge.merge_unit_group for merge in values.merges)) if values.merges else set()
+        )
+        split_units_set = set(split.unit_id for split in values.splits) if values.splits else set()
+        removed_set = set(values.removed) if values.removed else set()
         unit_ids = values.unit_ids
 
         unit_set = set(unit_ids)
@@ -111,19 +239,24 @@ class CurationModel(BaseModel):
             raise ValueError("Curation format: some labeled units are not in the unit list")
         if not merged_units_set.issubset(unit_set):
             raise ValueError("Curation format: some merged units are not in the unit list")
-        if not removed_units_set.issubset(unit_set):
+        if not split_units_set.issubset(unit_set):
+            raise ValueError("Curation format: some split units are not in the unit list")
+        if not removed_set.issubset(unit_set):
             raise ValueError("Curation format: some removed units are not in the unit list")
 
-        for group in values.merge_unit_groups:
-            if len(group) < 2:
-                raise ValueError("Curation format: 'merge_unit_groups' must be list of list with at least 2 elements")
-
-        all_merging_groups = [set(group) for group in values.merge_unit_groups]
+        # Check for units being merged multiple times
+        all_merging_groups = [set(merge.merge_unit_group) for merge in values.merges] if values.merges else []
         for gp_1, gp_2 in combinations(all_merging_groups, 2):
             if len(gp_1.intersection(gp_2)) != 0:
                 raise ValueError("Curation format: some units belong to multiple merge groups")
-        if len(removed_units_set.intersection(merged_units_set)) != 0:
+
+        # Check no overlaps between operations
+        if len(removed_set.intersection(merged_units_set)) != 0:
             raise ValueError("Curation format: some units were merged and deleted")
+        if len(removed_set.intersection(split_units_set)) != 0:
+            raise ValueError("Curation format: some units were split and deleted")
+        if len(merged_units_set.intersection(split_units_set)) != 0:
+            raise ValueError("Curation format: some units were both merged and split")
 
         for manual_label in values.manual_labels:
             for label_key in values.label_definitions.keys():
