@@ -13,15 +13,15 @@ def test_format_version():
 
     # Invalid format version
     with pytest.raises(ValidationError):
-        CurationModel(format_version="2", unit_ids=[1, 2, 3])
+        CurationModel(format_version="3", unit_ids=[1, 2, 3])
     with pytest.raises(ValidationError):
-        CurationModel(format_version="0", unit_ids=[1, 2, 3])
+        CurationModel(format_version="0.1", unit_ids=[1, 2, 3])
 
 
 # Test data for label definitions
 def test_label_definitions():
     valid_label_def = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3],
         "label_definitions": {
             "quality": LabelDefinition(name="quality", label_options=["good", "noise"], exclusive=True),
@@ -42,7 +42,7 @@ def test_label_definitions():
 # Test manual labels
 def test_manual_labels():
     valid_labels = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3],
         "label_definitions": {
             "quality": LabelDefinition(name="quality", label_options=["good", "noise"], exclusive=True),
@@ -59,7 +59,7 @@ def test_manual_labels():
 
     # Test invalid unit ID
     invalid_unit = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3],
         "label_definitions": {
             "quality": LabelDefinition(name="quality", label_options=["good", "noise"], exclusive=True)
@@ -71,7 +71,7 @@ def test_manual_labels():
 
     # Test violation of exclusive label
     invalid_exclusive = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3],
         "label_definitions": {
             "quality": LabelDefinition(name="quality", label_options=["good", "noise"], exclusive=True)
@@ -88,7 +88,7 @@ def test_manual_labels():
 def test_merge_units():
     # Test list format
     valid_merge = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3, 4],
         "merges": [
             {"merge_unit_group": [1, 2], "merge_new_unit_ids": 5},
@@ -102,7 +102,7 @@ def test_merge_units():
     assert model.merges[1].merge_new_unit_ids == 6
 
     # Test dictionary format
-    valid_merge_dict = {"format_version": "1", "unit_ids": [1, 2, 3, 4], "merges": {5: [1, 2], 6: [3, 4]}}
+    valid_merge_dict = {"format_version": "2", "unit_ids": [1, 2, 3, 4], "merges": {5: [1, 2], 6: [3, 4]}}
 
     model = CurationModel(**valid_merge_dict)
     assert len(model.merges) == 2
@@ -111,7 +111,7 @@ def test_merge_units():
 
     # Test list format
     valid_merge_list = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3, 4],
         "merges": [[1, 2], [3, 4]],  # Merge each pair into a new unit
     }
@@ -120,7 +120,7 @@ def test_merge_units():
 
     # Test invalid merge group (single unit)
     invalid_merge_group = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3],
         "merges": [{"merge_unit_group": [1], "merge_new_unit_ids": 4}],
     }
@@ -129,7 +129,7 @@ def test_merge_units():
 
     # Test overlapping merge groups
     invalid_overlap = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3],
         "merges": [
             {"merge_unit_group": [1, 2], "merge_new_unit_ids": 4},
@@ -144,7 +144,7 @@ def test_merge_units():
 def test_split_units():
     # Test indices mode with list format
     valid_split_indices = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3],
         "splits": [
             {
@@ -163,7 +163,7 @@ def test_split_units():
 
     # Test labels mode with list format
     valid_split_labels = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3],
         "splits": [
             {"unit_id": 1, "split_mode": "labels", "split_labels": [0, 0, 1, 1, 0, 2], "split_new_unit_ids": [4, 5, 6]}
@@ -177,7 +177,7 @@ def test_split_units():
 
     # Test dictionary format with indices
     valid_split_dict = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3],
         "splits": {
             1: [[0, 1, 2], [3, 4, 5]],  # Split unit 1 into two parts
@@ -191,7 +191,7 @@ def test_split_units():
 
     # Test invalid unit ID
     invalid_unit_id = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3],
         "splits": [{"unit_id": 4, "split_mode": "indices", "split_indices": [[0, 1], [2, 3]]}],  # Non-existent unit
     }
@@ -200,7 +200,7 @@ def test_split_units():
 
     # Test invalid new unit IDs count for indices mode
     invalid_new_ids = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3],
         "splits": [
             {
@@ -217,19 +217,19 @@ def test_split_units():
 
 # Test removed units
 def test_removed_units():
-    valid_remove = {"format_version": "1", "unit_ids": [1, 2, 3], "removed": [2]}
+    valid_remove = {"format_version": "2", "unit_ids": [1, 2, 3], "removed": [2]}
 
     model = CurationModel(**valid_remove)
     assert len(model.removed) == 1
 
     # Test removing non-existent unit
-    invalid_remove = {"format_version": "1", "unit_ids": [1, 2, 3], "removed": [4]}  # Non-existent unit
+    invalid_remove = {"format_version": "2", "unit_ids": [1, 2, 3], "removed": [4]}  # Non-existent unit
     with pytest.raises(ValidationError):
         CurationModel(**invalid_remove)
 
     # Test conflict between merge and remove
     invalid_merge_remove = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3],
         "merges": [{"merge_unit_group": [1, 2], "merge_new_unit_ids": 4}],
         "removed": [1],  # Unit is both merged and removed
@@ -241,7 +241,7 @@ def test_removed_units():
 # Test complete model with multiple operations
 def test_complete_model():
     complete_model = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3, 4, 5],
         "label_definitions": {
             "quality": LabelDefinition(name="quality", label_options=["good", "noise"], exclusive=True),
@@ -256,7 +256,7 @@ def test_complete_model():
     }
 
     model = CurationModel(**complete_model)
-    assert model.format_version == "1"
+    assert model.format_version == "2"
     assert len(model.unit_ids) == 5
     assert len(model.label_definitions) == 2
     assert len(model.manual_labels) == 1
@@ -266,7 +266,7 @@ def test_complete_model():
 
     # Test dictionary format for complete model
     complete_model_dict = {
-        "format_version": "1",
+        "format_version": "2",
         "unit_ids": [1, 2, 3, 4, 5],
         "label_definitions": {
             "quality": LabelDefinition(name="quality", label_options=["good", "noise"], exclusive=True),
@@ -279,7 +279,7 @@ def test_complete_model():
     }
 
     model = CurationModel(**complete_model_dict)
-    assert model.format_version == "1"
+    assert model.format_version == "2"
     assert len(model.unit_ids) == 5
     assert len(model.label_definitions) == 2
     assert len(model.manual_labels) == 1
