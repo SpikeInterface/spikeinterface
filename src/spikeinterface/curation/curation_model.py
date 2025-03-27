@@ -273,10 +273,13 @@ class CurationModel(BaseModel):
             labels_def = {
                 "all_labels": {"name": "all_labels", "label_options": list(set(all_labels)), "exclusive": False}
             }
+            for merge_group in merge_groups:
+                all_units.extend(merge_group)
+            all_units = list(set(all_units))
 
             values = {
                 "format_version": "2",
-                "unit_ids": values["unit_ids"],
+                "unit_ids": values.get("unit_ids", all_units),
                 "label_definitions": labels_def,
                 "manual_labels": list(manual_labels),
                 "merges": [{"merge_unit_group": list(group)} for group in merge_groups],
