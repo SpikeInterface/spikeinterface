@@ -28,7 +28,6 @@ class DetectThresholdCrossing(PeakDetector):
         if noise_levels is None:
             noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
         self.abs_thresholds = noise_levels * detect_threshold
-        print(self.abs_thresholds)
         self._dtype = np.dtype(base_peak_dtype + [("onset", "bool")])
 
     def get_trace_margin(self):
@@ -81,7 +80,8 @@ def detect_onsets(recording, detect_threshold=5, min_duration_ms=50, **extra_kwa
         offset_time = recording.get_num_samples(seg_index)
 
         while onset_time < offset_time:
-
+            pass
+        
         if len(onsets) == 0 and len(offsets) == 0:
             periods.append([])
             continue
