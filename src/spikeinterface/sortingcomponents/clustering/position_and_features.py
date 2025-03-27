@@ -42,22 +42,13 @@ class PositionAndFeaturesClustering:
         "ms_before": 1.5,
         "ms_after": 1.5,
         "cleaning_method": "dip",
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "progress_bar": True},
     }
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         from sklearn.preprocessing import QuantileTransformer
 
         assert HAVE_HDBSCAN, "twisted clustering needs hdbscan to be installed"
-
-        if "n_jobs" in params["job_kwargs"]:
-            if params["job_kwargs"]["n_jobs"] == -1:
-                params["job_kwargs"]["n_jobs"] = os.cpu_count()
-
-        if "core_dist_n_jobs" in params["hdbscan_kwargs"]:
-            if params["hdbscan_kwargs"]["core_dist_n_jobs"] == -1:
-                params["hdbscan_kwargs"]["core_dist_n_jobs"] = os.cpu_count()
 
         d = params
 
@@ -80,7 +71,7 @@ class PositionAndFeaturesClustering:
         }
 
         features_data = compute_features_from_peaks(
-            recording, peaks, features_list, features_params, ms_before=1, ms_after=1, **params["job_kwargs"]
+            recording, peaks, features_list, features_params, ms_before=1, ms_after=1, **job_kwargs
         )
 
         hdbscan_data = np.zeros((len(peaks), 3), dtype=np.float32)
@@ -150,10 +141,10 @@ class PositionAndFeaturesClustering:
                 dtype=recording.get_dtype(),
                 sparsity_mask=None,
                 copy=True,
-                **params["job_kwargs"],
+                **job_kwargs,
             )
 
-            noise_levels = get_noise_levels(recording, return_scaled=False)
+            noise_levels = get_noise_levels(recording, return_scaled=False, **job_kwargs)
             labels, peak_labels = remove_duplicates(
                 wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, **params["cleaning_kwargs"]
             )
@@ -170,7 +161,7 @@ class PositionAndFeaturesClustering:
             name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
             tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
 
-            sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["unit_index"], fs)
+            sorting = NumpySorting.from_samples_and_labels(spikes["sample_index"], spikes["unit_index"], fs)
 
             nbefore = int(params["ms_before"] * fs / 1000.0)
             nafter = int(params["ms_after"] * fs / 1000.0)
@@ -181,7 +172,7 @@ class PositionAndFeaturesClustering:
                 nbefore,
                 nafter,
                 return_scaled=False,
-                **params["job_kwargs"],
+                **job_kwargs,
             )
             templates = Templates(
                 templates_array=templates_array,
@@ -193,7 +184,7 @@ class PositionAndFeaturesClustering:
             )
 
             labels, peak_labels = remove_duplicates_via_matching(
-                templates, peak_labels, job_kwargs=params["job_kwargs"], **params["cleaning_kwargs"]
+                templates, peak_labels, job_kwargs=job_kwargs, **params["cleaning_kwargs"]
             )
             shutil.rmtree(tmp_folder)
 

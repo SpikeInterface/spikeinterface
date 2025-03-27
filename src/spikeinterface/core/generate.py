@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 import warnings
 import numpy as np
-from typing import Literal
+from typing import Literal, Optional
 from math import ceil
 
 from .basesorting import SpikeVectorSortingSegment
@@ -134,7 +134,7 @@ def generate_sorting(
     seed = _ensure_seed(seed)
     rng = np.random.default_rng(seed)
     num_segments = len(durations)
-    unit_ids = np.arange(num_units)
+    unit_ids = [str(idx) for idx in np.arange(num_units)]
 
     spikes = []
     for segment_index in range(num_segments):
@@ -509,7 +509,7 @@ class TransformSorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_times_labels(
+    def from_samples_and_labels(
         sorting1, times_list, labels_list, sampling_frequency, unit_ids=None, refractory_period_ms=None
     ) -> "NumpySorting":
         """
@@ -537,7 +537,7 @@ class TransformSorting(BaseSorting):
             discarded.
         """
 
-        sorting2 = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency, unit_ids)
+        sorting2 = NumpySorting.from_samples_and_labels(times_list, labels_list, sampling_frequency, unit_ids)
         sorting = TransformSorting.add_from_sorting(sorting1, sorting2, refractory_period_ms)
         return sorting
 
@@ -1111,7 +1111,7 @@ class SortingGenerator(BaseSorting):
 
         """
 
-        unit_ids = np.arange(num_units)
+        unit_ids = [str(idx) for idx in np.arange(num_units)]
         super().__init__(sampling_frequency, unit_ids)
 
         self.num_units = num_units
@@ -1138,6 +1138,7 @@ class SortingGenerator(BaseSorting):
                 firing_rates=firing_rates,
                 refractory_period_seconds=self.refractory_period_seconds,
                 seed=segment_seed,
+                unit_ids=unit_ids,
                 t_start=None,
             )
             self.add_sorting_segment(segment)
@@ -1161,6 +1162,7 @@ class SortingGeneratorSegment(BaseSortingSegment):
         firing_rates: float | np.ndarray,
         refractory_period_seconds: float | np.ndarray,
         seed: int,
+        unit_ids: list[str],
         t_start: Optional[float] = None,
     ):
         self.num_units = num_units
@@ -1177,7 +1179,8 @@ class SortingGeneratorSegment(BaseSortingSegment):
             self.refractory_period_seconds = np.full(num_units, self.refractory_period_seconds, dtype="float64")
 
         self.segment_seed = seed
-        self.units_seed = {unit_id: self.segment_seed + hash(unit_id) for unit_id in range(num_units)}
+        self.units_seed = {unit_id: abs(self.segment_seed + hash(unit_id)) for unit_id in unit_ids}
+
         self.num_samples = math.ceil(sampling_frequency * duration)
         super().__init__(t_start)
 
@@ -1280,7 +1283,7 @@ class NoiseGeneratorRecording(BaseRecording):
         noise_block_size: int = 30000,
     ):
 
-        channel_ids = np.arange(num_channels)
+        channel_ids = [str(idx) for idx in np.arange(num_channels)]
         dtype = np.dtype(dtype).name  # Cast to string for serialization
         if dtype not in ("float32", "float64"):
             raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")

@@ -19,9 +19,9 @@ def setup_module(tmp_path_factory):
 
 def make_sorting(times1, labels1, times2, labels2, times3, labels3):
     sampling_frequency = 30000.0
-    sorting1 = NumpySorting.from_times_labels([times1], [labels1], sampling_frequency)
-    sorting2 = NumpySorting.from_times_labels([times2], [labels2], sampling_frequency)
-    sorting3 = NumpySorting.from_times_labels([times3], [labels3], sampling_frequency)
+    sorting1 = NumpySorting.from_samples_and_labels([times1], [labels1], sampling_frequency)
+    sorting2 = NumpySorting.from_samples_and_labels([times2], [labels2], sampling_frequency)
+    sorting3 = NumpySorting.from_samples_and_labels([times3], [labels3], sampling_frequency)
     sorting1 = sorting1.save()
     sorting2 = sorting2.save()
     sorting3 = sorting3.save()
@@ -41,12 +41,15 @@ def test_compare_multiple_sorters(setup_module):
     )
     msc = compare_multiple_sorters([sorting1, sorting2, sorting3], verbose=True)
     msc_shuffle = compare_multiple_sorters([sorting3, sorting1, sorting2])
+    msc_dist = compare_multiple_sorters([sorting3, sorting1, sorting2], agreement_method="distance")
 
     agr = msc._do_agreement_matrix()
     agr_shuffle = msc_shuffle._do_agreement_matrix()
+    agr_dist = msc_dist._do_agreement_matrix()
 
     print(agr)
     print(agr_shuffle)
+    print(agr_dist)
 
     assert len(msc.get_agreement_sorting(minimum_agreement_count=3).get_unit_ids()) == 3
     assert len(msc.get_agreement_sorting(minimum_agreement_count=2).get_unit_ids()) == 5
@@ -57,7 +60,14 @@ def test_compare_multiple_sorters(setup_module):
     assert len(msc.get_agreement_sorting(minimum_agreement_count=2).get_unit_ids()) == len(
         msc_shuffle.get_agreement_sorting(minimum_agreement_count=2).get_unit_ids()
     )
+    assert len(msc.get_agreement_sorting(minimum_agreement_count=3).get_unit_ids()) == len(
+        msc_dist.get_agreement_sorting(minimum_agreement_count=3).get_unit_ids()
+    )
+    assert len(msc.get_agreement_sorting(minimum_agreement_count=2).get_unit_ids()) == len(
+        msc_dist.get_agreement_sorting(minimum_agreement_count=2).get_unit_ids()
+    )
     assert len(msc.get_agreement_sorting().get_unit_ids()) == len(msc_shuffle.get_agreement_sorting().get_unit_ids())
+    assert len(msc.get_agreement_sorting().get_unit_ids()) == len(msc_dist.get_agreement_sorting().get_unit_ids())
     agreement_2 = msc.get_agreement_sorting(minimum_agreement_count=2, minimum_agreement_count_only=True)
     assert np.all([agreement_2.get_unit_property(u, "agreement_number")] == 2 for u in agreement_2.get_unit_ids())
 

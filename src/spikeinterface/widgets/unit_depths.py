@@ -7,7 +7,7 @@ from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
 
-from ..core.template_tools import get_template_extremum_amplitude
+from spikeinterface.core.template_tools import get_template_extremum_amplitude
 
 
 class UnitDepthsWidget(BaseWidget):
@@ -18,8 +18,9 @@ class UnitDepthsWidget(BaseWidget):
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object
-    unit_colors :  dict or None, default: None
-        If given, a dictionary with unit ids as keys and colors as values
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     depth_axis : int, default: 1
         The dimension of unit_locations that is depth
     peak_sign : "neg" | "pos" | "both", default: "neg"

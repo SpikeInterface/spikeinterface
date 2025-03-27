@@ -570,7 +570,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
         )
     else:
         recording = NumpyRecording(zdata, sampling_frequency=fs)
-        recording = SharedMemoryRecording.from_recording(recording)
+        recording = SharedMemoryRecording.from_recording(recording, **job_kwargs)
 
     recording = recording.set_probe(templates.probe)
     recording.annotate(is_filtered=True)
@@ -586,6 +586,8 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
     similar_templates = [[], []]
 
     keep_searching = True
+
+    local_job_kargs = {"n_jobs": 1, "progress_bar": False}
 
     DEBUG = False
     while keep_searching:
@@ -604,7 +606,11 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
             local_params.update({"ignore_inds": ignore_inds + [i]})
 
             spikes, more_outputs = find_spikes_from_templates(
-                sub_recording, method="circus-omp-svd", method_kwargs=local_params, extra_outputs=True, **job_kwargs
+                sub_recording,
+                method="circus-omp-svd",
+                method_kwargs=local_params,
+                extra_outputs=True,
+                **local_job_kargs,
             )
             local_params["precomputed"] = more_outputs
             valid = (spikes["sample_index"] >= 0) * (spikes["sample_index"] < duration + 2 * margin)

@@ -10,9 +10,9 @@ import numpy as np
 import warnings
 from copy import deepcopy
 
-from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from ..core.template_tools import get_template_extremum_channel
-from ..core.template_tools import get_dense_templates_array
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
+from spikeinterface.core.template_tools import get_template_extremum_channel
+from spikeinterface.core.template_tools import get_dense_templates_array
 
 # DEBUG = False
 
@@ -153,10 +153,10 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         if delete_existing_metrics is False and tm_extension is not None:
 
             existing_metric_names = tm_extension.params["metric_names"]
-            existing_metric_names_propogated = [
+            existing_metric_names_propagated = [
                 metric_name for metric_name in existing_metric_names if metric_name not in metrics_to_compute
             ]
-            metric_names = metrics_to_compute + existing_metric_names_propogated
+            metric_names = metrics_to_compute + existing_metric_names_propagated
 
         params = dict(
             metric_names=metric_names,
@@ -327,13 +327,18 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         )
 
         existing_metrics = []
-        tm_extension = self.sorting_analyzer.get_extension("template_metrics")
-        if (
-            delete_existing_metrics is False
-            and tm_extension is not None
-            and tm_extension.data.get("metrics") is not None
-        ):
-            existing_metrics = tm_extension.params["metric_names"]
+
+        # Check if we need to propagate any old metrics. If so, we'll do that.
+        # Otherwise, we'll avoid attempting to load an empty template_metrics.
+        if set(self.params["metrics_to_compute"]) != set(self.params["metric_names"]):
+
+            tm_extension = self.sorting_analyzer.get_extension("template_metrics")
+            if (
+                delete_existing_metrics is False
+                and tm_extension is not None
+                and tm_extension.data.get("metrics") is not None
+            ):
+                existing_metrics = tm_extension.params["metric_names"]
 
         existing_metrics = []
         # here we get in the loaded via the dict only (to avoid full loading from disk after params reset)

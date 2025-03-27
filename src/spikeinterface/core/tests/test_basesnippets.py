@@ -10,7 +10,7 @@ from numpy.testing import assert_raises
 
 from probeinterface import Probe
 from spikeinterface.core import generate_snippets
-from spikeinterface.core import NumpySnippets, load_extractor
+from spikeinterface.core import NumpySnippets, load
 from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
 from spikeinterface.core.base import BaseExtractor
 
@@ -41,8 +41,8 @@ def test_BaseSnippets(create_cache_folder):
     assert snippets.get_num_segments() == len(duration)
     assert snippets.get_num_channels() == num_channels
 
-    assert np.all(snippets.ids_to_indices([0, 1, 2]) == [0, 1, 2])
-    assert np.all(snippets.ids_to_indices([0, 1, 2], prefer_slice=True) == slice(0, 3, None))
+    assert np.all(snippets.ids_to_indices(["0", "1", "2"]) == [0, 1, 2])
+    assert np.all(snippets.ids_to_indices(["0", "1", "2"], prefer_slice=True) == slice(0, 3, None))
 
     # annotations / properties
     snippets.annotate(gre="ta")
@@ -60,7 +60,7 @@ def test_BaseSnippets(create_cache_folder):
     )
 
     # missing property
-    snippets.set_property("string_property", ["ciao", "bello"], ids=[0, 1])
+    snippets.set_property("string_property", ["ciao", "bello"], ids=["0", "1"])
     values = snippets.get_property("string_property")
     assert values[2] == ""
 
@@ -70,14 +70,14 @@ def test_BaseSnippets(create_cache_folder):
         snippets.set_property,
         key="string_property_nan",
         values=["hola", "chabon"],
-        ids=[0, 1],
+        ids=["0", "1"],
         missing_value=np.nan,
     )
 
     # int properties without missing values raise an error
     assert_raises(Exception, snippets.set_property, key="int_property", values=[5, 6], ids=[1, 2])
 
-    snippets.set_property("int_property", [5, 6], ids=[1, 2], missing_value=200)
+    snippets.set_property("int_property", [5, 6], ids=["1", "2"], missing_value=200)
     values = snippets.get_property("int_property")
     assert values.dtype.kind == "i"
 
@@ -90,27 +90,27 @@ def test_BaseSnippets(create_cache_folder):
     # dump/load dict
     d = snippets.to_dict()
     snippets2 = BaseExtractor.from_dict(d)
-    snippets3 = load_extractor(d)
+    snippets3 = load(d)
 
     # dump/load json
     snippets.dump_to_json(cache_folder / "test_BaseSnippets.json")
     snippets2 = BaseExtractor.load(cache_folder / "test_BaseSnippets.json")
-    snippets3 = load_extractor(cache_folder / "test_BaseSnippets.json")
+    snippets3 = load(cache_folder / "test_BaseSnippets.json")
 
     # dump/load pickle
     snippets.dump_to_pickle(cache_folder / "test_BaseSnippets.pkl")
     snippets2 = BaseExtractor.load(cache_folder / "test_BaseSnippets.pkl")
-    snippets3 = load_extractor(cache_folder / "test_BaseSnippets.pkl")
+    snippets3 = load(cache_folder / "test_BaseSnippets.pkl")
 
     # dump/load dict - relative
     d = snippets.to_dict(relative_to=cache_folder, recursive=True)
     snippets2 = BaseExtractor.from_dict(d, base_folder=cache_folder)
-    snippets3 = load_extractor(d, base_folder=cache_folder)
+    snippets3 = load(d, base_folder=cache_folder)
 
     # dump/load json
     snippets.dump_to_json(cache_folder / "test_BaseSnippets_rel.json", relative_to=cache_folder)
     snippets2 = BaseExtractor.load(cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder)
-    snippets3 = load_extractor(cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder)
+    snippets3 = load(cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder)
 
     # cache to npy
     folder = cache_folder / "simple_snippets"
@@ -156,7 +156,7 @@ def test_BaseSnippets(create_cache_folder):
     # test save with probe
     folder = cache_folder / "simple_snippets3"
     snippets2 = snippets_p.save(folder=folder)
-    snippets2 = load_extractor(folder)
+    snippets2 = load(folder)
     probe2 = snippets2.get_probe()
     assert np.array_equal(probe2.contact_positions, [[0, 30.0], [0.0, 0.0]])
     positions2 = snippets_p.get_channel_locations()

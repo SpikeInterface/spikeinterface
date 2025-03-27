@@ -20,7 +20,7 @@ of the tests are:
 
 import pytest
 import copy
-from typing import Any
+from packaging.version import parse
 from inspect import signature
 
 import numpy as np
@@ -84,8 +84,6 @@ PARAMS_TO_TEST_DICT = {
     "duplicate_spike_ms": 0.3,
 }
 
-PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
-
 PARAMETERS_NOT_AFFECTING_RESULTS = [
     "artifact_threshold",
     "ccg_threshold",
@@ -95,13 +93,24 @@ PARAMETERS_NOT_AFFECTING_RESULTS = [
     "duplicate_spike_ms",  # this is because ground-truth spikes don't have violations
 ]
 
-# THIS IS A PLACEHOLDER FOR FUTURE PARAMS TO TEST
-# if parse(version("kilosort")) >= parse("4.0.X"):
-#     PARAMS_TO_TEST_DICT.update(
-#         [
-#             {"new_param": new_value},
-#         ]
-#     )
+
+# Add/Remove version specific parameters
+if parse(kilosort.__version__) >= parse("4.0.22"):
+    PARAMS_TO_TEST_DICT.update(
+        {"position_limit": 50}
+    )
+    # Position limit only affects computing spike locations after sorting
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("position_limit")
+
+if parse(kilosort.__version__) >= parse("4.0.24"):
+    PARAMS_TO_TEST_DICT.update(
+        {"max_peels": 200},
+    )
+    # max_peels is not affecting the results in this short dataset
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("max_peels")
+
+
+PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
 
 
 class TestKilosort4Long:
@@ -249,17 +258,22 @@ class TestKilosort4Long:
         self._check_arguments(compute_preprocessing, ["ops", "device", "tic0", "file_object"])
 
     def test_compute_drift_location_arguments(self):
-        self._check_arguments(
-            compute_drift_correction, ["ops", "device", "tic0", "progress_bar", "file_object", "clear_cache"]
-        )
+        expected_arguments = ["ops", "device", "tic0", "progress_bar", "file_object", "clear_cache"]
+        if parse(kilosort.__version__) >= parse("4.0.28"):
+            expected_arguments += ["verbose"]
+        self._check_arguments(compute_drift_correction, expected_arguments)
 
     def test_detect_spikes_arguments(self):
-        self._check_arguments(detect_spikes, ["ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"])
+        expected_arguments = ["ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
+        if parse(kilosort.__version__) >= parse("4.0.28"):
+            expected_arguments += ["verbose"]
+        self._check_arguments(detect_spikes, expected_arguments)
 
     def test_cluster_spikes_arguments(self):
-        self._check_arguments(
-            cluster_spikes, ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
-        )
+        expected_arguments = ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
+        if parse(kilosort.__version__) >= parse("4.0.28"):
+            expected_arguments += ["verbose"]
+        self._check_arguments(cluster_spikes, expected_arguments)
 
     def test_save_sorting_arguments(self):
         expected_arguments = ["ops", "results_dir", "st", "clu", "tF", "Wall", "imin", "tic0", "save_extra_vars"]

@@ -13,11 +13,11 @@ from spikeinterface import DEV_MODE
 import spikeinterface
 
 
-from .. import __version__ as si_version
+from spikeinterface import __version__ as si_version
 
 
-from ..core import BaseRecording, NumpySorting, load_extractor
-from ..core.core_tools import check_json, is_editable_mode
+from spikeinterface.core import BaseRecording, NumpySorting, load
+from spikeinterface.core.core_tools import check_json, is_editable_mode
 from .sorterlist import sorter_dict
 from .utils import (
     SpikeSortingError,
@@ -408,7 +408,7 @@ def run_sorter_container(
     py_script = f"""
 import json
 from pathlib import Path
-from spikeinterface import load_extractor
+from spikeinterface import load
 from spikeinterface.sorters import run_sorter_local
 
 if __name__ == '__main__':
@@ -417,9 +417,9 @@ if __name__ == '__main__':
     json_rec = Path('{parent_folder_unix}/in_container_recording.json')
     pickle_rec = Path('{parent_folder_unix}/in_container_recording.pickle')
     if json_rec.exists():
-        recording = load_extractor(json_rec)
+        recording = load(json_rec)
     else:
-        recording = load_extractor(pickle_rec)
+        recording = load(pickle_rec)
 
     # load params in container
     with open('{parent_folder_unix}/in_container_params.json', encoding='utf8', mode='r') as f:
@@ -652,7 +652,7 @@ if __name__ == '__main__':
                 sorting = SorterClass.get_result_from_folder(folder)
             except Exception as e:
                 try:
-                    sorting = load_extractor(in_container_sorting_folder)
+                    sorting = load(in_container_sorting_folder)
                 except FileNotFoundError:
                     SpikeSortingError(f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
 

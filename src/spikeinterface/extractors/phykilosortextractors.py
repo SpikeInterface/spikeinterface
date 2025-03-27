@@ -56,7 +56,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         spike_clusters = np.atleast_1d(spike_clusters.squeeze())
 
         clust_id = np.unique(spike_clusters)
-        unique_unit_ids = list(clust_id)
+        unique_unit_ids = [int(c) for c in clust_id]
         params = read_python(str(phy_folder / "params.py"))
         sampling_frequency = params["sample_rate"]
 

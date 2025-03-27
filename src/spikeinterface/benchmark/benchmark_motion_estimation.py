@@ -8,15 +8,15 @@ import time
 import numpy as np
 
 from spikeinterface.core import get_noise_levels
-from .benchmark_base import Benchmark, BenchmarkStudy
-from .benchmark_plot_tools import _simpleaxis
+from spikeinterface.core.motion import Motion
 from spikeinterface.sortingcomponents.motion import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.widgets import plot_probe_map
 
-from spikeinterface.sortingcomponents.motion import Motion
+from .benchmark_base import Benchmark, BenchmarkStudy
+from .benchmark_plot_tools import _simpleaxis
 
 # import MEArec as mr
 
@@ -86,7 +86,7 @@ class MotionEstimationBenchmark(Benchmark):
     def run(self, **job_kwargs):
         p = self.params
 
-        noise_levels = get_noise_levels(self.recording, return_scaled=False)
+        noise_levels = get_noise_levels(self.recording, return_scaled=False, **job_kwargs)
 
         t0 = time.perf_counter()
         peaks = detect_peaks(self.recording, noise_levels=noise_levels, **p["detect_kwargs"], **job_kwargs)
@@ -109,6 +109,8 @@ class MotionEstimationBenchmark(Benchmark):
             estimate_motion=t4 - t3,
         )
 
+        self.result["peaks"] = peaks
+        self.result["peak_locations"] = peak_locations
         self.result["step_run_times"] = step_run_times
         self.result["raw_motion"] = motion
 
@@ -131,6 +133,8 @@ class MotionEstimationBenchmark(Benchmark):
         self.result["motion"] = motion
 
     _run_key_saved = [
+        ("peaks", "npy"),
+        ("peak_locations", "npy"),
         ("raw_motion", "Motion"),
         ("step_run_times", "pickle"),
     ]
@@ -161,7 +165,9 @@ class MotionEstimationStudy(BenchmarkStudy):
     def plot_true_drift(self, case_keys=None, scaling_probe=1.5, figsize=(8, 6)):
         self.plot_drift(case_keys=case_keys, tested_drift=False, scaling_probe=scaling_probe, figsize=figsize)
 
-    def plot_drift(self, case_keys=None, gt_drift=True, tested_drift=True, scaling_probe=1.0, figsize=(8, 6)):
+    def plot_drift(
+        self, case_keys=None, gt_drift=True, tested_drift=True, raster=False, scaling_probe=1.0, figsize=(8, 6)
+    ):
         import matplotlib.pyplot as plt
 
         if case_keys is None:
@@ -195,6 +201,13 @@ class MotionEstimationStudy(BenchmarkStudy):
 
             # for i in range(self.gt_unit_positions.shape[1]):
             #     ax.plot(temporal_bins_s, self.gt_unit_positions[:, i], alpha=0.5, ls="--", c="0.5")
+            if raster:
+                peaks = bench.result["peaks"]
+                peak_locations = bench.result["peak_locations"]
+                rec = bench.recording
+                x = peaks["sample_index"] / rec.sampling_frequency
+                y = peak_locations[bench.direction]
+                ax.scatter(x, y, alpha=0.2, s=2, c=np.abs(peaks["amplitude"]), cmap="inferno")
 
             for i in range(gt_motion.displacement[0].shape[1]):
                 depth = motion.spatial_bins_um[i]

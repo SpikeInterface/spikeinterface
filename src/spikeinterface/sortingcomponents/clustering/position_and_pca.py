@@ -38,7 +38,6 @@ class PositionAndPCAClustering:
         "ms_after": 2.5,
         "n_components_by_channel": 3,
         "n_components": 5,
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "progress_bar": True},
         "hdbscan_global_kwargs": {"min_cluster_size": 20, "allow_single_cluster": True, "core_dist_n_jobs": -1},
         "hdbscan_local_kwargs": {"min_cluster_size": 20, "allow_single_cluster": True, "core_dist_n_jobs": -1},
         "waveform_mode": "shared_memory",
@@ -73,7 +72,7 @@ class PositionAndPCAClustering:
         return params2
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         # res = PositionClustering(recording, peaks, params)
 
         assert HAVE_HDBSCAN, "position_and_pca clustering need hdbscan to be installed"
@@ -85,9 +84,7 @@ class PositionAndPCAClustering:
         if params["peak_locations"] is None:
             from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
-            peak_locations = localize_peaks(
-                recording, peaks, **params["peak_localization_kwargs"], **params["job_kwargs"]
-            )
+            peak_locations = localize_peaks(recording, peaks, **params["peak_localization_kwargs"], **job_kwargs)
         else:
             peak_locations = params["peak_locations"]
 
@@ -155,7 +152,7 @@ class PositionAndPCAClustering:
             dtype=recording.get_dtype(),
             sparsity_mask=sparsity_mask,
             copy=(params["waveform_mode"] == "shared_memory"),
-            **params["job_kwargs"],
+            **job_kwargs,
         )
 
         noise = get_random_data_chunks(
@@ -222,7 +219,7 @@ class PositionAndPCAClustering:
             dtype=recording.get_dtype(),
             sparsity_mask=sparsity_mask3,
             copy=(params["waveform_mode"] == "shared_memory"),
-            **params["job_kwargs"],
+            **job_kwargs,
         )
 
         clean_peak_labels, peak_sample_shifts = auto_clean_clustering(

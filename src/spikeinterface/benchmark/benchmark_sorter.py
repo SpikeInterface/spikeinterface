@@ -3,9 +3,9 @@ This replace the previous `GroundTruthStudy`
 """
 
 import numpy as np
-from ..core import NumpySorting
+from spikeinterface.core import NumpySorting
 from .benchmark_base import Benchmark, BenchmarkStudy
-from ..sorters import run_sorter
+from spikeinterface.sorters import run_sorter
 from spikeinterface.comparison import compare_sorter_to_ground_truth
 
 
@@ -55,6 +55,15 @@ class SorterStudy(BenchmarkStudy):
         sorter_folder = self.folder / "sorters" / self.key_to_str(key)
         benchmark = SorterBenchmark(recording, gt_sorting, params, sorter_folder)
         return benchmark
+
+    def remove_benchmark(self, key):
+        BenchmarkStudy.remove_benchmark(self, key)
+
+        sorter_folder = self.folder / "sorters" / self.key_to_str(key)
+        import shutil
+
+        if sorter_folder.exists():
+            shutil.rmtree(sorter_folder)
 
     def get_performance_by_unit(self, case_keys=None):
         import pandas as pd
@@ -129,7 +138,27 @@ class SorterStudy(BenchmarkStudy):
 
         return plot_performances(self, **kwargs)
 
+    def plot_performances_vs_snr(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_snr
+
+        return plot_performances_vs_snr(self, **kwargs)
+
+    def plot_performances_ordered(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_ordered
+
+        return plot_performances_ordered(self, **kwargs)
+
+    def plot_performances_swarm(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_swarm
+
+        return plot_performances_swarm(self, **kwargs)
+
     def plot_agreement_matrix(self, **kwargs):
         from .benchmark_plot_tools import plot_agreement_matrix
 
         return plot_agreement_matrix(self, **kwargs)
+
+    def plot_performance_losses(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performance_losses
+
+        return plot_performance_losses(self, *args, **kwargs)

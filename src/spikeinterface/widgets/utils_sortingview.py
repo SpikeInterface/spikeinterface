@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from warnings import warn
+
 import numpy as np
 
-from ..core import SortingAnalyzer, BaseSorting
-from ..core.core_tools import check_json
-from warnings import warn
+from spikeinterface.core import SortingAnalyzer, BaseSorting
+from spikeinterface.core.core_tools import check_json
+from .utils import make_units_table_from_sorting, make_units_table_from_analyzer
 
 
 def make_serializable(*args):
@@ -50,105 +52,58 @@ def handle_display_and_url(widget, view, **backend_kwargs):
 def generate_unit_table_view(
     sorting_or_sorting_analyzer: SortingAnalyzer | BaseSorting,
     unit_properties: list[str] | None = None,
-    similarity_scores: npndarray | None = None,
+    similarity_scores: np.ndarray | None = None,
+    extra_unit_properties: dict | None = None,
 ):
     import sortingview.views as vv
 
     if isinstance(sorting_or_sorting_analyzer, SortingAnalyzer):
         analyzer = sorting_or_sorting_analyzer
+        units_tables = make_units_table_from_analyzer(analyzer, extra_properties=extra_unit_properties)
         sorting = analyzer.sorting
     else:
         sorting = sorting_or_sorting_analyzer
-        analyzer = None
+        units_tables = make_units_table_from_sorting(sorting)
+        # analyzer = None
 
-    # Find available unit properties from all sources
-    sorting_props = list(sorting.get_property_keys())
-    if analyzer is not None:
-        if analyzer.get_extension("quality_metrics") is not None:
-            qm_props = list(analyzer.get_extension("quality_metrics").get_data().columns)
-            qm_data = analyzer.get_extension("quality_metrics").get_data()
-        else:
-            qm_props = []
-        if analyzer.get_extension("template_metrics") is not None:
-            tm_props = list(analyzer.get_extension("template_metrics").get_data().columns)
-            tm_data = analyzer.get_extension("template_metrics").get_data()
-        else:
-            tm_props = []
-        # Check for any overlaps and warn user if any
-        all_props = sorting_props + qm_props + tm_props
-    else:
-        all_props = sorting_props
-        qm_props = []
-        tm_props = []
-        qm_data = None
-        tm_data = None
-
-    overlap_props = [prop for prop in all_props if all_props.count(prop) > 1]
-    if len(overlap_props) > 0:
-        warn(
-            f"Warning: Overlapping properties found in sorting, quality_metrics, and template_metrics: {overlap_props}"
-        )
-
-    # Get unit properties
     if unit_properties is None:
         ut_columns = []
         ut_rows = [vv.UnitsTableRow(unit_id=u, values={}) for u in sorting.unit_ids]
     else:
+        # keep only selected columns
+        unit_properties = np.array(unit_properties)
+        keep = np.isin(unit_properties, units_tables.columns)
+        if sum(keep) < len(unit_properties):
+            warn(f"Some unit properties are not in the sorting: {unit_properties[~keep]}")
+        unit_properties = unit_properties[keep]
+        units_tables = units_tables.loc[:, unit_properties]
+
+        dtype_convertor = {"i": "int", "u": "int", "f": "float", "U": "str", "S": "str", "b": "bool"}
+        # we add "O": "str" because pandas automatically converts strings to Object dtype
+        dtype_convertor["O"] = "str"
+
         ut_columns = []
+        for col in unit_properties:
+            values = units_tables[col].to_numpy()
+            if values.dtype.kind in dtype_convertor:
+                txt_dtype = dtype_convertor[values.dtype.kind]
+                ut_columns.append(vv.UnitsTableColumn(key=col, label=col, dtype=txt_dtype))
+
         ut_rows = []
-        values = {}
-        valid_unit_properties = []
-
-        # Create columns for each property
-        for prop_name in unit_properties:
-
-            # Get property values from correct location
-            if prop_name in sorting_props:
-                property_values = sorting.get_property(prop_name)
-            elif prop_name in qm_props:
-                property_values = qm_data[prop_name].to_numpy()
-            elif prop_name in tm_props:
-                property_values = tm_data[prop_name].to_numpy()
-            else:
-                warn(f"Property '{prop_name}' not found in sorting, quality_metrics, or template_metrics")
-                continue
-
-            # make dtype available
-            val0 = np.array(property_values[0])
-            if val0.dtype.kind in ("i", "u"):
-                dtype = "int"
-            elif val0.dtype.kind in ("U", "S"):
-                dtype = "str"
-            elif val0.dtype.kind == "f":
-                dtype = "float"
-            elif val0.dtype.kind == "b":
-                dtype = "bool"
-            else:
-                warn(f"Unsupported dtype {val0.dtype} for property {prop_name}. Skipping")
-                continue
-            ut_columns.append(vv.UnitsTableColumn(key=prop_name, label=prop_name, dtype=dtype))
-            valid_unit_properties.append(prop_name)
-
-        # Create rows for each unit
-        for ui, unit in enumerate(sorting.unit_ids):
-            for prop_name in valid_unit_properties:
-
-                # Get property values from correct location
-                if prop_name in sorting_props:
-                    property_values = sorting.get_property(prop_name)
-                elif prop_name in qm_props:
-                    property_values = qm_data[prop_name].to_numpy()
-                elif prop_name in tm_props:
-                    property_values = tm_data[prop_name].to_numpy()
-
-                # Check for NaN values and round floats
-                val0 = np.array(property_values[0])
-                if val0.dtype.kind == "f":
-                    if np.isnan(property_values[ui]):
-                        continue
-                    property_values[ui] = np.format_float_positional(property_values[ui], precision=4, fractional=False)
-                values[prop_name] = property_values[ui]
-            ut_rows.append(vv.UnitsTableRow(unit_id=unit, values=check_json(values)))
+        for unit_index, unit_id in enumerate(sorting.unit_ids):
+            row_values = {}
+            for col in unit_properties:
+                values = units_tables[col].to_numpy()
+                if values.dtype.kind in dtype_convertor:
+                    value = values[unit_index]
+                    if values.dtype.kind == "f":
+                        # Check for NaN values and round floats
+                        if np.isnan(values[unit_index]):
+                            continue
+                        value = np.format_float_positional(value, precision=4, fractional=False)
+                    row_values[col] = value
+            ut_rows.append(vv.UnitsTableRow(unit_id=unit_id, values=check_json(row_values)))
 
     v_units_table = vv.UnitsTable(rows=ut_rows, columns=ut_columns, similarity_scores=similarity_scores)
+
     return v_units_table

@@ -8,13 +8,17 @@ from spikeinterface.core import (
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 
-@pytest.fixture(scope="module")
-def small_sorting_analyzer():
+def make_small_analyzer():
     recording, sorting = generate_ground_truth_recording(
         durations=[2.0],
         num_units=10,
         seed=1205,
     )
+
+    channel_ids_as_integers = [id for id in range(recording.get_num_channels())]
+    unit_ids_as_integers = [id for id in range(sorting.get_num_units())]
+    recording = recording.rename_channels(new_channel_ids=channel_ids_as_integers)
+    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
 
     sorting = sorting.select_units([2, 7, 0], ["#3", "#9", "#4"])
 
@@ -33,6 +37,11 @@ def small_sorting_analyzer():
     sorting_analyzer.compute(extensions_to_compute)
 
     return sorting_analyzer
+
+
+@pytest.fixture(scope="module")
+def small_sorting_analyzer():
+    return make_small_analyzer()
 
 
 @pytest.fixture(scope="module")
@@ -59,6 +68,11 @@ def sorting_analyzer_simple():
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=1205,
     )
+
+    channel_ids_as_integers = [id for id in range(recording.get_num_channels())]
+    unit_ids_as_integers = [id for id in range(sorting.get_num_units())]
+    recording = recording.rename_channels(new_channel_ids=channel_ids_as_integers)
+    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
 

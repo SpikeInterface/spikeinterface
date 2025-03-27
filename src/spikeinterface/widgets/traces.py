@@ -4,7 +4,7 @@ import warnings
 
 import numpy as np
 
-from ..core import BaseRecording
+from spikeinterface.core import BaseRecording
 from .base import BaseWidget, to_attr
 from .utils import get_some_colors, array_to_image
 
@@ -107,7 +107,7 @@ class TracesWidget(BaseWidget):
             )
 
         if order_channel_by_depth and rec0.has_channel_location():
-            from ..preprocessing import depth_order
+            from spikeinterface.preprocessing import depth_order
 
             rec0 = depth_order(rec0)
             recordings = {k: depth_order(rec) for k, rec in recordings.items()}
@@ -145,7 +145,7 @@ class TracesWidget(BaseWidget):
         fs = rec0.get_sampling_frequency()
         if time_range is None:
             time_range = (t_start, t_start + 1.0)
-        time_range = np.array(time_range)
+        time_range = np.array(time_range, dtype=np.float64)
         if time_range[1] > t_end:
             warnings.warn(
                 "You have selected a time after the end of the segment. The range will be clipped to " f"{t_end}"
@@ -642,7 +642,7 @@ class TracesWidget(BaseWidget):
 
     def plot_ephyviewer(self, data_plot, **backend_kwargs):
         import ephyviewer
-        from ..preprocessing import depth_order
+        from spikeinterface.preprocessing import depth_order
 
         dp = to_attr(data_plot)
 
