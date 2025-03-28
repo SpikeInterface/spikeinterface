@@ -5,6 +5,7 @@ import platform
 import os
 import random
 import string
+import warnings
 
 # TODO move this inside functions
 
@@ -102,10 +103,10 @@ class ContainerClient:
                 docker_image = Client.load("docker://" + container_image)
                 if docker_image and len(docker_image.tags) > 0:
                     tag = docker_image.tags[0]
-                    print(f"Building singularity image from local docker image: {tag}")
+                    warnings.warn(f"Building singularity image from local docker image: {tag}")
                     singularity_image = Client.build(f"docker-daemon://{tag}", sif_file, sudo=False)
                 if not singularity_image:
-                    print(f"Singularity: pulling image {container_image}")
+                    warnings.warn(f"Singularity: pulling image {container_image}")
                     singularity_image = Client.pull(f"docker://{container_image}")
 
             if not Path(singularity_image).exists():

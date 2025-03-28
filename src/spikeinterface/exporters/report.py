@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import shutil
+import warnings
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 import spikeinterface.widgets as sw
@@ -58,7 +59,7 @@ def export_report(
         spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data(outputs="by_unit")
     else:
         spike_amplitudes = None
-        print(
+        warnings.warn(
             "export_report(): spike_amplitudes will not be exported. Use sorting_analyzer.compute('spike_amplitudes') if you want to include them."
         )
 
@@ -70,7 +71,7 @@ def export_report(
         metrics = sorting_analyzer.get_extension("quality_metrics").get_data()
     else:
         metrics = None
-        print(
+        warnings.warn(
             "export_report(): quality metrics will not be exported. Use sorting_analyzer.compute('quality_metrics') if you want to include them."
         )
 
@@ -81,7 +82,7 @@ def export_report(
         correlograms, bins = compute_correlograms(sorting_analyzer, window_ms=100.0, bin_ms=1.0)
     else:
         correlograms = None
-        print(
+        warnings.warn(
             "export_report(): correlograms will not be exported. Use sorting_anlyzer.compute('correlograms') if you want to include them."
         )
 
