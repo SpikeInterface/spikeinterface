@@ -452,17 +452,16 @@ def generate_unit_ids_for_merge_group(old_unit_ids, merge_unit_groups, new_unit_
 def apply_splits_to_sorting(sorting, unit_splits, new_unit_ids=None, return_extra=False, new_id_strategy="append"):
     spikes = sorting.to_spike_vector().copy()
 
-    # take care of single-list splits
-    full_unit_splits = _get_full_unit_splits(unit_splits, sorting)
+    # here we assume that unit_splits split_indices are already full.
+    # this is true when running via apply_curation
 
     new_unit_ids = generate_unit_ids_for_split(
-        sorting.unit_ids, full_unit_splits, new_unit_ids=new_unit_ids, new_id_strategy=new_id_strategy
+        sorting.unit_ids, unit_splits, new_unit_ids=new_unit_ids, new_id_strategy=new_id_strategy
     )
-    all_unit_ids = _get_ids_after_splitting(sorting.unit_ids, full_unit_splits, new_unit_ids)
+    all_unit_ids = _get_ids_after_splitting(sorting.unit_ids, unit_splits, new_unit_ids)
     all_unit_ids = list(all_unit_ids)
 
     num_seg = sorting.get_num_segments()
-    assert num_seg == 1
     seg_lims = np.searchsorted(spikes["segment_index"], np.arange(0, num_seg + 2))
     segment_slices = [(seg_lims[i], seg_lims[i + 1]) for i in range(num_seg)]
 
@@ -470,17 +469,18 @@ def apply_splits_to_sorting(sorting, unit_splits, new_unit_ids=None, return_extr
     spike_vector_list = [spikes[s0:s1] for s0, s1 in segment_slices]
     spike_indices = spike_vector_to_indices(spike_vector_list, sorting.unit_ids, absolute_index=True)
 
-    # TODO deal with segments in splits
+    # split_indices are a concatenation across segments
     for unit_id in sorting.unit_ids:
-        if unit_id in full_unit_splits:
-            split_indices = full_unit_splits[unit_id]
-            new_split_ids = new_unit_ids[list(full_unit_splits.keys()).index(unit_id)]
+        if unit_id in unit_splits:
+            split_indices = unit_splits[unit_id]
+            new_split_ids = new_unit_ids[list(unit_splits.keys()).index(unit_id)]
 
             for split, new_unit_id in zip(split_indices, new_split_ids):
                 new_unit_index = all_unit_ids.index(new_unit_id)
-                for segment_index in range(num_seg):
-                    spike_inds = spike_indices[segment_index][unit_id]
-                    spikes["unit_index"][spike_inds[split]] = new_unit_index
+                spike_indices_unit = np.concatenate(
+                    spike_indices[segment_index][unit_id] for segment_index in range(num_seg)
+                )
+                spikes["unit_index"][spike_indices_unit[split]] = new_unit_index
         else:
             new_unit_index = all_unit_ids.index(unit_id)
             for segment_index in range(num_seg):
