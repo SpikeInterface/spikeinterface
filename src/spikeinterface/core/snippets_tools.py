@@ -1,5 +1,5 @@
 from __future__ import annotations
-import numpy as np
+
 from .job_tools import fix_job_kwargs
 from .waveform_tools import extract_waveforms_to_buffers
 from .numpyextractors import NumpySnippets

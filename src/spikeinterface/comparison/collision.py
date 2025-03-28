@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from .paircomparisons import GroundTruthComparison
-from .groundtruthstudy import GroundTruthStudy
+
+# keep import as we do not want to delete code below.
+# from .groundtruthstudy import GroundTruthStudy
 from .comparisontools import make_collision_events
 
 import numpy as np

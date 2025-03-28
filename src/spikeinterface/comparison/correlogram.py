@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from .paircomparisons import GroundTruthComparison
-from .groundtruthstudy import GroundTruthStudy
+
+# this import was previously used. Leave for now.
+# from .groundtruthstudy import GroundTruthStudy
 from spikeinterface.postprocessing import compute_correlograms
 
 

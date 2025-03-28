@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from tempfile import tempdir
 from packaging.version import parse
+import importlib.util
 
 from spikeinterface.preprocessing import bandpass_filter, whiten
-
 from spikeinterface.sorters.basesorter import BaseSorter
 from spikeinterface.core.old_api_utils import NewToOldRecording
-from spikeinterface.core import load_extractor
-
 from spikeinterface.extractors import NpzSortingExtractor, NumpySorting
 
 
@@ -63,11 +60,11 @@ class Mountainsort4Sorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import mountainsort4
 
+        ms4_spec = importlib.util.find_spec("mountainsort4")
+        if ms4_spec is not None:
             HAVE_MS4 = True
-        except ImportError:
+        else:
             HAVE_MS4 = False
         return HAVE_MS4
 

@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
-import os
-import shutil
-import numpy as np
-import copy
+
 import time
 from pprint import pprint
+import importlib.util
+from importlib.metadata import version
 
 from spikeinterface.extractors import TridesclousSortingExtractor
-
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from spikeinterface.core import write_binary_recording
 
@@ -57,24 +54,17 @@ class TridesclousSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import tridesclous as tdc
-
+        tdc_spec = importlib.util.find_spec("tridesclous")
+        if tdc_spec is not None:
             HAVE_TDC = True
-        except ImportError:
-            HAVE_TDC = False
-        except:
-            print(
-                "tridesclous is installed, but it has some dependency problems, check numba or hdbscan installations!"
-            )
+        else:
             HAVE_TDC = False
         return HAVE_TDC
 
     @classmethod
     def get_sorter_version(cls):
-        import tridesclous as tdc
 
-        return tdc.__version__
+        return version("tridesclous")
 
     @classmethod
     def _check_params(cls, recording, sorter_output_folder, params):

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-import copy
 from pathlib import Path
 import os
+import importlib.util
+from importlib.metadata import version
+import sys
+
 import numpy as np
 from numpy.lib.format import open_memmap
-import sys
+
 
 from spikeinterface.extractors import SpykingCircusSortingExtractor
 from spikeinterface.sorters.basesorter import BaseSorter
@@ -64,19 +67,17 @@ class SpykingcircusSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import circus
 
+        circus_spec = importlib.util.find_spec("circus")
+        if circus_spec is not None:
             HAVE_SC = True
-        except ImportError:
+        else:
             HAVE_SC = False
         return HAVE_SC
 
     @staticmethod
     def get_sorter_version():
-        import circus
-
-        return circus.__version__
+        return version("circus")
 
     @classmethod
     def _check_params(cls, recording, sorter_output_folder, params):

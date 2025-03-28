@@ -1,6 +1,5 @@
 from __future__ import annotations
 import numpy as np
-import warnings
 
 from .basesorting import BaseSorting, BaseSortingSegment
 from .waveform_tools import has_exceeding_spikes

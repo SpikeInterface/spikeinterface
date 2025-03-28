@@ -4,6 +4,8 @@ from pathlib import Path
 import os
 import numpy as np
 import sys
+import importlib.util
+from importlib.metadata import version
 
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from spikeinterface.sorters.utils import ShellScript
@@ -110,20 +112,16 @@ class YassSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import yaml
-            import yass
-
+        yass_spec = importlib.util.find_spec("yass")
+        if yass_spec is not None:
             HAVE_YASS = True
-        except ImportError:
+        else:
             HAVE_YASS = False
         return HAVE_YASS
 
     @classmethod
     def get_sorter_version(cls):
-        import yass
-
-        return yass.__version__
+        return version("yass")
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):

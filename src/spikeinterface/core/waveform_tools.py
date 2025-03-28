@@ -13,7 +13,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-import multiprocessing
 
 from spikeinterface.core.baserecording import BaseRecording
 
