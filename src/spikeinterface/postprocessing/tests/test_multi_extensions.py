@@ -48,9 +48,22 @@ data_with_miltiple_returns = ["isi_histograms", "correlograms"]
 # due to incremental PCA, hard computation could result in different results for PCA
 # the model is differents always
 random_computation = ["principal_components"]
+# for some extensions (templates, amplitude_scalings), since the templates slightly change for merges/splits
+# we allow a relative tolerance
+# (amplitud_scalings are the moste sensitive!)
+extensions_with_rel_tolerance_merge = {
+    "amplitude_scalings": 1e-1,
+    "templates": 1e-3,
+    "template_similarity": 1e-3,
+    "unit_locations": 1e-3,
+    "template_metrics": 1e-3,
+    "quality_metrics": 1e-3,
+}
+extensions_with_rel_tolerance_splits = {"amplitude_scalings": 1e-1}
 
 
-def get_dataset_with_splits():
+def get_dataset_to_merge():
+    # generate a dataset with some split units to minimize merge errors
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],
         sampling_frequency=16000.0,
@@ -58,6 +71,7 @@ def get_dataset_with_splits():
         num_units=10,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=2.0, maximum_z=15.0, minimum_distance=20),
         seed=2205,
     )
 
@@ -80,16 +94,49 @@ def get_dataset_with_splits():
     return recording, sorting_with_splits, split_unit_ids
 
 
+def get_dataset_to_split():
+    # generate a dataset and return large unit to split to minimize split errors
+    recording, sorting = generate_ground_truth_recording(
+        durations=[30.0],
+        sampling_frequency=16000.0,
+        num_channels=10,
+        num_units=10,
+        generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
+        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        seed=2205,
+    )
+
+    channel_ids_as_integers = [id for id in range(recording.get_num_channels())]
+    unit_ids_as_integers = [id for id in range(sorting.get_num_units())]
+    recording = recording.rename_channels(new_channel_ids=channel_ids_as_integers)
+    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
+
+    # since templates are going to be averaged and this might be a problem for amplitude scaling
+    # we select the 3 units with the largest templates to split
+    analyzer_raw = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    analyzer_raw.compute(["random_spikes", "templates"])
+    # select 3 largest templates to split
+    sort_by_amp = np.argsort(list(get_template_extremum_amplitude(analyzer_raw).values()))[::-1]
+    large_units = sorting.unit_ids[sort_by_amp][:2]
+
+    return recording, sorting, large_units
+
+
 @pytest.fixture(scope="module")
-def dataset():
-    return get_dataset_with_splits()
+def dataset_to_merge():
+    return get_dataset_to_merge()
+
+
+@pytest.fixture(scope="module")
+def dataset_to_split():
+    return get_dataset_to_split()
 
 
 @pytest.mark.parametrize("sparse", [False, True])
-def test_SortingAnalyzer_merge_all_extensions(dataset, sparse):
+def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, sparse):
     set_global_job_kwargs(n_jobs=1)
 
-    recording, sorting, other_ids = dataset
+    recording, sorting, other_ids = dataset_to_merge
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=sparse)
     extension_dict_merge = extension_dict.copy()
@@ -155,21 +202,29 @@ def test_SortingAnalyzer_merge_all_extensions(dataset, sparse):
         )
 
         if ext not in random_computation:
+            if ext in extensions_with_rel_tolerance_merge:
+                rtol = extensions_with_rel_tolerance_merge[ext]
+            else:
+                rtol = 0
             if extension_data_type[ext] == "pandas":
                 data_hard_merged = data_hard_merged.dropna().to_numpy().astype("float")
                 data_soft_merged = data_soft_merged.dropna().to_numpy().astype("float")
             if data_hard_merged.dtype.fields is None:
-                assert np.allclose(data_hard_merged, data_soft_merged, rtol=0.1)
+                if not np.allclose(data_hard_merged, data_soft_merged, rtol=rtol):
+                    max_error = np.max(np.abs(data_hard_merged - data_soft_merged))
+                    raise Exception(f"Failed for {ext} - max error {max_error}")
             else:
                 for f in data_hard_merged.dtype.fields:
-                    assert np.allclose(data_hard_merged[f], data_soft_merged[f], rtol=0.1)
+                    if not np.allclose(data_hard_merged[f], data_soft_merged[f], rtol=rtol):
+                        max_error = np.max(np.abs(data_hard_merged[f] - data_soft_merged[f]))
+                        raise Exception(f"Failed for {ext} - field {f} - max error {max_error}")
 
 
 @pytest.mark.parametrize("sparse", [False, True])
-def test_SortingAnalyzer_split_all_extensions(dataset, sparse):
+def test_SortingAnalyzer_split_all_extensions(dataset_to_split, sparse):
     set_global_job_kwargs(n_jobs=1)
 
-    recording, sorting, _ = dataset
+    recording, sorting, units_to_split = dataset_to_split
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=sparse)
     extension_dict_split = extension_dict.copy()
@@ -178,7 +233,6 @@ def test_SortingAnalyzer_split_all_extensions(dataset, sparse):
     # we randomly apply splits (at half of spiketrain)
     num_spikes = sorting.count_num_spikes_per_unit()
 
-    units_to_split = [sorting_analyzer.unit_ids[1], sorting_analyzer.unit_ids[5]]
     unsplit_unit_ids = sorting_analyzer.unit_ids[~np.isin(sorting_analyzer.unit_ids, units_to_split)]
     splits = {}
     for unit in units_to_split:
@@ -220,17 +274,23 @@ def test_SortingAnalyzer_split_all_extensions(dataset, sparse):
         data_split_hard = get_extension_data_for_units(
             analyzer_hard, data_recompute, split_unit_ids, extension_data_type[ext]
         )
-        # TODO: fix amplitude scalings
-        failing_extensions = []
-        if ext not in random_computation + failing_extensions:
+        if ext not in random_computation:
+            if ext in extensions_with_rel_tolerance_splits:
+                rtol = extensions_with_rel_tolerance_splits[ext]
+            else:
+                rtol = 0
             if extension_data_type[ext] == "pandas":
                 data_split_soft = data_split_soft.dropna().to_numpy().astype("float")
                 data_split_hard = data_split_hard.dropna().to_numpy().astype("float")
             if data_split_hard.dtype.fields is None:
-                assert np.allclose(data_split_hard, data_split_soft, rtol=0.1)
+                if not np.allclose(data_split_hard, data_split_soft, rtol=rtol):
+                    max_error = np.max(np.abs(data_split_hard - data_split_soft))
+                    raise Exception(f"Failed for {ext} - max error {max_error}")
             else:
                 for f in data_split_hard.dtype.fields:
-                    assert np.allclose(data_split_hard[f], data_split_soft[f], rtol=0.1)
+                    if not np.allclose(data_split_hard[f], data_split_soft[f], rtol=rtol):
+                        max_error = np.max(np.abs(data_split_hard[f] - data_split_soft[f]))
+                        raise Exception(f"Failed for {ext} - field {f} - max error {max_error}")
 
 
 def get_extension_data_for_units(sorting_analyzer, data, unit_ids, ext_data_type):
@@ -259,5 +319,5 @@ def get_extension_data_for_units(sorting_analyzer, data, unit_ids, ext_data_type
 
 
 if __name__ == "__main__":
-    dataset = get_dataset_with_splits()
+    dataset = get_dataset_to_merge()
     test_SortingAnalyzer_merge_all_extensions(dataset, False)
