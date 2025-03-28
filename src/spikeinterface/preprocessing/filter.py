@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-from ..core import get_chunk_with_margin
+from spikeinterface.core import get_chunk_with_margin
 
 
 _common_filter_docs = """**filter_kwargs : dict
@@ -322,10 +322,10 @@ class NotchFilterRecording(BasePreprocessor):
 
 
 # functions for API
-filter = define_function_from_class(source_class=FilterRecording, name="filter")
-bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
-notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
-highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
+filter = define_function_handling_dict_from_class(source_class=FilterRecording, name="filter")
+bandpass_filter = define_function_handling_dict_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
+notch_filter = define_function_handling_dict_from_class(source_class=NotchFilterRecording, name="notch_filter")
+highpass_filter = define_function_handling_dict_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
 
 
 def causal_filter(

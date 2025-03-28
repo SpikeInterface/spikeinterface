@@ -4,8 +4,8 @@ import numpy as np
 import warnings
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from ..core.template_tools import get_dense_templates_array
-from ..core.sparsity import ChannelSparsity
+from spikeinterface.core.template_tools import get_dense_templates_array
+from spikeinterface.core.sparsity import ChannelSparsity
 
 try:
     import numba

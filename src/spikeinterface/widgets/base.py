@@ -5,8 +5,8 @@ import inspect
 global default_backend_
 default_backend_ = "matplotlib"
 
-from ..core import SortingAnalyzer, BaseSorting
-from ..core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
+from spikeinterface.core import SortingAnalyzer, BaseSorting
+from spikeinterface.core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
 
 
 def get_default_plotter_backend():

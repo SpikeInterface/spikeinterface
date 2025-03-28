@@ -5,12 +5,12 @@ import numpy as np
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 from .traces import TracesWidget
-from ..core import ChannelSparsity
-from ..core.template_tools import get_template_extremum_channel
-from ..core.sortinganalyzer import SortingAnalyzer
-from ..core.baserecording import BaseRecording
-from ..core.basesorting import BaseSorting
-from ..postprocessing import compute_unit_locations
+from spikeinterface.core import ChannelSparsity
+from spikeinterface.core.template_tools import get_template_extremum_channel
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+from spikeinterface.core.baserecording import BaseRecording
+from spikeinterface.core.basesorting import BaseSorting
+from spikeinterface.postprocessing import compute_unit_locations
 
 
 class SpikesOnTracesWidget(BaseWidget):
