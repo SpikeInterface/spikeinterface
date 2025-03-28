@@ -17,7 +17,7 @@ class ManualLabel(BaseModel):
 
 class Merge(BaseModel):
     merge_unit_group: List[Union[int, str]] = Field(..., description="List of groups of units to be merged")
-    merge_new_unit_ids: Optional[Union[int, str]] = Field(default=None, description="New unit IDs for the merge group")
+    merge_new_unit_id: Optional[Union[int, str]] = Field(default=None, description="New unit IDs for the merge group")
 
 
 class Split(BaseModel):
@@ -67,7 +67,7 @@ class CurationModel(BaseModel):
 
     @classmethod
     def check_manual_labels(cls, values):
-        values = dict(values)
+
         unit_ids = list(values["unit_ids"])
         manual_labels = values.get("manual_labels")
         if manual_labels is None:
@@ -99,7 +99,7 @@ class CurationModel(BaseModel):
 
     @classmethod
     def check_merges(cls, values):
-        values = dict(values)
+
         unit_ids = list(values["unit_ids"])
         merges = values.get("merges")
         if merges is None:
@@ -110,7 +110,7 @@ class CurationModel(BaseModel):
             # Convert dict format to list of Merge objects
             merge_list = []
             for merge_new_id, merge_group in merges.items():
-                merge_list.append({"merge_unit_group": list(merge_group), "merge_new_unit_ids": merge_new_id})
+                merge_list.append({"merge_unit_group": list(merge_group), "merge_new_unit_id": merge_new_id})
             merges = merge_list
 
         # Make a copy of the list
@@ -138,16 +138,16 @@ class CurationModel(BaseModel):
                 raise ValueError("Merge unit groups must have at least 2 elements")
 
             # Check new unit id not already used
-            if merge.merge_new_unit_ids is not None:
-                if merge.merge_new_unit_ids in unit_ids:
-                    raise ValueError(f"New unit ID {merge.merge_new_unit_ids} is already in the unit list")
+            if merge.merge_new_unit_id is not None:
+                if merge.merge_new_unit_id in unit_ids:
+                    raise ValueError(f"New unit ID {merge.merge_new_unit_id} is already in the unit list")
 
         values["merges"] = merges
         return values
 
     @classmethod
     def check_splits(cls, values):
-        values = dict(values)
+
         unit_ids = list(values["unit_ids"])
         splits = values.get("splits")
         if splits is None:
@@ -230,7 +230,6 @@ class CurationModel(BaseModel):
 
     @classmethod
     def check_removed(cls, values):
-        values = dict(values)
         unit_ids = list(values["unit_ids"])
         removed = values.get("removed")
         if removed is None:
@@ -246,8 +245,6 @@ class CurationModel(BaseModel):
     @classmethod
     def convert_old_format(cls, values):
         format_version = values.get("format_version", "0")
-        if format_version != "2":
-            values = dict(values)
         if format_version == "0":
             print("Conversion from format version v0 (sortingview) to v2")
             if "mergeGroups" not in values.keys():
@@ -298,6 +295,7 @@ class CurationModel(BaseModel):
     @model_validator(mode="before")
     def validate_fields(cls, values):
         values = dict(values)
+        values["label_definitions"] = values.get("label_definitions", {})
         values = cls.convert_old_format(values)
         values = cls.check_manual_labels(values)
         values = cls.check_merges(values)

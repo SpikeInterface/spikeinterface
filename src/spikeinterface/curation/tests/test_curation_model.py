@@ -91,22 +91,22 @@ def test_merge_units():
         "format_version": "2",
         "unit_ids": [1, 2, 3, 4],
         "merges": [
-            {"merge_unit_group": [1, 2], "merge_new_unit_ids": 5},
-            {"merge_unit_group": [3, 4], "merge_new_unit_ids": 6},
+            {"merge_unit_group": [1, 2], "merge_new_unit_id": 5},
+            {"merge_unit_group": [3, 4], "merge_new_unit_id": 6},
         ],
     }
 
     model = CurationModel(**valid_merge)
     assert len(model.merges) == 2
-    assert model.merges[0].merge_new_unit_ids == 5
-    assert model.merges[1].merge_new_unit_ids == 6
+    assert model.merges[0].merge_new_unit_id == 5
+    assert model.merges[1].merge_new_unit_id == 6
 
     # Test dictionary format
     valid_merge_dict = {"format_version": "2", "unit_ids": [1, 2, 3, 4], "merges": {5: [1, 2], 6: [3, 4]}}
 
     model = CurationModel(**valid_merge_dict)
     assert len(model.merges) == 2
-    merge_new_ids = {merge.merge_new_unit_ids for merge in model.merges}
+    merge_new_ids = {merge.merge_new_unit_id for merge in model.merges}
     assert merge_new_ids == {5, 6}
 
     # Test list format
@@ -122,7 +122,7 @@ def test_merge_units():
     invalid_merge_group = {
         "format_version": "2",
         "unit_ids": [1, 2, 3],
-        "merges": [{"merge_unit_group": [1], "merge_new_unit_ids": 4}],
+        "merges": [{"merge_unit_group": [1], "merge_new_unit_id": 4}],
     }
     with pytest.raises(ValidationError):
         CurationModel(**invalid_merge_group)
@@ -132,8 +132,8 @@ def test_merge_units():
         "format_version": "2",
         "unit_ids": [1, 2, 3],
         "merges": [
-            {"merge_unit_group": [1, 2], "merge_new_unit_ids": 4},
-            {"merge_unit_group": [2, 3], "merge_new_unit_ids": 5},
+            {"merge_unit_group": [1, 2], "merge_new_unit_id": 4},
+            {"merge_unit_group": [2, 3], "merge_new_unit_id": 5},
         ],
     }
     with pytest.raises(ValidationError):
@@ -231,7 +231,7 @@ def test_removed_units():
     invalid_merge_remove = {
         "format_version": "2",
         "unit_ids": [1, 2, 3],
-        "merges": [{"merge_unit_group": [1, 2], "merge_new_unit_ids": 4}],
+        "merges": [{"merge_unit_group": [1, 2], "merge_new_unit_id": 4}],
         "removed": [1],  # Unit is both merged and removed
     }
     with pytest.raises(ValidationError):
@@ -248,7 +248,7 @@ def test_complete_model():
             "tags": LabelDefinition(name="tags", label_options=["burst", "slow"], exclusive=False),
         },
         "manual_labels": [{"unit_id": 1, "labels": {"quality": ["good"], "tags": ["burst"]}}],
-        "merges": [{"merge_unit_group": [2, 3], "merge_new_unit_ids": 6}],
+        "merges": [{"merge_unit_group": [2, 3], "merge_new_unit_id": 6}],
         "splits": [
             {"unit_id": 4, "split_mode": "indices", "split_indices": [[0, 1], [2, 3]], "split_new_unit_ids": [7, 8]}
         ],
