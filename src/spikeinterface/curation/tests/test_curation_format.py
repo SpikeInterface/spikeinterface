@@ -1,8 +1,5 @@
 import pytest
 
-from pydantic import BaseModel, ValidationError, field_validator
-
-
 from pathlib import Path
 import json
 import numpy as np
@@ -11,15 +8,15 @@ from spikeinterface.core import generate_ground_truth_recording, create_sorting_
 
 from spikeinterface.curation.curation_format import (
     validate_curation_dict,
-    convert_from_sortingview_curation_format_v0,
     curation_label_to_vectors,
     curation_label_to_dataframe,
     apply_curation,
 )
 
-
-"""example = {
-    'unit_ids': List[str, int],
+"""
+v1 = {
+    'format_version': '1',
+    'unit_ids': List[int | str],
     'label_definitions': {
         'category_key1':
         {
@@ -27,18 +24,57 @@ from spikeinterface.curation.curation_format import (
          'exclusive': bool}
     },
     'manual_labels': [
-        {'unit_id': str or int,
-         category_key1': List[str],
+        {
+            'unit_id': str or int,
+            'category_key1': List[str],
+        }
+    ],
+    'removed_units': List[int | str]  # Can not be  in the merged_units
+    'merge_unit_groups': List[List[int | str]],  # one cell goes into at most one list
+}
+
+v2 = {
+    'format_version': '2',
+    'unit_ids': List[int | int],
+    'label_definitions': {
+        'category_key1':
+        {
+         'label_options': List[str],
+         'exclusive': bool}
+    },
+    'manual_labels': [
+        {
+            'unit_id': str | int,
+            'category_key1': List[str],
          }
     ],
-    'merge_unit_groups': List[List[unit_ids]],  # one cell goes into at most one list
-    'removed_units': List[unit_ids]  # Can not be  in the merged_units
-}
+    'removed': List[unit_ids], # Can not be  in the merged_units
+    'merges': [
+        {
+            'merge_unit_group': List[unit_ids],
+            'merge_new_unit_id': int | str (optional)
+        }
+    ],
+    'splits': [
+        {
+            'unit_id': int | str
+            'split_mode': 'indices' or 'labels',
+            'split_indices': List[List[int]],
+            'split_labels': List[int]],
+            'split_new_unit_ids': List[int | str]
+        }
+    ]
+
+sortingview_curation = {
+    'mergeGroups': List[List[int | str]],
+    'labelsByUnit': {
+        'unit_id': List[str]
+    }
+
 """
 
-
 curation_ids_int = {
-    "format_version": "1",
+    "format_version": "2",
     "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
     "label_definitions": {
         "quality": {"label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
@@ -51,19 +87,21 @@ curation_ids_int = {
         {"unit_id": 1, "quality": ["good"]},
         {
             "unit_id": 2,
-            "quality": [
-                "noise",
-            ],
+            "quality": ["noise"],
             "putative_type": ["excitatory", "pyramidal"],
         },
         {"unit_id": 3, "putative_type": ["inhibitory"]},
     ],
-    "merge_unit_groups": [[3, 6], [10, 14, 20]],  # one cell goes into at most one list
-    "removed_units": [31, 42],  # Can not be  in the merged_units
+    "merges": [{"merge_unit_group": [3, 6]}, {"merge_unit_group": [10, 14, 20]}],
+    "splits": [],
+    "removed": [31, 42],
 }
 
+# Test dictionary format for merges
+curation_ids_int_dict = {**curation_ids_int, "merges": {50: [3, 6], 51: [10, 14, 20]}}
+
 curation_ids_str = {
-    "format_version": "1",
+    "format_version": "2",
     "unit_ids": ["u1", "u2", "u3", "u6", "u10", "u14", "u20", "u31", "u42"],
     "label_definitions": {
         "quality": {"label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
@@ -76,49 +114,78 @@ curation_ids_str = {
         {"unit_id": "u1", "quality": ["good"]},
         {
             "unit_id": "u2",
-            "quality": [
-                "noise",
-            ],
+            "quality": ["noise"],
             "putative_type": ["excitatory", "pyramidal"],
         },
         {"unit_id": "u3", "putative_type": ["inhibitory"]},
     ],
-    "merge_unit_groups": [["u3", "u6"], ["u10", "u14", "u20"]],  # one cell goes into at most one list
-    "removed_units": ["u31", "u42"],  # Can not be  in the merged_units
+    "merges": [{"merge_unit_group": ["u3", "u6"]}, {"merge_unit_group": ["u10", "u14", "u20"]}],
+    "splits": [],
+    "removed": ["u31", "u42"],
 }
 
-curation_with_split = {
-    "format_version": "1",
-    "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
-    "split_units": {
-        1: np.arange(10),
-        2: np.arange(10, 20),
-    },
-}
+# Test dictionary format for merges with string IDs
+curation_ids_str_dict = {**curation_ids_str, "merges": {"u50": ["u3", "u6"], "u51": ["u10", "u14", "u20"]}}
 
 
 # This is a failure example with duplicated merge
 duplicate_merge = curation_ids_int.copy()
 duplicate_merge["merge_unit_groups"] = [[3, 6, 10], [10, 14, 20]]
 
+# Test with splits
+curation_with_splits = {
+    "format_version": "2",
+    "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
+    "label_definitions": {
+        "quality": {"label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
+        "putative_type": {
+            "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral"],
+            "exclusive": False,
+        },
+    },
+    "manual_labels": [
+        {"unit_id": 2, "quality": ["good"], "putative_type": ["excitatory", "pyramidal"]},
+    ],
+    "splits": [{"unit_id": 2, "split_mode": "indices", "split_indices": [[0, 1, 2], [3, 4, 5]]}],
+}
+
+# Test dictionary format for splits
+curation_with_splits_dict = {**curation_ids_int, "splits": {2: [[0, 1, 2], [3, 4, 5]]}}
+
+# This is a failure example with duplicated merge
+duplicate_merge = {**curation_ids_int, "merges": [{"merge_unit_group": [3, 6, 10]}, {"merge_unit_group": [10, 14, 20]}]}
 
 # This is a failure example with unit 3 both in removed and merged
-merged_and_removed = curation_ids_int.copy()
-merged_and_removed["merge_unit_groups"] = [[3, 6], [10, 14, 20]]
-merged_and_removed["removed_units"] = [3, 31, 42]
+merged_and_removed = {
+    **curation_ids_int,
+    "merges": [{"merge_unit_group": [3, 6]}, {"merge_unit_group": [10, 14, 20]}],
+    "removed": [3, 31, 42],
+}
 
-# this is a failure because unit 99 is not in the initial list
-unknown_merged_unit = curation_ids_int.copy()
-unknown_merged_unit["merge_unit_groups"] = [[3, 6, 99], [10, 14, 20]]
+# This is a failure because unit 99 is not in the initial list
+unknown_merged_unit = {
+    **curation_ids_int,
+    "merges": [{"merge_unit_group": [3, 6, 99]}, {"merge_unit_group": [10, 14, 20]}],
+}
 
-# this is a failure because unit 99 is not in the initial list
-unknown_removed_unit = curation_ids_int.copy()
-unknown_removed_unit["removed_units"] = [31, 42, 99]
+# This is a failure because unit 99 is not in the initial list
+unknown_removed_unit = {**curation_ids_int, "removed": [31, 42, 99]}
 
 
 def test_curation_format_validation():
+    # Test basic formats
+    print(curation_ids_int)
     validate_curation_dict(curation_ids_int)
+    print(curation_ids_int)
     validate_curation_dict(curation_ids_str)
+
+    # Test dictionary formats
+    validate_curation_dict(curation_ids_int_dict)
+    validate_curation_dict(curation_ids_str_dict)
+
+    # Test splits
+    validate_curation_dict(curation_with_splits)
+    validate_curation_dict(curation_with_splits_dict)
 
     with pytest.raises(ValueError):
         # Raised because duplicated merged units
@@ -135,13 +202,13 @@ def test_curation_format_validation():
 
 
 def test_to_from_json():
-
     json.loads(json.dumps(curation_ids_int, indent=4))
     json.loads(json.dumps(curation_ids_str, indent=4))
+    json.loads(json.dumps(curation_ids_int_dict, indent=4))
+    json.loads(json.dumps(curation_with_splits, indent=4))
 
 
 def test_convert_from_sortingview_curation_format_v0():
-
     parent_folder = Path(__file__).parent
     for filename in (
         "sv-sorting-curation.json",
@@ -149,18 +216,13 @@ def test_convert_from_sortingview_curation_format_v0():
         "sv-sorting-curation-str.json",
         "sv-sorting-curation-false-positive.json",
     ):
-
         json_file = parent_folder / filename
         with open(json_file, "r") as f:
             curation_v0 = json.load(f)
-            # print(curation_v0)
-            curation_v1 = convert_from_sortingview_curation_format_v0(curation_v0)
-            # print(curation_v1)
-            validate_curation_dict(curation_v1)
+            validate_curation_dict(curation_v0)
 
 
 def test_curation_label_to_vectors():
-
     labels = curation_label_to_vectors(curation_ids_int)
     assert "quality" in labels
     assert "excitatory" in labels
@@ -171,26 +233,33 @@ def test_curation_label_to_vectors():
 
 
 def test_curation_label_to_dataframe():
-
     df = curation_label_to_dataframe(curation_ids_int)
     assert "quality" in df.columns
     assert "excitatory" in df.columns
     print(df)
 
     df = curation_label_to_dataframe(curation_ids_str)
-    # print(df)
+    print(df)
 
 
 def test_apply_curation():
     recording, sorting = generate_ground_truth_recording(durations=[10.0], num_units=9, seed=2205)
-    sorting = sorting.rename_units(np.array([1, 2, 3, 6, 10, 14, 20, 31, 42]))
+    sorting = sorting.rename_units([1, 2, 3, 6, 10, 14, 20, 31, 42])
     analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
 
+    # Test with list format
     sorting_curated = apply_curation(sorting, curation_ids_int)
     assert sorting_curated.get_property("quality", ids=[1])[0] == "good"
     assert sorting_curated.get_property("quality", ids=[2])[0] == "noise"
     assert sorting_curated.get_property("excitatory", ids=[2])[0]
 
+    # Test with dictionary format
+    sorting_curated = apply_curation(sorting, curation_ids_int_dict)
+    assert sorting_curated.get_property("quality", ids=[1])[0] == "good"
+    assert sorting_curated.get_property("quality", ids=[2])[0] == "noise"
+    assert sorting_curated.get_property("excitatory", ids=[2])[0]
+
+    # Test analyzer
     analyzer_curated = apply_curation(analyzer, curation_ids_int)
     assert "quality" in analyzer_curated.sorting.get_property_keys()
 
@@ -200,29 +269,34 @@ def test_apply_curation_with_split():
     sorting = sorting.rename_units(np.array([1, 2, 3, 6, 10, 14, 20, 31, 42]))
     analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
 
-    sorting_curated = apply_curation(sorting, curation_with_split)
+    sorting_curated = apply_curation(sorting, curation_with_splits)
+    # the split indices are not complete, so an extra unit is added
     assert len(sorting_curated.unit_ids) == len(sorting.unit_ids) + 2
 
-    assert 1 not in sorting_curated.unit_ids
     assert 2 not in sorting_curated.unit_ids
-    assert 43 in sorting_curated.unit_ids
-    assert 44 in sorting_curated.unit_ids
+    split_unit_ids = [43, 44, 45]
+    for unit_id in split_unit_ids:
+        assert unit_id in sorting_curated.unit_ids
+        assert sorting_curated.get_property("quality", ids=[unit_id])[0] == "good"
+        assert sorting_curated.get_property("excitatory", ids=[unit_id])[0]
+        assert sorting_curated.get_property("pyramidal", ids=[unit_id])[0]
 
-    analyzer_curated = apply_curation(analyzer, curation_with_split)
+    analyzer_curated = apply_curation(analyzer, curation_with_splits)
     assert len(analyzer_curated.sorting.unit_ids) == len(analyzer.sorting.unit_ids) + 2
 
-    assert 1 not in analyzer_curated.unit_ids
     assert 2 not in analyzer_curated.unit_ids
-    assert 43 in analyzer_curated.unit_ids
-    assert 44 in analyzer_curated.unit_ids
+    for unit_id in split_unit_ids:
+        assert unit_id in analyzer_curated.unit_ids
+        assert analyzer_curated.sorting.get_property("quality", ids=[unit_id])[0] == "good"
+        assert analyzer_curated.sorting.get_property("excitatory", ids=[unit_id])[0]
+        assert analyzer_curated.sorting.get_property("pyramidal", ids=[unit_id])[0]
 
 
 if __name__ == "__main__":
-    test_curation_format_validation()
-    test_curation_format_validation()
-    test_to_from_json()
-    test_convert_from_sortingview_curation_format_v0()
-    test_curation_label_to_vectors()
-    test_curation_label_to_dataframe()
-
-    test_apply_curation()
+    # test_curation_format_validation()
+    # test_to_from_json()
+    # test_convert_from_sortingview_curation_format_v0()
+    # test_curation_label_to_vectors()
+    # test_curation_label_to_dataframe()
+    # test_apply_curation()
+    test_apply_curation_with_split()

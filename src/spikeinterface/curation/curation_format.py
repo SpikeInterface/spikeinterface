@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import numpy as np
 from itertools import chain
 
@@ -21,69 +20,6 @@ def validate_curation_dict(curation_dict: dict):
     """
     # this will validate the format of the curation_dict
     CurationModel(**curation_dict)
-
-
-def convert_from_sortingview_curation_format_v0(sortingview_dict: dict, destination_format: str = "1"):
-    """
-    Converts the old sortingview curation format (v0) into a curation dictionary new format (v1)
-    Couple of caveats:
-        * The list of units is not available in the original sortingview dictionary. We set it to None
-        * Labels can not be mutually exclusive.
-        * Labels have no category, so we regroup them under the "all_labels" category
-
-    Parameters
-    ----------
-    sortingview_dict : dict
-        Dictionary containing the curation information from sortingview
-    destination_format : str
-        Version of the format to use.
-        Default to "1"
-
-    Returns
-    -------
-    curation_dict : dict
-        A curation dictionary
-    """
-
-    assert destination_format == "1"
-    if "mergeGroups" not in sortingview_dict.keys():
-        sortingview_dict["mergeGroups"] = []
-    merge_groups = sortingview_dict["mergeGroups"]
-
-    first_unit_id = next(iter(sortingview_dict["labelsByUnit"].keys()))
-    if str.isdigit(first_unit_id):
-        unit_id_type = int
-    else:
-        unit_id_type = str
-
-    all_units = []
-    all_labels = []
-    manual_labels = []
-    general_cat = "all_labels"
-    for unit_id_, l_labels in sortingview_dict["labelsByUnit"].items():
-        all_labels.extend(l_labels)
-        # recorver the correct type for unit_id
-        unit_id = unit_id_type(unit_id_)
-        if unit_id not in all_units:
-            all_units.append(unit_id)
-        manual_labels.append({"unit_id": unit_id, general_cat: l_labels})
-    labels_def = {"all_labels": {"name": "all_labels", "label_options": list(set(all_labels)), "exclusive": False}}
-
-    for merge_group in merge_groups:
-        for unit_id in merge_group:
-            if unit_id not in all_units:
-                all_units.append(unit_id)
-
-    curation_dict = {
-        "format_version": destination_format,
-        "unit_ids": all_units,
-        "label_definitions": labels_def,
-        "manual_labels": manual_labels,
-        "merge_unit_groups": merge_groups,
-        "removed_units": [],
-    }
-
-    return curation_dict
 
 
 def curation_label_to_vectors(curation_dict_or_model: dict | CurationModel):
@@ -135,29 +71,6 @@ def curation_label_to_vectors(curation_dict_or_model: dict | CurationModel):
     return labels
 
 
-def clean_curation_dict(curation_dict: dict):
-    """
-    In some cases the curation_dict can have inconsistencies (like in the sorting view format).
-    For instance, some unit_ids are both in 'merge_unit_groups' and 'removed_units'.
-    This is ambiguous!
-
-    This cleaner helper function ensures units tagged as `removed_units` are removed from the `merge_unit_groups`
-    """
-    curation_dict = copy.deepcopy(curation_dict)
-
-    clean_merge_unit_groups = []
-    for group in curation_dict["merge_unit_groups"]:
-        clean_group = []
-        for unit_id in group:
-            if unit_id not in curation_dict["removed_units"]:
-                clean_group.append(unit_id)
-        if len(clean_group) > 1:
-            clean_merge_unit_groups.append(clean_group)
-
-    curation_dict["merge_unit_groups"] = clean_merge_unit_groups
-    return curation_dict
-
-
 def curation_label_to_dataframe(curation_dict_or_model: dict | CurationModel):
     """
     Transform the curation dict into a pandas dataframe.
@@ -187,7 +100,9 @@ def curation_label_to_dataframe(curation_dict_or_model: dict | CurationModel):
     return labels
 
 
-def apply_curation_labels(sorting: BaseSorting, curation_dict_or_model: dict | CurationModel):
+def apply_curation_labels(
+    sorting_or_analyzer: BaseSorting | SortingAnalyzer, curation_dict_or_model: dict | CurationModel
+):
     """
     Apply manual labels after merges/splits.
 
@@ -202,14 +117,19 @@ def apply_curation_labels(sorting: BaseSorting, curation_dict_or_model: dict | C
     else:
         curation_model = curation_dict_or_model
 
+    if isinstance(sorting_or_analyzer, BaseSorting):
+        sorting = sorting_or_analyzer
+    else:
+        sorting = sorting_or_analyzer.sorting
+
     # Please note that manual_labels is done on the unit_ids before the merge!!!
     manual_labels = curation_label_to_vectors(curation_model)
 
     # apply on non merged / split
-    merge_new_unit_ids = curation_model.merge_new_unit_ids if curation_model.merge_new_unit_ids is not None else []
-    split_new_unit_ids = (
-        list(chain(*curation_model.split_new_unit_ids)) if curation_model.split_new_unit_ids is not None else []
-    )
+    merge_new_unit_ids = [m.merge_new_unit_id for m in curation_model.merges]
+    split_new_unit_ids = [m.split_new_unit_ids for m in curation_model.splits]
+    split_new_unit_ids = list(chain(*split_new_unit_ids))
+
     merged_split_units = merge_new_unit_ids + split_new_unit_ids
     for key, values in manual_labels.items():
         all_values = np.zeros(sorting.unit_ids.size, dtype=values.dtype)
@@ -220,36 +140,46 @@ def apply_curation_labels(sorting: BaseSorting, curation_dict_or_model: dict | C
         sorting.set_property(key, all_values)
 
     # merges
-    if len(merge_new_unit_ids) > 0:
-        for new_unit_id, old_group_ids in zip(curation_model.merge_new_unit_ids, curation_model.merge_unit_groups):
-            for label_key, label_def in curation_model.label_definitions.items():
-                if label_def.exclusive:
+    for merge in curation_model.merges:
+        new_unit_id = merge.merge_new_unit_id
+        old_group_ids = merge.merge_unit_group
+        for label_key, label_def in curation_model.label_definitions.items():
+            if label_def.exclusive:
+                group_values = []
+                for unit_id in old_group_ids:
+                    ind = list(curation_model.unit_ids).index(unit_id)
+                    value = manual_labels[label_key][ind]
+                    if value != "":
+                        group_values.append(value)
+                if len(set(group_values)) == 1:
+                    # all group has the same label or empty
+                    sorting.set_property(key, values=group_values[:1], ids=[new_unit_id])
+            else:
+                for key in label_def.label_options:
                     group_values = []
                     for unit_id in old_group_ids:
                         ind = list(curation_model.unit_ids).index(unit_id)
-                        value = manual_labels[label_key][ind]
-                        if value != "":
-                            group_values.append(value)
-                    if len(set(group_values)) == 1:
-                        # all group has the same label or empty
-                        sorting.set_property(key, values=group_values[:1], ids=[new_unit_id])
-                else:
-                    for key in label_def.label_options:
-                        group_values = []
-                        for unit_id in old_group_ids:
-                            ind = list(curation_model.unit_ids).index(unit_id)
-                            value = manual_labels[key][ind]
-                            group_values.append(value)
-                        new_value = np.any(group_values)
-                        sorting.set_property(key, values=[new_value], ids=[new_unit_id])
+                        value = manual_labels[key][ind]
+                        group_values.append(value)
+                    new_value = np.any(group_values)
+                    sorting.set_property(key, values=[new_value], ids=[new_unit_id])
 
     # splits
-    if len(split_new_unit_ids) > 0:
-        for new_unit_index, old_unit in enumerate(curation_model.split_units):
-            for label_key, label_def in curation_model.label_definitions.items():
+    for split in curation_model.splits:
+        # propagate property of splut unit to new units
+        old_unit = split.unit_id
+        new_unit_ids = split.split_new_unit_ids
+        for label_key, label_def in curation_model.label_definitions.items():
+            if label_def.exclusive:
                 ind = list(curation_model.unit_ids).index(old_unit)
                 value = manual_labels[label_key][ind]
-                sorting.set_property(label_key, values=[value], ids=[curation_model.split_new_unit_ids[new_unit_index]])
+                if value != "":
+                    sorting.set_property(label_key, values=[value] * len(new_unit_ids), ids=new_unit_ids)
+            else:
+                for key in label_def.label_options:
+                    ind = list(curation_model.unit_ids).index(old_unit)
+                    value = manual_labels[key][ind]
+                    sorting.set_property(key, values=[value] * len(new_unit_ids), ids=new_unit_ids)
 
 
 def apply_curation(
@@ -283,11 +213,12 @@ def apply_curation(
     censor_ms : float | None, default: None
         When applying the merges, any consecutive spikes within the `censor_ms` are removed. This can be thought of
         as the desired refractory period. If `censor_ms=None`, no spikes are discarded.
-    new_id_strategy : "append" | "take_first", default: "append"
+    new_id_strategy : "append" | "take_first" | "join", default: "append"
         The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
 
             * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
             * "take_first" : new_unit_ids will be the first unit_id of every list of merges
+            * "join" : new_unit_ids will be the concatenation of all unit_ids of every list of merges
     merging_mode : "soft" | "hard", default: "soft"
         How merges are performed for SortingAnalyzer. If the `merge_mode` is "soft" , merges will be approximated, with no reloading of
         the waveforms. This will lead to approximations. If `merge_mode` is "hard", recomputations are accurately
@@ -302,11 +233,15 @@ def apply_curation(
 
     Returns
     -------
-    sorting_or_analyzer : Sorting | SortingAnalyzer
+    curated_sorting_or_analyzer : Sorting | SortingAnalyzer
         The curated object.
-
-
     """
+    assert isinstance(
+        sorting_or_analyzer, (BaseSorting, SortingAnalyzer)
+    ), f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)}"
+    assert isinstance(
+        curation_dict_or_model, (dict, CurationModel)
+    ), f"`curation_dict_or_model` must be a dict or a CurationModel, not an object of type {type(curation_dict_or_model)}"
     if isinstance(curation_dict_or_model, dict):
         curation_model = CurationModel(**curation_dict_or_model)
     else:
@@ -315,37 +250,29 @@ def apply_curation(
     if not np.array_equal(np.asarray(curation_model.unit_ids), sorting_or_analyzer.unit_ids):
         raise ValueError("unit_ids from the curation_dict do not match the one from Sorting or SortingAnalyzer")
 
-    if isinstance(sorting_or_analyzer, BaseSorting):
-        sorting = sorting_or_analyzer
-        sorting = sorting.remove_units(curation_model.removed_units)
-        new_unit_ids = sorting.unit_ids
-        if len(curation_model.merge_unit_groups) > 0:
-            sorting, _, new_unit_ids = apply_merges_to_sorting(
-                sorting,
-                curation_model.merge_unit_groups,
-                censor_ms=censor_ms,
-                return_extra=True,
-                new_id_strategy=new_id_strategy,
-            )
-            curation_model.merge_new_unit_ids = new_unit_ids
-        if len(curation_model.split_units) > 0:
-            sorting, new_unit_ids = apply_splits_to_sorting(
-                sorting,
-                curation_model.split_units,
-                new_id_strategy=new_id_strategy,
-                return_extra=True,
-            )
-            curation_model.split_new_unit_ids = new_unit_ids
-        apply_curation_labels(sorting, curation_model)
-        return sorting
+    # 1. Remove units
+    if len(curation_model.removed) > 0:
+        curated_sorting_or_analyzer = sorting_or_analyzer.remove_units(curation_model.removed)
+    else:
+        curated_sorting_or_analyzer = sorting_or_analyzer
 
-    elif isinstance(sorting_or_analyzer, SortingAnalyzer):
-        analyzer = sorting_or_analyzer
-        if len(curation_model.removed_units) > 0:
-            analyzer = analyzer.remove_units(curation_model.removed_units)
-        if len(curation_model.merge_unit_groups) > 0:
-            analyzer, new_unit_ids = analyzer.merge_units(
-                curation_model.merge_unit_groups,
+    # 2. Merge units
+    if len(curation_model.merges) > 0:
+        merge_unit_groups = [m.merge_unit_group for m in curation_model.merges]
+        merge_new_unit_ids = [m.merge_new_unit_id for m in curation_model.merges if m.merge_new_unit_id is not None]
+        if len(merge_new_unit_ids) == 0:
+            merge_new_unit_ids = None
+        if isinstance(sorting_or_analyzer, BaseSorting):
+            curated_sorting_or_analyzer, _, new_unit_ids = apply_merges_to_sorting(
+                curated_sorting_or_analyzer,
+                merge_unit_groups=merge_unit_groups,
+                censor_ms=censor_ms,
+                new_id_strategy=new_id_strategy,
+                return_extra=True,
+            )
+        else:
+            curated_sorting_or_analyzer, new_unit_ids = curated_sorting_or_analyzer.merge_units(
+                merge_unit_groups=merge_unit_groups,
                 censor_ms=censor_ms,
                 merging_mode=merging_mode,
                 sparsity_overlap=sparsity_overlap,
@@ -355,19 +282,43 @@ def apply_curation(
                 verbose=verbose,
                 **job_kwargs,
             )
-            curation_model.merge_new_unit_ids = new_unit_ids
-        if len(curation_model.split_units) > 0:
-            analyzer, new_unit_ids = analyzer.split_units(
-                curation_model.split_units,
+        for i, merge_unit_id in enumerate(new_unit_ids):
+            curation_model.merges[i].merge_new_unit_id = merge_unit_id
+
+    # 3. Split units
+    if len(curation_model.splits) > 0:
+        split_units = {}
+        for split in curation_model.splits:
+            sorting = (
+                curated_sorting_or_analyzer
+                if isinstance(sorting_or_analyzer, BaseSorting)
+                else sorting_or_analyzer.sorting
+            )
+            split_units[split.unit_id] = split.get_full_spike_indices(sorting)
+        split_new_unit_ids = [s.split_new_unit_ids for s in curation_model.splits if s.split_new_unit_ids is not None]
+        if len(split_new_unit_ids) == 0:
+            split_new_unit_ids = None
+        if isinstance(sorting_or_analyzer, BaseSorting):
+            curated_sorting_or_analyzer, new_unit_ids = apply_splits_to_sorting(
+                curated_sorting_or_analyzer,
+                split_units,
+                new_unit_ids=split_new_unit_ids,
+                new_id_strategy=new_id_strategy,
+                return_extra=True,
+            )
+        else:
+            curated_sorting_or_analyzer, new_unit_ids = curated_sorting_or_analyzer.split_units(
+                split_units,
                 new_id_strategy=new_id_strategy,
                 return_new_unit_ids=True,
+                new_unit_ids=split_new_unit_ids,
                 format="memory",
                 verbose=verbose,
             )
-            curation_model.split_new_unit_ids = new_unit_ids
-        apply_curation_labels(analyzer.sorting, curation_model)
-        return analyzer
-    else:
-        raise TypeError(
-            f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)}"
-        )
+        for i, split_unit_ids in enumerate(new_unit_ids):
+            curation_model.splits[i].split_new_unit_ids = split_unit_ids
+
+    # 4. Apply labels
+    apply_curation_labels(curated_sorting_or_analyzer, curation_model)
+
+    return curated_sorting_or_analyzer
