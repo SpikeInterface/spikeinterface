@@ -469,7 +469,6 @@ def apply_splits_to_sorting(sorting, unit_splits, new_unit_ids=None, return_extr
     spike_vector_list = [spikes[s0:s1] for s0, s1 in segment_slices]
     spike_indices = spike_vector_to_indices(spike_vector_list, sorting.unit_ids, absolute_index=True)
 
-    # split_indices are a concatenation across segments
     for unit_id in sorting.unit_ids:
         if unit_id in unit_splits:
             split_indices = unit_splits[unit_id]
@@ -477,8 +476,10 @@ def apply_splits_to_sorting(sorting, unit_splits, new_unit_ids=None, return_extr
 
             for split, new_unit_id in zip(split_indices, new_split_ids):
                 new_unit_index = all_unit_ids.index(new_unit_id)
+                # split_indices are a concatenation across segments with absolute indices
+                # so we need to concatenate the spike indices across segments
                 spike_indices_unit = np.concatenate(
-                    spike_indices[segment_index][unit_id] for segment_index in range(num_seg)
+                    [spike_indices[segment_index][unit_id] for segment_index in range(num_seg)]
                 )
                 spikes["unit_index"][spike_indices_unit[split]] = new_unit_index
         else:
