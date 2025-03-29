@@ -384,13 +384,14 @@ class UnitWaveformsWidget(BaseWidget):
             # plot channels
             if dp.plot_channels:
                 from probeinterface.plotting import plot_probe
+
                 probe = dp.sorting_analyzer_or_templates.get_probe()
-                poly, poly_contour = plot_probe(probe, contacts_colors='w', add_to_axis=False)
+                poly, poly_contour = plot_probe(probe, contacts_colors="w", add_to_axis=False)
                 ax.add_collection(poly)
 
             # Apply axis_equal setting
             if dp.axis_equal:
-                ax.set_aspect('equal')
+                ax.set_aspect("equal")
 
             if dp.same_axis and dp.plot_legend:
                 if hasattr(self, "legend") and self.legend is not None:
