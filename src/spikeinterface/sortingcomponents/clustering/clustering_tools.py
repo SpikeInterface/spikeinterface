@@ -593,6 +593,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
     while keep_searching:
 
         keep_searching = False
+        sub_recording = None  # we only do a sub recording if we have data to iterate through
 
         for i in list(set(range(nb_templates)).difference(ignore_inds)):
 
