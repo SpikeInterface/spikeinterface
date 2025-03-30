@@ -47,6 +47,9 @@ class BaseExtractor:
     # these properties are skipped by default in copy_metadata
     _skip_properties = []
 
+    # kwargs which can be precomputed before being used by the extractor
+    _precomputable_kwarg_names = []
+
     installation_mesg = ""
     installed = True
 
