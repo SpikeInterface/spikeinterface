@@ -57,6 +57,8 @@ class WhitenRecording(BasePreprocessor):
         The whitened recording extractor
     """
 
+    _precomputable_kwarg_names = ["W", "M"]
+
     def __init__(
         self,
         recording,
