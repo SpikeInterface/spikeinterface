@@ -95,7 +95,7 @@ def test_remove_channels():
     rec_sliced_channel_ids = rec_sliced.get_channel_ids()
     assert np.all(rec_sliced_channel_ids == np.array(["1", "3"]))
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         rec_sliced = rec.remove_channels(remove_channel_ids=[0, "1"])
 
 

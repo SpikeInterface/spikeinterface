@@ -733,9 +733,10 @@ class BaseRecording(BaseRecordingSnippets):
 
         recording_channel_ids = self.get_channel_ids()
         non_present_channel_ids = list(set(remove_channel_ids).difference(recording_channel_ids))
-        assert (
-            len(non_present_channel_ids) == 0
-        ), f"`remove_channel_ids` {non_present_channel_ids} are not in recording ids {recording_channel_ids}."
+        if len(non_present_channel_ids) != 0:
+            raise ValueError(
+                f"`remove_channel_ids` {non_present_channel_ids} are not in recording ids {recording_channel_ids}."
+            )
 
         new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
