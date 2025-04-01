@@ -705,5 +705,5 @@ _unit_location_methods = {
     "center_of_mass": compute_center_of_mass,
     "grid_convolution": compute_grid_convolution,
     "monopolar_triangulation": compute_monopolar_triangulation,
-    "max_channel": compute_location_max_channel,
+    "peak_channel": compute_location_max_channel,
 }

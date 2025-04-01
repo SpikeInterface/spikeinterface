@@ -286,7 +286,7 @@ unit_locations
 
 This extension is similar to the :code:`spike_locations`, but instead of estimating a location for each spike
 based on individual waveforms, it calculates at the unit level using templates. The same localization methods
-(:code:`method="center_of_mass" | "monopolar_triangulation" | "grid_convolution" | "max_channel"`) are available.
+(:code:`method="center_of_mass" | "monopolar_triangulation" | "grid_convolution" | "peak_channel"`) are available.
 
 
 .. code-block:: python
