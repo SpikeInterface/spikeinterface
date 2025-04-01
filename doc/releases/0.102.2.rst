@@ -3,24 +3,27 @@
 SpikeInterface 0.102.2 release notes
 ------------------------------------
 
-24th March 2025
+2nd April 2025
 
 Minor release with bug fixes
 
 core:
 
+* Print zarr exception if `super_zarr_open` fails (#3803)
+* Add `_precomputable_kwarg_names` to `BaseExtractor` (#3781)
 * Fix dict representation in aggregation (numpy 2.0) (#3744)
 * Explicit sparsity mask for SparseWaveform (#3742)
 * Renaming: `from_time_labels` -> `from_samples_and_labels` (#3724)
 * New sparsity (to add Ks clustering in components) (#3717)
-* Update sorting property dtype check on unit aggregation to allow for different string types (#3778)
 
 extractors:
 
+* Add nwb extractors to API docs (#3810)
+* Make sure to use the latest ibllib version - ONE will come along (#3802)
+* Better naming for SI units  (#3788)
 * Add Intan port groups by default (#3753)
 * Fix stream names and ids representation in numpy 2.0 (#3751)
 * Add warning message for streams with mixed units (#3739)
-* Added `physical_unit", "gain_to_physical_unit" and "offset_to_physical_unit"` to `RecordingExtractor` as properties (#3788)
 * Fix: get_streams call in OpenEphysBinaryRecordingExtractor completed (#3738)
 * Fix gain inference for "Volts" unit in Plexon2 files (#3728)
 * Fix IBL streaming tests (#3718)
@@ -29,6 +32,7 @@ extractors:
 preprocessing:
 
 * Allow preprocessing on dicts of recordings (again) (#3773)
+* Update `load_motion_info` to load legacy motion folders (#3772)
 * Allow `aggregate_channels` to accept a dict of recordings (#3767)
 
 sorters:
@@ -72,6 +76,8 @@ motion correction:
 
 documentation:
 
+* Add nwb extractors to API docs (#3810)
+* Fixed typo in import statement (#3791)
 * Clean up all docs warnings (#3746)
 * Remove commented-out study classes from comparison (#3743)
 
@@ -92,12 +98,15 @@ testing:
 Contributors:
 
 * @FrancescoNegri
+* @OleBialas
 * @abhinavsns
 * @alejoe91
 * @chrishalcrow
 * @guptadivyansh
 * @h-mayorquin
+* @oliche
 * @remi-pr
 * @rly
 * @samuelgarcia
 * @yger
+* @zm711
