@@ -1,10 +1,9 @@
 import os
-import re
 from pathlib import Path
 import requests
 import json
 from packaging.version import parse
-import spikeinterface
+
 
 def get_pypi_versions(package_name):
     """
@@ -16,8 +15,10 @@ def get_pypi_versions(package_name):
     response.raise_for_status()
     data = response.json()
     versions = list(sorted(data["releases"].keys()))
-    # Filter out versions that are less than 4.0.16
-    versions = [ver for ver in versions if parse(ver) >= parse("4.0.16")]
+    # Filter out versions that are less than 4.0.16 and different from 4.0.26 and 4.0.27
+    # (buggy - https://github.com/MouseLand/Kilosort/releases/tag/v4.0.26)
+    versions = [ver for ver in versions if parse(ver) >= parse("4.0.16") and
+                parse(ver) not in [parse("4.0.26"), parse("4.0.27")]]
     return versions
 
 

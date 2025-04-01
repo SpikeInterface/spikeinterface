@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["setuptools>=62.0"]
+requires = ["setuptools>=78.0.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -72,15 +72,13 @@ extractors = [
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",
-    "ONE-api>=2.7.0,<3.0.0", # alf sorter and streaming IBL
-    "ibllib>=2.36.0,<3.0.0", # streaming IBL
+    "ibllib", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
     "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
-    "ONE-api>=2.7.0,<3.0.0", # alf sorter and streaming IBL
-    "ibllib>=2.36.0,<3.0.0", # streaming IBL
+    "ibllib", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
     "fsspec",
@@ -145,7 +143,7 @@ test_extractors = [
 ]
 
 test_preprocessing = [
-    "ibllib>=2.36.0", # for IBL
+    "ibllib", # for IBL
     "torch",
 ]
 
@@ -154,11 +152,12 @@ test = [
     "pytest",
     "pytest-dependency",
     "pytest-cov",
+    "psutil",
 
     "huggingface_hub",
 
     # preprocessing
-    "ibllib>=2.36.0", # for IBL
+    "ibllib", # for IBL
 
     # streaming templates
     "s3fs",
@@ -169,7 +168,7 @@ test = [
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
 
     # for sortingview backend
-    "sortingview",
+    "sortingview>=0.12.0",
 
     # for motion and sortingcomponents
     "torch",
