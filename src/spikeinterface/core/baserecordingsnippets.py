@@ -6,7 +6,6 @@ import numpy as np
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
 from .base import BaseExtractor
-from .core_tools import check_json
 from .recording_tools import check_probe_do_not_overlap
 
 from warnings import warn
