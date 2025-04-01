@@ -103,13 +103,14 @@ class DetectAndInterpolateBadChannelsRecording(InterpolateBadChannelsRecording):
         The recording with bad channels removed
     """
 
+    _precomputable_kwarg_names = ["bad_channel_ids"]
+
     def __init__(
         self,
         recording: BaseRecording,
         bad_channel_ids=None,
         **detect_bad_channels_kwargs,
     ):
-
         if bad_channel_ids is None:
             bad_channel_ids, channel_labels = detect_bad_channels(recording=recording, **detect_bad_channels_kwargs)
         else:
