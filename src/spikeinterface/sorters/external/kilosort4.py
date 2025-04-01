@@ -21,7 +21,7 @@ class Kilosort4Sorter(BaseSorter):
     sorter_name: str = "kilosort4"
     requires_locations = True
     gpu_capability = "nvidia-optional"
-    requires_binary_data = False
+    requires_binary_data = True
 
     _si_default_params = {
         "do_CAR": True,
@@ -72,12 +72,13 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import kilosort as ks
-            import torch
+        import importlib.util
 
+        ks_spec = importlib.util.find_spec("kilosort")
+        torch_spec = importlib.util.find_spec("torch")
+        if ks_spec is not None and torch_spec is not None:
             HAVE_KS = True
-        except ImportError:
+        else:
             HAVE_KS = False
         return HAVE_KS
 

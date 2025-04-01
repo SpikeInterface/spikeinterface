@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-from warnings import warn
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
