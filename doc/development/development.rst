@@ -13,7 +13,7 @@ There are various ways to contribute to SpikeInterface as a user or developer. S
 * Crafting tutorials for common workflows (e.g., spike sorting, post-processing, etc.).
 * Writing unit tests to expand code coverage and use case scenarios.
 * Reporting bugs and issues.
-o
+
 We use a forking workflow `<https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow>`_ to manage contributions. Here's a summary of the steps involved, with more details available in the provided link:
 
 * Fork the SpikeInterface repository.
