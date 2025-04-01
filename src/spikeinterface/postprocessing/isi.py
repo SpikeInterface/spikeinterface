@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import importlib.util
+
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
-try:
-    import numba
-
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ModuleNotFoundError as err:
+else:
     HAVE_NUMBA = False
 
 
@@ -181,6 +182,7 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
 
 
 if HAVE_NUMBA:
+    import numba
 
     @numba.jit(
         nopython=True,

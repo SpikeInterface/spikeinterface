@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 import numpy as np
 from numpy.testing import assert_array_equal
-from .base import BaseExtractor
 from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 

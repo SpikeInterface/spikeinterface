@@ -1,6 +1,5 @@
 from __future__ import annotations
 import numpy as np
-import warnings
 
 from .template import Templates
 from .sortinganalyzer import SortingAnalyzer

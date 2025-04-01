@@ -604,10 +604,10 @@ class TracesWidget(BaseWidget):
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
         from .utils_sortingview import handle_display_and_url
+        import importlib.util
 
-        try:
-            import pyvips
-        except ImportError:
+        spec = importlib.util.find_spec("pyvips")
+        if spec is None:
             raise ImportError("To use `plot_traces()` in sortingview you need the pyvips package.")
 
         dp = to_attr(data_plot)
