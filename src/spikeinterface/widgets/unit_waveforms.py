@@ -383,11 +383,11 @@ class UnitWaveformsWidget(BaseWidget):
 
             # plot channels
             if dp.plot_channels:
-                from probeinterface.plotting import plot_probe
+                from probeinterface.plotting import create_probe_polygons
 
                 probe = dp.sorting_analyzer_or_templates.get_probe()
-                poly, poly_contour = plot_probe(probe, contacts_colors="w", add_to_axis=False)
-                ax.add_collection(poly)
+                contacts, probe_outline = create_probe_polygons(probe, contacts_colors="w")
+                ax.add_collection(contacts)
 
             # Apply axis_equal setting
             if dp.axis_equal:
