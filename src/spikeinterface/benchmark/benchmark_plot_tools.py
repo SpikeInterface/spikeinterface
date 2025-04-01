@@ -9,7 +9,7 @@ def _simpleaxis(ax):
     ax.get_yaxis().tick_left()
 
 
-def plot_run_times(study, case_keys=None):
+def plot_run_times(study, case_keys=None, ax=None):
     """
     Plot run times for a BenchmarkStudy.
 
@@ -29,7 +29,11 @@ def plot_run_times(study, case_keys=None):
 
     colors = study.get_colors()
 
-    fig, ax = plt.subplots()
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
+        
     labels = []
     for i, key in enumerate(case_keys):
         labels.append(study.cases[key]["label"])

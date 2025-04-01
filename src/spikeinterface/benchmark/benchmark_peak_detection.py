@@ -184,22 +184,27 @@ class PeakDetectionStudy(BenchmarkStudy):
             if count == 2:
                 ax.legend()
 
-    def plot_detected_amplitudes(self, case_keys=None, figsize=(15, 5), detect_threshold=None):
+    def plot_detected_amplitudes(self, case_keys=None, figsize=(15, 5), detect_threshold=None, axs=None):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
         import matplotlib.pyplot as plt
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+        if axs is None:
+            fig, axs = plt.subplots(ncols=len(case_keys), figsize=figsize, squeeze=False)
+        else:
+            fig = axs[0].get_figure()
+            assert len(axs) == len(case_keys), "axs should be the same length as case_keys"
 
         for count, key in enumerate(case_keys):
-            ax = axs[0, count]
+            ax = axs[count]
             data1 = self.get_result(key)["peaks"]["amplitude"]
             data2 = self.get_result(key)["gt_amplitudes"]
+            color = self.get_colors()[key]
             bins = np.linspace(data2.min(), data2.max(), 100)
-            ax.hist(data1, bins=bins, alpha=0.5, label="detected")
-            ax.hist(data2, bins=bins, alpha=0.5, label="gt")
-            ax.set_title(self.cases[key]["label"])
+            ax.hist(data1, bins=bins, label="detected", histtype="step", color=color, linewidth=2)
+            ax.hist(data2, bins=bins, alpha=0.1, label="gt", color="k")
+            #ax.set_title(self.cases[key]["label"])
             ax.legend()
             if detect_threshold is not None:
                 noise_levels = get_noise_levels(self.benchmarks[key].recording, return_scaled=False).mean()
@@ -229,14 +234,63 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.set_xticks(np.arange(len(gt_sorting.unit_ids)), gt_sorting.unit_ids)
             ax.set_ylabel("# frames")
             ax.set_xlabel("unit id")
-
-    def plot_template_similarities(self, case_keys=None, metric="l2", figsize=(15, 5), detect_threshold=None):
+    
+    def plot_mean_deltas(self, case_keys=None, figsize=(15, 5), ax=None):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
         import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=figsize, squeeze=True)
+        if ax is None:
+            fig, ax = plt.subplots(1, figsize=figsize)
+        else:
+            fig = ax.get_figure()
+
+        results = {}
+        labels = []
+        colors = []
+        for count, key in enumerate(case_keys):
+            gt_sorting = self.benchmarks[key].gt_sorting
+            results[key] = []
+            labels += [self.cases[key]["label"]]
+            data = self.get_result(key)["matches"]
+            for unit_ind, unit_id in enumerate(gt_sorting.unit_ids):
+                mask = data["labels"] == unit_id
+                results[key] += [np.mean(data["deltas"][mask])]
+
+            colors += [self.get_colors()[key]]
+
+        plots = ax.violinplot(
+            results.values(), 
+            range(len(case_keys)), 
+            showmeans=True, 
+            showmedians=False, 
+            showextrema=False,
+        )
+
+        # Set the color of the violin patches
+        for pc, color in zip(plots['bodies'], colors):
+            pc.set_facecolor(color)
+            pc.set_edgecolor(color)
+
+        plots['cmeans'].set_colors(colors)
+
+        #ax.set_title(self.cases[key]["label"])
+        ax.set_xticks(range(len(case_keys)), labels, rotation=45)
+        ax.set_ylabel("# frames")
+        #ax.set_xlabel("unit id")
+
+    def plot_template_similarities(self, case_keys=None, metric="l2", figsize=(15, 5), detect_threshold=None, ax=None):
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+        import matplotlib.pyplot as plt
+
+        if ax is None:
+            fig, ax = plt.subplots(ncols=1, nrows=1, figsize=figsize, squeeze=True)
+        else:
+            fig = ax.get_figure()
+
         for key in case_keys:
 
             import sklearn.metrics

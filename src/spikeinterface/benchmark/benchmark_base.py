@@ -258,10 +258,10 @@ class BenchmarkStudy:
             df.index.names = self.levels
         return df
 
-    def plot_run_times(self, case_keys=None):
+    def plot_run_times(self, case_keys=None, ax=None):
         from .benchmark_plot_tools import plot_run_times
 
-        return plot_run_times(self, case_keys=case_keys)
+        return plot_run_times(self, case_keys=case_keys, ax=ax)
 
     def compute_results(self, case_keys=None, verbose=False, **result_params):
 
