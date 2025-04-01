@@ -45,7 +45,7 @@ def plot_run_times(study, case_keys=None, ax=None):
     return fig
 
 
-def plot_unit_counts(study, case_keys=None):
+def plot_unit_counts(study, case_keys=None, ax=None):
     """
     Plot unit counts for a study: "num_well_detected", "num_false_positive", "num_redundant", "num_overmerged"
 
@@ -64,7 +64,10 @@ def plot_unit_counts(study, case_keys=None):
 
     count_units = study.get_count_units(case_keys=case_keys)
 
-    fig, ax = plt.subplots()
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
 
     columns = count_units.columns.tolist()
     columns.remove("num_gt")
@@ -99,7 +102,7 @@ def plot_unit_counts(study, case_keys=None):
     return fig
 
 
-def plot_agreement_matrix(study, ordered=True, case_keys=None):
+def plot_agreement_matrix(study, ordered=True, case_keys=None, axs=None):
     """
     Plot agreement matri ces for cases in a study.
 
@@ -121,10 +124,14 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None):
         case_keys = list(study.cases.keys())
 
     num_axes = len(case_keys)
-    fig, axs = plt.subplots(ncols=num_axes, squeeze=False)
+    if axs is None:
+        fig, axs = plt.subplots(ncols=num_axes, squeeze=True)
+    else:
+        assert len(axs) == num_axes, "axs should have the same number of axes as case_keys"
+        fig = axs[0].get_figure()
 
     for count, key in enumerate(case_keys):
-        ax = axs.flatten()[count]
+        ax = axs[count]
         comp = study.get_result(key)["gt_comparison"]
 
         unit_ticks = len(comp.sorting1.unit_ids) <= 16
@@ -140,6 +147,8 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None):
             ax.set_ylabel(None)
             ax.set_yticks([])
         ax.set_xticks([])
+    
+    return fig
 
 
 def plot_performances(study, mode="ordered", performance_names=("accuracy", "precision", "recall"), case_keys=None):
@@ -180,17 +189,22 @@ def plot_performances_vs_snr(
     figsize=None,
     performance_names=("accuracy", "recall", "precision"),
     snr_dataset_reference=None,
+    axs=None,
 ):
     import matplotlib.pyplot as plt
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
 
-    fig, axs = plt.subplots(ncols=1, nrows=len(performance_names), figsize=figsize, squeeze=False)
+    if axs is None:
+        fig, axs = plt.subplots(nrows=len(performance_names), figsize=figsize)
+    else:
+        assert len(axs) == num_axes, "axs should have the same number of axes as performance_names"
+        fig = axs[0].get_figure()
 
     for count, k in enumerate(performance_names):
 
-        ax = axs[count, 0]
+        ax = axs[count]
         for key in case_keys:
             color = study.get_colors()[key]
             label = study.cases[key]["label"]
@@ -225,11 +239,16 @@ def plot_performances_ordered(
     case_keys=None,
     performance_names=("accuracy", "recall", "precision"),
     figsize=None,
+    axs=None
 ):
     import matplotlib.pyplot as plt
 
     num_axes = len(performance_names)
-    fig, axs = plt.subplots(nrows=num_axes, figsize=figsize, squeeze=False)
+    if axs is None:
+        fig, axs = plt.subplots(nrows=num_axes, figsize=figsize, squeeze=True)
+    else:
+        assert len(axs) == num_axes, "axs should have the same number of axes as performance_names"
+        fig = axs[0].get_figure()
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
@@ -238,7 +257,7 @@ def plot_performances_ordered(
     colors = study.get_colors()
 
     for count, performance_name in enumerate(performance_names):
-        ax = axs[count, 0]
+        ax = axs[count]
 
         for key in case_keys:
             color = study.get_colors()[key]
@@ -255,7 +274,11 @@ def plot_performances_ordered(
     return fig
 
 
-def plot_performances_swarm(study, case_keys=None, performance_names=("accuracy", "recall", "precision"), figsize=None):
+def plot_performances_swarm(study, 
+                            case_keys=None, 
+                            performance_names=("accuracy", "recall", "precision"), 
+                            figsize=None, 
+                            ax=None):
 
     import matplotlib.pyplot as plt
     import pandas as pd
@@ -267,7 +290,10 @@ def plot_performances_swarm(study, case_keys=None, performance_names=("accuracy"
     perfs = study.get_performance_by_unit(case_keys=case_keys)
     colors = study.get_colors()
 
-    fig, ax = plt.subplots()
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
 
     levels = perfs.index.names
 
@@ -346,14 +372,22 @@ def plot_performances_comparison(
     return fig
 
 
-def plot_performances_vs_depth_and_snr(study, performance_name="accuracy", case_keys=None, figsize=None):
+def plot_performances_vs_depth_and_snr(study, 
+                                       performance_name="accuracy", 
+                                       case_keys=None, 
+                                       figsize=None, 
+                                       axs=None):
 
     import pylab as plt
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
 
-    fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+    if axs is None:
+        fig, axs = plt.subplots(ncols=len(case_keys), figsize=figsize, squeeze=True)
+    else:
+        assert len(axs) == len(case_keys), "axs should have the same number of axes as case_keys"
+        fig = axs[0].get_figure()
 
     for count, key in enumerate(case_keys):
 
@@ -367,7 +401,7 @@ def plot_performances_vs_depth_and_snr(study, performance_name="accuracy", case_
         snr = metrics["snr"]
         perfs = result["gt_comparison"].get_performance()[performance_name].values
 
-        ax = axs[0, count]
+        ax = axs[count]
         points = ax.scatter(depth, snr, c=perfs, label="matched")
         points.set_clim(0, 1)
         ax.set_xlabel("depth")
@@ -385,14 +419,23 @@ def plot_performances_vs_depth_and_snr(study, performance_name="accuracy", case_
     return fig
 
 
-def plot_performance_losses(study, case0, case1, performance_names=["accuracy"], figsize=None):
+def plot_performance_losses(study, 
+                            case0, 
+                            case1, 
+                            performance_names=["accuracy"], 
+                            figsize=None,
+                            axs=None):
     import matplotlib.pyplot as plt
 
-    fig, axs = plt.subplots(ncols=1, nrows=len(performance_names), figsize=figsize, squeeze=False)
+    if axs is None:
+        fig, axs = plt.subplots(nrows=len(performance_names), figsize=figsize, squeeze=True)
+    else:
+        assert len(axs) == len(performance_names), "axs should have the same number of axes as performance_names"
+        fig = axs[0].get_figure()
 
     for count, perf_name in enumerate(performance_names):
 
-        ax = axs[0, count]
+        ax = axs[count]
 
         positions = study.get_result(case0)["gt_comparison"].sorting1.get_property("gt_unit_locations")
 
