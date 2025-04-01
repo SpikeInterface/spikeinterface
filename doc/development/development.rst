@@ -406,7 +406,7 @@ How to make a release
 Checklist
 ^^^^^^^^^
 * pyproject.toml: check that the version is ahead of current release. Also, comment out the @ (git dependencies)
-* In the top level ``__init__`` (located on ``src/spikeinterface/__init__.py``) uncomment ``DEV_MODE`` (this is used for the docker installations)
+* In the top level ``__init__`` (located at ``src/spikeinterface/__init__.py``) uncomment ``DEV_MODE`` (this is used for the docker installations)
 * Create a new release note for the appropriate version on doc/releases/new_version_tag.
 
 There can be large releases like:
@@ -434,7 +434,7 @@ Where the start date is the date of the last release and the end date is the cur
 The date of the last release can be found on `PyPI <https://pypi.org/project/spikeinterface/>`_.
 
 
-As an specific example:
+As a specific example:
 .. code-block:: bash
 
     bash auto-release-notes.sh 2025-02-19 2025-03-24
