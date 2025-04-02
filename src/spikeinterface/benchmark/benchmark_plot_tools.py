@@ -92,58 +92,75 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
         The resulting figure containing the plots
     """
     import matplotlib.pyplot as plt
-    import seaborn as sns
+    
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
 
     run_times = study.get_run_times(case_keys=case_keys)
-    run_times, case_keys, labels, colors = aggregate_levels(run_times, study, case_keys, levels_to_keep)
-    palette_keys = case_keys
-
-    if levels_to_keep is None:
-        x = None
-        hue = case_keys
-        plt_fun = sns.barplot
-    elif len(levels_to_keep) == 1:
-        x = None
-        hue = levels_to_keep[0]
-        plt_fun = sns.boxplot
-    elif len(levels_to_keep) == 2:
-        # here we need to override the colors, since we are using x and hue
-        # to displaye the 2 levels. We need to set the colors for the hue level alone
-        x, hue = levels_to_keep
-        hues = np.unique([c[1] for c in case_keys])
-        colors = study.get_colors(levels_to_group_by=[hue])
-        plt_fun = sns.boxplot
-        palette_keys = hues
-    else:
-        # we aggregate levels into the same column and use the last level as hue
-        levels_to_aggregate = levels_to_keep[:-1]
-        hue = levels_to_keep[-1]
-        x = " / ".join(levels_to_aggregate)
-        run_times.loc[:, x] = run_times.index.map(lambda x: " / ".join(map(str, x[:-1])))
-        hues = np.unique([c[-1] for c in case_keys])
-        colors = study.get_colors(levels_to_group_by=[hue])
-        plt_fun = sns.barplot
-        palette_keys = hues
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
         fig = ax.get_figure()
 
-    assert all(
-        [key in colors for key in palette_keys]
-    ), f"colors must have a color for each palette key: {palette_keys}"
 
-    plt_fun(data=run_times, y="run_times", x=x, hue=hue, ax=ax, palette=colors)
-
-    despine(ax)
     if levels_to_keep is None:
-        h, l = ax.get_legend_handles_labels()
-        ax.legend(h, list(labels.values()))
-    ax.set_ylabel("run time (s)")
+        colors = study.get_colors()
+        labels = []
+        for i, key in enumerate(case_keys):
+            labels.append(study.cases[key]["label"])
+            rt = run_times.at[key, "run_times"]
+            ax.bar(i, rt, width=0.8, color=colors[key])
+        ax.set_xticks(np.arange(len(case_keys)))
+        ax.set_xticklabels(labels, rotation=45.0)
+        ax.set_ylabel("Run times (s)")
+
+    else:
+        import seaborn as sns
+
+        run_times, case_keys, labels, colors = aggregate_levels(run_times, study, case_keys, levels_to_keep)
+        palette_keys = case_keys
+
+        if levels_to_keep is None:
+            x = None
+            hue = case_keys
+            plt_fun = sns.barplot
+        elif len(levels_to_keep) == 1:
+            x = None
+            hue = levels_to_keep[0]
+            plt_fun = sns.boxplot
+        elif len(levels_to_keep) == 2:
+            # here we need to override the colors, since we are using x and hue
+            # to displaye the 2 levels. We need to set the colors for the hue level alone
+            x, hue = levels_to_keep
+            hues = np.unique([c[1] for c in case_keys])
+            colors = study.get_colors(levels_to_group_by=[hue])
+            plt_fun = sns.boxplot
+            palette_keys = hues
+        else:
+            # we aggregate levels into the same column and use the last level as hue
+            levels_to_aggregate = levels_to_keep[:-1]
+            hue = levels_to_keep[-1]
+            x = " / ".join(levels_to_aggregate)
+            run_times.loc[:, x] = run_times.index.map(lambda x: " / ".join(map(str, x[:-1])))
+            hues = np.unique([c[-1] for c in case_keys])
+            colors = study.get_colors(levels_to_group_by=[hue])
+            plt_fun = sns.barplot
+            palette_keys = hues
+
+
+        assert all(
+            [key in colors for key in palette_keys]
+        ), f"colors must have a color for each palette key: {palette_keys}"
+
+        plt_fun(data=run_times, y="run_times", x=x, hue=hue, ax=ax, palette=colors)
+
+        despine(ax)
+        if levels_to_keep is None:
+            h, l = ax.get_legend_handles_labels()
+            ax.legend(h, list(labels.values()))
+        ax.set_ylabel("run time (s)")
     return fig
 
 
@@ -179,66 +196,97 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
     if case_keys is None:
         case_keys = list(study.cases.keys())
 
-    count_units = study.get_count_units(case_keys=case_keys)
-    count_units, case_keys, _, _ = aggregate_levels(count_units, study, case_keys, levels_to_keep)
-    count_units = count_units.drop(columns=["num_gt", "num_sorter"])
-    if "num_bad" in count_units.columns:
-        count_units = count_units.drop(columns=["num_bad"])
-
-    # set hue based on exhaustive GT
-    if "num_overmerged" in count_units.columns:
-        hue_order = ["Well Detected", "False Positive", "Redundant", "Overmerged"]
-    else:
-        hue_order = ["Well Detected"]
-
-    for col in count_units.columns:
-        vals = count_units[col].values
-        if not "well_detected" in col:
-            vals = -vals
-        col_name = col.replace("num_", "").replace("_", " ").title()
-        count_units.loc[:, col_name] = vals
-        del count_units[col]
-
-    columns = count_units.columns.tolist()
-    if colors is None:
-        colors = get_some_colors(columns, color_engine="auto", map_name="hot")
-        colors["Well Detected"] = "green"
-    else:
-        assert all([col in colors for col in columns]), f"colors must have a color for each column: {columns}"
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
         fig = ax.get_figure()
 
-    df = pd.melt(
-        count_units.reset_index(),
-        id_vars=levels_to_keep,
-        value_vars=columns,
-        var_name="Unit class",
-        value_name="Count",
-    )
-    if levels_to_keep is not None:
+    count_units = study.get_count_units(case_keys=case_keys)
+
+    if levels_to_keep is None:
+        columns = count_units.columns.tolist()
+        columns.remove("num_gt")
+        columns.remove("num_sorter")
+
+        ncol = len(columns)
+
+        colors = get_some_colors(columns, color_engine="auto", map_name="hot")
+        colors["num_well_detected"] = "green"
+
+        xticklabels = []
+        for i, key in enumerate(case_keys):
+            for c, col in enumerate(columns):
+                x = i + 1 + c / (ncol + 1)
+                y = count_units.loc[key, col]
+                if not "well_detected" in col:
+                    y = -y
+
+                if i == 0:
+                    label = col.replace("num_", "").replace("_", " ").title()
+                else:
+                    label = None
+                ax.bar([x], [y], width=1 / (ncol + 2), label=label, color=colors[col])
+            xticklabels.append(study.cases[key]["label"])
+        ax.set_xticks(np.arange(len(case_keys)) + 1)
+        ax.set_xticklabels(xticklabels, rotation=45.0)
+        ax.legend()
+
+    else:
+
+        count_units, case_keys, _, _ = aggregate_levels(count_units, study, case_keys, levels_to_keep)
+        count_units = count_units.drop(columns=["num_gt", "num_sorter"])
+        if "num_bad" in count_units.columns:
+            count_units = count_units.drop(columns=["num_bad"])
+
+        # set hue based on exhaustive GT
+        if "num_overmerged" in count_units.columns:
+            hue_order = ["Well Detected", "False Positive", "Redundant", "Overmerged"]
+        else:
+            hue_order = ["Well Detected"]
+
+        for col in count_units.columns:
+            vals = count_units[col].values
+            if not "well_detected" in col:
+                vals = -vals
+            col_name = col.replace("num_", "").replace("_", " ").title()
+            count_units.loc[:, col_name] = vals
+            del count_units[col]
+
+        columns = count_units.columns.tolist()
+        if colors is None:
+            colors = get_some_colors(columns, color_engine="auto", map_name="hot")
+            colors["Well Detected"] = "green"
+        else:
+            assert all([col in colors for col in columns]), f"colors must have a color for each column: {columns}"
+
+
+        df = pd.melt(
+            count_units.reset_index(),
+            id_vars=levels_to_keep,
+            value_vars=columns,
+            var_name="Unit class",
+            value_name="Count",
+        )
+
         if len(levels_to_keep) > 1:
             x = " / ".join(levels_to_keep)
             df.loc[:, x] = df.apply(lambda r: " / ".join([str(r[col]) for col in levels_to_keep]), axis=1)
             df = df.drop(columns=levels_to_keep)
         else:
             x = levels_to_keep[0]
-    else:
-        x = None
 
-    sns.barplot(
-        data=df,
-        x=x,
-        y="Count",
-        hue="Unit class",
-        ax=ax,
-        hue_order=hue_order,
-        palette=colors,
-    )
+        sns.barplot(
+            data=df,
+            x=x,
+            y="Count",
+            hue="Unit class",
+            ax=ax,
+            hue_order=hue_order,
+            palette=colors,
+        )
 
-    despine(ax)
+        despine(ax)
 
     return fig
 
