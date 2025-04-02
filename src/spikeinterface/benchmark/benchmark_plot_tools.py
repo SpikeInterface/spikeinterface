@@ -227,7 +227,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
             x = levels_to_keep[0]
     else:
         x = None
-        
+
     sns.barplot(
         data=df,
         x=x,
