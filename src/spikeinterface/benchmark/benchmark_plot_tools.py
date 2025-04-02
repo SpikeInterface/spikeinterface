@@ -133,13 +133,6 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
     else:
         fig = ax.get_figure()
         
-    labels = []
-    for i, key in enumerate(case_keys):
-        labels.append(study.cases[key]["label"])
-        rt = run_times.at[key, "run_times"]
-        ax.bar(i, rt, width=0.8, color=colors[key])
-    ax.set_xticks(np.arange(len(case_keys)))
-    ax.set_xticklabels(labels, rotation=45.0)
     assert all(
         [key in colors for key in palette_keys]
     ), f"colors must have a color for each palette key: {palette_keys}"
