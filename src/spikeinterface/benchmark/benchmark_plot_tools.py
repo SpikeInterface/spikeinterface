@@ -14,6 +14,8 @@ def despine(ax_or_axes):
         sns.despine(ax=ax)
 
 
+
+
 def clean_axis(ax):
     for loc in ("top", "right", "left", "bottom"):
         ax.spines[loc].set_visible(False)
@@ -124,6 +126,7 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
         The resulting figure containing the plots
     """
     import matplotlib.pyplot as plt
+    
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
@@ -134,6 +137,7 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
         fig, ax = plt.subplots(figsize=figsize)
     else:
         fig = ax.get_figure()
+
 
     if levels_to_keep is None:
         colors = study.get_colors()
@@ -178,6 +182,7 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
             colors = study.get_colors(levels_to_group_by=[hue])
             plt_fun = sns.barplot
             palette_keys = hues
+
 
         assert all(
             [key in colors for key in palette_keys]
@@ -224,6 +229,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
+
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -287,6 +293,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
             colors["Well Detected"] = "green"
         else:
             assert all([col in colors for col in columns]), f"colors must have a color for each column: {columns}"
+
 
         df = pd.melt(
             count_units.reset_index(),
@@ -543,6 +550,7 @@ def plot_performances_ordered(
     performance_names=("accuracy", "recall", "precision"),
     levels_to_keep=None,
     orientation="vertical",
+    show_legend=True,
     figsize=None,
     axs=None,
 ):
@@ -561,6 +569,8 @@ def plot_performances_ordered(
         A list of levels to keep. Performances are aggregated by these levels.
     orientation : "vertical" | "horizontal", default: "vertical"
         The orientation of the plot.
+    show_legend : bool, default True
+        Show legend or not
     figsize : tuple | None, default: None
         The size of the figure.
     axs : matplotlib.axes.Axes | None, default: None
@@ -605,7 +615,7 @@ def plot_performances_ordered(
             ax.plot(val, label=label, c=color)
 
         ax.set_title(performance_name)
-        if count == len(performance_names) - 1:
+        if show_legend and (count == len(performance_names) - 1):
             ax.legend(bbox_to_anchor=(0.05, 0.05), loc="lower left", framealpha=0.8)
 
     despine(axs)
