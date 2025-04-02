@@ -83,6 +83,8 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
         A list of levels to keep. Run times are aggregated by these levels.
     figsize : tuple | None, default: None
         The size of the figure.
+    ax : matplotlib.axes.Axes | None, default: None
+        The axes to use for plotting.
 
     Returns
     -------
@@ -168,6 +170,8 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
         A dictionary of colors to use for each class ("Well Detected", "False Positive", "Redundant", "Overmerged").
     figsize : tuple | None, default: None
         The size of the figure.
+    ax : matplotlib.axes.Axes | None, default: None
+        The axes to use for plotting.
 
     Returns
     -------
@@ -256,6 +260,8 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None, axs=None):
     ordered : bool
         Order units with best agreement scores.
         This enable to see agreement on a diagonal.
+    axs : matplotlib.axes.Axes | None, default: None
+        The axs to use for plotting. Should be the same size as len(case_keys).
 
     Returns
     -------
@@ -375,6 +381,8 @@ def plot_performances_vs_snr(
         Levels to group by when mapping case keys.
     orientation : "vertical" | "horizontal", default: "vertical"
         The orientation of the plot.
+    axs : matplotlib.axes.Axes | None, default: None
+        The axs to use for plotting. Should be the same size as len(performance_names).
 
     Returns
     -------
@@ -474,6 +482,8 @@ def plot_performances_ordered(
         The orientation of the plot.
     figsize : tuple | None, default: None
         The size of the figure.
+    axs : matplotlib.axes.Axes | None, default: None
+        The axs to use for plotting. Should be the same size as len(performance_names).
 
     Returns
     -------
@@ -544,6 +554,9 @@ def plot_performances_swarm(study,
         A dictionary of colors to use for each performance name.
     figsize : tuple | None, default: None
         The size of the figure.
+    ax : matplotlib.axes.Axes | None, default: None
+        The ax to use for plotting
+
 
     Returns
     -------
@@ -705,6 +718,8 @@ def plot_performances_vs_depth_and_snr(study,
         The name of the map to use for colors.
     figsize : tuple | None, default: None
         The size of the figure.
+    axs : matplotlib.axes.Axes | None, default: None
+        The axs to use for plotting. Should be the same size as len(case_keys).
 
     Returns
     -------
@@ -789,6 +804,8 @@ def plot_performance_losses(study,
         The name of the map to use for colors.
     figsize : tuple | None, default: None
         The size of the figure.
+    axs : matplotlib.axes.Axes | None, default: None
+        The axs to use for plotting. Should be the same size as len(performance_names).
 
     Returns
     -------
