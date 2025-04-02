@@ -69,7 +69,7 @@ def aggregate_levels(df, study, case_keys=None, levels_to_keep=None):
     return df, new_case_keys, labels, colors
 
 
-def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None):
+def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=None):
     """
     Plot run times for a BenchmarkStudy.
 
@@ -83,6 +83,8 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None):
         A list of levels to keep. Run times are aggregated by these levels.
     figsize : tuple | None, default: None
         The size of the figure.
+    ax : matplotlib.axes.Axes | None, default: None
+        The axes to use for plotting.
 
     Returns
     -------
@@ -126,11 +128,14 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None):
         plt_fun = sns.barplot
         palette_keys = hues
 
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
+
     assert all(
         [key in colors for key in palette_keys]
     ), f"colors must have a color for each palette key: {palette_keys}"
-
-    fig, ax = plt.subplots(figsize=figsize)
 
     plt_fun(data=run_times, y="run_times", x=x, hue=hue, ax=ax, palette=colors)
 
@@ -142,7 +147,7 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None):
     return fig
 
 
-def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, figsize=None):
+def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, figsize=None, ax=None):
     """
     Plot unit counts for a study: "num_well_detected", "num_false_positive", "num_redundant", "num_overmerged"
 
@@ -158,6 +163,8 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
         A dictionary of colors to use for each class ("Well Detected", "False Positive", "Redundant", "Overmerged").
     figsize : tuple | None, default: None
         The size of the figure.
+    ax : matplotlib.axes.Axes | None, default: None
+        The axes to use for plotting.
 
     Returns
     -------
@@ -199,7 +206,10 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
     else:
         assert all([col in colors for col in columns]), f"colors must have a color for each column: {columns}"
 
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
 
     df = pd.melt(
         count_units.reset_index(),
@@ -208,12 +218,15 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
         var_name="Unit class",
         value_name="Count",
     )
-    if len(levels_to_keep) > 1:
-        x = " / ".join(levels_to_keep)
-        df.loc[:, x] = df.apply(lambda r: " / ".join([str(r[col]) for col in levels_to_keep]), axis=1)
-        df = df.drop(columns=levels_to_keep)
+    if levels_to_keep is not None:
+        if len(levels_to_keep) > 1:
+            x = " / ".join(levels_to_keep)
+            df.loc[:, x] = df.apply(lambda r: " / ".join([str(r[col]) for col in levels_to_keep]), axis=1)
+            df = df.drop(columns=levels_to_keep)
+        else:
+            x = levels_to_keep[0]
     else:
-        x = levels_to_keep[0]
+        x = None
 
     sns.barplot(
         data=df,
@@ -230,7 +243,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
     return fig
 
 
-def plot_agreement_matrix(study, ordered=True, case_keys=None):
+def plot_agreement_matrix(study, ordered=True, case_keys=None, axs=None):
     """
     Plot agreement matri ces for cases in a study.
 
@@ -243,6 +256,8 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None):
     ordered : bool
         Order units with best agreement scores.
         This enable to see agreement on a diagonal.
+    axs : matplotlib.axes.Axes | None, default: None
+        The axs to use for plotting. Should be the same size as len(case_keys).
 
     Returns
     -------
@@ -257,10 +272,14 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None):
         case_keys = list(study.cases.keys())
 
     num_axes = len(case_keys)
-    fig, axs = plt.subplots(ncols=num_axes, squeeze=False)
+    if axs is None:
+        fig, axs = plt.subplots(ncols=num_axes, squeeze=True)
+    else:
+        assert len(axs) == num_axes, "axs should have the same number of axes as case_keys"
+        fig = axs[0].get_figure()
 
     for count, key in enumerate(case_keys):
-        ax = axs.flatten()[count]
+        ax = axs[count]
         comp = study.get_result(key)["gt_comparison"]
 
         unit_ticks = len(comp.sorting1.unit_ids) <= 16
@@ -335,6 +354,7 @@ def plot_performances_vs_snr(
     figsize=None,
     performance_names=("accuracy", "recall", "precision"),
     snr_dataset_reference=None,
+    axs=None,
     levels_to_keep=None,
     orientation="vertical",
 ):
@@ -357,6 +377,8 @@ def plot_performances_vs_snr(
         Levels to group by when mapping case keys.
     orientation : "vertical" | "horizontal", default: "vertical"
         The orientation of the plot.
+    axs : matplotlib.axes.Axes | None, default: None
+        The axs to use for plotting. Should be the same size as len(performance_names).
 
     Returns
     -------
@@ -377,7 +399,11 @@ def plot_performances_vs_snr(
     else:
         raise ValueError("orientation must be 'vertical' or 'horizontal'")
 
-    fig, axs = plt.subplots(ncols=ncols, nrows=nrows, figsize=figsize, squeeze=True)
+    if axs is None:
+        fig, axs = plt.subplots(ncols=ncols, nrows=nrows, figsize=figsize, squeeze=True)
+    else:
+        assert len(axs) == len(performance_names), "axs should have the same number of axes as performance_names"
+        fig = axs[0].get_figure()
 
     for count, performance_name in enumerate(performance_names):
 
@@ -433,6 +459,7 @@ def plot_performances_ordered(
     levels_to_keep=None,
     orientation="vertical",
     figsize=None,
+    axs=None,
 ):
     """
     Plot performances ordered by decreasing performance.
@@ -451,6 +478,8 @@ def plot_performances_ordered(
         The orientation of the plot.
     figsize : tuple | None, default: None
         The size of the figure.
+    axs : matplotlib.axes.Axes | None, default: None
+        The axs to use for plotting. Should be the same size as len(performance_names).
 
     Returns
     -------
@@ -468,12 +497,16 @@ def plot_performances_ordered(
     perfs, case_keys, labels, colors = aggregate_levels(perfs, study, case_keys, levels_to_keep)
     assert all([key in colors for key in case_keys]), f"colors must have a color for each case key: {case_keys}"
 
-    if orientation == "vertical":
-        fig, axs = plt.subplots(nrows=num_axes, figsize=figsize, squeeze=True)
-    elif orientation == "horizontal":
-        fig, axs = plt.subplots(ncols=num_axes, figsize=figsize, squeeze=True)
+    if axs is None:
+        if orientation == "vertical":
+            fig, axs = plt.subplots(nrows=num_axes, figsize=figsize, squeeze=True)
+        elif orientation == "horizontal":
+            fig, axs = plt.subplots(ncols=num_axes, figsize=figsize, squeeze=True)
+        else:
+            raise ValueError("orientation must be 'vertical' or 'horizontal'")
     else:
-        raise ValueError("orientation must be 'vertical' or 'horizontal'")
+        assert len(axs) == num_axes, "axs should have the same number of axes as performance_names"
+        fig = axs[0].get_figure()
 
     for count, performance_name in enumerate(performance_names):
         ax = axs[count]
@@ -499,13 +532,12 @@ def plot_performances_swarm(
     study,
     case_keys=None,
     performance_names=("accuracy", "recall", "precision"),
+    figsize=None,
     levels_to_keep=None,
     performance_colors={"accuracy": "g", "recall": "b", "precision": "r"},
-    figsize=None,
+    ax=None,
 ):
     """
-    Plot performances as a swarm plot.
-
     Parameters
     ----------
     study : BenchmarkStudy
@@ -520,6 +552,9 @@ def plot_performances_swarm(
         A dictionary of colors to use for each performance name.
     figsize : tuple | None, default: None
         The size of the figure.
+    ax : matplotlib.axes.Axes | None, default: None
+        The ax to use for plotting
+
 
     Returns
     -------
@@ -540,7 +575,10 @@ def plot_performances_swarm(
         [key in performance_colors for key in performance_names]
     ), f"performance_colors must have a color for each performance name: {performance_names}"
 
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
 
     levels = perfs.index.names
 
@@ -656,11 +694,10 @@ def plot_performances_comparison(
 
 
 def plot_performances_vs_depth_and_snr(
-    study, performance_name="accuracy", case_keys=None, levels_to_keep=None, map_name="viridis", figsize=None
+    study, performance_name="accuracy", case_keys=None, figsize=None, levels_to_keep=None, map_name="viridis", axs=None
 ):
     """
     Plot performances vs depth and snr for a study.
-
     Parameters
     ----------
     study : BenchmarkStudy
@@ -675,6 +712,8 @@ def plot_performances_vs_depth_and_snr(
         The name of the map to use for colors.
     figsize : tuple | None, default: None
         The size of the figure.
+    axs : matplotlib.axes.Axes | None, default: None
+        The axs to use for plotting. Should be the same size as len(case_keys).
 
     Returns
     -------
@@ -687,7 +726,12 @@ def plot_performances_vs_depth_and_snr(
         case_keys = list(study.cases.keys())
 
     case_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_keep)
-    fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+
+    if axs is None:
+        fig, axs = plt.subplots(ncols=len(case_keys), figsize=figsize, squeeze=True)
+    else:
+        assert len(axs) == len(case_keys), "axs should have the same number of axes as case_keys"
+        fig = axs[0].get_figure()
 
     for count, (key, key_list) in enumerate(case_keys.items()):
         all_snrs = []
@@ -710,7 +754,7 @@ def plot_performances_vs_depth_and_snr(
         perfs = np.concatenate(all_perfs)
         depth = np.concatenate(all_depths)
 
-        ax = axs[0, count]
+        ax = axs[count]
         points = ax.scatter(depth, snr, c=perfs, label="matched", cmap=map_name)
         points.set_clim(0, 1)
         ax.set_xlabel("depth")
@@ -730,7 +774,9 @@ def plot_performances_vs_depth_and_snr(
     return fig
 
 
-def plot_performance_losses(study, case0, case1, performance_names=["accuracy"], map_name="coolwarm", figsize=None):
+def plot_performance_losses(
+    study, case0, case1, performance_names=["accuracy"], map_name="coolwarm", figsize=None, axs=None
+):
     """
     Plot performance losses between two cases.
 
@@ -748,6 +794,8 @@ def plot_performance_losses(study, case0, case1, performance_names=["accuracy"],
         The name of the map to use for colors.
     figsize : tuple | None, default: None
         The size of the figure.
+    axs : matplotlib.axes.Axes | None, default: None
+        The axs to use for plotting. Should be the same size as len(performance_names).
 
     Returns
     -------
@@ -756,11 +804,15 @@ def plot_performance_losses(study, case0, case1, performance_names=["accuracy"],
     """
     import matplotlib.pyplot as plt
 
-    fig, axs = plt.subplots(ncols=1, nrows=len(performance_names), figsize=figsize, squeeze=False)
+    if axs is None:
+        fig, axs = plt.subplots(nrows=len(performance_names), figsize=figsize, squeeze=True)
+    else:
+        assert len(axs) == len(performance_names), "axs should have the same number of axes as performance_names"
+        fig = axs[0].get_figure()
 
     for count, perf_name in enumerate(performance_names):
 
-        ax = axs[0, count]
+        ax = axs[count]
 
         positions = study.get_gt_unit_locations(case0)
 
