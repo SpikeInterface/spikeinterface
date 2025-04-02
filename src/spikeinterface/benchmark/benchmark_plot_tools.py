@@ -152,7 +152,7 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
     return fig
 
 
-def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, figsize=None ax=None):
+def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, figsize=None, ax=None):
     """
     Plot unit counts for a study: "num_well_detected", "num_false_positive", "num_redundant", "num_overmerged"
 
