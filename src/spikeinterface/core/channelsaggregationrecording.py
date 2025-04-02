@@ -14,7 +14,15 @@ class ChannelsAggregationRecording(BaseRecording):
 
     """
 
-    def __init__(self, recording_list_or_dict, renamed_channel_ids=None):
+    def __init__(self, recording_list_or_dict=None, renamed_channel_ids=None, recording_list=None):
+
+        if recording_list is not None:
+            warnings.warn(
+                "`recording_list` is deprecated and will be removed in 0.105.0. Please use `recording_list_or_dict` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            recording_list_or_dict = recording_list
 
         if isinstance(recording_list_or_dict, dict):
             recording_list = list(recording_list_or_dict.values())
@@ -258,12 +266,4 @@ def aggregate_channels(
         The aggregated recording object
     """
 
-    if recording_list is not None:
-        warnings.warn(
-            "`recording_list` is deprecated and will be removed in 0.105.0. Please use `recording_list_or_dict` instead.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        recording_list_or_dict = recording_list
-
-    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids)
+    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids, recording_list)
