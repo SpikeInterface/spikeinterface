@@ -120,7 +120,7 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
 
 def test_metric_names_in_same_order(small_sorting_analyzer):
     """
-    Computes sepecified quality metrics and checks order is propogated.
+    Computes sepecified quality metrics and checks order is propagated.
     """
     specified_metric_names = ["firing_range", "snr", "amplitude_cutoff"]
     small_sorting_analyzer.compute("quality_metrics", metric_names=specified_metric_names)

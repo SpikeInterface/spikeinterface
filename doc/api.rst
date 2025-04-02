@@ -143,7 +143,9 @@ Non-NEO-based
     .. autofunction:: read_mcsh5
     .. autofunction:: read_mda_recording
     .. autofunction:: read_mda_sorting
-    .. autofunction:: read_nwb
+    .. autofunction:: read_nwb_sorting
+    .. autofunction:: read_nwb_recording
+    .. autofunction:: read_nwb_timeseries
     .. autofunction:: read_phy
     .. autofunction:: read_shybrid_recording
     .. autofunction:: read_shybrid_sorting
@@ -168,7 +170,7 @@ spikeinterface.preprocessing
     .. autofunction:: astype
     .. autofunction:: average_across_direction
     .. autofunction:: bandpass_filter
-    .. autofunction:: blank_staturation
+    .. autofunction:: blank_saturation
     .. autofunction:: center
     .. autofunction:: clip
     .. autofunction:: common_reference
