@@ -132,7 +132,7 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
         fig, ax = plt.subplots(figsize=figsize)
     else:
         fig = ax.get_figure()
-        
+
     assert all(
         [key in colors for key in palette_keys]
     ), f"colors must have a color for each palette key: {palette_keys}"
@@ -184,7 +184,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
     count_units = count_units.drop(columns=["num_gt", "num_sorter"])
     if "num_bad" in count_units.columns:
         count_units = count_units.drop(columns=["num_bad"])
-        
+
     # set hue based on exhaustive GT
     if "num_overmerged" in count_units.columns:
         hue_order = ["Well Detected", "False Positive", "Redundant", "Overmerged"]
@@ -295,7 +295,7 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None, axs=None):
             ax.set_ylabel(None)
             ax.set_yticks([])
         ax.set_xticks([])
-    
+
     return fig
 
 
@@ -459,7 +459,7 @@ def plot_performances_ordered(
     levels_to_keep=None,
     orientation="vertical",
     figsize=None,
-    axs=None
+    axs=None,
 ):
     """
     Plot performances ordered by decreasing performance.
@@ -528,13 +528,15 @@ def plot_performances_ordered(
     return fig
 
 
-def plot_performances_swarm(study, 
-                            case_keys=None, 
-                            performance_names=("accuracy", "recall", "precision"), 
-                            figsize=None, 
-                            levels_to_keep=None,
-                            performance_colors={"accuracy": "g", "recall": "b", "precision": "r"},
-                            ax=None):
+def plot_performances_swarm(
+    study,
+    case_keys=None,
+    performance_names=("accuracy", "recall", "precision"),
+    figsize=None,
+    levels_to_keep=None,
+    performance_colors={"accuracy": "g", "recall": "b", "precision": "r"},
+    ax=None,
+):
     """
     Parameters
     ----------
@@ -691,13 +693,9 @@ def plot_performances_comparison(
     return fig
 
 
-def plot_performances_vs_depth_and_snr(study, 
-                                       performance_name="accuracy", 
-                                       case_keys=None, 
-                                       figsize=None, 
-                                       levels_to_keep=None, 
-                                       map_name="viridis", 
-                                       axs=None):
+def plot_performances_vs_depth_and_snr(
+    study, performance_name="accuracy", case_keys=None, figsize=None, levels_to_keep=None, map_name="viridis", axs=None
+):
     """
     Plot performances vs depth and snr for a study.
     Parameters
@@ -776,13 +774,9 @@ def plot_performances_vs_depth_and_snr(study,
     return fig
 
 
-def plot_performance_losses(study, 
-                            case0, 
-                            case1, 
-                            performance_names=["accuracy"], 
-                            map_name="coolwarm", 
-                            figsize=None,
-                            axs=None):
+def plot_performance_losses(
+    study, case0, case1, performance_names=["accuracy"], map_name="coolwarm", figsize=None, axs=None
+):
     """
     Plot performance losses between two cases.
 
