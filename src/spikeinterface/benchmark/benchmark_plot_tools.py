@@ -211,6 +211,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
     else:
         fig = ax.get_figure()
 
+    print(count_units)
     df = pd.melt(
         count_units.reset_index(),
         id_vars=levels_to_keep,
@@ -218,6 +219,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
         var_name="Unit class",
         value_name="Count",
     )
+    print(df)
     if levels_to_keep is not None:
         if len(levels_to_keep) > 1:
             x = " / ".join(levels_to_keep)

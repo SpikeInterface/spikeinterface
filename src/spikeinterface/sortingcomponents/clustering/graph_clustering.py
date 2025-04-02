@@ -16,32 +16,16 @@ class GraphClustering:
     Then a classic algorithm like louvain or hdbscan is used.
     """
 
-    # _default_params = {
-    #     "radius_um": 180.,
-    #     "bin_um": 60.,
-    #     "motion": None,
-    #     "seed": None,
-    #     "n_neighbors": 15,
-    #     # "clustering_method": "leidenalg",
-    #     "clustering_method": "sknetwork-leiden",
-    # }
-
-
     _default_params = {
-        "radius_um": 140.,
-        # "bin_um": 30.,
-
-        # "radius_um": 180.,
-        # "bin_um": 60.,
-
+        "radius_um": 100.,
 
         "ms_before" : 1.,
-        "ms_after" : 2,
+        "ms_after" : 2.,
         "motion": None,
         "seed": None,
         "graph_kwargs" : dict(
             bin_mode="channels",
-            neighbors_radius_um=60.,
+            neighbors_radius_um=50.,
 
             # bin_mode="vertical_bins",
             # bin_um=30.,
@@ -49,7 +33,7 @@ class GraphClustering:
 
             normed_distances=True,
             # n_neighbors=15,
-            n_neighbors=25,
+            n_neighbors=50,
             # n_components=0.8,
             n_components=10,
             sparse_mode="knn",
@@ -69,17 +53,16 @@ class GraphClustering:
             cluster_selection_epsilon=0.1,
         ),
         "peak_locations" : None,
-        # "extract_peaks_svd_kwargs" : dict()
+        "extract_peaks_svd_kwargs" : dict(
+            n_components=5
+        ),
     }
-
-
 
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
 
         radius_um = params["radius_um"]
-        # bin_um = params["bin_um"]
         motion = params["motion"]
         seed = params["seed"]
         clustering_method = params["clustering_method"]
@@ -100,34 +83,23 @@ class GraphClustering:
             radius_um=radius_um,
             motion_aware=motion_aware,
             motion=None,
+            **params['extract_peaks_svd_kwargs'],
+            # **job_kwargs
         )
-        # print(peaks_svd.shape)
 
-
-
-        channel_locations = recording.get_channel_locations()
-        channel_depth = channel_locations[:, 1]
-        peak_depths = channel_depth[peaks["channel_index"]]
-
-        # order peaks by depth
-        order = np.argsort(peak_depths)
-        ordered_peaks = peaks[order]
-        ordered_peaks_svd = peaks_svd[order]
-
-        # TODO : try to use real peak location
-        
         # some method need a symetric matrix
         ensure_symetric = clustering_method in ("hdbscan", )
 
         distances = create_graph_from_peak_features(
             recording,
-            ordered_peaks,
-            ordered_peaks_svd,
+            peaks,
+            peaks_svd,
             sparse_mask,
             peak_locations=None,
             # bin_um=bin_um,
             ensure_symetric=ensure_symetric,
-            **graph_kwargs
+            **graph_kwargs,
+            
         )
 
         # print(distances)
@@ -145,7 +117,7 @@ class GraphClustering:
             distances_bool.data[:] = 1
             G = nx.Graph(distances_bool)
             communities = nx.community.louvain_communities(G, seed=seed)
-            peak_labels = np.zeros(ordered_peaks.size, dtype=int)
+            peak_labels = np.zeros(peaks.size, dtype=int)
             peak_labels[:] = -1
             k = 0
             for community in communities:
@@ -193,44 +165,30 @@ class GraphClustering:
 
             # print(np.unique(connected_labels))
             # print("n_graph", n_graph)
-            peak_labels = np.zeros(ordered_peaks.size, dtype='int64')
+            peak_labels = np.zeros(peaks.size, dtype='int64')
             peak_labels[:] = -1
 
             label_count = 0
             for g in range(n_graph):
-                rows = np.flatnonzero(connected_labels == g)
-                if len(rows) == 1:
+                connected_nodes = np.flatnonzero(connected_labels == g)
+                if len(connected_nodes) == 1:
                     continue
                 
-                local_dist = distances[rows, :][:, rows]
+                local_dist = distances[connected_nodes, :].tocsc()[:, connected_nodes].tocsr()
 
-                has_neibhor = np.array(np.sum(local_dist>0, axis=1) > 1)
-                has_neibhor = has_neibhor[:, 0]
-
-                rows = rows[has_neibhor]
-                local_dist = distances[rows, :].tocsc()[:, rows].tocsr()
-
-
-                max_dist=(local_dist.max() - local_dist.min()) * 1000
-
-
-                import time
-                t0 = time.perf_counter()
+                # import time
+                # t0 = time.perf_counter()
                 clusterer = HDBSCAN(
                     metric="precomputed",
                     **clustering_kwargs
                 )
                 local_labels = clusterer.fit_predict(local_dist)
-                t1 = time.perf_counter()
-                print("hdbscan", t1-t0)
+                # t1 = time.perf_counter()
+                # print("hdbscan", t1-t0)
 
-
-
-                mask = local_labels>=0
-                if np.sum(mask):
-
-                    peak_labels[rows[mask]] = local_labels[mask] + label_count
-
+                valid_clusters = np.flatnonzero(local_labels>=0)
+                if valid_clusters.size:
+                    peak_labels[connected_nodes[valid_clusters]] = local_labels[valid_clusters] + label_count
                     label_count += max(np.max(local_labels), 0)
 
 
@@ -240,10 +198,6 @@ class GraphClustering:
         labels_set = np.unique(peak_labels)
         labels_set = labels_set[labels_set >= 0]
 
-        # we need to reorder labels
-        reverse_order = np.argsort(order)
-        peak_labels = peak_labels[reverse_order]
-        
         return labels_set, peak_labels
 
 
