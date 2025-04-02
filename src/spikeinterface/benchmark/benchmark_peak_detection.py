@@ -152,7 +152,6 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["sliced_gt_comparison"], ax=ax)
 
-
     def plot_detected_amplitudes(self, case_keys=None, figsize=(15, 5), detect_threshold=None, axs=None):
 
         if case_keys is None:
@@ -175,7 +174,7 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.hist(data1, bins=bins, label="detected", histtype="step", color=color, linewidth=2)
             ax.hist(data2, bins=bins, alpha=0.1, label="gt", color="k")
             ax.set_yscale("log")
-            #ax.set_title(self.cases[key]["label"])
+            # ax.set_title(self.cases[key]["label"])
             ax.legend()
             if detect_threshold is not None:
                 noise_levels = get_noise_levels(self.benchmarks[key].recording, return_scaled=False).mean()
@@ -205,7 +204,7 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.set_xticks(np.arange(len(gt_sorting.unit_ids)), gt_sorting.unit_ids)
             ax.set_ylabel("# frames")
             ax.set_xlabel("unit id")
-    
+
     def plot_mean_deltas(self, case_keys=None, figsize=(15, 5), ax=None):
 
         if case_keys is None:
@@ -232,24 +231,24 @@ class PeakDetectionStudy(BenchmarkStudy):
             colors += [self.get_colors()[key]]
         despine(ax)
         plots = ax.violinplot(
-            results.values(), 
-            range(len(case_keys)), 
-            showmeans=True, 
-            showmedians=False, 
+            results.values(),
+            range(len(case_keys)),
+            showmeans=True,
+            showmedians=False,
             showextrema=False,
         )
 
         # Set the color of the violin patches
-        for pc, color in zip(plots['bodies'], colors):
+        for pc, color in zip(plots["bodies"], colors):
             pc.set_facecolor(color)
             pc.set_edgecolor(color)
 
-        plots['cmeans'].set_colors(colors)
+        plots["cmeans"].set_colors(colors)
 
-        #ax.set_title(self.cases[key]["label"])
+        # ax.set_title(self.cases[key]["label"])
         ax.set_xticks(range(len(case_keys)), labels, rotation=45)
         ax.set_ylabel("# frames")
-        #ax.set_xlabel("unit id")
+        # ax.set_xlabel("unit id")
 
     def plot_template_similarities(self, case_keys=None, metric="l2", figsize=(15, 5), detect_threshold=None, ax=None):
 
