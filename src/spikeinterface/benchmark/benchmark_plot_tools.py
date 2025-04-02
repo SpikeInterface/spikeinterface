@@ -14,6 +14,38 @@ def despine(ax_or_axes):
         sns.despine(ax=ax)
 
 
+def clean_axis(ax):
+    for loc in ("top", "right", "left", "bottom"):
+        ax.spines[loc].set_visible(False)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_left()
+
+
+def plot_study_legend(study, case_keys=None, ax=None):
+    """
+    Make a ax with only legend
+    """
+    import matplotlib.pyplot as plt
+    
+    if case_keys is None:
+        case_keys = list(study.cases.keys())
+    
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
+
+    colors = study.get_colors()
+       
+    for k in case_keys:
+        ax.plot([], color=colors[k], label=study.cases[k]['label'])
+    ax.legend()
+    clean_axis(ax)
+    return fig
+
+
 def aggregate_levels(df, study, case_keys=None, levels_to_keep=None):
     """
     Aggregate a DataFrame by dropping levels not to keep.
@@ -81,8 +113,8 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
         A selection of cases to plot, if None, then all.
     levels_to_keep : list | None, default: None
         A list of levels to keep. Run times are aggregated by these levels.
-    figsize : tuple | None, default: None
-        The size of the figure.
+    show_legend : bool, default True
+        Show legend or not
     ax : matplotlib.axes.Axes | None, default: None
         The axes to use for plotting.
 
@@ -402,9 +434,10 @@ def plot_performances_vs_snr(
     figsize=None,
     performance_names=("accuracy", "recall", "precision"),
     snr_dataset_reference=None,
-    axs=None,
     levels_to_keep=None,
     orientation="vertical",
+    show_legend=True,
+    axs=None,
 ):
     """
     Plots performance metrics against signal-to-noise ratio (SNR) for different cases in a study.
@@ -425,6 +458,8 @@ def plot_performances_vs_snr(
         Levels to group by when mapping case keys.
     orientation : "vertical" | "horizontal", default: "vertical"
         The orientation of the plot.
+    show_legend : bool, default True
+        Show legend or not
     axs : matplotlib.axes.Axes | None, default: None
         The axs to use for plotting. Should be the same size as len(performance_names).
 
@@ -456,11 +491,18 @@ def plot_performances_vs_snr(
     for count, performance_name in enumerate(performance_names):
 
         ax = axs[count]
-        case_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_keep)
+        if levels_to_keep is not None:
+            case_group_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_keep)
+        else:
+            labels = {k: study.cases[k]['label'] for k in case_keys}
+            case_group_keys = {k : [k] for k in case_keys}
+            
+
         colors = study.get_colors(levels_to_group_by=levels_to_keep)
+        
         assert all([key in colors for key in case_keys]), f"colors must have a color for each case key: {case_keys}"
 
-        for key, key_list in case_keys.items():
+        for key, key_list in case_group_keys.items():
             color = colors[key]
             label = labels[key]
             all_xs = []
@@ -484,7 +526,7 @@ def plot_performances_vs_snr(
             all_ys = np.concatenate(all_ys)
 
             ax.scatter(all_xs, all_ys, marker=".", label=label, color=color)
-            ax.set_title(performance_name)
+            ax.set_ylabel(performance_name)
 
             popt = fit_sigmoid(all_xs, all_ys, p0=None)
             xfit = np.linspace(0, max(x), 100)
@@ -492,7 +534,7 @@ def plot_performances_vs_snr(
 
         ax.set_ylim(-0.05, 1.05)
 
-        if count == 2:
+        if show_legend and (count == len(performance_names) - 1):
             ax.legend()
 
     despine(axs)
