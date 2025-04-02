@@ -8,7 +8,7 @@ from spikeinterface.widgets import (
 )
 from spikeinterface.comparison.comparisontools import make_matching_events
 from spikeinterface.core import get_noise_levels
-
+from spikeinterface.benchmark.benchmark_plot_tools import despine
 
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
@@ -167,6 +167,7 @@ class PeakDetectionStudy(BenchmarkStudy):
 
         for count, key in enumerate(case_keys):
             ax = axs[count]
+            despine(ax)
             data1 = self.get_result(key)["peaks"]["amplitude"]
             data2 = self.get_result(key)["gt_amplitudes"]
             color = self.get_colors()[key]
@@ -229,7 +230,7 @@ class PeakDetectionStudy(BenchmarkStudy):
                 results[key] += [np.mean(data["deltas"][mask])]
 
             colors += [self.get_colors()[key]]
-
+        despine(ax)
         plots = ax.violinplot(
             results.values(), 
             range(len(case_keys)), 
@@ -290,7 +291,7 @@ class PeakDetectionStudy(BenchmarkStudy):
             x = metrics["snr"].values
             y = distances
             ax.scatter(x, y, marker=".", label=label, color=color)
-
+            despine(ax)
             popt = fit_sigmoid(x, y, p0=None)
             xfit = np.linspace(0, max(metrics["snr"].values), 100)
             ax.plot(xfit, sigmoid(xfit, *popt), color=color)
