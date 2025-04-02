@@ -354,7 +354,6 @@ class InterpolateMotionRecording(BasePreprocessor):
         **spatial_interpolation_kwargs,
     ):
         # assert recording.get_num_segments() == 1, "correct_motion() is only available for single-segment recordings"
-
         channel_locations = recording.get_channel_locations()
         assert channel_locations.ndim >= motion.dim, (
             f"'direction' {motion.direction} not available. "
