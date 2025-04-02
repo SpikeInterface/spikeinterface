@@ -28,6 +28,7 @@ dependencies = [
     "neo>=0.14.0",
     "probeinterface>=0.2.23",
     "packaging",
+    "pydantic",
 ]
 
 [build-system]
