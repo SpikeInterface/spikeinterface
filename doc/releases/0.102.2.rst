@@ -9,6 +9,7 @@ Minor release with bug fixes
 
 core:
 
+* Add check that `remove_channel_ids` are in parent recording (#3822)
 * Print zarr exception if `super_zarr_open` fails (#3803)
 * Add `_precomputable_kwarg_names` to `BaseExtractor` (#3781)
 * Fix dict representation in aggregation (numpy 2.0) (#3744)
@@ -55,6 +56,7 @@ widgets:
 * In sorting_summary: `rp_violation` -> `rp_violations` (#3770)
 * Support new sortingview and kachery (#3762)
 * Pin sortingview version (#3757)
+* Fitting scaling factors in waveform/template plots for irregular probe layouts (#3748)
 * Fix `extra_properties` propagation in sorting summary and SV string properties (#3716)
 * Enhance the CC plots (#3713)
 * Add `BaseRasterWidget` (#3661)
@@ -63,6 +65,7 @@ widgets:
 
 sortingcomponents:
 
+* Prevent error of trying to delete non-existent variable in sorting components (#3820)
 * Ks clustering (#3712)
 * Peak SVD motion extraction (#3693)
 * Implement motion_aware option in tdc-peeler (#3682)
@@ -76,6 +79,7 @@ motion correction:
 
 documentation:
 
+* Switch `print` to `warnings.warn` (#3811)
 * Add nwb extractors to API docs (#3810)
 * Fixed typo in import statement (#3791)
 * Clean up all docs warnings (#3746)
@@ -88,6 +92,9 @@ continuous integration:
 
 packaging:
 
+* Update floor of `setuptools` for metadata (#3800)
+* Switch `numba` check to `importlib.util.find_spec` (#3797)
+* Cleanup imports and use `importlib.util.find_spec` rather than try-except (#3795)
 * Replace deep relative imports with absolute imports (#3766)
 * Add psutil to [test] (#3759)
 
@@ -110,3 +117,4 @@ Contributors:
 * @samuelgarcia
 * @yger
 * @zm711
+* @zzhmark
