@@ -124,7 +124,6 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
         The resulting figure containing the plots
     """
     import matplotlib.pyplot as plt
-    
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
@@ -135,7 +134,6 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
         fig, ax = plt.subplots(figsize=figsize)
     else:
         fig = ax.get_figure()
-
 
     if levels_to_keep is None:
         colors = study.get_colors()
@@ -180,7 +178,6 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
             colors = study.get_colors(levels_to_group_by=[hue])
             plt_fun = sns.barplot
             palette_keys = hues
-
 
         assert all(
             [key in colors for key in palette_keys]
@@ -227,7 +224,6 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
-
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -291,7 +287,6 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
             colors["Well Detected"] = "green"
         else:
             assert all([col in colors for col in columns]), f"colors must have a color for each column: {columns}"
-
 
         df = pd.melt(
             count_units.reset_index(),
