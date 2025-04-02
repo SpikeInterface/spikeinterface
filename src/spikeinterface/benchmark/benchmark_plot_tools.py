@@ -218,13 +218,16 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
         var_name="Unit class",
         value_name="Count",
     )
-    if len(levels_to_keep) > 1:
-        x = " / ".join(levels_to_keep)
-        df.loc[:, x] = df.apply(lambda r: " / ".join([str(r[col]) for col in levels_to_keep]), axis=1)
-        df = df.drop(columns=levels_to_keep)
+    if levels_to_keep is not None:
+        if len(levels_to_keep) > 1:
+            x = " / ".join(levels_to_keep)
+            df.loc[:, x] = df.apply(lambda r: " / ".join([str(r[col]) for col in levels_to_keep]), axis=1)
+            df = df.drop(columns=levels_to_keep)
+        else:
+            x = levels_to_keep[0]
     else:
-        x = levels_to_keep[0]
-
+        x = None
+        
     sns.barplot(
         data=df,
         x=x,
