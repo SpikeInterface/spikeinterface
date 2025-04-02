@@ -63,9 +63,10 @@ class GraphClustering:
             # n_jobs=-1,
             core_dist_n_jobs=-1,
             min_cluster_size=50,
-            # cluster_selection_method='leaf',
-            cluster_selection_method='eom',
-            allow_single_cluster=True
+            cluster_selection_method='leaf',
+            # cluster_selection_method='eom',
+            allow_single_cluster=True,
+            cluster_selection_epsilon=0.1,
         ),
         "peak_locations" : None,
         # "extract_peaks_svd_kwargs" : dict()
