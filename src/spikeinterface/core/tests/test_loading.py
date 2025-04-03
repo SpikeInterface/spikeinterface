@@ -1,7 +1,14 @@
 import pytest
 
 import numpy as np
-from spikeinterface import generate_ground_truth_recording, create_sorting_analyzer, load, SortingAnalyzer, Templates
+from spikeinterface import (
+    generate_ground_truth_recording,
+    create_sorting_analyzer,
+    load,
+    SortingAnalyzer,
+    Templates,
+    aggregate_channels,
+)
 from spikeinterface.core.motion import Motion
 from spikeinterface.core.generate import generate_unit_locations, generate_templates
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
@@ -174,6 +181,24 @@ def test_load_motion(tmp_path, generate_motion_object):
     motion_loaded = load(tmp_path / "motion")
 
     assert motion == motion_loaded
+
+
+def test_load_aggregate_recording_from_json(generate_recording_sorting, tmp_path):
+    """
+    Save, then load an aggregated recording using its provenance.json file.
+    """
+
+    recording, _ = generate_recording_sorting
+
+    recording.set_property("group", [0, 0, 1, 1])
+    list_of_recs = list(recording.split_by("group").values())
+    aggregated_rec = aggregate_channels(list_of_recs)
+
+    recording_path = tmp_path / "aggregated_recording"
+    aggregated_rec.save_to_folder(folder=recording_path)
+    loaded_rec = load(recording_path / "provenance.json", base_folder=recording_path)
+
+    assert np.all(loaded_rec.get_property("group") == recording.get_property("group"))
 
 
 @pytest.mark.streaming_extractors
