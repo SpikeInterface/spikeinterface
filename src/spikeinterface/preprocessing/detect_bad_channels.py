@@ -96,22 +96,24 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
 
     def __init__(
         self,
-        recording: BaseRecording,
+        parent_recording: BaseRecording,
         bad_channel_ids=None,
         **detect_bad_channels_kwargs,
     ):
 
         if bad_channel_ids is None:
-            bad_channel_ids, channel_labels = detect_bad_channels(recording=recording, **detect_bad_channels_kwargs)
+            bad_channel_ids, channel_labels = detect_bad_channels(
+                recording=parent_recording, **detect_bad_channels_kwargs
+            )
         else:
             channel_labels = None
 
-        self._main_ids = recording.get_channel_ids()
+        self._main_ids = parent_recording.get_channel_ids()
         new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, bad_channel_ids)]
 
         ChannelSliceRecording.__init__(
             self,
-            recording,
+            parent_recording=parent_recording,
             channel_ids=new_channel_ids,
         )
 
