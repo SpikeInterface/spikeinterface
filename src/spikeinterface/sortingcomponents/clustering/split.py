@@ -253,9 +253,11 @@ class LocalFeatureClustering:
             nb_dimensions = min(flatten_features.shape[0], flatten_features.shape[1])
             if projection_mode == "pca":
                 from sklearn.decomposition import PCA
+
                 tsvd = PCA(nb_dimensions, whiten=True)
             elif projection_mode == "tsvd":
                 from sklearn.decomposition import TruncatedSVD
+
                 tsvd = TruncatedSVD(nb_dimensions)
             final_features = tsvd.fit_transform(flatten_features)
             n_explain = np.sum(np.cumsum(tsvd.explained_variance_ratio_) <= n_pca_features) + 1
@@ -265,9 +267,11 @@ class LocalFeatureClustering:
             if flatten_features.shape[1] > n_pca_features:
                 if projection_mode == "pca":
                     from sklearn.decomposition import PCA
+
                     tsvd = PCA(n_pca_features, whiten=True)
                 elif projection_mode == "tsvd":
                     from sklearn.decomposition import TruncatedSVD
+
                     tsvd = TruncatedSVD(n_pca_features)
 
                 final_features = tsvd.fit_transform(flatten_features)
