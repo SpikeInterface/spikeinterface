@@ -194,7 +194,7 @@ def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
     return aligned_waveforms
 
 
-def get_templates_from_recording(
+def get_templates_from_peaks_and_recording(
     recording,
     peaks,
     peak_labels,
@@ -255,7 +255,15 @@ def get_templates_from_recording(
     return templates
 
 
-def get_templates_from_svd(recording, peaks, peak_labels, ms_before, ms_after, svd_model, svd_features, sparsity_mask):
+def get_templates_from_peaks_and_svd(recording, 
+                                     peaks, 
+                                     peak_labels, 
+                                     ms_before, 
+                                     ms_after, 
+                                     svd_model, 
+                                     svd_features, 
+                                     operator='mean',
+                                     sparsity_mask):
     """
     Get templates from recording using the SVD components
 
@@ -284,7 +292,7 @@ def get_templates_from_svd(recording, peaks, peak_labels, ms_before, ms_after, s
         The estimated templates object.
     """
     from spikeinterface.core.template import Templates
-
+    assert operator in ['mean', 'median'], "operator should be either 'mean' or 'median'"
     mask = peak_labels > -1
     labels = np.unique(peak_labels[mask])
 
@@ -302,8 +310,11 @@ def get_templates_from_svd(recording, peaks, peak_labels, ms_before, ms_after, s
         best_channel = peak_channels[np.argmax(b)]
         sub_mask = local_peaks["channel_index"] == best_channel
         for count, i in enumerate(np.flatnonzero(sparsity_mask[best_channel])):
-            data = svd_model.inverse_transform(local_svd[sub_mask, :, count])
-            templates_array[unit_ind, :, i] = np.median(data, 0)
+            if operator == 'mean':
+                data = np.mean(local_svd[sub_mask, :, count], 0)
+            elif operator == 'median':
+                data = np.median(local_svd[sub_mask, :, count], 0)
+            templates_array[unit_ind, :, i] = svd_model.inverse_transform()
 
     templates = Templates(
         templates_array=templates_array,
@@ -317,26 +328,3 @@ def get_templates_from_svd(recording, peaks, peak_labels, ms_before, ms_after, s
     )
 
     return templates
-
-
-def get_templates_from_clusters(
-    recording,
-    peaks,
-    peak_labels,
-    ms_before,
-    ms_after,
-    svd_model=None,
-    svd_features=None,
-    sparsity_mask=None,
-    **job_kwargs,
-):
-
-    if svd_model is None:
-        return get_templates_from_recording(recording, peaks, peak_labels, ms_before, ms_after, **job_kwargs)
-    else:
-        assert (
-            svd_features is not None and sparsity_mask is not None
-        ), "svd_features and sparsity_mask are required when svd_model is provided"
-        return get_templates_from_svd(
-            recording, peaks, peak_labels, ms_before, ms_after, svd_model, svd_features, sparsity_mask
-        )
