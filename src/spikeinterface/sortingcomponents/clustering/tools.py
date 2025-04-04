@@ -255,13 +255,13 @@ def get_templates_from_peaks_and_recording(
     return templates
 
 
-def get_templates_from_peaks_and_svd(recording, 
-                                     peaks, 
-                                     peak_labels, 
-                                     ms_before, 
-                                     ms_after, 
-                                     svd_model, 
-                                     svd_features, 
+def get_templates_from_peaks_and_svd(recording,
+                                     peaks,
+                                     peak_labels,
+                                     ms_before,
+                                     ms_after,
+                                     svd_model,
+                                     svd_features,
                                      operator='mean',
                                      sparsity_mask):
     """
