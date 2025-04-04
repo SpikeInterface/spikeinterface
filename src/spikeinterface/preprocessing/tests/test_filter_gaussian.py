@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
-from pathlib import Path
-from spikeinterface.core import load, set_global_tmp_folder
+from spikeinterface.core import load
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core.generate import generate_recording
 from spikeinterface.preprocessing import gaussian_filter
