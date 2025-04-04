@@ -86,9 +86,11 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path, true_zeroes, use_synthetic_noise):
-        neo_kwargs = {"filename": str(file_path),
-                      "true_zeroes": true_zeroes,
-                      "use_synthetic_noise": use_synthetic_noise}
+        neo_kwargs = {
+            "filename": str(file_path),
+            "true_zeroes": true_zeroes,
+            "use_synthetic_noise": use_synthetic_noise,
+        }
         return neo_kwargs
 
 
