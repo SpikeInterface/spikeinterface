@@ -3,10 +3,10 @@ import platform
 import subprocess
 import os
 from packaging import version
+import importlib.util
 
 import pytest
 
-from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface import get_global_dataset_folder
 from spikeinterface.extractors import *
 
@@ -40,11 +40,10 @@ def has_plexon2_dependencies():
             return False
 
         # Check for 'zugbruecke' using pip
-        try:
-            import zugbruecke
-
+        zugbruecke_spec = importlib.util.find_spec("zugbruecke")
+        if zugbruecke_spec is not None:
             return True
-        except ImportError:
+        else:
             return False
     else:
         raise ValueError(f"Unsupported OS: {os_type}")

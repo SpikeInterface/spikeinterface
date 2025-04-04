@@ -1,9 +1,4 @@
-import pytest
 import numpy as np
-from pathlib import Path
-import shutil
-
-import probeinterface
 
 from spikeinterface.generation import (
     make_one_displacement_vector,

@@ -1,8 +1,6 @@
 import pytest
-from pathlib import Path
 import numpy as np
 
-from spikeinterface import set_global_tmp_folder
 from spikeinterface.core import generate_recording
 from spikeinterface.core.numpyextractors import NumpyRecording
 
