@@ -13,7 +13,7 @@ def create_graph_from_peak_features(
     peak_features,
     sparse_mask,
     peak_locations=None,
-    bin_mode="channel",
+    bin_mode="channels",
     neighbors_radius_um=60.,
     # bin_mode="vertical_bins",
     bin_um=20.,
