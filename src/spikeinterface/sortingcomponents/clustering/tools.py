@@ -228,6 +228,7 @@ def get_templates_from_recording(
         The estimated templates object.
     """
     from spikeinterface.core.template import Templates
+
     mask = peak_labels > -1
     labels = np.unique(peak_labels[mask])
     fs = recording.get_sampling_frequency()
@@ -235,10 +236,11 @@ def get_templates_from_recording(
     nafter = int(ms_after * fs / 1000.0)
 
     from spikeinterface.core.waveform_tools import estimate_templates
+
     templates_array = estimate_templates(
-            recording, peaks, labels, nbefore, nafter, return_scaled=False, job_name=None, **job_kwargs
-        )
-    
+        recording, peaks, labels, nbefore, nafter, return_scaled=False, job_name=None, **job_kwargs
+    )
+
     templates = Templates(
         templates_array=templates_array,
         sampling_frequency=fs,
@@ -249,19 +251,11 @@ def get_templates_from_recording(
         probe=recording.get_probe(),
         is_scaled=False,
     )
-    
+
     return templates
 
-def get_templates_from_svd(
-    recording,
-    peaks,
-    peak_labels,
-    ms_before,
-    ms_after,
-    svd_model,
-    svd_features,
-    sparsity_mask
-):
+
+def get_templates_from_svd(recording, peaks, peak_labels, ms_before, ms_after, svd_model, svd_features, sparsity_mask):
     """
     Get templates from recording using the SVD components
 
@@ -283,7 +277,7 @@ def get_templates_from_svd(
         The SVD features array.
     sparsity_mask : numpy.ndarray
         The sparsity mask array.
-        
+
     Returns
     -------
     templates : Templates
@@ -324,6 +318,7 @@ def get_templates_from_svd(
 
     return templates
 
+
 def get_templates_from_clusters(
     recording,
     peaks,
@@ -337,18 +332,11 @@ def get_templates_from_clusters(
 ):
 
     if svd_model is None:
-        return get_templates_from_recording(
-            recording, peaks, peak_labels, ms_before, ms_after, **job_kwargs
-        )
+        return get_templates_from_recording(recording, peaks, peak_labels, ms_before, ms_after, **job_kwargs)
     else:
-        assert svd_features is not None and sparsity_mask is not None, "svd_features and sparsity_mask are required when svd_model is provided"
+        assert (
+            svd_features is not None and sparsity_mask is not None
+        ), "svd_features and sparsity_mask are required when svd_model is provided"
         return get_templates_from_svd(
-            recording, 
-            peaks, 
-            peak_labels, 
-            ms_before, 
-            ms_after, 
-            svd_model, 
-            svd_features, 
-            sparsity_mask
+            recording, peaks, peak_labels, ms_before, ms_after, svd_model, svd_features, sparsity_mask
         )
