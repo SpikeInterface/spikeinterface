@@ -161,6 +161,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         # TODO add , regularize=True chen ready
         whitening_kwargs = params["whitening"].copy()
         whitening_kwargs["dtype"] = "float32"
+        whitening_kwargs["seed"] = params["seed"]
         whitening_kwargs["regularize"] = whitening_kwargs.get("regularize", False)
         if num_channels == 1:
             whitening_kwargs["regularize"] = False
@@ -168,7 +169,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             whitening_kwargs["regularize_kwargs"] = {"method": "LedoitWolf"}
 
         recording_w = whiten(recording_f, **whitening_kwargs)
-        noise_levels = get_noise_levels(recording_w, return_scaled=False, **job_kwargs)
+        noise_levels = get_noise_levels(recording_w, 
+                                        random_slices_kwargs={"seed": params["seed"]},
+                                        return_scaled=False, **job_kwargs)
 
         if recording_w.check_serializability("json"):
             recording_w.dump(sorter_output_folder / "preprocessed_recording.json", relative_to=None)
@@ -198,7 +201,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_folder.mkdir(parents=True, exist_ok=True)
             np.save(clustering_folder / "noise_levels.npy", noise_levels)
 
-
         if params["matched_filtering"]:
             prototype, waveforms, _ = get_prototype_and_waveforms_from_recording(
                 recording_w,
@@ -216,19 +218,24 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 np.save(clustering_folder / "prototype.npy", prototype)
             if skip_peaks:
                 detection_params["skip_after_n_peaks"] = n_peaks
-                detection_params["recording_slices"] = get_shuffled_recording_slices(
-                    recording_w, seed=params["seed"], **job_kwargs
-                )
+            detection_params["recording_slices"] = get_shuffled_recording_slices(
+                recording_w, seed=params["seed"], **job_kwargs
+            )
+            detection_params['random_chunk_kwargs'] = {"num_chunks_per_segment": 5, 
+                                                       "seed" : params["seed"]}
+            print(prototype.mean())
+            import sys
+            sys.exit()
             peaks = detect_peaks(recording_w, "matched_filtering", **detection_params, **job_kwargs)
         else:
             waveforms = None
             if skip_peaks:
                 detection_params["skip_after_n_peaks"] = n_peaks
-                detection_params["recording_slices"] = get_shuffled_recording_slices(
-                    recording_w, seed=params["seed"], **job_kwargs
-                )
+            detection_params["recording_slices"] = get_shuffled_recording_slices(
+                recording_w, seed=params["seed"], **job_kwargs
+            )
             peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, **job_kwargs)
-        print(prototype.mean())
+
         if not skip_peaks and verbose:
             print("Found %d peaks in total" % len(peaks))
 
