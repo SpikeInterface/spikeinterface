@@ -159,6 +159,7 @@ class IblRecordingExtractor(BaseRecording):
         if pid is not None:
             assert stream_type is not None, "When providing a PID, you must also provide a stream type."
             eid, _ = one.pid2eid(pid)
+            eid = str(eid)
             pids, probes = one.eid2pid(eid)
             pids = [str(p) for p in pids]
             pname = probes[pids.index(pid)]
