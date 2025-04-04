@@ -192,3 +192,56 @@ def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
             aligned_waveforms[mask, -shift:, :] = wfs[:, :-shift, :]
 
     return aligned_waveforms
+
+
+def get_templates_from_clusters(recording, 
+                                peaks, 
+                                peak_labels,
+                                ms_before, 
+                                ms_after, 
+                                svd_model=None,
+                                svd_features=None,
+                                sparsity_mask=None,
+                                **job_kwargs):
+
+    from spikeinterface.core.template import Templates
+    from spikeinterface.core.waveform_tools import estimate_templates
+
+    mask = peak_labels > -1
+    labels = np.unique(peak_labels[mask])
+
+    fs = recording.get_sampling_frequency()
+    nbefore = int(ms_before * fs / 1000.0)
+    nafter = int(ms_after * fs / 1000.0)
+    num_channels = recording.get_num_channels()
+
+    if svd_model is None:
+        templates_array = estimate_templates(
+            recording, peaks, labels, nbefore, nafter, return_scaled=False, job_name=None, **job_kwargs
+        )
+    else:
+        assert svd_features is not None and sparsity_mask is not None
+        templates_array = np.zeros((len(labels), nbefore+nafter, num_channels), dtype=np.float32)
+        for unit_ind, label in enumerate(labels):
+            mask = peak_labels == label
+            local_peaks = peaks[mask]
+            local_svd = svd_features[mask]
+            peak_channels, b = np.unique(local_peaks['channel_index'], return_counts=True)
+            best_channel = peak_channels[np.argmax(b)]
+            sub_mask = local_peaks['channel_index'] == best_channel
+            for count, i in enumerate(np.flatnonzero(sparsity_mask[best_channel])):
+                data = svd_model.inverse_transform(local_svd[sub_mask, :, count])
+                templates_array[unit_ind, :, i] = np.median(data, 0)
+
+    templates = Templates(
+        templates_array=templates_array,
+        sampling_frequency=fs,
+        nbefore=nbefore,
+        sparsity_mask=None,
+        channel_ids=recording.channel_ids,
+        unit_ids=labels,
+        probe=recording.get_probe(),
+        is_scaled=False,
+    )
+
+    return templates
