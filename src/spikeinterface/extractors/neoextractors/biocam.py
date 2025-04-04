@@ -23,6 +23,13 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         The inter-electrode distance (pitch) between electrodes.
     electrode_width : float, default: None
         Width of the electrodes in um.
+    true_zeroes: bool, default: False
+        For recordings in sparse format: Whether to put 0 in unscaled recording traces,
+        by default fill with 2048, such that scaled traces center around 0.
+        Ignored when use_synthetic_noise is True.
+    use_synthetic_noise: bool, default: False
+        For recordings in sparse format: Whether to fill gaps with synthetic noise
+        matching the channel's noise.
     stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
     stream_name : str, default: None
@@ -41,12 +48,14 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         file_path,
         mea_pitch=None,
         electrode_width=None,
+        true_zeroes=False,
+        use_synthetic_noise=False,
         stream_id=None,
         stream_name=None,
         all_annotations: bool = False,
         use_names_as_ids: bool = False,
     ):
-        neo_kwargs = self.map_to_neo_kwargs(file_path)
+        neo_kwargs = self.map_to_neo_kwargs(file_path, true_zeroes, use_synthetic_noise)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -76,8 +85,12 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         )
 
     @classmethod
-    def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(file_path)}
+    def map_to_neo_kwargs(cls, file_path, true_zeroes, use_synthetic_noise):
+        neo_kwargs = {
+            "filename": str(file_path),
+            "true_zeroes": true_zeroes,
+            "use_synthetic_noise": use_synthetic_noise,
+        }
         return neo_kwargs
 
 
