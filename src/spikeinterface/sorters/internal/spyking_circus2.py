@@ -47,6 +47,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.5},
         "seed": 42,
+        "deterministic": False,
         "debug": False,
     }
 
@@ -76,6 +77,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "seed": "An int to control how chunks are shuffled while detecting peaks",
+        "deterministic": "a boolean to specify if the sorting should be deterministic or not. If True, then the seed will be used to shuffle the chunks",
         "debug": "Boolean to specify if internal data structures made during the sorting should be kept for debugging",
     }
 
@@ -187,6 +189,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         nafter = int(ms_after * fs / 1000.0)
 
         skip_peaks = not params["multi_units_only"] and selection_params.get("method", "uniform") == "uniform"
+        skip_peaks = skip_peaks and not params["deterministic"]
         max_n_peaks = selection_params["n_peaks_per_channel"] * num_channels
         n_peaks = max(selection_params["min_n_peaks"], max_n_peaks)
 
@@ -194,6 +197,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_folder = sorter_output_folder / "clustering"
             clustering_folder.mkdir(parents=True, exist_ok=True)
             np.save(clustering_folder / "noise_levels.npy", noise_levels)
+
 
         if params["matched_filtering"]:
             prototype, waveforms, _ = get_prototype_and_waveforms_from_recording(
@@ -224,7 +228,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     recording_w, seed=params["seed"], **job_kwargs
                 )
             peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, **job_kwargs)
-
+        print(prototype.mean())
         if not skip_peaks and verbose:
             print("Found %d peaks in total" % len(peaks))
 
@@ -234,6 +238,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
             ## channels as flat as possible
             selection_params = params["selection"]
+            selection_params["seed"] = params["seed"]
             selection_params["n_peaks"] = n_peaks
             selection_params.update({"noise_levels": noise_levels})
             selected_peaks = select_peaks(peaks, **selection_params)
