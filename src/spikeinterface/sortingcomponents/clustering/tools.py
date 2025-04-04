@@ -317,7 +317,7 @@ def get_templates_from_peaks_and_svd(
                 data = np.mean(local_svd[sub_mask, :, count], 0)
             elif operator == "median":
                 data = np.median(local_svd[sub_mask, :, count], 0)
-            templates_array[unit_ind, :, i] = svd_model.inverse_transform(data.reshape(1,-1))
+            templates_array[unit_ind, :, i] = svd_model.inverse_transform(data.reshape(1, -1))
 
     templates = Templates(
         templates_array=templates_array,

@@ -79,21 +79,21 @@ def test_extract_peaks_svd(recording, peaks, job_kwargs):
     assert peaks_svd.shape[1] == 5
     assert peaks_svd.shape[2] == np.max(np.sum(sparse_mask, axis=1))
 
+
 def test_templates_from_svd(recording, peaks, job_kwargs):
-    peaks_svd, sparse_mask, svd_model = extract_peaks_svd(recording, 
-                                                          peaks, 
-                                                          n_components=1, 
-                                                          ms_before=1,
-                                                          ms_after=1, 
-                                                          **job_kwargs)
-    templates = get_templates_from_peaks_and_svd(recording,
-    peaks,
-    peaks["channel_index"],
-    ms_before=1,
-    ms_after=1,
-    svd_features=peaks_svd,
-    sparsity_mask=sparse_mask,
-    svd_model=svd_model)
+    peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
+        recording, peaks, n_components=1, ms_before=1, ms_after=1, **job_kwargs
+    )
+    templates = get_templates_from_peaks_and_svd(
+        recording,
+        peaks,
+        peaks["channel_index"],
+        ms_before=1,
+        ms_after=1,
+        svd_features=peaks_svd,
+        sparsity_mask=sparse_mask,
+        svd_model=svd_model,
+    )
 
 
 if __name__ == "__main__":
