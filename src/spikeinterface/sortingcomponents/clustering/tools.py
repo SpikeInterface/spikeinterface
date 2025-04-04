@@ -255,16 +255,17 @@ def get_templates_from_peaks_and_recording(
     return templates
 
 
-def get_templates_from_peaks_and_svd(recording,
-                                     peaks,
-                                     peak_labels,
-                                     ms_before,
-                                     ms_after,
-                                     svd_model,
-                                     svd_features,
-                                     sparsity_mask,
-                                     operator='mean',
-                                     ):
+def get_templates_from_peaks_and_svd(
+    recording,
+    peaks,
+    peak_labels,
+    ms_before,
+    ms_after,
+    svd_model,
+    svd_features,
+    sparsity_mask,
+    operator="mean",
+):
     """
     Get templates from recording using the SVD components
 
@@ -293,7 +294,8 @@ def get_templates_from_peaks_and_svd(recording,
         The estimated templates object.
     """
     from spikeinterface.core.template import Templates
-    assert operator in ['mean', 'median'], "operator should be either 'mean' or 'median'"
+
+    assert operator in ["mean", "median"], "operator should be either 'mean' or 'median'"
     mask = peak_labels > -1
     labels = np.unique(peak_labels[mask])
 
@@ -311,9 +313,9 @@ def get_templates_from_peaks_and_svd(recording,
         best_channel = peak_channels[np.argmax(b)]
         sub_mask = local_peaks["channel_index"] == best_channel
         for count, i in enumerate(np.flatnonzero(sparsity_mask[best_channel])):
-            if operator == 'mean':
+            if operator == "mean":
                 data = np.mean(local_svd[sub_mask, :, count], 0)
-            elif operator == 'median':
+            elif operator == "median":
                 data = np.median(local_svd[sub_mask, :, count], 0)
             templates_array[unit_ind, :, i] = svd_model.inverse_transform(data.reshape(1,-1))
 
