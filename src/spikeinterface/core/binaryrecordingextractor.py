@@ -148,6 +148,18 @@ class BinaryRecordingExtractor(BaseRecording):
         )
         return d
 
+    def __del__(self):
+        """
+        Ensures that all segment resources are properly cleaned up when this recording extractor is deleted.
+        Closes any open file handles in the recording segments.
+        """
+        # Close all recording segments
+        if hasattr(self, "_recording_segments"):
+            for segment in self._recording_segments:
+                # This will trigger the __del__ method of the BinaryRecordingSegment
+                # which will close the file handle
+                del segment
+
 
 BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.write_recording.__doc__.format(
     _shared_job_kwargs_doc
@@ -222,6 +234,15 @@ class BinaryRecordingSegment(BaseRecordingSegment):
             traces = traces[:, channel_indices]
 
         return traces
+
+    def __del__(self):
+        # Ensure that the file handle is closed when the segment is garbage-collected
+        try:
+            if hasattr(self, "file") and self.file and not self.file.closed:
+                self.file.close()
+        except Exception as e:
+            warnings.warn(f"Error closing file handle in BinaryRecordingSegment: {e}")
+            pass
 
 
 # For backward compatibility (old good time)
