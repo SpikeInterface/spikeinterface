@@ -139,21 +139,48 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     all_annotations : bool, default: False
         Load exhaustively all annotation from neo
 
+    Notes
+    -----
+    If no stream is explicitly specified and there are exactly two streams (neural data and
+    synchronization data), the neural data stream will be automatically selected.
     """
 
     NeoRawIOClass = "OpenEphysBinaryRawIO"
 
     def __init__(
         self,
-        folder_path,
-        load_sync_channel=False,
-        load_sync_timestamps=False,
-        experiment_names=None,
-        stream_id=None,
-        stream_name=None,
-        block_index=None,
-        all_annotations=False,
+        folder_path: str | Path,
+        load_sync_channel: bool = False,
+        load_sync_timestamps: bool = False,
+        experiment_names: str | list | None = None,
+        stream_id: str = None,
+        stream_name: str = None,
+        block_index: int = None,
+        all_annotations: bool = False,
     ):
+
+        # Not sure if we should deprecate this, discuss with Alessio
+        # if load_sync_channel:
+        #     import warnings
+
+        #     warning_message = (
+        #         "OpenEphysBinaryRecordingExtractor: load_sync_channel is deprecated and will"
+        #         "be removed in version 0.104, use the stream_name or stream_id to load the sync stream if needed"
+        #     )
+        #     warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
+
+        stream_is_not_specified = stream_name is None and stream_id is None
+        if stream_is_not_specified:
+            available_stream_names, _ = self.get_streams(folder_path, load_sync_channel, experiment_names)
+
+            # Auto-select neural data stream when there are exactly two streams (neural + sync)
+            # and no stream was explicitly specified
+            if len(available_stream_names) == 2:
+                has_sync_stream = any("SYNC" in stream for stream in available_stream_names)
+                if has_sync_stream:
+                    neural_stream_name = next(stream for stream in available_stream_names if "SYNC" not in stream)
+                    stream_name = neural_stream_name
+
         neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel, experiment_names)
         NeoBaseRecordingExtractor.__init__(
             self,
