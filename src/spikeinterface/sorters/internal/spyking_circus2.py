@@ -45,7 +45,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": True,
         "matched_filtering": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
-        "chunk_preprocessing": {"memory_limit": 0.01},
+        "chunk_preprocessing": {"memory_limit": None},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.75},
         "seed": 42,
@@ -121,7 +121,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
         job_kwargs.update({"progress_bar": verbose})
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
-        job_kwargs = _set_optimal_chunk_size(recording, job_kwargs, **params["chunk_preprocessing"])
+        if params["chunk_preprocessing"].get("memory_limit", None) is not None:
+            job_kwargs = _set_optimal_chunk_size(recording, job_kwargs, **params["chunk_preprocessing"])
 
         sampling_frequency = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
