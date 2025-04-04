@@ -194,20 +194,102 @@ def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
     return aligned_waveforms
 
 
-def get_templates_from_clusters(
+def get_templates_from_recording(
     recording,
     peaks,
     peak_labels,
     ms_before,
     ms_after,
-    svd_model=None,
-    svd_features=None,
-    sparsity_mask=None,
     **job_kwargs,
 ):
+    """
+    Get templates from recording using the estimate_templates function.
+    This function is a wrapper around the estimate_templates function from
+    spikeinterface.core.waveform_tools. The function returns the Templates
 
+    Parameters
+    ----------
+    recording : RecordingExtractor
+        The recording object containing the data.
+    peaks : numpy.ndarray
+        The peaks array containing the peak information.
+    peak_labels : numpy.ndarray
+        The labels for each peak.
+    ms_before : float
+        The time window before the peak in milliseconds.
+    ms_after : float
+        The time window after the peak in milliseconds.
+    job_kwargs : dict
+        Additional keyword arguments for the estimate_templates function.
+
+    Returns
+    -------
+    templates : Templates
+        The estimated templates object.
+    """
     from spikeinterface.core.template import Templates
+    mask = peak_labels > -1
+    labels = np.unique(peak_labels[mask])
+    fs = recording.get_sampling_frequency()
+    nbefore = int(ms_before * fs / 1000.0)
+    nafter = int(ms_after * fs / 1000.0)
+
     from spikeinterface.core.waveform_tools import estimate_templates
+    templates_array = estimate_templates(
+            recording, peaks, labels, nbefore, nafter, return_scaled=False, job_name=None, **job_kwargs
+        )
+    
+    templates = Templates(
+        templates_array=templates_array,
+        sampling_frequency=fs,
+        nbefore=nbefore,
+        sparsity_mask=None,
+        channel_ids=recording.channel_ids,
+        unit_ids=labels,
+        probe=recording.get_probe(),
+        is_scaled=False,
+    )
+    
+    return templates
+
+def get_templates_from_svd(
+    recording,
+    peaks,
+    peak_labels,
+    ms_before,
+    ms_after,
+    svd_model,
+    svd_features,
+    sparsity_mask
+):
+    """
+    Get templates from recording using the SVD components
+
+    Parameters
+    ----------
+    recording: RecordingExtractor
+        The recording object containing the data.
+    peaks : numpy.ndarray
+        The peaks array containing the peak information.
+    peak_labels : numpy.ndarray
+        The labels for each peak.
+    ms_before : float
+        The time window before the peak in milliseconds.
+    ms_after : float
+        The time window after the peak in milliseconds.
+    svd_model : TruncatedSVD
+        The SVD model used to transform the data.
+    svd_features : numpy.ndarray
+        The SVD features array.
+    sparsity_mask : numpy.ndarray
+        The sparsity mask array.
+        
+    Returns
+    -------
+    templates : Templates
+        The estimated templates object.
+    """
+    from spikeinterface.core.template import Templates
 
     mask = peak_labels > -1
     labels = np.unique(peak_labels[mask])
@@ -217,23 +299,17 @@ def get_templates_from_clusters(
     nafter = int(ms_after * fs / 1000.0)
     num_channels = recording.get_num_channels()
 
-    if svd_model is None:
-        templates_array = estimate_templates(
-            recording, peaks, labels, nbefore, nafter, return_scaled=False, job_name=None, **job_kwargs
-        )
-    else:
-        assert svd_features is not None and sparsity_mask is not None
-        templates_array = np.zeros((len(labels), nbefore + nafter, num_channels), dtype=np.float32)
-        for unit_ind, label in enumerate(labels):
-            mask = peak_labels == label
-            local_peaks = peaks[mask]
-            local_svd = svd_features[mask]
-            peak_channels, b = np.unique(local_peaks["channel_index"], return_counts=True)
-            best_channel = peak_channels[np.argmax(b)]
-            sub_mask = local_peaks["channel_index"] == best_channel
-            for count, i in enumerate(np.flatnonzero(sparsity_mask[best_channel])):
-                data = svd_model.inverse_transform(local_svd[sub_mask, :, count])
-                templates_array[unit_ind, :, i] = np.median(data, 0)
+    templates_array = np.zeros((len(labels), nbefore + nafter, num_channels), dtype=np.float32)
+    for unit_ind, label in enumerate(labels):
+        mask = peak_labels == label
+        local_peaks = peaks[mask]
+        local_svd = svd_features[mask]
+        peak_channels, b = np.unique(local_peaks["channel_index"], return_counts=True)
+        best_channel = peak_channels[np.argmax(b)]
+        sub_mask = local_peaks["channel_index"] == best_channel
+        for count, i in enumerate(np.flatnonzero(sparsity_mask[best_channel])):
+            data = svd_model.inverse_transform(local_svd[sub_mask, :, count])
+            templates_array[unit_ind, :, i] = np.median(data, 0)
 
     templates = Templates(
         templates_array=templates_array,
@@ -247,3 +323,32 @@ def get_templates_from_clusters(
     )
 
     return templates
+
+def get_templates_from_clusters(
+    recording,
+    peaks,
+    peak_labels,
+    ms_before,
+    ms_after,
+    svd_model=None,
+    svd_features=None,
+    sparsity_mask=None,
+    **job_kwargs,
+):
+
+    if svd_model is None:
+        return get_templates_from_recording(
+            recording, peaks, peak_labels, ms_before, ms_after, **job_kwargs
+        )
+    else:
+        assert svd_features is not None and sparsity_mask is not None, "svd_features and sparsity_mask are required when svd_model is provided"
+        return get_templates_from_svd(
+            recording, 
+            peaks, 
+            peak_labels, 
+            ms_before, 
+            ms_after, 
+            svd_model, 
+            svd_features, 
+            sparsity_mask
+        )
