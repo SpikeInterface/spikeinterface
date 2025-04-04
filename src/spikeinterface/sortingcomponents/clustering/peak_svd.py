@@ -21,6 +21,7 @@ def extract_peaks_svd(
     svd_model=None,
     n_components=5,
     radius_um=120.0,
+    sparsity_mask=None,
     motion_aware=False,
     motion=None,
     folder=None,
@@ -46,13 +47,20 @@ def extract_peaks_svd(
 
     # Step 1 : select a few peaks to fit the SVD
     if svd_model is None:
-        few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=5000, margin=(nbefore, nafter))
+        few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=10000, margin=(nbefore, nafter))
         few_wfs = extract_waveform_at_max_channel(
             recording, few_peaks, ms_before=ms_before, ms_after=ms_after, job_name="Fit peaks svd", **job_kwargs
         )
 
         wfs = few_wfs[:, :, 0]
         from sklearn.decomposition import TruncatedSVD
+
+        # Remove outliers
+        valid = np.argmax(np.abs(wfs), axis=1) == nbefore
+        wfs = wfs[valid]
+
+        # Ensure all waveforms have a positive max
+        wfs *= np.sign(wfs[:, nbefore])[:, np.newaxis]
 
         svd_model = TruncatedSVD(n_components=n_components)
         svd_model.fit(wfs)
@@ -92,6 +100,7 @@ def extract_peaks_svd(
     node0 = PeakRetriever(recording, peaks)
 
     if motion_aware:
+        assert sparsity_mask is None
         # we need to increase the radius by the max motion
         max_motion = max(abs(e) for e in motion.get_boundaries())
         radius_um = radius_um + max_motion
@@ -103,6 +112,7 @@ def extract_peaks_svd(
         ms_before=ms_before,
         ms_after=ms_after,
         radius_um=radius_um,
+        sparsity_mask=sparsity_mask,
     )
 
     if motion_aware:
