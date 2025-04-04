@@ -15,7 +15,7 @@ from spikeinterface.sortingcomponents.tools import (
     cache_preprocessing,
     get_prototype_and_waveforms_from_recording,
     get_shuffled_recording_slices,
-    set_optimal_chunk_size,
+    _set_optimal_chunk_size,
 )
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
@@ -91,7 +91,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "2.0"
+        return "2.0.1"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -121,7 +121,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
         job_kwargs.update({"progress_bar": verbose})
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
-        job_kwargs = set_optimal_chunk_size(recording, job_kwargs, **params["chunk_preprocessing"])
+        job_kwargs = _set_optimal_chunk_size(recording, job_kwargs, **params["chunk_preprocessing"])
 
         sampling_frequency = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
