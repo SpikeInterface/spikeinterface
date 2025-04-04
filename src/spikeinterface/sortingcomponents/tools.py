@@ -458,5 +458,3 @@ def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):
     recording_slices = rng.permutation(recording_slices)
 
     return recording_slices
-
-
