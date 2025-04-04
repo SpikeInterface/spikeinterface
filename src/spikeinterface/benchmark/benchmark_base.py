@@ -621,7 +621,6 @@ class Benchmark:
         raise NotImplementedError
 
 
-
 # Common feature accross some benchmark : sorter + matching
 class MixinStudyUnitCount:
     def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):

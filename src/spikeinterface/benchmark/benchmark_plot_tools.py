@@ -14,8 +14,6 @@ def despine(ax_or_axes):
         sns.despine(ax=ax)
 
 
-
-
 def clean_axis(ax):
     for loc in ("top", "right", "left", "bottom"):
         ax.spines[loc].set_visible(False)
@@ -30,19 +28,19 @@ def plot_study_legend(study, case_keys=None, ax=None):
     Make a ax with only legend
     """
     import matplotlib.pyplot as plt
-    
+
     if case_keys is None:
         case_keys = list(study.cases.keys())
-    
+
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
         fig = ax.get_figure()
 
     colors = study.get_colors()
-       
+
     for k in case_keys:
-        ax.plot([], color=colors[k], label=study.cases[k]['label'])
+        ax.plot([], color=colors[k], label=study.cases[k]["label"])
     ax.legend()
     clean_axis(ax)
     return fig
@@ -126,7 +124,6 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
         The resulting figure containing the plots
     """
     import matplotlib.pyplot as plt
-    
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
@@ -137,7 +134,6 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
         fig, ax = plt.subplots(figsize=figsize)
     else:
         fig = ax.get_figure()
-
 
     if levels_to_keep is None:
         colors = study.get_colors()
@@ -182,7 +178,6 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
             colors = study.get_colors(levels_to_group_by=[hue])
             plt_fun = sns.barplot
             palette_keys = hues
-
 
         assert all(
             [key in colors for key in palette_keys]
@@ -229,7 +224,6 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
-
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -293,7 +287,6 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
             colors["Well Detected"] = "green"
         else:
             assert all([col in colors for col in columns]), f"colors must have a color for each column: {columns}"
-
 
         df = pd.melt(
             count_units.reset_index(),
@@ -496,12 +489,11 @@ def plot_performances_vs_snr(
         if levels_to_keep is not None:
             case_group_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_keep)
         else:
-            labels = {k: study.cases[k]['label'] for k in case_keys}
-            case_group_keys = {k : [k] for k in case_keys}
-            
+            labels = {k: study.cases[k]["label"] for k in case_keys}
+            case_group_keys = {k: [k] for k in case_keys}
 
         colors = study.get_colors(levels_to_group_by=levels_to_keep)
-        
+
         assert all([key in colors for key in case_keys]), f"colors must have a color for each case key: {case_keys}"
 
         for key, key_list in case_group_keys.items():

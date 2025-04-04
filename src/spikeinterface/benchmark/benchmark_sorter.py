@@ -65,7 +65,6 @@ class SorterStudy(BenchmarkStudy, MixinStudyUnitCount):
         if sorter_folder.exists():
             shutil.rmtree(sorter_folder)
 
-
     # plotting as methods
     def plot_unit_counts(self, **kwargs):
         from .benchmark_plot_tools import plot_unit_counts
