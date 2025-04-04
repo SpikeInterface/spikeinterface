@@ -262,8 +262,8 @@ def get_templates_from_peaks_and_svd(recording,
                                      ms_after, 
                                      svd_model, 
                                      svd_features, 
-                                     operator='mean',
-                                     sparsity_mask):
+                                     sparsity_mask,
+                                     operator='mean'):
     """
     Get templates from recording using the SVD components
 
