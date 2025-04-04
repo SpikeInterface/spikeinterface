@@ -11,7 +11,7 @@ from spikeinterface.widgets import (
 
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
-from .benchmark_base import Benchmark, BenchmarkStudy
+from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
@@ -93,7 +93,7 @@ class ClusteringBenchmark(Benchmark):
     ]
 
 
-class ClusteringStudy(BenchmarkStudy):
+class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
 
     benchmark_class = ClusteringBenchmark
 
@@ -195,6 +195,11 @@ class ClusteringStudy(BenchmarkStudy):
         from .benchmark_plot_tools import plot_performances_vs_depth_and_snr
 
         return plot_performances_vs_depth_and_snr(self, *args, **kwargs)
+
+    def plot_performances_ordered(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performances_ordered
+
+        return plot_performances_ordered(self, *args, **kwargs)
 
     def plot_error_metrics(self, metric="cosine", case_keys=None, figsize=(15, 5)):
 
