@@ -182,7 +182,9 @@ class IblRecordingExtractor(BaseRecording):
         if pid is None:
             self.ssl.pid = one.alyx.rest("insertions", "list", session=eid, name=pname)[0]["id"]
 
-        self._file_streamer = self.ssl.raw_electrophysiology(band=stream_type, stream=stream, remove_cached=remove_cached)
+        self._file_streamer = self.ssl.raw_electrophysiology(
+            band=stream_type, stream=stream, remove_cached=remove_cached
+        )
 
         # get basic metadata
         meta_file = str(self._file_streamer.file_meta_data)  # streamer downloads uncompressed metadata files on init
@@ -320,6 +322,7 @@ class IblSortingExtractor(BaseSorting):
         try:
             from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader
+
             if isinstance(one, dict):
                 one = ONE(**one)
             elif one is None:
