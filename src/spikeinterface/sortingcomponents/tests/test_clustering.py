@@ -81,9 +81,8 @@ def test_extract_peaks_svd(recording, peaks, job_kwargs):
     assert peaks_svd.shape[2] == np.max(np.sum(sparse_mask, axis=1))
 
 
-
 def test_create_graph_from_peak_features(recording, peaks, job_kwargs):
-    peaks_svd, sparse_mask, svd_model = extract_peaks_svd(recording, peaks, n_components=5, **job_kwargs)    
+    peaks_svd, sparse_mask, svd_model = extract_peaks_svd(recording, peaks, n_components=5, **job_kwargs)
 
     distances = create_graph_from_peak_features(
         recording,

@@ -25,7 +25,6 @@ clustering_methods = {
     "circus": CircusClustering,
     "tdc_clustering": TdcClustering,
     "graph_clustering": GraphClustering,
-
 }
 
 try:

@@ -56,7 +56,7 @@ class TridesclousPeeler(BaseTemplateMatching):
         motion_aware=False,
         motion=None,
         drifting_templates=None,
-        interpolation_time_bin_size_s = 1.0,
+        interpolation_time_bin_size_s=1.0,
         motion_step_um=2.0,
         use_fine_detector=True,
         # TODO optimize theses radius
@@ -152,7 +152,7 @@ class TridesclousPeeler(BaseTemplateMatching):
             self.sparse_templates_array_static = None
 
             # interpolation bins edges
-            
+
             self.interpolation_time_bins_s = []
             self.interpolation_time_bin_edges_s = []
             for segment_index, parent_segment in enumerate(recording._recording_segments):
@@ -327,7 +327,6 @@ class TridesclousPeeler(BaseTemplateMatching):
                 # print()
                 # print(start_frame, end_frame, end_frame - start_frame, [(l[:2], np.unique(l[2])) for l in loop])
                 # print([np.unique(l[2]) for l in loop])
-
 
         else:
             start = 0
