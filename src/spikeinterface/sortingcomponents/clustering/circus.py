@@ -308,7 +308,7 @@ class CircusClustering:
         if verbose:
             print("Found %d raw clusters, starting to clean with matching" % (len(templates.unit_ids)))
 
-        cleaning_job_kwargs = job_kwargs.copy()
+        cleaning_job_kwargs = job_kwargs_local.copy()
         cleaning_job_kwargs["progress_bar"] = False
         cleaning_params = params["cleaning_kwargs"].copy()
 
