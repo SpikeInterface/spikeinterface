@@ -60,6 +60,7 @@ class CircusClustering:
         "few_waveforms": None,
         "ms_before": 0.5,
         "ms_after": 0.5,
+        "seed" : 42,
         "noise_threshold": 4,
         "rank": 5,
         "noise_levels": None,
@@ -91,10 +92,19 @@ class CircusClustering:
         # SVD for time compression
         if params["few_waveforms"] is None:
             few_peaks = select_peaks(
-                peaks, recording=recording, method="uniform", n_peaks=10000, margin=(nbefore, nafter)
+                peaks, 
+                recording=recording, 
+                method="uniform", 
+                seed=params["seed"],
+                n_peaks=10000, 
+                margin=(nbefore, nafter)
             )
             few_wfs = extract_waveform_at_max_channel(
-                recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+                recording, 
+                few_peaks, 
+                ms_before=ms_before, 
+                ms_after=ms_after, 
+                **job_kwargs
             )
             wfs = few_wfs[:, :, 0]
         else:

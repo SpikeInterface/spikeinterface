@@ -6,14 +6,13 @@ import shutil
 import numpy as np
 
 from spikeinterface.core import NumpySorting
-from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.template import Templates
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.preprocessing import common_reference, whiten, bandpass_filter, correct_motion
 from spikeinterface.sortingcomponents.tools import (
     cache_preprocessing,
-    get_prototype_and_waveforms_from_recording,
     get_shuffled_recording_slices,
 )
 from spikeinterface.core.basesorting import minimum_spike_dtype
@@ -47,7 +46,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.5},
         "seed": 42,
-        "deterministic": False,
+        "deterministic": True,
         "debug": False,
     }
 
@@ -202,15 +201,35 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             np.save(clustering_folder / "noise_levels.npy", noise_levels)
 
         if params["matched_filtering"]:
-            prototype, waveforms, _ = get_prototype_and_waveforms_from_recording(
-                recording_w,
-                n_peaks=10000,
-                ms_before=ms_before,
-                ms_after=ms_after,
-                seed=params["seed"],
-                **detection_params,
-                **job_kwargs,
-            )
+            if not params["deterministic"]:
+                from spikeinterface.sortingcomponents.tools import (
+                    get_prototype_and_waveforms_from_recording,
+                )
+                prototype, waveforms, _ = get_prototype_and_waveforms_from_recording(
+                    recording_w,
+                    n_peaks=10000,
+                    ms_before=ms_before,
+                    ms_after=ms_after,
+                    seed=params["seed"],
+                    **detection_params,
+                    **job_kwargs,
+                )
+            else:
+                from spikeinterface.sortingcomponents.tools import (
+                    get_prototype_and_waveforms_from_peaks,
+                )
+                peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, **job_kwargs)
+                prototype, waveforms, _ = get_prototype_and_waveforms_from_peaks(
+                    recording_w,
+                    peaks,
+                    n_peaks=10000,
+                    ms_before=ms_before,
+                    ms_after=ms_after,
+                    seed=params["seed"],
+                    **detection_params,
+                    **job_kwargs,
+                )
+
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
             if params["debug"]:
@@ -223,9 +242,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             )
             detection_params['random_chunk_kwargs'] = {"num_chunks_per_segment": 5, 
                                                        "seed" : params["seed"]}
-            print(prototype.mean())
-            import sys
-            sys.exit()
             peaks = detect_peaks(recording_w, "matched_filtering", **detection_params, **job_kwargs)
         else:
             waveforms = None
