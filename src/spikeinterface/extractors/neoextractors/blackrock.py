@@ -95,8 +95,10 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
         sampling_frequency: Optional[float] = None,
         stream_id: Optional[str] = None,
         stream_name: Optional[str] = None,
+        nsx_to_load: Optional[list[int]] = None,
     ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
+        neo_kwargs["nsx_to_load"] = nsx_to_load
         NeoBaseSortingExtractor.__init__(
             self,
             sampling_frequency=sampling_frequency,
