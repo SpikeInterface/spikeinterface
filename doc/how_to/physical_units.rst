@@ -62,3 +62,35 @@ Both preprocessors automatically:
 1. Detect the appropriate gain and offset from the recording properties
 2. Apply the conversion to all channels
 3. Update the recording properties to reflect that data is now in physical units
+
+Setting Custom Physical Units
+---------------------------
+
+While most extractors automatically set the appropriate ``gain_to_uV`` and ``offset_to_uV`` values,
+there might be cases where you want to set custom physical units. In these cases, you can set
+the following properties:
+
+* ``physical_unit``: The target physical unit (e.g., 'uV', 'mV', 'N')
+* ``gain_to_unit``: The gain to convert from raw values to the target unit
+* ``offset_to_unit``: The offset to convert from raw values to the target unit
+
+Here's an example of how to set custom units:
+
+.. code-block:: python
+
+    # Set custom physical units
+    num_channels = recording.get_num_channels()
+    values = ["volts"] * num_channels
+    recording.set_property(key='physical_unit', value=values)
+
+    values = [0.001] * num_channels  # Convert from ADC to volts
+    recording.set_property(key='gain_to_unit', values=values)  # Convert to volts
+
+    values = [0] * num_channels  # No offset
+    recording.set_property(key='offset_to_unit', values=values)  # No offset
+
+    # Apply the conversion using scale_to_physical_units
+    recording_physical = scale_to_physical_units(recording)
+
+This approach gives you full control over the unit conversion process while maintaining
+compatibility with SpikeInterface's preprocessing pipeline.

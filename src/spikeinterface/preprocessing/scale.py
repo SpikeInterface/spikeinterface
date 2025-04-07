@@ -34,15 +34,15 @@ def scale_to_physical_units(recording: BasePreprocessor) -> BasePreprocessor:
     # To avoid a circular import
     from spikeinterface.preprocessing import ScaleRecording
 
-    if not recording.has_property("gain_to_physical_unit"):
+    if "gain_to_physical_unit" not in recording.get_property_keys():
         raise ValueError("Recording must have 'gain_to_physical_unit' property to convert to physical units")
-    if not recording.has_property("offset_to_physical_unit"):
+    if "offset_to_physical_unit" not in recording.get_property_keys():
         raise ValueError("Recording must have 'offset_to_physical_unit' property to convert to physical units")
 
     gain = recording.get_property("gain_to_physical_unit")
     offset = recording.get_property("offset_to_physical_unit")
 
-    scaled_recording = ScaleRecording(recording, gain=gain, offset=offset, dtype="float32")
+    scaled_recording = ScaleRecording(recording, gain=gain, offset=offset)
 
     # Reset gain/offset since data is now in physical units
     scaled_recording.set_property(
