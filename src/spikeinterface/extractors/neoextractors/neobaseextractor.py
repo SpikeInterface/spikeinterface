@@ -108,9 +108,7 @@ class _NeoBaseExtractor:
         elif "spike_channels" in neo_header and neo_header["spike_channels"].size > 0:
             channels = neo_header["spike_channels"]
             channel_sampling_frequencies = channels["wf_sampling_rate"]
-            stream_to_sampling_frequencies = {
-                0: float(np.unique(channel_sampling_frequencies)[0])
-            }
+            stream_to_sampling_frequencies = {0: float(np.unique(channel_sampling_frequencies)[0])}
         else:
             raise AssertionError("No signal or spike streams to infer the sampling frequency. Set it manually")
 
