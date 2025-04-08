@@ -237,11 +237,11 @@ def get_templates_from_peaks_and_recording(
     valid_peaks = peaks[mask]
     valid_labels = peak_labels[mask]
     labels, indices = np.unique(valid_labels, return_inverse=True)
-    
+
     fs = recording.get_sampling_frequency()
     nbefore = int(ms_before * fs / 1000.0)
     nafter = int(ms_after * fs / 1000.0)
-    
+
     sorting = np.zeros(valid_peaks.size, dtype=minimum_spike_dtype)
     sorting["sample_index"] = valid_peaks["sample_index"]
     sorting["unit_index"] = indices
@@ -250,15 +250,15 @@ def get_templates_from_peaks_and_recording(
     from spikeinterface.core.waveform_tools import estimate_templates
 
     templates_array = estimate_templates(
-        recording, 
-        sorting, 
-        np.arange(len(labels)), 
-        nbefore, 
-        nafter, 
+        recording,
+        sorting,
+        np.arange(len(labels)),
+        nbefore,
+        nafter,
         operator=operator,
-        return_scaled=False, 
-        job_name=None, 
-        **job_kwargs
+        return_scaled=False,
+        job_name=None,
+        **job_kwargs,
     )
 
     templates = Templates(

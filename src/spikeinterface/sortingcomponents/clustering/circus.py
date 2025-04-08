@@ -48,8 +48,7 @@ class CircusClustering:
             "recursive_depth": 3,
             "returns_split_count": True,
         },
-        "split_kwargs": {"projection_mode": "tsvd", 
-                         "n_pca_features": 0.9},
+        "split_kwargs": {"projection_mode": "tsvd", "n_pca_features": 0.9},
         "radius_um": 100,
         "neighbors_radius_um": 50,
         "n_svd": 5,
@@ -107,19 +106,22 @@ class CircusClustering:
         wfs = wfs[valid]
 
         from sklearn.decomposition import TruncatedSVD
+
         svd_model = TruncatedSVD(params["n_svd"])
         svd_model.fit(wfs)
         features_folder = tmp_folder / "tsvd_features"
         features_folder.mkdir(exist_ok=True)
 
-        peaks_svd, sparse_mask, svd_model = extract_peaks_svd(recording, 
-                                                              peaks, 
-                                                              ms_before=ms_before,
-                                                              ms_after=ms_after,
-                                                              svd_model=svd_model,
-                                                              radius_um=radius_um,
-                                                              folder=features_folder,
-                                                              **job_kwargs)
+        peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
+            recording,
+            peaks,
+            ms_before=ms_before,
+            ms_after=ms_after,
+            svd_model=svd_model,
+            radius_um=radius_um,
+            folder=features_folder,
+            **job_kwargs,
+        )
 
         neighbours_mask = get_channel_distances(recording) <= neighbors_radius_um
 
@@ -144,12 +146,13 @@ class CircusClustering:
         peak_labels, _ = split_clusters(
             original_labels,
             recording,
-            {"peaks" : peaks, "sparse_tsvd" : peaks_svd},
+            {"peaks": peaks, "sparse_tsvd": peaks_svd},
             method="local_feature_clustering",
             method_kwargs=split_kwargs,
             debug_folder=debug_folder,
             **params["recursive_kwargs"],
-            **job_kwargs)
+            **job_kwargs,
+        )
 
         non_noise = peak_labels > -1
         labels, inverse = np.unique(peak_labels[non_noise], return_inverse=True)

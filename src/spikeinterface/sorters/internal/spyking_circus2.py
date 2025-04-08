@@ -22,42 +22,22 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
     _default_params = {
-        "general": {"ms_before": 2, 
-                    "ms_after": 2, 
-                    "radius_um": 100},
-        "sparsity": {"method": "snr", 
-                     "amplitude_mode": 
-                     "peak_to_peak", 
-                     "threshold": 0},
-        "filtering": {"freq_min": 150, 
-                      "freq_max": 7000, 
-                      "ftype": "bessel", 
-                      "filter_order": 2, 
-                      "margin_ms": 10},
-        "whitening": {"mode": "local", 
-                      "regularize": False},
-        "detection": {"method" : "matched_filtering", 
-                      "method_kwargs" : dict(
-                            peak_sign="neg",
-                            detect_threshold=5
-                        )},
-        "selection": {"method": "uniform", 
-                      "method_kwargs" : dict(
-                            n_peaks_per_channel=5000,
-                            min_n_peaks=100000,
-                            select_per_channel=False)
-                        },
+        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
+        "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0},
+        "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2, "margin_ms": 10},
+        "whitening": {"mode": "local", "regularize": False},
+        "detection": {"method": "matched_filtering", "method_kwargs": dict(peak_sign="neg", detect_threshold=5)},
+        "selection": {
+            "method": "uniform",
+            "method_kwargs": dict(n_peaks_per_channel=5000, min_n_peaks=100000, select_per_channel=False),
+        },
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
-        "clustering": {"method": "graph_clustering", 
-                       "method_kwargs" : dict()},
-        "matching": {"method": "wobble", 
-                     "method_kwargs" : dict()},
+        "clustering": {"method": "graph_clustering", "method_kwargs": dict()},
+        "matching": {"method": "wobble", "method_kwargs": dict()},
         "apply_preprocessing": True,
-        "cache_preprocessing": {"mode": "memory", 
-                                "memory_limit": 0.5, 
-                                "delete_cache": True},
+        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.75},
         "seed": 42,
@@ -235,7 +215,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     recording_w, seed=seed, **job_kwargs
                 )
             detection_method = "locally_exclusive"
-        
+
         peaks = detect_peaks(recording_w, detection_method, **detection_params, **job_kwargs)
         order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
         peaks = peaks[order]
@@ -255,9 +235,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             shutil.rmtree(sorting_folder)
 
         if params["multi_units_only"]:
-            sorting = NumpySorting.from_peaks(peaks, 
-                                              sampling_frequency, 
-                                              unit_ids=recording_w.channel_ids)
+            sorting = NumpySorting.from_peaks(peaks, sampling_frequency, unit_ids=recording_w.channel_ids)
         else:
             ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
             ## channels as flat as possible
@@ -285,30 +263,34 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 clustering_params["debug"] = debug
                 clustering_params["noise_threshold"] = detection_params.get("detect_threshold", 4)
             elif clustering_method == "graph_clustering":
-                clustering_params = {"ms_before" : ms_before,
-                                     "ms_after" : ms_after, 
-                                     "clustering_method": "hdbscan",
-                                     "radius_um" : radius_um,
-                                     "clustering_kwargs" : dict(min_samples=1,
-                                                               min_cluster_size=50,
-                                                               core_dist_n_jobs=-1,
-                                                               cluster_selection_method='leaf',
-                                                               allow_single_cluster=True,
-                                                               cluster_selection_epsilon=0.1)
+                clustering_params = {
+                    "ms_before": ms_before,
+                    "ms_after": ms_after,
+                    "clustering_method": "hdbscan",
+                    "radius_um": radius_um,
+                    "clustering_kwargs": dict(
+                        min_samples=1,
+                        min_cluster_size=50,
+                        core_dist_n_jobs=-1,
+                        cluster_selection_method="leaf",
+                        allow_single_cluster=True,
+                        cluster_selection_epsilon=0.1,
+                    ),
                 }
 
             outputs = find_cluster_from_peaks(
-                recording_w, 
-                selected_peaks, 
+                recording_w,
+                selected_peaks,
                 method=clustering_method,
-                method_kwargs=clustering_params, 
+                method_kwargs=clustering_params,
                 extra_outputs=True,
-                **job_kwargs
+                **job_kwargs,
             )
-            
+
             if len(outputs) == 2:
                 _, peak_labels = outputs
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_recording
+
                 templates = get_templates_from_peaks_and_recording(
                     recording_w,
                     peaks,
@@ -320,6 +302,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             elif len(outputs) == 5:
                 _, peak_labels, svd_model, svd_features, sparsity_mask = outputs
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+
                 templates = get_templates_from_peaks_and_svd(
                     recording_w,
                     peaks,
@@ -329,7 +312,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     svd_model,
                     svd_features,
                     sparsity_mask,
-                    operator="median"
+                    operator="median",
                 )
 
             sparsity = compute_sparsity(templates, noise_levels, **sparsity_kwargs)
