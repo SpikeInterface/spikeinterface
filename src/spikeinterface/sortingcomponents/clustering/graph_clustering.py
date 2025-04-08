@@ -70,7 +70,7 @@ class GraphClustering:
         elif graph_kwargs["bin_mode"] == "vertical_bins":
             assert radius_um >= graph_kwargs["bin_um"] * 3
 
-        peaks_svd, sparse_mask, _ = extract_peaks_svd(
+        peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
             recording,
             peaks,
             radius_um=radius_um,
@@ -191,7 +191,7 @@ class GraphClustering:
         labels_set = np.unique(peak_labels)
         labels_set = labels_set[labels_set >= 0]
 
-        return labels_set, peak_labels
+        return labels_set, peak_labels, svd_model, peaks_svd, sparse_mask
 
 
 def _remove_small_cluster(peak_labels, min_size=1):
