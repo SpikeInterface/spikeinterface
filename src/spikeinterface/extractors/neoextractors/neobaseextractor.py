@@ -95,22 +95,18 @@ class _NeoBaseExtractor:
             If there are no signal streams available from which to extract the sampling frequencies.
         """
         neo_header = self.neo_reader.header
-        if "signal_channels" in neo_header and neo_header["signal_channels"].size > 0:
-            channels = neo_header["signal_channels"]
-            # Get unique pairs of channel_stream_id and channel_sampling_frequencies
-            channel_sampling_frequencies = channels["sampling_rate"]
-            channel_stream_id = channels["stream_id"]
-            unique_pairs = np.unique(np.vstack((channel_stream_id, channel_sampling_frequencies)).T, axis=0)
-            # Form a dictionary of stream_id to sampling_frequency
-            stream_to_sampling_frequencies = {}
-            for stream_id, sampling_frequency in unique_pairs:
-                stream_to_sampling_frequencies[stream_id] = float(sampling_frequency)
-        elif "spike_channels" in neo_header and neo_header["spike_channels"].size > 0:
-            channels = neo_header["spike_channels"]
-            channel_sampling_frequencies = channels["wf_sampling_rate"]
-            stream_to_sampling_frequencies = {0: float(np.unique(channel_sampling_frequencies)[0])}
-        else:
-            raise AssertionError("No signal or spike streams to infer the sampling frequency. Set it manually")
+        signal_channels = neo_header["signal_channels"]
+        assert signal_channels.size > 0, "No signal streams to infer the sampling frequency. Set it manually"
+
+        # Get unique pairs of channel_stream_id and channel_sampling_frequencies
+        channel_sampling_frequencies = signal_channels["sampling_rate"]
+        channel_stream_id = signal_channels["stream_id"]
+        unique_pairs = np.unique(np.vstack((channel_stream_id, channel_sampling_frequencies)).T, axis=0)
+
+        # Form a dictionary of stream_id to sampling_frequency
+        stream_to_sampling_frequencies = {}
+        for stream_id, sampling_frequency in unique_pairs:
+            stream_to_sampling_frequencies[stream_id] = float(sampling_frequency)
 
         return stream_to_sampling_frequencies
 

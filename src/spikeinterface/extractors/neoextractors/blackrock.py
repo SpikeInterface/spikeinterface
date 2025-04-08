@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from packaging import version
-from typing import Optional
-
+from typing import Optional, Dict
+import numpy as np
 
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -117,6 +117,33 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     def map_to_neo_kwargs(cls, file_path):
         neo_kwargs = {"filename": str(file_path)}
         return neo_kwargs
+
+    def build_stream_id_to_sampling_frequency_dict(self) -> Dict[str, float]:
+        """
+        Build a mapping from stream_id to sampling frequencies.
+
+        This function creates a dictionary mapping each stream_id to its corresponding sampling
+        frequency, as extracted from the signal channels in the Neo header.
+
+        Returns
+        -------
+        dict of {str: float}
+            Dictionary mapping stream_ids to their corresponding sampling frequencies.
+
+        Raises
+        ------
+        AssertionError
+            If there are no signal streams available from which to extract the sampling frequencies.
+        """
+        neo_header = self.neo_reader.header
+        if "spike_channels" in neo_header and neo_header["spike_channels"].size > 0:
+            channels = neo_header["spike_channels"]
+            channel_sampling_frequencies = channels["wf_sampling_rate"]
+            stream_to_sampling_frequencies = {0: float(np.unique(channel_sampling_frequencies)[0])}
+        else:
+            raise AssertionError("No signal or spike streams to infer the sampling frequency. Set it manually")
+
+        return stream_to_sampling_frequencies
 
 
 read_blackrock = define_function_from_class(source_class=BlackrockRecordingExtractor, name="read_blackrock")
