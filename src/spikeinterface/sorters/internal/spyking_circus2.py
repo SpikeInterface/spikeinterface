@@ -8,7 +8,6 @@ import numpy as np
 from spikeinterface.core import NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.recording_tools import get_noise_levels
-from spikeinterface.core.template import Templates
 from spikeinterface.preprocessing import common_reference, whiten, bandpass_filter, correct_motion
 from spikeinterface.sortingcomponents.tools import (
     cache_preprocessing,
@@ -23,9 +22,18 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
     _default_params = {
-        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
-        "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
-        "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2, "margin_ms": 10},
+        "general": {"ms_before": 2, 
+                    "ms_after": 2, 
+                    "radius_um": 100},
+        "sparsity": {"method": "snr", 
+                     "amplitude_mode": 
+                     "peak_to_peak", 
+                     "threshold": 0.25},
+        "filtering": {"freq_min": 150, 
+                      "freq_max": 7000, 
+                      "ftype": "bessel", 
+                      "filter_order": 2, 
+                      "margin_ms": 10},
         "whitening": {"mode": "local", "regularize": False},
         "detection": {"method" : "matched_filtering", 
                       "method_kwargs" : dict(
@@ -46,7 +54,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {"method": "wobble", 
                      "method_kwargs" : dict()},
         "apply_preprocessing": True,
-        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
+        "cache_preprocessing": {"mode": "memory", 
+                                "memory_limit": 0.5, 
+                                "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.75},
         "seed": 42,
@@ -236,6 +246,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if "peak_sign" not in sparsity_kwargs:
             sparsity_kwargs["peak_sign"] = peak_sign
 
+        sorting_folder = sorter_output_folder / "sorting"
+        if sorting_folder.exists():
+            shutil.rmtree(sorting_folder)
+
         if params["multi_units_only"]:
             sorting = NumpySorting.from_peaks(peaks, 
                                               sampling_frequency, 
@@ -284,7 +298,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 selected_peaks, 
                 method=clustering_method,
                 method_kwargs=clustering_params, 
-                extra_outputs=True,
+                extra_outputs=False,
                 **job_kwargs
             )
             if len(outputs) == 2:
@@ -343,38 +357,36 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting["sample_index"] = spikes["sample_index"]
                 sorting["unit_index"] = spikes["cluster_index"]
                 sorting["segment_index"] = spikes["segment_index"]
+                order = np.lexsort((spikes["sample_index"], spikes["segment_index"]))
+                spikes = spikes[order]
                 sorting = NumpySorting(sorting, sampling_frequency, templates.unit_ids)
 
-        sorting_folder = sorter_output_folder / "sorting"
-        if sorting_folder.exists():
-            shutil.rmtree(sorting_folder)
+            merging_params = params["merging"].copy()
+            merging_params["debug_folder"] = sorter_output_folder / "merging"
 
-        merging_params = params["merging"].copy()
-        merging_params["debug_folder"] = sorter_output_folder / "merging"
+            if len(merging_params) > 0:
+                if params["motion_correction"] and motion_folder is not None:
+                    from spikeinterface.preprocessing.motion import load_motion_info
 
-        if len(merging_params) > 0:
-            if params["motion_correction"] and motion_folder is not None:
-                from spikeinterface.preprocessing.motion import load_motion_info
+                    motion_info = load_motion_info(motion_folder)
+                    motion = motion_info["motion"]
+                    max_motion = max(
+                        np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
+                    )
+                    max_distance_um = merging_params.get("max_distance_um", 50)
+                    merging_params["max_distance_um"] = max(max_distance_um, 2 * max_motion)
 
-                motion_info = load_motion_info(motion_folder)
-                motion = motion_info["motion"]
-                max_motion = max(
-                    np.max(np.abs(motion.displacement[seg_index])) for seg_index in range(len(motion.displacement))
-                )
-                max_distance_um = merging_params.get("max_distance_um", 50)
-                merging_params["max_distance_um"] = max(max_distance_um, 2 * max_motion)
+                if debug:
+                    curation_folder = sorter_output_folder / "curation"
+                    if curation_folder.exists():
+                        shutil.rmtree(curation_folder)
+                    sorting.save(folder=curation_folder)
+                    # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
-            if debug:
-                curation_folder = sorter_output_folder / "curation"
-                if curation_folder.exists():
-                    shutil.rmtree(curation_folder)
-                sorting.save(folder=curation_folder)
-                # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
+                sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params, **job_kwargs)
 
-            sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params, **job_kwargs)
-
-            if verbose:
-                print(f"Kept {len(sorting.unit_ids)} units after final merging")
+                if verbose:
+                    print(f"Kept {len(sorting.unit_ids)} units after final merging")
 
         folder_to_delete = None
         cache_mode = params["cache_preprocessing"].get("mode", "memory")

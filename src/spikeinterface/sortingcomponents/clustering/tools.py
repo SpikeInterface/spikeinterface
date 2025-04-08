@@ -234,22 +234,25 @@ def get_templates_from_peaks_and_recording(
     from spikeinterface.core.numpyextractors import NumpySorting
 
     mask = peak_labels > -1
-    valid_peaks = peaks[mask]
-    valid_labels = peak_labels[mask]
-    labels = np.unique(valid_labels)
+    labels = np.unique(peak_labels[mask])
     
     fs = recording.get_sampling_frequency()
     nbefore = int(ms_before * fs / 1000.0)
     nafter = int(ms_after * fs / 1000.0)
-    spikes = NumpySorting.from_peaks(valid_peaks, fs, labels)
-    spikes = spikes.to_spike_vector()
+    
+    sorting = NumpySorting.from_samples_and_labels(
+        peaks["sample_index"][mask],
+        peak_labels[mask],
+        fs,
+        unit_ids=labels,
+    )
 
     from spikeinterface.core.waveform_tools import estimate_templates
 
     templates_array = estimate_templates(
         recording, 
-        spikes, 
-        np.arange(len(labels)), 
+        sorting.to_spike_vector(), 
+        sorting.unit_ids, 
         nbefore, 
         nafter, 
         operator=operator,
@@ -264,7 +267,7 @@ def get_templates_from_peaks_and_recording(
         nbefore=nbefore,
         sparsity_mask=None,
         channel_ids=recording.channel_ids,
-        unit_ids=np.arange(len(labels)),
+        unit_ids=labels,
         probe=recording.get_probe(),
         is_scaled=False,
     )
@@ -347,7 +350,7 @@ def get_templates_from_peaks_and_svd(
         nbefore=nbefore,
         sparsity_mask=None,
         channel_ids=recording.channel_ids,
-        unit_ids=np.arange(len(labels)),
+        unit_ids=labels,
         probe=recording.get_probe(),
         is_scaled=False,
     )
