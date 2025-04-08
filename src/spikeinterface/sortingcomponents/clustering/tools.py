@@ -200,6 +200,7 @@ def get_templates_from_peaks_and_recording(
     peak_labels,
     ms_before,
     ms_after,
+    operator="mean",
     **job_kwargs,
 ):
     """
@@ -238,7 +239,15 @@ def get_templates_from_peaks_and_recording(
     from spikeinterface.core.waveform_tools import estimate_templates
 
     templates_array = estimate_templates(
-        recording, peaks, labels, nbefore, nafter, return_scaled=False, job_name=None, **job_kwargs
+        recording, 
+        peaks, 
+        labels, 
+        nbefore, 
+        nafter, 
+        operator=operator,
+        return_scaled=False, 
+        job_name=None, 
+        **job_kwargs
     )
 
     templates = Templates(

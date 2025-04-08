@@ -59,6 +59,8 @@ class GraphClustering:
         radius_um = params["radius_um"]
         motion = params["motion"]
         seed = params["seed"]
+        ms_before = params["ms_before"]
+        ms_after = params["ms_after"]
         clustering_method = params["clustering_method"]
         clustering_kwargs = params["clustering_kwargs"]
         graph_kwargs = params["graph_kwargs"]
@@ -73,6 +75,8 @@ class GraphClustering:
         peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
             recording,
             peaks,
+            ms_before=ms_before,
+            ms_after=ms_after,
             radius_um=radius_um,
             motion_aware=motion_aware,
             motion=None,

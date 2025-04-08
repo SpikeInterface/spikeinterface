@@ -23,9 +23,6 @@ from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.sortingcomponents.tools import remove_empty_templates
 from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
-from spikeinterface.core.node_pipeline import (
-    run_node_pipeline,
-)
 
 
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
