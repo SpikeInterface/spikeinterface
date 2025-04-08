@@ -95,15 +95,8 @@ class _NeoBaseExtractor:
             If there are no signal streams available from which to extract the sampling frequencies.
         """
         neo_header = self.neo_reader.header
-        if "spike_channels" in neo_header:
-            channels = neo_header["spike_channels"]
-            channel_sampling_frequencies = channels["wf_sampling_rate"]
-            stream_to_sampling_frequencies = {
-                0: float(np.unique(channel_sampling_frequencies)[0])
-            }
-        elif "signal_channels" in neo_header:
+        if "signal_channels" in neo_header and neo_header["signal_channels"].size > 0:
             channels = neo_header["signal_channels"]
-            assert channels.size > 0, "No spike or signal streams to infer the sampling frequency. Set it manually"
             # Get unique pairs of channel_stream_id and channel_sampling_frequencies
             channel_sampling_frequencies = channels["sampling_rate"]
             channel_stream_id = channels["stream_id"]
@@ -113,8 +106,14 @@ class _NeoBaseExtractor:
             stream_to_sampling_frequencies = {}
             for stream_id, sampling_frequency in unique_pairs:
                 stream_to_sampling_frequencies[stream_id] = float(sampling_frequency)
+        elif "spike_channels" in neo_header and neo_header["spike_channels"].size > 0:
+            channels = neo_header["spike_channels"]
+            channel_sampling_frequencies = channels["wf_sampling_rate"]
+            stream_to_sampling_frequencies = {
+                0: float(np.unique(channel_sampling_frequencies)[0])
+            }
         else:
-            raise AssertionError("No spike or signal streams to infer the sampling frequency. Set it manually")
+            raise AssertionError("No signal or spike streams to infer the sampling frequency. Set it manually")
 
         return stream_to_sampling_frequencies
 
