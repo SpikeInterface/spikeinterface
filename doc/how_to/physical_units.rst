@@ -1,4 +1,4 @@
-Working with Units in SpikeInterface Recordings
+Working with physical units in SpikeInterface recordings
 ===============================================
 
 In neurophysiology recordings, data is often stored in raw ADC (Analog-to-Digital Converter) units
@@ -26,10 +26,10 @@ Converting to Physical Units
 -------------------------
 
 SpikeInterface provides two preprocessing classes for converting recordings to physical units. Both wrap the
-``RecordingExtractor`` class and ensures that the data is returned in physical units when calling get_traces()
+``RecordingExtractor`` class and ensures that the data is returned in physical units when calling `get_traces <https://spikeinterface.readthedocs.io/en/stable/api.html#spikeinterface.core.BaseRecording.get_traces>`_
 
 1. ``scale_to_uV``: The primary function for extracellular recordings. SpikeInterface is centered around
-   extracellular recordings, and this function is designed to convert the data to microvolts (µV). Many plottinf
+   extracellular recordings, and this function is designed to convert the data to microvolts (µV). Many plotting
    and analyzing functions in SpikeInterface expect data in microvolts, so this is the recommended approach for most users.
 2. ``scale_to_physical_units``: A general function for any physical unit conversion. This will allow you to extract the data in any
    physical unit, not just microvolts. This is useful for other types of recordings, such as force measurements in Newtons but should be
