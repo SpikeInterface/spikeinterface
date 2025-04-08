@@ -235,6 +235,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             detection_method = "locally_exclusive"
         
         peaks = detect_peaks(recording_w, detection_method, **detection_params, **job_kwargs)
+        order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
+        peaks = peaks[order]
 
         if debug:
             np.save(clustering_folder / "peaks.npy", peaks)
@@ -301,6 +303,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 extra_outputs=False,
                 **job_kwargs
             )
+            
             if len(outputs) == 2:
                 _, peak_labels = outputs
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_recording
@@ -357,8 +360,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting["sample_index"] = spikes["sample_index"]
                 sorting["unit_index"] = spikes["cluster_index"]
                 sorting["segment_index"] = spikes["segment_index"]
-                order = np.lexsort((spikes["sample_index"], spikes["segment_index"]))
-                spikes = spikes[order]
                 sorting = NumpySorting(sorting, sampling_frequency, templates.unit_ids)
 
             merging_params = params["merging"].copy()

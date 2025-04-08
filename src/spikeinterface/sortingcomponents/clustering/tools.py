@@ -231,28 +231,28 @@ def get_templates_from_peaks_and_recording(
         The estimated templates object.
     """
     from spikeinterface.core.template import Templates
-    from spikeinterface.core.numpyextractors import NumpySorting
+    from spikeinterface.core.basesorting import minimum_spike_dtype
 
     mask = peak_labels > -1
-    labels = np.unique(peak_labels[mask])
+    valid_peaks = peaks[mask]
+    valid_labels = peak_labels[mask]
+    labels, indices = np.unique(valid_labels, return_inverse=True)
     
     fs = recording.get_sampling_frequency()
     nbefore = int(ms_before * fs / 1000.0)
     nafter = int(ms_after * fs / 1000.0)
     
-    sorting = NumpySorting.from_samples_and_labels(
-        peaks["sample_index"][mask],
-        peak_labels[mask],
-        fs,
-        unit_ids=labels,
-    )
+    sorting = np.zeros(valid_peaks.size, dtype=minimum_spike_dtype)
+    sorting["sample_index"] = valid_peaks["sample_index"]
+    sorting["unit_index"] = indices
+    sorting["segment_index"] = valid_peaks["segment_index"]
 
     from spikeinterface.core.waveform_tools import estimate_templates
 
     templates_array = estimate_templates(
         recording, 
-        sorting.to_spike_vector(), 
-        sorting.unit_ids, 
+        sorting, 
+        np.arange(len(labels)), 
         nbefore, 
         nafter, 
         operator=operator,
