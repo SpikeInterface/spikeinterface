@@ -237,7 +237,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             sparsity_kwargs["peak_sign"] = peak_sign
 
         if params["multi_units_only"]:
-            sorting = NumpySorting.from_peaks(peaks, sampling_frequency, unit_ids=recording_w.unit_ids)
+            sorting = NumpySorting.from_peaks(peaks, 
+                                              sampling_frequency, 
+                                              unit_ids=recording_w.channel_ids)
         else:
             ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
             ## channels as flat as possible
