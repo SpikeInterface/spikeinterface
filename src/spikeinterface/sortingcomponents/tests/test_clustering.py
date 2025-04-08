@@ -5,6 +5,7 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks, clustering_methods
 from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
+from spikeinterface.sortingcomponents.clustering.graph_tools import create_graph_from_peak_features
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
 from spikeinterface.core import get_noise_levels
@@ -80,6 +81,18 @@ def test_extract_peaks_svd(recording, peaks, job_kwargs):
     assert peaks_svd.shape[2] == np.max(np.sum(sparse_mask, axis=1))
 
 
+def test_create_graph_from_peak_features(recording, peaks, job_kwargs):
+    peaks_svd, sparse_mask, svd_model = extract_peaks_svd(recording, peaks, n_components=5, **job_kwargs)
+
+    distances = create_graph_from_peak_features(
+        recording,
+        peaks,
+        peaks_svd,
+        sparse_mask,
+    )
+    print(distances.shape)
+
+
 def test_templates_from_svd(recording, peaks, job_kwargs):
     peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
         recording, peaks, n_components=1, ms_before=1, ms_after=1, **job_kwargs
@@ -108,4 +121,5 @@ if __name__ == "__main__":
 
     # test_find_cluster_from_peaks(method, recording, peaks, peak_locations)
 
-    test_extract_peaks_svd(recording, peaks, job_kwargs)
+    # test_extract_peaks_svd(recording, peaks, job_kwargs)
+    test_create_graph_from_peak_features(recording, peaks, job_kwargs)
