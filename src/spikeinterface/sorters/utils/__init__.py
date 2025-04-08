@@ -10,5 +10,5 @@ from .misc import (
     has_singularity,
     has_spython,
     has_docker_nvidia_installed,
-    get_nvidia_docker_dependecies,
+    get_nvidia_docker_dependencies,
 )

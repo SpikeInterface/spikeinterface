@@ -1,6 +1,5 @@
 import unittest
 import pytest
-from pathlib import Path
 
 from spikeinterface import load, generate_ground_truth_recording
 from spikeinterface.sorters import Kilosort4Sorter, run_sorter

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import warnings
 
 from spikeinterface.core.job_tools import fix_job_kwargs
 
