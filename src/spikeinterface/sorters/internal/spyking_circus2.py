@@ -28,7 +28,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "sparsity": {"method": "snr", 
                      "amplitude_mode": 
                      "peak_to_peak", 
-                     "threshold": 0.25},
+                     "threshold": 0},
         "filtering": {"freq_min": 150, 
                       "freq_max": 7000, 
                       "ftype": "bessel", 
@@ -52,7 +52,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "merging": {"max_distance_um": 50},
         "clustering": {"method": "graph_clustering", 
                        "method_kwargs" : dict()},
-        "matching": {"method": "circus-omp-svd", 
+        "matching": {"method": "wobble", 
                      "method_kwargs" : dict()},
         "apply_preprocessing": True,
         "cache_preprocessing": {"mode": "memory", 
@@ -289,8 +289,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                                      "clustering_method": "hdbscan",
                                      "radius_um" : radius_um,
                                      "clustering_kwargs" : dict(min_samples=1,
-                                                               n_jobs=-1,
                                                                min_cluster_size=50,
+                                                               core_dist_n_jobs=-1,
                                                                cluster_selection_method='leaf',
                                                                allow_single_cluster=True,
                                                                cluster_selection_epsilon=0.1)
@@ -301,7 +301,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 selected_peaks, 
                 method=clustering_method,
                 method_kwargs=clustering_params, 
-                extra_outputs=False,
+                extra_outputs=True,
                 **job_kwargs
             )
             
