@@ -102,7 +102,7 @@ class GraphClustering:
         # print(distances.shape)
         # print("sparsity: ", distances.indices.size / (distances.shape[0]**2))
 
-        #print("clustering_method", clustering_method)
+        # print("clustering_method", clustering_method)
 
         if clustering_method == "networkx-louvain":
             # using networkx : very slow (possible backend with cude  backend="cugraph",)
