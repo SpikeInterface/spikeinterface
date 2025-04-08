@@ -334,12 +334,12 @@ def get_templates_from_peaks_and_svd(
         peak_channels, b = np.unique(local_peaks["channel_index"], return_counts=True)
         best_channel = peak_channels[np.argmax(b)]
         sub_mask = local_peaks["channel_index"] == best_channel
-        for count, i in enumerate(np.flatnonzero(sparsity_mask[best_channel])):
-            if operator == "average":
-                data = np.mean(local_svd[sub_mask, :, count], 0)
-            elif operator == "median":
-                data = np.median(local_svd[sub_mask, :, count], 0)
-            templates_array[unit_ind, :, i] = svd_model.inverse_transform(data.reshape(1, -1))
+        channel_indices = np.flatnonzero(sparsity_mask[best_channel])
+        if operator == "average":
+            data = np.mean(local_svd[sub_mask], 0)
+        elif operator == "median":
+            data = np.median(local_svd[sub_mask], 0)
+        templates_array[unit_ind, :, channel_indices] = svd_model.inverse_transform(data.T)
 
     templates = Templates(
         templates_array=templates_array,

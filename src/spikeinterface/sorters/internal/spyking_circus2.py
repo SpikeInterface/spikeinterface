@@ -24,7 +24,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
-        "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0},
+        "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2, "margin_ms": 10},
         "whitening": {"mode": "local", "regularize": False},
         "detection": {"method" : "matched_filtering", 
@@ -282,7 +282,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 selected_peaks, 
                 method=clustering_method,
                 method_kwargs=clustering_params, 
-                extra_outputs=False,
+                extra_outputs=True,
                 **job_kwargs
             )
             if len(outputs) == 2:
@@ -296,8 +296,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     ms_after,
                     **job_kwargs,
                 )
-            elif len(outputs) == 3:
-                _, peak_labels, templates = outputs
             elif len(outputs) == 5:
                 _, peak_labels, svd_model, svd_features, sparsity_mask = outputs
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
