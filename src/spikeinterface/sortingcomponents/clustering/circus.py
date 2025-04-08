@@ -51,6 +51,7 @@ class CircusClustering:
         "split_kwargs": {"projection_mode": "tsvd", 
                          "n_pca_features": 0.9},
         "radius_um": 100,
+        "neighbors_radius_um": 50,
         "n_svd": 5,
         "few_waveforms": None,
         "ms_before": 0.5,
@@ -74,6 +75,7 @@ class CircusClustering:
         ms_before = params["ms_before"]
         ms_after = params["ms_after"]
         radius_um = params["radius_um"]
+        neighbors_radius_um = params["neighbors_radius_um"]
         nbefore = int(ms_before * fs / 1000.0)
         nafter = int(ms_after * fs / 1000.0)
         if params["tmp_folder"] is None:
@@ -119,7 +121,7 @@ class CircusClustering:
                                                               folder=features_folder,
                                                               **job_kwargs)
 
-        neighbours_mask = get_channel_distances(recording) <= radius_um
+        neighbours_mask = get_channel_distances(recording) <= neighbors_radius_um
 
         if params["debug"]:
             np.save(features_folder / "sparse_mask.npy", sparse_mask)

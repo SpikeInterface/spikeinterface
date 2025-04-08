@@ -41,9 +41,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
-        "clustering": {"method": "graph_clustering", 
+        "clustering": {"method": "circus", 
                        "method_kwargs" : dict()},
-        "matching": {"method": "circus-omp-svd", 
+        "matching": {"method": "wobble", 
                      "method_kwargs" : dict()},
         "apply_preprocessing": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
@@ -162,6 +162,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             whitening_kwargs["regularize_kwargs"] = {"method": "LedoitWolf"}
 
         recording_w = whiten(recording_f, **whitening_kwargs)
+
         noise_levels = get_noise_levels(recording_w, return_scaled=False, **job_kwargs)
 
         if recording_w.check_serializability("json"):
@@ -251,6 +252,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             if clustering_method == "circus":
                 clustering_params["waveforms"] = {}
                 clustering_params["sparsity"] = sparsity_kwargs
+                clustering_params["neighbors_radius_um"] = 50
                 clustering_params["radius_um"] = radius_um
                 clustering_params["waveforms"]["ms_before"] = ms_before
                 clustering_params["waveforms"]["ms_after"] = ms_after
@@ -280,21 +282,20 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 selected_peaks, 
                 method=clustering_method,
                 method_kwargs=clustering_params, 
-                extra_outputs=True,
+                extra_outputs=False,
                 **job_kwargs
             )
             if len(outputs) == 2:
                 _, peak_labels = outputs
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_recording
                 templates = get_templates_from_peaks_and_recording(
-                    recording,
+                    recording_w,
                     peaks,
                     peak_labels,
                     ms_before,
                     ms_after,
                     **job_kwargs,
                 )
-
             elif len(outputs) == 3:
                 _, peak_labels, templates = outputs
             elif len(outputs) == 5:
@@ -318,7 +319,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             if debug:
                 templates.to_zarr(folder_path=clustering_folder / "templates")
-                sorting = sorting.save(folder=clustering_folder / "sorting")
 
             ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
             matching_method = params["matching"].get("method", "circus-omp_svd")
