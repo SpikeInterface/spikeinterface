@@ -101,7 +101,6 @@ class _NeoBaseExtractor:
             channel_sampling_frequencies = channels["sampling_rate"]
             channel_stream_id = channels["stream_id"]
             unique_pairs = np.unique(np.vstack((channel_stream_id, channel_sampling_frequencies)).T, axis=0)
-
             # Form a dictionary of stream_id to sampling_frequency
             stream_to_sampling_frequencies = {}
             for stream_id, sampling_frequency in unique_pairs:
