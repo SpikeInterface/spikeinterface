@@ -171,6 +171,7 @@ class CircusClustering:
             )
         else:
             from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+
             templates = get_templates_from_peaks_and_svd(
                 recording,
                 peaks,
@@ -182,7 +183,7 @@ class CircusClustering:
                 sparse_mask,
                 operator="median",
             )
-        
+
         templates_array = templates.templates_array
         best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
         peak_snrs = np.abs(templates_array[:, nbefore, :])
@@ -190,6 +191,7 @@ class CircusClustering:
         valid_templates = best_snrs_ratio > params["noise_threshold"]
 
         from spikeinterface.core.template import Templates
+
         templates = Templates(
             templates_array=templates_array[valid_templates],
             sampling_frequency=fs,
