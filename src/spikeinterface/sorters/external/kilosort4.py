@@ -138,11 +138,7 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
-        from probeinterface import write_prb
-
-        pg = recording.get_probegroup()
-        probe_filename = sorter_output_folder / "probe.prb"
-        write_prb(probe_filename, pg)
+        KilosortBase._generate_channel_map_file(recording, sorter_output_folder, format="json")
 
         if params["use_binary_file"]:
             if not recording.binary_compatible_with(time_axis=0, file_paths_length=1):
@@ -189,7 +185,7 @@ class Kilosort4Sorter(BaseSorter):
 
         sorter_output_folder = sorter_output_folder.absolute()
 
-        probe_filename = sorter_output_folder / "probe.prb"
+        probe_filename = sorter_output_folder / "chanMap.json"
 
         torch_device = params["torch_device"]
         if torch_device == "auto":
