@@ -43,7 +43,7 @@ class KilosortBase:
         sorter_output_folder: pathlib.Path
             Path object to save `chanMap.mat` file
         format: str
-            The format of the channel map file. Currently, 'mat' 
+            The format of the channel map file. Currently, 'mat'
             and 'json' are supported ('mat' is the default).
         """
         if format not in ("mat", "json"):
@@ -78,13 +78,14 @@ class KilosortBase:
             scipy.io.savemat(str(sorter_output_folder / "chanMap.mat"), channel_map)
         elif format == "json":
             from kilosort.io import save_probe
+
             probe = {
-                'chanMap': np.arange(nchan),
-                'xc': np.array(xcoords[0]).astype(float).squeeze(),
-                'yc': np.array(ycoords[0]).astype(float).squeeze(),
-                'kcoords': np.array(kcoords).astype(float).squeeze(),
-                'n_chan': nchan,
-                }
+                "chanMap": np.arange(nchan),
+                "xc": np.array(xcoords[0]).astype(float).squeeze(),
+                "yc": np.array(ycoords[0]).astype(float).squeeze(),
+                "kcoords": np.array(kcoords).astype(float).squeeze(),
+                "n_chan": nchan,
+            }
             save_probe(probe, str(sorter_output_folder / "chanMap.json"))
 
     @classmethod
