@@ -37,6 +37,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "clustering": {"method": "graph_clustering", "method_kwargs": dict()},
         "matching": {"method": "wobble", "method_kwargs": dict()},
         "apply_preprocessing": True,
+        "templates_from_svd": False,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.75},
@@ -61,6 +62,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": "Boolean to specify whether circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
                                                     median reference + whitening",
         "apply_motion_correction": "Boolean to specify whether circus 2 should apply motion correction to the recording or not",
+        "templates_from_svd": "Boolean to specify whether templates should be computed from SVD or not.",
         "matched_filtering": "Boolean to specify whether circus 2 should detect peaks via matched filtering (slightly slower)",
         "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
                          memory_limit will control how much RAM can be used. In case of folder or zarr, delete_cache controls if cache is cleaned after sorting",
@@ -107,6 +109,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_after = params["general"].get("ms_after", 2)
         radius_um = params["general"].get("radius_um", 75)
         peak_sign = params["detection"].get("peak_sign", "neg")
+        templates_from_svd = params["templates_from_svd"]
         debug = params["debug"]
         seed = params["seed"]
         apply_preprocessing = params["apply_preprocessing"]
@@ -283,7 +286,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 selected_peaks,
                 method=clustering_method,
                 method_kwargs=clustering_params,
-                extra_outputs=True,
+                extra_outputs=templates_from_svd,
                 **job_kwargs,
             )
 
