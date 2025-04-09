@@ -57,6 +57,7 @@ class CircusClustering:
         "ms_after": 0.5,
         "noise_threshold": 4,
         "rank": 5,
+        "templates_from_svd": False,
         "noise_levels": None,
         "tmp_folder": None,
         "verbose": True,
@@ -154,47 +155,48 @@ class CircusClustering:
             **job_kwargs,
         )
 
-        non_noise = peak_labels > -1
-        labels, inverse = np.unique(peak_labels[non_noise], return_inverse=True)
-        peak_labels[non_noise] = inverse
-        labels = np.unique(inverse)
-
-        spikes = np.zeros(non_noise.sum(), dtype=minimum_spike_dtype)
-        spikes["sample_index"] = peaks[non_noise]["sample_index"]
-        spikes["segment_index"] = peaks[non_noise]["segment_index"]
-        spikes["unit_index"] = peak_labels[non_noise]
-
-        unit_ids = labels
-
-        nbefore = int(params["waveforms"]["ms_before"] * fs / 1000.0)
-        nafter = int(params["waveforms"]["ms_after"] * fs / 1000.0)
-
         if params["noise_levels"] is None:
             params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
 
-        templates_array = estimate_templates(
-            recording,
-            spikes,
-            unit_ids,
-            nbefore,
-            nafter,
-            return_scaled=False,
-            job_name=None,
-            **job_kwargs,
-        )
+        if not params["templates_from_svd"]:
+            from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_recording
 
+            templates = get_templates_from_peaks_and_recording(
+                recording,
+                peaks,
+                peak_labels,
+                ms_before,
+                ms_after,
+                **job_kwargs,
+            )
+        else:
+            from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+            templates = get_templates_from_peaks_and_svd(
+                recording,
+                peaks,
+                peak_labels,
+                ms_before,
+                ms_after,
+                svd_model,
+                peaks_svd,
+                sparse_mask,
+                operator="median",
+            )
+        
+        templates_array = templates.templates_array
         best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
         peak_snrs = np.abs(templates_array[:, nbefore, :])
         best_snrs_ratio = (peak_snrs / params["noise_levels"])[np.arange(len(peak_snrs)), best_channels]
         valid_templates = best_snrs_ratio > params["noise_threshold"]
 
+        from spikeinterface.core.template import Templates
         templates = Templates(
             templates_array=templates_array[valid_templates],
             sampling_frequency=fs,
-            nbefore=nbefore,
+            nbefore=templates.nbefore,
             sparsity_mask=None,
             channel_ids=recording.channel_ids,
-            unit_ids=unit_ids[valid_templates],
+            unit_ids=templates.unit_ids[valid_templates],
             probe=recording.get_probe(),
             is_scaled=False,
         )

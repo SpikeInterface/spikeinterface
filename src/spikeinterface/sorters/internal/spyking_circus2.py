@@ -262,6 +262,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 clustering_params["ms_before"] = ms_before
                 clustering_params["ms_after"] = ms_after
                 clustering_params["verbose"] = verbose
+                clustering_params["templates_from_svd"] = templates_from_svd
                 clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
                 clustering_params["debug"] = debug
                 clustering_params["noise_threshold"] = detection_params.get("detect_threshold", 4)
