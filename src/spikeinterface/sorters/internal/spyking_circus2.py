@@ -23,7 +23,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
-        "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0},
+        "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2, "margin_ms": 10},
         "whitening": {"mode": "local", "regularize": False},
         "detection": {"method": "matched_filtering", "method_kwargs": dict(peak_sign="neg", detect_threshold=5)},
@@ -34,10 +34,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
-        "clustering": {"method": "graph_clustering", "method_kwargs": dict()},
-        "matching": {"method": "wobble", "method_kwargs": dict()},
+        "clustering": {"method": "circus", "method_kwargs": dict()},
+        "matching": {"method": "circus-omp-svd", "method_kwargs": dict()},
         "apply_preprocessing": True,
-        "templates_from_svd": False,
+        "templates_from_svd": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.75},
@@ -79,7 +79,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "2.0"
+        return "2.0rc"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
