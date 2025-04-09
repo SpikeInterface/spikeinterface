@@ -107,7 +107,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         num_channels = recording.get_num_channels()
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
-        radius_um = params["general"].get("radius_um", 75)
+        radius_um = params["general"].get("radius_um", 100)
         peak_sign = params["detection"].get("peak_sign", "neg")
         templates_from_svd = params["templates_from_svd"]
         debug = params["debug"]
@@ -170,7 +170,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_method = params["detection"].get("method", "matched_filtering")
         detection_params = params["detection"].get("method_kwargs", dict())
-        detection_params["radius_um"] = radius_um
+        detection_params["radius_um"] = radius_um / 2
         detection_params["exclude_sweep_ms"] = exclude_sweep_ms
         detection_params["noise_levels"] = noise_levels
 
@@ -178,6 +178,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         selection_params = params["selection"].get("method_kwargs", dict())
         n_peaks_per_channel = selection_params.get("n_peaks_per_channel", 5000)
         min_n_peaks = selection_params.get("min_n_peaks", 100000)
+
+        full_clustering = params["matching"].get("method", "circus-omp-svd") is None
+
         skip_peaks = not params["multi_units_only"] and selection_method == "uniform"
         max_n_peaks = n_peaks_per_channel * num_channels
         n_peaks = max(min_n_peaks, max_n_peaks)
@@ -218,6 +221,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     recording_w, seed=seed, **job_kwargs
                 )
             detection_method = "locally_exclusive"
+
+        #if full_clustering:
 
         peaks = detect_peaks(recording_w, detection_method, **detection_params, **job_kwargs)
         order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
