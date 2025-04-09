@@ -1,11 +1,8 @@
 import pytest
 import numpy as np
-from pathlib import Path
 
 from spikeinterface.extractors import WhiteMatterRecordingExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
-from spikeinterface.core.core_tools import measure_memory_allocation
-from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
 def test_WhiteMatterRecordingExtractor(create_cache_folder):
