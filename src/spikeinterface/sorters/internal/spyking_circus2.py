@@ -79,7 +79,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "2.0rc"
+        return "2.1"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -352,6 +352,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             else:
                 ## we should have a case to deal with clustering all peaks without matching
                 ## for small density channel counts
+
                 sorting = np.zeros(selected_peaks.size, dtype=minimum_spike_dtype)
                 sorting["sample_index"] = selected_peaks["sample_index"]
                 sorting["unit_index"] = peak_labels
