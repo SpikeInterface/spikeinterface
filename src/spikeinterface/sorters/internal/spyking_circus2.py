@@ -296,7 +296,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
                 templates = get_templates_from_peaks_and_recording(
                     recording_w,
-                    peaks,
+                    selected_peaks,
                     peak_labels,
                     ms_before,
                     ms_after,
@@ -308,7 +308,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
                 templates = get_templates_from_peaks_and_svd(
                     recording_w,
-                    peaks,
+                    selected_peaks,
                     peak_labels,
                     ms_before,
                     ms_after,
@@ -348,6 +348,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting["sample_index"] = spikes["sample_index"]
                 sorting["unit_index"] = spikes["cluster_index"]
                 sorting["segment_index"] = spikes["segment_index"]
+                sorting = NumpySorting(sorting, sampling_frequency, templates.unit_ids)
+            else:
+                ## we should have a case to deal with clustering all peaks without matching
+                ## for small density channel counts
+                sorting = np.zeros(selected_peaks.size, dtype=minimum_spike_dtype)
+                sorting["sample_index"] = selected_peaks["sample_index"]
+                sorting["unit_index"] = peak_labels
+                sorting["segment_index"] = selected_peaks["segment_index"]
                 sorting = NumpySorting(sorting, sampling_frequency, templates.unit_ids)
 
             merging_params = params["merging"].copy()
