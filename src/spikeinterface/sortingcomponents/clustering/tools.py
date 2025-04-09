@@ -317,7 +317,7 @@ def get_templates_from_peaks_and_svd(
     """
     from spikeinterface.core.template import Templates
 
-    assert operator in ["mean", "median"], "operator should be either 'mean' or 'median'"
+    assert operator in ["average", "median"], "operator should be either 'average' or 'median'"
     mask = peak_labels > -1
     valid_peaks = peaks[mask]
     valid_labels = peak_labels[mask]
