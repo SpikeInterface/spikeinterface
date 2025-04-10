@@ -41,6 +41,7 @@ class CircusClustering:
             "allow_single_cluster": True,
         },
         "cleaning_kwargs": {},
+        "remove_mixtures": False,
         "waveforms": {"ms_before": 2, "ms_after": 2},
         "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "recursive_kwargs": {
@@ -188,7 +189,11 @@ class CircusClustering:
         best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
         peak_snrs = np.abs(templates_array[:, nbefore, :])
         best_snrs_ratio = (peak_snrs / params["noise_levels"])[np.arange(len(peak_snrs)), best_channels]
+        old_unit_ids = templates.unit_ids.copy()
         valid_templates = best_snrs_ratio > params["noise_threshold"]
+
+        mask = np.isin(peak_labels, old_unit_ids[~valid_templates])
+        peak_labels[mask] = -1
 
         from spikeinterface.core.template import Templates
 
@@ -210,26 +215,31 @@ class CircusClustering:
         sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
         empty_templates = templates.sparsity_mask.sum(axis=1) == 0
+        old_unit_ids = templates.unit_ids.copy()
         templates = remove_empty_templates(templates)
 
-        mask = np.isin(peak_labels, np.where(empty_templates)[0])
+        mask = np.isin(peak_labels, old_unit_ids[empty_templates])
         peak_labels[mask] = -1
 
-        mask = np.isin(peak_labels, np.where(~valid_templates)[0])
-        peak_labels[mask] = -1
+        labels = np.unique(peak_labels)
+        labels = labels[labels >= 0]
 
-        if verbose:
-            print("Found %d raw clusters, starting to clean with matching" % (len(templates.unit_ids)))
+        if params["remove_mixtures"]:
+            if verbose:
+                print("Found %d raw clusters, starting to clean with matching" % (len(templates.unit_ids)))
 
-        cleaning_job_kwargs = job_kwargs.copy()
-        cleaning_job_kwargs["progress_bar"] = False
-        cleaning_params = params["cleaning_kwargs"].copy()
+            cleaning_job_kwargs = job_kwargs.copy()
+            cleaning_job_kwargs["progress_bar"] = False
+            cleaning_params = params["cleaning_kwargs"].copy()
 
-        labels, peak_labels = remove_duplicates_via_matching(
-            templates, peak_labels, job_kwargs=cleaning_job_kwargs, **cleaning_params
-        )
+            labels, peak_labels = remove_duplicates_via_matching(
+                templates, peak_labels, job_kwargs=cleaning_job_kwargs, **cleaning_params
+            )
 
-        if verbose:
-            print("Kept %d non-duplicated clusters" % len(labels))
+            if verbose:
+                print("Kept %d non-duplicated clusters" % len(labels))
+        else:
+            if verbose:
+                print("Kept %d raw clusters" % len(labels))
 
         return labels, peak_labels, svd_model, peaks_svd, sparse_mask
