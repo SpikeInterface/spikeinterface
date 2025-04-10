@@ -107,7 +107,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         num_channels = recording.get_num_channels()
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
-        radius_um = params["general"].get("radius_um", 75)
+        radius_um = params["general"].get("radius_um", 100)
         peak_sign = params["detection"].get("peak_sign", "neg")
         templates_from_svd = params["templates_from_svd"]
         debug = params["debug"]
@@ -170,7 +170,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_method = params["detection"].get("method", "matched_filtering")
         detection_params = params["detection"].get("method_kwargs", dict())
-        detection_params["radius_um"] = radius_um
+        detection_params["radius_um"] = radius_um / 2
         detection_params["exclude_sweep_ms"] = exclude_sweep_ms
         detection_params["noise_levels"] = noise_levels
 
@@ -369,6 +369,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     templates=templates,
                     **job_kwargs,
                 )
+
+                if verbose:
+                    print("Found %d spikes" % len(peaks))
+
                 sorting = np.zeros(peaks.size, dtype=minimum_spike_dtype)
                 sorting["sample_index"] = peaks["sample_index"]
                 sorting["unit_index"] = peak_labels
