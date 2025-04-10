@@ -69,7 +69,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "seed": "An int to control how chunks are shuffled while detecting peaks",
-        "deterministic": "a boolean to specify if the sorting should be deterministic or not. If True, then the seed will be used to shuffle the chunks",
+        "deterministic": "A boolean to specify if the sorting should be deterministic or not. If True, then the seed will be used to shuffle the chunks",
         "debug": "Boolean to specify if internal data structures made during the sorting should be kept for debugging",
     }
 
