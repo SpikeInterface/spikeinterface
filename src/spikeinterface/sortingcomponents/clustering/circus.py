@@ -223,21 +223,25 @@ class CircusClustering:
         mask = np.isin(peak_labels, old_unit_ids[empty_templates])
         peak_labels[mask] = -1
 
-        if verbose:
-            print("Found %d raw clusters, starting to clean with matching" % (len(templates.unit_ids)))
-
-        cleaning_job_kwargs = job_kwargs.copy()
-        cleaning_job_kwargs["progress_bar"] = False
-        cleaning_params = params["cleaning_kwargs"].copy()
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
 
         if params["remove_mixtures"]:
+            if verbose:
+                print("Found %d raw clusters, starting to clean with matching" % (len(templates.unit_ids)))
+
+            cleaning_job_kwargs = job_kwargs.copy()
+            cleaning_job_kwargs["progress_bar"] = False
+            cleaning_params = params["cleaning_kwargs"].copy()
+        
             labels, peak_labels = remove_duplicates_via_matching(
                 templates, peak_labels, job_kwargs=cleaning_job_kwargs, **cleaning_params
             )
 
             if verbose:
                 print("Kept %d non-duplicated clusters" % len(labels))
+        else:
+            if verbose:
+                print("Kept %d raw clusters" % len(labels))
 
         return labels, peak_labels, svd_model, peaks_svd, sparse_mask
