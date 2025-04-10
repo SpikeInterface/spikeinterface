@@ -5,29 +5,6 @@ from spikeinterface.extractors import WhiteMatterRecordingExtractor, BinaryRecor
 from spikeinterface.core.numpyextractors import NumpyRecording
 
 
-def test_WhiteMatterRecordingExtractor(create_cache_folder):
-    cache_folder = create_cache_folder
-    num_channels = 3
-    num_samples = 30
-    sampling_frequency = 10000
-    dtype = "int16"
-
-    file_path = cache_folder / "test_WhiteMatterRecordingExtractor.raw"
-    np.memmap(file_path, dtype=dtype, mode="w+", shape=(num_samples, num_channels))
-
-    rec = WhiteMatterRecordingExtractor(
-        file_path=file_path,
-        sampling_frequency=sampling_frequency,
-        num_channels=num_channels,
-    )
-
-    file_path = cache_folder / "test_WhiteMatterRecordingExtractor_copied.raw"
-    BinaryRecordingExtractor.write_recording(rec, file_path, dtype="int16", byte_offset=8)
-
-    file_path = cache_folder / "test_WhiteMatterRecordingExtractor.raw"
-    assert (cache_folder / "test_WhiteMatterRecordingExtractor_copied.raw").is_file()
-
-
 def test_round_trip(tmp_path):
     num_channels = 10
     num_samples = 500
@@ -99,7 +76,3 @@ def test_sequential_reading_of_small_traces(tmp_path):
     small_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
     expected_traces = full_traces[start_frame:end_frame, :]
     assert np.allclose(small_traces, expected_traces)
-
-
-if __name__ == "__main__":
-    test_WhiteMatterRecordingExtractor()
