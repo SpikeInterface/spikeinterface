@@ -37,7 +37,7 @@ def export_to_ibl(
     Parameters
     ----------
     analyzer: SortingAnalyzer
-        The sorting analyzer object to use for spike information. 
+        The sorting analyzer object to use for spike information.
         Should also contain the pre-processed recording to use for AP-band data.
     output_folder: str | Path
         The output folder for the exports.
@@ -63,9 +63,7 @@ def export_to_ibl(
     try:
         from scipy.signal import welch
     except ImportError as e:
-        raise ImportError(
-            "Please install scipy to use the export_to_ibl function."
-        ) from e
+        raise ImportError("Please install scipy to use the export_to_ibl function.") from e
 
     # Output folder checks
     if isinstance(output_folder, str):
@@ -138,9 +136,7 @@ def export_to_ibl(
     # See here for docs on the format: https://github.com/int-brain-lab/iblapps/wiki/3.-Overview-of-datasets#input-histology-data
 
     # Subset channels in case some were excluded from spike sorting
-    (channel_inds,) = np.isin(
-        analyzer.recording.channel_ids, analyzer.channel_ids
-    ).nonzero()
+    (channel_inds,) = np.isin(analyzer.recording.channel_ids, analyzer.channel_ids).nonzero()
 
     # TODO: put this into a chunk extractor
     def _get_rms(rec):
@@ -160,9 +156,7 @@ def export_to_ibl(
     # Get RMS for the AP data. We will use a window of length rms_win_length_sec seconds slid over the entire recording.
     ap_rec = analyzer.recording
     if ap_rec.get_num_segments() != 1:
-        warnings.warn(
-            "Found ap recording with more than one segment, only using initial segment."
-        )
+        warnings.warn("Found ap recording with more than one segment, only using initial segment.")
         ap_rec = ap_rec[0]
     chunk_rms, chunk_start_times = _get_rms(ap_rec)
     np.save(os.path.join(output_folder, "_iblqc_ephysTimeRmsAP.rms.npy"), chunk_rms)
@@ -174,9 +168,7 @@ def export_to_ibl(
     if lfp_recording is not None:
         # Get RMS for the LFP data.
         if lfp_recording.get_num_segments() != 1:
-            warnings.warn(
-                "Found lfp recording with more than one segment, only using initial segment."
-            )
+            warnings.warn("Found lfp recording with more than one segment, only using initial segment.")
             lfp_recording = lfp_recording[0]
         chunk_rms, chunk_start_times = _get_rms(lfp_recording)
         np.save(os.path.join(output_folder, "_iblqc_ephysTimeRmsLF.rms.npy"), chunk_rms)
@@ -187,9 +179,7 @@ def export_to_ibl(
 
         # Get spectral density on a snippet of LFP data
         end_frame = int(total_secs_spec_dens * lfp_recording.sampling_frequency)
-        traces = lfp_recording.get_traces(
-            start_frame=0, end_frame=end_frame
-        )  # time x channels
+        traces = lfp_recording.get_traces(start_frame=0, end_frame=end_frame)  # time x channels
         spec_density = np.zeros((welch_win_length_samples // 2 + 1, traces.shape[1]))
         for iCh in range(traces.shape[1]):
             f, Pxx = welch(
@@ -198,9 +188,7 @@ def export_to_ibl(
                 nperseg=welch_win_length_samples,
             )
             spec_density[:, iCh] = Pxx
-        spec_density = spec_density[
-            :, channel_inds
-        ]  # only keep channels that were used for spike sorting
+        spec_density = spec_density[:, channel_inds]  # only keep channels that were used for spike sorting
         spec_density = spec_density.astype(np.float32)
         f = f.astype(np.float32)
         assert spec_density.shape[0] == len(f)
@@ -208,9 +196,7 @@ def export_to_ibl(
             os.path.join(output_folder, "_iblqc_ephysSpectralDensityLF.power.npy"),
             spec_density,
         )
-        np.save(
-            os.path.join(output_folder, "_iblqc_ephysSpectralDensityLF.freqs.npy"), f
-        )
+        np.save(os.path.join(output_folder, "_iblqc_ephysSpectralDensityLF.freqs.npy"), f)
 
     ### Save spike info ###
 
@@ -223,9 +209,7 @@ def export_to_ibl(
 
     # convert times and squeeze
     times = np.load(output_folder / "spike_times.npy")
-    np.save(
-        output_folder / "spike_times.npy", np.squeeze(times / 30000.0).astype("float64")
-    )
+    np.save(output_folder / "spike_times.npy", np.squeeze(times / 30000.0).astype("float64"))
 
     # convert amplitudes and squeeze
     amps = np.load(output_folder / "amplitudes.npy")
@@ -233,9 +217,7 @@ def export_to_ibl(
 
     # save depths and channel inds
     np.save(output_folder / "spike_depths.npy", spike_depths)
-    np.save(
-        output_folder / "channel_inds.npy", np.arange(len(channel_inds), dtype="int")
-    )
+    np.save(output_folder / "channel_inds.npy", np.arange(len(channel_inds), dtype="int"))
 
     # # save templates
     cluster_channels = []
@@ -248,9 +230,7 @@ def export_to_ibl(
         waveform = templates[unit_idx, :, :]
         extremum_channel_index = extremum_channel_indices[unit_id]
         peak_waveform = waveform[:, extremum_channel_index]
-        peakToTrough = (
-            np.argmax(peak_waveform) - np.argmin(peak_waveform)
-        ) / analyzer.sampling_frequency
+        peakToTrough = (np.argmax(peak_waveform) - np.argmin(peak_waveform)) / analyzer.sampling_frequency
         # cluster_channels.append(int(channel_locs[extremum_channel_index, 1] / 10)) # ??? fails for odd nums of units
         cluster_channels.append(
             extremum_channel_index
