@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from spikeinterface.extractors import WhiteMatterRecordingExtractor
+from spikeinterface.extractors import WhiteMatterRecordingExtractor, BinaryRecordingExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
 
 
@@ -22,7 +22,7 @@ def test_WhiteMatterRecordingExtractor(create_cache_folder):
     )
 
     file_path = cache_folder / "test_WhiteMatterRecordingExtractor_copied.raw"
-    WhiteMatterRecordingExtractor.write_recording(rec, file_path)
+    BinaryRecordingExtractor.write_recording(rec, file_path, dtype="int16", byte_offset=8)
 
     file_path = cache_folder / "test_WhiteMatterRecordingExtractor.raw"
     assert (cache_folder / "test_WhiteMatterRecordingExtractor_copied.raw").is_file()
@@ -36,7 +36,7 @@ def test_round_trip(tmp_path):
     recording = NumpyRecording(traces_list=traces_list, sampling_frequency=sampling_frequency)
 
     file_path = tmp_path / "test_WhiteMatterRecordingExtractor.raw"
-    WhiteMatterRecordingExtractor.write_recording(recording=recording, file_paths=file_path)
+    BinaryRecordingExtractor.write_recording(recording=recording, file_paths=file_path, dtype="int16", byte_offset=8)
 
     sampling_frequency = recording.get_sampling_frequency()
     num_channels = recording.get_num_channels()
@@ -67,7 +67,7 @@ def test_sequential_reading_of_small_traces(tmp_path):
     recording = NumpyRecording(traces_list=traces_list, sampling_frequency=sampling_frequency)
 
     file_path = tmp_path / "test_WhiteMatterRecordingExtractor.raw"
-    WhiteMatterRecordingExtractor.write_recording(recording=recording, file_paths=file_path)
+    BinaryRecordingExtractor.write_recording(recording=recording, file_paths=file_path, dtype="int16", byte_offset=8)
 
     sampling_frequency = recording.get_sampling_frequency()
     num_channels = recording.get_num_channels()

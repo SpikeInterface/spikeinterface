@@ -57,21 +57,6 @@ class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
             channel_ids=channel_ids,
         )
 
-    @staticmethod
-    def write_recording(recording, file_paths, **job_kwargs):
-        """
-        Save the traces of a recording extractor in binary .dat format.
-
-        Parameters
-        ----------
-        recording : RecordingExtractor
-            The recording extractor object to be saved in .dat format
-        file_paths : str
-            The path to the file.
-        """
-        job_kwargs["byte_offset"] = 8
-        BinaryRecordingExtractor.write_recording(recording, file_paths=file_paths, dtype="int16", **job_kwargs)
-
 
 # Define function equivalent for convenience
 read_whitematter = define_function_from_class(source_class=WhiteMatterRecordingExtractor, name="read_whitematter")
