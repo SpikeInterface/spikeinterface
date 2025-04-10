@@ -185,7 +185,6 @@ class CircusClustering:
                 operator="median",
             )
 
-
         templates_array = templates.templates_array
         best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
         peak_snrs = np.abs(templates_array[:, nbefore, :])
@@ -196,7 +195,6 @@ class CircusClustering:
         mask = np.isin(peak_labels, old_unit_ids[~valid_templates])
         peak_labels[mask] = -1
 
-        
         from spikeinterface.core.template import Templates
 
         templates = Templates(
