@@ -22,9 +22,9 @@ class FindNearestTemplate(PipelineNode):
         templates_array = templates.get_dense_templates()
         n_templates = templates_array.shape[0]
         num_channels = recording.get_num_channels()
-        self.svd_templates = np.zeros((n_templates, num_channels, pca_model.n_components), 'float32')
+        self.svd_templates = np.zeros((n_templates, pca_model.n_components, num_channels), 'float32')
         for i in range(n_templates):
-            self.svd_templates[i] = pca_model.transform(templates_array[i].T)
+            self.svd_templates[i] = pca_model.transform(templates_array[i].T).T
         self.sparsity_mask = sparsity_mask
         self._dtype = recording.get_dtype()
         self._kwargs.update(
@@ -44,7 +44,7 @@ class FindNearestTemplate(PipelineNode):
             (chan_inds,) = np.nonzero(self.sparsity_mask[main_chan])
             local_svds = waveforms[idx][:, :, :len(chan_inds)]
             XA = local_svds.reshape(local_svds.shape[0], -1)
-            XB = self.svd_templates[:, chan_inds, :].reshape(self.svd_templates.shape[0], -1)
+            XB = self.svd_templates[:, :, chan_inds].reshape(self.svd_templates.shape[0], -1)
             distances= cdist(XA, XB, metric='euclidean')
             peak_labels[idx] = np.argmin(distances, axis=1)
         return peak_labels
