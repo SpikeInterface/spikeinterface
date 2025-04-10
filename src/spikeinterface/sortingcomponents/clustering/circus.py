@@ -55,7 +55,7 @@ class CircusClustering:
         "few_waveforms": None,
         "ms_before": 0.5,
         "ms_after": 0.5,
-        "seed" : 42,
+        "seed": 42,
         "noise_threshold": 4,
         "rank": 5,
         "templates_from_svd": False,
@@ -90,19 +90,15 @@ class CircusClustering:
         # SVD for time compression
         if params["few_waveforms"] is None:
             few_peaks = select_peaks(
-                peaks, 
-                recording=recording, 
-                method="uniform", 
+                peaks,
+                recording=recording,
+                method="uniform",
                 seed=params["seed"],
-                n_peaks=10000, 
-                margin=(nbefore, nafter)
+                n_peaks=10000,
+                margin=(nbefore, nafter),
             )
             few_wfs = extract_waveform_at_max_channel(
-                recording, 
-                few_peaks, 
-                ms_before=ms_before, 
-                ms_after=ms_after, 
-                **job_kwargs
+                recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
             )
             wfs = few_wfs[:, :, 0]
         else:
@@ -181,6 +177,7 @@ class CircusClustering:
             )
         else:
             from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+
             templates = get_templates_from_peaks_and_svd(
                 recording,
                 peaks,
@@ -192,7 +189,7 @@ class CircusClustering:
                 sparse_mask,
                 operator="median",
             )
-        
+
         templates_array = templates.templates_array
         best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
         peak_snrs = np.abs(templates_array[:, nbefore, :])
@@ -200,6 +197,7 @@ class CircusClustering:
         valid_templates = best_snrs_ratio > params["noise_threshold"]
 
         from spikeinterface.core.template import Templates
+
         templates = Templates(
             templates_array=templates_array[valid_templates],
             sampling_frequency=fs,
