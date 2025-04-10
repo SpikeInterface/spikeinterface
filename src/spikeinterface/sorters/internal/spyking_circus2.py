@@ -219,6 +219,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 )
             detection_method = "locally_exclusive"
 
+        matching_method = params["matching"].get("method", "circus-omp-svd")
+        if matching_method is None:
+            # We want all peaks if we are planning to assign them to templates afterwards
+            detection_params["skip_after_n_peaks"] = None
+        
         peaks = detect_peaks(recording_w, detection_method, **detection_params, **job_kwargs)
         order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
         peaks = peaks[order]
@@ -353,12 +358,23 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             else:
                 ## we should have a case to deal with clustering all peaks without matching
                 ## for small density channel counts
-
-                sorting = np.zeros(selected_peaks.size, dtype=minimum_spike_dtype)
-                sorting["sample_index"] = selected_peaks["sample_index"]
+                from spikeinterface.sortingcomponents.matching.tools import assign_templates_to_peaks
+                peak_labels = assign_templates_to_peaks(
+                    recording_w,
+                    peaks,
+                    ms_before=ms_before,
+                    ms_after=ms_after,
+                    svd_model=svd_model,
+                    sparse_mask=sparsity_mask,
+                    templates=templates,
+                    **job_kwargs,
+                )
+                sorting = np.zeros(peaks.size, dtype=minimum_spike_dtype)
+                sorting["sample_index"] = peaks["sample_index"]
                 sorting["unit_index"] = peak_labels
-                sorting["segment_index"] = selected_peaks["segment_index"]
+                sorting["segment_index"] = peaks["segment_index"]
                 sorting = NumpySorting(sorting, sampling_frequency, templates.unit_ids)
+
 
             merging_params = params["merging"].copy()
             merging_params["debug_folder"] = sorter_output_folder / "merging"
