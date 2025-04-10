@@ -161,7 +161,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         recording_w = whiten(recording_f, **whitening_kwargs)
 
-        noise_levels = get_noise_levels(recording_w, return_scaled=False, **job_kwargs)
+        noise_levels = get_noise_levels(recording_w, 
+                                        return_scaled=False, 
+                                        seed=seed,
+                                        **job_kwargs)
 
         if recording_w.check_serializability("json"):
             recording_w.dump(sorter_output_folder / "preprocessed_recording.json", relative_to=None)
@@ -193,9 +196,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_folder.mkdir(parents=True, exist_ok=True)
             np.save(clustering_folder / "noise_levels.npy", noise_levels)
 
-        detection_params["recording_slices"] = get_shuffled_recording_slices(
-            recording_w, seed=params["seed"], **job_kwargs
-        )
         detection_params['random_chunk_kwargs'] = {"num_chunks_per_segment": 5, 
                                                     "seed" : params["seed"]}
 
@@ -228,25 +228,26 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     **detection_params,
                     **job_kwargs,
                 )
-
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
             if debug:
                 np.save(clustering_folder / "waveforms.npy", waveforms)
                 np.save(clustering_folder / "prototype.npy", prototype)
-            if skip_peaks:
-                detection_params["skip_after_n_peaks"] = n_peaks
             
-            peaks = detect_peaks(recording_w, "matched_filtering", **detection_params, **job_kwargs)
         else:
             waveforms = None
-            if skip_peaks:
-                detection_params["skip_after_n_peaks"] = n_peaks
             detection_method = "locally_exclusive"
 
+        if skip_peaks:
+            detection_params["skip_after_n_peaks"] = n_peaks
+        
+        detection_params["recording_slices"] = get_shuffled_recording_slices(
+            recording_w, seed=params["seed"], **job_kwargs
+        )
         peaks = detect_peaks(recording_w, detection_method, **detection_params, **job_kwargs)
         order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
         peaks = peaks[order]
+        
 
         if debug:
             np.save(clustering_folder / "peaks.npy", peaks)
