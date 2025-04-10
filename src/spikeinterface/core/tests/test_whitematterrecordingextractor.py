@@ -7,27 +7,25 @@ from spikeinterface.core.numpyextractors import NumpyRecording
 
 def test_WhiteMatterRecordingExtractor(create_cache_folder):
     cache_folder = create_cache_folder
-    num_seg = 2
     num_channels = 3
     num_samples = 30
     sampling_frequency = 10000
     dtype = "int16"
 
-    file_paths = [cache_folder / f"test_WhiteMatterRecordingExtractor_{i}.raw" for i in range(num_seg)]
-    for i in range(num_seg):
-        np.memmap(file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_channels))
+    file_path = cache_folder / "test_WhiteMatterRecordingExtractor.raw"
+    np.memmap(file_path, dtype=dtype, mode="w+", shape=(num_samples, num_channels))
 
     rec = WhiteMatterRecordingExtractor(
-        file_paths=file_paths,
+        file_path=file_path,
         sampling_frequency=sampling_frequency,
         num_channels=num_channels,
     )
 
-    file_paths = [cache_folder / f"test_WhiteMatterRecordingExtractor_copied_{i}.raw" for i in range(num_seg)]
-    WhiteMatterRecordingExtractor.write_recording(rec, file_paths)
+    file_path = cache_folder / "test_WhiteMatterRecordingExtractor_copied.raw"
+    WhiteMatterRecordingExtractor.write_recording(rec, file_path)
 
-    file_paths = [cache_folder / f"test_WhiteMatterRecordingExtractor_{i}.raw" for i in range(num_seg)]
-    assert (cache_folder / "test_WhiteMatterRecordingExtractor_copied_0.raw").is_file()
+    file_path = cache_folder / "test_WhiteMatterRecordingExtractor.raw"
+    assert (cache_folder / "test_WhiteMatterRecordingExtractor_copied.raw").is_file()
 
 
 def test_round_trip(tmp_path):
@@ -43,7 +41,7 @@ def test_round_trip(tmp_path):
     sampling_frequency = recording.get_sampling_frequency()
     num_channels = recording.get_num_channels()
     binary_recorder = WhiteMatterRecordingExtractor(
-        file_paths=file_path,
+        file_path=file_path,
         sampling_frequency=sampling_frequency,
         num_channels=num_channels,
     )
@@ -74,7 +72,7 @@ def test_sequential_reading_of_small_traces(tmp_path):
     sampling_frequency = recording.get_sampling_frequency()
     num_channels = recording.get_num_channels()
     recording = WhiteMatterRecordingExtractor(
-        file_paths=file_path,
+        file_path=file_path,
         sampling_frequency=sampling_frequency,
         num_channels=num_channels,
     )
