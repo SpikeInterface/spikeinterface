@@ -31,19 +31,25 @@ class UnitLocationsWidget(BaseWidget):
         If True, the legend is plotted (matplotlib backend)
     hide_axis : bool, default: False
         If True, the axis is set to off (matplotlib backend)
+    x_lim : tuple or None, default: None
+        The min and max width to display, if None compute using probe information.
+    y_lim : tuple or None, default: None
+        The min and max depth to display, if None compute using probe information.
     """
 
     def __init__(
         self,
         sorting_analyzer: SortingAnalyzer,
-        unit_ids=None,
-        with_channel_ids=False,
-        unit_colors=None,
-        hide_unit_selector=False,
-        plot_all_units=True,
-        plot_legend=False,
-        hide_axis=False,
-        backend=None,
+        unit_ids: list | None = None,
+        with_channel_ids: bool = False,
+        unit_colors: dict | None = None,
+        hide_unit_selector: bool = False,
+        plot_all_units: bool = True,
+        plot_legend: bool = False,
+        hide_axis: bool = False,
+        backend: str | None = None,
+        y_lim: tuple[float, float] | None = None,
+        x_lim: tuple[float, float] | None = None,
         **backend_kwargs,
     ):
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
@@ -78,6 +84,8 @@ class UnitLocationsWidget(BaseWidget):
             plot_all_units=plot_all_units,
             plot_legend=plot_legend,
             hide_axis=hide_axis,
+            x_lim=x_lim,
+            y_lim=y_lim,
         )
 
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
@@ -120,6 +128,10 @@ class UnitLocationsWidget(BaseWidget):
                 poly_contour.set_zorder(1)
 
         self.ax.set_title("")
+        if dp.x_lim is not None:
+            self.ax.set_xlim(*dp.x_lim)
+        if dp.y_lim is not None:
+            self.ax.set_ylim(*dp.y_lim)
 
         width = height = 10
         ellipse_kwargs = dict(width=width, height=height, lw=2)
