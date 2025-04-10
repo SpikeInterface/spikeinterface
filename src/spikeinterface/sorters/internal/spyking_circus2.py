@@ -223,7 +223,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if matching_method is None:
             # We want all peaks if we are planning to assign them to templates afterwards
             detection_params["skip_after_n_peaks"] = None
-        
+
         peaks = detect_peaks(recording_w, detection_method, **detection_params, **job_kwargs)
         order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
         peaks = peaks[order]
@@ -359,6 +359,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 ## we should have a case to deal with clustering all peaks without matching
                 ## for small density channel counts
                 from spikeinterface.sortingcomponents.matching.tools import assign_templates_to_peaks
+
                 peak_labels = assign_templates_to_peaks(
                     recording_w,
                     peaks,
@@ -374,7 +375,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting["unit_index"] = peak_labels
                 sorting["segment_index"] = peaks["segment_index"]
                 sorting = NumpySorting(sorting, sampling_frequency, templates.unit_ids)
-
 
             merging_params = params["merging"].copy()
             merging_params["debug_folder"] = sorter_output_folder / "merging"
