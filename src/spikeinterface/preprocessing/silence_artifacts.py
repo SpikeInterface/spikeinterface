@@ -128,7 +128,7 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
         - "noise": The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel
                    basis
-    **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
+    **random_slices_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
     -------
