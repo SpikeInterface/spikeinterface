@@ -28,10 +28,9 @@ class KilosortBase:
     requires_binary_data = True
 
     @staticmethod
-    def _generate_channel_map_file(recording, sorter_output_folder, format="mat"):
+    def _generate_channel_map_file(recording, sorter_output_folder):
         """
         This function generates channel map data for kilosort and saves as `chanMap.mat`
-        or `chanMap.json`, depending on the format chosen by the caller.
 
         Loading example in Matlab (shouldn't be assigned to a variable):
         >> load('/path/to/sorter_output_folder/chanMap.mat');
@@ -42,15 +41,9 @@ class KilosortBase:
             The recording to generate the channel map file
         sorter_output_folder: pathlib.Path
             Path object to save `chanMap.mat` file
-        format: str
-            The format of the channel map file. Currently, 'mat'
-            and 'json' are supported ('mat' is the default).
         """
-        if format not in ("mat", "json"):
-            raise ValueError("Only 'mat' and 'json' formats are supported for Kilosort channel maps.")
-
         # prepare electrode positions for this group (only one group, the split is done in basesorter)
-        groups = recording.get_channel_groups()
+        groups = [1] * recording.get_num_channels()
         positions = np.array(recording.get_channel_locations())
         if positions.shape[1] != 2:
             raise RuntimeError("3D 'location' are not supported. Set 2D locations instead")
@@ -60,33 +53,21 @@ class KilosortBase:
         ycoords = ([p[1] for p in positions],)
         kcoords = (groups,)
 
-        if format == "mat":
-            channel_map = {}
-            channel_map["Nchannels"] = nchan
-            channel_map["connected"] = np.full((nchan, 1), True)
-            channel_map["chanMap0ind"] = np.arange(nchan)
-            channel_map["chanMap"] = channel_map["chanMap0ind"] + 1
+        channel_map = {}
+        channel_map["Nchannels"] = nchan
+        channel_map["connected"] = np.full((nchan, 1), True)
+        channel_map["chanMap0ind"] = np.arange(nchan)
+        channel_map["chanMap"] = channel_map["chanMap0ind"] + 1
 
-            channel_map["xcoords"] = np.array(xcoords).astype(float)
-            channel_map["ycoords"] = np.array(ycoords).astype(float)
-            channel_map["kcoords"] = np.array(kcoords).astype(float)
+        channel_map["xcoords"] = np.array(xcoords).astype(float)
+        channel_map["ycoords"] = np.array(ycoords).astype(float)
+        channel_map["kcoords"] = np.array(kcoords).astype(float)
 
-            sample_rate = recording.get_sampling_frequency()
-            channel_map["fs"] = float(sample_rate)
-            import scipy.io
+        sample_rate = recording.get_sampling_frequency()
+        channel_map["fs"] = float(sample_rate)
+        import scipy.io
 
-            scipy.io.savemat(str(sorter_output_folder / "chanMap.mat"), channel_map)
-        elif format == "json":
-            from kilosort.io import save_probe
-
-            probe = {
-                "chanMap": np.arange(nchan),
-                "xc": np.array(xcoords[0]).astype(float).squeeze(),
-                "yc": np.array(ycoords[0]).astype(float).squeeze(),
-                "kcoords": np.array(kcoords).astype(float).squeeze(),
-                "n_chan": nchan,
-            }
-            save_probe(probe, str(sorter_output_folder / "chanMap.json"))
+        scipy.io.savemat(str(sorter_output_folder / "chanMap.mat"), channel_map)
 
     @classmethod
     def _generate_ops_file(cls, recording, params, sorter_output_folder, binary_file_path):
