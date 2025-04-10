@@ -118,7 +118,7 @@ def create_graph_from_peak_features(
         raise ValueError("create_graph_from_peak_features : wrong bin_mode")
 
     if progress_bar:
-        loop = tqdm(loop, desc=f"Construct distance graph looping over {bin_mode}")
+        loop = tqdm(loop, desc=f"Build distance graph over {bin_mode}")
 
     local_graphs = []
     row_indices = []

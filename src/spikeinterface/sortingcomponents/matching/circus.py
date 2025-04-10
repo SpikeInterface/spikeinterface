@@ -31,7 +31,7 @@ from .base import BaseTemplateMatching
 
 
 def compress_templates(
-    templates_array, approx_rank, remove_mean=True, return_new_templates=True
+    templates_array, approx_rank, remove_mean=False, return_new_templates=True
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray | None]:
     """Compress templates using singular value decomposition.
 
