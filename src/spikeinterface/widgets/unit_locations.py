@@ -32,6 +32,8 @@ class UnitLocationsWidget(BaseWidget):
         If True, the legend is plotted (matplotlib backend)
     hide_axis : bool, default: False
         If True, the axis is set to off (matplotlib backend)
+    margin : float, default: 50
+        Amount of margin to add to plot, beyond the extremum unit locations.
     """
 
     def __init__(
@@ -45,6 +47,7 @@ class UnitLocationsWidget(BaseWidget):
         plot_legend: bool = False,
         hide_axis: bool = False,
         backend: str | None = None,
+        margin: float = 50,
         **backend_kwargs,
     ):
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
@@ -59,12 +62,12 @@ class UnitLocationsWidget(BaseWidget):
         x_locations = all_unit_locations[:, 0]
         x_min = np.min(x_locations)
         x_max = np.max(x_locations)
-        x_lim = (x_min - 50, x_max + 50)
+        x_lim = (x_min - margin, x_max + margin)
 
         y_locations = all_unit_locations[:, 1]
         y_min = np.min(y_locations)
         y_max = np.max(y_locations)
-        y_lim = (y_min - 50, y_max + 50)
+        y_lim = (y_min - margin, y_max + margin)
 
         sorting = sorting_analyzer.sorting
 
