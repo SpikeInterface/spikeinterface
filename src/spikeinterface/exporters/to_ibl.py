@@ -267,10 +267,12 @@ def export_to_ibl(
     qm_data = qm.get_data()
     qm_data.index.name = "cluster_id"
     qm_data["cluster_id.1"] = qm_data.index.values
-    good_ibl = (  # rough estimate of ibl standards
-        (qm_data["amplitude_median"] > 50)
-        & (qm_data["isi_violations_ratio"] < 0.2)
-        & (qm_data["amplitude_cutoff"] < 0.1)
+    amplitude_sign_coef = -1 if analyzer.get_extension("spike_amplitudes").params["peak_sign"] == "neg" else 1
+    
+    good_ibl = (  # rough, slightly looser estimate of ibl standards
+        ((amplitude_sign_coef * qm_data["amplitude_median"]) > 40)
+        & (qm_data["isi_violations_ratio"] < 0.5)
+        & (qm_data["amplitude_cutoff"] < 0.2)
     )
     qm_data["label"] = good_ibl.astype("int")
     qm_data.to_csv(output_folder / "clusters.metrics.csv")
