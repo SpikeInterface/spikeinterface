@@ -2,12 +2,18 @@ from __future__ import annotations
 
 import importlib.util
 import warnings
+import platform
 from copy import deepcopy
+from tqdm.auto import tqdm
+
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+import multiprocessing as mp
+from threadpoolctl import threadpool_limits
 
 import numpy as np
-from joblib import Parallel, delayed
 
 from spikeinterface.core import BaseSorting
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import (
     AnalyzerExtension,
     SortingAnalyzer,
@@ -630,9 +636,7 @@ class ComputeACG3D(AnalyzerExtension):
     - smoothing_factor (float): width of the boxcar filter for smoothing (in milliseconds).
                      Default=250ms. Set to None to disable smoothing.
     - firing_rate_bins (array-like): Optional predefined firing rate bin edges.
-                                    If provided, num_firing_rate_bins is ignored.
-    - n_jobs (int): The number of parallel jobs spawned to compute the acgs across units.
-                    Defaults to -1 (one job per cpu).
+                                     If provided, num_firing_rate_bins is ignored.
 
     Returns
     -------
@@ -660,7 +664,7 @@ class ComputeACG3D(AnalyzerExtension):
     depend_on = []
     need_recording = False
     use_nodepipeline = False
-    need_job_kwargs = False
+    need_job_kwargs = True
 
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
@@ -671,14 +675,12 @@ class ComputeACG3D(AnalyzerExtension):
         bin_ms: float = 1.0,
         num_firing_rate_quantiles: int = 10,
         smoothing_factor: int = 250,
-        n_jobs: int = -1,
     ):
         params = dict(
             window_ms=window_ms,
             bin_ms=bin_ms,
             num_firing_rate_quantiles=num_firing_rate_quantiles,
             smoothing_factor=smoothing_factor,
-            n_jobs=n_jobs,
         )
 
         return params
@@ -704,6 +706,7 @@ class ComputeACG3D(AnalyzerExtension):
             bin_ms=self.params["bin_ms"],
             num_firing_rate_quantiles=self.params["num_firing_rate_quantiles"],
             smoothing_factor=self.params["smoothing_factor"],
+            **job_kwargs,
         )
 
         new_unit_ids_indices = new_sorting.ids_to_indices(new_unit_ids)
@@ -726,8 +729,8 @@ class ComputeACG3D(AnalyzerExtension):
         )
         return new_data
 
-    def _run(self, verbose=False):
-        acgs_3d, firing_quantiles, bins = _compute_acgs_3d(self.sorting_analyzer.sorting, **self.params)
+    def _run(self, verbose=False, **job_kwargs):
+        acgs_3d, firing_quantiles, bins = _compute_acgs_3d(self.sorting_analyzer.sorting, **self.params, **job_kwargs)
         self.data["firing_quantiles"] = firing_quantiles
         self.data["acgs_3d"] = acgs_3d
         self.data["bins"] = bins
@@ -743,7 +746,7 @@ def _compute_acgs_3d(
     bin_ms: float = 1.0,
     num_firing_rate_quantiles: int = 10,
     smoothing_factor: int = 250,
-    n_jobs: int = -1,
+    **job_kwargs,
 ):
     """
     Computes the 3D autocorrelogram for a single unit.
@@ -784,6 +787,25 @@ def _compute_acgs_3d(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
+    job_kwargs = fix_job_kwargs(job_kwargs)
+
+    n_jobs = job_kwargs["n_jobs"]
+    progress_bar = job_kwargs["progress_bar"]
+    max_threads_per_worker = job_kwargs["max_threads_per_worker"]
+    mp_context = job_kwargs["mp_context"]
+    pool_engine = job_kwargs["pool_engine"]
+    if mp_context is not None and platform.system() == "Windows":
+        assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+    elif mp_context == "fork" and platform.system() == "Darwin":
+        warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
+
+    num_segments = sorting.get_num_segments()
+    if num_segments > 1:
+        warnings.warn(
+            "Multiple segments detected. Firing rate quantiles will be automatically computed on the first segment. "
+            "Manually define global firing_rate_quantiles if needed.",
+        )
+
     # pre-compute time bins
     winsize_bins = 2 * int(0.5 * window_ms * 1.0 / bin_ms) + 1
     bin_times_ms = np.linspace(-window_ms / 2, window_ms / 2, num=winsize_bins)
@@ -794,23 +816,45 @@ def _compute_acgs_3d(
 
     time_bins_ms = np.repeat(bin_times_ms, num_units, axis=0)
 
-    # Process units in parallel
-    results = Parallel(n_jobs=n_jobs)(
-        delayed(_compute_3d_acg_one_unit)(
-            sorting,
-            unit_id,
-            window_ms,
-            bin_ms,
-            num_firing_rate_quantiles=num_firing_rate_quantiles,
-            smoothing_factor=smoothing_factor,
-        )
+    items = [
+        (sorting, unit_id, window_ms, bin_ms, num_firing_rate_quantiles, smoothing_factor, max_threads_per_worker)
         for unit_id in unit_ids
-    )
+    ]
 
-    # Unpack results
-    for unit_index, (acg_3d, firing_quantile) in enumerate(results):
-        acgs_3d[unit_index, :, :] = acg_3d
-        firing_quantiles[unit_index, :] = firing_quantile
+    if n_jobs > 1:
+        job_name = "calculate_acgs_3d"
+        if pool_engine == "process":
+            parallel_pool_class = ProcessPoolExecutor
+            pool_kwargs = dict(mp_context=mp.get_context(mp_context))
+            desc = f"{job_name} (workers: {n_jobs} processes)"
+        else:
+            parallel_pool_class = ThreadPoolExecutor
+            pool_kwargs = dict()
+            desc = f"{job_name} (workers: {n_jobs} threads)"
+
+        # Process units in parallel
+        with parallel_pool_class(max_workers=n_jobs, **pool_kwargs) as executor:
+            results = executor.map(_compute_3d_acg_one_unit_star, items)
+            if progress_bar:
+                results = tqdm(results, total=len(unit_ids), desc=desc)
+            for unit_index, (acg_3d, firing_quantile) in enumerate(results):
+                acgs_3d[unit_index, :, :] = acg_3d
+                firing_quantiles[unit_index, :] = firing_quantile
+    else:
+        # Process units in serial
+        for unit_index, (sorting, unit_id, window_ms, bin_ms, num_firing_rate_quantiles, smoothing_factor) in enumerate(
+            items
+        ):
+            acg_3d, firing_quantile = _compute_3d_acg_one_unit(
+                sorting,
+                unit_id,
+                window_ms,
+                bin_ms,
+                num_firing_rate_quantiles,
+                smoothing_factor,
+            )
+            acgs_3d[unit_index, :, :] = acg_3d
+            firing_quantiles[unit_index, :] = firing_quantile
 
     return acgs_3d, firing_quantiles, time_bins_ms
 
@@ -848,17 +892,9 @@ def _compute_3d_acg_one_unit(
     # Samples per bin
     samples_per_bin = int(np.ceil(fs / (1000 / bin_size)))
 
-    segments = sorting.get_num_segments()
-    if segments > 1 and firing_rate_quantiles is None:
-        warnings.warn(
-            "Multiple segments detected. Firing rate quantiles will be automatically computed on the first segment."
-            " Manually define global firing_rate_quantiles if needed.",
-            UserWarning,
-            2,
-        )
-
+    num_segments = sorting.get_num_segments()
     # Convert times_1 and times_2 (which are in units of fs to units of bin_size)
-    for segment_index in range(segments):
+    for segment_index in range(num_segments):
         spike_times = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
 
         # Convert to bin indices
@@ -925,6 +961,20 @@ def _compute_3d_acg_one_unit(
     acg_3d[:, acg_3d.shape[1] // 2] = 0
 
     return acg_3d, firing_rate_quantiles
+
+
+def _compute_3d_acg_one_unit_star(args):
+    """
+    Helper function to compute the 3D ACG for a single unit.
+    This is used to parallelize the computation.
+    """
+    max_threads_per_worker = args[-1]
+    new_args = args[:-1]
+    if max_threads_per_worker is None:
+        return _compute_3d_acg_one_unit(*new_args)
+    else:
+        with threadpool_limits(limits=int(max_threads_per_worker)):
+            return _compute_3d_acg_one_unit(*new_args)
 
 
 def compute_acgs_3d(
