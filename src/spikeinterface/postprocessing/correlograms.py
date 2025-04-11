@@ -842,9 +842,15 @@ def _compute_acgs_3d(
                 firing_quantiles[unit_index, :] = firing_quantile
     else:
         # Process units in serial
-        for unit_index, (sorting, unit_id, window_ms, bin_ms, num_firing_rate_quantiles, smoothing_factor) in enumerate(
-            items
-        ):
+        for unit_index, (
+            sorting,
+            unit_id,
+            window_ms,
+            bin_ms,
+            num_firing_rate_quantiles,
+            smoothing_factor,
+            _,
+        ) in enumerate(items):
             acg_3d, firing_quantile = _compute_3d_acg_one_unit(
                 sorting,
                 unit_id,
