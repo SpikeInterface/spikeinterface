@@ -68,6 +68,9 @@ def detect_onsets(recording, detect_threshold=5, min_duration_ms=50, **extra_kwa
         job_name="detect threshold crossings",
     )
 
+    order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
+    peaks = peaks[order]
+
     periods = []
     fs = recording.sampling_frequency
     max_duration_samples = int(min_duration_ms * fs / 1000)
@@ -77,20 +80,25 @@ def detect_onsets(recording, detect_threshold=5, min_duration_ms=50, **extra_kwa
         sub_periods = []
         mask = peaks["segment_index"] == 0
         sub_peaks = peaks[mask]
-        onsets = sub_peaks[sub_peaks["onset"]]
-        offsets = sub_peaks[~sub_peaks["onset"]]
+        if len(sub_peaks) > 0:
+            if not sub_peaks["onset"][0]:
+                local_peaks = np.zeros(1, dtype=np.dtype(base_peak_dtype + [("onset", "bool")]))
+                local_peaks["sample_index"] = 0
+                local_peaks["onset"] = True
+                sub_peaks = np.hstack((local_peaks, sub_peaks))
+            if sub_peaks["onset"][-1]:
+                local_peaks = np.zeros(1, dtype=np.dtype(base_peak_dtype + [("onset", "bool")]))
+                local_peaks["sample_index"] = recording.get_num_samples(seg_index)
+                local_peaks["onset"] = False
+                sub_peaks = np.hstack((sub_peaks, local_peaks))
 
-        if len(onsets) == 0 and len(offsets) == 0:
-            periods.append([])
-            continue
-        elif len(onsets) > 0 and len(offsets) == 0:
-            offset = recording.get_num_samples(seg_index)
-            if (offset - onsets["sample_index"][0]) > max_duration_samples:
-                periods.append([(onsets["sample_index"][0], offset)])
-            continue
-
-        for i in range(min(len(onsets), len(offsets))):
-            sub_periods += [(onsets["sample_index"][i], offsets["sample_index"][i])]
+            indices = np.flatnonzero(np.diff(sub_peaks["onset"]))
+            for i, j in zip(indices[:-1], indices[1:]):
+                if sub_peaks["onset"][i]:
+                    start = sub_peaks["sample_index"][i]
+                    end = sub_peaks["sample_index"][j]
+                    if end - start > max_duration_samples:
+                        sub_periods.append((start, end))
 
         periods.append(sub_periods)
 
@@ -162,6 +170,7 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
                 seed=seed,
                 **random_slices_kwargs,
             )
+
             if verbose:
                 for i, periods in enumerate(list_periods):
                     total_time = np.sum([end - start for start, end in periods])
