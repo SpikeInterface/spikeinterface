@@ -5,6 +5,7 @@ from probeinterface import ProbeGroup
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+import numpy as np
 
 
 class UnitLocationsWidget(BaseWidget):
@@ -57,6 +58,20 @@ class UnitLocationsWidget(BaseWidget):
         self.check_extensions(sorting_analyzer, "unit_locations")
         ulc = sorting_analyzer.get_extension("unit_locations")
         unit_locations = ulc.get_data(outputs="by_unit")
+
+        # set axis limits based on extremum unit locations
+        if (x_lim is None) or (y_lim is None):
+            all_unit_locations = ulc.get_data()
+            if x_lim is None:
+                x_locations = all_unit_locations[:, 0]
+                x_min = np.min(x_locations)
+                x_max = np.max(x_locations)
+                x_lim = (x_min - 50, x_max + 50)
+            if y_lim is None:
+                y_locations = all_unit_locations[:, 1]
+                y_min = np.min(y_locations)
+                y_max = np.max(y_locations)
+                y_lim = (y_min - 50, y_max + 50)
 
         sorting = sorting_analyzer.sorting
 
