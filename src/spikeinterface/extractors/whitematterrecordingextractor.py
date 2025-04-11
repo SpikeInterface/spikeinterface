@@ -4,6 +4,16 @@ from typing import List, Union, Optional
 from spikeinterface.core import BinaryRecordingExtractor
 from spikeinterface.core.core_tools import define_function_from_class
 
+# Specific parameters for WhiteMatter format
+DTYPE = "int16"
+GAIN_TO_UV = 6.25e3 / 32768
+OFFSET_TO_UV = 0.0
+FILE_OFFSET = 8
+TIME_AXIS = 0
+# This extractor is based on a single example file without a formal specification from WhiteMatter.
+# The parameters above are currently assumed to be constant for all WhiteMatter files.
+# If you encounter issues with this extractor, these assumptions may need to be revisited.
+
 
 class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
     """
@@ -36,23 +46,15 @@ class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
         channel_ids: Optional[List] = None,
         is_filtered: Optional[bool] = None,
     ):
-        # Specific parameters for WhiteMatter format
-        dtype = "int16"
-        gain_to_uV = 6.25e3 / 32768
-        offset_to_uV = 0.0
-        file_offset = 8
-        time_axis = 0
-        file_paths = [file_path]
-
         super().__init__(
-            file_paths=file_paths,
+            file_paths=[file_path],
             sampling_frequency=sampling_frequency,
             num_channels=num_channels,
-            dtype=dtype,
-            time_axis=time_axis,
-            file_offset=file_offset,
-            gain_to_uV=gain_to_uV,
-            offset_to_uV=offset_to_uV,
+            dtype=DTYPE,
+            time_axis=TIME_AXIS,
+            file_offset=FILE_OFFSET,
+            gain_to_uV=GAIN_TO_UV,
+            offset_to_uV=OFFSET_TO_UV,
             is_filtered=is_filtered,
             channel_ids=channel_ids,
         )
