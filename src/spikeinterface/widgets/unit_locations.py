@@ -32,10 +32,6 @@ class UnitLocationsWidget(BaseWidget):
         If True, the legend is plotted (matplotlib backend)
     hide_axis : bool, default: False
         If True, the axis is set to off (matplotlib backend)
-    x_lim : tuple or None, default: None
-        The min and max width to display. If None, estimate using unit location information.
-    y_lim : tuple or None, default: None
-        The min and max depth to display. If None, estimate using unit location information.
     """
 
     def __init__(
@@ -49,8 +45,6 @@ class UnitLocationsWidget(BaseWidget):
         plot_legend: bool = False,
         hide_axis: bool = False,
         backend: str | None = None,
-        y_lim: tuple[float, float] | None = None,
-        x_lim: tuple[float, float] | None = None,
         **backend_kwargs,
     ):
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
@@ -60,18 +54,17 @@ class UnitLocationsWidget(BaseWidget):
         unit_locations = ulc.get_data(outputs="by_unit")
 
         # set axis limits based on extremum unit locations
-        if (x_lim is None) or (y_lim is None):
-            all_unit_locations = ulc.get_data()
-            if x_lim is None:
-                x_locations = all_unit_locations[:, 0]
-                x_min = np.min(x_locations)
-                x_max = np.max(x_locations)
-                x_lim = (x_min - 50, x_max + 50)
-            if y_lim is None:
-                y_locations = all_unit_locations[:, 1]
-                y_min = np.min(y_locations)
-                y_max = np.max(y_locations)
-                y_lim = (y_min - 50, y_max + 50)
+        all_unit_locations = ulc.get_data()
+
+        x_locations = all_unit_locations[:, 0]
+        x_min = np.min(x_locations)
+        x_max = np.max(x_locations)
+        x_lim = (x_min - 50, x_max + 50)
+
+        y_locations = all_unit_locations[:, 1]
+        y_min = np.min(y_locations)
+        y_max = np.max(y_locations)
+        y_lim = (y_min - 50, y_max + 50)
 
         sorting = sorting_analyzer.sorting
 
@@ -143,10 +136,8 @@ class UnitLocationsWidget(BaseWidget):
                 poly_contour.set_zorder(1)
 
         self.ax.set_title("")
-        if dp.x_lim is not None:
-            self.ax.set_xlim(*dp.x_lim)
-        if dp.y_lim is not None:
-            self.ax.set_ylim(*dp.y_lim)
+        self.ax.set_xlim(*dp.x_lim)
+        self.ax.set_ylim(*dp.y_lim)
 
         width = height = 10
         ellipse_kwargs = dict(width=width, height=height, lw=2)

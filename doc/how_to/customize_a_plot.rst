@@ -2,9 +2,9 @@ Customize a plot
 ================
 
 The ``SpikeInterface`` widgets are designed to have reasonable default
-plotting options but sometimes you’ll want to make adjustments to the
-plots. For this, expose the underlying ``matplotlib`` objects for you to
-edit. Let’s see how to do this in an example. First, let’s make some
+plotting options, but sometimes you’ll want to make adjustments to the
+plots. For doing this, we expose the underlying ``matplotlib`` objects for you to
+edit. Let’s see how to do this in an example. First, let’s make some synthetic
 data and compute some extensions which can be used for plotting.
 
 .. code:: ipython3
@@ -56,10 +56,10 @@ locations widget to ``fig_units``.
 .. image:: customize_a_plot_files/customize_a_plot_4_1.png
 
 
-By playing with these, we gain access to the full ``matplotlib``
+By playing with the matplotlib objects, we gain access to the full matplotlib
 machinery: adding custom titles, axis labels, ticks, more plots etc.
-Let’s cusomtise our unit locations plot. Note that the
-``SpikeInterface`` Team does not endorse the following style conventions
+Let’s cusomtise our unit locations plot (Note: the
+``SpikeInterface`` Team does not endorse the following style conventions):
 
 .. code:: ipython3
 
