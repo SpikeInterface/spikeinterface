@@ -17,9 +17,10 @@
 # # Customize a plot
 
 # The `SpikeInterface` widgets are designed to have reasonable default plotting options, but
-# sometimes you'll want to make adjustments to the plots. For doing this, we expose the underlying
-# `matplotlib` objects for you to edit. Let's see how to do this in an example. First,
-# let's make some synthetic data and compute some extensions which can be used for plotting.
+# sometimes you'll want to make adjustments to the plots. The plotting functions all return
+# a `Widget` object. These contain and give you access to the underlying matplotlib figure
+# and axis, which you can apply any matplotlib machinery to. Let's see how to do this in an
+# example, by first making some synthetic data and computing extensions which can be used for plotting.
 
 # +
 import spikeinterface.full as si
@@ -32,9 +33,9 @@ sorting_analyzer.compute({"random_spikes": {'seed': 1205}, "templates": {}, "uni
 unit_locations = sorting_analyzer.get_extension("unit_locations").get_data()
 # -
 
-# Now we can plot the `unit_locations` and `unit_templates` using the approperiate widgets
+# Now we can plot the `unit_locations` and `unit_templates` using the appropriate widgets
 # (see the  [full list of widgets](https://spikeinterface.readthedocs.io/en/stable/modules/widgets.html#available-plotting-functions)
-# for more!). These functions output a `widget`.  We'll assign the unit locations widget to `fig_units`.
+# for more!). These functions output a `Widget object`.  We'll assign the unit locations widget to `fig_units`.
 
 # +
 fig_units = si.plot_unit_locations(sorting_analyzer)
@@ -44,9 +45,9 @@ print(type(fig_units.figure))
 print(type(fig_units.ax))
 # -
 
-# By getting with the matplotlib objects, we gain access to the full `matplotlib` machinery: adding custom
-#  titles, axis labels, ticks, more plots etc. Let's cusomtise our unit locations plot. (Note: the
-# `SpikeInterface` Team does not endorse the following style conventions):
+# By gaining access to the matplotlib objects, we are able to utilize the full `matplotlib`
+# machinery: adding custom titles, axis labels, ticks, more plots etc. Let's customize
+# our unit locations plot. (Note: the `SpikeInterface` Team does not endorse the following style conventions):
 
 # +
 # Get the widget
@@ -55,7 +56,7 @@ fig_units = si.plot_unit_locations(sorting_analyzer)
 # Modify the widget's `axis`` to set the title and axes labels
 fig_units.ax.set_title("My favorite units", fontname = "Comic Sans MS")
 fig_units.ax.set_xlabel("x probe location (um)")
-fig_units.ax.set_xlabel("y probe location (um)")
+fig_units.ax.set_ylabel("y probe location (um)")
 
 # You can also set custom ticks
 fig_units.ax.set_xticks([-60,-30,unit_locations[0,0],30,60])
@@ -75,7 +76,9 @@ fig_units
 
 # Beautiful!!!
 #
-# You can also combine figures into a multi-figure plot. The easiest way to do this is to set up your figure and axes first, then tell `SpikeInterface` which axes it should attach the widget plot to. Here's an example of making a unit summary plot.
+# You can also combine figures into a multi-figure plot. The easiest way to do this is to set up your
+# figure and axes first, then tell `SpikeInterface` which axes it should attach the widget plot to.
+# Here's an example of making a unit summary plot.
 
 # +
 import matplotlib.pyplot as plt

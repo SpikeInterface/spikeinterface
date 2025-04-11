@@ -3,10 +3,11 @@ Customize a plot
 
 The ``SpikeInterface`` widgets are designed to have reasonable default
 plotting options, but sometimes you’ll want to make adjustments to the
-plots. For doing this, we expose the underlying ``matplotlib`` objects
-for you to edit. Let’s see how to do this in an example. First, let’s
-make some synthetic data and compute some extensions which can be used
-for plotting.
+plots. The plotting functions all return a ``Widget`` object. These
+contain and give you access to the underlying matplotlib figure and
+axis, which you can apply any matplotlib machinery to. Let’s see how to
+do this in an example, by first making some synthetic data and computing
+extensions which can be used for plotting.
 
 .. code::
 
@@ -33,10 +34,10 @@ for plotting.
 
 
 Now we can plot the ``unit_locations`` and ``unit_templates`` using the
-approperiate widgets (see the `full list of
+appropriate widgets (see the `full list of
 widgets <https://spikeinterface.readthedocs.io/en/stable/modules/widgets.html#available-plotting-functions>`__
-for more!). These functions output a ``widget``. We’ll assign the unit
-locations widget to ``fig_units``.
+for more!). These functions output a ``Widget object``. We’ll assign the
+unit locations widget to ``fig_units``.
 
 .. code::
 
@@ -57,9 +58,9 @@ locations widget to ``fig_units``.
 .. image:: customize_a_plot_files/customize_a_plot_4_1.png
 
 
-By getting with the matplotlib objects, we gain access to the full
-``matplotlib`` machinery: adding custom titles, axis labels, ticks, more
-plots etc. Let’s cusomtise our unit locations plot. (Note: the
+By gaining access to the matplotlib objects, we are able to utilize the
+full ``matplotlib`` machinery: adding custom titles, axis labels, ticks,
+more plots etc. Let’s customize our unit locations plot. (Note: the
 ``SpikeInterface`` Team does not endorse the following style
 conventions):
 
@@ -71,7 +72,7 @@ conventions):
     # Modify the widget's `axis`` to set the title and axes labels
     fig_units.ax.set_title("My favorite units", fontname = "Comic Sans MS")
     fig_units.ax.set_xlabel("x probe location (um)")
-    fig_units.ax.set_xlabel("y probe location (um)")
+    fig_units.ax.set_ylabel("y probe location (um)")
 
     # You can also set custom ticks
     fig_units.ax.set_xticks([-60,-30,unit_locations[0,0],30,60])
@@ -93,7 +94,7 @@ conventions):
 
 .. parsed-literal::
 
-    <spikeinterface.widgets.unit_locations.UnitLocationsWidget at 0x147bda550>
+    <spikeinterface.widgets.unit_locations.UnitLocationsWidget at 0x147a81520>
 
 
 
@@ -125,11 +126,6 @@ Here’s an example of making a unit summary plot.
 
     fig.tight_layout()
 
-
-.. parsed-literal::
-
-    /Users/christopherhalcrow/Work/fromgit/spikeinterface/src/spikeinterface/widgets/unit_waveforms.py:182: UserWarning: templates_percentile_shading can only be used if the 'waveforms' extension is available. Settimg templates_percentile_shading to None.
-      warn(
 
 
 
