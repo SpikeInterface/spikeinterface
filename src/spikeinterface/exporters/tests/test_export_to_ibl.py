@@ -9,6 +9,7 @@ from spikeinterface.exporters.tests.common import (
     sorting_analyzer_sparse_for_export,
 )
 
+
 def test_export_to_ibl(sorting_analyzer_sparse_for_export, create_cache_folder):
     cache_folder = create_cache_folder
     output_folder = cache_folder / "ibl_output"

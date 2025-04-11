@@ -100,8 +100,8 @@ def export_to_ibl(
             else:
                 kwargs = {}
             analyzer.compute(ext, verbose=verbose, **kwargs)
-        
-    # Check in case user pre-calculated a small set of qm's that aren't enough for IBL 
+
+    # Check in case user pre-calculated a small set of qm's that aren't enough for IBL
     required_qms = ["amplitude_median", "isi_violation", "amplitude_cutoff"]
     qm = analyzer.get_extension("quality_metrics").get_data()
     for rqm in required_qms:
@@ -270,7 +270,7 @@ def export_to_ibl(
     qm_data.index.name = "cluster_id"
     qm_data["cluster_id.1"] = qm_data.index.values
     amplitude_sign_coef = -1 if analyzer.get_extension("spike_amplitudes").params["peak_sign"] == "neg" else 1
-    
+
     good_ibl = (  # rough, slightly looser estimate of ibl standards
         ((amplitude_sign_coef * qm_data["amplitude_median"]) > 40)
         & (qm_data["isi_violations_ratio"] < 0.5)
