@@ -4,14 +4,15 @@ from pathlib import Path
 from packaging.version import parse
 
 import shutil
-import numpy as np
 from warnings import warn
+import importlib.util
+from importlib.metadata import version
+
+import numpy as np
 
 from spikeinterface.preprocessing import bandpass_filter, whiten
-
 from spikeinterface.core.baserecording import BaseRecording
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
-
 from spikeinterface.extractors import NpzSortingExtractor
 
 
@@ -82,21 +83,19 @@ class Mountainsort5Sorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import mountainsort5
-
+        ms5_spec = importlib.util.find_spec("mountainsort5")
+        if ms5_spec is not None:
             HAVE_MS5 = True
-        except ImportError:
+        else:
             HAVE_MS5 = False
-            mountainsort5 = None
 
         if HAVE_MS5:
-            assert mountainsort5
-            vv = parse(mountainsort5.__version__)
+            ms5_version = version("mountainsort5")
+            vv = parse(ms5_version)
             if vv < parse("0.3"):
-                print(
+                warn(
                     f"WARNING: This version of SpikeInterface expects Mountainsort5 version 0.3.x or newer. "
-                    f"You have version {mountainsort5.__version__}"
+                    f"You have version {ms5_version}"
                 )
                 HAVE_MS5 = False
         return HAVE_MS5

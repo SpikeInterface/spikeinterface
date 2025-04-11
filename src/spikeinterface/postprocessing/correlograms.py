@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import math
+import importlib.util
 import warnings
 from copy import deepcopy
 
@@ -17,11 +17,10 @@ from spikeinterface.core.waveforms_extractor_backwards_compatibility import (
     MockWaveformExtractor,
 )
 
-try:
-    import numba
-
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ModuleNotFoundError as err:
+else:
     HAVE_NUMBA = False
 
 
@@ -530,6 +529,7 @@ def _compute_correlograms_numba(sorting, window_size, bin_size):
 
 
 if HAVE_NUMBA:
+    import numba
 
     @numba.jit(
         nopython=True,
