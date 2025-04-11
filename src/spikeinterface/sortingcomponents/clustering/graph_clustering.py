@@ -59,6 +59,8 @@ class GraphClustering:
         radius_um = params["radius_um"]
         motion = params["motion"]
         seed = params["seed"]
+        ms_before = params["ms_before"]
+        ms_after = params["ms_after"]
         clustering_method = params["clustering_method"]
         clustering_kwargs = params["clustering_kwargs"]
         graph_kwargs = params["graph_kwargs"]
@@ -70,12 +72,15 @@ class GraphClustering:
         elif graph_kwargs["bin_mode"] == "vertical_bins":
             assert radius_um >= graph_kwargs["bin_um"] * 3
 
-        peaks_svd, sparse_mask, _ = extract_peaks_svd(
+        peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
             recording,
             peaks,
+            ms_before=ms_before,
+            ms_after=ms_after,
             radius_um=radius_um,
             motion_aware=motion_aware,
             motion=None,
+            seed=params["seed"],
             **params["extract_peaks_svd_kwargs"],
             # **job_kwargs
         )
@@ -98,7 +103,7 @@ class GraphClustering:
         # print(distances.shape)
         # print("sparsity: ", distances.indices.size / (distances.shape[0]**2))
 
-        print("clustering_method", clustering_method)
+        # print("clustering_method", clustering_method)
 
         if clustering_method == "networkx-louvain":
             # using networkx : very slow (possible backend with cude  backend="cugraph",)
@@ -191,7 +196,7 @@ class GraphClustering:
         labels_set = np.unique(peak_labels)
         labels_set = labels_set[labels_set >= 0]
 
-        return labels_set, peak_labels
+        return labels_set, peak_labels, svd_model, peaks_svd, sparse_mask
 
 
 def _remove_small_cluster(peak_labels, min_size=1):
