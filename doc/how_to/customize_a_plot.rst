@@ -3,11 +3,12 @@ Customize a plot
 
 The ``SpikeInterface`` widgets are designed to have reasonable default
 plotting options, but sometimes you’ll want to make adjustments to the
-plots. For doing this, we expose the underlying ``matplotlib`` objects for you to
-edit. Let’s see how to do this in an example. First, let’s make some synthetic
-data and compute some extensions which can be used for plotting.
+plots. For doing this, we expose the underlying ``matplotlib`` objects
+for you to edit. Let’s see how to do this in an example. First, let’s
+make some synthetic data and compute some extensions which can be used
+for plotting.
 
-.. code:: ipython3
+.. code::
 
     import spikeinterface.full as si
     import matplotlib.pyplot as plt
@@ -37,7 +38,7 @@ widgets <https://spikeinterface.readthedocs.io/en/stable/modules/widgets.html#av
 for more!). These functions output a ``widget``. We’ll assign the unit
 locations widget to ``fig_units``.
 
-.. code:: ipython3
+.. code::
 
     fig_units = si.plot_unit_locations(sorting_analyzer)
 
@@ -56,17 +57,18 @@ locations widget to ``fig_units``.
 .. image:: customize_a_plot_files/customize_a_plot_4_1.png
 
 
-By playing with the matplotlib objects, we gain access to the full matplotlib
-machinery: adding custom titles, axis labels, ticks, more plots etc.
-Let’s cusomtise our unit locations plot (Note: the
-``SpikeInterface`` Team does not endorse the following style conventions):
+By getting with the matplotlib objects, we gain access to the full
+``matplotlib`` machinery: adding custom titles, axis labels, ticks, more
+plots etc. Let’s cusomtise our unit locations plot. (Note: the
+``SpikeInterface`` Team does not endorse the following style
+conventions):
 
-.. code:: ipython3
+.. code::
 
     # Get the widget
     fig_units = si.plot_unit_locations(sorting_analyzer)
 
-    # Modify the widget's `axis`` to set the title and xes labels
+    # Modify the widget's `axis`` to set the title and axes labels
     fig_units.ax.set_title("My favorite units", fontname = "Comic Sans MS")
     fig_units.ax.set_xlabel("x probe location (um)")
     fig_units.ax.set_xlabel("y probe location (um)")
@@ -89,10 +91,9 @@ Let’s cusomtise our unit locations plot (Note: the
 
 
 
-
 .. parsed-literal::
 
-    <spikeinterface.widgets.unit_locations.UnitLocationsWidget at 0x17f719cd0>
+    <spikeinterface.widgets.unit_locations.UnitLocationsWidget at 0x147bda550>
 
 
 
@@ -107,7 +108,7 @@ to do this is to set up your figure and axes first, then tell
 ``SpikeInterface`` which axes it should attach the widget plot to.
 Here’s an example of making a unit summary plot.
 
-.. code:: ipython3
+.. code::
 
     import matplotlib.pyplot as plt
     fig, axs = plt.subplots(ncols=2, nrows=1)
