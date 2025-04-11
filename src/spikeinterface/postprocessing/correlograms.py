@@ -1,11 +1,21 @@
 from __future__ import annotations
+
 import math
 import warnings
-import numpy as np
-from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension, SortingAnalyzer
 from copy import deepcopy
 
-from spikeinterface.core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
+import numpy as np
+from joblib import Parallel, delayed
+
+from spikeinterface.core import BaseSorting
+from spikeinterface.core.sortinganalyzer import (
+    AnalyzerExtension,
+    SortingAnalyzer,
+    register_result_extension,
+)
+from spikeinterface.core.waveforms_extractor_backwards_compatibility import (
+    MockWaveformExtractor,
+)
 
 try:
     import numba
@@ -107,10 +117,8 @@ class ComputeCorrelograms(AnalyzerExtension):
         if censor_ms is not None:
             # if censor_ms has no effect, can apply "soft" method. Check if any spikes have been removed
             for new_unit_id, merge_unit_group in zip(new_unit_ids, merge_unit_groups):
-
                 num_segments = new_sorting_analyzer.get_num_segments()
                 for segment_index in range(num_segments):
-
                     merged_spike_train_length = len(
                         new_sorting_analyzer.sorting.get_unit_spike_train(new_unit_id, segment_index=segment_index)
                     )
@@ -132,7 +140,6 @@ class ComputeCorrelograms(AnalyzerExtension):
             new_ccgs, new_bins = _compute_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params)
             new_data = dict(ccgs=new_ccgs, bins=new_bins)
         else:
-
             # Make a transformation dict, which tells us how unit_indices from the
             # old to the new sorter are mapped.
             old_to_new_unit_index_map = {}
@@ -160,7 +167,6 @@ class ComputeCorrelograms(AnalyzerExtension):
             correlograms, new_bins = deepcopy(self.get_data())
 
             for new_unit_id, merge_unit_group in zip(new_unit_ids, merge_unit_groups):
-
                 merge_unit_group_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_group)
 
                 # Sum unit rows of the correlogram matrix: C_{k,l} = C_{i,l} + C_{j,l}
@@ -564,7 +570,6 @@ if HAVE_NUMBA:
         start_j = 0
         for i in range(spike_times.size):
             for j in range(start_j, spike_times.size):
-
                 if i == j:
                     continue
 
@@ -593,3 +598,364 @@ if HAVE_NUMBA:
                 bin = diff // bin_size
 
                 correlograms[spike_unit_indices[i], spike_unit_indices[j], num_half_bins + bin] += 1
+
+
+class ComputeACG3D(AnalyzerExtension):
+    """
+    Computes the 3D Autocorrelograms (3D-ACG) from units spike times to analyze how a neuron's temporal firing
+    pattern varies with its firing rate.
+
+    The 3D-ACG, originally described in [Beau]_ et al., 2025, provides a rich representations of a unit's
+    spike train statistics while accounting for firing rate modulations.
+    The method was developed to normalize for the impact of changes in firing rate on measures of firing statistics,
+    particularly in awake animals performing behavioral tasks where firing rates naturally vary over time.
+
+    The approach works as follows:
+    1. The instantaneous firing rate is calculated at each spike time using inverse ISI
+    2. Firing rates are smoothed with a boxcar filter (default 250ms width)
+    3. Spikes are grouped into firing rate bins (deciles by default)
+    4. Separate ACGs are computed for each firing rate bin
+
+    The result can be visualized as an image where:
+    - The y-axis represents different firing rate bins
+    - The x-axis represents time lag from the trigger spike
+    - The z-axis (color) represents spike probability
+
+    Parameters
+    ----------
+    - spike_times: vector of spike timestamps (in sample units)
+    - window_ms (float): window size for auto-correlation, in milliseconds
+    - bin_ms (float): bin size for auto-correlation, in milliseconds
+    - num_firing_rate_quantiles (integer): number of firing rate quantiles. Default=10 (deciles)
+    - smoothing_factor (float): width of the boxcar filter for smoothing (in milliseconds).
+                     Default=250ms. Set to None to disable smoothing.
+    - firing_rate_bins (array-like): Optional predefined firing rate bin edges.
+                                    If provided, num_firing_rate_bins is ignored.
+    - n_jobs (int): The number of parallel jobs spawned to compute the acgs across units.
+                    Defaults to -1 (one job per cpu).
+
+    Returns
+    -------
+    - acg_3d (numpy.ndarray): 2D array with dimension (num_firing_rate_bins x num_timepoints),
+              where each element is the probability of observing a spike at the given time lag,
+              conditioned on the neuron's firing rate at the trigger spike time.
+    - firing_rate_quantiles (numpy.ndarray): The firing rate values that define the quantiles edges
+
+    Notes
+    -----
+    - The central bin (t=0) is set to 0 as it would always be 1 by definition
+    - Edge spikes are excluded to avoid boundary artifacts
+    - Spike counts are normalized by the total number of trigger spikes in each rate bin
+
+    References
+    ----------
+    Based on work in [Beau]_ et al., 2025.
+
+    Adapted Python implementation from [npyx]_ : https://github.com/m-beau/NeuroPyxels/
+
+    Original author: David Herzfeld <herzfeldd@gmail.com>
+    """
+
+    extension_name = "acgs_3d"
+    depend_on = []
+    need_recording = False
+    use_nodepipeline = False
+    need_job_kwargs = False
+
+    def __init__(self, sorting_analyzer):
+        AnalyzerExtension.__init__(self, sorting_analyzer)
+
+    def _set_params(
+        self,
+        window_ms: float = 50.0,
+        bin_ms: float = 1.0,
+        num_firing_rate_quantiles: int = 10,
+        smoothing_factor: int = 250,
+        n_jobs: int = -1,
+    ):
+        params = dict(
+            window_ms=window_ms,
+            bin_ms=bin_ms,
+            num_firing_rate_quantiles=num_firing_rate_quantiles,
+            smoothing_factor=smoothing_factor,
+            n_jobs=n_jobs,
+        )
+
+        return params
+
+    def _select_extension_data(self, unit_ids):
+        # filter metrics dataframe
+        unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+        new_acgs_3d = self.data["acgs_3d"][unit_indices]
+        new_firing_quantiles = self.data["firing_quantiles"][unit_indices]
+        new_bins = self.data["bins"][:]
+        new_data = dict(acgs_3d=new_acgs_3d, firing_quantiles=new_firing_quantiles, bins=new_bins)
+        return new_data
+
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+    ):
+        new_sorting = new_sorting_analyzer.sorting
+
+        acgs_3d, firing_rate_quantiles, _ = _compute_acgs_3d(
+            new_sorting,
+            unit_ids=new_unit_ids,
+            window_ms=self.params["window_ms"],
+            bin_ms=self.params["bin_ms"],
+            num_firing_rate_quantiles=self.params["num_firing_rate_quantiles"],
+            smoothing_factor=self.params["smoothing_factor"],
+        )
+
+        new_unit_ids_indices = new_sorting.ids_to_indices(new_unit_ids)
+        old_unit_ids = [unit_id for unit_id in new_sorting_analyzer.unit_ids if unit_id not in new_unit_ids]
+        old_unit_ids_indices = new_sorting.ids_to_indices(old_unit_ids)
+
+        new_acgs_3d = np.zeros((len(new_sorting.unit_ids), acgs_3d.shape[1], acgs_3d.shape[2]))
+        new_firing_quantiles = np.zeros((len(new_sorting.unit_ids), firing_rate_quantiles.shape[1]))
+
+        new_acgs_3d[new_unit_ids_indices, :, :] = acgs_3d
+        new_acgs_3d[old_unit_ids_indices, :, :] = self.data["acgs_3d"][old_unit_ids_indices, :, :]
+
+        new_firing_quantiles[new_unit_ids_indices, :] = firing_rate_quantiles
+        new_firing_quantiles[old_unit_ids_indices, :] = self.data["firing_quantiles"][old_unit_ids_indices, :]
+
+        new_data = dict(
+            acgs_3d=new_acgs_3d,
+            firing_quantiles=new_firing_quantiles,
+            bins=self.data["bins"],
+        )
+        return new_data
+
+    def _run(self, verbose=False):
+        acgs_3d, firing_quantiles, bins = _compute_acgs_3d(self.sorting_analyzer.sorting, **self.params)
+        self.data["firing_quantiles"] = firing_quantiles
+        self.data["acgs_3d"] = acgs_3d
+        self.data["bins"] = bins
+
+    def _get_data(self):
+        return self.data["acgs_3d"], self.data["firing_quantiles"], self.data["bins"]
+
+
+def _compute_acgs_3d(
+    sorting: BaseSorting,
+    unit_ids=None,
+    window_ms: float = 50.0,
+    bin_ms: float = 1.0,
+    num_firing_rate_quantiles: int = 10,
+    smoothing_factor: int = 250,
+    n_jobs: int = -1,
+):
+    """
+    Computes the 3D autocorrelogram for a single unit.
+
+    See ComputeACG3D() for more details.
+
+    Parameters
+    ----------
+    sorting : Sorting
+        A SpikeInterface Sorting object
+    unit_ids : list of int, default: None
+        The unit ids to compute the autocorrelogram for. If None,
+        all units in the sorting are used.
+    window_ms : float, default: 50.0
+        The window around the spike to compute the correlation in ms. For example,
+         if 50 ms, the correlations will be computed at lags -25 ms ... 25 ms.
+    bin_ms : float, default: 1.0
+        The bin size in ms. This determines the bin size over which to
+        combine lags. For example, with a window size of -25 ms to 25 ms, and
+        bin size 1 ms, the correlation will be binned as -25 ms, -24 ms, ...
+    num_firing_rate_quantiles : int, default: 10
+        The number of quantiles to use for firing rate bins.
+    smoothing_factor : float, default: 250
+        The width of the smoothing kernel in milliseconds.
+    n_jobs : int, default: -1.
+        Number of parallel jobs to spawn to compute the 3D-ACGS on different units.
+
+    Returns
+    -------
+    firing_quantiles : np.array
+        The firing rate quantiles used for each unit.
+    acgs_3d : np.array
+        The autocorrelograms for each unit at each firing rate quantile.
+    bins : np.array
+        The bin edges in ms
+
+    """
+    if unit_ids is None:
+        unit_ids = sorting.unit_ids
+
+    # pre-compute time bins
+    winsize_bins = 2 * int(0.5 * window_ms * 1.0 / bin_ms) + 1
+    bin_times_ms = np.linspace(-window_ms / 2, window_ms / 2, num=winsize_bins)
+    num_units = len(unit_ids)
+    winsize_bins = winsize_bins
+    acgs_3d = np.zeros((num_units, num_firing_rate_quantiles, winsize_bins))
+    firing_quantiles = np.zeros((num_units, num_firing_rate_quantiles))
+
+    time_bins_ms = np.repeat(bin_times_ms, num_units, axis=0)
+
+    # Process units in parallel
+    results = Parallel(n_jobs=n_jobs)(
+        delayed(_compute_3d_acg_one_unit)(
+            sorting,
+            unit_id,
+            window_ms,
+            bin_ms,
+            num_firing_rate_quantiles=num_firing_rate_quantiles,
+            smoothing_factor=smoothing_factor,
+        )
+        for unit_id in unit_ids
+    )
+
+    # Unpack results
+    for unit_index, (acg_3d, firing_quantile) in enumerate(results):
+        acgs_3d[unit_index, :, :] = acg_3d
+        firing_quantiles[unit_index, :] = firing_quantile
+
+    return acgs_3d, firing_quantiles, time_bins_ms
+
+
+register_result_extension(ComputeACG3D)
+compute_acgs_3d_sorting_analyzer = ComputeACG3D.function_factory()
+
+
+def _compute_3d_acg_one_unit(
+    sorting: BaseSorting,
+    unit_id: int | str,
+    win_size: float,
+    bin_size: float,
+    num_firing_rate_quantiles: int = 10,
+    smoothing_factor: int = 250,
+    use_spikes_around_times1_for_deciles: bool = True,
+    firing_rate_quantiles: list | None = None,
+):
+    fs = sorting.sampling_frequency
+
+    bin_size = np.clip(bin_size, 1000 * 1.0 / fs, 1e8)  # in milliseconds
+    win_size = np.clip(win_size, 1e-2, 1e8)  # in milliseconds
+    winsize_bins = 2 * int(0.5 * win_size * 1.0 / bin_size) + 1  # Both in millisecond
+    assert winsize_bins >= 1
+    assert winsize_bins % 2 == 1
+    bin_times_ms = np.linspace(-win_size / 2, win_size / 2, num=winsize_bins)
+
+    if firing_rate_quantiles is not None:
+        num_firing_rate_quantiles = len(firing_rate_quantiles)
+    spike_counts = np.zeros(
+        (num_firing_rate_quantiles, len(bin_times_ms))
+    )  # Counts number of occurences of spikes in a given bin in time axis
+    firing_rate_bin_occurence = np.zeros(num_firing_rate_quantiles, dtype=np.int64)  # total occurence
+
+    # Samples per bin
+    samples_per_bin = int(np.ceil(fs / (1000 / bin_size)))
+
+    segments = sorting.get_num_segments()
+    if segments > 1 and firing_rate_quantiles is None:
+        warnings.warn(
+            "Multiple segments detected. Firing rate quantiles will be automatically computed on the first segment."
+            " Manually define global firing_rate_quantiles if needed.",
+            UserWarning,
+            2,
+        )
+
+    # Convert times_1 and times_2 (which are in units of fs to units of bin_size)
+    for segment_index in range(segments):
+        spike_times = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
+
+        # Convert to bin indices
+        spike_bins = np.floor(spike_times / samples_per_bin).astype(np.int64)
+
+        if len(spike_bins) <= 1:
+            continue  # Need at least 2 spikes for ACG
+
+        # Create a binary spike train spanning the entire time range
+        max_bin = int(np.ceil(spike_bins[-1] + 1))
+        spiketrain = np.zeros(max_bin + winsize_bins, dtype=bool)  # Add extra space for window
+        spiketrain[spike_bins] = True
+
+        # Convert spikes to firing rate using the inverse ISI method
+        firing_rate = np.zeros(max_bin)
+        for i in range(1, len(spike_bins) - 1):
+            start = 0 if i == 0 else (spike_bins[i - 1] + (spike_bins[i] - spike_bins[i - 1]) // 2)
+            stop = max_bin if i == len(spike_bins) - 1 else (spike_bins[i] + (spike_bins[i + 1] - spike_bins[i]) // 2)
+            current_firing_rate = 1.0 / ((stop - start) * (bin_size / 1000))
+            firing_rate[start:stop] = current_firing_rate
+
+        # Smooth the firing rate using numpy convolution function if requested
+        if isinstance(smoothing_factor, (int, float)) and smoothing_factor > 0:
+            kernel_size = int(np.ceil(smoothing_factor / bin_size))
+            half_kernel_size = kernel_size // 2
+            kernel = np.ones(kernel_size) / kernel_size
+            smoothed_firing_rate = np.convolve(firing_rate, kernel, mode="same")
+
+            # Correct manually for possible artefacts at the edges
+            for i in range(kernel_size):
+                start = max(0, i - half_kernel_size)
+                stop = min(len(firing_rate), i + half_kernel_size)
+                smoothed_firing_rate[i] = np.mean(firing_rate[start:stop])
+            for i in range(len(firing_rate) - kernel_size, len(firing_rate)):
+                start = max(0, i - half_kernel_size)
+                stop = min(len(firing_rate), i + half_kernel_size)
+
+                smoothed_firing_rate[i] = np.mean(firing_rate[start:stop])
+            firing_rate = smoothed_firing_rate
+
+        # Get firing rate quantiles
+        if firing_rate_quantiles is None:
+            quantile_bins = np.linspace(0, 1, num_firing_rate_quantiles + 2)[1:-1]
+            if use_spikes_around_times1_for_deciles:
+                firing_rate_quantiles = np.quantile(firing_rate[spike_bins], quantile_bins)
+            else:
+                firing_rate_quantiles = np.quantile(firing_rate, quantile_bins)
+        for i, spike_index in enumerate(spike_bins):
+            start = spike_index + int(np.ceil(bin_times_ms[0] / bin_size))
+            stop = start + len(bin_times_ms)
+            if (start < 0) or (stop >= len(spiketrain)) or spike_index < spike_bins[0] or spike_index >= spike_bins[-1]:
+                continue  # Skip these spikes to avoid edge artifacts
+            current_firing_rate = firing_rate[spike_index]  # Firing of neuron 2 at neuron 1's spike index
+            current_firing_rate_bin_number = np.argmax(firing_rate_quantiles >= current_firing_rate)
+            if current_firing_rate_bin_number == 0 and current_firing_rate > firing_rate_quantiles[0]:
+                current_firing_rate_bin_number = len(firing_rate_quantiles) - 1
+            spike_counts[current_firing_rate_bin_number, :] += spiketrain[start:stop]
+            firing_rate_bin_occurence[current_firing_rate_bin_number] += 1
+
+    acg_3d = spike_counts / (np.ones((len(bin_times_ms), num_firing_rate_quantiles)) * firing_rate_bin_occurence).T
+    # Divison by zero cases will return nans, so we fix this
+    acg_3d = np.nan_to_num(acg_3d)
+    # remove bin 0 which will always be 1
+    acg_3d[:, acg_3d.shape[1] // 2] = 0
+
+    return acg_3d, firing_rate_quantiles
+
+
+def compute_acgs_3d(
+    sorting_analyzer_or_sorting: SortingAnalyzer | BaseSorting,
+    window_ms: float = 50.0,
+    bin_ms: float = 1.0,
+    num_firing_rate_quantiles: int = 10,
+    smoothing_factor: int = 250,
+):
+    """
+    Compute 3D Autocorrelograms. See ComputeACG3D() for a detailed documentation.
+    """
+    if isinstance(sorting_analyzer_or_sorting, MockWaveformExtractor):
+        sorting_analyzer_or_sorting = sorting_analyzer_or_sorting.sorting
+
+    if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
+        return compute_acgs_3d_sorting_analyzer(
+            sorting_analyzer_or_sorting,
+            window_ms=window_ms,
+            bin_ms=bin_ms,
+            num_firing_rate_quantiles=num_firing_rate_quantiles,
+            smoothing_factor=smoothing_factor,
+        )
+    else:
+        return _compute_acgs_3d(
+            sorting_analyzer_or_sorting,
+            window_ms=window_ms,
+            bin_ms=bin_ms,
+            num_firing_rate_quantiles=num_firing_rate_quantiles,
+            smoothing_factor=smoothing_factor,
+        )
+
+
+compute_acgs_3d.__doc__ = compute_acgs_3d_sorting_analyzer.__doc__
