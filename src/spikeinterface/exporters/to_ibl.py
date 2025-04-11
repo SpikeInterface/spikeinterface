@@ -82,7 +82,10 @@ def export_to_ibl(
         print("Exporting recording to IBL format...")
 
     # Compute any missing extensions
-    available_extension_names = analyzer.get_saved_extension_names()
+    if analyzer.format == "memory":
+        available_extension_names = list(analyzer.extensions.keys())
+    else:
+        available_extension_names = analyzer.get_saved_extension_names()
     required_exts = [
         "templates",
         "template_similarity",
@@ -90,7 +93,6 @@ def export_to_ibl(
         "noise_levels",
         "quality_metrics",
     ]
-    required_qms = ["amplitude_median", "isi_violations_ratio", "amplitude_cutoff"]
     for ext in required_exts:
         if ext not in available_extension_names:
             if ext == "quality_metrics":
@@ -200,7 +202,7 @@ def export_to_ibl(
 
     ### Save spike info ###
 
-    spike_locations = analyzer.load_extension("spike_locations").get_data()
+    spike_locations = analyzer.get_extension("spike_locations").get_data()
     spike_depths = spike_locations["y"]
 
     # convert clusters and squeeze
@@ -261,7 +263,7 @@ def export_to_ibl(
         os.rename(old_name, new_name)
 
     # save quality metrics
-    qm = analyzer.load_extension("quality_metrics")
+    qm = analyzer.get_extension("quality_metrics")
     qm_data = qm.get_data()
     qm_data.index.name = "cluster_id"
     qm_data["cluster_id.1"] = qm_data.index.values
