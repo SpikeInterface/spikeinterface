@@ -96,19 +96,21 @@ def export_to_ibl(
     for ext in required_exts:
         if ext not in available_extension_names:
             if ext == "quality_metrics":
-                kwargs = {"skip_pc_metrics": False}
+                kwargs = {"skip_pc_metrics": True}
             else:
                 kwargs = {}
             analyzer.compute(ext, verbose=verbose, **kwargs)
-        elif ext == "quality_metrics":
-            qm = analyzer.get_extension("quality_metrics").get_data()
-            for rqm in required_qms:
-                if rqm not in qm:
-                    analyzer.compute(
-                        "quality_metrics",
-                        metric_names=[rqm],
-                        verbose=verbose,
-                    )
+        
+    # Check in case user pre-calculated a small set of qm's that aren't enough for IBL 
+    required_qms = ["amplitude_median", "isi_violation", "amplitude_cutoff"]
+    qm = analyzer.get_extension("quality_metrics").get_data()
+    for rqm in required_qms:
+        if rqm not in qm:
+            analyzer.compute(
+                "quality_metrics",
+                metric_names=[rqm],
+                verbose=verbose,
+            )
 
     # # Start by just exporting to phy
     if not only_ibl_specific_steps:
