@@ -33,9 +33,9 @@ class UnitLocationsWidget(BaseWidget):
     hide_axis : bool, default: False
         If True, the axis is set to off (matplotlib backend)
     x_lim : tuple or None, default: None
-        The min and max width to display, if None compute using probe information.
+        The min and max width to display. If None, estimate using unit location information.
     y_lim : tuple or None, default: None
-        The min and max depth to display, if None compute using probe information.
+        The min and max depth to display. If None, estimate using unit location information.
     """
 
     def __init__(
