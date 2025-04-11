@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
 import os
 import shutil
 import warnings
@@ -7,7 +8,6 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-import numpy.typing as npt
 from tqdm.auto import tqdm
 
 from spikeinterface.core import ChannelSparsity, SortingAnalyzer
@@ -60,10 +60,10 @@ def export_to_ibl(
 
     """
 
-    try:
+    if find_spec("scipy") is None:
+        raise ImportError("Please install scipy to use the export_to_ibl function.")
+    else:
         from scipy.signal import welch
-    except ImportError as e:
-        raise ImportError("Please install scipy to use the export_to_ibl function.") from e
 
     # Output folder checks
     if isinstance(output_folder, str):
@@ -209,7 +209,7 @@ def export_to_ibl(
 
     # convert times and squeeze
     times = np.load(output_folder / "spike_times.npy")
-    np.save(output_folder / "spike_times.npy", np.squeeze(times / 30000.0).astype("float64"))
+    np.save(output_folder / "spike_times.npy", np.squeeze(times / analyzer.sampling_frequency).astype("float64"))
 
     # convert amplitudes and squeeze
     amps = np.load(output_folder / "amplitudes.npy")
@@ -221,24 +221,24 @@ def export_to_ibl(
 
     # # save templates
     cluster_channels = []
-    cluster_peakToTrough = []
+    cluster_peak_to_trough = []
     cluster_waveforms = []
     templates = analyzer.get_extension("templates").get_data()
     extremum_channel_indices = get_template_extremum_channel(analyzer, outputs="index")
 
-    for unit_idx, unit_id in enumerate(analyzer.unit_ids):
-        waveform = templates[unit_idx, :, :]
+    for unit_index, unit_id in enumerate(analyzer.unit_ids):
+        waveform = templates[unit_index, :, :]
         extremum_channel_index = extremum_channel_indices[unit_id]
         peak_waveform = waveform[:, extremum_channel_index]
-        peakToTrough = (np.argmax(peak_waveform) - np.argmin(peak_waveform)) / analyzer.sampling_frequency
+        peak_to_trough = (np.argmax(peak_waveform) - np.argmin(peak_waveform)) / analyzer.sampling_frequency
         # cluster_channels.append(int(channel_locs[extremum_channel_index, 1] / 10)) # ??? fails for odd nums of units
         cluster_channels.append(
             extremum_channel_index
         )  # see: https://github.com/SpikeInterface/spikeinterface/issues/2843#issuecomment-2148164870
-        cluster_peakToTrough.append(peakToTrough)
+        cluster_peak_to_trough.append(peak_to_trough)
         cluster_waveforms.append(waveform)
 
-    np.save(output_folder / "cluster_peakToTrough.npy", np.array(cluster_peakToTrough))
+    np.save(output_folder / "cluster_peak_to_trough.npy", np.array(cluster_peak_to_trough))
     np.save(output_folder / "cluster_waveforms.npy", np.stack(cluster_waveforms))
     np.save(output_folder / "cluster_channels.npy", np.array(cluster_channels))
 
@@ -246,7 +246,7 @@ def export_to_ibl(
     _FILE_RENAMES = [  # file_in, file_out
         ("channel_positions.npy", "channels.localCoordinates.npy"),
         ("channel_inds.npy", "channels.rawInd.npy"),
-        ("cluster_peakToTrough.npy", "clusters.peakToTrough.npy"),
+        ("cluster_peak_to_trough.npy", "clusters.peakToTrough.npy"),
         ("cluster_channels.npy", "clusters.channels.npy"),
         ("cluster_waveforms.npy", "clusters.waveforms.npy"),
         ("spike_clusters.npy", "spikes.clusters.npy"),
