@@ -23,7 +23,7 @@ class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
     channel_ids : list or None, default: None
         A list of channel ids. If None, channel_ids = list(range(num_channels)).
     is_filtered : bool or None, default: None
-        If True, the recording is assumed to be filtered. If None, is_filtered is not set.
+        If True, the recording is assumed to be filtered. If None, `is_filtered` is not set.
     """
 
     mode = "file"
