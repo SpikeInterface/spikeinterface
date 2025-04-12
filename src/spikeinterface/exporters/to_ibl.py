@@ -104,7 +104,7 @@ def export_to_ibl(
     # Check in case user pre-calculated a small set of qm's that aren't enough for IBL
     required_qms = ["amplitude_median", "isi_violation", "amplitude_cutoff"]
     qm = analyzer.get_extension("quality_metrics").get_data()
-    qms_to_compute = [metric for metric in required_qms if metric not in qm]    
+    qms_to_compute = [metric for metric in required_qms if metric not in qm]
     analyzer.compute("quality_metrics", metric_names=qms_to_compute, verbose=verbose)
 
     # # Start by just exporting to phy
