@@ -388,22 +388,23 @@ class Kilosort4Sorter(BaseSorter):
         """Create a JSON probe map file for Kilosort4."""
         from kilosort.io import save_probe
         import numpy as np
-        
+
         groups = recording.get_channel_groups()
         positions = np.array(recording.get_channel_locations())
         if positions.shape[1] != 2:
             raise RuntimeError("3D 'location' are not supported. Set 2D locations instead.")
-        
-        nchan = recording.get_num_channels()
-        xcoords = ([p[0] for p in positions],)
-        ycoords = ([p[1] for p in positions],)
-        kcoords = (groups,)
-        
+
+        n_chan = recording.get_num_channels()
+        chanMap = np.arange(n_chan)
+        xc = positions[:, 0]
+        yc = positions[:, 1]
+        kcoords = groups.astype(float)
+                        
         probe = {
-            'chanMap': np.arange(nchan),
-            'xc': np.array(xcoords[0]).astype(float).squeeze(),
-            'yc': np.array(ycoords[0]).astype(float).squeeze(),
-            'kcoords': np.array(kcoords).astype(float).squeeze(),
-            'n_chan': nchan,
+            'chanMap': chanMap,
+            'xc': xc,
+            'yc': yc,
+            'kcoords': kcoords,
+            'n_chan': n_chan,
             }
         save_probe(probe, str(sorter_output_folder / "chanMap.json"))
