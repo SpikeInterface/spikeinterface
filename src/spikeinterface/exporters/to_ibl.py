@@ -61,7 +61,7 @@ def export_to_ibl(
     """
 
     if find_spec("scipy") is None:
-        raise ImportError("Please install scipy to use the export_to_ibl function.")
+        raise ImportError("Please install scipy to use the `export_to_ibl` function.")
     else:
         from scipy.signal import welch
 
@@ -104,13 +104,8 @@ def export_to_ibl(
     # Check in case user pre-calculated a small set of qm's that aren't enough for IBL
     required_qms = ["amplitude_median", "isi_violation", "amplitude_cutoff"]
     qm = analyzer.get_extension("quality_metrics").get_data()
-    for rqm in required_qms:
-        if rqm not in qm:
-            analyzer.compute(
-                "quality_metrics",
-                metric_names=[rqm],
-                verbose=verbose,
-            )
+    qms_to_compute = [metric for metric in required_qms if metric not in qm]    
+    analyzer.compute("quality_metrics", metric_names=qms_to_compute, verbose=verbose)
 
     # # Start by just exporting to phy
     if not only_ibl_specific_steps:
@@ -157,17 +152,20 @@ def export_to_ibl(
         chunk_start_times = chunk_start_times.astype(np.float32)
         return chunk_rms, chunk_start_times
 
-    # Get RMS for the AP data. We will use a window of length rms_win_length_sec seconds slid over the entire recording.
-    ap_rec = analyzer.recording
-    if ap_rec.get_num_segments() != 1:
-        warnings.warn("Found ap recording with more than one segment, only using initial segment.")
-        ap_rec = ap_rec[0]
-    chunk_rms, chunk_start_times = _get_rms(ap_rec)
-    np.save(os.path.join(output_folder, "_iblqc_ephysTimeRmsAP.rms.npy"), chunk_rms)
-    np.save(
-        os.path.join(output_folder, "_iblqc_ephysTimeRmsAP.timestamps.npy"),
-        chunk_start_times,
-    )
+    if analyzer.has_recording():
+        # Get RMS for the AP data. We will use a window of length rms_win_length_sec seconds slid over the entire recording.
+        ap_rec = analyzer.recording
+        if ap_rec.get_num_segments() != 1:
+            warnings.warn("Found ap recording with more than one segment, only using initial segment.")
+            ap_rec = ap_rec[0]
+        chunk_rms, chunk_start_times = _get_rms(ap_rec)
+        np.save(os.path.join(output_folder, "_iblqc_ephysTimeRmsAP.rms.npy"), chunk_rms)
+        np.save(
+            os.path.join(output_folder, "_iblqc_ephysTimeRmsAP.timestamps.npy"),
+            chunk_start_times,
+        )
+    elif verbose:
+        print("No recording data found in the SortingAnalyzer, skipping AP RMS calculation.")
 
     if lfp_recording is not None:
         # Get RMS for the LFP data.
@@ -186,7 +184,7 @@ def export_to_ibl(
         traces = lfp_recording.get_traces(start_frame=0, end_frame=end_frame)  # time x channels
         spec_density = np.zeros((welch_win_length_samples // 2 + 1, traces.shape[1]))
         for iCh in range(traces.shape[1]):
-            f, Pxx = welch(
+            freqs, Pxx = welch(
                 traces[:, iCh],
                 fs=lfp_recording.sampling_frequency,
                 nperseg=welch_win_length_samples,
@@ -194,13 +192,12 @@ def export_to_ibl(
             spec_density[:, iCh] = Pxx
         spec_density = spec_density[:, channel_inds]  # only keep channels that were used for spike sorting
         spec_density = spec_density.astype(np.float32)
-        f = f.astype(np.float32)
-        assert spec_density.shape[0] == len(f)
+        freqs = freqs.astype(np.float32)
         np.save(
             os.path.join(output_folder, "_iblqc_ephysSpectralDensityLF.power.npy"),
             spec_density,
         )
-        np.save(os.path.join(output_folder, "_iblqc_ephysSpectralDensityLF.freqs.npy"), f)
+        np.save(os.path.join(output_folder, "_iblqc_ephysSpectralDensityLF.freqs.npy"), freqs)
 
     ### Save spike info ###
 
