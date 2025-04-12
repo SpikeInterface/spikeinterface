@@ -399,12 +399,12 @@ class Kilosort4Sorter(BaseSorter):
         xc = positions[:, 0]
         yc = positions[:, 1]
         kcoords = groups.astype(float)
-                        
+
         probe = {
-            'chanMap': chanMap,
-            'xc': xc,
-            'yc': yc,
-            'kcoords': kcoords,
-            'n_chan': n_chan,
-            }
+            "chanMap": chanMap,
+            "xc": xc,
+            "yc": yc,
+            "kcoords": kcoords,
+            "n_chan": n_chan,
+        }
         save_probe(probe, str(sorter_output_folder / "chanMap.json"))
