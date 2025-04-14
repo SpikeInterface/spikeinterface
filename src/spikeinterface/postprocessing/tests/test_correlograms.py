@@ -1,18 +1,18 @@
 import numpy as np
+import importlib
 
-try:
-    import numba
-
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ModuleNotFoundError as err:
+else:
     HAVE_NUMBA = False
 
-try:
-    import npyx
-
+npyx_spec = importlib.util.find_spec("npyx")
+if npyx_spec is not None:
     HAVE_NPYX = True
-except ModuleNotFoundError:
+else:
     HAVE_NPYX = False
+
 
 import pytest
 from pytest import param

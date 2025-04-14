@@ -13,7 +13,7 @@ from threadpoolctl import threadpool_limits
 import numpy as np
 
 from spikeinterface.core import BaseSorting
-from spikeinterface.core.job_tools import fix_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core.sortinganalyzer import (
     AnalyzerExtension,
     SortingAnalyzer,
@@ -272,7 +272,7 @@ def _make_bins(sorting, window_ms, bin_ms) -> tuple[np.ndarray, int, int]:
     bin_size = int(round(fs * bin_ms * 1e-3))
     window_size -= window_size % bin_size
     num_bins = 2 * int(window_size / bin_size)
-    assert num_bins >= 1
+    assert num_bins >= 1, "Number of bins must be >= 1"
 
     bins = np.arange(-window_size, window_size + bin_size, bin_size) * 1e3 / fs
 
@@ -330,7 +330,7 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
     bins : np.array
         The bins edges in ms
     """
-    assert method in ("auto", "numba", "numpy")
+    assert method in ("auto", "numba", "numpy"), "method must be 'auto', 'numba' or 'numpy'"
 
     if method == "auto":
         method = "numba" if HAVE_NUMBA else "numpy"
@@ -771,8 +771,7 @@ def _compute_acgs_3d(
         The number of quantiles to use for firing rate bins.
     smoothing_factor : float, default: 250
         The width of the smoothing kernel in milliseconds.
-    n_jobs : int, default: -1.
-        Number of parallel jobs to spawn to compute the 3D-ACGS on different units.
+    {}
 
     Returns
     -------
@@ -841,7 +840,7 @@ def _compute_acgs_3d(
                 acgs_3d[unit_index, :, :] = acg_3d
                 firing_quantiles[unit_index, :] = firing_quantile
     else:
-        # Process units in serial
+        # Process units serially
         for unit_index, (
             sorting,
             unit_id,
@@ -868,6 +867,8 @@ def _compute_acgs_3d(
 register_result_extension(ComputeACG3D)
 compute_acgs_3d_sorting_analyzer = ComputeACG3D.function_factory()
 
+_compute_acgs_3d.__doc__ = _compute_acgs_3d.__doc__.format(_shared_job_kwargs_doc)
+
 
 def _compute_3d_acg_one_unit(
     sorting: BaseSorting,
@@ -884,8 +885,8 @@ def _compute_3d_acg_one_unit(
     bin_size = np.clip(bin_size, 1000 * 1.0 / fs, 1e8)  # in milliseconds
     win_size = np.clip(win_size, 1e-2, 1e8)  # in milliseconds
     winsize_bins = 2 * int(0.5 * win_size * 1.0 / bin_size) + 1  # Both in millisecond
-    assert winsize_bins >= 1
-    assert winsize_bins % 2 == 1
+    assert winsize_bins >= 1, "Number of bins must be >= 1"
+    assert winsize_bins % 2 == 1, "Number of bins must be odd"
     bin_times_ms = np.linspace(-win_size / 2, win_size / 2, num=winsize_bins)
 
     if firing_rate_quantiles is not None:
@@ -989,6 +990,7 @@ def compute_acgs_3d(
     bin_ms: float = 1.0,
     num_firing_rate_quantiles: int = 10,
     smoothing_factor: int = 250,
+    **job_kwargs,
 ):
     """
     Compute 3D Autocorrelograms. See ComputeACG3D() for a detailed documentation.
@@ -1003,6 +1005,7 @@ def compute_acgs_3d(
             bin_ms=bin_ms,
             num_firing_rate_quantiles=num_firing_rate_quantiles,
             smoothing_factor=smoothing_factor,
+            **job_kwargs,
         )
     else:
         return _compute_acgs_3d(
@@ -1011,6 +1014,7 @@ def compute_acgs_3d(
             bin_ms=bin_ms,
             num_firing_rate_quantiles=num_firing_rate_quantiles,
             smoothing_factor=smoothing_factor,
+            **job_kwargs,
         )
 
 
