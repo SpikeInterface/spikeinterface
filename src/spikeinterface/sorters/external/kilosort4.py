@@ -167,6 +167,7 @@ class Kilosort4Sorter(BaseSorter):
             cluster_spikes,
             save_sorting,
             get_run_parameters,
+            setup_logger,
         )
         from kilosort.io import load_probe, RecordingExtractorAsArray, BinaryFiltered, save_preprocessing
         from kilosort.parameters import DEFAULT_SETTINGS
@@ -174,11 +175,27 @@ class Kilosort4Sorter(BaseSorter):
         import time
         import torch
         import numpy as np
+        import logging
+        
+        # setup kilosort's console and file log handlers
+        setup_logger(sorter_output_folder, verbose_console=False)   # setting verbose_console=False ensures
+                                                                    # that the console handler's log level
+                                                                    # is logging.INFO
+        
+        # if verbose is False, set the console handler's log 
+        # level to logging.WARNING to preserve original 
+        # behavior prior to addition of setup_logger() above
+        if not verbose:
+            logger = logging.getLogger("kilosort")
 
-        if verbose:
-            import logging
-
-            logging.basicConfig(level=logging.INFO)
+            # find the stream handler
+            stream_handler = None
+            for handler in logger.handlers:
+                if type(handler)==logging.StreamHandler:
+                    stream_handler = handler
+                    break
+            
+            stream_handler.setLevel(logging.WARNING)
 
         if version.parse(cls.get_sorter_version()) < version.parse("4.0.16"):
             raise RuntimeError(
