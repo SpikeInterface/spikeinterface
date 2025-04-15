@@ -17,3 +17,4 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     drift_with_lfp
     auto_curation_training
     auto_curation_prediction
+    customize_a_plot
