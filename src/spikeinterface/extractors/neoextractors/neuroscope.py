@@ -116,8 +116,8 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
                         color = "#0080ff"
                     anatomycolors[channel_id] = color
 
-        discarded_channels = np.setdiff1d(np.arange(n_channels), np.concatenate(channel_groups))
-        kept_channels = np.setdiff1d(np.arange(n_channels), np.concatenate([skipped_channels, discarded_channels]))
+        discarded_channels = [ch for ch in range(n_channels) if all(ch not in group for group in channel_groups)]
+        kept_channels = [ch for ch in range(n_channels) if ch not in skipped_channels and ch not in discarded_channels]
 
         return channel_groups, kept_channels, discarded_channels, anatomycolors
 
