@@ -178,9 +178,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         selection_params = params["selection"].get("method_kwargs", dict())
         n_peaks_per_channel = selection_params.get("n_peaks_per_channel", 5000)
         min_n_peaks = selection_params.get("min_n_peaks", 100000)
-
-        full_clustering = params["matching"].get("method", "circus-omp-svd") is None
-
         skip_peaks = not params["multi_units_only"] and selection_method == "uniform"
         max_n_peaks = n_peaks_per_channel * num_channels
         n_peaks = max(min_n_peaks, max_n_peaks)
