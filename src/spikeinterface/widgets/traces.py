@@ -4,7 +4,7 @@ import warnings
 
 import numpy as np
 
-from ..core import BaseRecording
+from spikeinterface.core import BaseRecording
 from .base import BaseWidget, to_attr
 from .utils import get_some_colors, array_to_image
 
@@ -107,7 +107,7 @@ class TracesWidget(BaseWidget):
             )
 
         if order_channel_by_depth and rec0.has_channel_location():
-            from ..preprocessing import depth_order
+            from spikeinterface.preprocessing import depth_order
 
             rec0 = depth_order(rec0)
             recordings = {k: depth_order(rec) for k, rec in recordings.items()}
@@ -604,10 +604,10 @@ class TracesWidget(BaseWidget):
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
         from .utils_sortingview import handle_display_and_url
+        import importlib.util
 
-        try:
-            import pyvips
-        except ImportError:
+        spec = importlib.util.find_spec("pyvips")
+        if spec is None:
             raise ImportError("To use `plot_traces()` in sortingview you need the pyvips package.")
 
         dp = to_attr(data_plot)
@@ -642,7 +642,7 @@ class TracesWidget(BaseWidget):
 
     def plot_ephyviewer(self, data_plot, **backend_kwargs):
         import ephyviewer
-        from ..preprocessing import depth_order
+        from spikeinterface.preprocessing import depth_order
 
         dp = to_attr(data_plot)
 

@@ -11,6 +11,7 @@ from .position_and_features import PositionAndFeaturesClustering
 from .random_projections import RandomProjectionClustering
 from .circus import CircusClustering
 from .tdc import TdcClustering
+from .graph_clustering import GraphClustering
 
 clustering_methods = {
     "dummy": DummyClustering,
@@ -23,4 +24,13 @@ clustering_methods = {
     "random_projections": RandomProjectionClustering,
     "circus": CircusClustering,
     "tdc_clustering": TdcClustering,
+    "graph_clustering": GraphClustering,
 }
+
+try:
+    # Kilosort licence (GPL 3) is forcing us to make and use an external package
+    from spikeinterface_kilosort_components import KiloSortClustering
+
+    clustering_methods["kilosort_clustering"] = KiloSortClustering
+except ImportError:
+    pass

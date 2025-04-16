@@ -344,13 +344,6 @@ class BaseRecording(BaseRecordingSnippets):
                 traces = traces.astype(f"int{dtype.itemsize * 8}")
 
         if return_scaled:
-            if hasattr(self, "NeoRawIOClass"):
-                if self.has_non_standard_units:
-                    message = (
-                        f"This extractor based on neo.{self.NeoRawIOClass} has channels with units not in (V, mV, uV)"
-                    )
-                    warnings.warn(message)
-
             if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
                     # here we do not truely have scale but we assume this is scaled
@@ -738,6 +731,13 @@ class BaseRecording(BaseRecordingSnippets):
     def _remove_channels(self, remove_channel_ids):
         from .channelslice import ChannelSliceRecording
 
+        recording_channel_ids = self.get_channel_ids()
+        non_present_channel_ids = list(set(remove_channel_ids).difference(recording_channel_ids))
+        if len(non_present_channel_ids) != 0:
+            raise ValueError(
+                f"`remove_channel_ids` {non_present_channel_ids} are not in recording ids {recording_channel_ids}."
+            )
+
         new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
@@ -889,7 +889,7 @@ class BaseRecording(BaseRecordingSnippets):
         return True
 
     def astype(self, dtype, round: bool | None = None):
-        from ..preprocessing.astype import astype
+        from spikeinterface.preprocessing.astype import astype
 
         return astype(self, dtype=dtype, round=round)
 

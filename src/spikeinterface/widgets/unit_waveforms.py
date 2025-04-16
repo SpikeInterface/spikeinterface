@@ -6,8 +6,8 @@ from warnings import warn
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
-from ..core import ChannelSparsity, SortingAnalyzer, Templates
-from ..core.basesorting import BaseSorting
+from spikeinterface.core import ChannelSparsity, SortingAnalyzer, Templates
+from spikeinterface.core.basesorting import BaseSorting
 
 
 class UnitWaveformsWidget(BaseWidget):
@@ -48,9 +48,9 @@ class UnitWaveformsWidget(BaseWidget):
         Line width for the waveforms, (matplotlib backend)
     lw_templates : float, default: 2
         Line width for the templates, (matplotlib backend)
-    unit_colors : None or dict, default: None
-        A dict key is unit_id and value is any color format handled by matplotlib.
-        If None, then the get_unit_colors() is internally used. (matplotlib / ipywidgets backend)
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     alpha_waveforms : float, default: 0.5
         Alpha value for waveforms (matplotlib backend)
     alpha_templates : float, default: 1
@@ -307,7 +307,7 @@ class UnitWaveformsWidget(BaseWidget):
                     length_uv = int(np.ptp(wfs_for_scale) // 5)
                     x_offset = xscale_bar[0] - np.ptp(xscale_bar) // 2
                     ax.plot([xscale_bar[0], xscale_bar[0]], [min_wfs - offset, min_wfs - offset + length], color="k")
-                    ax.text(x_offset, min_wfs - offset + length // 3, f"{length_uv} $\mu$V", fontsize=8, rotation=90)
+                    ax.text(x_offset, min_wfs - offset + length // 3, f"{length_uv} $\\mu$V", fontsize=8, rotation=90)
 
             # plot template
             if dp.plot_templates:
@@ -379,7 +379,7 @@ class UnitWaveformsWidget(BaseWidget):
                     length_uv = int(np.ptp(template_for_scale) // 5)
                     x_offset = xscale_bar[0] - np.ptp(xscale_bar) // 2
                     ax.plot([xscale_bar[0], xscale_bar[0]], [min_wfs - offset, min_wfs - offset + length], color="k")
-                    ax.text(x_offset, min_wfs - offset + length // 3, f"{length_uv} $\mu$V", fontsize=8, rotation=90)
+                    ax.text(x_offset, min_wfs - offset + length // 3, f"{length_uv} $\\mu$V", fontsize=8, rotation=90)
 
             # plot channels
             if dp.plot_channels:
@@ -650,19 +650,33 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
     wf_max = np.max(templates)
     wf_min = np.min(templates)
 
-    x_chans = np.unique(channel_locations[:, 0])
-    if x_chans.size > 1:
-        delta_x = np.min(np.diff(x_chans))
-        if delta_x < 5:
-            delta_x = 20.0
-    else:
-        delta_x = 40.0
+    # estimating x and y interval from a weighted average of the distance matrix, factors include:
+    # 1. gaussian distance penalty: penalize far distances
+    # 2. trigonometric angular penalty: penalize distances unparallel to the corresponding interval
+    manh = np.abs(
+        channel_locations[None, :] - channel_locations[:, None]
+    )  # vertical and horizontal distances between each channel
+    eucl = np.linalg.norm(manh, axis=2)  # Euclidean distance matrix
+    np.fill_diagonal(eucl, np.inf)  # the distance of a channel to itself is not considered
+    gaus = np.exp(-0.5 * (eucl / eucl.min()) ** 2)  # sigma uses the min distance between channels
 
-    y_chans = np.unique(channel_locations[:, 1])
-    if y_chans.size > 1:
-        delta_y = np.min(np.diff(y_chans))
+    # horizontal interval
+    # penalize vertically inclined distances
+    # weights can be 0 when there is one column
+    weight = manh[..., 0] / eucl * gaus
+    if weight.sum() == 0:
+        delta_x = 10
     else:
-        delta_y = 40.0
+        delta_x = (manh[..., 0] * weight).sum() / weight.sum()
+
+    # vertical interval
+    # penalize horizontally inclined distances
+    # weights can be 0 when there is one row
+    weight = manh[..., 1] / eucl * gaus
+    if weight.sum() == 0:
+        delta_y = 10
+    else:
+        delta_y = (manh[..., 1] * weight).sum() / weight.sum()
 
     m = max(np.abs(wf_max), np.abs(wf_min))
     y_scale = delta_y / m * 0.7

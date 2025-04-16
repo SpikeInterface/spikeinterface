@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import warnings
 import numpy as np
 
@@ -77,43 +78,44 @@ class UnitsAggregationSorting(BaseSorting):
             if np.all(annotations == annotations[0]):
                 self.set_annotation(annotation_name, sorting_list[0].get_annotation(annotation_name))
 
-        property_keys = {}
-        property_dict = {}
-        deleted_keys = []
-        for sort in sorting_list:
-            for prop_name in sort.get_property_keys():
-                if prop_name in deleted_keys:
-                    continue
-                if prop_name in property_keys:
-                    if property_keys[prop_name] != sort.get_property(prop_name).dtype:
-                        print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
-                        del property_keys[prop_name]
-                        deleted_keys.append(prop_name)
-                else:
-                    property_keys[prop_name] = sort.get_property(prop_name).dtype
-        for prop_name in property_keys:
-            dtype = property_keys[prop_name]
-            property_dict[prop_name] = np.array([], dtype=dtype)
+        # Check if all the sortings have the same properties
+        properties_set = set(np.concatenate([sorting.get_property_keys() for sorting in sorting_list]))
+        for prop_name in properties_set:
 
+            dtypes_per_sorting = []
             for sort in sorting_list:
                 if prop_name in sort.get_property_keys():
-                    values = sort.get_property(prop_name)
-                else:
-                    if dtype.kind not in BaseExtractor.default_missing_property_values:
-                        del property_dict[prop_name]
-                        break
-                    values = np.full(
-                        sort.get_num_units(), BaseExtractor.default_missing_property_values[dtype.kind], dtype=dtype
-                    )
+                    dtypes_per_sorting.append(sort.get_property(prop_name).dtype.kind)
 
-                try:
-                    property_dict[prop_name] = np.concatenate((property_dict[prop_name], values))
-                except Exception as e:
-                    print(f"Skipping property '{prop_name}' due to shape inconsistency")
-                    del property_dict[prop_name]
-                    break
-        for prop_name, prop_values in property_dict.items():
-            self.set_property(key=prop_name, values=prop_values)
+            if len(set(dtypes_per_sorting)) != 1:
+                warnings.warn(
+                    f"Skipping property '{prop_name}'. Difference in dtype.kind between sortings: {dtypes_per_sorting}"
+                )
+                continue
+
+            all_property_values = []
+            for sort in sorting_list:
+
+                # If one of the sortings doesn't have the property, use the default missing property value
+                if prop_name not in sort.get_property_keys():
+                    try:
+                        values = np.full(
+                            sort.get_num_units(),
+                            BaseExtractor.default_missing_property_values[dtypes_per_sorting[0]],
+                        )
+                    except:
+                        warnings.warn(f"Skipping property '{prop_name}: cannot inpute missing property values.'")
+                        break
+                else:
+                    values = sort.get_property(prop_name)
+
+                all_property_values.append(values)
+
+            try:
+                prop_values = np.concatenate(all_property_values)
+                self.set_property(key=prop_name, values=prop_values)
+            except Exception as ext:
+                warnings.warn(f"Skipping property '{prop_name}' as numpy cannot concatente. Numpy error: {ext}")
 
         # add segments
         for i_seg in range(num_segments):

@@ -590,6 +590,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
     local_job_kargs = {"n_jobs": 1, "progress_bar": False}
 
     DEBUG = False
+    sub_recording = None  # we only do a sub recording if we have data to iterate through
     while keep_searching:
 
         keep_searching = False

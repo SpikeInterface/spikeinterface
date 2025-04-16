@@ -1,6 +1,6 @@
 from spikeinterface.core import generate_recording
 
-from spikeinterface.preprocessing import clip, blank_staturation
+from spikeinterface.preprocessing import clip, blank_saturation
 
 import numpy as np
 
@@ -25,13 +25,13 @@ def test_clip():
     assert np.all(-1.5 <= traces1[1])
 
 
-def test_blank_staturation():
+def test_blank_saturation():
     rec = generate_recording()
 
-    rec0 = blank_staturation(rec, abs_threshold=3.0)
+    rec0 = blank_saturation(rec, abs_threshold=3.0)
     rec0.save(verbose=False)
 
-    rec1 = blank_staturation(rec, quantile_threshold=0.01, direction="both", chunk_size=10000)
+    rec1 = blank_saturation(rec, quantile_threshold=0.01, direction="both", chunk_size=10000)
     rec1.save(verbose=False)
 
     traces0 = rec0.get_traces(segment_index=0, channel_ids=["1"])
@@ -47,4 +47,4 @@ def test_blank_staturation():
 
 if __name__ == "__main__":
     test_clip()
-    test_blank_staturation()
+    test_blank_saturation()
