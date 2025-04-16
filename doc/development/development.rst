@@ -429,7 +429,7 @@ The signature of the script is:
 
     bash auto-release-notes.sh <start_date> <end_date>
 
-Where the start date is the date of the last release and the end date is the current date.
+Where the start date is the date of the last release and the end date is the current date. Dates are in YYYY-MM-DD format
 
 The date of the last release can be found on `PyPI <https://pypi.org/project/spikeinterface/>`_.
 
