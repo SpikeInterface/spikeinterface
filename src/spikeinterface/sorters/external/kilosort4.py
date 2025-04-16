@@ -187,12 +187,12 @@ class Kilosort4Sorter(BaseSorter):
         # setup kilosort's console and file log handlers
         if version.parse(cls.get_sorter_version()) > version.parse("4.0.18"):
             # v4.0.19 and higher
-            setup_logger(sorter_output_folder, verbose_console=False)   # setting verbose_console=False ensures
-                                                                        # that the stream handler's log level
-                                                                        # is logging.INFO, not logging.DEBUG.
-            
-            # if verbose is False, set the stream handler's log 
-            # level to logging.WARNING to preserve original 
+            setup_logger(sorter_output_folder, verbose_console=False)  # setting verbose_console=False ensures
+            # that the stream handler's log level
+            # is logging.INFO, not logging.DEBUG.
+
+            # if verbose is False, set the stream handler's log
+            # level to logging.WARNING to preserve original
             # behavior prior to addition of setup_logger() above
             if not verbose:
                 logger = logging.getLogger("kilosort")
@@ -200,27 +200,27 @@ class Kilosort4Sorter(BaseSorter):
                 # find the stream handler
                 stream_handler = None
                 for handler in logger.handlers:
-                    if type(handler)==logging.StreamHandler:
+                    if type(handler) == logging.StreamHandler:
                         stream_handler = handler
                         break
-                
+
                 stream_handler.setLevel(logging.WARNING)
         else:
             # v4.0.16, v4.0.17, v4.0.18
             setup_logger(sorter_output_folder)
 
             if not verbose:
-                logger = logging.getLogger('') # Kilosort's logger is unnamed
+                logger = logging.getLogger("")  # Kilosort's logger is unnamed
 
                 # find the stream handler
                 stream_handler = None
                 for handler in logger.handlers:
-                    if type(handler)==logging.StreamHandler:
+                    if type(handler) == logging.StreamHandler:
                         stream_handler = handler
                         break
-                
+
                 stream_handler.setLevel(logging.WARNING)
-        
+
         sorter_output_folder = sorter_output_folder.absolute()
 
         probe_filename = sorter_output_folder / "probe.prb"
