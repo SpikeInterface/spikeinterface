@@ -264,6 +264,7 @@ class IblRecordingExtractor(BaseRecording):
             "cache_folder": cache_folder,
             "remove_cached": remove_cached,
             "stream": stream,
+            "stream_type": stream_type,
         }
 
 
