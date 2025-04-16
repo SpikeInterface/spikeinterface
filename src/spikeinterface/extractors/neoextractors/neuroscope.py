@@ -66,7 +66,7 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
             xml_file_path = str(Path(xml_file_path).absolute())
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), xml_file_path=xml_file_path))
         self.xml_file_path = xml_file_path if xml_file_path is not None else Path(file_path).with_suffix(".xml")
-        self.split_recording_by_channel_groups()
+        self._set_groups()
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path, xml_file_path=None):
@@ -121,7 +121,12 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
 
         return channel_groups, kept_channels, discarded_channels, anatomycolors
 
-    def split_recording_by_channel_groups(self):
+    def _set_groups(self):
+        """
+        Set the group ids and colors based on the xml file.
+        These group ids are usually different brain/body anatomical areas, or shanks from multi-shank probes.
+        The group ids are set as a property of the recording extractor.
+        """
         n = self.get_num_channels()
         group_ids = np.full(n, -1, dtype=int)  # Initialize all positions to -1
 
