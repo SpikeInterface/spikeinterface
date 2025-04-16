@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 from typing import Tuple, List, Optional
+import importlib.util
 
 import numpy as np
 
@@ -27,21 +28,21 @@ from spikeinterface.postprocessing.localization_tools import get_convolution_wei
 
 from .tools import make_multi_method_doc
 
-try:
-    import numba
-
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ImportError:
+else:
     HAVE_NUMBA = False
 
-try:
-    import torch
-    import torch.nn.functional as F
-
-    HAVE_TORCH = True
-except ImportError:
+torch_spec = importlib.util.find_spec("torch")
+if torch_spec is not None:
+    torch_nn_functional_spec = importlib.util.find_spec("torch.nn")
+    if torch_nn_functional_spec is not None:
+        HAVE_TORCH = True
+    else:
+        HAVE_TORCH = False
+else:
     HAVE_TORCH = False
-
 
 """
 TODO:
@@ -499,8 +500,12 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
         return_tensor=False,
         random_chunk_kwargs={},
     ):
+
         if not HAVE_TORCH:
             raise ModuleNotFoundError('"by_channel_torch" needs torch which is not installed')
+
+        import torch.cuda
+
         assert peak_sign in ("both", "neg", "pos")
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -839,6 +844,7 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
 
 
 if HAVE_NUMBA:
+    import numba
 
     @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_pos(
@@ -932,6 +938,8 @@ if HAVE_NUMBA:
 
 
 if HAVE_TORCH:
+    import torch
+    import torch.nn.functional as F
 
     @torch.no_grad()
     def _torch_detect_peaks(traces, peak_sign, abs_thresholds, exclude_sweep_size=5, neighbours_mask=None, device=None):
@@ -1109,7 +1117,6 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
 
 class OpenCLDetectPeakExecutor:
     def __init__(self, abs_thresholds, exclude_sweep_size, neighbours_mask, peak_sign):
-        import pyopencl
 
         self.chunk_size = None
 

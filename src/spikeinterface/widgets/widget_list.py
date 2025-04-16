@@ -95,6 +95,11 @@ Returns
 -------
 w : BaseWidget
     The output widget object.
+
+Notes
+-----
+When using the matplotlib backend, the returned `BaseWidget` contains the matplotlib fig and axis objects. This allows
+customization of plots using matplotlib machinery e.g. `returned_widget.ax.set_xlim((0,100))`.
     """
     backend_str = ""
     backend_kwargs_str = ""

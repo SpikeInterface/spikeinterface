@@ -1703,7 +1703,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         Returns
         -------
-        ext_instanace:
+        ext_instance:
             The loaded instance of the extension
 
         """

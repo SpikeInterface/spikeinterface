@@ -94,8 +94,7 @@ def test_name_and_repr():
     assert "Hz" in rec_str
 
 
-def test_setting_properties():
-
+def test_setting_complete_properties():
     num_channels = 5
     recording = generate_recording(num_channels=5, durations=[1.0])
     channel_ids = ["a", "b", "c", "d", "e"]
@@ -108,7 +107,13 @@ def test_setting_properties():
     expected_array = np.array(complete_values)
     assert np.array_equal(property_in_recording, expected_array)
 
-    # Set property with missing values
+
+def test_setting_incomplete_properties():
+    num_channels = 5
+    recording = generate_recording(num_channels=5, durations=[1.0])
+    channel_ids = ["a", "b", "c", "d", "e"]
+    recording = recording.rename_channels(new_channel_ids=channel_ids)
+
     incomplete_values = ["value"] * (num_channels - 1)
     recording.set_property(key="incomplete_property", ids=channel_ids[:-1], values=incomplete_values)
 
@@ -116,17 +121,24 @@ def test_setting_properties():
     expected_array = np.array(incomplete_values + [""])  # Spikeinterface defines missing values as empty strings
     assert np.array_equal(property_in_recording, expected_array)
 
-    # # Passs a missing value
-    # recording.set_property(
-    #     key="missing_property",
-    #     ids=channel_ids[:-1],
-    #     values=incomplete_values,
-    #     missing_value="missing",
-    # )
 
-    # property_in_recording = recording.get_property("missing_property")
-    # expected_array = np.array(incomplete_values + ["missing"])
-    # assert np.array_equal(property_in_recording, expected_array)
+def test_setting_properties_with_custom_missing_value():
+    num_channels = 5
+    recording = generate_recording(num_channels=5, durations=[1.0])
+    channel_ids = ["a", "b", "c", "d", "e"]
+    recording = recording.rename_channels(new_channel_ids=channel_ids)
+
+    incomplete_values = ["value"] * (num_channels - 1)
+    recording.set_property(
+        key="missing_property",
+        ids=channel_ids[:-1],
+        values=incomplete_values,
+        missing_value="missing",
+    )
+
+    property_in_recording = recording.get_property("missing_property")
+    expected_array = np.array(incomplete_values + ["missing"])
+    assert np.array_equal(property_in_recording, expected_array)
 
 
 if __name__ == "__main__":
