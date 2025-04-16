@@ -442,7 +442,7 @@ As a specific example:
 * Finish the release notes and merge
 * Locally tag the main branch with the newly merged release notes with the new version
 * Push the tag to the remote repository which will trigger the release action (.github/workflows/publish-to-pypi.yml)
-* Do an after-release PR:
+* Do an after-release `PR <https://github.com/SpikeInterface/spikeinterface/pull/3828/files>`_:
     - Uncomment the git installs in pyproject
     - Modify `DEV_MODE` in the top level ``__init__`` (located at ``src/spikeinterface/__init__.py``)
     - Update `pyproject.toml` version one patch ahead or one minor if it is larger one.
