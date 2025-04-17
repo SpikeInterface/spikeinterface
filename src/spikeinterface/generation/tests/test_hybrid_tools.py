@@ -71,7 +71,7 @@ def test_generate_hybrid_from_templates():
     assert sorting_hybrid.get_num_units() == num_units
 
 
-@pytest.mak_skip("Spykingcircus2 is not stable enought for estimating templates from recording")
+@pytest.mark.skip("Spykingcircus2 is not stable enought for estimating templates from recording")
 def test_estimate_templates_from_recording(create_cache_folder):
     cache_folder = create_cache_folder
     rec, _ = generate_ground_truth_recording(num_units=10, sampling_frequency=20000, seed=0)
