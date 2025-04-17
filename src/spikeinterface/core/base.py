@@ -49,7 +49,6 @@ class BaseExtractor:
     # kwargs which can be precomputed before being used by the extractor
     _precomputable_kwarg_names = []
 
-    installation_mesg = ""
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
