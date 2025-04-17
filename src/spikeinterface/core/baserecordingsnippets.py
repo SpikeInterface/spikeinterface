@@ -16,7 +16,6 @@ class BaseRecordingSnippets(BaseExtractor):
     Mixin that handles all probe and channel operations
     """
 
-    has_default_locations = False
 
     def __init__(self, sampling_frequency: float, channel_ids: list[str, int], dtype: np.dtype):
         BaseExtractor.__init__(self, channel_ids)

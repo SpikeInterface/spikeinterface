@@ -764,7 +764,7 @@ class BaseRecording(BaseRecordingSnippets):
         sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
         return sub_recording
 
-    def time_slice(self, start_time: float | None, end_time: float) -> BaseRecording:
+    def time_slice(self, start_time: float | None, end_time: float | None)  -> BaseRecording:
         """
         Returns a new recording object, restricted to the time interval [start_time, end_time].
 

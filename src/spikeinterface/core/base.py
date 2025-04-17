@@ -16,7 +16,6 @@ import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import (
-    is_path_remote,
     clean_zarr_folder_name,
     is_dict_extractor,
     SIJsonEncoder,
@@ -51,7 +50,6 @@ class BaseExtractor:
     _precomputable_kwarg_names = []
 
     installation_mesg = ""
-    installed = True
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
