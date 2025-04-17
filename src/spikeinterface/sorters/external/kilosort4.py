@@ -138,11 +138,7 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
-        from probeinterface import write_prb
-
-        pg = recording.get_probegroup()
-        probe_filename = sorter_output_folder / "probe.prb"
-        write_prb(probe_filename, pg)
+        cls._setup_json_probe_map(recording, sorter_output_folder)
 
         if params["use_binary_file"]:
             if not recording.binary_compatible_with(time_axis=0, file_paths_length=1):
@@ -217,7 +213,7 @@ class Kilosort4Sorter(BaseSorter):
 
         sorter_output_folder = sorter_output_folder.absolute()
 
-        probe_filename = sorter_output_folder / "probe.prb"
+        probe_filename = sorter_output_folder / "chanMap.json"
 
         torch_device = params["torch_device"]
         if torch_device == "auto":
@@ -414,3 +410,29 @@ class Kilosort4Sorter(BaseSorter):
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
         return KilosortBase._get_result_from_folder(sorter_output_folder)
+
+    @classmethod
+    def _setup_json_probe_map(cls, recording, sorter_output_folder):
+        """Create a JSON probe map file for Kilosort4."""
+        from kilosort.io import save_probe
+        import numpy as np
+
+        groups = recording.get_channel_groups()
+        positions = np.array(recording.get_channel_locations())
+        if positions.shape[1] != 2:
+            raise RuntimeError("3D 'location' are not supported. Set 2D locations instead.")
+
+        n_chan = recording.get_num_channels()
+        chanMap = np.arange(n_chan)
+        xc = positions[:, 0]
+        yc = positions[:, 1]
+        kcoords = groups.astype(float)
+
+        probe = {
+            "chanMap": chanMap,
+            "xc": xc,
+            "yc": yc,
+            "kcoords": kcoords,
+            "n_chan": n_chan,
+        }
+        save_probe(probe, str(sorter_output_folder / "chanMap.json"))
