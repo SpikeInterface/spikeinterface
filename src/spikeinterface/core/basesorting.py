@@ -302,7 +302,6 @@ class BaseSorting(BaseExtractor):
         v = values[self.id_to_index(unit_id)]
         return v
 
-
     def count_num_spikes_per_unit(self, outputs="dict"):
         """
         For each unit : get number of spikes  across segments.
