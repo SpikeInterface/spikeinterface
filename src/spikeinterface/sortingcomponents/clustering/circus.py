@@ -157,6 +157,7 @@ class CircusClustering:
 
         if not params["templates_from_svd"]:
             from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_recording
+
             job_kwargs_local = job_kwargs.copy()
             unit_ids = np.unique(peak_labels)
             ram_requested = recording.get_num_channels() * (nbefore + nafter) * len(unit_ids) * 4
