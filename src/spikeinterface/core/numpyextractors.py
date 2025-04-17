@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 import numpy as np
 from spikeinterface.core import (
     BaseRecording,
@@ -236,7 +237,8 @@ class NumpySorting(BaseSorting):
 
     But we have convenient class methods to instantiate from:
       * other sorting object: `NumpySorting.from_sorting()`
-      * from time+labels: `NumpySorting.from_times_labels()`
+      * from samples+labels: `NumpySorting.from_samples_and_labels()`
+      * from times+labels: `NumpySorting.from_times_and_labels()`
       * from dict of list: `NumpySorting.from_unit_dict()`
       * from neo: `NumpySorting.from_neo_spiketrain_list()`
 
@@ -287,17 +289,17 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+    def from_samples_and_labels(samples_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
         """
         Construct NumpySorting extractor from:
-          * an array of spike times (in frames)
-          * an array of spike labels and adds all the
+          * an array of spike samples
+          * an array of spike labels
         In case of multisegment, it is a list of array.
 
         Parameters
         ----------
-        times_list : list of array (or array)
-            An array of spike times (in frames)
+        samples_list : list of array (or array)
+            An array of spike samples
         labels_list : list of array (or array)
             An array of spike labels corresponding to the given times
         unit_ids : list or None, default: None
@@ -305,22 +307,22 @@ class NumpySorting(BaseSorting):
             If None, then it will be np.unique(labels_list)
         """
 
-        if isinstance(times_list, np.ndarray):
+        if isinstance(samples_list, np.ndarray):
             assert isinstance(labels_list, np.ndarray)
-            times_list = [times_list]
+            samples_list = [samples_list]
             labels_list = [labels_list]
 
-        times_list = [np.asarray(e) for e in times_list]
+        samples_list = [np.asarray(e) for e in samples_list]
         labels_list = [np.asarray(e) for e in labels_list]
 
-        nseg = len(times_list)
+        nseg = len(samples_list)
 
         if unit_ids is None:
             unit_ids = np.unique(np.concatenate([np.unique(labels_list[i]) for i in range(nseg)]))
 
         spikes = []
         for i in range(nseg):
-            times, labels = times_list[i], labels_list[i]
+            times, labels = samples_list[i], labels_list[i]
             unit_index = np.zeros(labels.size, dtype="int64")
             for u, unit_id in enumerate(unit_ids):
                 unit_index[labels == unit_id] = u
@@ -336,6 +338,49 @@ class NumpySorting(BaseSorting):
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
         return sorting
+
+    @staticmethod
+    def from_times_and_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+        """
+        Construct NumpySorting extractor from:
+          * an array of spike times (in s)
+          * an array of spike labels
+        In case of multisegment, it is a list of array.
+
+        Parameters
+        ----------
+        times_list : list of array (or array)
+            An array of spike samples
+        labels_list : list of array (or array)
+            An array of spike labels corresponding to the given times
+        unit_ids : list or None, default: None
+            The explicit list of unit_ids that should be extracted from labels_list
+            If None, then it will be np.unique(labels_list)
+        """
+        if isinstance(times_list, np.ndarray):
+            assert isinstance(labels_list, np.ndarray)
+            times_list = [times_list]
+            labels_list = [labels_list]
+
+        sample_list = [np.round(t * sampling_frequency).astype("int64") for t in times_list]
+        return NumpySorting.from_samples_and_labels(sample_list, labels_list, sampling_frequency, unit_ids)
+
+    @staticmethod
+    def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+        warning_msg = (
+            "`from_times_labels` is deprecated and will be removed in 0.104.0. Note this function requires"
+            "samples rather than times so should not be used for clarity purposes. For those working in samples please"
+            "use `from_samples_and_labels` instead. For those working in time units (seconds) please use "
+            "`from_times_and_labels` instead."
+        )
+
+        warnings.warn(
+            warning_msg,
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        # despite the naming of the original function this required samples
+        return NumpySorting.from_samples_and_labels(times_list, labels_list, sampling_frequency, unit_ids)
 
     @staticmethod
     def from_unit_dict(units_dict_list, sampling_frequency) -> "NumpySorting":

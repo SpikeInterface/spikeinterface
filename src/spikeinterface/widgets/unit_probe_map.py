@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Union
 
 # from probeinterface import ProbeGroup
 
 from .base import BaseWidget, to_attr
 
 # from .utils import get_unit_colors
-from ..core.sortinganalyzer import SortingAnalyzer
-from ..core.template_tools import get_dense_templates_array
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+from spikeinterface.core.template_tools import get_dense_templates_array
 
 
 class UnitProbeMapWidget(BaseWidget):

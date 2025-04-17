@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from .paircomparisons import GroundTruthComparison
-from .groundtruthstudy import GroundTruthStudy
+
+# keep import as we do not want to delete code below.
+# from .groundtruthstudy import GroundTruthStudy
 from .comparisontools import make_collision_events
 
 import numpy as np
@@ -15,11 +17,11 @@ class CollisionGTComparison(GroundTruthComparison):
 
     Parameters
     ----------
-    gt_sorting : SortingExtractor
+    gt_sorting : BaseSorting
         The first sorting for the comparison
     collision_lag : float, default 2.0
         Collision lag in ms.
-    tested_sorting : SortingExtractor
+    tested_sorting : BaseSorting
         The second sorting for the comparison
     nbins : int, default : 11
         Number of collision bins

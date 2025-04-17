@@ -19,7 +19,7 @@ In this code example, we build a preprocessing chain with two steps:
 
 .. code-block:: python
 
-    import spikeinterface.preprocessing import bandpass_filter, common_reference
+    from spikeinterface.preprocessing import bandpass_filter, common_reference
 
     # recording is a RecordingExtractor object
     recording_f = bandpass_filter(recording=recording, freq_min=300, freq_max=6000)
@@ -196,18 +196,18 @@ The whitened traces are then the dot product between the traces and the :code:`W
 
 * :py:func:`~spikeinterface.preprocessing.whiten()`
 
-clip() / blank_staturation()
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+clip() / blank_saturation()
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We can limit traces between a user-defined minimum and maximum using :code:`clip()` function.
-The :code:`blank_staturation()` function is similar, but it automatically estimates the limits by using quantiles.
+The :code:`blank_saturation()` function is similar, but it automatically estimates the limits by using quantiles.
 
 .. code-block:: python
 
     rec_w = clip(recording=rec, a_min=-250., a_max=260)
 
 * :py:func:`~spikeinterface.preprocessing.clip()`
-* :py:func:`~spikeinterface.preprocessing.blank_staturation()`
+* :py:func:`~spikeinterface.preprocessing.blank_saturation()`
 
 
 highpass_spatial_filter()

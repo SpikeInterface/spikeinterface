@@ -8,7 +8,7 @@ from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
 
 from .tf_utils import import_tf
-from ...core import BaseRecording
+from spikeinterface.core import BaseRecording
 
 
 global train_func

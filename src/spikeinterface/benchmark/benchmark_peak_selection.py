@@ -160,7 +160,7 @@ class PeakSelectionStudy(BenchmarkStudy):
 #         nb_garbage = len(garbage_peaks)
 
 #         ratio = 100 * len(garbage_peaks) / len(times2)
-#         self.garbage_sorting = NumpySorting.from_times_labels(garbage_peaks, garbage_channels, self.sampling_rate)
+#         self.garbage_sorting = NumpySorting.from_samples_and_labels(garbage_peaks, garbage_channels, self.sampling_rate)
 
 #         print("The peaks have {0:.2f}% of garbage (without gt around)".format(ratio))
 

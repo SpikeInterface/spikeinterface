@@ -287,7 +287,7 @@ available parameters are dictionaries and can be accessed with:
      'detect_threshold': 5,
      'freq_max': 5000.0,
      'freq_min': 400.0,
-     'max_threads_per_process': 1,
+     'max_threads_per_worker': 1,
      'mp_context': None,
      'n_jobs': 20,
      'nested_params': None,

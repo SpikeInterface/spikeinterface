@@ -4,8 +4,8 @@ from warnings import warn
 
 import numpy as np
 
-from ..core import SortingAnalyzer, BaseSorting
-from ..core.core_tools import check_json
+from spikeinterface.core import SortingAnalyzer, BaseSorting
+from spikeinterface.core.core_tools import check_json
 from .utils import make_units_table_from_sorting, make_units_table_from_analyzer
 
 
@@ -53,12 +53,13 @@ def generate_unit_table_view(
     sorting_or_sorting_analyzer: SortingAnalyzer | BaseSorting,
     unit_properties: list[str] | None = None,
     similarity_scores: np.ndarray | None = None,
+    extra_unit_properties: dict | None = None,
 ):
     import sortingview.views as vv
 
     if isinstance(sorting_or_sorting_analyzer, SortingAnalyzer):
         analyzer = sorting_or_sorting_analyzer
-        units_tables = make_units_table_from_analyzer(analyzer)
+        units_tables = make_units_table_from_analyzer(analyzer, extra_properties=extra_unit_properties)
         sorting = analyzer.sorting
     else:
         sorting = sorting_or_sorting_analyzer
@@ -72,15 +73,17 @@ def generate_unit_table_view(
         # keep only selected columns
         unit_properties = np.array(unit_properties)
         keep = np.isin(unit_properties, units_tables.columns)
+        if sum(keep) < len(unit_properties):
+            warn(f"Some unit properties are not in the sorting: {unit_properties[~keep]}")
         unit_properties = unit_properties[keep]
         units_tables = units_tables.loc[:, unit_properties]
 
         dtype_convertor = {"i": "int", "u": "int", "f": "float", "U": "str", "S": "str", "b": "bool"}
+        # we add "O": "str" because pandas automatically converts strings to Object dtype
+        dtype_convertor["O"] = "str"
 
         ut_columns = []
         for col in unit_properties:
-            if col not in units_tables.columns:
-                continue
             values = units_tables[col].to_numpy()
             if values.dtype.kind in dtype_convertor:
                 txt_dtype = dtype_convertor[values.dtype.kind]
@@ -90,8 +93,6 @@ def generate_unit_table_view(
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             row_values = {}
             for col in unit_properties:
-                if col not in units_tables.columns:
-                    continue
                 values = units_tables[col].to_numpy()
                 if values.dtype.kind in dtype_convertor:
                     value = values[unit_index]

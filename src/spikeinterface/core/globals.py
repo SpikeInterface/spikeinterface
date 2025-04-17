@@ -97,7 +97,9 @@ def is_set_global_dataset_folder() -> bool:
 
 
 ########################################
-_default_job_kwargs = dict(n_jobs=1, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_process=1)
+_default_job_kwargs = dict(
+    pool_engine="process", n_jobs=1, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_worker=1
+)
 
 global global_job_kwargs
 global_job_kwargs = _default_job_kwargs.copy()

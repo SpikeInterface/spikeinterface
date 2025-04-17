@@ -173,21 +173,43 @@ def test_estimate_templates_with_accumulator():
 
     job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
-    templates = estimate_templates_with_accumulator(
-        recording, spikes, sorting.unit_ids, nbefore, nafter, return_scaled=True, **job_kwargs
-    )
-    print(templates.shape)
-    assert templates.shape[0] == sorting.unit_ids.size
-    assert templates.shape[1] == nbefore + nafter
-    assert templates.shape[2] == recording.get_num_channels()
+    # here we compare the result with the same mechanism with with several worker pool size
+    # this means that that acumulator are splitted and then agglomerated back
+    # this should lead to very small diff
+    # n_jobs=1 is done in loop
+    templates_by_worker = []
 
-    assert np.any(templates != 0)
+    if platform.system() == "Linux":
+        engine_loop = ["thread", "process"]
+    else:
+        engine_loop = ["thread"]
 
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # for unit_index, unit_id in enumerate(sorting.unit_ids):
-    #     ax.plot(templates[unit_index, :, :].T.flatten())
-    # plt.show()
+    for pool_engine in engine_loop:
+        for n_jobs in (1, 2, 8):
+            job_kwargs = dict(pool_engine=pool_engine, n_jobs=n_jobs, progress_bar=True, chunk_duration="1s")
+            templates = estimate_templates_with_accumulator(
+                recording, spikes, sorting.unit_ids, nbefore, nafter, return_scaled=True, **job_kwargs
+            )
+            assert templates.shape[0] == sorting.unit_ids.size
+            assert templates.shape[1] == nbefore + nafter
+            assert templates.shape[2] == recording.get_num_channels()
+            assert np.any(templates != 0)
+
+            templates_by_worker.append(templates)
+            if len(templates_by_worker) > 1:
+                templates_loop = templates_by_worker[0]
+                np.testing.assert_almost_equal(templates, templates_loop, decimal=4)
+
+                # import matplotlib.pyplot as plt
+                # fig, axs = plt.subplots(nrows=2, sharex=True)
+                # for unit_index, unit_id in enumerate(sorting.unit_ids):
+                #     ax = axs[0]
+                #     ax.set_title(f"{pool_engine} {n_jobs}")
+                #     ax.plot(templates[unit_index, :, :].T.flatten())
+                #     ax.plot(templates_loop[unit_index, :, :].T.flatten(), color="k", ls="--")
+                #     ax = axs[1]
+                #     ax.plot((templates - templates_loop)[unit_index, :, :].T.flatten(), color="k", ls="--")
+                # plt.show()
 
 
 def test_estimate_templates():
@@ -225,6 +247,6 @@ def test_estimate_templates():
 
 
 if __name__ == "__main__":
-    test_waveform_tools()
+    # test_waveform_tools()
     test_estimate_templates_with_accumulator()
-    test_estimate_templates()
+    # test_estimate_templates()

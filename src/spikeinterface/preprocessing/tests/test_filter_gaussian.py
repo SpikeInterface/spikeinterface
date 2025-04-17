@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from pathlib import Path
-from spikeinterface.core import load_extractor, set_global_tmp_folder
+from spikeinterface.core import load, set_global_tmp_folder
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core.generate import generate_recording
 from spikeinterface.preprocessing import gaussian_filter
@@ -23,7 +23,7 @@ def test_filter_gaussian(tmp_path):
     assert rec_filtered.get_traces(segment_index=1, start_frame=rec_filtered.get_num_frames(1) - 200).shape == (200, 3)
 
     # Check dumpability
-    saved_loaded = load_extractor(rec_filtered.to_dict())
+    saved_loaded = load(rec_filtered.to_dict())
     check_recordings_equal(rec_filtered, saved_loaded, return_scaled=False)
 
     saved_1job = rec_filtered.save(folder=tmp_path / "1job")

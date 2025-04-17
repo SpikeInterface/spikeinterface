@@ -23,7 +23,7 @@ from .sortinganalyzer import create_sorting_analyzer, get_extension_class
 from .job_tools import split_job_kwargs
 from .sparsity import ChannelSparsity
 from .sortinganalyzer import SortingAnalyzer, load_sorting_analyzer
-from .base import load_extractor
+from .loading import load
 from .analyzer_extension_core import ComputeRandomSpikes, ComputeWaveforms, ComputeTemplates
 
 _backwards_compatibility_msg = """####
@@ -247,6 +247,9 @@ class MockWaveformExtractor:
 
     def has_extension(self, extension_name: str) -> bool:
         return self.sorting_analyzer.has_extension(extension_name)
+
+    def load_extension(self, extension_name: str):
+        return self.sorting_analyzer.get_extension(extension_name)
 
     def select_units(self, unit_ids):
         return self.sorting_analyzer.select_units(unit_ids)
@@ -475,21 +478,21 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
     recording = None
     if (folder / "recording.json").exists():
         try:
-            recording = load_extractor(folder / "recording.json", base_folder=folder)
+            recording = load(folder / "recording.json", base_folder=folder)
         except:
             pass
     elif (folder / "recording.pickle").exists():
         try:
-            recording = load_extractor(folder / "recording.pickle", base_folder=folder)
+            recording = load(folder / "recording.pickle", base_folder=folder)
         except:
             pass
 
     # sorting
     if sorting is None:
         if (folder / "sorting.json").exists():
-            sorting = load_extractor(folder / "sorting.json", base_folder=folder)
+            sorting = load(folder / "sorting.json", base_folder=folder)
         elif (folder / "sorting.pickle").exists():
-            sorting = load_extractor(folder / "sorting.pickle", base_folder=folder)
+            sorting = load(folder / "sorting.pickle", base_folder=folder)
 
     sorting_analyzer = SortingAnalyzer.create_memory(
         sorting, recording, sparsity=sparsity, return_scaled=return_scaled, rec_attributes=rec_attributes
@@ -676,7 +679,7 @@ def make_ext_params_up_to_date(ext, old_params, new_params):
 #     recording = None
 #     try:
 #         recording_dict = waveforms_root.attrs["recording"]
-#         recording = load_extractor(recording_dict, base_folder=folder)
+#         recording = load(recording_dict, base_folder=folder)
 #     except:
 #         pass
 
@@ -684,7 +687,7 @@ def make_ext_params_up_to_date(ext, old_params, new_params):
 #     if sorting is None:
 #         assert "sorting" in waveforms_root.attrs, "Could not load sorting object"
 #         sorting_dict = waveforms_root.attrs["sorting"]
-#         sorting = load_extractor(sorting_dict, base_folder=folder)
+#         sorting = load(sorting_dict, base_folder=folder)
 
 #     if "sparsity" in waveforms_root.attrs:
 #         sparsity_dict = waveforms_root.attrs["sparsity"]

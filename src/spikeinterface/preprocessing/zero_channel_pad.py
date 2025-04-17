@@ -6,7 +6,7 @@ import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 
 class TracePaddedRecording(BasePreprocessor):
@@ -201,5 +201,7 @@ class ZeroChannelPaddedRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-zero_channel_pad = define_function_from_class(source_class=ZeroChannelPaddedRecording, name="zero_channel_pad")
-pad_traces = define_function_from_class(source_class=TracePaddedRecording, name="pad_traces")
+zero_channel_pad = define_function_handling_dict_from_class(
+    source_class=ZeroChannelPaddedRecording, name="zero_channel_pad"
+)
+pad_traces = define_function_handling_dict_from_class(source_class=TracePaddedRecording, name="pad_traces")

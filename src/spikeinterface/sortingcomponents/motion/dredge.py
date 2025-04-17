@@ -28,8 +28,8 @@ import warnings
 import numpy as np
 from tqdm.auto import trange
 
+from spikeinterface.core.motion import Motion
 from .motion_utils import (
-    Motion,
     get_spatial_bin_edges,
     get_spatial_windows,
     get_window_domains,

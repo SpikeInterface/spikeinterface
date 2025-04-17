@@ -2,19 +2,19 @@ import pytest
 import numpy as np
 
 from spikeinterface.core import (
-    BaseRecording,
     NumpyRecording,
     SharedMemoryRecording,
     NumpySorting,
     SharedMemorySorting,
     NumpyEvent,
     create_sorting_npz,
-    load_extractor,
+    load,
     NpzSortingExtractor,
     generate_recording,
 )
 
 from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.testing import check_sortings_equal
 
 
 @pytest.fixture(scope="module")
@@ -41,7 +41,7 @@ def test_SharedMemoryRecording():
     rec = SharedMemoryRecording.from_recording(rec0, **job_kwargs)
 
     d = rec.to_dict()
-    rec_clone = load_extractor(d)
+    rec_clone = load(d)
     traces = rec_clone.get_traces(start_frame=0, end_frame=30000, segment_index=0)
 
     assert rec.shms[0].name == rec_clone.shms[0].name
@@ -61,16 +61,20 @@ def test_NumpySorting(setup_NumpyRecording):
     # print(sorting)
 
     # 2 columns
-    times = np.arange(0, 1000, 10)
-    labels = np.zeros(times.size, dtype="int64")
+    samples = np.arange(0, 1000, 10)
+    labels = np.zeros(samples.size, dtype="int64")
     labels[0::3] = 0
     labels[1::3] = 1
     labels[2::3] = 2
-    sorting = NumpySorting.from_times_labels(times, labels, sampling_frequency)
+    sorting = NumpySorting.from_samples_and_labels(samples, labels, sampling_frequency)
     # print(sorting)
     assert sorting.get_num_segments() == 1
 
-    sorting = NumpySorting.from_times_labels([times] * 3, [labels] * 3, sampling_frequency)
+    times = samples / sampling_frequency
+    sorting_from_times = NumpySorting.from_times_and_labels(times, labels, sampling_frequency)
+    check_sortings_equal(sorting, sorting_from_times)
+
+    sorting = NumpySorting.from_samples_and_labels([samples] * 3, [labels] * 3, sampling_frequency)
     # print(sorting)
     assert sorting.get_num_segments() == 3
 
@@ -87,7 +91,7 @@ def test_NumpySorting(setup_NumpyRecording):
     # print(sorting)
 
     # construct back from kwargs keep the same array
-    sorting2 = load_extractor(sorting.to_dict())
+    sorting2 = load(sorting.to_dict())
     assert np.shares_memory(sorting2._cached_spike_vector, sorting._cached_spike_vector)
 
 
@@ -109,7 +113,7 @@ def test_SharedMemorySorting():
     # print(sorting.to_spike_vector())
     d = sorting.to_dict()
 
-    sorting_reload = load_extractor(d)
+    sorting_reload = load(d)
     # print(sorting_reload)
     # print(sorting_reload.to_spike_vector())
 

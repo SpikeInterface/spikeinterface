@@ -37,6 +37,13 @@ def test_average_across_direction():
     assert np.all(geom_avgy[:2, 0] == 0)
     assert np.all(geom_avgy[2, 0] == 1.5)
 
+    # test with channel ids
+    # use chans at y in (1, 2)
+    traces = rec_avgy.get_traces(channel_ids=["0-1", "2-3"])
+    assert traces.shape == (100, 2)
+    assert np.all(traces[:, 0] == 0.5)
+    assert np.all(traces[:, 1] == 2.5)
+
     # test averaging across x
     rec_avgx = average_across_direction(rec, direction="x")
     traces = rec_avgx.get_traces()
