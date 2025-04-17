@@ -25,8 +25,9 @@ class AmplitudesWidget(BaseRasterWidget):
     unit_colors : dict | None, default: None
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
         by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
-    segment_index : int or None, default: None
-        The segment index (or None if mono-segment)
+    segment_index : int or list of int or None, default: None
+        Segment index or indices to plot. If None and there are multiple segments, defaults to 0.
+        If list, spike trains and amplitudes are concatenated across the specified segments.
     max_spikes_per_unit : int or None, default: None
         Number of max spikes per unit to display. Use None for all spikes
     y_lim : tuple or None, default: None
@@ -64,53 +65,96 @@ class AmplitudesWidget(BaseRasterWidget):
     ):
 
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
-
         sorting = sorting_analyzer.sorting
         self.check_extensions(sorting_analyzer, "spike_amplitudes")
 
+        # Get amplitudes by segment
         amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data(outputs="by_unit")
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
-        if sorting.get_num_segments() > 1:
+        num_segments = sorting.get_num_segments()
+
+        # Handle segment_index input
+        if num_segments > 1:
             if segment_index is None:
                 warn("More than one segment available! Using `segment_index = 0`.")
                 segment_index = 0
         else:
             segment_index = 0
 
-        amplitudes_segment = amplitudes[segment_index]
-        total_duration = sorting_analyzer.get_num_samples(segment_index) / sorting_analyzer.sampling_frequency
+        # Check for SortingView backend
+        is_sortingview = backend == "sortingview"
 
-        all_spiketrains = {
-            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index, return_times=True)
-            for unit_id in sorting.unit_ids
-        }
+        # For SortingView, ensure we're only using a single segment
+        if is_sortingview and isinstance(segment_index, list) and len(segment_index) > 1:
+            warn("SortingView backend currently supports only single segment. Using first segment.")
+            segment_index = segment_index[0]
 
-        all_amplitudes = amplitudes_segment
-        if max_spikes_per_unit is not None:
-            spiketrains_to_plot = dict()
-            amplitudes_to_plot = dict()
-            for unit, st in all_spiketrains.items():
-                amps = all_amplitudes[unit]
-                if len(st) > max_spikes_per_unit:
-                    random_idxs = np.random.choice(len(st), size=max_spikes_per_unit, replace=False)
-                    spiketrains_to_plot[unit] = st[random_idxs]
-                    amplitudes_to_plot[unit] = amps[random_idxs]
-                else:
-                    spiketrains_to_plot[unit] = st
-                    amplitudes_to_plot[unit] = amps
+        # Convert segment_index to list for consistent processing
+        if isinstance(segment_index, int):
+            segment_indices = [segment_index]
+        elif isinstance(segment_index, list):
+            segment_indices = segment_index
         else:
-            spiketrains_to_plot = all_spiketrains
-            amplitudes_to_plot = all_amplitudes
+            raise ValueError("segment_index must be an int or a list of ints")
+
+        # Validate segment indices
+        for idx in segment_indices:
+            if not isinstance(idx, int):
+                raise ValueError(f"Each segment index must be an integer, got {type(idx)}")
+            if idx < 0 or idx >= num_segments:
+                raise ValueError(f"segment_index {idx} out of range (0 to {num_segments - 1})")
+
+        # Create multi-segment data structure (dict of dicts)
+        spiketrains_by_segment = {}
+        amplitudes_by_segment = {}
+
+        for idx in segment_indices:
+            amplitudes_segment = amplitudes[idx]
+
+            # Initialize for this segment
+            spiketrains_by_segment[idx] = {}
+            amplitudes_by_segment[idx] = {}
+
+            for unit_id in unit_ids:
+                # Get spike times for this unit in this segment
+                spike_times = sorting.get_unit_spike_train(unit_id, segment_index=idx, return_times=True)
+                amps = amplitudes_segment[unit_id]
+
+                # Store data in dict of dicts format
+                spiketrains_by_segment[idx][unit_id] = spike_times
+                amplitudes_by_segment[idx][unit_id] = amps
+
+        # Apply max_spikes_per_unit limit if specified
+        if max_spikes_per_unit is not None:
+            for idx in segment_indices:
+                for unit_id in unit_ids:
+                    st = spiketrains_by_segment[idx][unit_id]
+                    amps = amplitudes_by_segment[idx][unit_id]
+                    if len(st) > max_spikes_per_unit:
+                        # Scale down the number of spikes proportionally per segment
+                        # to ensure we have max_spikes_per_unit total after concatenation
+                        segment_count = len(segment_indices)
+                        segment_max = max(1, max_spikes_per_unit // segment_count)
+
+                        if len(st) > segment_max:
+                            random_idxs = np.random.choice(len(st), size=segment_max, replace=False)
+                            spiketrains_by_segment[idx][unit_id] = st[random_idxs]
+                            amplitudes_by_segment[idx][unit_id] = amps[random_idxs]
 
         if plot_histograms and bins is None:
             bins = 100
 
+        # Calculate total duration across all segments for x-axis limits
+        total_duration = 0
+        for idx in segment_indices:
+            duration = sorting_analyzer.get_num_samples(idx) / sorting_analyzer.sampling_frequency
+            total_duration += duration
+
+        # Build the plot data with the full dict of dicts structure
         plot_data = dict(
-            spike_train_data=spiketrains_to_plot,
-            y_axis_data=amplitudes_to_plot,
             unit_colors=unit_colors,
             plot_histograms=plot_histograms,
             bins=bins,
@@ -122,6 +166,17 @@ class AmplitudesWidget(BaseRasterWidget):
             y_lim=y_lim,
             scatter_decimate=scatter_decimate,
         )
+
+        # If using SortingView, extract just the first segment's data as flat dicts
+        if is_sortingview:
+            first_segment = segment_indices[0]
+            plot_data["spike_train_data"] = spiketrains_by_segment[first_segment]
+            plot_data["y_axis_data"] = amplitudes_by_segment[first_segment]
+        else:
+            # Otherwise use the full dict of dicts structure with all segments
+            plot_data["spike_train_data"] = spiketrains_by_segment
+            plot_data["y_axis_data"] = amplitudes_by_segment
+            plot_data["segment_index"] = segment_indices
 
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
 
