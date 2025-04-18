@@ -134,7 +134,7 @@ def get_nvidia_docker_dependencies():
 
 
 def has_docker_python():
-    docker_spec = importlib.util.find_spec("docker") is not None
+    docker_spec = importlib.util.find_spec("docker")
     if docker_spec is not None:
         return True
     else:
