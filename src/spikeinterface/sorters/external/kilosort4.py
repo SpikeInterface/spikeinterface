@@ -382,7 +382,10 @@ class Kilosort4Sorter(BaseSorter):
         )
         if version.parse(ks_version) >= version.parse("4.0.28"):
             cluster_spikes_kwargs.update(dict(verbose=verbose))
-        clu, Wall = cluster_spikes(**cluster_spikes_kwargs)
+        if version.parse(ks_version) <= version.parse("4.0.30"):
+            clu, Wall = cluster_spikes(**cluster_spikes_kwargs)
+        else:
+            clu, Wall, st, tF = cluster_spikes(**cluster_spikes_kwargs)
 
         if params["skip_kilosort_preprocessing"]:
             ops["preprocessing"] = dict(
