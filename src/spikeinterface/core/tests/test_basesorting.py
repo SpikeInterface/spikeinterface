@@ -196,7 +196,6 @@ def test_empty_sorting():
 
     assert len(sorting.unit_ids) == 0
 
-
     spikes = sorting.to_spike_vector()
     assert spikes.shape == (0,)
 
