@@ -166,7 +166,7 @@ class UnitWaveformsWidget(BaseWidget):
 
         # get templates
         if isinstance(sorting_analyzer_or_templates, Templates):
-            templates = sorting_analyzer_or_templates.templates_array
+            templates = sorting_analyzer_or_templates.select_units(unit_ids).templates_array
             nbefore = sorting_analyzer_or_templates.nbefore
             self.templates_ext = None
             templates_shading = None
@@ -312,8 +312,7 @@ class UnitWaveformsWidget(BaseWidget):
 
             # plot template
             if dp.plot_templates:
-                unit_ind = list(dp.sorting_analyzer_or_templates.unit_ids).index(unit_id)
-                template = dp.templates[unit_ind, :, :][:, chan_inds] * dp.scale * y_scale + y_offset[:, chan_inds]
+                template = dp.templates[i, :, :][:, chan_inds] * dp.scale * y_scale + y_offset[:, chan_inds]
 
                 if dp.x_offset_units:
                     # 0.7 is to match spacing in xvect
@@ -329,10 +328,10 @@ class UnitWaveformsWidget(BaseWidget):
                     shading_alphas = np.linspace(lightest_gray_alpha, darkest_gray_alpha, n_shadings)
                     for s in range(n_shadings):
                         lower_bound = (
-                            dp.templates_shading[s][unit_ind, :, :][:, chan_inds] * dp.scale * y_scale + y_offset[:, chan_inds]
+                            dp.templates_shading[s][i, :, :][:, chan_inds] * dp.scale * y_scale + y_offset[:, chan_inds]
                         )
                         upper_bound = (
-                            dp.templates_shading[n_percentiles - 1 - s][unit_ind, :, :][:, chan_inds] * dp.scale * y_scale
+                            dp.templates_shading[n_percentiles - 1 - s][i, :, :][:, chan_inds] * dp.scale * y_scale
                             + y_offset[:, chan_inds]
                         )
                         ax.fill_between(
