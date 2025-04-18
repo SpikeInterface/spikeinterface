@@ -3,6 +3,7 @@ import numpy as np
 
 from spikeinterface.extractors import WhiteMatterRecordingExtractor, BinaryRecordingExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
+from spikeinterface import get_global_dataset_folder
 
 
 def test_round_trip(tmp_path):
@@ -33,3 +34,22 @@ def test_round_trip(tmp_path):
     binary_smaller_traces = binary_recorder.get_traces(start_frame=start_frame, end_frame=end_frame)
 
     np.allclose(smaller_traces, binary_smaller_traces)
+
+
+def test_on_data():
+    file_path = (
+        get_global_dataset_folder()
+        / "ephy_testing_data"
+        / "whitematter"
+        / "HSW_2024_12_12__10_28_23__70min_17sec__hsamp_64ch_25000sps_stub.bin"
+    )
+    sampling_frequency = 25_000.0
+    num_channels = 64
+    recording = WhiteMatterRecordingExtractor(
+        file_path=file_path,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_channels,
+    )
+    assert recording.get_sampling_frequency() == sampling_frequency
+    assert recording.get_num_channels() == num_channels
+    assert recording.get_duration() == 1.0
