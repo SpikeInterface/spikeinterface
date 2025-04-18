@@ -56,7 +56,7 @@ class TridesclousPeeler(BaseTemplateMatching):
         motion_aware=False,
         motion=None,
         drifting_templates=None,
-        interpolation_time_bin_size_s = 1.0,
+        interpolation_time_bin_size_s=1.0,
         motion_step_um=2.0,
         use_fine_detector=True,
         # TODO optimize theses radius
@@ -322,6 +322,10 @@ class TridesclousPeeler(BaseTemplateMatching):
                 loop.append((current_start_index, next_start_index + 2 * self.margin, channel_motions))
 
                 current_start_index = next_start_index
+
+                # print()
+                # print(start_frame, end_frame, end_frame - start_frame, [(l[:2], np.unique(l[2])) for l in loop])
+                # print([np.unique(l[2]) for l in loop])
 
         else:
             start = 0
@@ -725,8 +729,8 @@ def fit_one_amplitude_with_neighbors(
     if neighbors_spikes is None or (neighbors_spikes.size == 0):
         template = sparse_templates_array[cluster_index, :, :num_chans]
         wf = traces[start:stop, :][:, chan_sparsity_mask]
-        # TODO precompute template norms
         amplitude = np.sum(template.flatten() * wf.flatten()) / template_norms[cluster_index]
+
     else:
 
         lim0 = min(start, np.min(neighbors_spikes["sample_index"]) - nbefore)
