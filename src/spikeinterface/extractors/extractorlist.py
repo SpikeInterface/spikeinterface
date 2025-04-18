@@ -39,6 +39,7 @@ from .nwbextractors import (
 from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
 from .iblextractors import IblRecordingExtractor, IblSortingExtractor, read_ibl_recording, read_ibl_sorting
 from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
+from .whitematterrecordingextractor import WhiteMatterRecordingExtractor
 
 # sorting extractors in relation with a sorter
 from .cellexplorersortingextractor import CellExplorerSortingExtractor, read_cellexplorer
@@ -92,6 +93,7 @@ recording_extractor_full_list = [
     IblRecordingExtractor,
     MCSH5RecordingExtractor,
     SinapsResearchPlatformRecordingExtractor,
+    WhiteMatterRecordingExtractor,
 ]
 recording_extractor_full_list += neo_recording_extractors_list
 
