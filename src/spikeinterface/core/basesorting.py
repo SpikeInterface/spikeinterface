@@ -520,44 +520,6 @@ class BaseSorting(BaseExtractor):
 
         return sample_index
 
-    def get_all_spike_trains(self, outputs="unit_id"):
-        """
-        Return all spike trains concatenated.
-        This is deprecated and will be removed in spikeinterface 0.102 use sorting.to_spike_vector() instead
-        """
-
-        warnings.warn(
-            "Sorting.get_all_spike_trains() will be deprecated. Sorting.to_spike_vector() instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        assert outputs in ("unit_id", "unit_index")
-        spikes = []
-        for segment_index in range(self.get_num_segments()):
-            spike_times = []
-            spike_labels = []
-            for i, unit_id in enumerate(self.unit_ids):
-                st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                spike_times.append(st)
-                if outputs == "unit_id":
-                    spike_labels.append(np.array([unit_id] * st.size))
-                elif outputs == "unit_index":
-                    spike_labels.append(np.zeros(st.size, dtype="int64") + i)
-
-            if len(spike_times) > 0:
-                spike_times = np.concatenate(spike_times)
-                spike_labels = np.concatenate(spike_labels)
-                order = np.argsort(spike_times)
-                spike_times = spike_times[order]
-                spike_labels = spike_labels[order]
-            else:
-                spike_times = np.array([], dtype=np.int64)
-                spike_labels = np.array([], dtype=np.int64)
-
-            spikes.append((spike_times, spike_labels))
-        return spikes
-
     def precompute_spike_trains(self, from_spike_vector=None):
         """
         Pre-computes and caches all spike trains for this sorting
