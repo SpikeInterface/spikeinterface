@@ -100,7 +100,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         some_channel_ids = sorting_analyzer.channel_ids[::2]
 
         random_spikes_indices = sorting_analyzer.get_extension("random_spikes").get_data()
-        all_num_spikes = sorting_analyzer.sorting.get_total_num_spikes()
+        all_num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit()
         unit_ids_num_spikes = np.sum(all_num_spikes[unit_id] for unit_id in some_unit_ids)
 
         # this should be all spikes all channels

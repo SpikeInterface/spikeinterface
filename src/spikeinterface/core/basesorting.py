@@ -17,10 +17,10 @@ class BaseSorting(BaseExtractor):
     Abstract class representing several segment several units and relative spiketrains.
     """
 
-    def __init__(self, sampling_frequency: float, unit_ids: List):
+    def __init__(self, sampling_frequency: float, unit_ids: list):
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = float(sampling_frequency)
-        self._sorting_segments: List[BaseSortingSegment] = []
+        self._sorting_segments: list[BaseSortingSegment] = []
         # this weak link is to handle times from a recording object
         self._recording = None
         self._sorting_info = None
@@ -212,7 +212,7 @@ class BaseSorting(BaseExtractor):
         sorting_info = dict(recording=recording_dict, params=params_dict, log=log_dict)
         self.annotate(__sorting_info__=sorting_info)
 
-    def has_recording(self):
+    def has_recording(self) -> bool:
         return self._recording is not None
 
     def has_time_vector(self, segment_index=None) -> bool:
@@ -301,14 +301,6 @@ class BaseSorting(BaseExtractor):
         values = self.get_property(key)
         v = values[self.id_to_index(unit_id)]
         return v
-
-    def get_total_num_spikes(self):
-        warnings.warn(
-            "Sorting.get_total_num_spikes() is deprecated and will be removed in spikeinterface 0.102, use sorting.count_num_spikes_per_unit()",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.count_num_spikes_per_unit(outputs="dict")
 
     def count_num_spikes_per_unit(self, outputs="dict"):
         """
@@ -451,12 +443,34 @@ class BaseSorting(BaseExtractor):
         non_empty_units = self.get_non_empty_unit_ids()
         return self.select_units(non_empty_units)
 
-    def get_non_empty_unit_ids(self):
+    def get_non_empty_unit_ids(self) -> np.ndarray:
+        """
+        Return the unit IDs that have at least one spike across all segments.
+
+        This method computes the number of spikes for each unit using
+        `count_num_spikes_per_unit` and filters out units with zero spikes.
+
+        Returns
+        -------
+        np.ndarray
+            Array of unit IDs (same dtype as self.unit_ids) for which at least one spike exists.
+        """
         num_spikes_per_unit = self.count_num_spikes_per_unit()
 
         return np.array([unit_id for unit_id in self.unit_ids if num_spikes_per_unit[unit_id] != 0])
 
-    def get_empty_unit_ids(self):
+    def get_empty_unit_ids(self) -> np.ndarray:
+        """
+        Return the unit IDs that have zero spikes across all segments.
+
+        This method returns the complement of `get_non_empty_unit_ids` with respect
+        to all unit IDs in the sorting.
+
+        Returns
+        -------
+        np.ndarray
+            Array of unit IDs (same dtype as self.unit_ids) for which no spikes exist.
+        """
         unit_ids = self.unit_ids
         empty_units = unit_ids[~np.isin(unit_ids, self.get_non_empty_unit_ids())]
         return empty_units
@@ -505,44 +519,6 @@ class BaseSorting(BaseExtractor):
             sample_index = round((time - t_start) * self.get_sampling_frequency())
 
         return sample_index
-
-    def get_all_spike_trains(self, outputs="unit_id"):
-        """
-        Return all spike trains concatenated.
-        This is deprecated and will be removed in spikeinterface 0.102 use sorting.to_spike_vector() instead
-        """
-
-        warnings.warn(
-            "Sorting.get_all_spike_trains() will be deprecated. Sorting.to_spike_vector() instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        assert outputs in ("unit_id", "unit_index")
-        spikes = []
-        for segment_index in range(self.get_num_segments()):
-            spike_times = []
-            spike_labels = []
-            for i, unit_id in enumerate(self.unit_ids):
-                st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                spike_times.append(st)
-                if outputs == "unit_id":
-                    spike_labels.append(np.array([unit_id] * st.size))
-                elif outputs == "unit_index":
-                    spike_labels.append(np.zeros(st.size, dtype="int64") + i)
-
-            if len(spike_times) > 0:
-                spike_times = np.concatenate(spike_times)
-                spike_labels = np.concatenate(spike_labels)
-                order = np.argsort(spike_times)
-                spike_times = spike_times[order]
-                spike_labels = spike_labels[order]
-            else:
-                spike_times = np.array([], dtype=np.int64)
-                spike_labels = np.array([], dtype=np.int64)
-
-            spikes.append((spike_times, spike_labels))
-        return spikes
 
     def precompute_spike_trains(self, from_spike_vector=None):
         """
