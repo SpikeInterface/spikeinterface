@@ -27,6 +27,7 @@ from .normalize_scale import (
 )
 from .scale import scale_to_uV, scale_to_physical_units
 
+
 from .whiten import WhitenRecording, whiten, compute_whitening_matrix
 from .rectify import RectifyRecording, rectify
 from .clip import BlankSaturationRecording, blank_saturation, ClipRecording, clip
