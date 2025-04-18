@@ -397,3 +397,52 @@ After this you need to add a block in `Install Sorters <https://github.com/Spike
 to describe your sorter.
 
 Finally, make a pull request so we can review the code and incorporate into the sorters module of SpikeInterface!
+
+
+
+How to make a release
+---------------------
+
+Checklist
+^^^^^^^^^
+* pyproject.toml: check that the version is ahead of current release. Also, comment out the @ (git dependencies)
+* In the top level ``__init__`` (located at ``src/spikeinterface/__init__.py``) set ``DEV_MODE`` to ``False`` (this is used for the docker installations)
+* Create a new release note for the appropriate version on doc/releases/new_version_tag.
+
+There can be large releases like:
+
+``doc/releases/0.101.0.rst``
+
+Which contain a section called "Main Changes" and minor releases which include only bug fixes like:
+
+``doc/releases/0.101.2.rst``
+
+To collect all the PRs and bug fixes we have a script in:
+``doc/scripts/``
+called ``auto-release-notes.sh``. Run it with ``bash auto-release-notes.sh`` and it will create the release notes for the module specific changes.
+
+The first time you run the script, GitHub will guide you through an authorization process if you've not already done so.
+
+The signature of the script is:
+
+.. code-block:: bash
+
+    bash auto-release-notes.sh <start_date> <end_date>
+
+Where the start date is the date of the last release and the end date is the current date. Dates are in YYYY-MM-DD format
+
+The date of the last release can be found on `PyPI <https://pypi.org/project/spikeinterface/>`_.
+
+
+As a specific example:
+.. code-block:: bash
+
+    bash auto-release-notes.sh 2025-02-19 2025-03-24
+
+* Finish the release notes and merge
+* Locally tag the main branch with the newly merged release notes with the new version
+* Push the tag to the remote repository which will trigger the release action (.github/workflows/publish-to-pypi.yml)
+* Do an after-release `PR <https://github.com/SpikeInterface/spikeinterface/pull/3828/files>`_:
+    - Uncomment the git installs in pyproject
+    - Set ``DEV_MODE`` to ``True`` in the top level ``__init__`` (located at ``src/spikeinterface/__init__.py``)
+    - Update `pyproject.toml` version one patch ahead or one minor if it is larger one.
