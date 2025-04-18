@@ -166,7 +166,7 @@ class UnitWaveformsWidget(BaseWidget):
 
         # get templates
         if isinstance(sorting_analyzer_or_templates, Templates):
-            templates = sorting_analyzer_or_templates.templates_array
+            templates = sorting_analyzer_or_templates.select_units(unit_ids).templates_array
             nbefore = sorting_analyzer_or_templates.nbefore
             self.templates_ext = None
             templates_shading = None
@@ -308,6 +308,7 @@ class UnitWaveformsWidget(BaseWidget):
                     x_offset = xscale_bar[0] - np.ptp(xscale_bar) // 2
                     ax.plot([xscale_bar[0], xscale_bar[0]], [min_wfs - offset, min_wfs - offset + length], color="k")
                     ax.text(x_offset, min_wfs - offset + length // 3, f"{length_uv} $\\mu$V", fontsize=8, rotation=90)
+
 
             # plot template
             if dp.plot_templates:
