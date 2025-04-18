@@ -4,7 +4,6 @@ import pytest
 
 from spikeinterface import generate_ground_truth_recording
 from spikeinterface.core.core_tools import is_editable_mode
-import spikeinterface.extractors as se
 import spikeinterface.sorters as ss
 
 

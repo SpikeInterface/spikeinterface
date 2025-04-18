@@ -7,7 +7,6 @@ import spikeinterface as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
 from spikeinterface.core import generate_recording
-import spikeinterface.widgets as sw
 import importlib.util
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
@@ -24,6 +23,7 @@ if DEBUG:
 # ----------------------------------------------------------------------------------------------------------------------
 
 
+### Shouldn't we skip if we can't find the package. In both these cases we skip if we find the packages.....#####
 @pytest.mark.skipif(
     importlib.util.find_spec("neurodsp") is not None or importlib.util.find_spec("spikeglx") or ON_GITHUB,
     reason="Only local. Requires ibl-neuropixel install",

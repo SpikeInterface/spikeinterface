@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
 import subprocess  # TODO: decide best format for this
 from subprocess import check_output, CalledProcessError
-from typing import List, Union
-
-import numpy as np
+import importlib.util
 
 
 class SpikeSortingError(RuntimeError):
@@ -66,13 +63,13 @@ def has_nvidia():
     """
     Checks if the machine has nvidia capability.
     """
-
-    try:
+    cuda_spec = importlib.util.find_spec("cuda")
+    if cuda_spec is not None:
         from cuda import cuda
-    except ModuleNotFoundError as err:
+    else:
         raise Exception(
             "This sorter requires cuda, but the package 'cuda-python' is not installed. You can install it with:\npip install cuda-python"
-        ) from err
+        )
 
     try:
         (cu_result_init,) = cuda.cuInit(0)
@@ -118,14 +115,14 @@ def has_docker_nvidia_installed():
     Whether at least one of the dependencies listed in
     `get_nvidia_docker_dependecies()` is installed.
     """
-    all_dependencies = get_nvidia_docker_dependecies()
+    all_dependencies = get_nvidia_docker_dependencies()
     has_dep = []
     for dep in all_dependencies:
         has_dep.append(_run_subprocess_silently(f"{dep} --version").returncode == 0)
     return any(has_dep)
 
 
-def get_nvidia_docker_dependecies():
+def get_nvidia_docker_dependencies():
     """
     See `has_docker_nvidia_installed()`
     """
@@ -137,18 +134,16 @@ def get_nvidia_docker_dependecies():
 
 
 def has_docker_python():
-    try:
-        import docker
-
+    docker_spec = importlib.util.find_spec("docker")
+    if docker_spec is not None:
         return True
-    except ImportError:
+    else:
         return False
 
 
 def has_spython():
-    try:
-        import spython
-
+    spython_spec = importlib.util.find_spec("spython")
+    if spython_spec is not None:
         return True
-    except ImportError:
+    else:
         return False

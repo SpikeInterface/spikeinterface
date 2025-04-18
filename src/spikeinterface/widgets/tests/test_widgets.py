@@ -1,16 +1,12 @@
 import unittest
-import pytest
 import os
-
-import numpy as np
+import importlib.util
 
 if __name__ != "__main__":
-    try:
+    if importlib.util.find_spec("matplotlib") is not None:
         import matplotlib
 
         matplotlib.use("Agg")
-    except:
-        pass
 
 
 from spikeinterface import (
