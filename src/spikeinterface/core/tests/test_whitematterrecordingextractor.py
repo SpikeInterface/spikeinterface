@@ -36,13 +36,15 @@ def test_round_trip(tmp_path):
     np.allclose(smaller_traces, binary_smaller_traces)
 
 
+file_path = (
+    get_global_dataset_folder()
+    / "ephy_testing_data"
+    / "whitematter"
+    / "HSW_2024_12_12__10_28_23__70min_17sec__hsamp_64ch_25000sps_stub.bin"
+)
+
+
 def test_on_data():
-    file_path = (
-        get_global_dataset_folder()
-        / "ephy_testing_data"
-        / "whitematter"
-        / "HSW_2024_12_12__10_28_23__70min_17sec__hsamp_64ch_25000sps_stub.bin"
-    )
     sampling_frequency = 25_000.0
     num_channels = 64
     recording = WhiteMatterRecordingExtractor(
