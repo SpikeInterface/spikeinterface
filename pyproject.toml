@@ -151,8 +151,6 @@ test = [
     "pytest-cov",
     "psutil",
 
-    "huggingface_hub",
-
     # preprocessing
     "ibllib", # for IBL
 
@@ -195,8 +193,8 @@ docs = [
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "networkx",
-    "skops", # For auotmated curation
-    "scikit-learn", # For auotmated curation
+    "skops", # For automated curation
+    "scikit-learn", # For automated curation
     # Download data
     "pooch>=1.8.2",
     "datalad>=1.0.2",
