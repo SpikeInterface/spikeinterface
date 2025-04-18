@@ -4,7 +4,6 @@ from pathlib import Path
 from packaging import version
 from typing import Optional
 
-
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
@@ -76,14 +75,17 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     ----------
     file_path : str
         The file path to load the recordings from
-    sampling_frequency : float, default: None
-        The sampling frequency for the sorting extractor. When the signal data is available (.ncs) those files will be
-        used to extract the frequency automatically. Otherwise, the sampling frequency needs to be specified for
-        this extractor to be initialized
     stream_id : str, default: None
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
     stream_name : str, default: None
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
+    sampling_frequency : float, default: None
+        The sampling frequency for the sorting extractor. When the signal data is available (.ncs) those files will be
+        used to extract the frequency automatically. Otherwise, the sampling frequency needs to be specified for
+        this extractor to be initialized.
+    nsx_to_load : int | list | str, default: None
+        IDs of nsX file from which to load data, e.g., if set to 5 only data from the ns5 file are loaded.
+        If 'all', then all nsX will be loaded. If None, all nsX files will be loaded. If empty list, no nsX files will be loaded.
     """
 
     NeoRawIOClass = "BlackrockRawIO"
@@ -92,16 +94,18 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     def __init__(
         self,
         file_path,
-        sampling_frequency: Optional[float] = None,
         stream_id: Optional[str] = None,
         stream_name: Optional[str] = None,
+        sampling_frequency: Optional[float] = None,
+        nsx_to_load: Optional[int | list | str] = None,
     ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseSortingExtractor.__init__(
             self,
-            sampling_frequency=sampling_frequency,
             stream_id=stream_id,
             stream_name=stream_name,
+            sampling_frequency=sampling_frequency,
+            nsx_to_load=nsx_to_load,
             **neo_kwargs,
         )
 
