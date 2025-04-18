@@ -23,6 +23,14 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         The inter-electrode distance (pitch) between electrodes.
     electrode_width : float, default: None
         Width of the electrodes in um.
+    fill_gaps_strategy: "zeros" | "synthetic_noise" | None, default: None
+        The strategy to fill the gaps in the data when using event-based
+        compression. If None and the file is event-based compressed,
+        you need to specify a fill gaps strategy:
+
+        * "zeros": the gaps are filled with unsigned 0s (2048). This value is the "0" of the unsigned 12 bits
+                   representation of the data.
+        * "synthetic_noise": the gaps are filled with synthetic noise.
     stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
     stream_name : str, default: None
@@ -41,12 +49,13 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         file_path,
         mea_pitch=None,
         electrode_width=None,
+        fill_gaps_strategy=None,
         stream_id=None,
         stream_name=None,
         all_annotations: bool = False,
         use_names_as_ids: bool = False,
     ):
-        neo_kwargs = self.map_to_neo_kwargs(file_path)
+        neo_kwargs = self.map_to_neo_kwargs(file_path, fill_gaps_strategy)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -76,8 +85,11 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         )
 
     @classmethod
-    def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(file_path)}
+    def map_to_neo_kwargs(cls, file_path, fill_gaps_strategy):
+        neo_kwargs = {
+            "filename": str(file_path),
+            "fill_gaps_strategy": fill_gaps_strategy,
+        }
         return neo_kwargs
 
 
