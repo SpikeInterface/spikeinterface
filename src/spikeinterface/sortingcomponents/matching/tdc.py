@@ -718,7 +718,7 @@ def fit_one_amplitude_with_neighbors(
     sample_index = spike["sample_index"]
     chan_sparsity_mask = template_sparsity_mask[cluster_index, :]
     num_chans = np.sum(chan_sparsity_mask)
-    if num_chans == 0:
+    if num_chans == 0 or template_norms[cluster_index] == 0:
         # protect against empty template because too sparse
         return 0.0
     start, stop = sample_index - nbefore, sample_index + nafter
