@@ -1,5 +1,5 @@
 Working with physical units in SpikeInterface recordings
-===============================================
+========================================================
 
 In neurophysiology recordings, data is often stored in raw ADC (Analog-to-Digital Converter) units
 but needs to be analyzed in physical units. For extracellular recordings, this is typically microvolts (µV),
@@ -23,7 +23,7 @@ The conversion formula is:
 
 
 Converting to Physical Units
--------------------------
+----------------------------
 
 SpikeInterface provides two preprocessing classes for converting recordings to physical units. Both wrap the
 ``RecordingExtractor`` class and ensures that the data is returned in physical units when calling `get_traces <https://spikeinterface.readthedocs.io/en/stable/api.html#spikeinterface.core.BaseRecording.get_traces>`_
