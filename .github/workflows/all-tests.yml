@@ -108,7 +108,6 @@ jobs:
           pip install datalad-installer
           if [ ${{ runner.os }} = 'Linux' ]; then
             datalad-installer --sudo ok git-annex --method datalad/packages
-            pip install datalad
           elif [ ${{ runner.os }} = 'macOS' ]; then
             datalad-installer --sudo ok git-annex --method brew
           elif [ ${{ runner.os }} = 'Windows' ]; then
