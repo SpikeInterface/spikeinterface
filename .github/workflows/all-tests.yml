@@ -107,14 +107,7 @@ jobs:
         run: |
           pip install datalad-installer
           if [ ${{ runner.os }} = 'Linux' ]; then
-            wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
-            mkdir /home/runner/work/installation
-            mv git-annex-standalone-amd64.tar.gz /home/runner/work/installation/
-            workdir=$(pwd)
-            cd /home/runner/work/installation
-            tar xvzf git-annex-standalone-amd64.tar.gz
-            echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
-            cd $workdir
+            sudo apt-get install datalad
           elif [ ${{ runner.os }} = 'macOS' ]; then
             datalad-installer --sudo ok git-annex --method brew
           elif [ ${{ runner.os }} = 'Windows' ]; then
