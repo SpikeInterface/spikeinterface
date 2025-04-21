@@ -55,7 +55,6 @@ class ScaleToPhysicalUnits(ScaleRecording):
         self.set_channel_offsets(offsets=0.0)
 
 
-# Function is now just a reference to the class
 scale_to_physical_units = ScaleToPhysicalUnits
 
 
@@ -78,7 +77,7 @@ def scale_to_uV(recording: BasePreprocessor) -> BasePreprocessor:
         If the recording extractor does not have scaleable traces.
     """
     # To avoid a circular import
-    from spikeinterface.preprocessing.normalize_scale import ScaleRecording
+    from spikeinterface.preprocessing import ScaleRecording
 
     if not recording.has_scaleable_traces():
         error_msg = "Recording must have gains and offsets set to be scaled to µV"

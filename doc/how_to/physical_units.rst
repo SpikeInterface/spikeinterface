@@ -74,7 +74,7 @@ the following properties:
 * ``gain_to_unit``: The gain to convert from raw values to the target unit
 * ``offset_to_unit``: The offset to convert from raw values to the target unit
 
-Here's an example of how to set custom units:
+You need to set these properties for every channel, which allows for the case when there are different gains and offsets on different channels. Here's an example:
 
 .. code-block:: python
 
