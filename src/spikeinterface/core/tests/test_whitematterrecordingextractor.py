@@ -1,9 +1,10 @@
 import pytest
 import numpy as np
+from pathlib import Path
 
 from spikeinterface.extractors import WhiteMatterRecordingExtractor, BinaryRecordingExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
-from spikeinterface import get_global_dataset_folder
+from spikeinterface import get_global_dataset_folder, download_dataset
 
 
 def test_round_trip(tmp_path):
@@ -27,7 +28,7 @@ def test_round_trip(tmp_path):
     # Test for full traces
     assert np.allclose(recording.get_traces(), binary_recorder.get_traces())
 
-    # Ttest for a sub-set of the traces
+    # Test for a sub-set of the traces
     start_frame = 20
     end_frame = 40
     smaller_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
@@ -36,15 +37,16 @@ def test_round_trip(tmp_path):
     np.allclose(smaller_traces, binary_smaller_traces)
 
 
-file_path = (
-    get_global_dataset_folder()
-    / "ephy_testing_data"
-    / "whitematter"
-    / "HSW_2024_12_12__10_28_23__70min_17sec__hsamp_64ch_25000sps_stub.bin"
-)
+gin_repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
+local_folder = get_global_dataset_folder() / "ephy_testing_data"
+remote_path = Path("whitematter") / "HSW_2024_12_12__10_28_23__70min_17sec__hsamp_64ch_25000sps_stub.bin"
 
 
 def test_on_data():
+    file_path = download_dataset(
+        repo=gin_repo, remote_path=remote_path, local_folder=local_folder, update_if_exists=True
+    )
+
     sampling_frequency = 25_000.0
     num_channels = 64
     recording = WhiteMatterRecordingExtractor(
