@@ -23,9 +23,8 @@ if DEBUG:
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-### Shouldn't we skip if we can't find the package. In both these cases we skip if we find the packages.....#####
 @pytest.mark.skipif(
-    importlib.util.find_spec("neurodsp") is not None or importlib.util.find_spec("spikeglx") or ON_GITHUB,
+    importlib.util.find_spec("neurodsp") is None or importlib.util.find_spec("spikeglx") is None or ON_GITHUB,
     reason="Only local. Requires ibl-neuropixel install",
 )
 @pytest.mark.parametrize("lagc", [False, 1, 300])
