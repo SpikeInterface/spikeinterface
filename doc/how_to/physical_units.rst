@@ -90,11 +90,11 @@ You need to set these properties for every channel, which allows for the case wh
     values = ["volts"] * num_channels
     recording.set_property(key='physical_unit', value=values)
 
-    values = [0.001] * num_channels  # Convert from ADC to volts
-    recording.set_property(key='gain_to_unit', values=values)  # Convert to volts
+    gain_values = [0.001] * num_channels  # Convert from ADC to volts
+    recording.set_property(key='gain_to_unit', values=gain_values)  # Convert to volts
 
-    values = [0] * num_channels  # No offset
-    recording.set_property(key='offset_to_unit', values=values)  # No offset
+    offset_values = [0] * num_channels  # No offset
+    recording.set_property(key='offset_to_unit', values=offset_values)  # No offset
 
     # Apply the conversion using scale_to_physical_units
     recording_physical = scale_to_physical_units(recording)

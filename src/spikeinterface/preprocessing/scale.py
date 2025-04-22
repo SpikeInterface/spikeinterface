@@ -36,9 +36,17 @@ class ScaleToPhysicalUnits(ScaleRecording):
 
     def __init__(self, recording):
         if "gain_to_physical_unit" not in recording.get_property_keys():
-            raise ValueError("Recording must have 'gain_to_physical_unit' property to convert to physical units")
+            error_msg = (
+                "Recording must have 'gain_to_physical_unit' property to convert to physical units. \n"
+                "Set the gain using `recording.set_property(key='gain_to_physical_unit', value=values)`."
+            )
+            raise ValueError(error_msg)
         if "offset_to_physical_unit" not in recording.get_property_keys():
-            raise ValueError("Recording must have 'offset_to_physical_unit' property to convert to physical units")
+            error_msg = (
+                "Recording must have 'offset_to_physical_unit' property to convert to physical units. \n"
+                "Set the offset using `recording.set_property(key='offset_to_physical_unit', value=values)`."
+            )
+            raise ValueError(error_msg)
 
         gain = recording.get_property("gain_to_physical_unit")
         offset = recording.get_property("offset_to_physical_unit")
