@@ -57,3 +57,23 @@ def test_on_data():
     assert recording.get_sampling_frequency() == sampling_frequency
     assert recording.get_num_channels() == num_channels
     assert recording.get_duration() == 1.0
+
+
+def test_kwargs():
+    file_path = download_dataset(
+        repo=gin_repo, remote_path=remote_path, local_folder=local_folder, update_if_exists=True
+    )
+
+    sampling_frequency = 25_000.0
+    num_channels = 64
+    recording1 = WhiteMatterRecordingExtractor(
+        file_path=file_path,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_channels,
+        is_filtered=True,
+    )
+    recording2 = WhiteMatterRecordingExtractor(**recording1._kwargs)
+
+    assert recording1.get_sampling_frequency() == recording2.get_sampling_frequency()
+    assert recording1.get_num_channels() == recording2.get_num_channels()
+    assert recording1.get_duration() == recording2.get_duration()
