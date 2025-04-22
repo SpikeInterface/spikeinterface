@@ -1,9 +1,11 @@
 import pytest
 import numpy as np
 from pathlib import Path
+import pickle
 
 from spikeinterface.extractors import WhiteMatterRecordingExtractor, BinaryRecordingExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
+from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface import get_global_dataset_folder, download_dataset
 
 
@@ -59,21 +61,20 @@ def test_on_data():
     assert recording.get_duration() == 1.0
 
 
-def test_kwargs():
+def test_pickling():
     file_path = download_dataset(
         repo=gin_repo, remote_path=remote_path, local_folder=local_folder, update_if_exists=True
     )
 
     sampling_frequency = 25_000.0
     num_channels = 64
-    recording1 = WhiteMatterRecordingExtractor(
+    recording = WhiteMatterRecordingExtractor(
         file_path=file_path,
         sampling_frequency=sampling_frequency,
         num_channels=num_channels,
         is_filtered=True,
     )
-    recording2 = WhiteMatterRecordingExtractor(**recording1._kwargs)
+    pickled_recording = pickle.dumps(recording)
+    unpickled_recording = pickle.loads(pickled_recording)
 
-    assert recording1.get_sampling_frequency() == recording2.get_sampling_frequency()
-    assert recording1.get_num_channels() == recording2.get_num_channels()
-    assert recording1.get_duration() == recording2.get_duration()
+    check_recordings_equal(recording, unpickled_recording)
