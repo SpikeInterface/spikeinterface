@@ -59,6 +59,14 @@ class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
             channel_ids=channel_ids,
         )
 
+        self._kwargs = {
+            "file_path": file_path,
+            "sampling_frequency": sampling_frequency,
+            "num_channels": num_channels,
+            "channel_ids": channel_ids,
+            "is_filtered": is_filtered,
+        }
+
 
 # Define function equivalent for convenience
 read_whitematter = define_function_from_class(source_class=WhiteMatterRecordingExtractor, name="read_whitematter")
