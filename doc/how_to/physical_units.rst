@@ -5,7 +5,7 @@ In neurophysiology recordings, data is often stored in raw ADC (Analog-to-Digita
 For extracellular recordings, this is typically microvolts (µV), but some recording devices may use different physical units.
 SpikeInterface provides tools to handle both situations.
 
-It's important to note that **most spike sorters work fine on raw digital (ADC) units** and not scaling is needed.
+It's important to note that **most spike sorters work fine on raw digital (ADC) units** and scaling is not needed.
 Many preprocessing tools are also linear transformations, and if the ADC is implemented as a linear transformation, the overall effect can be preserved.
 That is, **preprocessing steps can often be applied either before or after unit conversion without affecting the outcome.**
 
