@@ -1,17 +1,19 @@
+import importlib.util
+
 import pytest
 import numpy as np
 
 from spikeinterface.core import generate_recording
-from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.numpyextractors import NumpyRecording
 from spikeinterface.preprocessing import whiten, scale, compute_whitening_matrix
 from spikeinterface.preprocessing.whiten import compute_sklearn_covariance_matrix
 
-try:
+sklearn_spec = importlib.util.find_spec("sklearn")
+if sklearn_spec is not None:
     from sklearn import covariance as sklearn_covariance
 
     HAS_SKLEARN = True
-except ImportError:
+else:
     HAS_SKLEARN = False
 
 

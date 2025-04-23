@@ -15,14 +15,7 @@ runs:
       shell: bash
       run: |
         pip install datalad-installer
-        wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
-        mkdir /home/runner/work/installation
-        mv git-annex-standalone-amd64.tar.gz /home/runner/work/installation/
-        workdir=$(pwd)
-        cd /home/runner/work/installation
-        tar xvzf git-annex-standalone-amd64.tar.gz
-        echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
-        cd $workdir
+        datalad-installer --sudo ok git-annex --method datalad/packages
         git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
     - name: Force installation of latest dev from key-packages when running dev (not release)
       run: |
