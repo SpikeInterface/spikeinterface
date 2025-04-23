@@ -28,6 +28,7 @@ dependencies = [
     "neo>=0.14.0",
     "probeinterface>=0.2.23",
     "packaging",
+    "numcodecs<0.16.0", # For supporting zarr < 3
 ]
 
 [build-system]
@@ -63,7 +64,7 @@ extractors = [
     "MEArec>=1.8",
     "pynwb>=2.6.0",
     "hdmf-zarr>=0.11.0",
-    "pyedflib>=0.1.30,<0.1.39",
+    "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",
@@ -150,8 +151,6 @@ test = [
     "pytest-cov",
     "psutil",
 
-    "huggingface_hub",
-
     # preprocessing
     "ibllib", # for IBL
 
@@ -194,8 +193,8 @@ docs = [
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "networkx",
-    "skops", # For auotmated curation
-    "scikit-learn", # For auotmated curation
+    "skops", # For automated curation
+    "scikit-learn", # For automated curation
     # Download data
     "pooch>=1.8.2",
     "datalad>=1.0.2",
