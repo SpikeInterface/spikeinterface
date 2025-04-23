@@ -14,7 +14,7 @@ with `nbconvert`. Here are the steps (in this example for the `get_started`):
 
 ```
 >>>  jupytext --to notebook get_started.py
->>>  jupytext --set-formats ipynb,py get_started.ipynb
+>>>  jupytext --set-formats ipynb.py get_started.ipynb
 ```
 
 2. Run the notebook

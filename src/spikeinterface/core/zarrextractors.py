@@ -382,7 +382,6 @@ def get_default_zarr_compressor(clevel: int = 5):
     Blosc.compressor
         The compressor object that can be used with the save to zarr function
     """
-    assert ZarrRecordingExtractor.installed, ZarrRecordingExtractor.installation_mesg
     from numcodecs import Blosc
 
     return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)
