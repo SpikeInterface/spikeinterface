@@ -14,7 +14,7 @@ from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.exporters import export_to_phy
 
 
-def export_to_ibl(
+def export_to_ibl_gui(
     sorting_analyzer: SortingAnalyzer,
     output_folder: str | Path,
     lfp_recording: BaseRecording | None = None,
@@ -28,7 +28,7 @@ def export_to_ibl(
     **job_kwargs,
 ):
     """
-    Exports a sorting analyzer to the IBL GUI format (similar to the Phy format with some extras).
+    Exports a sorting analyzer to the format required by the `IBL alignment GUI <https://github.com/int-brain-lab/iblapps/wiki>`_.
 
     Parameters
     ----------

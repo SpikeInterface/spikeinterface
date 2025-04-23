@@ -1,7 +1,7 @@
 import pytest
 
 from spikeinterface.preprocessing import bandpass_filter, decimate
-from spikeinterface.exporters import export_to_ibl
+from spikeinterface.exporters import export_to_ibl_gui
 
 from spikeinterface.exporters.tests.common import (
     make_sorting_analyzer,
@@ -37,7 +37,7 @@ def test_export_ap_to_ibl(sorting_analyzer_sparse_for_export, create_cache_folde
 
     sorting_analyzer = sorting_analyzer_sparse_for_export
     # AP, but no LFP
-    export_to_ibl(
+    export_to_ibl_gui(
         sorting_analyzer,
         output_folder,
         # good_units_query=good_units_query,
@@ -61,7 +61,7 @@ def test_export_recordingless_to_ibl(sorting_analyzer_sparse_for_export, create_
     sorting_analyzer._recording = None
 
     # AP, but no LFP
-    export_to_ibl(sorting_analyzer_sparse_for_export, output_folder, good_units_query=good_units_query, n_jobs=-1)
+    export_to_ibl_gui(sorting_analyzer_sparse_for_export, output_folder, good_units_query=good_units_query, n_jobs=-1)
     for f in required_output_files:
         assert (output_folder / f).exists(), f"Missing file: {f}"
     for f in ap_output_files:
@@ -102,12 +102,12 @@ def test_missing_info(sorting_analyzer_sparse_for_export, create_cache_folder):
     good_units_query = "rp_violations < 0.2"
 
     with pytest.raises(ValueError, match="Missing required quality metrics"):
-        export_to_ibl(sorting_analyzer, output_folder, good_units_query=good_units_query, n_jobs=-1)
+        export_to_ibl_gui(sorting_analyzer, output_folder, good_units_query=good_units_query, n_jobs=-1)
 
     sorting_analyzer.delete_extension("spike_amplitudes")
 
     with pytest.raises(ValueError, match="Missing required extension"):
-        export_to_ibl(sorting_analyzer, output_folder, n_jobs=-1)
+        export_to_ibl_gui(sorting_analyzer, output_folder, n_jobs=-1)
 
 
 if __name__ == "__main__":
