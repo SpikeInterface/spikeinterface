@@ -81,7 +81,7 @@ def test_export_lfp_to_ibl(sorting_analyzer_sparse_for_export, create_cache_fold
     recording_lfp = bandpass_filter(recording, freq_min=0.5, freq_max=300)
     recording_lfp = decimate(recording_lfp, 10)
     # LFP, but no AP
-    export_to_ibl(
+    export_to_ibl_gui(
         sorting_analyzer, output_folder, lfp_recording=recording_lfp, good_units_query=good_units_query, n_jobs=-1
     )
     for f in required_output_files:
