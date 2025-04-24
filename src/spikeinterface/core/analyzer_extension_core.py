@@ -709,7 +709,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
     depend_on = []
     need_recording = True
     use_nodepipeline = False
-    need_job_kwargs = False
+    need_job_kwargs = True
     need_backward_compatibility_on_load = True
 
     def __init__(self, sorting_analyzer):
@@ -729,9 +729,12 @@ class ComputeNoiseLevels(AnalyzerExtension):
         # this does not depend on units
         return self.data.copy()
 
-    def _run(self, verbose=False):
+    def _run(self, verbose=False, **job_kwargs):
         self.data["noise_levels"] = get_noise_levels(
-            self.sorting_analyzer.recording, return_scaled=self.sorting_analyzer.return_scaled, **self.params
+            self.sorting_analyzer.recording,
+            return_scaled=self.sorting_analyzer.return_scaled,
+            **self.params,
+            **job_kwargs,
         )
 
     def _get_data(self):
