@@ -25,7 +25,6 @@ The input of the :py:func:`~spikeinterface.exporters.export_to_phy` is a :code:`
 .. code-block:: python
 
     import spikeinterface as si # core module only
-    from spikeinterface.postprocessing import compute_spike_amplitudes, compute_principal_components
     from spikeinterface.exporters import export_to_phy
 
     # the waveforms are sparse so it is faster to export to phy
@@ -39,6 +38,41 @@ The input of the :py:func:`~spikeinterface.exporters.export_to_phy` is a :code:`
     # the export process is fast because everything is pre-computed
     export_to_phy(sorting_analyzer=sorting_analyzer, output_folder='path/to/phy_folder')
 
+
+Export to IBL GUI
+-----------------
+
+The :py:func:`~spikeinterface.exporters.export_to_ibl_gui` function allows you to use the
+`IBL GUI <https://github.com/int-brain-lab/iblapps/wiki>`_ for probe alignment.
+
+The IBL GUI can also be installed as a standalone app using `this fork <https://github.com/AllenNeuralDynamics/ibl-ephys-alignment-gui>`_ from the Allen Institute.
+
+The input of the :py:func:`~spikeinterface.exporters.export_to_ibl_gui` is a :code:`SortingAnalyzer` object.
+
+.. code-block:: python
+
+    import spikeinterface as si # core module only
+    import spikeinterface.preprocessing as spre
+    from spikeinterface.exporters import export_to_ibl_gui
+
+    sorting_analyzer = si.create_sorting_analyzer(sorting=sorting, recording=recording)
+
+    # we need to compute some required extensions
+    sorting_analyzer.compute(['random_spikes', 'templates', 'spike_amplitudes', 'spike_locations', 'noise_levels', 'quality_metrics'])
+    # note that spike_locations are optional, but recommended to compute accurate spike depths
+
+    # optionally, we can pass an LFP recording to compute RMS/PSD in the LFP band
+    recording_lfp = spre.bandpass_filter(recording, freq_min=1, freq_max=300)
+    # we can also decimate the LFP to speed up the process
+    recording_lfp = spre.decimate(recording_lfp, 10)
+
+    # the export process is fast because everything is pre-computed
+    export_to_ibl_gui(
+        sorting_analyzer=sorting_analyzer,
+        output_folder='path/to/ibl_folder',
+        lfp_recording=recording_lfp,
+        n_jobs=-1
+    )
 
 
 Export a spike sorting report
@@ -68,8 +102,6 @@ with many units!
 .. code-block:: python
 
     import spikeinterface as si # core module only
-    from spikeinterface.postprocessing import compute_spike_amplitudes, compute_correlograms
-    from spikeinterface.qualitymetrics import compute_quality_metrics
     from spikeinterface.exporters import export_report
 
 
