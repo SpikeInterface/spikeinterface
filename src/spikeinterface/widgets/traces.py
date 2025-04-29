@@ -126,6 +126,11 @@ class TracesWidget(BaseWidget):
         else:
             channel_locations = None
 
+        if segment_index is None:
+            if rec0.get_num_segments() != 1:
+                raise ValueError('You must provide "segment_index" for multisegment recordings.')
+            segment_index = 0
+
         if not rec0.has_time_vector(segment_index=segment_index):
             times = None
         else:
@@ -134,11 +139,6 @@ class TracesWidget(BaseWidget):
         t_end = rec0.get_end_time(segment_index=segment_index)
 
         layer_keys = list(recordings.keys())
-
-        if segment_index is None:
-            if rec0.get_num_segments() != 1:
-                raise ValueError('You must provide "segment_index" for multisegment recordings.')
-            segment_index = 0
 
         fs = rec0.get_sampling_frequency()
         if time_range is None:
