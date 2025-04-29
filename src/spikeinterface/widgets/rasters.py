@@ -4,7 +4,7 @@ import numpy as np
 from warnings import warn
 
 from .base import BaseWidget, to_attr, default_backend_kwargs
-from .utils import get_some_colors
+from .utils import get_some_colors, validate_segment_indices
 
 
 class BaseRasterWidget(BaseWidget):
@@ -23,7 +23,7 @@ class BaseRasterWidget(BaseWidget):
         converted to a dict of dicts with segment 0.
     unit_ids : array-like | None, default: None
         List of unit_ids to plot
-    segment_index : int | list | None, default: None
+    segment_indices : list | None, default: None
         For multi-segment data, specifies which segment(s) to plot. If None, uses all available segments.
         For single-segment data, this parameter is ignored.
     total_duration : int | None, default: None
@@ -65,7 +65,7 @@ class BaseRasterWidget(BaseWidget):
         spike_train_data: dict,
         y_axis_data: dict,
         unit_ids: list | None = None,
-        segment_index: int | list | None = None,
+        segment_indices: list | None = None,
         total_duration: int | None = None,
         plot_histograms: bool = False,
         bins: int | None = None,
@@ -93,22 +93,17 @@ class BaseRasterWidget(BaseWidget):
         available_segments.sort()  # Ensure consistent ordering
 
         # Determine which segments to use
-        if segment_index is None:
+        if segment_indices is None:
             # Use all segments by default
             segments_to_use = available_segments
-        elif isinstance(segment_index, int):
-            # Single segment specified
-            if segment_index not in available_segments:
-                raise ValueError(f"segment_index {segment_index} not found in data")
-            segments_to_use = [segment_index]
-        elif isinstance(segment_index, list):
+        elif isinstance(segment_indices, list):
             # Multiple segments specified
-            for idx in segment_index:
+            for idx in segment_indices:
                 if idx not in available_segments:
-                    raise ValueError(f"segment_index {idx} not found in data")
-            segments_to_use = segment_index
+                    raise ValueError(f"segment_index {idx} not found in avialable segments {available_segments}")
+            segments_to_use = segment_indices
         else:
-            raise ValueError("segment_index must be int, list, or None")
+            raise ValueError("segment_index must be `list` or `None`")
 
         # Get all unit IDs present in any segment if not specified
         if unit_ids is None:
@@ -391,7 +386,7 @@ class RasterWidget(BaseRasterWidget):
         A sorting object
     sorting_analyzer : SortingAnalyzer  | None, default: None
         A sorting analyzer object
-    segment_index : int or list of int or None, default: None
+    segment_indices : list of int or None, default: None
         The segment index or indices to use. If None and there are multiple segments, defaults to 0.
         If a list of indices is provided, spike trains are concatenated across the specified segments.
     unit_ids : list
@@ -406,7 +401,7 @@ class RasterWidget(BaseRasterWidget):
         self,
         sorting=None,
         sorting_analyzer=None,
-        segment_index=None,
+        segment_indices=None,
         unit_ids=None,
         time_range=None,
         color="k",
@@ -424,30 +419,7 @@ class RasterWidget(BaseRasterWidget):
 
         sorting = self.ensure_sorting(sorting)
 
-        num_segments = sorting.get_num_segments()
-
-        # Handle segment_index input
-        if num_segments > 1:
-            if segment_index is None:
-                warn("More than one segment available! Using `segment_index = 0`.")
-                segment_index = 0
-        else:
-            segment_index = 0
-
-        # Convert segment_index to list for consistent processing
-        if isinstance(segment_index, int):
-            segment_indices = [segment_index]
-        elif isinstance(segment_index, list):
-            segment_indices = segment_index
-        else:
-            raise ValueError("segment_index must be an int or a list of ints")
-
-        # Validate segment indices
-        for idx in segment_indices:
-            if not isinstance(idx, int):
-                raise ValueError(f"Each segment index must be an integer, got {type(idx)}")
-            if idx < 0 or idx >= num_segments:
-                raise ValueError(f"segment_index {idx} out of range (0 to {num_segments - 1})")
+        segment_indices = validate_segment_indices(sorting, segment_indices)
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids

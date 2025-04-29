@@ -5,7 +5,7 @@ from warnings import warn
 
 from .rasters import BaseRasterWidget
 from .base import BaseWidget, to_attr
-from .utils import get_some_colors
+from .utils import get_some_colors, validate_segment_indices
 
 from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 
@@ -25,7 +25,7 @@ class AmplitudesWidget(BaseRasterWidget):
     unit_colors : dict | None, default: None
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
         by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
-    segment_index : int or list of int or None, default: None
+    segment_indices : list of int or None, default: None
         Segment index or indices to plot. If None and there are multiple segments, defaults to 0.
         If list, spike trains and amplitudes are concatenated across the specified segments.
     max_spikes_per_unit : int or None, default: None
@@ -52,7 +52,7 @@ class AmplitudesWidget(BaseRasterWidget):
         sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         unit_colors=None,
-        segment_index=None,
+        segment_indices=None,
         max_spikes_per_unit=None,
         y_lim=None,
         scatter_decimate=1,
@@ -74,38 +74,16 @@ class AmplitudesWidget(BaseRasterWidget):
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
-        num_segments = sorting.get_num_segments()
-
         # Handle segment_index input
-        if num_segments > 1:
-            if segment_index is None:
-                warn("More than one segment available! Using `segment_index = 0`.")
-                segment_index = 0
-        else:
-            segment_index = 0
+        segment_indices = validate_segment_indices(segment_indices, sorting)
 
         # Check for SortingView backend
         is_sortingview = backend == "sortingview"
 
         # For SortingView, ensure we're only using a single segment
-        if is_sortingview and isinstance(segment_index, list) and len(segment_index) > 1:
+        if is_sortingview and len(segment_indices) > 1:
             warn("SortingView backend currently supports only single segment. Using first segment.")
-            segment_index = segment_index[0]
-
-        # Convert segment_index to list for consistent processing
-        if isinstance(segment_index, int):
-            segment_indices = [segment_index]
-        elif isinstance(segment_index, list):
-            segment_indices = segment_index
-        else:
-            raise ValueError("segment_index must be an int or a list of ints")
-
-        # Validate segment indices
-        for idx in segment_indices:
-            if not isinstance(idx, int):
-                raise ValueError(f"Each segment index must be an integer, got {type(idx)}")
-            if idx < 0 or idx >= num_segments:
-                raise ValueError(f"segment_index {idx} out of range (0 to {num_segments - 1})")
+            segment_indices = segment_indices[0]
 
         # Create multi-segment data structure (dict of dicts)
         spiketrains_by_segment = {}

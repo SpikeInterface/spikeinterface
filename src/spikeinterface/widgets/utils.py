@@ -3,6 +3,7 @@ from __future__ import annotations
 from warnings import warn
 import numpy as np
 
+from spikeinterface.core import BaseSorting
 
 def get_some_colors(
     keys,
@@ -349,3 +350,46 @@ def make_units_table_from_analyzer(
                 )
 
     return units_table
+
+def validate_segment_indices(segment_indices: list[int] |  None, sorting: BaseSorting):
+    """
+    Validate a list of segment indices for a sorting object.
+
+    Parameters
+    ----------
+    segment_indices : list of int
+        The segment index or indices to validate.
+    sorting : BaseSorting
+        The sorting object to validate against.
+
+    Returns
+    -------
+    list of int
+        A list of valid segment indices.
+
+    Raises
+    ------
+    ValueError
+        If the segment indices are not valid.
+    """
+    num_segments = sorting.get_num_segments()
+
+    # Handle segment_indices input
+    if segment_indices is None:
+        if num_segments > 1:
+            warn("Segment indices not specified. Using first available segment only.")
+        return [0]
+
+    # Convert segment_index to list for consistent processing
+    if not isinstance(segment_indices, list):
+        raise ValueError("segment_indices must be a list of ints - available segments are: " + list(range(num_segments)))
+
+    # Validate segment indices
+    for idx in segment_indices:
+        if not isinstance(idx, int):
+            raise ValueError(f"Each segment index must be an integer, got {type(idx)}")
+        if idx < 0 or idx >= num_segments:
+            raise ValueError(f"segment_index {idx} out of range (0 to {num_segments - 1})")
+
+
+    return segment_indices

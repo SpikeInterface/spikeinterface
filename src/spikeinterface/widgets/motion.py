@@ -121,7 +121,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
         The recording extractor object (only used to get "real" times).
     sampling_frequency : float, default: None
         The sampling frequency (needed if recording is None).
-    segment_index : int or list of int or None, default: None
+    segment_indices : list of int or None, default: None
         The segment index or indices to display. If None and there's only one segment, it's used.
         If None and there are multiple segments, you must specify which to use.
         If a list of indices is provided, peaks and locations are concatenated across the segments.
@@ -149,7 +149,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
         direction: str = "y",
         recording: BaseRecording | None = None,
         sampling_frequency: float | None = None,
-        segment_index: int | list | None = None,
+        segment_indices: list[int] | None = None,
         depth_lim: tuple[float, float] | None = None,
         color_amplitude: bool = True,
         scatter_decimate: int | None = None,
@@ -197,16 +197,13 @@ class DriftRasterMapWidget(BaseRasterWidget):
 
         unique_segments = np.unique(peaks["segment_index"])
 
-        if segment_index is None:
+        if segment_indices is None:
             if len(unique_segments) == 1:
                 segment_indices = [int(unique_segments[0])]
             else:
                 raise ValueError("segment_index must be specified if there are multiple segments")
-        elif isinstance(segment_index, int):
-            segment_indices = [segment_index]
-        elif isinstance(segment_index, list):
-            segment_indices = segment_index
-        else:
+        
+        if not isinstance(segment_indices, list):
             raise ValueError("segment_index must be an int or a list of ints")
 
         # Validate all segment indices exist in the data
