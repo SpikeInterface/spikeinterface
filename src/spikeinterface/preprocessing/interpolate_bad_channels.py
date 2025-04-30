@@ -116,8 +116,6 @@ class DetectAndInterpolateBadChannelsRecording(InterpolateBadChannelsRecording):
         else:
             channel_labels = None
 
-        self._main_ids = recording.get_channel_ids()
-
         InterpolateBadChannelsRecording.__init__(
             self,
             recording,
