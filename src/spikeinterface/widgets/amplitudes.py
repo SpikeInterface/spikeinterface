@@ -125,18 +125,18 @@ class AmplitudesWidget(BaseRasterWidget):
         if plot_histograms and bins is None:
             bins = 100
 
-        # Calculate total duration across all segments for x-axis limits
-        total_duration = 0
+        # Calculate durations for all segments for x-axis limits
+        durations = []
         for idx in segment_indices:
             duration = sorting_analyzer.get_num_samples(idx) / sorting_analyzer.sampling_frequency
-            total_duration += duration
+            durations.append(duration)
 
         # Build the plot data with the full dict of dicts structure
         plot_data = dict(
             unit_colors=unit_colors,
             plot_histograms=plot_histograms,
             bins=bins,
-            total_duration=total_duration,
+            durations=durations,
             unit_ids=unit_ids,
             hide_unit_selector=hide_unit_selector,
             plot_legend=plot_legend,
@@ -150,8 +150,6 @@ class AmplitudesWidget(BaseRasterWidget):
             first_segment = segment_indices[0]
             plot_data["spike_train_data"] = spiketrains_by_segment[first_segment]
             plot_data["y_axis_data"] = amplitudes_by_segment[first_segment]
-            print(plot_data["spike_train_data"])
-            print(plot_data["y_axis_data"])
         else:
             # Otherwise use the full dict of dicts structure with all segments
             plot_data["spike_train_data"] = spiketrains_by_segment
@@ -178,7 +176,7 @@ class AmplitudesWidget(BaseRasterWidget):
         ]
 
         self.view = vv.SpikeAmplitudes(
-            start_time_sec=0, end_time_sec=dp.total_duration, plots=sa_items, hide_unit_selector=dp.hide_unit_selector
+            start_time_sec=0, end_time_sec=np.sum(dp.durations), plots=sa_items, hide_unit_selector=dp.hide_unit_selector
         )
 
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)

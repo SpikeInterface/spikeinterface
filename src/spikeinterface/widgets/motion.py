@@ -256,8 +256,8 @@ class DriftRasterMapWidget(BaseRasterWidget):
         else:
             color_kwargs = dict(color=color, c=None, alpha=alpha)
 
-        # Calculate total duration for x-axis limits
-        total_duration = 0
+        # Calculate segment durations for x-axis limits
+        durations = []
         for seg_idx in segment_indices:
             if recording is not None and hasattr(recording, "get_duration"):
                 duration = recording.get_duration(seg_idx)
@@ -270,7 +270,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
                     duration = (max_sample + 1) / sampling_frequency
                 else:
                     duration = 0
-            total_duration += duration
+            durations.append(duration)
 
         plot_data = dict(
             spike_train_data=spike_train_data,
@@ -281,7 +281,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
             scatter_decimate=scatter_decimate,
             title="Peak depth",
             y_label="Depth [um]",
-            total_duration=total_duration,
+            durations=durations,
         )
 
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
@@ -414,10 +414,10 @@ class MotionInfoWidget(BaseWidget):
             dp.recording,
         )
 
-        commpon_drift_map_kwargs = dict(
+        common_drift_map_kwargs = dict(
             direction=dp.motion.direction,
             recording=dp.recording,
-            segment_indices=list(dp.segment_index),
+            segment_indices=[dp.segment_index],
             depth_lim=dp.depth_lim,
             scatter_decimate=dp.scatter_decimate,
             color_amplitude=dp.color_amplitude,
@@ -434,7 +434,7 @@ class MotionInfoWidget(BaseWidget):
             dp.peak_locations,
             ax=ax0,
             immediate_plot=True,
-            **commpon_drift_map_kwargs,
+            **common_drift_map_kwargs,
         )
 
         _ = DriftRasterMapWidget(
@@ -442,7 +442,7 @@ class MotionInfoWidget(BaseWidget):
             corrected_location,
             ax=ax1,
             immediate_plot=True,
-            **commpon_drift_map_kwargs,
+            **common_drift_map_kwargs,
         )
 
         ax2.plot(temporal_bins_s, displacement, alpha=0.2, color="black")
