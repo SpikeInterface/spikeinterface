@@ -25,6 +25,7 @@ from .normalize_scale import (
     CenterRecording,
     center,
 )
+
 from .scale import scale_to_uV
 
 from .whiten import WhitenRecording, whiten, compute_whitening_matrix
