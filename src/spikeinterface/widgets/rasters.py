@@ -113,36 +113,34 @@ class BaseRasterWidget(BaseWidget):
             unit_ids = list(all_units)
 
         # Calculate cumulative durations for segment boundaries
-        segment_boundaries = np.cumsum(durations)  
-        cumulative_durations = np.concatenate([[0], segment_boundaries]) 
+        segment_boundaries = np.cumsum(durations)
+        cumulative_durations = np.concatenate([[0], segment_boundaries])
 
         # Concatenate data across segments with proper time offsets
         concatenated_spike_trains = {unit_id: np.array([]) for unit_id in unit_ids}
         concatenated_y_axis = {unit_id: np.array([]) for unit_id in unit_ids}
 
         for offset, spike_train_segment, y_axis_segment in zip(
-            cumulative_durations, 
+            cumulative_durations,
             [spike_train_data[idx] for idx in segments_to_use],
-            [y_axis_data[idx] for idx in segments_to_use]
+            [y_axis_data[idx] for idx in segments_to_use],
         ):
             # Process each unit in the current segment
             for unit_id, spike_times in spike_train_segment.items():
                 if unit_id not in unit_ids:
                     continue
-                    
+
                 # Get y-axis values for this unit
                 y_values = y_axis_segment[unit_id]
-                
+
                 # Apply offset to spike times
                 adjusted_times = spike_times + offset
-                
+
                 # Add to concatenated data
                 concatenated_spike_trains[unit_id] = np.concatenate(
                     [concatenated_spike_trains[unit_id], adjusted_times]
                 )
-                concatenated_y_axis[unit_id] = np.concatenate(
-                    [concatenated_y_axis[unit_id], y_values]
-                )
+                concatenated_y_axis[unit_id] = np.concatenate([concatenated_y_axis[unit_id], y_values])
 
         plot_data = dict(
             spike_train_data=concatenated_spike_trains,

@@ -202,7 +202,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
                 segment_indices = [int(unique_segments[0])]
             else:
                 raise ValueError("segment_indices must be specified if there are multiple segments")
-        
+
         if not isinstance(segment_indices, list):
             raise ValueError("segment_indices must be a list of ints")
 

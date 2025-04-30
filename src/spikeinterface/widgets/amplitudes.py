@@ -176,7 +176,10 @@ class AmplitudesWidget(BaseRasterWidget):
         ]
 
         self.view = vv.SpikeAmplitudes(
-            start_time_sec=0, end_time_sec=np.sum(dp.durations), plots=sa_items, hide_unit_selector=dp.hide_unit_selector
+            start_time_sec=0,
+            end_time_sec=np.sum(dp.durations),
+            plots=sa_items,
+            hide_unit_selector=dp.hide_unit_selector,
         )
 
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)
