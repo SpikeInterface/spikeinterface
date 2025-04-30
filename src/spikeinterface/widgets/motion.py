@@ -201,10 +201,10 @@ class DriftRasterMapWidget(BaseRasterWidget):
             if len(unique_segments) == 1:
                 segment_indices = [int(unique_segments[0])]
             else:
-                raise ValueError("segment_index must be specified if there are multiple segments")
+                raise ValueError("segment_indices must be specified if there are multiple segments")
         
         if not isinstance(segment_indices, list):
-            raise ValueError("segment_index must be an int or a list of ints")
+            raise ValueError("segment_indices must be a list of ints")
 
         # Validate all segment indices exist in the data
         for idx in segment_indices:
@@ -275,7 +275,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
         plot_data = dict(
             spike_train_data=spike_train_data,
             y_axis_data=y_axis_data,
-            segment_index=segment_indices,
+            segment_indices=segment_indices,
             y_lim=depth_lim,
             color_kwargs=color_kwargs,
             scatter_decimate=scatter_decimate,
@@ -417,7 +417,7 @@ class MotionInfoWidget(BaseWidget):
         commpon_drift_map_kwargs = dict(
             direction=dp.motion.direction,
             recording=dp.recording,
-            segment_index=dp.segment_index,
+            segment_indices=list(dp.segment_index),
             depth_lim=dp.depth_lim,
             scatter_decimate=dp.scatter_decimate,
             color_amplitude=dp.color_amplitude,

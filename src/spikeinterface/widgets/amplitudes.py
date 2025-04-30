@@ -83,7 +83,7 @@ class AmplitudesWidget(BaseRasterWidget):
         # For SortingView, ensure we're only using a single segment
         if is_sortingview and len(segment_indices) > 1:
             warn("SortingView backend currently supports only single segment. Using first segment.")
-            segment_indices = segment_indices[0]
+            segment_indices = [segment_indices[0]]
 
         # Create multi-segment data structure (dict of dicts)
         spiketrains_by_segment = {}
@@ -150,11 +150,13 @@ class AmplitudesWidget(BaseRasterWidget):
             first_segment = segment_indices[0]
             plot_data["spike_train_data"] = spiketrains_by_segment[first_segment]
             plot_data["y_axis_data"] = amplitudes_by_segment[first_segment]
+            print(plot_data["spike_train_data"])
+            print(plot_data["y_axis_data"])
         else:
             # Otherwise use the full dict of dicts structure with all segments
             plot_data["spike_train_data"] = spiketrains_by_segment
             plot_data["y_axis_data"] = amplitudes_by_segment
-            plot_data["segment_index"] = segment_indices
+            plot_data["segment_indices"] = segment_indices
 
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
 

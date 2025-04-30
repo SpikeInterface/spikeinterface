@@ -419,7 +419,7 @@ class RasterWidget(BaseRasterWidget):
 
         sorting = self.ensure_sorting(sorting)
 
-        segment_indices = validate_segment_indices(sorting, segment_indices)
+        segment_indices = validate_segment_indices(segment_indices, sorting)
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
@@ -479,7 +479,7 @@ class RasterWidget(BaseRasterWidget):
         plot_data = dict(
             spike_train_data=spike_train_data,
             y_axis_data=y_axis_data,
-            segment_index=segment_indices,
+            segment_indices=segment_indices,
             x_lim=time_range,
             y_label="Unit id",
             unit_ids=unit_ids,
