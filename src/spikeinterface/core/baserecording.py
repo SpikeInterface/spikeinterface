@@ -731,6 +731,13 @@ class BaseRecording(BaseRecordingSnippets):
     def _remove_channels(self, remove_channel_ids):
         from .channelslice import ChannelSliceRecording
 
+        recording_channel_ids = self.get_channel_ids()
+        non_present_channel_ids = list(set(remove_channel_ids).difference(recording_channel_ids))
+        if len(non_present_channel_ids) != 0:
+            raise ValueError(
+                f"`remove_channel_ids` {non_present_channel_ids} are not in recording ids {recording_channel_ids}."
+            )
+
         new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
@@ -757,7 +764,7 @@ class BaseRecording(BaseRecordingSnippets):
         sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
         return sub_recording
 
-    def time_slice(self, start_time: float | None, end_time: float) -> BaseRecording:
+    def time_slice(self, start_time: float | None, end_time: float | None) -> BaseRecording:
         """
         Returns a new recording object, restricted to the time interval [start_time, end_time].
 

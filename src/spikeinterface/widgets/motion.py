@@ -246,8 +246,10 @@ class DriftRasterMapWidget(BaseRasterWidget):
                 amps /= q_95
                 c = cmap_obj(amps)
             else:
+                from matplotlib.colors import Normalize
+
                 norm_function = Normalize(vmin=clim[0], vmax=clim[1], clip=True)
-                c = cmap_obj(norm_function(amps))
+                c = cmap(norm_function(amps))
             color_kwargs = dict(
                 color=None,
                 c=c,

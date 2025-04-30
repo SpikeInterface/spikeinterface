@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.102.2"
+version = "0.102.3"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -28,10 +28,11 @@ dependencies = [
     "neo>=0.14.0",
     "probeinterface>=0.2.23",
     "packaging",
+    "numcodecs<0.16.0", # For supporting zarr < 3
 ]
 
 [build-system]
-requires = ["setuptools>=62.0"]
+requires = ["setuptools>=78.0.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -63,7 +64,7 @@ extractors = [
     "MEArec>=1.8",
     "pynwb>=2.6.0",
     "hdmf-zarr>=0.11.0",
-    "pyedflib>=0.1.30,<0.1.39",
+    "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",
@@ -133,6 +134,7 @@ test_extractors = [
     # Functions to download data in neo test suite
     "pooch>=1.8.2",
     "datalad>=1.0.2",
+    # Commenting out for release
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
@@ -148,8 +150,6 @@ test = [
     "pytest-dependency",
     "pytest-cov",
     "psutil",
-
-    "huggingface_hub",
 
     # preprocessing
     "ibllib", # for IBL
@@ -193,8 +193,8 @@ docs = [
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "networkx",
-    "skops", # For auotmated curation
-    "scikit-learn", # For auotmated curation
+    "skops", # For automated curation
+    "scikit-learn", # For automated curation
     # Download data
     "pooch>=1.8.2",
     "datalad>=1.0.2",
@@ -202,7 +202,6 @@ docs = [
     # for release we need pypi, so this needs to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
-
 ]
 
 dev = [

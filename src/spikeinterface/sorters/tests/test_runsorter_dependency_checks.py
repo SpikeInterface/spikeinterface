@@ -1,14 +1,9 @@
-import os
 import pytest
-from pathlib import Path
-import shutil
 import platform
 from spikeinterface import generate_ground_truth_recording
 from spikeinterface.sorters.utils import has_spython, has_docker_python, has_docker, has_singularity
 from spikeinterface.sorters import run_sorter
-import subprocess
 import sys
-import copy
 
 
 def _monkeypatch_return_false():

@@ -159,7 +159,9 @@ class IblRecordingExtractor(BaseRecording):
         if pid is not None:
             assert stream_type is not None, "When providing a PID, you must also provide a stream type."
             eid, _ = one.pid2eid(pid)
+            eid = str(eid)
             pids, probes = one.eid2pid(eid)
+            pids = [str(p) for p in pids]
             pname = probes[pids.index(pid)]
             stream_name = f"{pname}.{stream_type}"
         else:
@@ -180,7 +182,9 @@ class IblRecordingExtractor(BaseRecording):
         if pid is None:
             self.ssl.pid = one.alyx.rest("insertions", "list", session=eid, name=pname)[0]["id"]
 
-        self._file_streamer = self.ssl.raw_electrophysiology(band=stream_type, stream=stream)
+        self._file_streamer = self.ssl.raw_electrophysiology(
+            band=stream_type, stream=stream, remove_cached=remove_cached
+        )
 
         # get basic metadata
         meta_file = str(self._file_streamer.file_meta_data)  # streamer downloads uncompressed metadata files on init
@@ -260,6 +264,7 @@ class IblRecordingExtractor(BaseRecording):
             "cache_folder": cache_folder,
             "remove_cached": remove_cached,
             "stream": stream,
+            "stream_type": stream_type,
         }
 
 
@@ -319,10 +324,9 @@ class IblSortingExtractor(BaseSorting):
             from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader
 
-            assert one is not None, "one is a required parameter."
             if isinstance(one, dict):
                 one = ONE(**one)
-            else:
+            elif one is None:
                 one = IblRecordingExtractor._get_default_one()
         except ImportError:
             raise ImportError(self.installation_mesg)
