@@ -42,42 +42,57 @@ from .tdt import TdtRecordingExtractor, read_tdt
 
 from .neo_utils import get_neo_streams, get_neo_num_blocks
 
-neo_recording_extractors_list = [
-    AlphaOmegaRecordingExtractor,
-    AxonaRecordingExtractor,
-    BiocamRecordingExtractor,
-    BlackrockRecordingExtractor,
-    CedRecordingExtractor,
-    EDFRecordingExtractor,
-    IntanRecordingExtractor,
-    MaxwellRecordingExtractor,
-    MEArecRecordingExtractor,
-    MCSRawRecordingExtractor,
-    NeuralynxRecordingExtractor,
-    NeuroScopeRecordingExtractor,
-    NeuroNexusRecordingExtractor,
-    NixRecordingExtractor,
-    OpenEphysBinaryRecordingExtractor,
-    OpenEphysLegacyRecordingExtractor,
-    PlexonRecordingExtractor,
-    Plexon2RecordingExtractor,
-    Spike2RecordingExtractor,
-    SpikeGadgetsRecordingExtractor,
-    SpikeGLXRecordingExtractor,
-    TdtRecordingExtractor,
-    NeuroExplorerRecordingExtractor,
-]
+neo_recording_extractors_dict = {
+    AlphaOmegaRecordingExtractor: read_alphaomega,
+    AxonaRecordingExtractor: read_axona,
+    BiocamRecordingExtractor: read_biocam,
+    BlackrockRecordingExtractor: read_blackrock,
+    CedRecordingExtractor: read_ced,
+    EDFRecordingExtractor: read_edf,
+    IntanRecordingExtractor: read_intan,
+    MaxwellRecordingExtractor: read_maxwell,
+    MEArecRecordingExtractor: read_mearec,
+    MCSRawRecordingExtractor: read_mcsraw,
+    NeuralynxRecordingExtractor: read_neuralynx,
+    NeuroScopeRecordingExtractor: read_neuroscope_recording,
+    NeuroNexusRecordingExtractor: read_neuronexus,
+    NixRecordingExtractor: read_nix,
+    OpenEphysBinaryRecordingExtractor: read_openephys,
+    OpenEphysLegacyRecordingExtractor: read_openephys,
+    PlexonRecordingExtractor: read_plexon,
+    Plexon2RecordingExtractor: read_plexon2,
+    Spike2RecordingExtractor: read_spike2,
+    SpikeGadgetsRecordingExtractor: read_spikegadgets,
+    SpikeGLXRecordingExtractor: read_spikeglx,
+    TdtRecordingExtractor: read_tdt,
+    NeuroExplorerRecordingExtractor: read_neuroexplorer,
+}
 
-neo_sorting_extractors_list = [
-    BlackrockSortingExtractor,
-    MEArecSortingExtractor,
-    NeuralynxSortingExtractor,
-    Plexon2SortingExtractor,
-]
+neo_sorting_extractors_dict = {
+    BlackrockSortingExtractor: read_blackrock_sorting,
+    MEArecSortingExtractor: read_mearec,
+    NeuralynxSortingExtractor: read_neuralynx_sorting,
+    PlexonSortingExtractor: read_plexon_sorting,
+    Plexon2SortingExtractor: read_plexon2_sorting,
+    NeuroScopeSortingExtractor: read_neuroscope_sorting,
+}
 
-neo_event_extractors_list = [
-    AlphaOmegaEventExtractor,
-    OpenEphysBinaryEventExtractor,
-    Plexon2EventExtractor,
-    SpikeGLXEventExtractor,
+neo_event_extractors_dict = {
+    AlphaOmegaEventExtractor: read_alphaomega_event,
+    OpenEphysBinaryEventExtractor: read_openephys_event,
+    Plexon2EventExtractor: read_plexon2_event,
+    SpikeGLXEventExtractor: read_spikeglx_event,
+    MaxwellEventExtractor: read_maxwell_event,
+}
+
+__all__ = [
+    "neo_recording_extractors_dict",
+    "neo_sorting_extractors_dict",
+    "neo_event_extractors_dict",
+    get_neo_streams.__name__,
+    get_neo_num_blocks.__name__,
 ]
+__all__ += [func.__name__ for func in neo_recording_extractors_dict.values()]
+__all__ += [func.__name__ for func in neo_sorting_extractors_dict.values()]
+__all__ += [func.__name__ for func in neo_event_extractors_dict.values()]
+__all__.append("read_neuroscope")

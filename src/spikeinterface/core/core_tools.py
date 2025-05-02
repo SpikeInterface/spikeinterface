@@ -60,6 +60,9 @@ def define_function_handling_dict_from_class(source_class, name):
 def define_function_from_class(source_class, name):
     "Wrapper to change the name of a class"
 
+    source_class.__class_name__ = source_class.__name__
+    source_class.__name__ = name
+
     return source_class
 
 
