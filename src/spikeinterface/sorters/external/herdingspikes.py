@@ -5,7 +5,7 @@ from packaging import version
 
 from spikeinterface.sorters.basesorter import BaseSorter
 
-from spikeinterface.extractors import HerdingspikesSortingExtractor
+from spikeinterface.extractors.extractorlist import HerdingspikesSortingExtractor
 
 
 class HerdingspikesSorter(BaseSorter):
