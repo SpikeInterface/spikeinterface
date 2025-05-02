@@ -35,7 +35,7 @@ def get_neuropixels_sample_shifts(
         Neuropixels 1.0 probes have 13 cycles for AP (action potential) signals
         and 12 for LFP (local field potential) signals.
         Neuropixels 2.0 probes have 16 cycles.
-        If None, defaults to the value of `num_adcs`.
+        If None, defaults to the value of `num_channels_per_adc`.
 
     Returns
     -------
@@ -57,7 +57,7 @@ def get_neuropixels_sample_shifts(
     return sample_shifts
 
 
-def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
+def get_neuropixels_channel_groups(num_channels=384, num_channels_per_adc=12):
     """
     Returns groups of simultaneously sampled channels on a Neuropixels probe.
 
@@ -83,10 +83,10 @@ def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
     num_channels : int, default: 384
         The total number of channels in a recording.
         All currently available Neuropixels variants have 384 channels.
-    num_adcs : int, default: 12
+    num_channels_per_adc : int, default: 12
         The number of channels per ADC on the probe.
-        Neuropixels 1.0 probes have 12 ADCs.
-        Neuropixels 2.0 probes have 16 ADCs.
+        Neuropixels 1.0 probes have 32 ADCs, each handling 12 channels.
+        Neuropixels 2.0 probes have 24 ADCs, each handling 16 channels.
 
     Returns
     -------
@@ -96,14 +96,14 @@ def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
 
     groups = []
 
-    for i in range(num_adcs):
+    for i in range(num_channels_per_adc):
         groups.append(
             list(
                 np.sort(
                     np.concatenate(
                         [
-                            np.arange(i * 2, num_channels, num_adcs * 2),
-                            np.arange(i * 2 + 1, num_channels, num_adcs * 2),
+                            np.arange(i * 2, num_channels, num_channels_per_adc * 2),
+                            np.arange(i * 2 + 1, num_channels, num_channels_per_adc * 2),
                         ]
                     )
                 )
