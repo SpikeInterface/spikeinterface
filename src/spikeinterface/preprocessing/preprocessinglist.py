@@ -80,8 +80,15 @@ _all_preprocesser_dict = {
     AstypeRecording: astype,
     UnsignedToSignedRecording: unsigned_to_signed,
 }
-__all__ = list(_all_preprocesser_dict.values())
-__all__.extend([scale_to_uV, compute_whitening_matrix, train_deepinterpolation, causal_filter])
+# we control import in the preprocessing init by setting an __all__
 
-preprocesser_dict = {pp_class.name: pp_function for pp_class, pp_function in _all_preprocesser_dict.items()}
-__all__.append(preprocesser_dict)
+# pp_function.__name__ gives the name of the function that users should use
+__all__ = [pp_function.__name__ for pp_function in _all_preprocesser_dict.values()]
+__all__.extend(
+    [scale_to_uV.__name__, compute_whitening_matrix.__name__, train_deepinterpolation.__name__, causal_filter.__name__]
+)
+
+preprocessor_dict = {
+    pp_class.__name__: pp_function.__name__ for pp_class, pp_function in _all_preprocesser_dict.items()
+}
+__all__.append("preprocessor_dict")
