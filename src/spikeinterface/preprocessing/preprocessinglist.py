@@ -45,41 +45,43 @@ from .depth_order import DepthOrderRecording, depth_order
 from .astype import AstypeRecording, astype
 from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
 
-
-preprocessers_full_list = [
+_all_preprocesser_dict = {
     # filter stuff
-    FilterRecording,
-    BandpassFilterRecording,
-    HighpassFilterRecording,
-    NotchFilterRecording,
-    GaussianFilterRecording,
+    FilterRecording: filter,
+    BandpassFilterRecording: bandpass_filter,
+    HighpassFilterRecording: highpass_filter,
+    NotchFilterRecording: notch_filter,
+    GaussianFilterRecording: gaussian_filter,
     # gain offset stuff
-    NormalizeByQuantileRecording,
-    ScaleRecording,
-    CenterRecording,
-    ZScoreRecording,
+    NormalizeByQuantileRecording: normalize_by_quantile,
+    ScaleRecording: scale,
+    CenterRecording: center,
+    ZScoreRecording: zscore,
     # decorrelation stuff
-    WhitenRecording,
+    WhitenRecording: whiten,
     # re-reference
-    CommonReferenceRecording,
-    PhaseShiftRecording,
+    CommonReferenceRecording: common_reference,
+    PhaseShiftRecording: phase_shift,
     # misc
-    RectifyRecording,
-    ClipRecording,
-    BlankSaturationRecording,
-    SilencedPeriodsRecording,
-    RemoveArtifactsRecording,
-    ZeroChannelPaddedRecording,
-    DeepInterpolatedRecording,
-    ResampleRecording,
-    DecimateRecording,
-    HighpassSpatialFilterRecording,
-    InterpolateBadChannelsRecording,
-    DepthOrderRecording,
-    AverageAcrossDirectionRecording,
-    DirectionalDerivativeRecording,
-    AstypeRecording,
-    UnsignedToSignedRecording,
-]
+    RectifyRecording: rectify,
+    ClipRecording: clip,
+    BlankSaturationRecording: blank_saturation,
+    SilencedPeriodsRecording: silence_periods,
+    RemoveArtifactsRecording: remove_artifacts,
+    ZeroChannelPaddedRecording: zero_channel_pad,
+    DeepInterpolatedRecording: deepinterpolate,
+    ResampleRecording: resample,
+    DecimateRecording: decimate,
+    HighpassSpatialFilterRecording: highpass_spatial_filter,
+    InterpolateBadChannelsRecording: interpolate_bad_channels,
+    DepthOrderRecording: depth_order,
+    AverageAcrossDirectionRecording: average_across_direction,
+    DirectionalDerivativeRecording: directional_derivative,
+    AstypeRecording: astype,
+    UnsignedToSignedRecording: unsigned_to_signed,
+}
+__all__ = list(_all_preprocesser_dict.values())
+__all__.extend([scale_to_uV, compute_whitening_matrix, train_deepinterpolation, causal_filter])
 
-preprocesser_dict = {pp_class.name: pp_class for pp_class in preprocessers_full_list}
+preprocesser_dict = {pp_class.name: pp_function for pp_class, pp_function in _all_preprocesser_dict.items()}
+__all__.append(preprocesser_dict)
