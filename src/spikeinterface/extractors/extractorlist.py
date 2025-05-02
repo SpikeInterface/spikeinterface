@@ -135,19 +135,19 @@ _snippets_extractor_full_dict = {
 # Organize the possible extractors into an easy to use format
 
 recording_extractor_full_dict = {
-    rec_class.__name__.replace("Recording", "").replace("Extractor", "").lower(): rec_func.__name__
+    rec_class.__name__.replace("read_", "").replace("_recording", "").lower(): rec_func.__name__
     for rec_class, rec_func in _recording_extractor_full_dict.items()
 }
 sorting_extractor_full_dict = {
-    sort_class.__name__.replace("Sorting", "").replace("Extractor", "").lower(): sort_func.__name__
+    sort_class.__name__.replace("read_", "").replace("_sorting", "").lower(): sort_func.__name__
     for sort_class, sort_func in _sorting_extractor_full_dict.items()
 }
 event_extractor_full_dict = {
-    event_class.__name__.replace("Event", "").replace("Extractor", "").lower(): event_func.__name__
+    event_class.__name__.replace("read_", "").replace("_event", "").lower(): event_func.__name__
     for event_class, event_func in _event_extractor_full_dict.items()
 }
 snippets_extractor_full_dict = {
-    snippets_class.__name__.replace("Snippets", "").replace("Extractor", "").lower(): snippets_func.__name__
+    snippets_class.__name__.replace("read_", "").replace("_snippets", "").lower(): snippets_func.__name__
     for snippets_class, snippets_func in _snippets_extractor_full_dict.items()
 }
 
@@ -164,6 +164,5 @@ __all__.extend(
         "sorting_extractor_full_dict",
         "event_extractor_full_dict",
         "snippets_extractor_full_dict",
-        "read_phy",
     ]
 )
