@@ -80,46 +80,46 @@ from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
 # first we line up each class with its function
 
 _recording_extractor_full_dict = {
-    BinaryFolderRecording: read_binary,
-    BinaryRecordingExtractor: read_binary,
-    ZarrRecordingExtractor: read_zarr,
+    BinaryFolderRecording: "read_binary",
+    BinaryRecordingExtractor: "read_binary",
+    ZarrRecordingExtractor: "read_zarr",
     # natively implemented in spikeinterface.extractors
-    NumpyRecording: NumpyRecording,
-    SHYBRIDRecordingExtractor: read_shybrid_recording,
-    MdaRecordingExtractor: read_mda_recording,
-    NwbRecordingExtractor: read_nwb_recording,
+    NumpyRecording: "NumpyRecording",
+    SHYBRIDRecordingExtractor: "read_shybrid_recording",
+    MdaRecordingExtractor: "read_mda_recording",
+    NwbRecordingExtractor: "read_nwb_recording",
     # others
-    CompressedBinaryIblExtractor: read_cbin_ibl,
-    IblRecordingExtractor: read_ibl_recording,
-    MCSH5RecordingExtractor: read_mcsh5,
-    SinapsResearchPlatformRecordingExtractor: read_sinaps_research_platform,
-    SinapsResearchPlatformH5RecordingExtractor: read_sinaps_research_platform_h5,
-    WhiteMatterRecordingExtractor: read_whitematter,
+    CompressedBinaryIblExtractor: "read_cbin_ibl",
+    IblRecordingExtractor: "read_ibl_recording",
+    MCSH5RecordingExtractor: "read_mcsh5",
+    SinapsResearchPlatformRecordingExtractor: "read_sinaps_research_platform",
+    SinapsResearchPlatformH5RecordingExtractor: "read_sinaps_research_platform_h5",
+    WhiteMatterRecordingExtractor: "read_whitematter",
 }
 _recording_extractor_full_dict.update(neo_recording_extractors_dict)
 
 _sorting_extractor_full_dict = {
-    NpzSortingExtractor: read_npz_sorting,
-    ZarrSortingExtractor: read_zarr,
-    NumpySorting: NumpySorting,
+    NpzSortingExtractor: "read_npz_sorting",
+    ZarrSortingExtractor: "read_zarr",
+    NumpySorting: "NumpySorting",
     # natively implemented in spikeinterface.extractors
-    MdaSortingExtractor: read_mda_sorting,
-    SHYBRIDSortingExtractor: read_shybrid_sorting,
-    ALFSortingExtractor: read_alf_sorting,
-    KlustaSortingExtractor: read_klusta,
-    HDSortSortingExtractor: read_hdsort,
-    MClustSortingExtractor: read_mclust,
-    WaveClusSortingExtractor: read_waveclus,
-    YassSortingExtractor: read_yass,
-    CombinatoSortingExtractor: read_combinato,
-    TridesclousSortingExtractor: read_tridesclous,
-    SpykingCircusSortingExtractor: read_spykingcircus,
-    HerdingspikesSortingExtractor: read_herdingspikes,
-    KiloSortSortingExtractor: read_kilosort,
-    PhySortingExtractor: read_phy,
-    NwbSortingExtractor: read_nwb_sorting,
-    IblSortingExtractor: read_ibl_sorting,
-    CellExplorerSortingExtractor: read_cellexplorer,
+    MdaSortingExtractor: "read_mda_sorting",
+    SHYBRIDSortingExtractor: "read_shybrid_sorting",
+    ALFSortingExtractor: "read_alf_sorting",
+    KlustaSortingExtractor: "read_klusta",
+    HDSortSortingExtractor: "read_hdsort",
+    MClustSortingExtractor: "read_mclust",
+    WaveClusSortingExtractor: "read_waveclus",
+    YassSortingExtractor: "read_yass",
+    CombinatoSortingExtractor: "read_combinato",
+    TridesclousSortingExtractor: "read_tridesclous",
+    SpykingCircusSortingExtractor: "read_spykingcircus",
+    HerdingspikesSortingExtractor: "read_herdingspikes",
+    KiloSortSortingExtractor: "read_kilosort",
+    PhySortingExtractor: "read_phy",
+    NwbSortingExtractor: "read_nwb_sorting",
+    IblSortingExtractor: "read_ibl_sorting",
+    CellExplorerSortingExtractor: "read_cellexplorer",
 }
 _sorting_extractor_full_dict.update(neo_sorting_extractors_dict)
 
@@ -127,27 +127,27 @@ _sorting_extractor_full_dict.update(neo_sorting_extractors_dict)
 _event_extractor_full_dict = neo_event_extractors_dict
 
 _snippets_extractor_full_dict = {
-    NpySnippetsExtractor: read_npy_snippets,
-    WaveClusSnippetsExtractor: read_waveclus_snippets,
+    NpySnippetsExtractor: "read_npy_snippets",
+    WaveClusSnippetsExtractor: "read_waveclus_snippets",
 }
 
 #############################################################################################
 # Organize the possible extractors into an easy to use format
 
 recording_extractor_full_dict = {
-    rec_class.__name__.replace("read_", "").replace("_recording", "").lower(): rec_func.__name__
+    rec_class.__name__.replace("Recording", "").replace("Extractor", "").lower(): rec_func
     for rec_class, rec_func in _recording_extractor_full_dict.items()
 }
 sorting_extractor_full_dict = {
-    sort_class.__name__.replace("read_", "").replace("_sorting", "").lower(): sort_func.__name__
+    sort_class.__name__.replace("Sorting", "").replace("Extractor", "").lower(): sort_func
     for sort_class, sort_func in _sorting_extractor_full_dict.items()
 }
 event_extractor_full_dict = {
-    event_class.__name__.replace("read_", "").replace("_event", "").lower(): event_func.__name__
+    event_class.__name__.replace("Event", "").replace("Extractor", "").lower(): event_func
     for event_class, event_func in _event_extractor_full_dict.items()
 }
 snippets_extractor_full_dict = {
-    snippets_class.__name__.replace("read_", "").replace("_snippets", "").lower(): snippets_func.__name__
+    snippets_class.__name__.replace("Snippets", "").replace("Extractor", "").lower(): snippets_func
     for snippets_class, snippets_func in _snippets_extractor_full_dict.items()
 }
 
