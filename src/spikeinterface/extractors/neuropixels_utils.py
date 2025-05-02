@@ -5,7 +5,7 @@ from typing import Optional
 
 
 def get_neuropixels_sample_shifts(
-    num_channels: int = 384, num_adcs: int = 12, num_cycles: Optional[int] = None
+    num_channels: int = 384, num_channels_per_adc: int = 12, num_cycles: Optional[int] = None
 ) -> np.ndarray:
     """
     Calculate the relative sampling phase (inter-sample shifts) for each channel
@@ -26,10 +26,10 @@ def get_neuropixels_sample_shifts(
     num_channels : int, default: 384
         Total number of channels in the recording.
         Neuropixels probes typically have 384 channels.
-    num_adcs : int, default: 12
+    num_channels_per_adc : int, default: 12
         Number of channels assigned to each ADC on the probe.
-        Neuropixels 1.0 probes have 12 ADCs, each handling 32 channels.
-        Neuropixels 2.0 probes have 16 ADCs, each handling 24 channels.
+        Neuropixels 1.0 probes have 32 ADCs, each handling 12 channels.
+        Neuropixels 2.0 probes have 24 ADCs, each handling 16 channels.
     num_cycles : int or None, default: None
         Number of cycles in the ADC sampling sequence.
         Neuropixels 1.0 probes have 13 cycles for AP (action potential) signals
@@ -44,14 +44,16 @@ def get_neuropixels_sample_shifts(
         representing the fractional delay within the sampling period due to sequential ADC sampling.
     """
     if num_cycles is None:
-        num_cycles = num_adcs
+        num_cycles = num_channels_per_adc
 
-    adc_indices = np.floor(np.arange(num_channels) / (num_adcs * 2)) * 2 + np.mod(np.arange(num_channels), 2)
+    adc_indices = np.floor(np.arange(num_channels) / (num_channels_per_adc * 2)) * 2 + np.mod(
+        np.arange(num_channels), 2
+    )
 
     sample_shifts = np.zeros_like(adc_indices)
 
     for adc_index in adc_indices:
-        sample_shifts[adc_indices == adc_index] = np.arange(num_adcs) / num_cycles
+        sample_shifts[adc_indices == adc_index] = np.arange(num_channels_per_adc) / num_cycles
     return sample_shifts
 
 
