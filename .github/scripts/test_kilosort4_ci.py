@@ -70,7 +70,6 @@ PARAMS_TO_TEST_DICT = {
     "nearest_chans": 8,
     "nearest_templates": 35,
     "max_channel_distance": 5,
-    "templates_from_data": False,
     "n_templates": 10,
     "n_pcs": 3,
     "Th_single_ch": 4,
@@ -108,6 +107,9 @@ if parse(kilosort.__version__) >= parse("4.0.24"):
     )
     # max_peels is not affecting the results in this short dataset
     PARAMETERS_NOT_AFFECTING_RESULTS.append("max_peels")
+
+if parse(kilosort.__version__) >= parse("4.0.34"):
+    PARAMS_TO_TEST_DICT.update({"cluster_neighbors": 20})
 
 
 PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
@@ -178,11 +180,11 @@ class TestKilosort4Long:
         """
         paths = {
             "session_scope_tmp_path": tmp_path,
-            "recording_path": tmp_path / "my_test_recording",
+            "recording_path": tmp_path / "my_test_recording" / "traces_cached_seg0.raw",
             "probe_path": tmp_path / "my_test_probe.prb",
         }
 
-        recording.save(folder=paths["recording_path"], overwrite=True)
+        recording.save(folder=paths["recording_path"].parent, overwrite=True)
 
         probegroup = recording.get_probegroup()
         write_prb(paths["probe_path"].as_posix(), probegroup)
@@ -214,7 +216,7 @@ class TestKilosort4Long:
         tested_keys += additional_non_tested_keys
 
         for param_key in DEFAULT_SETTINGS:
-            if param_key not in ["n_chan_bin", "fs", "tmin", "tmax"]:
+            if param_key not in ["n_chan_bin", "fs", "tmin", "tmax", "templates_from_data"]:
                 assert param_key in tested_keys, f"param: {param_key} in DEFAULT SETTINGS but not tested."
 
     def test_spikeinterface_defaults_against_kilsort(self):
@@ -234,8 +236,11 @@ class TestKilosort4Long:
 
     # Testing Arguments ###
     def test_set_files_arguments(self):
+        expected_arguments = ["settings", "filename", "probe", "probe_name", "data_dir", "results_dir", "bad_channels"]
+        if parse(kilosort.__version__) >= parse("4.0.34"):
+            expected_arguments += ["shank_idx"]
         self._check_arguments(
-            set_files, ["settings", "filename", "probe", "probe_name", "data_dir", "results_dir", "bad_channels"]
+            set_files, expected_arguments
         )
 
     def test_initialize_ops_arguments(self):
@@ -620,7 +625,7 @@ class TestKilosort4Long:
         are through the function, these are split here.
         """
         settings = {
-            "data_dir": paths["recording_path"],
+            "filename": paths["recording_path"],
             "n_chan_bin": recording.get_num_channels(),
             "fs": recording.get_sampling_frequency(),
         }

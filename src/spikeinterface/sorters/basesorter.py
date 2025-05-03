@@ -266,21 +266,21 @@ class BaseSorter:
         }
         t0 = time.perf_counter()
 
-        try:
-            SorterClass._run_from_folder(sorter_output_folder, sorter_params, verbose)
-            t1 = time.perf_counter()
-            run_time = float(t1 - t0)
-            has_error = False
-        except Exception as err:
-            has_error = True
-            run_time = None
-            log["error"] = True
-            error_log_to_display = traceback.format_exc()
-            trace_lines = error_log_to_display.strip().split("\n")
-            error_to_json = ["Traceback (most recent call last):"] + [
-                f"  {line}" if not line.startswith(" ") else line for line in trace_lines[1:]
-            ]
-            log["error_trace"] = error_to_json
+        # try:
+        SorterClass._run_from_folder(sorter_output_folder, sorter_params, verbose)
+        t1 = time.perf_counter()
+        run_time = float(t1 - t0)
+        has_error = False
+        # except Exception as err:
+        #     has_error = True
+        #     run_time = None
+        #     log["error"] = True
+        #     error_log_to_display = traceback.format_exc()
+        #     trace_lines = error_log_to_display.strip().split("\n")
+        #     error_to_json = ["Traceback (most recent call last):"] + [
+        #         f"  {line}" if not line.startswith(" ") else line for line in trace_lines[1:]
+        #     ]
+        #     log["error_trace"] = error_to_json
 
         log["error"] = has_error
         log["run_time"] = run_time
