@@ -108,8 +108,9 @@ if parse(kilosort.__version__) >= parse("4.0.24"):
     # max_peels is not affecting the results in this short dataset
     PARAMETERS_NOT_AFFECTING_RESULTS.append("max_peels")
 
-if parse(kilosort.__version__) >= parse("4.0.34"):
-    PARAMS_TO_TEST_DICT.update({"cluster_neighbors": 20})
+if parse(kilosort.__version__) >= parse("4.0.33"):
+    PARAMS_TO_TEST_DICT.update({"cluster_neighbors": 11})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("position_limit")
 
 
 PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
@@ -538,33 +539,60 @@ class TestKilosort4Long:
         kilosort_output_dir = tmp_path / "kilosort_output_dir"
         spikeinterface_output_dir = tmp_path / "spikeinterface_output_dir"
 
-        def monkeypatch_filter_function(self, X, ops=None, ibatch=None):
-            """
-            This is a direct copy of the kilosort io.BinaryFiltered.filter
-            function, with hp_filter and whitening matrix code sections, and
-            comments removed. This is the easiest way to monkeypatch (tried a few approaches)
-            """
-            if self.chan_map is not None:
-                X = X[self.chan_map]
+        if parse(kilosort.__version__) >= parse("4.0.33"):
+            def monkeypatch_filter_function(self, X, ops=None, ibatch=None, skip_preproc=False):
+                """
+                This is a direct copy of the kilosort io.BinaryFiltered.filter
+                function, with hp_filter and whitening matrix code sections, and
+                comments removed. This is the easiest way to monkeypatch (tried a few approaches)
+                """
+                if self.chan_map is not None:
+                    X = X[self.chan_map]
 
-            if self.invert_sign:
-                X = X * -1
+                if self.invert_sign:
+                    X = X * -1
 
-            X = X - X.mean(1).unsqueeze(1)
-            if self.do_CAR:
-                X = X - torch.median(X, 0)[0]
+                X = X - X.mean(1).unsqueeze(1)
+                if self.do_CAR:
+                    X = X - torch.median(X, 0)[0]
 
-            if self.hp_filter is not None:
-                pass
+                if self.hp_filter is not None:
+                    pass
 
-            if self.artifact_threshold < np.inf:
-                if torch.any(torch.abs(X) >= self.artifact_threshold):
-                    return torch.zeros_like(X)
+                if self.artifact_threshold < np.inf:
+                    if torch.any(torch.abs(X) >= self.artifact_threshold):
+                        return torch.zeros_like(X)
 
-            if self.whiten_mat is not None:
-                pass
-            return X
+                if self.whiten_mat is not None:
+                    pass
+                return X
+        else:
+            def monkeypatch_filter_function(self, X, ops=None, ibatch=None):
+                """
+                This is a direct copy of the kilosort io.BinaryFiltered.filter
+                function, with hp_filter and whitening matrix code sections, and
+                comments removed. This is the easiest way to monkeypatch (tried a few approaches)
+                """
+                if self.chan_map is not None:
+                    X = X[self.chan_map]
 
+                if self.invert_sign:
+                    X = X * -1
+
+                X = X - X.mean(1).unsqueeze(1)
+                if self.do_CAR:
+                    X = X - torch.median(X, 0)[0]
+
+                if self.hp_filter is not None:
+                    pass
+
+                if self.artifact_threshold < np.inf:
+                    if torch.any(torch.abs(X) >= self.artifact_threshold):
+                        return torch.zeros_like(X)
+
+                if self.whiten_mat is not None:
+                    pass
+                return X
         monkeypatch.setattr("kilosort.io.BinaryFiltered.filter", monkeypatch_filter_function)
 
         ks_settings, _, ks_format_probe = self._get_kilosort_native_settings(recording, paths, param_key, param_value)
