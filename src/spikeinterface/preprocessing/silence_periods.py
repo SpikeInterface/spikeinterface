@@ -3,9 +3,8 @@ from __future__ import annotations
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-
-from spikeinterface.core import get_random_data_chunks, get_noise_levels
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
@@ -47,12 +46,10 @@ class SilencedPeriodsRecording(BasePreprocessor):
     def __init__(self, recording, list_periods, mode="zeros", noise_levels=None, seed=None, **random_chunk_kwargs):
         available_modes = ("zeros", "noise")
         num_seg = recording.get_num_segments()
-
         if num_seg == 1:
             if isinstance(list_periods, (list, np.ndarray)) and np.array(list_periods).ndim == 2:
-                # when unique segment accept list instead of of list of list/arrays
+                # when unique segment accept list instead of list of list/arrays
                 list_periods = [list_periods]
-
         # some checks
         assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
 
@@ -112,8 +109,7 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
-
-        if len(self.periods) > 0:
+        if self.periods.size > 0:
             new_interval = np.array([start_frame, end_frame])
             lower_index = np.searchsorted(self.periods[:, 1], new_interval[0])
             upper_index = np.searchsorted(self.periods[:, 0], new_interval[1])
