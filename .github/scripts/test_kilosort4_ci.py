@@ -110,7 +110,7 @@ if parse(kilosort.__version__) >= parse("4.0.24"):
 
 if parse(kilosort.__version__) >= parse("4.0.33"):
     PARAMS_TO_TEST_DICT.update({"cluster_neighbors": 11})
-    PARAMETERS_NOT_AFFECTING_RESULTS.append("position_limit")
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("cluster_neighbors")
 
 
 PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
