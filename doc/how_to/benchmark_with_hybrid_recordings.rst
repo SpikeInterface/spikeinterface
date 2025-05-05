@@ -2531,9 +2531,8 @@ Although non of the sorters find all units perfectly, ``Kilosort2.5``,
 ``Kilosort4``, and ``SpyKING CIRCUS 2`` all find around 10-12 hybrid
 units with accuracy greater than 80%. ``Kilosort4`` has a better overall
 curve, being able to find almost all units with an accuracy above 50%.
-``Kilosort2.5`` performs well when looking at precision (finding all
-spikes in a hybrid unit), at the cost of lower recall (finding spikes
-when it shouldn’t).
+``Kilosort2.5`` performs well when looking at precision (not finding spikes
+when it shouldn’t), but it has a lower recall (finding all spikes in the ground truth).
 
 In this example, we showed how to:
 

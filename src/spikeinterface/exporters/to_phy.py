@@ -35,7 +35,7 @@ def export_to_phy(
     **job_kwargs,
 ):
     """
-    Exports a waveform extractor to the phy template-gui format.
+    Exports a sorting analyzer to the phy template-gui format.
 
     Parameters
     ----------
@@ -167,7 +167,7 @@ def export_to_phy(
         f.write(f"dtype = '{dtype_str}'\n")
         f.write(f"offset = 0\n")
         f.write(f"sample_rate = {fs}\n")
-        f.write(f"hp_filtered = {sorting_analyzer.recording.is_filtered()}")
+        f.write(f"hp_filtered = {sorting_analyzer.is_filtered()}")
 
     # export spike_times/spike_templates/spike_clusters
     # here spike_labels is a remapping to unit_index

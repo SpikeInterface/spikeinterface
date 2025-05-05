@@ -22,6 +22,8 @@ spikeinterface.core
     .. autofunction:: estimate_sparsity
     .. autoclass:: ChannelSparsity
         :members:
+    .. autoclass:: Motion
+        :members:
     .. autoclass:: BinaryRecordingExtractor
     .. autoclass:: ZarrRecordingExtractor
     .. autoclass:: BinaryFolderRecording
@@ -72,6 +74,19 @@ Low-level
     :noindex:
 
     .. autoclass:: ChunkRecordingExecutor
+
+
+Back-compatibility with ``WaveformExtractor`` (version < 0.101.0)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: spikeinterface.core
+    :noindex:
+
+    .. autofunction:: extract_waveforms
+    .. autofunction:: load_waveforms
+    .. autofunction:: load_sorting_analyzer_or_waveforms
+
+
 
 spikeinterface.extractors
 -------------------------
@@ -128,7 +143,9 @@ Non-NEO-based
     .. autofunction:: read_mcsh5
     .. autofunction:: read_mda_recording
     .. autofunction:: read_mda_sorting
-    .. autofunction:: read_nwb
+    .. autofunction:: read_nwb_sorting
+    .. autofunction:: read_nwb_recording
+    .. autofunction:: read_nwb_timeseries
     .. autofunction:: read_phy
     .. autofunction:: read_shybrid_recording
     .. autofunction:: read_shybrid_sorting
@@ -136,6 +153,7 @@ Non-NEO-based
     .. autofunction:: toy_example
     .. autofunction:: read_tridesclous
     .. autofunction:: read_waveclus
+    .. autofunction:: read_whitematter
     .. autofunction:: read_yass
 
 
@@ -153,7 +171,7 @@ spikeinterface.preprocessing
     .. autofunction:: astype
     .. autofunction:: average_across_direction
     .. autofunction:: bandpass_filter
-    .. autofunction:: blank_staturation
+    .. autofunction:: blank_saturation
     .. autofunction:: center
     .. autofunction:: clip
     .. autofunction:: common_reference
@@ -171,6 +189,7 @@ spikeinterface.preprocessing
     .. autofunction:: interpolate_bad_channels
     .. autofunction:: normalize_by_quantile
     .. autofunction:: notch_filter
+    .. autofunction:: causal_filter
     .. autofunction:: phase_shift
     .. autofunction:: rectify
     .. autofunction:: remove_artifacts
@@ -263,8 +282,6 @@ spikeinterface.comparison
 
     .. autoclass:: CollisionGTComparison
     .. autoclass:: CorrelogramGTComparison
-    .. autoclass:: CollisionGTStudy
-    .. autoclass:: CorrelogramGTStudy
 
 
 
@@ -319,6 +336,7 @@ spikeinterface.exporters
 .. automodule:: spikeinterface.exporters
 
     .. autofunction:: export_to_phy
+    .. autofunction:: export_to_ibl_gui
     .. autofunction:: export_report
 
 
@@ -332,6 +350,9 @@ spikeinterface.curation
     .. autofunction:: remove_redundant_units
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
+    .. autofunction:: load_model
+    .. autofunction:: auto_label_units
+    .. autofunction:: train_model
 
 Deprecated
 ~~~~~~~~~~
@@ -432,7 +453,6 @@ Motion Correction
 ~~~~~~~~~~~~~~~~~
 .. automodule:: spikeinterface.sortingcomponents.motion
 
-    .. autoclass:: Motion
     .. autofunction:: estimate_motion
     .. autofunction:: interpolate_motion
     .. autofunction:: correct_motion_on_peaks

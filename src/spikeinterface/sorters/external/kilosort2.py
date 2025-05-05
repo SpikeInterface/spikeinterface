@@ -4,9 +4,9 @@ from pathlib import Path
 import os
 from typing import Union
 
-from ..basesorter import BaseSorter
+from spikeinterface.sorters.basesorter import BaseSorter
 from .kilosortbase import KilosortBase
-from ..utils import get_git_commit
+from spikeinterface.sorters.utils import get_git_commit
 
 PathType = Union[str, Path]
 
@@ -142,7 +142,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         return p
 
     @classmethod
-    def _get_specific_options(cls, ops, params):
+    def _get_specific_options(cls, ops, params) -> dict:
         """
         Adds specific options for Kilosort2 in the ops dict and returns the final dict
 

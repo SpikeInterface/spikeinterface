@@ -7,7 +7,7 @@ import warnings
 
 import numpy as np
 
-from spikeinterface.core import load_extractor, BaseSorting, BaseSortingSegment
+from spikeinterface.core import load, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from .basecomparison import BaseMultiComparison, MixinSpikeTrainComparison, MixinTemplateComparison
 from .paircomparisons import SymmetricSortingComparison, TemplateComparison
@@ -35,6 +35,9 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         Minimum agreement score to match units
     chance_score : float, default: 0.1
         Minimum agreement score to for a possible match
+    agreement_method : "count" | "distance", default: "count"
+        The method to compute agreement scores. The "count" method computes agreement scores from spike counts.
+        The "distance" method computes agreement scores from spike time distance functions.
     n_jobs : int, default: -1
        Number of cores to use in parallel. Uses all available if -1
     spiketrain_mode : "union" | "intersection", default: "union"
@@ -43,7 +46,9 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             - "intersection" : spike trains are the intersection between the spike trains of the
                best matching two sorters
     verbose : bool, default: False
-        if True, output is verbose
+        If True, output is verbose
+    do_matching : bool, default: True
+        If True, the comparison is done when the `MultiSortingComparison` is initialized
 
     Returns
     -------
@@ -58,6 +63,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         delta_time=0.4,  # sampling_frequency=None,
         match_score=0.5,
         chance_score=0.1,
+        agreement_method="count",
         n_jobs=-1,
         spiketrain_mode="union",
         verbose=False,
@@ -71,9 +77,10 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             name_list=name_list,
             match_score=match_score,
             chance_score=chance_score,
+            n_jobs=n_jobs,
             verbose=verbose,
         )
-        MixinSpikeTrainComparison.__init__(self, delta_time=delta_time, n_jobs=n_jobs)
+        MixinSpikeTrainComparison.__init__(self, delta_time=delta_time, agreement_method=agreement_method)
         self.set_frames_and_frequency(self.object_list)
         self._spiketrain_mode = spiketrain_mode
         self._spiketrains = None
@@ -91,7 +98,8 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             sorting2_name=self.name_list[j],
             delta_time=self.delta_time,
             match_score=self.match_score,
-            n_jobs=self.n_jobs,
+            chance_score=self.chance_score,
+            agreement_method=self.agreement_method,
             verbose=False,
         )
         return comp
@@ -228,7 +236,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         with (folder_path / "sortings.json").open() as f:
             dict_sortings = json.load(f)
         name_list = list(dict_sortings.keys())
-        sorting_list = [load_extractor(v, base_folder=folder_path) for v in dict_sortings.values()]
+        sorting_list = [load(v, base_folder=folder_path) for v in dict_sortings.values()]
         mcmp = MultiSortingComparison(sorting_list=sorting_list, name_list=list(name_list), do_matching=False, **kwargs)
         filename = str(folder_path / "multicomparison.gpickle")
         with open(filename, "rb") as f:
@@ -318,7 +326,15 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
     chance_score : float, default: 0.3
         Minimum agreement score to for a possible match
     verbose : bool, default: False
-        if True, output is verbose
+        If True, output is verbose
+    do_matching : bool, default: True
+        If True, the comparison is done when the `MultiSortingComparison` is initialized
+    support : "dense" | "union" | "intersection", default: "union"
+        The support to compute the similarity matrix.
+    num_shifts : int, default: 0
+        Number of shifts to use to shift templates to maximize similarity.
+    similarity_method : "cosine" | "l1" | "l2", default: "cosine"
+        Method for the similarity matrix.
 
     Returns
     -------

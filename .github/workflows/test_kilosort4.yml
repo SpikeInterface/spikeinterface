@@ -1,0 +1,74 @@
+name: Testing Kilosort4
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 0"  # Weekly on Sunday at noon UTC
+  pull_request:
+    paths:
+      - '**/kilosort4.py'
+
+jobs:
+  versions:
+    # Poll Pypi for all released KS4 versions >4.0.16, save to JSON
+    # and store them in a matrix for the next job.
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          pip install requests packaging
+          pip install .
+
+      - name: Fetch package versions from PyPI
+        run: |
+          python .github/scripts/check_kilosort4_releases.py
+        shell: bash
+
+      - name: Set matrix data
+        id: set-matrix
+        run: |
+          echo "matrix=$(jq -c . < .github/scripts/kilosort4-latest-version.json)" >> $GITHUB_OUTPUT
+
+  test:
+    needs: versions
+    name: ${{ matrix.ks_version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+        ks_version: ${{ fromJson(needs.versions.outputs.matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install SpikeInterface
+        run: |
+          pip install -e .[test]
+        shell: bash
+
+      - name: Install Kilosort
+        run: |
+          pip install kilosort==${{ matrix.ks_version }}
+        shell: bash
+
+      - name: Run new kilosort4 tests
+        run: |
+          pytest .github/scripts/test_kilosort4_ci.py
+        shell: bash

@@ -5,7 +5,7 @@ import numpy as np
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
-from ..core.core_tools import check_json
+from spikeinterface.core.core_tools import check_json
 
 
 class MetricsBaseWidget(BaseWidget):
@@ -24,8 +24,9 @@ class MetricsBaseWidget(BaseWidget):
         If given, a list of quality metrics to skip, default: None
     include_metrics: list or None, default: None
         If given, a list of quality metrics to include, default: None
-    unit_colors :  dict or None, default: None
-        If given, a dictionary with unit ids as keys and colors as values
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
     include_metrics_data : bool, default: True
@@ -235,6 +236,9 @@ class MetricsBaseWidget(BaseWidget):
             values = check_json(metrics.loc[unit_id].to_dict())
             values_skip_nans = {}
             for k, v in values.items():
+                # convert_dypes returns NaN as None or np.nan (for float)
+                if v is None:
+                    continue
                 if np.isnan(v):
                     continue
                 values_skip_nans[k] = v

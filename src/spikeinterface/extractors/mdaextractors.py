@@ -72,6 +72,7 @@ class MdaRecordingExtractor(BaseRecording):
         params_fname="params.json",
         geom_fname="geom.csv",
         dtype=None,
+        verbose=False,
         **job_kwargs,
     ):
         """Write a recording to file in MDA format.
@@ -93,6 +94,8 @@ class MdaRecordingExtractor(BaseRecording):
             File name of geom file
         dtype : dtype or None, default: None
             Data type to be used. If None dtype is same as recording traces.
+        verbose : bool
+            If True, shows progress bar when saving recording.
         **job_kwargs:
             Use by job_tools modules to set:
 
@@ -130,6 +133,7 @@ class MdaRecordingExtractor(BaseRecording):
             dtype=dtype,
             byte_offset=header_size,
             add_file_extension=False,
+            verbose=verbose,
             **job_kwargs,
         )
 
@@ -176,6 +180,13 @@ class MdaRecordingSegment(BaseRecordingSegment):
 class MdaSortingExtractor(BaseSorting):
     """Load MDA format data as a sorting extractor.
 
+    NOTE: As in the MDA format, the max_channel property indexes the channels that are given as input
+    to the sorter.
+    If sorting was run on a subset of channels of the recording, then the max_channel values are
+    based on that subset, so care must be taken when associating these values with a recording.
+    If additional sorting segments are added to this sorting extractor after initialization,
+    then max_channel will not be updated. The max_channel indices begin at 1.
+
     Parameters
     ----------
     file_path : str or Path
@@ -198,6 +209,19 @@ class MdaSortingExtractor(BaseSorting):
         sorting_segment = MdaSortingSegment(firings)
         self.add_sorting_segment(sorting_segment)
 
+        # Store the max channel for each unit
+        # Every spike assigned to a unit (label) has the same max channel
+        # ref: https://github.com/SpikeInterface/spikeinterface/issues/3695#issuecomment-2663329006
+        max_channels = []
+        segment = self._sorting_segments[0]
+        for unit_id in self.unit_ids:
+            label_mask = segment._labels == unit_id
+            # since all max channels are the same, we can just grab the first occurrence for the unit
+            max_channel = segment._max_channels[label_mask][0]
+            max_channels.append(max_channel)
+
+        self.set_property(key="max_channel", values=max_channels)
+
         self._kwargs = {
             "file_path": str(Path(file_path).absolute()),
             "sampling_frequency": sampling_frequency,
@@ -205,7 +229,7 @@ class MdaSortingExtractor(BaseSorting):
 
     @staticmethod
     def write_sorting(sorting, save_path, write_primary_channels=False):
-        assert sorting.get_num_segments() == 1, "MdaSorting.write_sorting() can only write a single segment " "sorting"
+        assert sorting.get_num_segments() == 1, "MdaSorting.write_sorting() can only write a single segment sorting"
         unit_ids = sorting.get_unit_ids()
         times_list = []
         labels_list = []
@@ -219,7 +243,7 @@ class MdaSortingExtractor(BaseSorting):
             else:
                 labels_list.append(np.ones(times.shape, dtype=int) * unit_index)
             if write_primary_channels:
-                if "max_channel" in sorting.get_unit_property_names(unit_id):
+                if "max_channel" in sorting.get_property_keys():
                     primary_channels_list.append([sorting.get_unit_property(unit_id, "max_channel")] * times.shape[0])
                 else:
                     raise ValueError(

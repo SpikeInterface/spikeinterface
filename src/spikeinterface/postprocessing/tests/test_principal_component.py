@@ -18,6 +18,18 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
     def test_extension(self, params):
         self.run_extension_tests(ComputePrincipalComponents, params=params)
 
+    def test_multi_processing(self):
+        """
+        Test the extension works with multiple processes.
+        """
+        sorting_analyzer = self._prepare_sorting_analyzer(
+            format="memory", sparse=False, extension_class=ComputePrincipalComponents
+        )
+        sorting_analyzer.compute("principal_components", mode="by_channel_local", n_jobs=2)
+        sorting_analyzer.compute(
+            "principal_components", mode="by_channel_local", n_jobs=2, max_threads_per_worker=4, mp_context="spawn"
+        )
+
     def test_mode_concatenated(self):
         """
         Replicate the "extension_function_params_list" test outside of
@@ -37,6 +49,13 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         pca = ext.data["pca_projection"]
         assert pca.ndim == 2
         assert pca.shape[1] == n_components
+
+        ext_rand = sorting_analyzer.get_extension("random_spikes")
+        num_rand_spikes = len(ext_rand.get_data())
+
+        some_projections = ext.get_some_projections()
+        assert some_projections[0].shape[0] == num_rand_spikes
+        assert some_projections[0].shape[1] == n_components
 
     @pytest.mark.parametrize("sparse", [True, False])
     def test_get_projections(self, sparse):
@@ -81,7 +100,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         some_channel_ids = sorting_analyzer.channel_ids[::2]
 
         random_spikes_indices = sorting_analyzer.get_extension("random_spikes").get_data()
-        all_num_spikes = sorting_analyzer.sorting.get_total_num_spikes()
+        all_num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit()
         unit_ids_num_spikes = np.sum(all_num_spikes[unit_id] for unit_id in some_unit_ids)
 
         # this should be all spikes all channels

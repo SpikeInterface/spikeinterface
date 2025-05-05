@@ -157,7 +157,7 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
         self.parent_segments = parent_segments
         self.all_length = [rec_seg.get_num_samples() for rec_seg in self.parent_segments]
         self.cumsum_length = [0] + [sum(self.all_length[: i + 1]) for i in range(len(self.all_length))]
-        self.total_length = int(np.sum(self.all_length))
+        self.total_length = int(sum(self.all_length))
 
     def get_num_samples(self):
         return self.total_length
@@ -243,6 +243,7 @@ class SelectSegmentRecording(BaseRecording):
         for segment_index in segment_indices:
             rec_seg = recording._recording_segments[segment_index]
             self.add_recording_segment(rec_seg)
+        self._parent = recording
 
         self._kwargs = {"recording": recording, "segment_indices": segment_indices}
 
@@ -450,7 +451,7 @@ class ProxyConcatenateSortingSegment(BaseSortingSegment):
         self.parent_segments = parent_segments
         self.parent_num_samples = parent_num_samples
         self.cumsum_length = np.cumsum([0] + self.parent_num_samples)
-        self.total_num_samples = np.sum(self.parent_num_samples)
+        self.total_num_samples = int(sum(self.parent_num_samples))
 
     def get_num_samples(self):
         return self.total_num_samples
@@ -564,6 +565,7 @@ class SplitSegmentSorting(BaseSorting):
             )
             sliced_segment = sliced_parent_sorting._sorting_segments[0]
             self.add_sorting_segment(sliced_segment)
+        self._parent = parent_sorting
 
         self._kwargs = {"parent_sorting": parent_sorting, "recording_or_recording_list": recording_list}
 

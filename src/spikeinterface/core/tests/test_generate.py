@@ -3,13 +3,14 @@ import psutil
 
 import numpy as np
 
-from spikeinterface.core import load_extractor
+from spikeinterface.core import load
 
 from probeinterface import generate_multi_columns_probe
 from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
     NoiseGeneratorRecording,
+    SortingGenerator,
     TransformSorting,
     generate_recording_by_size,
     InjectTemplatesRecording,
@@ -92,6 +93,73 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
         memory = mem_info.total - mem_info.available
 
     return memory
+
+
+def test_memory_sorting_generator():
+    # Test that get_traces does not consume more memory than allocated.
+
+    bytes_to_MiB_factor = 1024**2
+    relative_tolerance = 0.05  # relative tolerance of 5 per cent
+
+    sampling_frequency = 30000  # Hz
+    durations = [60.0]
+    num_units = 1000
+    seed = 0
+
+    before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
+    sorting = SortingGenerator(
+        num_units=num_units,
+        sampling_frequency=sampling_frequency,
+        durations=durations,
+        seed=seed,
+    )
+    after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
+    memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
+    ratio = memory_usage_MiB / before_instanciation_MiB
+    expected_allocation_MiB = 0
+    assert (
+        ratio <= 1.0 + relative_tolerance
+    ), f"SortingGenerator wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+
+
+def test_sorting_generator_consisency_across_calls():
+    sampling_frequency = 30000  # Hz
+    durations = [1.0]
+    num_units = 3
+    seed = 0
+
+    sorting = SortingGenerator(
+        num_units=num_units,
+        sampling_frequency=sampling_frequency,
+        durations=durations,
+        seed=seed,
+    )
+
+    for unit_id in sorting.get_unit_ids():
+        spike_train = sorting.get_unit_spike_train(unit_id=unit_id)
+        spike_train_again = sorting.get_unit_spike_train(unit_id=unit_id)
+
+        assert np.allclose(spike_train, spike_train_again)
+
+
+def test_sorting_generator_consisency_within_trains():
+    sampling_frequency = 30000  # Hz
+    durations = [1.0]
+    num_units = 3
+    seed = 0
+
+    sorting = SortingGenerator(
+        num_units=num_units,
+        sampling_frequency=sampling_frequency,
+        durations=durations,
+        seed=seed,
+    )
+
+    for unit_id in sorting.get_unit_ids():
+        spike_train = sorting.get_unit_spike_train(unit_id=unit_id, start_frame=0, end_frame=1000)
+        spike_train_again = sorting.get_unit_spike_train(unit_id=unit_id, start_frame=0, end_frame=1000)
+
+        assert np.allclose(spike_train, spike_train_again)
 
 
 def test_noise_generator_memory():
@@ -295,7 +363,7 @@ def test_noise_generator_consistency_after_dump(strategy, seed):
     )
     traces0 = rec0.get_traces()
 
-    rec1 = load_extractor(rec0.to_dict())
+    rec1 = load(rec0.to_dict())
     traces1 = rec1.get_traces()
 
     assert np.allclose(traces0, traces1)
@@ -477,7 +545,7 @@ def test_inject_templates():
         assert rec.get_traces(start_frame=rec_noise.get_num_frames(0) - 200, segment_index=0).shape == (200, 4)
 
         # Check dumpability
-        saved_loaded = load_extractor(rec.to_dict())
+        saved_loaded = load(rec.to_dict())
         check_recordings_equal(rec, saved_loaded, return_scaled=False)
 
 
@@ -545,7 +613,7 @@ def test_generate_ground_truth_recording():
 
 def test_generate_sorting_to_inject():
     durations = [10.0, 20.0]
-    sorting = generate_sorting(num_units=10, durations=durations, sampling_frequency=30000, firing_rates=1.0)
+    sorting = generate_sorting(num_units=10, durations=durations, sampling_frequency=30000, firing_rates=1.0, seed=2205)
     injected_sorting = generate_sorting_to_inject(
         sorting, [int(duration * sorting.sampling_frequency) for duration in durations], seed=2308
     )

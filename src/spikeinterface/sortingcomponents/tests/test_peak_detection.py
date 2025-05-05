@@ -22,7 +22,7 @@ from spikeinterface.sortingcomponents.peak_detection import (
 )
 
 from spikeinterface.core.node_pipeline import run_node_pipeline
-from spikeinterface.sortingcomponents.tools import get_prototype_spike
+from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms_from_peaks
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
@@ -314,7 +314,9 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
 
     ms_before = 1.0
     ms_after = 1.0
-    prototype = get_prototype_spike(recording, peaks_by_channel_np, ms_before, ms_after, **job_kwargs)
+    prototype, _, _ = get_prototype_and_waveforms_from_peaks(
+        recording, peaks=peaks_by_channel_np, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+    )
 
     peaks_local_mf_filtering = detect_peaks(
         recording,
@@ -328,19 +330,38 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
     )
     assert len(peaks_local_mf_filtering) > len(peaks_by_channel_np)
 
+    peaks_local_mf_filtering_both = detect_peaks(
+        recording,
+        method="matched_filtering",
+        peak_sign="both",
+        detect_threshold=5,
+        exclude_sweep_ms=0.1,
+        prototype=prototype,
+        ms_before=1.0,
+        **job_kwargs,
+    )
+    assert len(peaks_local_mf_filtering_both) > len(peaks_local_mf_filtering)
+
     DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
 
-        peaks = peaks_local_mf_filtering
+        peaks_local = peaks_by_channel_np
+        peaks_mf_neg = peaks_local_mf_filtering
+        peaks_mf_both = peaks_local_mf_filtering_both
+        labels = ["locally_exclusive", "mf_neg", "mf_both"]
 
-        sample_inds, chan_inds, amplitudes = peaks["sample_index"], peaks["channel_index"], peaks["amplitude"]
+        fig, ax = plt.subplots()
         chan_offset = 500
         traces = recording.get_traces().copy()
         traces += np.arange(traces.shape[1])[None, :] * chan_offset
-        fig, ax = plt.subplots()
         ax.plot(traces, color="k")
-        ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, color="r")
+
+        for count, peaks in enumerate([peaks_local, peaks_mf_neg, peaks_mf_both]):
+            sample_inds, chan_inds, amplitudes = peaks["sample_index"], peaks["channel_index"], peaks["amplitude"]
+            ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, label=labels[count])
+
+        ax.legend()
         plt.show()
 
 

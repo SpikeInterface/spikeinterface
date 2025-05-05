@@ -39,7 +39,7 @@ jobs:
           pip install tabulate
           echo "# Timing profile of core tests in ${{matrix.os}}" >> $GITHUB_STEP_SUMMARY
           # Outputs markdown summary to standard output
-          python ./.github/build_job_summary.py report.txt >> $GITHUB_STEP_SUMMARY
+          python ./.github/scripts/build_job_summary.py report.txt >> $GITHUB_STEP_SUMMARY
           cat $GITHUB_STEP_SUMMARY
           rm report.txt
         shell: bash  # Necessary for pipeline to work on windows

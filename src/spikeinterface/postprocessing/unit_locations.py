@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import warnings
 
-from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from .localization_tools import _unit_location_methods
 
 
@@ -24,22 +24,22 @@ class ComputeUnitLocations(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    method: "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
+    method : "monopolar_triangulation" |  "center_of_mass" | "grid_convolution", default: "monopolar_triangulation"
         The method to use for localization
-    method_kwargs: dict, default: {}
-        Other kwargs depending on the method
+    **method_kwargs : dict, default: {}
+        Kwargs which are passed to the method function. These can be found in the docstrings of `compute_center_of_mass`, `compute_grid_convolution` and `compute_monopolar_triangulation`.
 
     Returns
     -------
-    unit_locations: np.array
+    unit_locations : np.array
         unit location with shape (num_unit, 2) or (num_unit, 3) or (num_unit, 3) (with alpha)
     """
 
     extension_name = "unit_locations"
     depend_on = ["templates"]
-    need_recording = True
+    need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
     need_backward_compatibility_on_load = True
@@ -94,7 +94,7 @@ class ComputeUnitLocations(AnalyzerExtension):
         method_kwargs.pop("method")
 
         if method not in _unit_location_methods:
-            raise ValueError(f"Wrong ethod for unit_locations : it should be in {list(_unit_location_methods.keys())}")
+            raise ValueError(f"Wrong method for unit_locations : it should be in {list(_unit_location_methods.keys())}")
 
         func = _unit_location_methods[method]
         self.data["unit_locations"] = func(self.sorting_analyzer, **method_kwargs)

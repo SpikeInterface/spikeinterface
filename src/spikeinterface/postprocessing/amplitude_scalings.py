@@ -11,7 +11,7 @@ from spikeinterface.core.sortinganalyzer import register_result_extension, Analy
 
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
 
-from ..core.template_tools import get_dense_templates_array, _get_nbefore
+from spikeinterface.core.template_tools import get_dense_templates_array, _get_nbefore
 
 
 class ComputeAmplitudeScalings(AnalyzerExtension):
@@ -456,7 +456,7 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
 
     Returns
     -------
-    collision_spikes_dict: np.array
+    collision_spikes_dict: dict
         A dictionary with collisions. The key is the index of the spike with collision, the value is an
         array of overlapping spikes, including the spike itself at position 0.
     """

@@ -10,8 +10,7 @@ on:
       - main
 
 env:
-  KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
-  KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+  KACHERY_API_KEY: ${{ secrets.KACHERY_API_KEY }}
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,8 +23,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.12"]  # Lower and higher versions we support
-        os: [macos-13, windows-latest, ubuntu-latest]
+        python-version: ["3.9", "3.13"]  # Lower and higher versions we support
+        os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python ${{ matrix.python-version }}
@@ -35,7 +34,7 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@v46.0.1
 
       - name: List all changed files
         shell: bash
@@ -46,11 +45,11 @@ jobs:
             echo "$file was changed"
           done
 
-      - name: Set testing environment  # This decides which tests are run and whether to install especial dependencies
+      - name: Set testing environment  # This decides which tests are run and whether to install special dependencies
         shell: bash
         run: |
           changed_files="${{ steps.changed-files.outputs.all_changed_files }}"
-          python .github/determine_testing_environment.py $changed_files
+          python .github/scripts/determine_testing_environment.py $changed_files
 
       - name: Display testing environment
         shell: bash
@@ -74,6 +73,9 @@ jobs:
         run: |
           pip install -e .[test_core]
         shell: bash
+
+      - name: Pip list
+        run: pip list
 
       - name: Test core
         run: pytest -m "core"
@@ -105,14 +107,7 @@ jobs:
         run: |
           pip install datalad-installer
           if [ ${{ runner.os }} = 'Linux' ]; then
-            wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
-            mkdir /home/runner/work/installation
-            mv git-annex-standalone-amd64.tar.gz /home/runner/work/installation/
-            workdir=$(pwd)
-            cd /home/runner/work/installation
-            tar xvzf git-annex-standalone-amd64.tar.gz
-            echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
-            cd $workdir
+            datalad-installer --sudo ok git-annex --method datalad/packages
           elif [ ${{ runner.os }} = 'macOS' ]; then
             datalad-installer --sudo ok git-annex --method brew
           elif [ ${{ runner.os }} = 'Windows' ]; then
@@ -135,13 +130,15 @@ jobs:
         if: env.RUN_EXTRACTORS_TESTS == 'true'
         run: |
           pip install -e .[extractors,streaming_extractors,test_extractors]
+          pip list
           ./.github/run_tests.sh "extractors and not streaming_extractors" --no-virtual-env
 
       - name: Test streaming extractors
         shell: bash
-        if: env.RUN_STREAMING_EXTRACTORS_TESTS
+        if: env.RUN_STREAMING_EXTRACTORS_TESTS == 'true'
         run: |
           pip install -e .[streaming_extractors,test_extractors]
+          pip list
           ./.github/run_tests.sh "streaming_extractors" --no-virtual-env
 
       - name: Test preprocessing
@@ -149,18 +146,21 @@ jobs:
         if: env.RUN_PREPROCESSING_TESTS == 'true'
         run: |
           pip install -e .[preprocessing,test_preprocessing]
+          pip list
           ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
 
       - name: Install remaining testing dependencies # TODO: Remove this step once we have better modularization
         shell: bash
         run: |
           pip install -e .[test]
+          pip list
 
       - name: Test postprocessing
         shell: bash
         if: env.RUN_POSTPROCESSING_TESTS == 'true'
         run: |
           pip install -e .[full]
+          pip list
           ./.github/run_tests.sh postprocessing --no-virtual-env
 
       - name: Test quality metrics
@@ -168,6 +168,7 @@ jobs:
         if: env.RUN_QUALITYMETRICS_TESTS == 'true'
         run: |
           pip install -e .[qualitymetrics]
+          pip list
           ./.github/run_tests.sh qualitymetrics --no-virtual-env
 
       - name: Test comparison
@@ -175,6 +176,7 @@ jobs:
         if: env.RUN_COMPARISON_TESTS == 'true'
         run: |
           pip install -e .[full]
+          pip list
           ./.github/run_tests.sh comparison --no-virtual-env
 
       - name: Test core sorters
@@ -182,6 +184,7 @@ jobs:
         if: env.RUN_SORTERS_TESTS == 'true'
         run: |
           pip install -e .[full]
+          pip list
           ./.github/run_tests.sh sorters --no-virtual-env
 
       - name: Test internal sorters
@@ -189,6 +192,7 @@ jobs:
         if: env.RUN_INTERNAL_SORTERS_TESTS == 'true'
         run: |
           pip install -e .[full]
+          pip list
           ./.github/run_tests.sh sorters_internal --no-virtual-env
 
       - name: Test curation
@@ -196,13 +200,17 @@ jobs:
         if: env.RUN_CURATION_TESTS == 'true'
         run: |
           pip install -e .[full]
+          pip list
           ./.github/run_tests.sh curation --no-virtual-env
 
       - name: Test widgets
         shell: bash
         if: env.RUN_WIDGETS_TESTS == 'true'
+        env:
+          KACHERY_ZONE: "scratch"
         run: |
-          pip install -e .[full]
+          pip install -e .[full,widgets]
+          pip list
           ./.github/run_tests.sh widgets --no-virtual-env
 
       - name: Test exporters
@@ -210,6 +218,7 @@ jobs:
         if: env.RUN_EXPORTERS_TESTS == 'true'
         run: |
           pip install -e .[full]
+          pip list
           ./.github/run_tests.sh exporters --no-virtual-env
 
       - name: Test sortingcomponents
@@ -217,6 +226,7 @@ jobs:
         if: env.RUN_SORTINGCOMPONENTS_TESTS == 'true'
         run: |
           pip install -e .[full]
+          pip list
           ./.github/run_tests.sh sortingcomponents --no-virtual-env
 
       - name: Test generation
@@ -224,4 +234,5 @@ jobs:
         if: env.RUN_GENERATION_TESTS == 'true'
         run: |
           pip install -e .[full]
+          pip list
           ./.github/run_tests.sh generation --no-virtual-env

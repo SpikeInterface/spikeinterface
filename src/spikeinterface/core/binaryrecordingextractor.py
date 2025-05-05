@@ -23,8 +23,6 @@ class BinaryRecordingExtractor(BaseRecording):
         The sampling frequency
     num_channels : int
         Number of channels
-    num_chan : int [deprecated, use num_channels instead, will be removed as early as v0.100.0]
-        Number of channels
     dtype : str or dtype
         The dtype of the binary file
     time_axis : int, default: 0
@@ -57,7 +55,7 @@ class BinaryRecordingExtractor(BaseRecording):
         file_paths,
         sampling_frequency,
         dtype,
-        num_channels=None,
+        num_channels: int,
         t_starts=None,
         channel_ids=None,
         time_axis=0,
@@ -65,13 +63,7 @@ class BinaryRecordingExtractor(BaseRecording):
         gain_to_uV=None,
         offset_to_uV=None,
         is_filtered=None,
-        num_chan=None,
     ):
-        # This assigns num_channels if num_channels is not None, otherwise num_chan is assigned
-        num_channels = num_channels or num_chan
-        assert num_channels is not None, "You must provide num_channels or num_chan"
-        if num_chan is not None:
-            warnings.warn("`num_chan` is to be deprecated in version 0.100, please use `num_channels` instead")
 
         if channel_ids is None:
             channel_ids = list(range(num_channels))
@@ -156,6 +148,18 @@ class BinaryRecordingExtractor(BaseRecording):
         )
         return d
 
+    def __del__(self):
+        """
+        Ensures that all segment resources are properly cleaned up when this recording extractor is deleted.
+        Closes any open file handles in the recording segments.
+        """
+        # Close all recording segments
+        if hasattr(self, "_recording_segments"):
+            for segment in self._recording_segments:
+                # This will trigger the __del__ method of the BinaryRecordingSegment
+                # which will close the file handle
+                del segment
+
 
 BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.write_recording.__doc__.format(
     _shared_job_kwargs_doc
@@ -230,6 +234,15 @@ class BinaryRecordingSegment(BaseRecordingSegment):
                 traces = traces[:, channel_indices]
 
             return traces
+
+    def __del__(self):
+        # Ensure that the file handle is closed when the segment is garbage-collected
+        try:
+            if hasattr(self, "file") and self.file and not self.file.closed:
+                self.file.close()
+        except Exception as e:
+            warnings.warn(f"Error closing file handle in BinaryRecordingSegment: {e}")
+            pass
 
 
 # For backward compatibility (old good time)

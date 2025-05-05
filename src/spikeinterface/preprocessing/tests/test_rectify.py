@@ -1,12 +1,5 @@
-import pytest
-from pathlib import Path
-
-from spikeinterface import set_global_tmp_folder
 from spikeinterface.core import generate_recording
-
 from spikeinterface.preprocessing import rectify
-
-import numpy as np
 
 
 def test_rectify():
@@ -15,7 +8,7 @@ def test_rectify():
     rec2 = rectify(rec)
     rec2.save(verbose=False)
 
-    traces = rec2.get_traces(segment_index=0, channel_ids=[1])
+    traces = rec2.get_traces(segment_index=0, channel_ids=["1"])
     assert traces.shape[1] == 1
 
     # import matplotlib.pyplot as plt

@@ -30,8 +30,8 @@ from .multicomparisons import (
 )
 
 from .groundtruthstudy import GroundTruthStudy
-from .collision import CollisionGTComparison, CollisionGTStudy
-from .correlogram import CorrelogramGTComparison, CorrelogramGTStudy
+from .collision import CollisionGTComparison
+from .correlogram import CorrelogramGTComparison
 
 from .hybrid import (
     HybridSpikesRecording,

@@ -56,7 +56,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         spike_clusters = np.atleast_1d(spike_clusters.squeeze())
 
         clust_id = np.unique(spike_clusters)
-        unique_unit_ids = list(clust_id)
+        unique_unit_ids = [int(c) for c in clust_id]
         params = read_python(str(phy_folder / "params.py"))
         sampling_frequency = params["sample_rate"]
 
@@ -153,13 +153,14 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         self.extra_requirements.append("pandas")
 
         for prop_name in cluster_info.columns:
-            if prop_name in ["chan_grp", "ch_group"]:
+            if prop_name in ["chan_grp", "ch_group", "channel_group"]:
                 self.set_property(key="group", values=cluster_info[prop_name])
             elif prop_name == "cluster_id":
                 self.set_property(key="original_cluster_id", values=cluster_info[prop_name])
             elif prop_name == "group":
                 # rename group property to 'quality'
-                self.set_property(key="quality", values=cluster_info[prop_name])
+                values = cluster_info[prop_name].values.astype("str")
+                self.set_property(key="quality", values=values)
             else:
                 if load_all_cluster_properties:
                     # pandas loads strings with empty values as objects with NaNs

@@ -15,7 +15,10 @@ class TestTimeHandling:
     is generated on the fly. Both time representations are tested here.
     """
 
-    # Fixtures #####
+    # #########################################################################
+    # Fixtures
+    # #########################################################################
+
     @pytest.fixture(scope="session")
     def time_vector_recording(self):
         """
@@ -49,19 +52,14 @@ class TestTimeHandling:
         spaced timeseries data. Return the original recording,
         recoridng with time vectors added and list including the added time vectors.
         """
-        times_recording = copy.deepcopy(raw_recording)
+        times_recording = raw_recording.clone()
         all_time_vectors = []
         for segment_index in range(raw_recording.get_num_segments()):
 
             t_start = segment_index + 1 * 100
+            t_stop = t_start + raw_recording.get_duration(segment_index) + segment_index + 1
 
-            some_small_increasing_numbers = np.arange(times_recording.get_num_samples(segment_index)) * (
-                1 / times_recording.get_sampling_frequency()
-            )
-
-            offsets = np.cumsum(some_small_increasing_numbers)
-            time_vector = t_start + times_recording.get_times(segment_index) + offsets
-
+            time_vector = np.linspace(t_start, t_stop, raw_recording.get_num_samples(segment_index))
             all_time_vectors.append(time_vector)
             times_recording.set_times(times=time_vector, segment_index=segment_index)
 
@@ -100,7 +98,10 @@ class TestTimeHandling:
         raw_recording, times_recording, all_times = time_recording_fixture
         return (raw_recording, times_recording, all_times)
 
-    # Tests #####
+    # #########################################################################
+    # Tests
+    # #########################################################################
+
     def test_has_time_vector(self, time_vector_recording):
         """
         Test the `has_time_vector` function returns `False` before
@@ -127,7 +128,7 @@ class TestTimeHandling:
 
         if mode == "zarr":
             folder_name += ".zarr"
-        recording_load = si.load_extractor(tmp_path / folder_name)
+        recording_load = si.load(tmp_path / folder_name)
 
         self._check_times_match(recording_cache, all_times)
         self._check_times_match(recording_load, all_times)
@@ -310,7 +311,87 @@ class TestTimeHandling:
 
         assert np.array_equal(sorting_analyzer.get_total_duration(), raw_recording.get_total_duration())
 
-    # Helpers ####
+    @pytest.mark.parametrize("fixture_name", ["time_vector_recording", "t_start_recording"])
+    @pytest.mark.parametrize("shift", [-123.456, 123.456])
+    def test_shift_time_all_segments(self, request, fixture_name, shift):
+        """
+        Shift the times in every segment using the `None` default, then
+        check that every segment of the recording is shifted as expected.
+        """
+        _, times_recording, all_times = self._get_fixture_data(request, fixture_name)
+
+        num_segments, orig_seg_data = self._store_all_times(times_recording)
+
+        times_recording.shift_times(shift)  # use default `segment_index=None`
+
+        for idx in range(num_segments):
+            assert np.allclose(
+                orig_seg_data[idx], times_recording.get_times(segment_index=idx) - shift, rtol=0, atol=1e-8
+            )
+
+    @pytest.mark.parametrize("fixture_name", ["time_vector_recording", "t_start_recording"])
+    @pytest.mark.parametrize("shift", [-123.456, 123.456])
+    def test_shift_times_different_segments(self, request, fixture_name, shift):
+        """
+        Shift each segment separately, and check the shifted segment only
+        is shifted as expected.
+        """
+        _, times_recording, all_times = self._get_fixture_data(request, fixture_name)
+
+        num_segments, orig_seg_data = self._store_all_times(times_recording)
+
+        # For each segment, shift the segment only and check the
+        # times are updated as expected.
+        for idx in range(num_segments):
+
+            scaler = idx + 2
+            times_recording.shift_times(shift * scaler, segment_index=idx)
+
+            assert np.allclose(
+                orig_seg_data[idx], times_recording.get_times(segment_index=idx) - shift * scaler, rtol=0, atol=1e-8
+            )
+
+            # Just do a little check that we are not
+            # accidentally changing some other segments,
+            # which should remain unchanged at this point in the loop.
+            if idx != num_segments - 1:
+                assert np.array_equal(orig_seg_data[idx + 1], times_recording.get_times(segment_index=idx + 1))
+
+    @pytest.mark.parametrize("fixture_name", ["time_vector_recording", "t_start_recording"])
+    def test_save_and_load_time_shift(self, request, fixture_name, tmp_path):
+        """
+        Save the shifted data and check the shift is propagated correctly.
+        """
+        _, times_recording, all_times = self._get_fixture_data(request, fixture_name)
+
+        shift = 100
+        times_recording.shift_times(shift=shift)
+
+        times_recording.save(folder=tmp_path / "my_file")
+
+        loaded_recording = si.load(tmp_path / "my_file")
+
+        for idx in range(times_recording.get_num_segments()):
+            assert np.array_equal(
+                times_recording.get_times(segment_index=idx), loaded_recording.get_times(segment_index=idx)
+            )
+
+    def _store_all_times(self, recording):
+        """
+        Convenience function to store original times of all segments to a dict.
+        """
+        num_segments = recording.get_num_segments()
+        seg_data = {}
+
+        for idx in range(num_segments):
+            seg_data[idx] = copy.deepcopy(recording.get_times(segment_index=idx))
+
+        return num_segments, seg_data
+
+    # #########################################################################
+    # Helpers
+    # #########################################################################
+
     def _check_times_match(self, recording, all_times):
         """
         For every segment in a recording, check the `get_times()`

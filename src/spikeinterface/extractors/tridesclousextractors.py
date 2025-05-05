@@ -30,7 +30,6 @@ class TridesclousSortingExtractor(BaseSorting):
         except ImportError:
             raise ImportError(self.installation_mesg)
 
-        assert self.installed, self.installation_mesg
         tdc_folder = Path(folder_path)
 
         dataio = tdc.DataIO(str(tdc_folder))

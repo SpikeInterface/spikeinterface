@@ -55,11 +55,11 @@ def test_scaling_in_preprocessing_chain():
     recording.set_channel_gains(gains)
     recording.set_channel_offsets(offsets)
 
-    centered_recording = CenterRecording(scale_to_uV(recording=recording))
+    centered_recording = CenterRecording(scale_to_uV(recording=recording), seed=2205)
     traces_scaled_with_argument = centered_recording.get_traces(return_scaled=True)
 
     # Chain preprocessors
-    centered_recording_scaled = CenterRecording(scale_to_uV(recording=recording))
+    centered_recording_scaled = CenterRecording(scale_to_uV(recording=recording), seed=2205)
     traces_scaled_with_preprocessor = centered_recording_scaled.get_traces()
 
     np.testing.assert_allclose(traces_scaled_with_argument, traces_scaled_with_preprocessor)
@@ -68,3 +68,8 @@ def test_scaling_in_preprocessing_chain():
     traces_scaled_with_preprocessor_and_argument = centered_recording_scaled.get_traces(return_scaled=True)
 
     np.testing.assert_allclose(traces_scaled_with_preprocessor, traces_scaled_with_preprocessor_and_argument)
+
+
+if __name__ == "__main__":
+    test_scale_to_uV()
+    test_scaling_in_preprocessing_chain()

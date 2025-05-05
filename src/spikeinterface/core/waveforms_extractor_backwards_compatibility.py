@@ -23,7 +23,7 @@ from .sortinganalyzer import create_sorting_analyzer, get_extension_class
 from .job_tools import split_job_kwargs
 from .sparsity import ChannelSparsity
 from .sortinganalyzer import SortingAnalyzer, load_sorting_analyzer
-from .base import load_extractor
+from .loading import load
 from .analyzer_extension_core import ComputeRandomSpikes, ComputeWaveforms, ComputeTemplates
 
 _backwards_compatibility_msg = """####
@@ -248,6 +248,9 @@ class MockWaveformExtractor:
     def has_extension(self, extension_name: str) -> bool:
         return self.sorting_analyzer.has_extension(extension_name)
 
+    def load_extension(self, extension_name: str):
+        return self.sorting_analyzer.get_extension(extension_name)
+
     def select_units(self, unit_ids):
         return self.sorting_analyzer.select_units(unit_ids)
 
@@ -343,12 +346,37 @@ class MockWaveformExtractor:
         return templates[0]
 
 
+def load_sorting_analyzer_or_waveforms(folder, sorting=None):
+    """
+    Load a SortingAnalyzer from either a newly saved SortingAnalyzer folder or an old WaveformExtractor folder.
+
+    Parameters
+    ----------
+    folder: str | Path
+        The folder to the sorting analyzer or waveform extractor
+    sorting: BaseSorting | None, default: None
+        The sorting object to instantiate with the SortingAnalyzer (only used for old WaveformExtractor)
+
+    Returns
+    -------
+    sorting_analyzer: SortingAnalyzer
+        The returned SortingAnalyzer.
+    """
+    folder = Path(folder)
+    if folder.suffix == ".zarr":
+        return load_sorting_analyzer(folder)
+    elif (folder / "spikeinterface_info.json").exists():
+        return load_sorting_analyzer(folder)
+    else:
+        return load_waveforms(folder, sorting=sorting, output="SortingAnalyzer")
+
+
 def load_waveforms(
     folder,
     with_recording: bool = True,
     sorting: Optional[BaseSorting] = None,
     output="MockWaveformExtractor",
-):
+) -> MockWaveformExtractor | SortingAnalyzer:
     """
     This read an old WaveformsExtactor folder (folder or zarr) and convert it into a SortingAnalyzer or MockWaveformExtractor.
 
@@ -450,21 +478,21 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
     recording = None
     if (folder / "recording.json").exists():
         try:
-            recording = load_extractor(folder / "recording.json", base_folder=folder)
+            recording = load(folder / "recording.json", base_folder=folder)
         except:
             pass
     elif (folder / "recording.pickle").exists():
         try:
-            recording = load_extractor(folder / "recording.pickle", base_folder=folder)
+            recording = load(folder / "recording.pickle", base_folder=folder)
         except:
             pass
 
     # sorting
     if sorting is None:
         if (folder / "sorting.json").exists():
-            sorting = load_extractor(folder / "sorting.json", base_folder=folder)
+            sorting = load(folder / "sorting.json", base_folder=folder)
         elif (folder / "sorting.pickle").exists():
-            sorting = load_extractor(folder / "sorting.pickle", base_folder=folder)
+            sorting = load(folder / "sorting.pickle", base_folder=folder)
 
     sorting_analyzer = SortingAnalyzer.create_memory(
         sorting, recording, sparsity=sparsity, return_scaled=return_scaled, rec_attributes=rec_attributes
@@ -511,6 +539,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         ext = ComputeRandomSpikes(sorting_analyzer)
         ext.params = dict()
         ext.data = dict(random_spikes_indices=random_spikes_indices)
+        ext.run_info = None
         sorting_analyzer.extensions["random_spikes"] = ext
 
         ext = ComputeWaveforms(sorting_analyzer)
@@ -520,6 +549,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
             dtype=params["dtype"],
         )
         ext.data["waveforms"] = waveforms
+        ext.run_info = None
         sorting_analyzer.extensions["waveforms"] = ext
 
     # templates saved dense
@@ -534,6 +564,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         ext.params = dict(ms_before=params["ms_before"], ms_after=params["ms_after"], operators=list(templates.keys()))
         for mode, arr in templates.items():
             ext.data[mode] = arr
+        ext.run_info = None
         sorting_analyzer.extensions["templates"] = ext
 
     for old_name, new_name in old_extension_to_new_class_map.items():
@@ -606,6 +637,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         ext.set_params(**updated_params, save=False)
         if ext.need_backward_compatibility_on_load:
             ext._handle_backward_compatibility_on_load()
+        ext.run_info = None
 
         sorting_analyzer.extensions[new_name] = ext
 
@@ -647,7 +679,7 @@ def make_ext_params_up_to_date(ext, old_params, new_params):
 #     recording = None
 #     try:
 #         recording_dict = waveforms_root.attrs["recording"]
-#         recording = load_extractor(recording_dict, base_folder=folder)
+#         recording = load(recording_dict, base_folder=folder)
 #     except:
 #         pass
 
@@ -655,7 +687,7 @@ def make_ext_params_up_to_date(ext, old_params, new_params):
 #     if sorting is None:
 #         assert "sorting" in waveforms_root.attrs, "Could not load sorting object"
 #         sorting_dict = waveforms_root.attrs["sorting"]
-#         sorting = load_extractor(sorting_dict, base_folder=folder)
+#         sorting = load(sorting_dict, base_folder=folder)
 
 #     if "sparsity" in waveforms_root.attrs:
 #         sparsity_dict = waveforms_root.attrs["sparsity"]

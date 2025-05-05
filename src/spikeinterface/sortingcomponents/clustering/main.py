@@ -12,15 +12,15 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object
-    peaks: numpy.array
+    peaks : numpy.array
         The peak vector
-    method: str
+    method : str
         Which method to use ("stupid" | "XXXX")
-    method_kwargs: dict, default: dict()
+    method_kwargs : dict, default: dict()
         Keyword arguments for the chosen method
-    extra_outputs: bool, default: False
+    extra_outputs : bool, default: False
         If True then debug is also return
     {}
 
@@ -41,7 +41,7 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
     params = method_class._default_params.copy()
     params.update(**method_kwargs)
 
-    outputs = method_class.main_function(recording, peaks, params)
+    outputs = method_class.main_function(recording, peaks, params, job_kwargs=job_kwargs)
 
     if extra_outputs:
         return outputs

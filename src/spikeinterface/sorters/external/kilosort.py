@@ -5,9 +5,9 @@ import os
 from typing import Union
 import numpy as np
 
-from ..basesorter import BaseSorter
+from spikeinterface.sorters.basesorter import BaseSorter
 from .kilosortbase import KilosortBase
-from ..utils import get_git_commit
+from spikeinterface.sorters.utils import get_git_commit
 
 
 def check_if_installed(kilosort_path: Union[str, None]):
@@ -131,7 +131,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         return p
 
     @classmethod
-    def _get_specific_options(cls, ops, params):
+    def _get_specific_options(cls, ops, params) -> dict:
         """
         Adds specific options for Kilosort in the ops dict and returns the final dict
 
@@ -206,7 +206,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
         # options for posthoc merges (under construction)
         ops["fracse"] = 0.1  # binning step along discriminant axis for posthoc merges (in units of sd)
-        ops["epu"] = np.Inf
+        ops["epu"] = np.inf
 
         ops["ForceMaxRAMforDat"] = 20e9  # maximum RAM the algorithm will try to use; on Windows it will autodetect.
 

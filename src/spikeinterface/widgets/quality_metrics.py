@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .metrics import MetricsBaseWidget
-from ..core.sortinganalyzer import SortingAnalyzer
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 
 
 class QualityMetricsWidget(MetricsBaseWidget):
@@ -18,8 +18,9 @@ class QualityMetricsWidget(MetricsBaseWidget):
         If given, a list of quality metrics to include
     skip_metrics : list or None, default: None
         If given, a list of quality metrics to skip
-    unit_colors : dict or None, default: None
-        If given, a dictionary with unit ids as keys and colors as values
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
     """

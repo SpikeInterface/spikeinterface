@@ -45,12 +45,16 @@ def validate_curation_dict(curation_dict):
         if not removed_units_set.issubset(unit_set):
             raise ValueError("Curation format: some removed units are not in the unit list")
 
+    for group in curation_dict["merge_unit_groups"]:
+        if len(group) < 2:
+            raise ValueError("Curation format: 'merge_unit_groups' must be list of list with at least 2 elements")
+
     all_merging_groups = [set(group) for group in curation_dict["merge_unit_groups"]]
     for gp_1, gp_2 in combinations(all_merging_groups, 2):
         if len(gp_1.intersection(gp_2)) != 0:
-            raise ValueError("Some units belong to multiple merge groups")
+            raise ValueError("Curation format: some units belong to multiple merge groups")
     if len(removed_units_set.intersection(merged_units_set)) != 0:
-        raise ValueError("Some units were merged and deleted")
+        raise ValueError("Curation format: some units were merged and deleted")
 
     # Check the labels exclusivity
     for lbl in curation_dict["manual_labels"]:
@@ -92,13 +96,17 @@ def convert_from_sortingview_curation_format_v0(sortingview_dict, destination_fo
     """
 
     assert destination_format == "1"
-
+    if "mergeGroups" not in sortingview_dict.keys():
+        sortingview_dict["mergeGroups"] = []
     merge_groups = sortingview_dict["mergeGroups"]
     merged_units = sum(merge_groups, [])
-    if len(merged_units) > 0:
-        unit_id_type = int if isinstance(merged_units[0], int) else str
+
+    first_unit_id = next(iter(sortingview_dict["labelsByUnit"].keys()))
+    if str.isdigit(first_unit_id):
+        unit_id_type = int
     else:
         unit_id_type = str
+
     all_units = []
     all_labels = []
     manual_labels = []
@@ -234,7 +242,7 @@ def apply_curation_labels(sorting, new_unit_ids, curation_dict):
         all_values = np.zeros(sorting.unit_ids.size, dtype=values.dtype)
         for unit_ind, unit_id in enumerate(sorting.unit_ids):
             if unit_id not in new_unit_ids:
-                ind = curation_dict["unit_ids"].index(unit_id)
+                ind = list(curation_dict["unit_ids"]).index(unit_id)
                 all_values[unit_ind] = values[ind]
         sorting.set_property(key, all_values)
 
@@ -249,7 +257,7 @@ def apply_curation_labels(sorting, new_unit_ids, curation_dict):
                         group_values.append(value)
                 if len(set(group_values)) == 1:
                     # all group has the same label or empty
-                    sorting.set_property(key, values=group_values, ids=[new_unit_id])
+                    sorting.set_property(key, values=group_values[:1], ids=[new_unit_id])
             else:
 
                 for key in label_def["label_options"]:
@@ -289,7 +297,7 @@ def apply_curation(
         The Sorting object to apply merges.
     curation_dict : dict
         The curation dict.
-    censor_ms: float | None, default: None
+    censor_ms : float | None, default: None
         When applying the merges, any consecutive spikes within the `censor_ms` are removed. This can be thought of
         as the desired refractory period. If `censor_ms=None`, no spikes are discarded.
     new_id_strategy : "append" | "take_first", default: "append"
@@ -297,17 +305,17 @@ def apply_curation(
 
             * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
             * "take_first" : new_unit_ids will be the first unit_id of every list of merges
-    merging_mode  : "soft" | "hard", default: "soft"
+    merging_mode : "soft" | "hard", default: "soft"
         How merges are performed for SortingAnalyzer. If the `merge_mode` is "soft" , merges will be approximated, with no reloading of
         the waveforms. This will lead to approximations. If `merge_mode` is "hard", recomputations are accurately
         performed, reloading waveforms if needed
     sparsity_overlap : float, default 0.75
-            The percentage of overlap that units should share in order to accept merges. If this criteria is not
-            achieved, soft merging will not be possible and an error will be raised. This is for use with a SortingAnalyzer input.
-
-    verbose:
-
-    **job_kwargs
+        The percentage of overlap that units should share in order to accept merges. If this criteria is not
+        achieved, soft merging will not be possible and an error will be raised. This is for use with a SortingAnalyzer input.
+    verbose : bool, default: False
+        If True, output is verbose
+    **job_kwargs : dict
+        Job keyword arguments for `merge_units`
 
     Returns
     -------
@@ -335,18 +343,22 @@ def apply_curation(
 
     elif isinstance(sorting_or_analyzer, SortingAnalyzer):
         analyzer = sorting_or_analyzer
-        analyzer = analyzer.remove_units(curation_dict["removed_units"])
-        analyzer, new_unit_ids = analyzer.merge_units(
-            curation_dict["merge_unit_groups"],
-            censor_ms=censor_ms,
-            merging_mode=merging_mode,
-            sparsity_overlap=sparsity_overlap,
-            new_id_strategy=new_id_strategy,
-            return_new_unit_ids=True,
-            format="memory",
-            verbose=verbose,
-            **job_kwargs,
-        )
+        if len(curation_dict["removed_units"]) > 0:
+            analyzer = analyzer.remove_units(curation_dict["removed_units"])
+        if len(curation_dict["merge_unit_groups"]) > 0:
+            analyzer, new_unit_ids = analyzer.merge_units(
+                curation_dict["merge_unit_groups"],
+                censor_ms=censor_ms,
+                merging_mode=merging_mode,
+                sparsity_overlap=sparsity_overlap,
+                new_id_strategy=new_id_strategy,
+                return_new_unit_ids=True,
+                format="memory",
+                verbose=verbose,
+                **job_kwargs,
+            )
+        else:
+            new_unit_ids = []
         apply_curation_labels(analyzer.sorting, new_unit_ids, curation_dict)
         return analyzer
     else:

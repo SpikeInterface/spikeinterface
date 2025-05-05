@@ -9,6 +9,8 @@ from spikeinterface.core import get_noise_levels
 
 import numpy as np
 
+from pathlib import Path
+
 
 def test_silence(create_cache_folder):
 
@@ -46,4 +48,5 @@ def test_silence(create_cache_folder):
 
 
 if __name__ == "__main__":
-    test_silence()
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder"
+    test_silence(cache_folder)

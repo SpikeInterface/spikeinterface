@@ -1,10 +1,11 @@
 from __future__ import annotations
 import numpy as np
+from spikeinterface import BaseSorting
 
 from spikeinterface import SortingAnalyzer
 
-from ..core.template_tools import get_template_extremum_channel_peak_shift, get_template_amplitudes
-from ..postprocessing import align_sorting
+from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift, get_template_amplitudes
+from spikeinterface.postprocessing import align_sorting
 
 
 _remove_strategies = ("minimum_shift", "highest_amplitude", "max_spikes")
@@ -20,7 +21,7 @@ def remove_redundant_units(
     remove_strategy="minimum_shift",
     peak_sign="neg",
     extra_outputs=False,
-):
+) -> BaseSorting:
     """
     Removes redundant or duplicate units by comparing the sorting output with itself.
 
@@ -58,6 +59,10 @@ def remove_redundant_units(
         Used when remove_strategy="highest_amplitude"
     extra_outputs : bool, default: False
         If True, will return the redundant pairs.
+    unit_peak_shifts : dict
+        Dictionary mapping the unit_id to the unit's shift (in number of samples).
+        A positive shift means the spike train is shifted back in time, while
+        a negative shift means the spike train is shifted forward.
 
     Returns
     -------

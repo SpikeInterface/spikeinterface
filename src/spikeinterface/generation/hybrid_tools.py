@@ -15,7 +15,7 @@ from spikeinterface.core.generate import (
 )
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
-from spikeinterface.sortingcomponents.motion import Motion
+from spikeinterface.core.motion import Motion
 
 from spikeinterface.generation.drift_tools import (
     InjectDriftingTemplatesRecording,
@@ -42,6 +42,8 @@ def estimate_templates_from_recording(
 
     Parameters
     ----------
+    recording : BaseRecording
+        The recording to get temaples from.
     ms_before : float
         The time before peaks of templates.
     ms_after : float
@@ -181,6 +183,8 @@ def scale_template_to_range(
         The minimum amplitude of the output templates after scaling.
     max_amplitude : float
         The maximum amplitude of the output templates after scaling.
+    amplitude_function : "ptp" | "min" | "max", default: "ptp"
+        The function to use to compute the amplitude of the templates. Can be "ptp", "min" or "max".
 
     Returns
     -------
@@ -356,10 +360,6 @@ def generate_hybrid_recording(
     are_templates_scaled : bool, default: True
         If True, the templates are assumed to be in uV, otherwise in the same unit as the recording.
         In case the recording has scaling, the templates are "unscaled" before injection.
-    ms_before : float, default: 1.5
-        Cut out in ms before spike peak.
-    ms_after : float, default: 3
-        Cut out in ms after spike peak.
     unit_locations : np.array, default: None
         The locations at which the templates should be injected. If not provided, generated (see
         generate_unit_location_kwargs).

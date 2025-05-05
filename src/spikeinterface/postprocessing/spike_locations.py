@@ -5,9 +5,7 @@ import numpy as np
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.template_tools import get_template_extremum_channel
-
 from spikeinterface.core.sorting_tools import spike_vector_to_indices
-
 from spikeinterface.core.node_pipeline import SpikeRetriever, run_node_pipeline
 
 
@@ -17,13 +15,13 @@ class ComputeSpikeLocations(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
     ms_before : float, default: 0.5
         The left window, before a peak, in milliseconds
     ms_after : float, default: 0.5
         The right window, after a peak, in milliseconds
-    spike_retriver_kwargs: dict
+    spike_retriver_kwargs : dict
         A dictionary to control the behavior for getting the maximum channel for each spike
         This dictionary contains:
 

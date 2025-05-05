@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import warnings
 
 from spikeinterface.core.job_tools import fix_job_kwargs
 
@@ -22,16 +21,15 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
     ms_before : float, default: 0.5
         The left window, before a peak, in milliseconds
     ms_after : float, default: 0.5
         The right window, after a peak, in milliseconds
-    spike_retriver_kwargs: dict
+    spike_retriver_kwargs : dict
         A dictionary to control the behavior for getting the maximum channel for each spike
         This dictionary contains:
-
           * channel_from_template: bool, default: True
               For each spike is the maximum channel computed from template or re estimated at every spikes
               channel_from_template = True is old behavior but less acurate
@@ -42,8 +40,8 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
               In case channel_from_template=False, this is the peak sign.
     method : "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
         The localization method to use
-    method_kwargs : dict, default: dict()
-        Other kwargs depending on the method.
+    **method_kwargs : dict, default: {}
+        Kwargs which are passed to the method function. These can be found in the docstrings of `compute_center_of_mass`, `compute_grid_convolution` and `compute_monopolar_triangulation`.
     outputs : "numpy" | "by_unit", default: "numpy"
         The output format, either concatenated as numpy array or separated on a per unit basis
 
