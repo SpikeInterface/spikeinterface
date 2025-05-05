@@ -89,6 +89,6 @@ __all__.extend(
 )
 
 preprocessor_dict = {
-    pp_class.__name__: pp_function.__name__ for pp_class, pp_function in _all_preprocesser_dict.items()
+    pp_class.__name__: pp_function for pp_class, pp_function in _all_preprocesser_dict.items()
 }
 __all__.append("preprocessor_dict")
