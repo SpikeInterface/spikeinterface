@@ -386,7 +386,7 @@ class UnitWaveformsWidget(BaseWidget):
             if dp.plot_channels:
                 from probeinterface import __version__ as pi_version
 
-                if parse(pi_version) >= parse("0.2.27"):
+                if parse(pi_version) >= parse("0.2.28"):
                     from probeinterface.plotting import create_probe_polygons
 
                     probe = dp.sorting_analyzer_or_templates.get_probe()
