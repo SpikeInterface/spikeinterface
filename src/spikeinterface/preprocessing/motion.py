@@ -45,14 +45,6 @@ motion_options_preset = {
             border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
-    "dredge_lpf": {
-        "doc": "Dredge LFP method",
-        "detect_kwargs": dict(),
-        "select_kwargs": dict(),
-        "localize_peaks_kwargs": dict(),
-        "estimate_motion_kwargs": dict(method="dredge_lfp"),
-        "interpolate_motion_kwargs": dict(),
-    },
     "medicine": {
         "doc": "Medicine method: https://jazlab.github.io/medicine/",
         "detect_kwargs": dict(
@@ -434,8 +426,11 @@ def compute_motion(
     try:
         motion = estimate_motion(recording, peaks, peak_locations, progress_bar=progress_bar, **estimate_motion_kwargs)
     except Exception as err:
+        error_message = f"Motion estimation failed. Error given: {err}."
         if raise_error:
-            raise RuntimeError(f"Motion estimation failed. Error given: {err}.")
+            raise RuntimeError(error_message)
+        else:
+            warnings.warn(error_message)
         motion = None
     t1 = time.perf_counter()
     run_times["estimate_motion"] = t1 - t0
@@ -524,7 +519,7 @@ def correct_motion(
         for plotting. See `plot_motion_info()`
     """
 
-    from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
+    from spikeinterface.sortingcomponents.motion import interpolate_motion
 
     detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
         preset, detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs
@@ -545,7 +540,7 @@ def correct_motion(
 
     motion = motion_info["motion"]
 
-    recording_corrected = InterpolateMotionRecording(recording, motion, **interpolate_motion_kwargs)
+    recording_corrected = interpolate_motion(recording, motion, **interpolate_motion_kwargs)
 
     if not output_motion and not output_motion_info:
         return recording_corrected
