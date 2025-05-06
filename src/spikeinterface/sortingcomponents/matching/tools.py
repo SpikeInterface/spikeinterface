@@ -57,15 +57,7 @@ class FindNearestTemplate(PipelineNode):
 
 
 def assign_templates_to_peaks(
-    recording, 
-    peaks, 
-    ms_before, 
-    ms_after, 
-    svd_model, 
-    sparse_mask, 
-    templates, 
-    gather_mode="memory",
-    **job_kwargs
+    recording, peaks, ms_before, ms_after, svd_model, sparse_mask, templates, gather_mode="memory", **job_kwargs
 ) -> np.ndarray | tuple[np.ndarray, dict]:
 
     job_kwargs = fix_job_kwargs(job_kwargs)
