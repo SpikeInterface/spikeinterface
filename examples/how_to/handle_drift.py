@@ -26,7 +26,8 @@
 # Here is a short demo on how to handle drift using the high-level function `spikeinterface.preprocessing.compute_motion()`.
 #
 # This function takes a preprocessed recording as input and returns a `motion_info` object which contains everything you need to
-# plot, analyse and later interpolate your recording.
+# plot, analyse and later interpolate your recording. Note that you can alternatively compute the motion correction and interpolate
+# at the same time using the `spikeinterface.preprocessing.correct_motion()` function.
 #
 # Internally this function runs the following steps (which can be slow!):
 #

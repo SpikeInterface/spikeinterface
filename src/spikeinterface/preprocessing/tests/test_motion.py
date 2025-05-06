@@ -46,7 +46,7 @@ def test_get_motion_parameters_preset():
     pprint(params)
 
 
-def test_estimate_motion_fails():
+def test_compute_motion_fails():
     """
     If motion estimation fails, `compute_motion` should still return a `motion_info` dict with all information except
     the motion object. This tests whether this does happen.
@@ -63,4 +63,4 @@ if __name__ == "__main__":
     # print(correct_motion.__doc__)
     # test_estimate_and_correct_motion()
     test_get_motion_parameters_preset()
-    test_estimate_motion_fails()
+    test_compute_motion_fails()
