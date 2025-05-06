@@ -475,62 +475,6 @@ class InterpolateMotionRecording(BasePreprocessor):
         self._kwargs.update(spatial_interpolation_kwargs)
 
 
-class ComputeMotionAndInterpolateRecording(InterpolateMotionRecording):
-
-    _precomputable_kwarg_names = ["motion"]
-
-    def __init__(
-        self,
-        recording: BaseRecording,
-        motion=None,
-        preset: (
-            Literal[
-                "dredge",
-                "dredge_fast",
-                "nonrigid_accurate",
-                "nonrigid_fast_and_accurate",
-                "rigid_fast",
-                "kilosort_like",
-            ]
-            | None
-        ) = None,
-        detect_kwargs: dict = {},
-        select_kwargs: dict = {},
-        localize_peaks_kwargs: dict = {},
-        estimate_motion_kwargs: dict = {},
-        interpolate_motion_kwargs: dict = {},
-    ):
-
-        if motion is None:
-
-            detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
-                preset, detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs
-            )
-
-            motion, _ = compute_motion(
-                recording=recording,
-                preset=preset,
-                detect_kwargs=detect_kwargs,
-                select_kwargs=select_kwargs,
-                localize_peaks_kwargs=localize_peaks_kwargs,
-                estimate_motion_kwargs=estimate_motion_kwargs,
-            )
-
-        interpolate_motion_kwargs = _update_interpolation_kwargs(preset, interpolate_motion_kwargs)
-        InterpolateMotionRecording.__init__(self, recording=recording, motion=motion, **interpolate_motion_kwargs)
-
-        self._kwargs = dict(
-            recording=recording,
-            motion=motion,
-            preset=preset,
-            detect_kwargs=detect_kwargs,
-            select_kwargs=select_kwargs,
-            localize_peaks_kwargs=localize_peaks_kwargs,
-            estimate_motion_kwargs=estimate_motion_kwargs,
-            interpolate_motion_kwargs=interpolate_motion_kwargs,
-        )
-
-
 class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
     def __init__(
         self,
@@ -585,7 +529,4 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
 
 interpolate_motion = define_function_handling_dict_from_class(
     source_class=InterpolateMotionRecording, name="interpolate_motion"
-)
-compute_motion_and_interpolate = define_function_handling_dict_from_class(
-    source_class=ComputeMotionAndInterpolateRecording, name="compute_motion_and_interpolate"
 )

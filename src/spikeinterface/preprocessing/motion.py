@@ -54,7 +54,7 @@ motion_options_preset = {
         "interpolate_motion_kwargs": dict(),
     },
     "medicine": {
-        "doc": "Medicine method: MEDICINE URL",
+        "doc": "Medicine method: https://jazlab.github.io/medicine/",
         "detect_kwargs": dict(
             method="locally_exclusive",
         ),
@@ -297,8 +297,39 @@ def compute_motion(
     estimate_motion_kwargs={},
     folder=None,
     overwrite=False,
+    raise_error: bool = True,
     **job_kwargs,
-):
+) -> dict:
+    """
+    Function to compute motion correction based on a preset e.g. 'dredge' or 'medicine'.
+
+    This function has some intermediate steps that can be controlled one by one with parameters:
+      * detect peaks
+      * (optional) sub-sample peaks to speed up the localization
+      * localize peaks
+      * estimate the motion
+
+    The recording must be preprocessed (filter and denoised at least), and we recommend to not use whitening before motion
+    estimation. Since the motion interpolation requires a "float" recording, the recording is cast to float32 if necessary.
+
+    Parameters for each step are handled as separate dictionaries.
+    For more information please check the documentation of the following functions:
+
+      * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks`
+      * :py:func:`~spikeinterface.sortingcomponents.peak_selection.select_peaks`
+      * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks`
+      * :py:func:`~spikeinterface.sortingcomponents.motion.motion.estimate_motion`
+
+    {}
+    raise_error : bool, default: True
+        If True, an error is raised if motion estimation fails
+        If False, the process continues and the peaks and peak_locations are still returned in `motion_info`.
+
+    Returns
+    =======
+    motion_info : dict
+        A dictionary containing a motion objects, peaks, peak locations, run_times and the parameters used to compute these.
+    """
 
     # local import are important because "sortingcomponents" is not important by default
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
@@ -312,8 +343,6 @@ def compute_motion(
     detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
         preset, detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs
     )
-
-    print("localize_peaks_kwargs: ", localize_peaks_kwargs)
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
@@ -330,6 +359,8 @@ def compute_motion(
 
     progress_bar = job_kwargs.get("progress_bar", False)
 
+    noise_levels = get_noise_levels(recording, return_scaled=False)
+
     if folder is not None:
         folder = Path(folder)
         if overwrite:
@@ -340,82 +371,71 @@ def compute_motion(
         else:
             assert not folder.is_dir(), f"Folder {folder} already exists"
 
-    estimate_motion_method_name = estimate_motion_kwargs["method"]
-    estimate_motion_method = estimate_motion_methods[estimate_motion_method_name]
-
     no_selection_kwargs = len(select_kwargs) == 0
 
-    run_times = {}
+    if no_selection_kwargs:
+        # maybe do this directly in the folder when not None, but might be slow on external storage
+        gather_mode = "memory"
+        # node detect
+        detect_peaks_method = detect_kwargs["method"]
+        method_class = detect_peak_methods[detect_peaks_method]
+        detect_kwargs_without_method = {
+            key: detect_kwarg for key, detect_kwarg in detect_kwargs.items() if key != "method"
+        }
+        node0 = method_class(recording, **detect_kwargs_without_method)
 
-    if estimate_motion_method.need_peak_location is False:
+        node1 = ExtractDenseWaveforms(recording, parents=[node0], ms_before=0.1, ms_after=0.3)
 
-        peaks = None
-        peak_locations = None
-
+        # node detect + localize
+        method = localize_peaks_kwargs["method"]
+        method_class = localize_peak_methods[method]
+        localize_peaks_kwargs_without_method = {
+            key: localize_peaks_kwarg for key, localize_peaks_kwarg in localize_peaks_kwargs.items() if key != "method"
+        }
+        node2 = method_class(
+            recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs_without_method
+        )
+        pipeline_nodes = [node0, node1, node2]
+        t0 = time.perf_counter()
+        peaks, peak_locations = run_node_pipeline(
+            recording,
+            pipeline_nodes,
+            job_kwargs,
+            job_name="detect and localize",
+            gather_mode=gather_mode,
+            gather_kwargs=None,
+            squeeze_output=False,
+            folder=None,
+            names=None,
+        )
+        t1 = time.perf_counter()
+        run_times = dict(detect_and_localize=t1 - t0)
     else:
+        # localization is done after select_peaks()
+        pipeline_nodes = None
 
-        noise_levels = get_noise_levels(recording, return_scaled=False)
+        t0 = time.perf_counter()
+        peaks = detect_peaks(recording, noise_levels=noise_levels, pipeline_nodes=None, **detect_kwargs, **job_kwargs)
+        t1 = time.perf_counter()
+        # select some peaks
+        peaks = select_peaks(peaks, **select_kwargs, **job_kwargs)
+        t2 = time.perf_counter()
+        peak_locations = localize_peaks(recording, peaks, **localize_peaks_kwargs, **job_kwargs)
+        t3 = time.perf_counter()
 
-        if no_selection_kwargs:
-            # maybe do this directly in the folder when not None, but might be slow on external storage
-            gather_mode = "memory"
-            # node detect
-            detect_peaks_method = detect_kwargs["method"]
-            method_class = detect_peak_methods[detect_peaks_method]
-            detect_kwargs_without_method = {
-                key: detect_kwarg for key, detect_kwarg in detect_kwargs.items() if key != "method"
-            }
-            node0 = method_class(recording, **detect_kwargs_without_method)
-
-            node1 = ExtractDenseWaveforms(recording, parents=[node0], ms_before=0.1, ms_after=0.3)
-
-            # node detect + localize
-            method = localize_peaks_kwargs["method"]
-            method_class = localize_peak_methods[method]
-            localize_peaks_kwargs_without_method = {
-                key: localize_peaks_kwarg
-                for key, localize_peaks_kwarg in localize_peaks_kwargs.items()
-                if key != "method"
-            }
-            node2 = method_class(
-                recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs_without_method
-            )
-            pipeline_nodes = [node0, node1, node2]
-            t0 = time.perf_counter()
-            peaks, peak_locations = run_node_pipeline(
-                recording,
-                pipeline_nodes,
-                job_kwargs,
-                job_name="detect and localize",
-                gather_mode=gather_mode,
-                gather_kwargs=None,
-                squeeze_output=False,
-                folder=None,
-                names=None,
-            )
-            t1 = time.perf_counter()
-            run_times["detect_and_localize"] = t1 - t0
-        else:
-            # localization is done after select_peaks()
-            pipeline_nodes = None
-
-            t0 = time.perf_counter()
-            peaks = detect_peaks(
-                recording, noise_levels=noise_levels, pipeline_nodes=None, **detect_kwargs, **job_kwargs
-            )
-            t1 = time.perf_counter()
-            # select some peaks
-            peaks = select_peaks(peaks, **select_kwargs, **job_kwargs)
-            t2 = time.perf_counter()
-            peak_locations = localize_peaks(recording, peaks, **localize_peaks_kwargs, **job_kwargs)
-            t3 = time.perf_counter()
-
-            run_times["detect_peaks"] = t1 - t0
-            run_times["select_peaks"] = (t2 - t1,)
-            run_times["localize_peaks"] = t3 - t2
+        run_times = dict(
+            detect_peaks=t1 - t0,
+            select_peaks=t2 - t1,
+            localize_peaks=t3 - t2,
+        )
 
     t0 = time.perf_counter()
-    motion = estimate_motion(recording, peaks, peak_locations, progress_bar=progress_bar, **estimate_motion_kwargs)
+    try:
+        motion = estimate_motion(recording, peaks, peak_locations, progress_bar=progress_bar, **estimate_motion_kwargs)
+    except Exception as err:
+        if raise_error:
+            raise RuntimeError(f"Motion estimation failed. Error given: {err}.")
+        motion = None
     t1 = time.perf_counter()
     run_times["estimate_motion"] = t1 - t0
 
@@ -432,7 +452,7 @@ def compute_motion(
     if folder is not None:
         save_motion_info(motion_info, folder, overwrite=overwrite)
 
-    return motion, motion_info
+    return motion_info
 
 
 def correct_motion(
@@ -459,7 +479,7 @@ def correct_motion(
       * estimate the motion
       * create and return a `InterpolateMotionRecording` recording object
 
-    Even if this function is convinient, we recommend to run all step separately for fine tuning.
+    Even if this function is convenient, we recommend to run all step separately for fine tuning.
 
     Optionally, this function can create a folder with files and figures ready to check.
 
@@ -467,9 +487,8 @@ def correct_motion(
 
     If `select_kwargs` is None then all peak are used for localized.
 
-    The recording must be preprocessed (filter and denoised at least), and we recommend to not use whithening before motion
-    estimation.
-    Since the motion interpolation requires a "float" recording, the recording is casted to float32 if necessary.
+    The recording must be preprocessed (filter and denoised at least), and we recommend to not use whitening before motion
+    estimation. Since the motion interpolation requires a "float" recording, the recording is cast to float32 if necessary.
 
     Parameters for each step are handled as separate dictionaries.
     For more information please check the documentation of the following functions:
@@ -483,33 +502,13 @@ def correct_motion(
 
     Possible presets : {}
 
-    Parameters
-    ----------
-    recording : RecordingExtractor
-        The recording extractor to be transformed
-    preset : str, default: "nonrigid_accurate"
-        The preset name
-    folder : Path str or None, default: None
-        If not None then intermediate motion info are saved into a folder
+    {}
     output_motion : bool, default: False
         It True, the function returns a `motion` object.
     output_motion_info : bool, default: False
         If True, then the function returns a `motion_info` dictionary that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
         This dictionary is the same when reloaded from the folder
-    overwrite : bool, default: False
-        If True and folder is given, overwrite the folder if it already exists
-    detect_kwargs : dict
-        Optional parameters to overwrite the ones in the preset for "detect" step.
-    select_kwargs : dict
-        If not None, optional parameters to overwrite the ones in the preset for "select" step.
-        If None, the "select" step is skipped.
-    localize_peaks_kwargs : dict
-        Optional parameters to overwrite the ones in the preset for "localize" step.
-    estimate_motion_kwargs : dict
-        Optional parameters to overwrite the ones in the preset for "estimate_motion" step.
-    interpolate_motion_kwargs : dict
-        Optional parameters to overwrite the ones in the preset for "detect" step.
 
     {}
 
@@ -531,19 +530,19 @@ def correct_motion(
     )
     interpolate_motion_kwargs = _update_interpolation_kwargs(preset, interpolate_motion_kwargs)
 
-    motion, motion_info = compute_motion(
+    motion_info = compute_motion(
         recording,
         preset=preset,
         folder=folder,
         overwrite=overwrite,
-        output_motion=output_motion,
-        output_motion_info=output_motion_info,
         detect_kwargs=detect_kwargs,
         select_kwargs=select_kwargs,
         localize_peaks_kwargs=localize_peaks_kwargs,
         estimate_motion_kwargs=estimate_motion_kwargs,
-        job_kwargs=job_kwargs,
+        **job_kwargs,
     )
+
+    motion = motion_info["motion"]
 
     recording_corrected = InterpolateMotionRecording(recording, motion, **interpolate_motion_kwargs)
 
@@ -556,16 +555,6 @@ def correct_motion(
     if output_motion_info:
         out += (motion_info,)
     return out
-
-
-_doc_presets = "\n"
-for k, v in motion_options_preset.items():
-    if k == "":
-        continue
-    doc = v["doc"]
-    _doc_presets = _doc_presets + f"      * {k}: {doc}\n"
-
-correct_motion.__doc__ = correct_motion.__doc__.format(_doc_presets, _shared_job_kwargs_doc)
 
 
 def save_motion_info(motion_info, folder, overwrite=False):
@@ -623,3 +612,43 @@ def load_motion_info(folder):
 
     motion_info["motion"] = motion
     return motion_info
+
+
+#########################################
+# Docstrings
+#########################################
+
+
+_doc_presets = "\n"
+for k, v in motion_options_preset.items():
+    if k == "":
+        continue
+    doc = v["doc"]
+    _doc_presets = _doc_presets + f"      * {k}: {doc}\n"
+
+_common_motion_parameters = """Parameters
+    ----------
+    recording : RecordingExtractor
+        The recording extractor to be transformed
+    preset : str, default: "nonrigid_accurate"
+        The preset name
+    folder : Path str or None, default: None
+        If not None then intermediate motion info are saved into a folder
+    overwrite : bool, default: False
+        If True and folder is given, overwrite the folder if it already exists
+    detect_kwargs : dict
+        Optional parameters to overwrite the ones in the preset for "detect" step.
+    select_kwargs : dict
+        If not None, optional parameters to overwrite the ones in the preset for "select" step.
+        If None, the "select" step is skipped.
+    localize_peaks_kwargs : dict
+        Optional parameters to overwrite the ones in the preset for "localize" step.
+    estimate_motion_kwargs : dict
+        Optional parameters to overwrite the ones in the preset for "estimate_motion" step.
+    interpolate_motion_kwargs : dict
+        Optional parameters to overwrite the ones in the preset for "detect" step.
+"""
+
+
+correct_motion.__doc__ = correct_motion.__doc__.format(_doc_presets, _common_motion_parameters, _shared_job_kwargs_doc)
+compute_motion.__doc__ = compute_motion.__doc__.format(_doc_presets, _common_motion_parameters)
