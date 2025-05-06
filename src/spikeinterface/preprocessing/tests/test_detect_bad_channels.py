@@ -6,6 +6,9 @@ from probeinterface import generate_linear_probe
 
 from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import detect_bad_channels, highpass_filter
+from spikeinterface.preprocessing.detect_bad_channels import detect_bad_channels_method_names
+
+from typing import get_type_hints, get_args
 
 try:
     # WARNING : this is not this package https://pypi.org/project/neurodsp/
@@ -16,6 +19,15 @@ try:
     HAVE_NPIX = True
 except:  # Catch relevant exception
     HAVE_NPIX = False
+
+
+def test_literal_hardcoded_values():
+    """
+    The possible strings allowed by the `method` argument are hardcoded. Here we check they are consistent
+    with the methods list.
+    """
+    detect_bad_channels_method_literals = get_args(get_type_hints(detect_bad_channels)["method"])
+    assert set(detect_bad_channels_method_literals) == set(detect_bad_channels_method_names)
 
 
 def test_detect_bad_channels_std_mad():

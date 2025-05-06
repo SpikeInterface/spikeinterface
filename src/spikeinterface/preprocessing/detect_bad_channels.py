@@ -7,10 +7,12 @@ from typing import Literal
 from .filter import highpass_filter
 from spikeinterface.core import get_random_data_chunks, order_channels_by_depth, BaseRecording
 
+detect_bad_channels_method_names = ("std", "mad", "coherence+psd", "neighborhood_r2")
+
 
 def detect_bad_channels(
     recording: BaseRecording,
-    method: str = "coherence+psd",
+    method: Literal["std", "mad", "coherence+psd", "neighborhood_r2"] = "coherence+psd",
     std_mad_threshold: float = 5,
     psd_hf_threshold: float = 0.02,
     dead_channel_threshold: float = -0.5,
@@ -121,8 +123,9 @@ def detect_bad_channels(
     """
     import scipy.stats
 
-    method_list = ("std", "mad", "coherence+psd", "neighborhood_r2")
-    assert method in method_list, f"{method} is not a valid method. Available methods are {method_list}"
+    assert (
+        method in detect_bad_channels_method_names
+    ), f"{method} is not a valid method. Available methods are {detect_bad_channels_method_names}."
 
     # Get random subset of data to estimate from
     random_chunk_kwargs = dict(
