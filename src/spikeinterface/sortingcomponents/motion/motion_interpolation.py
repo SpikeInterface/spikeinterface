@@ -1,11 +1,14 @@
 from __future__ import annotations
+from typing import Literal
 
 import numpy as np
-from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core.motion import ensure_time_bin_edges, ensure_time_bins
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core.motion import ensure_time_bins
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
+from spikeinterface.preprocessing.motion import compute_motion, _update_motion_kwargs, _update_interpolation_kwargs
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.preprocessing.filter import fix_dtype
+from spikeinterface.core import BaseRecording
 
 
 def compute_peak_displacements(peaks, motion, recording, peak_locations=None):
@@ -472,6 +475,62 @@ class InterpolateMotionRecording(BasePreprocessor):
         self._kwargs.update(spatial_interpolation_kwargs)
 
 
+class ComputeMotionAndInterpolateRecording(InterpolateMotionRecording):
+
+    _precomputable_kwarg_names = ["motion"]
+
+    def __init__(
+        self,
+        recording: BaseRecording,
+        motion=None,
+        preset: (
+            Literal[
+                "dredge",
+                "dredge_fast",
+                "nonrigid_accurate",
+                "nonrigid_fast_and_accurate",
+                "rigid_fast",
+                "kilosort_like",
+            ]
+            | None
+        ) = None,
+        detect_kwargs: dict = {},
+        select_kwargs: dict = {},
+        localize_peaks_kwargs: dict = {},
+        estimate_motion_kwargs: dict = {},
+        interpolate_motion_kwargs: dict = {},
+    ):
+
+        if motion is None:
+
+            detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
+                preset, detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs
+            )
+
+            motion, _ = compute_motion(
+                recording=recording,
+                preset=preset,
+                detect_kwargs=detect_kwargs,
+                select_kwargs=select_kwargs,
+                localize_peaks_kwargs=localize_peaks_kwargs,
+                estimate_motion_kwargs=estimate_motion_kwargs,
+            )
+
+        interpolate_motion_kwargs = _update_interpolation_kwargs(preset, interpolate_motion_kwargs)
+        InterpolateMotionRecording.__init__(self, recording=recording, motion=motion, **interpolate_motion_kwargs)
+
+        self._kwargs = dict(
+            recording=recording,
+            motion=motion,
+            preset=preset,
+            detect_kwargs=detect_kwargs,
+            select_kwargs=select_kwargs,
+            localize_peaks_kwargs=localize_peaks_kwargs,
+            estimate_motion_kwargs=estimate_motion_kwargs,
+            interpolate_motion_kwargs=interpolate_motion_kwargs,
+        )
+
+
 class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
     def __init__(
         self,
@@ -524,4 +583,9 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
         return traces
 
 
-interpolate_motion = define_function_from_class(source_class=InterpolateMotionRecording, name="interpolate_motion")
+interpolate_motion = define_function_handling_dict_from_class(
+    source_class=InterpolateMotionRecording, name="interpolate_motion"
+)
+compute_motion_and_interpolate = define_function_handling_dict_from_class(
+    source_class=ComputeMotionAndInterpolateRecording, name="compute_motion_and_interpolate"
+)

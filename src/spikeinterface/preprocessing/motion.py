@@ -14,6 +14,7 @@ from spikeinterface.core import get_noise_levels, fix_job_kwargs
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.core_tools import SIJsonEncoder
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
+from spikeinterface.core import BaseRecording
 
 
 motion_options_preset = {
@@ -43,6 +44,24 @@ motion_options_preset = {
         "interpolate_motion_kwargs": dict(
             border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
+    },
+    "dredge_lpf": {
+        "doc": "Dredge LFP method",
+        "detect_kwargs": dict(),
+        "select_kwargs": dict(),
+        "localize_peaks_kwargs": dict(),
+        "estimate_motion_kwargs": dict(method="dredge_lfp"),
+        "interpolate_motion_kwargs": dict(),
+    },
+    "medicine": {
+        "doc": "Medicine method: MEDICINE URL",
+        "detect_kwargs": dict(
+            method="locally_exclusive",
+        ),
+        "localize_peaks_kwargs": dict(method="grid_convolution"),
+        "select_kwargs": dict(),
+        "estimate_motion_kwargs": dict(method="medicine"),
+        "interpolate_motion_kwargs": dict(),
     },
     # similar than dredge but faster
     "dredge_fast": {
@@ -250,6 +269,172 @@ def get_motion_parameters_preset(preset):
     return params
 
 
+def _update_motion_kwargs(preset, detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs):
+
+    params = motion_options_preset[preset]
+    detect_kwargs = dict(params["detect_kwargs"], **detect_kwargs)
+    select_kwargs = dict(params["select_kwargs"], **select_kwargs)
+    localize_peaks_kwargs = dict(params["localize_peaks_kwargs"], **localize_peaks_kwargs)
+    estimate_motion_kwargs = dict(params["estimate_motion_kwargs"], **estimate_motion_kwargs)
+
+    return detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs
+
+
+def _update_interpolation_kwargs(preset, interpolation_kwargs):
+
+    params = motion_options_preset[preset]
+    interpolation_kwargs = dict(params["interpolate_motion_kwargs"], **interpolation_kwargs)
+
+    return interpolation_kwargs
+
+
+def compute_motion(
+    recording: BaseRecording,
+    preset="dredge_fast",
+    detect_kwargs={},
+    select_kwargs={},
+    localize_peaks_kwargs={},
+    estimate_motion_kwargs={},
+    folder=None,
+    overwrite=False,
+    **job_kwargs,
+):
+
+    # local import are important because "sortingcomponents" is not important by default
+    from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
+    from spikeinterface.sortingcomponents.peak_selection import select_peaks
+    from spikeinterface.sortingcomponents.peak_localization import localize_peaks, localize_peak_methods
+    from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
+    from spikeinterface.sortingcomponents.motion import estimate_motion
+    from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion_methods
+
+    # get preset params and update if necessary
+    detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
+        preset, detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs
+    )
+
+    print("localize_peaks_kwargs: ", localize_peaks_kwargs)
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
+
+    # params
+    parameters = dict(
+        preset=preset,
+        detect_kwargs=detect_kwargs,
+        select_kwargs=select_kwargs,
+        localize_peaks_kwargs=localize_peaks_kwargs,
+        estimate_motion_kwargs=estimate_motion_kwargs,
+        job_kwargs=job_kwargs,
+        sampling_frequency=recording.sampling_frequency,
+    )
+
+    progress_bar = job_kwargs.get("progress_bar", False)
+
+    if folder is not None:
+        folder = Path(folder)
+        if overwrite:
+            if folder.is_dir():
+                import shutil
+
+                shutil.rmtree(folder)
+        else:
+            assert not folder.is_dir(), f"Folder {folder} already exists"
+
+    estimate_motion_method_name = estimate_motion_kwargs["method"]
+    estimate_motion_method = estimate_motion_methods[estimate_motion_method_name]
+
+    no_selection_kwargs = len(select_kwargs) == 0
+
+    run_times = {}
+
+    if estimate_motion_method.need_peak_location is False:
+
+        peaks = None
+        peak_locations = None
+
+    else:
+
+        noise_levels = get_noise_levels(recording, return_scaled=False)
+
+        if no_selection_kwargs:
+            # maybe do this directly in the folder when not None, but might be slow on external storage
+            gather_mode = "memory"
+            # node detect
+            detect_peaks_method = detect_kwargs["method"]
+            method_class = detect_peak_methods[detect_peaks_method]
+            detect_kwargs_without_method = {
+                key: detect_kwarg for key, detect_kwarg in detect_kwargs.items() if key != "method"
+            }
+            node0 = method_class(recording, **detect_kwargs_without_method)
+
+            node1 = ExtractDenseWaveforms(recording, parents=[node0], ms_before=0.1, ms_after=0.3)
+
+            # node detect + localize
+            method = localize_peaks_kwargs["method"]
+            method_class = localize_peak_methods[method]
+            localize_peaks_kwargs_without_method = {
+                key: localize_peaks_kwarg
+                for key, localize_peaks_kwarg in localize_peaks_kwargs.items()
+                if key != "method"
+            }
+            node2 = method_class(
+                recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs_without_method
+            )
+            pipeline_nodes = [node0, node1, node2]
+            t0 = time.perf_counter()
+            peaks, peak_locations = run_node_pipeline(
+                recording,
+                pipeline_nodes,
+                job_kwargs,
+                job_name="detect and localize",
+                gather_mode=gather_mode,
+                gather_kwargs=None,
+                squeeze_output=False,
+                folder=None,
+                names=None,
+            )
+            t1 = time.perf_counter()
+            run_times["detect_and_localize"] = t1 - t0
+        else:
+            # localization is done after select_peaks()
+            pipeline_nodes = None
+
+            t0 = time.perf_counter()
+            peaks = detect_peaks(
+                recording, noise_levels=noise_levels, pipeline_nodes=None, **detect_kwargs, **job_kwargs
+            )
+            t1 = time.perf_counter()
+            # select some peaks
+            peaks = select_peaks(peaks, **select_kwargs, **job_kwargs)
+            t2 = time.perf_counter()
+            peak_locations = localize_peaks(recording, peaks, **localize_peaks_kwargs, **job_kwargs)
+            t3 = time.perf_counter()
+
+            run_times["detect_peaks"] = t1 - t0
+            run_times["select_peaks"] = (t2 - t1,)
+            run_times["localize_peaks"] = t3 - t2
+
+    t0 = time.perf_counter()
+    motion = estimate_motion(recording, peaks, peak_locations, progress_bar=progress_bar, **estimate_motion_kwargs)
+    t1 = time.perf_counter()
+    run_times["estimate_motion"] = t1 - t0
+
+    if recording.get_dtype().kind != "f":
+        recording = recording.astype("float32")
+
+    motion_info = dict(
+        parameters=parameters,
+        run_times=run_times,
+        peaks=peaks,
+        peak_locations=peak_locations,
+        motion=motion,
+    )
+    if folder is not None:
+        save_motion_info(motion_info, folder, overwrite=overwrite)
+
+    return motion, motion_info
+
+
 def correct_motion(
     recording,
     preset="dredge_fast",
@@ -338,120 +523,29 @@ def correct_motion(
         Optional output if `output_motion_info=True`. This dict contains several variable for
         for plotting. See `plot_motion_info()`
     """
-    # local import are important because "sortingcomponents" is not important by default
-    from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
-    from spikeinterface.sortingcomponents.peak_selection import select_peaks
-    from spikeinterface.sortingcomponents.peak_localization import localize_peaks, localize_peak_methods
-    from spikeinterface.sortingcomponents.motion import estimate_motion, InterpolateMotionRecording
-    from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
 
-    # get preset params and update if necessary
-    params = motion_options_preset[preset]
-    detect_kwargs = dict(params["detect_kwargs"], **detect_kwargs)
-    select_kwargs = dict(params["select_kwargs"], **select_kwargs)
-    localize_peaks_kwargs = dict(params["localize_peaks_kwargs"], **localize_peaks_kwargs)
-    estimate_motion_kwargs = dict(params["estimate_motion_kwargs"], **estimate_motion_kwargs)
-    interpolate_motion_kwargs = dict(params["interpolate_motion_kwargs"], **interpolate_motion_kwargs)
-    do_selection = len(select_kwargs) > 0
+    from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
 
-    # params
-    parameters = dict(
+    detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
+        preset, detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs
+    )
+    interpolate_motion_kwargs = _update_interpolation_kwargs(preset, interpolate_motion_kwargs)
+
+    motion, motion_info = compute_motion(
+        recording,
+        preset=preset,
+        folder=folder,
+        overwrite=overwrite,
+        output_motion=output_motion,
+        output_motion_info=output_motion_info,
         detect_kwargs=detect_kwargs,
         select_kwargs=select_kwargs,
         localize_peaks_kwargs=localize_peaks_kwargs,
         estimate_motion_kwargs=estimate_motion_kwargs,
-        interpolate_motion_kwargs=interpolate_motion_kwargs,
         job_kwargs=job_kwargs,
-        sampling_frequency=recording.sampling_frequency,
     )
 
-    if output_motion_info:
-        motion_info = {}
-    else:
-        motion_info = None
-
-    job_kwargs = fix_job_kwargs(job_kwargs)
-    noise_levels = get_noise_levels(recording, return_scaled=False)
-    progress_bar = job_kwargs.get("progress_bar", False)
-
-    if folder is not None:
-        folder = Path(folder)
-        if overwrite:
-            if folder.is_dir():
-                import shutil
-
-                shutil.rmtree(folder)
-        else:
-            assert not folder.is_dir(), f"Folder {folder} already exists"
-
-    if not do_selection:
-        # maybe do this directly in the folder when not None, but might be slow on external storage
-        gather_mode = "memory"
-        # node detect
-        method = detect_kwargs.pop("method", "locally_exclusive")
-        method_class = detect_peak_methods[method]
-        node0 = method_class(recording, **detect_kwargs)
-
-        node1 = ExtractDenseWaveforms(recording, parents=[node0], ms_before=0.1, ms_after=0.3)
-
-        # node detect + localize
-        method = localize_peaks_kwargs.pop("method", "center_of_mass")
-        method_class = localize_peak_methods[method]
-        node2 = method_class(recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs)
-        pipeline_nodes = [node0, node1, node2]
-        t0 = time.perf_counter()
-        peaks, peak_locations = run_node_pipeline(
-            recording,
-            pipeline_nodes,
-            job_kwargs,
-            job_name="detect and localize",
-            gather_mode=gather_mode,
-            gather_kwargs=None,
-            squeeze_output=False,
-            folder=None,
-            names=None,
-        )
-        t1 = time.perf_counter()
-        run_times = dict(
-            detect_and_localize=t1 - t0,
-        )
-    else:
-        # localization is done after select_peaks()
-        pipeline_nodes = None
-
-        t0 = time.perf_counter()
-        peaks = detect_peaks(recording, noise_levels=noise_levels, pipeline_nodes=None, **detect_kwargs, **job_kwargs)
-        t1 = time.perf_counter()
-        # salect some peaks
-        peaks = select_peaks(peaks, **select_kwargs, **job_kwargs)
-        t2 = time.perf_counter()
-        peak_locations = localize_peaks(recording, peaks, **localize_peaks_kwargs, **job_kwargs)
-        t3 = time.perf_counter()
-
-        run_times = dict(
-            detect_peaks=t1 - t0,
-            select_peaks=t2 - t1,
-            localize_peaks=t3 - t2,
-        )
-
-    t0 = time.perf_counter()
-    motion = estimate_motion(recording, peaks, peak_locations, progress_bar=progress_bar, **estimate_motion_kwargs)
-    t1 = time.perf_counter()
-    run_times["estimate_motion"] = t1 - t0
-
-    if recording.get_dtype().kind != "f":
-        recording = recording.astype("float32")
     recording_corrected = InterpolateMotionRecording(recording, motion, **interpolate_motion_kwargs)
-
-    motion_info = dict(
-        parameters=parameters,
-        run_times=run_times,
-        peaks=peaks,
-        peak_locations=peak_locations,
-        motion=motion,
-    )
-    if folder is not None:
-        save_motion_info(motion_info, folder, overwrite=overwrite)
 
     if not output_motion and not output_motion_info:
         return recording_corrected
