@@ -327,13 +327,23 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 templates.to_zarr(folder_path=clustering_folder / "templates")
 
             ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
+
             matching_method = params["matching"].get("method", "circus-omp_svd")
+            gather_mode = params["matching"].pop("gather_mode", "memory")
             matching_params = params["matching"].get("method_kwargs", dict())
             matching_params["templates"] = templates
 
             if matching_method is not None:
+                gather_kwargs = {}
+                if gather_mode == "npy":
+                    gather_kwargs["folder"] = sorter_output_folder / "matching"
                 spikes = find_spikes_from_templates(
-                    recording_w, matching_method, method_kwargs=matching_params, **job_kwargs
+                    recording_w,
+                    matching_method,
+                    method_kwargs=matching_params,
+                    gather_mode=gather_mode,
+                    gather_kwargs=gather_kwargs,
+                    **job_kwargs,
                 )
 
                 if debug:
