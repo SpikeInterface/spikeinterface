@@ -179,12 +179,15 @@ def test_BaseSnippets(create_cache_folder):
     waveforms_int16 = nse_int16.get_snippets()
     assert waveforms_int16.dtype == "int16"
 
-    # return_scaled raise error when no gain_to_uV/offset_to_uV properties
+    # return_in_uV raises error when no gain_to_uV/offset_to_uV properties
     with pytest.raises(ValueError):
-        waveforms_float32 = nse_int16.get_snippets(return_scaled=True)
+        waveforms_float32 = nse_int16.get_snippets(return_in_uV=True)
+
+    # Set properties and test return_in_uV parameter
     nse_int16.set_property("gain_to_uV", [0.195] * 5)
     nse_int16.set_property("offset_to_uV", [0.0] * 5)
-    waveforms_float32 = nse_int16.get_snippets(return_scaled=True)
+
+    waveforms_float32 = nse_int16.get_snippets(return_in_uV=True)
     assert waveforms_float32.dtype == "float32"
 
 
