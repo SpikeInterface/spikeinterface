@@ -363,11 +363,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 peak_labels = assign_templates_to_peaks(
                     recording_w,
                     peaks,
-                    ms_before=ms_before,
-                    ms_after=ms_after,
+                    templates=templates,
                     svd_model=svd_model,
                     sparse_mask=sparsity_mask,
-                    templates=templates,
                     **job_kwargs,
                 )
 

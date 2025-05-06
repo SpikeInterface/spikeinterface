@@ -59,18 +59,43 @@ class FindNearestTemplate(PipelineNode):
 def assign_templates_to_peaks(
     recording, 
     peaks, 
-    ms_before, 
-    ms_after, 
+    templates, 
     svd_model, 
     sparse_mask, 
-    templates, 
     gather_mode="memory",
     **job_kwargs
 ) -> np.ndarray | tuple[np.ndarray, dict]:
+    """
+    Assigns templates to peaks using a pipeline of nodes.
+
+    Parameters
+    ----------
+    recording : RecordingExtractor
+        The recording extractor.
+    peaks : np.ndarray 
+        Peaks that should be assigned to templates.
+    templates : Templates
+        The templates used for matching.
+    svd_model : SVDModel
+        The SVD model used for PCA projection.
+    sparse_mask : np.ndarray
+        The sparsity mask used to extract waveforms.
+    gather_mode : str
+        The mode for gathering results. Can be 'memory' or 'file'.
+    job_kwargs : dict
+        Additional keyword arguments for joblib.
+    
+    Returns
+    -------
+    peak_labels: np.ndarray
+        The labels assigned to each peak.
+    """
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     node0 = PeakRetriever(recording, peaks)
+    ms_before = templates.ms_before
+    ms_after = templates.ms_after
 
     if templates.are_templates_sparse():
         node1 = ExtractSparseWaveforms(
