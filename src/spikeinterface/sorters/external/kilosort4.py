@@ -6,10 +6,10 @@ import warnings
 from packaging import version
 
 
-from ...core import write_binary_recording
-from ..basesorter import BaseSorter, get_job_kwargs
+from spikeinterface.core import write_binary_recording
+from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from .kilosortbase import KilosortBase
-from ..basesorter import get_job_kwargs
+from spikeinterface.sorters.basesorter import get_job_kwargs
 from importlib.metadata import version as importlib_version
 
 PathType = Union[str, Path]
@@ -21,7 +21,7 @@ class Kilosort4Sorter(BaseSorter):
     sorter_name: str = "kilosort4"
     requires_locations = True
     gpu_capability = "nvidia-optional"
-    requires_binary_data = False
+    requires_binary_data = True
 
     _si_default_params = {
         "do_CAR": True,
@@ -72,12 +72,13 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import kilosort as ks
-            import torch
+        import importlib.util
 
+        ks_spec = importlib.util.find_spec("kilosort")
+        torch_spec = importlib.util.find_spec("torch")
+        if ks_spec is not None and torch_spec is not None:
             HAVE_KS = True
-        except ImportError:
+        else:
             HAVE_KS = False
         return HAVE_KS
 
@@ -137,11 +138,7 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
-        from probeinterface import write_prb
-
-        pg = recording.get_probegroup()
-        probe_filename = sorter_output_folder / "probe.prb"
-        write_prb(probe_filename, pg)
+        cls._setup_json_probe_map(recording, sorter_output_folder)
 
         if params["use_binary_file"]:
             if not recording.binary_compatible_with(time_axis=0, file_paths_length=1):
@@ -156,6 +153,7 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        from kilosort import __version__ as ks_version
         from kilosort.run_kilosort import (
             set_files,
             initialize_ops,
@@ -178,16 +176,16 @@ class Kilosort4Sorter(BaseSorter):
 
             logging.basicConfig(level=logging.INFO)
 
-        if version.parse(cls.get_sorter_version()) < version.parse("4.0.5"):
+        if version.parse(cls.get_sorter_version()) < version.parse("4.0.16"):
             raise RuntimeError(
-                "Kilosort versions before 4.0.5 are not supported"
+                "Kilosort versions before 4.0.16 are not supported"
                 "in SpikeInterface. "
                 "Please upgrade Kilosort version."
             )
 
         sorter_output_folder = sorter_output_folder.absolute()
 
-        probe_filename = sorter_output_folder / "probe.prb"
+        probe_filename = sorter_output_folder / "chanMap.json"
 
         torch_device = params["torch_device"]
         if torch_device == "auto":
@@ -314,8 +312,7 @@ class Kilosort4Sorter(BaseSorter):
             print("Skipping drift correction.")
             ops["nblocks"] = 0
 
-        # this function applies both preprocessing and drift correction
-        ops, bfile, st0 = compute_drift_correction(
+        drift_kwargs = dict(
             ops=ops,
             device=device,
             tic0=tic0,
@@ -323,16 +320,29 @@ class Kilosort4Sorter(BaseSorter):
             file_object=file_object,
             clear_cache=clear_cache,
         )
+        if version.parse(ks_version) >= version.parse("4.0.28"):
+            drift_kwargs.update(dict(verbose=verbose))
+
+        # this function applies both preprocessing and drift correction
+        ops, bfile, st0 = compute_drift_correction(**drift_kwargs)
 
         if save_preprocessed_copy:
             save_preprocessing(results_dir / "temp_wh.dat", ops, bfile)
 
         # Sort spikes and save results
-        st, tF, _, _ = detect_spikes(
-            ops=ops, device=device, bfile=bfile, tic0=tic0, progress_bar=progress_bar, clear_cache=clear_cache
+        detect_spikes_kwargs = dict(
+            ops=ops,
+            device=device,
+            bfile=bfile,
+            tic0=tic0,
+            progress_bar=progress_bar,
+            clear_cache=clear_cache,
         )
+        if version.parse(ks_version) >= version.parse("4.0.28"):
+            detect_spikes_kwargs.update(dict(verbose=verbose))
+        st, tF, _, _ = detect_spikes(**detect_spikes_kwargs)
 
-        clu, Wall = cluster_spikes(
+        cluster_spikes_kwargs = dict(
             st=st,
             tF=tF,
             ops=ops,
@@ -342,6 +352,12 @@ class Kilosort4Sorter(BaseSorter):
             progress_bar=progress_bar,
             clear_cache=clear_cache,
         )
+        if version.parse(ks_version) >= version.parse("4.0.28"):
+            cluster_spikes_kwargs.update(dict(verbose=verbose))
+        if version.parse(ks_version) <= version.parse("4.0.30"):
+            clu, Wall = cluster_spikes(**cluster_spikes_kwargs)
+        else:
+            clu, Wall, st, tF = cluster_spikes(**cluster_spikes_kwargs)
 
         if params["skip_kilosort_preprocessing"]:
             ops["preprocessing"] = dict(
@@ -369,3 +385,29 @@ class Kilosort4Sorter(BaseSorter):
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
         return KilosortBase._get_result_from_folder(sorter_output_folder)
+
+    @classmethod
+    def _setup_json_probe_map(cls, recording, sorter_output_folder):
+        """Create a JSON probe map file for Kilosort4."""
+        from kilosort.io import save_probe
+        import numpy as np
+
+        groups = recording.get_channel_groups()
+        positions = np.array(recording.get_channel_locations())
+        if positions.shape[1] != 2:
+            raise RuntimeError("3D 'location' are not supported. Set 2D locations instead.")
+
+        n_chan = recording.get_num_channels()
+        chanMap = np.arange(n_chan)
+        xc = positions[:, 0]
+        yc = positions[:, 1]
+        kcoords = groups.astype(float)
+
+        probe = {
+            "chanMap": chanMap,
+            "xc": xc,
+            "yc": yc,
+            "kcoords": kcoords,
+            "n_chan": n_chan,
+        }
+        save_probe(probe, str(sorter_output_folder / "chanMap.json"))

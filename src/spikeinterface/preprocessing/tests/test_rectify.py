@@ -1,12 +1,5 @@
-import pytest
-from pathlib import Path
-
-from spikeinterface import set_global_tmp_folder
 from spikeinterface.core import generate_recording
-
 from spikeinterface.preprocessing import rectify
-
-import numpy as np
 
 
 def test_rectify():

@@ -1,3 +1,5 @@
+import pytest
+
 import numpy as np
 
 from spikeinterface.core import Templates
@@ -69,7 +71,8 @@ def test_generate_hybrid_from_templates():
     assert sorting_hybrid.get_num_units() == num_units
 
 
-def test_estimate_templates(create_cache_folder):
+@pytest.mark.skip("Spykingcircus2 is not stable enought for estimating templates from recording")
+def test_estimate_templates_from_recording(create_cache_folder):
     cache_folder = create_cache_folder
     rec, _ = generate_ground_truth_recording(num_units=10, sampling_frequency=20000, seed=0)
     templates = estimate_templates_from_recording(
@@ -79,7 +82,11 @@ def test_estimate_templates(create_cache_folder):
 
 
 if __name__ == "__main__":
+    from pathlib import Path
+
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "generation"
+
     # test_generate_hybrid_no_motion()
-    test_generate_hybrid_motion()
-    # test_estimate_templates()
+    # test_generate_hybrid_motion()
+    test_estimate_templates_from_recording(cache_folder)
     # test_generate_hybrid_with_sorting()

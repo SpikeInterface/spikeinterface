@@ -43,6 +43,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         If True, waveforms are pre-whitened
     dtype : dtype, default: "float32"
         Dtype of the pc scores
+    {}
 
     Examples
     --------
@@ -522,8 +523,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
         # transform a waveforms buffer
         # used by _run() and project_new()
 
-        from sklearn.exceptions import NotFittedError
-
         mode = self.params["mode"]
 
         # prepare buffer
@@ -682,6 +681,7 @@ def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafte
     return worker_ctx
 
 
+ComputePrincipalComponents.__doc__.format(_shared_job_kwargs_doc)
 register_result_extension(ComputePrincipalComponents)
 compute_principal_components = ComputePrincipalComponents.function_factory()
 

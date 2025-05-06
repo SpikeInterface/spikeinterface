@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import warnings
 
 from spikeinterface.core.job_tools import fix_job_kwargs
 
@@ -31,7 +30,6 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
     spike_retriver_kwargs : dict
         A dictionary to control the behavior for getting the maximum channel for each spike
         This dictionary contains:
-
           * channel_from_template: bool, default: True
               For each spike is the maximum channel computed from template or re estimated at every spikes
               channel_from_template = True is old behavior but less acurate
