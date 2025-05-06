@@ -1,14 +1,11 @@
 from __future__ import annotations
-from typing import Literal
 
 import numpy as np
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from spikeinterface.core.motion import ensure_time_bins
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
-from spikeinterface.preprocessing.motion import compute_motion, _update_motion_kwargs, _update_interpolation_kwargs
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.preprocessing.filter import fix_dtype
-from spikeinterface.core import BaseRecording
 
 
 def compute_peak_displacements(peaks, motion, recording, peak_locations=None):
