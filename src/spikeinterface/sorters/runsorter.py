@@ -27,7 +27,6 @@ from .utils import (
     has_singularity,
     has_spython,
     has_docker_nvidia_installed,
-    get_nvidia_docker_dependecies,
 )
 from .container_tools import (
     find_recording_folders,
