@@ -321,6 +321,7 @@ def compute_motion(
       * :py:func:`~spikeinterface.sortingcomponents.motion.motion.estimate_motion`
 
     {}
+    {}
     raise_error : bool, default: True
         If True, an error is raised if motion estimation fails
         If False, the process continues and the peaks and peak_locations are still returned in `motion_info`.
@@ -646,8 +647,7 @@ _common_motion_parameters = """Parameters
     estimate_motion_kwargs : dict
         Optional parameters to overwrite the ones in the preset for "estimate_motion" step.
     interpolate_motion_kwargs : dict
-        Optional parameters to overwrite the ones in the preset for "detect" step.
-"""
+        Optional parameters to overwrite the ones in the preset for "detect" step."""
 
 
 correct_motion.__doc__ = correct_motion.__doc__.format(_doc_presets, _common_motion_parameters, _shared_job_kwargs_doc)
