@@ -8,7 +8,7 @@ import time
 import inspect
 from pathlib import Path
 import numpy as np
-
+from typing import Literal
 
 from spikeinterface.core import get_noise_levels, fix_job_kwargs
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
@@ -282,13 +282,21 @@ def _update_interpolation_kwargs(preset, interpolation_kwargs):
 
 def compute_motion(
     recording: BaseRecording,
-    preset="dredge_fast",
-    detect_kwargs={},
-    select_kwargs={},
-    localize_peaks_kwargs={},
-    estimate_motion_kwargs={},
-    folder=None,
-    overwrite=False,
+    preset: Literal[
+        "dredge",
+        "medicine",
+        "dredge_fast",
+        "nonrigid_accurate",
+        "nonrigid_fast_and_accurate",
+        "rigid_fast",
+        "kilosort_like",
+    ] = "dredge_fast",
+    detect_kwargs: dict = {},
+    select_kwargs: dict = {},
+    localize_peaks_kwargs: dict = {},
+    estimate_motion_kwargs: dict = {},
+    folder: str | Path | None = None,
+    overwrite: bool = False,
     raise_error: bool = True,
     **job_kwargs,
 ) -> dict:
@@ -452,17 +460,25 @@ def compute_motion(
 
 
 def correct_motion(
-    recording,
-    preset="dredge_fast",
-    folder=None,
-    output_motion=False,
-    output_motion_info=False,
-    overwrite=False,
-    detect_kwargs={},
-    select_kwargs={},
-    localize_peaks_kwargs={},
-    estimate_motion_kwargs={},
-    interpolate_motion_kwargs={},
+    recording: BaseRecording,
+    preset: Literal[
+        "dredge",
+        "medicine",
+        "dredge_fast",
+        "nonrigid_accurate",
+        "nonrigid_fast_and_accurate",
+        "rigid_fast",
+        "kilosort_like",
+    ] = "dredge_fast",
+    folder: str | Path | None = None,
+    output_motion: bool = False,
+    output_motion_info: bool = False,
+    overwrite: bool = False,
+    detect_kwargs: dict = {},
+    select_kwargs: dict = {},
+    localize_peaks_kwargs: dict = {},
+    estimate_motion_kwargs: dict = {},
+    interpolate_motion_kwargs: dict = {},
     **job_kwargs,
 ):
     """

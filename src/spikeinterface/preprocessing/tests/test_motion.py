@@ -6,6 +6,7 @@ from spikeinterface.preprocessing import (
     load_motion_info,
     save_motion_info,
     get_motion_parameters_preset,
+    compute_motion,
 )
 from spikeinterface.preprocessing.motion import _get_default_motion_params
 
@@ -45,7 +46,21 @@ def test_get_motion_parameters_preset():
     pprint(params)
 
 
+def test_estimate_motion_fails():
+    """
+    If motion estimation fails, `compute_motion` should still return a `motion_info` dict with all information except
+    the motion object. This tests whether this does happen.
+    """
+    rec = generate_recording(durations=[5])
+    motion_info = compute_motion(rec, raise_error=False)
+
+    assert motion_info["motion"] == None
+    assert motion_info["peaks"] is not None
+    assert motion_info["parameters"] is not None
+
+
 if __name__ == "__main__":
     # print(correct_motion.__doc__)
     # test_estimate_and_correct_motion()
     test_get_motion_parameters_preset()
+    test_estimate_motion_fails()
