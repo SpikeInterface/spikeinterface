@@ -337,8 +337,7 @@ def compute_motion(
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks, localize_peak_methods
     from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
-    from spikeinterface.sortingcomponents.motion import estimate_motion
-    from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion_methods
+    from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion, estimate_motion_methods
 
     # get preset params and update if necessary
     detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
