@@ -3,7 +3,7 @@
 SpikeInterface 0.102.3 release notes
 ------------------------------------
 
-May 5th 2025
+May 7th 2025
 
 Minor release with bug fixes
 
@@ -13,29 +13,38 @@ core:
 * Cleanup base sorting extractor  (#3871)
 * Propagate job_kwargs to noise_levels (#3867)
 * Add del dunder to binary recording (#3833)
-* BUG FIX: ensure matching of args in aggregate_channels and ChannelAggregationRecording (#3829)
+* Ensure matching of args in aggregate_channels and ChannelAggregationRecording (#3829)
 
 extractors:
 
-* channel names  to singular as property (#3879)
+* Channel names to singular as property (#3879)
 * Pickle fix for the IBL recording (#3863)
-* WhiteMatterRecordingExtractor (#3849)
+* Implement WhiteMatterRecordingExtractor (#3849)
 * BlackrockSortingExtractor - load only .nev files, ignore nsX (#3843)
 * Backwards compatibility for sync stream in OpenEphysBinary (#3839)
 * Remove ceiling on pyedflib (#3752)
 
+preprocessing:
+
+* Add `compute_motion`` function (#3905)
+
 sorters:
 
+* Fix ks4 tests and support ks4>=4.0.34 (#3900)
 * Patch for memory usage while matching in SC2 (#3889)
 * Update KS4 wrapper for versions 4.0.31+ (#3872)
+* Incorporated kilosort4's setup_logger() function to ensure generation of kilosort4.log file in sorter_output folder (#3866)
 * Updated KilosortBase's channel map generation to support json probe maps with kcoord information. (#3852)
 
+qualitymetrics:
+
+* Add numba check to `sd_ratio` (#3890)
 
 widgets:
 
 * Fix plot traces when t_start is defined (#3893)
 * Add docs for custom plotting and change default `limits` in `UnitLocationsWidget` (#3855)
-
+* Allow UnitWaveformsWidget to use probeinterface plot_probe (#3819)
 
 sortingcomponents:
 
@@ -46,6 +55,10 @@ sortingcomponents:
 * Function to estimate templates from svd (#3834)
 * Prevent error of trying to delete non-existent variable in sorting components (#3820)
 * Graph tools (#3714)
+
+motion correction:
+
+* Refactor `correct_motion` into compute motion, then make interpolation (#3905)
 
 
 documentation:
@@ -59,12 +72,12 @@ continuous integration:
 
 packaging:
 
-* cleanup pyproject--remove duplicate from testing section (#3874)
+* Cleanup pyproject - remove duplicate from testing section (#3874)
 * More cleanup of imports focused mostly on testing and utils around testing (#3841)
 
 testing:
 
-* skip test_estimate_templates_from_recording because SC2 is not stable enough (#3870)
+* Skip test_estimate_templates_from_recording because SC2 is not stable enough (#3870)
 
 Contributors:
 
@@ -74,6 +87,7 @@ Contributors:
 * @cwindolf
 * @emmanuel-ferdman
 * @h-mayorquin
+* @jakeswann1
 * @jonahpearl
 * @luiztauffer
 * @mahlzahn
