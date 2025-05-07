@@ -21,11 +21,9 @@ def test_estimate_and_correct_motion(create_cache_folder):
         shutil.rmtree(folder)
 
     rec_corrected = correct_motion(rec, folder=folder, estimate_motion_kwargs={"win_step_um": 50, "win_scale_um": 100})
-    print(rec_corrected)
 
     # test reloading motion info
     motion_info = load_motion_info(folder)
-    print(motion_info.keys())
 
     # test saving motion info
     save_folder = folder / "motion_info"
@@ -54,8 +52,9 @@ def test_compute_motion_fails(create_cache_folder):
     """
     # this recording has too few channels for the motion correction to work
     rec = generate_recording(durations=[5])
-    motion_info = compute_motion(rec, raise_error=False)
+    motion, motion_info = compute_motion(rec, raise_error=False, output_motion_info=True)
 
+    assert motion is None
     assert motion_info["motion"] is None
     assert motion_info["peaks"] is not None
     assert motion_info["parameters"] is not None

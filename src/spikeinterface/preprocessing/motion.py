@@ -295,6 +295,7 @@ def compute_motion(
     select_kwargs: dict = {},
     localize_peaks_kwargs: dict = {},
     estimate_motion_kwargs: dict = {},
+    output_motion_info: bool = False,
     folder: str | Path | None = None,
     overwrite: bool = False,
     raise_error: bool = True,
@@ -455,7 +456,10 @@ def compute_motion(
     if folder is not None:
         save_motion_info(motion_info, folder, overwrite=overwrite)
 
-    return motion_info
+    if output_motion_info:
+        return motion, motion_info
+    else:
+        return motion
 
 
 def correct_motion(
@@ -516,10 +520,6 @@ def correct_motion(
     {}
     output_motion : bool, default: False
         It True, the function returns a `motion` object.
-    output_motion_info : bool, default: False
-        If True, then the function returns a `motion_info` dictionary that contains variables
-        to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
-        This dictionary is the same when reloaded from the folder
 
     {}
 
@@ -541,7 +541,7 @@ def correct_motion(
     )
     interpolate_motion_kwargs = _update_interpolation_kwargs(preset, interpolate_motion_kwargs)
 
-    motion_info = compute_motion(
+    motion, motion_info = compute_motion(
         recording,
         preset=preset,
         folder=folder,
@@ -550,10 +550,9 @@ def correct_motion(
         select_kwargs=select_kwargs,
         localize_peaks_kwargs=localize_peaks_kwargs,
         estimate_motion_kwargs=estimate_motion_kwargs,
+        output_motion_info=True,
         **job_kwargs,
     )
-
-    motion = motion_info["motion"]
 
     recording_corrected = interpolate_motion(recording, motion, **interpolate_motion_kwargs)
 
@@ -672,7 +671,11 @@ _common_motion_parameters = """Parameters
     estimate_motion_kwargs : dict
         Optional parameters to overwrite the ones in the preset for "estimate_motion" step.
     interpolate_motion_kwargs : dict
-        Optional parameters to overwrite the ones in the preset for "detect" step."""
+        Optional parameters to overwrite the ones in the preset for "detect" step.
+    output_motion_info : bool, default: False
+        If True, then the function returns a `motion_info` dictionary that contains variables
+        to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
+        This dictionary is the same when reloaded from the folder."""
 
 
 correct_motion.__doc__ = correct_motion.__doc__.format(_doc_presets, _common_motion_parameters, _shared_job_kwargs_doc)
