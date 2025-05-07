@@ -1,4 +1,5 @@
 import shutil
+import pytest
 
 from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import (
@@ -14,7 +15,6 @@ from spikeinterface.preprocessing.motion import _get_default_motion_params
 def test_estimate_and_correct_motion(create_cache_folder):
     cache_folder = create_cache_folder
     rec = generate_recording(durations=[30.0], num_channels=12)
-    print(rec)
 
     folder = cache_folder / "estimate_and_correct_motion"
     if folder.exists():
@@ -46,17 +46,29 @@ def test_get_motion_parameters_preset():
     pprint(params)
 
 
-def test_compute_motion_fails():
+def test_compute_motion_fails(create_cache_folder):
     """
     If motion estimation fails, `compute_motion` should still return a `motion_info` dict with all information except
-    the motion object. This tests whether this does happen.
+    the motion object. This tests whether this does happen, then checks that saving and loading still works when motion
+    is `None`.
     """
+    # this recording has too few channels for the motion correction to work
     rec = generate_recording(durations=[5])
     motion_info = compute_motion(rec, raise_error=False)
 
-    assert motion_info["motion"] == None
+    assert motion_info["motion"] is None
     assert motion_info["peaks"] is not None
     assert motion_info["parameters"] is not None
+
+    # save and load the motion. We expect a warning.
+    cache_folder = create_cache_folder
+    folder = cache_folder / "motion_info_with_motion_none"
+    save_motion_info(motion_info, folder=folder)
+
+    with pytest.warns(UserWarning):
+        loaded_motion_info = load_motion_info(folder)
+
+    assert loaded_motion_info["motion"] is None
 
 
 if __name__ == "__main__":

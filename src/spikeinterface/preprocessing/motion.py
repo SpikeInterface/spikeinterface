@@ -584,7 +584,10 @@ def save_motion_info(motion_info, folder, overwrite=False):
 
     np.save(folder / "peaks.npy", motion_info["peaks"])
     np.save(folder / "peak_locations.npy", motion_info["peak_locations"])
-    motion_info["motion"].save(folder / "motion")
+
+    motion = motion_info["motion"]
+    if motion is not None:
+        motion.save(folder / "motion")
 
 
 def load_motion_info(folder):
@@ -610,16 +613,28 @@ def load_motion_info(folder):
     if (folder / "motion").is_dir():
         motion = Motion.load(folder / "motion")
     else:
-        warnings.warn("Trying to load Motion from the legacy format")
+
+        is_legacy_format = True
         required_files = ["spatial_bins.npy", "temporal_bins.npy", "motion.npy"]
         for required_file in required_files:
             if not (folder / required_file).is_file():
-                raise IOError("The provided folder is not a valid motion folder")
-        spatial_bins_um = np.load(folder / "spatial_bins.npy")
-        temporal_bins_s = [np.load(folder / "temporal_bins.npy")]
-        displacement = [np.load(folder / "motion.npy")]
+                is_legacy_format = False
 
-        motion = Motion(displacement=displacement, temporal_bins_s=temporal_bins_s, spatial_bins_um=spatial_bins_um)
+        if is_legacy_format:
+
+            warnings.warn("Trying to load Motion from the legacy format")
+
+            spatial_bins_um = np.load(folder / "spatial_bins.npy")
+            temporal_bins_s = [np.load(folder / "temporal_bins.npy")]
+            displacement = [np.load(folder / "motion.npy")]
+
+            motion = Motion(displacement=displacement, temporal_bins_s=temporal_bins_s, spatial_bins_um=spatial_bins_um)
+
+        else:
+
+            warnings.warn("No `motion` object in folder. `motion_info` is loaded with `motion` equal to `None`.")
+
+            motion = None
 
     motion_info["motion"] = motion
     return motion_info
