@@ -66,7 +66,7 @@ def assign_templates_to_peaks(
     ----------
     recording : RecordingExtractor
         The recording extractor.
-    peaks : np.ndarray 
+    peaks : np.ndarray
         Peaks that should be assigned to templates.
     templates : Templates
         The templates used for matching.
@@ -78,7 +78,7 @@ def assign_templates_to_peaks(
         The mode for gathering results. Can be 'memory' or 'file'.
     job_kwargs : dict
         Additional keyword arguments for joblib.
-    
+
     Returns
     -------
     peak_labels: np.ndarray
