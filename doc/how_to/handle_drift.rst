@@ -15,12 +15,17 @@ Here is a short demo on how to handle drift using the high-level
 function ``spikeinterface.preprocessing.compute_motion()``.
 
 This function takes a preprocessed recording as input and returns a
-``motion_info`` object which contains everything you need to plot,
-analyse and later interpolate your recording. Note that you can
-alternatively compute the motion correction and interpolate at the same
-time using the ``spikeinterface.preprocessing.correct_motion()`` function.
+``motion`` object, which contains the information required to
+interpolate your recording. You can additionally return a
+``motion_info`` object which contains the peaks, peak_locations and
+parameters used to compute the ``motion`` object by passing
+``output_motion_info = True`` to the ``compute_motion`` function. Note
+that you can alternatively compute the motion correction and interpolate
+at the same time using the
+``spikeinterface.preprocessing.correct_motion()`` function.
 
-Internally this function runs the following steps (which can be slow!):
+Internally the function ``compute_motion`` runs the following steps
+(which can be slow!):
 
 ::
 
@@ -1326,7 +1331,7 @@ to load them later.
 .. code:: ipython3
 
     # lets try theses presets
-    some_presets = ("rigid_fast", "kilosort_like",  "nonrigid_accurate", "nonrigid_fast_and_accurate", "dredge", "dredge_fast")
+    some_presets = ("rigid_fast", "kilosort_like",  "nonrigid_accurate", "nonrigid_fast_and_accurate", "dredge", "dredge_fast", "medicine")
 
 .. code:: ipython3
 
@@ -1336,8 +1341,8 @@ to load them later.
         folder = base_folder / "motion_folder_dataset1" / preset
         if folder.exists():
             shutil.rmtree(folder)
-        motion_info = si.compute_motion(
-            rec, preset=preset, folder=folder, **job_kwargs
+        motion, motion_info = si.compute_motion(
+            rec, preset=preset, folder=folder, output_motion_info=True, **job_kwargs
         )
 
 
@@ -1348,11 +1353,11 @@ to load them later.
 
 .. parsed-literal::
 
-    noise_level (no parallelization):   0%|          | 0/20 [00:00<?, ?it/s]noise_level (no parallelization): 100%|██████████| 20/20 [00:04<00:00,  4.21it/s]
-    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [02:50<00:00, 11.47it/s]
+    noise_level (no parallelization):   0%|          | 0/20 [00:00<?, ?it/s]noise_level (no parallelization): 100%|██████████| 20/20 [00:04<00:00,  4.09it/s]
+    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [02:48<00:00, 11.63it/s]
     /home/nolanlab/Work/Developing/motion_correct_docs/spikeinterface/.venv/lib/python3.13/site-packages/torch/cuda/__init__.py:174: UserWarning: CUDA initialization: Unexpected error from cudaGetDeviceCount(). Did you run some cuda functions before calling NumCudaDevices() that might have already set an error? Error 804: forward compatibility was attempted on non supported HW (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:109.)
       return torch._C._cuda_getDeviceCount() > 0
-    Cross correlation: 100%|██████████| 1/1 [00:05<00:00,  5.29s/it]
+    Cross correlation: 100%|██████████| 1/1 [00:05<00:00,  5.33s/it]
 
 
 .. parsed-literal::
@@ -1362,7 +1367,7 @@ to load them later.
 
 .. parsed-literal::
 
-    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [04:34<00:00,  7.12it/s]
+    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [04:33<00:00,  7.16it/s]
 
 
 .. parsed-literal::
@@ -1372,8 +1377,8 @@ to load them later.
 
 .. parsed-literal::
 
-    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [04:37<00:00,  7.06it/s]
-    pairwise displacement: 100%|██████████| 18/18 [01:01<00:00,  3.41s/it]
+    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [04:47<00:00,  6.82it/s]
+    pairwise displacement: 100%|██████████| 18/18 [01:01<00:00,  3.43s/it]
 
 
 .. parsed-literal::
@@ -1383,8 +1388,8 @@ to load them later.
 
 .. parsed-literal::
 
-    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [04:16<00:00,  7.63it/s]
-    pairwise displacement: 100%|██████████| 18/18 [00:58<00:00,  3.27s/it]
+    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [04:15<00:00,  7.67it/s]
+    pairwise displacement: 100%|██████████| 18/18 [01:00<00:00,  3.37s/it]
 
 .. parsed-literal::
 
@@ -1394,9 +1399,9 @@ to load them later.
 .. parsed-literal::
 
 
-    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [04:46<00:00,  6.85it/s]
-    Cross correlation: 100%|██████████| 9/9 [01:34<00:00, 10.47s/it]
-    Solve: 100%|██████████| 8/8 [00:03<00:00,  2.23it/s]
+    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [04:45<00:00,  6.87it/s]
+    Cross correlation: 100%|██████████| 9/9 [01:33<00:00, 10.35s/it]
+    Solve: 100%|██████████| 8/8 [00:30<00:00,  3.85s/it]
 
 
 .. parsed-literal::
@@ -1406,9 +1411,42 @@ to load them later.
 
 .. parsed-literal::
 
-    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [04:17<00:00,  7.61it/s]
-    Cross correlation: 100%|██████████| 9/9 [01:29<00:00,  9.99s/it]
-    Solve: 100%|██████████| 8/8 [00:05<00:00,  1.53it/s]
+    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [04:13<00:00,  7.72it/s]
+    Cross correlation: 100%|██████████| 9/9 [01:29<00:00,  9.94s/it]
+    Solve: 100%|██████████| 8/8 [00:30<00:00,  3.85s/it]
+
+
+.. parsed-literal::
+
+    Computing with medicine
+
+
+.. parsed-literal::
+
+    detect and localize (workers: 10 processes): 100%|██████████| 1958/1958 [06:52<00:00,  4.75it/s]
+    [INFO] - Constructing Dataset instance
+    [INFO] - Constructing MotionFunction instance with parameters:
+        bound_normalized = 0.10328739313377586
+        time_range = (np.float64(0.0005666666666666667), np.float64(1957.1912))
+        time_bin_size = 1.0
+        time_kernel_width = 30
+        num_depth_bins = 13
+    [INFO] - Constructing ActivityNetwork instance with parameters:
+        hidden_features = (256, 256)
+        activation = None
+    [INFO] - Constructing Medicine instance
+
+
+.. parsed-literal::
+
+    num_depth_bins 13
+
+
+.. parsed-literal::
+
+    [INFO] - Fitting motion estimation
+    100%|██████████| 10000/10000 [02:49<00:00, 59.09it/s]
+    [INFO] - Finished fitting motion estimation
 
 
 Plot the results
@@ -1493,6 +1531,10 @@ nonrigid_accurate but faster (using grid_convolution).
 
 
 .. image:: handle_drift_files/handle_drift_17_5.png
+
+
+
+.. image:: handle_drift_files/handle_drift_17_6.png
 
 
 Make an interpolated recording
@@ -3723,61 +3765,61 @@ this as follows
      0.         0.         0.07692308 0.07692308 0.15384615 0.15384615
      0.23076923 0.23076923 0.30769231 0.30769231 0.38461538 0.38461538
      0.46153846 0.46153846 0.53846154 0.53846154 0.61538462 0.61538462
-     0.69230769 0.69230769 0.76923077 0.76923077 0.84615385 0.84615385]</details><details><summary><strong>noise_level_mad_raw</strong></summary>[4.328971  3.5193124 4.040843  3.3707893 3.5230763 3.3174088 3.4241784
-     3.067026  3.2180939 3.15462   3.3479633 3.168944  3.4533458 2.9745495
-     3.553351  3.318973  3.7787642 3.4898267 4.2657423 3.5958266 4.424821
-     3.9538722 5.0891304 3.9154568 5.1110907 4.1876154 4.6338573 3.8354003
-     4.567849  4.017486  4.522938  3.6062286 3.9204037 3.8948383 4.948183
-     3.8204093 3.9349682 3.882407  4.4976983 3.781583  4.105978  3.8969655
-     3.953466  3.8211784 3.8850296 4.1316943 4.179173  4.1594563 4.2184596
-     4.3685904 4.386817  4.7110853 4.160495  4.6285615 4.218015  4.4000406
-     4.3210664 4.4048233 4.354333  4.396923  4.3958845 4.531192  4.475874
-     4.5972705 4.673949  4.7713614 4.774121  5.1072783 5.2013197 4.934017
-     5.198869  5.267235  5.2332187 4.6607533 5.550741  4.844428  5.1129465
-     4.874814  5.656312  4.8352923 4.9894214 4.5395823 5.2075114 4.593696
-     4.259925  4.1594267 4.497315  4.1006556 4.9757814 4.108612  5.766862
-     4.2851877 4.0539913 4.1027856 4.1954007 3.976122  4.2195992 4.4401965
-     5.441061  4.1190443 4.216155  4.161042  4.338449  3.8671448 4.3444624
-     4.0069013 4.711561  4.4212313 4.998662  5.222762  5.719619  4.7795873
-     4.426294  4.557147  4.8130813 4.315013  4.5562754 4.816596  4.7824035
-     4.471732  4.6601024 4.74837   5.4284697 4.7998285 4.9097075 5.327355
-     4.811641  4.655443  4.319278  4.518914  4.852558  3.4545722 3.4548862
-     4.047536  4.33533   3.6169631 3.442721  4.178751  4.592254  3.4432025
-     3.9144013 4.2521777 4.0821    3.674123  4.1212416 4.6537223 5.817271
-     4.119782  6.0250835 4.733878  3.4041111 7.1230497 4.9508796 4.949074
-     6.5452585 4.784212  5.3380613 5.115077  5.9395404 5.304719  4.595127
-     4.8561172 5.463059  4.3916597 4.380916  4.9863505 4.845601  4.265464
-     4.4942765 4.923888  5.134233  4.671912  4.844829  5.8539877 5.0213747
-     4.3499393 4.875056  5.1741858 5.8596334 4.9580507 5.616236  4.883301
-     5.3757234 5.8201876 5.6435027 4.636811  5.299855  4.7550764 5.2311525
-     4.9484544 6.438708  2.870315  5.9104576 5.3212786 5.4377975 4.8122306
-     4.9390182 4.928448  4.6482506 4.571772  4.9140205 5.4245954 5.640577
-     5.4567456 5.0989237 4.998292  5.860266  5.1513495 5.741376  5.1380463
-     5.584403  6.2906113 5.2667994 5.3842077 5.791311  5.0080523 5.0025215
-     5.930398  5.148056  5.8274007 5.5260286 6.248809  5.7920446 6.799681
-     6.1707544 6.6044493 5.951358  5.9048343 5.7227774 7.1150084 6.1371427
-     5.832712  5.559903  6.7610917 6.930537  5.9423056 5.4481273 6.4911118
-     5.858526  6.4035378 6.549627  6.4368033 6.4269915 6.665831  6.6732016
-     6.7925034 6.3119144 6.760165  6.305271  6.6763067 6.4305735 7.6928864
-     5.6824746 6.1973906 6.07708   5.709277  5.468787  5.355897  5.6885843
-     4.968072  5.263758  5.2139297 5.273679  5.3433547 4.6620855 5.111024
-     5.2481036 4.612145  5.046064  4.9943666 5.5279493 5.1984625 5.2900405
-     4.3727045 5.0149364 4.087596  4.339757  4.539951  4.4287605 4.135468
-     5.145887  4.3257937 5.1583304 4.7722726 4.5894136 4.5787034 5.5674167
-     4.8246336 6.0918584 4.447677  5.50765   3.9916413 5.2402754 4.6197166
-     4.925642  4.7575865 5.451802  3.803788  5.3139553 4.418626  3.9237301
-     4.416856  4.349386  3.2770047 3.8144867 6.107548  3.8687606 4.955581
-     3.799668  4.2485237 4.12194   3.408886  3.1816838 3.5183861 3.352635
-     3.2044716 3.2228718 3.7424386 4.5424566 3.3817153 3.7698188 3.4002805
-     3.602919  3.4449258 3.904628  3.7715988 3.5285926 2.979291  3.9341598
-     3.9099612 4.289459  3.422584  2.7172062 3.219637  4.198288  3.3135257
-     2.9733627 5.157943  4.0262957 3.8720825 2.8101976 5.2893577 4.0898476
-     3.8282528 3.7123306 1.5625069 3.6592453 2.8705273 3.4515805 3.3318653
-     3.255453  2.8958867 3.357513  4.4694514 3.769628  3.2731786 3.2729678
-     4.2269545 3.7364018 3.1594296 3.228335  3.9247768 3.8299565 3.110499
-     3.1814544 3.651895  3.5906901 2.8458903 3.9197044 3.768661  4.8830295
-     3.7792995 3.1664577 3.3843017 4.154054  3.1571536 4.393162  4.216581
-     3.9081967 3.1560757 3.372657  3.5572033 3.665028  2.9009733]</details></ul></details><details style='margin-left: 10px;'>  <summary><strong>Parent</strong></summary><ul><div style='border:1px solid #ddd; padding:10px;'><strong>BandpassFilterRecording: 384 channels - 30.0kHz - 1 segments - 58,715,724 samples - 1,957.19s (32.62 minutes) - float32 dtype - 83.99 GiB</strong></div><details style='margin-left: 10px;'>  <summary><strong>Channel IDs</strong></summary><ul>['imec0.ap#AP0' 'imec0.ap#AP1' 'imec0.ap#AP2' 'imec0.ap#AP3'
+     0.69230769 0.69230769 0.76923077 0.76923077 0.84615385 0.84615385]</details><details><summary><strong>noise_level_mad_raw</strong></summary>[4.2855964 3.492429  4.0180144 3.3666706 3.5278823 3.3179352 3.439708
+     3.070353  3.210783  3.1490717 3.3396506 3.1979225 3.4955215 2.9963536
+     3.5930698 3.3350708 3.8276646 3.5310807 4.278153  3.6044033 4.458356
+     3.99234   5.1158357 3.9673972 5.192459  4.2907877 4.689567  3.912412
+     4.61987   4.086311  4.510907  3.6906376 3.9533157 3.9671597 5.0037894
+     3.8934646 3.9793854 4.021913  4.550074  3.9045506 4.1819053 4.0232825
+     4.052217  3.9738297 4.0177526 4.314392  4.340369  4.3405523 4.397862
+     4.6237535 4.59031   4.8712406 4.3537416 4.812516  4.410579  4.5957766
+     4.517499  4.569435  4.552661  4.6056986 4.5583076 4.7078376 4.719682
+     4.810146  4.922519  4.989482  4.9835844 5.301668  5.3826385 5.1143036
+     5.3812017 5.411904  5.389824  4.775195  5.7043095 4.987653  5.1840835
+     4.974888  5.6931686 4.9118104 5.0130787 4.599759  5.1904454 4.6440883
+     4.2792854 4.228923  4.5452585 4.1915774 5.0216    4.150725  5.8135
+     4.348508  4.072265  4.154316  4.243102  4.0243483 4.2717576 4.5053973
+     5.4594727 4.2193804 4.2443547 4.1713114 4.3973384 3.9117064 4.377062
+     3.965004  4.668711  4.372008  4.9489813 5.2014246 5.708063  4.694083
+     4.3594103 4.4369283 4.727226  4.2251635 4.458459  4.686775  4.666874
+     4.389735  4.569252  4.6213    5.340361  4.7040977 4.7990866 5.1839514
+     4.7267613 4.600446  4.297935  4.513276  4.8463945 3.4484773 3.4760222
+     4.051447  4.32361   3.6205635 3.4699295 4.166444  4.600744  3.448174
+     3.909265  4.255771  4.1034365 3.6838212 4.11306   4.6598177 5.793179
+     4.1359015 6.0613027 4.725399  3.4271922 7.1897516 4.803236  5.0069423
+     6.4442606 4.7810106 5.180518  5.087472  5.812115  5.196607  4.4870467
+     4.8794966 5.4463143 4.380263  4.3620443 4.9692907 4.872739  4.210808
+     4.3967247 4.896011  5.0428696 4.5854187 4.726063  5.8508043 4.9672637
+     4.365802  4.843416  5.11014   5.817958  4.9503617 5.597903  4.873899
+     5.280375  5.729596  5.613024  4.5854235 5.266111  4.662812  5.1338105
+     4.870392  6.234307  2.8424067 5.740838  5.243568  5.351054  4.7781763
+     4.858476  4.8666105 4.5978994 4.474023  4.8581095 5.3878183 5.616058
+     5.4300547 5.0092936 4.929963  5.813242  5.089921  5.687169  5.0425487
+     5.482409  6.214619  5.187956  5.351322  5.750521  4.9546194 4.948117
+     5.8985605 5.1514735 5.727295  5.4778223 6.1868095 5.7745867 6.723811
+     6.1139345 6.480891  5.8922877 5.755698  5.6491404 6.9867682 6.0885344
+     5.7351475 5.45999   6.7053795 6.9258666 5.839465  5.404176  6.4503164
+     5.8377504 6.342604  6.5335627 6.4939356 6.3274055 6.629232  6.605002
+     6.8320704 6.256805  6.7286654 6.3245373 6.7135954 6.4266624 7.6135955
+     5.591593  6.20144   6.0022326 5.632736  5.413129  5.2872877 5.6439996
+     4.938378  5.274398  5.213336  5.304457  5.329827  4.6885605 5.177614
+     5.3004336 4.6933393 5.116024  5.0833855 5.6145678 5.3163543 5.350334
+     4.436827  5.0735726 4.161907  4.4414773 4.581197  4.485259  4.18822
+     5.2131286 4.3885865 5.203862  4.813886  4.567301  4.587146  5.4807715
+     4.872098  6.1114755 4.6375194 5.4561024 4.0987043 5.2862086 4.623134
+     4.8850965 4.7503567 5.4428773 3.7992234 5.257924  4.3990655 3.909058
+     4.4379835 4.297831  3.3044562 3.8122203 6.193172  3.8778214 4.9388266
+     3.7797494 4.257824  4.1218843 3.4523454 3.1943307 3.509864  3.3406124
+     3.2137837 3.255054  3.754146  4.538768  3.40375   3.7803307 3.3942363
+     3.5918183 3.4567065 3.9290786 3.7720141 3.5060687 2.9589734 3.924705
+     3.8995082 4.28544   3.4167428 2.7148714 3.2281075 4.1968412 3.3198833
+     2.974458  5.1193695 3.995488  3.8809292 2.7993133 5.25269   4.06581
+     3.8151505 3.6989398 1.554759  3.625798  2.8626964 3.4661727 3.3246632
+     3.2519355 2.8903203 3.3230774 4.4842563 3.7510521 3.2427921 3.2872958
+     4.2534    3.7180748 3.1714869 3.2209778 3.969171  3.803349  3.1074347
+     3.1912575 3.6632237 3.5963902 2.8377233 3.92343   3.7584305 4.8514576
+     3.7637908 3.1882536 3.3816674 4.168189  3.147501  4.385599  4.235315
+     3.9455788 3.1955812 3.357071  3.5595803 3.6574993 2.9044878]</details></ul></details><details style='margin-left: 10px;'>  <summary><strong>Parent</strong></summary><ul><div style='border:1px solid #ddd; padding:10px;'><strong>BandpassFilterRecording: 384 channels - 30.0kHz - 1 segments - 58,715,724 samples - 1,957.19s (32.62 minutes) - float32 dtype - 83.99 GiB</strong></div><details style='margin-left: 10px;'>  <summary><strong>Channel IDs</strong></summary><ul>['imec0.ap#AP0' 'imec0.ap#AP1' 'imec0.ap#AP2' 'imec0.ap#AP3'
      'imec0.ap#AP4' 'imec0.ap#AP5' 'imec0.ap#AP6' 'imec0.ap#AP7'
      'imec0.ap#AP8' 'imec0.ap#AP9' 'imec0.ap#AP10' 'imec0.ap#AP11'
      'imec0.ap#AP12' 'imec0.ap#AP13' 'imec0.ap#AP14' 'imec0.ap#AP15'
@@ -7227,6 +7269,10 @@ to display the results.
 .. image:: handle_drift_files/handle_drift_22_5.png
 
 
+
+.. image:: handle_drift_files/handle_drift_22_6.png
+
+
 run times
 ---------
 
@@ -7256,7 +7302,7 @@ computation speeds. It is good to have this in mind!
 
 .. parsed-literal::
 
-    <matplotlib.legend.Legend at 0x7ad7884da510>
+    <matplotlib.legend.Legend at 0x7c9f003c1a90>
 
 
 

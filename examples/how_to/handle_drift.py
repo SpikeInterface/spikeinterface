@@ -25,11 +25,14 @@
 #
 # Here is a short demo on how to handle drift using the high-level function `spikeinterface.preprocessing.compute_motion()`.
 #
-# This function takes a preprocessed recording as input and returns a `motion_info` object which contains everything you need to
-# plot, analyse and later interpolate your recording. Note that you can alternatively compute the motion correction and interpolate
-# at the same time using the `spikeinterface.preprocessing.correct_motion()` function.
+# This function takes a preprocessed recording as input and returns a `motion` object, which contains the
+# information required to interpolate your recording. You can additionally return a `motion_info` object
+# which contains the peaks, peak_locations and parameters used to compute the `motion` object by passing
+# `output_motion_info = True` to the `compute_motion` function. Note that you can alternatively compute
+# the motion correction and interpolate at the same time using the `spikeinterface.preprocessing.correct_motion()`
+# function.
 #
-# Internally this function runs the following steps (which can be slow!):
+# Internally the function `compute_motion` runs the following steps (which can be slow!):
 #
 #      1. detect_peaks()
 #      2. localize_peaks()
@@ -121,8 +124,8 @@ for preset in some_presets:
     folder = base_folder / "motion_folder_dataset1" / preset
     if folder.exists():
         shutil.rmtree(folder)
-    motion_info = si.compute_motion(
-        rec, preset=preset, folder=folder, **job_kwargs
+    motion, motion_info = si.compute_motion(
+        rec, preset=preset, folder=folder, output_motion_info=True, **job_kwargs
     )
 
 # ### Plot the results
