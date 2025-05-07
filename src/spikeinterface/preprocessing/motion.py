@@ -50,7 +50,7 @@ motion_options_preset = {
         "detect_kwargs": dict(
             method="locally_exclusive",
         ),
-        "localize_peaks_kwargs": dict(method="grid_convolution"),
+        "localize_peaks_kwargs": dict(method="monopolar_triangulation"),
         "select_kwargs": dict(),
         "estimate_motion_kwargs": dict(method="medicine"),
         "interpolate_motion_kwargs": dict(),
