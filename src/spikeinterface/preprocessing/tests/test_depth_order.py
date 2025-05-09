@@ -2,7 +2,7 @@ import pytest
 
 from spikeinterface.core import NumpyRecording
 
-from spikeinterface.preprocessing import DepthOrderRecording, depth_order
+from spikeinterface.preprocessing.preprocessinglist import DepthOrderRecording, depth_order
 
 import numpy as np
 

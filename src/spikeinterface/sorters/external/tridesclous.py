@@ -6,7 +6,7 @@ from pprint import pprint
 import importlib.util
 from importlib.metadata import version
 
-from spikeinterface.extractors import TridesclousSortingExtractor
+from spikeinterface.extractors.extractorlist import TridesclousSortingExtractor
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from spikeinterface.core import write_binary_recording
 

@@ -8,7 +8,7 @@ from importlib.metadata import version
 
 import numpy as np
 
-from spikeinterface.extractors import KiloSortSortingExtractor
+from spikeinterface.extractors.extractorlist import KiloSortSortingExtractor
 from spikeinterface.core import write_binary_recording
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 

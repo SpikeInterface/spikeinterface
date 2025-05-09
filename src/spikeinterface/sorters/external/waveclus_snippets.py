@@ -11,8 +11,8 @@ import json
 from spikeinterface.sorters.basesorter import BaseSorter
 from spikeinterface.sorters.utils import ShellScript
 
-from spikeinterface.extractors import WaveClusSortingExtractor
-from spikeinterface.extractors import WaveClusSnippetsExtractor
+from spikeinterface.extractors.extractorlist import WaveClusSortingExtractor
+from spikeinterface.extractors.extractorlist import WaveClusSnippetsExtractor
 
 PathType = Union[str, Path]
 
