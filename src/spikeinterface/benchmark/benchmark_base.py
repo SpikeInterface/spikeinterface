@@ -593,16 +593,19 @@ class Benchmark:
                         result[k] = pickle.load(f)
             elif format == "sorting":
                 from spikeinterface.core import load_extractor
+
                 sorting_folder = folder / k
                 if sorting_folder.exists():
                     result[k] = load(sorting_folder)
             elif format == "Motion":
                 from spikeinterface.core.motion import Motion
+
                 motion_folder = folder / k
                 if motion_folder.exists():
                     result[k] = Motion.load(motion_folder)
             elif format == "zarr_templates":
                 from spikeinterface.core.template import Templates
+
                 zarr_folder = folder / k
                 if zarr_folder.exists():
 
