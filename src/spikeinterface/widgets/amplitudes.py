@@ -5,7 +5,7 @@ from warnings import warn
 
 from .rasters import BaseRasterWidget
 from .base import BaseWidget, to_attr
-from .utils import get_some_colors, validate_segment_indices
+from .utils import get_some_colors, validate_segment_indices, get_segment_durations
 
 from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 
@@ -126,10 +126,7 @@ class AmplitudesWidget(BaseRasterWidget):
             bins = 100
 
         # Calculate durations for all segments for x-axis limits
-        durations = []
-        for idx in segment_indices:
-            duration = sorting_analyzer.get_num_samples(idx) / sorting_analyzer.sampling_frequency
-            durations.append(duration)
+        durations = get_segment_durations(sorting)
 
         # Build the plot data with the full dict of dicts structure
         plot_data = dict(

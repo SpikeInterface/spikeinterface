@@ -4,7 +4,7 @@ import numpy as np
 from warnings import warn
 
 from .base import BaseWidget, to_attr, default_backend_kwargs
-from .utils import get_some_colors, validate_segment_indices
+from .utils import get_some_colors, validate_segment_indices, get_segment_durations
 
 
 class BaseRasterWidget(BaseWidget):
@@ -380,14 +380,12 @@ class RasterWidget(BaseRasterWidget):
         backend=None,
         **backend_kwargs,
     ):
-        recording = None
         if sorting is None and sorting_analyzer is None:
             raise Exception("Must supply either a sorting or a sorting_analyzer")
         elif sorting is not None and sorting_analyzer is not None:
             raise Exception("Should supply either a sorting or a sorting_analyzer, not both")
         elif sorting_analyzer is not None:
             sorting = sorting_analyzer.sorting
-            recording = sorting_analyzer.recording
 
         sorting = self.ensure_sorting(sorting)
 
@@ -403,37 +401,25 @@ class RasterWidget(BaseRasterWidget):
         # Create a lookup dictionary for unit indices
         unit_indices_map = {unit_id: i for i, unit_id in enumerate(unit_ids)}
 
-        # Calculate total duration across all segments
-        durations = []
+        # Get all spikes at once
+        spikes = sorting.to_spike_vector()
+
+        # Estimate segment duration from max spike time in each segment
+        durations = get_segment_durations(sorting)
+
+        # Extract spike data for all segments and units at once
+        spike_train_data = {seg_idx: {} for seg_idx in segment_indices}
+        y_axis_data = {seg_idx: {} for seg_idx in segment_indices}
+
         for seg_idx in segment_indices:
-            # Try to get duration from recording if available
-            if recording is not None:
-                duration = recording.get_duration(seg_idx)
-            else:
-                # Fallback: estimate from max spike time
-                max_time = 0
-                for unit_id in unit_ids:
-                    st = sorting.get_unit_spike_train(unit_id, segment_index=seg_idx, return_times=True)
-                    if len(st) > 0:
-                        max_time = max(max_time, np.max(st))
-                duration = max_time
-
-            durations.append(duration)
-
-            # Initialize dicts for this segment
-            spike_train_data[seg_idx] = {}
-            y_axis_data[seg_idx] = {}
-
-            # Get spike trains for each unit in this segment
             for unit_id in unit_ids:
-                spike_times = sorting.get_unit_spike_train(unit_id, segment_index=seg_idx, return_times=True)
-
-                # Store spike trains
+                # Get spikes for this segment and unit
+                mask = (spikes['segment_index'] == seg_idx) & (spikes['unit_index'] == unit_id)
+                spike_times = spikes['sample_index'][mask] / sorting.sampling_frequency
+                
+                # Store data
                 spike_train_data[seg_idx][unit_id] = spike_times
-
-                # Create raster locations (y-values for plotting)
-                unit_index = unit_indices_map[unit_id]
-                y_axis_data[seg_idx][unit_id] = unit_index * np.ones(len(spike_times))
+                y_axis_data[seg_idx][unit_id] = unit_indices_map[unit_id] * np.ones(len(spike_times))
 
         # Apply time range filtering if specified
         if time_range is not None:

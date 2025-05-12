@@ -396,3 +396,32 @@ def validate_segment_indices(segment_indices: list[int] | None, sorting: BaseSor
             raise ValueError(f"segment_index {idx} out of range (0 to {num_segments - 1})")
 
     return segment_indices
+
+def get_segment_durations(sorting: BaseSorting) -> list[float]:
+    """
+    Calculate the duration of each segment in a sorting object.
+    
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The sorting object containing spike data
+        
+    Returns
+    -------
+    list[float]
+        List of segment durations in seconds
+    """
+    spikes = sorting.to_spike_vector()
+    segment_indices = np.unique(spikes['segment_index'])
+    
+    durations = []
+    for seg_idx in segment_indices:
+        segment_mask = spikes['segment_index'] == seg_idx
+        if np.any(segment_mask):
+            max_sample = np.max(spikes['sample_index'][segment_mask])
+            duration = max_sample / sorting.sampling_frequency
+        else:
+            duration = 0
+        durations.append(duration)
+    
+    return durations

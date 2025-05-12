@@ -6,6 +6,7 @@ from .base import BaseWidget, to_attr
 
 from spikeinterface.core import BaseRecording, SortingAnalyzer
 from .rasters import BaseRasterWidget
+from .utils import get_segment_durations
 from spikeinterface.core.motion import Motion
 
 
@@ -259,20 +260,18 @@ class DriftRasterMapWidget(BaseRasterWidget):
             color_kwargs = dict(color=color, c=None, alpha=alpha)
 
         # Calculate segment durations for x-axis limits
-        durations = []
-        for seg_idx in segment_indices:
-            if recording is not None and hasattr(recording, "get_duration"):
-                duration = recording.get_duration(seg_idx)
-            else:
-                # Estimate from spike times
-                segment_mask = filtered_peaks["segment_index"] == seg_idx
-                segment_peaks = filtered_peaks[segment_mask]
-                if len(segment_peaks) > 0:
-                    max_sample = np.max(segment_peaks["sample_index"])
-                    duration = (max_sample + 1) / sampling_frequency
-                else:
-                    duration = 0
-            durations.append(duration)
+        if recording is not None:
+            durations = [recording.get_duration(seg_idx) for seg_idx in segment_indices]
+        else:
+            # Find boundaries between segments using searchsorted
+            segment_boundaries = [np.searchsorted(filtered_peaks["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices]
+            
+            # Calculate durations from max sample in each segment
+            durations = [
+                (np.max(filtered_peaks["sample_index"][start:end]) + 1) / sampling_frequency 
+                if start < end else 0
+                for (start, end) in segment_boundaries
+            ]
 
         plot_data = dict(
             spike_train_data=spike_train_data,
