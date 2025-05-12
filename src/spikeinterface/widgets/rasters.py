@@ -414,9 +414,9 @@ class RasterWidget(BaseRasterWidget):
         for seg_idx in segment_indices:
             for unit_id in unit_ids:
                 # Get spikes for this segment and unit
-                mask = (spikes['segment_index'] == seg_idx) & (spikes['unit_index'] == unit_id)
-                spike_times = spikes['sample_index'][mask] / sorting.sampling_frequency
-                
+                mask = (spikes["segment_index"] == seg_idx) & (spikes["unit_index"] == unit_id)
+                spike_times = spikes["sample_index"][mask] / sorting.sampling_frequency
+
                 # Store data
                 spike_train_data[seg_idx][unit_id] = spike_times
                 y_axis_data[seg_idx][unit_id] = unit_indices_map[unit_id] * np.ones(len(spike_times))

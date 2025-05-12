@@ -50,21 +50,22 @@ def test_validate_segment_indices():
     with pytest.raises(ValueError):
         validate_segment_indices([5], sorting_multiple)
 
+
 def test_get_segment_durations():
     from spikeinterface import generate_sorting
-    
+
     # Test with a normal multi-segment sorting
     durations = [5.0, 10.0, 15.0]
-    
+
     # Create sorting with high fr to ensure spikes near the end segments
     sorting = generate_sorting(
         durations=durations,
         firing_rates=15.0,
     )
-    
+
     # Calculate durations
     calculated_durations = get_segment_durations(sorting)
-    
+
     # Check results
     assert len(calculated_durations) == len(durations)
     # Durations should be approximately correct
@@ -74,18 +75,19 @@ def test_get_segment_durations():
         # And reasonably close
         tolerance = max(0.1 * expected_duration, 0.1)
         assert expected_duration - calculated_duration < tolerance
-    
+
     # Test with single-segment sorting
     sorting_single = generate_sorting(
         durations=[7.0],
         firing_rates=15.0,
     )
-    
+
     single_duration = get_segment_durations(sorting_single)[0]
-    
+
     # Test that the calculated duration is reasonable
     assert single_duration <= 7.0
     assert 7.0 - single_duration < 0.7  # Within 10%
+
 
 if __name__ == "__main__":
     test_get_some_colors()

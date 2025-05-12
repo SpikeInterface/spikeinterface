@@ -264,12 +264,13 @@ class DriftRasterMapWidget(BaseRasterWidget):
             durations = [recording.get_duration(seg_idx) for seg_idx in segment_indices]
         else:
             # Find boundaries between segments using searchsorted
-            segment_boundaries = [np.searchsorted(filtered_peaks["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices]
-            
+            segment_boundaries = [
+                np.searchsorted(filtered_peaks["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices
+            ]
+
             # Calculate durations from max sample in each segment
             durations = [
-                (np.max(filtered_peaks["sample_index"][start:end]) + 1) / sampling_frequency 
-                if start < end else 0
+                (np.max(filtered_peaks["sample_index"][start:end]) + 1) / sampling_frequency if start < end else 0
                 for (start, end) in segment_boundaries
             ]
 
