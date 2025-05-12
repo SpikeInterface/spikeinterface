@@ -479,8 +479,10 @@ if __name__ == '__main__':
             extra_kwargs["container_requires_gpu"] = True
 
             if platform.system() == "Linux" and not has_docker_nvidia_installed():
+                from .utils import get_nvidia_docker_dependencies
+
                 warn(
-                    f"nvidia-required but none of \n{get_nvidia_docker_dependecies()}\n were found. "
+                    f"nvidia-required but none of \n{get_nvidia_docker_dependencies()}\n were found. "
                     f"This may result in an error being raised during sorting. Try "
                     "installing `nvidia-container-toolkit`, including setting the "
                     "configuration steps, if running into errors."
