@@ -23,7 +23,10 @@ from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
 
 from spikeinterface.sortingcomponents.clustering.split import split_clusters
-from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
+# from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
+from spikeinterface.sortingcomponents.clustering.merge import merge_peak_labels_from_templates
+from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+
 
 
 class TdcClustering:
@@ -85,14 +88,14 @@ class TdcClustering:
         wfs = few_wfs[:, :, 0]
         from sklearn.decomposition import TruncatedSVD
 
-        tsvd = TruncatedSVD(params["svd"]["n_components"])
-        tsvd.fit(wfs)
+        tsvd_model = TruncatedSVD(params["svd"]["n_components"])
+        tsvd_model.fit(wfs)
 
         model_folder = clustering_folder / "tsvd_model"
 
         model_folder.mkdir(exist_ok=True)
         with open(model_folder / "pca_model.pkl", "wb") as f:
-            pickle.dump(tsvd, f)
+            pickle.dump(tsvd_model, f)
 
         model_params = {
             "ms_before": ms_before,
@@ -117,10 +120,12 @@ class TdcClustering:
             radius_um=radius_um,
         )
 
-        model_folder_path = clustering_folder / "tsvd_model"
+        # model_folder_path = clustering_folder / "tsvd_model"
 
         node2 = TemporalPCAProjection(
-            recording, parents=[node0, node1], return_output=True, model_folder_path=model_folder_path
+            recording, parents=[node0, node1], return_output=True,
+            pca_model=tsvd_model,
+            # model_folder_path=model_folder_path
         )
 
         pipeline_nodes = [node0, node1, node2]
@@ -186,34 +191,66 @@ class TdcClustering:
         )
 
         if params["clustering"]["do_merge"]:
-            merge_radius_um = params["clustering"]["merge_radius_um"]
-            threshold_diff = params["clustering"]["threshold_diff"]
+            # merge_radius_um = params["clustering"]["merge_radius_um"]
+            # threshold_diff = params["clustering"]["threshold_diff"]
 
-            post_merge_label, peak_shifts = merge_clusters(
+            # post_merge_label, peak_shifts = merge_clusters(
+            #     peaks,
+            #     post_split_label,
+            #     recording,
+            #     features_folder,
+            #     radius_um=merge_radius_um,
+            #     # method="project_distribution",
+            #     # method_kwargs=dict(
+            #     #     waveforms_sparse_mask=sparse_mask,
+            #     #     feature_name="sparse_wfs",
+            #     #     projection="centroid",
+            #     #     criteria="distrib_overlap",
+            #     #     threshold_overlap=0.3,
+            #     #     min_cluster_size=min_cluster_size + 1,
+            #     #     num_shift=5,
+            #     # ),
+            #     method="normalized_template_diff",
+            #     method_kwargs=dict(
+            #         waveforms_sparse_mask=sparse_mask,
+            #         threshold_diff=threshold_diff,
+            #         min_cluster_size=min_cluster_size + 1,
+            #         num_shift=5,
+            #     ),
+            #     **job_kwargs,
+            # )
+
+            label_set = np.unique(post_split_label)
+            label_set = label_set[label_set>=0]
+
+            svd_features = np.load(features_folder/ "sparse_tsvd.npy")
+
+            
+
+            templates, sparse_mask2 = get_templates_from_peaks_and_svd(
+                recording,
                 peaks,
                 post_split_label,
-                recording,
-                features_folder,
-                radius_um=merge_radius_um,
-                # method="project_distribution",
-                # method_kwargs=dict(
-                #     waveforms_sparse_mask=sparse_mask,
-                #     feature_name="sparse_wfs",
-                #     projection="centroid",
-                #     criteria="distrib_overlap",
-                #     threshold_overlap=0.3,
-                #     min_cluster_size=min_cluster_size + 1,
-                #     num_shift=5,
-                # ),
-                method="normalized_template_diff",
-                method_kwargs=dict(
-                    waveforms_sparse_mask=sparse_mask,
-                    threshold_diff=threshold_diff,
-                    min_cluster_size=min_cluster_size + 1,
-                    num_shift=5,
-                ),
-                **job_kwargs,
+                ms_before,
+                ms_after,
+                tsvd_model,
+                svd_features,
+                sparse_mask,
+                operator="average",
             )
+
+            templates_array = templates.templates_array
+
+            post_merge_label, merge_template_array = merge_peak_labels_from_templates(
+                peaks, post_split_label, label_set,
+                templates_array, sparse_mask2,
+                metric="l2",
+                template_diff_thresh=0.25,
+                num_shifts=2,
+            )
+            # todo handle shifts
+            peak_shifts = np.zeros(post_split_label.size, dtype="int64")
+
         else:
             post_merge_label = post_split_label.copy()
             peak_shifts = np.zeros(post_split_label.size, dtype="int64")
