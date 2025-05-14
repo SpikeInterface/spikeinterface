@@ -87,11 +87,13 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
                 self.set_probe(probe, in_place=True)
 
             # load num_channels_per_adc depending on probe type
-            ptype = probe.annotations["probe_type"]
+            model_name = probe.annotations.get("model_name", None)
+            if model_name is None:
+                model_name = probe.annotations["probe_name"]
 
-            if ptype in [21, 24]:  # NP2.0
+            if "2.0" in model_name:  # Neuropixels 2.0
                 num_channels_per_adc = 16
-                num_cycles_in_adc = 16  # TODO: Check this.
+                num_cycles_in_adc = 16
                 total_channels = 384
             else:  # NP1.0
                 num_channels_per_adc = 12
