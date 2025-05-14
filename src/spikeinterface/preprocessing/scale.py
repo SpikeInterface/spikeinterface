@@ -4,6 +4,7 @@ import numpy as np
 
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor
 from spikeinterface.preprocessing.normalize_scale import ScaleRecording
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 
 class ScaleToPhysicalUnits(ScaleRecording):
@@ -63,7 +64,7 @@ class ScaleToPhysicalUnits(ScaleRecording):
         self.set_channel_offsets(offsets=0.0)
 
 
-scale_to_physical_units = ScaleToPhysicalUnits
+scale_to_physical_units = define_function_handling_dict_from_class(ScaleToPhysicalUnits)
 
 
 def scale_to_uV(recording: BasePreprocessor) -> BasePreprocessor:
