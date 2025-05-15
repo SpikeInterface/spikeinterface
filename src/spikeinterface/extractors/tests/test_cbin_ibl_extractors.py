@@ -1,7 +1,7 @@
 import pytest
 import unittest
 
-from spikeinterface.extractors.extractorlist import CompressedBinaryIblExtractor, read_cbin_ibl
+from spikeinterface.extractors.extractor_classes import CompressedBinaryIblExtractor, read_cbin_ibl
 
 
 from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
