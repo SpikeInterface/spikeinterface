@@ -13,9 +13,7 @@ except:
     HAVE_HDBSCAN = False
 
 import random, string
-from spikeinterface.core import get_global_tmp_folder
-from spikeinterface.core.basesorting import minimum_spike_dtype
-from spikeinterface.core.waveform_tools import estimate_templates
+from spikeinterface.core import get_global_tmp_folder, Templates
 from .clustering_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
@@ -23,7 +21,7 @@ from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.sortingcomponents.tools import remove_empty_templates
 from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
-
+from spikeinterface.sortingcomponents.clustering.merge import merge_peak_labels_from_templates
 
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
@@ -56,11 +54,18 @@ class CircusClustering:
         "few_waveforms": None,
         "ms_before": 0.5,
         "ms_after": 0.5,
+        "remove_small_snr": False,
         "noise_threshold": 4,
         "rank": 5,
         "templates_from_svd": False,
         "noise_levels": None,
         "tmp_folder": None,
+        "do_merge": True,
+        "merge_kwargs": {
+            "similarity_metric": "l1",
+            "num_shifts": 3,
+            "similarity_thresh": 0.8,
+        },
         "verbose": True,
         "debug": False,
     }
@@ -170,10 +175,11 @@ class CircusClustering:
                 ms_after,
                 **job_kwargs,
             )
+            sparse_mask2 = sparse_mask
         else:
             from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
-            templates, _ = get_templates_from_peaks_and_svd(
+            templates, sparse_mask2 = get_templates_from_peaks_and_svd(
                 recording,
                 peaks,
                 peak_labels,
@@ -185,44 +191,54 @@ class CircusClustering:
                 operator="median",
             )
 
-        templates_array = templates.templates_array
-        best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
-        peak_snrs = np.abs(templates_array[:, nbefore, :])
-        best_snrs_ratio = (peak_snrs / params["noise_levels"])[np.arange(len(peak_snrs)), best_channels]
-        old_unit_ids = templates.unit_ids.copy()
-        valid_templates = best_snrs_ratio > params["noise_threshold"]
+        if params["do_merge"]:
+            peak_labels, merge_template_array, new_unit_ids = merge_peak_labels_from_templates(
+                peaks, peak_labels, templates.unit_ids,
+                templates.templates_array, sparse_mask2,
+                **params["merge_kwargs"]
+            )
 
-        mask = np.isin(peak_labels, old_unit_ids[~valid_templates])
-        peak_labels[mask] = -1
+            templates  = Templates(
+                templates_array=merge_template_array,
+                sampling_frequency=fs,
+                nbefore=templates.nbefore,
+                sparsity_mask=None,
+                channel_ids=recording.channel_ids,
+                unit_ids=new_unit_ids,
+                probe=recording.get_probe(),
+                is_scaled=False
+            )
 
-        from spikeinterface.core.template import Templates
+        if params["remove_small_snr"] :
+            templates_array = templates.templates_array
+            best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
+            peak_snrs = np.abs(templates_array[:, nbefore, :])
+            best_snrs_ratio = (peak_snrs / params["noise_levels"])[np.arange(len(peak_snrs)), best_channels]
+            old_unit_ids = templates.unit_ids.copy()
+            valid_templates = best_snrs_ratio > params["noise_threshold"]
 
-        templates = Templates(
-            templates_array=templates_array[valid_templates],
-            sampling_frequency=fs,
-            nbefore=templates.nbefore,
-            sparsity_mask=None,
-            channel_ids=recording.channel_ids,
-            unit_ids=templates.unit_ids[valid_templates],
-            probe=recording.get_probe(),
-            is_scaled=False,
-        )
+            mask = np.isin(peak_labels, old_unit_ids[~valid_templates])
+            peak_labels[mask] = -1
+
+            templates = templates.select_units(templates.unit_ids[valid_templates])
+
+        labels = templates.unit_ids
 
         if params["debug"]:
             templates_folder = tmp_folder / "dense_templates"
             templates.to_zarr(folder_path=templates_folder)
 
-        sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
-        templates = templates.to_sparse(sparsity)
-        empty_templates = templates.sparsity_mask.sum(axis=1) == 0
-        old_unit_ids = templates.unit_ids.copy()
-        templates = remove_empty_templates(templates)
+        # sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
+        # templates = templates.to_sparse(sparsity)
+        # empty_templates = templates.sparsity_mask.sum(axis=1) == 0
+        # old_unit_ids = templates.unit_ids.copy()
+        # templates = remove_empty_templates(templates)
 
-        mask = np.isin(peak_labels, old_unit_ids[empty_templates])
-        peak_labels[mask] = -1
+        # mask = np.isin(peak_labels, old_unit_ids[empty_templates])
+        # peak_labels[mask] = -1
 
-        labels = np.unique(peak_labels)
-        labels = labels[labels >= 0]
+        # labels = np.unique(peak_labels)
+        # labels = labels[labels >= 0]
 
         if params["remove_mixtures"]:
             if verbose:

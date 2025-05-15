@@ -79,7 +79,7 @@ class GraphClustering:
             ms_after=ms_after,
             radius_um=radius_um,
             motion_aware=motion_aware,
-            motion=None,
+            motion=motion,
             **params["extract_peaks_svd_kwargs"],
             # **job_kwargs
         )
