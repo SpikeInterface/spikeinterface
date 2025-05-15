@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from spikeinterface.core.testing_tools import generate_recording
-from spikeinterface.preprocessing.preprocessinglist import scale_to_uV, CenterRecording
+from spikeinterface.preprocessing.preprocessing_classes import scale_to_uV, CenterRecording
 
 
 def test_scale_to_uV():

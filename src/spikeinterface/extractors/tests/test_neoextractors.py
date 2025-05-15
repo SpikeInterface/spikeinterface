@@ -8,7 +8,7 @@ import importlib.util
 import pytest
 
 from spikeinterface import get_global_dataset_folder
-from spikeinterface.extractors.neoextractors import (
+from spikeinterface.extractors.extractor_classes import (
     MEArecRecordingExtractor,
     MEArecSortingExtractor,
     SpikeGLXRecordingExtractor,
@@ -42,7 +42,7 @@ from spikeinterface.extractors.neoextractors import (
     Plexon2RecordingExtractor,
 )
 
-from spikeinterface.extractors.extractorlist import KiloSortSortingExtractor
+from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
 
 from spikeinterface.extractors.tests.common_tests import (
     RecordingCommonTestSuite,

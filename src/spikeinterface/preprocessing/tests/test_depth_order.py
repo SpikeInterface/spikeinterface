@@ -1,8 +1,6 @@
-import pytest
-
 from spikeinterface.core import NumpyRecording
 
-from spikeinterface.preprocessing.preprocessinglist import DepthOrderRecording, depth_order
+from spikeinterface.preprocessing import depth_order
 
 import numpy as np
 

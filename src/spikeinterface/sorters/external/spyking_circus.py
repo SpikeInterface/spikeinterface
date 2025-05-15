@@ -10,7 +10,7 @@ import numpy as np
 from numpy.lib.format import open_memmap
 
 
-from spikeinterface.extractors.extractorlist import SpykingCircusSortingExtractor
+from spikeinterface.extractors.extractor_classes import SpykingCircusSortingExtractor
 from spikeinterface.sorters.basesorter import BaseSorter
 from spikeinterface.sorters.utils import ShellScript
 

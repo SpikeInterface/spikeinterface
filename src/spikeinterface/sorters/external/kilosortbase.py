@@ -10,7 +10,7 @@ import numpy as np
 
 from spikeinterface.sorters.utils import ShellScript, get_matlab_shell_name, get_bash_path
 from spikeinterface.sorters.basesorter import get_job_kwargs
-from spikeinterface.extractors.extractorlist import KiloSortSortingExtractor
+from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
 from spikeinterface.core import write_binary_recording
 from spikeinterface.preprocessing.zero_channel_pad import TracePaddedRecording
 

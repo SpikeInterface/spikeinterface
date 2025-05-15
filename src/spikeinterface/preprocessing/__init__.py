@@ -1,4 +1,4 @@
-from .preprocessinglist import *
+from .preprocessing_classes import *
 
 from .motion import correct_motion, load_motion_info, save_motion_info, get_motion_parameters_preset, get_motion_presets
 

@@ -1,4 +1,4 @@
-from .extractorlist import *
+from .extractor_classes import *
 
 from .toy_example import toy_example
 from .bids import read_bids

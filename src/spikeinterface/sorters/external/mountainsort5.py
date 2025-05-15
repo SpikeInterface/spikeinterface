@@ -13,7 +13,7 @@ import numpy as np
 from spikeinterface.preprocessing import bandpass_filter, whiten
 from spikeinterface.core.baserecording import BaseRecording
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
-from spikeinterface.extractors.extractorlist import NpzSortingExtractor
+from spikeinterface.extractors.extractor_classes import NpzSortingExtractor
 
 
 class Mountainsort5Sorter(BaseSorter):
