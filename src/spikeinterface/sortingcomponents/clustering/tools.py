@@ -10,7 +10,7 @@ import numpy as np
 
 class FeaturesLoader:
     """
-    Feature can be computed in memory or in a folder contaning npy files.
+    Feature can be computed in memory or in a folder containing npy files.
 
     This class read the folder and behave like a dict of array lazily.
 
@@ -52,7 +52,7 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
     """
     Aggregate sparse features that have unaligned channels and realigned then on target_channels.
 
-    This is usefull to aligned back peaks waveform or pca or tsvd when detected a differents channels.
+    This is useful to aligned back peaks waveform or pca or tsvd when detected a differents channels.
 
 
     Parameters
@@ -87,7 +87,7 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
         peak_inds = np.flatnonzero(local_peaks["channel_index"] == chan)
         if np.all(np.isin(target_channels, sparse_chans)):
             # peaks feature channel have all target_channels
-            source_chans = np.flatnonzero(np.in1d(sparse_chans, target_channels))
+            source_chans = np.flatnonzero(np.isin(sparse_chans, target_channels))
             aligned_features[peak_inds, :, :] = sparse_feature[peak_indices[peak_inds], :, :][:, :, source_chans]
         else:
             # some channel are missing, peak are not removde
@@ -149,7 +149,7 @@ def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
     """
     Apply a shift a spike level to realign waveforms buffers.
 
-    This is usefull to compute template after merge when to cluster are shifted.
+    This is useful to compute template after merge when to cluster are shifted.
 
     A negative shift need the waveforms to be moved toward the right because the trough was too early.
     A positive shift need the waveforms to be moved toward the left because the trough was too late.
