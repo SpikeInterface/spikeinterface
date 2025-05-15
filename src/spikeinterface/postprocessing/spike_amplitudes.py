@@ -25,7 +25,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         A SortingAnalyzer object
     peak_sign : "pos" or "neg"
         to get the extremum_channels_indices
-        
+
     Returns
     -------
     spike_amplitudes: np.array
