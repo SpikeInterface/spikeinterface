@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.extractors.extractor_classes import NwbRecordingExtractor, NwbSortingExtractor, NwbTimeSeriesExtractor
+from spikeinterface.extractors.extractor_classes import (
+    NwbRecordingExtractor,
+    NwbSortingExtractor,
+    NwbTimeSeriesExtractor,
+)
 
 from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
 from spikeinterface.core.testing import check_recordings_equal
