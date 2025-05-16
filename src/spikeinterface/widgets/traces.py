@@ -126,21 +126,19 @@ class TracesWidget(BaseWidget):
         else:
             channel_locations = None
 
-        if not rec0.has_time_vector(segment_index=segment_index):
-            times = None
-            t_start = 0
-            t_end = rec0.get_duration(segment_index=segment_index)
-        else:
-            times = rec0.get_times(segment_index=segment_index)
-            t_start = times[0]
-            t_end = times[-1]
-
-        layer_keys = list(recordings.keys())
-
         if segment_index is None:
             if rec0.get_num_segments() != 1:
                 raise ValueError('You must provide "segment_index" for multisegment recordings.')
             segment_index = 0
+
+        if not rec0.has_time_vector(segment_index=segment_index):
+            times = None
+        else:
+            times = rec0.get_times(segment_index=segment_index)
+        t_start = rec0.get_start_time(segment_index=segment_index)
+        t_end = rec0.get_end_time(segment_index=segment_index)
+
+        layer_keys = list(recordings.keys())
 
         fs = rec0.get_sampling_frequency()
         if time_range is None:
@@ -680,11 +678,10 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_s
         frame_range = np.searchsorted(times, time_range)
         times = times[frame_range[0] : frame_range[1]]
     else:
-        frame_range = (time_range * fs).astype("int64", copy=False)
+        frame_range = rec0.time_to_sample_index(time_range, segment_index=segment_index)
         a_max = rec0.get_num_frames(segment_index=segment_index)
         frame_range = np.clip(frame_range, 0, a_max)
-        time_range = frame_range / fs
-        times = np.arange(frame_range[0], frame_range[1]) / fs
+        times = np.arange(frame_range[0], frame_range[1]) / fs + rec0.get_start_time(segment_index=segment_index)
 
     list_traces = []
     for rec_name, rec in recordings.items():

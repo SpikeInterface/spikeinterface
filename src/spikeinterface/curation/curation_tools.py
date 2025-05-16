@@ -127,10 +127,10 @@ def find_duplicated_spikes(
         assert seed is not None, "The 'seed' has to be provided if method=='random'"
         return _find_duplicated_spikes_random(spike_train, censored_period, seed)
     elif method == "keep_first_iterative":
-        assert HAVE_NUMBA, "'keep_first' method requires numba. Install it with >>> pip install numba"
+        assert HAVE_NUMBA, "'keep_first_iterative' method requires numba. Install it with >>> pip install numba"
         return _find_duplicated_spikes_keep_first_iterative(spike_train.astype(np.int64), censored_period)
     elif method == "keep_last_iterative":
-        assert HAVE_NUMBA, "'keep_last' method requires numba. Install it with >>> pip install numba"
+        assert HAVE_NUMBA, "'keep_last_iterative' method requires numba. Install it with >>> pip install numba"
         return _find_duplicated_spikes_keep_last_iterative(spike_train.astype(np.int64), censored_period)
     else:
         raise ValueError(f"Method '{method}' isn't a valid method for find_duplicated_spikes. Use one of {_methods}")
