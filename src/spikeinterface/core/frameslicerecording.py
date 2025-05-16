@@ -40,9 +40,9 @@ class FrameSliceRecording(BaseRecording):
         else:
             assert (
                 0 < end_frame <= parent_size
-            ), f"'end_frame' must be fewer than number of samples in parent: {parent_size}"
+            ), f"'{end_frame=}' must be fewer than number of samples in parent: {parent_size=}"
 
-        assert end_frame > start_frame, "'start_frame' must be smaller than 'end_frame'!"
+        assert end_frame > start_frame, f"{start_frame=} must be smaller than 'end_frame' {end_frame=}!"
 
         BaseRecording.__init__(
             self,
