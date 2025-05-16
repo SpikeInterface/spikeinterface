@@ -86,7 +86,7 @@ from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
 _recording_extractor_full_dict = {
     BinaryFolderRecording: {"BinaryFolderRecording": BinaryFolderRecording},
     BinaryRecordingExtractor: {"BinaryRecordingExtractor": BinaryRecordingExtractor},
-    ZarrRecordingExtractor: {"read_zarr": read_zarr},
+    ZarrRecordingExtractor: {"ZarrRecordingExtractor": ZarrRecordingExtractor},
     # natively implemented in spikeinterface.extractors
     NumpyRecording: {"NumpyRecording": NumpyRecording},
     SHYBRIDRecordingExtractor: {"read_shybrid_recording": read_shybrid_recording},
@@ -105,7 +105,7 @@ _recording_extractor_full_dict.update(neo_recording_extractors_dict)
 
 _sorting_extractor_full_dict = {
     NpzSortingExtractor: {"read_npz_sorting": read_npz_sorting},
-    ZarrSortingExtractor: {"read_zarr": read_zarr},
+    ZarrSortingExtractor: {"ZarrSortingExtractor": ZarrSortingExtractor},
     NumpySorting: {"NumpySorting": NumpySorting},
     # natively implemented in spikeinterface.extractors
     MdaSortingExtractor: {"read_mda_sorting": read_mda_sorting},
@@ -170,5 +170,6 @@ __all__.extend(
         "event_extractor_full_dict",
         "snippets_extractor_full_dict",
         "read_binary",  # convenience function for binary formats
+        "read_zarr",
     ]
 )

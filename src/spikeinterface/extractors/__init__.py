@@ -18,6 +18,14 @@ from warnings import warn
 # to the end-user
 # to be removed after version 0.105.0
 def __getattr__(extractor_name):
+    # we need this trick to allow us to use import * for spikeinterface.full
+    if extractor_name == "__all__":
+        __all__ = []
+        for imp in globals():
+            # need to remove a bunch of builtins etc that shouldn't be part of all
+            if imp[0] != "_" and imp != "warn" and imp != "extractor_name":
+                __all__.append(imp)
+        return __all__
     all_extractors = list(recording_extractor_full_dict.values())
     all_extractors += list(sorting_extractor_full_dict.values())
     all_extractors += list(event_extractor_full_dict.values())
