@@ -61,7 +61,7 @@ print(isinstance(recording, si.BaseRecording))
 # :py:class:`~spikeinterface.extractors.Spike2RecordingExtractor` object:
 #
 
-recording = se.Spike2RecordingExtractor(spike2_file_path, stream_id="0")
+recording = se.read_spike2(spike2_file_path, stream_id="0")
 print(recording)
 
 ##############################################################################
@@ -75,11 +75,6 @@ print()
 print(sorting)
 print(type(sorting))
 
-##############################################################################
-#  The :py:func:`~spikeinterface.extractors.read_mearec` function is equivalent to:
-
-recording = se.MEArecRecordingExtractor(mearec_folder_path)
-sorting = se.MEArecSortingExtractor(mearec_folder_path)
 
 ##############################################################################
 # SI objects (:py:class:`~spikeinterface.core.BaseRecording` and :py:class:`~spikeinterface.core.BaseSorting`)

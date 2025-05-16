@@ -13,7 +13,7 @@ from spikeinterface.sorters.basesorter import BaseSorter
 from spikeinterface.sorters.utils import ShellScript
 
 # from spikeinterface.extractors import MaxOneRecordingExtractor
-from spikeinterface.extractors import HDSortSortingExtractor
+from spikeinterface.extractors.extractor_classes import HDSortSortingExtractor
 
 PathType = Union[str, Path]
 

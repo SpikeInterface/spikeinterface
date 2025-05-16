@@ -1,10 +1,6 @@
-import pytest
-from pathlib import Path
-
-from spikeinterface import set_global_tmp_folder
 from spikeinterface.core import NumpyRecording
 
-from spikeinterface.preprocessing import AverageAcrossDirectionRecording, average_across_direction
+from spikeinterface.preprocessing import average_across_direction
 
 import numpy as np
 

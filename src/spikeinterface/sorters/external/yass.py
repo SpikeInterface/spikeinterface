@@ -11,7 +11,7 @@ from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from spikeinterface.sorters.utils import ShellScript
 
 from spikeinterface.core import write_binary_recording
-from spikeinterface.extractors import YassSortingExtractor
+from spikeinterface.extractors.extractor_classes import YassSortingExtractor
 
 
 class YassSorter(BaseSorter):
