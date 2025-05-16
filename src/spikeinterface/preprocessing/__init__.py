@@ -46,4 +46,4 @@ def __getattr__(preprocessor_name):
             warn(dep_msg)
             return pp_function
     # this is necessary for objects that we don't support
-    raise ImportError(f"cannot import name '{preprocessor_name}' from '{__name__}'")
+    raise AttributeError(f"cannot import name '{preprocessor_name}' from '{__name__}'")
