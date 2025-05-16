@@ -76,15 +76,16 @@ from .waveclussnippetstextractors import WaveClusSnippetsExtractor, read_waveclu
 from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
 
 
-#################################################
+###############################################################################################
 # first we line up each class with its function
 # for this to work we need the actual function along with a string version of the function name
 # so we make a private nested dict that we can use to make the exposed dicts as well as load the
 # correct function into the extractors __init__
+# note that some formats (binary and numpy) still use the class format as they aren't read-only
 
 _recording_extractor_full_dict = {
-    BinaryFolderRecording: {"read_binary": read_binary},
-    BinaryRecordingExtractor: {"read_binary": read_binary},
+    BinaryFolderRecording: {"BinaryFolderRecording": BinaryFolderRecording},
+    BinaryRecordingExtractor: {"BinaryRecordingExtractor": BinaryRecordingExtractor},
     ZarrRecordingExtractor: {"read_zarr": read_zarr},
     # natively implemented in spikeinterface.extractors
     NumpyRecording: {"NumpyRecording": NumpyRecording},
@@ -163,10 +164,11 @@ __all__ += [list(func.keys())[0] for func in _event_extractor_full_dict.values()
 __all__ += [list(func.keys())[0] for func in _snippets_extractor_full_dict.values()]
 __all__.extend(
     [
-        "read_nwb",
+        "read_nwb",  # convenience function for multiple nwb formats
         "recording_extractor_full_dict",
         "sorting_extractor_full_dict",
         "event_extractor_full_dict",
         "snippets_extractor_full_dict",
+        "read_binary",  # convenience function for binary formats
     ]
 )
