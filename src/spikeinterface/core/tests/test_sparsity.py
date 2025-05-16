@@ -290,7 +290,7 @@ def test_estimate_sparsity():
 def test_compute_sparsity():
     recording, sorting = get_dataset()
 
-    sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, sparse=False, return_scaled=True)
+    sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, sparse=False, return_in_uV=True)
     sorting_analyzer.compute("random_spikes")
     sorting_analyzer.compute(
         "waveforms",

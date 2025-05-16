@@ -360,7 +360,7 @@ def compute_motion(
 
     progress_bar = job_kwargs.get("progress_bar", False)
 
-    noise_levels = get_noise_levels(recording, return_scaled=False)
+    noise_levels = get_noise_levels(recording, return_in_uV=False)
 
     if folder is not None:
         folder = Path(folder)
