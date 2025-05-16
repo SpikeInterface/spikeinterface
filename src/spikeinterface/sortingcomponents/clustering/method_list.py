@@ -22,15 +22,15 @@ clustering_methods = {
     # "sliding_nn": SlidingNNClustering,
     "position_and_features": PositionAndFeaturesClustering,
     "random_projections": RandomProjectionClustering,
-    "circus_clustering": CircusClustering,
-    "tdc_clustering": TdcClustering,
-    "graph_clustering": GraphClustering,
+    "circus-clustering": CircusClustering,
+    "tdc-clustering": TdcClustering,
+    "graph-clustering": GraphClustering,
 }
 
 try:
     # Kilosort licence (GPL 3) is forcing us to make and use an external package
     from spikeinterface_kilosort_components import KiloSortClustering
 
-    clustering_methods["kilosort_clustering"] = KiloSortClustering
+    clustering_methods["kilosort-clustering"] = KiloSortClustering
 except ImportError:
     pass

@@ -80,9 +80,8 @@ class TdcClustering:
         motion = params["motion"]
         motion_aware = motion is not None
 
-
         # extract svd
-        peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
+        outs = extract_peaks_svd(
             recording,
             peaks,
             ms_before=ms_before,
@@ -94,9 +93,16 @@ class TdcClustering:
             **job_kwargs
         )
 
+        if motion is not None:
+           # also return peaks with new channel index
+           peaks_svd, sparse_mask, svd_model, peaks = outs           
+        else:
+           peaks_svd, sparse_mask, svd_model = outs
+
         # Clustering: channel index > split > merge
         split_radius_um = params["clustering"]["split_radius_um"]
         neighbours_mask = get_channel_distances(recording) < split_radius_um
+
 
         original_labels = peaks["channel_index"]
 
