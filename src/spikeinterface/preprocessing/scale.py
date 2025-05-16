@@ -64,7 +64,7 @@ class ScaleToPhysicalUnits(ScaleRecording):
         self.set_channel_offsets(offsets=0.0)
 
 
-scale_to_physical_units = define_function_handling_dict_from_class(ScaleToPhysicalUnits)
+scale_to_physical_units = define_function_handling_dict_from_class(ScaleToPhysicalUnits, "scale_to_physical_units")
 
 
 def scale_to_uV(recording: BasePreprocessor) -> BasePreprocessor:
