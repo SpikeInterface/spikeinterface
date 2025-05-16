@@ -759,6 +759,7 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
         if "starting_time" in electrical_series.keys():
             t_start = electrical_series["starting_time"][()]
             sampling_frequency = electrical_series["starting_time"].attrs["rate"]
+            timestamps = None
         elif "timestamps" in electrical_series.keys():
             timestamps = electrical_series["timestamps"][:]
             t_start = timestamps[0]
