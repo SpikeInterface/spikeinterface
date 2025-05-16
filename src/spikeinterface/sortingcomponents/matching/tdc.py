@@ -152,7 +152,6 @@ class TridesclousPeeler(BaseTemplateMatching):
             self.sparse_templates_array_static = None
 
             # interpolation bins edges
-
             self.interpolation_time_bins_s = []
             self.interpolation_time_bin_edges_s = []
             for segment_index, parent_segment in enumerate(recording._recording_segments):
