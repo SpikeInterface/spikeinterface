@@ -9,13 +9,14 @@ from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 from .unit_templates import UnitTemplatesWidget
 from ..core import Templates
 
+
 class DriftingTemplatesWidget(BaseWidget):
     """
     Plot a drifting templates object to explore motion
 
     Parameters
     ----------
-    drifting_templates : 
+    drifting_templates :
         A drifting templates object
     scale : float, default: 1
         Scale factor for the waveforms/templates (matplotlib backend)
@@ -45,7 +46,7 @@ class DriftingTemplatesWidget(BaseWidget):
         check_ipywidget_backend()
 
         # self.next_data_plot = data_plot.copy()
-        self.drifting_templates = data_plot['drifting_templates']
+        self.drifting_templates = data_plot["drifting_templates"]
 
         cm = 1 / 2.54
 
@@ -68,9 +69,9 @@ class DriftingTemplatesWidget(BaseWidget):
 
         self.slider = widgets.IntSlider(
             orientation="horizontal",
-            value=arr.shape[0]//2,
+            value=arr.shape[0] // 2,
             min=0,
-            max=arr.shape[0]-1,
+            max=arr.shape[0] - 1,
             readout=False,
             continuous_update=True,
             layout=widgets.Layout(width=f"100%"),
@@ -91,13 +92,13 @@ class DriftingTemplatesWidget(BaseWidget):
         if backend_kwargs["display"]:
             display(self.widget)
 
-    def _change_unit(self,  change=None):
+    def _change_unit(self, change=None):
         self._update_ipywidget(keep_lims=False)
 
-    def _change_displacement(self,  change=None):
+    def _change_displacement(self, change=None):
         self._update_ipywidget(keep_lims=True)
 
-    def _update_ipywidget(self,keep_lims=False):
+    def _update_ipywidget(self, keep_lims=False):
         if keep_lims:
             xlim = self.ax.get_xlim()
             ylim = self.ax.get_ylim()
@@ -119,10 +120,9 @@ class DriftingTemplatesWidget(BaseWidget):
             probe=self.drifting_templates.probe,
         )
 
-        UnitTemplatesWidget(templates, unit_ids=unit_ids, scale=5,
-                            plot_legend=False,
-                            backend="matplotlib", ax=self.ax, same_axis=True)
-
+        UnitTemplatesWidget(
+            templates, unit_ids=unit_ids, scale=5, plot_legend=False, backend="matplotlib", ax=self.ax, same_axis=True
+        )
 
         displacement = self.drifting_templates.displacements[displacement_index]
         self.ax.set_title(f"{displacement_index}:{displacement} - untis:{unit_ids}")
@@ -134,4 +134,3 @@ class DriftingTemplatesWidget(BaseWidget):
         fig = self.ax.get_figure()
         fig.canvas.draw()
         fig.canvas.flush_events()
-

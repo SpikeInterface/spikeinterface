@@ -310,7 +310,6 @@ class UnitWaveformsWidget(BaseWidget):
                     ax.plot([xscale_bar[0], xscale_bar[0]], [min_wfs - offset, min_wfs - offset + length], color="k")
                     ax.text(x_offset, min_wfs - offset + length // 3, f"{length_uv} $\\mu$V", fontsize=8, rotation=90)
 
-
             # plot template
             if dp.plot_templates:
                 template = dp.templates[i, :, :][:, chan_inds] * dp.scale * y_scale + y_offset[:, chan_inds]
