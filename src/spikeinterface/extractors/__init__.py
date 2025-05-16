@@ -40,4 +40,4 @@ def __getattr__(extractor_name):
             warn(dep_msg)
             return reading_function
     # this is necessary for objects that we don't support
-    raise ImportError(f"cannot import name '{extractor_name}' from '{__name__}'")
+    raise AttributeError(f"cannot import name '{extractor_name}' from '{__name__}'")
