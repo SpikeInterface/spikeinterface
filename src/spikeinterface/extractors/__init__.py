@@ -31,6 +31,16 @@ def __getattr__(extractor_name):
     all_extractors += list(event_extractor_full_dict.values())
     all_extractors += list(snippets_extractor_full_dict.values())
     # special cases because they don't have simple wrappers
+    from .neoextractors import (
+        MEArecRecordingExtractor,
+        MEArecSortingExtractor,
+        OpenEphysBinaryEventExtractor,
+        OpenEphysBinaryRecordingExtractor,
+        OpenEphysLegacyRecordingExtractor,
+        SpikeGLXEventExtractor,
+        SpikeGLXRecordingExtractor,
+    )
+
     all_extractors += [
         MEArecRecordingExtractor,
         MEArecSortingExtractor,
