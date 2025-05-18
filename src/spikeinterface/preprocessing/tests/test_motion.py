@@ -32,7 +32,7 @@ def test_estimate_and_correct_motion(create_cache_folder):
     assert motion_info_loaded["motion"] == motion_info["motion"]
 
 
-def test_estimate_and_correct_motion_int(create_cache_folder):
+def test_estimate_and_correct_motion_int():
 
     rec = generate_recording(durations=[30.0], num_channels=12).astype(int)
     rec_corrected = correct_motion(rec, estimate_motion_kwargs={"win_step_um": 50, "win_scale_um": 100})
