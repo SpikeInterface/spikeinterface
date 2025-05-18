@@ -30,6 +30,16 @@ def __getattr__(extractor_name):
     all_extractors += list(sorting_extractor_full_dict.values())
     all_extractors += list(event_extractor_full_dict.values())
     all_extractors += list(snippets_extractor_full_dict.values())
+    # special cases because they don't have simple wrappers
+    all_extractors += [
+        MEArecRecordingExtractor,
+        MEArecSortingExtractor,
+        OpenEphysBinaryEventExtractor,
+        OpenEphysBinaryRecordingExtractor,
+        OpenEphysLegacyRecordingExtractor,
+        SpikeGLXEventExtractor,
+        SpikeGLXRecordingExtractor,
+    ]
     for reading_function in all_extractors:
         if extractor_name == reading_function.__name__:
             dep_msg = (
@@ -40,4 +50,5 @@ def __getattr__(extractor_name):
             warn(dep_msg)
             return reading_function
     # this is necessary for objects that we don't support
+    # normally this is an ImportError but since this is in the _getattr__ pytest needs an AttributeError
     raise AttributeError(f"cannot import name '{extractor_name}' from '{__name__}'")
