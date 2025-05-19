@@ -23,8 +23,8 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    peak_sign : "pos" or "neg"
-        to get the extremum_channels_indices
+    peak_sign : "neg" | "pos" | "both", default: "neg"
+        Sign of the template to compute extremum channel used to retrieve spike amplitudes.
 
     Returns
     -------
