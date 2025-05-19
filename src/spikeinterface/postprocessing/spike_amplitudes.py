@@ -17,7 +17,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
     Computes the spike amplitudes.
 
     Needs "templates" to be computed first.
-    Spike amplitudes from templates on peak channel for every spike in spike train.
+    Computes spike amplitudes from the template's peak channel for every spike.
 
     Parameters
     ----------
