@@ -443,9 +443,6 @@ def compute_motion(
     t1 = time.perf_counter()
     run_times["estimate_motion"] = t1 - t0
 
-    if recording.get_dtype().kind != "f":
-        recording = recording.astype("float32")
-
     motion_info = dict(
         parameters=parameters,
         run_times=run_times,
@@ -553,6 +550,9 @@ def correct_motion(
         output_motion_info=True,
         **job_kwargs,
     )
+
+    if recording.get_dtype().kind != "f":
+        recording = recording.astype("float32")
 
     recording_corrected = interpolate_motion(recording, motion, **interpolate_motion_kwargs)
 
