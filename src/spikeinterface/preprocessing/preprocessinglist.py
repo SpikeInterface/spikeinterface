@@ -44,46 +44,48 @@ from .depth_order import DepthOrderRecording, depth_order
 from .astype import AstypeRecording, astype
 from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
 
-from .motion import correct_motion
-
-pp_function_to_class = {
+_all_preprocesser_dict = {
     # filter stuff
-    "filter": FilterRecording,
-    "bandpass_filter": BandpassFilterRecording,
-    "notch_filter": NotchFilterRecording,
-    "highpass_filter": HighpassFilterRecording,
-    "gaussian_filter": GaussianFilterRecording,
+    FilterRecording: filter,
+    BandpassFilterRecording: bandpass_filter,
+    HighpassFilterRecording: highpass_filter,
+    NotchFilterRecording: notch_filter,
+    GaussianFilterRecording: gaussian_filter,
     # gain offset stuff
-    "normalize_by_quantile": NormalizeByQuantileRecording,
-    "scale": ScaleRecording,
-    "zscore": ZScoreRecording,
-    "center": CenterRecording,
+    NormalizeByQuantileRecording: normalize_by_quantile,
+    ScaleRecording: scale,
+    CenterRecording: center,
+    ZScoreRecording: zscore,
     # decorrelation stuff
-    "whiten": WhitenRecording,
+    WhitenRecording: whiten,
     # re-reference
-    "common_reference": CommonReferenceRecording,
-    "phase_shift": PhaseShiftRecording,
+    CommonReferenceRecording: common_reference,
+    PhaseShiftRecording: phase_shift,
     # misc
-    "rectify": RectifyRecording,
-    "clip": ClipRecording,
-    "blank_staturation": BlankSaturationRecording,
-    "silence_periods": SilencedPeriodsRecording,
-    "remove_artifacts": RemoveArtifactsRecording,
-    "zero_channel_pad": ZeroChannelPaddedRecording,
-    "deepinterpolate": DeepInterpolatedRecording,
-    "resample": ResampleRecording,
-    "decimate": DecimateRecording,
-    "highpass_spatial_filter": HighpassSpatialFilterRecording,
-    "interpolate_bad_channels": InterpolateBadChannelsRecording,
-    "depth_order": DepthOrderRecording,
-    "average_across_direction": AverageAcrossDirectionRecording,
-    "directional_derivative": DirectionalDerivativeRecording,
-    "astype": AstypeRecording,
-    "unsigned_to_signed": UnsignedToSignedRecording,
-    "correct_motion": correct_motion,
+    RectifyRecording: rectify,
+    ClipRecording: clip,
+    BlankSaturationRecording: blank_saturation,
+    SilencedPeriodsRecording: silence_periods,
+    RemoveArtifactsRecording: remove_artifacts,
+    ZeroChannelPaddedRecording: zero_channel_pad,
+    DeepInterpolatedRecording: deepinterpolate,
+    ResampleRecording: resample,
+    DecimateRecording: decimate,
+    HighpassSpatialFilterRecording: highpass_spatial_filter,
+    InterpolateBadChannelsRecording: interpolate_bad_channels,
+    DepthOrderRecording: depth_order,
+    AverageAcrossDirectionRecording: average_across_direction,
+    DirectionalDerivativeRecording: directional_derivative,
+    AstypeRecording: astype,
+    UnsignedToSignedRecording: unsigned_to_signed,
 }
+# we control import in the preprocessing init by setting an __all__
 
+# pp_function.__name__ gives the name of the function that users should use
+__all__ = [pp_function.__name__ for pp_function in _all_preprocesser_dict.values()]
+__all__.extend(
+    [scale_to_uV.__name__, compute_whitening_matrix.__name__, train_deepinterpolation.__name__, causal_filter.__name__]
+)
 
-preprocessers_full_list = pp_function_to_class.values()
-
-preprocesser_dict = {pp_class.__name__: pp_class for pp_class in preprocessers_full_list}
+preprocessor_dict = {pp_class.__name__: pp_function for pp_class, pp_function in _all_preprocesser_dict.items()}
+__all__.append("preprocessor_dict")

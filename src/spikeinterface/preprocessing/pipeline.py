@@ -1,9 +1,11 @@
-import re
 import json
 import inspect
-from copy import deepcopy
 from spikeinterface.core.core_tools import is_dict_extractor
-from spikeinterface.preprocessing.preprocessinglist import pp_function_to_class, preprocesser_dict
+from spikeinterface.core import BaseRecording
+from spikeinterface.preprocessing.preprocessinglist import preprocessor_dict, _all_preprocesser_dict
+
+pp_names_to_functions = {preprocessor.__name__: preprocessor for preprocessor in preprocessor_dict.values()}
+pp_names_to_classes = {pp_function.__name__: pp_class for pp_class, pp_function in _all_preprocesser_dict.items()}
 
 
 class PreprocessingPipeline:
@@ -24,15 +26,18 @@ class PreprocessingPipeline:
     >>> preprocessor_dict = {'bandpass_filter': {'freq_max': 3000}, 'common_reference': {}}
     >>> my_pipeline = PreprocessingPipeline(preprocessor_dict)
     PreprocessingPipeline:  Raw Recording → bandpass_filter → common_reference → Preprocessed Recording
-    >>> my_pipeline.apply_to(recording)
+    >>> my_pipeline.apply(recording)
 
     """
 
     def __init__(self, preprocessor_dict):
         for preprocessor in preprocessor_dict:
-            assert _is_genuine_preprocessor(
-                preprocessor
-            ), f"'{preprocessor}' is not a preprocessing step in spikeinterface. To see the full list run:\n\t>>> from spikeinterface.preprocessing import pp_function_to_class\n\t>>> print(pp_function_to_class.keys())"
+            if preprocessor not in pp_names_to_functions.keys():
+                raise TypeError(
+                    f"'{preprocessor}' is not supported by the `PreprocessingPipeline`. \
+                    To see the list of supported steps, run:\n\t>>> from spikeinterface.preprocessing \
+                    import preprocessor_dict\n\t>>> print(preprocessor_dict.keys())"
+                )
 
         self.preprocessor_dict = preprocessor_dict
 
@@ -47,47 +52,40 @@ class PreprocessingPipeline:
 
         all_kwargs = _get_all_kwargs_and_values(self)
 
-        num_titles = len(all_kwargs) + 3
-        colors = [
-            [255 - (a * 15) // num_titles, 255 - (a * 82) // num_titles, 255 - (a * 30) // num_titles]
-            for a in range(0, num_titles + 1)
-        ]
-
         html_text = "<div'>"
-
-        html_text += "<strong>PreprocessingPipeline:</strong>"
-
-        html_text += f"<div style='border:1px solid #ddd; padding:10px;'><strong>Initial Recording</strong></div>"
-
-        html_text += "<div style='margin: auto'>&#x2193;</div>"
+        html_text += "<strong>PreprocessingPipeline</strong>"
+        html_text += "<div style='border:1px solid #ccc; padding:10px;'><strong>Initial Recording</strong></div>"
+        html_text += "<div style='margin: auto; text-indent: 30px;'>&#x2193;</div>"
 
         for a, (preprocessor, kwargs) in enumerate(all_kwargs.items()):
-            html_text += "<details>"
-            html_text += (
-                f"<summary style='border:1px solid #eee; padding:5px;'><strong>{preprocessor}</strong></summary>"
-            )
+            html_text += "<details style='border:1px solid #ddd; padding:5px;'>"
+            html_text += f"<summary><strong>{preprocessor}</strong></summary>"
+
             html_text += "<ul>"
             for kwarg, value in kwargs.items():
                 html_text += f"<li><strong>{kwarg}</strong>: {value}</li>"
             html_text += "</ul>"
             html_text += "</details>"
-            html_text += """<div">&#x2193;</div>"""
 
-        html_text += f"<div style='border:1px solid #ddd; padding:10px;'><strong>Preprocessed Recording</strong></div>"
-
+        html_text += """<div style='margin: auto; text-indent: 30px;'>&#x2193;</div>"""
+        html_text += "<div style='border:1px solid #ccc; padding:10px;'><strong>Preprocessed Recording</strong></div>"
         html_text += "</div>"
 
         return html_text
 
-    def apply_to(self, recording):
+    def apply(self, recording, ignore_precomputed_kwargs=True):
         """
-        Creates a preprocessed recording by applying the PreprocessingPipeline to
+        Creates a preprocessed recording by applying the `PreprocessingPipeline` to
         `recording`.
 
         Parameters
         ----------
         recording : RecordingExtractor
             The initial recording
+        ignore_precomputed_kwargs : Bool
+            Some preprocessing steps (e.g. Whitening) contain arguments which are computed
+            during preprocessing. If True, we ignore these precomputed steps. If False, we
+            compute when we apply the preprocessors.
 
         Returns
         -------
@@ -96,28 +94,25 @@ class PreprocessingPipeline:
 
         """
 
-        preprocessor_dict = self.preprocessor_dict
+        for preprocessor_name, kwargs in self.preprocessor_dict.items():
 
-        for preprocessor, kwargs in preprocessor_dict.items():
+            dont_include_kwargs = ["recording", "parent_recording"]
 
-            kwargs.pop("recording", kwargs)
-            kwargs.pop("parent_recording", kwargs)
+            if ignore_precomputed_kwargs:
+                preprocessor_class = pp_names_to_classes[preprocessor_name]
+                precomputable_kwarg_names = preprocessor_class._precomputable_kwarg_names
+                dont_include_kwargs += precomputable_kwarg_names
 
-            using_class_name = bool(re.search("Recording", preprocessor))
-            if using_class_name is True:
-                pp_output = preprocesser_dict[preprocessor.split(".")[-1]](recording, **kwargs)
-            else:
-                pp_output = pp_function_to_class[preprocessor.split(".")[-1]](recording, **kwargs)
-
-            if preprocessor == "motion_correct":
-                pp_output = pp_output[0]
-
+            non_rec_kwargs = {key: value for key, value in kwargs.items() if key not in dont_include_kwargs}
+            pp_output = pp_names_to_functions[preprocessor_name](recording, **non_rec_kwargs)
             recording = pp_output
 
         return recording
 
 
-def create_preprocessed(recording, preprocessor_dict=None):
+def apply_pipeline(
+    recording: BaseRecording, pipeline_or_dict: dict | PreprocessingPipeline = {}, ignore_precomputed_kwargs=True
+):
     """
     Creates a preprocessed recording by applying the preprocessing steps in
     `preprocessor_dict` to `recording`.
@@ -126,8 +121,13 @@ def create_preprocessed(recording, preprocessor_dict=None):
     ----------
     recording : RecordingExtractor
         The initial recording
-    preprocessor_dict : dict
-        Dictionary containing preprocessing steps and their kwargs
+    preprocessor_dict : dict |  PreprocessingPipeline = {}
+        Dictionary containing preprocessing steps and their kwargs, or a pipeline object.
+        If None, the original recording is returned.
+    ignore_precomputed_kwargs : Bool
+        Some preprocessing steps (e.g. Whitening) contain arguments which are computed
+        during preprocessing. If True, we ignore these precomputed steps. If False, we
+        compute when we apply the preprocessors.
 
     Returns
     -------
@@ -142,13 +142,15 @@ def create_preprocessed(recording, preprocessor_dict=None):
     >>> from spikeinterface.generation import generate_recording
     >>> recording = generate_recording()
     >>> preprocessor_dict = {'bandpass_filter': {'freq_max': 3000}, 'common_reference': {}}
-    >>> preprocessed_recording = create_preprocessed(recording, preprocessor_dict)
-
-
+    >>> preprocessed_recording = apply_pipeline(recording, preprocessor_dict)
     """
 
-    pipeline = PreprocessingPipeline(preprocessor_dict)
-    preprocessed_recording = pipeline.apply_to(recording)
+    if isinstance(pipeline_or_dict, PreprocessingPipeline):
+        pipeline = pipeline_or_dict
+    else:
+        pipeline = PreprocessingPipeline(pipeline_or_dict)
+
+    preprocessed_recording = pipeline.apply(recording, ignore_precomputed_kwargs)
     return preprocessed_recording
 
 
@@ -177,49 +179,34 @@ def get_preprocessing_dict_from_json(recording_json_path):
     """
     recording_json = json.load(open(recording_json_path))
 
-    initial_preprocessor_dict = {}
-    _load_pp_from_dict(recording_json, initial_preprocessor_dict)
+    pp_from_json = {}
+    _load_pp_from_dict(recording_json, pp_from_json)
 
-    preprocessor_dict = deepcopy(initial_preprocessor_dict)
-    for preprocessor in initial_preprocessor_dict:
-        preprocessor_name = preprocessor.split(".")[-1]
+    pipeline_dict = {}
+    for preprocessor in reversed(pp_from_json):
 
-        if not _is_genuine_preprocessor(preprocessor_name):
-            preprocessor_dict.pop(preprocessor, preprocessor_dict)
+        preprocessor_class_name = preprocessor.split(".")[-1]
+
+        preprocessor_function = preprocessor_dict.get(preprocessor_class_name)
+        if preprocessor_function is None:
             continue
 
-        # remove recording details
-        preprocessor_dict[preprocessor].pop("recording", preprocessor_dict[preprocessor])
-        preprocessor_dict[preprocessor].pop("parent_recording", preprocessor_dict[preprocessor])
+        pp_kwargs = {
+            key: value
+            for key, value in pp_from_json[preprocessor].items()
+            if key not in ["recording", "parent_recording"]
+        }
 
-        # rename keys to be the class names
-        preprocessor_dict[preprocessor_name] = preprocessor_dict[preprocessor]
-        preprocessor_dict.pop(preprocessor)
+        pipeline_dict[preprocessor_function.__name__] = pp_kwargs
 
-    preprocessor_dict = dict(reversed(preprocessor_dict.items()))
-
-    return preprocessor_dict
-
-
-def _is_genuine_preprocessor(preprocessor):
-    """
-    Check is string 'preprocessor' is in the list of preprocessors from
-    `pp_function_to_class`.
-    """
-
-    using_class_name = bool(re.search("Recording", preprocessor))
-    if using_class_name:
-        genuine_preprocessor = preprocessor in preprocesser_dict.keys()
-    else:
-        genuine_preprocessor = preprocessor in pp_function_to_class.keys()
-
-    return genuine_preprocessor
+    return pipeline_dict
 
 
 def _load_pp_from_dict(prov_dict, kwargs_dict):
     """
     Recursive function used to iterate through recording provenance dictionary, and
-    extract preprocessing steps and their kwargs.
+    extract preprocessing steps and their kwargs. Based on `_load_extractor_from_dict`
+    from spikeinterface.core.base.
     """
     new_kwargs = dict()
     transform_dict_to_extractor = lambda x: _load_pp_from_dict(x) if is_dict_extractor(x) else x
@@ -238,18 +225,21 @@ def _load_pp_from_dict(prov_dict, kwargs_dict):
 
 
 def _get_all_kwargs_and_values(my_pipeline):
+    """
+    Get all keyword arguments and their values from a pipeline,
+    including the default values.
+    """
 
     all_kwargs = {}
     for preprocessor in my_pipeline.preprocessor_dict:
 
         preprocessor_name = preprocessor.split(".")[-1]
-        # preprocessor_name = preprocessor.split(".")[-1]
-        pp_function = pp_function_to_class[preprocessor.split(".")[-1]]
+        pp_function = pp_names_to_functions[preprocessor.split(".")[-1]]
         signature = inspect.signature(pp_function)
 
         all_kwargs[preprocessor_name] = {}
 
-        for parameter, value in signature.parameters.items():
+        for _, value in signature.parameters.items():
             par_name = str(value).split("=")[0].split(":")[0]
             if par_name != "recording":
                 try:
