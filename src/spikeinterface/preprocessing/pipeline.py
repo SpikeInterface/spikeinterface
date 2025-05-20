@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import inspect
 from spikeinterface.core.core_tools import is_dict_extractor
