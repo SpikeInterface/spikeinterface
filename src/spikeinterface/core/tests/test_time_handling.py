@@ -438,7 +438,7 @@ class TestTimeHandling:
 
 
 def test_shift_times_with_None_as_t_start():
-
+    """Ensures we can shift times even when t_stat is None which is interpeted as zero"""
     recording = generate_recording(num_channels=4, durations=[10])
 
     assert recording._recording_segments[0].t_start is None
