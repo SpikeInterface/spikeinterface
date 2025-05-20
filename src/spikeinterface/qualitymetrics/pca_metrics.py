@@ -16,8 +16,8 @@ from threadpoolctl import threadpool_limits
 
 from .misc_metrics import compute_num_spikes, compute_firing_rates
 
-from ..core import get_random_data_chunks, compute_sparsity
-from ..core.template_tools import get_template_extremum_channel
+from spikeinterface.core import get_random_data_chunks, compute_sparsity
+from spikeinterface.core.template_tools import get_template_extremum_channel
 
 _possible_pc_metric_names = [
     "isolation_distance",
@@ -157,7 +157,10 @@ def compute_pc_metrics(
         neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
 
         labels = all_labels[np.isin(all_labels, neighbor_unit_ids)]
-        pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
+        if pca_ext.params["mode"] == "concatenated":
+            pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)]
+        else:
+            pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
 
         func_args = (pcs_flat, labels, non_nn_metrics, unit_id, unit_ids, metric_params, max_threads_per_worker)

@@ -13,7 +13,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-import multiprocessing
 
 from spikeinterface.core.baserecording import BaseRecording
 
@@ -170,7 +169,7 @@ def allocate_waveforms_buffers(
         Dictionary to "construct" array in workers process (memmap file or sharemem)
     """
 
-    nsamples = nbefore + nafter
+    n_samples = nbefore + nafter
 
     dtype = np.dtype(dtype)
     if mode == "shared_memory":
@@ -187,11 +186,11 @@ def allocate_waveforms_buffers(
             num_chans = recording.get_num_channels()
         else:
             num_chans = np.sum(sparsity_mask[unit_ind, :])
-        shape = (n_spikes, nsamples, num_chans)
+        shape = (int(n_spikes), int(n_samples), int(num_chans))
 
         if mode == "memmap":
             filename = str(folder / f"waveforms_{unit_id}.npy")
-            arr = np.lib.format.open_memmap(filename, mode="w+", dtype=dtype, shape=shape)
+            arr = np.lib.format.open_memmap(filename, mode="w+", dtype=dtype.str, shape=shape)
             waveforms_by_units[unit_id] = arr
             arrays_info[unit_id] = filename
         elif mode == "shared_memory":
@@ -476,7 +475,7 @@ def extract_waveforms_to_single_buffer(
         Optionally return in case of shared_memory if copy=False.
         Dictionary to "construct" array in workers process (memmap file or sharemem info)
     """
-    nsamples = nbefore + nafter
+    n_samples = nbefore + nafter
 
     dtype = np.dtype(dtype)
     if mode == "shared_memory":
@@ -489,7 +488,7 @@ def extract_waveforms_to_single_buffer(
         num_chans = recording.get_num_channels()
     else:
         num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
-    shape = (num_spikes, nsamples, num_chans)
+    shape = (int(num_spikes), int(n_samples), int(num_chans))
 
     if mode == "memmap":
         all_waveforms = np.lib.format.open_memmap(file_path, mode="w+", dtype=dtype, shape=shape)

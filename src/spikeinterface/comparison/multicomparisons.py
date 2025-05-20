@@ -35,6 +35,9 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         Minimum agreement score to match units
     chance_score : float, default: 0.1
         Minimum agreement score to for a possible match
+    agreement_method : "count" | "distance", default: "count"
+        The method to compute agreement scores. The "count" method computes agreement scores from spike counts.
+        The "distance" method computes agreement scores from spike time distance functions.
     n_jobs : int, default: -1
        Number of cores to use in parallel. Uses all available if -1
     spiketrain_mode : "union" | "intersection", default: "union"
@@ -60,6 +63,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         delta_time=0.4,  # sampling_frequency=None,
         match_score=0.5,
         chance_score=0.1,
+        agreement_method="count",
         n_jobs=-1,
         spiketrain_mode="union",
         verbose=False,
@@ -73,9 +77,10 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             name_list=name_list,
             match_score=match_score,
             chance_score=chance_score,
+            n_jobs=n_jobs,
             verbose=verbose,
         )
-        MixinSpikeTrainComparison.__init__(self, delta_time=delta_time, n_jobs=n_jobs)
+        MixinSpikeTrainComparison.__init__(self, delta_time=delta_time, agreement_method=agreement_method)
         self.set_frames_and_frequency(self.object_list)
         self._spiketrain_mode = spiketrain_mode
         self._spiketrains = None
@@ -93,7 +98,8 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             sorting2_name=self.name_list[j],
             delta_time=self.delta_time,
             match_score=self.match_score,
-            n_jobs=self.n_jobs,
+            chance_score=self.chance_score,
+            agreement_method=self.agreement_method,
             verbose=False,
         )
         return comp

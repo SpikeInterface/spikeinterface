@@ -243,6 +243,7 @@ class SelectSegmentRecording(BaseRecording):
         for segment_index in segment_indices:
             rec_seg = recording._recording_segments[segment_index]
             self.add_recording_segment(rec_seg)
+        self._parent = recording
 
         self._kwargs = {"recording": recording, "segment_indices": segment_indices}
 
@@ -564,6 +565,7 @@ class SplitSegmentSorting(BaseSorting):
             )
             sliced_segment = sliced_parent_sorting._sorting_segments[0]
             self.add_sorting_segment(sliced_segment)
+        self._parent = parent_sorting
 
         self._kwargs = {"parent_sorting": parent_sorting, "recording_or_recording_list": recording_list}
 

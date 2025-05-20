@@ -140,7 +140,6 @@ def test_InjectDriftingTemplatesRecording(create_cache_folder):
 
     # drifting templates
     drifting_templates = DriftingTemplates.from_static_templates(templates)
-    channel_locations = probe.contact_positions
 
     num_units = templates.unit_ids.size
     sampling_frequency = templates.sampling_frequency

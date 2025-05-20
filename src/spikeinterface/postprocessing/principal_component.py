@@ -43,6 +43,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         If True, waveforms are pre-whitened
     dtype : dtype, default: "float32"
         Dtype of the pc scores
+    {}
 
     Examples
     --------
@@ -260,7 +261,11 @@ class ComputePrincipalComponents(AnalyzerExtension):
         spike_unit_indices = some_spikes["unit_index"][selected_inds]
 
         if sparsity is None:
-            some_projections = all_projections[selected_inds, :, :][:, :, channel_indices]
+            if self.params["mode"] == "concatenated":
+                some_projections = all_projections[selected_inds, :]
+            else:
+                some_projections = all_projections[selected_inds, :, :][:, :, channel_indices]
+
         else:
             # need re-alignement
             some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
@@ -518,8 +523,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
         # transform a waveforms buffer
         # used by _run() and project_new()
 
-        from sklearn.exceptions import NotFittedError
-
         mode = self.params["mode"]
 
         # prepare buffer
@@ -678,6 +681,7 @@ def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafte
     return worker_ctx
 
 
+ComputePrincipalComponents.__doc__.format(_shared_job_kwargs_doc)
 register_result_extension(ComputePrincipalComponents)
 compute_principal_components = ComputePrincipalComponents.function_factory()
 

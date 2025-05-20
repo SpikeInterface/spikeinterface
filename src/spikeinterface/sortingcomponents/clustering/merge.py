@@ -61,7 +61,7 @@ def merge_clusters(
         A vector of sample shift to be reverse applied on original sample_index on peak detection
         Negative shift means too early.
         Posituve shift means too late.
-        So the correction must be applied like this externaly:
+        So the correction must be applied like this externally:
         final_peaks = peaks.copy()
         final_peaks['sample_index'] -= peak_shifts
 
@@ -99,7 +99,7 @@ def merge_clusters(
         fig, ax = plt.subplots()
         clusterer = hdbscan.HDBSCAN(metric="precomputed", min_cluster_size=2, allow_single_cluster=True)
         clusterer.fit(pair_values)
-        print(clusterer.labels_)
+        # print(clusterer.labels_)
         clusterer.single_linkage_tree_.plot(cmap="viridis", colorbar=True)
         # ~ fig, ax = plt.subplots()
         # ~ clusterer.minimum_spanning_tree_.plot(edge_cmap='viridis',
@@ -132,7 +132,7 @@ def merge_clusters(
     peak_shifts = np.zeros(peak_labels.size, dtype="int64")
     for merge, shifts in zip(merges, group_shifts):
         label0 = merge[0]
-        mask = np.in1d(peak_labels, merge)
+        mask = np.isin(peak_labels, merge)
         merge_peak_labels[mask] = label0
         for l, label1 in enumerate(merge):
             if l == 0:
@@ -265,7 +265,7 @@ def find_merge_pairs(
     # progress_bar=True,
 ):
     """
-    Searh some possible merge 2 by 2.
+    Search some possible merge 2 by 2.
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
@@ -293,6 +293,10 @@ def find_merge_pairs(
     channel_locs = recording.get_channel_locations()
     template_locs = channel_locs[max_chans, :]
     template_dist = scipy.spatial.distance.cdist(template_locs, template_locs, metric="euclidean")
+
+    # print("template_locs", template_locs.shape, template_locs)
+    # print("template_locs", np.unique(template_locs[:, 1]).shape)
+    # print("radius_um", radius_um)
 
     pair_mask = pair_mask & (template_dist <= radius_um)
     indices0, indices1 = np.nonzero(pair_mask)
@@ -601,7 +605,7 @@ class ProjectDistribution:
 class NormalizedTemplateDiff:
     """
     Compute the normalized (some kind of) template differences.
-    And merge if below a threhold.
+    And merge if below a threshold.
     Do this at several shift.
 
     """

@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
-
-from spikeinterface.core import BaseRecording
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor
 
 

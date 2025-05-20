@@ -20,7 +20,7 @@ of the tests are:
 
 import pytest
 import copy
-from typing import Any
+from packaging.version import parse
 from inspect import signature
 
 import numpy as np
@@ -70,7 +70,6 @@ PARAMS_TO_TEST_DICT = {
     "nearest_chans": 8,
     "nearest_templates": 35,
     "max_channel_distance": 5,
-    "templates_from_data": False,
     "n_templates": 10,
     "n_pcs": 3,
     "Th_single_ch": 4,
@@ -84,8 +83,6 @@ PARAMS_TO_TEST_DICT = {
     "duplicate_spike_ms": 0.3,
 }
 
-PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
-
 PARAMETERS_NOT_AFFECTING_RESULTS = [
     "artifact_threshold",
     "ccg_threshold",
@@ -95,13 +92,28 @@ PARAMETERS_NOT_AFFECTING_RESULTS = [
     "duplicate_spike_ms",  # this is because ground-truth spikes don't have violations
 ]
 
-# THIS IS A PLACEHOLDER FOR FUTURE PARAMS TO TEST
-# if parse(version("kilosort")) >= parse("4.0.X"):
-#     PARAMS_TO_TEST_DICT.update(
-#         [
-#             {"new_param": new_value},
-#         ]
-#     )
+
+# Add/Remove version specific parameters
+if parse(kilosort.__version__) >= parse("4.0.22"):
+    PARAMS_TO_TEST_DICT.update(
+        {"position_limit": 50}
+    )
+    # Position limit only affects computing spike locations after sorting
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("position_limit")
+
+if parse(kilosort.__version__) >= parse("4.0.24"):
+    PARAMS_TO_TEST_DICT.update(
+        {"max_peels": 200},
+    )
+    # max_peels is not affecting the results in this short dataset
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("max_peels")
+
+if parse(kilosort.__version__) >= parse("4.0.33"):
+    PARAMS_TO_TEST_DICT.update({"cluster_neighbors": 11})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("cluster_neighbors")
+
+
+PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
 
 
 class TestKilosort4Long:
@@ -169,11 +181,11 @@ class TestKilosort4Long:
         """
         paths = {
             "session_scope_tmp_path": tmp_path,
-            "recording_path": tmp_path / "my_test_recording",
+            "recording_path": tmp_path / "my_test_recording" / "traces_cached_seg0.raw",
             "probe_path": tmp_path / "my_test_probe.prb",
         }
 
-        recording.save(folder=paths["recording_path"], overwrite=True)
+        recording.save(folder=paths["recording_path"].parent, overwrite=True)
 
         probegroup = recording.get_probegroup()
         write_prb(paths["probe_path"].as_posix(), probegroup)
@@ -205,7 +217,7 @@ class TestKilosort4Long:
         tested_keys += additional_non_tested_keys
 
         for param_key in DEFAULT_SETTINGS:
-            if param_key not in ["n_chan_bin", "fs", "tmin", "tmax"]:
+            if param_key not in ["n_chan_bin", "fs", "tmin", "tmax", "templates_from_data"]:
                 assert param_key in tested_keys, f"param: {param_key} in DEFAULT SETTINGS but not tested."
 
     def test_spikeinterface_defaults_against_kilsort(self):
@@ -225,8 +237,11 @@ class TestKilosort4Long:
 
     # Testing Arguments ###
     def test_set_files_arguments(self):
+        expected_arguments = ["settings", "filename", "probe", "probe_name", "data_dir", "results_dir", "bad_channels"]
+        if parse(kilosort.__version__) >= parse("4.0.34"):
+            expected_arguments += ["shank_idx"]
         self._check_arguments(
-            set_files, ["settings", "filename", "probe", "probe_name", "data_dir", "results_dir", "bad_channels"]
+            set_files, expected_arguments
         )
 
     def test_initialize_ops_arguments(self):
@@ -249,17 +264,22 @@ class TestKilosort4Long:
         self._check_arguments(compute_preprocessing, ["ops", "device", "tic0", "file_object"])
 
     def test_compute_drift_location_arguments(self):
-        self._check_arguments(
-            compute_drift_correction, ["ops", "device", "tic0", "progress_bar", "file_object", "clear_cache"]
-        )
+        expected_arguments = ["ops", "device", "tic0", "progress_bar", "file_object", "clear_cache"]
+        if parse(kilosort.__version__) >= parse("4.0.28"):
+            expected_arguments += ["verbose"]
+        self._check_arguments(compute_drift_correction, expected_arguments)
 
     def test_detect_spikes_arguments(self):
-        self._check_arguments(detect_spikes, ["ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"])
+        expected_arguments = ["ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
+        if parse(kilosort.__version__) >= parse("4.0.28"):
+            expected_arguments += ["verbose"]
+        self._check_arguments(detect_spikes, expected_arguments)
 
     def test_cluster_spikes_arguments(self):
-        self._check_arguments(
-            cluster_spikes, ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
-        )
+        expected_arguments = ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
+        if parse(kilosort.__version__) >= parse("4.0.28"):
+            expected_arguments += ["verbose"]
+        self._check_arguments(cluster_spikes, expected_arguments)
 
     def test_save_sorting_arguments(self):
         expected_arguments = ["ops", "results_dir", "st", "clu", "tF", "Wall", "imin", "tic0", "save_extra_vars"]
@@ -519,33 +539,60 @@ class TestKilosort4Long:
         kilosort_output_dir = tmp_path / "kilosort_output_dir"
         spikeinterface_output_dir = tmp_path / "spikeinterface_output_dir"
 
-        def monkeypatch_filter_function(self, X, ops=None, ibatch=None):
-            """
-            This is a direct copy of the kilosort io.BinaryFiltered.filter
-            function, with hp_filter and whitening matrix code sections, and
-            comments removed. This is the easiest way to monkeypatch (tried a few approaches)
-            """
-            if self.chan_map is not None:
-                X = X[self.chan_map]
+        if parse(kilosort.__version__) >= parse("4.0.33"):
+            def monkeypatch_filter_function(self, X, ops=None, ibatch=None, skip_preproc=False):
+                """
+                This is a direct copy of the kilosort io.BinaryFiltered.filter
+                function, with hp_filter and whitening matrix code sections, and
+                comments removed. This is the easiest way to monkeypatch (tried a few approaches)
+                """
+                if self.chan_map is not None:
+                    X = X[self.chan_map]
 
-            if self.invert_sign:
-                X = X * -1
+                if self.invert_sign:
+                    X = X * -1
 
-            X = X - X.mean(1).unsqueeze(1)
-            if self.do_CAR:
-                X = X - torch.median(X, 0)[0]
+                X = X - X.mean(1).unsqueeze(1)
+                if self.do_CAR:
+                    X = X - torch.median(X, 0)[0]
 
-            if self.hp_filter is not None:
-                pass
+                if self.hp_filter is not None:
+                    pass
 
-            if self.artifact_threshold < np.inf:
-                if torch.any(torch.abs(X) >= self.artifact_threshold):
-                    return torch.zeros_like(X)
+                if self.artifact_threshold < np.inf:
+                    if torch.any(torch.abs(X) >= self.artifact_threshold):
+                        return torch.zeros_like(X)
 
-            if self.whiten_mat is not None:
-                pass
-            return X
+                if self.whiten_mat is not None:
+                    pass
+                return X
+        else:
+            def monkeypatch_filter_function(self, X, ops=None, ibatch=None):
+                """
+                This is a direct copy of the kilosort io.BinaryFiltered.filter
+                function, with hp_filter and whitening matrix code sections, and
+                comments removed. This is the easiest way to monkeypatch (tried a few approaches)
+                """
+                if self.chan_map is not None:
+                    X = X[self.chan_map]
 
+                if self.invert_sign:
+                    X = X * -1
+
+                X = X - X.mean(1).unsqueeze(1)
+                if self.do_CAR:
+                    X = X - torch.median(X, 0)[0]
+
+                if self.hp_filter is not None:
+                    pass
+
+                if self.artifact_threshold < np.inf:
+                    if torch.any(torch.abs(X) >= self.artifact_threshold):
+                        return torch.zeros_like(X)
+
+                if self.whiten_mat is not None:
+                    pass
+                return X
         monkeypatch.setattr("kilosort.io.BinaryFiltered.filter", monkeypatch_filter_function)
 
         ks_settings, _, ks_format_probe = self._get_kilosort_native_settings(recording, paths, param_key, param_value)
@@ -606,7 +653,7 @@ class TestKilosort4Long:
         are through the function, these are split here.
         """
         settings = {
-            "data_dir": paths["recording_path"],
+            "filename": paths["recording_path"],
             "n_chan_bin": recording.get_num_channels(),
             "fs": recording.get_sampling_frequency(),
         }

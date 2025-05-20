@@ -15,15 +15,80 @@ from .recording_tools import determine_cast_unsigned
 from .core_tools import is_path_remote
 
 
-def anononymous_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: dict | None = None):
-    if is_path_remote(str(folder_path)) and storage_options is None:
-        try:
-            root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
-        except Exception as e:
-            storage_options = {"anon": True}
-            root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: dict | None = None):
+    """
+    Open a zarr folder with super powers.
+
+    The function tries to open a zarr folder with the following options:
+    - zarr.open_consolidated (if mode is not "a" or "r+")
+    - zarr.open
+
+    For remote paths, the function tries to open the folder with:
+    - the provided storage options (if storage_options is not None)
+    - anon=True/False is storage_options is None
+
+    Parameters
+    ----------
+    folder_path : str | Path
+        The path to the zarr folder
+    mode : str, optional
+        The mode to open the zarr folder in, default: "r"
+    storage_options : dict | None, optional
+        The storage options to use when opening the zarr folder, default: None
+
+    Returns
+    -------
+    root: zarr.hierarchy.Group
+        The zarr root group object
+
+    Raises
+    ------
+    ValueError
+        Raised if the folder cannot be opened in the specified mode with the given storage options.
+    """
+    import zarr
+
+    # if mode is append or read/write, we try to open the folder with zarr.open
+    # since zarr.open_consolidated does not support creating new groups/datasets
+    if mode in ("a", "r+"):
+        open_funcs = (zarr.open,)
     else:
-        root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+        open_funcs = (zarr.open_consolidated, zarr.open)
+
+    # if storage_options is None, we try to open the folder with and without anonymous access
+    # if storage_options is not None, we try to open the folder with the given storage options
+    if storage_options is None or storage_options == {}:
+        storage_options_to_test = ({"anon": True}, {"anon": False})
+    else:
+        storage_options_to_test = (storage_options,)
+
+    root = None
+    exception = None
+    if is_path_remote(str(folder_path)):
+        for open_func in open_funcs:
+            if root is not None:
+                break
+            for storage_options in storage_options_to_test:
+                try:
+                    root = open_func(str(folder_path), mode=mode, storage_options=storage_options)
+                    break
+                except Exception as e:
+                    exception = e
+                    pass
+    else:
+        if not Path(folder_path).is_dir():
+            raise ValueError(f"Folder {folder_path} does not exist")
+        for open_func in open_funcs:
+            try:
+                root = open_func(str(folder_path), mode=mode, storage_options=storage_options)
+                break
+            except Exception as e:
+                exception = e
+                pass
+    if root is None:
+        raise ValueError(
+            f"Cannot open {folder_path} in mode {mode} with storage_options {storage_options}.\nException: {exception}"
+        )
     return root
 
 
@@ -52,7 +117,7 @@ class ZarrRecordingExtractor(BaseRecording):
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
-        self._root = anononymous_zarr_open(folder_path, mode="r", storage_options=storage_options)
+        self._root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
 
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
@@ -192,7 +257,7 @@ class ZarrSortingExtractor(BaseSorting):
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
-        zarr_root = anononymous_zarr_open(folder_path, mode="r", storage_options=storage_options)
+        zarr_root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
 
         if zarr_group is None:
             self._root = zarr_root
@@ -271,7 +336,7 @@ def read_zarr(
     """
     # TODO @alessio : we should have something more explicit in our zarr format to tell which object it is.
     # for the futur SortingAnalyzer we will have this 2 fields!!!
-    root = anononymous_zarr_open(folder_path, mode="r", storage_options=storage_options)
+    root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
     if "channel_ids" in root.keys():
         return read_zarr_recording(folder_path, storage_options=storage_options)
     elif "unit_ids" in root.keys():
@@ -317,7 +382,6 @@ def get_default_zarr_compressor(clevel: int = 5):
     Blosc.compressor
         The compressor object that can be used with the save to zarr function
     """
-    assert ZarrRecordingExtractor.installed, ZarrRecordingExtractor.installation_mesg
     from numcodecs import Blosc
 
     return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)

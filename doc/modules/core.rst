@@ -310,12 +310,13 @@ Since these core extensions are important for all other extensions it is importa
   and the time after (:code:`ms_after`) to ensure that you have a full waveform. Because waveforms occur on multiple channels with multiple
   samples this can be a big data structure.
 * :code:`templates` are calculated from the raw waveform data and are used for downstream analyses
-  (e.g. :code:`spike_amplitudes` are calculated based on the templates). This raises the question: if the :code:`templates` are what are used,
-  then why save the :code:`waveforms`? Well, there are two ways to obtain :code:`templates` data: 1) directly from the raw data (based on the
-  :code:`random_spikes`) or 2) from the :code:`waveforms`. When getting :code:`templates` from the raw data we are limited to obtaining averages
-  and standard deviations. If we calculate the templates from the waveforms, however, we can also calculate the templates as medians or percentiles
+  (e.g. :code:`spike_amplitudes` are calculated based on the templates). This raises the question: if the :code:`templates` are all we need,
+  then why compute and save the :code:`waveforms`? Well, there are two ways to obtain :code:`templates` data: 1) directly from the raw data (based on the
+  :code:`random_spikes`) or 2) from the :code:`waveforms` extension. When getting :code:`templates` from the raw data we are limited to obtaining averages
+  and standard deviations. If we calculate the templates from the waveforms, however, we can also calculate the template medians or percentiles
   in addition to the average or standard deviations of the :code:`waveforms`. So it is important to think about the type of downstream analyses that
-  you may want to do in deciding whether to calculate :code:`templates` with :code:`random_spikes` or using :code:`waveforms`.
+  you may want to do in deciding whether to calculate :code:`templates` with :code:`random_spikes` or using :code:`waveforms`. Note that if the :code:`waveforms`
+  extension is available, :code:`templates` will be calculated from it (the :code:`ms_before` and :code:`ms_after` parameters are also inherited from the :code:`waveforms`).
 * :code:`noise_levels` compute noise-levels in a channel-wise fashion. This provides important information about the specific recording session
   and is important for some downstream quality analyses.
 
@@ -710,8 +711,13 @@ In this example, we create a recording and a sorting object from numpy objects:
         spike_trains += spike_trains_i
         labels += labels_i
 
-    sorting_memory = NumpySorting.from_times_labels(times=spike_trains, labels=labels,
-                                                    sampling_frequency=sampling_frequency)
+    # construct a mono-segment
+    samples_list = [np.array(spike_trains)]
+    labels_list = [np.array(labels)]
+
+    sorting_memory = NumpySorting.from_samples_and_labels(
+        samples_list=samples_list, labels_list=labels_list, sampling_frequency=sampling_frequency
+    )
 
 
 Any sorting object can be transformed into a :py:class:`~spikeinterface.core.NumpySorting` or

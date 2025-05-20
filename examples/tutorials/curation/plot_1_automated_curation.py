@@ -79,7 +79,7 @@ sorting_analyzer.compute('template_metrics', include_multi_channel_metrics=True)
 # We can check that this is true by accessing the extension data.
 
 all_metric_names = list(sorting_analyzer.get_extension('quality_metrics').get_data().keys()) + list(sorting_analyzer.get_extension('template_metrics').get_data().keys())
-print(set(all_metric_names) == set(model.feature_names_in_))
+print(set(model.feature_names_in_).issubset(set(all_metric_names)))
 
 ##############################################################################
 # Great! We can now use the model to predict labels. Here, we pass the HF repo id directly
@@ -209,8 +209,8 @@ plt.legend(); plt.grid(True); plt.show()
 # trained on real data.
 #
 # For example, the following classifiers are trained on Neuropixels data from 11 mice recorded in
-# V1,SC and ALM: https://huggingface.co/AnoushkaJain3/noise_neural_classifier/ and
-# https://huggingface.co/AnoushkaJain3/sua_mua_classifier/ . One will classify units into
+# V1,SC and ALM: https://huggingface.co/SpikeInterface/UnitRefine_noise_neural_classifier/ and
+# https://huggingface.co/SpikeInterface/UnitRefine_sua_mua_classifier/. One will classify units into
 # `noise` or `not-noise` and the other will classify the `not-noise` units into single
 # unit activity (sua) units and multi-unit activity (mua) units.
 #
@@ -221,8 +221,8 @@ plt.legend(); plt.grid(True); plt.show()
 
 # Apply the noise/not-noise model
 noise_neuron_labels = sc.auto_label_units(
-    sorting_analyzer = sorting_analyzer,
-    repo_id = "AnoushkaJain3/noise_neural_classifier",
+    sorting_analyzer=sorting_analyzer,
+    repo_id="SpikeInterface/UnitRefine_noise_neural_classifier",
     trust_model=True,
 )
 
@@ -231,8 +231,8 @@ analyzer_neural = sorting_analyzer.remove_units(noise_units.index)
 
 # Apply the sua/mua model
 sua_mua_labels = sc.auto_label_units(
-    sorting_analyzer = analyzer_neural,
-    repo_id = "AnoushkaJain3/sua_mua_classifier",
+    sorting_analyzer=analyzer_neural,
+    repo_id="SpikeInterface/UnitRefine_sua_mua_classifier",
     trust_model=True,
 )
 
