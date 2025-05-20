@@ -732,7 +732,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
     def _run(self, verbose=False, **job_kwargs):
         self.data["noise_levels"] = get_noise_levels(
             self.sorting_analyzer.recording,
-            return_in_uV=self.sorting_analyzer.return_in_uV,,
+            return_in_uV=self.sorting_analyzer.return_in_uV,
             **self.params,
             **job_kwargs,
         )
