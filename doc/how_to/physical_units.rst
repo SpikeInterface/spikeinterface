@@ -9,7 +9,7 @@ It's important to note that **most spike sorters work fine on raw digital (ADC) 
 The specific behavior however depends on the spike sorter, so it's important to understand the specific input requirements on a case per case basis.
 
 Many preprocessing tools are also linear transformations, and if the ADC is implemented as a linear transformation which is fairly common, then the overall effect can be preserved.
-That is, **preprocessing steps can often be applied either before or after unit conversion without affecting the outcome.**. That said, there are rough edges to this approach.
+That is, **preprocessing steps can often be applied either before or after unit conversion without affecting the outcome.**. That being said, there are rough edges to this approach.
 preprocessing algorithms like filtering, whitening, centering, interpolation and common reference require casting to float within the pipeline. We advise users to experiment
 with different approaches to find the best one for their specific use case.
 
