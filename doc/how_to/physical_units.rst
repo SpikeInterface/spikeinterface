@@ -6,7 +6,7 @@ For extracellular recordings, this is typically microvolts (µV), but some recor
 SpikeInterface provides tools to handle both situations.
 
 It's important to note that **most spike sorters work fine on raw digital (ADC) units** and scaling is not needed. Going a step further, some sorters, such as Kilosort 3, require their input to be in raw ADC units.
-The specific behavior however depends on the spike sorter, so it's important to understand the specific input requirements in a case per case basis.
+The specific behavior however depends on the spike sorter, so it's important to understand the specific input requirements on a case per case basis.
 
 Many preprocessing tools are also linear transformations, and if the ADC is implemented as a linear transformation which is fairly common, then the overall effect can be preserved.
 That is, **preprocessing steps can often be applied either before or after unit conversion without affecting the outcome.**. That said, there are rough edges to this approach.
