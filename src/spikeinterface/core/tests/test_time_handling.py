@@ -443,4 +443,4 @@ def test_shift_times_with_None_as_t_start():
 
     assert recording._recording_segments[0].t_start is None
     recording.shift_times(shift=1.0)  # Shift by one seconds should not generate an error
-    assert recording.get_t_start() == 1.0
+    assert recording.get_start_time() == 1.0
