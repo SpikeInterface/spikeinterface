@@ -541,10 +541,10 @@ class BaseRecording(BaseRecordingSnippets):
         else:
             segments_to_shift = (segment_index,)
 
-        for index in segments_to_shift:
-            rs = self._recording_segments[index]
+        for segment_index in segments_to_shift:
+            rs = self._recording_segments[segment_index]
 
-            if self.has_time_vector(segment_index=index):
+            if self.has_time_vector(segment_index=segment_index):
                 rs.time_vector += shift
             else:
                 new_start_time = 0 + shift if rs.t_start is None else rs.t_start + shift
