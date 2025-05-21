@@ -547,7 +547,8 @@ class BaseRecording(BaseRecordingSnippets):
             if self.has_time_vector(segment_index=idx):
                 rs.time_vector += shift
             else:
-                rs.t_start += shift
+                new_start_time = 0 + shift if rs.t_start is None else rs.t_start + shift
+                rs.t_start = new_start_time
 
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
@@ -749,9 +750,9 @@ class BaseRecording(BaseRecordingSnippets):
         Parameters
         ----------
         start_frame : int, optional
-            The start frame, if not provided it is set to 0
+            Start frame index. If None, defaults to the beginning of the recording (frame 0).
         end_frame : int, optional
-            The end frame, it not provided it is set to the total number of samples
+            End frame index. If None, defaults to the last frame of the recording.
 
         Returns
         -------
@@ -771,9 +772,9 @@ class BaseRecording(BaseRecordingSnippets):
         Parameters
         ----------
         start_time : float, optional
-            The start time in seconds. If not provided it is set to 0.
+            Start time in seconds. If None, defaults to the beginning of the recording.
         end_time : float, optional
-            The end time in seconds. If not provided it is set to the total duration.
+            End time in seconds. If None, defaults to the end of the recording.
 
         Returns
         -------
