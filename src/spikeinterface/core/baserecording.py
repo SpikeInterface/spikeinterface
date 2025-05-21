@@ -547,7 +547,8 @@ class BaseRecording(BaseRecordingSnippets):
             if self.has_time_vector(segment_index=idx):
                 rs.time_vector += shift
             else:
-                rs.t_start += shift
+                new_start_time = 0 + shift if rs.t_start is None else rs.t_start + shift
+                rs.t_start = new_start_time
 
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
