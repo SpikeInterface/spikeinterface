@@ -412,6 +412,27 @@ def test_time_slice():
     assert np.allclose(sliced_recording_times.get_traces(), sliced_recording_frames.get_traces())
 
 
+def test_out_of_range_time_slice():
+    recording = generate_recording(durations=[0.100])  # duration = 0.1 s
+    recording.shift_times(1.0)  # shifts start time to 1.0 s, end time to 1.1 s
+
+    # start_time before recording
+    with pytest.raises(ValueError, match="start_time .* is before the start time"):
+        recording.time_slice(start_time=0, end_time=None)
+
+    # end_time before start of recording
+    with pytest.raises(ValueError, match="end_time .* is before the start time"):
+        recording.time_slice(start_time=None, end_time=0.5)
+
+    # start_time after end of recording
+    with pytest.raises(ValueError, match="start_time .* is after the end time"):
+        recording.time_slice(start_time=2.0, end_time=None)
+
+    # end_time after end of recording
+    with pytest.raises(ValueError, match="end_time .* is after the end time"):
+        recording.time_slice(start_time=None, end_time=2.0)
+
+
 def test_time_slice_with_time_vector():
 
     # Case with time vector
