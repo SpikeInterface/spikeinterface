@@ -541,10 +541,10 @@ class BaseRecording(BaseRecordingSnippets):
         else:
             segments_to_shift = (segment_index,)
 
-        for idx in segments_to_shift:
-            rs = self._recording_segments[idx]
+        for segment_index in segments_to_shift:
+            rs = self._recording_segments[segment_index]
 
-            if self.has_time_vector(segment_index=idx):
+            if self.has_time_vector(segment_index=segment_index):
                 rs.time_vector += shift
             else:
                 new_start_time = 0 + shift if rs.t_start is None else rs.t_start + shift
@@ -781,11 +781,37 @@ class BaseRecording(BaseRecordingSnippets):
         BaseRecording
             A new recording object with only samples between start_time and end_time
         """
+        num_segments = self.get_num_segments()
+        assert (
+            num_segments == 1
+        ), f"Time slicing is only supported for single segment recordings. Found {num_segments} segments."
 
-        assert self.get_num_segments() == 1, "Time slicing is only supported for single segment recordings."
+        t_start = self.get_start_time()
+        t_end = self.get_end_time()
 
-        start_frame = self.time_to_sample_index(start_time) if start_time else None
-        end_frame = self.time_to_sample_index(end_time) if end_time else None
+        if start_time is not None:
+            t_start = self.get_start_time()
+            t_start_too_early = start_time < t_start
+            if t_start_too_early:
+                raise ValueError(f"start_time {start_time} is before the start time {t_start} of the recording.")
+            t_start_too_late = start_time > t_end
+            if t_start_too_late:
+                raise ValueError(f"start_time {start_time} is after the end time {t_end} of the recording.")
+            start_frame = self.time_to_sample_index(start_time)
+        else:
+            start_frame = None
+
+        if end_time is not None:
+            t_end_too_early = end_time < t_start
+            if t_end_too_early:
+                raise ValueError(f"end_time {end_time} is before the start time {t_start} of the recording.")
+
+            t_end_too_late = end_time > t_end
+            if t_end_too_late:
+                raise ValueError(f"end_time {end_time} is after the end time {t_end} of the recording.")
+            end_frame = self.time_to_sample_index(end_time)
+        else:
+            end_frame = None
 
         return self.frame_slice(start_frame=start_frame, end_frame=end_frame)
 
