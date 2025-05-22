@@ -114,6 +114,7 @@ if parse(kilosort.__version__) >= parse("4.0.33"):
 
 if parse(kilosort.__version__) >= parse("4.0.37"):
     PARAMS_TO_TEST_DICT.update({"max_cluster_subset": 20})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("max_cluster_subset")
 
 
 PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
