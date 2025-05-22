@@ -43,12 +43,7 @@ class ISIDistributionWidget(BaseWidget):
             warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
             sorting_analyzer_or_sorting = sorting
 
-        if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
-            sorting = sorting_analyzer_or_sorting.sorting
-        elif isinstance(sorting_analyzer_or_sorting, BaseSorting):
-            sorting = sorting_analyzer_or_sorting
-        else:
-            raise TypeError("`plot_isis_distribution` expects a `SortingAnalyzer` or a `Sorting`.")
+        sorting = self.ensure_sorting(sorting_analyzer_or_sorting)
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
