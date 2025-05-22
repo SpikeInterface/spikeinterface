@@ -16,25 +16,24 @@ class ISIDistributionWidget(BaseWidget):
     ----------
     sorting_analyzer_or_sorting : SortingAnalyzer | BaseSorting | None = None
         The object containing the sorting information for the isi distribution plo
-    sorting : BaseSorting | None = None
-        Deprecated argument.
     unit_ids : list
         List of unit ids
     bins_ms : int
         Bin size in ms
     window_ms : float
         Window size in ms
-
+    sorting : BaseSorting | None = None
+        Deprecated argument.
     """
 
     def __init__(
         self,
         sorting_analyzer_or_sorting: SortingAnalyzer | BaseSorting | None = None,
-        sorting: BaseSorting | None = None,
         unit_ids: list | None = None,
         window_ms: float = 100.0,
         bin_ms: float = 1.0,
         backend: str | None = None,
+        sorting: BaseSorting | None = None,
         **backend_kwargs,
     ):
 
