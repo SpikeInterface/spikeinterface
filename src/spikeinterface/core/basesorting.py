@@ -664,7 +664,7 @@ class BaseSorting(BaseExtractor):
             spike_trains[unit_id] = self.get_unit_spike_train(unit_id) / self.sampling_frequency
         # self.spike_trains = spike_trains
         return spike_trains
-    
+
     def to_numpy_sorting(self, propagate_cache=True):
         """
         Turn any sorting in a NumpySorting.
