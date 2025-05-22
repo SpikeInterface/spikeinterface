@@ -653,6 +653,18 @@ class BaseSorting(BaseExtractor):
 
         return spikes
 
+    def get_spike_trains(self):
+        """
+        spike trains of sorter in recording time (seconds) of all units
+
+        Returns: dictionary with unit_id as keys and spike train in seconds as values
+        """
+        spike_trains = {}
+        for unit_id in self.get_unit_ids():
+            spike_trains[unit_id] = self.get_unit_spike_train(unit_id) / self.sampling_frequency
+        # self.spike_trains = spike_trains
+        return spike_trains
+    
     def to_numpy_sorting(self, propagate_cache=True):
         """
         Turn any sorting in a NumpySorting.
