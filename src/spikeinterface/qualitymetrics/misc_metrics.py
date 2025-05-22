@@ -36,6 +36,164 @@ else:
 
 _default_params = dict()
 
+def compute_noise_cutoffs(
+    sorting_analyzer,
+    high_quantile=0.25,
+    low_quantile=0.1,
+    n_bins=100,
+    ax=None,
+    unit_ids=None,
+):
+    """
+    A metric to determine if a unit's amplitude distribution is cut off, without assuming a Gaussian distribution.
+    
+    1. This method compares counts in the lower-amplitude bins to counts in the top 'high_quantile' of the amplitude range.
+    It computes the mean and std of an upper quantile of the distribution, and calculates how many standard deviations away
+    from that mean the lower-quantile bins lie.
+
+    2. The method also compares the counts in the lower-amplitude bins to the count in the highest bin and return their ratio.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
+    high_quantile : float, default: 0.25
+        Quantile of the amplitude range above which values are treated as "high" (default 0.25 = top 25%), the reference region.
+    low_quantile : int, default: 0.1
+        Quantile of the amplitude range below which values are treated as "low" (default 0.1 = lower 10%), the test region.
+    n_bins: int, default: 100
+        The number of bins to use to compute the amplitude histogram.
+    ax: matplotlib.Axes, optional, default: None
+        A matplotlib axes object. Only works if plotting a single component.
+    unit_ids : list or None
+        List of unit ids to compute the amplitude cutoffs. If None, all units are used.
+
+    Returns
+    -------
+    noise_cutoff_dict : dict of floats
+        Estimated metrics based on the amplitude distribution, for each unit ID.
+
+    References
+    ----------
+    Inspired by metric described in [IBL2024]_
+
+    """
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+
+    noise_cutoff_dict = {}
+    if sorting_analyzer.has_extension("spike_amplitudes"):
+
+        amplitudes_by_units = sorting_analyzer.get_extension('spike_amplitudes').get_data(outputs='by_units')
+
+        for unit_id in unit_ids:
+            amplitudes = amplitudes_by_units[unit_id]
+            
+            noise_cutoff_dict[unit_id] = noise_cutoff(
+                amplitudes, high_quantile=high_quantile, low_quantile=low_quantile, n_bins=n_bins, ax=ax
+            )
+
+    else:
+        warnings.warn("compute_noise_cutoffs need 'spike_amplitudes'")
+        for unit_id in unit_ids:
+            noise_cutoff_dict[unit_id] = np.nan
+
+
+
+    return noise_cutoff_dict
+
+def noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100, ax=None):
+    """
+    A metric to determine if a unit's amplitude distribution is cut off, without assuming a Gaussian distribution.
+    
+    1. This method compares counts in the lower-amplitude bins to counts in the higher_amplitude bins.
+    It computes the mean and std of an upper quantile of the distribution, and calculates how many standard deviations away
+    from that mean the lower-quantile bins lie.
+
+    2. The method also compares the counts in the lower-amplitude bins to the count in the highest bin and return their ratio.
+    
+    Parameters
+    ----------
+    amps : array-like
+        Spike amplitudes.
+    high_quantile : float, default: 0.25
+        Quantile of the amplitude range above which values are treated as "high" (default 0.25 = top 25%), the reference region.
+    low_quantile : int, default: 0.1
+        Quantile of the amplitude range below which values are treated as "low" (default 0.1 = lower 10%), the test region.
+    n_bins: int, default: 100
+        The number of bins to use to compute the amplitude histogram.
+    ax: matplotlib.Axes, optional, default: None
+        A matplotlib axes object. Only works if plotting a single component.
+
+    Returns
+    -------
+    cutoff : float
+        (mean(lower_bins_count) - mean(high_bins_count)) / std(high_bins_count)
+    ratio: float
+        mean(lower_bins_count) / highest_bin_count
+
+    """
+    n, bin_edges = np.histogram(amps, bins=n_bins)
+
+    # height of the peak bin
+    peak = np.max(n)
+
+    # find the low quantile of the amplitudes
+    low_quantile_value = np.quantile(amps,q=low_quantile)
+
+    # the indices for low-amplitude bins
+    low_indices = np.where(bin_edges[1:]<=low_quantile_value)[0]
+ 
+    # find the high quantile of the amplitudes
+    high_quantile_value = np.quantile(amps,q=1-high_quantile)
+
+    # the indices for high-amplitude bins
+    high_indices = np.where(bin_edges[:-1]>=high_quantile_value)[0]
+
+    # calculate metrics
+    if len(low_indices) == 0:
+        warnings.warn("no bin is selected to test cutoff. please increase low_quantile.")
+        cutoff = np.nan
+        ratio = np.nan
+    else:
+        # ratio
+        low_counts = n[low_indices]
+        mean_low_counts = np.mean(low_counts)
+        ratio = mean_low_counts / peak
+
+        # cutoff
+        if len(high_indices) == 0:
+            warnings.warn("no bin is selected as the reference region. please increase high_quantile.")
+            cutoff = np.nan
+        else:
+            high_counts = n[high_indices]
+            mean_high_counts = np.mean(high_counts)
+            std_high_counts  = np.std(high_counts)
+            if std_high_counts == 0:
+                cutoff = np.nan
+            else: 
+                cutoff = (mean_low_counts - mean_high_counts) / std_high_counts
+        
+
+    if ax is not None:
+        patches = ax.hist(amps, bins=bin_edges, color='royalblue')[2]
+        n_low_bins = len(low_indices)
+        for i, patch in enumerate(patches):
+            if i < n_low_bins:
+                patch.set_facecolor('limegreen')
+            elif bin_edges[i] >= high_quantile_value:
+                patch.set_facecolor('red')
+        # low-quantile cutoff
+        low_edge = bin_edges[n_low_bins]
+        ax.axvline(low_edge, linestyle='--',color='limegreen')
+        # high-quantile cutoff
+        ax.axvline(bin_edges[high_indices[0]], color='red', linestyle='--')
+        ax.set_xlabel('Amplitude')
+        ax.set_ylabel('Count')
+        ax.set_title(f'Quantiles=({low_quantile}, {high_quantile}), n_bins={n_bins}, \n cutoff={np.round(cutoff,3)}, ratio={np.round(ratio,3)}')
+        # ax.legend()
+ 
+    return cutoff, ratio
 
 def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
     """
