@@ -15,7 +15,7 @@ class ISIDistributionWidget(BaseWidget):
     Parameters
     ----------
     sorting_analyzer_or_sorting : SortingAnalyzer | BaseSorting | None = None
-        The object containing the sorting information for the isi distribution plo
+        The object containing the sorting information for the isi distribution plot
     unit_ids : list
         List of unit ids
     bins_ms : int
