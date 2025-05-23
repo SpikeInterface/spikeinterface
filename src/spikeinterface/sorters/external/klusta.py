@@ -12,7 +12,7 @@ from spikeinterface.sorters.utils import ShellScript
 from probeinterface import write_prb
 
 from spikeinterface.core import write_binary_recording
-from spikeinterface.extractors import KlustaSortingExtractor
+from spikeinterface.extractors.extractor_classes import KlustaSortingExtractor
 
 
 class KlustaSorter(BaseSorter):

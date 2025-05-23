@@ -22,7 +22,7 @@ def scale_to_uV(recording: BasePreprocessor) -> BasePreprocessor:
         If the recording extractor does not have scaleable traces.
     """
     # To avoid a circular import
-    from spikeinterface.preprocessing import ScaleRecording
+    from spikeinterface.preprocessing.preprocessing_classes import ScaleRecording
 
     if not recording.has_scaleable_traces():
         error_msg = "Recording must have gains and offsets set to be scaled to µV"
