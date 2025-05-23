@@ -40,7 +40,11 @@ class MatchingBenchmark(Benchmark):
 
     def compute_result(self, with_collision=False, **result_params):
         sorting = self.result["sorting"]
-        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
+        exhaustive_gt = result_params.get("exhaustive_gt", True)
+        match_score = result_params.get("match_score", None)
+        comp = compare_sorter_to_ground_truth(
+            self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt, match_score=match_score
+        )
         self.result["gt_comparison"] = comp
         if with_collision:
             self.result["gt_collision"] = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=True)
