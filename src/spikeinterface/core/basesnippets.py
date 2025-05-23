@@ -214,7 +214,7 @@ class BaseSnippets(BaseRecordingSnippets):
         else:
             raise ValueError(f"format {format} not supported")
 
-        if self.get_property("contact_vector") is not None:
+        if self.has_probe():
             probegroup = self.get_probegroup()
             cached.set_probegroup(probegroup)
 
