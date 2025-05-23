@@ -56,10 +56,10 @@ CMR, and save it to a binary file in the "/path/to/preprocessed" folder. The :co
 The Preprocessing Pipeline
 --------------------------
 
-The module also contains :code:`PreprocessingPipeline` object which aims to allow users to easily share pipelines across
+The module also contains the :code:`PreprocessingPipeline` object which aims to allow users to easily share pipelines across
 labs. The input to create the pipeline is a dictionary of preprocessing steps whose keys are the names of the steps
 and values are dictionaries of parameters. For example, to construct a pipeline consisting of highpass filtering
-with a minimum frequency of 200 Hz followed by whitening with default parameters, we first make the appropriate dictionary
+with a minimum frequency of 250 Hz followed by whitening with default parameters, we first make the appropriate dictionary
 
 .. code-block:: python
 
@@ -70,7 +70,7 @@ with a minimum frequency of 200 Hz followed by whitening with default parameters
         'whiten': {}
     }
 
-We can then pass this dictionary directly to the :code:`apply_pipeline` function to make a preprocessed recording
+We can then pass this dictionary to the :code:`apply_pipeline` function to make a preprocessed recording
 
 .. code-block:: python
 
@@ -82,6 +82,7 @@ using it.
 .. code-block:: python
 
     preprocessing_pipeline = PreprocessingPipeline(recording, preprocessing_dict)
+    # to view the pipeline:
     preprocessing_pipeline
 
 Once we have the pipeline, we can apply it to a recording in the same way as applying the dictionary
@@ -91,11 +92,11 @@ Once we have the pipeline, we can apply it to a recording in the same way as app
     preprocessed_recording_again = apply_pipeline(recording, preprocessing_pipeline)
 
 To share the pipeline you have made with another lab, you can simply share the dictionary. The dictionary
-can also be obtained from the pipeline object easily:
+can also be obtained from the pipeline object directly:
 
 .. code-block:: python
 
-    print(preprocessing_pipeline.preprocessor_dict)
+    dict_used_to_make_pipeline = preprocessing_pipeline.preprocessor_dict
 
 
 Impact on recording dtype
