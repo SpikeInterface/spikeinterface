@@ -11,12 +11,12 @@ def test_pipeline_equiv_to_step():
     a recording or a dict of recording.
     """
 
-    singl_group_rec = generate_recording(durations=[1])
+    single_group_rec = generate_recording(durations=[1])
 
     rec_groups = generate_recording(durations=[1])
     rec_groups.set_property(key="group", values=[0, 1])
 
-    for rec in (singl_group_rec, rec_groups.split_by("group")):
+    for rec in [single_group_rec, rec_groups.split_by("group")]:
         for _, pp_wrapper in preprocessor_dict.items():
 
             pp_name = pp_wrapper.__name__
@@ -27,9 +27,8 @@ def test_pipeline_equiv_to_step():
                 "phase_shift",
                 "deepinterpolate",
                 "highpass_spatial_filter",
-                "interpolate_bad_channels",
                 "unsigned_to_signed",
-                "filter",
+                "interpolate_bad_channels",
             ]:
                 continue
 
