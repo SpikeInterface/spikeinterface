@@ -11,6 +11,8 @@ on:
 jobs:
   create-gin-data-cache-if-missing:
     name: Caching data env
+    # Run only in upstream repo to avoid unnecessary runs in forks
+    if: github.repository == 'SpikeInterface/spikeinterface'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

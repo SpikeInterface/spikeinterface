@@ -11,6 +11,8 @@ env:
 jobs:
   full-tests-with-codecov:
     name: Codecov in Ubuntu
+    # Run only in upstream repo to avoid unnecessary runs in forks
+    if: github.repository == 'SpikeInterface/spikeinterface'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

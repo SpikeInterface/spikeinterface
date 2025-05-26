@@ -13,6 +13,8 @@ jobs:
     # Poll Pypi for all released KS4 versions >4.0.16, save to JSON
     # and store them in a matrix for the next job.
     runs-on: ubuntu-latest
+    # Run only in upstream repo to avoid unnecessary runs in forks
+    if: github.repository == 'SpikeInterface/spikeinterface'
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
