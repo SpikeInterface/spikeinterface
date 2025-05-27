@@ -105,9 +105,13 @@ class ChannelsAggregationRecording(BaseRecording):
                 "Locations are not unique! " "Cannot aggregate recordings!"
             )
 
-        planar_contour_keys = [key for recording in recording_list for key in recording.get_annotation_keys() if 'planar_contour' in key]
-        if len(planar_contour_keys)>0:
-            if all(k == planar_contour_keys[0] for k in planar_contour_keys):  # we add the 'planar_contour' annotations only if there is a unique one in the recording_list
+        planar_contour_keys = [
+            key for recording in recording_list for key in recording.get_annotation_keys() if "planar_contour" in key
+        ]
+        if len(planar_contour_keys) > 0:
+            if all(
+                k == planar_contour_keys[0] for k in planar_contour_keys
+            ):  # we add the 'planar_contour' annotations only if there is a unique one in the recording_list
                 planar_contour_key = planar_contour_keys[0]
                 collect_planar_contours = []
                 for rec in recording_list:
