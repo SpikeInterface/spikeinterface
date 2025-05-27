@@ -206,21 +206,31 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["verbose"] = 1.0  # whether to print command line progress
         ops["showfigures"] = 0.0  # whether to plot figures during optimization
 
-        ops["Nfilt"] = params["Nfilt"]  # number of clusters to use (2-4 times more than Nchan, should be a multiple of 32)
-        
+        ops["Nfilt"] = params[
+            "Nfilt"
+        ]  # number of clusters to use (2-4 times more than Nchan, should be a multiple of 32)
+
         # ops["nNeighPC"] = min(12.0, ops["Nchan"]) # Original Kilosort default logic
         if params["nNeighPC"] is not None:
             ops["nNeighPC"] = params["nNeighPC"]
         else:
             # Kilosort's default behavior if nNeighPC is None in params (from _default_params)
-            ops["nNeighPC"] = min(12.0, ops.get("Nchan", 12.0))  # visualization only (Phy): number of channnels to mask the PCs, leave empty to skip (12)
-        
-        ops["nNeigh"] = params["nNeigh"]  # visualization only (Phy): number of neighboring templates to retain projections of (16)
+            ops["nNeighPC"] = min(
+                12.0, ops.get("Nchan", 12.0)
+            )  # visualization only (Phy): number of channnels to mask the PCs, leave empty to skip (12)
+
+        ops["nNeigh"] = params[
+            "nNeigh"
+        ]  # visualization only (Phy): number of neighboring templates to retain projections of (16)
 
         # options for channel whitening
-        ops["whitening"] = params["whitening"]  # type of whitening (default 'full', for 'noSpikes' set options for spike detection below)
+        ops["whitening"] = params[
+            "whitening"
+        ]  # type of whitening (default 'full', for 'noSpikes' set options for spike detection below)
         ops["nSkipCov"] = params["nSkipCov"]  # compute whitening matrix from every N-th batch (1)
-        ops["whiteningRange"] = params["whiteningRange"]  # how many channels to whiten together (Inf for whole probe whitening, should be fine if Nchan<=32)
+        ops["whiteningRange"] = params[
+            "whiteningRange"
+        ]  # how many channels to whiten together (Inf for whole probe whitening, should be fine if Nchan<=32)
 
         # ops['criterionNoiseChannels'] = 0.2  # fraction of "noise" templates allowed to span all channel groups (see createChannelMapFile for more info).
 
@@ -248,12 +258,12 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["splitT"] = params["splitT"]  # lower threshold for splitting (.1)
 
         ops["initialize"] = params["initialize"]  # 'fromData' or 'no'
-        
+
         # ops["spkTh"] = -params["detect_threshold"] # Original default logic if spkTh was not in _default_params
-        if params["spkTh"] is None: 
+        if params["spkTh"] is None:
             ops["spkTh"] = -params["detect_threshold"]  # spike threshold in standard deviations (-6)
         else:
-            ops["spkTh"] = params["spkTh"] # Using user-provided or default spkTh from _default_params
+            ops["spkTh"] = params["spkTh"]  # Using user-provided or default spkTh from _default_params
 
         ops["loc_range"] = params["loc_range"]  # ranges to detect peaks; plus/minus in time and channel ([3 1])
         ops["long_range"] = params["long_range"]  # ranges to detect isolated peaks ([30 6])
@@ -265,8 +275,12 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["fracse"] = params["fracse"]  # binning step along discriminant axis for posthoc merges (in units of sd)
         ops["epu"] = params["epu"]
 
-        ops["ForceMaxRAMforDat"] = params["ForceMaxRAMforDat"]  # maximum RAM the algorithm will try to use; on Windows it will autodetect.
+        ops["ForceMaxRAMforDat"] = params[
+            "ForceMaxRAMforDat"
+        ]  # maximum RAM the algorithm will try to use; on Windows it will autodetect.
 
         ## option for wavelength
-        ops["nt0"] = params["wave_length"]  # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
+        ops["nt0"] = params[
+            "wave_length"
+        ]  # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
         return ops
