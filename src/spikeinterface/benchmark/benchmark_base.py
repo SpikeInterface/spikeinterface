@@ -134,8 +134,6 @@ class BenchmarkStudy:
                 else:
                     analyzer = data
 
-                rec, gt_sorting = analyzer.recording, analyzer.sorting
-
             analyzers_path[key] = str(analyzer.folder.resolve())
 
             # recordings are pickled
@@ -180,7 +178,11 @@ class BenchmarkStudy:
             self.analyzers[key] = analyzer
             # the sorting is in memory here we take the saved one because comparisons need to pickle it later
             sorting = load(analyzer.folder / "sorting")
-            self.datasets[key] = analyzer.recording, sorting
+            if analyzer.has_recording():
+                recording = analyzer.recording
+            else:
+                recording = None
+            self.datasets[key] = recording, sorting
 
         with open(self.folder / "cases.pickle", "rb") as f:
             self.cases = pickle.load(f)
