@@ -110,8 +110,8 @@ class ChannelsAggregationRecording(BaseRecording):
             if all(k == planar_contour_keys[0] for k in planar_contour_keys):  # we add the 'planar_contour' annotations only if there is a unique one in the recording_list 
                 planar_contour_key = planar_contour_keys[0] 
                 collect_planar_contours = [] 
-                    for rec in recording_list: 
-                collect_planar_contours.append(rec.get_annotation(planar_contour_key)) 
+                for rec in recording_list: 
+                    collect_planar_contours.append(rec.get_annotation(planar_contour_key)) 
                 if all(np.array_equal(arr, collect_planar_contours[0]) for arr in collect_planar_contours): 
                     self.set_annotation(planar_contour_key, collect_planar_contours[0])
 
