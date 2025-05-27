@@ -26,10 +26,14 @@ class SorterBenchmark(Benchmark):
         sorting = NumpySorting.from_sorting(raw_sorting)
         self.result = {"sorting": sorting}
 
-    def compute_result(self, exhaustive_gt=True):
+    def compute_result(self, **result_params):
         # run becnhmark result
         sorting = self.result["sorting"]
-        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt)
+        exhaustive_gt = result_params.get("exhaustive_gt", True)
+        match_score = result_params.get("match_score", None)
+        comp = compare_sorter_to_ground_truth(
+            self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt, match_score=match_score
+        )
         self.result["gt_comparison"] = comp
 
     _run_key_saved = [
