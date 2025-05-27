@@ -259,12 +259,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
         ops["initialize"] = params["initialize"]  # 'fromData' or 'no'
 
-        # ops["spkTh"] = -params["detect_threshold"] # Original default logic if spkTh was not in _default_params
-        if params["spkTh"] is None:
-            ops["spkTh"] = -params["detect_threshold"]  # spike threshold in standard deviations (-6)
-        else:
-            ops["spkTh"] = params["spkTh"]  # Using user-provided or default spkTh from _default_params
-
+        ops["spkTh"] = -params["detect_threshold"]  # spike threshold in standard deviations (-6)
         ops["loc_range"] = params["loc_range"]  # ranges to detect peaks; plus/minus in time and channel ([3 1])
         ops["long_range"] = params["long_range"]  # ranges to detect isolated peaks ([30 6])
         ops["maskMaxChannels"] = params["maskMaxChannels"]  # how many channels to mask up/down ([5])
