@@ -46,7 +46,7 @@ def test_remove_bad_channel():
     assert set(new_rec._kwargs["channel_ids"]) == set(good_channel_ids)
     assert new_rec._kwargs["noisy_channel_threshold"] == 0
 
-    # now apply `detec_bad_channels` directly and see that the outputs matches
+    # now apply `detect_bad_channels` directly and see that the outputs matches
     bad_channel_ids_from_function, channel_labels_from_function = detect_bad_channels(
         recording, noisy_channel_threshold=0, seed=1205
     )

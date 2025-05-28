@@ -95,7 +95,10 @@ class DetectAndInterpolateBadChannelsRecording(InterpolateBadChannelsRecording):
 
     {}
     bad_channel_ids : np.array | list | None, default: None
-        If given, these are used rather than being dected.
+        If given, these are used rather than being detected.
+    channel_labels : np.array | list | None, default: None
+        If given, these are labels given to the channels by the
+        detection process. Only intended for use when loading.
 
     Returns
     -------

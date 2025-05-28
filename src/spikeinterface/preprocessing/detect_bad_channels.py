@@ -84,7 +84,10 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
 
     {}
     bad_channel_ids : np.array | list | None, default: None
-        If given, these are used rather than being dected.
+        If given, these are used rather than being detected.
+    channel_labels : np.array | list | None, default: None
+        If given, these are labels given to the channels by the
+        detection process. Only intended for use when loading.
 
     Returns
     -------
@@ -98,6 +101,7 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
         self,
         parent_recording: BaseRecording,
         bad_channel_ids=None,
+        channel_labels=None,
         **detect_bad_channels_kwargs,
     ):
 
@@ -137,7 +141,9 @@ def _get_all_detect_bad_channel_kwargs(detect_bad_channels_kwargs):
     """Get the default parameters from `detect_bad_channels`, and update with any user-specified parameters."""
 
     sig = signature(detect_bad_channels)
-    all_detect_bad_channels_kwargs = {k: v.default for k, v in sig.parameters.items() if k != "recording"}
+    all_detect_bad_channels_kwargs = {
+        k: v.default for k, v in sig.parameters.items() if k not in ["recording", "parent_recording"]
+    }
     all_detect_bad_channels_kwargs.update(detect_bad_channels_kwargs)
     return all_detect_bad_channels_kwargs
 
