@@ -55,7 +55,6 @@ class KilosortSorter(KilosortBase, BaseSorter):
         "Nrank": 3.0,
         "nfullpasses": 6.0,
         "maxFR": 20000,
-        "scaleproc": 200.0,
         "Th": [4.0, 10.0, 10.0],
         "lam": [5.0, 5.0, 5.0],
         "nannealpasses": 4.0,
@@ -97,7 +96,6 @@ class KilosortSorter(KilosortBase, BaseSorter):
         "Nrank": "Matrix rank of spike template model. (Default 3.0)",
         "nfullpasses": "Number of complete passes through data during optimization. (Default 6.0)",
         "maxFR": "Maximum number of spikes to extract per batch. (Default 20000)",
-        "scaleproc": "int16 scaling of whitened data. (Default 200.0)",
         "Th": "Threshold for detecting spikes on template-filtered data. Array of 3 values: [initial, final, final pass]. (Default [4.0, 10.0, 10.0])",
         "lam": "Regularization parameter for template amplitudes. Large means amplitudes are forced around the mean. Array of 3 values: [initial, final, final pass]. (Default [5.0, 5.0, 5.0])",
         "nannealpasses": "Number of annealing passes. Should be less than nfullpasses. (Default 4.0)",
@@ -241,7 +239,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["fshigh"] = params["freq_min"]  # frequency for high pass filtering
         ops["fslow"] = params["freq_max"]  # frequency for low pass filtering (optional)
         ops["ntbuff"] = params["ntbuff"]  # samples of symmetrical buffer for whitening and spike detection
-        ops["scaleproc"] = params["scaleproc"]  # int16 scaling of whitened data
+        ops["scaleproc"] = 200.0  # int16 scaling of whitened data
         ops["NT"] = params["NT"]  # 32*1024+ ops.ntbuff;
         # this is the batch size (try decreasing if out of memory)
         # for GPU should be multiple of 32 + ntbuff
