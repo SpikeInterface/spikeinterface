@@ -307,7 +307,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 _, peak_labels, svd_model, svd_features, sparsity_mask = outputs
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
-                templates = get_templates_from_peaks_and_svd(
+                templates, _ = get_templates_from_peaks_and_svd(
                     recording_w,
                     selected_peaks,
                     peak_labels,
