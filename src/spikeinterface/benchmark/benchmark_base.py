@@ -176,17 +176,11 @@ class BenchmarkStudy:
         self.levels = self.info["levels"]
 
         for key, folder in self.analyzers_path.items():
-            analyzer = load_sorting_analyzer(folder)
+            analyzer = load_sorting_analyzer(folder, load_extensions=False)
             self.analyzers[key] = analyzer
             # the sorting is in memory here we take the saved one because comparisons need to pickle it later
             sorting = load(analyzer.folder / "sorting")
             self.datasets[key] = analyzer.recording, sorting
-
-        # for rec_file in (self.folder / "datasets" / "recordings").glob("*.pickle"):
-        #     key = rec_file.stem
-        #     rec = load(rec_file)
-        #     gt_sorting = load(self.folder / f"datasets" / "gt_sortings" / key)
-        #     self.datasets[key] = (rec, gt_sorting)
 
         with open(self.folder / "cases.pickle", "rb") as f:
             self.cases = pickle.load(f)
@@ -600,15 +594,22 @@ class Benchmark:
             elif format == "sorting":
                 from spikeinterface.core import load_extractor
 
-                result[k] = load(folder / k)
+                sorting_folder = folder / k
+                if sorting_folder.exists():
+                    result[k] = load(sorting_folder)
             elif format == "Motion":
                 from spikeinterface.core.motion import Motion
 
-                result[k] = Motion.load(folder / k)
+                motion_folder = folder / k
+                if motion_folder.exists():
+                    result[k] = Motion.load(motion_folder)
             elif format == "zarr_templates":
                 from spikeinterface.core.template import Templates
 
-                result[k] = Templates.from_zarr(folder / k)
+                zarr_folder = folder / k
+                if zarr_folder.exists():
+
+                    result[k] = Templates.from_zarr(zarr_folder)
 
         return result
 

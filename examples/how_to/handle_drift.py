@@ -23,21 +23,25 @@
 # Spikeinterface offers a very flexible framework to handle drift as a preprocessing step.
 # If you want to know more, please read the `motion_correction` section of the documentation.
 #
-# Here is a short demo on how to handle drift using the high-level function `spikeinterface.preprocessing.correct_motion()`.
+# Here is a short demo on how to handle drift using the high-level function `spikeinterface.preprocessing.compute_motion()`.
 #
-# This function takes a preprocessed recording as input and then internally runs several steps (it can be slow!) and returns a lazy
-# recording that interpolates the traces on-the-fly to compensate for the motion.
+# This function takes a preprocessed recording as input and returns a `motion` object, which contains the
+# information required to interpolate your recording. You can additionally return a `motion_info` object
+# which contains the peaks, peak_locations and parameters used to compute the `motion` object by passing
+# `output_motion_info = True` to the `compute_motion` function. Note that you can alternatively compute
+# the motion correction and interpolate at the same time using the `spikeinterface.preprocessing.correct_motion()`
+# function.
 #
-# Internally this function runs the following steps:
+# Internally the function `compute_motion` runs the following steps (which can be slow!):
 #
-#      1. localize_peaks()
-#      2. select_peaks() (optional)
-#      3. estimate_motion()
-#      4. interpolate_motion()
+#      1. detect_peaks()
+#      2. localize_peaks()
+#      3. select_peaks() (optional)
+#      4. estimate_motion()
 #
 # All these sub-steps can be run with different methods and have many parameters.
 #
-# The high-level function suggests 3 predifined "presets" and we will explore them using a very well known public dataset recorded by Nick Steinmetz:
+# The high-level function suggests several predefined "presets" and we will explore them using a very well known public dataset recorded by Nick Steinmetz:
 # [Imposed motion datasets](https://figshare.com/articles/dataset/_Imposed_motion_datasets_from_Steinmetz_et_al_Science_2021/14024495)
 #
 # This dataset contains 3 recordings and each recording contains a Neuropixels 1 and a Neuropixels 2 probe.
@@ -59,7 +63,7 @@ from spikeinterface.preprocessing import get_motion_parameters_preset, get_motio
 
 # -
 
-base_folder = Path("/mnt/data/sam/DataSpikeSorting/imposed_motion_nick")
+base_folder = Path("/home/nolanlab/Work/Data")
 dataset_folder = base_folder / "dataset1/NP1"
 
 # read the file
@@ -91,9 +95,9 @@ job_kwargs = dict(n_jobs=40, chunk_duration="1s", progress_bar=True)
 #
 # Here we also save the motion correction results into a folder to be able to load them later.
 
-# ### preset and parameters
+# ### Preset and parameters
 #
-# Motion correction has some steps and eevry step can be controlled by a method and related parameters.
+# Motion correction has some steps and every step can be controlled by a method and related parameters.
 #
 # A preset is a nested dict that contains theses methods/parameters.
 
@@ -120,8 +124,8 @@ for preset in some_presets:
     folder = base_folder / "motion_folder_dataset1" / preset
     if folder.exists():
         shutil.rmtree(folder)
-    recording_corrected, motion, motion_info = si.correct_motion(
-        rec, preset=preset, folder=folder, output_motion=True, output_motion_info=True, **job_kwargs
+    motion, motion_info = si.compute_motion(
+        rec, preset=preset, folder=folder, output_motion_info=True, **job_kwargs
     )
 
 # ### Plot the results
@@ -175,6 +179,21 @@ for preset in some_presets:
     )
 
     fig.suptitle(f"{preset=}")
+
+# ### Make an interpolated recording
+#
+# Once you have analyzed your results you can choose the motion correction method that works best on your dataset, and
+# create an interpolated recording using `interpolate_motion`. The motion object itself is contained in the `motion_info` dict.
+# Suppose we decide to use the `nonrigid_accurate` preset to make the interpolated recording. We do this as follows
+
+from spikeinterface.sortingcomponents.motion import interpolate_motion
+preset = "nonrigid_accurate"
+folder = base_folder / "motion_folder_dataset1" / preset
+motion_info = si.load_motion_info(folder)
+motion = motion_info['motion']
+interpolated_recording = interpolate_motion(recording=rec, motion=motion)
+
+# You can then use the interpolated recording for e.g. spike sorting.
 
 # ### Plot peak localization
 #
@@ -235,7 +254,7 @@ for preset in some_presets:
 
 # ## run times
 #
-# Presets and related methods have differents accuracies but also computation speeds.
+# Presets and related methods have different accuracies but also computation speeds.
 # It is good to have this in mind!
 
 # +
