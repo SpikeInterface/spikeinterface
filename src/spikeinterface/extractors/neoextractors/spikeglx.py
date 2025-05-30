@@ -75,13 +75,18 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
         self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), load_sync_channel=load_sync_channel))
 
+        stream_is_nidq_or_sync = "nidq" in self.stream_id or "SYNC" in self.stream_id
+        if stream_is_nidq_or_sync:
+            # Do not add probe information for the sync or nidq stream. Early return
+            return None
+
         # Checks if the probe information is available and adds location, shanks and sample shift if available.
         signals_info_dict = {e["stream_name"]: e for e in self.neo_reader.signals_info_list}
         meta_filename = signals_info_dict[self.stream_id]["meta_file"]
+
         ap_meta_filename = meta_filename.replace(".lf", ".ap") if "lf" in self.stream_id else meta_filename
         ap_meta_file_exists = Path(ap_meta_filename).exists()
-        stream_is_not_nidq = "nidq" not in self.stream_id
-        add_probe_properties = ap_meta_file_exists and stream_is_not_nidq and not load_sync_channel
+        add_probe_properties = ap_meta_file_exists and not load_sync_channel
 
         if add_probe_properties:
             probe = probeinterface.read_spikeglx(ap_meta_filename)
