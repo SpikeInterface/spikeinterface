@@ -84,7 +84,7 @@ def compute_noise_cutoffs(
     noise_cutoff_dict = {}
     if sorting_analyzer.has_extension("spike_amplitudes"):
 
-        amplitudes_by_units = sorting_analyzer.get_extension('spike_amplitudes').get_data(outputs='by_units')
+        amplitudes_by_units = sorting_analyzer.get_extension('spike_amplitudes').get_data(outputs='by_unit')[0]
 
         for unit_id in unit_ids:
             amplitudes = amplitudes_by_units[unit_id]
