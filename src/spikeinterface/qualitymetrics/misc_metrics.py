@@ -170,6 +170,7 @@ def noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100, ax=None
             mean_high_counts = np.mean(high_counts)
             std_high_counts  = np.std(high_counts)
             if std_high_counts == 0:
+                warnings.warn("only one bin is selected as the reference region, and thus the standard deviation cannot be computed. please increase high_quantile.")
                 cutoff = np.nan
             else: 
                 cutoff = (mean_low_counts - mean_high_counts) / std_high_counts
