@@ -438,7 +438,9 @@ class Kilosort4Sorter(BaseSorter):
         chanMap = np.arange(n_chan)
         xc = positions[:, 0]
         yc = positions[:, 1]
-        kcoords = groups.astype(float)
+        unique_groups = set(groups)
+        group_map = {group: idx for idx, group in enumerate(unique_groups)}
+        kcoords = np.array([group_map[group] for group in groups], dtype=int)
 
         probe = {
             "chanMap": chanMap,
