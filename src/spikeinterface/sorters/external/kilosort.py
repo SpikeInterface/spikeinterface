@@ -229,6 +229,11 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["whiteningRange"] = params[
             "whiteningRange"
         ]  # how many channels to whiten together (Inf for whole probe whitening, should be fine if Nchan<=32)
+        if ops["whiteningRange"] == np.inf and ops["Nchan"] > 32:
+            print(
+                "Warning: Kilosort is set to use full probe whitening, but the "
+                "number of channels is greater than 32."
+            )
 
         # ops['criterionNoiseChannels'] = 0.2  # fraction of "noise" templates allowed to span all channel groups (see createChannelMapFile for more info).
 
