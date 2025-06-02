@@ -571,7 +571,6 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         # )
 
         assert peak_sign in ("both", "neg", "pos")
-
         if noise_levels is None:
             noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
         abs_thresholds = noise_levels * detect_threshold
