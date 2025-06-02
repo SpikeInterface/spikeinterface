@@ -112,6 +112,10 @@ if parse(kilosort.__version__) >= parse("4.0.33"):
     PARAMS_TO_TEST_DICT.update({"cluster_neighbors": 11})
     PARAMETERS_NOT_AFFECTING_RESULTS.append("cluster_neighbors")
 
+if parse(kilosort.__version__) >= parse("4.0.37"):
+    PARAMS_TO_TEST_DICT.update({"max_cluster_subset": 20})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("max_cluster_subset")
+
 
 PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
 
@@ -254,6 +258,8 @@ class TestKilosort4Long:
             "device",
             "save_preprocessed_copy",
         ]
+        if parse(kilosort.__version__) >= parse("4.0.37"):
+            expected_arguments += ["gui_mode"]
 
         self._check_arguments(
             initialize_ops,

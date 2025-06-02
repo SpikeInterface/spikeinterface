@@ -26,7 +26,7 @@ from .normalize_scale import (
     center,
 )
 
-from .scale import scale_to_uV
+from .scale import scale_to_uV, ScaleToPhysicalUnits, scale_to_phyical_units
 
 from .whiten import WhitenRecording, whiten, compute_whitening_matrix
 from .rectify import RectifyRecording, rectify
@@ -57,6 +57,7 @@ _all_preprocesser_dict = {
     ScaleRecording: scale,
     CenterRecording: center,
     ZScoreRecording: zscore,
+    ScaleToPhysicalUnits: scale_to_phyical_units,
     # decorrelation stuff
     WhitenRecording: whiten,
     # re-reference
