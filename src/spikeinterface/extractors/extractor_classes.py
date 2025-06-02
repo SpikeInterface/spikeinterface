@@ -114,7 +114,7 @@ _sorting_extractor_full_dict = {
     NumpySorting: dict(wrapper_string="NumpySorting", wrapper_class=NumpySorting),
     # natively implemented in spikeinterface.extractors
     MdaSortingExtractor: dict(wrapper_string="read_mda_sorting", wrapper_class=read_mda_sorting),
-    SHYBRIDSortingExtractor: dict(wrapper_string="read_shybrid_sorting", wrapper_clas=read_shybrid_sorting),
+    SHYBRIDSortingExtractor: dict(wrapper_string="read_shybrid_sorting", wrapper_class=read_shybrid_sorting),
     ALFSortingExtractor: dict(wrapper_string="read_alf_sorting", wrapper_class=read_alf_sorting),
     KlustaSortingExtractor: dict(wrapper_string="read_klusta", wrapper_class=read_klusta),
     HDSortSortingExtractor: dict(wrapper_string="read_hdsort", wrapper_class=read_hdsort),
@@ -141,8 +141,13 @@ _snippets_extractor_full_dict = {
     WaveClusSnippetsExtractor: dict(wrapper_string="read_waveclus_snippets", wrapper_class=read_waveclus_snippets),
 }
 
-#############################################################################################
-# Organize the possible extractors into an easy to use format
+############################################################################################################
+# Organize the possible extractors into a user facing format with keys being extractor names
+# (e.g. 'intan' , 'kilosort') and values being the appropriate Extractor class (e.g. IntanRecordingExtractor,
+# KiloSortingSortingExtractor)
+# for example if we wanted to create a recording from an intan file we could do the following:
+# >>> recording = se.recording_extractor_full_dict['intan'](file_path='path/to/data.rhd')
+
 
 recording_extractor_full_dict = {
     rec_class.__name__.replace("Recording", "").replace("Extractor", "").lower(): rec_func["wrapper_class"]
