@@ -214,7 +214,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         else:
             # Kilosort's default behavior if nNeighPC is None in params (from _default_params)
             ops["nNeighPC"] = min(
-                12.0, ops.get("Nchan", 12.0)
+                12.0, ops["Nchan"]
             )  # visualization only (Phy): number of channnels to mask the PCs, leave empty to skip (12)
 
         ops["nNeigh"] = params[
@@ -250,6 +250,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["Th"] = params["Th"]  # threshold for detecting spikes on template-filtered data ([6 12 12])
         ops["lam"] = params["lam"]  # large means amplitudes are forced around the mean ([10 30 30])
         ops["nannealpasses"] = params["nannealpasses"]  # should be less than nfullpasses (4)
+        assert ops["nannealpasses"] < ops["nfullpasses"]
         ops["momentum"] = params["momentum"]  # start with high momentum and anneal (1./[20 1000])
         ops["shuffle_clusters"] = params["shuffle_clusters"]  # allow merges and splits during optimization (1)
         ops["mergeT"] = params["mergeT"]  # upper threshold for merging (.1)
