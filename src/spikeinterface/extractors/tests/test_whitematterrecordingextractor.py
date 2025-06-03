@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 import pickle
 
-from spikeinterface.extractors import WhiteMatterRecordingExtractor, BinaryRecordingExtractor
+from spikeinterface.extractors.extractor_classes import WhiteMatterRecordingExtractor, BinaryRecordingExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface import get_global_dataset_folder, download_dataset

@@ -58,7 +58,7 @@ The input of the :py:func:`~spikeinterface.exporters.export_to_ibl_gui` is a :co
     sorting_analyzer = si.create_sorting_analyzer(sorting=sorting, recording=recording)
 
     # we need to compute some required extensions
-    sorting_analyzer.compute(['random_spikes', 'templates', 'spike_amplitudes', 'spike_locations', 'quality_metrics'])
+    sorting_analyzer.compute(['random_spikes', 'templates', 'spike_amplitudes', 'spike_locations', 'noise_levels', 'quality_metrics'])
     # note that spike_locations are optional, but recommended to compute accurate spike depths
 
     # optionally, we can pass an LFP recording to compute RMS/PSD in the LFP band
@@ -70,7 +70,7 @@ The input of the :py:func:`~spikeinterface.exporters.export_to_ibl_gui` is a :co
     export_to_ibl_gui(
         sorting_analyzer=sorting_analyzer,
         output_folder='path/to/ibl_folder',
-        recording_lfp=recording_lfp,
+        lfp_recording=recording_lfp,
         n_jobs=-1
     )
 
