@@ -144,7 +144,7 @@ _snippets_extractor_full_dict = {
 ############################################################################################################
 # Organize the possible extractors into a user facing format with keys being extractor names
 # (e.g. 'intan' , 'kilosort') and values being the appropriate Extractor class (e.g. IntanRecordingExtractor,
-# KiloSortingSortingExtractor)
+# KiloSortSortingExtractor)
 # for example if we wanted to create a recording from an intan file we could do the following:
 # >>> recording = se.recording_extractor_full_dict['intan'](file_path='path/to/data.rhd')
 
