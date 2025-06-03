@@ -120,7 +120,7 @@ qualitymetrics = [
 ]
 
 test_core = [
-    "pytest",
+    "pytest<8.4.0",
     "pytest-dependency",
     "psutil",
 
@@ -146,7 +146,7 @@ test_preprocessing = [
 
 
 test = [
-    "pytest",
+    "pytest<8.4.0",
     "pytest-dependency",
     "pytest-cov",
     "psutil",
