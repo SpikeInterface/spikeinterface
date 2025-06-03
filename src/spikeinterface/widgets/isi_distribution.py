@@ -14,16 +14,16 @@ class ISIDistributionWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting_analyzer_or_sorting : SortingAnalyzer | BaseSorting | None = None
+    sorting_analyzer_or_sorting : SortingAnalyzer | BaseSorting | None, default: None
         The object containing the sorting information for the isi distribution plot
-    unit_ids : list
-        List of unit ids
-    bins_ms : int
-        Bin size in ms
-    window_ms : float
+    unit_ids : list | None, default: None
+        List of unit ids. If None, uses all unit ids.
+    window_ms : float, default: 100.0
         Window size in ms
-    sorting : BaseSorting | None = None
-        Deprecated argument.
+    bins_ms : int, default: 1.0
+        Bin size in ms
+    sorting : SortingExtractor | None, default: None
+        A sorting object. Deprecated.
     """
 
     def __init__(
