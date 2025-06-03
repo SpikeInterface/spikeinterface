@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 ### PREPROCESSORS ###
+
+
 from .resample import ResampleRecording, resample
 from .decimate import DecimateRecording, decimate
 from .filter import (
@@ -44,7 +46,7 @@ from .directional_derivative import DirectionalDerivativeRecording, directional_
 from .depth_order import DepthOrderRecording, depth_order
 from .astype import AstypeRecording, astype
 from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
-
+from .generic import GenericPreprocessor, generic_preprocessor
 
 preprocessers_full_list = [
     # filter stuff
