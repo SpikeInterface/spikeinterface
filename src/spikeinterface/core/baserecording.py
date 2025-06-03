@@ -20,7 +20,15 @@ class BaseRecording(BaseRecordingSnippets):
     """
 
     _main_annotations = BaseRecordingSnippets._main_annotations + ["is_filtered"]
-    _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
+    _main_properties = [
+        "group",
+        "location",
+        "gain_to_uV",
+        "offset_to_uV",
+        "gain_to_physical_unit",
+        "offset_to_physical_unit",
+        "physical_unit",
+    ]
     _main_features = []  # recording do not handle features
 
     _skip_properties = [
@@ -287,7 +295,8 @@ class BaseRecording(BaseRecordingSnippets):
         end_frame: int | None = None,
         channel_ids: list | np.array | tuple | None = None,
         order: "C" | "F" | None = None,
-        return_scaled: bool = False,
+        return_scaled: bool | None = None,
+        return_in_uV: bool = False,
         cast_unsigned: bool = False,
     ) -> np.ndarray:
         """Returns traces from recording.
@@ -304,7 +313,11 @@ class BaseRecording(BaseRecordingSnippets):
             The channel ids. If None, all channels are used, default: None
         order : "C" | "F" | None, default: None
             The order of the traces ("C" | "F"). If None, traces are returned as they are
-        return_scaled : bool, default: False
+        return_scaled : bool | None, default: None
+            DEPRECATED. Use return_in_uV instead.
+            If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+            traces are scaled to uV
+        return_in_uV : bool, default: False
             If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
             traces are scaled to uV
         cast_unsigned : bool, default: False
@@ -319,7 +332,7 @@ class BaseRecording(BaseRecordingSnippets):
         Raises
         ------
         ValueError
-            If return_scaled is True, but recording does not have scaled traces
+            If return_in_uV is True, but recording does not have scaled traces
         """
         segment_index = self._check_segment_index(segment_index)
         channel_indices = self.ids_to_indices(channel_ids, prefer_slice=True)
@@ -343,7 +356,16 @@ class BaseRecording(BaseRecordingSnippets):
                 traces = traces.astype(f"int{2 * (dtype.itemsize) * 8}") - 2 ** (nbits - 1)
                 traces = traces.astype(f"int{dtype.itemsize * 8}")
 
-        if return_scaled:
+        # Handle deprecated return_scaled parameter
+        if return_scaled is not None:
+            warnings.warn(
+                "`return_scaled` is deprecated and will be removed in a future version. Use `return_in_uV` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            return_in_uV = return_scaled
+
+        if return_in_uV:
             if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
                     # here we do not truely have scale but we assume this is scaled
@@ -351,7 +373,7 @@ class BaseRecording(BaseRecordingSnippets):
                     pass
                 else:
                     raise ValueError(
-                        "This recording does not support return_scaled=True (need gain_to_uV and offset_"
+                        "This recording does not support return_in_uV=True (need gain_to_uV and offset_"
                         "to_uV properties)"
                     )
             else:
