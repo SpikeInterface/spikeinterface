@@ -1,7 +1,7 @@
 from .extractor_classes import *
 
-from .toy_example import toy_example
-from .bids import read_bids
+from .toy_example import toy_example as toy_example
+from .bids import read_bids as read_bids
 
 
 from .neuropixels_utils import get_neuropixels_channel_groups, get_neuropixels_sample_shifts
@@ -31,6 +31,8 @@ def __getattr__(extractor_name):
     all_extractors += list(event_extractor_full_dict.values())
     all_extractors += list(snippets_extractor_full_dict.values())
     # special cases because they don't have simple wrappers
+    # instead a single wrapper maps to multiple classes so we return
+    # each class to check it
     from .neoextractors import (
         MEArecRecordingExtractor,
         MEArecSortingExtractor,
@@ -38,7 +40,6 @@ def __getattr__(extractor_name):
         OpenEphysBinaryRecordingExtractor,
         OpenEphysLegacyRecordingExtractor,
         SpikeGLXEventExtractor,
-        SpikeGLXRecordingExtractor,
     )
 
     all_extractors += [
@@ -48,17 +49,16 @@ def __getattr__(extractor_name):
         OpenEphysBinaryRecordingExtractor,
         OpenEphysLegacyRecordingExtractor,
         SpikeGLXEventExtractor,
-        SpikeGLXRecordingExtractor,
     ]
     for reading_function in all_extractors:
         if extractor_name == reading_function.__name__:
             dep_msg = (
-                "Importing classes at __init__ has been deprecated in favor of only importing functions "
+                "Importing classes at __init__ has been deprecated in favor of only importing function-size wrappers "
                 "and will be removed in 0.105.0. For developers that prefer working with the class versions of extractors "
                 "they can be imported from spikeinterface.extractors.extractor_classes"
             )
             warn(dep_msg)
             return reading_function
     # this is necessary for objects that we don't support
-    # normally this is an ImportError but since this is in the _getattr__ pytest needs an AttributeError
+    # normally this is an ImportError but since this is in the __getattr__ pytest needs an AttributeError
     raise AttributeError(f"cannot import name '{extractor_name}' from '{__name__}'")

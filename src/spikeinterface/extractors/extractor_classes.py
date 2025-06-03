@@ -77,14 +77,29 @@ from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
 
 
 ###############################################################################################
-# first we line up each class with its wrapper that returns a snakecase version of the class
-# that Alessio and Zach like to call the function-version.
-# for this to work we need the actual wrapper class (ie the function) along with a string version of wrapper name
-# so we make a private nested dict that we can load the wrapper string into the __all__ attribute which means only the
-# correct "function"/wrapper class are loaded into the extractors __init__
-# note that some formats (binary and numpy) still use the class format as they aren't read-only (ie they have no wrapper)
+# the following code is necessary for controlling what the end user imports from spikeinterface.
+# The strategy has three goals:
+#
+#    * A mapping from the original class to its wrapper (because that's what we want to expose)
+#    * A mapping from the original class to its wrapper string (because of __all__)
+#    * A mapping from format to the class wrapper for convenience (exposed to users for ease of use)
+#
+# To achieve these there goals we do the following:
+#
+# 1) we line up each class with its wrapper that returns a snakecase version of the class (in some docs called
+#    the "function" version, although this is just a wrapper of the underlying class)
+# 2) we do (1) by creating nested dicts where the key is the original class and the values are a nested dict with
+# 3) a "wrapper_class" key which returns the wrapper to be exposed to the end user and
+# 4) a "wrapper_string" which is added to the __all__ attribute of the __init__. This is necessary because __all__
+#    can only accept a list of strings
+# 5) Finally we create dictionaries exposed to the user where we return a formatted file format as a key along
+#    with the value being the wrapper (see the comment below for examples for this dict)
+#
+# Note that some formats (e.g. binary and numpy) still use the class format as they aren't read-only (i.e. they
+# have no wrapper)
 
 _recording_extractor_full_dict = {
+    # core extractors that are returned as classes
     BinaryFolderRecording: dict(wrapper_string="BinaryFolderRecording", wrapper_class=BinaryFolderRecording),
     BinaryRecordingExtractor: dict(wrapper_string="BinaryRecordingExtractor", wrapper_class=BinaryRecordingExtractor),
     ZarrRecordingExtractor: dict(wrapper_string="ZarrRecordingExtractor", wrapper_class=ZarrRecordingExtractor),
@@ -143,8 +158,10 @@ _snippets_extractor_full_dict = {
 
 ############################################################################################################
 # Organize the possible extractors into a user facing format with keys being extractor names
-# (e.g. 'intan' , 'kilosort') and values being the appropriate Extractor class (e.g. IntanRecordingExtractor,
-# KiloSortSortingExtractor)
+# (e.g. 'intan' , 'kilosort') and values being the appropriate Extractor class returned as its wrapper
+# (e.g. IntanRecordingExtractor, KiloSortSortingExtractor)
+# An important note is the the formats are returned after performing `.lower()` so a format like
+# SpikeGLX will be a key of 'spikeglx'
 # for example if we wanted to create a recording from an intan file we could do the following:
 # >>> recording = se.recording_extractor_full_dict['intan'](file_path='path/to/data.rhd')
 
