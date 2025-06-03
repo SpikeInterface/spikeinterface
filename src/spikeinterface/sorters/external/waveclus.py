@@ -13,7 +13,7 @@ from spikeinterface.sorters.basesorter import BaseSorter
 from spikeinterface.sorters.utils import ShellScript
 
 from spikeinterface.core import write_to_h5_dataset_format
-from spikeinterface.extractors import WaveClusSortingExtractor
+from spikeinterface.extractors.extractor_classes import WaveClusSortingExtractor
 from spikeinterface.core.channelslice import ChannelSliceRecording
 
 PathType = Union[str, Path]
