@@ -56,7 +56,7 @@ def get_neo_num_blocks(extractor_name, *args, **kwargs) -> int:
 
 
 def get_neo_extractor(extractor_name):
-    from spikeinterface.extractors.extractorlist import recording_extractor_full_dict
+    from spikeinterface.extractors.extractor_classes import recording_extractor_full_dict
 
     assert extractor_name in recording_extractor_full_dict, (
         f"{extractor_name} not an extractor name:" f"\n{list(recording_extractor_full_dict.keys())}"

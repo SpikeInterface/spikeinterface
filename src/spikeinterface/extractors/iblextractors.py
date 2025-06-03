@@ -359,5 +359,5 @@ class IblSortingExtractor(BaseSorting):
         self._kwargs = dict(pid=pid, good_clusters_only=good_clusters_only, load_unit_properties=load_unit_properties)
 
 
-read_ibl_recording = define_function_from_class(source_class=IblRecordingExtractor, name="read_ibl_streaming_recording")
+read_ibl_recording = define_function_from_class(source_class=IblRecordingExtractor, name="read_ibl_recording")
 read_ibl_sorting = define_function_from_class(source_class=IblSortingExtractor, name="read_ibl_sorting")
