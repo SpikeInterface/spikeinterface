@@ -2247,14 +2247,13 @@ def generate_unit_locations(
     minimum_y, maximum_y = np.min(channel_locations[:, 1]) - margin_um, np.max(channel_locations[:, 1]) + margin_um
 
     units_locations[:, 0] = rng.uniform(minimum_x, maximum_x, size=num_units)
-    units_locations[:, 2] = rng.uniform(minimum_z, maximum_z, size=num_units)
     if distribution == "uniform":
         units_locations[:, 1] = rng.uniform(minimum_y, maximum_y, size=num_units)
     elif distribution == "multimodal":
         units_locations[:, 1] = _generate_multimodal(rng, num_units, num_modes, minimum_y, maximum_y)
-
     else:
         raise ValueError("generate_unit_locations has wrong distribution must be 'uniform' or ")
+    units_locations[:, 2] = rng.uniform(minimum_z, maximum_z, size=num_units)
 
     if minimum_distance is not None:
         solution_found = False
@@ -2274,13 +2273,12 @@ def generate_unit_locations(
                     renew_inds = renew_inds[np.isin(renew_inds, np.unique(inds0))]
 
                 units_locations[:, 0][renew_inds] = rng.uniform(minimum_x, maximum_x, size=renew_inds.size)
-                units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
-                
                 if distribution == "uniform":
                     units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
                     
                 elif distribution == "multimodal":
                     units_locations[:, 1][renew_inds] =  _generate_multimodal(rng, renew_inds.size, num_modes, minimum_y, maximum_y)
+                units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
 
             else:
                 solution_found = True
