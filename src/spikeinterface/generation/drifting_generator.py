@@ -69,6 +69,8 @@ def make_one_displacement_vector(
 ):
     """
     Generates a toy displacement vector with ziagzag or bumps patterns.
+    This displacement vector has no amplitde, this generate only the shape
+    in the range [-0.5, 0.5]
 
     Parameters
     ----------
@@ -140,9 +142,20 @@ def make_one_displacement_vector(
                 displacement_vector[ind0:ind1] = 0.5
             else:
                 displacement_vector[ind0:ind1] = -0.5
+    
+    elif drift_mode == "random_walk":
+        rg = np.random.RandomState(seed=seed)
+        steps = rg.random_integers(low=0, high=1, size=num_samples)
+        # 0 -> -1 and 1 -> 1
+        steps = steps * 2 -1
+        steps[:start_drift_index] = 0
+        steps[end_drift_index:] = 0
+        displacement_vector = np.cumsum(steps, dtype='float64')
+        displacement_vector /= np.max(np.abs(displacement_vector)) * 2
+
 
     else:
-        raise ValueError("drift_mode must be 'zigzag' or 'bump'")
+        raise ValueError("drift_mode must be 'zigzag' or 'bump' or 'random_walk'")
 
     return displacement_vector * amplitude_factor
 
@@ -151,8 +164,8 @@ def generate_displacement_vector(
     duration,
     unit_locations,
     displacement_sampling_frequency=5.0,
-    drift_start_um=[0, 20.0],
-    drift_stop_um=[0, -20.0],
+    drift_start_um=[0, 30.0],
+    drift_stop_um=[0, -30.0],
     drift_step_um=1,
     motion_list=[
         dict(
@@ -269,6 +282,9 @@ def generate_drifting_recording(
         minimum_distance=18.0,
         max_iteration=100,
         distance_strict=False,
+        distribution="uniform",
+        # distribution="multimodal",
+        # num_modes=2,
     ),
     generate_displacement_vector_kwargs=dict(
         displacement_sampling_frequency=5.0,

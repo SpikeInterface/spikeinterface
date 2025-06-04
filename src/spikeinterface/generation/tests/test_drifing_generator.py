@@ -17,6 +17,10 @@ def test_make_one_displacement_vector():
         drift_mode="bump", duration=700.0, period_s=300, bump_interval_s=(30, 90.0), t_start_drift=100.0, seed=2205
     )
 
+    displacement_vector = make_one_displacement_vector(
+        drift_mode="random_walk", duration=700.0, t_start_drift=100.0, seed=2205
+    )
+
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
     # ax.plot(displacement_vector)
@@ -90,7 +94,7 @@ def test_generate_drifting_recording():
 
 
 if __name__ == "__main__":
-    # test_make_one_displacement_vector()
+    test_make_one_displacement_vector()
     # test_generate_displacement_vector()
     # test_generate_noise()
-    test_generate_drifting_recording()
+    # test_generate_drifting_recording()
