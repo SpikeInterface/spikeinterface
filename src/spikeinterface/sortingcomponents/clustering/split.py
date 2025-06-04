@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
@@ -283,7 +285,9 @@ class LocalFeatureClustering:
             from hdbscan import HDBSCAN
 
             clust = HDBSCAN(**clusterer_kwargs, core_dist_n_jobs=1)
-            clust.fit(final_features)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore")
+                clust.fit(final_features)
             possible_labels = clust.labels_
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
             del clust
