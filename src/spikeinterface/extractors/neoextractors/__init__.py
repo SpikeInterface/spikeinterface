@@ -42,42 +42,47 @@ from .tdt import TdtRecordingExtractor, read_tdt
 
 from .neo_utils import get_neo_streams, get_neo_num_blocks
 
-neo_recording_extractors_list = [
-    AlphaOmegaRecordingExtractor,
-    AxonaRecordingExtractor,
-    BiocamRecordingExtractor,
-    BlackrockRecordingExtractor,
-    CedRecordingExtractor,
-    EDFRecordingExtractor,
-    IntanRecordingExtractor,
-    MaxwellRecordingExtractor,
-    MEArecRecordingExtractor,
-    MCSRawRecordingExtractor,
-    NeuralynxRecordingExtractor,
-    NeuroScopeRecordingExtractor,
-    NeuroNexusRecordingExtractor,
-    NixRecordingExtractor,
-    OpenEphysBinaryRecordingExtractor,
-    OpenEphysLegacyRecordingExtractor,
-    PlexonRecordingExtractor,
-    Plexon2RecordingExtractor,
-    Spike2RecordingExtractor,
-    SpikeGadgetsRecordingExtractor,
-    SpikeGLXRecordingExtractor,
-    TdtRecordingExtractor,
-    NeuroExplorerRecordingExtractor,
-]
+neo_recording_extractors_dict = {
+    AlphaOmegaRecordingExtractor: dict(wrapper_string="read_alphaomega", wrapper_class=read_alphaomega),
+    AxonaRecordingExtractor: dict(wrapper_string="read_axona", wrapper_class=read_axona),
+    BiocamRecordingExtractor: dict(wrapper_string="read_biocam", wrapper_class=read_biocam),
+    BlackrockRecordingExtractor: dict(wrapper_string="read_blackrock", wrapper_class=read_blackrock),
+    CedRecordingExtractor: dict(wrapper_string="read_ced", wrapper_class=read_ced),
+    EDFRecordingExtractor: dict(wrapper_string="read_edf", wrapper_class=read_edf),
+    IntanRecordingExtractor: dict(wrapper_string="read_intan", wrapper_class=read_intan),
+    MaxwellRecordingExtractor: dict(wrapper_string="read_maxwell", wrapper_class=read_maxwell),
+    MEArecRecordingExtractor: dict(wrapper_string="read_mearec", wrapper_class=read_mearec),
+    MCSRawRecordingExtractor: dict(wrapper_string="read_mcsraw", wrapper_class=read_mcsraw),
+    NeuralynxRecordingExtractor: dict(wrapper_string="read_neuralynx", wrapper_class=read_neuralynx),
+    NeuroScopeRecordingExtractor: dict(
+        wrapper_string="read_neuroscope_recording", wrapper_class=read_neuroscope_recording
+    ),
+    NeuroNexusRecordingExtractor: dict(wrapper_string="read_neuronexus", wrapper_class=read_neuronexus),
+    NixRecordingExtractor: dict(wrapper_string="read_nix", wrapper_class=read_nix),
+    OpenEphysBinaryRecordingExtractor: dict(wrapper_string="read_openephys", wrapper_class=read_openephys),
+    OpenEphysLegacyRecordingExtractor: dict(wrapper_string="read_openephys", wrapper_class=read_openephys),
+    PlexonRecordingExtractor: dict(wrapper_string="read_plexon", wrapper_class=read_plexon),
+    Plexon2RecordingExtractor: dict(wrapper_string="read_plexon2", wrapper_class=read_plexon2),
+    Spike2RecordingExtractor: dict(wrapper_string="read_spike2", wrapper_class=read_spike2),
+    SpikeGadgetsRecordingExtractor: dict(wrapper_string="read_spikegadgets", wrapper_class=read_spikegadgets),
+    SpikeGLXRecordingExtractor: dict(wrapper_string="read_spikeglx", wrapper_class=read_spikeglx),
+    TdtRecordingExtractor: dict(wrapper_string="read_tdt", wrapper_class=read_tdt),
+    NeuroExplorerRecordingExtractor: dict(wrapper_string="read_neuroexplorer", wrapper_class=read_neuroexplorer),
+}
 
-neo_sorting_extractors_list = [
-    BlackrockSortingExtractor,
-    MEArecSortingExtractor,
-    NeuralynxSortingExtractor,
-    Plexon2SortingExtractor,
-]
+neo_sorting_extractors_dict = {
+    BlackrockSortingExtractor: dict(wrapper_string="read_blackrock_sorting", wrapper_class=read_blackrock_sorting),
+    MEArecSortingExtractor: dict(wrapper_string="read_mearec", wrapper_class=read_mearec),
+    NeuralynxSortingExtractor: dict(wrapper_string="read_neuralynx_sorting", wrapper_class=read_neuralynx_sorting),
+    PlexonSortingExtractor: dict(wrapper_string="read_plexon_sorting", wrapper_class=read_plexon_sorting),
+    Plexon2SortingExtractor: dict(wrapper_string="read_plexon2_sorting", wrapper_class=read_plexon2_sorting),
+    NeuroScopeSortingExtractor: dict(wrapper_string="read_neuroscope_sorting", wrapper_class=read_neuroscope_sorting),
+}
 
-neo_event_extractors_list = [
-    AlphaOmegaEventExtractor,
-    OpenEphysBinaryEventExtractor,
-    Plexon2EventExtractor,
-    SpikeGLXEventExtractor,
-]
+neo_event_extractors_dict = {
+    AlphaOmegaEventExtractor: dict(wrapper_string="read_alphaomega_event", wrapper_class=read_alphaomega_event),
+    OpenEphysBinaryEventExtractor: dict(wrapper_string="read_openephys_event", wrapper_class=read_openephys_event),
+    Plexon2EventExtractor: dict(wrapper_string="read_plexon2_event", wrapper_class=read_plexon2_event),
+    SpikeGLXEventExtractor: dict(wrapper_string="read_spikeglx_event", wrapper_class=read_spikeglx_event),
+    MaxwellEventExtractor: dict(wrapper_string="read_maxwell_event", wrapper_class=read_maxwell_event),
+}

@@ -45,7 +45,10 @@ def make_sorting_analyzer(sparse=True, with_group=False):
     sorting_analyzer.compute("noise_levels")
     sorting_analyzer.compute("principal_components")
     sorting_analyzer.compute("template_similarity")
-    sorting_analyzer.compute("quality_metrics", metric_names=["snr"])
+    sorting_analyzer.compute(
+        "quality_metrics", metric_names=["snr", "amplitude_median", "isi_violation", "amplitude_cutoff"]
+    )
+    sorting_analyzer.compute(["spike_amplitudes", "spike_locations"])
 
     return sorting_analyzer
 

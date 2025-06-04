@@ -494,7 +494,9 @@ def plot_performances_vs_snr(
 
         colors = study.get_colors(levels_to_group_by=levels_to_keep)
 
-        assert all([key in colors for key in case_keys]), f"colors must have a color for each case key: {case_keys}"
+        assert all(
+            [key in colors for key in case_group_keys]
+        ), f"colors must have a color for each case key: {case_group_keys}"
 
         for key, key_list in case_group_keys.items():
             color = colors[key]
