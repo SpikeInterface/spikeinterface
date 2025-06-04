@@ -15,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment, read_python
+from spikeinterface.core import BaseSorting, BaseSortingSegment, read_python
 from spikeinterface.core.core_tools import define_function_from_class
 
 

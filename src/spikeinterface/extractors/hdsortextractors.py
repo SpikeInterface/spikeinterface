@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment
+from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from .matlabhelpers import MatlabHelper
 
