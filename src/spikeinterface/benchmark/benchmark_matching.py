@@ -38,10 +38,8 @@ class MatchingBenchmark(Benchmark):
         self.result = {"sorting": sorting, "spikes": spikes}
         self.result["templates"] = self.templates
 
-    def compute_result(self, with_collision=False, **result_params):
+    def compute_result(self, with_collision=False, match_score=0.5, exhaustive_gt=True):
         sorting = self.result["sorting"]
-        exhaustive_gt = result_params.get("exhaustive_gt", True)
-        match_score = result_params.get("match_score", None)
         comp = compare_sorter_to_ground_truth(
             self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt, match_score=match_score
         )
