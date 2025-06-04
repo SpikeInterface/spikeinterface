@@ -101,9 +101,9 @@ class SpikeGLXRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ["spikeglx"]
     entities = [
         ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap"}),
-        ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap", "load_sync_channel": True}),
         ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.lf"}),
         ("spikeglx/Noise4Sam_g0", {"stream_id": "nidq"}),
+        ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap-SYNC"}),
     ]
 
 
