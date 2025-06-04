@@ -95,7 +95,8 @@ class TdcClustering:
 
         if motion is not None:
            # also return peaks with new channel index
-           peaks_svd, sparse_mask, svd_model, peaks = outs           
+           peaks_svd, sparse_mask, svd_model, moved_peaks = outs
+           peaks = moved_peaks
         else:
            peaks_svd, sparse_mask, svd_model = outs
 

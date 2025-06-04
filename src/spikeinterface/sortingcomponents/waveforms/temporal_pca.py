@@ -423,10 +423,13 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
                 )
                 peak_motion = peak_motion[0]
 
-                new_peak_loc = self.channel_locations[chan_index, :].copy()
-                new_peak_loc[self.motion.dim] += peak_motion
-                new_chan_index = np.argmin(np.sum((self.channel_locations - new_peak_loc)**2, axis=1))
-                new_channel_indices[i] = new_chan_index
+                # # new_peak_loc = self.channel_locations[chan_index, :].copy()
+                # # new_peak_loc[self.motion.dim] -= peak_motion
+                # # new_chan_index = np.argmin(np.sum((self.channel_locations - new_peak_loc)**2, axis=1))
+                # # new_channel_indices[i] = new_chan_index
+                # if chan_index != new_chan_index:
+                #     print(chan_index, new_chan_index, self.channel_locations[chan_index], self.channel_locations[new_chan_index])
+
 
                 # interpolate the svd to the original position
                 wf_local_chans = np.flatnonzero(self.wf_sparsity_mask[chan_index, :])
@@ -434,7 +437,9 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
                 dest_locations = source_locations.copy()
                 dest_locations[:, self.motion.dim] += peak_motion
 
-                final_local_chans = np.flatnonzero(self.final_sparsity_mask[new_chan_index, :])
+                # final_local_chans = np.flatnonzero(self.final_sparsity_mask[new_chan_index, :])
+
+                # channel_select = np.flatnonzero(np.in1d(wf_local_chans, final_local_chans))
 
                 for c in range(self.n_components):
                     projected_full_wf = scipy.interpolate.griddata(
@@ -444,8 +449,37 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
                         method=self.interpolation_method,
                         fill_value=0,
                     )
-                    channel_select = np.in1d(wf_local_chans, final_local_chans)
+                    if c == 0:
+                        new_chan_index = wf_local_chans[np.argmax(np.abs(projected_full_wf))]
+                        final_local_chans = np.flatnonzero(self.final_sparsity_mask[new_chan_index, :])
+                        # if not np.all(np.isin(wf_local_chans, final_local_chans)):
+                        #     # sparsity not cover the channel change
+                        #     new_chan_index = chan_index
+                        #     final_local_chans = np.flatnonzero(self.final_sparsity_mask[new_chan_index, :])
+                        new_channel_indices[i] = new_chan_index
+                        
+                        channel_select = np.flatnonzero(np.isin(wf_local_chans, final_local_chans))
+                        if channel_select.size != self.out_num_channels:
+                            # sparsity not cover the channel change                            
+                            new_chan_index = chan_index
+                            final_local_chans = np.flatnonzero(self.final_sparsity_mask[new_chan_index, :])
+                            channel_select = np.flatnonzero(np.isin(wf_local_chans, final_local_chans))
+
+                        new_channel_indices[i] = new_chan_index
+                        
+                        # if chan_index != new_chan_index:
+                        #     print(chan_index, new_chan_index, self.channel_locations[chan_index], self.channel_locations[new_chan_index])
+
                     projected_waveforms[i, c, : final_local_chans.size] = projected_full_wf[channel_select]
+                    # try:
+                    #     projected_waveforms[i, c, : final_local_chans.size] = projected_full_wf[channel_select]
+                    # except:
+                    #     print('zob')
+                    #     print(wf_local_chans)
+                    #     print(final_local_chans)
+                    #     print(channel_select)
+                    #     raise ValueError()
+
 
 
         return (projected_waveforms.astype(self.dtype, copy=False), new_channel_indices)

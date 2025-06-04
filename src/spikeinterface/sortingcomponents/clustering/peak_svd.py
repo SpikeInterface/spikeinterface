@@ -70,9 +70,9 @@ def extract_peaks_svd(
 
         svd_model = TruncatedSVD(n_components=n_components)
         svd_model.fit(wfs)
-        need_save_model = True
-    else:
-        need_save_model = False
+    #     need_save_model = True
+    # else:
+    #     need_save_model = False
 
     if folder is None:
         gather_mode = "memory"
@@ -85,19 +85,19 @@ def extract_peaks_svd(
 
         folder = Path(folder)
 
-        # save the model
-        if need_save_model:
-            model_folder = folder / "svd_model"
-            model_folder.mkdir(exist_ok=True, parents=True)
-            with open(model_folder / "pca_model.pkl", "wb") as f:
-                pickle.dump(svd_model, f)
-            model_params = {
-                "ms_before": ms_before,
-                "ms_after": ms_after,
-                "sampling_frequency": float(recording.sampling_frequency),
-            }
-            with open(model_folder / "params.json", "w") as f:
-                json.dump(model_params, f)
+        # # save the model
+        # if need_save_model:
+        #     model_folder = folder / "svd_model"
+        #     model_folder.mkdir(exist_ok=True, parents=True)
+        #     with open(model_folder / "pca_model.pkl", "wb") as f:
+        #         pickle.dump(svd_model, f)
+        #     model_params = {
+        #         "ms_before": ms_before,
+        #         "ms_after": ms_after,
+        #         "sampling_frequency": float(recording.sampling_frequency),
+        #     }
+        #     with open(model_folder / "params.json", "w") as f:
+        #         json.dump(model_params, f)
 
         # save the features
         features_folder = folder / "features"
@@ -113,10 +113,14 @@ def extract_peaks_svd(
         # we need to increase the radius by the max motion for the waveforms mask
         # the final mask of svd will be th small one
         max_motion = max(abs(e) for e in motion.get_boundaries())
-        margin = np.min(channel_distance[channel_distance>0])
-        print("margin", margin, "max_motion", max_motion)
-        wf_sparsity_mask = wf_sparsity_mask = channel_distance <= (radius_um + max_motion)
+        margin = np.min(channel_distance[channel_distance>0]) * 2
+        # margin = 0
+        print("margin", margin, "max_motion", max_motion, "radius_um", radius_um, "total_radius_um", radius_um + max_motion + margin)
+        wf_sparsity_mask = channel_distance <= (radius_um + max_motion + margin)
         final_sparsity_mask = channel_distance <= radius_um
+        print("wf_sparsity_mask", np.sum(wf_sparsity_mask, axis=1))
+
+        print("final_sparsity_mask", np.sum(final_sparsity_mask, axis=1))
     else:
         if sparsity_mask is None:
             wf_sparsity_mask = channel_distance <= radius_um
@@ -140,7 +144,8 @@ def extract_peaks_svd(
             raise ValueError("For motion aware PCA motion must provided")
         node2 = MotionAwareTemporalPCAProjection(
             recording, parents=[node0, node1], return_output=True, pca_model=svd_model, motion=motion,
-            interpolation_method="linear",
+            # interpolation_method="linear",
+            interpolation_method="cubic",
             final_sparsity_mask=final_sparsity_mask,
         )
         out_names = ["sparse_svd", "peak_channel_index"]
@@ -167,9 +172,9 @@ def extract_peaks_svd(
     )
 
     if motion_aware:
-        peaks_svd, peak_channel_index = outs
+        peaks_svd, peak_channel_indices = outs
         new_peaks = peaks.copy()
-        new_peaks["channel_index"] = peak_channel_index
+        new_peaks["channel_index"] = peak_channel_indices
         # here the mask is not the waveform mask (bigger) but the final mask of requested radius
         sparse_mask = final_sparsity_mask
         return peaks_svd, sparse_mask, svd_model, new_peaks
