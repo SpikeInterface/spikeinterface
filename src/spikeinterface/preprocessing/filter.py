@@ -400,8 +400,27 @@ highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
 
 def fix_dtype(recording, dtype):
     """
-    Many preprocessors access scipy functions (e.g. filter) that fail silently with unsigned dtypes.
-    This function fixes the dtype to be signed if it is unsigned.
+    Fix and validate dtype for preprocessing operations.
+
+    This function performs three operations:
+    * If no dtype is provided, infers it from the recording
+    * Converts the dtype to a numpy.dtype object
+    * Converts unsigned dtypes to their signed equivalents
+
+    Many preprocessors use scipy functions (e.g., filtering) that fail
+    silently with unsigned dtypes, so conversion to signed types is necessary.
+
+    Parameters
+    ----------
+    recording : Recording
+        The recording object to get dtype from if none provided
+    dtype : numpy.dtype or None
+        The desired dtype. If None, uses recording's dtype
+
+    Returns
+    -------
+    numpy.dtype
+        A validated numpy dtype, converted to signed if originally unsigned
     """
     if dtype is None:
         dtype = recording.get_dtype()
