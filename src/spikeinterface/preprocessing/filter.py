@@ -399,6 +399,10 @@ highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
 
 
 def fix_dtype(recording, dtype):
+    """
+    Many preprocessors access scipy functions (e.g. filter) that fail silently with unsigned dtypes.
+    This function fixes the dtype to be signed if it is unsigned.
+    """
     if dtype is None:
         dtype = recording.get_dtype()
     dtype = np.dtype(dtype)
