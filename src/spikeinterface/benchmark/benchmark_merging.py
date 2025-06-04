@@ -35,9 +35,11 @@ class MergingBenchmark(Benchmark):
 
         self.result["sorting"] = merged_analyzer.sorting
 
-    def compute_result(self, **result_params):
+    def compute_result(self, match_score=0.5, exhaustive_gt=True):
         sorting = self.result["sorting"]
-        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
+        comp = compare_sorter_to_ground_truth(
+            self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt, match_score=match_score
+        )
         self.result["gt_comparison"] = comp
 
     _run_key_saved = [("sorting", "sorting"), ("merges", "pickle"), ("merged_pairs", "pickle"), ("outs", "pickle")]
