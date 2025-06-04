@@ -5,3 +5,4 @@ Module to benchmark:
 """
 
 from .benchmark_sorter import SorterStudy
+from .benchmark_sorter_without_gt import SorterStudyWithoutGroundTruth

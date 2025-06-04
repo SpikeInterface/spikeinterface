@@ -9,7 +9,7 @@ import numpy as np
 import time
 
 
-from spikeinterface.core import SortingAnalyzer
+from spikeinterface.core import SortingAnalyzer, NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface import load, create_sorting_analyzer, load_sorting_analyzer
 from spikeinterface.widgets import get_some_colors
@@ -118,12 +118,21 @@ class BenchmarkStudy:
             if isinstance(data, tuple):
                 # old case : rec + sorting
                 rec, gt_sorting = data
-                analyzer = create_sorting_analyzer(
-                    gt_sorting, rec, sparse=True, format="binary_folder", folder=local_analyzer_folder
-                )
-                analyzer.compute("random_spikes")
-                analyzer.compute("templates")
-                analyzer.compute("noise_levels")
+
+                if gt_sorting is not None:
+                    analyzer = create_sorting_analyzer(
+                        gt_sorting, rec, sparse=True, format="binary_folder", folder=local_analyzer_folder
+                    )
+                    analyzer.compute("random_spikes")
+                    analyzer.compute("templates")
+                    analyzer.compute("noise_levels")
+                else:
+                    # some study/benchmark has no GT sorting
+                    # in that case we still need an analyzer for internal API
+                    gt_sorting = NumpySorting.from_samples_and_labels([np.array([])], [np.array([])], rec.sampling_frequency, unit_ids=None)
+                    analyzer = create_sorting_analyzer(
+                        gt_sorting, rec, sparse=False, format="binary_folder", folder=local_analyzer_folder
+                    )
             else:
                 # new case : analzyer
                 assert isinstance(data, SortingAnalyzer)
