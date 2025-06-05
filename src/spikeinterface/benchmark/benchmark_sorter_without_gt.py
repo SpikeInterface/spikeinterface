@@ -3,7 +3,7 @@ This replace the previous `GroundTruthStudy`
 """
 
 import numpy as np
-from spikeinterface.core import NumpySorting
+from spikeinterface.core import NumpySorting, create_sorting_analyzer
 from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
 from spikeinterface.sorters import run_sorter
 from spikeinterface.comparison import compare_multiple_sorters
@@ -28,15 +28,25 @@ class SorterBenchmarkWithoutGroundTruth(Benchmark):
         sorting = NumpySorting.from_sorting(raw_sorting)
         self.result = {"sorting": sorting}
 
-    def compute_result(self, exhaustive_gt=True):
-        # TODO
-        pass
+    def compute_result(self, exhaustive_gt=True, **job_kwargs):
+        sorting = self.result['sorting']
+        analyzer = create_sorting_analyzer(
+            sorting, self.recording, sparse=True, format="memory", **job_kwargs
+        )
+        analyzer.compute("random_spikes")
+        analyzer.compute("templates")
+        analyzer.compute("noise_levels")
+        analyzer.compute("spike_amplitudes", **job_kwargs)
+        analyzer.compute("quality_metrics", **job_kwargs)
+
+        self.result["sorter_analyzer"] = analyzer
 
     _run_key_saved = [
         ("sorting", "sorting"),
     ]
     _result_key_saved = [
         ("multi_comp", "pickle"),
+        ("sorter_analyzer", "sorting_analyzer"),
     ]
 
 
@@ -56,6 +66,17 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
         benchmark = SorterBenchmarkWithoutGroundTruth(recording, gt_sorting, params, sorter_folder)
         return benchmark
     
+    def _get_comparison_groups(self):
+        # multicomparison are done on all cases sharing the same dataset key.
+        case_keys = list(self.cases.keys())
+        groups = {}
+        for case_key in case_keys:
+            data_key = self.cases[case_key]['dataset']
+            if data_key not in groups:
+                groups[data_key] = []
+            groups[data_key].append(case_key)
+        return groups
+
     def compute_results(self, case_keys=None, verbose=False, delta_time=0.4, match_score=0.5, chance_score=0.1, **result_params):
         # Here we need a hack because the results is not computed case by case but all at once
 
@@ -68,19 +89,15 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
         BenchmarkStudy.compute_results(self, case_keys=case_keys, verbose=verbose, **result_params)
 
         # Then we need to compute the multicomparison for case that have the same dataset key.
-        groups = {}
-        for case_key in case_keys:
-            data_key = self.cases[case_key]['dataset']
-            if data_key not in groups:
-                groups[data_key] = []
-            groups[data_key].append(case_key)
-        
+        groups = self._get_comparison_groups()
+
         for data_key, group in groups.items():
 
             sorting_list = [self.get_result(key)['sorting'] for key in group]
+            name_list = [key for key in group]
             multi_comp = compare_multiple_sorters(
                 sorting_list,
-                name_list=None,
+                name_list=name_list,
                 delta_time=delta_time,
                 match_score=0.5,
                 chance_score=0.1,
@@ -95,4 +112,65 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
                 benchmark = self.benchmarks[key]
                 benchmark.result['multi_comp'] = multi_comp
                 benchmark.save_result(self.folder / "results" / self.key_to_str(key))
+
+
+    def plot_quality_metrics_comparison_on_agreement(self, qm_name='rp_contamination', figsize=None):
+        import matplotlib.pyplot as plt
+
+        groups = self._get_comparison_groups()
+
+        for data_key, group in groups.items():
+            n = len(group)
+            fig, axs = plt.subplots(ncols=n - 1, nrows=n - 1, figsize=figsize, squeeze=False)
+            for i, key1 in enumerate(group):
+                for j, key2 in enumerate(group):
+                    if i < j:
+                        ax = axs[i, j - 1]
+                        label1 = self.cases[key1]['label']
+                        label2 = self.cases[key2]['label']
+
+                        if i == j - 1:
+                            ax.set_xlabel(label2)
+                            ax.set_ylabel(label1)
+
+                        multi_comp = self.get_result(key1)['multi_comp']
+                        comp = multi_comp.comparisons[key1, key2]
+                        
+                        match_12 = comp.hungarian_match_12
+                        if match_12.dtype.kind =='i':
+                            mask = match_12.values != -1
+                        if match_12.dtype.kind =='U':
+                            mask = match_12.values != ''
+                        
+                        common_unit1_ids = match_12[mask].index
+                        common_unit2_ids = match_12[mask].values
+                        metrics1 = self.get_result(key1)["sorter_analyzer"].get_extension("quality_metrics").get_data()
+                        metrics2 = self.get_result(key2)["sorter_analyzer"].get_extension("quality_metrics").get_data()
+
+                        values1 = metrics1.loc[common_unit1_ids, qm_name].values
+                        values2 = metrics2.loc[common_unit2_ids, qm_name].values
+
+                        print(common_unit1_ids, metrics1.columns, values1)
+                        print(common_unit2_ids, metrics2.columns, values2)
+
+                        ax.scatter(values1, values2)
+                        if i != j - 1:
+                            ax.set_xlabel("")
+                            ax.set_ylabel("")
+                            ax.set_xticks([])
+                            ax.set_yticks([])
+                            ax.set_xticklabels([])
+                            ax.set_yticklabels([])
+
+
+    def plot_quality_metrics_comparison_on_non_agreement(self, qm_name='rp_contamination', figsize=None):
+        import matplotlib.pyplot as plt
+
+        groups = self._get_comparison_groups()
+
+        for data_key, group in groups.items():
+            n = len(group)
+            fig, ax = plt.subplots(figsize=figsize)
+            for key in group:
+                pass
 

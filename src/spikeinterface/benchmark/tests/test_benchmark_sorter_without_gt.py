@@ -17,7 +17,7 @@ def create_simple_study_no_gt(tmp_path_factory):
 
 
 def _create_simple_study_no_gt(study_folder):
-    rec1, __annotations__ = generate_ground_truth_recording(num_channels=32, durations=[30.0], seed=91)
+    rec1, __annotations__ = generate_ground_truth_recording(num_channels=32, durations=[300.0], seed=2205)
 
     datasets = {
         "toy_probe32": (rec1, None),

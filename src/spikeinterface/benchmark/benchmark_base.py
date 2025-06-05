@@ -575,7 +575,10 @@ class Benchmark:
             elif format == "zarr_templates":
                 self.result[k].to_zarr(folder / k)
             elif format == "sorting_analyzer":
-                pass
+                analyzer_folder = folder / k
+                if analyzer_folder.exists():
+                    shutil.rmtree(analyzer_folder)
+                self.result[k].save_as(format="binary_folder", folder=analyzer_folder)
             else:
                 raise ValueError(f"Save error {k} {format}")
 
@@ -621,6 +624,10 @@ class Benchmark:
                 if zarr_folder.exists():
 
                     result[k] = Templates.from_zarr(zarr_folder)
+            elif format == "sorting_analyzer":
+                analyzer_folder = folder / k
+                if analyzer_folder.exists():
+                    result[k] = load_sorting_analyzer(analyzer_folder)
 
         return result
 
