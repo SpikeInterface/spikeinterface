@@ -17,6 +17,7 @@ spike_dtype = [
     ("segment_index", "int64"),
 ]
 
+
 def find_spikes_from_templates(
     recording, method="naive", method_kwargs={}, extra_outputs=False, verbose=False, **job_kwargs
 ) -> np.ndarray | tuple[np.ndarray, dict]:
