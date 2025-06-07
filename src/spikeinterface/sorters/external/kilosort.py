@@ -231,7 +231,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         if params["whiteningRange"] > 32:
             n_channels_whitening = params["whiteningRange"] if np.isfinite(params["whiteningRange"]) else "all"
             warn(
-                "Kilosort recommends whitening with 32 or fewer channels. " \
+                "Kilosort recommends whitening with 32 or fewer channels. "
                 f"However, you are whitening with {n_channels_whitening} channels."
             )
 
