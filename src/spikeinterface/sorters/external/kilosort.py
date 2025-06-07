@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import os
 from typing import Union
+from warnings import warn
 import numpy as np
 
 from spikeinterface.sorters.basesorter import BaseSorter
@@ -226,14 +227,17 @@ class KilosortSorter(KilosortBase, BaseSorter):
             "whitening"
         ]  # type of whitening (default 'full', for 'noSpikes' set options for spike detection below)
         ops["nSkipCov"] = params["nSkipCov"]  # compute whitening matrix from every N-th batch (1)
+
+        if params["whiteningRange"] > 32:
+            n_channels_whitening = params["whiteningRange"] if np.isfinite(params["whiteningRange"]) else "all"
+            warn(
+                "Kilosort recommends whitening with 32 or fewer channels. " \
+                f"However, you are whitening with {n_channels_whitening} channels."
+            )
+
         ops["whiteningRange"] = params[
             "whiteningRange"
         ]  # how many channels to whiten together (Inf for whole probe whitening, should be fine if Nchan<=32)
-        if ops["whiteningRange"] == np.inf and ops["Nchan"] > 32:
-            print(
-                "Warning: Kilosort is set to use full probe whitening, but the "
-                "number of channels is greater than 32."
-            )
 
         # ops['criterionNoiseChannels'] = 0.2  # fraction of "noise" templates allowed to span all channel groups (see createChannelMapFile for more info).
 
