@@ -124,6 +124,17 @@ Reference
 
 .. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_noise_cutoff
 
+Examples with plots
+-------------------
+
+Here is shown the histogram of two units, with the vertical lines separating low- and high-amplitude region.
+
+- On the left, we have a unit with no truncation at the left end, and the cutoff and ratio are small.
+- On the right, we have a unit with truncation at -1, and the cutoff and ratio are much larger.
+
+.. image:: example_cutoff.png
+    :width: 600
+
 Links to original implementations
 ---------------------------------
 

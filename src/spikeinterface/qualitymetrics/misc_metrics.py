@@ -41,12 +41,14 @@ def compute_noise_cutoffs(
     high_quantile=0.25,
     low_quantile=0.1,
     n_bins=100,
-    ax=None,
-    unit_ids=None,
+    unit_ids=None
 ):
     """
     A metric to determine if a unit's amplitude distribution is cut off, without assuming a Gaussian distribution.
     
+    The function flips the sign if 'peak_sign' == 'neg' when computing the amplitude. 
+    Based on the histogram of the (transformed) amplitude:
+
     1. This method compares counts in the lower-amplitude bins to counts in the top 'high_quantile' of the amplitude range.
     It computes the mean and std of an upper quantile of the distribution, and calculates how many standard deviations away
     from that mean the lower-quantile bins lie.
@@ -58,13 +60,11 @@ def compute_noise_cutoffs(
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object.
     high_quantile : float, default: 0.25
-        Quantile of the amplitude range above which values are treated as "high" (default 0.25 = top 25%), the reference region.
+        Quantile of the amplitude range above which values are treated as "high" (e.g. 0.25 = top 25%), the reference region.
     low_quantile : int, default: 0.1
-        Quantile of the amplitude range below which values are treated as "low" (default 0.1 = lower 10%), the test region.
+        Quantile of the amplitude range below which values are treated as "low" (e.g. 0.1 = lower 10%), the test region.
     n_bins: int, default: 100
         The number of bins to use to compute the amplitude histogram.
-    ax: matplotlib.Axes, optional, default: None
-        A matplotlib axes object. Only works if plotting a single component.
     unit_ids : list or None
         List of unit ids to compute the amplitude cutoffs. If None, all units are used.
 
@@ -78,34 +78,47 @@ def compute_noise_cutoffs(
     Inspired by metric described in [IBL2024]_
 
     """
+    res = namedtuple("cutoff_metrics", ["cutoff", "ratio"])
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
 
     noise_cutoff_dict = {}
-    if sorting_analyzer.has_extension("spike_amplitudes"):
-
-        amplitudes_by_units = sorting_analyzer.get_extension('spike_amplitudes').get_data(outputs='by_unit')[0]
-
-        for unit_id in unit_ids:
-            amplitudes = amplitudes_by_units[unit_id]
-            
-            noise_cutoff_dict[unit_id] = noise_cutoff(
-                amplitudes, high_quantile=high_quantile, low_quantile=low_quantile, n_bins=n_bins, ax=ax
-            )
-
-    else:
+    ratio_dict = {}
+    if not sorting_analyzer.has_extension("spike_amplitudes"):
         warnings.warn("compute_noise_cutoffs need 'spike_amplitudes'")
         for unit_id in unit_ids:
             noise_cutoff_dict[unit_id] = np.nan
+            ratio_dict[unit_id] = np.nan
+        return res(noise_cutoff_dict, ratio_dict)
 
+    amplitude_extension = sorting_analyzer.get_extension('spike_amplitudes')
+    amplitudes_by_units = amplitude_extension.get_data(outputs='by_unit')[0]
+    peak_sign = amplitude_extension.params['peak_sign']
 
+    if peak_sign == 'both':
+        raise TypeError('peak_sign should either be "pos" or "neg"!')
+
+    for unit_id in unit_ids:
+        amplitudes = amplitudes_by_units[unit_id]
+
+        if peak_sign == 'neg':
+            amplitudes = -amplitudes
+        
+        cutoff, ratio = _noise_cutoff(
+            amplitudes, high_quantile=high_quantile, low_quantile=low_quantile, n_bins=n_bins
+        )
+        noise_cutoff_dict[unit_id] = cutoff
+        ratio_dict[unit_id] = ratio
 
     return noise_cutoff_dict
 
-def noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100, ax=None):
+def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     """
     A metric to determine if a unit's amplitude distribution is cut off, without assuming a Gaussian distribution.
     
+    The function flips the sign if 'peak_sign' == 'neg' when computing the amplitude. 
+    Based on the histogram of the (transformed) amplitude:
+        
     1. This method compares counts in the lower-amplitude bins to counts in the higher_amplitude bins.
     It computes the mean and std of an upper quantile of the distribution, and calculates how many standard deviations away
     from that mean the lower-quantile bins lie.
@@ -117,13 +130,11 @@ def noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100, ax=None
     amps : array-like
         Spike amplitudes.
     high_quantile : float, default: 0.25
-        Quantile of the amplitude range above which values are treated as "high" (default 0.25 = top 25%), the reference region.
+        Quantile of the amplitude range above which values are treated as "high" (e.g. 0.25 = top 25%), the reference region.
     low_quantile : int, default: 0.1
-        Quantile of the amplitude range below which values are treated as "low" (default 0.1 = lower 10%), the test region.
+        Quantile of the amplitude range below which values are treated as "low" (e.g. 0.1 = lower 10%), the test region.
     n_bins: int, default: 100
         The number of bins to use to compute the amplitude histogram.
-    ax: matplotlib.Axes, optional, default: None
-        A matplotlib axes object. Only works if plotting a single component.
 
     Returns
     -------
@@ -153,47 +164,26 @@ def noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100, ax=None
     # calculate metrics
     if len(low_indices) == 0:
         warnings.warn("no bin is selected to test cutoff. please increase low_quantile.")
-        cutoff = np.nan
-        ratio = np.nan
-    else:
-        # ratio
-        low_counts = n[low_indices]
-        mean_low_counts = np.mean(low_counts)
-        ratio = mean_low_counts / peak
+        return np.nan, np.nan
+    
+    # ratio
+    low_counts = n[low_indices]
+    mean_low_counts = np.mean(low_counts)
+    ratio = mean_low_counts / peak
 
-        # cutoff
-        if len(high_indices) == 0:
-            warnings.warn("no bin is selected as the reference region. please increase high_quantile.")
-            cutoff = np.nan
-        else:
-            high_counts = n[high_indices]
-            mean_high_counts = np.mean(high_counts)
-            std_high_counts  = np.std(high_counts)
-            if std_high_counts == 0:
-                warnings.warn("only one bin is selected as the reference region, and thus the standard deviation cannot be computed. please increase high_quantile.")
-                cutoff = np.nan
-            else: 
-                cutoff = (mean_low_counts - mean_high_counts) / std_high_counts
-        
+    # cutoff
+    if len(high_indices) == 0:
+        warnings.warn("no bin is selected as the reference region. please increase high_quantile.")
+        return np.nan, ratio
 
-    if ax is not None:
-        patches = ax.hist(amps, bins=bin_edges, color='royalblue')[2]
-        n_low_bins = len(low_indices)
-        for i, patch in enumerate(patches):
-            if i < n_low_bins:
-                patch.set_facecolor('limegreen')
-            elif bin_edges[i] >= high_quantile_value:
-                patch.set_facecolor('red')
-        # low-quantile cutoff
-        low_edge = bin_edges[n_low_bins]
-        ax.axvline(low_edge, linestyle='--',color='limegreen')
-        # high-quantile cutoff
-        ax.axvline(bin_edges[high_indices[0]], color='red', linestyle='--')
-        ax.set_xlabel('Amplitude')
-        ax.set_ylabel('Count')
-        ax.set_title(f'Quantiles=({low_quantile}, {high_quantile}), n_bins={n_bins}, \n cutoff={np.round(cutoff,3)}, ratio={np.round(ratio,3)}')
-        # ax.legend()
- 
+    high_counts = n[high_indices]
+    mean_high_counts = np.mean(high_counts)
+    std_high_counts  = np.std(high_counts)
+    if std_high_counts == 0:
+        warnings.warn("only one bin is selected as the reference region, and thus the standard deviation cannot be computed. please increase high_quantile.")
+        return np.nan, ratio
+    
+    cutoff = (mean_low_counts - mean_high_counts) / std_high_counts 
     return cutoff, ratio
 
 def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
