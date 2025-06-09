@@ -6,6 +6,7 @@ Calculation
 
 
 Metric describing whether an amplitude distribution is cut off, similar to _amp_cutoff  :ref:`amplitude cutoff <amp_cutoff>` but without a Gaussian assumption.
+It flips the sign of the amplitude if 'peak_sign' == 'neg' when computing the amplitude.
 
 The **noise cutoff** metric assesses whether a unit’s spike‐amplitude distribution is truncated
 at the low-end, which may be due to the high amplitude detection threhold in the deconvolution step, 
@@ -59,18 +60,6 @@ instead, it directly compares counts in the low‐amplitude bins to counts in hi
 
    - If there are no low bins, :math:`\mathrm{ratio} = NaN`.  
 
-6. **Optional plotting**  
-
-   If an `ax` (a Matplotlib Axes) is provided, the function will:
-
-   - Draw the histogram bars.
-   - Color all “low‐quantile” bins in green.
-   - Color all “high‐quantile” bins in red.
-   - Draw vertical dashed lines at:
-
-     - The boundary between low‐ and mid‐quantile (green dashed).
-     - The boundary at the start of the high‐quantile (red dashed).
-   - Title the plot with `Quantiles=(low_quantile, high_quantile), n_bins=<n_bins>, cutoff=<value>, ratio=<value>`.
 
 Together, (cutoff, ratio) quantify how suppressed the low‐end of the amplitude distribution is relative to the top quantile and to the peak.
 
@@ -96,28 +85,14 @@ Example code
     # Select units you are interested in vizulazing.
     unit_ids = ... 
 
-    # Compute noise_cutoff without plotting:
+    # Compute noise_cutoff:
     summary_dict = compute_noise_cutoff(
         sorting_analyzer=sorting_analyzer
         high_quantile=0.25,
         low_quantile=0.10,
         n_bins=100,
-        ax=None,
         unit_ids=unit_ids
     )
-
-    # Compute noise_cutoff and plot colored histogram for a single unit:
-    fig, ax = plt.subplots(1,1)
-    summary_dict = noise_cutoff(
-        sorting_analyzer=sorting_analyzer
-        high_quantile=0.25,
-        low_quantile=0.10,
-        n_bins=100,
-        ax=ax,
-        unit_ids=unit_ids
-    )
-    # The histogram will show low bins in green, high bins in red.
-
 
 Reference
 ---------
