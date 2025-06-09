@@ -110,7 +110,7 @@ def compute_noise_cutoffs(
         noise_cutoff_dict[unit_id] = cutoff
         ratio_dict[unit_id] = ratio
 
-    return noise_cutoff_dict
+    return res(noise_cutoff_dict, ratio_dict)
 
 def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     """
@@ -185,6 +185,8 @@ def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     
     cutoff = (mean_low_counts - mean_high_counts) / std_high_counts 
     return cutoff, ratio
+
+
 
 def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
     """
