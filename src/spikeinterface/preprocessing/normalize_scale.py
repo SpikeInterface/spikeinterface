@@ -81,7 +81,7 @@ class NormalizeByQuantileRecording(BasePreprocessor):
     ):
         assert mode in ("pool_channel", "by_channel"), "'mode' must be 'pool_channel' or 'by_channel'"
 
-        random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
+        random_data = get_random_data_chunks(recording, return_in_uV=False, **random_chunk_kwargs)
 
         if mode == "pool_channel":
             num_chans = recording.get_num_channels()
@@ -285,7 +285,7 @@ class ZScoreRecording(BasePreprocessor):
                 offset = offset[None, :]
             assert offset.shape[1] == num_chans
         else:
-            random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
+            random_data = get_random_data_chunks(recording, return_in_uV=False, **random_chunk_kwargs)
 
             if mode == "median+mad":
                 medians = np.median(random_data, axis=0)
