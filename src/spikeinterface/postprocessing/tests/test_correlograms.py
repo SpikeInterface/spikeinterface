@@ -1,10 +1,11 @@
 import numpy as np
 
-try:
-    import numba
+import importlib.util
 
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ModuleNotFoundError as err:
+else:
     HAVE_NUMBA = False
 
 from spikeinterface import NumpySorting, generate_sorting

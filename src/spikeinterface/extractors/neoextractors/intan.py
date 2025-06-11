@@ -1,10 +1,10 @@
 from __future__ import annotations
-
 from pathlib import Path
 
-from spikeinterface.core.core_tools import define_function_from_class
+import numpy as np
 
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
+from spikeinterface.core.core_tools import define_function_from_class
+from .neobaseextractor import NeoBaseRecordingExtractor
 
 
 class IntanRecordingExtractor(NeoBaseRecordingExtractor):
@@ -64,23 +64,43 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
             **neo_kwargs,
         )
 
-        self._kwargs.update(dict(file_path=str(Path(file_path).absolute())))
-        if "ignore_integrity_checks" in neo_kwargs:
-            self._kwargs["ignore_integrity_checks"] = neo_kwargs["ignore_integrity_checks"]
+        amplifier_streams = ["RHS2000 amplifier channel", "RHD2000 amplifier channel"]
+        if self.stream_name in amplifier_streams:
+            self._add_channel_groups()
+
+        self._kwargs.update(
+            dict(file_path=str(Path(file_path).resolve()), ignore_integrity_checks=ignore_integrity_checks),
+        )
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path, ignore_integrity_checks: bool = False):
 
-        # Only propagate the argument if the version is greater than 0.13.1
-        import packaging
-        import neo
-
-        neo_version = packaging.version.parse(neo.__version__)
-        if neo_version > packaging.version.parse("0.13.1"):
-            neo_kwargs = {"filename": str(file_path), "ignore_integrity_checks": ignore_integrity_checks}
-        else:
-            neo_kwargs = {"filename": str(file_path)}
+        neo_kwargs = {"filename": str(file_path), "ignore_integrity_checks": ignore_integrity_checks}
         return neo_kwargs
+
+    def _add_channel_groups(self):
+
+        num_channels = self.get_num_channels()
+        groups = np.zeros(shape=num_channels, dtype="uint16")
+        group_names = np.zeros(shape=num_channels, dtype="str")
+
+        signal_header = self.neo_reader.header["signal_channels"]
+        amplifier_signal_header = signal_header[signal_header["stream_id"] == self.stream_id]
+        original_ids = amplifier_signal_header["id"]
+
+        # The hard-coded IDS of intan ids is "Port-Number" (e.g. A-001, C-017, B-020, etc) for amplifier channels
+        channel_ports = [id[:1] for id in original_ids if id[1] == "-"]
+
+        # This should be A, B, C, D, ...
+        amplifier_ports = np.unique(channel_ports).tolist()
+
+        for port in amplifier_ports:
+            channel_index = np.where(np.array(channel_ports) == port)
+            group_names[channel_index] = port
+            groups[channel_index] = amplifier_ports.index(port)
+
+        self.set_channel_groups(groups)
+        self.set_property(key="group_names", values=group_names)
 
 
 read_intan = define_function_from_class(source_class=IntanRecordingExtractor, name="read_intan")

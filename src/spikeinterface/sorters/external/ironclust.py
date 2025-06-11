@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import Union
 import sys
 
-from ..utils import ShellScript
-from ..basesorter import BaseSorter, get_job_kwargs
+from spikeinterface.sorters.utils import ShellScript
+from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 
-from spikeinterface.extractors import MdaRecordingExtractor, MdaSortingExtractor
+from spikeinterface.extractors.extractor_classes import MdaRecordingExtractor, MdaSortingExtractor
 
 PathType = Union[str, Path]
 

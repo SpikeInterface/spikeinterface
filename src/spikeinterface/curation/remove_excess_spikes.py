@@ -2,8 +2,8 @@ from __future__ import annotations
 from typing import Optional
 import numpy as np
 
-from ..core import BaseSorting, BaseSortingSegment, BaseRecording
-from ..core.waveform_tools import has_exceeding_spikes
+from spikeinterface.core import BaseSorting, BaseSortingSegment, BaseRecording
+from spikeinterface.core.waveform_tools import has_exceeding_spikes
 
 
 class RemoveExcessSpikesSorting(BaseSorting):

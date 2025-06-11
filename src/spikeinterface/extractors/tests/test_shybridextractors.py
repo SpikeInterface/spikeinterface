@@ -2,7 +2,7 @@ import pytest
 
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
-from spikeinterface.extractors import SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor
+from spikeinterface.extractors.extractor_classes import SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor
 
 
 @pytest.mark.skipif(True, reason="SHYBRID only tested locally")

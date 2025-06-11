@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.102.2"
+version = "0.102.4"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -25,13 +25,14 @@ dependencies = [
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.18,<3",
-    "neo>=0.14.0",
+    "neo>=0.14.1",
     "probeinterface>=0.2.23",
     "packaging",
+    "numcodecs<0.16.0", # For supporting zarr < 3
 ]
 
 [build-system]
-requires = ["setuptools>=62.0"]
+requires = ["setuptools>=78.0.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -63,19 +64,17 @@ extractors = [
     "MEArec>=1.8",
     "pynwb>=2.6.0",
     "hdmf-zarr>=0.11.0",
-    "pyedflib>=0.1.30,<0.1.39",
+    "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",
-    "ONE-api>=2.7.0", # alf sorter and streaming IBL
-    "ibllib>=2.36.0", # streaming IBL
+    "ibllib", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
     "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
-    "ONE-api>=2.7.0,<2.10.0", # alf sorter and streaming IBL
-    "ibllib>=2.36.0", # streaming IBL
+    "ibllib", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
     "fsspec",
@@ -121,7 +120,7 @@ qualitymetrics = [
 ]
 
 test_core = [
-    "pytest",
+    "pytest<8.4.0",
     "pytest-dependency",
     "psutil",
 
@@ -135,25 +134,25 @@ test_extractors = [
     # Functions to download data in neo test suite
     "pooch>=1.8.2",
     "datalad>=1.0.2",
+    # Commenting out for release
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test_preprocessing = [
-    "ibllib>=2.36.0", # for IBL
+    "ibllib", # for IBL
     "torch",
 ]
 
 
 test = [
-    "pytest",
+    "pytest<8.4.0",
     "pytest-dependency",
     "pytest-cov",
-
-    "huggingface_hub",
+    "psutil",
 
     # preprocessing
-    "ibllib>=2.36.0", # for IBL
+    "ibllib", # for IBL
 
     # streaming templates
     "s3fs",
@@ -164,7 +163,7 @@ test = [
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
 
     # for sortingview backend
-    "sortingview",
+    "sortingview>=0.12.0",
 
     # for motion and sortingcomponents
     "torch",
@@ -194,8 +193,8 @@ docs = [
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "networkx",
-    "skops", # For auotmated curation
-    "scikit-learn", # For auotmated curation
+    "skops", # For automated curation
+    "scikit-learn", # For automated curation
     # Download data
     "pooch>=1.8.2",
     "datalad>=1.0.2",
@@ -203,7 +202,6 @@ docs = [
     # for release we need pypi, so this needs to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
-
 ]
 
 dev = [

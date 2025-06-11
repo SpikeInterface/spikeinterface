@@ -3,9 +3,9 @@ from __future__ import annotations
 import numpy as np
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
-from ..core import get_random_data_chunks, get_channel_distances
+from spikeinterface.core import get_random_data_chunks, get_channel_distances
 from .filter import fix_dtype
 
 
@@ -56,6 +56,8 @@ class WhitenRecording(BasePreprocessor):
     whitened_recording : WhitenRecording
         The whitened recording extractor
     """
+
+    _precomputable_kwarg_names = ["W", "M"]
 
     def __init__(
         self,
@@ -239,7 +241,7 @@ def compute_covariance_matrix(recording, apply_mean, regularize, regularize_kwar
     Compute the covariance matrix from randomly sampled data chunsk.
     See `compute_whitening_matrix()` for parameters.
     """
-    random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
+    random_data = get_random_data_chunks(recording, concatenated=True, return_in_uV=False, **random_chunk_kwargs)
     random_data = random_data.astype(np.float32)
 
     regularize_kwargs = regularize_kwargs if regularize_kwargs is not None else {"method": "GraphicalLassoCV"}
@@ -285,4 +287,4 @@ def compute_sklearn_covariance_matrix(data, regularize_kwargs):
 
 
 # function for API
-whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")
+whiten = define_function_handling_dict_from_class(source_class=WhitenRecording, name="whiten")

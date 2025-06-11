@@ -5,7 +5,7 @@ import numpy as np
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
-from ..core import ChannelSparsity, get_template_extremum_channel
+from spikeinterface.core import ChannelSparsity, get_template_extremum_channel
 
 
 class UnitWaveformDensityMapWidget(BaseWidget):

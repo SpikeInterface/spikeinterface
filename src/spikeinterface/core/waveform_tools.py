@@ -13,7 +13,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-import multiprocessing
 
 from spikeinterface.core.baserecording import BaseRecording
 
@@ -30,7 +29,8 @@ def extract_waveforms_to_buffers(
     nbefore,
     nafter,
     mode="memmap",
-    return_scaled=False,
+    return_scaled=None,
+    return_in_uV=True,
     folder=None,
     dtype=None,
     sparsity_mask=None,
@@ -408,7 +408,8 @@ def extract_waveforms_to_single_buffer(
     nbefore,
     nafter,
     mode="memmap",
-    return_scaled=False,
+    return_scaled=None,
+    return_in_uV=True,
     file_path=None,
     dtype=None,
     sparsity_mask=None,
@@ -715,7 +716,8 @@ def estimate_templates(
     nbefore: int,
     nafter: int,
     operator: str = "average",
-    return_scaled: bool = True,
+    return_scaled=None,
+    return_in_uV=True,
     job_name=None,
     **job_kwargs,
 ):
@@ -787,7 +789,8 @@ def estimate_templates_with_accumulator(
     unit_ids: list | np.ndarray,
     nbefore: int,
     nafter: int,
-    return_scaled: bool = True,
+    return_scaled=None,
+    return_in_uV=True,
     job_name=None,
     return_std: bool = False,
     verbose: bool = False,

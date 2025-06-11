@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import warnings
 
 from spikeinterface.core.job_tools import fix_job_kwargs
 
@@ -18,38 +17,19 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
     Computes the spike amplitudes.
 
     Needs "templates" to be computed first.
-    Localize spikes in 2D or 3D with several methods given the template.
+    Computes spike amplitudes from the template's peak channel for every spike.
 
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object
-    ms_before : float, default: 0.5
-        The left window, before a peak, in milliseconds
-    ms_after : float, default: 0.5
-        The right window, after a peak, in milliseconds
-    spike_retriver_kwargs : dict
-        A dictionary to control the behavior for getting the maximum channel for each spike
-        This dictionary contains:
-          * channel_from_template: bool, default: True
-              For each spike is the maximum channel computed from template or re estimated at every spikes
-              channel_from_template = True is old behavior but less acurate
-              channel_from_template = False is slower but more accurate
-          * radius_um: float, default: 50
-              In case channel_from_template=False, this is the radius to get the true peak
-          * peak_sign, default: "neg"
-              In case channel_from_template=False, this is the peak sign.
-    method : "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
-        The localization method to use
-    **method_kwargs : dict, default: {}
-        Kwargs which are passed to the method function. These can be found in the docstrings of `compute_center_of_mass`, `compute_grid_convolution` and `compute_monopolar_triangulation`.
-    outputs : "numpy" | "by_unit", default: "numpy"
-        The output format, either concatenated as numpy array or separated on a per unit basis
+    peak_sign : "neg" | "pos" | "both", default: "neg"
+        Sign of the template to compute extremum channel used to retrieve spike amplitudes.
 
     Returns
     -------
-    spike_locations: np.array
-        All locations for all spikes and all units are concatenated
+    spike_amplitudes: np.array
+        All amplitudes for all spikes and all units are concatenated (along time, like in spike vector)
 
     """
 

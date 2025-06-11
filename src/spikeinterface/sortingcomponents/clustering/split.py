@@ -122,10 +122,10 @@ def split_clusters(
             if recursive:
                 recursion_level = np.max(split_count[peak_indices])
                 if recursive_depth is not None:
-                    # stop reccursivity when recursive_depth is reach
+                    # stop recursivity when recursive_depth is reach
                     extra_ball = recursion_level < recursive_depth
                 else:
-                    # reccurssive always
+                    # recursive always
                     extra_ball = True
 
                 if extra_ball:
@@ -211,6 +211,7 @@ class LocalFeatureClustering:
         waveforms_sparse_mask=None,
         min_size_split=25,
         n_pca_features=2,
+        projection_mode="tsvd",
         minimum_overlap_ratio=0.25,
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
@@ -247,16 +248,36 @@ class LocalFeatureClustering:
 
         is_split = False
 
-        if flatten_features.shape[1] > n_pca_features:
-            from sklearn.decomposition import PCA
+        if isinstance(n_pca_features, float):
+            assert 0 < n_pca_features < 1, "n_components should be in ]0, 1["
+            nb_dimensions = min(flatten_features.shape[0], flatten_features.shape[1])
+            if projection_mode == "pca":
+                from sklearn.decomposition import PCA
 
-            # from sklearn.decomposition import TruncatedSVD
-            # tsvd = TruncatedSVD(n_pca_features)
-            tsvd = PCA(n_pca_features, whiten=True)
+                tsvd = PCA(nb_dimensions, whiten=True)
+            elif projection_mode == "tsvd":
+                from sklearn.decomposition import TruncatedSVD
+
+                tsvd = TruncatedSVD(nb_dimensions)
             final_features = tsvd.fit_transform(flatten_features)
-            del tsvd
-        else:
-            final_features = flatten_features
+            n_explain = np.sum(np.cumsum(tsvd.explained_variance_ratio_) <= n_pca_features) + 1
+            final_features = final_features[:, :n_explain]
+            n_pca_features = final_features.shape[1]
+        elif isinstance(n_pca_features, int):
+            if flatten_features.shape[1] > n_pca_features:
+                if projection_mode == "pca":
+                    from sklearn.decomposition import PCA
+
+                    tsvd = PCA(n_pca_features, whiten=True)
+                elif projection_mode == "tsvd":
+                    from sklearn.decomposition import TruncatedSVD
+
+                    tsvd = TruncatedSVD(n_pca_features)
+
+                final_features = tsvd.fit_transform(flatten_features)
+            else:
+                final_features = flatten_features
+                tsvd = None
 
         if clusterer == "hdbscan":
             from hdbscan import HDBSCAN
@@ -270,7 +291,8 @@ class LocalFeatureClustering:
             min_cluster_size = clusterer_kwargs["min_cluster_size"]
             dipscore, cutpoint = isocut5(final_features[:, 0])
             possible_labels = np.zeros(final_features.shape[0])
-            if dipscore > 1.5:
+            min_dip = clusterer_kwargs.get("min_dip", 1.5)
+            if dipscore > min_dip:
                 mask = final_features[:, 0] > cutpoint
                 if np.sum(mask) > min_cluster_size and np.sum(~mask):
                     possible_labels[mask] = 1
@@ -289,9 +311,12 @@ class LocalFeatureClustering:
             colors = plt.colormaps["tab10"].resampled(len(labels_set))
             colors = {k: colors(i) for i, k in enumerate(labels_set)}
             colors[-1] = "k"
-            fig, axs = plt.subplots(nrows=2)
+            fig, axs = plt.subplots(nrows=4)
 
             flatten_wfs = aligned_wfs.swapaxes(1, 2).reshape(aligned_wfs.shape[0], -1)
+
+            if final_features.shape[1] == 1:
+                final_features = np.hstack((final_features, np.zeros_like(final_features)))
 
             sl = slice(None, None, 100)
             for k in np.unique(possible_labels):
@@ -302,10 +327,27 @@ class LocalFeatureClustering:
                     centroid = final_features[:, :2][mask].mean(axis=0)
                     ax.text(centroid[0], centroid[1], f"Label {k}", fontsize=10, color="k")
                 ax = axs[1]
-                ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
+                ax.plot(flatten_wfs[mask].T, color=colors[k], alpha=0.1)
                 if k > -1:
                     ax.plot(np.median(flatten_wfs[mask].T, axis=1), color=colors[k], lw=2)
                 ax.set_xlabel("PCA features")
+
+                ax = axs[3]
+                if n_pca_features == 1:
+                    bins = np.linspace(final_features[:, 0].min(), final_features[:, 0].max(), 100)
+                    ax.hist(final_features[mask, 0], bins, color=colors[k], alpha=0.1)
+                else:
+                    ax.plot(final_features[mask].T, color=colors[k], alpha=0.1)
+                if k > -1 and n_pca_features > 1:
+                    ax.plot(np.median(final_features[mask].T, axis=1), color=colors[k], lw=2)
+                ax.set_xlabel("Projected PCA features")
+
+            if tsvd is not None:
+                ax = axs[2]
+                sorted_components = np.argsort(tsvd.explained_variance_ratio_)[::-1]
+                ax.plot(tsvd.explained_variance_ratio_[sorted_components], c="k")
+                del tsvd
+
             ymin, ymax = ax.get_ylim()
             ax.plot([n_pca_features, n_pca_features], [ymin, ymax], "k--")
 
