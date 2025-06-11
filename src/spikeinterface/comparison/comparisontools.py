@@ -466,6 +466,8 @@ def _empty_match_series(unit1_ids, unit2_ids):
         match_12[:] = -1
     elif unit2_ids.dtype.kind == 'U':
         match_12[:] = ''
+    elif unit2_ids.dtype.kind == 'O':
+        match_12[:] = ''
     else:
         raise ValueError("make_best_match or make_hungarian_match has unit_ids dtype wich are not  'i' or 'U'")
     return match_12
