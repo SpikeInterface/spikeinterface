@@ -399,6 +399,23 @@ highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
 
 
 def fix_dtype(recording, dtype):
+    """
+    Fix recording dtype for preprocessing, by always returning a numpy.dtype.
+    If `dtype` is not provided, the recording dtype is returned.
+    If the dtype is unsigned, it raises a ValueError.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording to fix the dtype for
+    dtype : str | numpy.dtype
+        A specified dtype to return as numpy.dtype
+
+    Returns
+    -------
+    fixed_dtype : numpy.dtype
+        The fixed numpy.dtype
+    """
     if dtype is None:
         dtype = recording.get_dtype()
     dtype = np.dtype(dtype)
