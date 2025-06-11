@@ -405,6 +405,9 @@ def fix_dtype(recording, dtype):
 
     # if uint --> force int
     if dtype.kind == "u":
-        dtype = np.dtype(dtype.str.replace("u", "i"))
+        raise ValueError(
+            "Unsigned types are not supported. You can use "
+            "`spikeinterface.preprocessing.unsigned_to_signed` to convert the recording to a signed type."
+        )
 
     return dtype
