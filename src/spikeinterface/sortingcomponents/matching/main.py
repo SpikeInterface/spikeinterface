@@ -39,7 +39,6 @@ def find_spikes_from_templates(
         Optionaly returns for debug purpose.
     """
     from .method_list import matching_methods
-    from .base import _base_matching_dtype
 
     assert method in matching_methods, f"The 'method' {method} is not valid. Use a method from {matching_methods}"
 
@@ -50,7 +49,7 @@ def find_spikes_from_templates(
     nodes = [node0]
     assert "templates" in method_kwargs, "You must provide templates in method_kwargs"
     if len(method_kwargs["templates"].unit_ids) == 0:
-        return np.zeros(0, dtype=_base_matching_dtype)
+        return np.zeros(0, dtype=node0.get_dtype())
 
     spikes = run_node_pipeline(
         recording,
