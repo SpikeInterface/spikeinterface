@@ -257,7 +257,7 @@ the "chain" concept for this module. For example:
     rec_only_good_channels = detect_and_remove_bad_channels(recording=rec)
 
     # detect and interpolate the bad channels
-    rec_interpolated_channels = detect_and_interpolate_bad_channels(remove_channel_ids=bad_channel_ids)
+    rec_interpolated_channels = detect_and_interpolate_bad_channels(recording=rec)
 
 
 * :py:func:`~spikeinterface.preprocessing.detect_bad_channels()`
