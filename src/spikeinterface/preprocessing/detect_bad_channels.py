@@ -95,7 +95,7 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
         The recording with bad channels removed
     """
 
-    _precomputable_kwarg_names = ["bad_channel_ids"]
+    _precomputable_kwarg_names = ["bad_channel_ids", "channel_labels"]
 
     def __init__(
         self,
