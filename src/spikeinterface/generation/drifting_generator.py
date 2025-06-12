@@ -154,6 +154,7 @@ def make_one_displacement_vector(
     elif drift_mode == "random_walk":
         rg = np.random.RandomState(seed=seed)
         steps = rg.random_integers(low=0, high=1, size=num_samples)
+        steps = steps.astype('float64')
         # 0 -> -1 and 1 -> 1
         steps = steps * 2 -1
         steps[:start_drift_index] = 0
@@ -220,6 +221,8 @@ def generate_displacement_vector(
 
     Returns
     -------
+    unit_displacements : numpy.ndarray
+        The final per unit, displacement vector with shape (num_times, num_units, 2)
     displacement_vectors : numpy.ndarray
         The drift vector is a numpy array with shape (num_times, 2, num_motions)
         num_motions is generally 1, but can be > 1 in case of combining several drift vectors
@@ -255,7 +258,9 @@ def generate_displacement_vector(
             **motion_kwargs,
             seed=seed,
         )
+
         one_displacement = one_displacement[:, np.newaxis] * (drift_stop_um - drift_start_um) + mid
+
         displacement_vectors.append(one_displacement[:, :, np.newaxis])
 
         if non_rigid_gradient is None:
@@ -271,10 +276,27 @@ def generate_displacement_vector(
                 factors = 1 - factors
             f = np.abs(non_rigid_gradient)
             displacement_unit_factor[:, m] = factors * (1 - f) + f
-
+    
     displacement_vectors = np.concatenate(displacement_vectors, axis=2)
 
-    return displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps
+
+    # unit_displacements is the sum of all discplacements (times, units, direction_x_y)
+    unit_displacements = np.zeros((displacement_vectors.shape[0], num_units, 2))
+    for direction in (0, 1):
+        # x and y
+        for i in range(displacement_vectors.shape[2]):
+            m = displacement_vectors[:, direction, i][:, np.newaxis] * displacement_unit_factor[:, i][np.newaxis, :]
+            unit_displacements[:, :, direction] += m
+
+        lim0 = min(drift_start_um[direction], drift_stop_um[direction])
+        lim1 = max(drift_start_um[direction], drift_stop_um[direction])
+        if np.min(unit_displacements[:, :, direction]) < lim0 or np.max(unit_displacements[:, :, direction]) > lim1:
+            raise ValueError(
+                "unit_displacements is too big when combining several motion (with motion_list)."
+                "Please consider a smaller 'amplitude_factor' for each motion"
+            )
+
+    return unit_displacements, displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps
 
 
 def generate_drifting_recording(
@@ -395,17 +417,9 @@ def generate_drifting_recording(
         **generate_unit_locations_kwargs,
     )
 
-    displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
+    unit_displacements, displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
         generate_displacement_vector(duration, unit_locations[:, :2], seed=seed, **generate_displacement_vector_kwargs)
     )
-
-    # unit_displacements is the sum of all discplacements (times, units, direction_x_y)
-    unit_displacements = np.zeros((displacement_vectors.shape[0], num_units, 2))
-    for direction in (0, 1):
-        # x and y
-        for i in range(displacement_vectors.shape[2]):
-            m = displacement_vectors[:, direction, i][:, np.newaxis] * displacement_unit_factor[:, i][np.newaxis, :]
-            unit_displacements[:, :, direction] += m
 
     # unit_params need to be fixed before the displacement steps
     generate_templates_kwargs = generate_templates_kwargs.copy()

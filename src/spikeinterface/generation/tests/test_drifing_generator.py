@@ -33,15 +33,16 @@ def test_generate_displacement_vector():
     unit_locations[:, 1] = np.linspace(-50, 50, 10)
 
     # one motion Y only
-    displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
+    unit_displacements, displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
         generate_displacement_vector(duration, unit_locations)
     )
+    assert unit_locations.shape[0] == unit_displacements.shape[1]
     assert unit_locations.shape[0] == displacement_unit_factor.shape[0]
     assert displacement_vectors.shape[2] == displacement_unit_factor.shape[1]
     assert displacement_vectors.shape[2] == 1
 
     # two motion X and Y
-    displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
+    unit_displacements, displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
         generate_displacement_vector(
             duration,
             unit_locations,
@@ -50,7 +51,7 @@ def test_generate_displacement_vector():
             motion_list=[
                 dict(
                     drift_mode="zigzag",
-                    amplitude_factor=1.0,
+                    amplitude_factor=0.7,
                     non_rigid_gradient=0.4,
                     t_start_drift=60.0,
                     t_end_drift=None,
@@ -94,7 +95,7 @@ def test_generate_drifting_recording():
 
 
 if __name__ == "__main__":
-    test_make_one_displacement_vector()
-    # test_generate_displacement_vector()
+    # test_make_one_displacement_vector()
+    test_generate_displacement_vector()
     # test_generate_noise()
     # test_generate_drifting_recording()
