@@ -41,7 +41,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.75},
         "seed": 42,
-        "deterministic": False,
+        "deterministic_peaks_detection": False,
         "debug": False,
     }
 
@@ -111,7 +111,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         radius_um = params["general"].get("radius_um", 75)
         peak_sign = params["detection"].get("peak_sign", "neg")
         templates_from_svd = params["templates_from_svd"]
-        deterministic = params["deterministic_peaks"]
+        deterministic = params["deterministic_peaks_detection"]
         debug = params["debug"]
         seed = params["seed"]
         apply_preprocessing = params["apply_preprocessing"]
