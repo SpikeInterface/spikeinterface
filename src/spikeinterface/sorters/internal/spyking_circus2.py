@@ -69,7 +69,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "seed": "An int to control how chunks are shuffled while detecting peaks",
-        "deterministic": "A boolean to specify if the sorting should be deterministic or not. If True, then the seed will be used to shuffle the chunks",
+        "deterministic_peaks_detection": "A boolean to specify if the peak detection should be deterministic or not. If True, then the seed will be used to shuffle the chunks",
         "debug": "Boolean to specify if internal data structures made during the sorting should be kept for debugging",
     }
 
@@ -111,7 +111,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         radius_um = params["general"].get("radius_um", 75)
         peak_sign = params["detection"].get("peak_sign", "neg")
         templates_from_svd = params["templates_from_svd"]
-        deterministic = params["deterministic"]
+        deterministic = params["deterministic_peaks"]
         debug = params["debug"]
         seed = params["seed"]
         apply_preprocessing = params["apply_preprocessing"]
