@@ -68,6 +68,7 @@ with a minimum frequency of 250 Hz followed by whitening with default parameters
     preprocessing_dict = {
         'highpass_filter': {'freq_min': 250},
         'whiten': {}
+        'detect_and_remove_bad_channels': {}
     }
 
 We can then pass this dictionary to the :code:`apply_pipeline` function to make a preprocessed recording

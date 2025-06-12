@@ -2,6 +2,7 @@ from spikeinterface.generation import generate_recording
 from spikeinterface.preprocessing import apply_pipeline, preprocessor_dict, bandpass_filter, common_reference, whiten
 from spikeinterface.preprocessing.pipeline import pp_names_to_functions
 from spikeinterface.core.testing import check_recordings_equal
+from spikeinterface.core import BaseRecording
 
 
 def test_pipeline_equiv_to_step():
@@ -12,13 +13,20 @@ def test_pipeline_equiv_to_step():
     """
 
     single_group_rec = generate_recording(durations=[1])
-    single_group_rec.set_property("gain_to_physical_unit", [2.0, 1.5])
-    single_group_rec.set_property("offset_to_physical_unit", [0.0, 1.0])
 
     rec_groups = generate_recording(durations=[1])
     rec_groups.set_property(key="group", values=[0, 1])
+
+    # Set some properties that some of the preprocessing steps rely on
+    single_group_rec.set_property("gain_to_physical_unit", [2.0, 1.5])
+    single_group_rec.set_property("offset_to_physical_unit", [0.0, 1.0])
+    single_group_rec.set_property("gain_to_uV", [2.0, 1.5])
+    single_group_rec.set_property("offset_to_uV", [0.0, 1.0])
+
     rec_groups.set_property("gain_to_physical_unit", [2.0, 1.5])
     rec_groups.set_property("offset_to_physical_unit", [0.0, 1.0])
+    rec_groups.set_property("gain_to_uV", [2.0, 1.5])
+    rec_groups.set_property("offset_to_uV", [0.0, 1.0])
 
     for rec in [single_group_rec, rec_groups.split_by("group")]:
         for _, pp_wrapper in preprocessor_dict.items():
@@ -59,9 +67,6 @@ def test_pipeline_equiv_to_step():
             elif pp_name == "decimate":
                 pp_dict[pp_name] = {"decimation_factor": 2}
                 pp_rec_from_class = pp_class(rec, decimation_factor=2)
-            # elif pp_name == "scale_to_physical_units":
-            #     pp_dict[pp_name] = {"gain_to_physical_unit": 2}
-            #     pp_rec_from_class = pp_class(rec, gain_to_physical_unit=2)
             else:
                 pp_rec_from_class = pp_class(rec)
 
