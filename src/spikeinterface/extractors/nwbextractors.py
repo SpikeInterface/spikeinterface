@@ -2,12 +2,19 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Literal, Dict, BinaryIO
 import warnings
+import importlib.util
 
 import numpy as np
 
 from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
+
+
+if importlib.util.find_spec("pynwb") is not None:
+    HAVE_PYNWB = True
+else:
+    HAVE_PYNWB = False
 
 
 def read_file_from_backend(
@@ -568,9 +575,7 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
 
         # extract info
         if use_pynwb:
-            try:
-                import pynwb
-            except ImportError:
+            if not HAVE_PYNWB:
                 raise ImportError(self.installation_mesg)
 
             (
@@ -1082,9 +1087,7 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
                 self.backend = "hdf5"
 
         if use_pynwb:
-            try:
-                import pynwb
-            except ImportError:
+            if not HAVE_PYNWB:
                 raise ImportError(self.installation_mesg)
 
             unit_ids, spike_times_data, spike_times_index_data = self._fetch_sorting_segment_info_pynwb(
@@ -1480,9 +1483,7 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
             self.backend = "zarr" if self.stream_mode == "zarr" else "hdf5"
 
         if use_pynwb:
-            try:
-                import pynwb
-            except ImportError:
+            if not HAVE_PYNWB:
                 raise ImportError(self.installation_mesg)
 
             channel_ids, sampling_frequency, dtype, segment_data, times_kwargs = self._fetch_recording_segment_info(
