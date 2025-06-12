@@ -1,5 +1,3 @@
-import probeinterface
-
 from spikeinterface.generation import split_sorting_by_amplitudes, split_sorting_by_times
 
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer

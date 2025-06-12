@@ -4,7 +4,7 @@ import warnings
 from pathlib import Path
 
 import numpy as np
-from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, write_probeinterface
+from probeinterface import read_probeinterface, write_probeinterface
 
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets

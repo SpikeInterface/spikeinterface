@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from packaging import version
 from typing import Optional
 
 from spikeinterface.core.core_tools import define_function_from_class
