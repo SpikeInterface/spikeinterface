@@ -203,7 +203,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         return self.possible_match_21[unit2]
 
     def get_agreement_fraction(self, unit1=None, unit2=None):
-        if unit1 is None or unit1 == -1 or unit2 is None or unit2 == -1:
+        if unit1 is None or unit1 == -1 or unit1 == '' or unit2 is None or unit2 == -1 or unit2 == '':
             return 0
         else:
             return self.agreement_scores.at[unit1, unit2]
@@ -571,7 +571,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         false_positive_ids = []
         for u2 in self.unit2_ids:
             if u2 not in matched_units2:
-                if self.best_match_21[u2] == -1:
+                if self.best_match_21[u2] == -1 or self.best_match_21[u2] == '':
                     false_positive_ids.append(u2)
                 else:
                     u1 = self.best_match_21[u2]
@@ -615,7 +615,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         matched_units2 = list(self.hungarian_match_12.values)
         redundant_ids = []
         for u2 in self.unit2_ids:
-            if u2 not in matched_units2 and self.best_match_21[u2] != -1:
+            if u2 not in matched_units2 and self.best_match_21[u2] != -1 and self.best_match_21[u2] != '':
                 u1 = self.best_match_21[u2]
                 if u2 != self.best_match_12[u1]:
                     score = self.agreement_scores.at[u1, u2]
