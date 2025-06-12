@@ -128,7 +128,7 @@ def apply_curation_labels(
         sorting.set_property(key, all_values)
 
     for new_unit_id, merge in zip(new_unit_ids, curation_model.merges):
-        old_group_ids = merge.merge_unit_group
+        old_group_ids = merge.unit_ids
         for label_key, label_def in curation_model.label_definitions.items():
             if label_def.exclusive:
                 group_values = []
@@ -221,7 +221,7 @@ def apply_curation(
         if len(curation_model.merges) > 0:
             sorting, _, new_unit_ids = apply_merges_to_sorting(
                 sorting,
-                merge_unit_groups=[m.merge_unit_group for m in curation_model.merges],
+                merge_unit_groups=[m.unit_ids for m in curation_model.merges],
                 censor_ms=censor_ms,
                 return_extra=True,
                 new_id_strategy=new_id_strategy,
@@ -237,7 +237,7 @@ def apply_curation(
             analyzer = analyzer.remove_units(curation_model.removed)
         if len(curation_model.removed) > 0:
             analyzer, new_unit_ids = analyzer.merge_units(
-                merge_unit_groups=[m.merge_unit_group for m in curation_model.merges],
+                merge_unit_groups=[m.unit_ids for m in curation_model.merges],
                 censor_ms=censor_ms,
                 merging_mode=merging_mode,
                 sparsity_overlap=sparsity_overlap,

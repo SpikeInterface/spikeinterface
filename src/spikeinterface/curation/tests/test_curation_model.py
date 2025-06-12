@@ -98,15 +98,15 @@ def test_merge_units():
 
     model = CurationModel(**valid_merge)
     assert len(model.merges) == 2
-    assert model.merges[0].merge_new_unit_id == 5
-    assert model.merges[1].merge_new_unit_id == 6
+    assert model.merges[0].new_unit_id == 5
+    assert model.merges[1].new_unit_id == 6
 
     # Test dictionary format
     valid_merge_dict = {"format_version": "2", "unit_ids": [1, 2, 3, 4], "merges": {5: [1, 2], 6: [3, 4]}}
 
     model = CurationModel(**valid_merge_dict)
     assert len(model.merges) == 2
-    merge_new_ids = {merge.merge_new_unit_id for merge in model.merges}
+    merge_new_ids = {merge.new_unit_id for merge in model.merges}
     assert merge_new_ids == {5, 6}
 
     # Test list format
@@ -158,8 +158,8 @@ def test_split_units():
 
     model = CurationModel(**valid_split_indices)
     assert len(model.splits) == 1
-    assert model.splits[0].split_mode == "indices"
-    assert len(model.splits[0].split_indices) == 2
+    assert model.splits[0].mode == "indices"
+    assert len(model.splits[0].indices) == 2
 
     # Test labels mode with list format
     valid_split_labels = {
@@ -172,8 +172,8 @@ def test_split_units():
 
     model = CurationModel(**valid_split_labels)
     assert len(model.splits) == 1
-    assert model.splits[0].split_mode == "labels"
-    assert len(set(model.splits[0].split_labels)) == 3
+    assert model.splits[0].mode == "labels"
+    assert len(set(model.splits[0].labels)) == 3
 
     # Test dictionary format with indices
     valid_split_dict = {
@@ -187,7 +187,7 @@ def test_split_units():
 
     model = CurationModel(**valid_split_dict)
     assert len(model.splits) == 2
-    assert all(split.split_mode == "indices" for split in model.splits)
+    assert all(split.mode == "indices" for split in model.splits)
 
     # Test invalid unit ID
     invalid_unit_id = {

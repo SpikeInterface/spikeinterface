@@ -112,7 +112,7 @@ def apply_sortingview_curation(
         clean_merges = []
         for merge in curation_model.merges:
             clean_merge = []
-            for unit_id in merge.merge_unit_group:
+            for unit_id in merge.unit_ids:
                 if unit_id not in curation_model.removed:
                     clean_merge.append(unit_id)
             if len(clean_merge) > 1:
