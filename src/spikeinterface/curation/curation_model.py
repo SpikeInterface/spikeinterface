@@ -156,7 +156,7 @@ class CurationModel(BaseModel):
     def check_splits(cls, values):
         """
         Checks and validates the splits in the curation model.
-        If `splits` is a dictionary with unit_id as key and split data as values,
+        If `splits` is a dictionary with unit_id as key and split indices as values,
         it converts it to a list of Split objects.
         Each Split object is then validated:
         - Checks if the unit_id exists in the unit_ids list.
