@@ -546,7 +546,7 @@ def test_inject_templates():
 
         # Check dumpability
         saved_loaded = load(rec.to_dict())
-        check_recordings_equal(rec, saved_loaded, return_scaled=False)
+        check_recordings_equal(rec, saved_loaded, return_in_uV=False)
 
 
 def test_transformsorting():
