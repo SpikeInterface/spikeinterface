@@ -293,6 +293,18 @@ interpolated with the :code:`interpolate_bad_channels()` function (channels labe
     # Case 2 : interpolate then
     rec_clean = interpolate_bad_channels(recording=rec, bad_channel_ids=bad_channel_ids)
 
+Once you have tested these functions and decided on your workflow, you can use the `detect_and_*`
+functions to do everything at once. These return a Preprocessor class, so are consistent with
+the "chain" concept for this module. For example:
+
+.. code-block:: python
+
+    # detect and remove bad channels
+    rec_only_good_channels = detect_and_remove_bad_channels(recording=rec)
+
+    # detect and interpolate the bad channels
+    rec_interpolated_channels = detect_and_interpolate_bad_channels(recording=rec)
+
 
 * :py:func:`~spikeinterface.preprocessing.detect_bad_channels()`
 * :py:func:`~spikeinterface.preprocessing.interpolate_bad_channels()`
