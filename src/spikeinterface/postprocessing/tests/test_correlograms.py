@@ -1,6 +1,4 @@
 import numpy as np
-import importlib
-
 import importlib.util
 
 numba_spec = importlib.util.find_spec("numba")
