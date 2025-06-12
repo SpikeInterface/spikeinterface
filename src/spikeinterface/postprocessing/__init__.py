@@ -19,7 +19,9 @@ from .principal_component import (
 from .spike_amplitudes import compute_spike_amplitudes, ComputeSpikeAmplitudes
 
 from .correlograms import (
+    ComputeACG3D,
     ComputeCorrelograms,
+    compute_acgs_3d,
     compute_correlograms,
     correlogram_for_one_segment,
 )

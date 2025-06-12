@@ -33,7 +33,7 @@ def generate_recording(
     set_probe: bool | None = True,
     ndim: int | None = 2,
     seed: int | None = None,
-) -> NumpySorting:
+) -> BaseRecording:
     """
     Generate a lazy recording object.
     Useful for testing API and algos.
