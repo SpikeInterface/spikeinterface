@@ -39,8 +39,8 @@ def find_spikes_from_templates(
         Optionaly returns for debug purpose.
     """
     from .method_list import matching_methods
-    from base import _base_matching_dtype
-    
+    from .base import _base_matching_dtype
+
     assert method in matching_methods, f"The 'method' {method} is not valid. Use a method from {matching_methods}"
 
     job_kwargs = fix_job_kwargs(job_kwargs)
