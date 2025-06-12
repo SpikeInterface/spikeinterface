@@ -5,8 +5,7 @@ Calculation
 -----------
 
 
-Metric describing whether an amplitude distribution is cut off, similar to _amp_cutoff  :ref:`amplitude cutoff <amp_cutoff>` but without a Gaussian assumption.
-It flips the sign of the amplitude if 'peak_sign' == 'neg' when computing the amplitude.
+Metric describing whether an amplitude distribution is cut off as it approaches zero, similar to _amp_cutoff  :ref:`amplitude cutoff <amp_cutoff>` but without a Gaussian assumption.
 
 The **noise cutoff** metric assesses whether a unit’s spike‐amplitude distribution is truncated
 at the low-end, which may be due to the high amplitude detection threhold in the deconvolution step, 
@@ -115,6 +114,8 @@ Links to original implementations
 
 * From `IBL implementation <https://github.com/int-brain-lab/ibllib/blob/2e1f91c622ba8dbd04fc53946c185c99451ce5d6/brainbox/metrics/single_units.py>`_
 
+Note: Compared to the original implementation, we have added a comparison between the low-amplitude bins to the peak bin (`noise_ratio`). 
+The selection of low-amplitude bins is based on the `low_quantile` rather than the number of bins.
 
 Literature
 ----------

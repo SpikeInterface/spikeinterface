@@ -84,7 +84,7 @@ qm_compute_name_to_column_names = {
     "nn_noise_overlap": ["nn_noise_overlap"],
     "silhouette": ["silhouette"],
     "silhouette_full": ["silhouette_full"],
-    "noise_cutoff": ["cutoff", "ratio"]
+    "noise_cutoff": ["noise_cutoff", "noise_ratio"]
 }
 
 # this dict allows us to ensure the appropriate dtype of metrics rather than allow Pandas to infer them
@@ -120,6 +120,6 @@ column_name_to_column_dtype = {
     "nn_noise_overlap": float,
     "silhouette": float,
     "silhouette_full": float,
-    "cutoff": float,
-    "ratio": float,
+    "noise_cutoff": float,
+    "noise_ratio": float,
 }

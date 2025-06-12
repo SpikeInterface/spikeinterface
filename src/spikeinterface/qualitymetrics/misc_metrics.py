@@ -78,22 +78,22 @@ def compute_noise_cutoffs(
     Inspired by metric described in [IBL2024]_
 
     """
-    res = namedtuple("cutoff_metrics", ["cutoff", "ratio"])
+    res = namedtuple("cutoff_metrics", ["noise_cutoff", "noise_ratio"])
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
 
     noise_cutoff_dict = {}
-    ratio_dict = {}
+    noise_ratio_dict = {}
     if not sorting_analyzer.has_extension("spike_amplitudes"):
         warnings.warn("compute_noise_cutoffs need 'spike_amplitudes'")
         for unit_id in unit_ids:
             noise_cutoff_dict[unit_id] = np.nan
-            ratio_dict[unit_id] = np.nan
-        return res(noise_cutoff_dict, ratio_dict)
+            noise_ratio_dict[unit_id] = np.nan
+        return res(noise_cutoff_dict, noise_ratio_dict)
 
     amplitude_extension = sorting_analyzer.get_extension('spike_amplitudes')
-    amplitudes_by_units = amplitude_extension.get_data(outputs='by_unit')[0]
     peak_sign = amplitude_extension.params['peak_sign']
+    amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
 
     if peak_sign == 'both':
         raise TypeError('peak_sign should either be "pos" or "neg"!')
@@ -108,9 +108,15 @@ def compute_noise_cutoffs(
             amplitudes, high_quantile=high_quantile, low_quantile=low_quantile, n_bins=n_bins
         )
         noise_cutoff_dict[unit_id] = cutoff
-        ratio_dict[unit_id] = ratio
+        noise_ratio_dict[unit_id] = ratio
 
-    return res(noise_cutoff_dict, ratio_dict)
+    return res(noise_cutoff_dict, noise_ratio_dict)
+
+_default_params["noise_cutoff"] = dict(
+    high_quantile=0.25,
+    low_quantile=0.1,
+    n_bins=100
+)
 
 def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     """
@@ -144,39 +150,35 @@ def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
         mean(lower_bins_count) / highest_bin_count
 
     """
-    n, bin_edges = np.histogram(amps, bins=n_bins)
+    n_per_bin, bin_edges = np.histogram(amps, bins=n_bins)
 
-    # height of the peak bin
-    peak = np.max(n)
+    peak = np.max(n_per_bin)
 
-    # find the low quantile of the amplitudes
     low_quantile_value = np.quantile(amps,q=low_quantile)
 
     # the indices for low-amplitude bins
     low_indices = np.where(bin_edges[1:]<=low_quantile_value)[0]
  
-    # find the high quantile of the amplitudes
     high_quantile_value = np.quantile(amps,q=1-high_quantile)
 
     # the indices for high-amplitude bins
     high_indices = np.where(bin_edges[:-1]>=high_quantile_value)[0]
 
-    # calculate metrics
     if len(low_indices) == 0:
         warnings.warn("no bin is selected to test cutoff. please increase low_quantile.")
         return np.nan, np.nan
     
-    # ratio
-    low_counts = n[low_indices]
+    # compute ratio between low-amplitude bins and the peak bin
+    low_counts = n_per_bin[low_indices]
     mean_low_counts = np.mean(low_counts)
     ratio = mean_low_counts / peak
 
-    # cutoff
     if len(high_indices) == 0:
         warnings.warn("no bin is selected as the reference region. please increase high_quantile.")
         return np.nan, ratio
 
-    high_counts = n[high_indices]
+    # compute cutoff from low-amplitude and high-amplitude bins
+    high_counts = n_per_bin[high_indices]
     mean_high_counts = np.mean(high_counts)
     std_high_counts  = np.std(high_counts)
     if std_high_counts == 0:
