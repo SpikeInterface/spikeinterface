@@ -1,7 +1,6 @@
 import pytest
-from pathlib import Path
 
-import itertools
+
 from spikeinterface import NumpyRecording
 from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing.decimate import DecimateRecording

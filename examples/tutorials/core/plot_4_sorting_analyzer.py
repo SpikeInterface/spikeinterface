@@ -43,9 +43,8 @@ local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=N
 ##############################################################################
 # Let's now instantiate the recording and sorting objects:
 
-recording = se.MEArecRecordingExtractor(local_path)
+recording, sorting = se.read_mearec(local_path)
 print(recording)
-sorting = se.MEArecSortingExtractor(local_path)
 print(sorting)
 
 ###############################################################################

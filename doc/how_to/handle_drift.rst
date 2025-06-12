@@ -1455,38 +1455,32 @@ Plot the results
 We load back the results and use the widgets module to explore the
 estimated drift motion.
 
-For all methods we have 4 plots: \* top left: time vs estimated peak
-depth \* top right: time vs peak depth after motion correction \* bottom
-left: the average motion vector across depths and all motion across
-spatial depths (for non-rigid estimation) \* bottom right: if motion
-correction is non rigid, the motion vector across depths is plotted as a
-map, with the color code representing the motion in micrometers.
+For all methods we have 4 plots:
+    * top left: time vs estimated peak
+    * top right: time vs peak depth after motion correction
+    * bottom left: the average motion vector across depths and all motion across spatial depths (for non-rigid estimation)
+    * bottom right: if motion correction is non rigid, the motion vector across depths is plotted as a map,
+      with the color code representing the motion in micrometers.
 
-A few comments on the figures: \* the preset **‘rigid_fast’** has only
-one motion vector for the entire probe because it is a “rigid” case. The
-motion amplitude is globally underestimated because it averages across
-depths. However, the corrected peaks are flatter than the non-corrected
-ones, so the job is partially done. The big jump at=600s when the probe
-start moving is recovered quite well. \* The preset **kilosort_like**
-gives better results because it is a non-rigid case. The motion vector
-is computed for different depths. The corrected peak locations are
-flatter than the rigid case. The motion vector map is still be a bit
-noisy at some depths (e.g around 1000um). \* The preset **dredge** is
-offcial DREDge re-implementation in spikeinterface. It give the best
-result : very fast and smooth motion estimation. Very few noise. This
-method also capture very well the non rigid motion gradient along the
-probe. The best method on the market at the moement. An enormous thanks
-to the dream team : Charlie Windolf, Julien Boussard, Erdem Varol, Liam
-Paninski. Note that in the first part of the recording before the
-imposed motion (0-600s) we clearly have a non-rigid motion: the upper
-part of the probe (2000-3000um) experience some drifts, but the lower
-part (0-1000um) is relatively stable. The method defined by this preset
-is able to capture this. \* The preset **nonrigid_accurate** this is the
-ancestor of “dredge” before it was published. It seems to give the good
-results on this recording but with bit more noise. \* The preset
-**dredge_fast** similar than dredge but faster (using grid_convolution).
-\* The preset **nonrigid_fast_and_accurate** a variant of
-nonrigid_accurate but faster (using grid_convolution).
+A few comments on the figures:
+    * the preset **‘rigid_fast’** has only one motion vector for the entire probe because it is a “rigid” case. The
+      motion amplitude is globally underestimated because it averages across depths. However, the corrected peaks
+      are flatter than the non-corrected ones, so the job is partially done. The big jump at=600s when the probe start
+      moving is recovered quite well.
+    * The preset **kilosort_like** gives better results because it is a non-rigid case. The motion vector is computed
+      for different depths. The corrected peak locations are flatter than the rigid case. The motion vector map is still
+      be a bit noisy at some depths (e.g around 1000um).
+    * The preset **dredge** is official DREDge re-implementation in spikeinterface. It give the best result : very fast
+      and smooth motion estimation. Very few noise. This method also capture very well the non rigid motion gradient along
+      the probe. The best method on the market at the moement. An enormous thanks to the dream team : Charlie Windolf,
+      Julien Boussard, Erdem Varol, Liam Paninski. Note that in the first part of the recording before the imposed motion
+      (0-600s) we clearly have a non-rigid motion: the upper part of the probe (2000-3000um) experience some drifts, but the
+      lower part (0-1000um) is relatively stable. The method defined by this preset is able to capture this.
+    * The preset **nonrigid_accurate** this is the ancestor of “dredge” before it was published. It seems to give good results
+      on this recording but with bit more noise.
+    * The preset **dredge_fast** similar than dredge but faster (using grid_convolution).
+    * The preset **nonrigid_fast_and_accurate** a variant of
+      nonrigid_accurate but faster (using grid_convolution).
 
 .. code:: ipython3
 

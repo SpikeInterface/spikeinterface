@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import importlib.util
 
 import numpy as np
 
@@ -8,12 +9,24 @@ import probeinterface
 
 from spikeinterface.core import (
     BinaryRecordingExtractor,
-    BaseRecordingSegment,
     BaseSorting,
     BaseSortingSegment,
     write_binary_recording,
 )
 from spikeinterface.core.core_tools import define_function_from_class
+
+# have to do in two steps since find_spec fails if looking for a subpacke
+if importlib.util.find_spec("hybridizer") is not None:
+    if (
+        importlib.util.find_spec("hybridizer.io") is not None
+        and importlib.util.find_spec("hybridizer.probes") is not None
+        and importlib.util.find_spec("yaml") is not None
+    ):
+        HAVE_SHYBRID = True
+    else:
+        HAVE_SHYBRID = False
+else:
+    HAVE_SHYBRID = False
 
 
 class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
@@ -35,11 +48,10 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
     )
 
     def __init__(self, file_path):
-        try:
+        if HAVE_SHYBRID:
             import hybridizer.io as sbio
             import hybridizer.probes as sbprb
-            import yaml
-        except ImportError:
+        else:
             raise ImportError(self.installation_mesg)
 
         # load params file related to the given shybrid recording
@@ -93,11 +105,9 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
             Type of the saved data
         **write_binary_kwargs: keyword arguments for write_to_binary_dat_format() function
         """
-        try:
-            import hybridizer.io as sbio
-            import hybridizer.probes as sbprb
+        if HAVE_SHYBRID:
             import yaml
-        except ImportError:
+        else:
             raise ImportError(SHYBRIDRecordingExtractor.installation_mesg)
 
         assert recording.get_num_segments() == 1, "SHYBRID can only write single segment recordings"
@@ -153,10 +163,9 @@ class SHYBRIDSortingExtractor(BaseSorting):
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
 
     def __init__(self, file_path, sampling_frequency, delimiter=","):
-        try:
+        if HAVE_SHYBRID:
             import hybridizer.io as sbio
-            import hybridizer.probes as sbprb
-        except ImportError:
+        else:
             raise ImportError(self.installation_mesg)
 
         assert Path(file_path).suffix == ".csv", "The 'file_path' should be a csv file!"
@@ -190,10 +199,7 @@ class SHYBRIDSortingExtractor(BaseSorting):
         save_path : str
             Full path to the desired target folder.
         """
-        try:
-            import hybridizer.io as sbio
-            import hybridizer.probes as sbprb
-        except ImportError:
+        if not HAVE_SHYBRID:
             raise ImportError(SHYBRIDSortingExtractor.installation_mesg)
 
         assert sorting.get_num_segments() == 1, "SHYBRID can only write single segment sortings"

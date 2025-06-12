@@ -215,6 +215,7 @@ spikeinterface.postprocessing
     .. autofunction:: compute_spike_locations
     .. autofunction:: compute_template_similarity
     .. autofunction:: compute_correlograms
+    .. autofunction:: compute_acgs_3d
     .. autofunction:: compute_isi_histograms
     .. autofunction:: get_template_metric_names
     .. autofunction:: align_sorting

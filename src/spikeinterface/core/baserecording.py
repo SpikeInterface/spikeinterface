@@ -4,7 +4,7 @@ import warnings
 from pathlib import Path
 
 import numpy as np
-from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, write_probeinterface
+from probeinterface import read_probeinterface, write_probeinterface
 
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
@@ -20,7 +20,15 @@ class BaseRecording(BaseRecordingSnippets):
     """
 
     _main_annotations = BaseRecordingSnippets._main_annotations + ["is_filtered"]
-    _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
+    _main_properties = [
+        "group",
+        "location",
+        "gain_to_uV",
+        "offset_to_uV",
+        "gain_to_physical_unit",
+        "offset_to_physical_unit",
+        "physical_unit",
+    ]
     _main_features = []  # recording do not handle features
 
     _skip_properties = [
@@ -287,7 +295,8 @@ class BaseRecording(BaseRecordingSnippets):
         end_frame: int | None = None,
         channel_ids: list | np.array | tuple | None = None,
         order: "C" | "F" | None = None,
-        return_scaled: bool = False,
+        return_scaled: bool | None = None,
+        return_in_uV: bool = False,
         cast_unsigned: bool = False,
     ) -> np.ndarray:
         """Returns traces from recording.
@@ -304,7 +313,11 @@ class BaseRecording(BaseRecordingSnippets):
             The channel ids. If None, all channels are used, default: None
         order : "C" | "F" | None, default: None
             The order of the traces ("C" | "F"). If None, traces are returned as they are
-        return_scaled : bool, default: False
+        return_scaled : bool | None, default: None
+            DEPRECATED. Use return_in_uV instead.
+            If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+            traces are scaled to uV
+        return_in_uV : bool, default: False
             If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
             traces are scaled to uV
         cast_unsigned : bool, default: False
@@ -319,7 +332,7 @@ class BaseRecording(BaseRecordingSnippets):
         Raises
         ------
         ValueError
-            If return_scaled is True, but recording does not have scaled traces
+            If return_in_uV is True, but recording does not have scaled traces
         """
         segment_index = self._check_segment_index(segment_index)
         channel_indices = self.ids_to_indices(channel_ids, prefer_slice=True)
@@ -343,7 +356,16 @@ class BaseRecording(BaseRecordingSnippets):
                 traces = traces.astype(f"int{2 * (dtype.itemsize) * 8}") - 2 ** (nbits - 1)
                 traces = traces.astype(f"int{dtype.itemsize * 8}")
 
-        if return_scaled:
+        # Handle deprecated return_scaled parameter
+        if return_scaled is not None:
+            warnings.warn(
+                "`return_scaled` is deprecated and will be removed in a future version. Use `return_in_uV` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            return_in_uV = return_scaled
+
+        if return_in_uV:
             if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
                     # here we do not truely have scale but we assume this is scaled
@@ -351,7 +373,7 @@ class BaseRecording(BaseRecordingSnippets):
                     pass
                 else:
                     raise ValueError(
-                        "This recording does not support return_scaled=True (need gain_to_uV and offset_"
+                        "This recording does not support return_in_uV=True (need gain_to_uV and offset_"
                         "to_uV properties)"
                     )
             else:
@@ -541,13 +563,14 @@ class BaseRecording(BaseRecordingSnippets):
         else:
             segments_to_shift = (segment_index,)
 
-        for idx in segments_to_shift:
-            rs = self._recording_segments[idx]
+        for segment_index in segments_to_shift:
+            rs = self._recording_segments[segment_index]
 
-            if self.has_time_vector(segment_index=idx):
+            if self.has_time_vector(segment_index=segment_index):
                 rs.time_vector += shift
             else:
-                rs.t_start += shift
+                new_start_time = 0 + shift if rs.t_start is None else rs.t_start + shift
+                rs.t_start = new_start_time
 
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
@@ -749,9 +772,9 @@ class BaseRecording(BaseRecordingSnippets):
         Parameters
         ----------
         start_frame : int, optional
-            The start frame, if not provided it is set to 0
+            Start frame index. If None, defaults to the beginning of the recording (frame 0).
         end_frame : int, optional
-            The end frame, it not provided it is set to the total number of samples
+            End frame index. If None, defaults to the last frame of the recording.
 
         Returns
         -------
@@ -771,20 +794,46 @@ class BaseRecording(BaseRecordingSnippets):
         Parameters
         ----------
         start_time : float, optional
-            The start time in seconds. If not provided it is set to 0.
+            Start time in seconds. If None, defaults to the beginning of the recording.
         end_time : float, optional
-            The end time in seconds. If not provided it is set to the total duration.
+            End time in seconds. If None, defaults to the end of the recording.
 
         Returns
         -------
         BaseRecording
             A new recording object with only samples between start_time and end_time
         """
+        num_segments = self.get_num_segments()
+        assert (
+            num_segments == 1
+        ), f"Time slicing is only supported for single segment recordings. Found {num_segments} segments."
 
-        assert self.get_num_segments() == 1, "Time slicing is only supported for single segment recordings."
+        t_start = self.get_start_time()
+        t_end = self.get_end_time()
 
-        start_frame = self.time_to_sample_index(start_time) if start_time else None
-        end_frame = self.time_to_sample_index(end_time) if end_time else None
+        if start_time is not None:
+            t_start = self.get_start_time()
+            t_start_too_early = start_time < t_start
+            if t_start_too_early:
+                raise ValueError(f"start_time {start_time} is before the start time {t_start} of the recording.")
+            t_start_too_late = start_time > t_end
+            if t_start_too_late:
+                raise ValueError(f"start_time {start_time} is after the end time {t_end} of the recording.")
+            start_frame = self.time_to_sample_index(start_time)
+        else:
+            start_frame = None
+
+        if end_time is not None:
+            t_end_too_early = end_time < t_start
+            if t_end_too_early:
+                raise ValueError(f"end_time {end_time} is before the start time {t_start} of the recording.")
+
+            t_end_too_late = end_time > t_end
+            if t_end_too_late:
+                raise ValueError(f"end_time {end_time} is after the end time {t_end} of the recording.")
+            end_frame = self.time_to_sample_index(end_time)
+        else:
+            end_frame = None
 
         return self.frame_slice(start_frame=start_frame, end_frame=end_frame)
 

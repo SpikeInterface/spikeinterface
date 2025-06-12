@@ -1,21 +1,64 @@
 import pytest
 import numpy as np
+import importlib.util
+
 
 from spikeinterface import NumpyRecording, get_random_data_chunks
 from probeinterface import generate_linear_probe
 
+from spikeinterface.generation import generate_recording
+
 from spikeinterface.core import generate_recording
-from spikeinterface.preprocessing import detect_bad_channels, highpass_filter
+from spikeinterface.preprocessing import detect_bad_channels, highpass_filter, detect_and_remove_bad_channels
 
-try:
-    # WARNING : this is not this package https://pypi.org/project/neurodsp/
-    # BUT this one https://github.com/int-brain-lab/ibl-neuropixel
-    # pip install ibl-neuropixel
-    import neurodsp.voltage
-
+# WARNING : this is not this package https://pypi.org/project/neurodsp/
+# BUT this one https://github.com/int-brain-lab/ibl-neuropixel
+# pip install ibl-neuropixel
+# note the check needs to find package first before submodule otherwise the check will fail if the library
+# does not exist
+if importlib.util.find_spec("neurodsp") is not None and importlib.util.find_spec("neurodsp.voltage") is not None:
     HAVE_NPIX = True
-except:  # Catch relevant exception
+else:
     HAVE_NPIX = False
+
+
+def test_remove_bad_channel():
+    """
+    Generate a recording, then remove bad channels with a low noise threshold,
+    so that some units are removed. Then check that the new recording has none
+    of the bad channels still in it and that the one changed kwarg is successfully
+    propogated to the new recording.
+    """
+
+    recording = generate_recording(durations=[5, 6], seed=1205, num_channels=8)
+    recording.set_channel_offsets(0)
+    recording.set_channel_gains(1)
+
+    # set noisy_channel_threshold so that we do detect some bad channels
+    new_rec = detect_and_remove_bad_channels(recording, noisy_channel_threshold=0, seed=1205)
+
+    # make sure they are removed
+    bad_channel_ids = new_rec._kwargs["bad_channel_ids"]
+    assert len(set(bad_channel_ids).intersection(new_rec.channel_ids)) == 0
+    # and the good ones are kept
+    good_channel_ids = recording.channel_ids[~np.isin(recording.channel_ids, bad_channel_ids)]
+    assert set(good_channel_ids) == set(new_rec.channel_ids)
+
+    # and that the kwarg is propogatged to the kwargs of new_rec.
+    assert set(new_rec._kwargs["channel_ids"]) == set(good_channel_ids)
+    assert new_rec._kwargs["noisy_channel_threshold"] == 0
+
+    # now apply `detect_bad_channels` directly and see that the outputs matches
+    bad_channel_ids_from_function, channel_labels_from_function = detect_bad_channels(
+        recording, noisy_channel_threshold=0, seed=1205
+    )
+
+    assert np.all(new_rec._kwargs["bad_channel_ids"] == bad_channel_ids_from_function)
+    assert np.all(new_rec._kwargs["channel_labels"] == channel_labels_from_function)
+
+    new_rec_from_function = recording.remove_channels(remove_channel_ids=bad_channel_ids_from_function)
+
+    assert np.all(new_rec_from_function.channel_ids == new_rec.channel_ids)
 
 
 def test_detect_bad_channels_std_mad():
@@ -115,6 +158,8 @@ def test_detect_bad_channels_ibl(num_channels):
     however for testing it is necssary. So before calling the IBL function
     we need to rescale the traces to Volts.
     """
+    import neurodsp.voltage
+
     # download_path = si.download_dataset(remote_path='spikeglx/Noise4Sam_g0')
     # recording = se.read_spikeglx(download_path, stream_id="imec0.ap")
     recording = generate_recording(num_channels=num_channels, durations=[1])
@@ -166,9 +211,9 @@ def test_detect_bad_channels_ibl(num_channels):
         channel_flags_ibl[:, i] = channel_flags
 
     # Take the mode of the chunk estimates as final result. Convert to binary good / bad channel output.
-    import scipy.stats
+    from scipy.stats import mode
 
-    bad_channel_labels_ibl, _ = scipy.stats.mode(channel_flags_ibl, axis=1, keepdims=False)
+    bad_channel_labels_ibl, _ = mode(channel_flags_ibl, axis=1, keepdims=False)
 
     # Compare
     channels_labeled_as_good = bad_channel_labels_si == "good"
@@ -216,7 +261,7 @@ def reduce_high_freq_power_in_non_noisy_channels(recording, is_noisy, not_noisy)
     Reduce power in >80% Nyquist for all channels except noisy channels to 20% of original.
     Return the psd_cutoff in uV^2/Hz that separates the good at noisy channels.
     """
-    import scipy.signal
+    from scipy.signal import welch
 
     for iseg, __ in enumerate(recording._recording_segments):
         data = recording.get_traces(iseg).T
@@ -230,7 +275,7 @@ def reduce_high_freq_power_in_non_noisy_channels(recording, is_noisy, not_noisy)
         data[not_noisy] = np.fft.ifft(np.fft.ifftshift(D))
 
     # calculate the psd_cutoff (which separates noisy and non-noisy) ad-hoc from the last segment
-    fscale, psd = scipy.signal.welch(data, fs=recording.get_sampling_frequency())
+    fscale, psd = welch(data, fs=recording.get_sampling_frequency())
     psd_cutoff = np.mean([np.mean(psd[not_noisy, -50:]), np.mean(psd[is_noisy, -50:])])
     return psd_cutoff
 

@@ -6,7 +6,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
 
-from spikeinterface.extractors import read_ibl_recording, read_ibl_sorting, IblRecordingExtractor
+from spikeinterface.extractors.extractor_classes import read_ibl_recording, read_ibl_sorting, IblRecordingExtractor
 
 EID = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
 PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"

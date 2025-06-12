@@ -61,7 +61,7 @@ def merge_clusters(
         A vector of sample shift to be reverse applied on original sample_index on peak detection
         Negative shift means too early.
         Posituve shift means too late.
-        So the correction must be applied like this externaly:
+        So the correction must be applied like this externally:
         final_peaks = peaks.copy()
         final_peaks['sample_index'] -= peak_shifts
 
@@ -132,7 +132,7 @@ def merge_clusters(
     peak_shifts = np.zeros(peak_labels.size, dtype="int64")
     for merge, shifts in zip(merges, group_shifts):
         label0 = merge[0]
-        mask = np.in1d(peak_labels, merge)
+        mask = np.isin(peak_labels, merge)
         merge_peak_labels[mask] = label0
         for l, label1 in enumerate(merge):
             if l == 0:
@@ -265,7 +265,7 @@ def find_merge_pairs(
     # progress_bar=True,
 ):
     """
-    Searh some possible merge 2 by 2.
+    Search some possible merge 2 by 2.
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
@@ -605,7 +605,7 @@ class ProjectDistribution:
 class NormalizedTemplateDiff:
     """
     Compute the normalized (some kind of) template differences.
-    And merge if below a threhold.
+    And merge if below a threshold.
     Do this at several shift.
 
     """

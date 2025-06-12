@@ -160,8 +160,6 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     ):
 
         if load_sync_channel:
-            import warnings
-
             warning_message = (
                 "OpenEphysBinaryRecordingExtractor: load_sync_channel is deprecated and will"
                 "be removed in version 0.104, use the stream_name or stream_id to load the sync stream if needed"

@@ -2,12 +2,19 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Literal, Dict, BinaryIO
 import warnings
+import importlib.util
 
 import numpy as np
 
 from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
+
+
+if importlib.util.find_spec("pynwb") is not None:
+    HAVE_PYNWB = True
+else:
+    HAVE_PYNWB = False
 
 
 def read_file_from_backend(
@@ -568,9 +575,7 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
 
         # extract info
         if use_pynwb:
-            try:
-                import pynwb
-            except ImportError:
+            if not HAVE_PYNWB:
                 raise ImportError(self.installation_mesg)
 
             (
@@ -759,10 +764,13 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
         if "starting_time" in electrical_series.keys():
             t_start = electrical_series["starting_time"][()]
             sampling_frequency = electrical_series["starting_time"].attrs["rate"]
+            timestamps = None
         elif "timestamps" in electrical_series.keys():
             timestamps = electrical_series["timestamps"][:]
             t_start = timestamps[0]
             sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
+        else:
+            raise ValueError("TimeSeries must have either starting_time or timestamps")
 
         if load_time_vector and timestamps is not None:
             times_kwargs = dict(time_vector=electrical_series["timestamps"])
@@ -1079,9 +1087,7 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
                 self.backend = "hdf5"
 
         if use_pynwb:
-            try:
-                import pynwb
-            except ImportError:
+            if not HAVE_PYNWB:
                 raise ImportError(self.installation_mesg)
 
             unit_ids, spike_times_data, spike_times_index_data = self._fetch_sorting_segment_info_pynwb(
@@ -1477,9 +1483,7 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
             self.backend = "zarr" if self.stream_mode == "zarr" else "hdf5"
 
         if use_pynwb:
-            try:
-                import pynwb
-            except ImportError:
+            if not HAVE_PYNWB:
                 raise ImportError(self.installation_mesg)
 
             channel_ids, sampling_frequency, dtype, segment_data, times_kwargs = self._fetch_recording_segment_info(
@@ -1572,6 +1576,8 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
             timestamps = timeseries.timestamps
             sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
             t_start = timestamps[0]
+        else:
+            raise ValueError("TimeSeries must have either starting_time or timestamps")
 
         if load_time_vector and timestamps is not None:
             times_kwargs = dict(time_vector=timestamps)

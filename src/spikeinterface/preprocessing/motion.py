@@ -360,7 +360,7 @@ def compute_motion(
 
     progress_bar = job_kwargs.get("progress_bar", False)
 
-    noise_levels = get_noise_levels(recording, return_scaled=False)
+    noise_levels = get_noise_levels(recording, return_in_uV=False)
 
     if folder is not None:
         folder = Path(folder)
@@ -442,9 +442,6 @@ def compute_motion(
         motion = None
     t1 = time.perf_counter()
     run_times["estimate_motion"] = t1 - t0
-
-    if recording.get_dtype().kind != "f":
-        recording = recording.astype("float32")
 
     motion_info = dict(
         parameters=parameters,
@@ -553,6 +550,9 @@ def correct_motion(
         output_motion_info=True,
         **job_kwargs,
     )
+
+    if recording.get_dtype().kind != "f":
+        recording = recording.astype("float32")
 
     recording_corrected = interpolate_motion(recording, motion, **interpolate_motion_kwargs)
 
