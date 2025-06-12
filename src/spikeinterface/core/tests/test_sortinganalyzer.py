@@ -10,6 +10,7 @@ from spikeinterface.core import (
     load_sorting_analyzer,
     get_available_analyzer_extensions,
     get_default_analyzer_extension_params,
+    get_default_zarr_compressor,
 )
 from spikeinterface.core.sortinganalyzer import (
     register_result_extension,
@@ -30,6 +31,14 @@ def get_dataset():
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
+
+    # TODO: the tests or the sorting analyzer make assumptions about the ids being integers
+    # So keeping this the way it was
+    integer_channel_ids = [int(id) for id in recording.get_channel_ids()]
+    integer_unit_ids = [int(id) for id in sorting.get_unit_ids()]
+
+    recording = recording.rename_channels(new_channel_ids=integer_channel_ids)
+    sorting = sorting.rename_units(new_unit_ids=integer_unit_ids)
     return recording, sorting
 
 
@@ -47,15 +56,21 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="memory", sparse=False, return_scaled=True, sparsity=None
+        sorting, recording, format="memory", sparse=False, return_in_uV=True, sparsity=None
     )
-    assert sorting_analyzer.return_scaled
+    assert sorting_analyzer.return_in_uV
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="memory", sparse=False, return_scaled=False, sparsity=None
+        sorting, recording, format="memory", sparse=False, return_in_uV=False, sparsity=None
     )
-    assert not sorting_analyzer.return_scaled
+    assert not sorting_analyzer.return_in_uV
+
+    # test set_sorting_property
+    sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
+    sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
+    assert "quality" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
 
 
 def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
@@ -89,25 +104,43 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
         folder=folder,
         sparse=False,
         sparsity=None,
-        return_scaled=False,
+        return_in_uV=False,
     )
-    assert not sorting_analyzer.return_scaled
+    assert not sorting_analyzer.return_in_uV
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+
+    # test set_sorting_property
+    sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
+    sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
+    assert "quality" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
+    sorting_analyzer_reloded = load_sorting_analyzer(folder, format="auto")
+    assert "quality" in sorting_analyzer_reloded.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
 
 
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
     recording, sorting = dataset
 
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
-    if folder.exists():
-        shutil.rmtree(folder)
 
+    default_compressor = get_default_zarr_compressor()
     sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
+        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None, overwrite=True
     )
     sorting_analyzer.compute(["random_spikes", "templates"])
     sorting_analyzer = load_sorting_analyzer(folder, format="auto")
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+
+    # check that compression is applied
+    assert (
+        sorting_analyzer._get_zarr_root()["extensions"]["random_spikes"]["random_spikes_indices"].compressor.codec_id
+        == default_compressor.codec_id
+    )
+    assert (
+        sorting_analyzer._get_zarr_root()["extensions"]["templates"]["average"].compressor.codec_id
+        == default_compressor.codec_id
+    )
 
     # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
     # this bug requires that we have an info.json file so we calculate templates above
@@ -117,15 +150,60 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     assert len(remove_units_sorting_analyer.unit_ids) == len(sorting_analyzer.unit_ids) - 1
     assert 1 not in remove_units_sorting_analyer.unit_ids
 
-    folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
-    if folder.exists():
-        shutil.rmtree(folder)
-    sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None, return_scaled=False
+    # test no compression
+    sorting_analyzer_no_compression = create_sorting_analyzer(
+        sorting,
+        recording,
+        format="zarr",
+        folder=folder,
+        sparse=False,
+        sparsity=None,
+        return_in_uV=False,
+        overwrite=True,
+        backend_options={"saving_options": {"compressor": None}},
     )
+    print(sorting_analyzer_no_compression._backend_options)
+    sorting_analyzer_no_compression.compute(["random_spikes", "templates"])
+    assert (
+        sorting_analyzer_no_compression._get_zarr_root()["extensions"]["random_spikes"][
+            "random_spikes_indices"
+        ].compressor
+        is None
+    )
+    assert sorting_analyzer_no_compression._get_zarr_root()["extensions"]["templates"]["average"].compressor is None
+
+    # test a different compressor
+    from numcodecs import LZMA
+
+    lzma_compressor = LZMA()
+    folder = tmp_path / "test_SortingAnalyzer_zarr_lzma.zarr"
+    sorting_analyzer_lzma = sorting_analyzer_no_compression.save_as(
+        format="zarr", folder=folder, backend_options={"saving_options": {"compressor": lzma_compressor}}
+    )
+    assert (
+        sorting_analyzer_lzma._get_zarr_root()["extensions"]["random_spikes"][
+            "random_spikes_indices"
+        ].compressor.codec_id
+        == LZMA.codec_id
+    )
+    assert (
+        sorting_analyzer_lzma._get_zarr_root()["extensions"]["templates"]["average"].compressor.codec_id
+        == LZMA.codec_id
+    )
+
+    # test set_sorting_property
+    sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
+    sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
+    assert "quality" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
+    sorting_analyzer_reloded = load_sorting_analyzer(sorting_analyzer.folder, format="auto")
+    assert "quality" in sorting_analyzer_reloded.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
 
 
 def test_load_without_runtime_info(tmp_path, dataset):
+    import zarr
+
     recording, sorting = dataset
 
     folder = tmp_path / "test_SortingAnalyzer_run_info"
@@ -153,6 +231,7 @@ def test_load_without_runtime_info(tmp_path, dataset):
     root = sorting_analyzer._get_zarr_root(mode="r+")
     for ext in extensions:
         del root["extensions"][ext].attrs["run_info"]
+        zarr.consolidate_metadata(root.store)
     # should raise a warning for missing run_info
     with pytest.warns(UserWarning):
         sorting_analyzer = load_sorting_analyzer(folder, format="auto")
@@ -178,6 +257,27 @@ def test_SortingAnalyzer_tmp_recording(dataset):
         sorting_analyzer.set_temporary_recording(recording_sliced)
 
 
+def test_SortingAnalyzer_interleaved_probegroup(dataset):
+    from probeinterface import generate_linear_probe, ProbeGroup
+
+    recording, sorting = dataset
+    num_channels = recording.get_num_channels()
+    probe1 = generate_linear_probe(num_elec=num_channels // 2, ypitch=20.0)
+    probe2 = probe1.copy()
+    probe2.move([100.0, 100.0])
+
+    probegroup = ProbeGroup()
+    probegroup.add_probe(probe1)
+    probegroup.add_probe(probe2)
+    probegroup.set_global_device_channel_indices(np.random.permutation(num_channels))
+
+    recording = recording.set_probegroup(probegroup)
+
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    # check that locations are correct
+    assert np.array_equal(recording.get_channel_locations(), sorting_analyzer.get_channel_locations())
+
+
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
     register_result_extension(DummyAnalyzerExtension)
@@ -185,9 +285,6 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
     assert "channel_ids" in sorting_analyzer.rec_attributes
     assert "sampling_frequency" in sorting_analyzer.rec_attributes
     assert "num_samples" in sorting_analyzer.rec_attributes
-
-    probe = sorting_analyzer.get_probe()
-    sparsity = sorting_analyzer.sparsity
 
     # compute
     sorting_analyzer.compute("dummy", param1=5.5)
@@ -232,7 +329,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         assert data["result_two"].size == original_sorting.to_spike_vector().size
         assert np.array_equal(data["result_two"], sorting_analyzer.get_extension("dummy").data["result_two"])
 
-        assert sorting_analyzer2.return_scaled == sorting_analyzer.return_scaled
+        assert sorting_analyzer2.return_in_uV == sorting_analyzer.return_in_uV
 
         assert sorting_analyzer2.sparsity == sorting_analyzer.sparsity
 
@@ -291,6 +388,9 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer4 = sorting_analyzer.merge_units(merge_unit_groups=[[0, 1]], format=format, folder=folder)
+        assert 0 not in sorting_analyzer4.unit_ids
+        assert 1 not in sorting_analyzer4.unit_ids
+        assert len(sorting_analyzer4.unit_ids) == len(sorting_analyzer.unit_ids) - 1
 
         if format != "memory":
             if format == "zarr":
@@ -302,8 +402,12 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer5 = sorting_analyzer.merge_units(
-            merge_unit_groups=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, mode="hard"
+            merge_unit_groups=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, merging_mode="hard"
         )
+        assert 0 not in sorting_analyzer5.unit_ids
+        assert 1 not in sorting_analyzer5.unit_ids
+        assert len(sorting_analyzer5.unit_ids) == len(sorting_analyzer.unit_ids) - 1
+        assert 50 in sorting_analyzer5.unit_ids
 
     # test compute with extension-specific params
     sorting_analyzer.compute(["dummy"], extension_params={"dummy": {"param1": 5.5}})

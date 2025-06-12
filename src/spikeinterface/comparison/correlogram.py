@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from .paircomparisons import GroundTruthComparison
-from .groundtruthstudy import GroundTruthStudy
+
+# this import was previously used. Leave for now.
+# from .groundtruthstudy import GroundTruthStudy
 from spikeinterface.postprocessing import compute_correlograms
 
 
@@ -17,9 +19,9 @@ class CorrelogramGTComparison(GroundTruthComparison):
 
     Parameters
     ----------
-    gt_sorting : SortingExtractor
+    gt_sorting : BaseSorting
         The first sorting for the comparison
-    tested_sorting : SortingExtractor
+    tested_sorting : BaseSorting
         The second sorting for the comparison
     bin_ms : float, default: 1.0
         Size of bin for correlograms
@@ -128,57 +130,60 @@ class CorrelogramGTComparison(GroundTruthComparison):
         return similarities, errors
 
 
-class CorrelogramGTStudy(GroundTruthStudy):
-    def run_comparisons(
-        self, case_keys=None, exhaustive_gt=True, window_ms=100.0, bin_ms=1.0, well_detected_score=0.8, **kwargs
-    ):
-        _kwargs = dict()
-        _kwargs.update(kwargs)
-        _kwargs["exhaustive_gt"] = exhaustive_gt
-        _kwargs["window_ms"] = window_ms
-        _kwargs["bin_ms"] = bin_ms
-        _kwargs["well_detected_score"] = well_detected_score
-        GroundTruthStudy.run_comparisons(self, case_keys=None, comparison_class=CorrelogramGTComparison, **_kwargs)
-        self.exhaustive_gt = exhaustive_gt
+# This is removed at the moment.
+# We need to move this maybe one day in benchmark
 
-    @property
-    def time_bins(self):
-        for key, value in self.comparisons.items():
-            return value.time_bins
+# class CorrelogramGTStudy(GroundTruthStudy):
+#     def run_comparisons(
+#         self, case_keys=None, exhaustive_gt=True, window_ms=100.0, bin_ms=1.0, well_detected_score=0.8, **kwargs
+#     ):
+#         _kwargs = dict()
+#         _kwargs.update(kwargs)
+#         _kwargs["exhaustive_gt"] = exhaustive_gt
+#         _kwargs["window_ms"] = window_ms
+#         _kwargs["bin_ms"] = bin_ms
+#         _kwargs["well_detected_score"] = well_detected_score
+#         GroundTruthStudy.run_comparisons(self, case_keys=None, comparison_class=CorrelogramGTComparison, **_kwargs)
+#         self.exhaustive_gt = exhaustive_gt
 
-    def precompute_scores_by_similarities(self, case_keys=None, good_only=True):
-        import sklearn.metrics
+#     @property
+#     def time_bins(self):
+#         for key, value in self.comparisons.items():
+#             return value.time_bins
 
-        if case_keys is None:
-            case_keys = self.cases.keys()
+#     def precompute_scores_by_similarities(self, case_keys=None, good_only=True):
+#         import sklearn.metrics
 
-        self.all_similarities = {}
-        self.all_errors = {}
+#         if case_keys is None:
+#             case_keys = self.cases.keys()
 
-        for key in case_keys:
-            templates = self.get_templates(key)
-            flat_templates = templates.reshape(templates.shape[0], -1)
-            similarity = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
-            comp = self.comparisons[key]
-            similarities, errors = comp.compute_correlogram_by_similarity(similarity)
+#         self.all_similarities = {}
+#         self.all_errors = {}
 
-            self.all_similarities[key] = similarities
-            self.all_errors[key] = errors
+#         for key in case_keys:
+#             templates = self.get_templates(key)
+#             flat_templates = templates.reshape(templates.shape[0], -1)
+#             similarity = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+#             comp = self.comparisons[key]
+#             similarities, errors = comp.compute_correlogram_by_similarity(similarity)
 
-    def get_error_profile_over_similarity_bins(self, similarity_bins, key):
-        all_similarities = self.all_similarities[key]
-        all_errors = self.all_errors[key]
+#             self.all_similarities[key] = similarities
+#             self.all_errors[key] = errors
 
-        order = np.argsort(all_similarities)
-        all_similarities = all_similarities[order]
-        all_errors = all_errors[order, :]
+#     def get_error_profile_over_similarity_bins(self, similarity_bins, key):
+#         all_similarities = self.all_similarities[key]
+#         all_errors = self.all_errors[key]
 
-        result = {}
+#         order = np.argsort(all_similarities)
+#         all_similarities = all_similarities[order]
+#         all_errors = all_errors[order, :]
 
-        for i in range(similarity_bins.size - 1):
-            cmin, cmax = similarity_bins[i], similarity_bins[i + 1]
-            amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
-            mean_errors = np.nanmean(all_errors[amin:amax], axis=0)
-            result[(cmin, cmax)] = mean_errors
+#         result = {}
 
-        return result
+#         for i in range(similarity_bins.size - 1):
+#             cmin, cmax = similarity_bins[i], similarity_bins[i + 1]
+#             amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
+#             mean_errors = np.nanmean(all_errors[amin:amax], axis=0)
+#             result[(cmin, cmax)] = mean_errors
+
+#         return result

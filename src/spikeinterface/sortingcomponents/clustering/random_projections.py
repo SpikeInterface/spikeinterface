@@ -16,8 +16,7 @@ except:
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.waveform_tools import estimate_templates
 from .clustering_tools import remove_duplicates_via_matching
-from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
-from spikeinterface.core.job_tools import fix_job_kwargs
+from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
 from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
 from spikeinterface.core.template import Templates
@@ -45,7 +44,7 @@ class RandomProjectionClustering:
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2},
-        "sparsity": {"method": "ptp", "threshold": 0.25},
+        "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "radius_um": 30,
         "nb_projections": 10,
         "feature": "energy",
@@ -54,16 +53,15 @@ class RandomProjectionClustering:
         "random_seed": 42,
         "noise_levels": None,
         "smoothing_kwargs": {"window_length_ms": 0.25},
+        "noise_threshold": 4,
         "tmp_folder": None,
-        "job_kwargs": {},
         "verbose": True,
+        "debug": False,
     }
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         assert HAVE_HDBSCAN, "random projections clustering need hdbscan to be installed"
-
-        job_kwargs = fix_job_kwargs(params["job_kwargs"])
 
         d = params
         verbose = d["verbose"]
@@ -133,44 +131,59 @@ class RandomProjectionClustering:
         nbefore = int(params["waveforms"]["ms_before"] * fs / 1000.0)
         nafter = int(params["waveforms"]["ms_after"] * fs / 1000.0)
 
+        if params["noise_levels"] is None:
+            params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
+
         templates_array = estimate_templates(
-            recording, spikes, unit_ids, nbefore, nafter, return_scaled=False, job_name=None, **job_kwargs
+            recording,
+            spikes,
+            unit_ids,
+            nbefore,
+            nafter,
+            return_scaled=False,
+            job_name=None,
+            **job_kwargs,
         )
 
+        best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
+        peak_snrs = np.abs(templates_array[:, nbefore, :])
+        best_snrs_ratio = (peak_snrs / params["noise_levels"])[np.arange(len(peak_snrs)), best_channels]
+        valid_templates = best_snrs_ratio > params["noise_threshold"]
+
         templates = Templates(
-            templates_array=templates_array,
+            templates_array=templates_array[valid_templates],
             sampling_frequency=fs,
             nbefore=nbefore,
             sparsity_mask=None,
             channel_ids=recording.channel_ids,
-            unit_ids=unit_ids,
+            unit_ids=unit_ids[valid_templates],
             probe=recording.get_probe(),
             is_scaled=False,
         )
-        if params["noise_levels"] is None:
-            params["noise_levels"] = get_noise_levels(recording, return_scaled=False)
-        sparsity = compute_sparsity(templates, params["noise_levels"], **params["sparsity"])
+
+        sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
         templates = templates.to_sparse(sparsity)
+        empty_templates = templates.sparsity_mask.sum(axis=1) == 0
         templates = remove_empty_templates(templates)
 
+        mask = np.isin(peak_labels, np.where(empty_templates)[0])
+        peak_labels[mask] = -1
+
+        mask = np.isin(peak_labels, np.where(~valid_templates)[0])
+        peak_labels[mask] = -1
+
         if verbose:
-            print("We found %d raw clusters, starting to clean with matching..." % (len(templates.unit_ids)))
+            print("Found %d raw clusters, starting to clean with matching" % (len(templates.unit_ids)))
 
-        cleaning_matching_params = job_kwargs.copy()
-        for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
-            if value in cleaning_matching_params:
-                cleaning_matching_params[value] = None
-        cleaning_matching_params["chunk_duration"] = "100ms"
-        cleaning_matching_params["n_jobs"] = 1
-        cleaning_matching_params["progress_bar"] = False
-
+        cleaning_job_kwargs = job_kwargs.copy()
+        cleaning_job_kwargs["progress_bar"] = False
         cleaning_params = params["cleaning_kwargs"].copy()
 
         labels, peak_labels = remove_duplicates_via_matching(
-            templates, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
+            templates, peak_labels, job_kwargs=cleaning_job_kwargs, **cleaning_params
         )
 
         if verbose:
-            print("We kept %d non-duplicated clusters..." % len(labels))
+            print("Kept %d non-duplicated clusters" % len(labels))
 
         return labels, peak_labels

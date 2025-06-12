@@ -1,4 +1,4 @@
-Export MATLAB Data to Binary & Load in SpikeInterface
+Export MATLAB data to binary & load in SpikeInterface
 ========================================================
 
 In this tutorial, we will walk through the process of exporting data from MATLAB in a binary format and subsequently loading it using SpikeInterface in Python.

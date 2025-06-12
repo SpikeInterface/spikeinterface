@@ -1,10 +1,11 @@
 import numpy as np
 
-try:
-    import numba
+import importlib.util
 
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ModuleNotFoundError as err:
+else:
     HAVE_NUMBA = False
 
 from spikeinterface import NumpySorting, generate_sorting
@@ -92,7 +93,6 @@ def test_equal_results_correlograms(window_and_bin_ms):
         sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba"
     )
 
-    assert np.array_equal(result_numpy, result_numba)
     assert np.array_equal(result_numpy, result_numba)
 
 
@@ -194,12 +194,12 @@ def test_compute_correlograms(fill_all_bins, on_time_bin, multi_segment):
     )
 
     if multi_segment:
-        sorting = NumpySorting.from_times_labels(
-            times_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
+        sorting = NumpySorting.from_samples_and_labels(
+            samples_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
         )
     else:
-        sorting = NumpySorting.from_times_labels(
-            times_list=[spike_times, spike_times],
+        sorting = NumpySorting.from_samples_and_labels(
+            samples_list=[spike_times, spike_times],
             labels_list=[spike_unit_indices, spike_unit_indices],
             sampling_frequency=sampling_frequency,
         )
@@ -240,8 +240,8 @@ def test_compute_correlograms_different_units(method):
     window_ms = 40
     bin_ms = 5
 
-    sorting = NumpySorting.from_times_labels(
-        times_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
+    sorting = NumpySorting.from_samples_and_labels(
+        samples_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
     )
 
     result, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)

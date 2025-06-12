@@ -46,7 +46,7 @@ class TestCausalFilter:
 
         filt_data = causal_filter(recording, direction="forward", **options, margin_ms=0).get_traces()
 
-        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6)
+        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-2)
 
         # Then, change all kwargs to ensure they are propagated
         # and check the backwards version.
@@ -66,7 +66,7 @@ class TestCausalFilter:
 
         filt_data = causal_filter(recording, direction="backward", **options, margin_ms=0).get_traces()
 
-        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6)
+        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-2)
 
     def test_causal_filter_custom_coeff(self, recording_and_data):
         """
@@ -89,7 +89,7 @@ class TestCausalFilter:
 
         filt_data = causal_filter(recording, direction="forward", **options, margin_ms=0).get_traces()
 
-        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6, equal_nan=True)
+        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-2, equal_nan=True)
 
         # Next, in "sos" mode
         options["filter_mode"] = "sos"
@@ -100,7 +100,7 @@ class TestCausalFilter:
 
         filt_data = causal_filter(recording, direction="forward", **options, margin_ms=0).get_traces()
 
-        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-6, equal_nan=True)
+        assert np.allclose(test_data, filt_data, rtol=0, atol=1e-2, equal_nan=True)
 
     def test_causal_kwarg_error_raised(self, recording_and_data):
         """

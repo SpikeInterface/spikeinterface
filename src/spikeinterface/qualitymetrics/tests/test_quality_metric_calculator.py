@@ -2,7 +2,6 @@ import pytest
 from pathlib import Path
 import numpy as np
 
-
 from spikeinterface.core import (
     generate_ground_truth_recording,
     create_sorting_analyzer,
@@ -15,67 +14,24 @@ from spikeinterface.qualitymetrics import (
     compute_quality_metrics,
 )
 
-
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
-
-
-def get_sorting_analyzer(seed=2205):
-    # we need high firing rate for amplitude_cutoff
-    recording, sorting = generate_ground_truth_recording(
-        durations=[
-            120.0,
-        ],
-        sampling_frequency=30_000.0,
-        num_channels=6,
-        num_units=10,
-        generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
-        generate_unit_locations_kwargs=dict(
-            margin_um=5.0,
-            minimum_z=5.0,
-            maximum_z=20.0,
-        ),
-        generate_templates_kwargs=dict(
-            unit_params=dict(
-                alpha=(200.0, 500.0),
-            )
-        ),
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
-        seed=seed,
-    )
-
-    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
-
-    sorting_analyzer.compute("random_spikes", max_spikes_per_unit=300, seed=seed)
-    sorting_analyzer.compute("noise_levels")
-    sorting_analyzer.compute("waveforms", **job_kwargs)
-    sorting_analyzer.compute("templates")
-    sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
-
-    return sorting_analyzer
-
-
-@pytest.fixture(scope="module")
-def sorting_analyzer_simple():
-    sorting_analyzer = get_sorting_analyzer(seed=2205)
-    return sorting_analyzer
 
 
 def test_compute_quality_metrics(sorting_analyzer_simple):
     sorting_analyzer = sorting_analyzer_simple
-    print(sorting_analyzer)
 
     # without PCs
     metrics = compute_quality_metrics(
         sorting_analyzer,
         metric_names=["snr"],
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=True,
         seed=2205,
     )
     # print(metrics)
 
     qm = sorting_analyzer.get_extension("quality_metrics")
-    assert qm.params["qm_params"]["isi_violation"]["isi_threshold_ms"] == 2
+    assert qm.params["metric_params"]["isi_violation"]["isi_threshold_ms"] == 2
     assert "snr" in metrics.columns
     assert "isolation_distance" not in metrics.columns
 
@@ -84,12 +40,39 @@ def test_compute_quality_metrics(sorting_analyzer_simple):
     metrics = compute_quality_metrics(
         sorting_analyzer,
         metric_names=None,
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=False,
         seed=2205,
     )
     print(metrics.columns)
     assert "isolation_distance" in metrics.columns
+
+
+def test_merging_quality_metrics(sorting_analyzer_simple):
+
+    sorting_analyzer = sorting_analyzer_simple
+
+    metrics = compute_quality_metrics(
+        sorting_analyzer,
+        metric_names=None,
+        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        skip_pc_metrics=False,
+        seed=2205,
+    )
+
+    # sorting_analyzer_simple has ten units
+    new_sorting_analyzer = sorting_analyzer.merge_units([[0, 1]])
+
+    new_metrics = new_sorting_analyzer.get_extension("quality_metrics").get_data()
+
+    # we should copy over the metrics after merge
+    for column in metrics.columns:
+        assert column in new_metrics.columns
+        # should copy dtype too
+        assert metrics[column].dtype == new_metrics[column].dtype
+
+    # 10 units vs 9 units
+    assert len(metrics.index) > len(new_metrics.index)
 
 
 def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
@@ -98,7 +81,7 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
     metrics = compute_quality_metrics(
         sorting_analyzer,
         metric_names=None,
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=False,
         seed=2205,
     )
@@ -112,7 +95,7 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
     metrics_norec = compute_quality_metrics(
         sorting_analyzer_norec,
         metric_names=None,
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=False,
         seed=2205,
     )
@@ -145,15 +128,20 @@ def test_empty_units(sorting_analyzer_simple):
     metrics_empty = compute_quality_metrics(
         sorting_analyzer_empty,
         metric_names=None,
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=True,
         seed=2205,
     )
 
-    for empty_unit_id in sorting_empty.get_empty_unit_ids():
+    # num_spikes are ints not nans so we confirm empty units are nans for everything except
+    # num_spikes which should be 0
+    nan_containing_columns = [column for column in metrics_empty.columns if column != "num_spikes"]
+    for empty_unit_ids in sorting_empty.get_empty_unit_ids():
         from pandas import isnull
 
-        assert np.all(isnull(metrics_empty.loc[empty_unit_id].values))
+        assert np.all(isnull(metrics_empty.loc[empty_unit_ids, nan_containing_columns].values))
+        if "num_spikes" in metrics_empty.columns:
+            assert sum(metrics_empty.loc[empty_unit_ids, ["num_spikes"]]) == 0
 
 
 # TODO @alessio all theses old test should be moved in test_metric_functions.py or test_pca_metrics()

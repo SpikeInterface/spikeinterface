@@ -5,6 +5,7 @@ import json
 from dataclasses import dataclass, field, astuple, replace
 from probeinterface import Probe
 from pathlib import Path
+
 from .sparsity import ChannelSparsity
 
 
@@ -205,6 +206,7 @@ class Templates:
             unit_ids=self.unit_ids,
             probe=self.probe,
             check_for_consistent_sparsity=self.check_for_consistent_sparsity,
+            is_scaled=self.is_scaled,
         )
 
     def get_one_template_dense(self, unit_index):

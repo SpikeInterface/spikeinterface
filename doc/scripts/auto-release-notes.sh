@@ -1,6 +1,6 @@
 #!/bin/bash
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 START_DATE END_DATE [LABEL] [BRANCH1,BRANCH2] [LIMIT]"
+    echo "Usage: $0 START_DATE (format: YEAR-MM-DD) END_DATE [LABEL] [BRANCH1,BRANCH2] [LIMIT]"
     exit 1
 fi
 

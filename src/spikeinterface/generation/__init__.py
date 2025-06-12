@@ -15,6 +15,8 @@ from .hybrid_tools import (
 )
 from .noise_tools import generate_noise
 
+from .splitting_tools import split_sorting_by_amplitudes, split_sorting_by_times
+
 from .drifting_generator import (
     make_one_displacement_vector,
     generate_displacement_vector,
@@ -29,7 +31,7 @@ from .template_database import (
 )
 
 # expose the core generate functions
-from ..core.generate import (
+from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
     generate_snippets,

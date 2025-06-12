@@ -10,9 +10,9 @@ import numpy as np
 import warnings
 from copy import deepcopy
 
-from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from ..core.template_tools import get_template_extremum_channel
-from ..core.template_tools import get_dense_templates_array
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
+from spikeinterface.core.template_tools import get_template_extremum_channel
+from spikeinterface.core.template_tools import get_dense_templates_array
 
 # DEBUG = False
 
@@ -62,22 +62,11 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         For more on generating a ChannelSparsity, see the `~spikeinterface.compute_sparsity()` function.
     include_multi_channel_metrics : bool, default: False
         Whether to compute multi-channel metrics
-    metrics_kwargs : dict
-        Additional arguments to pass to the metric functions. Including:
-            * recovery_window_ms: the window in ms after the peak to compute the recovery_slope, default: 0.7
-            * peak_relative_threshold: the relative threshold to detect positive and negative peaks, default: 0.2
-            * peak_width_ms: the width in samples to detect peaks, default: 0.2
-            * depth_direction: the direction to compute velocity above and below, default: "y" (see notes)
-            * min_channels_for_velocity: the minimum number of channels above or below to compute velocity, default: 5
-            * min_r2_velocity: the minimum r2 to accept the velocity fit, default: 0.7
-            * exp_peak_function: the function to use to compute the peak amplitude for the exp decay, default: "ptp"
-            * min_r2_exp_decay: the minimum r2 to accept the exp decay fit, default: 0.5
-            * spread_threshold: the threshold to compute the spread, default: 0.2
-            * spread_smooth_um: the smoothing in um to compute the spread, default: 20
-            * column_range: the range in um in the horizontal direction to consider channels for velocity, default: None
-                - If None, all channels all channels are considered
-                - If 0 or 1, only the "column" that includes the max channel is considered
-                - If > 1, only channels within range (+/-) um from the max channel horizontal position are used
+    delete_existing_metrics : bool, default: False
+        If True, any template metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept, provided the `metric_params` are unchanged.
+    metric_params : dict of dicts or None, default: None
+        Dictionary with parameters for template metrics calculation.
+        Default parameters can be obtained with: `si.postprocessing.template_metrics.get_default_tm_params()`
 
     Returns
     -------
@@ -95,11 +84,24 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
     extension_name = "template_metrics"
     depend_on = ["templates"]
-    need_recording = True
+    need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
+    need_backward_compatibility_on_load = True
 
     min_channels_for_multi_channel_warning = 10
+
+    def _handle_backward_compatibility_on_load(self):
+
+        # For backwards compatibility - this reformats metrics_kwargs as metric_params
+        if (metrics_kwargs := self.params.get("metrics_kwargs")) is not None:
+
+            metric_params = {}
+            for metric_name in self.params["metric_names"]:
+                metric_params[metric_name] = deepcopy(metrics_kwargs)
+            self.params["metric_params"] = metric_params
+
+            del self.params["metrics_kwargs"]
 
     def _set_params(
         self,
@@ -107,8 +109,10 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         peak_sign="neg",
         upsampling_factor=10,
         sparsity=None,
+        metric_params=None,
         metrics_kwargs=None,
         include_multi_channel_metrics=False,
+        delete_existing_metrics=False,
         **other_kwargs,
     ):
 
@@ -129,22 +133,37 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         if include_multi_channel_metrics:
             metric_names += get_multi_channel_template_metric_names()
 
-        if metrics_kwargs is None:
-            metrics_kwargs_ = _default_function_kwargs.copy()
-            if len(other_kwargs) > 0:
-                for m in other_kwargs:
-                    if m in metrics_kwargs_:
-                        metrics_kwargs_[m] = other_kwargs[m]
-        else:
-            metrics_kwargs_ = _default_function_kwargs.copy()
-            metrics_kwargs_.update(metrics_kwargs)
+        if metrics_kwargs is not None and metric_params is None:
+            deprecation_msg = "`metrics_kwargs` is deprecated and will be removed in version 0.104.0. Please use `metric_params` instead"
+            deprecation_msg = "`metrics_kwargs` is deprecated and will be removed in version 0.104.0. Please use `metric_params` instead"
+
+            metric_params = {}
+            for metric_name in metric_names:
+                metric_params[metric_name] = deepcopy(metrics_kwargs)
+
+        metric_params_ = get_default_tm_params(metric_names)
+        for k in metric_params_:
+            if metric_params is not None and k in metric_params:
+                metric_params_[k].update(metric_params[k])
+
+        metrics_to_compute = metric_names
+        tm_extension = self.sorting_analyzer.get_extension("template_metrics")
+        if delete_existing_metrics is False and tm_extension is not None:
+
+            existing_metric_names = tm_extension.params["metric_names"]
+            existing_metric_names_propagated = [
+                metric_name for metric_name in existing_metric_names if metric_name not in metrics_to_compute
+            ]
+            metric_names = metrics_to_compute + existing_metric_names_propagated
 
         params = dict(
-            metric_names=[str(name) for name in np.unique(metric_names)],
+            metric_names=metric_names,
             sparsity=sparsity,
             peak_sign=peak_sign,
             upsampling_factor=int(upsampling_factor),
-            metrics_kwargs=metrics_kwargs_,
+            metric_params=metric_params_,
+            delete_existing_metrics=delete_existing_metrics,
+            metrics_to_compute=metrics_to_compute,
         )
 
         return params
@@ -158,6 +177,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
     ):
         import pandas as pd
 
+        metric_names = self.params["metric_names"]
         old_metrics = self.data["metrics"]
 
         all_unit_ids = new_sorting_analyzer.unit_ids
@@ -166,19 +186,20 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
-        metrics.loc[new_unit_ids, :] = self._compute_metrics(new_sorting_analyzer, new_unit_ids, verbose, **job_kwargs)
+        metrics.loc[new_unit_ids, :] = self._compute_metrics(
+            new_sorting_analyzer, new_unit_ids, verbose, metric_names, **job_kwargs
+        )
 
         new_data = dict(metrics=metrics)
         return new_data
 
-    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, **job_kwargs):
+    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, metric_names=None, **job_kwargs):
         """
         Compute template metrics.
         """
         import pandas as pd
         from scipy.signal import resample_poly
 
-        metric_names = self.params["metric_names"]
         sparsity = self.params["sparsity"]
         peak_sign = self.params["peak_sign"]
         upsampling_factor = self.params["upsampling_factor"]
@@ -242,7 +263,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                             sampling_frequency=sampling_frequency_up,
                             trough_idx=trough_idx,
                             peak_idx=peak_idx,
-                            **self.params["metrics_kwargs"],
+                            **self.params["metric_params"][metric_name],
                         )
                     except Exception as e:
                         warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
@@ -281,18 +302,59 @@ class ComputeTemplateMetrics(AnalyzerExtension):
                         template_upsampled,
                         channel_locations=channel_locations_sparse,
                         sampling_frequency=sampling_frequency_up,
-                        **self.params["metrics_kwargs"],
+                        **self.params["metric_params"][metric_name],
                     )
                 except Exception as e:
                     warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
                     value = np.nan
                 template_metrics.at[index, metric_name] = value
+
+        # we use the convert_dtypes to convert the columns to the most appropriate dtype and avoid object columns
+        # (in case of NaN values)
+        template_metrics = template_metrics.convert_dtypes()
         return template_metrics
 
     def _run(self, verbose=False):
-        self.data["metrics"] = self._compute_metrics(
-            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose
+
+        metrics_to_compute = self.params["metrics_to_compute"]
+        delete_existing_metrics = self.params["delete_existing_metrics"]
+
+        # compute the metrics which have been specified by the user
+        computed_metrics = self._compute_metrics(
+            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, metric_names=metrics_to_compute
         )
+
+        existing_metrics = []
+
+        # Check if we need to propagate any old metrics. If so, we'll do that.
+        # Otherwise, we'll avoid attempting to load an empty template_metrics.
+        if set(self.params["metrics_to_compute"]) != set(self.params["metric_names"]):
+
+            tm_extension = self.sorting_analyzer.get_extension("template_metrics")
+            if (
+                delete_existing_metrics is False
+                and tm_extension is not None
+                and tm_extension.data.get("metrics") is not None
+            ):
+                existing_metrics = tm_extension.params["metric_names"]
+
+        existing_metrics = []
+        # here we get in the loaded via the dict only (to avoid full loading from disk after params reset)
+        tm_extension = self.sorting_analyzer.extensions.get("template_metrics", None)
+        if (
+            delete_existing_metrics is False
+            and tm_extension is not None
+            and tm_extension.data.get("metrics") is not None
+        ):
+            existing_metrics = tm_extension.params["metric_names"]
+
+        # append the metrics which were previously computed
+        for metric_name in set(existing_metrics).difference(metrics_to_compute):
+            # some metrics names produce data columns with other names. This deals with that.
+            for column_name in tm_compute_name_to_column_names[metric_name]:
+                computed_metrics[column_name] = tm_extension.data["metrics"][column_name]
+
+        self.data["metrics"] = computed_metrics
 
     def _get_data(self):
         return self.data["metrics"]
@@ -315,6 +377,35 @@ _default_function_kwargs = dict(
     spread_smooth_um=20,
     column_range=None,
 )
+
+
+def get_default_tm_params(metric_names):
+    if metric_names is None:
+        metric_names = get_template_metric_names()
+
+    base_tm_params = _default_function_kwargs
+
+    metric_params = {}
+    for metric_name in metric_names:
+        metric_params[metric_name] = deepcopy(base_tm_params)
+
+    return metric_params
+
+
+# a dict converting the name of the metric for computation to the output of that computation
+tm_compute_name_to_column_names = {
+    "peak_to_valley": ["peak_to_valley"],
+    "peak_trough_ratio": ["peak_trough_ratio"],
+    "half_width": ["half_width"],
+    "repolarization_slope": ["repolarization_slope"],
+    "recovery_slope": ["recovery_slope"],
+    "num_positive_peaks": ["num_positive_peaks"],
+    "num_negative_peaks": ["num_negative_peaks"],
+    "velocity_above": ["velocity_above"],
+    "velocity_below": ["velocity_below"],
+    "exp_decay": ["exp_decay"],
+    "spread": ["spread"],
+}
 
 
 def get_trough_and_peak_idx(template):

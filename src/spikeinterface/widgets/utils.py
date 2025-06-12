@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+from warnings import warn
 import numpy as np
 
 
 def get_some_colors(
-    keys, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None, margin=None
+    keys,
+    color_engine="auto",
+    map_name="gist_ncar",
+    format="RGBA",
+    shuffle=None,
+    seed=None,
+    margin=None,
+    resample=True,
 ):
     """
     Return a dict of colors for given keys
@@ -26,6 +34,8 @@ def get_some_colors(
         Set the seed
     margin: None or int
         If None, put a margin to remove colors on borders of some colomap of matplotlib.
+    resample : bool, dafult True
+        For matplotlib, only resample the cmap to the number of keys + eventualy maring
 
     Returns
     -------
@@ -77,9 +87,11 @@ def get_some_colors(
     elif color_engine == "matplotlib":
         # some map have black or white at border so +10
 
-        if margin is None:
-            margin = max(4, int(N * 0.08))
-        cmap = plt.colormaps[map_name].resampled(N + 2 * margin)
+        cmap = plt.colormaps[map_name]
+        if resample:
+            if margin is None:
+                margin = max(4, int(N * 0.08))
+            cmap = cmap.resampled(N + 2 * margin)
         colors = [cmap(i + margin) for i, key in enumerate(keys)]
 
     elif color_engine == "colorsys":
@@ -243,3 +255,97 @@ def array_to_image(
             output_image = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape(output_image.shape)
 
     return output_image
+
+
+def make_units_table_from_sorting(sorting, units_table=None):
+    """
+    Make a DataFrame from sorting properties.
+    Only for properties with ndim=1
+
+    Parameters
+    ----------
+    sorting : Sorting
+        The Sorting object
+    units_table : None | pd.DataFrame
+        Optionally a existing dataframe.
+
+    Returns
+    -------
+    units_table : pd.DataFrame
+        Table containing all columns.
+    """
+
+    if units_table is None:
+        import pandas as pd
+
+        units_table = pd.DataFrame(index=sorting.unit_ids)
+
+    for col in sorting.get_property_keys():
+        values = sorting.get_property(col)
+        if values.dtype.kind in "iuUSfb" and values.ndim == 1:
+            units_table.loc[:, col] = values
+
+    return units_table
+
+
+def make_units_table_from_analyzer(
+    analyzer,
+    extra_properties=None,
+):
+    """
+    Make a DataFrame by aggregating :
+      * quality metrics
+      * template metrics
+      * unit_position
+      * sorting properties
+      * extra columns
+
+    This used in sortingview and spikeinterface-gui to display the units table in a flexible way.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer object
+    extra_properties : None | dict
+        Extra columns given as dict.
+
+    Returns
+    -------
+    units_table : pd.DataFrame
+        Table containing all columns.
+    """
+    import pandas as pd
+
+    all_df = []
+
+    if analyzer.get_extension("unit_locations") is not None:
+        locs = analyzer.get_extension("unit_locations").get_data()
+        df = pd.DataFrame(locs[:, :2], columns=["x", "y"], index=analyzer.unit_ids)
+        all_df.append(df)
+
+    if analyzer.get_extension("quality_metrics") is not None:
+        df = analyzer.get_extension("quality_metrics").get_data()
+        all_df.append(df)
+
+    if analyzer.get_extension("template_metrics") is not None:
+        df = analyzer.get_extension("template_metrics").get_data()
+        all_df.append(df)
+
+    if len(all_df) > 0:
+        units_table = pd.concat(all_df, axis=1)
+    else:
+        units_table = pd.DataFrame(index=analyzer.unit_ids)
+
+    make_units_table_from_sorting(analyzer.sorting, units_table=units_table)
+
+    if extra_properties is not None:
+        for col, values in extra_properties.items():
+            # the ndim = 1 is important because we need  column only for the display in gui.
+            if values.dtype.kind in "iuUSfb" and values.ndim == 1:
+                units_table.loc[:, col] = values
+            else:
+                warn(
+                    f"Extra property {col} not added to the units table because it has ndim > 1 or dtype not supported",
+                )
+
+    return units_table

@@ -1,16 +1,12 @@
 import unittest
-import pytest
 import os
-
-import numpy as np
+import importlib.util
 
 if __name__ != "__main__":
-    try:
+    if importlib.util.find_spec("matplotlib") is not None:
         import matplotlib
 
         matplotlib.use("Agg")
-    except:
-        pass
 
 
 from spikeinterface import (
@@ -73,7 +69,9 @@ class TestWidgets(unittest.TestCase):
             spike_amplitudes=dict(),
             unit_locations=dict(),
             spike_locations=dict(),
-            quality_metrics=dict(metric_names=["snr", "isi_violation", "num_spikes"]),
+            quality_metrics=dict(
+                metric_names=["snr", "isi_violation", "num_spikes", "firing_rate", "amplitude_cutoff"]
+            ),
             template_metrics=dict(),
             correlograms=dict(),
             template_similarity=dict(),
@@ -478,6 +476,30 @@ class TestWidgets(unittest.TestCase):
                     self.sorting_analyzer_sparse, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
                 )
 
+    def test_plot_locations(self):
+        possible_backends = list(sw.LocationsWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_locations(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
+                unit_ids = self.sorting_analyzer_dense.unit_ids[:4]
+                sw.plot_locations(
+                    self.sorting_analyzer_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
+                )
+                sw.plot_locations(
+                    self.sorting_analyzer_dense,
+                    unit_ids=unit_ids,
+                    plot_histograms=True,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                sw.plot_locations(
+                    self.sorting_analyzer_sparse,
+                    unit_ids=unit_ids,
+                    plot_histograms=True,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+
     def test_plot_similarity(self):
         possible_backends = list(sw.TemplateSimilarityWidget.get_possible_backends())
         for backend in possible_backends:
@@ -531,18 +553,29 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.SortingSummaryWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_sorting_summary(self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend])
-                sw.plot_sorting_summary(self.sorting_analyzer_sparse, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_sorting_summary(
-                    self.sorting_analyzer_sparse,
-                    sparsity=self.sparsity_strict,
+                    self.sorting_analyzer_dense,
+                    displayed_unit_properties=[],
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
-                # add unit_properties
                 sw.plot_sorting_summary(
                     self.sorting_analyzer_sparse,
-                    unit_table_properties=["firing_rate", "snr"],
+                    displayed_unit_properties=[],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                sw.plot_sorting_summary(
+                    self.sorting_analyzer_sparse,
+                    sparsity=self.sparsity_strict,
+                    displayed_unit_properties=[],
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+                # select unit_properties
+                sw.plot_sorting_summary(
+                    self.sorting_analyzer_sparse,
+                    displayed_unit_properties=["firing_rate", "snr"],
                     backend=backend,
                     **self.backend_kwargs[backend],
                 )
@@ -550,7 +583,7 @@ class TestWidgets(unittest.TestCase):
                 with self.assertWarns(UserWarning):
                     sw.plot_sorting_summary(
                         self.sorting_analyzer_sparse,
-                        unit_table_properties=["missing_property"],
+                        displayed_unit_properties=["missing_property"],
                         backend=backend,
                         **self.backend_kwargs[backend],
                     )
@@ -688,9 +721,9 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_presence()
     # mytest.test_plot_peak_activity()
     # mytest.test_plot_multicomparison()
-    # mytest.test_plot_sorting_summary()
+    mytest.test_plot_sorting_summary()
     # mytest.test_plot_motion()
-    mytest.test_plot_motion_info()
-    plt.show()
+    # mytest.test_plot_motion_info()
+    # plt.show()
 
     # TestWidgets.tearDownClass()

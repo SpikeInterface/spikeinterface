@@ -2,10 +2,18 @@ from __future__ import annotations
 
 import numpy as np
 import warnings
+import importlib.util
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from ..core.template_tools import get_dense_templates_array
-from ..core.sparsity import ChannelSparsity
+from spikeinterface.core.template_tools import get_dense_templates_array
+from spikeinterface.core.sparsity import ChannelSparsity
+
+
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
+    HAVE_NUMBA = True
+else:
+    HAVE_NUMBA = False
 
 
 class ComputeTemplateSimilarity(AnalyzerExtension):
@@ -37,7 +45,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 
     extension_name = "template_similarity"
     depend_on = ["templates"]
-    need_recording = True
+    need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
     need_backward_compatibility_on_load = True
@@ -147,10 +155,161 @@ register_result_extension(ComputeTemplateSimilarity)
 compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
 
+def _compute_similarity_matrix_numpy(templates_array, other_templates_array, num_shifts, mask, method):
+
+    num_templates = templates_array.shape[0]
+    num_samples = templates_array.shape[1]
+    other_num_templates = other_templates_array.shape[0]
+
+    num_shifts_both_sides = 2 * num_shifts + 1
+    distances = np.ones((num_shifts_both_sides, num_templates, other_num_templates), dtype=np.float32)
+    same_array = np.array_equal(templates_array, other_templates_array)
+
+    # We can use the fact that dist[i,j] at lag t is equal to dist[j,i] at time -t
+    # So the matrix can be computed only for negative lags and be transposed
+
+    if same_array:
+        # optimisation when array are the same because of symetry in shift
+        shift_loop = range(-num_shifts, 1)
+    else:
+        shift_loop = range(-num_shifts, num_shifts + 1)
+
+    for count, shift in enumerate(shift_loop):
+        src_sliced_templates = templates_array[:, num_shifts : num_samples - num_shifts]
+        tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
+        for i in range(num_templates):
+            src_template = src_sliced_templates[i]
+            overlapping_templates = np.flatnonzero(np.sum(mask[i], 1))
+            tgt_templates = tgt_sliced_templates[overlapping_templates]
+            for gcount, j in enumerate(overlapping_templates):
+                # symmetric values are handled later
+                if same_array and j < i:
+                    # no need exhaustive looping when same template
+                    continue
+                src = src_template[:, mask[i, j]].reshape(1, -1)
+                tgt = (tgt_templates[gcount][:, mask[i, j]]).reshape(1, -1)
+
+                if method == "l1":
+                    norm_i = np.sum(np.abs(src))
+                    norm_j = np.sum(np.abs(tgt))
+                    distances[count, i, j] = np.sum(np.abs(src - tgt))
+                    distances[count, i, j] /= norm_i + norm_j
+                elif method == "l2":
+                    norm_i = np.linalg.norm(src, ord=2)
+                    norm_j = np.linalg.norm(tgt, ord=2)
+                    distances[count, i, j] = np.linalg.norm(src - tgt, ord=2)
+                    distances[count, i, j] /= norm_i + norm_j
+                elif method == "cosine":
+                    norm_i = np.linalg.norm(src, ord=2)
+                    norm_j = np.linalg.norm(tgt, ord=2)
+                    distances[count, i, j] = np.sum(src * tgt)
+                    distances[count, i, j] /= norm_i * norm_j
+                    distances[count, i, j] = 1 - distances[count, i, j]
+
+                if same_array:
+                    distances[count, j, i] = distances[count, i, j]
+
+        if same_array and num_shifts != 0:
+            distances[num_shifts_both_sides - count - 1] = distances[count].T
+    return distances
+
+
+if HAVE_NUMBA:
+
+    from math import sqrt
+    import numba
+
+    @numba.jit(nopython=True, parallel=True, fastmath=True, nogil=True)
+    def _compute_similarity_matrix_numba(templates_array, other_templates_array, num_shifts, mask, method):
+        num_templates = templates_array.shape[0]
+        num_samples = templates_array.shape[1]
+        other_num_templates = other_templates_array.shape[0]
+
+        num_shifts_both_sides = 2 * num_shifts + 1
+        distances = np.ones((num_shifts_both_sides, num_templates, other_num_templates), dtype=np.float32)
+        same_array = np.array_equal(templates_array, other_templates_array)
+
+        # We can use the fact that dist[i,j] at lag t is equal to dist[j,i] at time -t
+        # So the matrix can be computed only for negative lags and be transposed
+
+        if same_array:
+            # optimisation when array are the same because of symetry in shift
+            shift_loop = list(range(-num_shifts, 1))
+        else:
+            shift_loop = list(range(-num_shifts, num_shifts + 1))
+
+        if method == "l1":
+            metric = 0
+        elif method == "l2":
+            metric = 1
+        elif method == "cosine":
+            metric = 2
+
+        for count in range(len(shift_loop)):
+            shift = shift_loop[count]
+            src_sliced_templates = templates_array[:, num_shifts : num_samples - num_shifts]
+            tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
+            for i in numba.prange(num_templates):
+                src_template = src_sliced_templates[i]
+                overlapping_templates = np.flatnonzero(np.sum(mask[i], 1))
+                tgt_templates = tgt_sliced_templates[overlapping_templates]
+                for gcount in range(len(overlapping_templates)):
+
+                    j = overlapping_templates[gcount]
+                    # symmetric values are handled later
+                    if same_array and j < i:
+                        # no need exhaustive looping when same template
+                        continue
+                    src = src_template[:, mask[i, j]].flatten()
+                    tgt = (tgt_templates[gcount][:, mask[i, j]]).flatten()
+
+                    norm_i = 0
+                    norm_j = 0
+                    distances[count, i, j] = 0
+
+                    for k in range(len(src)):
+                        if metric == 0:
+                            norm_i += abs(src[k])
+                            norm_j += abs(tgt[k])
+                            distances[count, i, j] += abs(src[k] - tgt[k])
+                        elif metric == 1:
+                            norm_i += src[k] ** 2
+                            norm_j += tgt[k] ** 2
+                            distances[count, i, j] += (src[k] - tgt[k]) ** 2
+                        elif metric == 2:
+                            distances[count, i, j] += src[k] * tgt[k]
+                            norm_i += src[k] ** 2
+                            norm_j += tgt[k] ** 2
+
+                    if metric == 0:
+                        distances[count, i, j] /= norm_i + norm_j
+                    elif metric == 1:
+                        norm_i = sqrt(norm_i)
+                        norm_j = sqrt(norm_j)
+                        distances[count, i, j] = sqrt(distances[count, i, j])
+                        distances[count, i, j] /= norm_i + norm_j
+                    elif metric == 2:
+                        norm_i = sqrt(norm_i)
+                        norm_j = sqrt(norm_j)
+                        distances[count, i, j] /= norm_i * norm_j
+                        distances[count, i, j] = 1 - distances[count, i, j]
+
+                    if same_array:
+                        distances[count, j, i] = distances[count, i, j]
+
+            if same_array and num_shifts != 0:
+                distances[num_shifts_both_sides - count - 1] = distances[count].T
+
+        return distances
+
+    _compute_similarity_matrix = _compute_similarity_matrix_numba
+else:
+    _compute_similarity_matrix = _compute_similarity_matrix_numpy
+
+
 def compute_similarity_with_templates_array(
     templates_array, other_templates_array, method, support="union", num_shifts=0, sparsity=None, other_sparsity=None
 ):
-    import sklearn.metrics.pairwise
 
     if method == "cosine_similarity":
         method = "cosine"
@@ -171,9 +330,8 @@ def compute_similarity_with_templates_array(
     num_channels = templates_array.shape[2]
     other_num_templates = other_templates_array.shape[0]
 
-    same_array = np.array_equal(templates_array, other_templates_array)
+    mask = np.ones((num_templates, other_num_templates, num_channels), dtype=bool)
 
-    mask = None
     if sparsity is not None and other_sparsity is not None:
         if support == "intersection":
             mask = np.logical_and(sparsity.mask[:, np.newaxis, :], other_sparsity.mask[np.newaxis, :, :])
@@ -182,63 +340,9 @@ def compute_similarity_with_templates_array(
             units_overlaps = np.sum(mask, axis=2) > 0
             mask = np.logical_or(sparsity.mask[:, np.newaxis, :], other_sparsity.mask[np.newaxis, :, :])
             mask[~units_overlaps] = False
-    if mask is not None:
-        units_overlaps = np.sum(mask, axis=2) > 0
-        overlapping_templates = {}
-        for i in range(num_templates):
-            overlapping_templates[i] = np.flatnonzero(units_overlaps[i])
-    else:
-        # here we make a dense mask and overlapping templates
-        overlapping_templates = {i: np.arange(other_num_templates) for i in range(num_templates)}
-        mask = np.ones((num_templates, other_num_templates, num_channels), dtype=bool)
 
     assert num_shifts < num_samples, "max_lag is too large"
-    num_shifts_both_sides = 2 * num_shifts + 1
-    distances = np.ones((num_shifts_both_sides, num_templates, other_num_templates), dtype=np.float32)
-
-    # We can use the fact that dist[i,j] at lag t is equal to dist[j,i] at time -t
-    # So the matrix can be computed only for negative lags and be transposed
-
-    if same_array:
-        # optimisation when array are the same because of symetry in shift
-        shift_loop = range(-num_shifts, 1)
-    else:
-        shift_loop = range(-num_shifts, num_shifts + 1)
-
-    for count, shift in enumerate(shift_loop):
-        src_sliced_templates = templates_array[:, num_shifts : num_samples - num_shifts]
-        tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
-        for i in range(num_templates):
-            src_template = src_sliced_templates[i]
-            tgt_templates = tgt_sliced_templates[overlapping_templates[i]]
-            for gcount, j in enumerate(overlapping_templates[i]):
-                # symmetric values are handled later
-                if same_array and j < i:
-                    # no need exhaustive looping when same template
-                    continue
-                src = src_template[:, mask[i, j]].reshape(1, -1)
-                tgt = (tgt_templates[gcount][:, mask[i, j]]).reshape(1, -1)
-
-                if method == "l1":
-                    norm_i = np.sum(np.abs(src))
-                    norm_j = np.sum(np.abs(tgt))
-                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l1").item()
-                    distances[count, i, j] /= norm_i + norm_j
-                elif method == "l2":
-                    norm_i = np.linalg.norm(src, ord=2)
-                    norm_j = np.linalg.norm(tgt, ord=2)
-                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(src, tgt, metric="l2").item()
-                    distances[count, i, j] /= norm_i + norm_j
-                else:
-                    distances[count, i, j] = sklearn.metrics.pairwise.pairwise_distances(
-                        src, tgt, metric="cosine"
-                    ).item()
-
-                if same_array:
-                    distances[count, j, i] = distances[count, i, j]
-
-        if same_array and num_shifts != 0:
-            distances[num_shifts_both_sides - count - 1] = distances[count].T
+    distances = _compute_similarity_matrix(templates_array, other_templates_array, num_shifts, mask, method)
 
     distances = np.min(distances, axis=0)
     similarity = 1 - distances

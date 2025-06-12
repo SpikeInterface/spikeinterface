@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import warnings
+import importlib.util
 
 import numpy as np
 
-try:
-    import numba
+from spikeinterface.core import SortingAnalyzer, Templates, compute_sparsity
+from spikeinterface.core.template_tools import _get_nbefore, get_dense_templates_array, get_template_extremum_channel
 
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ImportError:
+else:
     HAVE_NUMBA = False
-
-
-from spikeinterface.core import compute_sparsity, SortingAnalyzer, Templates
-from spikeinterface.core.template_tools import get_template_extremum_channel, _get_nbefore, get_dense_templates_array
 
 
 def compute_monopolar_triangulation(
@@ -77,7 +76,11 @@ def compute_monopolar_triangulation(
 
     contact_locations = sorting_analyzer_or_templates.get_channel_locations()
 
-    sparsity = compute_sparsity(sorting_analyzer_or_templates, method="radius", radius_um=radius_um)
+    if sorting_analyzer_or_templates.sparsity is None:
+        sparsity = compute_sparsity(sorting_analyzer_or_templates, method="radius", radius_um=radius_um)
+    else:
+        sparsity = sorting_analyzer_or_templates.sparsity
+
     templates = get_dense_templates_array(
         sorting_analyzer_or_templates, return_scaled=get_return_scaled(sorting_analyzer_or_templates)
     )
@@ -106,7 +109,7 @@ def compute_monopolar_triangulation(
         # wf is (nsample, nchan) - chann is only nieghboor
         wf = templates[i, :, :][:, chan_inds]
         if feature == "ptp":
-            wf_data = wf.ptp(axis=0)
+            wf_data = np.ptp(wf, axis=0)
         elif feature == "energy":
             wf_data = np.linalg.norm(wf, axis=0)
         elif feature == "peak_voltage":
@@ -157,9 +160,13 @@ def compute_center_of_mass(
 
     assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
 
-    sparsity = compute_sparsity(
-        sorting_analyzer_or_templates, peak_sign=peak_sign, method="radius", radius_um=radius_um
-    )
+    if sorting_analyzer_or_templates.sparsity is None:
+        sparsity = compute_sparsity(
+            sorting_analyzer_or_templates, peak_sign=peak_sign, method="radius", radius_um=radius_um
+        )
+    else:
+        sparsity = sorting_analyzer_or_templates.sparsity
+
     templates = get_dense_templates_array(
         sorting_analyzer_or_templates, return_scaled=get_return_scaled(sorting_analyzer_or_templates)
     )
@@ -180,7 +187,7 @@ def compute_center_of_mass(
         wf = templates[i, :, :]
 
         if feature == "ptp":
-            wf_data = (wf[:, chan_inds]).ptp(axis=0)
+            wf_data = np.ptp(wf[:, chan_inds], axis=0)
         elif feature == "mean":
             wf_data = (wf[:, chan_inds]).mean(axis=0)
         elif feature == "energy":
@@ -351,14 +358,13 @@ def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance
     import scipy.optimize
 
     x0, bounds = make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um)
-
     if optimizer == "least_square":
         args = (wf_data, local_contact_locations)
         try:
             output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args=args)
             return tuple(output["x"])
         except Exception as e:
-            print(f"scipy.optimize.least_squares error: {e}")
+            warnings.warn(f"scipy.optimize.least_squares error: {e}")
             return (np.nan, np.nan, np.nan, np.nan)
 
     if optimizer == "minimize_with_log_penality":
@@ -373,7 +379,7 @@ def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance
             alpha = (wf_data * q).sum() / np.square(q).sum()
             return (*output["x"], alpha)
         except Exception as e:
-            print(f"scipy.optimize.minimize error: {e}")
+            warnings.warn(f"scipy.optimize.minimize error: {e}")
             return (np.nan, np.nan, np.nan, np.nan)
 
 
@@ -647,11 +653,60 @@ def get_convolution_weights(
 
 
 if HAVE_NUMBA:
-    enforce_decrease_shells = numba.jit(enforce_decrease_shells_data, nopython=True)
+    from numba import jit
+
+    enforce_decrease_shells = jit(enforce_decrease_shells_data, nopython=True)
+
+
+def compute_location_max_channel(
+    templates_or_sorting_analyzer: SortingAnalyzer | Templates,
+    unit_ids=None,
+    peak_sign: "neg" | "pos" | "both" = "neg",
+    mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
+) -> np.ndarray:
+    """
+    Localize a unit using max channel.
+
+    This uses internally `get_template_extremum_channel()`
+
+
+    Parameters
+    ----------
+    templates_or_sorting_analyzer : SortingAnalyzer | Templates
+        A SortingAnalyzer or Templates object
+    unit_ids: list[str] | list[int] | None
+        A list of unit_id to restrict the computation
+    peak_sign :  "neg" | "pos" | "both"
+        Sign of the template to find extremum channels
+    mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
+        Where the amplitude is computed
+        * "extremum" : take the peak value (max or min depending on `peak_sign`)
+        * "at_index" : take value at `nbefore` index
+        * "peak_to_peak" : take the peak-to-peak amplitude
+
+    Returns
+    -------
+    unit_locations: np.ndarray
+        2d
+    """
+    extremum_channels_index = get_template_extremum_channel(
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, outputs="index"
+    )
+    contact_locations = templates_or_sorting_analyzer.get_channel_locations()
+    if unit_ids is None:
+        unit_ids = templates_or_sorting_analyzer.unit_ids
+    else:
+        unit_ids = np.asarray(unit_ids)
+    unit_locations = np.zeros((unit_ids.size, 2), dtype="float32")
+    for i, unit_id in enumerate(unit_ids):
+        unit_locations[i, :] = contact_locations[extremum_channels_index[unit_id]]
+
+    return unit_locations
 
 
 _unit_location_methods = {
     "center_of_mass": compute_center_of_mass,
     "grid_convolution": compute_grid_convolution,
     "monopolar_triangulation": compute_monopolar_triangulation,
+    "max_channel": compute_location_max_channel,
 }

@@ -2,11 +2,6 @@ Welcome to SpikeInterface's documentation!
 ==========================================
 
 
-.. image:: images/logo.png
-  :scale: 100 %
-  :align: center
-
-
 SpikeInterface is a Python module to analyze extracellular electrophysiology data.
 
 With a few lines of code, SpikeInterface enables you to load and pre-process the recording, run several
@@ -51,7 +46,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
 
     overview
     get_started/index
-    tutorials/index
+    tutorials_custom_index
     how_to/index
     modules/index
     api

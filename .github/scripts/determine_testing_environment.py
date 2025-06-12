@@ -31,6 +31,7 @@ exporters_changed = False
 sortingcomponents_changed = False
 generation_changed = False
 stream_extractors_changed = False
+github_actions_changed = False
 
 
 for changed_file in changed_files_in_the_pull_request_paths:
@@ -47,7 +48,7 @@ for changed_file in changed_files_in_the_pull_request_paths:
     elif changed_file.name == "nwbextractors.py":
         extractors_changed = True  # There are NWB tests that are not streaming
         stream_extractors_changed = True
-    elif changed_file.name == "iblextractors.py":
+    elif changed_file.name == "iblextractors.py" or changed_file.name == "test_iblextractors.py":
         stream_extractors_changed = True
     elif "core" in changed_file.parts:
         core_changed = True
@@ -78,9 +79,12 @@ for changed_file in changed_files_in_the_pull_request_paths:
             sorters_internal_changed = True
         else:
             sorters_changed = True
+    elif ".github" in changed_file.parts:
+        if "workflows" in changed_file.parts:
+            github_actions_changed = True
 
 
-run_everything = core_changed or pyproject_toml_changed or neobaseextractor_changed
+run_everything = core_changed or pyproject_toml_changed or neobaseextractor_changed or github_actions_changed
 run_generation_tests = run_everything or generation_changed
 run_extractor_tests = run_everything or extractors_changed or plexon2_changed
 run_preprocessing_tests = run_everything or preprocessing_changed
@@ -96,7 +100,7 @@ run_exporters_test = run_everything or run_widgets_test or exporters_changed
 run_sorters_test = run_everything or sorters_changed
 run_internal_sorters_test = run_everything or run_sortingcomponents_tests or sorters_internal_changed
 
-run_streaming_extractors_test = stream_extractors_changed
+run_streaming_extractors_test = stream_extractors_changed or github_actions_changed
 
 install_plexon_dependencies = plexon2_changed
 

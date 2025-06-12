@@ -6,11 +6,10 @@ from typing import Union
 import sys
 import json
 
-from ..utils import ShellScript
+from spikeinterface.sorters.utils import ShellScript
 from spikeinterface.core import write_to_h5_dataset_format
-from ..basesorter import BaseSorter
-from spikeinterface.extractors import CombinatoSortingExtractor
-from spikeinterface.preprocessing import ScaleRecording
+from spikeinterface.sorters.basesorter import BaseSorter
+from spikeinterface.extractors.extractor_classes import CombinatoSortingExtractor
 
 
 PathType = Union[str, Path]

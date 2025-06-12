@@ -1,6 +1,5 @@
 from __future__ import annotations
 import numpy as np
-import warnings
 
 from .template import Templates
 from .sortinganalyzer import SortingAnalyzer
@@ -23,6 +22,10 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_sc
         The dense templates (num_units, num_samples, num_channels)
     """
     if isinstance(one_object, Templates):
+        if return_scaled != one_object.is_scaled:
+            raise ValueError(
+                f"get_dense_templates_array: return_scaled={return_scaled} is not possible Templates has the reverse"
+            )
         templates_array = one_object.get_dense_templates()
     elif isinstance(one_object, SortingAnalyzer):
         if return_scaled != one_object.return_scaled:
@@ -31,7 +34,12 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_sc
             )
         ext = one_object.get_extension("templates")
         if ext is not None:
-            templates_array = ext.data["average"]
+            if "average" in ext.data:
+                templates_array = ext.data.get("average")
+            elif "median" in ext.data:
+                templates_array = ext.data.get("median")
+            else:
+                raise ValueError("Average or median templates have not been computed.")
         else:
             raise ValueError("SortingAnalyzer need extension 'templates' to be computed to retrieve templates")
     else:
@@ -159,7 +167,11 @@ def get_template_extremum_channel(
     # if SortingAnalyzer need to use global SortingAnalyzer return_scaled otherwise
     # we use the Templates is_scaled
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-        return_scaled = templates_or_sorting_analyzer.return_scaled
+        # For backward compatibility
+        if hasattr(templates_or_sorting_analyzer, "return_scaled"):
+            return_scaled = templates_or_sorting_analyzer.return_scaled
+        else:
+            return_scaled = templates_or_sorting_analyzer.return_in_uV
     else:
         return_scaled = templates_or_sorting_analyzer.is_scaled
 
@@ -208,7 +220,11 @@ def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak
     # We need to use the SortingAnalyzer return_scaled
     # We need to use the Templates is_scaled
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-        return_scaled = templates_or_sorting_analyzer.return_scaled
+        # For backward compatibility
+        if hasattr(templates_or_sorting_analyzer, "return_scaled"):
+            return_scaled = templates_or_sorting_analyzer.return_scaled
+        else:
+            return_scaled = templates_or_sorting_analyzer.return_in_uV
     else:
         return_scaled = templates_or_sorting_analyzer.is_scaled
 
@@ -269,7 +285,11 @@ def get_template_extremum_amplitude(
     extremum_channels_ids = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
 
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-        return_scaled = templates_or_sorting_analyzer.return_scaled
+        # For backward compatibility
+        if hasattr(templates_or_sorting_analyzer, "return_scaled"):
+            return_scaled = templates_or_sorting_analyzer.return_scaled
+        else:
+            return_scaled = templates_or_sorting_analyzer.return_in_uV
     else:
         return_scaled = templates_or_sorting_analyzer.is_scaled
 

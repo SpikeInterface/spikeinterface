@@ -1,13 +1,13 @@
 [project]
 name = "spikeinterface"
-version = "0.101.1"
+version = "0.102.4"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
 ]
 description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
 readme = "README.md"
-requires-python = ">=3.9,<4.0"
+requires-python = ">=3.9,<3.14"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "License :: OSI Approved :: MIT License",
@@ -20,17 +20,19 @@ classifiers = [
 
 
 dependencies = [
-    "numpy>=1.20, <2.0",  # 1.20 np.ptp, 1.26 might be necessary for avoiding pickling errors when numpy >2.0
+    "numpy>=1.20;python_version<'3.13'",
+    "numpy>=2.0.0;python_version>='3.13'",
     "threadpoolctl>=3.0.0",
     "tqdm",
-    "zarr>=2.16,<2.18",
-    "neo>=0.13.0",
+    "zarr>=2.18,<3",
+    "neo>=0.14.1",
     "probeinterface>=0.2.23",
     "packaging",
+    "numcodecs<0.16.0", # For supporting zarr < 3
 ]
 
 [build-system]
-requires = ["setuptools>=62.0"]
+requires = ["setuptools>=78.0.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -61,26 +63,24 @@ changelog = "https://spikeinterface.readthedocs.io/en/latest/whatisnew.html"
 extractors = [
     "MEArec>=1.8",
     "pynwb>=2.6.0",
-    "hdmf-zarr>=0.5.0",
+    "hdmf-zarr>=0.11.0",
     "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",
-    "ONE-api>=2.7.0", # alf sorter and streaming IBL
-    "ibllib>=2.36.0", # streaming IBL
+    "ibllib", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
     "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
-    "ONE-api>=2.7.0", # alf sorter and streaming IBL
-    "ibllib>=2.36.0", # streaming IBL
+    "ibllib", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
     "fsspec",
     "aiohttp",
     "requests",
-    "hdmf-zarr>=0.5.0",
+    "hdmf-zarr>=0.11.0",
     "remfile",
     "s3fs"
 ]
@@ -94,7 +94,6 @@ preprocessing = [
 full = [
     "h5py",
     "pandas",
-    "xarray",
     "scipy",
     "scikit-learn",
     "networkx",
@@ -102,6 +101,8 @@ full = [
     "matplotlib>=3.6", # matplotlib.colormaps
     "cuda-python; platform_system != 'Darwin'",
     "numba",
+    "skops",
+    "huggingface_hub"
 ]
 
 widgets = [
@@ -119,7 +120,7 @@ qualitymetrics = [
 ]
 
 test_core = [
-    "pytest",
+    "pytest<8.4.0",
     "pytest-dependency",
     "psutil",
 
@@ -136,45 +137,43 @@ test_extractors = [
     # Functions to download data in neo test suite
     "pooch>=1.8.2",
     "datalad>=1.0.2",
+    # Commenting out for release
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test_preprocessing = [
-    "ibllib>=2.36.0", # for IBL
+    "ibllib", # for IBL
     "torch",
 ]
 
 
 test = [
-    "pytest",
+    "pytest<8.4.0",
     "pytest-dependency",
     "pytest-cov",
-
-    "xarray",
-    "huggingface_hub",
+    "psutil",
 
     # preprocessing
-    "ibllib>=2.36.0", # for IBL
+    "ibllib", # for IBL
 
     # streaming templates
     "s3fs",
 
     # tridesclous
-    "numba",
+    "numba<0.61.0;python_version<'3.13'",
+    "numba>=0.61.0;python_version>='3.13'",
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
 
     # for sortingview backend
-    "sortingview",
+    "sortingview>=0.12.0",
 
-
-    ## install tridesclous for testing ##
-    "tridesclous>=1.6.8",
-
-    ## sliding_nn
-    "pymde",
+    # for motion and sortingcomponents
     "torch",
-    "pynndescent",
+
+    # curation
+    "skops",
+    "huggingface_hub",
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
@@ -199,8 +198,9 @@ docs = [
     "pandas", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
-    "xarray", # For use of SortingAnalyzer zarr format
     "networkx",
+    "skops", # For automated curation
+    "scikit-learn", # For automated curation
     # Download data
     "pooch>=1.8.2",
     "datalad>=1.0.2",
@@ -208,7 +208,6 @@ docs = [
     # for release we need pypi, so this needs to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
-
 ]
 
 dev = [

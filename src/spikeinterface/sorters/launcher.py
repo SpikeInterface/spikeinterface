@@ -214,7 +214,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
 
 _slurm_script = """#! {python}
 from numpy import array
-from spikeinterface import load_extractor
+from spikeinterface import load
 from spikeinterface.sorters import run_sorter
 
 rec_dict = {recording_dict}
@@ -222,7 +222,7 @@ rec_dict = {recording_dict}
 kwargs = dict(
 {kwargs_txt}
 )
-kwargs['recording'] = load_extractor(rec_dict)
+kwargs['recording'] = load(rec_dict)
 
 run_sorter(**kwargs)
 """

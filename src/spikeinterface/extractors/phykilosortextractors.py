@@ -15,7 +15,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     Parameters
     ----------
     folder_path : str or Path
-        Path to the output Phy folder (containing the params.py)
+        Path to the output Phy/Kilosort folder (containing the params.py)
     exclude_cluster_groups : list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     keep_good_only : bool, default: True
@@ -56,7 +56,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         spike_clusters = np.atleast_1d(spike_clusters.squeeze())
 
         clust_id = np.unique(spike_clusters)
-        unique_unit_ids = list(clust_id)
+        unique_unit_ids = [int(c) for c in clust_id]
         params = read_python(str(phy_folder / "params.py"))
         sampling_frequency = params["sample_rate"]
 
@@ -248,7 +248,7 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     Parameters
     ----------
     folder_path : str or Path
-        Path to the output Phy folder (containing the params.py).
+        Path to the output Kilosort folder (containing the params.py).
     keep_good_only : bool, default: True
         Whether to only keep good units.
         If True, only Kilosort-labeled 'good' units are returned.

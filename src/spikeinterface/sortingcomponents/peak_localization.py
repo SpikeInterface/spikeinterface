@@ -21,19 +21,16 @@ from .tools import make_multi_method_doc
 
 from spikeinterface.core import get_channel_distances
 
-from ..postprocessing.unit_locations import (
-    dtype_localize_by_method,
-    possible_localization_methods,
-)
+from spikeinterface.postprocessing.unit_locations import dtype_localize_by_method, possible_localization_methods
 
-from ..postprocessing.localization_tools import (
+from spikeinterface.postprocessing.localization_tools import (
     make_radial_order_parents,
     solve_monopolar_triangulation,
     enforce_decrease_shells_data,
     get_grid_convolution_templates_and_weights,
 )
 
-from .tools import get_prototype_spike
+from .tools import get_prototype_and_waveforms_from_peaks
 
 
 def get_localization_pipeline_nodes(
@@ -73,8 +70,8 @@ def get_localization_pipeline_nodes(
             assert isinstance(peak_source, (PeakRetriever, SpikeRetriever))
             # extract prototypes silently
             job_kwargs["progress_bar"] = False
-            method_kwargs["prototype"] = get_prototype_spike(
-                recording, peak_source.peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+            method_kwargs["prototype"], _, _ = get_prototype_and_waveforms_from_peaks(
+                recording, peaks=peak_source.peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
             )
         extract_dense_waveforms = ExtractDenseWaveforms(
             recording, parents=[peak_source], ms_before=ms_before, ms_after=ms_after, return_output=False
@@ -135,7 +132,7 @@ class LocalizeBase(PipelineNode):
         self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < radius_um
+        self.neighbours_mask = self.channel_distance <= radius_um
         self._kwargs["radius_um"] = radius_um
 
     def get_dtype(self):

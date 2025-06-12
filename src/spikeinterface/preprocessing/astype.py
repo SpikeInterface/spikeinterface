@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from .filter import fix_dtype
 
@@ -80,4 +80,4 @@ class AstypeRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-astype = define_function_from_class(source_class=AstypeRecording, name="astype")
+astype = define_function_handling_dict_from_class(source_class=AstypeRecording, name="astype")

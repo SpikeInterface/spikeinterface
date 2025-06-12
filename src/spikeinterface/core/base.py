@@ -16,7 +16,6 @@ import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import (
-    check_json,
     clean_zarr_folder_name,
     is_dict_extractor,
     SIJsonEncoder,
@@ -47,8 +46,8 @@ class BaseExtractor:
     # these properties are skipped by default in copy_metadata
     _skip_properties = []
 
-    installation_mesg = ""
-    installed = True
+    # kwargs which can be precomputed before being used by the extractor
+    _precomputable_kwarg_names = []
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
@@ -78,6 +77,31 @@ class BaseExtractor:
 
         # preferred context for multiprocessing
         self._preferred_mp_context = None
+
+    def _repr_html_(self, display_name=True):
+        pass
+
+    def _get_common_repr_html(self, common_style):
+        html_annotations = f"<details style='{common_style}'>  <summary><strong>Annotations</strong></summary><ul>"
+        for key, value in self._annotations.items():
+            html_annotations += f"<li> <strong> {key} </strong>: {value}</li>"
+        html_annotations += f"</details>"
+
+        html_properties = f"<details style='{common_style}'><summary><strong>Properties</strong></summary><ul>"
+        for key, value in self._properties.items():
+            # Add a further indent for each property
+            value_formatted = np.asarray(value)
+            html_properties += f"<details><summary><strong>{key}</strong></summary>{value_formatted}</details>"
+        html_properties += "</ul></details>"
+
+        if self.get_parent():
+            html_parent = f"<details style='{common_style}'>  <summary><strong>Parent</strong></summary><ul>"
+            display_name = self.name != self.get_parent().name
+            html_parent += self.get_parent()._repr_html_(display_name=display_name)
+            html_parent += "</ul></details>"
+        else:
+            html_parent = ""
+        return html_annotations + html_properties + html_parent
 
     @property
     def name(self):
@@ -145,7 +169,7 @@ class BaseExtractor:
             non_existent_ids = [id for id in ids if id not in self._main_ids]
             if non_existent_ids:
                 error_msg = (
-                    f"IDs {non_existent_ids} are not channel ids of the extractor. \n"
+                    f"IDs {non_existent_ids} are not ids of the extractor. \n"
                     f"Available ids are {self._main_ids} with dtype {self._main_ids.dtype}"
                 )
                 raise ValueError(error_msg)
@@ -231,10 +255,10 @@ class BaseExtractor:
         ids : list/np.array, default: None
             List of subset of ids to set the values, default: None
             if None which is the default all the ids are set or changed
-        missing_value : object, default: None
+        missing_value : Any, default: None
             In case the property is set on a subset of values ("ids" not None),
-            it specifies the how the missing values should be filled.
-            The missing_value has to be specified for types int and unsigned int.
+            This argument specifies how to fill missing values.
+            The `missing_value` is required for types int and unsigned int.
         """
 
         if values is None:
@@ -259,7 +283,7 @@ class BaseExtractor:
                 non_unique_ids = [id for id in ids if np.count_nonzero(ids == id) > 1]
                 raise ValueError(f"IDs are not unique: {non_unique_ids}")
 
-            # Not clear where this branch is used, perhaps on aggregation of extractors?
+            # Sam: this is used because you could set all ids (like the None) but with the vector.
             if ids.size < size:
                 if key not in self._properties:
 
@@ -281,7 +305,16 @@ class BaseExtractor:
 
                     # create the property with nan or empty
                     shape = (size,) + values.shape[1:]
-                    empty_values = np.zeros(shape, dtype=dtype)
+
+                    # For string (unicode) types, make sure dtype can fit the missing value
+                    if dtype_kind == "U" and missing_value is not None:
+                        max_val_len = np.max(np.char.str_len(values)) if values.size > 0 else 0
+                        missing_val_len = len(missing_value)
+                        max_len = max(max_val_len, missing_val_len)
+                        empty_values = np.full(shape, missing_value, dtype=f"<U{max_len}")
+                    else:
+                        empty_values = np.zeros(shape, dtype=dtype)
+
                     empty_values[:] = missing_value
                     self._properties[key] = empty_values
                     if ids.size == 0:
@@ -293,6 +326,11 @@ class BaseExtractor:
                     ), f"Mismatch between existing property dtype {existing_property.kind} and provided values dtype {dtype_kind}."
 
                 indices = self.ids_to_indices(ids)
+                if dtype_kind == "U":
+                    # re-adjust the size of the property
+                    existing_unicode_size = max(len(s) for s in self._properties[key])
+                    new_unicode_size = max(max(len(s) for s in values), existing_unicode_size)
+                    self._properties[key] = self._properties[key].astype(f"<U{new_unicode_size}")
                 self._properties[key][indices] = values
             else:
                 indices = self.ids_to_indices(ids)
@@ -673,7 +711,7 @@ class BaseExtractor:
     ) -> None:
         """
         Dump recording extractor to json file.
-        The extractor can be re-loaded with load_extractor(json_file)
+        The extractor can be re-loaded with load(json_file)
 
         Parameters
         ----------
@@ -715,7 +753,7 @@ class BaseExtractor:
     ):
         """
         Dump recording extractor to a pickle file.
-        The extractor can be re-loaded with load_extractor(pickle_file)
+        The extractor can be re-loaded with load(pickle_file)
 
         Parameters
         ----------
@@ -752,7 +790,9 @@ class BaseExtractor:
         file_path.write_bytes(pickle.dumps(dump_dict))
 
     @staticmethod
-    def load(file_path: Union[str, Path], base_folder: Optional[Union[Path, str, bool]] = None) -> "BaseExtractor":
+    def load(
+        file_or_folder_path: Union[str, Path], base_folder: Optional[Union[Path, str, bool]] = None
+    ) -> "BaseExtractor":
         """
         Load extractor from file path (.json or .pkl)
 
@@ -761,62 +801,10 @@ class BaseExtractor:
           * save (...)  a folder which contain data  + json (or pickle) + metadata.
 
         """
+        # use loading.py and keep backward compatibility
+        from .loading import load
 
-        file_path = Path(file_path)
-        if base_folder is True:
-            base_folder = file_path.parent
-
-        if file_path.is_file():
-            # standard case based on a file (json or pickle)
-            if str(file_path).endswith(".json"):
-                with open(file_path, "r") as f:
-                    d = json.load(f)
-            elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-                with open(file_path, "rb") as f:
-                    d = pickle.load(f)
-            else:
-                raise ValueError(f"Impossible to load {file_path}")
-            if "warning" in d:
-                print("The extractor was not serializable to file")
-                return None
-
-            extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
-            return extractor
-
-        elif file_path.is_dir():
-            # case from a folder after a calling extractor.save(...)
-            folder = file_path
-            file = None
-
-            if folder.suffix == ".zarr":
-                from .zarrextractors import read_zarr
-
-                extractor = read_zarr(folder)
-            else:
-                # the is spikeinterface<=0.94.0
-                # a folder came with 'cached.json'
-                for dump_ext in ("json", "pkl", "pickle"):
-                    f = folder / f"cached.{dump_ext}"
-                    if f.is_file():
-                        file = f
-
-                # spikeinterface>=0.95.0
-                f = folder / f"si_folder.json"
-                if f.is_file():
-                    file = f
-
-                if file is None:
-                    raise ValueError(f"This folder is not a cached folder {file_path}")
-                extractor = BaseExtractor.load(file, base_folder=folder)
-
-            return extractor
-
-        else:
-            error_msg = (
-                f"{file_path} is not a file or a folder. It should point to either a json, pickle file or a "
-                "folder that is the result of extractor.save(...)"
-            )
-            raise ValueError(error_msg)
+        return load(file_or_folder_path, base_folder=base_folder)
 
     def __reduce__(self):
         """
@@ -1165,50 +1153,6 @@ def _check_same_version(class_string, version):
         return current_version.major == saved_version.major and current_version.minor == saved_version.minor
     except AttributeError:
         return "unknown"
-
-
-def load_extractor(file_or_folder_or_dict, base_folder=None) -> BaseExtractor:
-    """
-    Instantiate extractor from:
-      * a dict
-      * a json file
-      * a pickle file
-      * folder (after save)
-      * a zarr folder (after save)
-
-    Parameters
-    ----------
-    file_or_folder_or_dict : dictionary or folder or file (json, pickle)
-        The file path, folder path, or dictionary to load the extractor from
-    base_folder : str | Path | bool (optional)
-        The base folder to make relative paths absolute.
-        If True and file_or_folder_or_dict is a file, the parent folder of the file is used.
-
-    Returns
-    -------
-    extractor: Recording or Sorting
-        The loaded extractor object
-    """
-    if isinstance(file_or_folder_or_dict, dict):
-        assert not isinstance(base_folder, bool), "`base_folder` must be a string or Path when loading from dict"
-        return BaseExtractor.from_dict(file_or_folder_or_dict, base_folder=base_folder)
-    else:
-        return BaseExtractor.load(file_or_folder_or_dict, base_folder=base_folder)
-
-
-def load_extractor_from_dict(d, base_folder=None) -> BaseExtractor:
-    warnings.warn("Use load_extractor(..) instead")
-    return BaseExtractor.from_dict(d, base_folder=base_folder)
-
-
-def load_extractor_from_json(json_file, base_folder=None) -> "BaseExtractor":
-    warnings.warn("Use load_extractor(..) instead")
-    return BaseExtractor.load(json_file, base_folder=base_folder)
-
-
-def load_extractor_from_pickle(pkl_file, base_folder=None) -> "BaseExtractor":
-    warnings.warn("Use load_extractor(..) instead")
-    return BaseExtractor.load(pkl_file, base_folder=base_folder)
 
 
 class BaseSegment:

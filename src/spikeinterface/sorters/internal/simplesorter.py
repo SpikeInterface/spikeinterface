@@ -185,6 +185,11 @@ class SimpleSorter(ComponentsBasedSorter):
 
             out = hdbscan.hdbscan(features_flat, **clust_params)
             peak_labels = out[0]
+        elif clust_method == "hdbscan-gpu":
+            from cuml.cluster import HDBSCAN as hdbscan
+
+            model = hdbscan(**clust_params).fit(features_flat)
+            peak_labels = model.labels_.copy()
         elif clust_method in ("kmeans"):
             from sklearn.cluster import MiniBatchKMeans
 
@@ -227,7 +232,7 @@ class SimpleSorter(ComponentsBasedSorter):
 
         # keep positive labels
         keep = peak_labels >= 0
-        sorting_final = NumpySorting.from_times_labels(
+        sorting_final = NumpySorting.from_samples_and_labels(
             peaks["sample_index"][keep], peak_labels[keep], sampling_frequency
         )
         sorting_final = sorting_final.save(folder=sorter_output_folder / "sorting")

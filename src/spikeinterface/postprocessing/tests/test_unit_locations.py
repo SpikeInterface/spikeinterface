@@ -13,6 +13,7 @@ class TestUnitLocationsExtension(AnalyzerExtensionCommonTestSuite):
             dict(method="grid_convolution", radius_um=150, weight_method={"mode": "gaussian_2d"}),
             dict(method="monopolar_triangulation", radius_um=150),
             dict(method="monopolar_triangulation", radius_um=150, optimizer="minimize_with_log_penality"),
+            dict(method="max_channel"),
         ],
     )
     def test_extension(self, params):

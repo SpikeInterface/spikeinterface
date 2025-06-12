@@ -4,9 +4,9 @@ import numpy as np
 from typing import Union
 
 from .base import BaseWidget, to_attr
-from ..core.sortinganalyzer import SortingAnalyzer
-from ..core.basesorting import BaseSorting
-from ..postprocessing import compute_correlograms
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+from spikeinterface.core.basesorting import BaseSorting
+from spikeinterface.postprocessing import compute_correlograms
 
 
 class CrossCorrelogramsWidget(BaseWidget):
@@ -21,7 +21,8 @@ class CrossCorrelogramsWidget(BaseWidget):
         List of unit ids
     min_similarity_for_correlograms : float, default: 0.2
         For sortingview backend. Threshold for computing pair-wise cross-correlograms.
-        If template similarity between two units is below this threshold, the cross-correlogram is not displayed
+        If template similarity between two units is below this threshold, the cross-correlogram is not displayed.
+        For auto-correlograms plot, this is automatically set to None.
     window_ms : float, default: 100.0
         Window for CCGs in ms. If correlograms are already computed (e.g. with SortingAnalyzer),
         this argument is ignored
@@ -30,8 +31,9 @@ class CrossCorrelogramsWidget(BaseWidget):
         this argument is ignored
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
-    unit_colors : dict or None, default: None
-        If given, a dictionary with unit ids as keys and colors as values
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     """
 
     def __init__(
@@ -115,6 +117,10 @@ class CrossCorrelogramsWidget(BaseWidget):
                 else:
                     color = "k"
                 ax.bar(x=bins[:-1], height=ccg, width=bin_width, color=color, align="edge")
+
+                if i < len(self.axes) - 1:
+                    self.axes[i, j].set_xticks([], [])
+        plt.tight_layout()
 
         for i, unit_id in enumerate(unit_ids):
             self.axes[0, i].set_title(str(unit_id))
