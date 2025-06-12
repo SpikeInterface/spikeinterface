@@ -9,7 +9,6 @@ import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.node_pipeline import run_node_pipeline
 
-from base import _base_matching_dtype
 
 def find_spikes_from_templates(
     recording, method="naive", method_kwargs={}, extra_outputs=False, verbose=False, **job_kwargs
@@ -39,7 +38,8 @@ def find_spikes_from_templates(
         Optionaly returns for debug purpose.
     """
     from .method_list import matching_methods
-
+    from base import _base_matching_dtype
+    
     assert method in matching_methods, f"The 'method' {method} is not valid. Use a method from {matching_methods}"
 
     job_kwargs = fix_job_kwargs(job_kwargs)
