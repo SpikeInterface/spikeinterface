@@ -36,17 +36,12 @@ else:
 
 _default_params = dict()
 
-def compute_noise_cutoffs(
-    sorting_analyzer,
-    high_quantile=0.25,
-    low_quantile=0.1,
-    n_bins=100,
-    unit_ids=None
-):
+
+def compute_noise_cutoffs(sorting_analyzer, high_quantile=0.25, low_quantile=0.1, n_bins=100, unit_ids=None):
     """
     A metric to determine if a unit's amplitude distribution is cut off, without assuming a Gaussian distribution.
-    
-    The function flips the sign if 'peak_sign' == 'neg' when computing the amplitude. 
+
+    The function flips the sign if 'peak_sign' == 'neg' when computing the amplitude.
     Based on the histogram of the (transformed) amplitude:
 
     1. This method compares counts in the lower-amplitude bins to counts in the top 'high_quantile' of the amplitude range.
@@ -91,46 +86,42 @@ def compute_noise_cutoffs(
             noise_ratio_dict[unit_id] = np.nan
         return res(noise_cutoff_dict, noise_ratio_dict)
 
-    amplitude_extension = sorting_analyzer.get_extension('spike_amplitudes')
-    peak_sign = amplitude_extension.params['peak_sign']
+    amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
+    peak_sign = amplitude_extension.params["peak_sign"]
     amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
 
-    if peak_sign == 'both':
+    if peak_sign == "both":
         raise TypeError('peak_sign should either be "pos" or "neg"!')
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
 
-        if peak_sign == 'neg':
+        if peak_sign == "neg":
             amplitudes = -amplitudes
-        
-        cutoff, ratio = _noise_cutoff(
-            amplitudes, high_quantile=high_quantile, low_quantile=low_quantile, n_bins=n_bins
-        )
+
+        cutoff, ratio = _noise_cutoff(amplitudes, high_quantile=high_quantile, low_quantile=low_quantile, n_bins=n_bins)
         noise_cutoff_dict[unit_id] = cutoff
         noise_ratio_dict[unit_id] = ratio
 
     return res(noise_cutoff_dict, noise_ratio_dict)
 
-_default_params["noise_cutoff"] = dict(
-    high_quantile=0.25,
-    low_quantile=0.1,
-    n_bins=100
-)
+
+_default_params["noise_cutoff"] = dict(high_quantile=0.25, low_quantile=0.1, n_bins=100)
+
 
 def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     """
     A metric to determine if a unit's amplitude distribution is cut off, without assuming a Gaussian distribution.
-    
-    The function flips the sign if 'peak_sign' == 'neg' when computing the amplitude. 
+
+    The function flips the sign if 'peak_sign' == 'neg' when computing the amplitude.
     Based on the histogram of the (transformed) amplitude:
-        
+
     1. This method compares counts in the lower-amplitude bins to counts in the higher_amplitude bins.
     It computes the mean and std of an upper quantile of the distribution, and calculates how many standard deviations away
     from that mean the lower-quantile bins lie.
 
     2. The method also compares the counts in the lower-amplitude bins to the count in the highest bin and return their ratio.
-    
+
     Parameters
     ----------
     amps : array-like
@@ -154,20 +145,20 @@ def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
 
     peak = np.max(n_per_bin)
 
-    low_quantile_value = np.quantile(amps,q=low_quantile)
+    low_quantile_value = np.quantile(amps, q=low_quantile)
 
     # the indices for low-amplitude bins
-    low_indices = np.where(bin_edges[1:]<=low_quantile_value)[0]
- 
-    high_quantile_value = np.quantile(amps,q=1-high_quantile)
+    low_indices = np.where(bin_edges[1:] <= low_quantile_value)[0]
+
+    high_quantile_value = np.quantile(amps, q=1 - high_quantile)
 
     # the indices for high-amplitude bins
-    high_indices = np.where(bin_edges[:-1]>=high_quantile_value)[0]
+    high_indices = np.where(bin_edges[:-1] >= high_quantile_value)[0]
 
     if len(low_indices) == 0:
         warnings.warn("no bin is selected to test cutoff. please increase low_quantile.")
         return np.nan, np.nan
-    
+
     # compute ratio between low-amplitude bins and the peak bin
     low_counts = n_per_bin[low_indices]
     mean_low_counts = np.mean(low_counts)
@@ -180,14 +171,15 @@ def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     # compute cutoff from low-amplitude and high-amplitude bins
     high_counts = n_per_bin[high_indices]
     mean_high_counts = np.mean(high_counts)
-    std_high_counts  = np.std(high_counts)
+    std_high_counts = np.std(high_counts)
     if std_high_counts == 0:
-        warnings.warn("only one bin is selected as the reference region, and thus the standard deviation cannot be computed. please increase high_quantile.")
+        warnings.warn(
+            "only one bin is selected as the reference region, and thus the standard deviation cannot be computed. please increase high_quantile."
+        )
         return np.nan, ratio
-    
-    cutoff = (mean_low_counts - mean_high_counts) / std_high_counts 
-    return cutoff, ratio
 
+    cutoff = (mean_low_counts - mean_high_counts) / std_high_counts
+    return cutoff, ratio
 
 
 def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):

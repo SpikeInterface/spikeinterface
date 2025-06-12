@@ -8,56 +8,56 @@ Calculation
 Metric describing whether an amplitude distribution is cut off as it approaches zero, similar to _amp_cutoff  :ref:`amplitude cutoff <amp_cutoff>` but without a Gaussian assumption.
 
 The **noise cutoff** metric assesses whether a unit’s spike‐amplitude distribution is truncated
-at the low-end, which may be due to the high amplitude detection threhold in the deconvolution step, 
-i.e., if low‐amplitude spikes were missed.  It does not assume a Gaussian shape; 
-instead, it directly compares counts in the low‐amplitude bins to counts in high‐amplitude bins.  
+at the low-end, which may be due to the high amplitude detection threhold in the deconvolution step,
+i.e., if low‐amplitude spikes were missed.  It does not assume a Gaussian shape;
+instead, it directly compares counts in the low‐amplitude bins to counts in high‐amplitude bins.
 
-1. **Build a histogram** 
+1. **Build a histogram**
 
-   For each unit, divide all amplitudes into `n_bins` equally spaced bins over the range of the amplitude.  
-   Let `n_i` denote the count in the :math:`i`-th bin.  
+   For each unit, divide all amplitudes into `n_bins` equally spaced bins over the range of the amplitude.
+   Let `n_i` denote the count in the :math:`i`-th bin.
 
-2. **Identify the “low” region**  
+2. **Identify the “low” region**
     - Compute the amplitude value at the specified `low_quantile` (for example, 0.10 = 10 percentile), denoted as :math:`\text{amp}_{low}`.
-    - Find all histogram bins whose upper edge is below that quantile value.  These bins form the “low‐quantile region”.  
+    - Find all histogram bins whose upper edge is below that quantile value.  These bins form the “low‐quantile region”.
     - Compute
 
     .. math::
-        L_{\mathrm{bins}} = \bigl\{i : \text{upper\_edge}(i) \le \text{amp}_{low}\bigr\}, \quad 
+        L_{\mathrm{bins}} = \bigl\{i : \text{upper\_edge}(i) \le \text{amp}_{low}\bigr\}, \quad
         \mu_{\mathrm{low}} = \frac{1}{|L_{\mathrm{bins}}|}\sum_{i\in L_{\mathrm{bins}}} n_i.
 
-3. **Identify the “high” region** 
+3. **Identify the “high” region**
 
-   - Compute the amplitude value at the specified `high_quantile` (for example, 0.25 = top 25 percentile), denoted as :math:`\text{amp}_{high}`. 
-   - Find all histogram bins whose lower edge is greater than that quantile value.  These bins form the “high‐quantile region.”  
-   - Compute 
+   - Compute the amplitude value at the specified `high_quantile` (for example, 0.25 = top 25 percentile), denoted as :math:`\text{amp}_{high}`.
+   - Find all histogram bins whose lower edge is greater than that quantile value.  These bins form the “high‐quantile region.”
+   - Compute
 
     .. math::
-        H_{\mathrm{bins}} &= \bigl\{i : \text{lower\_edge}(i)\ge \text{amp}_{high}\bigr\}, \\   
+        H_{\mathrm{bins}} &= \bigl\{i : \text{lower\_edge}(i)\ge \text{amp}_{high}\bigr\}, \\
         \mu_{\mathrm{high}} &= \frac{1}{|H_{\mathrm{bins}}|}\sum_{i\in H_{\mathrm{bins}}} n_i, \quad
         \sigma_{\mathrm{high}} = \sqrt{\frac{1}{|H_{\mathrm{bins}}|-1}\sum_{i\in H_{\mathrm{bins}}}\bigl(n_i-\mu_{\mathrm{high}} \bigr)^2}.
 
-4. **Compute cutoff**  
-   
+4. **Compute cutoff**
+
    The *cutoff* is given by how many standard deviations away the low-amplitude bins are from the high-amplitude bins, defined as
 
     .. math::
      \mathrm{cutoff} = \frac{\mu_{\mathrm{low}} - \mu_{\mathrm{high}}}{\sigma_{\mathrm{high}}}.
 
 
-   - If no low‐quantile bins exist, a warning is issued and `cutoff = NaN`.  
-   - If no high‐quantile bins exist or :math:`\sigma_{\mathrm{high}} = 0`, a warning is issued and `cutoff = NaN`.  
+   - If no low‐quantile bins exist, a warning is issued and `cutoff = NaN`.
+   - If no high‐quantile bins exist or :math:`\sigma_{\mathrm{high}} = 0`, a warning is issued and `cutoff = NaN`.
 
-5. **Compute the low-to-peak ratio** 
+5. **Compute the low-to-peak ratio**
 
    - Let :math:`M = \max_i\,n_i` be the height of the peak bin in the histogram.
-   - Define  
-   
+   - Define
+
    .. math::
         \mathrm{ratio} = \frac{\mu_{\mathrm{low}}}{M}.
 
 
-   - If there are no low bins, :math:`\mathrm{ratio} = NaN`.  
+   - If there are no low bins, :math:`\mathrm{ratio} = NaN`.
 
 
 Together, (cutoff, ratio) quantify how suppressed the low‐end of the amplitude distribution is relative to the top quantile and to the peak.
@@ -65,7 +65,7 @@ Together, (cutoff, ratio) quantify how suppressed the low‐end of the amplitude
 Expectation and use
 -------------------
 
-Noise cutoff attempts to describe whether an amplitude distribution is cut off. 
+Noise cutoff attempts to describe whether an amplitude distribution is cut off.
 If the distribution is not truncated at the low-end, one would expect cutoff to be less than 5 and ratio less than 0.1.
 It is suggested to use this metric when the amplitude histogram is **unimodal**.
 
@@ -82,7 +82,7 @@ Example code
 
     # Suppose `sorting_analyzer` has been computed with spike amplitudes:
     # Select units you are interested in vizulazing.
-    unit_ids = ... 
+    unit_ids = ...
 
     # Compute noise_cutoff:
     summary_dict = compute_noise_cutoff(
@@ -114,7 +114,7 @@ Links to original implementations
 
 * From `IBL implementation <https://github.com/int-brain-lab/ibllib/blob/2e1f91c622ba8dbd04fc53946c185c99451ce5d6/brainbox/metrics/single_units.py>`_
 
-Note: Compared to the original implementation, we have added a comparison between the low-amplitude bins to the peak bin (`noise_ratio`). 
+Note: Compared to the original implementation, we have added a comparison between the low-amplitude bins to the peak bin (`noise_ratio`).
 The selection of low-amplitude bins is based on the `low_quantile` rather than the number of bins.
 
 Literature
