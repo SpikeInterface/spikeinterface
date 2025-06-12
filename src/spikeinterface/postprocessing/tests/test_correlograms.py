@@ -1,6 +1,8 @@
 import numpy as np
 import importlib
 
+import importlib.util
+
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
     HAVE_NUMBA = True

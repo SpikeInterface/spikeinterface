@@ -7,7 +7,6 @@ import spikeinterface as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
 from spikeinterface.core import generate_recording
-import spikeinterface.widgets as sw
 import importlib.util
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
@@ -25,7 +24,7 @@ if DEBUG:
 
 
 @pytest.mark.skipif(
-    importlib.util.find_spec("neurodsp") is not None or importlib.util.find_spec("spikeglx") or ON_GITHUB,
+    importlib.util.find_spec("neurodsp") is None or importlib.util.find_spec("spikeglx") is None or ON_GITHUB,
     reason="Only local. Requires ibl-neuropixel install",
 )
 @pytest.mark.parametrize("lagc", [False, 1, 300])
