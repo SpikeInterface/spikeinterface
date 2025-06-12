@@ -11,6 +11,7 @@ from spikeinterface.core.node_pipeline import run_node_pipeline
 
 from base import _base_matching_dtype
 
+
 def find_spikes_from_templates(
     recording, method="naive", method_kwargs={}, extra_outputs=False, verbose=False, **job_kwargs
 ) -> np.ndarray | tuple[np.ndarray, dict]:
