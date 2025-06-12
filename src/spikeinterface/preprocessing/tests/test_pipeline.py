@@ -12,9 +12,13 @@ def test_pipeline_equiv_to_step():
     """
 
     single_group_rec = generate_recording(durations=[1])
+    single_group_rec.set_property("gain_to_physical_unit", [2.0, 1.5])
+    single_group_rec.set_property("offset_to_physical_unit", [0.0, 1.0])
 
     rec_groups = generate_recording(durations=[1])
     rec_groups.set_property(key="group", values=[0, 1])
+    rec_groups.set_property("gain_to_physical_unit", [2.0, 1.5])
+    rec_groups.set_property("offset_to_physical_unit", [0.0, 1.0])
 
     for rec in [single_group_rec, rec_groups.split_by("group")]:
         for _, pp_wrapper in preprocessor_dict.items():
@@ -55,6 +59,9 @@ def test_pipeline_equiv_to_step():
             elif pp_name == "decimate":
                 pp_dict[pp_name] = {"decimation_factor": 2}
                 pp_rec_from_class = pp_class(rec, decimation_factor=2)
+            # elif pp_name == "scale_to_physical_units":
+            #     pp_dict[pp_name] = {"gain_to_physical_unit": 2}
+            #     pp_rec_from_class = pp_class(rec, gain_to_physical_unit=2)
             else:
                 pp_rec_from_class = pp_class(rec)
 

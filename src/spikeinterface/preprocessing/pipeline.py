@@ -4,7 +4,7 @@ import json
 import inspect
 from spikeinterface.core.core_tools import is_dict_extractor
 from spikeinterface.core import BaseRecording
-from spikeinterface.preprocessing.preprocessinglist import preprocessor_dict, _all_preprocesser_dict
+from spikeinterface.preprocessing.preprocessing_classes import preprocessor_dict, _all_preprocesser_dict
 
 pp_names_to_functions = {preprocessor.__name__: preprocessor for preprocessor in preprocessor_dict.values()}
 pp_names_to_classes = {pp_function.__name__: pp_class for pp_class, pp_function in _all_preprocesser_dict.items()}
