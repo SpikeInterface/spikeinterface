@@ -8,7 +8,41 @@ import importlib.util
 import pytest
 
 from spikeinterface import get_global_dataset_folder
-from spikeinterface.extractors import *
+from spikeinterface.extractors.extractor_classes import (
+    MEArecRecordingExtractor,
+    MEArecSortingExtractor,
+    SpikeGLXRecordingExtractor,
+    OpenEphysBinaryRecordingExtractor,
+    OpenEphysBinaryEventExtractor,
+    OpenEphysLegacyRecordingExtractor,
+    IntanRecordingExtractor,
+    NeuroScopeRecordingExtractor,
+    NeuroExplorerRecordingExtractor,
+    NeuroScopeSortingExtractor,
+    NeuroNexusRecordingExtractor,
+    PlexonRecordingExtractor,
+    PlexonSortingExtractor,
+    NeuralynxRecordingExtractor,
+    AlphaOmegaEventExtractor,
+    SpikeGadgetsRecordingExtractor,
+    Plexon2SortingExtractor,
+    NeuralynxSortingExtractor,
+    BlackrockRecordingExtractor,
+    BlackrockSortingExtractor,
+    MCSRawRecordingExtractor,
+    TdtRecordingExtractor,
+    BiocamRecordingExtractor,
+    AxonaRecordingExtractor,
+    Plexon2EventExtractor,
+    MaxwellRecordingExtractor,
+    CedRecordingExtractor,
+    AlphaOmegaRecordingExtractor,
+    Spike2RecordingExtractor,
+    EDFRecordingExtractor,
+    Plexon2RecordingExtractor,
+)
+
+from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
 
 from spikeinterface.extractors.tests.common_tests import (
     RecordingCommonTestSuite,
@@ -67,9 +101,9 @@ class SpikeGLXRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ["spikeglx"]
     entities = [
         ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap"}),
-        ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap", "load_sync_channel": True}),
         ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.lf"}),
         ("spikeglx/Noise4Sam_g0", {"stream_id": "nidq"}),
+        ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap-SYNC"}),
     ]
 
 
