@@ -88,14 +88,16 @@ def compute_noise_cutoffs(sorting_analyzer, high_quantile=0.25, low_quantile=0.1
     amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
     peak_sign = amplitude_extension.params["peak_sign"]
     if peak_sign == "both":
-        raise TypeError('`peak_sign` should either be "pos" or "neg". You can set `peak_sign` as an argument when you compute spike_amplitudes.')
+        raise TypeError(
+            '`peak_sign` should either be "pos" or "neg". You can set `peak_sign` as an argument when you compute spike_amplitudes.'
+        )
 
     amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
 
-        # We assume the noise (zero values) is on the lower tail of the amplitude distribution. 
+        # We assume the noise (zero values) is on the lower tail of the amplitude distribution.
         # But if peak_sign == 'neg', the noise will be on the higher tail, so we flip the distribution.
         if peak_sign == "neg":
             amplitudes = -amplitudes
@@ -169,8 +171,10 @@ def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
         return np.nan, ratio
 
     if len(high_indices) == 1:
-        warnings.warn("Only one bin is selected as the reference region, and thus the standard deviation cannot be computed. " \
-        "Please increase high_quantile.")
+        warnings.warn(
+            "Only one bin is selected as the reference region, and thus the standard deviation cannot be computed. "
+            "Please increase high_quantile."
+        )
         return np.nan, ratio
 
     # compute cutoff from low-amplitude and high-amplitude bins
@@ -178,9 +182,7 @@ def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     mean_high_counts = np.mean(high_counts)
     std_high_counts = np.std(high_counts)
     if std_high_counts == 0:
-        warnings.warn(
-            "All the high-amplitude bins have the same size. Please consider changing n_bins."
-        )
+        warnings.warn("All the high-amplitude bins have the same size. Please consider changing n_bins.")
         return np.nan, ratio
 
     cutoff = (mean_low_counts - mean_high_counts) / std_high_counts
