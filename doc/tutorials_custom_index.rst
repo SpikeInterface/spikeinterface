@@ -85,6 +85,14 @@ These tutorials focus on the :py:mod:`spikeinterface.core` module.
       :class-card: gallery-card
       :text-align: center
 
+      .. grid-item-card:: Build full pipeline with dicts
+      :link-type: ref
+      :link: how_to/build_pipeline_with_dicts.rst
+      :img-top: /images/logo.png
+      :img-alt: Build full pipeline with dicts
+      :class-card: gallery-card
+      :text-align: center
+
 Extractors tutorials
 --------------------
 
