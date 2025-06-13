@@ -16,7 +16,7 @@ an example:
 .. code:: ipython3
 
     import spikeinterface.full as si
-    
+
     my_protocol = {
         'preprocessing': {
             'bandpass_filter': {},
@@ -39,7 +39,7 @@ an example:
             'correlograms': {},
         },
     }
-    
+
     # Usually, you would read in your raw recording
     rec, _ = si.generate_ground_truth_recording(num_channels=4, durations=[60], seed=0)
     preprocessed_rec = si.apply_pipeline(rec, my_protocol['preprocessing'])
@@ -107,9 +107,9 @@ and in the terminal ``help(si.bandpass_fitler)``)
 
 .. parsed-literal::
 
-    
+
         Bandpass filter of a recording
-    
+
         Parameters
         ----------
         recording : Recording
@@ -134,12 +134,12 @@ and in the terminal ``help(si.bandpass_fitler)``)
                     - numerator/denominator : ("ba")
                 ftype : str, default: "butter"
                     Filter type for `scipy.signal.iirfilter` e.g. "butter", "cheby1".
-    
+
         Returns
         -------
         filter_recording : BandpassFilterRecording
             The bandpass-filtered recording extractor object
-        
+
 
 
 Get the default sorter parameters of mountainsort5:
@@ -176,24 +176,23 @@ docstring of ‘compute_blah’, e.g.
 
 .. parsed-literal::
 
-    
+
         AnalyzerExtension
         Computes the spike amplitudes.
-    
+
         Needs "templates" to be computed first.
         Computes spike amplitudes from the template's peak channel for every spike.
-    
+
         Parameters
         ----------
         sorting_analyzer : SortingAnalyzer
             A SortingAnalyzer object
         peak_sign : "neg" | "pos" | "both", default: "neg"
             Sign of the template to compute extremum channel used to retrieve spike amplitudes.
-    
+
         Returns
         -------
         spike_amplitudes: np.array
             All amplitudes for all spikes and all units are concatenated (along time, like in spike vector)
-    
-        
+
 

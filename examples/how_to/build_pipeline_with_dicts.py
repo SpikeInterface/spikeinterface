@@ -70,7 +70,7 @@ si.plot_unit_summary(analyzer, unit_id=1)
 
 
 # The main disadvantage of the dictionaties approach is that you don't know exactly what options
-# and steps are available for you. You can search the API for help. Or we store many dictionaries 
+# and steps are available for you. You can search the API for help. Or we store many dictionaries
 # of tools and parameters, as is shown below.
 
 # Get all preprocessing steps:
