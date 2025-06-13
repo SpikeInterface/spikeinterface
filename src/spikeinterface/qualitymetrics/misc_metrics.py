@@ -79,7 +79,7 @@ def compute_noise_cutoffs(sorting_analyzer, high_quantile=0.25, low_quantile=0.1
     noise_cutoff_dict = {}
     noise_ratio_dict = {}
     if not sorting_analyzer.has_extension("spike_amplitudes"):
-        warnings.warn("compute_noise_cutoffs need 'spike_amplitudes'")
+        warnings.warn("`compute_noise_cutoffs` requires the 'spike_amplitudes` extension. Please run sorting_analyzer.compute('spike_amplitudes') to be able to compute `noise_cutoff`")
         for unit_id in unit_ids:
             noise_cutoff_dict[unit_id] = np.nan
             noise_ratio_dict[unit_id] = np.nan
