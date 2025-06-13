@@ -242,7 +242,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         else:
             waveforms = None
             detection_method = "locally_exclusive"
-  
+
         if skip_peaks:
             detection_params["skip_after_n_peaks"] = n_peaks
 
