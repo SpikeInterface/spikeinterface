@@ -132,7 +132,7 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
         channel_groups, kept_channels, discarded_channels, colors = self._parse_xml_file(self.xml_file_path)
         for group_id, numbers in enumerate(channel_groups):
             group_ids[numbers] = group_id  # Assign group_id to the positions in `numbers`
-        self.set_property("group", group_ids)
+        self.set_property("neuroscope_group", group_ids)
         discarded_ppty = np.full(n, False, dtype=bool)
         discarded_ppty[discarded_channels] = True
         self.set_property("discarded_channels", discarded_ppty)
