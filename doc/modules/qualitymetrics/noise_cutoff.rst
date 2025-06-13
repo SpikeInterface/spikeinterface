@@ -18,7 +18,7 @@ instead, it directly compares counts in the low‐amplitude bins to counts in hi
    Let `n_i` denote the count in the :math:`i`-th bin.
 
 2. **Identify the “low” region**
-    - Compute the amplitude value at the specified `low_quantile` (for example, 0.10 = 10 percentile), denoted as :math:`\text{amp}_{low}`.
+    - Compute the amplitude value at the specified `low_quantile` (for example, 0.10 = 10th percentile), denoted as :math:`\text{amp}_{low}`.
     - Find all histogram bins whose upper edge is below that quantile value.  These bins form the “low‐quantile region”.
     - Compute
 
