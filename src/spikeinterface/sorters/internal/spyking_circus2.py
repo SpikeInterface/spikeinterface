@@ -407,7 +407,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
                 if sorting.get_non_empty_unit_ids().size > 0:
-                    final_analyzer = final_cleaning_circus(recording_w, sorting, templates, **merging_params, **job_kwargs)
+                    final_analyzer = final_cleaning_circus(
+                        recording_w, sorting, templates, **merging_params, **job_kwargs
+                    )
                     final_analyzer.save_as(format="binary_folder", folder=sorter_output_folder / "final_analyzer")
 
                     sorting = final_analyzer.sorting
