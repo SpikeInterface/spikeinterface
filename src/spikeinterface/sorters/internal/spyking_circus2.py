@@ -108,7 +108,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         num_channels = recording.get_num_channels()
         ms_before = params["general"].get("ms_before", 2)
         ms_after = params["general"].get("ms_after", 2)
-        radius_um = params["general"].get("radius_um", 75)
+        radius_um = params["general"].get("radius_um", 100)
         peak_sign = params["detection"].get("peak_sign", "neg")
         templates_from_svd = params["templates_from_svd"]
         deterministic = params["deterministic_peaks_detection"]
@@ -179,7 +179,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_method = params["detection"].get("method", "matched_filtering")
         detection_params = params["detection"].get("method_kwargs", dict())
-        detection_params["radius_um"] = radius_um
+        detection_params["radius_um"] = radius_um / 2
         detection_params["exclude_sweep_ms"] = exclude_sweep_ms
         detection_params["noise_levels"] = noise_levels
 
@@ -187,8 +187,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         selection_params = params["selection"].get("method_kwargs", dict())
         n_peaks_per_channel = selection_params.get("n_peaks_per_channel", 5000)
         min_n_peaks = selection_params.get("min_n_peaks", 100000)
+        matching_method = params["matching"].get("method", "circus-omp-svd")
         skip_peaks = not params["multi_units_only"] and selection_method == "uniform"
-        skip_peaks = skip_peaks and not deterministic
+        skip_peaks = skip_peaks and not deterministic and not (matching_method is None)
         max_n_peaks = n_peaks_per_channel * num_channels
         n_peaks = max(min_n_peaks, max_n_peaks)
         selection_params["n_peaks"] = n_peaks
@@ -241,13 +242,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         else:
             waveforms = None
             detection_method = "locally_exclusive"
-
+  
         if skip_peaks:
             detection_params["skip_after_n_peaks"] = n_peaks
 
         detection_params["recording_slices"] = get_shuffled_recording_slices(
             recording_w, seed=params["seed"], **job_kwargs
         )
+
         peaks = detect_peaks(recording_w, detection_method, **detection_params, **job_kwargs)
         order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
         peaks = peaks[order]
@@ -383,11 +385,24 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             else:
                 ## we should have a case to deal with clustering all peaks without matching
                 ## for small density channel counts
+                from spikeinterface.sortingcomponents.matching.tools import assign_templates_to_peaks
 
-                sorting = np.zeros(selected_peaks.size, dtype=minimum_spike_dtype)
-                sorting["sample_index"] = selected_peaks["sample_index"]
+                peak_labels = assign_templates_to_peaks(
+                    recording_w,
+                    peaks,
+                    templates=templates,
+                    svd_model=svd_model,
+                    sparse_mask=sparsity_mask,
+                    **job_kwargs,
+                )
+
+                if verbose:
+                    print("Found %d spikes" % len(peaks))
+
+                sorting = np.zeros(peaks.size, dtype=minimum_spike_dtype)
+                sorting["sample_index"] = peaks["sample_index"]
                 sorting["unit_index"] = peak_labels
-                sorting["segment_index"] = selected_peaks["segment_index"]
+                sorting["segment_index"] = peaks["segment_index"]
                 sorting = NumpySorting(sorting, sampling_frequency, templates.unit_ids)
 
             merging_params = params["merging"].copy()
@@ -412,7 +427,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     sorting.save(folder=curation_folder)
                     # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
-                sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params, **job_kwargs)
+                if sorting.get_non_empty_unit_ids().size > 0:
+                    sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params, **job_kwargs)
 
                 if verbose:
                     print(f"Kept {len(sorting.unit_ids)} units after final merging")
