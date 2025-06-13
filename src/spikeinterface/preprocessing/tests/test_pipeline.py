@@ -1,6 +1,15 @@
-from spikeinterface.generation import generate_recording
-from spikeinterface.preprocessing import apply_pipeline, preprocessor_dict, bandpass_filter, common_reference, whiten
-from spikeinterface.preprocessing.pipeline import pp_names_to_functions
+from spikeinterface.generation import generate_recording, generate_ground_truth_recording
+from spikeinterface.preprocessing import (
+    apply_pipeline,
+    preprocessor_dict,
+    bandpass_filter,
+    common_reference,
+    whiten,
+    detect_and_remove_bad_channels,
+    bandpass_filter,
+    common_reference,
+)
+from spikeinterface.preprocessing.pipeline import pp_names_to_functions, get_preprocessing_dict_from_provenance
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core import BaseRecording
 
@@ -129,3 +138,28 @@ def test_kwargs_are_propagated():
     non_default_kwargs = bp_rec_non_default._kwargs
 
     assert non_default_kwargs["freq_min"] == 500.0
+
+
+def test_loading_provenance(create_cache_folder):
+    """
+    Makes a preprocessed recording using a Pipeline and saves it. Then reloads the preprocessed
+    recording using `get_preprocessing_dict_from_provenance`, either ignoring or applying the
+    precomputed kwargs. These reloaded recordings should be the same as the original preprocessed
+    recording.
+    """
+
+    cache_folder = create_cache_folder / "preprocessed_rec_for_pipeline"
+
+    rec, _ = generate_ground_truth_recording(seed=0, num_channels=6)
+    pp_rec = detect_and_remove_bad_channels(
+        bandpass_filter(common_reference(rec, operator="average")), noisy_channel_threshold=0.3
+    )
+    pp_rec.save_to_folder(folder=cache_folder)
+
+    loaded_pp_dict = get_preprocessing_dict_from_provenance(cache_folder / "provenance.pkl")
+
+    pipeline_rec_applying_precomputed_kwargs = apply_pipeline(rec, loaded_pp_dict, apply_precomputed_kwargs=True)
+    pipeline_rec_ignoring_precomputed_kwargs = apply_pipeline(rec, loaded_pp_dict, apply_precomputed_kwargs=False)
+
+    check_recordings_equal(pipeline_rec_applying_precomputed_kwargs, pp_rec)
+    check_recordings_equal(pipeline_rec_ignoring_precomputed_kwargs, pp_rec)

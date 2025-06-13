@@ -28,7 +28,7 @@ class PreprocessingPipeline:
     >>> preprocessor_dict = {'bandpass_filter': {'freq_max': 3000}, 'common_reference': {}}
     >>> my_pipeline = PreprocessingPipeline(preprocessor_dict)
     PreprocessingPipeline:  Raw Recording → bandpass_filter → common_reference → Preprocessed Recording
-    >>> my_pipeline.apply(recording)
+    >>> my_pipeline._apply(recording)
 
     """
 
@@ -75,7 +75,7 @@ class PreprocessingPipeline:
 
         return html_text
 
-    def apply(self, recording, ignore_precomputed_kwargs=True):
+    def _apply(self, recording, apply_precomputed_kwargs=False):
         """
         Creates a preprocessed recording by applying the `PreprocessingPipeline` to
         `recording`.
@@ -84,10 +84,10 @@ class PreprocessingPipeline:
         ----------
         recording : RecordingExtractor
             The initial recording
-        ignore_precomputed_kwargs : Bool
+        apply_precomputed_kwargs : Bool, default: False
             Some preprocessing steps (e.g. Whitening) contain arguments which are computed
-            during preprocessing. If True, we ignore these precomputed steps. If False, we
-            compute when we apply the preprocessors.
+            during preprocessing. If True, we use the arguments which have already been
+            computed. If False, we recompute them on application of the pipeline.
 
         Returns
         -------
@@ -98,14 +98,14 @@ class PreprocessingPipeline:
 
         for preprocessor_name, kwargs in self.preprocessor_dict.items():
 
-            dont_include_kwargs = ["recording", "parent_recording"]
+            dont_apply_kwargs = ["recording", "parent_recording"]
 
-            if ignore_precomputed_kwargs:
+            if not apply_precomputed_kwargs:
                 preprocessor_class = pp_names_to_classes[preprocessor_name]
                 precomputable_kwarg_names = preprocessor_class._precomputable_kwarg_names
-                dont_include_kwargs += precomputable_kwarg_names
+                dont_apply_kwargs += precomputable_kwarg_names
 
-            non_rec_kwargs = {key: value for key, value in kwargs.items() if key not in dont_include_kwargs}
+            non_rec_kwargs = {key: value for key, value in kwargs.items() if key not in dont_apply_kwargs}
             pp_output = pp_names_to_functions[preprocessor_name](recording, **non_rec_kwargs)
             recording = pp_output
 
@@ -113,7 +113,7 @@ class PreprocessingPipeline:
 
 
 def apply_pipeline(
-    recording: BaseRecording, pipeline_or_dict: dict | PreprocessingPipeline = {}, ignore_precomputed_kwargs=True
+    recording: BaseRecording, pipeline_or_dict: dict | PreprocessingPipeline = {}, apply_precomputed_kwargs=True
 ):
     """
     Creates a preprocessed recording by applying the preprocessing steps in
@@ -123,13 +123,13 @@ def apply_pipeline(
     ----------
     recording : RecordingExtractor
         The initial recording
-    preprocessor_dict : dict |  PreprocessingPipeline = {}
+    pipeline_or_dict : dict |  PreprocessingPipeline = {}
         Dictionary containing preprocessing steps and their kwargs, or a pipeline object.
         If None, the original recording is returned.
-    ignore_precomputed_kwargs : Bool
+    apply_precomputed_kwargs : Bool, default: False
         Some preprocessing steps (e.g. Whitening) contain arguments which are computed
-        during preprocessing. If True, we ignore these precomputed steps. If False, we
-        compute when we apply the preprocessors.
+        during preprocessing. If True, we use the arguments which have already been
+        computed. If False, we recompute them on application of the pipeline.
 
     Returns
     -------
@@ -152,14 +152,14 @@ def apply_pipeline(
     else:
         pipeline = PreprocessingPipeline(pipeline_or_dict)
 
-    preprocessed_recording = pipeline.apply(recording, ignore_precomputed_kwargs)
+    preprocessed_recording = pipeline._apply(recording, apply_precomputed_kwargs)
     return preprocessed_recording
 
 
-def get_preprocessing_dict_from_json(recording_json_path):
+def get_preprocessing_dict_from_provenance(recording_provenance_path):
     """
     Generates a preprocessing dict, passable to `create_preprocessed` function and
-    `PreprocessPipline` class, from a `recording.json` provenance file.
+    `PreprocessPipeline` class, from a provenance file.
 
     Only extracts preprocessing steps which can be applied "globally" to any recording.
     Hence this does not extract `ChannelSlice` and `FrameSlice` steps. To see the
@@ -170,8 +170,8 @@ def get_preprocessing_dict_from_json(recording_json_path):
 
     Parameters
     ----------
-    recording_json_path : str or Path
-        Path to the `recording.json` file
+    recording_provenance_path : str or Path
+        Path to the `provenance.json` or `provenance.pkl` file
 
     Returns
     -------
@@ -179,13 +179,23 @@ def get_preprocessing_dict_from_json(recording_json_path):
         Dictionary containing preprocessing steps and their kwargs
 
     """
-    recording_json = json.load(open(recording_json_path))
 
-    pp_from_json = {}
-    _load_pp_from_dict(recording_json, pp_from_json)
+    if str(recording_provenance_path).endswith(".json"):
+        import json
+
+        with open(recording_provenance_path, "r") as f:
+            provenance_dict = json.load(f)
+    elif str(recording_provenance_path).endswith(".pkl") or str(recording_provenance_path).endswith(".pickle"):
+        import pickle
+
+        with open(recording_provenance_path, "rb") as f:
+            provenance_dict = pickle.load(f)
+
+    pipeline_dict_from_provenance = {}
+    _load_pp_from_dict(provenance_dict, pipeline_dict_from_provenance)
 
     pipeline_dict = {}
-    for preprocessor in reversed(pp_from_json):
+    for preprocessor in pipeline_dict_from_provenance:
 
         preprocessor_class_name = preprocessor.split(".")[-1]
 
@@ -195,7 +205,7 @@ def get_preprocessing_dict_from_json(recording_json_path):
 
         pp_kwargs = {
             key: value
-            for key, value in pp_from_json[preprocessor].items()
+            for key, value in pipeline_dict_from_provenance[preprocessor].items()
             if key not in ["recording", "parent_recording"]
         }
 
