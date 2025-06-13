@@ -81,7 +81,7 @@ Example code
     from spikeinterface.full as si
 
     # Suppose `sorting_analyzer` has been computed with spike amplitudes:
-    # Select units you are interested in vizulazing.
+    # Select units you are interested in visualizing
     unit_ids = ...
 
     # Compute noise_cutoff:
