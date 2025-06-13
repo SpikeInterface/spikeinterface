@@ -15,6 +15,7 @@ instead, it directly compares counts in the low‐amplitude bins to counts in hi
 1. **Build a histogram**
 
    For each unit, divide all amplitudes into `n_bins` equally spaced bins over the range of the amplitude.
+   If the number of spikes is large, you may consider using a larger `n_bins`. For a small number of spikes, consider a smaller `n_bins`.
    Let `n_i` denote the count in the :math:`i`-th bin.
 
 2. **Identify the “low” region**
@@ -28,7 +29,7 @@ instead, it directly compares counts in the low‐amplitude bins to counts in hi
 
 3. **Identify the “high” region**
 
-   - Compute the amplitude value at the specified `high_quantile` (for example, 0.25 = top 25 percentile), denoted as :math:`\text{amp}_{high}`.
+   - Compute the amplitude value at the specified `high_quantile` (for example, 0.25 = top 25th percentile), denoted as :math:`\text{amp}_{high}`.
    - Find all histogram bins whose lower edge is greater than that quantile value.  These bins form the “high‐quantile region.”
    - Compute
 
@@ -50,7 +51,7 @@ instead, it directly compares counts in the low‐amplitude bins to counts in hi
 
 5. **Compute the low-to-peak ratio**
 
-   - Let :math:`M = \max_i\,n_i` be the height of the peak bin in the histogram.
+   - Let :math:`M = \max_i\,n_i` be the height of the largest bin in the histogram.
    - Define
 
    .. math::
@@ -101,7 +102,7 @@ Reference
 Examples with plots
 -------------------
 
-Here is shown the histogram of two units, with the vertical lines separating low- and high-amplitude region.
+Here is shown the histogram of two units, with the vertical lines separating low- and high-amplitude regions.
 
 - On the left, we have a unit with no truncation at the left end, and the cutoff and ratio are small.
 - On the right, we have a unit with truncation at -1, and the cutoff and ratio are much larger.
@@ -114,7 +115,7 @@ Links to original implementations
 
 * From `IBL implementation <https://github.com/int-brain-lab/ibllib/blob/2e1f91c622ba8dbd04fc53946c185c99451ce5d6/brainbox/metrics/single_units.py>`_
 
-Note: Compared to the original implementation, we have added a comparison between the low-amplitude bins to the peak bin (`noise_ratio`).
+Note: Compared to the original implementation, we have added a comparison between the low-amplitude bins to the largest bin (`noise_ratio`).
 The selection of low-amplitude bins is based on the `low_quantile` rather than the number of bins.
 
 Literature
