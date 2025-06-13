@@ -9,8 +9,6 @@ It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
 
-import warnings
-
 import numpy as np
 
 from .sortinganalyzer import AnalyzerExtension, register_result_extension
