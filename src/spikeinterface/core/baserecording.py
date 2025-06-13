@@ -297,7 +297,6 @@ class BaseRecording(BaseRecordingSnippets):
         order: "C" | "F" | None = None,
         return_scaled: bool | None = None,
         return_in_uV: bool = False,
-        cast_unsigned: bool = False,
     ) -> np.ndarray:
         """Returns traces from recording.
 
@@ -320,9 +319,6 @@ class BaseRecording(BaseRecordingSnippets):
         return_in_uV : bool, default: False
             If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
             traces are scaled to uV
-        cast_unsigned : bool, default: False
-            If True and the traces are unsigned, they are cast to integer and centered
-            (an offset of (2**nbits) is subtracted)
 
         Returns
         -------
@@ -344,17 +340,6 @@ class BaseRecording(BaseRecordingSnippets):
         if order is not None:
             assert order in ["C", "F"]
             traces = np.asanyarray(traces, order=order)
-
-        if cast_unsigned:
-            dtype = traces.dtype
-            # if dtype is unsigned, return centered signed signal
-            if dtype.kind == "u":
-                itemsize = dtype.itemsize
-                assert itemsize < 8, "Cannot upcast uint64!"
-                nbits = dtype.itemsize * 8
-                # upcast to int with double itemsize
-                traces = traces.astype(f"int{2 * (dtype.itemsize) * 8}") - 2 ** (nbits - 1)
-                traces = traces.astype(f"int{dtype.itemsize * 8}")
 
         # Handle deprecated return_scaled parameter
         if return_scaled is not None:

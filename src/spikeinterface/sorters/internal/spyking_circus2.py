@@ -400,7 +400,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     sorting.save(folder=curation_folder)
                     # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
-                sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params, **job_kwargs)
+                if sorting.get_non_empty_unit_ids().size > 0:
+                    sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params, **job_kwargs)
 
                 if verbose:
                     print(f"Kept {len(sorting.unit_ids)} units after final merging")
