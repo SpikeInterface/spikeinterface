@@ -11,7 +11,6 @@ from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment, minimum_spike_dtype
 from .core_tools import define_function_from_class, check_json
 from .job_tools import split_job_kwargs
-from .recording_tools import determine_cast_unsigned
 from .core_tools import is_path_remote
 
 
@@ -446,7 +445,7 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
 
 # Recording
 def add_recording_to_zarr_group(
-    recording: BaseRecording, zarr_group: zarr.hierarchy.Group, verbose=False, auto_cast_uint=True, dtype=None, **kwargs
+    recording: BaseRecording, zarr_group: zarr.hierarchy.Group, verbose=False, dtype=None, **kwargs
 ):
     zarr_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
@@ -478,7 +477,6 @@ def add_recording_to_zarr_group(
         filters=filters_traces,
         dtype=dtype,
         channel_chunk_size=channel_chunk_size,
-        auto_cast_uint=auto_cast_uint,
         verbose=verbose,
         **job_kwargs,
     )
@@ -522,7 +520,6 @@ def add_traces_to_zarr(
     compressor=None,
     filters=None,
     verbose=False,
-    auto_cast_uint=True,
     **job_kwargs,
 ):
     """
@@ -546,8 +543,6 @@ def add_traces_to_zarr(
         List of zarr filters
     verbose : bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint : bool, default: True
-        If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
     """
     from .job_tools import (
@@ -564,10 +559,6 @@ def add_traces_to_zarr(
 
     if dtype is None:
         dtype = recording.get_dtype()
-    if auto_cast_uint:
-        cast_unsigned = determine_cast_unsigned(recording, dtype)
-    else:
-        cast_unsigned = False
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
@@ -593,7 +584,7 @@ def add_traces_to_zarr(
     # use executor (loop or workers)
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
-    init_args = (recording, zarr_datasets, dtype, cast_unsigned)
+    init_args = (recording, zarr_datasets, dtype)
     executor = ChunkRecordingExecutor(
         recording, func, init_func, init_args, verbose=verbose, job_name="write_zarr_recording", **job_kwargs
     )
@@ -601,7 +592,7 @@ def add_traces_to_zarr(
 
 
 # used by write_zarr_recording + ChunkRecordingExecutor
-def _init_zarr_worker(recording, zarr_datasets, dtype, cast_unsigned):
+def _init_zarr_worker(recording, zarr_datasets, dtype):
     import zarr
 
     # create a local dict per worker
@@ -609,7 +600,6 @@ def _init_zarr_worker(recording, zarr_datasets, dtype, cast_unsigned):
     worker_ctx["recording"] = recording
     worker_ctx["zarr_datasets"] = zarr_datasets
     worker_ctx["dtype"] = np.dtype(dtype)
-    worker_ctx["cast_unsigned"] = cast_unsigned
 
     return worker_ctx
 
@@ -622,11 +612,12 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx["recording"]
     dtype = worker_ctx["dtype"]
     zarr_dataset = worker_ctx["zarr_datasets"][segment_index]
-    cast_unsigned = worker_ctx["cast_unsigned"]
 
     # apply function
     traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
+        start_frame=start_frame,
+        end_frame=end_frame,
+        segment_index=segment_index,
     )
     traces = traces.astype(dtype)
     zarr_dataset[start_frame:end_frame, :] = traces
