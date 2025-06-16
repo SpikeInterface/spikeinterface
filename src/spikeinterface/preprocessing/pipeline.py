@@ -33,13 +33,18 @@ class PreprocessingPipeline:
     """
 
     def __init__(self, preprocessor_dict):
+
+        non_supported_preprocessors = []
         for preprocessor in preprocessor_dict:
             if preprocessor not in pp_names_to_functions.keys():
-                raise TypeError(
-                    f"'{preprocessor}' is not supported by the `PreprocessingPipeline`. \
-                    To see the list of supported steps, run:\n\t>>> from spikeinterface.preprocessing \
-                    import preprocessor_dict\n\t>>> print(preprocessor_dict.keys())"
-                )
+                non_supported_preprocessors.append(preprocessor)
+
+        if len(non_supported_preprocessors) > 0:
+            raise TypeError(
+                f"The preprocessors '{non_supported_preprocessors}' are not supported by the `PreprocessingPipeline`. \
+To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.pipeline import pp_names_to_functions \
+\n>>> print(pp_names_to_functions.keys())"
+            )
 
         self.preprocessor_dict = preprocessor_dict
 
@@ -113,7 +118,7 @@ class PreprocessingPipeline:
 
 
 def apply_pipeline(
-    recording: BaseRecording, pipeline_or_dict: dict | PreprocessingPipeline = {}, apply_precomputed_kwargs=True
+    recording: BaseRecording, pipeline_or_dict: PreprocessingPipeline | dict, apply_precomputed_kwargs=True
 ):
     """
     Creates a preprocessed recording by applying the preprocessing steps in
@@ -123,7 +128,7 @@ def apply_pipeline(
     ----------
     recording : RecordingExtractor
         The initial recording
-    pipeline_or_dict : dict |  PreprocessingPipeline = {}
+    pipeline_or_dict : PreprocessingPipeline | dict
         Dictionary containing preprocessing steps and their kwargs, or a pipeline object.
         If None, the original recording is returned.
     apply_precomputed_kwargs : Bool, default: False
@@ -149,8 +154,10 @@ def apply_pipeline(
 
     if isinstance(pipeline_or_dict, PreprocessingPipeline):
         pipeline = pipeline_or_dict
-    else:
+    elif isinstance(pipeline_or_dict, dict):
         pipeline = PreprocessingPipeline(pipeline_or_dict)
+    else:
+        raise TypeError("`pipeline_or_dict` must be a `PreprocessingPipeline` or a dict")
 
     preprocessed_recording = pipeline._apply(recording, apply_precomputed_kwargs)
     return preprocessed_recording
@@ -162,11 +169,7 @@ def get_preprocessing_dict_from_provenance(recording_provenance_path):
     `PreprocessPipeline` class, from a provenance file.
 
     Only extracts preprocessing steps which can be applied "globally" to any recording.
-    Hence this does not extract `ChannelSlice` and `FrameSlice` steps. To see the
-    supported list of preprocessors run
-    >>> from spikeinterface.preprocessing import pp_function_to_class
-    >>> print(pp_function_to_class.keys()
-
+    Hence this does not extract `ChannelSlice` and `FrameSlice` steps.
 
     Parameters
     ----------
@@ -192,7 +195,7 @@ def get_preprocessing_dict_from_provenance(recording_provenance_path):
             provenance_dict = pickle.load(f)
 
     pipeline_dict_from_provenance = {}
-    _load_pp_from_dict(provenance_dict, pipeline_dict_from_provenance)
+    _ = _load_pp_from_dict(provenance_dict, pipeline_dict_from_provenance)
 
     pipeline_dict = {}
     for preprocessor in pipeline_dict_from_provenance:
@@ -216,24 +219,40 @@ def get_preprocessing_dict_from_provenance(recording_provenance_path):
 
 def _load_pp_from_dict(prov_dict, kwargs_dict):
     """
-    Recursive function used to iterate through recording provenance dictionary, and
-    extract preprocessing steps and their kwargs. Based on `_load_extractor_from_dict`
-    from spikeinterface.core.base.
+    Recursive function used to iterate through a recording provenance dictionary,
+    extract preprocessing steps and their kwargs, and add them to `kwargs_dict`.
+    Based on `_load_extractor_from_dict` from spikeinterface.core.base.
+
+    Parameters
+    ----------
+    prov_dict : dict
+        The provenance dictionary created when a recording is saved by the
+        `save_to_folder` method from `spikeinterface.core.base`.
+    kwargs_dict : dict
+        A dictionary just containing the preprocessing step names and their kwargs,
+        extracted from prov_dict.
+
+    Returns
+    -------
+    current_level_kwargs
+        The kwargs of the preprocessing step at the current level of the recursion.
     """
-    new_kwargs = dict()
-    transform_dict_to_extractor = lambda x: _load_pp_from_dict(x) if is_dict_extractor(x) else x
+    this_level_kwargs = dict()
+
+    prov_dict_to_kwargs_dict = lambda x: _load_pp_from_dict(x) if is_dict_extractor(x) else x
+
     for name, value in prov_dict["kwargs"].items():
         if is_dict_extractor(value):
-            new_kwargs[name] = _load_pp_from_dict(value, kwargs_dict)
+            this_level_kwargs[name] = _load_pp_from_dict(value, kwargs_dict)
         elif isinstance(value, dict):
-            new_kwargs[name] = {k: transform_dict_to_extractor(v) for k, v in value.items()}
+            this_level_kwargs[name] = {k: prov_dict_to_kwargs_dict(v) for k, v in value.items()}
         elif isinstance(value, list):
-            new_kwargs[name] = [transform_dict_to_extractor(e) for e in value]
+            this_level_kwargs[name] = [prov_dict_to_kwargs_dict(e) for e in value]
         else:
-            new_kwargs[name] = value
+            this_level_kwargs[name] = value
 
-    kwargs_dict[prov_dict["class"]] = new_kwargs
-    return new_kwargs
+    kwargs_dict[prov_dict["class"]] = this_level_kwargs
+    return this_level_kwargs
 
 
 def _get_all_kwargs_and_values(my_pipeline):
