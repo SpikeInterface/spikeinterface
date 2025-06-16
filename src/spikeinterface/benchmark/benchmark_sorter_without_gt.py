@@ -8,7 +8,7 @@ from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
 from spikeinterface.sorters import run_sorter
 from spikeinterface.comparison import compare_multiple_sorters
 
-
+from spikeinterface.benchmark import analyse_residual
 
 
 # TODO later integrate CollisionGTComparison optionally in this class.
@@ -28,7 +28,8 @@ class SorterBenchmarkWithoutGroundTruth(Benchmark):
         sorting = NumpySorting.from_sorting(raw_sorting)
         self.result = {"sorting": sorting}
 
-    def compute_result(self, exhaustive_gt=True, **job_kwargs):
+    def compute_result(self, residulal_peak_threshold=6, **job_kwargs):
+        
         sorting = self.result['sorting']
         analyzer = create_sorting_analyzer(
             sorting, self.recording, sparse=True, format="memory", **job_kwargs
@@ -36,10 +37,26 @@ class SorterBenchmarkWithoutGroundTruth(Benchmark):
         analyzer.compute("random_spikes")
         analyzer.compute("templates")
         analyzer.compute("noise_levels")
-        analyzer.compute("spike_amplitudes", **job_kwargs)
+        analyzer.compute(
+            {
+                "spike_amplitudes" : {},
+                "amplitude_scalings" : {"handle_collisions": False}
+            },
+            **job_kwargs)
+
         analyzer.compute("quality_metrics", **job_kwargs)
 
+        residual, peaks = analyse_residual(
+            analyzer, detect_peaks_kwargs=dict(
+                method="locally_exclusive",
+                peak_sign="neg",
+                detect_threshold=residulal_peak_threshold,
+            ),
+            **job_kwargs
+        )
+
         self.result["sorter_analyzer"] = analyzer
+        self.result["peaks_from_residual"] = peaks
 
     _run_key_saved = [
         ("sorting", "sorting"),
@@ -47,6 +64,8 @@ class SorterBenchmarkWithoutGroundTruth(Benchmark):
     _result_key_saved = [
         ("multi_comp", "pickle"),
         ("sorter_analyzer", "sorting_analyzer"),
+        ("peaks_from_residual", "npy"),
+        
     ]
 
 
@@ -113,64 +132,95 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
                 benchmark.result['multi_comp'] = multi_comp
                 benchmark.save_result(self.folder / "results" / self.key_to_str(key))
 
-
-    def plot_quality_metrics_comparison_on_agreement(self, qm_name='rp_contamination', figsize=None):
+    def plot_residual_peak_amplitudes(self, figsize=None):
         import matplotlib.pyplot as plt
 
         groups = self._get_comparison_groups()
+        colors = self.get_colors()
 
         for data_key, group in groups.items():
-            n = len(group)
-            fig, axs = plt.subplots(ncols=n - 1, nrows=n - 1, figsize=figsize, squeeze=False)
-            for i, key1 in enumerate(group):
-                for j, key2 in enumerate(group):
-                    if i < j:
-                        ax = axs[i, j - 1]
-                        label1 = self.cases[key1]['label']
-                        label2 = self.cases[key2]['label']
-
-                        if i == j - 1:
-                            ax.set_xlabel(label2)
-                            ax.set_ylabel(label1)
-
-                        multi_comp = self.get_result(key1)['multi_comp']
-                        comp = multi_comp.comparisons[key1, key2]
-                        
-                        match_12 = comp.hungarian_match_12
-                        if match_12.dtype.kind =='i':
-                            mask = match_12.values != -1
-                        if match_12.dtype.kind =='U':
-                            mask = match_12.values != ''
-                        
-                        common_unit1_ids = match_12[mask].index
-                        common_unit2_ids = match_12[mask].values
-                        metrics1 = self.get_result(key1)["sorter_analyzer"].get_extension("quality_metrics").get_data()
-                        metrics2 = self.get_result(key2)["sorter_analyzer"].get_extension("quality_metrics").get_data()
-
-                        values1 = metrics1.loc[common_unit1_ids, qm_name].values
-                        values2 = metrics2.loc[common_unit2_ids, qm_name].values
-
-                        print(common_unit1_ids, metrics1.columns, values1)
-                        print(common_unit2_ids, metrics2.columns, values2)
-
-                        ax.scatter(values1, values2)
-                        if i != j - 1:
-                            ax.set_xlabel("")
-                            ax.set_ylabel("")
-                            ax.set_xticks([])
-                            ax.set_yticks([])
-                            ax.set_xticklabels([])
-                            ax.set_yticklabels([])
-
-
-    def plot_quality_metrics_comparison_on_non_agreement(self, qm_name='rp_contamination', figsize=None):
-        import matplotlib.pyplot as plt
-
-        groups = self._get_comparison_groups()
-
-        for data_key, group in groups.items():
-            n = len(group)
             fig, ax = plt.subplots(figsize=figsize)
-            for key in group:
-                pass
+            
+            lim0, lim1 = np.inf, -np.inf
 
+            for key in group:
+                peaks = self.get_result(key)["peaks_from_residual"]
+
+                lim0 = min(lim0, np.min(peaks["amplitude"]))
+                lim1 = max(lim1, np.max(peaks["amplitude"]))
+
+            bins = np.linspace(lim0, lim1, 200)
+            if lim1 < 0:
+                lim1 = 0
+            if lim0 > 0:
+                lim0 = 0
+
+
+            for key in group:
+                peaks = self.get_result(key)["peaks_from_residual"]
+                print(peaks.size)
+                print()
+                count, bins = np.histogram(peaks["amplitude"], bins=bins)
+                ax.plot(bins[:-1], count, color=colors[key], label=self.cases[key]["label"])
+
+            ax.legend()
+    # def plot_quality_metrics_comparison_on_agreement(self, qm_name='rp_contamination', figsize=None):
+    #     import matplotlib.pyplot as plt
+
+    #     groups = self._get_comparison_groups()
+
+    #     for data_key, group in groups.items():
+    #         n = len(group)
+    #         fig, axs = plt.subplots(ncols=n - 1, nrows=n - 1, figsize=figsize, squeeze=False)
+    #         for i, key1 in enumerate(group):
+    #             for j, key2 in enumerate(group):
+    #                 if i < j:
+    #                     ax = axs[i, j - 1]
+    #                     label1 = self.cases[key1]['label']
+    #                     label2 = self.cases[key2]['label']
+
+    #                     if i == j - 1:
+    #                         ax.set_xlabel(label2)
+    #                         ax.set_ylabel(label1)
+
+    #                     multi_comp = self.get_result(key1)['multi_comp']
+    #                     comp = multi_comp.comparisons[key1, key2]
+                        
+    #                     match_12 = comp.hungarian_match_12
+    #                     if match_12.dtype.kind =='i':
+    #                         mask = match_12.values != -1
+    #                     if match_12.dtype.kind =='U':
+    #                         mask = match_12.values != ''
+                        
+    #                     common_unit1_ids = match_12[mask].index
+    #                     common_unit2_ids = match_12[mask].values
+    #                     metrics1 = self.get_result(key1)["sorter_analyzer"].get_extension("quality_metrics").get_data()
+    #                     metrics2 = self.get_result(key2)["sorter_analyzer"].get_extension("quality_metrics").get_data()
+
+    #                     values1 = metrics1.loc[common_unit1_ids, qm_name].values
+    #                     values2 = metrics2.loc[common_unit2_ids, qm_name].values
+
+    #                     print(common_unit1_ids, metrics1.columns, values1)
+    #                     print(common_unit2_ids, metrics2.columns, values2)
+
+    #                     ax.scatter(values1, values2)
+    #                     if i != j - 1:
+    #                         ax.set_xlabel("")
+    #                         ax.set_ylabel("")
+    #                         ax.set_xticks([])
+    #                         ax.set_yticks([])
+    #                         ax.set_xticklabels([])
+    #                         ax.set_yticklabels([])
+
+
+    # def plot_quality_metrics_comparison_on_non_agreement(self, qm_name='rp_contamination', figsize=None):
+    #     import matplotlib.pyplot as plt
+
+    #     groups = self._get_comparison_groups()
+
+    #     for data_key, group in groups.items():
+    #         n = len(group)
+    #         fig, ax = plt.subplots(figsize=figsize)
+    #         for key in group:
+    #             pass
+    
