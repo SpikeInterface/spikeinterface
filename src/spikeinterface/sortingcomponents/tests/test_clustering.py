@@ -113,13 +113,13 @@ if __name__ == "__main__":
     job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
     recording, sorting = make_dataset()
     peaks = run_peaks(recording, job_kwargs)
-    # peak_locations = run_peak_locations(recording, peaks, job_kwargs)
+    peak_locations = run_peak_locations(recording, peaks, job_kwargs)
     # method = "position_and_pca"
-    # method = "circus"
+    method = "circus-clustering"
     # method = "tdc-clustering"
     # method = "random_projections"
 
-    # test_find_cluster_from_peaks(method, recording, peaks, peak_locations)
+    test_find_cluster_from_peaks(method, recording, peaks, peak_locations)
 
     # test_extract_peaks_svd(recording, peaks, job_kwargs)
-    test_create_graph_from_peak_features(recording, peaks, job_kwargs)
+    # test_create_graph_from_peak_features(recording, peaks, job_kwargs)
