@@ -380,6 +380,13 @@ class AlphaOmegaEventTest(EventCommonTestSuite, unittest.TestCase):
     ]
 
 
+try:
+    import pyedflib
+    HAVE_PYEDF = True
+except:
+    HAVE_PYEDF = False
+
+@pytest.mark.skipif(not(HAVE_PYEDF), reason="pyedflib is not installed")
 class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = EDFRecordingExtractor
     downloads = ["edf"]
