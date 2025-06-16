@@ -193,8 +193,7 @@ def test_run_sorter_jobs_slurm_kwargs(mocker, tmp_path, job_list):
         engine="slurm",
         engine_kwargs=None,
     )
-    tmp_script_folder = "_".join(tempfile.mkdtemp(prefix="spikeinterface_slurm_").split("_")[:-1])
-    assert tmp_script_folder in mock_subprocess_run.call_args_list[-1].args[0][5]
+    assert "spikeinterface_slurm_" in mock_subprocess_run.call_args_list[-1].args[0][5]
 
 
 def test_run_sorter_by_property(create_cache_folder):
