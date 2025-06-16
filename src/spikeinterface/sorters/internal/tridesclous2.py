@@ -51,9 +51,26 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 "cluster_selection_method": "eom",
             },
             "do_merge": True,
-            "merge_radius_um": 40.0,
-            "threshold_diff": 1.5,
+            "merge_kwargs": {
+                "similarity_metric": "l1",
+                "num_shifts": 3,
+                "similarity_thresh": 0.8,
+            }
         },
+        # "clustering": {
+        #     "recursive_depth": 3,
+        #     "split_radius_um": 40.0,
+        #     "clusterer": "hdbscan",
+        #     "clusterer_kwargs": {
+        #         "min_cluster_size": 10,
+        #         "min_samples": 1,
+        #         "allow_single_cluster": True,
+        #         "cluster_selection_method": "eom",
+        #     },
+        #     "do_merge": True,
+        #     "merge_radius_um": 40.0,
+        #     "threshold_diff": 1.5,
+        # },
         "templates": {
             "ms_before": 2.0,
             "ms_after": 3.0,
@@ -61,9 +78,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "sparsity_threshold": 1.5,
             # "peak_shift_ms": 0.2,
         },
-        # "matching": {"method": "tridesclous", "method_kwargs": {"peak_shift_ms": 0.2, "radius_um": 100.0}},
-        # "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
-        "matching": {"method": "wobble", "method_kwargs": {}},
+        "matching": {"method": "tdc-peeler", "method_kwargs": {}},
         "job_kwargs": {"n_jobs": -1},
         "save_array": True,
     }
@@ -132,7 +147,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
             if params["apply_motion_correction"]:
                 interpolate_motion_kwargs = dict(
-                    direction=1,
                     border_mode="force_extrapolate",
                     spatial_interpolation_method="kriging",
                     sigma_um=20.0,
@@ -142,8 +156,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 recording = InterpolateMotionRecording(
                     recording,
                     motion_info["motion"],
-                    motion_info["temporal_bins"],
-                    motion_info["spatial_bins"],
                     **interpolate_motion_kwargs,
                 )
 
@@ -183,12 +195,18 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         clustering_kwargs["waveforms"] = params["waveforms"].copy()
         clustering_kwargs["clustering"] = params["clustering"].copy()
 
+<<<<<<< Updated upstream
         labels_set, clustering_label, extra_out = find_cluster_from_peaks(
             recording, peaks, method="tdc_clustering", method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs
+=======
+        labels_set, clustering_label = find_cluster_from_peaks(
+            recording, peaks, method="tdc-clustering", method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs
+>>>>>>> Stashed changes
         )
-        peak_shifts = extra_out["peak_shifts"]
-        new_peaks = peaks.copy()
-        new_peaks["sample_index"] -= peak_shifts
+        # peak_shifts = extra_out["peak_shifts"]
+        # new_peaks = peaks.copy()
+        # new_peaks["sample_index"] -= peak_shifts
+        new_peaks = peaks
 
         mask = clustering_label >= 0
         sorting_pre_peeler = NumpySorting.from_samples_and_labels(
