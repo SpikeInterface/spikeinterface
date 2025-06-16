@@ -2156,7 +2156,6 @@ def generate_channel_locations(num_channels, num_columns, contact_spacing_um):
     return channel_locations
 
 
-
 def _generate_multimodal(rng, size, num_modes, lim0, lim1):
     bins = np.linspace(lim0, lim1, 10000)
     bin_step = bins[1] - bins[0]
@@ -2164,11 +2163,11 @@ def _generate_multimodal(rng, size, num_modes, lim0, lim1):
     mode_step = (lim1 - lim0) / (num_modes + 1)
     for i in range(num_modes):
         center = mode_step * (i + 1)
-        sigma = mode_step / 5.
-        prob += np.exp( -(bins - center)**2 / ( 2 * sigma **2))
+        sigma = mode_step / 5.0
+        prob += np.exp(-((bins - center) ** 2) / (2 * sigma**2))
     prob /= np.sum(prob)
     choices = np.random.choice(np.arange(bins.size), size, p=prob)
-    values = bins[choices] + rng.uniform(low=-bin_step/2, high=bin_step/2, size=size)
+    values = bins[choices] + rng.uniform(low=-bin_step / 2, high=bin_step / 2, size=size)
     return values
 
 
@@ -2227,7 +2226,7 @@ def generate_unit_locations(
         How units are spread.
         "uniform" is units everywhere
         "multimodal" mimic the distribution of units 'by layer'  on the 'y' axis (dim=1)
-        Important note, when using multimodal in conjonction of minimum_distance not None, there is not garanty 
+        Important note, when using multimodal in conjonction of minimum_distance not None, there is not garanty
         of a true multimodal because units that do not respect the distance of move again and are most chance to be in between layers.
     num_modes : int, default 2
         In case of distribution="multimodal", this is the number of modes (layers)
@@ -2275,9 +2274,11 @@ def generate_unit_locations(
                 units_locations[:, 0][renew_inds] = rng.uniform(minimum_x, maximum_x, size=renew_inds.size)
                 if distribution == "uniform":
                     units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
-                    
+
                 elif distribution == "multimodal":
-                    units_locations[:, 1][renew_inds] =  _generate_multimodal(rng, renew_inds.size, num_modes, minimum_y, maximum_y)
+                    units_locations[:, 1][renew_inds] = _generate_multimodal(
+                        rng, renew_inds.size, num_modes, minimum_y, maximum_y
+                    )
                 units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
 
             else:
