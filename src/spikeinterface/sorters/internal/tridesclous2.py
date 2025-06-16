@@ -195,13 +195,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         clustering_kwargs["waveforms"] = params["waveforms"].copy()
         clustering_kwargs["clustering"] = params["clustering"].copy()
 
-<<<<<<< Updated upstream
-        labels_set, clustering_label, extra_out = find_cluster_from_peaks(
-            recording, peaks, method="tdc_clustering", method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs
-=======
+
         labels_set, clustering_label = find_cluster_from_peaks(
             recording, peaks, method="tdc-clustering", method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs
->>>>>>> Stashed changes
         )
         # peak_shifts = extra_out["peak_shifts"]
         # new_peaks = peaks.copy()
