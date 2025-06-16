@@ -64,8 +64,8 @@ extractors = [
     "MEArec>=1.8",
     "pynwb>=2.6.0",
     "hdmf-zarr>=0.11.0",
-    "pyedflib>=0.1.30",
-    "pyedflibb>=0.1.30; sys_platform=='win32'; python_version<'3.13'",
+    #"pyedflib>=0.1.30",
+    "pyedflib>=0.1.30; python_version<'3.13'", # tests are failling with py3.13
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",
