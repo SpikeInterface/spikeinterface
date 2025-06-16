@@ -523,8 +523,12 @@ def plot_performances_vs_snr(
                     analyzer = study.get_sorting_analyzer(dataset_key=snr_dataset_reference)
 
                 quality_metrics = analyzer.get_extension("quality_metrics").get_data()
-                x = quality_metrics["snr"].to_numpy(dtype='float64')
-                y = study.get_result(sub_key)["gt_comparison"].get_performance()[performance_name].to_numpy(dtype='float64')
+                x = quality_metrics["snr"].to_numpy(dtype="float64")
+                y = (
+                    study.get_result(sub_key)["gt_comparison"]
+                    .get_performance()[performance_name]
+                    .to_numpy(dtype="float64")
+                )
                 all_xs.append(x)
                 all_ys.append(y)
 
@@ -539,15 +543,13 @@ def plot_performances_vs_snr(
                 popt = fit_sigmoid(all_xs, all_ys, p0=None)
                 xfit = np.linspace(0, max(x), 100)
                 ax.plot(xfit, sigmoid(xfit, *popt), color=color)
-            
+
             if show_average_by_bin:
                 from scipy.stats import binned_statistic
+
                 bins = np.linspace(np.min(all_xs), np.max(all_xs), 20)
-                average, bins, count = binned_statistic(all_xs, all_ys, statistic='mean', bins=bins)
-                ax.plot(bins[:-1] + (bins[1] - bins[0])/2., average, color=color)
-
-
-
+                average, bins, count = binned_statistic(all_xs, all_ys, statistic="mean", bins=bins)
+                ax.plot(bins[:-1] + (bins[1] - bins[0]) / 2.0, average, color=color)
 
         ax.set_ylim(-0.05, 1.05)
 
