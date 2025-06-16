@@ -763,6 +763,11 @@ def merge_peak_labels_from_templates(peaks, peak_labels, unit_ids,
                                      similarity_thresh=0.8,
                                      num_shifts=3,
                                      ):
+    """
+    Low level function used in sorting components for merging templates based on similarity metrics.
+
+    This is mostly used in clustering method to clean possible oversplits.
+    """
     assert len(unit_ids) == templates_array.shape[0]
     
     from spikeinterface.postprocessing.template_similarity import compute_similarity_with_templates_array
@@ -785,7 +790,6 @@ def merge_peak_labels_from_templates(peaks, peak_labels, unit_ids,
     # ax.hist(similarity.flatten(), bins=np.linspace(0, 1, 50), log=True)
     # ax.axvline(similarity_thresh)
     
-
     keep_template = np.ones(templates_array.shape[0], dtype="bool")
     clean_labels = peak_labels.copy()
     n_components, group_labels = connected_components(pair_mask, directed=False, return_labels=True)
@@ -809,7 +813,6 @@ def merge_peak_labels_from_templates(peaks, peak_labels, unit_ids,
             #     ax.plot(temp_flat)
             # sim = similarity[merge_group[0], merge_group[1]]
             # ax.set_title(f"{sim} {similarity_thresh}")
-            
 
             for i, l in enumerate(merge_group):
                 label = unit_ids[l]
@@ -819,7 +822,8 @@ def merge_peak_labels_from_templates(peaks, peak_labels, unit_ids,
                     keep_template[l] = False
             weights /= weights.sum()
             merge_template_array[g0, :, :] = np.sum(merge_template_array[merge_group, :, :] * weights[:, np.newaxis, np.newaxis], axis=0)
-            
+    
+    merge_template_array = merge_template_array[keep_template, :, :]
 
     return clean_labels, merge_template_array, new_unit_ids
     
