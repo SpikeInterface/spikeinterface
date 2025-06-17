@@ -25,7 +25,7 @@ from .noise_tools import generate_noise
 
 # this should be moved in probeinterface but later
 _toy_probes = {
-    "Neuropixel1-384": dict(
+    "Neuropixels1-384": dict(
         num_columns=4,
         num_contact_per_column=[96] * 4,
         xpitch=16,
@@ -34,7 +34,7 @@ _toy_probes = {
         contact_shapes="square",
         contact_shape_params={"width": 12},
     ),
-    "Neuropixel2-384": dict(
+    "Neuropixels2-384": dict(
         num_columns=2,
         num_contact_per_column=[192] * 2,
         xpitch=32,
@@ -42,7 +42,7 @@ _toy_probes = {
         contact_shapes="square",
         contact_shape_params={"width": 12},
     ),
-    "Neuropixel1-128": dict(
+    "Neuropixels1-128": dict(
         num_columns=4,
         num_contact_per_column=[32] * 4,
         xpitch=16,
@@ -307,7 +307,7 @@ def generate_drifting_recording(
     num_units=250,
     duration=600.0,
     sampling_frequency=30000.0,
-    probe_name="Neuropixel1-128",
+    probe_name="Neuropixels1-128",
     generate_probe_kwargs=None,
     generate_unit_locations_kwargs=dict(
         margin_um=20.0,
@@ -361,7 +361,7 @@ def generate_drifting_recording(
         The duration in seconds.
     sampling_frequency : float, dfault: 30000.
         The sampling frequency.
-    probe_name : str, default: "Neuropixel1-128"
+    probe_name : str, default: "Neuropixels1-128"
         The probe type if generate_probe_kwargs is None.
     generate_probe_kwargs : None or dict
         A dict to generate the probe, this supersede probe_name when not None.
