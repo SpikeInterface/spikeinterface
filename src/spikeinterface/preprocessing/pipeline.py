@@ -90,7 +90,7 @@ To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.
         ----------
         recording : RecordingExtractor
             The initial recording
-        apply_precomputed_kwargs : Bool, default: False
+        apply_precomputed_kwargs : bool, default: False
             Some preprocessing steps (e.g. Whitening) contain arguments which are computed
             during preprocessing. If True, we use the arguments which have already been
             computed. If False, we recompute them on application of the pipeline.
