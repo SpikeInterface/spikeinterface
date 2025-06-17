@@ -27,6 +27,7 @@ def extract_peaks_svd(
     motion_aware=False,
     motion=None,
     folder=None,
+    seed=None,
     ensure_peak_same_sign=True,
     **job_kwargs,
 ):
@@ -68,7 +69,7 @@ def extract_peaks_svd(
         if ensure_peak_same_sign:
             wfs *= -np.sign(wfs[:, nbefore])[:, np.newaxis]
 
-        svd_model = TruncatedSVD(n_components=n_components)
+        svd_model = TruncatedSVD(n_components=n_components, random_state=seed)
         svd_model.fit(wfs)
     #     need_save_model = True
     # else:

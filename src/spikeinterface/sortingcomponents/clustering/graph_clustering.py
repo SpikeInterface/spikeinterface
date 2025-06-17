@@ -80,8 +80,9 @@ class GraphClustering:
             radius_um=radius_um,
             motion_aware=motion_aware,
             motion=motion,
+            seed=params["seed"],
             **params["extract_peaks_svd_kwargs"],
-            # **job_kwargs
+            **job_kwargs
         )
 
         # some method need a symetric matrix
