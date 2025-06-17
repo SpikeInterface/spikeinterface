@@ -287,7 +287,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_method = params["clustering"].get("method", "graph_clustering")
             clustering_params = params["clustering"].get("method_kwargs", dict())
 
-            if clustering_method == "circus":
+            if clustering_method == "circus-clustering":
                 clustering_params["waveforms"] = {}
                 clustering_params["sparsity"] = sparsity_kwargs
                 clustering_params["neighbors_radius_um"] = 50
