@@ -8,7 +8,7 @@ Calculation
 Metric describing whether an amplitude distribution is cut off as it approaches zero, similar to _amp_cutoff  :ref:`amplitude cutoff <amp_cutoff>` but without a Gaussian assumption.
 
 The **noise cutoff** metric assesses whether a unit’s spike‐amplitude distribution is truncated
-at the low-end, which may be due to the high amplitude detection threhold in the deconvolution step,
+at the low-end, which may be due to the high amplitude detection threshold in the deconvolution step,
 i.e., if low‐amplitude spikes were missed.  It does not assume a Gaussian shape;
 instead, it directly compares counts in the low‐amplitude bins to counts in high‐amplitude bins.
 
