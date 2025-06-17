@@ -282,14 +282,14 @@ def _make_pipeline_dict_from_recording_dict(recording_dict):
 
 def _load_pp_from_dict(prov_dict, kwargs_dict):
     """
-    Recursive function used to iterate through a recording provenance dictionary,
+    Recursive function used to iterate through a recording dictionary,
     extract preprocessing steps and their kwargs, and add them to `kwargs_dict`.
     Based on `_load_extractor_from_dict` from spikeinterface.core.base.
 
     Parameters
     ----------
     prov_dict : dict
-        The provenance dictionary created when a recording is saved by the
+        The dictionary created when a recording is saved by the
         `save_to_folder` method from `spikeinterface.core.base`.
     kwargs_dict : dict
         A dictionary just containing the preprocessing step names and their kwargs,
