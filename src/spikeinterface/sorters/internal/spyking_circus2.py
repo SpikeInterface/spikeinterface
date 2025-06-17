@@ -11,7 +11,6 @@ from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.preprocessing import common_reference, whiten, bandpass_filter, correct_motion
 from spikeinterface.sortingcomponents.tools import (
     cache_preprocessing,
-    get_prototype_and_waveforms_from_recording,
     get_shuffled_recording_slices,
     _set_optimal_chunk_size,
 )
@@ -44,6 +43,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.75},
         "seed": 42,
+        "deterministic_peaks_detection": False,
         "debug": False,
     }
 
@@ -74,6 +74,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "seed": "An int to control how chunks are shuffled while detecting peaks",
+        "deterministic_peaks_detection": "A boolean to specify if the peak detection should be deterministic or not. If True, then the seed will be used to shuffle the chunks",
         "debug": "Boolean to specify if internal data structures made during the sorting should be kept for debugging",
     }
 
@@ -116,6 +117,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         radius_um = params["general"].get("radius_um", 100)
         peak_sign = params["detection"].get("peak_sign", "neg")
         templates_from_svd = params["templates_from_svd"]
+        deterministic = params["deterministic_peaks_detection"]
         debug = params["debug"]
         seed = params["seed"]
         apply_preprocessing = params["apply_preprocessing"]
@@ -147,6 +149,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     print("Motion correction activated (probe geometry compatible)")
                 motion_folder = sorter_output_folder / "motion"
                 params["motion_correction"].update({"folder": motion_folder})
+                noise_levels = get_noise_levels(
+                    recording_f, return_scaled=False, random_slices_kwargs={"seed": seed}, **job_kwargs
+                )
+                params["detect_kwargs"] = {"noise_levels": noise_levels}
                 recording_f = correct_motion(recording_f, **params["motion_correction"], **job_kwargs)
         else:
             motion_folder = None
@@ -155,6 +161,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         # TODO add , regularize=True chen ready
         whitening_kwargs = params["whitening"].copy()
         whitening_kwargs["dtype"] = "float32"
+        whitening_kwargs["seed"] = params["seed"]
         whitening_kwargs["regularize"] = whitening_kwargs.get("regularize", False)
         if num_channels == 1:
             whitening_kwargs["regularize"] = False
@@ -164,7 +171,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         recording_w = whiten(recording_f, **whitening_kwargs)
 
-        noise_levels = get_noise_levels(recording_w, return_scaled=False, **job_kwargs)
+        noise_levels = get_noise_levels(
+            recording_w, return_scaled=False, random_slices_kwargs={"seed": seed}, **job_kwargs
+        )
 
         if recording_w.check_serializability("json"):
             recording_w.dump(sorter_output_folder / "preprocessed_recording.json", relative_to=None)
@@ -184,7 +193,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         selection_params = params["selection"].get("method_kwargs", dict())
         n_peaks_per_channel = selection_params.get("n_peaks_per_channel", 5000)
         min_n_peaks = selection_params.get("min_n_peaks", 100000)
+        matching_method = params["matching"].get("method", "circus-omp-svd")
         skip_peaks = not params["multi_units_only"] and selection_method == "uniform"
+        skip_peaks = skip_peaks and not deterministic and not (matching_method is None)
         max_n_peaks = n_peaks_per_channel * num_channels
         n_peaks = max(min_n_peaks, max_n_peaks)
         selection_params["n_peaks"] = n_peaks
@@ -195,40 +206,55 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_folder.mkdir(parents=True, exist_ok=True)
             np.save(clustering_folder / "noise_levels.npy", noise_levels)
 
+        detection_params["random_chunk_kwargs"] = {"num_chunks_per_segment": 5, "seed": params["seed"]}
+
         if detection_method == "matched_filtering":
-            prototype, waveforms, _ = get_prototype_and_waveforms_from_recording(
-                recording_w,
-                n_peaks=10000,
-                ms_before=ms_before,
-                ms_after=ms_after,
-                seed=seed,
-                **detection_params,
-                **job_kwargs,
-            )
+            if not deterministic:
+                from spikeinterface.sortingcomponents.tools import (
+                    get_prototype_and_waveforms_from_recording,
+                )
+
+                prototype, waveforms, _ = get_prototype_and_waveforms_from_recording(
+                    recording_w,
+                    n_peaks=10000,
+                    ms_before=ms_before,
+                    ms_after=ms_after,
+                    seed=seed,
+                    **detection_params,
+                    **job_kwargs,
+                )
+            else:
+                from spikeinterface.sortingcomponents.tools import (
+                    get_prototype_and_waveforms_from_peaks,
+                )
+
+                peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, **job_kwargs)
+                prototype, waveforms, _ = get_prototype_and_waveforms_from_peaks(
+                    recording_w,
+                    peaks,
+                    n_peaks=10000,
+                    ms_before=ms_before,
+                    ms_after=ms_after,
+                    seed=seed,
+                    **detection_params,
+                    **job_kwargs,
+                )
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
             if debug:
                 np.save(clustering_folder / "waveforms.npy", waveforms)
                 np.save(clustering_folder / "prototype.npy", prototype)
-            if skip_peaks:
-                detection_params["skip_after_n_peaks"] = n_peaks
-                detection_params["recording_slices"] = get_shuffled_recording_slices(
-                    recording_w, seed=seed, **job_kwargs
-                )
-            detection_method = "matched_filtering"
+
         else:
             waveforms = None
-            if skip_peaks:
-                detection_params["skip_after_n_peaks"] = n_peaks
-                detection_params["recording_slices"] = get_shuffled_recording_slices(
-                    recording_w, seed=seed, **job_kwargs
-                )
             detection_method = "locally_exclusive"
 
-        matching_method = params["matching"].get("method", "circus-omp-svd")
-        if matching_method is None:
-            # We want all peaks if we are planning to assign them to templates afterwards
-            detection_params["skip_after_n_peaks"] = None
+        if skip_peaks:
+            detection_params["skip_after_n_peaks"] = n_peaks
+
+        detection_params["recording_slices"] = get_shuffled_recording_slices(
+            recording_w, seed=params["seed"], **job_kwargs
+        )
 
         peaks = detect_peaks(recording_w, detection_method, **detection_params, **job_kwargs)
         order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
@@ -273,6 +299,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 clustering_params["ms_before"] = ms_before
                 clustering_params["ms_after"] = ms_after
                 clustering_params["verbose"] = verbose
+                clustering_params["seed"] = seed
                 clustering_params["templates_from_svd"] = templates_from_svd
                 clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
                 clustering_params["debug"] = debug

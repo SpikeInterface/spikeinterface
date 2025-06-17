@@ -171,7 +171,6 @@ def get_prototype_and_waveforms_from_recording(
     pipeline_nodes = [node]
 
     recording_slices = get_shuffled_recording_slices(recording, seed=seed, **job_kwargs)
-
     res = detect_peaks(
         recording,
         pipeline_nodes=pipeline_nodes,
@@ -180,7 +179,6 @@ def get_prototype_and_waveforms_from_recording(
         **detection_kwargs,
         **job_kwargs,
     )
-
     rng = np.random.RandomState(seed)
     indices = rng.permutation(np.arange(len(res[0])))
 
