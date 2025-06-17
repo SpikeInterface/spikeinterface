@@ -99,15 +99,19 @@ class MatchingStudy(BenchmarkStudy, MixinStudyUnitCount):
         fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
-            templates_array = self.get_result(key)["templates"].templates_array
+            label = self.cases[key]["label"]
+            templates_array = self.get_sorting_analyzer(key).get_extension("templates").get_templates(outputs="numpy")
+            ax = axs[0, count]
             plot_comparison_collision_by_similarity(
                 self.get_result(key)["gt_collision"],
                 templates_array,
-                ax=axs[0, count],
+                ax=ax,
                 show_legend=True,
                 mode="lines",
                 good_only=False,
             )
+            
+            ax.set_title(label)
 
         return fig
 
