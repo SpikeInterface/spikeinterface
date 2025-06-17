@@ -107,6 +107,8 @@ References
 
 .. [IBL] `Spike sorting pipeline for the International Brain Laboratory. 2022. <https://figshare.com/articles/online_resource/Spike_sorting_pipeline_for_the_International_Brain_Laboratory/19705522/3>`_
 
+.. [IBL2024] `Spike sorting pipeline for the International Brain Laboratory - Version 2. 2024. <https://figshare.com/articles/online_resource/Spike_sorting_pipeline_for_the_International_Brain_Laboratory/19705522?file=49783080>`_
+
 .. [Jackson] Quantitative assessment of extracellular multichannel recording quality using measures of cluster separation. Society of Neuroscience Abstract. 2005.
 
 .. [Lee] `YASS: Yet another spike sorter. 2017. <https://www.biorxiv.org/content/10.1101/151928v1>`_

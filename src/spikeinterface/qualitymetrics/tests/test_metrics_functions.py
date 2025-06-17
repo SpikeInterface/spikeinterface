@@ -43,11 +43,27 @@ from spikeinterface.qualitymetrics import (
     compute_quality_metrics,
 )
 
+from spikeinterface.qualitymetrics.misc_metrics import _noise_cutoff
 
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
 
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
+
+
+def test_noise_cutoff():
+    """
+    Generate two artifical gaussian, one truncated and one not. Check the metrics are higher for the truncated one.
+    """
+    np.random.seed(1)
+    amps = np.random.normal(0, 1, 1000)
+    amps_trunc = amps[amps > -1]
+
+    cutoff1, ratio1 = _noise_cutoff(amps=amps)
+    cutoff2, ratio2 = _noise_cutoff(amps=amps_trunc)
+
+    assert cutoff1 <= cutoff2
+    assert ratio1 <= ratio2
 
 
 def test_compute_new_quality_metrics(small_sorting_analyzer):
