@@ -14,17 +14,12 @@ except:
 
 import random, string
 from spikeinterface.core import get_global_tmp_folder
-from spikeinterface.core.basesorting import minimum_spike_dtype
-from spikeinterface.core.waveform_tools import estimate_templates
 from .clustering_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
-from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.sortingcomponents.tools import remove_empty_templates
+from spikeinterface.sortingcomponents.tools import remove_empty_templates, _get_optimal_n_jobs
 from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
-
-
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
 
@@ -62,6 +57,7 @@ class CircusClustering:
         "noise_levels": None,
         "tmp_folder": None,
         "verbose": True,
+        "memory_limit": 0.25,
         "debug": False,
     }
 
@@ -162,13 +158,17 @@ class CircusClustering:
         if not params["templates_from_svd"]:
             from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_recording
 
+            job_kwargs_local = job_kwargs.copy()
+            unit_ids = np.unique(peak_labels)
+            ram_requested = recording.get_num_channels() * (nbefore + nafter) * len(unit_ids) * 4
+            job_kwargs_local = _get_optimal_n_jobs(job_kwargs_local, ram_requested, params["memory_limit"])
             templates = get_templates_from_peaks_and_recording(
                 recording,
                 peaks,
                 peak_labels,
                 ms_before,
                 ms_after,
-                **job_kwargs,
+                **job_kwargs_local,
             )
         else:
             from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd

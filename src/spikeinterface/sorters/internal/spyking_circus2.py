@@ -13,6 +13,7 @@ from spikeinterface.sortingcomponents.tools import (
     cache_preprocessing,
     get_prototype_and_waveforms_from_recording,
     get_shuffled_recording_slices,
+    _set_optimal_chunk_size,
 )
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sparsity import compute_sparsity
@@ -39,6 +40,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": True,
         "templates_from_svd": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
+        "chunk_preprocessing": {"memory_limit": None},
         "multi_units_only": False,
         "job_kwargs": {"n_jobs": 0.75},
         "seed": 42,
@@ -66,6 +68,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matched_filtering": "Boolean to specify whether circus 2 should detect peaks via matched filtering (slightly slower)",
         "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
                          memory_limit will control how much RAM can be used. In case of folder or zarr, delete_cache controls if cache is cleaned after sorting",
+        "chunk_preprocessing": "How much RAM (approximately) should be devoted to load all data chunks (given n_jobs).\
+                memory_limit will control how much RAM can be used as a fraction of available memory. Otherwise, use total_memory to fix a hard limit, with\
+                a string syntax  (e.g. '1G', '500M')",
         "multi_units_only": "Boolean to get only multi units activity (i.e. one template per electrode)",
         "job_kwargs": "A dictionary to specify how many jobs and which parameters they should used",
         "seed": "An int to control how chunks are shuffled while detecting peaks",
@@ -100,8 +105,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
         job_kwargs.update({"progress_bar": verbose})
-
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
+        if params["chunk_preprocessing"].get("memory_limit", None) is not None:
+            job_kwargs = _set_optimal_chunk_size(recording, job_kwargs, **params["chunk_preprocessing"])
 
         sampling_frequency = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
@@ -401,7 +407,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
                 if sorting.get_non_empty_unit_ids().size > 0:
-                    sorting = final_cleaning_circus(recording_w, sorting, templates, **merging_params, **job_kwargs)
+                    final_analyzer = final_cleaning_circus(
+                        recording_w, sorting, templates, **merging_params, **job_kwargs
+                    )
+                    final_analyzer.save_as(format="binary_folder", folder=sorter_output_folder / "final_analyzer")
+
+                    sorting = final_analyzer.sorting
 
                 if verbose:
                     print(f"Kept {len(sorting.unit_ids)} units after final merging")
@@ -460,4 +471,5 @@ def final_cleaning_circus(
         sparsity_overlap=sparsity_overlap,
         **job_kwargs,
     )
-    return final_sa.sorting
+
+    return final_sa
