@@ -1,10 +1,7 @@
-import shutil
-from pathlib import Path
-
 import pytest
-import numpy as np
 
-from spikeinterface.extractors import *
+
+# from spikeinterface.extractors import read_spykingcircus
 
 
 @pytest.mark.skip("SpykingCIRCUS can be tested after running run_spykingcircus()")
@@ -13,7 +10,7 @@ def test_spykingcircusextractors():
     pass
 
     #  sc_folder = '/home/samuel/Documents/SpikeInterface/spikeinterface/spikeinterface/sorters/tests/spykingcircus_output/'
-    # sorting = SpykingCircusSortingExtractor(sc_folder)
+    # sorting = read_spykingcircus(sc_folder)
     #  print(sorting)
 
 
