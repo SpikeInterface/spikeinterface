@@ -1,10 +1,11 @@
 from __future__ import annotations
-
-import json
+from pathlib import Path
 import inspect
-from spikeinterface.core.core_tools import is_dict_extractor
 from spikeinterface.core import BaseRecording
+from spikeinterface.core.core_tools import is_dict_extractor
+from spikeinterface.core.zarrextractors import super_zarr_open
 from spikeinterface.preprocessing.preprocessing_classes import preprocessor_dict, _all_preprocesser_dict
+
 
 pp_names_to_functions = {preprocessor.__name__: preprocessor for preprocessor in preprocessor_dict.values()}
 pp_names_to_classes = {pp_function.__name__: pp_class for pp_class, pp_function in _all_preprocesser_dict.items()}
@@ -163,18 +164,70 @@ def apply_pipeline(
     return preprocessed_recording
 
 
-def get_preprocessing_dict_from_provenance(recording_provenance_path):
+def get_preprocessing_dict_from_analyzer(analyzer_folder, format="auto", backend_options=None):
     """
-    Generates a preprocessing dict, passable to `create_preprocessed` function and
-    `PreprocessPipeline` class, from a provenance file.
+    Generates a dictionary from a saved analyzer. The dictionary can be passed to the
+    `PreprocessingPipeline` class to create a preprocessing pipeline.
+
+    Parameters
+    ----------
+    analyzer_folder : str or Path
+        Path to the analyzer.
+    format : "auto" | "binary_folder" | "zarr", default: "auto"
+        The format of the folder. If "auto", tries to guess format using filename.
+    backend_options : dict | None, default: None
+        The backend options for the backend.
+
+    Returns
+    -------
+    preprocessing_dict : dict
+        The preprocessing dict extracted from the analyzer's recording.
+    """
+
+    analyzer_folder = Path(analyzer_folder)
+
+    if format == "auto":
+        if analyzer_folder.suffix == ".zarr":
+            format = "zarr"
+        else:
+            format = "binary_folder"
+
+    if format == "binary_folder":
+        recording_files = list(analyzer_folder.glob("*recording.*"))
+        if len(recording_files) == 0:
+            raise FileNotFoundError(f"Cannot find `recording.*` file in {analyzer_folder}.")
+        else:
+            recording_file = recording_files[0]
+            preprocessing_dict = get_preprocessing_dict_from_file(recording_file)
+
+    elif format == "zarr":
+        backend_options = {} if backend_options is None else backend_options
+        storage_options = backend_options.get("storage_options", {})
+        zarr_root = super_zarr_open(str(analyzer_folder), mode="r", storage_options=storage_options)
+
+        rec_field = zarr_root.get("recording")
+        if rec_field is not None:
+            recording_dict = rec_field[0]
+        else:
+            recording_dict = {}
+
+        preprocessing_dict = _make_pipeline_dict_from_recording_dict(recording_dict)
+
+    return preprocessing_dict
+
+
+def get_preprocessing_dict_from_file(recording_dictionary_path):
+    """
+    Generates a preprocessing dict, passable to `apply_pipeline` function and
+    `PreprocessPipeline` class, from a recording dictionary.
 
     Only extracts preprocessing steps which can be applied "globally" to any recording.
     Hence this does not extract `ChannelSlice` and `FrameSlice` steps.
 
     Parameters
     ----------
-    recording_provenance_path : str or Path
-        Path to the `provenance.json` or `provenance.pkl` file
+    recording_dictionary_path : str or Path
+        Path to the `.json` or `.pkl` output from a saved recording.
 
     Returns
     -------
@@ -183,22 +236,32 @@ def get_preprocessing_dict_from_provenance(recording_provenance_path):
 
     """
 
-    if str(recording_provenance_path).endswith(".json"):
+    if str(recording_dictionary_path).endswith(".json"):
         import json
 
-        with open(recording_provenance_path, "r") as f:
-            provenance_dict = json.load(f)
-    elif str(recording_provenance_path).endswith(".pkl") or str(recording_provenance_path).endswith(".pickle"):
+        with open(recording_dictionary_path, "r") as f:
+            recording_dict = json.load(f)
+    elif str(recording_dictionary_path).endswith(".pkl") or str(recording_dictionary_path).endswith(".pickle"):
         import pickle
 
-        with open(recording_provenance_path, "rb") as f:
-            provenance_dict = pickle.load(f)
+        with open(recording_dictionary_path, "rb") as f:
+            recording_dict = pickle.load(f)
 
-    pipeline_dict_from_provenance = {}
-    _ = _load_pp_from_dict(provenance_dict, pipeline_dict_from_provenance)
+    pipeline_dict = _make_pipeline_dict_from_recording_dict(recording_dict)
+    return pipeline_dict
+
+
+def _make_pipeline_dict_from_recording_dict(recording_dict):
+    """
+    Transforms a recording dict (created by the `dump` method of `BaseRecording`)
+    into a preprocessing pipeline dict.
+    """
+
+    pipeline_dict_from_file = {}
+    _ = _load_pp_from_dict(recording_dict, pipeline_dict_from_file)
 
     pipeline_dict = {}
-    for preprocessor in pipeline_dict_from_provenance:
+    for preprocessor in pipeline_dict_from_file:
 
         preprocessor_class_name = preprocessor.split(".")[-1]
 
@@ -208,7 +271,7 @@ def get_preprocessing_dict_from_provenance(recording_provenance_path):
 
         pp_kwargs = {
             key: value
-            for key, value in pipeline_dict_from_provenance[preprocessor].items()
+            for key, value in pipeline_dict_from_file[preprocessor].items()
             if key not in ["recording", "parent_recording"]
         }
 
@@ -239,7 +302,7 @@ def _load_pp_from_dict(prov_dict, kwargs_dict):
     """
     this_level_kwargs = dict()
 
-    prov_dict_to_kwargs_dict = lambda x: _load_pp_from_dict(x) if is_dict_extractor(x) else x
+    prov_dict_to_kwargs_dict = lambda x: _load_pp_from_dict(x, kwargs_dict) if is_dict_extractor(x) else x
 
     for name, value in prov_dict["kwargs"].items():
         if is_dict_extractor(value):
