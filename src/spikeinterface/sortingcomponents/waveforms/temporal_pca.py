@@ -467,18 +467,7 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
 
                         new_channel_indices[i] = new_chan_index
                         
-                        # if chan_index != new_chan_index:
-                        #     print(chan_index, new_chan_index, self.channel_locations[chan_index], self.channel_locations[new_chan_index])
-
                     projected_waveforms[i, c, : final_local_chans.size] = projected_full_wf[channel_select]
-                    # try:
-                    #     projected_waveforms[i, c, : final_local_chans.size] = projected_full_wf[channel_select]
-                    # except:
-                    #     print('zob')
-                    #     print(wf_local_chans)
-                    #     print(final_local_chans)
-                    #     print(channel_select)
-                    #     raise ValueError()
 
 
 
