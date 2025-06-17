@@ -88,7 +88,7 @@ To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.
 
         Parameters
         ----------
-        recording : RecordingExtractor
+        recording : BaseRecording
             The initial recording
         apply_precomputed_kwargs : bool, default: False
             Some preprocessing steps (e.g. Whitening) contain arguments which are computed
