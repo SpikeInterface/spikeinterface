@@ -20,6 +20,7 @@ def create_graph_from_peak_features(
     sparse_mode="knn",
     apply_local_svd=False,
     n_components=10,
+    seed=None,
     normed_distances=False,
     n_neighbors=20,
     ensure_symetric=False,
@@ -141,12 +142,12 @@ def create_graph_from_peak_features(
         if apply_local_svd:
             if isinstance(n_components, int):
                 n_components = min(n_components, flatten_feat.shape[1])
-                tsvd = TruncatedSVD(n_components)
+                tsvd = TruncatedSVD(n_components, random_state=seed)
                 flatten_feat = tsvd.fit_transform(flatten_feat)
 
             elif isinstance(n_components, float):
                 assert 0 < n_components < 1, "n_components should be in ]0, 1["
-                tsvd = TruncatedSVD(flatten_feat.shape[1])
+                tsvd = TruncatedSVD(flatten_feat.shape[1], random_state=seed)
                 flatten_feat = tsvd.fit_transform(flatten_feat)
                 n_explain = np.sum(np.cumsum(tsvd.explained_variance_ratio_) <= n_components) + 1
                 flatten_feat = flatten_feat[:, :n_explain]
