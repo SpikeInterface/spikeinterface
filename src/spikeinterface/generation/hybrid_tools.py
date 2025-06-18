@@ -400,7 +400,7 @@ def generate_hybrid_recording(
     num_segments = recording.get_num_segments()
     dtype = recording.dtype
     num_samples = np.array([recording.get_num_samples(segment_index) for segment_index in range(num_segments)])
-    # since the recording can have timestamps with some smalle gaps, we use the number of samples to compute
+    # since the recording can have timestamps with some small gaps, we use the number of samples to compute
     # the duration used for the sorting generation
     durations = num_samples / sampling_frequency
     channel_locations = probe.contact_positions
