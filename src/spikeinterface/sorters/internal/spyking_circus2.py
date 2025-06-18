@@ -34,7 +34,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
-        "clustering": {"method": "circus", "method_kwargs": dict()},
+        "clustering": {"method": "circus-clustering", "method_kwargs": dict()},
         "matching": {"method": "circus-omp-svd", "method_kwargs": dict()},
         "apply_preprocessing": True,
         "templates_from_svd": True,
@@ -287,7 +287,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_method = params["clustering"].get("method", "graph_clustering")
             clustering_params = params["clustering"].get("method_kwargs", dict())
 
-            if clustering_method == "circus":
+            if clustering_method == "circus-clustering":
                 clustering_params["waveforms"] = {}
                 clustering_params["sparsity"] = sparsity_kwargs
                 clustering_params["neighbors_radius_um"] = 50
@@ -345,7 +345,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 _, peak_labels, svd_model, svd_features, sparsity_mask = outputs
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
-                templates = get_templates_from_peaks_and_svd(
+                templates, _ = get_templates_from_peaks_and_svd(
                     recording_w,
                     selected_peaks,
                     peak_labels,
