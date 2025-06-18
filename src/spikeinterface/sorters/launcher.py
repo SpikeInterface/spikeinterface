@@ -239,7 +239,6 @@ def run_sorter_by_property(
     verbose=False,
     docker_image=None,
     singularity_image=None,
-    working_folder: None = None,
     **sorter_params,
 ):
     """
@@ -300,14 +299,6 @@ def run_sorter_by_property(
             DeprecationWarning,
             stacklevel=2,
         )
-
-    if working_folder is not None:
-        warnings.warn(
-            "`working_folder` is deprecated and will be removed in 0.103. Please use folder instead",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        folder = working_folder
 
     working_folder = Path(folder).absolute()
 

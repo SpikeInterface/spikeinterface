@@ -30,7 +30,6 @@ _sparsity_doc = """
         * "by_property" : sparsity is given by a property of the recording and sorting (e.g. "group").
                          In this case the sparsity for each unit is given by the channels that have the same property
                          value as the unit. Use the "by_property" argument to specify the property name.
-        * "ptp: : deprecated, use the 'snr' method with the 'peak_to_peak' amplitude mode instead.
 
     peak_sign : "neg" | "pos" | "both"
         Sign of the template to compute best channels.
@@ -453,33 +452,6 @@ class ChannelSparsity:
             chan_inds = np.nonzero((np.abs(peak_values[unit_id]) / noise_levels) >= threshold)
             mask[unit_ind, chan_inds] = True
         return cls(mask, unit_ids, channel_ids)
-
-    @classmethod
-    def from_ptp(cls, templates_or_sorting_analyzer, threshold, noise_levels=None):
-        """
-        Construct sparsity from a thresholds based on template peak-to-peak values.
-        Use the "threshold" argument to specify the peak-to-peak threshold.
-
-        Parameters
-        ----------
-        templates_or_sorting_analyzer : Templates | SortingAnalyzer
-            A Templates or a SortingAnalyzer object.
-        threshold : float
-            Threshold for "ptp" method (in units of amplitude).
-
-        Returns
-        -------
-        sparsity : ChannelSparsity
-            The estimated sparsity.
-        """
-        warnings.warn(
-            "The 'ptp' method is deprecated and will be removed in version 0.103.0. "
-            "Please use the 'snr' method with the 'peak_to_peak' amplitude mode instead.",
-            DeprecationWarning,
-        )
-        return cls.from_snr(
-            templates_or_sorting_analyzer, threshold, amplitude_mode="peak_to_peak", noise_levels=noise_levels
-        )
 
     @classmethod
     def from_amplitude(cls, templates_or_sorting_analyzer, threshold, amplitude_mode="extremum", peak_sign="neg"):
