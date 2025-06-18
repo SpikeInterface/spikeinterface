@@ -86,7 +86,6 @@ These tutorials focus on the :py:mod:`spikeinterface.core` module.
       :text-align: center
 
    .. grid-item-card:: Build full pipeline with dicts
-      :link-type: ref
       :link: how_to/build_pipeline_with_dicts.html
       :img-top: /images/logo.png
       :img-alt: Build full pipeline with dicts
