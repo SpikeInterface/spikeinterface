@@ -61,9 +61,6 @@ class BaseRecordingSnippets(BaseExtractor):
         # the is_filtered is handle with annotation
         return self._annotations.get("is_filtered", False)
 
-    def _channel_slice(self, channel_ids, renamed_channel_ids=None):
-        raise NotImplementedError
-
     def set_probe(self, probe, group_mode="by_probe", in_place=False):
         """
         Attach a list of Probe object to a recording.
@@ -417,25 +414,6 @@ class BaseRecordingSnippets(BaseExtractor):
         recording2d.set_probe(probe2d, in_place=True)
 
         return recording2d
-
-    # utils
-    def channel_slice(self, channel_ids, renamed_channel_ids=None):
-        """
-        Returns a new object with sliced channels.
-
-        Parameters
-        ----------
-        channel_ids : np.array or list
-            The list of channels to keep
-        renamed_channel_ids : np.array or list, default: None
-            A list of renamed channels
-
-        Returns
-        -------
-        BaseRecordingSnippets
-            The object with sliced channels
-        """
-        return self._channel_slice(channel_ids, renamed_channel_ids=renamed_channel_ids)
 
     def select_channels(self, channel_ids):
         """
