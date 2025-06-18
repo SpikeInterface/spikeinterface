@@ -3,7 +3,7 @@ Build a full Sorting pipeline with dicts
 
 When using ``SpikeInterface`` there are two phases. First, you should
 play: try to figure out any special steps or parameters you need to play
-with to get everything working with your data. Once your happy, you then
+with to get everything working with your data. Once you're happy, you then
 need to build a sturdy, consistent pipeline to process all your ephys
 sessions.
 

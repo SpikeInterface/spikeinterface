@@ -18,7 +18,7 @@
 #
 # When using `SpikeInterface` there are two phases. First, you should play: try to figure out
 # any special steps or parameters you need to play with to get everything working with your
-# data. Once your happy, you then need to build a sturdy, consistent pipeline to process all
+# data. Once you're happy, you then need to build a sturdy, consistent pipeline to process all
 # your ephys sessions.
 
 # It is now possible to create a flexible spike sorting pipeline using three simple dictionaries:
