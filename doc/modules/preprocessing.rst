@@ -87,7 +87,53 @@ using it.
     # to view the pipeline:
     preprocessing_pipeline
 
-<div><strong>PreprocessingPipeline</strong><div style='border:1px solid #ccc; padding:10px;'><strong>Initial Recording</strong></div><div style='margin: auto; text-indent: 30px;'>&#x2193;</div><details style='border:1px solid #ddd; padding:5px;'><summary><strong>highpass_filter</strong></summary><ul><li><strong>freq_min</strong>: 250</li><li><strong>margin_ms</strong>: 5.0</li><li><strong>dtype</strong>: None</li><li><strong>**filter_kwargs</strong>: None</li></ul></details><details style='border:1px solid #ddd; padding:5px;'><summary><strong>whiten</strong></summary><ul><li><strong>dtype</strong>: None</li><li><strong>apply_mean</strong>: False</li><li><strong>regularize</strong>: False</li><li><strong>regularize_kwargs</strong>: None</li><li><strong>mode</strong>: 'global'</li><li><strong>radius_um</strong>: 100.0</li><li><strong>int_scale</strong>: None</li><li><strong>eps</strong>: None</li><li><strong>W</strong>: None</li><li><strong>M</strong>: None</li><li><strong>**random_chunk_kwargs</strong>: None</li></ul></details><details style='border:1px solid #ddd; padding:5px;'><summary><strong>detect_and_remove_bad_channels</strong></summary><ul><li><strong>parent_recording</strong>: None</li><li><strong>bad_channel_ids</strong>: None</li><li><strong>channel_labels</strong>: None</li><li><strong>**detect_bad_channels_kwargs</strong>: None</li></ul></details><div style='margin: auto; text-indent: 30px;'>&#x2193;</div><div style='border:1px solid #ccc; padding:10px;'><strong>Preprocessed Recording</strong></div></div>
+.. raw:: html
+
+    <div>
+        <strong>PreprocessingPipeline</strong>
+        <div style='border:1px solid #ccc; padding:10px;'>
+            <strong>Initial Recording</strong>
+        </div>
+        <div style='margin: auto; text-indent: 30px;'>&#x2193;</div>
+        <details style='border:1px solid #ddd; padding:5px;'>
+            <summary><strong>highpass_filter</strong></summary>
+            <ul>
+                <li><strong>freq_min</strong>: 250</li>
+                <li><strong>margin_ms</strong>: 5.0</li>
+                <li><strong>dtype</strong>: None</li>
+                <li><strong>**filter_kwargs</strong>: None</li>
+            </ul>
+        </details>
+        <details style='border:1px solid #ddd; padding:5px;'>
+            <summary><strong>whiten</strong></summary>
+            <ul>
+                <li><strong>dtype</strong>: None</li>
+                <li><strong>apply_mean</strong>: False</li>
+                <li><strong>regularize</strong>: False</li>
+                <li><strong>regularize_kwargs</strong>: None</li>
+                <li><strong>mode</strong>: 'global'</li>
+                <li><strong>radius_um</strong>: 100.0</li>
+                <li><strong>int_scale</strong>: None</li>
+                <li><strong>eps</strong>: None</li>
+                <li><strong>W</strong>: None</li>
+                <li><strong>M</strong>: None</li>
+                <li><strong>**random_chunk_kwargs</strong>: None</li>
+            </ul>
+        </details>
+        <details style='border:1px solid #ddd; padding:5px;'>
+            <summary><strong>detect_and_remove_bad_channels</strong></summary>
+            <ul>
+                <li><strong>parent_recording</strong>: None</li>
+                <li><strong>bad_channel_ids</strong>: None</li>
+                <li><strong>channel_labels</strong>: None</li>
+                <li><strong>**detect_bad_channels_kwargs</strong>: None</li>
+            </ul>
+        </details>
+        <div style='margin: auto; text-indent: 30px;'>&#x2193;</div>
+        <div style='border:1px solid #ccc; padding:10px;'>
+            <strong>Preprocessed Recording</strong>
+        </div>
+    </div>
 
 Once we have the pipeline, we can apply it to a recording in the same way as applying the dictionary
 
