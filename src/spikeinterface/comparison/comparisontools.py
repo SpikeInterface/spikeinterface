@@ -8,6 +8,8 @@ from spikeinterface.core.basesorting import BaseSorting
 
 import numpy as np
 
+from tqdm.auto import tqdm
+
 
 def count_matching_events(times1, times2: np.ndarray | list, delta: int = 10):
     """
@@ -912,7 +914,7 @@ def make_matching_events(times1, times2, delta):
     return matching_event
 
 
-def make_collision_events(sorting, delta):
+def make_collision_events(sorting, delta, progress_bar=False):
     """
     Similar to count_matching_events but get index instead of counting.
     Used for collision detection
@@ -927,8 +929,8 @@ def make_collision_events(sorting, delta):
     Returns
     -------
     collision_events : numpy array
-            dtype =  [('index1', 'int64'), ('unit_id1', 'int64'),
-                      ('index2', 'int64'), ('unit_id2', 'int64'),
+            dtype =  [('index1', 'int64'), ('unit_id1', 'int64'), ('unit_index1', 'int64'),
+                      ('index2', 'int64'), ('unit_id2', 'int64'), ('unit_index2', 'int64'),
                       ('delta', 'int64')]
         1d of all collision
     """
@@ -936,24 +938,39 @@ def make_collision_events(sorting, delta):
     dtype = [
         ("index1", "int64"),
         ("unit_id1", unit_ids.dtype),
+        ("unit_index1", "int64"),
         ("index2", "int64"),
         ("unit_id2", unit_ids.dtype),
+        ("unit_index2", "int64"),
         ("delta_frame", "int64"),
     ]
 
-    collision_events = []
-    for i, u1 in enumerate(unit_ids):
-        times1 = sorting.get_unit_spike_train(u1)
 
-        for u2 in unit_ids[i + 1 :]:
-            times2 = sorting.get_unit_spike_train(u2)
+
+
+    collision_events = []
+
+    loop = enumerate(unit_ids)
+    if progress_bar:
+        loop = tqdm(loop, desc="detect collisions", total=len(unit_ids))
+
+    for unit_index1, unit_id1 in loop:
+        times1 = sorting.get_unit_spike_train(unit_id1)
+
+        for unit_index2, unit_id2 in enumerate(unit_ids):
+            if unit_index2 <= unit_index1:
+                continue
+
+            times2 = sorting.get_unit_spike_train(unit_id2)
 
             matching_event = make_matching_events(times1, times2, delta)
             ce = np.zeros(matching_event.size, dtype=dtype)
             ce["index1"] = matching_event["index1"]
-            ce["unit_id1"] = u1
+            ce["unit_id1"] = unit_id1
+            ce["unit_index1"] = unit_index1
             ce["index2"] = matching_event["index2"]
-            ce["unit_id2"] = u2
+            ce["unit_id2"] = unit_id2
+            ce["unit_index2"] = unit_index2
             ce["delta_frame"] = matching_event["delta_frame"]
 
             collision_events.append(ce)

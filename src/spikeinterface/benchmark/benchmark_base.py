@@ -374,6 +374,8 @@ class BenchmarkStudy:
 
         job_keys = []
         for key in case_keys:
+            if verbose:
+                print("### Compute result", key, "###")
             benchmark = self.benchmarks[key]
             assert benchmark is not None
             benchmark.compute_result(**result_params)

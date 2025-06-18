@@ -91,17 +91,20 @@ class MatchingStudy(BenchmarkStudy, MixinStudyUnitCount):
 
         return plot_performances_ordered(self, *args, **kwargs)
 
-    def plot_collisions(self, case_keys=None, figsize=None):
+    def plot_collisions(self, case_keys=None, axs=None, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
         import matplotlib.pyplot as plt
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+        if axs is None:
+            fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+            axs = axs[0, :]
+
 
         for count, key in enumerate(case_keys):
             label = self.cases[key]["label"]
             templates_array = self.get_sorting_analyzer(key).get_extension("templates").get_templates(outputs="numpy")
-            ax = axs[0, count]
+            ax = axs[count]
             plot_comparison_collision_by_similarity(
                 self.get_result(key)["gt_collision"],
                 templates_array,
