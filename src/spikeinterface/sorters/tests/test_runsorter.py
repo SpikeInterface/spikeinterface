@@ -34,7 +34,7 @@ def test_run_sorter_local(generate_recording, create_cache_folder):
     sorting = run_sorter(
         "tridesclous2",
         recording,
-        output_folder=cache_folder / "sorting_tdc_local",
+        folder=cache_folder / "sorting_tdc_local",
         remove_existing_folder=True,
         delete_output_folder=False,
         verbose=True,
@@ -61,7 +61,7 @@ def test_run_sorter_docker(generate_recording, create_cache_folder):
         sorting = run_sorter(
             "tridesclous",
             recording,
-            output_folder=output_folder,
+            folder=output_folder,
             remove_existing_folder=True,
             delete_output_folder=False,
             verbose=True,
@@ -96,7 +96,7 @@ def test_run_sorter_singularity(generate_recording, create_cache_folder):
         sorting = run_sorter(
             "tridesclous",
             recording,
-            output_folder=output_folder,
+            folder=output_folder,
             remove_existing_folder=True,
             delete_output_folder=False,
             verbose=True,

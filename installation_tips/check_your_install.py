@@ -21,7 +21,7 @@ def _run_one_sorter_and_analyzer(sorter_name):
     job_kwargs = dict(n_jobs=-1, progress_bar=True, chunk_duration="1s")
     import spikeinterface.full as si
     recording = si.load_extractor('./toy_example_recording')
-    sorting = si.run_sorter(sorter_name, recording, output_folder=f'./sorter_with_{sorter_name}', verbose=False)
+    sorting = si.run_sorter(sorter_name, recording, folder=f'./sorter_with_{sorter_name}', verbose=False)
 
     sorting_analyzer = si.create_sorting_analyzer(sorting, recording,
                                                 format="binary_folder", folder=f"./analyzer_with_{sorter_name}",

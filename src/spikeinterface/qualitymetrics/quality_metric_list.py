@@ -22,7 +22,6 @@ from .misc_metrics import (
 
 from .pca_metrics import (
     compute_pc_metrics,
-    calculate_pc_metrics,  # remove after 0.103.0
     mahalanobis_metrics,
     lda_metrics,
     nearest_neighbors_metrics,
