@@ -97,7 +97,7 @@ To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.
 
         Returns
         -------
-        preprocessed_recording : RecordingExtractor
+        preprocessed_recording : BaseRecording
             Preprocessed recording
 
         """
@@ -118,7 +118,7 @@ To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.
         return recording
 
 
-def apply_pipeline(
+def apply_preprocessing_pipeline(
     recording: BaseRecording, pipeline_or_dict: PreprocessingPipeline | dict, apply_precomputed_kwargs=True
 ):
     """
@@ -127,7 +127,7 @@ def apply_pipeline(
 
     Parameters
     ----------
-    recording : RecordingExtractor
+    recording : BaseRecording
         The initial recording
     pipeline_or_dict : PreprocessingPipeline | dict
         Dictionary containing preprocessing steps and their kwargs, or a pipeline object.
@@ -139,7 +139,7 @@ def apply_pipeline(
 
     Returns
     -------
-    preprocessed_recording : RecordingExtractor
+    preprocessed_recording : BaseRecording
         Preprocessed recording
 
     Examples
@@ -150,7 +150,7 @@ def apply_pipeline(
     >>> from spikeinterface.generation import generate_recording
     >>> recording = generate_recording()
     >>> preprocessor_dict = {'bandpass_filter': {'freq_max': 3000}, 'common_reference': {}}
-    >>> preprocessed_recording = apply_pipeline(recording, preprocessor_dict)
+    >>> preprocessed_recording = apply_preprocessing_pipeline(recording, preprocessor_dict)
     """
 
     if isinstance(pipeline_or_dict, PreprocessingPipeline):
@@ -218,7 +218,7 @@ def get_preprocessing_dict_from_analyzer(analyzer_folder, format="auto", backend
 
 def get_preprocessing_dict_from_file(recording_dictionary_path):
     """
-    Generates a preprocessing dict, passable to `apply_pipeline` function and
+    Generates a preprocessing dict, passable to `apply_preprocessing_pipeline` function and
     `PreprocessPipeline` class, from a recording dictionary.
 
     Only extracts preprocessing steps which can be applied "globally" to any recording.

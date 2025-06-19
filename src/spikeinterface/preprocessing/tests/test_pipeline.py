@@ -1,6 +1,6 @@
 from spikeinterface.generation import generate_recording, generate_ground_truth_recording
 from spikeinterface.preprocessing import (
-    apply_pipeline,
+    apply_preprocessing_pipeline,
     preprocessor_dict,
     bandpass_filter,
     common_reference,
@@ -83,7 +83,7 @@ def test_pipeline_equiv_to_step():
             else:
                 pp_rec_from_class = pp_class(rec)
 
-            pp_rec_from_pipeline = apply_pipeline(rec, pp_dict)
+            pp_rec_from_pipeline = apply_preprocessing_pipeline(rec, pp_dict)
 
             if isinstance(pp_rec_from_pipeline, dict):
                 check_recordings_equal(pp_rec_from_pipeline[0], pp_rec_from_class[0])
@@ -106,7 +106,7 @@ def test_three_preprocessing_steps():
         "whiten": {"seed": 1205},
     }
 
-    pp_rec_from_pipeline = apply_pipeline(rec, pipeline_dict)
+    pp_rec_from_pipeline = apply_preprocessing_pipeline(rec, pipeline_dict)
     pp_rec_from_functions = whiten(bandpass_filter(common_reference(rec)), seed=1205)
 
     check_recordings_equal(pp_rec_from_pipeline, pp_rec_from_functions)
@@ -115,7 +115,7 @@ def test_three_preprocessing_steps():
     rec_groups.set_property(key="group", values=[0, 1])
     dict_of_recs = rec_groups.split_by("group")
 
-    pp_dict_of_recs_from_pipeline = apply_pipeline(dict_of_recs, pipeline_dict)
+    pp_dict_of_recs_from_pipeline = apply_preprocessing_pipeline(dict_of_recs, pipeline_dict)
     pp_dict_of_recs_from_functions = whiten(bandpass_filter(common_reference(dict_of_recs)), seed=1205)
 
     check_recordings_equal(pp_dict_of_recs_from_pipeline[0], pp_dict_of_recs_from_functions[0])
@@ -131,14 +131,14 @@ def test_kwargs_are_propagated():
     rec = generate_recording(durations=[1])
     pipeline_dict = {"bandpass_filter": {}}
 
-    bp_rec_default = apply_pipeline(rec, pipeline_dict)
+    bp_rec_default = apply_preprocessing_pipeline(rec, pipeline_dict)
 
     kwargs = bp_rec_default._kwargs
     assert kwargs["freq_min"] == 300.0
 
     pipeline_dict_non_default = {"bandpass_filter": {"freq_min": 500.0}}
 
-    bp_rec_non_default = apply_pipeline(rec, pipeline_dict_non_default)
+    bp_rec_non_default = apply_preprocessing_pipeline(rec, pipeline_dict_non_default)
     non_default_kwargs = bp_rec_non_default._kwargs
 
     assert non_default_kwargs["freq_min"] == 500.0
@@ -162,8 +162,12 @@ def test_loading_provenance(create_cache_folder):
 
     loaded_pp_dict = get_preprocessing_dict_from_file(cache_folder / "provenance.pkl")
 
-    pipeline_rec_applying_precomputed_kwargs = apply_pipeline(rec, loaded_pp_dict, apply_precomputed_kwargs=True)
-    pipeline_rec_ignoring_precomputed_kwargs = apply_pipeline(rec, loaded_pp_dict, apply_precomputed_kwargs=False)
+    pipeline_rec_applying_precomputed_kwargs = apply_preprocessing_pipeline(
+        rec, loaded_pp_dict, apply_precomputed_kwargs=True
+    )
+    pipeline_rec_ignoring_precomputed_kwargs = apply_preprocessing_pipeline(
+        rec, loaded_pp_dict, apply_precomputed_kwargs=False
+    )
 
     check_recordings_equal(pipeline_rec_applying_precomputed_kwargs, pp_rec)
     check_recordings_equal(pipeline_rec_ignoring_precomputed_kwargs, pp_rec)
@@ -182,18 +186,18 @@ def test_loading_from_analyzer(create_cache_folder):
     recording, sorting = generate_ground_truth_recording()
 
     preprocessing_dict = {"common_reference": {}, "highpass_filter": {"freq_min": 301.0}}
-    pp_recording = apply_pipeline(recording, preprocessing_dict)
+    pp_recording = apply_preprocessing_pipeline(recording, preprocessing_dict)
 
     analyzer_binary_folder = cache_folder / "binary_format"
     _ = create_sorting_analyzer(
         sorting=sorting, recording=pp_recording, format="binary_folder", folder=analyzer_binary_folder
     )
     pp_dict_from_binary = get_preprocessing_dict_from_analyzer(analyzer_binary_folder)
-    pp_recording_from_binary = apply_pipeline(recording, pp_dict_from_binary)
+    pp_recording_from_binary = apply_preprocessing_pipeline(recording, pp_dict_from_binary)
     check_recordings_equal(pp_recording, pp_recording_from_binary)
 
     analyzer_zarr_folder = cache_folder / "zarr_format.zarr"
     _ = create_sorting_analyzer(sorting=sorting, recording=pp_recording, format="zarr", folder=analyzer_zarr_folder)
     pp_dict_from_zarr = get_preprocessing_dict_from_analyzer(analyzer_zarr_folder)
-    pp_recording_from_zarr = apply_pipeline(recording, pp_dict_from_zarr)
+    pp_recording_from_zarr = apply_preprocessing_pipeline(recording, pp_dict_from_zarr)
     check_recordings_equal(pp_recording, pp_recording_from_zarr)
