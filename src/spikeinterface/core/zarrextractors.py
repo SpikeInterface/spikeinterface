@@ -105,6 +105,8 @@ class ZarrRecordingExtractor(BaseRecording):
         which enables to load data from open buckets.
     storage_options : dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
+    load_compression_ratio : bool, default: False
+        If True, the compression ratio is loaded from the zarr file and annotated in the recording.
 
     Returns
     -------
@@ -112,7 +114,9 @@ class ZarrRecordingExtractor(BaseRecording):
         The recording Extractor
     """
 
-    def __init__(self, folder_path: Path | str, storage_options: dict | None = None):
+    def __init__(
+        self, folder_path: Path | str, storage_options: dict | None = None, load_compression_ratio: bool = False
+    ):
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
@@ -135,9 +139,10 @@ class ZarrRecordingExtractor(BaseRecording):
         dtype = np.dtype(dtype)
         t_starts = self._root.get("t_starts", None)
 
-        total_nbytes = 0
-        total_nbytes_stored = 0
-        cr_by_segment = {}
+        if load_compression_ratio:
+            total_nbytes = 0
+            total_nbytes_stored = 0
+            cr_by_segment = {}
         for segment_index in range(num_segments):
             trace_name = f"traces_seg{segment_index}"
             assert (
@@ -159,17 +164,18 @@ class ZarrRecordingExtractor(BaseRecording):
                 time_kwargs["sampling_frequency"] = sampling_frequency
 
             rec_segment = ZarrRecordingSegment(self._root, trace_name, **time_kwargs)
-
-            nbytes_segment = self._root[trace_name].nbytes
-            nbytes_stored_segment = self._root[trace_name].nbytes_stored
-            if nbytes_stored_segment > 0:
-                cr_by_segment[segment_index] = nbytes_segment / nbytes_stored_segment
-            else:
-                cr_by_segment[segment_index] = np.nan
-
-            total_nbytes += nbytes_segment
-            total_nbytes_stored += nbytes_stored_segment
             self.add_recording_segment(rec_segment)
+
+            if load_compression_ratio:
+                nbytes_segment = self._root[trace_name].nbytes
+                nbytes_stored_segment = self._root[trace_name].nbytes_stored
+                if nbytes_stored_segment > 0:
+                    cr_by_segment[segment_index] = nbytes_segment / nbytes_stored_segment
+                else:
+                    cr_by_segment[segment_index] = np.nan
+
+                total_nbytes += nbytes_segment
+                total_nbytes_stored += nbytes_stored_segment
 
         # load probe
         probe_dict = self._root.attrs.get("probe", None)
@@ -188,14 +194,19 @@ class ZarrRecordingExtractor(BaseRecording):
         annotations = self._root.attrs.get("annotations", None)
         if annotations is not None:
             self.annotate(**annotations)
-        # annotate compression ratios
-        if total_nbytes_stored > 0:
-            cr = total_nbytes / total_nbytes_stored
-        else:
-            cr = np.nan
-        self.annotate(compression_ratio=cr, compression_ratio_segments=cr_by_segment)
+        if load_compression_ratio:
+            # annotate compression ratios
+            if total_nbytes_stored > 0:
+                cr = total_nbytes / total_nbytes_stored
+            else:
+                cr = np.nan
+            self.annotate(compression_ratio=cr, compression_ratio_segments=cr_by_segment)
 
-        self._kwargs = {"folder_path": folder_path_kwarg, "storage_options": storage_options}
+        self._kwargs = {
+            "folder_path": folder_path_kwarg,
+            "storage_options": storage_options,
+            "load_compression_ratio": load_compression_ratio,
+        }
 
     @staticmethod
     def write_recording(
