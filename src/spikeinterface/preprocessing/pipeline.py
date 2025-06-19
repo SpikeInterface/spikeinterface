@@ -2,7 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 import inspect
 from spikeinterface.core import BaseRecording
-from spikeinterface.core.core_tools import is_dict_extractor
+from spikeinterface.core.core_tools import is_dict_extractor, is_path_remote
 from spikeinterface.core.zarrextractors import super_zarr_open
 from spikeinterface.preprocessing.preprocessing_classes import preprocessor_dict, _all_preprocesser_dict
 
@@ -183,11 +183,11 @@ def get_preprocessing_dict_from_analyzer(analyzer_folder, format="auto", backend
     preprocessing_dict : dict
         The preprocessing dict extracted from the analyzer's recording.
     """
-
-    analyzer_folder = Path(analyzer_folder)
+    if not is_path_remote(analyzer_folder):
+        analyzer_folder = Path(analyzer_folder)
 
     if format == "auto":
-        if analyzer_folder.suffix == ".zarr":
+        if str(analyzer_folder).endswith(".zarr"):
             format = "zarr"
         else:
             format = "binary_folder"
