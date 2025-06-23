@@ -284,7 +284,10 @@ def _load_object_from_zarr(folder_or_url, object_type, **kwargs):
         from .zarrextractors import read_zarr_recording
 
         storage_options = kwargs.get("storage_options", None)
-        recording = read_zarr_recording(folder_or_url, storage_options=storage_options)
+        load_compression_ratio = kwargs.get("load_compression_ratio", False)
+        recording = read_zarr_recording(
+            folder_or_url, storage_options=storage_options, load_compression_ratio=load_compression_ratio
+        )
         return recording
     elif object_type == "Sorting":
         from .zarrextractors import read_zarr_sorting

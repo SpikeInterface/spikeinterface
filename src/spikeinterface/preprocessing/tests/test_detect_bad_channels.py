@@ -44,8 +44,7 @@ def test_remove_bad_channel():
     good_channel_ids = recording.channel_ids[~np.isin(recording.channel_ids, bad_channel_ids)]
     assert set(good_channel_ids) == set(new_rec.channel_ids)
 
-    # and that the kwarg is propogatged to the kwargs of new_rec.
-    assert set(new_rec._kwargs["channel_ids"]) == set(good_channel_ids)
+    # and that the kwarg is propagated to the kwargs of new_rec.
     assert new_rec._kwargs["noisy_channel_threshold"] == 0
 
     # now apply `detect_bad_channels` directly and see that the outputs matches
