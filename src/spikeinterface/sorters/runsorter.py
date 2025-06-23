@@ -100,10 +100,6 @@ _common_param_doc = """
     **sorter_params : keyword args
         Spike sorter specific arguments (they can be retrieved with `get_default_sorter_params(sorter_name_or_class)`)
 
-    Returns
-    -------
-    BaseSorting | None
-        The spike sorted data (it `with_output` is True) or None (if `with_output` is False)
     """
 
 
@@ -124,8 +120,11 @@ def run_sorter(
 ):
     """
     Generic function to run a sorter via function approach.
-
     {}
+    Returns
+    -------
+    BaseSorting | None
+        The spike sorted data (it `with_output` is True) or None (if `with_output` is False)
 
     Examples
     --------
@@ -150,6 +149,16 @@ def run_sorter(
         with_output=with_output,
         **sorter_params,
     )
+
+    if isinstance(recording, dict):
+
+        all_kwargs = common_kwargs
+        all_kwargs["docker_image"] = docker_image
+        all_kwargs["singularity_image"] = singularity_image
+        all_kwargs["delete_container_files"] = delete_container_files
+
+        dict_of_sorters = _run_sorter_by_dict(recording, **all_kwargs)
+        return dict_of_sorters
 
     if docker_image or singularity_image:
         common_kwargs.update(dict(delete_container_files=delete_container_files))
@@ -199,6 +208,56 @@ def run_sorter(
 
 
 run_sorter.__doc__ = run_sorter.__doc__.format(_common_param_doc)
+
+
+def _run_sorter_by_dict(dict_of_recordings: dict, folder: str | Path | None = None, **run_sorter_params):
+    """
+    Applies `run_sorter` to each recording in a dict of recordings and saves
+    the results.
+    {}
+    Returns
+    -------
+    dict
+        Dictionary of `BaseSorting`s, with the same keys as the input dict of `BaseRecording`s.
+    """
+
+    sorter_name = run_sorter_params["sorter_name"]
+    remove_existing_folder = run_sorter_params["remove_existing_folder"]
+
+    if folder is None:
+        folder = Path(sorter_name + "_output")
+
+    folder.mkdir(exist_ok=remove_existing_folder)
+
+    # If we know how the recording was split, save this in the info file
+    first_recording = next(iter(dict_of_recordings.values()))
+    split_by_property = first_recording.get_annotation("split_by_property")
+    if split_by_property is None:
+        split_by_property = "Unknown"
+
+    info_file = folder / "spikeinterface_info.json"
+    info = dict(
+        version=spikeinterface.__version__,
+        dev_mode=spikeinterface.DEV_MODE,
+        object="dict of BaseSorting",
+        dict_keys=list(dict_of_recordings.keys()),
+        split_by_property=split_by_property,
+    )
+    with open(info_file, mode="w") as f:
+        json.dump(check_json(info), f, indent=4)
+
+    sorter_dict = {}
+    for group_key, recording in dict_of_recordings.items():
+
+        if "recording" in run_sorter_params:
+            run_sorter_params.pop("recording")
+
+        sorter_dict[group_key] = run_sorter(recording=recording, folder=folder / f"{group_key}", **run_sorter_params)
+
+    return sorter_dict
+
+
+_run_sorter_by_dict.__doc__ = _run_sorter_by_dict.__doc__.format(_common_param_doc)
 
 
 def run_sorter_local(

@@ -4,6 +4,7 @@ import pytest
 from pathlib import Path
 import shutil
 from packaging.version import parse
+import json
 
 from spikeinterface import generate_ground_truth_recording
 from spikeinterface.sorters import run_sorter
@@ -43,6 +44,48 @@ def test_run_sorter_local(generate_recording, create_cache_folder):
         **sorter_params,
     )
     print(sorting)
+
+
+def test_run_sorter_dict(generate_recording, create_cache_folder):
+    recording = generate_recording
+    cache_folder = create_cache_folder
+
+    recording.set_property(key="split_property", values=[4, 4, "g", "g", 4, 4, 4, "g"])
+    dict_of_recordings = recording.split_by("split_property")
+
+    sorter_params = {"detection": {"detect_threshold": 4.9}}
+
+    output_folder = cache_folder / "sorting_tdc_local_dict"
+
+    dict_of_sortings = run_sorter(
+        "tridesclous2",
+        dict_of_recordings,
+        output_folder=output_folder,
+        remove_existing_folder=True,
+        delete_output_folder=False,
+        verbose=True,
+        raise_error=True,
+        **sorter_params,
+    )
+
+    assert set(list(dict_of_sortings.keys())) == set(["g", "4"])
+    assert (output_folder / "g").is_dir()
+    assert (output_folder / "4").is_dir()
+
+    assert dict_of_sortings["g"]._recording.get_num_channels() == 3
+    assert dict_of_sortings["4"]._recording.get_num_channels() == 5
+
+    info_filepath = output_folder / "spikeinterface_info.json"
+    assert info_filepath.is_file()
+
+    with open(info_filepath) as f:
+        spikeinterface_info = json.load(f)
+
+    si_info_keys = spikeinterface_info.keys()
+    for key in ["version", "dev_mode", "object", "dict_keys", "split_by_property"]:
+        assert key in si_info_keys
+
+    assert spikeinterface_info["split_by_property"] == "split_property"
 
 
 @pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")
