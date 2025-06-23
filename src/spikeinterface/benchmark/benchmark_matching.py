@@ -91,7 +91,7 @@ class MatchingStudy(BenchmarkStudy, MixinStudyUnitCount):
 
         return plot_performances_ordered(self, *args, **kwargs)
 
-    def plot_collisions(self, case_keys=None, axs=None, figsize=None):
+    def plot_collisions(self, case_keys=None, metric="l2", mode="lines", show_legend=True, axs=None, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
         import matplotlib.pyplot as plt
@@ -99,6 +99,8 @@ class MatchingStudy(BenchmarkStudy, MixinStudyUnitCount):
         if axs is None:
             fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
             axs = axs[0, :]
+        else:
+            fig = axs[0].figure
 
 
         for count, key in enumerate(case_keys):
@@ -108,10 +110,13 @@ class MatchingStudy(BenchmarkStudy, MixinStudyUnitCount):
             plot_comparison_collision_by_similarity(
                 self.get_result(key)["gt_collision"],
                 templates_array,
+                metric=metric,
                 ax=ax,
-                show_legend=True,
-                mode="lines",
-                good_only=False,
+                show_legend=show_legend,
+                mode=mode,
+                # good_only=False,
+                # good_only=False,
+                good_only=True,
             )
             
             ax.set_title(label)

@@ -214,14 +214,23 @@ class CollisionGTComparison(GroundTruthComparison):
 
                 tp1 = self.all_tp[ind1, ind2, :]
                 fn1 = self.all_fn[ind1, ind2, :]
-                recall1 = tp1 / (tp1 + fn1)
+                recall1 = np.zeros(tp1.size)
+                recall1[:] = np.nan
+                mask = (tp1 + fn1) > 0
+                if np.any(mask):
+                    recall1[mask] = tp1[mask] / (tp1[mask] + fn1[mask])
+
                 recall_scores.append(recall1)
                 similarities.append(similarity_matrix[r, c])
                 pair_names.append(f"{u1} {u2}")
 
                 tp2 = self.all_tp[ind2, ind1, :]
                 fn2 = self.all_fn[ind2, ind1, :]
-                recall2 = tp2 / (tp2 + fn2)
+                recall2 = np.zeros(tp2.size)
+                recall2[:] = np.nan
+                mask = (tp2 + fn2) > 0
+                if np.any(mask):
+                    recall2[mask] = tp2[mask] / (tp2[mask] + fn2[mask])
                 recall_scores.append(recall2)
                 similarities.append(similarity_matrix[r, c])
                 pair_names.append(f"{u2} {u1}")
