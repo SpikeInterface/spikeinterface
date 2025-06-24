@@ -66,7 +66,7 @@ class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
         gain_to_uV: Optional[float] = None,
     ):
 
-        gain_to_uV = gain_to_uV if gain_to_uV is not None else self.GAIN_TO_UV
+        gain_to_uV = gain_to_uV if gain_to_uV is not None else self.HEADSTAGE_GAIN_TO_UV
 
         super().__init__(
             file_paths=[file_path],
@@ -87,6 +87,7 @@ class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
             "num_channels": num_channels,
             "channel_ids": channel_ids,
             "is_filtered": is_filtered,
+            "gain_to_uV": gain_to_uV,
         }
 
 
