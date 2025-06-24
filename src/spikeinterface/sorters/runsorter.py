@@ -226,7 +226,7 @@ def _run_sorter_by_dict(dict_of_recordings: dict, folder: str | Path | None = No
 
     if folder is None:
         folder = Path(sorter_name + "_output")
-    
+
     folder = Path(folder)
     folder.mkdir(exist_ok=remove_existing_folder)
 
