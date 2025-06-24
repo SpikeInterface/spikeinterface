@@ -226,7 +226,8 @@ def _run_sorter_by_dict(dict_of_recordings: dict, folder: str | Path | None = No
 
     if folder is None:
         folder = Path(sorter_name + "_output")
-
+    
+    folder = Path(folder)
     folder.mkdir(exist_ok=remove_existing_folder)
 
     # If we know how the recording was split, save this in the info file
@@ -239,7 +240,7 @@ def _run_sorter_by_dict(dict_of_recordings: dict, folder: str | Path | None = No
     info = dict(
         version=spikeinterface.__version__,
         dev_mode=spikeinterface.DEV_MODE,
-        object="dict of BaseSorting",
+        object="dict of Sorting",
         dict_keys=list(dict_of_recordings.keys()),
         split_by_property=split_by_property,
     )
