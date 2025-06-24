@@ -24,13 +24,31 @@ class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
         A list of channel ids. If None, channel_ids = list(range(num_channels)).
     is_filtered : bool or None, default: None
         If True, the recording is assumed to be filtered. If None, `is_filtered` is not set.
-    """
+    gain_to_uV : float | None, default: 0.190734863
+        Micro-volt conversion factor (ADC count → µV).
 
-    mode = "file"
+        Where to look
+        -------------
+        • **Head-stage files** (64 neural chan.):
+            *settingsHeadstages.xml* →
+            `<CHANNEL … voltsperbit="1.907348633e-7" />`
+            → 0.190 734 863 µV per count.
+
+        • **Analog-panel files** (32 aux chan., ±10 V range in our example):
+            *settingsAnalogPanel.xml* →
+            `<CHANNEL … voltsperbit="3.0517578125e-4" />`
+            → 305.175 781 µV per count.
+
+        Use the value from the corresponding XML file when loading data.
+        If *gain_to_uV* is left as *None* the extractor assumes the
+        head-stage constant (0.190734863 µV/bit).  Different hardware
+        ranges will have different *voltsperbit* numbers, so always double-check
+        for your specific setup.
+    """
 
     # Specific parameters for WhiteMatter format
     DTYPE = "int16"
-    GAIN_TO_UV = 6.25e3 / 32768
+    HEADSTAGE_GAIN_TO_UV = 0.190734863
     OFFSET_TO_UV = 0.0
     FILE_OFFSET = 8
     TIME_AXIS = 0
@@ -45,7 +63,11 @@ class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
         num_channels: int,
         channel_ids: Optional[List] = None,
         is_filtered: Optional[bool] = None,
+        gain_to_uV: Optional[float] = None,
     ):
+
+        gain_to_uV = gain_to_uV if gain_to_uV is not None else self.GAIN_TO_UV
+
         super().__init__(
             file_paths=[file_path],
             sampling_frequency=sampling_frequency,
@@ -53,7 +75,7 @@ class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
             dtype=self.DTYPE,
             time_axis=self.TIME_AXIS,
             file_offset=self.FILE_OFFSET,
-            gain_to_uV=self.GAIN_TO_UV,
+            gain_to_uV=gain_to_uV,
             offset_to_uV=self.OFFSET_TO_UV,
             is_filtered=is_filtered,
             channel_ids=channel_ids,
