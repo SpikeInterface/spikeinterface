@@ -339,8 +339,8 @@ Running spike sorting by group is indeed a very common need.
 A :py:class:`~spikeinterface.core.BaseRecording` object has the ability to split itself into a dictionary of
 sub-recordings given a certain property (see :py:meth:`~spikeinterface.core.BaseRecording.split_by`).
 So it is easy to loop over this dictionary and sequentially run spike sorting on these sub-recordings.
-SpikeInterface also provides a high-level function to automate the process of splitting the
-recording and then aggregating the results with the :py:func:`~spikeinterface.sorters.run_sorter_by_property` function.
+The :py:func:`~spikeinterface.sorters.run_sorter` method can also accept the dictionary which is returned
+by :py:meth:`~spikeinterface.core.BaseRecording.split_by` and will return a dictionary of sortings.
 
 In this example, we create a 16-channel recording with 4 tetrodes:
 
@@ -368,7 +368,19 @@ In this example, we create a 16-channel recording with 4 tetrodes:
     # >>> [0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3]
 
 
-**Option 1: Manual splitting**
+**Option 1 : Automatic splitting**
+
+.. code-block:: python
+
+    # here the result is a dict of sortings
+    dict_of_sortings = run_sorter(
+      sorter_name='kilosort2',
+      recording=recording_4_tetrodes,
+      working_folder='working_path'
+    )
+
+
+**Option 2: Manual splitting**
 
 .. code-block:: python
 
@@ -382,15 +394,6 @@ In this example, we create a 16-channel recording with 4 tetrodes:
     for group, sub_recording in recordings.items():
         sorting = run_sorter(sorter_name='kilosort2', recording=recording, output_folder=f"folder_KS2_group{group}")
         sortings[group] = sorting
-
-**Option 2 : Automatic splitting**
-
-.. code-block:: python
-
-    # here the result is one sorting that aggregates all sub sorting objects
-    aggregate_sorting = run_sorter_by_property(sorter_name='kilosort2', recording=recording_4_tetrodes,
-                                               grouping_property='group',
-                                               working_folder='working_path')
 
 
 Handling multi-segment recordings
