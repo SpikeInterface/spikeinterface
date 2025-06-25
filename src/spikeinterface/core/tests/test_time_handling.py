@@ -128,7 +128,7 @@ class TestTimeHandling:
 
         if mode == "zarr":
             folder_name += ".zarr"
-        recording_load = si.load_extractor(tmp_path / folder_name)
+        recording_load = si.load(tmp_path / folder_name)
 
         self._check_times_match(recording_cache, all_times)
         self._check_times_match(recording_load, all_times)
@@ -369,7 +369,7 @@ class TestTimeHandling:
 
         times_recording.save(folder=tmp_path / "my_file")
 
-        loaded_recording = si.load_extractor(tmp_path / "my_file")
+        loaded_recording = si.load(tmp_path / "my_file")
 
         for idx in range(times_recording.get_num_segments()):
             assert np.array_equal(
@@ -435,3 +435,12 @@ class TestTimeHandling:
         assert sorting.has_recording()
 
         return sorting
+
+
+def test_shift_times_with_None_as_t_start():
+    """Ensures we can shift times even when t_stat is None which is interpeted as zero"""
+    recording = generate_recording(num_channels=4, durations=[10])
+
+    assert recording._recording_segments[0].t_start is None
+    recording.shift_times(shift=1.0)  # Shift by one seconds should not generate an error
+    assert recording.get_start_time() == 1.0

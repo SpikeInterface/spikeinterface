@@ -4,10 +4,10 @@ import pickle
 import pytest
 import numpy as np
 
-from spikeinterface import load_extractor
+from spikeinterface import load
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
-from spikeinterface.extractors import NwbRecordingExtractor, NwbSortingExtractor
+from spikeinterface.extractors.extractor_classes import NwbRecordingExtractor, NwbSortingExtractor
 
 
 @pytest.mark.streaming_extractors
@@ -219,7 +219,7 @@ def test_sorting_s3_nwb_zarr(tmp_path):
     assert not sorting.check_serializability("pickle")
 
     # test to/from dict
-    sorting_loaded = load_extractor(sorting.to_dict())
+    sorting_loaded = load(sorting.to_dict())
 
     # just take 3 random units to test
     rng = np.random.default_rng(seed=2205)

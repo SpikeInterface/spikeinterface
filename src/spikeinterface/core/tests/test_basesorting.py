@@ -19,11 +19,13 @@ from spikeinterface.core import (
     NumpyFolderSorting,
     create_sorting_npz,
     generate_sorting,
-    load_extractor,
+    load,
 )
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
 from spikeinterface.core.generate import generate_sorting
+
+from spikeinterface.core import generate_recording, generate_ground_truth_recording
 
 
 def test_BaseSorting(create_cache_folder):
@@ -51,21 +53,21 @@ def test_BaseSorting(create_cache_folder):
     # dump/load dict
     d = sorting.to_dict(include_annotations=True, include_properties=True)
     sorting2 = BaseExtractor.from_dict(d)
-    sorting3 = load_extractor(d)
+    sorting3 = load(d)
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
 
     # dump/load json
     sorting.dump_to_json(cache_folder / "test_BaseSorting.json")
     sorting2 = BaseExtractor.load(cache_folder / "test_BaseSorting.json")
-    sorting3 = load_extractor(cache_folder / "test_BaseSorting.json")
+    sorting3 = load(cache_folder / "test_BaseSorting.json")
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=False)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=False)
 
     # dump/load pickle
     sorting.dump_to_pickle(cache_folder / "test_BaseSorting.pkl")
     sorting2 = BaseExtractor.load(cache_folder / "test_BaseSorting.pkl")
-    sorting3 = load_extractor(cache_folder / "test_BaseSorting.pkl")
+    sorting3 = load(cache_folder / "test_BaseSorting.pkl")
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
 
@@ -92,8 +94,6 @@ def test_BaseSorting(create_cache_folder):
     sorting4 = sorting.save(format="memory")
     check_sortings_equal(sorting, sorting4, check_annotations=True, check_properties=True)
 
-    with pytest.warns(DeprecationWarning):
-        num_spikes = sorting.get_all_spike_trains()
     # print(spikes)
 
     spikes = sorting.to_spike_vector()
@@ -122,7 +122,7 @@ def test_BaseSorting(create_cache_folder):
     sorting4 = sorting.to_numpy_sorting()
     sorting5 = sorting.to_multiprocessing(n_jobs=2)
     # create a clone with the same share mem buffer
-    sorting6 = load_extractor(sorting5.to_dict())
+    sorting6 = load(sorting5.to_dict())
     assert isinstance(sorting6, SharedMemorySorting)
     del sorting6
     del sorting5
@@ -130,7 +130,7 @@ def test_BaseSorting(create_cache_folder):
     # test save to zarr
     # compressor = get_default_zarr_compressor()
     sorting_zarr = sorting.save(format="zarr", folder=cache_folder / "sorting")
-    sorting_zarr_loaded = load_extractor(cache_folder / "sorting.zarr")
+    sorting_zarr_loaded = load(cache_folder / "sorting.zarr")
     # annotations is False because Zarr adds compression ratios
     check_sortings_equal(sorting, sorting_zarr, check_annotations=False, check_properties=True)
     check_sortings_equal(sorting_zarr, sorting_zarr_loaded, check_annotations=False, check_properties=True)
@@ -196,14 +196,34 @@ def test_empty_sorting():
 
     assert len(sorting.unit_ids) == 0
 
-    with pytest.warns(DeprecationWarning):
-        spikes = sorting.get_all_spike_trains()
-        assert len(spikes) == 1
-        assert len(spikes[0][0]) == 0
-        assert len(spikes[0][1]) == 0
-
     spikes = sorting.to_spike_vector()
     assert spikes.shape == (0,)
+
+
+def test_time_slice():
+
+    sampling_frequency = 10_000.0
+
+    # no recording attached to sorting
+    sorting = generate_sorting(durations=[1.0], sampling_frequency=sampling_frequency)
+
+    sliced_sorting_times = sorting.time_slice(start_time=0.1, end_time=0.8)
+    sliced_sorting_frames = sorting.frame_slice(start_frame=1000, end_frame=8000)
+
+    assert np.allclose(
+        sliced_sorting_times.to_spike_vector()["sample_index"], sliced_sorting_frames.to_spike_vector()["sample_index"]
+    )
+
+    # with recording
+    recording, sorting = generate_ground_truth_recording(durations=[1.0], sampling_frequency=sampling_frequency)
+    sorting.register_recording(recording)
+
+    sliced_sorting_times = sorting.time_slice(start_time=0.1, end_time=0.8)
+    sliced_sorting_frames = sorting.frame_slice(start_frame=1000, end_frame=8000)
+
+    assert np.allclose(
+        sliced_sorting_times.to_spike_vector()["sample_index"], sliced_sorting_frames.to_spike_vector()["sample_index"]
+    )
 
 
 if __name__ == "__main__":

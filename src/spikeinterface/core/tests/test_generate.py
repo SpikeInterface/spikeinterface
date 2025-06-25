@@ -3,7 +3,7 @@ import psutil
 
 import numpy as np
 
-from spikeinterface.core import load_extractor
+from spikeinterface.core import load
 
 from probeinterface import generate_multi_columns_probe
 from spikeinterface.core.generate import (
@@ -363,7 +363,7 @@ def test_noise_generator_consistency_after_dump(strategy, seed):
     )
     traces0 = rec0.get_traces()
 
-    rec1 = load_extractor(rec0.to_dict())
+    rec1 = load(rec0.to_dict())
     traces1 = rec1.get_traces()
 
     assert np.allclose(traces0, traces1)
@@ -545,8 +545,8 @@ def test_inject_templates():
         assert rec.get_traces(start_frame=rec_noise.get_num_frames(0) - 200, segment_index=0).shape == (200, 4)
 
         # Check dumpability
-        saved_loaded = load_extractor(rec.to_dict())
-        check_recordings_equal(rec, saved_loaded, return_scaled=False)
+        saved_loaded = load(rec.to_dict())
+        check_recordings_equal(rec, saved_loaded, return_in_uV=False)
 
 
 def test_transformsorting():
@@ -613,7 +613,7 @@ def test_generate_ground_truth_recording():
 
 def test_generate_sorting_to_inject():
     durations = [10.0, 20.0]
-    sorting = generate_sorting(num_units=10, durations=durations, sampling_frequency=30000, firing_rates=1.0)
+    sorting = generate_sorting(num_units=10, durations=durations, sampling_frequency=30000, firing_rates=1.0, seed=2205)
     injected_sorting = generate_sorting_to_inject(
         sorting, [int(duration * sorting.sampling_frequency) for duration in durations], seed=2308
     )
@@ -654,7 +654,8 @@ if __name__ == "__main__":
     # test_generate_recording()
     # test_generate_single_fake_waveform()
     # test_transformsorting()
-    test_generate_templates()
+    test_generate_unit_locations()
+    # test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
     # test_generate_sorting_with_spikes_on_borders()

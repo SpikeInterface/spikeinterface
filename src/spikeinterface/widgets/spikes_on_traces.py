@@ -5,12 +5,12 @@ import numpy as np
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 from .traces import TracesWidget
-from ..core import ChannelSparsity
-from ..core.template_tools import get_template_extremum_channel
-from ..core.sortinganalyzer import SortingAnalyzer
-from ..core.baserecording import BaseRecording
-from ..core.basesorting import BaseSorting
-from ..postprocessing import compute_unit_locations
+from spikeinterface.core import ChannelSparsity
+from spikeinterface.core.template_tools import get_template_extremum_channel
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+from spikeinterface.core.baserecording import BaseRecording
+from spikeinterface.core.basesorting import BaseSorting
+from spikeinterface.postprocessing import compute_unit_locations
 
 
 class SpikesOnTracesWidget(BaseWidget):
@@ -32,9 +32,9 @@ class SpikesOnTracesWidget(BaseWidget):
     sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply
         If SortingAnalyzer is already sparse, the argument is ignored
-    unit_colors : dict or None, default: None
-        If given, a dictionary with unit ids as keys and colors as values
-        If None, then the get_unit_colors() is internally used. (matplotlib backend)
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     mode : "line" | "map" | "auto", default: "auto"
         * "line": classical for low channel count
         * "map": for high channel count use color heat map

@@ -12,7 +12,7 @@ from numpy.testing import assert_raises
 
 from probeinterface import Probe, ProbeGroup, generate_linear_probe
 
-from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor, get_default_zarr_compressor
+from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load, get_default_zarr_compressor
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_recordings_equal
 
@@ -84,40 +84,40 @@ def test_BaseRecording(create_cache_folder):
     # dump/load dict
     d = rec.to_dict(include_annotations=True, include_properties=True)
     rec2 = BaseExtractor.from_dict(d)
-    rec3 = load_extractor(d)
-    check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True, check_properties=True)
-    check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True, check_properties=True)
+    rec3 = load(d)
+    check_recordings_equal(rec, rec2, return_in_uV=False, check_annotations=True, check_properties=True)
+    check_recordings_equal(rec, rec3, return_in_uV=False, check_annotations=True, check_properties=True)
 
     # dump/load json
     rec.dump_to_json(cache_folder / "test_BaseRecording.json")
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording.json")
-    rec3 = load_extractor(cache_folder / "test_BaseRecording.json")
-    check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True, check_properties=False)
-    check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True, check_properties=False)
+    rec3 = load(cache_folder / "test_BaseRecording.json")
+    check_recordings_equal(rec, rec2, return_in_uV=False, check_annotations=True, check_properties=False)
+    check_recordings_equal(rec, rec3, return_in_uV=False, check_annotations=True, check_properties=False)
 
     # dump/load pickle
     rec.dump_to_pickle(cache_folder / "test_BaseRecording.pkl")
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording.pkl")
-    rec3 = load_extractor(cache_folder / "test_BaseRecording.pkl")
-    check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True, check_properties=True)
-    check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True, check_properties=True)
+    rec3 = load(cache_folder / "test_BaseRecording.pkl")
+    check_recordings_equal(rec, rec2, return_in_uV=False, check_annotations=True, check_properties=True)
+    check_recordings_equal(rec, rec3, return_in_uV=False, check_annotations=True, check_properties=True)
 
     # dump/load dict - relative
     d = rec.to_dict(relative_to=cache_folder, recursive=True)
     rec2 = BaseExtractor.from_dict(d, base_folder=cache_folder)
-    rec3 = load_extractor(d, base_folder=cache_folder)
+    rec3 = load(d, base_folder=cache_folder)
 
     # dump/load json - relative to
     rec.dump_to_json(cache_folder / "test_BaseRecording_rel.json", relative_to=cache_folder)
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
-    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
+    rec3 = load(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
 
     # dump/load relative=True
     rec.dump_to_json(cache_folder / "test_BaseRecording_rel_true.json", relative_to=True)
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
-    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
-    check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True)
-    check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True)
+    rec3 = load(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
+    check_recordings_equal(rec, rec2, return_in_uV=False, check_annotations=True)
+    check_recordings_equal(rec, rec3, return_in_uV=False, check_annotations=True)
     with open(cache_folder / "test_BaseRecording_rel_true.json") as json_file:
         data = json.load(json_file)
         assert (
@@ -127,14 +127,14 @@ def test_BaseRecording(create_cache_folder):
     # dump/load pkl - relative to
     rec.dump_to_pickle(cache_folder / "test_BaseRecording_rel.pkl", relative_to=cache_folder)
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
-    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
+    rec3 = load(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
 
     # dump/load relative=True
     rec.dump_to_pickle(cache_folder / "test_BaseRecording_rel_true.pkl", relative_to=True)
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
-    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
-    check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True)
-    check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True)
+    rec3 = load(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
+    check_recordings_equal(rec, rec2, return_in_uV=False, check_annotations=True)
+    check_recordings_equal(rec, rec3, return_in_uV=False, check_annotations=True)
     with open(cache_folder / "test_BaseRecording_rel_true.pkl", "rb") as pkl_file:
         data = pickle.load(pkl_file)
         assert (
@@ -195,7 +195,7 @@ def test_BaseRecording(create_cache_folder):
     # test save with probe
     folder = cache_folder / "simple_recording3"
     rec2 = rec_p.save(folder=folder, chunk_size=10, n_jobs=2)
-    rec2 = load_extractor(folder)
+    rec2 = load(folder)
     probe2 = rec2.get_probe()
     assert np.array_equal(probe2.contact_positions, [[0, 30.0], [0.0, 0.0]])
     positions2 = rec_p.get_channel_locations()
@@ -219,7 +219,7 @@ def test_BaseRecording(create_cache_folder):
     rec_empty_probe = rec.set_probe(probe, group_mode="by_shank")
     assert rec_empty_probe.channel_ids.size == 0
 
-    # test return_scale
+    # test scaling parameters
     sampling_frequency = 30000
     traces = np.zeros((1000, 5), dtype="int16")
     rec_int16 = NumpyRecording([traces], sampling_frequency)
@@ -231,29 +231,27 @@ def test_BaseRecording(create_cache_folder):
 
     traces_int16 = rec_int16.get_traces()
     assert traces_int16.dtype == "int16"
-    # return_scaled raise error when no gain_to_uV/offset_to_uV properties
+
+    # Both return_scaled and return_in_uV raise error when no gain_to_uV/offset_to_uV properties
     with pytest.raises(ValueError):
-        traces_float32 = rec_int16.get_traces(return_scaled=True)
+        traces_float32 = rec_int16.get_traces(return_in_uV=True)
+    with pytest.raises(ValueError):
+        traces_float32 = rec_int16.get_traces(return_in_uV=True)
+
+    # Set properties and test both parameters
     rec_int16.set_property("gain_to_uV", [0.195] * 5)
     rec_int16.set_property("offset_to_uV", [0.0] * 5)
-    traces_float32 = rec_int16.get_traces(return_scaled=True)
-    assert traces_float32.dtype == "float32"
 
-    # test cast unsigned
-    tr_u = rec_uint16.get_traces(cast_unsigned=False)
-    assert tr_u.dtype.kind == "u"
-    tr_i = rec_uint16.get_traces(cast_unsigned=True)
-    assert tr_i.dtype.kind == "i"
-    folder = cache_folder / "recording_unsigned"
-    rec_u = rec_uint16.save(folder=folder)
-    rec_u.get_dtype() == "uint16"
-    folder = cache_folder / "recording_signed"
-    rec_i = rec_uint16.save(folder=folder, dtype="int16")
-    rec_i.get_dtype() == "int16"
-    assert np.allclose(
-        rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15), rec_i.get_traces().astype("float")
-    )
-    assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
+    # Test deprecated return_scaled parameter
+    traces_float32_old = rec_int16.get_traces(return_scaled=True)  # Keep this for testing the deprecation warning
+    assert traces_float32_old.dtype == "float32"
+
+    # Test new return_in_uV parameter
+    traces_float32_new = rec_int16.get_traces(return_in_uV=True)
+    assert traces_float32_new.dtype == "float32"
+
+    # Verify both parameters produce the same result
+    assert np.array_equal(traces_float32_old, traces_float32_new)
 
     # test cast with dtype
     rec_float32 = rec_int16.astype("float32")
@@ -286,7 +284,7 @@ def test_BaseRecording(create_cache_folder):
     folder = cache_folder / "recording_with_times"
     rec2 = rec.save(folder=folder)
     assert np.allclose(times1, rec2.get_times(1))
-    rec3 = load_extractor(folder)
+    rec3 = load(folder)
     assert np.allclose(times1, rec3.get_times(1))
 
     # reset times
@@ -323,11 +321,11 @@ def test_BaseRecording(create_cache_folder):
     # test save to zarr
     compressor = get_default_zarr_compressor()
     rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
-    rec_zarr_loaded = load_extractor(cache_folder / "recording.zarr")
+    rec_zarr_loaded = load(cache_folder / "recording.zarr")
     # annotations is False because Zarr adds compression ratios
-    check_recordings_equal(rec2, rec_zarr, return_scaled=False, check_annotations=False, check_properties=True)
+    check_recordings_equal(rec2, rec_zarr, return_in_uV=False, check_annotations=False, check_properties=True)
     check_recordings_equal(
-        rec_zarr, rec_zarr_loaded, return_scaled=False, check_annotations=False, check_properties=True
+        rec_zarr, rec_zarr_loaded, return_in_uV=False, check_annotations=False, check_properties=True
     )
     for annotation_name in rec2.get_annotation_keys():
         assert rec2.get_annotation(annotation_name) == rec_zarr.get_annotation(annotation_name)
@@ -336,26 +334,48 @@ def test_BaseRecording(create_cache_folder):
     rec_zarr2 = rec2.save(
         format="zarr", folder=cache_folder / "recording_channel_chunk", compressor=compressor, channel_chunk_size=2
     )
-    rec_zarr2_loaded = load_extractor(cache_folder / "recording_channel_chunk.zarr")
+    rec_zarr2_loaded = load(cache_folder / "recording_channel_chunk.zarr")
 
     # annotations is False because Zarr adds compression ratios
-    check_recordings_equal(rec2, rec_zarr2, return_scaled=False, check_annotations=False, check_properties=True)
+    check_recordings_equal(rec2, rec_zarr2, return_in_uV=False, check_annotations=False, check_properties=True)
     check_recordings_equal(
-        rec_zarr2, rec_zarr2_loaded, return_scaled=False, check_annotations=False, check_properties=True
+        rec_zarr2, rec_zarr2_loaded, return_in_uV=False, check_annotations=False, check_properties=True
     )
     for annotation_name in rec2.get_annotation_keys():
         assert rec2.get_annotation(annotation_name) == rec_zarr2.get_annotation(annotation_name)
         assert rec2.get_annotation(annotation_name) == rec_zarr2_loaded.get_annotation(annotation_name)
 
-    # test cast unsigned
-    rec_u = rec_uint16.save(format="zarr", folder=cache_folder / "rec_u")
-    rec_u.get_dtype() == "uint16"
-    rec_i = rec_uint16.save(format="zarr", folder=cache_folder / "rec_i", dtype="int16")
-    rec_i.get_dtype() == "int16"
-    assert np.allclose(
-        rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15), rec_i.get_traces().astype("float")
-    )
-    assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
+
+def test_json_pickle_equivalence(create_cache_folder):
+    """
+    For a json-ifyable recording, the json and pickle outputs created by `dump` should be the same
+    (except for the probe information). We check this here for a saved-then-loaded recording,
+    which tests if relative paths are dealt with in the same way.
+    """
+
+    rec = generate_recording(durations=[1])
+    cache_folder = create_cache_folder
+
+    json_file_path = cache_folder / "recording.json"
+    pkl_file_path = cache_folder / "recording.pkl"
+
+    rec.dump(json_file_path, relative_to=cache_folder)
+    rec.dump(pkl_file_path, relative_to=cache_folder)
+
+    with open(json_file_path, "r") as f:
+        data_json = json.load(f)
+
+    with open(pkl_file_path, "rb") as f:
+        data_pickle = pickle.load(f)
+
+    for key, value in data_json.items():
+        # skip probe info, since pickle keeps some additional information
+        if key not in ["properties"]:
+            if isinstance(value, dict):
+                for sub_key, sub_value in value.items():
+                    assert np.all(sub_value == data_pickle[key][sub_key])
+            else:
+                assert np.all(value == data_pickle[key])
 
 
 def test_interleaved_probegroups():
@@ -410,6 +430,27 @@ def test_time_slice():
     sliced_recording_frames = recording.frame_slice(start_frame=1000, end_frame=8000)
 
     assert np.allclose(sliced_recording_times.get_traces(), sliced_recording_frames.get_traces())
+
+
+def test_out_of_range_time_slice():
+    recording = generate_recording(durations=[0.100])  # duration = 0.1 s
+    recording.shift_times(1.0)  # shifts start time to 1.0 s, end time to 1.1 s
+
+    # start_time before recording
+    with pytest.raises(ValueError, match="start_time .* is before the start time"):
+        recording.time_slice(start_time=0, end_time=None)
+
+    # end_time before start of recording
+    with pytest.raises(ValueError, match="end_time .* is before the start time"):
+        recording.time_slice(start_time=None, end_time=0.5)
+
+    # start_time after end of recording
+    with pytest.raises(ValueError, match="start_time .* is after the end time"):
+        recording.time_slice(start_time=2.0, end_time=None)
+
+    # end_time after end of recording
+    with pytest.raises(ValueError, match="end_time .* is after the end time"):
+        recording.time_slice(start_time=None, end_time=2.0)
 
 
 def test_time_slice_with_time_vector():

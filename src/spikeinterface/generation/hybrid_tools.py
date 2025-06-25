@@ -15,7 +15,7 @@ from spikeinterface.core.generate import (
 )
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
-from spikeinterface.sortingcomponents.motion import Motion
+from spikeinterface.core.motion import Motion
 
 from spikeinterface.generation.drift_tools import (
     InjectDriftingTemplatesRecording,

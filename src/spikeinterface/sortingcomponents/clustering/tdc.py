@@ -40,7 +40,16 @@ class TdcClustering:
         },
         "svd": {"n_components": 6},
         "clustering": {
+            "recursive_depth": 3,
             "split_radius_um": 40.0,
+            "clusterer": "hdbscan",
+            "clusterer_kwargs": {
+                "min_cluster_size": 10,
+                "min_samples": 1,
+                "allow_single_cluster": True,
+                "cluster_selection_method": "eom",
+            },
+            "do_merge": True,
             "merge_radius_um": 40.0,
             "threshold_diff": 1.5,
         },
@@ -142,18 +151,24 @@ class TdcClustering:
         min_cluster_size = 50
         # min_cluster_size = 10
 
+        clusterer = params["clustering"].get("clusterer", "hdbscan")
+        clusterer_kwargs = params["clustering"].get("clusterer_kwargs", {})
+
         post_split_label, split_count = split_clusters(
             original_labels,
             recording,
             features_folder,
             method="local_feature_clustering",
             method_kwargs=dict(
-                clusterer="hdbscan",
-                clusterer_kwargs={
-                    "min_cluster_size": min_cluster_size,
-                    "allow_single_cluster": True,
-                    "cluster_selection_method": "eom",
-                },
+                clusterer=clusterer,
+                clusterer_kwargs=clusterer_kwargs,
+                # clusterer="hdbscan",
+                # clusterer_kwargs={
+                #     "min_cluster_size": min_cluster_size,
+                #     "allow_single_cluster": True,
+                #     # "cluster_selection_method": "eom",
+                #     "cluster_selection_method": "leaf",
+                # },
                 # clusterer="isocut5",
                 # clusterer_kwargs={"min_cluster_size": min_cluster_size},
                 feature_name="sparse_tsvd",
@@ -162,42 +177,46 @@ class TdcClustering:
                 waveforms_sparse_mask=sparse_mask,
                 min_size_split=min_cluster_size,
                 n_pca_features=3,
-                scale_n_pca_by_depth=True,
             ),
             recursive=True,
-            recursive_depth=3,
+            recursive_depth=params["clustering"]["recursive_depth"],
             returns_split_count=True,
+            debug_folder=clustering_folder / "figure_debug_split",
             **job_kwargs,
         )
 
-        merge_radius_um = params["clustering"]["merge_radius_um"]
-        threshold_diff = params["clustering"]["threshold_diff"]
+        if params["clustering"]["do_merge"]:
+            merge_radius_um = params["clustering"]["merge_radius_um"]
+            threshold_diff = params["clustering"]["threshold_diff"]
 
-        post_merge_label, peak_shifts = merge_clusters(
-            peaks,
-            post_split_label,
-            recording,
-            features_folder,
-            radius_um=merge_radius_um,
-            # method="project_distribution",
-            # method_kwargs=dict(
-            #     waveforms_sparse_mask=sparse_mask,
-            #     feature_name="sparse_wfs",
-            #     projection="centroid",
-            #     criteria="distrib_overlap",
-            #     threshold_overlap=0.3,
-            #     min_cluster_size=min_cluster_size + 1,
-            #     num_shift=5,
-            # ),
-            method="normalized_template_diff",
-            method_kwargs=dict(
-                waveforms_sparse_mask=sparse_mask,
-                threshold_diff=threshold_diff,
-                min_cluster_size=min_cluster_size + 1,
-                num_shift=5,
-            ),
-            **job_kwargs,
-        )
+            post_merge_label, peak_shifts = merge_clusters(
+                peaks,
+                post_split_label,
+                recording,
+                features_folder,
+                radius_um=merge_radius_um,
+                # method="project_distribution",
+                # method_kwargs=dict(
+                #     waveforms_sparse_mask=sparse_mask,
+                #     feature_name="sparse_wfs",
+                #     projection="centroid",
+                #     criteria="distrib_overlap",
+                #     threshold_overlap=0.3,
+                #     min_cluster_size=min_cluster_size + 1,
+                #     num_shift=5,
+                # ),
+                method="normalized_template_diff",
+                method_kwargs=dict(
+                    waveforms_sparse_mask=sparse_mask,
+                    threshold_diff=threshold_diff,
+                    min_cluster_size=min_cluster_size + 1,
+                    num_shift=5,
+                ),
+                **job_kwargs,
+            )
+        else:
+            post_merge_label = post_split_label.copy()
+            peak_shifts = np.zeros(post_split_label.size, dtype="int64")
 
         # sparse_wfs = np.load(features_folder / "sparse_wfs.npy", mmap_mode="r")
 

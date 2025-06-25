@@ -6,7 +6,6 @@ import numpy as np
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
 from .base import BaseExtractor
-from .core_tools import check_json
 from .recording_tools import check_probe_do_not_overlap
 
 from warnings import warn
@@ -16,8 +15,6 @@ class BaseRecordingSnippets(BaseExtractor):
     """
     Mixin that handles all probe and channel operations
     """
-
-    has_default_locations = False
 
     def __init__(self, sampling_frequency: float, channel_ids: list[str, int], dtype: np.dtype):
         BaseExtractor.__init__(self, channel_ids)
@@ -560,10 +557,11 @@ class BaseRecordingSnippets(BaseExtractor):
             recordings = []
         elif outputs == "dict":
             recordings = {}
-        for value in np.unique(values):
+        for value in np.unique(values).tolist():
             (inds,) = np.nonzero(values == value)
             new_channel_ids = self.get_channel_ids()[inds]
             subrec = self.select_channels(new_channel_ids)
+            subrec.set_annotation("split_by_property", value=property)
             if outputs == "list":
                 recordings.append(subrec)
             elif outputs == "dict":

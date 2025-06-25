@@ -10,7 +10,7 @@ from numpy.testing import assert_raises
 
 from probeinterface import Probe
 from spikeinterface.core import generate_snippets
-from spikeinterface.core import NumpySnippets, load_extractor
+from spikeinterface.core import NumpySnippets, load
 from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
 from spikeinterface.core.base import BaseExtractor
 
@@ -90,27 +90,27 @@ def test_BaseSnippets(create_cache_folder):
     # dump/load dict
     d = snippets.to_dict()
     snippets2 = BaseExtractor.from_dict(d)
-    snippets3 = load_extractor(d)
+    snippets3 = load(d)
 
     # dump/load json
     snippets.dump_to_json(cache_folder / "test_BaseSnippets.json")
     snippets2 = BaseExtractor.load(cache_folder / "test_BaseSnippets.json")
-    snippets3 = load_extractor(cache_folder / "test_BaseSnippets.json")
+    snippets3 = load(cache_folder / "test_BaseSnippets.json")
 
     # dump/load pickle
     snippets.dump_to_pickle(cache_folder / "test_BaseSnippets.pkl")
     snippets2 = BaseExtractor.load(cache_folder / "test_BaseSnippets.pkl")
-    snippets3 = load_extractor(cache_folder / "test_BaseSnippets.pkl")
+    snippets3 = load(cache_folder / "test_BaseSnippets.pkl")
 
     # dump/load dict - relative
     d = snippets.to_dict(relative_to=cache_folder, recursive=True)
     snippets2 = BaseExtractor.from_dict(d, base_folder=cache_folder)
-    snippets3 = load_extractor(d, base_folder=cache_folder)
+    snippets3 = load(d, base_folder=cache_folder)
 
     # dump/load json
     snippets.dump_to_json(cache_folder / "test_BaseSnippets_rel.json", relative_to=cache_folder)
     snippets2 = BaseExtractor.load(cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder)
-    snippets3 = load_extractor(cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder)
+    snippets3 = load(cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder)
 
     # cache to npy
     folder = cache_folder / "simple_snippets"
@@ -156,7 +156,7 @@ def test_BaseSnippets(create_cache_folder):
     # test save with probe
     folder = cache_folder / "simple_snippets3"
     snippets2 = snippets_p.save(folder=folder)
-    snippets2 = load_extractor(folder)
+    snippets2 = load(folder)
     probe2 = snippets2.get_probe()
     assert np.array_equal(probe2.contact_positions, [[0, 30.0], [0.0, 0.0]])
     positions2 = snippets_p.get_channel_locations()
@@ -179,12 +179,15 @@ def test_BaseSnippets(create_cache_folder):
     waveforms_int16 = nse_int16.get_snippets()
     assert waveforms_int16.dtype == "int16"
 
-    # return_scaled raise error when no gain_to_uV/offset_to_uV properties
+    # return_in_uV raises error when no gain_to_uV/offset_to_uV properties
     with pytest.raises(ValueError):
-        waveforms_float32 = nse_int16.get_snippets(return_scaled=True)
+        waveforms_float32 = nse_int16.get_snippets(return_in_uV=True)
+
+    # Set properties and test return_in_uV parameter
     nse_int16.set_property("gain_to_uV", [0.195] * 5)
     nse_int16.set_property("offset_to_uV", [0.0] * 5)
-    waveforms_float32 = nse_int16.get_snippets(return_scaled=True)
+
+    waveforms_float32 = nse_int16.get_snippets(return_in_uV=True)
     assert waveforms_float32.dtype == "float32"
 
 

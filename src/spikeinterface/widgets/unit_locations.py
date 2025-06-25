@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import numpy as np
-from typing import Union
-
 from probeinterface import ProbeGroup
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
-from ..core.sortinganalyzer import SortingAnalyzer
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+import numpy as np
 
 
 class UnitLocationsWidget(BaseWidget):
@@ -22,8 +20,9 @@ class UnitLocationsWidget(BaseWidget):
         List of unit ids
     with_channel_ids : bool, default: False
         Add channel ids text on the probe
-    unit_colors :  dict or None, default: None
-        If given, a dictionary with unit ids as keys and colors as values
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     hide_unit_selector : bool, default: False
         If True, the unit selector is not displayed (sortingview backend)
     plot_all_units : bool, default: True
@@ -33,19 +32,22 @@ class UnitLocationsWidget(BaseWidget):
         If True, the legend is plotted (matplotlib backend)
     hide_axis : bool, default: False
         If True, the axis is set to off (matplotlib backend)
+    margin : float, default: 50
+        Amount of margin to add to plot, beyond the extremum unit locations.
     """
 
     def __init__(
         self,
         sorting_analyzer: SortingAnalyzer,
-        unit_ids=None,
-        with_channel_ids=False,
-        unit_colors=None,
-        hide_unit_selector=False,
-        plot_all_units=True,
-        plot_legend=False,
-        hide_axis=False,
-        backend=None,
+        unit_ids: list | None = None,
+        with_channel_ids: bool = False,
+        unit_colors: dict | None = None,
+        hide_unit_selector: bool = False,
+        plot_all_units: bool = True,
+        plot_legend: bool = False,
+        hide_axis: bool = False,
+        backend: str | None = None,
+        margin: float = 50,
         **backend_kwargs,
     ):
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
@@ -53,6 +55,19 @@ class UnitLocationsWidget(BaseWidget):
         self.check_extensions(sorting_analyzer, "unit_locations")
         ulc = sorting_analyzer.get_extension("unit_locations")
         unit_locations = ulc.get_data(outputs="by_unit")
+
+        # set axis limits based on extremum unit locations
+        all_unit_locations = ulc.get_data()
+
+        x_locations = all_unit_locations[:, 0]
+        x_min = np.min(x_locations)
+        x_max = np.max(x_locations)
+        x_lim = (x_min - margin, x_max + margin)
+
+        y_locations = all_unit_locations[:, 1]
+        y_min = np.min(y_locations)
+        y_max = np.max(y_locations)
+        y_lim = (y_min - margin, y_max + margin)
 
         sorting = sorting_analyzer.sorting
 
@@ -80,6 +95,8 @@ class UnitLocationsWidget(BaseWidget):
             plot_all_units=plot_all_units,
             plot_legend=plot_legend,
             hide_axis=hide_axis,
+            x_lim=x_lim,
+            y_lim=y_lim,
         )
 
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
@@ -122,6 +139,8 @@ class UnitLocationsWidget(BaseWidget):
                 poly_contour.set_zorder(1)
 
         self.ax.set_title("")
+        self.ax.set_xlim(*dp.x_lim)
+        self.ax.set_ylim(*dp.y_lim)
 
         width = height = 10
         ellipse_kwargs = dict(width=width, height=height, lw=2)

@@ -54,13 +54,12 @@ def read_binary_recording(file, num_channels, dtype, time_axis=0, offset=0):
 
 
 # used by write_binary_recording + ChunkRecordingExecutor
-def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsigned):
+def _init_binary_worker(recording, file_path_dict, dtype, byte_offest):
     # create a local dict per worker
     worker_ctx = {}
     worker_ctx["recording"] = recording
     worker_ctx["byte_offset"] = byte_offest
     worker_ctx["dtype"] = np.dtype(dtype)
-    worker_ctx["cast_unsigned"] = cast_unsigned
 
     file_dict = {segment_index: open(file_path, "r+") for segment_index, file_path in file_path_dict.items()}
     worker_ctx["file_dict"] = file_dict
@@ -74,7 +73,6 @@ def write_binary_recording(
     dtype: np.typing.DTypeLike = None,
     add_file_extension: bool = True,
     byte_offset: int = 0,
-    auto_cast_uint: bool = True,
     verbose: bool = False,
     **job_kwargs,
 ):
@@ -98,9 +96,6 @@ def write_binary_recording(
     byte_offset : int, default: 0
         Offset in bytes for the binary file (e.g. to write a header). This is useful in case you want to append data
         to an existing file where you wrote a header or other data before.
-    auto_cast_uint : bool, default: True
-        If True, unsigned integers are automatically cast to int if the specified dtype is signed
-        .. deprecated:: 0.103, use the `unsigned_to_signed` function instead.
     verbose : bool
         This is the verbosity of the ChunkRecordingExecutor
     {}
@@ -117,12 +112,6 @@ def write_binary_recording(
         file_path_list = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_path_list]
 
     dtype = dtype if dtype is not None else recording.get_dtype()
-    if auto_cast_uint:
-        cast_unsigned = determine_cast_unsigned(recording, dtype)
-        warning_message = (
-            "auto_cast_uint is deprecated and will be removed in 0.103. Use the `unsigned_to_signed` function instead."
-        )
-        warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
 
     dtype_size_bytes = np.dtype(dtype).itemsize
     num_channels = recording.get_num_channels()
@@ -144,7 +133,7 @@ def write_binary_recording(
     # use executor (loop or workers)
     func = _write_binary_chunk
     init_func = _init_binary_worker
-    init_args = (recording, file_path_dict, dtype, byte_offset, cast_unsigned)
+    init_args = (recording, file_path_dict, dtype, byte_offset)
     executor = ChunkRecordingExecutor(
         recording, func, init_func, init_args, job_name="write_binary_recording", verbose=verbose, **job_kwargs
     )
@@ -157,7 +146,6 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx["recording"]
     dtype = worker_ctx["dtype"]
     byte_offset = worker_ctx["byte_offset"]
-    cast_unsigned = worker_ctx["cast_unsigned"]
     file = worker_ctx["file_dict"][segment_index]
 
     num_channels = recording.get_num_channels()
@@ -181,9 +169,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     memmap_array = np.ndarray(shape=shape, dtype=dtype, buffer=memmap_obj, offset=start_offset)
 
     # Extract the traces and store them in the memmap array
-    traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
-    )
+    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
 
     if traces.dtype != dtype:
         traces = traces.astype(dtype, copy=False)
@@ -243,13 +229,13 @@ def write_binary_recording_file_handle(
 
 
 # used by write_memory_recording
-def _init_memory_worker(recording, arrays, shm_names, shapes, dtype, cast_unsigned):
+def _init_memory_worker(recording, arrays, shm_names, shapes, dtype):
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
+        from spikeinterface.core import load
 
-        worker_ctx["recording"] = load_extractor(recording)
+        worker_ctx["recording"] = load(recording)
     else:
         worker_ctx["recording"] = recording
 
@@ -269,7 +255,6 @@ def _init_memory_worker(recording, arrays, shm_names, shapes, dtype, cast_unsign
             arrays.append(arr)
 
     worker_ctx["arrays"] = arrays
-    worker_ctx["cast_unsigned"] = cast_unsigned
 
     return worker_ctx
 
@@ -280,17 +265,14 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx["recording"]
     dtype = worker_ctx["dtype"]
     arr = worker_ctx["arrays"][segment_index]
-    cast_unsigned = worker_ctx["cast_unsigned"]
 
     # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
-    )
+    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
     traces = traces.astype(dtype, copy=False)
     arr[start_frame:end_frame, :] = traces
 
 
-def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=True, buffer_type="auto", **job_kwargs):
+def write_memory_recording(recording, dtype=None, verbose=False, buffer_type="auto", **job_kwargs):
     """
     Save the traces into numpy arrays (memory).
     try to use the SharedMemory introduce in py3.8 if n_jobs > 1
@@ -303,8 +285,6 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
         Type of the saved data
     verbose : bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint : bool, default: True
-        If True, unsigned integers are automatically cast to int if the specified dtype is signed
     buffer_type : "auto" | "numpy" | "sharedmem"
     {}
 
@@ -316,10 +296,6 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
 
     if dtype is None:
         dtype = recording.get_dtype()
-    if auto_cast_uint:
-        cast_unsigned = determine_cast_unsigned(recording, dtype)
-    else:
-        cast_unsigned = False
 
     # create sharedmmep
     arrays = []
@@ -352,9 +328,9 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     func = _write_memory_chunk
     init_func = _init_memory_worker
     if n_jobs > 1:
-        init_args = (recording, None, shm_names, shapes, dtype, cast_unsigned)
+        init_args = (recording, None, shm_names, shapes, dtype)
     else:
-        init_args = (recording, arrays, None, None, dtype, cast_unsigned)
+        init_args = (recording, arrays, None, None, dtype)
 
     executor = ChunkRecordingExecutor(
         recording, func, init_func, init_args, verbose=verbose, job_name="write_memory_recording", **job_kwargs
@@ -379,8 +355,8 @@ def write_to_h5_dataset_format(
     chunk_size=None,
     chunk_memory="500M",
     verbose=False,
-    auto_cast_uint=True,
-    return_scaled=False,
+    return_scaled=None,
+    return_in_uV=False,
 ):
     """
     Save the traces of a recording extractor in an h5 dataset.
@@ -412,9 +388,11 @@ def write_to_h5_dataset_format(
         Chunk size in bytes must end with "k", "M" or "G"
     verbose : bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint : bool, default: True
-        If True, unsigned integers are automatically cast to int if the specified dtype is signed
-    return_scaled : bool, default: False
+    return_scaled : bool | None, default: None
+        DEPRECATED. Use return_in_uV instead.
+        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+        traces are dumped to uV
+    return_in_uV : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are dumped to uV
     """
@@ -441,10 +419,6 @@ def write_to_h5_dataset_format(
         dtype_file = recording.get_dtype()
     else:
         dtype_file = dtype
-    if auto_cast_uint:
-        cast_unsigned = determine_cast_unsigned(recording, dtype)
-    else:
-        cast_unsigned = False
 
     if single_axis:
         shape = (num_frames,)
@@ -459,7 +433,15 @@ def write_to_h5_dataset_format(
     chunk_size = ensure_chunk_size(recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1)
 
     if chunk_size is None:
-        traces = recording.get_traces(cast_unsigned=cast_unsigned, return_scaled=return_scaled)
+        # Handle deprecated return_scaled parameter
+        if return_scaled is not None:
+            warnings.warn(
+                "`return_scaled` is deprecated and will be removed in a future version. Use `return_in_uV` instead.",
+                category=DeprecationWarning,
+            )
+            return_in_uV = return_scaled
+
+        traces = recording.get_traces(return_scaled=return_in_uV)
         if dtype is not None:
             traces = traces.astype(dtype_file, copy=False)
         if time_axis == 1:
@@ -483,8 +465,7 @@ def write_to_h5_dataset_format(
                 segment_index=segment_index,
                 start_frame=i * chunk_size,
                 end_frame=min((i + 1) * chunk_size, num_frames),
-                cast_unsigned=cast_unsigned,
-                return_scaled=return_scaled,
+                return_scaled=return_in_uV if return_scaled is None else return_scaled,
             )
             chunk_frames = traces.shape[0]
             if dtype is not None:
@@ -502,16 +483,6 @@ def write_to_h5_dataset_format(
     if save_path is not None:
         file_handle.close()
     return save_path
-
-
-def determine_cast_unsigned(recording, dtype):
-    recording_dtype = np.dtype(recording.get_dtype())
-
-    if np.dtype(dtype) != recording_dtype and recording_dtype.kind == "u" and np.dtype(dtype).kind == "i":
-        cast_unsigned = True
-    else:
-        cast_unsigned = False
-    return cast_unsigned
 
 
 def get_random_recording_slices(
@@ -541,7 +512,7 @@ def get_random_recording_slices(
     chunk_duration : str | float | None, default "500ms"
         The duration of each chunk in 's' or 'ms'
     chunk_size : int | None
-        Size of a chunk in number of frames. This is ued only if chunk_duration is None.
+        Size of a chunk in number of frames. This is used only if chunk_duration is None.
         This is kept for backward compatibility, you should prefer 'chunk_duration=500ms' instead.
     concatenated : bool, default: True
         If True chunk are concatenated along time axis
@@ -586,7 +557,9 @@ def get_random_recording_slices(
         for segment_index in range(num_segments):
             num_frames = recording.get_num_frames(segment_index)
             high = num_frames - chunk_size - margin_frames
-            random_starts = rng.integers(low=low, high=high, size=size)
+            # here we set endpoint to True, because the this represents the start of the
+            # chunk, and should be inclusive
+            random_starts = rng.integers(low=low, high=high, size=size, endpoint=True)
             random_starts = np.sort(random_starts)
             recording_slices += [
                 (segment_index, start_frame, (start_frame + chunk_size)) for start_frame in random_starts
@@ -597,7 +570,9 @@ def get_random_recording_slices(
     return recording_slices
 
 
-def get_random_data_chunks(recording, return_scaled=False, concatenated=True, **random_slices_kwargs):
+def get_random_data_chunks(
+    recording, return_scaled=None, return_in_uV=False, concatenated=True, **random_slices_kwargs
+):
     """
     Extract random chunks across segments.
 
@@ -634,7 +609,7 @@ def get_random_data_chunks(recording, return_scaled=False, concatenated=True, **
             start_frame=start_frame,
             end_frame=end_frame,
             segment_index=segment_index,
-            return_scaled=return_scaled,
+            return_scaled=return_in_uV if return_scaled is None else return_scaled,
         )
         chunk_list.append(traces_chunk)
 
@@ -711,17 +686,18 @@ def _noise_level_chunk(segment_index, start_frame, end_frame, worker_ctx):
     return noise_levels
 
 
-def _noise_level_chunk_init(recording, return_scaled, method):
+def _noise_level_chunk_init(recording, return_in_uV, method):
     worker_ctx = {}
     worker_ctx["recording"] = recording
-    worker_ctx["return_scaled"] = return_scaled
+    worker_ctx["return_scaled"] = return_in_uV
     worker_ctx["method"] = method
     return worker_ctx
 
 
 def get_noise_levels(
     recording: "BaseRecording",
-    return_scaled: bool = True,
+    return_scaled: bool | None = None,
+    return_in_uV: bool = True,
     method: Literal["mad", "std"] = "mad",
     force_recompute: bool = False,
     random_slices_kwargs: dict = {},
@@ -743,7 +719,10 @@ def get_noise_levels(
 
     recording : BaseRecording
         The recording extractor to get noise levels
-    return_scaled : bool
+    return_scaled : bool | None, default: None
+        DEPRECATED. Use return_in_uV instead.
+        If True, returned noise levels are scaled to uV
+    return_in_uV : bool, default: True
         If True, returned noise levels are scaled to uV
     method : "mad" | "std", default: "mad"
         The method to use to estimate noise levels
@@ -761,7 +740,15 @@ def get_noise_levels(
         Noise levels for each channel
     """
 
-    if return_scaled:
+    # Handle deprecated return_scaled parameter
+    if return_scaled is not None:
+        warnings.warn(
+            "`return_scaled` is deprecated and will be removed in a future version. Use `return_in_uV` instead.",
+            category=DeprecationWarning,
+        )
+        return_in_uV = return_scaled
+
+    if return_in_uV:
         key = f"noise_level_{method}_scaled"
     else:
         key = f"noise_level_{method}_raw"
@@ -795,7 +782,7 @@ def get_noise_levels(
 
         func = _noise_level_chunk
         init_func = _noise_level_chunk_init
-        init_args = (recording, return_scaled, method)
+        init_args = (recording, return_in_uV, method)
         executor = ChunkRecordingExecutor(
             recording,
             func,

@@ -1,12 +1,54 @@
 from __future__ import annotations
 
 import numpy as np
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core.motion import ensure_time_bins
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.preprocessing.filter import fix_dtype
 
-from .motion_utils import ensure_time_bin_edges, ensure_time_bins
+
+def compute_peak_displacements(peaks, motion, recording, peak_locations=None):
+    """
+    Compute the local motion for each peak given a motion object.
+
+    Parameters
+    ----------
+    peaks : np.array
+        peaks vector
+    motion : Motion
+        The motion object.
+    recording : Recording
+        The recording object. This is used to convert sample indices to times.
+    peak_locations: np.array | None
+        Optional : peaks location vector.
+        Otherwise use the channel_index for location.
+    Returns
+    -------
+    peak_displacements: np.array
+        Motion-corrected peak locations
+    """
+    if recording is None:
+        raise ValueError("compute_peak_displacements need recording to be not None")
+
+    channel_locations = recording.get_channel_locations()
+
+    peak_displacements = np.zeros(peaks.size, dtype="float32")
+
+    for segment_index in range(motion.num_segments):
+        i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
+        sl = slice(i0, i1)
+        peak_times = recording.sample_index_to_time(peaks["sample_index"][sl], segment_index=segment_index)
+        if peak_locations is None:
+            peak_locs = channel_locations[peaks["channel_index"][sl], motion.dim]
+        else:
+            peak_locs = peak_locations[motion.direction][sl]
+
+        peak_displacements[sl] = motion.get_displacement_at_time_and_depth(
+            peak_times, peak_locs, segment_index=segment_index
+        )
+
+    return peak_displacements
 
 
 def correct_motion_on_peaks(peaks, peak_locations, motion, recording) -> np.ndarray:
@@ -32,18 +74,9 @@ def correct_motion_on_peaks(peaks, peak_locations, motion, recording) -> np.ndar
     if recording is None:
         raise ValueError("correct_motion_on_peaks need recording to be not None")
 
+    peak_displacements = compute_peak_displacements(peaks, motion, recording, peak_locations=peak_locations)
     corrected_peak_locations = peak_locations.copy()
-
-    for segment_index in range(motion.num_segments):
-        times_s = recording.sample_index_to_time(peaks["sample_index"], segment_index=segment_index)
-        i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
-
-        spike_times = times_s[i0:i1]
-        spike_locs = peak_locations[motion.direction][i0:i1]
-        spike_displacement = motion.get_displacement_at_time_and_depth(
-            spike_times, spike_locs, segment_index=segment_index
-        )
-        corrected_peak_locations[i0:i1][motion.direction] -= spike_displacement
+    corrected_peak_locations[motion.direction] -= peak_displacements
 
     return corrected_peak_locations
 
@@ -491,4 +524,6 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
         return traces
 
 
-interpolate_motion = define_function_from_class(source_class=InterpolateMotionRecording, name="interpolate_motion")
+interpolate_motion = define_function_handling_dict_from_class(
+    source_class=InterpolateMotionRecording, name="interpolate_motion"
+)

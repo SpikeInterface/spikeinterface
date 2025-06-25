@@ -1,6 +1,7 @@
 import numpy as np
 
-from .motion_utils import Motion, get_spatial_windows, get_spatial_bin_edges, make_3d_motion_histograms
+from spikeinterface.core.motion import Motion
+from .motion_utils import get_spatial_windows, get_spatial_bin_edges, make_3d_motion_histograms
 
 
 class IterativeTemplateRegistration:

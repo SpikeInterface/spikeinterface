@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
-from ..core import get_chunk_with_margin
+from spikeinterface.core import get_chunk_with_margin
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
@@ -108,7 +108,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-phase_shift = define_function_from_class(source_class=PhaseShiftRecording, name="phase_shift")
+phase_shift = define_function_handling_dict_from_class(source_class=PhaseShiftRecording, name="phase_shift")
 
 
 def apply_frequency_shift(signal, shift_samples, axis=0):

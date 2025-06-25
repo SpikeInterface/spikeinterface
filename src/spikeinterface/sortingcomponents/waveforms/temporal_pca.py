@@ -18,7 +18,12 @@ from .waveform_utils import to_temporal_representation, from_temporal_representa
 
 class TemporalPCBaseNode(WaveformsNode):
     def __init__(
-        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
+        self,
+        recording: BaseRecording,
+        parents: List[PipelineNode],
+        pca_model=None,
+        model_folder_path=None,
+        return_output=True,
     ):
         """
         Base class for PCA projection nodes. Contains the logic of the fit method that should be inherited by all the
@@ -37,24 +42,27 @@ class TemporalPCBaseNode(WaveformsNode):
             parents=parents,
         )
 
-        self.model_folder_path = model_folder_path
+        if pca_model is None:
+            self.model_folder_path = model_folder_path
 
-        if not Path(model_folder_path).is_dir() or model_folder_path is None:
-            exception_string = (
-                f"model_path folder is not a folder or does not exist. \n"
-                f"A model can be trained by using{self.__class__.__name__}.fit(...)"
-            )
-            raise TypeError(exception_string)
+            if model_folder_path is None or not Path(model_folder_path).is_dir():
+                exception_string = (
+                    f"model_path folder is not a folder or does not exist. \n"
+                    f"A model can be trained by using{self.__class__.__name__}.fit(...)"
+                )
+                raise TypeError(exception_string)
 
-        # Load the model and the time interval dict from the model_folder
-        model_path = Path(model_folder_path) / "pca_model.pkl"
-        with open(model_path, "rb") as f:
-            self.pca_model = pickle.load(f)
-        params_path = Path(model_folder_path) / "params.json"
-        with open(params_path, "rb") as f:
-            self.params = json.load(f)
+            # Load the model and the time interval dict from the model_folder
+            model_path = Path(model_folder_path) / "pca_model.pkl"
+            with open(model_path, "rb") as f:
+                self.pca_model = pickle.load(f)
+            params_path = Path(model_folder_path) / "params.json"
+            with open(params_path, "rb") as f:
+                self.params = json.load(f)
 
-        self.assert_model_and_waveform_temporal_match(waveform_extractor)
+            self.assert_model_and_waveform_temporal_match(waveform_extractor)
+        else:
+            self.pca_model = pca_model
 
     def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformsNode):
         """
@@ -180,8 +188,10 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         The recording object
     parents: list
         The parent nodes of this node. This should contain a mechanism to extract waveforms
-    model_folder_path : str, Path
-        The path to the folder containing the pca model and the training metadata
+    pca_model: sklearn model | None
+        The already fitted sklearn model instead of model_folder_path
+    model_folder_path : str | Path | None
+        If pca_model is None, the path to the folder containing the pca model and the training metadata.
     return_output: bool, default: True
         use false to suppress the output of this node in the pipeline
 
@@ -191,12 +201,18 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         self,
         recording: BaseRecording,
         parents: List[PipelineNode],
-        model_folder_path: str,
+        pca_model=None,
+        model_folder_path=None,
         dtype="float32",
         return_output=True,
     ):
         TemporalPCBaseNode.__init__(
-            self, recording=recording, parents=parents, return_output=return_output, model_folder_path=model_folder_path
+            self,
+            recording=recording,
+            parents=parents,
+            return_output=return_output,
+            pca_model=pca_model,
+            model_folder_path=model_folder_path,
         )
         self.n_components = self.pca_model.n_components
         self.dtype = np.dtype(dtype)
@@ -244,18 +260,30 @@ class TemporalPCADenoising(TemporalPCBaseNode):
         The recording object
     parents: list
         The parent nodes of this node. This should contain a mechanism to extract waveforms
-    model_folder_path : str, Path
-        The path to the folder containing the pca model and the training metadata
+    pca_model: sklearn model | None
+        The already fitted sklearn model instead of model_folder_path
+    model_folder_path : str | Path | None
+        If pca_model is None, the path to the folder containing the pca model and the training metadata.
     return_output: bool, default: True
         use false to suppress the output of this node in the pipeline
 
     """
 
     def __init__(
-        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
+        self,
+        recording: BaseRecording,
+        parents: List[PipelineNode],
+        pca_model=None,
+        model_folder_path=None,
+        return_output=True,
     ):
         TemporalPCBaseNode.__init__(
-            self, recording=recording, parents=parents, return_output=return_output, model_folder_path=model_folder_path
+            self,
+            recording=recording,
+            parents=parents,
+            return_output=return_output,
+            pca_model=pca_model,
+            model_folder_path=model_folder_path,
         )
 
     def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
@@ -288,3 +316,121 @@ class TemporalPCADenoising(TemporalPCBaseNode):
             denoised_waveforms = np.zeros_like(waveforms)
 
         return denoised_waveforms
+
+
+class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
+    """
+    Similar to TemporalPCAProjection but also apply interpolation to revert a motion.
+
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording object
+    parents: list
+        The parent nodes of this node. This should contain a mechanism to extract waveforms
+    pca_model: sklearn model | None
+        The already fitted sklearn model instead of model_folder_path
+    model_folder_path : str | Path | None
+        If pca_model is None, the path to the folder containing the pca model and the training metadata.
+    motion: Motion
+        A motion object.
+    return_output: bool, default: True
+        use false to suppress the output of this node in the pipeline
+
+    """
+
+    _compute_has_extended_signature = True
+
+    def __init__(
+        self,
+        recording: BaseRecording,
+        parents: List[PipelineNode],
+        pca_model=None,
+        model_folder_path=None,
+        motion=None,
+        interpolation_method="cubic",
+        dtype="float32",
+        return_output=True,
+    ):
+        TemporalPCBaseNode.__init__(
+            self,
+            recording=recording,
+            parents=parents,
+            return_output=return_output,
+            pca_model=pca_model,
+            model_folder_path=model_folder_path,
+        )
+        self.n_components = self.pca_model.n_components
+        self.dtype = np.dtype(dtype)
+        self.motion = motion
+        self.interpolation_method = interpolation_method
+
+        self.channel_locations = self.recording.get_channel_locations()
+
+        self.neighbours_mask = self.parents[1].neighbours_mask
+
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peaks, waveforms) -> np.ndarray:
+        """
+        Projects the waveforms using the PCA model trained in the fit method or loaded from the model_folder_path.
+
+        Parameters
+        ----------
+        traces : np.ndarray
+            The traces of the recording.
+        peaks : np.ndarray
+            The peaks resulting from a peak_detection step.
+        waveforms : np.ndarray
+            Waveforms extracted from the recording using a WavefomExtractor node.
+
+        Returns
+        -------
+        np.ndarray
+            The projected waveforms.
+
+        """
+
+        import scipy.interpolate
+
+        # peak_motions = np.zeros(peaks.size, dtype="float32")
+
+        num_channels = waveforms.shape[2]
+        if waveforms.shape[0] > 0:
+            temporal_waveforms = to_temporal_representation(waveforms)
+            projected_temporal_waveforms = self.pca_model.transform(temporal_waveforms)
+            projected_waveforms_static = from_temporal_representation(projected_temporal_waveforms, num_channels)
+
+            projected_waveforms = np.zeros_like(projected_waveforms_static)
+
+            for i, peak in enumerate(peaks):
+                # print(peak["channel_index"], peak["segment_index"])
+                abs_sample_index = peak["sample_index"] + start_frame - max_margin
+                chan_index = peak["channel_index"]
+                peak_time = self.recording.sample_index_to_time(abs_sample_index, segment_index=peak["segment_index"])
+                peak_depth = self.channel_locations[chan_index, self.motion.dim]
+                peak_motion = self.motion.get_displacement_at_time_and_depth(
+                    np.array([peak_time]),
+                    np.array([peak_depth]),
+                    segment_index=peak["segment_index"],
+                )
+                peak_motion = peak_motion[0]
+
+                # interpolate the svd to the original position
+                local_chans = np.flatnonzero(self.neighbours_mask[chan_index, :])
+                source_locations = self.channel_locations[local_chans, :]
+                dest_locations = source_locations.copy()
+                dest_locations[:, self.motion.dim] += peak_motion
+
+                for c in range(self.n_components):
+                    projected_waveforms[i, c, : local_chans.size] = scipy.interpolate.griddata(
+                        source_locations,
+                        projected_waveforms_static[i, c, : local_chans.size],
+                        dest_locations,
+                        method=self.interpolation_method,
+                        fill_value=0,
+                    )
+
+        else:
+            projected_waveforms = np.zeros((0, self.n_components, num_channels), dtype=self.dtype)
+
+        return (projected_waveforms.astype(self.dtype, copy=False),)

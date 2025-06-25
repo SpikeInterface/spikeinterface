@@ -87,39 +87,28 @@ Splitting a recording by channel group returns a dictionary containing separate 
 Preprocessing a Recording by Channel Group
 ------------------------------------------
 
-The essence of preprocessing by channel group is to first split the recording
-into separate recordings, perform the preprocessing steps, then aggregate
-the channels back together.
-
-In the below example, we loop over the split recordings, preprocessing each channel group
-individually. At the end, we use the :py:func:`~aggregate_channels` function
-to combine the separate channel group recordings back together.
+If a preprocessing function is given a dictionary of recordings, it will apply the preprocessing
+seperately to each recording in the dict, and return a dictionary of preprocessed recordings.
+Hence we can pass the ``split_recording_dict`` in the same way as we would pass a single recording
+to any preprocessing function.
 
 .. code-block:: python
 
-    preprocessed_recordings = []
+    shifted_recordings = spre.phase_shift(split_recording_dict)
+    filtered_recording = spre.bandpass_filter(shifted_recording)
+    referenced_recording = spre.common_reference(filtered_recording)
+    good_channels_recording = spre.detect_and_remove_bad_channels(filtered_recording)
 
-   # loop over the recordings contained in the dictionary
-    for chan_group_rec in split_recordings_dict.values():
+We can then aggregate the recordings back together using the ``aggregate_channels`` function
 
-        # Apply the preprocessing steps to the channel group in isolation
-        shifted_recording = spre.phase_shift(chan_group_rec)
+.. code-block:: python
 
-        filtered_recording = spre.bandpass_filter(shifted_recording)
+    combined_preprocessed_recording = aggregate_channels(good_channels_recording)
 
-        referenced_recording = spre.common_reference(filtered_recording)
-
-        preprocessed_recordings.append(referenced_recording)
-
-    # Combine our preprocessed channel groups back together
-    combined_preprocessed_recording = aggregate_channels(preprocessed_recordings)
-
-Now, when this recording is used in sorting, plotting, or whenever
+Now, when ``combined_preprocessed_recording`` is used in sorting, plotting, or whenever
 calling its :py:func:`~get_traces` method, the data will have been
 preprocessed separately per-channel group (then concatenated
 back together under the hood).
-
-It is strongly recommended to use the above structure to preprocess by channel group.
 
 .. note::
 
