@@ -619,7 +619,7 @@ def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclass
         for u1 in unit1_ids:
             u2 = unit_map12[u1]
             sts = sts1[u1][seg_index]
-            if u2 != -1:
+            if u2 != -1 and u2 != "":
                 lab_st1 = labels_st1[u1][seg_index]
                 lab_st2 = labels_st2[u2][seg_index]
                 mapped_st = sorting2.get_unit_spike_train(u2, seg_index)
@@ -813,7 +813,7 @@ def do_count_score(event_counts1, event_counts2, match_12, match_event_count):
     for i1, u1 in enumerate(unit1_ids):
         u2 = match_12[u1]
         count_score.at[u1, "tested_id"] = u2
-        if u2 == -1:
+        if u2 == -1 or u2 == "":
             count_score.at[u1, "num_tested"] = 0
             count_score.at[u1, "tp"] = 0
             count_score.at[u1, "fp"] = 0
