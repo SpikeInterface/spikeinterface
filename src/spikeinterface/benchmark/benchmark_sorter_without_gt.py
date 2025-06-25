@@ -29,30 +29,24 @@ class SorterBenchmarkWithoutGroundTruth(Benchmark):
         self.result = {"sorting": sorting}
 
     def compute_result(self, residulal_peak_threshold=6, **job_kwargs):
-        
-        sorting = self.result['sorting']
-        analyzer = create_sorting_analyzer(
-            sorting, self.recording, sparse=True, format="memory", **job_kwargs
-        )
+
+        sorting = self.result["sorting"]
+        analyzer = create_sorting_analyzer(sorting, self.recording, sparse=True, format="memory", **job_kwargs)
         analyzer.compute("random_spikes")
         analyzer.compute("templates")
         analyzer.compute("noise_levels")
-        analyzer.compute(
-            {
-                "spike_amplitudes" : {},
-                "amplitude_scalings" : {"handle_collisions": False}
-            },
-            **job_kwargs)
+        analyzer.compute({"spike_amplitudes": {}, "amplitude_scalings": {"handle_collisions": False}}, **job_kwargs)
 
         analyzer.compute("quality_metrics", **job_kwargs)
 
         residual, peaks = analyse_residual(
-            analyzer, detect_peaks_kwargs=dict(
+            analyzer,
+            detect_peaks_kwargs=dict(
                 method="locally_exclusive",
                 peak_sign="neg",
                 detect_threshold=residulal_peak_threshold,
             ),
-            **job_kwargs
+            **job_kwargs,
         )
 
         self.result["sorter_analyzer"] = analyzer
@@ -65,9 +59,7 @@ class SorterBenchmarkWithoutGroundTruth(Benchmark):
         ("multi_comp", "pickle"),
         ("sorter_analyzer", "sorting_analyzer"),
         ("peaks_from_residual", "npy"),
-        
     ]
-
 
 
 class SorterStudyWithoutGroundTruth(BenchmarkStudy):
@@ -84,19 +76,21 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
         sorter_folder = self.folder / "sorters" / self.key_to_str(key)
         benchmark = SorterBenchmarkWithoutGroundTruth(recording, gt_sorting, params, sorter_folder)
         return benchmark
-    
+
     def _get_comparison_groups(self):
         # multicomparison are done on all cases sharing the same dataset key.
         case_keys = list(self.cases.keys())
         groups = {}
         for case_key in case_keys:
-            data_key = self.cases[case_key]['dataset']
+            data_key = self.cases[case_key]["dataset"]
             if data_key not in groups:
                 groups[data_key] = []
             groups[data_key].append(case_key)
         return groups
 
-    def compute_results(self, case_keys=None, verbose=False, delta_time=0.4, match_score=0.5, chance_score=0.1, **result_params):
+    def compute_results(
+        self, case_keys=None, verbose=False, delta_time=0.4, match_score=0.5, chance_score=0.1, **result_params
+    ):
         # Here we need a hack because the results is not computed case by case but all at once
 
         assert case_keys is None, "SorterStudyWithoutGroundTruth do not permit compute_results for sub cases"
@@ -112,7 +106,7 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
 
         for data_key, group in groups.items():
 
-            sorting_list = [self.get_result(key)['sorting'] for key in group]
+            sorting_list = [self.get_result(key)["sorting"] for key in group]
             name_list = [key for key in group]
             multi_comp = compare_multiple_sorters(
                 sorting_list,
@@ -129,7 +123,7 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
             # and then the same multi comp is stored for each case_key
             for key in case_keys:
                 benchmark = self.benchmarks[key]
-                benchmark.result['multi_comp'] = multi_comp
+                benchmark.result["multi_comp"] = multi_comp
                 benchmark.save_result(self.folder / "results" / self.key_to_str(key))
 
     def plot_residual_peak_amplitudes(self, figsize=None):
@@ -140,7 +134,7 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
 
         for data_key, group in groups.items():
             fig, ax = plt.subplots(figsize=figsize)
-            
+
             lim0, lim1 = np.inf, -np.inf
 
             for key in group:
@@ -155,7 +149,6 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
             if lim0 > 0:
                 lim0 = 0
 
-
             for key in group:
                 peaks = self.get_result(key)["peaks_from_residual"]
                 print(peaks.size)
@@ -164,6 +157,7 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
                 ax.plot(bins[:-1], count, color=colors[key], label=self.cases[key]["label"])
 
             ax.legend()
+
     # def plot_quality_metrics_comparison_on_agreement(self, qm_name='rp_contamination', figsize=None):
     #     import matplotlib.pyplot as plt
 
@@ -185,13 +179,13 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
 
     #                     multi_comp = self.get_result(key1)['multi_comp']
     #                     comp = multi_comp.comparisons[key1, key2]
-                        
+
     #                     match_12 = comp.hungarian_match_12
     #                     if match_12.dtype.kind =='i':
     #                         mask = match_12.values != -1
     #                     if match_12.dtype.kind =='U':
     #                         mask = match_12.values != ''
-                        
+
     #                     common_unit1_ids = match_12[mask].index
     #                     common_unit2_ids = match_12[mask].values
     #                     metrics1 = self.get_result(key1)["sorter_analyzer"].get_extension("quality_metrics").get_data()
@@ -212,7 +206,6 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
     #                         ax.set_xticklabels([])
     #                         ax.set_yticklabels([])
 
-
     # def plot_quality_metrics_comparison_on_non_agreement(self, qm_name='rp_contamination', figsize=None):
     #     import matplotlib.pyplot as plt
 
@@ -223,4 +216,3 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
     #         fig, ax = plt.subplots(figsize=figsize)
     #         for key in group:
     #             pass
-    
