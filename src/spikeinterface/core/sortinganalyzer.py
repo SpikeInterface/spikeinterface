@@ -21,8 +21,7 @@ import probeinterface
 
 import spikeinterface
 
-from .baserecording import BaseRecording
-from .basesorting import BaseSorting
+from spikeinterface.core import BaseRecording, BaseSorting, aggregate_channels, aggregate_units
 
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
 from .core_tools import (
@@ -133,6 +132,31 @@ def create_sorting_analyzer(
     In some situation, sparsity is not needed, so to make it fast creation, you need to turn
     sparsity off (or give external sparsity) like this.
     """
+
+    if isinstance(sorting, dict) & isinstance(recording, dict):
+
+        if sorting.keys() != recording.keys():
+            raise ValueError(
+                f"Keys of `sorting`, {sorting.keys()}, and `recording`, {recording.keys()}, dicts do not match."
+            )
+
+        aggregated_recording = aggregate_channels(recording)
+        aggregated_sorting = aggregate_units(sorting_list=list(sorting.values()))
+
+        return create_sorting_analyzer(
+            sorting=aggregated_sorting,
+            recording=aggregated_recording,
+            format=format,
+            folder=folder,
+            sparse=sparse,
+            sparsity=sparsity,
+            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
+            overwrite=overwrite,
+            backend_options=backend_options,
+            **sparsity_kwargs,
+        )
+
     if format != "memory":
         if format == "zarr":
             if not is_path_remote(folder):
