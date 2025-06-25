@@ -70,7 +70,7 @@ _common_param_doc = """
     ----------
     sorter_name : str
         The sorter name
-    recording : RecordingExtractor
+    recording : RecordingExtractor | dict of RecordingExtractor
         The recording extractor to be spike sorted
     folder : str or Path
         Path to output folder
@@ -105,7 +105,7 @@ _common_param_doc = """
 
 def run_sorter(
     sorter_name: str,
-    recording: BaseRecording,
+    recording: BaseRecording | dict,
     folder: Optional[str] = None,
     remove_existing_folder: bool = False,
     delete_output_folder: bool = False,
@@ -123,7 +123,7 @@ def run_sorter(
     {}
     Returns
     -------
-    BaseSorting | None
+    BaseSorting | dict of BaseSorting | None
         The spike sorted data (it `with_output` is True) or None (if `with_output` is False)
 
     Examples
@@ -153,9 +153,13 @@ def run_sorter(
     if isinstance(recording, dict):
 
         all_kwargs = common_kwargs
-        all_kwargs["docker_image"] = docker_image
-        all_kwargs["singularity_image"] = singularity_image
-        all_kwargs["delete_container_files"] = delete_container_files
+        all_kwargs.update(
+            dict(
+                docker_image=docker_image,
+                singularity_image=singularity_image,
+                delete_container_files=delete_container_files,
+            )
+        )
 
         dict_of_sorters = _run_sorter_by_dict(recording, **all_kwargs)
         return dict_of_sorters
