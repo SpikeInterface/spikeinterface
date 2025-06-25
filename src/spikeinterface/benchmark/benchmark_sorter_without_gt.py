@@ -62,6 +62,7 @@ class SorterBenchmarkWithoutGroundTruth(Benchmark):
         ("sorting", "sorting"),
     ]
     _result_key_saved = [
+        # note that this multi_comp is the same accros benchmark (cases)
         ("multi_comp", "pickle"),
         ("sorter_analyzer", "sorting_analyzer"),
         ("peaks_from_residual", "npy"),
@@ -72,7 +73,9 @@ class SorterBenchmarkWithoutGroundTruth(Benchmark):
 
 class SorterStudyWithoutGroundTruth(BenchmarkStudy):
     """
-    This class is an alternative to SorterStudy when the dataset do not have groundtruth
+    This class is an alternative to SorterStudy when the dataset do not have groundtruth.
+
+    This is mainly base on the residual analysis.
     """
 
     benchmark_class = SorterBenchmarkWithoutGroundTruth
@@ -164,6 +167,7 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
                 ax.plot(bins[:-1], count, color=colors[key], label=self.cases[key]["label"])
 
             ax.legend()
+    
     # def plot_quality_metrics_comparison_on_agreement(self, qm_name='rp_contamination', figsize=None):
     #     import matplotlib.pyplot as plt
 
@@ -213,14 +217,3 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
     #                         ax.set_yticklabels([])
 
 
-    # def plot_quality_metrics_comparison_on_non_agreement(self, qm_name='rp_contamination', figsize=None):
-    #     import matplotlib.pyplot as plt
-
-    #     groups = self._get_comparison_groups()
-
-    #     for data_key, group in groups.items():
-    #         n = len(group)
-    #         fig, ax = plt.subplots(figsize=figsize)
-    #         for key in group:
-    #             pass
-    
