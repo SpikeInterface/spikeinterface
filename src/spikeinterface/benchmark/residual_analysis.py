@@ -1,17 +1,15 @@
 from spikeinterface.core.generate import InjectTemplatesRecording
 
 
-
 def analyse_residual(
-        analyzer,
-        detect_peaks_kwargs=dict(
-            method="locally_exclusive",
-            peak_sign="both",
-            detect_threshold=6.,
-
-        ),
-        **job_kwargs
-    ):
+    analyzer,
+    detect_peaks_kwargs=dict(
+        method="locally_exclusive",
+        peak_sign="both",
+        detect_threshold=6.0,
+    ),
+    **job_kwargs,
+):
     """
     This create the residual by removing each spike from the recording.
     This take in account the spike amplitude scaling, analyzer need "amplitude_scalings" extensions.
@@ -41,8 +39,6 @@ def analyse_residual(
     return residual, peaks
 
 
-
-
 def make_residual_recording(analyzer):
     """
     This make a lazy recording residual from an anlyzer.
@@ -56,7 +52,7 @@ def make_residual_recording(analyzer):
     residual : Recording
         The resdiual
     """
-    
+
     templates = analyzer.get_extension("templates").get_templates(outputs="Templates")
     neg_templates_array = templates.templates_array.copy()
     neg_templates_array *= -1

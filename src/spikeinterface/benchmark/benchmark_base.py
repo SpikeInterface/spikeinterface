@@ -9,7 +9,6 @@ import numpy as np
 import time
 
 
-
 from spikeinterface.core import SortingAnalyzer, NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface import load, create_sorting_analyzer, load_sorting_analyzer
@@ -130,7 +129,9 @@ class BenchmarkStudy:
                 else:
                     # some study/benchmark has no GT sorting
                     # in that case we still need an analyzer for internal API
-                    gt_sorting = NumpySorting.from_samples_and_labels([np.array([])], [np.array([])], rec.sampling_frequency, unit_ids=None)
+                    gt_sorting = NumpySorting.from_samples_and_labels(
+                        [np.array([])], [np.array([])], rec.sampling_frequency, unit_ids=None
+                    )
                     analyzer = create_sorting_analyzer(
                         gt_sorting, rec, sparse=False, format="binary_folder", folder=local_analyzer_folder
                     )

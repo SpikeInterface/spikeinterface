@@ -40,13 +40,11 @@ def _create_simple_study_no_gt(study_folder):
                 "sorter_name": "spykingcircus2",
             },
         },
-
     }
 
-    study = SorterStudyWithoutGroundTruth.create(
-        study_folder, datasets=datasets, cases=cases
-    )
+    study = SorterStudyWithoutGroundTruth.create(study_folder, datasets=datasets, cases=cases)
     # print(study)
+
 
 @pytest.mark.skip()
 def test_SorterStudyWithoutGroundTruth(create_simple_study):
@@ -64,9 +62,10 @@ def test_SorterStudyWithoutGroundTruth(create_simple_study):
     print(study)
 
 
-
 if __name__ == "__main__":
-    study_folder_simple = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_SorterStudyWithoutGroundTruth"
+    study_folder_simple = (
+        Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_SorterStudyWithoutGroundTruth"
+    )
     print(study_folder_simple)
     if study_folder_simple.exists():
         shutil.rmtree(study_folder_simple)
