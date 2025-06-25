@@ -162,16 +162,99 @@ class BaseSorting(BaseExtractor):
             ).astype("int64")
 
         if return_times:
-            if self.has_recording():
-                times = self.get_times(segment_index=segment_index)
-                return times[spike_frames]
-            else:
+            # Use the new get_unit_spike_train_in_seconds method for better precision
+            start_time = None
+            end_time = None
+
+            if start_frame is not None:
                 segment = self._sorting_segments[segment_index]
                 t_start = segment._t_start if segment._t_start is not None else 0
-                spike_times = spike_frames / self.get_sampling_frequency()
-                return t_start + spike_times
+                start_time = start_frame / self.get_sampling_frequency() + t_start
+
+            if end_frame is not None:
+                segment = self._sorting_segments[segment_index]
+                t_start = segment._t_start if segment._t_start is not None else 0
+                end_time = end_frame / self.get_sampling_frequency() + t_start
+
+            return self.get_unit_spike_train_in_seconds(
+                unit_id=unit_id,
+                segment_index=segment_index,
+                start_time=start_time,
+                end_time=end_time,
+            )
         else:
             return spike_frames
+
+    def get_unit_spike_train_in_seconds(
+        self,
+        unit_id: str | int,
+        segment_index: Union[int, None] = None,
+        start_time: Union[float, None] = None,
+        end_time: Union[float, None] = None,
+    ):
+        """
+        Get spike train for a unit in seconds.
+
+        This method avoids double conversion for extractors that already store
+        spike times in seconds (e.g., NWB format). If the segment implements
+        get_unit_spike_train_in_seconds(), it uses that directly. Otherwise,
+        it falls back to the standard frame-to-time conversion.
+
+        Parameters
+        ----------
+        unit_id : str or int
+            The unit id to retrieve spike train for
+        segment_index : int or None, default: None
+            The segment index to retrieve spike train from.
+            For multi-segment objects, it is required
+        start_time : float or None, default: None
+            The start time in seconds for spike train extraction
+        end_time : float or None, default: None
+            The end time in seconds for spike train extraction
+
+        Returns
+        -------
+        spike_times : np.ndarray
+            Spike times in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        segment = self._sorting_segments[segment_index]
+
+        # Try to use segment-specific method if available
+        if hasattr(segment, "get_unit_spike_train_in_seconds"):
+            return segment.get_unit_spike_train_in_seconds(unit_id=unit_id, start_time=start_time, end_time=end_time)
+
+        # Fall back to frame-based conversion
+        start_frame = None
+        end_frame = None
+
+        if start_time is not None:
+            t_start = segment._t_start if segment._t_start is not None else 0
+            start_frame = int((start_time - t_start) * self.get_sampling_frequency())
+
+        if end_time is not None:
+            t_start = segment._t_start if segment._t_start is not None else 0
+            end_frame = int((end_time - t_start) * self.get_sampling_frequency())
+
+        # Get spike train in frames and convert to times using traditional method
+        spike_frames = self.get_unit_spike_train(
+            unit_id=unit_id,
+            segment_index=segment_index,
+            start_frame=start_frame,
+            end_frame=end_frame,
+            return_times=False,
+            use_cache=True,
+        )
+
+        # Convert frames to times
+        if self.has_recording():
+            times = self.get_times(segment_index=segment_index)
+            return times[spike_frames]
+        else:
+            segment = self._sorting_segments[segment_index]
+            t_start = segment._t_start if segment._t_start is not None else 0
+            spike_times = spike_frames / self.get_sampling_frequency()
+            return t_start + spike_times
 
     def register_recording(self, recording, check_spike_frames=True):
         """
