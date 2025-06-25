@@ -767,6 +767,8 @@ def merge_peak_labels_from_templates(peaks, peak_labels, unit_ids,
     Low level function used in sorting components for merging templates based on similarity metrics.
 
     This is mostly used in clustering method to clean possible oversplits.
+
+    templates_array is dense (num_templates, num_total_channel) but have a sparsity_mask compagion
     """
     assert len(unit_ids) == templates_array.shape[0]
     
@@ -798,6 +800,7 @@ def merge_peak_labels_from_templates(peaks, peak_labels, unit_ids,
     # print("merges", templates_array.shape[0], "to", n_components)
 
     merge_template_array = templates_array.copy()
+    merge_sparsity_mask = sparsity_mask.copy()
     new_unit_ids = np.zeros(n_components, dtype=unit_ids.dtype)
     for c in range(n_components):
         merge_group = np.flatnonzero(group_labels == c)
@@ -822,8 +825,10 @@ def merge_peak_labels_from_templates(peaks, peak_labels, unit_ids,
                     keep_template[l] = False
             weights /= weights.sum()
             merge_template_array[g0, :, :] = np.sum(merge_template_array[merge_group, :, :] * weights[:, np.newaxis, np.newaxis], axis=0)
+            merge_sparsity_mask[g0, :] = np.all(sparsity_mask[merge_group, :], axis=0)
     
     merge_template_array = merge_template_array[keep_template, :, :]
+    merge_sparsity_mask = merge_sparsity_mask[keep_template, :]
 
-    return clean_labels, merge_template_array, new_unit_ids
+    return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids
     

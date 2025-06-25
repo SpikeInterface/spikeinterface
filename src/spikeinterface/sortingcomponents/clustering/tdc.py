@@ -10,6 +10,8 @@ import shutil
 from spikeinterface.core import (
     get_channel_distances,
     get_global_tmp_folder,
+    Templates,
+    ChannelSparsity
 )
 
 from spikeinterface.core.node_pipeline import (
@@ -142,30 +144,49 @@ class TdcClustering:
             **job_kwargs,
         )
 
-        if params["clustering"]["do_merge"]:
-            templates, sparse_mask2 = get_templates_from_peaks_and_svd(
-                recording,
-                peaks,
-                post_split_label,
-                ms_before,
-                ms_after,
-                svd_model,
-                peaks_svd,
-                sparse_mask,
-                operator="average",
-            )
+        dense_templates, template_sparse_mask = get_templates_from_peaks_and_svd(
+            recording,
+            peaks,
+            post_split_label,
+            ms_before,
+            ms_after,
+            svd_model,
+            peaks_svd,
+            sparse_mask,
+            operator="average",
+        )
 
-            post_merge_label, merge_template_array, new_unit_ids = merge_peak_labels_from_templates(
-                peaks, post_split_label, templates.unit_ids,
-                templates.templates_array, sparse_mask2,
+        if params["clustering"]["do_merge"]:
+
+            post_merge_label, merge_template_array, merge_sparsity_mask, new_unit_ids = merge_peak_labels_from_templates(
+                peaks, post_split_label, dense_templates.unit_ids,
+                dense_templates.templates_array, template_sparse_mask,
                 **params["clustering"]["merge_kwargs"]
             )
+            
+            dense_templates  = Templates(
+                templates_array=merge_template_array,
+                sampling_frequency=dense_templates.sampling_frequency,
+                nbefore=dense_templates.nbefore,
+                sparsity_mask=None,
+                channel_ids=recording.channel_ids,
+                unit_ids=new_unit_ids,
+                probe=recording.get_probe(),
+                is_scaled=False
+            )
+            template_sparse_mask = merge_sparsity_mask
+
+            
             # todo handle shifts
             # peak_shifts = np.zeros(post_split_label.size, dtype="int64")
 
         else:
             post_merge_label = post_split_label.copy()
             # peak_shifts = np.zeros(post_split_label.size, dtype="int64")
+
+
+        sparsity = ChannelSparsity(template_sparse_mask, dense_templates.unit_ids, recording.channel_ids)
+        templates = dense_templates.to_sparse(sparsity)
 
         # sparse_wfs = np.load(features_folder / "sparse_wfs.npy", mmap_mode="r")
 
@@ -179,14 +200,17 @@ class TdcClustering:
         to_remove = labels_set[count < minimum_cluster_size]
         mask = np.isin(post_clean_label, to_remove)
         post_clean_label[mask] = -1
-
-        # final out
         final_peak_labels = post_clean_label
         labels_set = np.unique(final_peak_labels)
-        labels_set = labels_set[labels_set >= 0]
+        labels_set = labels_set[labels_set>=0]
+        templates = templates.select_units(labels_set)
 
         # if need_folder_rm:
         #     shutil.rmtree(clustering_folder)
 
         # extra_out = {"peak_shifts": peak_shifts}
-        return labels_set, final_peak_labels
+
+        more_outs = dict(
+            templates=templates,
+        )        
+        return labels_set, final_peak_labels, more_outs

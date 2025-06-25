@@ -115,10 +115,10 @@ if __name__ == "__main__":
     peaks = run_peaks(recording, job_kwargs)
     peak_locations = run_peak_locations(recording, peaks, job_kwargs)
     # method = "position_and_pca"
-    # method = "circus-clustering"
+    method = "circus-clustering"
     # method = "tdc-clustering"
     # method = "random_projections"
-    method = "graph-clustering"
+    # method = "graph-clustering"
 
     test_find_cluster_from_peaks(method, recording, peaks, peak_locations)
 
