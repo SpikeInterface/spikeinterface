@@ -228,6 +228,11 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         # need neo 0.10.0
         signal_channels = self.neo_reader.header["signal_channels"]
         mask = signal_channels["stream_id"] == stream_id
+        
+        # if stream has duplicate channel_id assignments, correct this
+        seen = set()        
+        dupid = [i for i,x in enumerate(signal_channels[mask]["id"]) if x in seen or seen.add(x)]
+        mask[dupid] = False
         signal_channels = signal_channels[mask]
 
         if use_names_as_ids:
