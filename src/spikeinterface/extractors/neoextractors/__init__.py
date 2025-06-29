@@ -86,3 +86,18 @@ neo_event_extractors_dict = {
     SpikeGLXEventExtractor: dict(wrapper_string="read_spikeglx_event", wrapper_class=read_spikeglx_event),
     MaxwellEventExtractor: dict(wrapper_string="read_maxwell_event", wrapper_class=read_maxwell_event),
 }
+
+
+# Utils dicts used for get_neo_extractor and get_neo_streams
+neo_recording_class_dict = {
+    rec_class.__name__.replace("Recording", "").replace("Extractor", "").lower(): rec_class
+    for rec_class in neo_recording_extractors_dict.keys()
+}
+neo_sorting_class_dict = {
+    sort_class.__name__.replace("Sorting", "").replace("Extractor", "").lower(): sort_class
+    for sort_class in neo_sorting_extractors_dict.keys()
+}
+neo_event_class_dict = {
+    event_class.__name__.replace("Event", "").replace("Extractor", "").lower(): event_class
+    for event_class in neo_event_extractors_dict.keys()
+}
