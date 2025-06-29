@@ -53,16 +53,6 @@ def read_file_from_backend(
         else:
             raise RuntimeError(f"{file_path} is not a valid HDF5 file!")
 
-    elif stream_mode == "ros3":
-        import h5py
-
-        assert file_path is not None, "file_path must be specified when using stream_mode='ros3'"
-
-        drivers = h5py.registered_drivers()
-        assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
-        assert "ros3" in drivers, assertion_msg
-        open_file = h5py.File(name=file_path, mode="r", driver="ros3")
-
     elif stream_mode == "remfile":
         import remfile
         import h5py
@@ -534,13 +524,6 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
         storage_options: dict | None = None,
         use_pynwb: bool = False,
     ):
-
-        if stream_mode == "ros3":
-            warnings.warn(
-                "The 'ros3' stream_mode is deprecated and will be removed in version 0.103.0. "
-                "Use 'fsspec' stream_mode instead.",
-                DeprecationWarning,
-            )
 
         if file_path is not None and file is not None:
             raise ValueError("Provide either file_path or file, not both")
@@ -1061,13 +1044,6 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
         storage_options: dict | None = None,
         use_pynwb: bool = False,
     ):
-
-        if stream_mode == "ros3":
-            warnings.warn(
-                "The 'ros3' stream_mode is deprecated and will be removed in version 0.103.0. "
-                "Use 'fsspec' stream_mode instead.",
-                DeprecationWarning,
-            )
 
         self.stream_mode = stream_mode
         self.stream_cache_path = stream_cache_path

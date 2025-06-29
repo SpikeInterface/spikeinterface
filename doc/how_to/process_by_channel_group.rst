@@ -160,7 +160,7 @@ sorting objects in a dictionary for later use.
         sorting = run_sorter(
             sorter_name='kilosort2',
             recording=split_preprocessed_recording,
-            output_folder=f"folder_KS2_group{group}"
+            folder=f"folder_KS2_group{group}"
             )
         sortings[group] = sorting
 
