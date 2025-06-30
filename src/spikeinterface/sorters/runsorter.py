@@ -244,7 +244,7 @@ def _run_sorter_by_dict(dict_of_recordings: dict, folder: str | Path | None = No
     info = dict(
         version=spikeinterface.__version__,
         dev_mode=spikeinterface.DEV_MODE,
-        object="Group[SorterOutput]",
+        object="Group[SorterFolder]",
         dict_keys=list(dict_of_recordings.keys()),
     )
     with open(info_file, mode="w") as f:

@@ -201,7 +201,7 @@ def _guess_object_from_local_folder(folder):
         and (folder / "spikeinterface_params.json").is_file()
         and (folder / "spikeinterface_log.json").is_file()
     ):
-        return "SorterOutput"
+        return "SorterFolder"
     elif (folder / "waveforms").is_dir():
         # before the SortingAnlazer, it was WaveformExtractor (v<0.101)
         return "WaveformExtractor"
@@ -226,7 +226,7 @@ def _load_object_from_folder(folder, object_type: str, **kwargs):
         analyzer = load_sorting_analyzer(folder, **kwargs)
         return analyzer
 
-    elif object_type == "SorterOutput":
+    elif object_type == "SorterFolder":
         from spikeinterface.sorters import read_sorter_folder
 
         sorting = read_sorter_folder(folder)
