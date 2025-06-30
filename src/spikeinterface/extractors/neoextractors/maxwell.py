@@ -91,7 +91,10 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         auto_install_maxwell_hdf5_compression_plugin(force_download=False)
 
 
-_maxwell_event_dtype = np.dtype([("id", "int8"), ("frame", "uint32"), ("time", "float64"), ("state", "uint32"), ("message", "object")])
+_maxwell_event_dtype = np.dtype(
+    [("id", "int8"), ("frame", "uint32"), ("time", "float64"), ("state", "uint32"), ("message", "object")]
+)
+
 
 class MaxwellEventExtractor(BaseEvent):
     """
@@ -105,23 +108,26 @@ class MaxwellEventExtractor(BaseEvent):
         h5_file = h5py.File(self.file_path, mode="r")
         version = int(h5_file["version"][0].decode())
         fs = 20000
-        
+
         if version < 20190530:
             raise NotImplementedError(f"Version {self.version} not supported")
-        
+
         # get ttl events
         bits = h5_file["bits"]
-        
-        channel_ids = np.zeros((0),dtype=np.int8)
-        if len(bits)>0:
+
+        channel_ids = np.zeros((0), dtype=np.int8)
+        if len(bits) > 0:
             bit_state = bits["bits"]
             channel_ids = np.int8(np.unique(bit_state[bit_state != 0]))
             if -1 in channel_ids or 1 in channel_ids:
                 raise ValueError("TTL bits cannot be -1 or 1.")
-        
+
         # access data_store from h5_file
         data_store_keys = [x for x in h5_file["data_store"].keys()]
-        data_store_keys_id = [("events" in h5_file["data_store"][x].keys()) and ("groups" in h5_file["data_store"][x].keys()) for x in data_store_keys]
+        data_store_keys_id = [
+            ("events" in h5_file["data_store"][x].keys()) and ("groups" in h5_file["data_store"][x].keys())
+            for x in data_store_keys
+        ]
         data_store = data_store_keys[data_store_keys_id.index(True)]
 
         # get stim events
@@ -129,16 +135,16 @@ class MaxwellEventExtractor(BaseEvent):
         channel_ids_stim = np.int8(np.unique([x[1] for x in event_raw]))
         if -1 in channel_ids_stim or 0 in channel_ids_stim:
             raise ValueError("Stimulation bits cannot be -1 or 0.")
-        if len(channel_ids)>0:
+        if len(channel_ids) > 0:
             if set(channel_ids) & set(channel_ids_stim):
                 raise ValueError("TTL and stimulation bits overlap.")
         channel_ids = np.concatenate((channel_ids, channel_ids_stim), dtype=np.int8)
 
         # set spike events channel == -1
         spike_raw = h5_file["data_store"][data_store]["spikes"]
-        if len(spike_raw)>0:
+        if len(spike_raw) > 0:
             channel_ids = np.concatenate((channel_ids, [-1]), dtype=np.int8)
-        
+
         BaseEvent.__init__(self, channel_ids, structured_dtype=_maxwell_event_dtype)
         event_segment = MaxwellEventSegment(h5_file, version, fs)
         self.add_event_segment(event_segment)
@@ -151,30 +157,33 @@ class MaxwellEventSegment(BaseEventSegment):
         self.version = version
         self.bits = self.h5_file["bits"]
         self.fs = fs
-        
+
     def get_events(self, channel_id, start_time, end_time):
         bits = self.bits
-        
+
         # get ttl events
-        channel_ids = np.zeros((0),dtype=np.int8)
-        bit_channel = np.zeros((0),dtype=np.int8)
-        bit_frameno = np.zeros((0),dtype=np.uint32)
-        bit_state = np.zeros((0),dtype=np.uint32)
-        bit_message = np.zeros((0),dtype=object)
-        if len(bits)>0:
+        channel_ids = np.zeros((0), dtype=np.int8)
+        bit_channel = np.zeros((0), dtype=np.int8)
+        bit_frameno = np.zeros((0), dtype=np.uint32)
+        bit_state = np.zeros((0), dtype=np.uint32)
+        bit_message = np.zeros((0), dtype=object)
+        if len(bits) > 0:
             good_idx = np.where(bits["bits"] != 0)[0]
-            channel_ids = np.concatenate((channel_ids,np.int8(np.unique(bits["bits"][good_idx]))))
+            channel_ids = np.concatenate((channel_ids, np.int8(np.unique(bits["bits"][good_idx]))))
             if 1 in channel_ids:
                 raise ValueError("TTL bits cannot be 1.")
-            bit_channel = np.concatenate((bit_channel,np.uint8(bits["bits"][good_idx])))
-            bit_frameno = np.concatenate((bit_frameno,np.uint32(bits["frameno"][good_idx])))
-            bit_state = np.concatenate((bit_state,np.uint32(bits["bits"][good_idx])))
-            bit_message = np.concatenate((bit_message,[b'{}\n']*len(bit_state)),dtype=object)
-        
+            bit_channel = np.concatenate((bit_channel, np.uint8(bits["bits"][good_idx])))
+            bit_frameno = np.concatenate((bit_frameno, np.uint32(bits["frameno"][good_idx])))
+            bit_state = np.concatenate((bit_state, np.uint32(bits["bits"][good_idx])))
+            bit_message = np.concatenate((bit_message, [b"{}\n"] * len(bit_state)), dtype=object)
+
         # access data_store from h5_file
         h5_file = self.h5_file
         data_store_keys = [x for x in h5_file["data_store"].keys()]
-        data_store_keys_id = [("events" in h5_file["data_store"][x].keys()) and ("groups" in h5_file["data_store"][x].keys()) for x in data_store_keys]
+        data_store_keys_id = [
+            ("events" in h5_file["data_store"][x].keys()) and ("groups" in h5_file["data_store"][x].keys())
+            for x in data_store_keys
+        ]
         data_store = data_store_keys[data_store_keys_id.index(True)]
 
         # get stim events
@@ -185,15 +194,15 @@ class MaxwellEventSegment(BaseEventSegment):
         bit_frameno_stim = stim_arr["frameno"]
         bit_state_stim = stim_arr["eventid"]
         bit_message_stim = stim_arr["eventmessage"]
-        
+
         # get spike events
         spike_raw = h5_file["data_store"][data_store]["spikes"]
-        if len(spike_raw)>0:
+        if len(spike_raw) > 0:
             channel_ids_spike = np.int8([-1])
         spike_arr = np.array(spike_raw)
-        bit_channel_spike = -np.ones(len(spike_arr),dtype=np.int8)
+        bit_channel_spike = -np.ones(len(spike_arr), dtype=np.int8)
         bit_frameno_spike = spike_arr["frameno"]
-        bit_state_spike= spike_arr["channel"]
+        bit_state_spike = spike_arr["channel"]
         bit_message_spike = spike_arr["amplitude"]
 
         # final array in order: spikes, stims, ttl

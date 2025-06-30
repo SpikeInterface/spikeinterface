@@ -232,22 +232,22 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         mask_id = np.argwhere(mask).flatten().tolist()
 
         # remove all duplicate channel-to-electrode assignments
-        dupid = np.where(pd.DataFrame(signal_channels[mask]['name']).duplicated(keep='first'))
+        dupid = np.where(pd.DataFrame(signal_channels[mask]["name"]).duplicated(keep="first"))
         for i in dupid[0]:
             mask[mask_id.pop(i)] = False
-        
+
         # remove all duplicate channel assigments corresponding to different electrodes (channel is a mix of mulitple electrode signals)
-        signal_channels_chan,_ = map(list, zip(*(x.split(' ') for x in signal_channels[mask]['name'])))
+        signal_channels_chan, _ = map(list, zip(*(x.split(" ") for x in signal_channels[mask]["name"])))
         dupid = np.where(pd.DataFrame(signal_channels_chan).duplicated(keep=False))
         for i in dupid[0]:
             mask[mask_id.pop(i)] = False
-        
+
         # remove subsequent duplicated electrodes (single electrode saved to multiple channels)
-        _,signal_channels_elec = map(list, zip(*(x.split(' ') for x in signal_channels[mask]['name'])))
-        dupid = np.where(pd.DataFrame(signal_channels_elec).duplicated(keep='first'))
+        _, signal_channels_elec = map(list, zip(*(x.split(" ") for x in signal_channels[mask]["name"])))
+        dupid = np.where(pd.DataFrame(signal_channels_elec).duplicated(keep="first"))
         for i in dupid[0]:
             mask[mask_id.pop(i)] = False
-        
+
         signal_channels = signal_channels[mask]
 
         if use_names_as_ids:
