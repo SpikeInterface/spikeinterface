@@ -243,7 +243,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             mask[mask_id.pop(i)] = False
         
         # remove subsequent duplicated electrodes (single electrode saved to multiple channels)
-        dupid = np.where(pd.DataFrame(signal_channels_elec[mask]['name']).duplicated(keep='first'))
+        dupid = np.where(pd.DataFrame(signal_channels_elec).duplicated(keep='first'))
         for i in dupid[0]:
             mask[mask_id.pop(i)] = False
         
