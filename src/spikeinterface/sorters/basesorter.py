@@ -344,6 +344,17 @@ class BaseSorter:
             if recording is not None:
                 sorting.register_recording(recording)
 
+            if recording.get_annotation("split_by_property") is not None:
+                split_by_property = recording.get_annotation("split_by_property")
+                property_values = set(recording.get_property(split_by_property))
+                if len(property_values) > 1:
+                    warnings.warn(
+                        f"Registered Recording has non-unique {split_by_property} keys. They are {property_values}."
+                    )
+                elif len(property_values) == 1:
+                    property_value = next(iter(property_values))
+                    sorting.set_property("split_by_property", values=[property_value] * sorting.get_num_units())
+
         if sorting_info:
             # set sorting info to Sorting object
             if (output_folder / "spikeinterface_recording.json").exists():
