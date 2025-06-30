@@ -139,15 +139,6 @@ class MaxwellEventExtractor(BaseEvent):
         if len(spike_raw)>0:
             channel_ids = np.concatenate((channel_ids, [-1]), dtype=np.int8)
         
-        # event = np.zeros(len(event_raw), dtype=_maxwell_stim_dtype)
-        # event["frame"] = [x[0] for x in event_raw] - first_frame
-        # event["time"] = event["frame"] / self.fs
-        # event["type"] = [x[1] for x in event_raw]
-        # event["subtype"] = [x[2] for x in event_raw]
-        # event["amplitude"] = [int(x[3].split(b'{"amplitude":"')[1].split(b'","phase":"')[0].decode("utf-8")) for x in event_raw]
-        # event["phase"] = [int(x[3].split(b',"phase":"')[1].split(b'"}\n')[0].decode("utf-8")) for x in event_raw]            
-        # self.stim = event
-
         BaseEvent.__init__(self, channel_ids, structured_dtype=_maxwell_event_dtype)
         event_segment = MaxwellEventSegment(h5_file, version, fs)
         self.add_event_segment(event_segment)
@@ -189,18 +180,12 @@ class MaxwellEventSegment(BaseEventSegment):
         # get stim events
         event_raw = h5_file["data_store"][data_store]["events"]
         channel_ids_stim = np.int8(np.unique([x[1] for x in event_raw]))
-        # if -1 in channel_ids_stim or 0 in channel_ids_stim:
-        #     raise ValueError("Stimulation bits cannot be -1 or 0.")
         stim_arr = np.array(event_raw)
         bit_channel_stim = stim_arr["eventtype"]
         bit_frameno_stim = stim_arr["frameno"]
         bit_state_stim = stim_arr["eventid"]
         bit_message_stim = stim_arr["eventmessage"]
-        # bit_channel_stim = np.array([x[1] for x in event_raw],dtype=np.uint8)
-        # bit_frameno_stim = np.array([x[0] for x in event_raw],dtype=np.uint32)
-        # bit_state_stim = np.array([x[2] for x in event_raw],dtype=np.uint32)
-        # bit_message_stim = np.array([x[3] for x in event_raw],dtype=object)
-
+        
         # get spike events
         spike_raw = h5_file["data_store"][data_store]["spikes"]
         if len(spike_raw)>0:
@@ -211,10 +196,6 @@ class MaxwellEventSegment(BaseEventSegment):
         bit_state_spike= spike_arr["channel"]
         bit_message_spike = spike_arr["amplitude"]
 
-        # if len(channel_ids)>0:
-        #     if set(channel_ids) & set(channel_ids_stim):
-        #         raise ValueError("TTL and stimulation bits overlap.")
-        
         # final array in order: spikes, stims, ttl
         bit_channel = np.concatenate((bit_channel_spike, bit_channel_stim, bit_channel))
         bit_frameno = np.concatenate((bit_frameno_spike, bit_frameno_stim, bit_frameno))
