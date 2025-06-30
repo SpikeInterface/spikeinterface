@@ -52,7 +52,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         block_index=None,
         all_annotations=False,
         rec_name=None,
-        install_maxwell_plugin=False,
+        install_maxwell_plugin=True,
         use_names_as_ids: bool = False,
     ):
         if install_maxwell_plugin:
