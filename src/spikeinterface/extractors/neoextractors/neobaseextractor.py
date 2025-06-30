@@ -5,6 +5,7 @@ import warnings
 from math import isclose
 
 import numpy as np
+import pandas as pd
 import importlib
 
 from spikeinterface.core import (
@@ -228,12 +229,25 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         # need neo 0.10.0
         signal_channels = self.neo_reader.header["signal_channels"]
         mask = signal_channels["stream_id"] == stream_id
+        mask_id = np.argwhere(mask).flatten().tolist()
+
+        # remove all duplicate channel-to-electrode assignments
+        dupid = np.where(pd.DataFrame(signal_channels[mask]['name']).duplicated(keep='first'))
+        for i in dupid[0]:
+            mask[mask_id.pop(i)] = False
         
-        # if stream has duplicate channel_id assignments, correct this
-        # seen = set()        
-        # dupid = [i for i,x in enumerate(signal_channels[mask]["id"]) if x in seen or seen.add(x)]
-        # mask[dupid] = False
-        # signal_channels = signal_channels[mask]
+        # remove all duplicate channel assigments corresponding to different electrodes (channel is a mix of mulitple electrode signals)
+        signal_channels_chan, signal_channels_elec = map(list, zip(*(x.split(' ') for x in signal_channels[mask]['name'])))
+        dupid = np.where(pd.DataFrame(signal_channels_chan).duplicated(keep=False))
+        for i in dupid[0]:
+            mask[mask_id.pop(i)] = False
+        
+        # remove subsequent duplicated electrodes (single electrode saved to multiple channels)
+        dupid = np.where(pd.DataFrame(signal_channels_elec[mask]['name']).duplicated(keep='first'))
+        for i in dupid[0]:
+            mask[mask_id.pop(i)] = False
+        
+        signal_channels = signal_channels[mask]
 
         if use_names_as_ids:
             chan_names = signal_channels["name"]
