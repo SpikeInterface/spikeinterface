@@ -5,8 +5,9 @@ from pathlib import Path
 import shutil
 from packaging.version import parse
 import json
+import numpy as np
 
-from spikeinterface import generate_ground_truth_recording
+from spikeinterface import generate_ground_truth_recording, load
 from spikeinterface.sorters import run_sorter
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
@@ -50,6 +51,8 @@ def test_run_sorter_dict(generate_recording, create_cache_folder):
     recording = generate_recording
     cache_folder = create_cache_folder
 
+    recording = recording.time_slice(start_time=0, end_time=3)
+
     recording.set_property(key="split_property", values=[4, 4, "g", "g", 4, 4, 4, "g"])
     dict_of_recordings = recording.split_by("split_property")
 
@@ -58,7 +61,7 @@ def test_run_sorter_dict(generate_recording, create_cache_folder):
     output_folder = cache_folder / "sorting_tdc_local_dict"
 
     dict_of_sortings = run_sorter(
-        "tridesclous2",
+        "simple",
         dict_of_recordings,
         output_folder=output_folder,
         remove_existing_folder=True,
@@ -82,10 +85,14 @@ def test_run_sorter_dict(generate_recording, create_cache_folder):
         spikeinterface_info = json.load(f)
 
     si_info_keys = spikeinterface_info.keys()
-    for key in ["version", "dev_mode", "object", "dict_keys", "split_by_property"]:
+    for key in ["version", "dev_mode", "object"]:
         assert key in si_info_keys
 
-    assert spikeinterface_info["split_by_property"] == "split_property"
+    loaded_sortings = load(output_folder)
+    assert loaded_sortings.keys() == dict_of_sortings.keys()
+    for key, sorting in loaded_sortings.items():
+        assert np.all(sorting.unit_ids == dict_of_sortings[key].unit_ids)
+        assert np.all(sorting.to_spike_vector() == dict_of_sortings[key].to_spike_vector())
 
 
 @pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")

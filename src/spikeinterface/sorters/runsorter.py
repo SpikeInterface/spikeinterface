@@ -240,17 +240,12 @@ def _run_sorter_by_dict(dict_of_recordings: dict, folder: str | Path | None = No
     if split_by_property is None:
         split_by_property = "Unknown"
 
-    dict_keys = dict_of_recordings.keys()
-    dict_key_types = [type(key).__name__ for key in dict_keys]
-
     info_file = folder / "spikeinterface_info.json"
     info = dict(
         version=spikeinterface.__version__,
         dev_mode=spikeinterface.DEV_MODE,
-        object="dict of Sorting",
+        object="Group[SorterOutput]",
         dict_keys=list(dict_of_recordings.keys()),
-        dict_key_types=dict_key_types,
-        split_by_property=split_by_property,
     )
     with open(info_file, mode="w") as f:
         json.dump(check_json(info), f, indent=4)
