@@ -36,7 +36,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     rec_name : str, default: None
         When the file contains several recordings you need to specify the one
         you want to extract. (rec_name='rec0000').
-    install_maxwell_plugin : bool, default: False
+    install_maxwell_plugin : bool, default: True
         If True, install the maxwell plugin for neo.
     block_index : int, default: None
         If there are several blocks (experiments), specify the block index you want to load
