@@ -5,7 +5,6 @@ import warnings
 from math import isclose
 
 import numpy as np
-import pandas as pd
 import importlib
 
 from spikeinterface.core import (
@@ -229,24 +228,26 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         # need neo 0.10.0
         signal_channels = self.neo_reader.header["signal_channels"]
         mask = signal_channels["stream_id"] == stream_id
-        mask_id = np.argwhere(mask).flatten().tolist()
 
         # remove all duplicate channel-to-electrode assignments
-        dupid = np.where(pd.DataFrame(signal_channels[mask]["name"]).duplicated(keep="first"))
-        for i in dupid[0]:
-            mask[mask_id.pop(i)] = False
-
+        mask_id = np.argwhere(mask).flatten()
+        [u,u_i,u_v,u_c] = np.unique(signal_channels[mask]['name'], return_index=True, return_inverse=True, return_counts=True)
+        for i in u_v[u_i[u_c>1]]:
+            mask[mask_id[np.argwhere(signal_channels[mask]['name'] == u[i])[1:].flatten()]] = False
+        
         # remove all duplicate channel assigments corresponding to different electrodes (channel is a mix of mulitple electrode signals)
-        signal_channels_chan, _ = map(list, zip(*(x.split(" ") for x in signal_channels[mask]["name"])))
-        dupid = np.where(pd.DataFrame(signal_channels_chan).duplicated(keep=False))
-        for i in dupid[0]:
-            mask[mask_id.pop(i)] = False
-
+        mask_id = np.argwhere(mask).flatten()
+        signal_channels_chan,_ = map(list, zip(*(x.split(' ') for x in signal_channels[mask]['name'])))
+        [u,u_i,u_v,u_c] = np.unique(signal_channels_chan, return_index=True, return_inverse=True, return_counts=True)
+        for i in u_v[u_i[u_c>1]]:
+            mask[mask_id[np.argwhere(signal_channels_chan == u[i])[:].flatten()]] = False
+        
         # remove subsequent duplicated electrodes (single electrode saved to multiple channels)
-        _, signal_channels_elec = map(list, zip(*(x.split(" ") for x in signal_channels[mask]["name"])))
-        dupid = np.where(pd.DataFrame(signal_channels_elec).duplicated(keep="first"))
-        for i in dupid[0]:
-            mask[mask_id.pop(i)] = False
+        mask_id = np.argwhere(mask).flatten()
+        _,signal_channels_elec = map(list, zip(*(x.split(' ') for x in signal_channels[mask]['name'])))
+        [u,u_i,u_v,u_c] = np.unique(signal_channels_elec, return_index=True, return_inverse=True, return_counts=True)
+        for i in u_v[u_i[u_c>1]]:
+            mask[mask_id[np.argwhere(signal_channels_elec == u[i])[1:].flatten()]] = False
 
         signal_channels = signal_channels[mask]
 
