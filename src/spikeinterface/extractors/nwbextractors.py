@@ -1383,7 +1383,7 @@ class NwbSortingSegment(BaseSortingSegment):
         start_time: Optional[float] = None,
         end_time: Optional[float] = None,
     ) -> np.ndarray:
-        """Get the spike train for a unit in seconds.
+        """Get the spike train times for a unit in seconds.
 
         This method returns spike times directly in seconds without conversion
         to frames, avoiding double conversion for NWB files that already store
@@ -1413,16 +1413,16 @@ class NwbSortingSegment(BaseSortingSegment):
         spike_times = self.spike_times_data[start_index:end_index]
 
         # Filter by time range if specified
-        start_idx = 0
+        start_index = 0
         if start_time is not None:
-            start_idx = np.searchsorted(spike_times, start_time, side="left")
+            start_index = np.searchsorted(spike_times, start_time, side="left")
 
         if end_time is not None:
-            end_idx = np.searchsorted(spike_times, end_time, side="left")
+            end_index = np.searchsorted(spike_times, end_time, side="left")
         else:
-            end_idx = spike_times.size
+            end_index = spike_times.size
 
-        return spike_times[start_idx:end_idx].astype("float64", copy=False)
+        return spike_times[start_index:end_index].astype("float64", copy=False)
 
 
 def _find_timeseries_from_backend(group, path="", result=None, backend="hdf5"):
