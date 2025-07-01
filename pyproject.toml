@@ -68,13 +68,13 @@ extractors = [
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",
-    "ibllib", # streaming IBL
+    "ibllib==3.3.1", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
     "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
-    "ibllib", # streaming IBL
+    "ibllib==3.3.1", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
     "fsspec",
@@ -143,7 +143,7 @@ test_extractors = [
 ]
 
 test_preprocessing = [
-    "ibllib", # for IBL
+    "ibllib==3.3.1", # for IBL
     "torch",
 ]
 
@@ -155,7 +155,7 @@ test = [
     "psutil",
 
     # preprocessing
-    "ibllib", # for IBL
+    "ibllib==3.3.1", # for IBL
 
     # streaming templates
     "s3fs",
