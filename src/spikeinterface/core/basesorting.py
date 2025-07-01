@@ -131,12 +131,36 @@ class BaseSorting(BaseExtractor):
     def get_unit_spike_train(
         self,
         unit_id: str | int,
-        segment_index: Union[int, None] = None,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        segment_index: Optional[int] = None,
+        start_frame: Optional[int] = None,
+        end_frame: Optional[int] = None,
         return_times: bool = False,
         use_cache: bool = True,
     ) -> np.ndarray:
+        """
+        Get spike train for a unit.
+
+        Parameters
+        ----------
+        unit_id : str or int
+            The unit id to retrieve spike train for
+        segment_index : int or None, default: None
+            The segment index to retrieve spike train from.
+            For multi-segment objects, it is required
+        start_frame : int or None, default: None
+            The start frame for spike train extraction
+        end_frame : int or None, default: None
+            The end frame for spike train extraction
+        return_times : bool, default: False
+            If True, returns spike times in seconds instead of frames
+        use_cache : bool, default: True
+            If True, uses cached spike trains when available
+
+        Returns
+        -------
+        spike_train : np.ndarray
+            Spike frames (or times if return_times=True)
+        """
 
         segment_index = self._check_segment_index(segment_index)
         if use_cache:
