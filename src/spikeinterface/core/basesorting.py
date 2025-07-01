@@ -188,9 +188,9 @@ class BaseSorting(BaseExtractor):
     def get_unit_spike_train_in_seconds(
         self,
         unit_id: str | int,
-        segment_index: Union[int, None] = None,
-        start_time: Union[float, None] = None,
-        end_time: Union[float, None] = None,
+        segment_index: Optional[int] = None,
+        start_time: Optional[float] = None,
+        end_time: Optional[float] = None,
     ):
         """
         Get spike train for a unit in seconds.
@@ -298,7 +298,7 @@ class BaseSorting(BaseExtractor):
     def has_recording(self) -> bool:
         return self._recording is not None
 
-    def has_time_vector(self, segment_index=None) -> bool:
+    def has_time_vector(self, segment_index: Optional[int] = None) -> bool:
         """
         Check if the segment of the registered recording has a time vector.
         """
