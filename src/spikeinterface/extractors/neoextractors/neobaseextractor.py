@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Union, Dict, Any, List, Tuple
+from typing import Optional, Union, Dict, Any, List
 import warnings
 from math import isclose
 
@@ -273,9 +273,9 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         self.set_property("offset_to_uV", offset_to_uV)
 
         # Add machinery to keep the neo units for downstream users
-        self.set_property("original_unit", channel_units)
-        self.set_property("original_gain", neo_gains)
-        self.set_property("original_offset", neo_offsets)
+        self.set_property("physical_unit", channel_units)
+        self.set_property("gain_to_physical_unit", neo_gains)
+        self.set_property("offset_to_physical_unit", neo_offsets)
 
         # Streams with mixed units are to be used with caution
         # We warn the user when this is the case
@@ -288,12 +288,12 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         if has_mixed_units:
             warning_msg = (
                 "Found a mix of voltage and non-voltage units. "
-                'Proceed with caution. Check channel units with `recording.get_property("original_unit")`.'
+                'Proceed with caution. Check channel units with `recording.get_property("physical_unit")`.'
             )
             warnings.warn(warning_msg)
 
         if not use_names_as_ids:
-            self.set_property("channel_names", signal_channels["name"])
+            self.set_property("channel_name", signal_channels["name"])
 
         if all_annotations:
             block_ann = self.neo_reader.raw_annotations["blocks"][self.block_index]
@@ -316,9 +316,9 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             array_annotations = sig_ann["__array_annotations__"]
             # We do not add this because is confusing for the user to have this repeated
             array_annotations.pop("channel_ids", None)
-            # This is duplicated when using channel_names as ids
+            # This is duplicated when using `use_names_as_ids`
             if use_names_as_ids:
-                array_annotations.pop("channel_names", None)
+                array_annotations.pop("channel_name", None)
 
             # vector array_annotations are channel properties
             for key, values in array_annotations.items():
