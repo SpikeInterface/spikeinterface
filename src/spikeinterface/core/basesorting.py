@@ -250,16 +250,12 @@ class BaseSorting(BaseExtractor):
         segment = self._sorting_segments[segment_index]
 
         # If sorting has a registered recording, get the frames and get the times from the recording
-        if self.has_time_vector(segment_index=segment_index):
+        # Note that this take into account the segment start time of the recording
+        if self.has_recording():
+            
+            # Get all the spike times and then slice them
             start_frame = None
             end_frame = None
-
-            if start_time is not None:
-                start_frame = self.time_to_sample_index(start_time, segment_index=segment_index)
-
-            if end_time is not None:
-                end_frame = self.time_to_sample_index(end_time, segment_index=segment_index)
-
             spike_frames = self.get_unit_spike_train(
                 unit_id=unit_id,
                 segment_index=segment_index,
@@ -268,15 +264,22 @@ class BaseSorting(BaseExtractor):
                 return_times=False,
                 use_cache=True,
             )
+            
+            recording_times = self.get_times()
+            spike_times = recording_times[spike_frames]
+            if start_time is not None:
+                spike_times = spike_times[spike_times >= start_time]
+            if end_time is not None:
+                spike_times = spike_times[spike_times <= end_time]
+                
+            return spike_times
 
-            times = self.get_times(segment_index=segment_index)
-            return times[spike_frames]
 
         # Use the native spiking times if available
         if hasattr(segment, "get_unit_spike_train_in_seconds"):
             return segment.get_unit_spike_train_in_seconds(unit_id=unit_id, start_time=start_time, end_time=end_time)
 
-        # all back to frame-based conversion
+        # If no recording attached and all back to frame-based conversion
         start_frame = None
         end_frame = None
 
