@@ -45,6 +45,11 @@ please include the appropriate citation for the :code:`sorter_name` parameter yo
 - :code:`wavclus` [Chaure]_
 - :code:`yass` [Lee]_
 
+Postprocessing Module
+---------------------
+
+If you use the :code:`acgs_3d` extensions, (i.e. :code:`postprocessing.compute_acgs_3d`, :code:`postprocessing.ComputeACG3D`) please cite [Beau]_
+
 Qualitymetrics Module
 ---------------------
 If you use the :code:`qualitymetrics` module, i.e. you use the :code:`analyzer.compute()`
@@ -76,6 +81,8 @@ If you use the :code:`get_potential_auto_merge` method from the curation module,
 
 References
 ----------
+
+.. [Beau] `A deep learning strategy to identify cell types across species from high-density extracellular recordings. 2025. <https://doi.org/10.1016/j.cell.2025.01.041>`_
 
 .. [Buccino] `SpikeInterface, a unified framework for spike sorting. 2020. <https://pubmed.ncbi.nlm.nih.gov/33170122/>`_
 
@@ -112,6 +119,8 @@ References
 .. [Muthmann] `Spike Detection for Large Neural Populations Using High Density Multielectrode Arrays. 2015. <https://pubmed.ncbi.nlm.nih.gov/26733859/>`_
 
 .. [Niediek] `Reliable Analysis of Single-Unit Recordings from the Human Brain under Noisy Conditions: Tracking Neurons over Hours. 2016. <https://pubmed.ncbi.nlm.nih.gov/27930664/>`_
+
+.. [npyx] `NeuroPyxels: loading, processing and plotting Neuropixels data in python. 2021. <https://doi.org/10.5281/zenodo.5509776>_`
 
 .. [Pachitariu] `Spike sorting with Kilosort4. 2024. <https://pubmed.ncbi.nlm.nih.gov/38589517/>`_
 

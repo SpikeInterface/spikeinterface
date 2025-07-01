@@ -53,6 +53,102 @@ CMR, and save it to a binary file in the "/path/to/preprocessed" folder. The :co
 
 **NOTE:** all sorters will automatically perform the saving operation internally.
 
+The Preprocessing Pipeline
+--------------------------
+
+The module also contains the :code:`PreprocessingPipeline` object which aims to allow users to easily share pipelines across
+labs. The input to create the pipeline is a dictionary of preprocessing steps whose keys are the names of the steps
+and values are dictionaries of parameters. For example, to construct a pipeline consisting of highpass filtering
+with a minimum frequency of 250 Hz followed by whitening with default parameters, and finally a detect and remove
+bad channels step. We first make the appropriate dictionary
+
+.. code-block:: python
+
+    from spikeinterface.preprocessing import apply_pipeline, PreprocessingPipeline
+
+    preprocessing_dict = {
+        'highpass_filter': {'freq_min': 250},
+        'whiten': {},
+        'detect_and_remove_bad_channels': {},
+    }
+
+We can then pass this dictionary to the :code:`apply_pipeline` function to make a preprocessed recording
+
+.. code-block:: python
+
+    preprocessed_recording = apply_pipeline(recording, preprocessing_dict)
+
+Alternatively, we can construct a :code:`PreprocessingPipeline`, allowing us to investigate the pipeline before
+using it.
+
+.. code-block:: python
+
+    preprocessing_pipeline = PreprocessingPipeline(preprocessing_dict)
+    # to view the pipeline:
+    preprocessing_pipeline
+
+.. raw:: html
+
+    <div>
+        <strong>PreprocessingPipeline</strong>
+        <div style='border:1px solid #ccc; padding:10px;'>
+            <strong>Initial Recording</strong>
+        </div>
+        <div style='margin: auto; text-indent: 30px;'>&#x2193;</div>
+        <details style='border:1px solid #ddd; padding:5px;'>
+            <summary><strong>highpass_filter</strong></summary>
+            <ul>
+                <li><strong>freq_min</strong>: 250</li>
+                <li><strong>margin_ms</strong>: 5.0</li>
+                <li><strong>dtype</strong>: None</li>
+                <li><strong>**filter_kwargs</strong>: None</li>
+            </ul>
+        </details>
+        <details style='border:1px solid #ddd; padding:5px;'>
+            <summary><strong>whiten</strong></summary>
+            <ul>
+                <li><strong>dtype</strong>: None</li>
+                <li><strong>apply_mean</strong>: False</li>
+                <li><strong>regularize</strong>: False</li>
+                <li><strong>regularize_kwargs</strong>: None</li>
+                <li><strong>mode</strong>: 'global'</li>
+                <li><strong>radius_um</strong>: 100.0</li>
+                <li><strong>int_scale</strong>: None</li>
+                <li><strong>eps</strong>: None</li>
+                <li><strong>W</strong>: None</li>
+                <li><strong>M</strong>: None</li>
+                <li><strong>**random_chunk_kwargs</strong>: None</li>
+            </ul>
+        </details>
+        <details style='border:1px solid #ddd; padding:5px;'>
+            <summary><strong>detect_and_remove_bad_channels</strong></summary>
+            <ul>
+                <li><strong>parent_recording</strong>: None</li>
+                <li><strong>bad_channel_ids</strong>: None</li>
+                <li><strong>channel_labels</strong>: None</li>
+                <li><strong>**detect_bad_channels_kwargs</strong>: None</li>
+            </ul>
+        </details>
+        <div style='margin: auto; text-indent: 30px;'>&#x2193;</div>
+        <div style='border:1px solid #ccc; padding:10px;'>
+            <strong>Preprocessed Recording</strong>
+        </div>
+    </div>
+
+Once we have the pipeline, we can apply it to a recording in the same way as applying the dictionary
+
+.. code-block:: python
+
+    preprocessed_recording_again = apply_pipeline(recording, preprocessing_pipeline)
+
+To share the pipeline you have made with another lab, you can simply share the dictionary. The dictionary
+can also be obtained from the pipeline object directly:
+
+.. code-block:: python
+
+    dict_used_to_make_pipeline = preprocessing_pipeline.preprocessor_dict
+
+
 Impact on recording dtype
 -------------------------
 
@@ -246,6 +342,18 @@ interpolated with the :code:`interpolate_bad_channels()` function (channels labe
     rec_clean = recording.remove_channels(remove_channel_ids=bad_channel_ids)
     # Case 2 : interpolate then
     rec_clean = interpolate_bad_channels(recording=rec, bad_channel_ids=bad_channel_ids)
+
+Once you have tested these functions and decided on your workflow, you can use the `detect_and_*`
+functions to do everything at once. These return a Preprocessor class, so are consistent with
+the "chain" concept for this module. For example:
+
+.. code-block:: python
+
+    # detect and remove bad channels
+    rec_only_good_channels = detect_and_remove_bad_channels(recording=rec)
+
+    # detect and interpolate the bad channels
+    rec_interpolated_channels = detect_and_interpolate_bad_channels(recording=rec)
 
 
 * :py:func:`~spikeinterface.preprocessing.detect_bad_channels()`

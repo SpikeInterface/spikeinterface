@@ -38,7 +38,13 @@ from .phase_shift import PhaseShiftRecording, phase_shift
 from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
 from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate, train_deepinterpolation
 from .highpass_spatial_filter import HighpassSpatialFilterRecording, highpass_spatial_filter
-from .interpolate_bad_channels import InterpolateBadChannelsRecording, interpolate_bad_channels
+from .interpolate_bad_channels import (
+    DetectAndInterpolateBadChannelsRecording,
+    detect_and_interpolate_bad_channels,
+    InterpolateBadChannelsRecording,
+    interpolate_bad_channels,
+)
+from .detect_bad_channels import DetectAndRemoveBadChannelsRecording, detect_and_remove_bad_channels
 from .average_across_direction import AverageAcrossDirectionRecording, average_across_direction
 from .directional_derivative import DirectionalDerivativeRecording, directional_derivative
 from .depth_order import DepthOrderRecording, depth_order
@@ -63,6 +69,9 @@ _all_preprocesser_dict = {
     # re-reference
     CommonReferenceRecording: common_reference,
     PhaseShiftRecording: phase_shift,
+    # bad channel detection/interpolation
+    DetectAndRemoveBadChannelsRecording: detect_and_remove_bad_channels,
+    DetectAndInterpolateBadChannelsRecording: detect_and_interpolate_bad_channels,
     # misc
     RectifyRecording: rectify,
     ClipRecording: clip,
