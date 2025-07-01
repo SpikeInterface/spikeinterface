@@ -250,8 +250,7 @@ class BaseSorting(BaseExtractor):
         segment = self._sorting_segments[segment_index]
 
         # If sorting has a registered recording, get the frames and get the times from the recording
-        if self.has_time_vector():
-
+        if self.has_time_vector(segment_index=segment_index):
             start_frame = None
             end_frame = None
 
