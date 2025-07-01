@@ -100,7 +100,7 @@ to any preprocessing function.
     good_channels_recording = spre.detect_and_remove_bad_channels(filtered_recording)
 
 We can then aggregate the recordings back together using the ``aggregate_channels`` function.
-Note that we do not need to do this to sort the data (see :ref:`sorting a recording by channel group`)
+Note that we do not need to do this to sort the data (see :ref:`sorting-by-channel-group`).
 
 .. code-block:: python
 
@@ -135,6 +135,7 @@ back together under the hood).
     In general, it is not recommended to apply :py:func:`~aggregate_channels` more than once.
     This will slow down :py:func:`~get_traces` calls and may result in unpredictable behaviour.
 
+.. _sorting-by-channel-group:
 
 Sorting a Recording by Channel Group
 ------------------------------------
