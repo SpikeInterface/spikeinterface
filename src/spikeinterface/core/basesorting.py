@@ -265,7 +265,7 @@ class BaseSorting(BaseExtractor):
                 use_cache=True,
             )
 
-            recording_times = self.get_times()
+            recording_times = self.get_times(segment_index=segment_index)
             spike_times = recording_times[spike_frames]
             if start_time is not None:
                 spike_times = spike_times[spike_times >= start_time]
