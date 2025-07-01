@@ -252,7 +252,7 @@ class BaseSorting(BaseExtractor):
         # If sorting has a registered recording, get the frames and get the times from the recording
         # Note that this take into account the segment start time of the recording
         if self.has_recording():
-            
+
             # Get all the spike times and then slice them
             start_frame = None
             end_frame = None
@@ -264,16 +264,15 @@ class BaseSorting(BaseExtractor):
                 return_times=False,
                 use_cache=True,
             )
-            
+
             recording_times = self.get_times()
             spike_times = recording_times[spike_frames]
             if start_time is not None:
                 spike_times = spike_times[spike_times >= start_time]
             if end_time is not None:
                 spike_times = spike_times[spike_times <= end_time]
-                
-            return spike_times
 
+            return spike_times
 
         # Use the native spiking times if available
         if hasattr(segment, "get_unit_spike_train_in_seconds"):
