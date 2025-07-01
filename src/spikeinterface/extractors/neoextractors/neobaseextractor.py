@@ -228,21 +228,21 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         # need neo 0.10.0
         signal_channels = self.neo_reader.header["signal_channels"]
         mask = signal_channels["stream_id"] == stream_id
-        
+
         # remove all duplicate channel assigments corresponding to different electrodes (channel is a mix of mulitple electrode signals)
         mask_id = np.argwhere(mask).flatten()
-        signal_channels_chan,_ = map(list, zip(*(x.split(' ') for x in signal_channels[mask]['name'])))
+        signal_channels_chan, _ = map(list, zip(*(x.split(" ") for x in signal_channels[mask]["name"])))
         [u, u_c] = np.unique(signal_channels_chan, return_counts=True)
-        for i in np.argwhere(u_c>1).flatten():
+        for i in np.argwhere(u_c > 1).flatten():
             mask[mask_id[np.argwhere(signal_channels_chan == u[i])[:].flatten()]] = False
-        
+
         # remove subsequent duplicated electrodes (single electrode saved to multiple channels)
         mask_id = np.argwhere(mask).flatten()
-        _,signal_channels_elec = map(list, zip(*(x.split(' ') for x in signal_channels[mask]['name'])))
+        _, signal_channels_elec = map(list, zip(*(x.split(" ") for x in signal_channels[mask]["name"])))
         [u, u_c] = np.unique(signal_channels_elec, return_counts=True)
-        for i in np.argwhere(u_c>1).flatten():
+        for i in np.argwhere(u_c > 1).flatten():
             mask[mask_id[np.argwhere(signal_channels_elec == u[i])[1:].flatten()]] = False
-        
+
         signal_channels = signal_channels[mask]
 
         if use_names_as_ids:
