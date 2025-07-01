@@ -36,12 +36,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "ms_after": 1.5,
             "radius_um": 120.0,
         },
-        "filtering": {"freq_min": 300.0, "freq_max": 8000.0},
+        "filtering": {"freq_min": 150.0, "freq_max": 8000.0, "ftype":"bessel"},
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
         "svd": {"n_components": 6},
         "clustering": {
-            "recursive_depth": 3,
+            "recursive_depth": 5,
             "split_radius_um": 40.0,
             "clusterer": "hdbscan",
             "clusterer_kwargs": {
@@ -51,8 +51,11 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 "cluster_selection_method": "eom",
             },
             "do_merge": True,
-            "merge_radius_um": 40.0,
-            "threshold_diff": 1.5,
+            "merge_kwargs": {
+                "similarity_metric": "l1",
+                "num_shifts": 3,
+                "similarity_thresh": 0.8,
+            }
         },
         "templates": {
             "ms_before": 2.0,
@@ -61,9 +64,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "sparsity_threshold": 1.5,
             # "peak_shift_ms": 0.2,
         },
-        # "matching": {"method": "tridesclous", "method_kwargs": {"peak_shift_ms": 0.2, "radius_um": 100.0}},
-        # "matching": {"method": "circus-omp-svd", "method_kwargs": {}},
-        "matching": {"method": "wobble", "method_kwargs": {}},
+        "matching": {"method": "tdc-peeler", "method_kwargs": {}},
         "job_kwargs": {"n_jobs": -1},
         "save_array": True,
     }
@@ -132,7 +133,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
             if params["apply_motion_correction"]:
                 interpolate_motion_kwargs = dict(
-                    direction=1,
                     border_mode="force_extrapolate",
                     spatial_interpolation_method="kriging",
                     sigma_um=20.0,
@@ -142,8 +142,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 recording = InterpolateMotionRecording(
                     recording,
                     motion_info["motion"],
-                    motion_info["temporal_bins"],
-                    motion_info["spatial_bins"],
                     **interpolate_motion_kwargs,
                 )
 
@@ -183,26 +181,36 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         clustering_kwargs["waveforms"] = params["waveforms"].copy()
         clustering_kwargs["clustering"] = params["clustering"].copy()
 
-        labels_set, clustering_label, extra_out = find_cluster_from_peaks(
-            recording, peaks, method="tdc_clustering", method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs
+
+        unit_ids, clustering_label, more_outs = find_cluster_from_peaks(
+            recording, peaks, method="tdc-clustering", method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs
         )
-        peak_shifts = extra_out["peak_shifts"]
-        new_peaks = peaks.copy()
-        new_peaks["sample_index"] -= peak_shifts
+
+
+        # peak_shifts = extra_out["peak_shifts"]
+        # new_peaks = peaks.copy()
+        # new_peaks["sample_index"] -= peak_shifts
+        new_peaks = peaks
 
         mask = clustering_label >= 0
         sorting_pre_peeler = NumpySorting.from_samples_and_labels(
             new_peaks["sample_index"][mask],
             clustering_label[mask],
             sampling_frequency,
-            unit_ids=labels_set,
+            unit_ids=unit_ids,
         )
-
         if verbose:
             print(f"find_cluster_from_peaks(): {sorting_pre_peeler.unit_ids.size} cluster found")
 
+
         recording_for_peeler = recording
 
+        # if "templates" in more_outs:
+        #     # No, bad idea because templates are too short
+        #     # clustering also give templates
+        #     templates = more_outs["templates"]
+        
+        # we recompute the template even if the clustering give it already because we use different ms_before/ms_after
         nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.0)
         nafter = int(params["templates"]["ms_after"] * sampling_frequency / 1000.0)
 
@@ -219,14 +227,14 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             templates_array=templates_array,
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
+            channel_ids=recording_for_peeler.channel_ids,
+            unit_ids=sorting_pre_peeler.unit_ids,
             sparsity_mask=None,
             probe=recording_for_peeler.get_probe(),
             is_scaled=False,
         )
 
-        # TODO : try other methods for sparsity
         sparsity_threshold = params["templates"]["sparsity_threshold"]
-        # sparsity = compute_sparsity(templates_dense, method="radius", radius_um=120.)
         sparsity = compute_sparsity(templates_dense, noise_levels=noise_levels, threshold=sparsity_threshold)
         templates = templates_dense.to_sparse(sparsity)
         templates = remove_empty_templates(templates)
@@ -249,13 +257,17 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             np.save(sorter_output_folder / "peaks.npy", peaks)
             np.save(sorter_output_folder / "clustering_label.npy", clustering_label)
             np.save(sorter_output_folder / "spikes.npy", spikes)
+            import pickle
+            with open(sorter_output_folder / "templates.pickle", "wb") as f:
+                pickle.dump(templates.to_dict(), f)
+
 
         final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)
         final_spikes["sample_index"] = spikes["sample_index"]
         final_spikes["unit_index"] = spikes["cluster_index"]
         final_spikes["segment_index"] = spikes["segment_index"]
 
-        sorting = NumpySorting(final_spikes, sampling_frequency, labels_set)
+        sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
         return sorting
