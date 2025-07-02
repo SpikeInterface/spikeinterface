@@ -40,6 +40,7 @@ from spikeinterface.extractors.extractor_classes import (
     Spike2RecordingExtractor,
     EDFRecordingExtractor,
     Plexon2RecordingExtractor,
+    AxonRecordingExtractor,
 )
 
 from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
@@ -294,6 +295,12 @@ class TdTRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [("tdt/aep_05", {"stream_id": "1"})]
 
 
+class AxonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = AxonRecordingExtractor
+    downloads = ["axon"]
+    entities = ["axon/extracellular_data/four_electrodes/24606005_SampleData.abf"]
+
+
 class AxonaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = AxonaRecordingExtractor
     downloads = ["axona"]
@@ -420,6 +427,8 @@ class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2SortingExtractor
     downloads = ["plexon"]
     entities = [("plexon/4chDemoPL2.pl2", {"sampling_frequency": 40000})]
+
+
 
 
 if __name__ == "__main__":
