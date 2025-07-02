@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import warnings
 import numpy as np
 
@@ -62,7 +63,7 @@ class UnitsAggregationSorting(BaseSorting):
         sampling_frequency = sorting_list[0].get_sampling_frequency()
         num_segments = sorting_list[0].get_num_segments()
 
-        ok1 = all(sampling_frequency == sort.get_sampling_frequency() for sort in sorting_list)
+        ok1 = all(math.isclose(sampling_frequency, sort.get_sampling_frequency(), abs_tol=1e-2) for sort in sorting_list)
         ok2 = all(num_segments == sort.get_num_segments() for sort in sorting_list)
         if not (ok1 and ok2):
             raise ValueError("Sortings don't have the same sampling_frequency/num_segments")
