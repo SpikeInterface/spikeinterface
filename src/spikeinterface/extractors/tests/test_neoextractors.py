@@ -429,8 +429,6 @@ class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
     entities = [("plexon/4chDemoPL2.pl2", {"sampling_frequency": 40000})]
 
 
-
-
 if __name__ == "__main__":
     # test = MearecSortingTest()
     # test = SpikeGLXRecordingTest()
