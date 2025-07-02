@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 
@@ -187,19 +187,8 @@ class BaseSorting(BaseExtractor):
             ).astype("int64")
 
         if return_times:
-            # Use the new get_unit_spike_train_in_seconds method for better precision
-            start_time = None
-            end_time = None
-
-            if start_frame is not None:
-                segment = self._sorting_segments[segment_index]
-                t_start = segment._t_start if segment._t_start is not None else 0
-                start_time = start_frame / self.get_sampling_frequency() + t_start
-
-            if end_frame is not None:
-                segment = self._sorting_segments[segment_index]
-                t_start = segment._t_start if segment._t_start is not None else 0
-                end_time = end_frame / self.get_sampling_frequency() + t_start
+            start_time = self.sample_index_to_time(start_frame, segment_index=segment_index) if start_frame is not None else None
+            end_time = self.sample_index_to_time(end_frame, segment_index=segment_index) if end_frame is not None else None
 
             return self.get_unit_spike_train_in_seconds(
                 unit_id=unit_id,
@@ -265,8 +254,9 @@ class BaseSorting(BaseExtractor):
                 use_cache=True,
             )
 
-            recording_times = self.get_times(segment_index=segment_index)
-            spike_times = recording_times[spike_frames]
+            spike_times = self.sample_index_to_time(spike_frames, segment_index=segment_index)
+            
+            # Filter to return only the spikes within the specified time range
             if start_time is not None:
                 spike_times = spike_times[spike_times >= start_time]
             if end_time is not None:
@@ -279,16 +269,10 @@ class BaseSorting(BaseExtractor):
             return segment.get_unit_spike_train_in_seconds(unit_id=unit_id, start_time=start_time, end_time=end_time)
 
         # If no recording attached and all back to frame-based conversion
-        start_frame = None
-        end_frame = None
-
-        if start_time is not None:
-            start_frame = self.time_to_sample_index(start_time, segment_index=segment_index)
-
-        if end_time is not None:
-            end_frame = self.time_to_sample_index(end_time, segment_index=segment_index)
-
         # Get spike train in frames and convert to times using traditional method
+        start_frame = self.time_to_sample_index(start_time, segment_index=segment_index) if start_time else None
+        end_frame = self.time_to_sample_index(end_time, segment_index=segment_index) if end_time else None
+
         spike_frames = self.get_unit_spike_train(
             unit_id=unit_id,
             segment_index=segment_index,
@@ -298,7 +282,6 @@ class BaseSorting(BaseExtractor):
             use_cache=True,
         )
 
-        # Convert frames to times
         t_start = segment._t_start if segment._t_start is not None else 0
         spike_times = spike_frames / self.get_sampling_frequency()
         return t_start + spike_times
@@ -306,7 +289,7 @@ class BaseSorting(BaseExtractor):
     def register_recording(self, recording, check_spike_frames: bool = True):
         """
         Register a recording to the sorting. If the sorting and recording both contain
-        time information, the recording’s time information will be used.
+        time information, the recording's time information will be used.
 
         Parameters
         ----------
@@ -649,6 +632,18 @@ class BaseSorting(BaseExtractor):
             sample_index = round((time - t_start) * self.get_sampling_frequency())
 
         return sample_index
+
+    def sample_index_to_time(self, sample_index: int | np.ndarray, segment_index: Optional[int] = None) -> float | np.ndarray:
+        """
+        Transform sample index into time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        if self.has_recording():
+            return self._recording.sample_index_to_time(sample_index, segment_index=segment_index)
+        else:
+            segment = self._sorting_segments[segment_index]
+            t_start = segment._t_start if segment._t_start is not None else 0
+            return (sample_index / self.get_sampling_frequency()) + t_start
 
     def precompute_spike_trains(self, from_spike_vector=None):
         """
