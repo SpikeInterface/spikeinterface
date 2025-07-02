@@ -967,11 +967,19 @@ class SortingAnalyzer:
                 if unit_id in new_unit_ids:
                     merge_unit_group = tuple(merge_unit_groups[new_unit_ids.index(unit_id)])
                     if not mergeable[merge_unit_group]:
-                        raise Exception(
-                            f"The sparsity of {merge_unit_group} do not overlap enough for a soft merge using "
-                            f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
-                            "a hard merge."
-                        )
+                        # if someone wants soft mode we error if they try to use an inappropriate sparsity overlap
+                        # if hard mode we can still use a sparsity if all units have good sparsity overlap
+                        # but if any merge_unit_group doesn't have an overlap then we have to not use the old
+                        # sparsity and instead use a new sparsity
+                        if merging_mode == "soft":
+                            raise Exception(
+                                f"The sparsity of {merge_unit_group} do not overlap enough for a soft merge using "
+                                f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
+                                "a hard merge."
+                            )
+                        else:
+                            sparsity = None
+                            break
                     else:
                         sparsity_mask[unit_index] = masks[merge_unit_group]
                 else:
