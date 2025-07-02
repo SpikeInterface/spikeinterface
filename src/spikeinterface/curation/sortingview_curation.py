@@ -80,6 +80,9 @@ def apply_sortingview_curation(
         except:
             raise Exception(f"Could not retrieve curation from SortingView uri: {uri_or_json}")
 
+    if curation_dict is None:
+        raise ValueError(f"Could not retrieve curation from SortingView uri: {uri_or_json}")
+
     unit_ids = sorting_or_analyzer.unit_ids
     curation_dict["unit_ids"] = unit_ids
     curation_model = CurationModel(**curation_dict)

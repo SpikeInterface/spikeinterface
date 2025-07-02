@@ -5,23 +5,23 @@ import numpy as np
 
 
 class LabelDefinition(BaseModel):
-    name: str = Field(..., description="Name of the label")
-    label_options: List[str] = Field(..., description="List of possible label options", min_length=2)
-    exclusive: bool = Field(..., description="Whether the label is exclusive")
+    name: str = Field(description="Name of the label")
+    label_options: List[str] = Field(description="List of possible label options", min_length=2)
+    exclusive: bool = Field(description="Whether the label is exclusive")
 
 
 class ManualLabel(BaseModel):
-    unit_id: Union[int, str] = Field(..., description="ID of the unit")
-    labels: Dict[str, List[str]] = Field(..., description="Dictionary of labels for the unit")
+    unit_id: Union[int, str] = Field(description="ID of the unit")
+    labels: Dict[str, List[str]] = Field(description="Dictionary of labels for the unit")
 
 
 class Merge(BaseModel):
-    unit_ids: List[Union[int, str]] = Field(..., description="List of unit ids to be merged")
+    unit_ids: List[Union[int, str]] = Field(description="List of unit ids to be merged")
     new_unit_id: Optional[Union[int, str]] = Field(default=None, description="New unit IDs for the merge group")
 
 
 class Split(BaseModel):
-    unit_id: Union[int, str] = Field(..., description="ID of the unit")
+    unit_id: Union[int, str] = Field(description="ID of the unit")
     mode: Literal["indices", "labels"] = Field(
         default="indices",
         description=(
@@ -49,8 +49,8 @@ class CurationModel(BaseModel):
     supported_versions: Tuple[Literal["1"], Literal["2"]] = Field(
         default=["1", "2"], description="Supported versions of the curation format"
     )
-    format_version: str = Field(..., description="Version of the curation format")
-    unit_ids: List[Union[int, str]] = Field(..., description="List of unit IDs")
+    format_version: str = Field(description="Version of the curation format")
+    unit_ids: List[Union[int, str]] = Field(description="List of unit IDs")
     label_definitions: Optional[Dict[str, LabelDefinition]] = Field(
         default=None, description="Dictionary of label definitions"
     )
