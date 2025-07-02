@@ -117,8 +117,6 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         **other_kwargs,
     ):
 
-        import pandas as pd
-
         # TODO alessio can you check this : this used to be in the function but now we have ComputeTemplateMetrics.function_factory()
         if include_multi_channel_metrics or (
             metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])

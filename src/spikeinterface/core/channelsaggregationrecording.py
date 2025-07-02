@@ -14,7 +14,15 @@ class ChannelsAggregationRecording(BaseRecording):
 
     """
 
-    def __init__(self, recording_list_or_dict, renamed_channel_ids=None):
+    def __init__(self, recording_list_or_dict=None, renamed_channel_ids=None, recording_list=None):
+
+        if recording_list is not None:
+            warnings.warn(
+                "`recording_list` is deprecated and will be removed in 0.105.0. Please use `recording_list_or_dict` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            recording_list_or_dict = recording_list
 
         if isinstance(recording_list_or_dict, dict):
             recording_list = list(recording_list_or_dict.values())
@@ -96,6 +104,20 @@ class ChannelsAggregationRecording(BaseRecording):
             assert len(set(location_tuple)) == self.get_num_channels(), (
                 "Locations are not unique! " "Cannot aggregate recordings!"
             )
+
+        planar_contour_keys = [
+            key for recording in recording_list for key in recording.get_annotation_keys() if "planar_contour" in key
+        ]
+        if len(planar_contour_keys) > 0:
+            if all(
+                k == planar_contour_keys[0] for k in planar_contour_keys
+            ):  # we add the 'planar_contour' annotations only if there is a unique one in the recording_list
+                planar_contour_key = planar_contour_keys[0]
+                collect_planar_contours = []
+                for rec in recording_list:
+                    collect_planar_contours.append(rec.get_annotation(planar_contour_key))
+                if all(np.array_equal(arr, collect_planar_contours[0]) for arr in collect_planar_contours):
+                    self.set_annotation(planar_contour_key, collect_planar_contours[0])
 
         # finally add segments, we need a channel mapping
         ch_id = 0
@@ -258,12 +280,4 @@ def aggregate_channels(
         The aggregated recording object
     """
 
-    if recording_list is not None:
-        warnings.warn(
-            "`recording_list` is deprecated and will be removed in 0.105.0. Please use `recording_list_or_dict` instead.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        recording_list_or_dict = recording_list
-
-    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids)
+    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids, recording_list)

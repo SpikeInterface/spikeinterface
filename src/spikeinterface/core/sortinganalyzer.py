@@ -54,7 +54,8 @@ def create_sorting_analyzer(
     folder=None,
     sparse=True,
     sparsity=None,
-    return_scaled=True,
+    return_scaled=None,
+    return_in_uV=True,
     overwrite=False,
     backend_options=None,
     **sparsity_kwargs,
@@ -87,9 +88,14 @@ def create_sorting_analyzer(
         You can control `estimate_sparsity()` : all extra arguments are propagated to it (included job_kwargs)
     sparsity : ChannelSparsity or None, default: None
         The sparsity used to compute exensions. If this is given, `sparse` is ignored.
-    return_scaled : bool, default: True
-        All extensions that play with traces will use this global return_scaled : "waveforms", "noise_levels", "templates".
-        This prevent return_scaled being differents from different extensions and having wrong snr for instance.
+    return_scaled : bool | None, default: None
+        DEPRECATED. Use return_in_uV instead.
+        All extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
+        This prevent return_in_uV being differents from different extensions and having wrong snr for instance.
+    return_in_uV : bool, default: None
+        If True, all extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
+        This prevent return_in_uV being differents from different extensions and having wrong snr for instance.
+        If None, use return_scaled value.
     overwrite: bool, default: False
         If True, overwrite the folder if it already exists.
     backend_options : dict | None, default: None
@@ -159,9 +165,18 @@ def create_sorting_analyzer(
     else:
         sparsity = None
 
-    if return_scaled and not recording.has_scaleable_traces() and recording.get_dtype().kind == "i":
-        print("create_sorting_analyzer: recording does not have scaling to uV, forcing return_scaled=False")
-        return_scaled = False
+    # Handle deprecated return_scaled parameter
+    if return_scaled is not None:
+        warnings.warn(
+            "`return_scaled` is deprecated and will be removed in a future version. Use `return_in_uV` instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return_in_uV = return_scaled
+
+    if return_in_uV and not recording.has_scaleable_traces() and recording.get_dtype().kind == "i":
+        print("create_sorting_analyzer: recording does not have scaling to uV, forcing return_in_uV=False")
+        return_in_uV = False
 
     sorting_analyzer = SortingAnalyzer.create(
         sorting,
@@ -169,7 +184,7 @@ def create_sorting_analyzer(
         format=format,
         folder=folder,
         sparsity=sparsity,
-        return_scaled=return_scaled,
+        return_in_uV=return_in_uV,
         backend_options=backend_options,
     )
 
@@ -236,7 +251,7 @@ class SortingAnalyzer:
         rec_attributes: dict | None = None,
         format: str | None = None,
         sparsity: ChannelSparsity | None = None,
-        return_scaled: bool = True,
+        return_in_uV: bool = True,
         backend_options: dict | None = None,
     ):
         # very fast init because checks are done in load and create
@@ -246,7 +261,10 @@ class SortingAnalyzer:
         self.rec_attributes = rec_attributes
         self.format = format
         self.sparsity = sparsity
-        self.return_scaled = return_scaled
+        self.return_in_uV = return_in_uV
+
+        # For backward compatibility
+        self.return_scaled = return_in_uV
         self.folder: str | Path | None = None
 
         # this is used to store temporary recording
@@ -298,7 +316,8 @@ class SortingAnalyzer:
         ] = "memory",
         folder=None,
         sparsity=None,
-        return_scaled=True,
+        return_scaled=None,
+        return_in_uV=True,
         backend_options=None,
     ):
         assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
@@ -323,14 +342,14 @@ class SortingAnalyzer:
         check_probe_do_not_overlap(all_probes)
 
         if format == "memory":
-            sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_scaled, rec_attributes=None)
+            sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_in_uV, rec_attributes=None)
         elif format == "binary_folder":
             sorting_analyzer = cls.create_binary_folder(
                 folder,
                 sorting,
                 recording,
                 sparsity,
-                return_scaled,
+                return_in_uV,
                 rec_attributes=None,
                 backend_options=backend_options,
             )
@@ -343,7 +362,7 @@ class SortingAnalyzer:
                 sorting,
                 recording,
                 sparsity,
-                return_scaled,
+                return_in_uV,
                 rec_attributes=None,
                 backend_options=backend_options,
             )
@@ -382,7 +401,7 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     @classmethod
-    def create_memory(cls, sorting, recording, sparsity, return_scaled, rec_attributes):
+    def create_memory(cls, sorting, recording, sparsity, return_in_uV, rec_attributes):
         # used by create and save_as
 
         if rec_attributes is None:
@@ -402,12 +421,12 @@ class SortingAnalyzer:
             rec_attributes=rec_attributes,
             format="memory",
             sparsity=sparsity,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
         )
         return sorting_analyzer
 
     @classmethod
-    def create_binary_folder(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes, backend_options):
+    def create_binary_folder(cls, folder, sorting, recording, sparsity, return_in_uV, rec_attributes, backend_options):
         # used by create and save_as
 
         folder = Path(folder)
@@ -470,7 +489,7 @@ class SortingAnalyzer:
 
         settings_file = folder / f"settings.json"
         settings = dict(
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
         )
         with open(settings_file, mode="w") as f:
             json.dump(check_json(settings), f, indent=4)
@@ -537,12 +556,12 @@ class SortingAnalyzer:
             with open(settings_file, "r") as f:
                 settings = json.load(f)
         else:
-            warnings.warn("settings.json not found for this folder writing one with return_scaled=True")
-            settings = dict(return_scaled=True)
+            warnings.warn("settings.json not found for this folder writing one with return_in_uV=True")
+            settings = dict(return_in_uV=True)
             with open(settings_file, "w") as f:
                 json.dump(check_json(settings), f, indent=4)
 
-        return_scaled = settings["return_scaled"]
+        return_in_uV = settings.get("return_in_uV", settings.get("return_scaled", True))
 
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
@@ -550,7 +569,7 @@ class SortingAnalyzer:
             rec_attributes=rec_attributes,
             format="binary_folder",
             sparsity=sparsity,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
             backend_options=backend_options,
         )
         sorting_analyzer.folder = folder
@@ -565,7 +584,7 @@ class SortingAnalyzer:
         return zarr_root
 
     @classmethod
-    def create_zarr(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes, backend_options):
+    def create_zarr(cls, folder, sorting, recording, sparsity, return_in_uV, rec_attributes, backend_options):
         # used by create and save_as
         import zarr
         import numcodecs
@@ -589,7 +608,7 @@ class SortingAnalyzer:
         info = dict(version=spikeinterface.__version__, dev_mode=spikeinterface.DEV_MODE, object="SortingAnalyzer")
         zarr_root.attrs["spikeinterface_info"] = check_json(info)
 
-        settings = dict(return_scaled=return_scaled)
+        settings = dict(return_in_uV=return_in_uV)
         zarr_root.attrs["settings"] = check_json(settings)
 
         # the recording
@@ -709,7 +728,9 @@ class SortingAnalyzer:
         else:
             sparsity = None
 
-        return_scaled = zarr_root.attrs["settings"]["return_scaled"]
+        return_in_uV = zarr_root.attrs["settings"].get(
+            "return_in_uV", zarr_root.attrs["settings"].get("return_scaled", True)
+        )
 
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
@@ -717,7 +738,7 @@ class SortingAnalyzer:
             rec_attributes=rec_attributes,
             format="zarr",
             sparsity=sparsity,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
             backend_options=backend_options,
         )
         sorting_analyzer.folder = folder
@@ -1041,7 +1062,7 @@ class SortingAnalyzer:
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
             new_sorting_analyzer = SortingAnalyzer.create_memory(
-                sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes
+                sorting_provenance, recording, sparsity, self.return_in_uV, self.rec_attributes
             )
 
         elif format == "binary_folder":
@@ -1053,7 +1074,7 @@ class SortingAnalyzer:
                 sorting_provenance,
                 recording,
                 sparsity,
-                self.return_scaled,
+                self.return_in_uV,
                 self.rec_attributes,
                 backend_options=backend_options,
             )
@@ -1066,7 +1087,7 @@ class SortingAnalyzer:
                 sorting_provenance,
                 recording,
                 sparsity,
-                self.return_scaled,
+                self.return_in_uV,
                 self.rec_attributes,
                 backend_options=backend_options,
             )
@@ -1834,7 +1855,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         Returns
         -------
-        ext_instanace:
+        ext_instance:
             The loaded instance of the extension
 
         """

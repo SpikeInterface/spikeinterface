@@ -91,22 +91,22 @@ def test_merge_units():
         "format_version": "2",
         "unit_ids": [1, 2, 3, 4],
         "merges": [
-            {"merge_unit_group": [1, 2], "merge_new_unit_id": 5},
-            {"merge_unit_group": [3, 4], "merge_new_unit_id": 6},
+            {"unit_ids": [1, 2], "new_unit_id": 5},
+            {"unit_ids": [3, 4], "new_unit_id": 6},
         ],
     }
 
     model = CurationModel(**valid_merge)
     assert len(model.merges) == 2
-    assert model.merges[0].merge_new_unit_id == 5
-    assert model.merges[1].merge_new_unit_id == 6
+    assert model.merges[0].new_unit_id == 5
+    assert model.merges[1].new_unit_id == 6
 
     # Test dictionary format
     valid_merge_dict = {"format_version": "2", "unit_ids": [1, 2, 3, 4], "merges": {5: [1, 2], 6: [3, 4]}}
 
     model = CurationModel(**valid_merge_dict)
     assert len(model.merges) == 2
-    merge_new_ids = {merge.merge_new_unit_id for merge in model.merges}
+    merge_new_ids = {merge.new_unit_id for merge in model.merges}
     assert merge_new_ids == {5, 6}
 
     # Test list format
@@ -122,7 +122,7 @@ def test_merge_units():
     invalid_merge_group = {
         "format_version": "2",
         "unit_ids": [1, 2, 3],
-        "merges": [{"merge_unit_group": [1], "merge_new_unit_id": 4}],
+        "merges": [{"unit_ids": [1], "new_unit_id": 4}],
     }
     with pytest.raises(ValidationError):
         CurationModel(**invalid_merge_group)
@@ -132,8 +132,8 @@ def test_merge_units():
         "format_version": "2",
         "unit_ids": [1, 2, 3],
         "merges": [
-            {"merge_unit_group": [1, 2], "merge_new_unit_id": 4},
-            {"merge_unit_group": [2, 3], "merge_new_unit_id": 5},
+            {"unit_ids": [1, 2], "new_unit_id": 4},
+            {"unit_ids": [2, 3], "new_unit_id": 5},
         ],
     }
     with pytest.raises(ValidationError):
@@ -149,31 +149,29 @@ def test_split_units():
         "splits": [
             {
                 "unit_id": 1,
-                "split_mode": "indices",
-                "split_indices": [[0, 1, 2], [3, 4, 5]],
-                "split_new_unit_ids": [4, 5],
+                "mode": "indices",
+                "indices": [[0, 1, 2], [3, 4, 5]],
+                "new_unit_ids": [4, 5],
             }
         ],
     }
 
     model = CurationModel(**valid_split_indices)
     assert len(model.splits) == 1
-    assert model.splits[0].split_mode == "indices"
-    assert len(model.splits[0].split_indices) == 2
+    assert model.splits[0].mode == "indices"
+    assert len(model.splits[0].indices) == 2
 
     # Test labels mode with list format
     valid_split_labels = {
         "format_version": "2",
         "unit_ids": [1, 2, 3],
-        "splits": [
-            {"unit_id": 1, "split_mode": "labels", "split_labels": [0, 0, 1, 1, 0, 2], "split_new_unit_ids": [4, 5, 6]}
-        ],
+        "splits": [{"unit_id": 1, "mode": "labels", "labels": [0, 0, 1, 1, 0, 2], "new_unit_ids": [4, 5, 6]}],
     }
 
     model = CurationModel(**valid_split_labels)
     assert len(model.splits) == 1
-    assert model.splits[0].split_mode == "labels"
-    assert len(set(model.splits[0].split_labels)) == 3
+    assert model.splits[0].mode == "labels"
+    assert len(set(model.splits[0].labels)) == 3
 
     # Test dictionary format with indices
     valid_split_dict = {
@@ -187,13 +185,13 @@ def test_split_units():
 
     model = CurationModel(**valid_split_dict)
     assert len(model.splits) == 2
-    assert all(split.split_mode == "indices" for split in model.splits)
+    assert all(split.mode == "indices" for split in model.splits)
 
     # Test invalid unit ID
     invalid_unit_id = {
         "format_version": "2",
         "unit_ids": [1, 2, 3],
-        "splits": [{"unit_id": 4, "split_mode": "indices", "split_indices": [[0, 1], [2, 3]]}],  # Non-existent unit
+        "splits": [{"unit_id": 4, "mode": "indices", "indices": [[0, 1], [2, 3]]}],  # Non-existent unit
     }
     with pytest.raises(ValidationError):
         CurationModel(**invalid_unit_id)
@@ -205,9 +203,9 @@ def test_split_units():
         "splits": [
             {
                 "unit_id": 1,
-                "split_mode": "indices",
-                "split_indices": [[0, 1], [2, 3]],
-                "split_new_unit_ids": [4],  # Should have 2 new IDs for 2 splits
+                "mode": "indices",
+                "indices": [[0, 1], [2, 3]],
+                "new_unit_ids": [4],  # Should have 2 new IDs for 2 splits
             }
         ],
     }
@@ -231,7 +229,7 @@ def test_removed_units():
     invalid_merge_remove = {
         "format_version": "2",
         "unit_ids": [1, 2, 3],
-        "merges": [{"merge_unit_group": [1, 2], "merge_new_unit_id": 4}],
+        "merges": [{"unit_ids": [1, 2], "new_unit_id": 4}],
         "removed": [1],  # Unit is both merged and removed
     }
     with pytest.raises(ValidationError):
@@ -248,10 +246,8 @@ def test_complete_model():
             "tags": LabelDefinition(name="tags", label_options=["burst", "slow"], exclusive=False),
         },
         "manual_labels": [{"unit_id": 1, "labels": {"quality": ["good"], "tags": ["burst"]}}],
-        "merges": [{"merge_unit_group": [2, 3], "merge_new_unit_id": 6}],
-        "splits": [
-            {"unit_id": 4, "split_mode": "indices", "split_indices": [[0, 1], [2, 3]], "split_new_unit_ids": [7, 8]}
-        ],
+        "merges": [{"unit_ids": [2, 3], "new_unit_id": 6}],
+        "splits": [{"unit_id": 4, "mode": "indices", "indices": [[0, 1], [2, 3]], "new_unit_ids": [7, 8]}],
         "removed": [5],
     }
 

@@ -113,7 +113,7 @@ def test_waveform_tools(create_cache_folder):
                     unit_ids,
                     nbefore,
                     nafter,
-                    return_scaled=False,
+                    return_in_uV=False,
                     dtype=dtype,
                     copy=True,
                     **sparsity_kwargs,
@@ -139,7 +139,7 @@ def test_waveform_tools(create_cache_folder):
                     unit_ids,
                     nbefore,
                     nafter,
-                    return_scaled=False,
+                    return_in_uV=False,
                     dtype=dtype,
                     copy=True,
                     **sparsity_kwargs,
@@ -188,7 +188,7 @@ def test_estimate_templates_with_accumulator():
         for n_jobs in (1, 2, 8):
             job_kwargs = dict(pool_engine=pool_engine, n_jobs=n_jobs, progress_bar=True, chunk_duration="1s")
             templates = estimate_templates_with_accumulator(
-                recording, spikes, sorting.unit_ids, nbefore, nafter, return_scaled=True, **job_kwargs
+                recording, spikes, sorting.unit_ids, nbefore, nafter, return_in_uV=True, **job_kwargs
             )
             assert templates.shape[0] == sorting.unit_ids.size
             assert templates.shape[1] == nbefore + nafter
@@ -229,7 +229,7 @@ def test_estimate_templates():
 
     for operator in ("average", "median"):
         templates = estimate_templates(
-            recording, spikes, sorting.unit_ids, nbefore, nafter, operator=operator, return_scaled=True, **job_kwargs
+            recording, spikes, sorting.unit_ids, nbefore, nafter, operator=operator, return_in_uV=True, **job_kwargs
         )
         # print(templates.shape)
         assert templates.shape[0] == sorting.unit_ids.size

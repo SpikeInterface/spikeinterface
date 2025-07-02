@@ -97,12 +97,13 @@ to any preprocessing function.
     shifted_recordings = spre.phase_shift(split_recording_dict)
     filtered_recording = spre.bandpass_filter(shifted_recording)
     referenced_recording = spre.common_reference(filtered_recording)
+    good_channels_recording = spre.detect_and_remove_bad_channels(filtered_recording)
 
 We can then aggregate the recordings back together using the ``aggregate_channels`` function
 
 .. code-block:: python
 
-    combined_preprocessed_recording = aggregate_channels(referenced_recording)
+    combined_preprocessed_recording = aggregate_channels(good_channels_recording)
 
 Now, when ``combined_preprocessed_recording`` is used in sorting, plotting, or whenever
 calling its :py:func:`~get_traces` method, the data will have been

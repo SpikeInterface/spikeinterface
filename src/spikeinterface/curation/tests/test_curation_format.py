@@ -51,17 +51,17 @@ v2 = {
     'removed': List[unit_ids], # Can not be  in the merged_units
     'merges': [
         {
-            'merge_unit_group': List[unit_ids],
-            'merge_new_unit_id': int | str (optional)
+            'unit_ids': List[unit_ids],
+            'new_unit_id': int | str (optional)
         }
     ],
     'splits': [
         {
             'unit_id': int | str
-            'split_mode': 'indices' or 'labels',
-            'split_indices': List[List[int]],
-            'split_labels': List[int]],
-            'split_new_unit_ids': List[int | str]
+            'mode': 'indices' or 'labels',
+            'indices': List[List[int]],
+            'labels': List[int]],
+            'new_unit_ids': List[int | str]
         }
     ]
 
@@ -92,7 +92,7 @@ curation_ids_int = {
         },
         {"unit_id": 3, "putative_type": ["inhibitory"]},
     ],
-    "merges": [{"merge_unit_group": [3, 6]}, {"merge_unit_group": [10, 14, 20]}],
+    "merges": [{"unit_ids": [3, 6]}, {"unit_ids": [10, 14, 20]}],
     "splits": [],
     "removed": [31, 42],
 }
@@ -119,7 +119,7 @@ curation_ids_str = {
         },
         {"unit_id": "u3", "putative_type": ["inhibitory"]},
     ],
-    "merges": [{"merge_unit_group": ["u3", "u6"]}, {"merge_unit_group": ["u10", "u14", "u20"]}],
+    "merges": [{"unit_ids": ["u3", "u6"]}, {"unit_ids": ["u10", "u14", "u20"]}],
     "splits": [],
     "removed": ["u31", "u42"],
 }
@@ -133,38 +133,27 @@ duplicate_merge["merge_unit_groups"] = [[3, 6, 10], [10, 14, 20]]
 
 # Test with splits
 curation_with_splits = {
-    "format_version": "2",
-    "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
-    "label_definitions": {
-        "quality": {"label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
-        "putative_type": {
-            "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral"],
-            "exclusive": False,
-        },
-    },
-    "manual_labels": [
-        {"unit_id": 2, "quality": ["good"], "putative_type": ["excitatory", "pyramidal"]},
-    ],
-    "splits": [{"unit_id": 2, "split_mode": "indices", "split_indices": [[0, 1, 2], [3, 4, 5]]}],
+    **curation_ids_int,
+    "splits": [{"unit_id": 2, "mode": "indices", "indices": [[0, 1, 2], [3, 4, 5]], "new_unit_ids": [50, 51]}],
 }
 
 # Test dictionary format for splits
 curation_with_splits_dict = {**curation_ids_int, "splits": {2: [[0, 1, 2], [3, 4, 5]]}}
 
 # This is a failure example with duplicated merge
-duplicate_merge = {**curation_ids_int, "merges": [{"merge_unit_group": [3, 6, 10]}, {"merge_unit_group": [10, 14, 20]}]}
+duplicate_merge = {**curation_ids_int, "merges": [{"unit_ids": [3, 6, 10]}, {"unit_ids": [10, 14, 20]}]}
 
 # This is a failure example with unit 3 both in removed and merged
 merged_and_removed = {
     **curation_ids_int,
-    "merges": [{"merge_unit_group": [3, 6]}, {"merge_unit_group": [10, 14, 20]}],
+    "merges": [{"unit_ids": [3, 6]}, {"unit_ids": [10, 14, 20]}],
     "removed": [3, 31, 42],
 }
 
 # This is a failure because unit 99 is not in the initial list
 unknown_merged_unit = {
     **curation_ids_int,
-    "merges": [{"merge_unit_group": [3, 6, 99]}, {"merge_unit_group": [10, 14, 20]}],
+    "merges": [{"unit_ids": [3, 6, 99]}, {"unit_ids": [10, 14, 20]}],
 }
 
 # This is a failure because unit 99 is not in the initial list

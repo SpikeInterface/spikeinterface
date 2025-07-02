@@ -2,19 +2,32 @@ from __future__ import annotations
 
 from pathlib import Path
 from collections import deque
+import importlib.util
+
+if importlib.util.find_spec("h5py") is not None and importlib.util.find_spec("scipy") is not None:
+    if importlib.util.find_spec("scipy.io") is not None and importlib.util.find_spec("scipy.io.matlab") is not None:
+        HAVE_MATLAB_HELPERS = True
+    else:
+        HAVE_MATLAB_HELPERS = False
+else:
+    HAVE_MATLAB_HELPERS = False
+
+if importlib.util.find_spec("hdf5storage") is not None:
+    HAVE_HDF5STORAGE = True
+else:
+    HAVE_HDF5STORAGE = False
 
 
 class MatlabHelper:
-    mode = "file"
     installation_mesg = (
         "To use the MATSortingExtractor install h5py and scipy: " "\n\n pip install h5py scipy\n\n"
     )  # error message when not installed
 
     def __init__(self, file_path):
-        try:
+        if HAVE_MATLAB_HELPERS:
             import h5py
-            from scipy.io.matlab import loadmat, savemat
-        except ImportError:
+            from scipy.io.matlab import loadmat
+        else:
             raise ImportError(self.installation_mesg)
 
         file_path = Path(file_path) if isinstance(file_path, str) else file_path
@@ -62,12 +75,12 @@ class MatlabHelper:
             "\n\n pip install hdf5storage\n\n"
         )
 
-        try:
+        if HAVE_HDF5STORAGE:
             import hdf5storage
-        except ImportError:
+        else:
             raise ImportError(hdf5storage_import_error)
 
-        from scipy.io.matlab import loadmat, savemat
+        from scipy.io.matlab import savemat
 
         if version == "7.3":
             hdf5storage.write(dict_to_write, "/", mat_file_path, matlab_compatible=True, options="w")

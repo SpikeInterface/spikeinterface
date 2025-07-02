@@ -9,8 +9,6 @@ It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
 
-import warnings
-
 import numpy as np
 
 from .sortinganalyzer import AnalyzerExtension, register_result_extension
@@ -199,7 +197,7 @@ class ComputeWaveforms(AnalyzerExtension):
             self.nbefore,
             self.nafter,
             mode=mode,
-            return_scaled=self.sorting_analyzer.return_scaled,
+            return_in_uV=self.sorting_analyzer.return_in_uV,
             file_path=file_path,
             dtype=self.params["dtype"],
             sparsity_mask=sparsity_mask,
@@ -221,7 +219,7 @@ class ComputeWaveforms(AnalyzerExtension):
         if dtype is None:
             dtype = recording.get_dtype()
 
-        if np.issubdtype(dtype, np.integer) and self.sorting_analyzer.return_scaled:
+        if np.issubdtype(dtype, np.integer) and self.sorting_analyzer.return_in_uV:
             dtype = "float32"
 
         dtype = np.dtype(dtype)
@@ -435,7 +433,7 @@ class ComputeTemplates(AnalyzerExtension):
             # retrieve spike vector and the sampling
             some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
-            return_scaled = self.sorting_analyzer.return_scaled
+            return_in_uV = self.sorting_analyzer.return_in_uV
 
             return_std = "std" in self.params["operators"]
             output = estimate_templates_with_accumulator(
@@ -444,7 +442,7 @@ class ComputeTemplates(AnalyzerExtension):
                 unit_ids,
                 self.nbefore,
                 self.nafter,
-                return_scaled=return_scaled,
+                return_in_uV=return_in_uV,
                 return_std=return_std,
                 verbose=verbose,
                 **job_kwargs,
@@ -692,7 +690,7 @@ class ComputeTemplates(AnalyzerExtension):
                 channel_ids=self.sorting_analyzer.channel_ids,
                 unit_ids=unit_ids,
                 probe=self.sorting_analyzer.get_probe(),
-                is_scaled=self.sorting_analyzer.return_scaled,
+                is_scaled=self.sorting_analyzer.return_in_uV,
             )
         else:
             raise ValueError("`outputs` must be 'numpy' or 'Templates'")
@@ -753,7 +751,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
     depend_on = []
     need_recording = True
     use_nodepipeline = False
-    need_job_kwargs = False
+    need_job_kwargs = True
     need_backward_compatibility_on_load = True
 
     def __init__(self, sorting_analyzer):
@@ -777,9 +775,12 @@ class ComputeNoiseLevels(AnalyzerExtension):
         # this does not depend on units
         return self.data.copy()
 
-    def _run(self, verbose=False):
+    def _run(self, verbose=False, **job_kwargs):
         self.data["noise_levels"] = get_noise_levels(
-            self.sorting_analyzer.recording, return_scaled=self.sorting_analyzer.return_scaled, **self.params
+            self.sorting_analyzer.recording,
+            return_in_uV=self.sorting_analyzer.return_in_uV,
+            **self.params,
+            **job_kwargs,
         )
 
     def _get_data(self):

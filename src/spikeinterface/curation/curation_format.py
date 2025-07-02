@@ -139,10 +139,8 @@ def apply_curation_labels(
                 all_values[unit_ind] = values[ind]
         sorting.set_property(key, all_values)
 
-    # merges
-    for merge in curation_model.merges:
-        new_unit_id = merge.merge_new_unit_id
-        old_group_ids = merge.merge_unit_group
+    for new_unit_id, merge in zip(new_unit_ids, curation_model.merges):
+        old_group_ids = merge.unit_ids
         for label_key, label_def in curation_model.label_definitions.items():
             if label_def.exclusive:
                 group_values = []
@@ -258,8 +256,8 @@ def apply_curation(
 
     # 2. Merge units
     if len(curation_model.merges) > 0:
-        merge_unit_groups = [m.merge_unit_group for m in curation_model.merges]
-        merge_new_unit_ids = [m.merge_new_unit_id for m in curation_model.merges if m.merge_new_unit_id is not None]
+        merge_unit_groups = [m.unit_ids for m in curation_model.merges]
+        merge_new_unit_ids = [m.new_unit_id for m in curation_model.merges if m.new_unit_id is not None]
         if len(merge_new_unit_ids) == 0:
             merge_new_unit_ids = None
         if isinstance(sorting_or_analyzer, BaseSorting):
@@ -295,7 +293,7 @@ def apply_curation(
                 else sorting_or_analyzer.sorting
             )
             split_units[split.unit_id] = split.get_full_spike_indices(sorting)
-        split_new_unit_ids = [s.split_new_unit_ids for s in curation_model.splits if s.split_new_unit_ids is not None]
+        split_new_unit_ids = [s.new_unit_ids for s in curation_model.splits if s.new_unit_ids is not None]
         if len(split_new_unit_ids) == 0:
             split_new_unit_ids = None
         if isinstance(sorting_or_analyzer, BaseSorting):
