@@ -225,8 +225,8 @@ def _run_sorter_by_dict(dict_of_recordings: dict, folder: str | Path | None = No
         Dictionary of `BaseSorting`s, with the same keys as the input dict of `BaseRecording`s.
     """
 
-    sorter_name = run_sorter_params["sorter_name"]
-    remove_existing_folder = run_sorter_params["remove_existing_folder"]
+    sorter_name = run_sorter_params.get("sorter_name")
+    remove_existing_folder = run_sorter_params.get("remove_existing_folder")
 
     if folder is None:
         folder = Path(sorter_name + "_output")
@@ -234,11 +234,13 @@ def _run_sorter_by_dict(dict_of_recordings: dict, folder: str | Path | None = No
     folder = Path(folder)
     folder.mkdir(exist_ok=remove_existing_folder)
 
-    # If we know how the recording was split, save this in the info file
-    first_recording = next(iter(dict_of_recordings.values()))
-    split_by_property = first_recording.get_annotation("split_by_property")
-    if split_by_property is None:
-        split_by_property = "Unknown"
+    sorter_dict = {}
+    for group_key, recording in dict_of_recordings.items():
+
+        if "recording" in run_sorter_params:
+            run_sorter_params.pop("recording")
+
+        sorter_dict[group_key] = run_sorter(recording=recording, folder=folder / f"{group_key}", **run_sorter_params)
 
     info_file = folder / "spikeinterface_info.json"
     info = dict(
@@ -249,14 +251,6 @@ def _run_sorter_by_dict(dict_of_recordings: dict, folder: str | Path | None = No
     )
     with open(info_file, mode="w") as f:
         json.dump(check_json(info), f, indent=4)
-
-    sorter_dict = {}
-    for group_key, recording in dict_of_recordings.items():
-
-        if "recording" in run_sorter_params:
-            run_sorter_params.pop("recording")
-
-        sorter_dict[group_key] = run_sorter(recording=recording, folder=folder / f"{group_key}", **run_sorter_params)
 
     return sorter_dict
 

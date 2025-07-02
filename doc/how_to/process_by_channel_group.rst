@@ -155,6 +155,7 @@ This will return a dict of sortings, with the keys corresponding to the groups.
 .. code-block:: python
 
     split_recording = raw_recording.split_by("group")
+    # is a dict of recordings
 
     # do preprocessing if needed
     pp_recording = spre.bandpass_filter(split_recording)
