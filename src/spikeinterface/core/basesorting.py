@@ -187,8 +187,12 @@ class BaseSorting(BaseExtractor):
             ).astype("int64")
 
         if return_times:
-            start_time = self.sample_index_to_time(start_frame, segment_index=segment_index) if start_frame is not None else None
-            end_time = self.sample_index_to_time(end_frame, segment_index=segment_index) if end_frame is not None else None
+            start_time = (
+                self.sample_index_to_time(start_frame, segment_index=segment_index) if start_frame is not None else None
+            )
+            end_time = (
+                self.sample_index_to_time(end_frame, segment_index=segment_index) if end_frame is not None else None
+            )
 
             return self.get_unit_spike_train_in_seconds(
                 unit_id=unit_id,
@@ -255,7 +259,7 @@ class BaseSorting(BaseExtractor):
             )
 
             spike_times = self.sample_index_to_time(spike_frames, segment_index=segment_index)
-            
+
             # Filter to return only the spikes within the specified time range
             if start_time is not None:
                 spike_times = spike_times[spike_times >= start_time]
@@ -633,7 +637,9 @@ class BaseSorting(BaseExtractor):
 
         return sample_index
 
-    def sample_index_to_time(self, sample_index: int | np.ndarray, segment_index: Optional[int] = None) -> float | np.ndarray:
+    def sample_index_to_time(
+        self, sample_index: int | np.ndarray, segment_index: Optional[int] = None
+    ) -> float | np.ndarray:
         """
         Transform sample index into time in seconds
         """
