@@ -201,7 +201,6 @@ class BaseSorting(BaseExtractor):
                 unit_id=unit_id, start_frame=start_frame, end_frame=end_frame
             ).astype("int64")
 
-
         return spike_frames
 
     def get_unit_spike_train_in_seconds(
