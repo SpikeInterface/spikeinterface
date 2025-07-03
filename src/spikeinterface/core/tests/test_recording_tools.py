@@ -197,14 +197,14 @@ def test_get_noise_levels():
     job_kwargs = dict(n_jobs=1, progress_bar=True)
     rec = generate_recording(num_channels=2, sampling_frequency=1000.0, durations=[60.0])
 
-    noise_levels_1 = get_noise_levels(rec, return_scaled=False, **job_kwargs)
-    noise_levels_2 = get_noise_levels(rec, return_scaled=False, **job_kwargs)
+    noise_levels_1 = get_noise_levels(rec, return_in_uV=False, **job_kwargs)
+    noise_levels_2 = get_noise_levels(rec, return_in_uV=False, **job_kwargs)
 
     rec.set_channel_gains(0.1)
     rec.set_channel_offsets(0)
-    noise_levels = get_noise_levels(rec, return_scaled=True, force_recompute=True, **job_kwargs)
+    noise_levels = get_noise_levels(rec, return_in_uV=True, force_recompute=True, **job_kwargs)
 
-    noise_levels = get_noise_levels(rec, return_scaled=True, method="std", **job_kwargs)
+    noise_levels = get_noise_levels(rec, return_in_uV=True, method="std", **job_kwargs)
 
     # Generate a recording following a gaussian distribution to check the result of get_noise.
     std = 6.0
@@ -214,9 +214,9 @@ def test_get_noise_levels():
     recording = NumpyRecording(traces, 30000)
 
     assert np.all(noise_levels_1 == noise_levels_2)
-    assert np.allclose(get_noise_levels(recording, return_scaled=False, **job_kwargs), [std, std], rtol=1e-2, atol=1e-3)
+    assert np.allclose(get_noise_levels(recording, return_in_uV=False, **job_kwargs), [std, std], rtol=1e-2, atol=1e-3)
     assert np.allclose(
-        get_noise_levels(recording, method="std", return_scaled=False, **job_kwargs), [std, std], rtol=1e-2, atol=1e-3
+        get_noise_levels(recording, method="std", return_in_uV=False, **job_kwargs), [std, std], rtol=1e-2, atol=1e-3
     )
 
 
@@ -234,7 +234,7 @@ def test_get_noise_levels_output():
     std_estimated_with_mad = get_noise_levels(
         recording,
         method="mad",
-        return_scaled=False,
+        return_in_uV=False,
         random_slices_kwargs=dict(num_chunks_per_segment=40, chunk_size=1_000, seed=seed),
     )
     print(std_estimated_with_mad)
@@ -243,7 +243,7 @@ def test_get_noise_levels_output():
     std_estimated_with_std = get_noise_levels(
         recording,
         method="std",
-        return_scaled=False,
+        return_in_uV=False,
         random_slices_kwargs=dict(num_chunks_per_segment=40, chunk_size=1_000, seed=seed),
     )
     assert np.allclose(std_estimated_with_std, [std, std], rtol=1e-2, atol=1e-3)

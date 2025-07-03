@@ -95,8 +95,6 @@ _common_param_doc = """
         If True, the output Sorting is returned as a Sorting
     delete_container_files : bool, default: True
         If True, the container temporary files are deleted after the sorting is done
-    output_folder : None, default: None
-        Do not use. Deprecated output function to be removed in 0.103.
     **sorter_params : keyword args
         Spike sorter specific arguments (they can be retrieved with `get_default_sorter_params(sorter_name_or_class)`)
 
@@ -119,7 +117,6 @@ def run_sorter(
     singularity_image: Optional[Union[bool, str]] = False,
     delete_container_files: bool = True,
     with_output: bool = True,
-    output_folder: None = None,
     **sorter_params,
 ):
     """
@@ -131,13 +128,6 @@ def run_sorter(
     --------
     >>> sorting = run_sorter("tridesclous", recording)
     """
-
-    if output_folder is not None and folder is None:
-        deprecation_msg = (
-            "`output_folder` is deprecated and will be removed in version 0.103.0 Please use folder instead"
-        )
-        folder = output_folder
-        warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
 
     common_kwargs = dict(
         sorter_name=sorter_name,
@@ -210,7 +200,6 @@ def run_sorter_local(
     verbose=False,
     raise_error=True,
     with_output=True,
-    output_folder=None,
     **sorter_params,
 ):
     """
@@ -235,19 +224,10 @@ def run_sorter_local(
         If False, the process continues and the error is logged in the log file
     with_output : bool, default: True
         If True, the output Sorting is returned as a Sorting
-    output_folder : None, default: None
-        Do not use. Deprecated output function to be removed in 0.103.
     **sorter_params : keyword args
     """
     if isinstance(recording, list):
         raise Exception("If you want to run several sorters/recordings use run_sorter_jobs(...)")
-
-    if output_folder is not None and folder is None:
-        deprecation_msg = (
-            "`output_folder` is deprecated and will be removed in version 0.103.0 Please use folder instead"
-        )
-        folder = output_folder
-        warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
 
     SorterClass = sorter_dict[sorter_name]
 
@@ -294,7 +274,6 @@ def run_sorter_container(
     installation_mode="auto",
     spikeinterface_version=None,
     spikeinterface_folder_source=None,
-    output_folder: None = None,
     **sorter_params,
 ):
     """
@@ -309,8 +288,6 @@ def run_sorter_container(
         The container mode : "docker" or "singularity"
     container_image : str, default: None
         The container image name and tag. If None, the default container image is used
-    output_folder : str, default: None
-        Path to output folder
     remove_existing_folder : bool, default: True
         If True and output_folder exists yet then delete
     delete_output_folder : bool, default: False
@@ -345,13 +322,6 @@ def run_sorter_container(
     """
 
     assert installation_mode in ("auto", "pypi", "github", "folder", "dev", "no-install")
-
-    if output_folder is not None and folder is None:
-        deprecation_msg = (
-            "`output_folder` is deprecated and will be removed in version 0.103.0 Please use folder instead"
-        )
-        folder = output_folder
-        warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
     spikeinterface_version = spikeinterface_version or si_version
 
     if extra_requirements is None:

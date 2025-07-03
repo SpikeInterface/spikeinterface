@@ -28,6 +28,7 @@ dependencies = [
     "neo>=0.14.1",
     "probeinterface>=0.2.23",
     "packaging",
+    "pydantic",
     "numcodecs<0.16.0", # For supporting zarr < 3
 ]
 
@@ -68,13 +69,13 @@ extractors = [
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",
-    "ibllib", # streaming IBL
+    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
     "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
-    "ibllib", # streaming IBL
+    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
     "fsspec",
@@ -120,7 +121,7 @@ qualitymetrics = [
 ]
 
 test_core = [
-    "pytest",
+    "pytest<8.4.0",
     "pytest-dependency",
     "psutil",
 
@@ -128,6 +129,9 @@ test_core = [
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+
+    # for slurm jobs,
+    "pytest-mock"
 ]
 
 test_extractors = [
@@ -140,19 +144,19 @@ test_extractors = [
 ]
 
 test_preprocessing = [
-    "ibllib", # for IBL
+    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
     "torch",
 ]
 
 
 test = [
-    "pytest",
+    "pytest<8.4.0",
     "pytest-dependency",
     "pytest-cov",
     "psutil",
 
     # preprocessing
-    "ibllib", # for IBL
+    "ibllib>=3.4.1;python_version>='3.10'",
 
     # streaming templates
     "s3fs",
@@ -176,6 +180,9 @@ test = [
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+
+    # for slurm jobs
+    "pytest-mock",
 ]
 
 docs = [

@@ -33,7 +33,7 @@ def generate_recording(
     set_probe: bool | None = True,
     ndim: int | None = 2,
     seed: int | None = None,
-) -> NumpySorting:
+) -> BaseRecording:
     """
     Generate a lazy recording object.
     Useful for testing API and algos.
@@ -2156,6 +2156,21 @@ def generate_channel_locations(num_channels, num_columns, contact_spacing_um):
     return channel_locations
 
 
+def _generate_multimodal(rng, size, num_modes, lim0, lim1):
+    bins = np.linspace(lim0, lim1, 10000)
+    bin_step = bins[1] - bins[0]
+    prob = np.zeros(bins.size)
+    mode_step = (lim1 - lim0) / (num_modes + 1)
+    for i in range(num_modes):
+        center = mode_step * (i + 1)
+        sigma = mode_step / 5.0
+        prob += np.exp(-((bins - center) ** 2) / (2 * sigma**2))
+    prob /= np.sum(prob)
+    choices = np.random.choice(np.arange(bins.size), size, p=prob)
+    values = bins[choices] + rng.uniform(low=-bin_step / 2, high=bin_step / 2, size=size)
+    return values
+
+
 def generate_unit_locations(
     num_units,
     channel_locations,
@@ -2165,6 +2180,8 @@ def generate_unit_locations(
     minimum_distance=20.0,
     max_iteration=100,
     distance_strict=False,
+    distribution="uniform",
+    num_modes=2,
     seed=None,
 ):
     """
@@ -2205,6 +2222,14 @@ def generate_unit_locations(
         If True, the function will raise an exception if a solution meeting the distance
         constraint cannot be found within the maximum number of iterations. If False, a warning
         will be issued.
+    distribution : "uniform" | "multimodal", default: "uniform"
+        How units are spread.
+        "uniform" is units everywhere
+        "multimodal" mimic the distribution of units 'by layer'  on the 'y' axis (dim=1)
+        Important note, when using multimodal in conjonction of minimum_distance not None, there is not garanty
+        of a true multimodal because units that do not respect the distance of move again and are most chance to be in between layers.
+    num_modes : int, default 2
+        In case of distribution="multimodal", this is the number of modes (layers)
     seed : int or None, optional
         Random seed for reproducibility. If None, the seed is not set
 
@@ -2221,7 +2246,12 @@ def generate_unit_locations(
     minimum_y, maximum_y = np.min(channel_locations[:, 1]) - margin_um, np.max(channel_locations[:, 1]) + margin_um
 
     units_locations[:, 0] = rng.uniform(minimum_x, maximum_x, size=num_units)
-    units_locations[:, 1] = rng.uniform(minimum_y, maximum_y, size=num_units)
+    if distribution == "uniform":
+        units_locations[:, 1] = rng.uniform(minimum_y, maximum_y, size=num_units)
+    elif distribution == "multimodal":
+        units_locations[:, 1] = _generate_multimodal(rng, num_units, num_modes, minimum_y, maximum_y)
+    else:
+        raise ValueError("generate_unit_locations has wrong distribution must be 'uniform' or ")
     units_locations[:, 2] = rng.uniform(minimum_z, maximum_z, size=num_units)
 
     if minimum_distance is not None:
@@ -2242,20 +2272,27 @@ def generate_unit_locations(
                     renew_inds = renew_inds[np.isin(renew_inds, np.unique(inds0))]
 
                 units_locations[:, 0][renew_inds] = rng.uniform(minimum_x, maximum_x, size=renew_inds.size)
-                units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
+                if distribution == "uniform":
+                    units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
+
+                elif distribution == "multimodal":
+                    units_locations[:, 1][renew_inds] = _generate_multimodal(
+                        rng, renew_inds.size, num_modes, minimum_y, maximum_y
+                    )
                 units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
+
             else:
                 solution_found = True
                 break
 
-    if not solution_found:
-        if distance_strict:
-            raise ValueError(
-                f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=} "
-                "You can use distance_strict=False or reduce minimum distance"
-            )
-        else:
-            warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
+        if not solution_found:
+            if distance_strict:
+                raise ValueError(
+                    f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=} "
+                    "You can use distance_strict=False or reduce minimum distance"
+                )
+            else:
+                warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
 
     return units_locations
 
