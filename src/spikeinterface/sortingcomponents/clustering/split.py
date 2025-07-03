@@ -211,6 +211,7 @@ class LocalFeatureClustering:
         waveforms_sparse_mask=None,
         min_size_split=25,
         n_pca_features=2,
+        seed=None,
         projection_mode="tsvd",
         minimum_overlap_ratio=0.25,
     ):
@@ -258,7 +259,7 @@ class LocalFeatureClustering:
             elif projection_mode == "tsvd":
                 from sklearn.decomposition import TruncatedSVD
 
-                tsvd = TruncatedSVD(nb_dimensions)
+                tsvd = TruncatedSVD(nb_dimensions, random_state=seed)
             final_features = tsvd.fit_transform(flatten_features)
             n_explain = np.sum(np.cumsum(tsvd.explained_variance_ratio_) <= n_pca_features) + 1
             final_features = final_features[:, :n_explain]
@@ -272,7 +273,7 @@ class LocalFeatureClustering:
                 elif projection_mode == "tsvd":
                     from sklearn.decomposition import TruncatedSVD
 
-                    tsvd = TruncatedSVD(n_pca_features)
+                    tsvd = TruncatedSVD(n_pca_features, random_state=seed)
 
                 final_features = tsvd.fit_transform(flatten_features)
             else:

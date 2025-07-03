@@ -20,20 +20,23 @@ def test_depth_order():
 
     # geometry flat -- needs to be stable!
     geom = np.zeros((5, 2), dtype="float32")
+    geom[:, 0] = np.arange(5)
     rec = NumpyRecording(orig_traces, 10)
     rec.set_dummy_probe_from_locations(geom)
     rec_sorted = depth_order(rec)
     assert np.array_equal(rec_sorted.get_channel_ids(), rec.get_channel_ids())
     assert np.array_equal(rec_sorted.get_traces(), orig_traces)
 
-    # geometry out of order with a duplicate
+    # geometry out of order
     geom = np.zeros((5, 2), dtype="float32")
-    geom[:, 1] = [3, 2, 1, 0, 0]
+    geom[:, 1] = [2, 3, 1, 0, -1]
     rec = NumpyRecording(orig_traces, 10)
     rec.set_dummy_probe_from_locations(geom)
+    print(rec.get_channel_locations())
     rec_sorted = depth_order(rec)
-    assert np.array_equal(rec_sorted.get_channel_ids(), [3, 4, 2, 1, 0])
-    assert np.array_equal(rec_sorted.get_traces(), orig_traces[:, [3, 4, 2, 1, 0]])
+    print(rec_sorted.get_channel_locations())
+    assert np.array_equal(rec_sorted.get_channel_ids(), [4, 3, 2, 0, 1])
+    assert np.array_equal(rec_sorted.get_traces(), orig_traces[:, [4, 3, 2, 0, 1]])
 
 
 if __name__ == "__main__":

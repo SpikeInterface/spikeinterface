@@ -6,8 +6,10 @@ import importlib.util
 from spikeinterface import NumpyRecording, get_random_data_chunks
 from probeinterface import generate_linear_probe
 
+from spikeinterface.generation import generate_recording
+
 from spikeinterface.core import generate_recording
-from spikeinterface.preprocessing import detect_bad_channels, highpass_filter
+from spikeinterface.preprocessing import detect_bad_channels, highpass_filter, detect_and_remove_bad_channels
 
 # WARNING : this is not this package https://pypi.org/project/neurodsp/
 # BUT this one https://github.com/int-brain-lab/ibl-neuropixel
@@ -18,6 +20,44 @@ if importlib.util.find_spec("neurodsp") is not None and importlib.util.find_spec
     HAVE_NPIX = True
 else:
     HAVE_NPIX = False
+
+
+def test_remove_bad_channel():
+    """
+    Generate a recording, then remove bad channels with a low noise threshold,
+    so that some units are removed. Then check that the new recording has none
+    of the bad channels still in it and that the one changed kwarg is successfully
+    propogated to the new recording.
+    """
+
+    recording = generate_recording(durations=[5, 6], seed=1205, num_channels=8)
+    recording.set_channel_offsets(0)
+    recording.set_channel_gains(1)
+
+    # set noisy_channel_threshold so that we do detect some bad channels
+    new_rec = detect_and_remove_bad_channels(recording, noisy_channel_threshold=0, seed=1205)
+
+    # make sure they are removed
+    bad_channel_ids = new_rec._kwargs["bad_channel_ids"]
+    assert len(set(bad_channel_ids).intersection(new_rec.channel_ids)) == 0
+    # and the good ones are kept
+    good_channel_ids = recording.channel_ids[~np.isin(recording.channel_ids, bad_channel_ids)]
+    assert set(good_channel_ids) == set(new_rec.channel_ids)
+
+    # and that the kwarg is propagated to the kwargs of new_rec.
+    assert new_rec._kwargs["noisy_channel_threshold"] == 0
+
+    # now apply `detect_bad_channels` directly and see that the outputs matches
+    bad_channel_ids_from_function, channel_labels_from_function = detect_bad_channels(
+        recording, noisy_channel_threshold=0, seed=1205
+    )
+
+    assert np.all(new_rec._kwargs["bad_channel_ids"] == bad_channel_ids_from_function)
+    assert np.all(new_rec._kwargs["channel_labels"] == channel_labels_from_function)
+
+    new_rec_from_function = recording.remove_channels(remove_channel_ids=bad_channel_ids_from_function)
+
+    assert np.all(new_rec_from_function.channel_ids == new_rec.channel_ids)
 
 
 def test_detect_bad_channels_std_mad():
