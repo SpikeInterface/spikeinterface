@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import warnings
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from .localization_tools import _unit_location_methods

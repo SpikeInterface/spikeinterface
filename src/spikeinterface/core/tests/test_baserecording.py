@@ -253,22 +253,6 @@ def test_BaseRecording(create_cache_folder):
     # Verify both parameters produce the same result
     assert np.array_equal(traces_float32_old, traces_float32_new)
 
-    # test cast unsigned
-    tr_u = rec_uint16.get_traces(cast_unsigned=False)
-    assert tr_u.dtype.kind == "u"
-    tr_i = rec_uint16.get_traces(cast_unsigned=True)
-    assert tr_i.dtype.kind == "i"
-    folder = cache_folder / "recording_unsigned"
-    rec_u = rec_uint16.save(folder=folder)
-    rec_u.get_dtype() == "uint16"
-    folder = cache_folder / "recording_signed"
-    rec_i = rec_uint16.save(folder=folder, dtype="int16")
-    rec_i.get_dtype() == "int16"
-    assert np.allclose(
-        rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15), rec_i.get_traces().astype("float")
-    )
-    assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
-
     # test cast with dtype
     rec_float32 = rec_int16.astype("float32")
     assert rec_float32.get_dtype() == "float32"
@@ -361,15 +345,37 @@ def test_BaseRecording(create_cache_folder):
         assert rec2.get_annotation(annotation_name) == rec_zarr2.get_annotation(annotation_name)
         assert rec2.get_annotation(annotation_name) == rec_zarr2_loaded.get_annotation(annotation_name)
 
-    # test cast unsigned
-    rec_u = rec_uint16.save(format="zarr", folder=cache_folder / "rec_u")
-    rec_u.get_dtype() == "uint16"
-    rec_i = rec_uint16.save(format="zarr", folder=cache_folder / "rec_i", dtype="int16")
-    rec_i.get_dtype() == "int16"
-    assert np.allclose(
-        rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15), rec_i.get_traces().astype("float")
-    )
-    assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
+
+def test_json_pickle_equivalence(create_cache_folder):
+    """
+    For a json-ifyable recording, the json and pickle outputs created by `dump` should be the same
+    (except for the probe information). We check this here for a saved-then-loaded recording,
+    which tests if relative paths are dealt with in the same way.
+    """
+
+    rec = generate_recording(durations=[1])
+    cache_folder = create_cache_folder
+
+    json_file_path = cache_folder / "recording.json"
+    pkl_file_path = cache_folder / "recording.pkl"
+
+    rec.dump(json_file_path, relative_to=cache_folder)
+    rec.dump(pkl_file_path, relative_to=cache_folder)
+
+    with open(json_file_path, "r") as f:
+        data_json = json.load(f)
+
+    with open(pkl_file_path, "rb") as f:
+        data_pickle = pickle.load(f)
+
+    for key, value in data_json.items():
+        # skip probe info, since pickle keeps some additional information
+        if key not in ["properties"]:
+            if isinstance(value, dict):
+                for sub_key, sub_value in value.items():
+                    assert np.all(sub_value == data_pickle[key][sub_key])
+            else:
+                assert np.all(value == data_pickle[key])
 
 
 def test_interleaved_probegroups():

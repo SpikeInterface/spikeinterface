@@ -2,12 +2,19 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Literal, Dict, BinaryIO
 import warnings
+import importlib.util
 
 import numpy as np
 
 from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
+
+
+if importlib.util.find_spec("pynwb") is not None:
+    HAVE_PYNWB = True
+else:
+    HAVE_PYNWB = False
 
 
 def read_file_from_backend(
@@ -45,16 +52,6 @@ def read_file_from_backend(
             open_file = h5py.File(ffspec_file, "r")
         else:
             raise RuntimeError(f"{file_path} is not a valid HDF5 file!")
-
-    elif stream_mode == "ros3":
-        import h5py
-
-        assert file_path is not None, "file_path must be specified when using stream_mode='ros3'"
-
-        drivers = h5py.registered_drivers()
-        assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
-        assert "ros3" in drivers, assertion_msg
-        open_file = h5py.File(name=file_path, mode="r", driver="ros3")
 
     elif stream_mode == "remfile":
         import remfile
@@ -528,13 +525,6 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
         use_pynwb: bool = False,
     ):
 
-        if stream_mode == "ros3":
-            warnings.warn(
-                "The 'ros3' stream_mode is deprecated and will be removed in version 0.103.0. "
-                "Use 'fsspec' stream_mode instead.",
-                DeprecationWarning,
-            )
-
         if file_path is not None and file is not None:
             raise ValueError("Provide either file_path or file, not both")
         if file_path is None and file is None:
@@ -568,9 +558,7 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
 
         # extract info
         if use_pynwb:
-            try:
-                import pynwb
-            except ImportError:
+            if not HAVE_PYNWB:
                 raise ImportError(self.installation_mesg)
 
             (
@@ -1057,13 +1045,6 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
         use_pynwb: bool = False,
     ):
 
-        if stream_mode == "ros3":
-            warnings.warn(
-                "The 'ros3' stream_mode is deprecated and will be removed in version 0.103.0. "
-                "Use 'fsspec' stream_mode instead.",
-                DeprecationWarning,
-            )
-
         self.stream_mode = stream_mode
         self.stream_cache_path = stream_cache_path
         self.electrical_series_path = electrical_series_path
@@ -1082,9 +1063,7 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
                 self.backend = "hdf5"
 
         if use_pynwb:
-            try:
-                import pynwb
-            except ImportError:
+            if not HAVE_PYNWB:
                 raise ImportError(self.installation_mesg)
 
             unit_ids, spike_times_data, spike_times_index_data = self._fetch_sorting_segment_info_pynwb(
@@ -1480,9 +1459,7 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
             self.backend = "zarr" if self.stream_mode == "zarr" else "hdf5"
 
         if use_pynwb:
-            try:
-                import pynwb
-            except ImportError:
+            if not HAVE_PYNWB:
                 raise ImportError(self.installation_mesg)
 
             channel_ids, sampling_frequency, dtype, segment_data, times_kwargs = self._fetch_recording_segment_info(

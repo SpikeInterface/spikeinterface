@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 from warnings import warn
 
+from spikeinterface.core import SortingAnalyzer, BaseSorting
 from .base import BaseWidget, to_attr, default_backend_kwargs
 from .utils import get_some_colors, validate_segment_indices, get_segment_durations
 
@@ -354,40 +355,46 @@ class RasterWidget(BaseRasterWidget):
 
     Parameters
     ----------
-    sorting : SortingExtractor | None, default: None
-        A sorting object
-    sorting_analyzer : SortingAnalyzer  | None, default: None
-        A sorting analyzer object
-    segment_indices : list of int or None, default: None
-        The segment index or indices to use. If None and there are multiple segments, defaults to 0.
-        If a list of indices is provided, spike trains are concatenated across the specified segments.
-    unit_ids : list
-        List of unit ids
-    time_range : list
+    sorting_analyzer_or_sorting : SortingAnalyzer | BaseSorting | None, default: None
+        The object containing the sorting information for the raster plot
+    segment_index : None | int, default: None
+        The segment index. If None, uses first segment.
+    unit_ids : list | None, default: None
+        List of unit ids. If None, uses all unit ids.
+    time_range : list | None, default: None
         List with start time and end time
-    color : matplotlib color
+    color : matplotlib color, default: "k"
         The color to be used
+    sorting : SortingExtractor | None, default: None
+        A sorting object. Deprecated.
+    sorting_analyzer : SortingAnalyzer  | None, default: None
+        A sorting analyzer object. Deprecated.
     """
 
     def __init__(
         self,
-        sorting=None,
-        sorting_analyzer=None,
-        segment_indices=None,
-        unit_ids=None,
-        time_range=None,
+        sorting_analyzer_or_sorting: SortingAnalyzer | BaseSorting | None = None,
+        segment_index: int | None = None,
+        unit_ids: list | None = None,
+        time_range: list | None = None,
         color="k",
-        backend=None,
+        backend: str | None = None,
+        sorting: BaseSorting | None = None,
+        sorting_analyzer: SortingAnalyzer | None = None,
         **backend_kwargs,
     ):
-        if sorting is None and sorting_analyzer is None:
-            raise Exception("Must supply either a sorting or a sorting_analyzer")
-        elif sorting is not None and sorting_analyzer is not None:
-            raise Exception("Should supply either a sorting or a sorting_analyzer, not both")
-        elif sorting_analyzer is not None:
-            sorting = sorting_analyzer.sorting
 
-        sorting = self.ensure_sorting(sorting)
+        if sorting is not None:
+            # When removed, make `sorting_analyzer_or_sorting` a required argument rather than None.
+            deprecation_msg = "`sorting` argument is deprecated and will be removed in version 0.105.0. Please use `sorting_analyzer_or_sorting` instead"
+            warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
+            sorting_analyzer_or_sorting = sorting
+        if sorting_analyzer is not None:
+            deprecation_msg = "`sorting_analyzer` argument is deprecated and will be removed in version 0.105.0. Please use `sorting_analyzer_or_sorting` instead"
+            warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
+            sorting_analyzer_or_sorting = sorting_analyzer
+
+        sorting = self.ensure_sorting(sorting_analyzer_or_sorting)
 
         segment_indices = validate_segment_indices(segment_indices, sorting)
 
