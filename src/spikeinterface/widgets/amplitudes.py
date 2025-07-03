@@ -65,13 +65,14 @@ class AmplitudesWidget(BaseRasterWidget):
         **backend_kwargs,
     ):
         import warnings
+
         # Handle deprecation of segment_index parameter
         if segment_index is not None:
             warnings.warn(
                 "The 'segment_index' parameter is deprecated and will be removed in a future version. "
                 "Use 'segment_indices' instead.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             if segment_indices is None:
                 if isinstance(segment_index, int):

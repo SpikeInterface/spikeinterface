@@ -172,7 +172,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
                 "The 'segment_index' parameter is deprecated and will be removed in a future version. "
                 "Use 'segment_indices' instead.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             if segment_indices is None:
                 if isinstance(segment_index, int):
@@ -285,8 +285,9 @@ class DriftRasterMapWidget(BaseRasterWidget):
             ]
 
             # Calculate durations from max sample in each segment
-            durations = [(filtered_peaks["sample_index"][end-1]+1) / sampling_frequency for (_, end) in segment_boundaries ]  
-
+            durations = [
+                (filtered_peaks["sample_index"][end - 1] + 1) / sampling_frequency for (_, end) in segment_boundaries
+            ]
 
         plot_data = dict(
             spike_train_data=spike_train_data,

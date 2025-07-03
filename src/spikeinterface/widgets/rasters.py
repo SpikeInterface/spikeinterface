@@ -386,13 +386,14 @@ class RasterWidget(BaseRasterWidget):
     ):
 
         import warnings
+
         # Handle deprecation of segment_index parameter
         if segment_index is not None:
             warnings.warn(
                 "The 'segment_index' parameter is deprecated and will be removed in a future version. "
                 "Use 'segment_indices' instead.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             if segment_indices is None:
                 if isinstance(segment_index, int):
@@ -437,7 +438,9 @@ class RasterWidget(BaseRasterWidget):
         for seg_idx in segment_indices:
             for unit_id in unit_ids:
                 # Get spikes for this segment and unit
-                spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=seg_idx) / sorting.sampling_frequency  
+                spike_times = (
+                    sorting.get_unit_spike_train(unit_id=unit_id, segment_index=seg_idx) / sorting.sampling_frequency
+                )
 
                 # Store data
                 spike_train_data[seg_idx][unit_id] = spike_times

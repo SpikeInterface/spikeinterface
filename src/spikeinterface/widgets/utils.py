@@ -415,10 +415,10 @@ def get_segment_durations(sorting: BaseSorting) -> list[float]:
     spikes = sorting.to_spike_vector()
     segment_indices = np.unique(spikes["segment_index"])
 
-    segment_boundaries = [  
-        np.searchsorted(spikes["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices  
-    ]  
+    segment_boundaries = [
+        np.searchsorted(spikes["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices
+    ]
 
-    durations = [(spikes["sample_index"][end-1] + 1) / sorting.sampling_frequency for (_, end) in segment_boundaries]
+    durations = [(spikes["sample_index"][end - 1] + 1) / sorting.sampling_frequency for (_, end) in segment_boundaries]
 
     return durations
