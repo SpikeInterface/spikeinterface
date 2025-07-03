@@ -176,3 +176,21 @@ Alternatively, SpikeInterface provides a convenience function to sort the record
         grouping_property='group',
         working_folder='working_path'
     )
+
+Creating a SortingAnalyzer by Channel Group
+-------------------------------------------
+
+The code above generates a dictionary of recording objects and a dictionary of sorting objects.
+When making a :ref:`core <modules/core:SortingAnalyzer>`, we can pass these dictionaries and
+a single analyzer will be created, with the recordings and sortings appropriately aggregated.
+This works in the exact same way as creating a sorting analyzer from a single recording and sorting:
+
+.. code-block:: python
+
+    dict_of_recordings = preprocessed_recording.split_by("group")
+    dict_of_sortings = run_sorter(sorter_name="mountainsort5", recording = dict_of_recordings)
+
+    analyzer = create_sorting_analyzer(sorting=dict_of_sortings, recording=dict_of_recordings)
+
+
+The code above creates a _single_ sorting analyzer called :code:`analyzer`.

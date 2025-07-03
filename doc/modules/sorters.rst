@@ -393,6 +393,10 @@ In this example, we create a 16-channel recording with 4 tetrodes:
                                                working_folder='working_path')
 
 
+Note: you can feed the dict of sortings and dict of recordings directly to :code:`create_sorting_analyzer` to make
+a SortingAnalyzer from the split data. Read more: :ref:`how_to/process_by_channel_group`_.
+
+
 Handling multi-segment recordings
 ---------------------------------
 
