@@ -51,26 +51,26 @@ class Split(BaseModel):
         Get the full indices of the spikes in the split for different split modes.
         """
         num_spikes = sorting.count_num_spikes_per_unit()[self.unit_id]
-        if self.split_mode == "indices":
+        if self.mode == "indices":
             # check the sum of split_indices is equal to num_spikes
-            num_spikes_in_split = sum(len(indices) for indices in self.split_indices)
+            num_spikes_in_split = sum(len(indices) for indices in self.indices)
             if num_spikes_in_split != num_spikes:
                 # add remaining spike indices
-                full_spike_indices = list(self.split_indices)
-                existing_indices = np.concatenate(self.split_indices)
+                full_spike_indices = list(self.indices)
+                existing_indices = np.concatenate(self.indices)
                 remaining_indices = np.setdiff1d(np.arange(num_spikes), existing_indices)
                 full_spike_indices.append(remaining_indices)
             else:
-                full_spike_indices = self.split_indices
-        elif self.split_mode == "labels":
-            assert len(self.split_labels) == num_spikes, (
-                f"In 'labels' mode, the number of split_labels ({len(self.split_labels)}) "
+                full_spike_indices = self.indices
+        elif self.mode == "labels":
+            assert len(self.labels) == num_spikes, (
+                f"In 'labels' mode, the number of.labels ({len(self.labels)}) "
                 f"must match the number of spikes in the unit ({num_spikes})"
             )
             # convert to spike indices
             full_spike_indices = []
-            for label in np.unique(self.split_labels):
-                label_indices = np.where(self.split_labels == label)[0]
+            for label in np.unique(self.labels):
+                label_indices = np.where(self.labels == label)[0]
                 full_spike_indices.append(label_indices)
 
         return full_spike_indices
@@ -258,7 +258,10 @@ class CurationModel(BaseModel):
             # Validate new unit IDs
             if split.new_unit_ids is not None:
                 if split.mode == "indices":
-                    if len(split.new_unit_ids) != len(split.indices):
+                    if (
+                        len(split.new_unit_ids) != len(split.indices)
+                        and len(split.new_unit_ids) != len(split.indices) + 1
+                    ):
                         raise ValueError(
                             f"Number of new unit IDs does not match number of splits for unit {split.unit_id}"
                         )

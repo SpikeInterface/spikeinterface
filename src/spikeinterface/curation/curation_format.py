@@ -126,8 +126,8 @@ def apply_curation_labels(
     manual_labels = curation_label_to_vectors(curation_model)
 
     # apply on non merged / split
-    merge_new_unit_ids = [m.merge_new_unit_id for m in curation_model.merges]
-    split_new_unit_ids = [m.split_new_unit_ids for m in curation_model.splits]
+    merge_new_unit_ids = [m.new_unit_id for m in curation_model.merges]
+    split_new_unit_ids = [m.new_unit_ids for m in curation_model.splits]
     split_new_unit_ids = list(chain(*split_new_unit_ids))
 
     merged_split_units = merge_new_unit_ids + split_new_unit_ids
@@ -139,7 +139,7 @@ def apply_curation_labels(
                 all_values[unit_ind] = values[ind]
         sorting.set_property(key, all_values)
 
-    for new_unit_id, merge in zip(new_unit_ids, curation_model.merges):
+    for new_unit_id, merge in zip(merge_new_unit_ids, curation_model.merges):
         old_group_ids = merge.unit_ids
         for label_key, label_def in curation_model.label_definitions.items():
             if label_def.exclusive:
@@ -166,7 +166,7 @@ def apply_curation_labels(
     for split in curation_model.splits:
         # propagate property of splut unit to new units
         old_unit = split.unit_id
-        new_unit_ids = split.split_new_unit_ids
+        new_unit_ids = split.new_unit_ids
         for label_key, label_def in curation_model.label_definitions.items():
             if label_def.exclusive:
                 ind = list(curation_model.unit_ids).index(old_unit)
@@ -194,9 +194,9 @@ def apply_curation(
     Apply curation dict to a Sorting or a SortingAnalyzer.
 
     Steps are done in this order:
-      1. Apply removal using curation_dict["removed_units"]
-      2. Apply merges using curation_dict["merge_unit_groups"]
-      3. Apply splits using curation_dict["split_units"]
+      1. Apply removal using curation_dict["removed"]
+      2. Apply merges using curation_dict["merges"]
+      3. Apply splits using curation_dict["splits"]
       4. Set labels using curation_dict["manual_labels"]
 
     A new Sorting or SortingAnalyzer (in memory) is returned.
@@ -281,7 +281,7 @@ def apply_curation(
                 **job_kwargs,
             )
         for i, merge_unit_id in enumerate(new_unit_ids):
-            curation_model.merges[i].merge_new_unit_id = merge_unit_id
+            curation_model.merges[i].new_unit_id = merge_unit_id
 
     # 3. Split units
     if len(curation_model.splits) > 0:
@@ -314,7 +314,7 @@ def apply_curation(
                 verbose=verbose,
             )
         for i, split_unit_ids in enumerate(new_unit_ids):
-            curation_model.splits[i].split_new_unit_ids = split_unit_ids
+            curation_model.splits[i].new_unit_ids = split_unit_ids
 
     # 4. Apply labels
     apply_curation_labels(curated_sorting_or_analyzer, curation_model)

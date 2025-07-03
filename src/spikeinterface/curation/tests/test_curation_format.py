@@ -133,8 +133,19 @@ duplicate_merge["merge_unit_groups"] = [[3, 6, 10], [10, 14, 20]]
 
 # Test with splits
 curation_with_splits = {
-    **curation_ids_int,
-    "splits": [{"unit_id": 2, "mode": "indices", "indices": [[0, 1, 2], [3, 4, 5]], "new_unit_ids": [50, 51]}],
+    "format_version": "2",
+    "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
+    "label_definitions": {
+        "quality": {"label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
+        "putative_type": {
+            "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral"],
+            "exclusive": False,
+        },
+    },
+    "manual_labels": [
+        {"unit_id": 2, "quality": ["good"], "putative_type": ["excitatory", "pyramidal"]},
+    ],
+    "splits": [{"unit_id": 2, "mode": "indices", "indices": [[0, 1, 2], [3, 4, 5]]}],
 }
 
 # Test dictionary format for splits
@@ -301,7 +312,7 @@ def test_apply_curation_with_split_multi_segment():
         split_indices.append(np.arange(0, len(spikes_in_segment)) + cum_spikes)
         cum_spikes += len(spikes_in_segment)
 
-    curation_with_splits_multi_segment["splits"][0]["split_indices"] = split_indices
+    curation_with_splits_multi_segment["splits"][0]["indices"] = split_indices
 
     sorting_curated = apply_curation(sorting, curation_with_splits_multi_segment)
 
@@ -352,9 +363,9 @@ def test_apply_curation_splits_with_mask():
         "splits": [
             {
                 "unit_id": 2,
-                "split_mode": "labels",
-                "split_labels": split_labels.tolist(),
-                "split_new_unit_ids": [43, 44, 45],
+                "mode": "labels",
+                "labels": split_labels.tolist(),
+                "new_unit_ids": [43, 44, 45],
             }
         ],
     }
