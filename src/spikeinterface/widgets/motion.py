@@ -158,11 +158,27 @@ class DriftRasterMapWidget(BaseRasterWidget):
         color: str = "Gray",
         clim: tuple[float, float] | None = None,
         alpha: float = 1,
+        segment_index: int | list[int] | None = None,
         backend: str | None = None,
         **backend_kwargs,
     ):
+        import warnings
         from matplotlib.pyplot import colormaps
         from matplotlib.colors import Normalize
+
+        # Handle deprecation of segment_index parameter
+        if segment_index is not None:
+            warnings.warn(
+                "The 'segment_index' parameter is deprecated and will be removed in a future version. "
+                "Use 'segment_indices' instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            if segment_indices is None:
+                if isinstance(segment_index, int):
+                    segment_indices = [segment_index]
+                else:
+                    segment_indices = segment_index
 
         assert peaks is not None or sorting_analyzer is not None
 
@@ -269,10 +285,8 @@ class DriftRasterMapWidget(BaseRasterWidget):
             ]
 
             # Calculate durations from max sample in each segment
-            durations = [
-                (np.max(filtered_peaks["sample_index"][start:end]) + 1) / sampling_frequency if start < end else 0
-                for (start, end) in segment_boundaries
-            ]
+            durations = [(filtered_peaks["sample_index"][end-1]+1) / sampling_frequency for (_, end) in segment_boundaries ]  
+
 
         plot_data = dict(
             spike_train_data=spike_train_data,

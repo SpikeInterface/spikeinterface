@@ -374,15 +374,31 @@ class RasterWidget(BaseRasterWidget):
     def __init__(
         self,
         sorting_analyzer_or_sorting: SortingAnalyzer | BaseSorting | None = None,
-        segment_index: int | None = None,
+        segment_indices: int | None = None,
         unit_ids: list | None = None,
         time_range: list | None = None,
         color="k",
         backend: str | None = None,
         sorting: BaseSorting | None = None,
         sorting_analyzer: SortingAnalyzer | None = None,
+        segment_index: int | None = None,
         **backend_kwargs,
     ):
+
+        import warnings
+        # Handle deprecation of segment_index parameter
+        if segment_index is not None:
+            warnings.warn(
+                "The 'segment_index' parameter is deprecated and will be removed in a future version. "
+                "Use 'segment_indices' instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            if segment_indices is None:
+                if isinstance(segment_index, int):
+                    segment_indices = [segment_index]
+                else:
+                    segment_indices = segment_index
 
         if sorting is not None:
             # When removed, make `sorting_analyzer_or_sorting` a required argument rather than None.
@@ -421,8 +437,7 @@ class RasterWidget(BaseRasterWidget):
         for seg_idx in segment_indices:
             for unit_id in unit_ids:
                 # Get spikes for this segment and unit
-                mask = (spikes["segment_index"] == seg_idx) & (spikes["unit_index"] == unit_id)
-                spike_times = spikes["sample_index"][mask] / sorting.sampling_frequency
+                spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=seg_idx) / sorting.sampling_frequency  
 
                 # Store data
                 spike_train_data[seg_idx][unit_id] = spike_times
