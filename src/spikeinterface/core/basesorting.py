@@ -162,6 +162,21 @@ class BaseSorting(BaseExtractor):
             Spike frames (or times if return_times=True)
         """
 
+        if return_times:
+            start_time = (
+                self.sample_index_to_time(start_frame, segment_index=segment_index) if start_frame is not None else None
+            )
+            end_time = (
+                self.sample_index_to_time(end_frame, segment_index=segment_index) if end_frame is not None else None
+            )
+
+            return self.get_unit_spike_train_in_seconds(
+                unit_id=unit_id,
+                segment_index=segment_index,
+                start_time=start_time,
+                end_time=end_time,
+            )
+
         segment_index = self._check_segment_index(segment_index)
         if use_cache:
             if segment_index not in self._cached_spike_trains:
@@ -186,22 +201,8 @@ class BaseSorting(BaseExtractor):
                 unit_id=unit_id, start_frame=start_frame, end_frame=end_frame
             ).astype("int64")
 
-        if return_times:
-            start_time = (
-                self.sample_index_to_time(start_frame, segment_index=segment_index) if start_frame is not None else None
-            )
-            end_time = (
-                self.sample_index_to_time(end_frame, segment_index=segment_index) if end_frame is not None else None
-            )
 
-            return self.get_unit_spike_train_in_seconds(
-                unit_id=unit_id,
-                segment_index=segment_index,
-                start_time=start_time,
-                end_time=end_time,
-            )
-        else:
-            return spike_frames
+        return spike_frames
 
     def get_unit_spike_train_in_seconds(
         self,
