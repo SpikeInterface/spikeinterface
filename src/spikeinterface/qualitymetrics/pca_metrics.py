@@ -229,28 +229,6 @@ def compute_pc_metrics(
     return pc_metrics
 
 
-def calculate_pc_metrics(
-    sorting_analyzer, metric_names=None, metric_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
-):
-    warnings.warn(
-        "The `calculate_pc_metrics` function is deprecated and will be removed in 0.103.0. Please use compute_pc_metrics instead",
-        category=DeprecationWarning,
-        stacklevel=2,
-    )
-
-    pc_metrics = compute_pc_metrics(
-        sorting_analyzer,
-        metric_names=metric_names,
-        metric_params=metric_params,
-        unit_ids=unit_ids,
-        seed=seed,
-        n_jobs=n_jobs,
-        progress_bar=progress_bar,
-    )
-
-    return pc_metrics
-
-
 #################################################################
 # Code from spikemetrics
 

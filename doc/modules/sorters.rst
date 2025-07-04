@@ -55,15 +55,15 @@ to easily run spike sorters:
     from spikeinterface.sorters import run_sorter
 
     # run Tridesclous
-    sorting_TDC = run_sorter(sorter_name="tridesclous", recording=recording, output_folder="/folder_TDC")
+    sorting_TDC = run_sorter(sorter_name="tridesclous", recording=recording, folder="/folder_TDC")
     # run Kilosort2.5
-    sorting_KS2_5 = run_sorter(sorter_name="kilosort2_5", recording=recording, output_folder="/folder_KS2_5")
+    sorting_KS2_5 = run_sorter(sorter_name="kilosort2_5", recording=recording, folder="/folder_KS2_5")
     # run IronClust
-    sorting_IC = run_sorter(sorter_name="ironclust", recording=recording, output_folder="/folder_IC")
+    sorting_IC = run_sorter(sorter_name="ironclust", recording=recording, folder="/folder_IC")
     # run pyKilosort
-    sorting_pyKS = run_sorter(sorter_name="pykilosort", recording=recording, output_folder="/folder_pyKS")
+    sorting_pyKS = run_sorter(sorter_name="pykilosort", recording=recording, folder="/folder_pyKS")
     # run SpykingCircus
-    sorting_SC = run_sorter(sorter_name="spykingcircus", recording=recording, output_folder="/folder_SC")
+    sorting_SC = run_sorter(sorter_name="spykingcircus", recording=recording, folder="/folder_SC")
 
 
 Then the output, which is a :py:class:`~spikeinterface.core.BaseSorting` object, can be easily
@@ -87,10 +87,10 @@ Spike-sorter-specific parameters can be controlled directly from the
 
 .. code-block:: python
 
-    sorting_TDC = run_sorter(sorter_name='tridesclous', recording=recording, output_folder="/folder_TDC",
+    sorting_TDC = run_sorter(sorter_name='tridesclous', recording=recording, folder="/folder_TDC",
                              detect_threshold=8.)
 
-    sorting_KS2_5 = run_sorter(sorter_name="kilosort2_5", recording=recording, output_folder="/folder_KS2_5"
+    sorting_KS2_5 = run_sorter(sorter_name="kilosort2_5", recording=recording, folder="/folder_KS2_5"
                                do_correction=False, preclust_threshold=6, freq_min=200.)
 
 
@@ -193,7 +193,7 @@ The following code creates a test recording and runs a containerized spike sorte
 
     sorting = ss.run_sorter(sorter_name='kilosort3',
         recording=test_recording,
-        output_folder="kilosort3",
+        folder="kilosort3",
         singularity_image=True)
 
     print(sorting)
@@ -208,7 +208,7 @@ To run in Docker instead of Singularity, use ``docker_image=True``.
 .. code-block:: python
 
     sorting = run_sorter(sorter_name='kilosort3', recording=test_recording,
-                         output_folder="/tmp/kilosort3", docker_image=True)
+                         folder="/tmp/kilosort3", docker_image=True)
 
 To use a specific image, set either ``docker_image`` or ``singularity_image`` to a string,
 e.g. ``singularity_image="spikeinterface/kilosort3-compiled-base:0.1.0"``.
@@ -217,7 +217,7 @@ e.g. ``singularity_image="spikeinterface/kilosort3-compiled-base:0.1.0"``.
 
     sorting = run_sorter(sorter_name="kilosort3",
         recording=test_recording,
-        output_folder="kilosort3",
+        folder="kilosort3",
         singularity_image="spikeinterface/kilosort3-compiled-base:0.1.0")
 
 
@@ -301,10 +301,10 @@ an :code:`engine` that supports parallel processing (such as :code:`joblib` or :
     another_recording = ...
 
     job_list = [
-      {'sorter_name': 'tridesclous', 'recording': recording, 'output_folder': 'folder1','detect_threshold': 5.},
-      {'sorter_name': 'tridesclous', 'recording': another_recording, 'output_folder': 'folder2', 'detect_threshold': 5.},
-      {'sorter_name': 'herdingspikes', 'recording': recording, 'output_folder': 'folder3', 'clustering_bandwidth': 8., 'docker_image': True},
-      {'sorter_name': 'herdingspikes', 'recording': another_recording, 'output_folder': 'folder4', 'clustering_bandwidth': 8., 'docker_image': True},
+      {'sorter_name': 'tridesclous', 'recording': recording, 'folder': 'folder1','detect_threshold': 5.},
+      {'sorter_name': 'tridesclous', 'recording': another_recording, 'folder': 'folder2', 'detect_threshold': 5.},
+      {'sorter_name': 'herdingspikes', 'recording': recording, 'folder': 'folder3', 'clustering_bandwidth': 8., 'docker_image': True},
+      {'sorter_name': 'herdingspikes', 'recording': another_recording, 'folder': 'folder4', 'clustering_bandwidth': 8., 'docker_image': True},
     ]
 
     # run in loop
@@ -392,7 +392,7 @@ In this example, we create a 16-channel recording with 4 tetrodes:
     # here the result is a dict of a sorting object
     sortings = {}
     for group, sub_recording in recordings.items():
-        sorting = run_sorter(sorter_name='kilosort2', recording=recording, output_folder=f"folder_KS2_group{group}")
+        sorting = run_sorter(sorter_name='kilosort2', recording=recording, folder=f"folder_KS2_group{group}")
         sortings[group] = sorting
 
 
@@ -549,7 +549,7 @@ From the user's perspective, they behave exactly like the external sorters:
 
 .. code-block:: python
 
-    sorting = run_sorter(sorter_name="spykingcircus2", recording=recording, output_folder="/tmp/folder")
+    sorting = run_sorter(sorter_name="spykingcircus2", recording=recording, folder="/tmp/folder")
 
 
 Contributing

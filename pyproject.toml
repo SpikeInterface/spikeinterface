@@ -28,6 +28,7 @@ dependencies = [
     "neo>=0.14.1",
     "probeinterface>=0.2.23",
     "packaging",
+    "pydantic",
     "numcodecs<0.16.0", # For supporting zarr < 3
 ]
 
@@ -68,13 +69,13 @@ extractors = [
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",
-    "ibllib==3.3.1", # streaming IBL
+    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
     "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
-    "ibllib==3.3.1", # streaming IBL
+    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
     "fsspec",
@@ -143,7 +144,7 @@ test_extractors = [
 ]
 
 test_preprocessing = [
-    "ibllib==3.3.1", # for IBL
+    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
     "torch",
 ]
 
@@ -155,7 +156,7 @@ test = [
     "psutil",
 
     # preprocessing
-    "ibllib==3.3.1", # for IBL
+    "ibllib>=3.4.1;python_version>='3.10'",
 
     # streaming templates
     "s3fs",
