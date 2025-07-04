@@ -20,8 +20,7 @@ classifiers = [
 
 
 dependencies = [
-    "numpy>=1.20;python_version<'3.13'",
-    "numpy>=2.0.0;python_version>='3.13'",
+    "numpy",
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.18,<3",
