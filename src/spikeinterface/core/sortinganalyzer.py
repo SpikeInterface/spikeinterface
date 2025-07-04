@@ -960,6 +960,7 @@ class SortingAnalyzer:
             mergeable, masks = self.are_units_mergeable(
                 merge_unit_groups,
                 sparsity_overlap=sparsity_overlap,
+                merging_mode=merging_mode,
                 return_masks=True,
             )
 
@@ -967,21 +968,14 @@ class SortingAnalyzer:
                 if unit_id in new_unit_ids:
                     merge_unit_group = tuple(merge_unit_groups[new_unit_ids.index(unit_id)])
                     if not mergeable[merge_unit_group]:
-                        # if someone wants soft mode we error if they try to use an inappropriate sparsity overlap
-                        # if hard mode we can still use a sparsity if all units have good sparsity overlap
-                        # but if any merge_unit_group doesn't have an overlap then we have to not use the old
-                        # sparsity and instead use a new sparsity
-                        if merging_mode == "soft":
-                            raise Exception(
-                                f"The sparsity of {merge_unit_group} do not overlap enough for a soft merge using "
-                                f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
-                                "a hard merge."
-                            )
-                        else:
-                            sparsity = None
-                            break
-                    else:
-                        sparsity_mask[unit_index] = masks[merge_unit_group]
+                        # unit groups can be not mergeable only in "soft" mode
+                        # see are_units_mergeable() function
+                        raise Exception(
+                            f"The sparsity of {merge_unit_group} do not overlap enough for a soft merge using "
+                            f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold "
+                            "or use a hard merge."
+                        )
+                    sparsity_mask[unit_index] = masks[merge_unit_group]
                 else:
                     # This means that the unit is already in the previous sorting
                     index = self.sorting.id_to_index(unit_id)
