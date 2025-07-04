@@ -160,8 +160,9 @@ def run_sorter(
                 delete_container_files=delete_container_files,
             )
         )
+        all_kwargs.pop("recording")
 
-        dict_of_sorters = _run_sorter_by_dict(recording, **all_kwargs)
+        dict_of_sorters = _run_sorter_by_dict(dict_of_recordings=recording, **all_kwargs)
         return dict_of_sorters
 
     if docker_image or singularity_image:
@@ -236,10 +237,6 @@ def _run_sorter_by_dict(dict_of_recordings: dict, folder: str | Path | None = No
 
     sorter_dict = {}
     for group_key, recording in dict_of_recordings.items():
-
-        if "recording" in run_sorter_params:
-            run_sorter_params.pop("recording")
-
         sorter_dict[group_key] = run_sorter(recording=recording, folder=folder / f"{group_key}", **run_sorter_params)
 
     info_file = folder / "spikeinterface_info.json"
