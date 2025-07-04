@@ -58,12 +58,12 @@ def test_run_sorter_dict(generate_recording, create_cache_folder):
 
     sorter_params = {"detection": {"detect_threshold": 4.9}}
 
-    output_folder = cache_folder / "sorting_tdc_local_dict"
+    folder = cache_folder / "sorting_tdc_local_dict"
 
     dict_of_sortings = run_sorter(
         "simple",
         dict_of_recordings,
-        output_folder=output_folder,
+        folder=folder,
         remove_existing_folder=True,
         delete_output_folder=False,
         verbose=True,
@@ -72,13 +72,13 @@ def test_run_sorter_dict(generate_recording, create_cache_folder):
     )
 
     assert set(list(dict_of_sortings.keys())) == set(["g", "4"])
-    assert (output_folder / "g").is_dir()
-    assert (output_folder / "4").is_dir()
+    assert (folder / "g").is_dir()
+    assert (folder / "4").is_dir()
 
     assert dict_of_sortings["g"]._recording.get_num_channels() == 3
     assert dict_of_sortings["4"]._recording.get_num_channels() == 5
 
-    info_filepath = output_folder / "spikeinterface_info.json"
+    info_filepath = folder / "spikeinterface_info.json"
     assert info_filepath.is_file()
 
     with open(info_filepath) as f:
@@ -88,7 +88,7 @@ def test_run_sorter_dict(generate_recording, create_cache_folder):
     for key in ["version", "dev_mode", "object"]:
         assert key in si_info_keys
 
-    loaded_sortings = load(output_folder)
+    loaded_sortings = load(folder)
     assert loaded_sortings.keys() == dict_of_sortings.keys()
     for key, sorting in loaded_sortings.items():
         assert np.all(sorting.unit_ids == dict_of_sortings[key].unit_ids)
