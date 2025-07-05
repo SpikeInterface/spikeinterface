@@ -16,10 +16,14 @@ def run_peak_pipeline(
     folder=None,
     names=None,
 ):
-    # TODO remove this soon
+    # TODO remove this soon. Will be removed in 0.104.0
     import warnings
 
-    warnings.warn("run_peak_pipeline() is deprecated use run_node_pipeline() instead", DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        "run_peak_pipeline() is deprecated and will be removed in version 0.104.0, `use run_node_pipeline()` instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     node0 = PeakRetriever(recording, peaks)
     # because nodes are modified inplace (insert parent) they need to copy incase

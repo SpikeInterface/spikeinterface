@@ -374,6 +374,7 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None, axs=None):
     return fig
 
 
+# what's the dperecation strategy for this function in general?
 def plot_performances(study, mode="ordered", performance_names=("accuracy", "precision", "recall"), case_keys=None):
     """
     Plot performances over case for a study.
