@@ -30,7 +30,7 @@ _backwards_compatibility_msg = """####
 # extract_waveforms() and WaveformExtractor() have been replaced by the `SortingAnalyzer` since version 0.101.0.
 # You should use `spikeinterface.create_sorting_analyzer()` instead.
 # `spikeinterface.extract_waveforms()` is now mocking the old behavior for backwards compatibility only,
-# and will be removed with version 0.103.0
+# and may potentially be removed in a future version.
 ####"""
 
 

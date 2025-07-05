@@ -190,6 +190,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         )
         return sorting
 
+    # strategy for this dep?
     def save_to_folder(self, save_folder):
         warnings.warn(
             "save_to_folder() is deprecated. "
@@ -221,6 +222,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         with (save_folder / "sortings.json").open("w") as f:
             json.dump(sortings, f)
 
+    # and here too. Strategy for this dep?
     @staticmethod
     def load_from_folder(folder_path):
         warnings.warn(

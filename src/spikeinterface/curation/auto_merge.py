@@ -635,8 +635,9 @@ def get_potential_auto_merge(
     done by Aurelien Wyngaard and Victor Llobet.
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
     """
+    # deprecation moved to 0.105.0 for @zm711
     warnings.warn(
-        "get_potential_auto_merge() is deprecated. Use compute_merge_unit_groups() instead",
+        "get_potential_auto_merge() is deprecated and will be removed in version 0.105.0. Use compute_merge_unit_groups() instead",
         DeprecationWarning,
         stacklevel=2,
     )
