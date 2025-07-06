@@ -4,8 +4,6 @@ from warnings import warn
 import numpy as np
 
 from spikeinterface.core import BaseSorting
-from traitlets import Int
-
 
 def get_some_colors(
     keys,
