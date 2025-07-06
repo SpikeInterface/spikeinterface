@@ -4,6 +4,7 @@ from warnings import warn
 import numpy as np
 
 from spikeinterface.core import BaseSorting
+from traitlets import Int
 
 
 def get_some_colors(
@@ -398,7 +399,7 @@ def validate_segment_indices(segment_indices: list[int] | None, sorting: BaseSor
     return segment_indices
 
 
-def get_segment_durations(sorting: BaseSorting) -> list[float]:
+def get_segment_durations(sorting: BaseSorting, segment_indices: list[int]) -> list[float]:
     """
     Calculate the duration of each segment in a sorting object.
 
@@ -413,7 +414,6 @@ def get_segment_durations(sorting: BaseSorting) -> list[float]:
         List of segment durations in seconds
     """
     spikes = sorting.to_spike_vector()
-    segment_indices = np.unique(spikes["segment_index"])
 
     segment_boundaries = [
         np.searchsorted(spikes["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices

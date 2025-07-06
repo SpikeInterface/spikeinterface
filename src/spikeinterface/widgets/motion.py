@@ -6,7 +6,6 @@ from .base import BaseWidget, to_attr
 
 from spikeinterface.core import BaseRecording, SortingAnalyzer
 from .rasters import BaseRasterWidget
-from .utils import get_segment_durations
 from spikeinterface.core.motion import Motion
 
 

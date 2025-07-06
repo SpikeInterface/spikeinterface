@@ -425,11 +425,8 @@ class RasterWidget(BaseRasterWidget):
         # Create a lookup dictionary for unit indices
         unit_indices_map = {unit_id: i for i, unit_id in enumerate(unit_ids)}
 
-        # Get all spikes at once
-        spikes = sorting.to_spike_vector()
-
         # Estimate segment duration from max spike time in each segment
-        durations = get_segment_durations(sorting)
+        durations = get_segment_durations(sorting, segment_indices)
 
         # Extract spike data for all segments and units at once
         spike_train_data = {seg_idx: {} for seg_idx in segment_indices}

@@ -142,7 +142,7 @@ class AmplitudesWidget(BaseRasterWidget):
             bins = 100
 
         # Calculate durations for all segments for x-axis limits
-        durations = get_segment_durations(sorting)
+        durations = get_segment_durations(sorting, segment_indices)
 
         # Build the plot data with the full dict of dicts structure
         plot_data = dict(
