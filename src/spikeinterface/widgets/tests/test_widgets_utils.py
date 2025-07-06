@@ -1,4 +1,3 @@
-from matplotlib.lines import segment_hits
 import pytest
 
 from spikeinterface import generate_sorting
