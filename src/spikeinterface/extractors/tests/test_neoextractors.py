@@ -219,7 +219,7 @@ class NeuroNexusRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroNexusRecordingExtractor
     downloads = ["neuronexus"]
     entities = [
-        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "0"}),
+        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "ai-pri"}),
     ]
 
 
