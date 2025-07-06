@@ -5,6 +5,7 @@ import numpy as np
 
 from spikeinterface.core import BaseSorting
 
+
 def get_some_colors(
     keys,
     color_engine="auto",
