@@ -137,6 +137,9 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         The engine to use for the convolutions
     torch_device : string in ["cpu", "cuda", None]. Default "cpu"
         Controls torch device if the torch engine is selected
+    shared_memory : bool, default True
+        If True, the templates are stored in shared memory, which is more efficient when 
+        using numerous cores
     -----
     """
 
@@ -167,6 +170,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         vicinity=2,
         precomputed=None,
         engine="numpy",
+        shared_memory=True,
         torch_device="cpu",
     ):
 
@@ -176,6 +180,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         self.num_samples = templates.num_samples
         self.nbefore = templates.nbefore
         self.nafter = templates.nafter
+        self.shared_memory = shared_memory
         self.sampling_frequency = recording.get_sampling_frequency()
         self.vicinity = vicinity * self.num_samples
         assert engine in ["numpy", "torch", "auto"], "engine should be numpy, torch or auto"
@@ -207,6 +212,16 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             for key in self._more_output_keys:
                 assert precomputed[key] is not None, "If templates are provided, %d should also be there" % key
                 setattr(self, key, precomputed[key])
+
+        if self.shared_memory:
+            self.max_overlaps = max([len(o) for o in self.overlaps])
+            num_samples = len(self.overlaps[0][0])
+            from spikeinterface.core.core_tools import make_shared_array
+            arr, shm = make_shared_array((self.num_templates*self.max_overlaps, num_samples), dtype=np.float32)
+            for i in range(self.num_templates):
+                arr[i * self.max_overlaps : (i + 1) * self.max_overlaps, :] = self.overlaps[i]
+            self.overlaps = arr
+            self.shm = shm
 
         self.ignore_inds = np.array(ignore_inds)
 
@@ -409,7 +424,11 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                     myline = neighbor_window + delta_t[idx]
                     myindices = selection[0, idx]
 
-                    local_overlaps = self.overlaps[best_cluster_ind]
+                    if self.shared_memory:
+                        local_overlaps = self.overlaps[best_cluster_ind * self.max_overlaps : (best_cluster_ind + 1) * self.max_overlaps, :]
+                    else:
+                        local_overlaps = self.overlaps[best_cluster_ind]
+                    
                     overlapping_templates = self.unit_overlaps_indices[best_cluster_ind]
                     table = self.unit_overlaps_tables[best_cluster_ind]
 
@@ -487,7 +506,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                 for i in modified:
                     tmp_best, tmp_peak = sub_selection[:, i]
                     diff_amp = diff_amplitudes[i] * self.norms[tmp_best]
-                    local_overlaps = self.overlaps[tmp_best]
+                    if self.shared_memory:
+                        local_overlaps = self.overlaps[tmp_best*self.max_overlaps : (tmp_best+1)*self.max_overlaps, :]
+                    else:
+                        local_overlaps = self.overlaps[tmp_best]
                     overlapping_templates = self.units_overlaps[tmp_best]
                     tmp = tmp_peak - neighbor_window
                     idx = [max(0, tmp), min(num_peaks, tmp_peak + self.num_samples)]
