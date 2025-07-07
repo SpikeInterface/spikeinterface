@@ -32,14 +32,14 @@ Kilosort, Ironclust and HDSort are MATLAB based and need to be installed from so
 ### Quick installation using "uv" (recommended)
 
 1. On macOS and Linux. Open a terminal and do
-   `$ curl -LsSf https://astral.sh/uv/install.sh | sh`
+   `curl -LsSf https://astral.sh/uv/install.sh | sh`
 1. On windows. Open a terminal using with CMD
    `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
 2. exit session and log again.
 3. Download with right click and save this file corresponding in "Documents" folder:
     * [`requirements_stable.txt`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/requirements_stable.txt)
 4. open terminal or powershell
-5. `uv venv si_env --python 3.11`
+5. `uv venv si_env --python 3.12`
 6. For Mac/Linux `source si_env/bin/activate` (you should have `(si_env)` in your terminal)
 6. For windows `si_env\Scripts\activate`
 7. `uv pip install -r Documents/beginner_requirements_stable.txt` or `uv pip install -r Documents/beginner_requirements_rolling.txt`
