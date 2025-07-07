@@ -1,6 +1,7 @@
 import pytest
 
 import numpy as np
+import importlib.util
 
 from spikeinterface.postprocessing.tests.common_extension_tests import (
     AnalyzerExtensionCommonTestSuite,
@@ -12,16 +13,13 @@ from spikeinterface.postprocessing.template_similarity import (
     _compute_similarity_matrix_numpy,
 )
 
-try:
-    import numba
+if importlib.util.find_spec("numba") is not None:
 
     HAVE_NUMBA = True
     from spikeinterface.postprocessing.template_similarity import _compute_similarity_matrix_numba
-except ModuleNotFoundError as err:
+else:
     HAVE_NUMBA = False
 
-import pytest
-from pytest import param
 
 SKIP_NUMBA = pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
 

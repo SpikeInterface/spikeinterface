@@ -9,8 +9,6 @@ It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
 
-import warnings
-
 import numpy as np
 
 from .sortinganalyzer import AnalyzerExtension, register_result_extension
@@ -22,21 +20,23 @@ from .sorting_tools import random_spikes_selection
 
 class ComputeRandomSpikes(AnalyzerExtension):
     """
-    AnalyzerExtension that select some random spikes.
+    AnalyzerExtension that select somes random spikes.
+    This allows for a subsampling of spikes for further calculations and is important
+    for managing that amount of memory and speed of computation in the analyzer.
 
     This will be used by the `waveforms`/`templates` extensions.
 
-    This internally use `random_spikes_selection()` parameters are the same.
+    This internally uses `random_spikes_selection()` parameters.
 
     Parameters
     ----------
-    method: "uniform" | "all", default: "uniform"
+    method : "uniform" | "all", default: "uniform"
         The method to select the spikes
-    max_spikes_per_unit: int, default: 500
+    max_spikes_per_unit : int, default: 500
         The maximum number of spikes per unit, ignored if method="all"
-    margin_size: int, default: None
+    margin_size : int, default: None
         A margin on each border of segments to avoid border spikes, ignored if method="all"
-    seed: int or None, default: None
+    seed : int or None, default: None
         A seed for the random generator, ignored if method="all"
 
     Returns
@@ -104,7 +104,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
         return self._some_spikes
 
     def get_selected_indices_in_spike_train(self, unit_id, segment_index):
-        # usefull for Waveforms extractor backwars compatibility
+        # useful for WaveformExtractor backwards compatibility
         # In Waveforms extractor "selected_spikes" was a dict (key: unit_id) of list (segment_index) of indices of spikes in spiketrain
         sorting = self.sorting_analyzer.sorting
         random_spikes_indices = self.data["random_spikes_indices"]
@@ -133,16 +133,16 @@ class ComputeWaveforms(AnalyzerExtension):
 
     Parameters
     ----------
-    ms_before: float, default: 1.0
+    ms_before : float, default: 1.0
         The number of ms to extract before the spike events
-    ms_after: float, default: 2.0
+    ms_after : float, default: 2.0
         The number of ms to extract after the spike events
-    dtype: None | dtype, default: None
+    dtype : None | dtype, default: None
         The dtype of the waveforms. If None, the dtype of the recording is used.
 
     Returns
     -------
-    waveforms: np.ndarray
+    waveforms : np.ndarray
         Array with computed waveforms with shape (num_random_spikes, num_samples, num_channels)
     """
 
@@ -192,7 +192,7 @@ class ComputeWaveforms(AnalyzerExtension):
             self.nbefore,
             self.nafter,
             mode=mode,
-            return_scaled=self.sorting_analyzer.return_scaled,
+            return_in_uV=self.sorting_analyzer.return_in_uV,
             file_path=file_path,
             dtype=self.params["dtype"],
             sparsity_mask=sparsity_mask,
@@ -214,7 +214,7 @@ class ComputeWaveforms(AnalyzerExtension):
         if dtype is None:
             dtype = recording.get_dtype()
 
-        if np.issubdtype(dtype, np.integer) and self.sorting_analyzer.return_scaled:
+        if np.issubdtype(dtype, np.integer) and self.sorting_analyzer.return_in_uV:
             dtype = "float32"
 
         dtype = np.dtype(dtype)
@@ -380,7 +380,12 @@ class ComputeTemplates(AnalyzerExtension):
         assert isinstance(operators, list)
         for operator in operators:
             if isinstance(operator, str):
-                assert operator in ("average", "std", "median", "mad")
+                if operator not in ("average", "std", "median", "mad"):
+                    error_msg = (
+                        f"You have entered an operator {operator} in your `operators` argument which is "
+                        f"not supported. Please use any of ['average', 'std', 'median', 'mad'] instead."
+                    )
+                    raise ValueError(error_msg)
             else:
                 assert isinstance(operator, (list, tuple))
                 assert len(operator) == 2
@@ -405,9 +410,13 @@ class ComputeTemplates(AnalyzerExtension):
             self._compute_and_append_from_waveforms(self.params["operators"])
 
         else:
-            for operator in self.params["operators"]:
-                if operator not in ("average", "std"):
-                    raise ValueError(f"Computing templates with operators {operator} needs the 'waveforms' extension")
+            bad_operator_list = [
+                operator for operator in self.params["operators"] if operator not in ("average", "std")
+            ]
+            if len(bad_operator_list) > 0:
+                raise ValueError(
+                    f"Computing templates with operators {bad_operator_list} requires the 'waveforms' extension"
+                )
 
             recording = self.sorting_analyzer.recording
             sorting = self.sorting_analyzer.sorting
@@ -416,7 +425,7 @@ class ComputeTemplates(AnalyzerExtension):
             # retrieve spike vector and the sampling
             some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
-            return_scaled = self.sorting_analyzer.return_scaled
+            return_in_uV = self.sorting_analyzer.return_in_uV
 
             return_std = "std" in self.params["operators"]
             output = estimate_templates_with_accumulator(
@@ -425,7 +434,7 @@ class ComputeTemplates(AnalyzerExtension):
                 unit_ids,
                 self.nbefore,
                 self.nafter,
-                return_scaled=return_scaled,
+                return_in_uV=return_in_uV,
                 return_std=return_std,
                 verbose=verbose,
                 **job_kwargs,
@@ -441,7 +450,7 @@ class ComputeTemplates(AnalyzerExtension):
 
     def _compute_and_append_from_waveforms(self, operators):
         if not self.sorting_analyzer.has_extension("waveforms"):
-            raise ValueError(f"Computing templates with operators {operators} needs the 'waveforms' extension")
+            raise ValueError(f"Computing templates with operators {operators} requires the 'waveforms' extension")
 
         unit_ids = self.sorting_analyzer.unit_ids
         channel_ids = self.sorting_analyzer.channel_ids
@@ -466,7 +475,7 @@ class ComputeTemplates(AnalyzerExtension):
 
         assert self.sorting_analyzer.has_extension(
             "random_spikes"
-        ), "compute templates requires the random_spikes extension. You can run sorting_analyzer.get_random_spikes()"
+        ), "compute 'templates' requires the random_spikes extension. You can run sorting_analyzer.compute('random_spikes')"
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         for unit_index, unit_id in enumerate(unit_ids):
             spike_mask = some_spikes["unit_index"] == unit_index
@@ -549,8 +558,16 @@ class ComputeTemplates(AnalyzerExtension):
         if operator != "percentile":
             key = operator
         else:
-            assert percentile is not None, "You must provide percentile=..."
+            assert percentile is not None, "You must provide percentile=... if `operator=percentile`"
             key = f"percentile_{percentile}"
+
+        if key not in self.data.keys():
+            error_msg = (
+                f"You have entered `operator={key}`, but the only operators calculated are "
+                f"{list(self.data.keys())}. Please use one of these as your `operator` in the "
+                f"`get_data` function."
+            )
+            raise ValueError(error_msg)
 
         templates_array = self.data[key]
 
@@ -566,7 +583,7 @@ class ComputeTemplates(AnalyzerExtension):
                 probe=self.sorting_analyzer.get_probe(),
             )
         else:
-            raise ValueError("outputs must be numpy or Templates")
+            raise ValueError("outputs must be `numpy` or `Templates`")
 
     def get_templates(self, unit_ids=None, operator="average", percentile=None, save=True, outputs="numpy"):
         """
@@ -576,26 +593,26 @@ class ComputeTemplates(AnalyzerExtension):
 
         Parameters
         ----------
-        unit_ids: list or None
+        unit_ids : list or None
             Unit ids to retrieve waveforms for
-        operator: "average" | "median" | "std" | "percentile", default: "average"
+        operator : "average" | "median" | "std" | "percentile", default: "average"
             The operator to compute the templates
-        percentile: float, default: None
+        percentile : float, default: None
             Percentile to use for operator="percentile"
-        save: bool, default True
+        save : bool, default: True
             In case, the operator is not computed yet it can be saved to folder or zarr
-        outputs: "numpy" | "Templates"
+        outputs : "numpy" | "Templates", default: "numpy"
             Whether to return a numpy array or a Templates object
 
         Returns
         -------
-        templates: np.array
+        templates : np.array | Templates
             The returned templates (num_units, num_samples, num_channels)
         """
         if operator != "percentile":
             key = operator
         else:
-            assert percentile is not None, "You must provide percentile=..."
+            assert percentile is not None, "You must provide percentile=... if `operator='percentile'`"
             key = f"pencentile_{percentile}"
 
         if key in self.data:
@@ -629,10 +646,10 @@ class ComputeTemplates(AnalyzerExtension):
                 channel_ids=self.sorting_analyzer.channel_ids,
                 unit_ids=unit_ids,
                 probe=self.sorting_analyzer.get_probe(),
-                is_scaled=self.sorting_analyzer.return_scaled,
+                is_scaled=self.sorting_analyzer.return_in_uV,
             )
         else:
-            raise ValueError("outputs must be numpy or Templates")
+            raise ValueError("`outputs` must be 'numpy' or 'Templates'")
 
     def get_unit_template(self, unit_id, operator="average"):
         """
@@ -642,7 +659,7 @@ class ComputeTemplates(AnalyzerExtension):
         ----------
         unit_id: str | int
             Unit id to retrieve waveforms for
-        operator: str
+        operator: str, default: "average"
              The operator to compute the templates
 
         Returns
@@ -690,32 +707,45 @@ class ComputeNoiseLevels(AnalyzerExtension):
     depend_on = []
     need_recording = True
     use_nodepipeline = False
-    need_job_kwargs = False
+    need_job_kwargs = True
+    need_backward_compatibility_on_load = True
 
     def __init__(self, sorting_analyzer):
         AnalyzerExtension.__init__(self, sorting_analyzer)
 
-    def _set_params(self, num_chunks_per_segment=20, chunk_size=10000, seed=None):
-        params = dict(num_chunks_per_segment=num_chunks_per_segment, chunk_size=chunk_size, seed=seed)
+    def _set_params(self, **noise_level_params):
+        params = noise_level_params.copy()
         return params
 
     def _select_extension_data(self, unit_ids):
-        # this do not depend on units
+        # this does not depend on units
         return self.data
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
-        # this do not depend on units
+        # this does not depend on units
         return self.data.copy()
 
-    def _run(self, verbose=False):
+    def _run(self, verbose=False, **job_kwargs):
         self.data["noise_levels"] = get_noise_levels(
-            self.sorting_analyzer.recording, return_scaled=self.sorting_analyzer.return_scaled, **self.params
+            self.sorting_analyzer.recording,
+            return_in_uV=self.sorting_analyzer.return_in_uV,
+            **self.params,
+            **job_kwargs,
         )
 
     def _get_data(self):
         return self.data["noise_levels"]
+
+    def _handle_backward_compatibility_on_load(self):
+        # The old parameters used to be params=dict(num_chunks_per_segment=20, chunk_size=10000, seed=None)
+        # now it is handle more explicitly using random_slices_kwargs=dict()
+        for key in ("num_chunks_per_segment", "chunk_size", "seed"):
+            if key in self.params:
+                if "random_slices_kwargs" not in self.params:
+                    self.params["random_slices_kwargs"] = dict()
+                self.params["random_slices_kwargs"][key] = self.params.pop(key)
 
 
 register_result_extension(ComputeNoiseLevels)

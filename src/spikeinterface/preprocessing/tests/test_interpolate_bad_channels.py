@@ -7,7 +7,8 @@ import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
 from spikeinterface.core.generate import generate_recording
 import importlib.util
-
+from spikeinterface.preprocessing.interpolate_bad_channels import detect_and_interpolate_bad_channels
+from spikeinterface.preprocessing.detect_bad_channels import detect_bad_channels
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 DEBUG = False
@@ -21,6 +22,31 @@ if DEBUG:
 # -------------------------------------------------------------------------------
 # Tests
 # -------------------------------------------------------------------------------
+
+
+def test_detect_and_interpolate_bad_channel():
+    """
+    Generate a recording, then remove bad channels with a low noise threshold, so that
+    some units are removed. Then check that the new recording is an interpolated
+    recording and that kwargs are successfully propogated to the new recording.
+    """
+
+    recording = generate_recording(durations=[5, 6], seed=1205, num_channels=8)
+    recording.set_channel_offsets(0)
+    recording.set_channel_gains(1)
+
+    # find the bad channels directly
+    bad_channel_ids, _ = detect_bad_channels(recording, noisy_channel_threshold=0, seed=1205)
+
+    # set noisy_channel_threshold so that we do detect some bad channels
+    new_rec = detect_and_interpolate_bad_channels(recording, noisy_channel_threshold=0, seed=1205)
+
+    # make sure they are in the new recording kwargs
+    bad_channel_ids_from_rec = new_rec._kwargs["bad_channel_ids"]
+    assert set(bad_channel_ids) == set(bad_channel_ids_from_rec)
+
+    # and that the kwarg is propogatged to the kwargs of new_rec.
+    assert new_rec._kwargs["noisy_channel_threshold"] == 0
 
 
 @pytest.mark.skipif(
@@ -163,7 +189,9 @@ def test_output_values():
     expected_weights = np.r_[np.tile(np.exp(-2), 3), np.exp(-4)]
     expected_weights /= np.sum(expected_weights)
 
-    si_interpolated_recording = spre.interpolate_bad_channels(recording, bad_channel_indexes, sigma_um=1, p=1)
+    si_interpolated_recording = spre.interpolate_bad_channels(
+        recording, bad_channel_ids=bad_channel_ids, sigma_um=1, p=1
+    )
     si_interpolated = si_interpolated_recording.get_traces()
 
     expected_ts = si_interpolated[:, 1:] @ expected_weights

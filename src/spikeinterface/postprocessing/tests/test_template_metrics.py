@@ -1,11 +1,54 @@
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
-from spikeinterface.postprocessing import ComputeTemplateMetrics
+from spikeinterface.postprocessing import ComputeTemplateMetrics, compute_template_metrics
 import pytest
 import csv
 
 from spikeinterface.postprocessing.template_metrics import _single_channel_metric_name_to_func
 
 template_metrics = list(_single_channel_metric_name_to_func.keys())
+
+
+def test_different_params_template_metrics(small_sorting_analyzer):
+    """
+    Computes template metrics using different params, and check that they are
+    actually calculated using the different params.
+    """
+    compute_template_metrics(
+        sorting_analyzer=small_sorting_analyzer,
+        metric_names=["exp_decay", "spread", "half_width"],
+        metric_params={"exp_decay": {"recovery_window_ms": 0.8}, "spread": {"spread_smooth_um": 15}},
+    )
+
+    tm_extension = small_sorting_analyzer.get_extension("template_metrics")
+    tm_params = tm_extension.params["metric_params"]
+
+    assert tm_params["exp_decay"]["recovery_window_ms"] == 0.8
+    assert tm_params["spread"]["recovery_window_ms"] == 0.7
+    assert tm_params["half_width"]["recovery_window_ms"] == 0.7
+
+    assert tm_params["spread"]["spread_smooth_um"] == 15
+    assert tm_params["exp_decay"]["spread_smooth_um"] == 20
+    assert tm_params["half_width"]["spread_smooth_um"] == 20
+
+
+def test_backwards_compat_params_template_metrics(small_sorting_analyzer):
+    """
+    Computes template metrics using the metrics_kwargs keyword
+    """
+    compute_template_metrics(
+        sorting_analyzer=small_sorting_analyzer,
+        metric_names=["exp_decay", "spread"],
+        metrics_kwargs={"recovery_window_ms": 0.8},
+    )
+
+    tm_extension = small_sorting_analyzer.get_extension("template_metrics")
+    tm_params = tm_extension.params["metric_params"]
+
+    assert tm_params["exp_decay"]["recovery_window_ms"] == 0.8
+    assert tm_params["spread"]["recovery_window_ms"] == 0.8
+
+    assert tm_params["spread"]["spread_smooth_um"] == 20
+    assert tm_params["exp_decay"]["spread_smooth_um"] == 20
 
 
 def test_compute_new_template_metrics(small_sorting_analyzer):
@@ -16,6 +59,8 @@ def test_compute_new_template_metrics(small_sorting_analyzer):
     Then computes template metrics with new parameters and checks that old metrics
     are deleted.
     """
+
+    small_sorting_analyzer.delete_extension("template_metrics")
 
     # calculate just exp_decay
     small_sorting_analyzer.compute({"template_metrics": {"metric_names": ["exp_decay"]}})
@@ -47,13 +92,13 @@ def test_compute_new_template_metrics(small_sorting_analyzer):
 
     # check that, when parameters are changed, the old metrics are deleted
     small_sorting_analyzer.compute(
-        {"template_metrics": {"metric_names": ["exp_decay"], "metrics_kwargs": {"recovery_window_ms": 0.6}}}
+        {"template_metrics": {"metric_names": ["exp_decay"], "metric_params": {"recovery_window_ms": 0.6}}}
     )
 
 
 def test_metric_names_in_same_order(small_sorting_analyzer):
     """
-    Computes sepecified template metrics and checks order is propogated.
+    Computes sepecified template metrics and checks order is propagated.
     """
     specified_metric_names = ["peak_trough_ratio", "num_negative_peaks", "half_width"]
     small_sorting_analyzer.compute("template_metrics", metric_names=specified_metric_names)

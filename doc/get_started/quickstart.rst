@@ -287,7 +287,7 @@ available parameters are dictionaries and can be accessed with:
      'detect_threshold': 5,
      'freq_max': 5000.0,
      'freq_min': 400.0,
-     'max_threads_per_process': 1,
+     'max_threads_per_worker': 1,
      'mp_context': None,
      'n_jobs': 20,
      'nested_params': None,
@@ -336,7 +336,7 @@ Alternatively we can pass a full dictionary containing the parameters:
 
     # parameters set by params dictionary
     sorting_TDC_2 = ss.run_sorter(
-        sorter_name="tridesclous", recording=recording_preprocessed, output_folder="tdc_output2", **other_params
+        sorter_name="tridesclous", recording=recording_preprocessed, folder="tdc_output2", **other_params
     )
     print(sorting_TDC_2)
 
@@ -673,7 +673,7 @@ compute quality metrics (some quality metrics require certain extensions
                               'min_spikes': 0,
                               'window_size_s': 1},
      'snr': {'peak_mode': 'extremum', 'peak_sign': 'neg'},
-     'synchrony': {'synchrony_sizes': (2, 4, 8)}}
+     'synchrony': {}
 
 
 Since the recording is very short, let’s change some parameters to

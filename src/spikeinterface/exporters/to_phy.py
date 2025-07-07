@@ -35,7 +35,7 @@ def export_to_phy(
     **job_kwargs,
 ):
     """
-    Exports a waveform extractor to the phy template-gui format.
+    Exports a sorting analyzer to the phy template-gui format.
 
     Parameters
     ----------

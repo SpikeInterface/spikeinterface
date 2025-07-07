@@ -37,7 +37,7 @@ class NumpyFolderSorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self.spikes = np.load(folder_path / "spikes.npy", mmap_mode="r")
+        self.spikes = np.load(folder_path / "spikes.npy")
 
         for segment_index in range(num_segments):
             self.add_sorting_segment(SpikeVectorSortingSegment(self.spikes, segment_index, unit_ids))

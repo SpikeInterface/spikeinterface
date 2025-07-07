@@ -24,14 +24,14 @@ def test_compute_quality_metrics(sorting_analyzer_simple):
     metrics = compute_quality_metrics(
         sorting_analyzer,
         metric_names=["snr"],
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=True,
         seed=2205,
     )
     # print(metrics)
 
     qm = sorting_analyzer.get_extension("quality_metrics")
-    assert qm.params["qm_params"]["isi_violation"]["isi_threshold_ms"] == 2
+    assert qm.params["metric_params"]["isi_violation"]["isi_threshold_ms"] == 2
     assert "snr" in metrics.columns
     assert "isolation_distance" not in metrics.columns
 
@@ -40,12 +40,39 @@ def test_compute_quality_metrics(sorting_analyzer_simple):
     metrics = compute_quality_metrics(
         sorting_analyzer,
         metric_names=None,
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=False,
         seed=2205,
     )
     print(metrics.columns)
     assert "isolation_distance" in metrics.columns
+
+
+def test_merging_quality_metrics(sorting_analyzer_simple):
+
+    sorting_analyzer = sorting_analyzer_simple
+
+    metrics = compute_quality_metrics(
+        sorting_analyzer,
+        metric_names=None,
+        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        skip_pc_metrics=False,
+        seed=2205,
+    )
+
+    # sorting_analyzer_simple has ten units
+    new_sorting_analyzer = sorting_analyzer.merge_units([[0, 1]])
+
+    new_metrics = new_sorting_analyzer.get_extension("quality_metrics").get_data()
+
+    # we should copy over the metrics after merge
+    for column in metrics.columns:
+        assert column in new_metrics.columns
+        # should copy dtype too
+        assert metrics[column].dtype == new_metrics[column].dtype
+
+    # 10 units vs 9 units
+    assert len(metrics.index) > len(new_metrics.index)
 
 
 def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
@@ -54,7 +81,7 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
     metrics = compute_quality_metrics(
         sorting_analyzer,
         metric_names=None,
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=False,
         seed=2205,
     )
@@ -68,7 +95,7 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
     metrics_norec = compute_quality_metrics(
         sorting_analyzer_norec,
         metric_names=None,
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=False,
         seed=2205,
     )
@@ -101,15 +128,20 @@ def test_empty_units(sorting_analyzer_simple):
     metrics_empty = compute_quality_metrics(
         sorting_analyzer_empty,
         metric_names=None,
-        qm_params=dict(isi_violation=dict(isi_threshold_ms=2)),
+        metric_params=dict(isi_violation=dict(isi_threshold_ms=2)),
         skip_pc_metrics=True,
         seed=2205,
     )
 
-    for empty_unit_id in sorting_empty.get_empty_unit_ids():
+    # num_spikes are ints not nans so we confirm empty units are nans for everything except
+    # num_spikes which should be 0
+    nan_containing_columns = [column for column in metrics_empty.columns if column != "num_spikes"]
+    for empty_unit_ids in sorting_empty.get_empty_unit_ids():
         from pandas import isnull
 
-        assert np.all(isnull(metrics_empty.loc[empty_unit_id].values))
+        assert np.all(isnull(metrics_empty.loc[empty_unit_ids, nan_containing_columns].values))
+        if "num_spikes" in metrics_empty.columns:
+            assert sum(metrics_empty.loc[empty_unit_ids, ["num_spikes"]]) == 0
 
 
 # TODO @alessio all theses old test should be moved in test_metric_functions.py or test_pca_metrics()

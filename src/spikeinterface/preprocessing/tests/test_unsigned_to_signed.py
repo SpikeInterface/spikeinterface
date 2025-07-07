@@ -1,13 +1,7 @@
-import pytest
-from pathlib import Path
-import shutil
-
-from spikeinterface import set_global_tmp_folder, NumpyRecording
-from spikeinterface.core import generate_recording
-
-from spikeinterface.preprocessing import unsigned_to_signed
-
 import numpy as np
+
+from spikeinterface import NumpyRecording
+from spikeinterface.preprocessing import unsigned_to_signed
 
 
 def test_unsigned_to_signed():

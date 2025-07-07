@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import importlib.util
+
 import numpy as np
-from spikeinterface.core import NumpySorting
 
 from .basesorting import BaseSorting
 from .numpyextractors import NumpySorting
+
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
+    HAVE_NUMBA = True
+else:
+    HAVE_NUMBA = False
 
 
 def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.array) -> dict[dict[str, np.array]]:
@@ -26,13 +33,6 @@ def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.arra
         A dict containing, for each segment, the spike trains of all units
         (as a dict: unit_id --> spike_train).
     """
-
-    try:
-        import numba
-
-        HAVE_NUMBA = True
-    except:
-        HAVE_NUMBA = False
 
     if HAVE_NUMBA:
         # the trick here is to have a function getter
@@ -76,12 +76,6 @@ def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, ab
         A dict containing, for each segment, the spike indices of all units
         (as a dict: unit_id --> index).
     """
-    try:
-        import numba
-
-        HAVE_NUMBA = True
-    except:
-        HAVE_NUMBA = False
 
     if HAVE_NUMBA:
         # the trick here is to have a function getter
@@ -233,8 +227,13 @@ def random_spikes_selection(
 
 
 def apply_merges_to_sorting(
-    sorting, merge_unit_groups, new_unit_ids=None, censor_ms=None, return_extra=False, new_id_strategy="append"
-):
+    sorting: BaseSorting,
+    merge_unit_groups: list[list[int | str]] | list[tuple[int | str]],
+    new_unit_ids: list[int | str] | None = None,
+    censor_ms: float | None = None,
+    return_extra: bool = False,
+    new_id_strategy: str = "append",
+) -> NumpySorting | tuple[NumpySorting, np.ndarray, list[int | str]]:
     """
     Apply a resolved representation of the merges to a sorting object.
 
@@ -246,9 +245,9 @@ def apply_merges_to_sorting(
 
     Parameters
     ----------
-    sorting : Sorting
+    sorting : BaseSorting
         The Sorting object to apply merges.
-    merge_unit_groups : list/tuple of lists/tuples
+    merge_unit_groups : list of lists/tuples
         A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
         but it can also have more (merge multiple units at once).
     new_unit_ids : list | None, default: None

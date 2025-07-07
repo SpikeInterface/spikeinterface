@@ -12,7 +12,7 @@ trains. This way synchronous events can be found both in multi-unit and single-u
 Complexity is calculated by counting the number of spikes (i.e. non-empty bins) that occur at the same sample index,
 within and across spike trains.
 
-Synchrony metrics can be computed for different synchrony sizes (>1), defining the number of simultaneous spikes to count.
+Synchrony metrics are computed for 2, 4 and 8 synchronous spikes.
 
 
 
@@ -29,7 +29,7 @@ Example code
 
     import spikeinterface.qualitymetrics as sqm
     # Combine a sorting and recording into a sorting_analyzer
-    synchrony = sqm.compute_synchrony_metrics(sorting_analyzer=sorting_analyzer synchrony_sizes=(2, 4, 8))
+    synchrony = sqm.compute_synchrony_metrics(sorting_analyzer=sorting_analyzer)
     # synchrony is a tuple of dicts with the synchrony metrics for each unit
 
 

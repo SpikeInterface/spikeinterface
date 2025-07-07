@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 import warnings
 import numpy as np
-from typing import Literal
+from typing import Literal, Optional
 from math import ceil
 
 from .basesorting import SpikeVectorSortingSegment
@@ -33,7 +33,7 @@ def generate_recording(
     set_probe: bool | None = True,
     ndim: int | None = 2,
     seed: int | None = None,
-) -> NumpySorting:
+) -> BaseRecording:
     """
     Generate a lazy recording object.
     Useful for testing API and algos.
@@ -134,7 +134,7 @@ def generate_sorting(
     seed = _ensure_seed(seed)
     rng = np.random.default_rng(seed)
     num_segments = len(durations)
-    unit_ids = np.arange(num_units)
+    unit_ids = [str(idx) for idx in np.arange(num_units)]
 
     spikes = []
     for segment_index in range(num_segments):
@@ -509,7 +509,7 @@ class TransformSorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_times_labels(
+    def from_samples_and_labels(
         sorting1, times_list, labels_list, sampling_frequency, unit_ids=None, refractory_period_ms=None
     ) -> "NumpySorting":
         """
@@ -537,7 +537,7 @@ class TransformSorting(BaseSorting):
             discarded.
         """
 
-        sorting2 = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency, unit_ids)
+        sorting2 = NumpySorting.from_samples_and_labels(times_list, labels_list, sampling_frequency, unit_ids)
         sorting = TransformSorting.add_from_sorting(sorting1, sorting2, refractory_period_ms)
         return sorting
 
@@ -1111,7 +1111,7 @@ class SortingGenerator(BaseSorting):
 
         """
 
-        unit_ids = np.arange(num_units)
+        unit_ids = [str(idx) for idx in np.arange(num_units)]
         super().__init__(sampling_frequency, unit_ids)
 
         self.num_units = num_units
@@ -1138,6 +1138,7 @@ class SortingGenerator(BaseSorting):
                 firing_rates=firing_rates,
                 refractory_period_seconds=self.refractory_period_seconds,
                 seed=segment_seed,
+                unit_ids=unit_ids,
                 t_start=None,
             )
             self.add_sorting_segment(segment)
@@ -1161,6 +1162,7 @@ class SortingGeneratorSegment(BaseSortingSegment):
         firing_rates: float | np.ndarray,
         refractory_period_seconds: float | np.ndarray,
         seed: int,
+        unit_ids: list[str],
         t_start: Optional[float] = None,
     ):
         self.num_units = num_units
@@ -1177,7 +1179,8 @@ class SortingGeneratorSegment(BaseSortingSegment):
             self.refractory_period_seconds = np.full(num_units, self.refractory_period_seconds, dtype="float64")
 
         self.segment_seed = seed
-        self.units_seed = {unit_id: self.segment_seed + hash(unit_id) for unit_id in range(num_units)}
+        self.units_seed = {unit_id: abs(self.segment_seed + hash(unit_id)) for unit_id in unit_ids}
+
         self.num_samples = math.ceil(sampling_frequency * duration)
         super().__init__(t_start)
 
@@ -1280,7 +1283,7 @@ class NoiseGeneratorRecording(BaseRecording):
         noise_block_size: int = 30000,
     ):
 
-        channel_ids = np.arange(num_channels)
+        channel_ids = [str(idx) for idx in np.arange(num_channels)]
         dtype = np.dtype(dtype).name  # Cast to string for serialization
         if dtype not in ("float32", "float64"):
             raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")
@@ -2153,6 +2156,21 @@ def generate_channel_locations(num_channels, num_columns, contact_spacing_um):
     return channel_locations
 
 
+def _generate_multimodal(rng, size, num_modes, lim0, lim1):
+    bins = np.linspace(lim0, lim1, 10000)
+    bin_step = bins[1] - bins[0]
+    prob = np.zeros(bins.size)
+    mode_step = (lim1 - lim0) / (num_modes + 1)
+    for i in range(num_modes):
+        center = mode_step * (i + 1)
+        sigma = mode_step / 5.0
+        prob += np.exp(-((bins - center) ** 2) / (2 * sigma**2))
+    prob /= np.sum(prob)
+    choices = np.random.choice(np.arange(bins.size), size, p=prob)
+    values = bins[choices] + rng.uniform(low=-bin_step / 2, high=bin_step / 2, size=size)
+    return values
+
+
 def generate_unit_locations(
     num_units,
     channel_locations,
@@ -2162,6 +2180,8 @@ def generate_unit_locations(
     minimum_distance=20.0,
     max_iteration=100,
     distance_strict=False,
+    distribution="uniform",
+    num_modes=2,
     seed=None,
 ):
     """
@@ -2202,6 +2222,14 @@ def generate_unit_locations(
         If True, the function will raise an exception if a solution meeting the distance
         constraint cannot be found within the maximum number of iterations. If False, a warning
         will be issued.
+    distribution : "uniform" | "multimodal", default: "uniform"
+        How units are spread.
+        "uniform" is units everywhere
+        "multimodal" mimic the distribution of units 'by layer'  on the 'y' axis (dim=1)
+        Important note, when using multimodal in conjonction of minimum_distance not None, there is not garanty
+        of a true multimodal because units that do not respect the distance of move again and are most chance to be in between layers.
+    num_modes : int, default 2
+        In case of distribution="multimodal", this is the number of modes (layers)
     seed : int or None, optional
         Random seed for reproducibility. If None, the seed is not set
 
@@ -2218,7 +2246,12 @@ def generate_unit_locations(
     minimum_y, maximum_y = np.min(channel_locations[:, 1]) - margin_um, np.max(channel_locations[:, 1]) + margin_um
 
     units_locations[:, 0] = rng.uniform(minimum_x, maximum_x, size=num_units)
-    units_locations[:, 1] = rng.uniform(minimum_y, maximum_y, size=num_units)
+    if distribution == "uniform":
+        units_locations[:, 1] = rng.uniform(minimum_y, maximum_y, size=num_units)
+    elif distribution == "multimodal":
+        units_locations[:, 1] = _generate_multimodal(rng, num_units, num_modes, minimum_y, maximum_y)
+    else:
+        raise ValueError("generate_unit_locations has wrong distribution must be 'uniform' or ")
     units_locations[:, 2] = rng.uniform(minimum_z, maximum_z, size=num_units)
 
     if minimum_distance is not None:
@@ -2239,20 +2272,27 @@ def generate_unit_locations(
                     renew_inds = renew_inds[np.isin(renew_inds, np.unique(inds0))]
 
                 units_locations[:, 0][renew_inds] = rng.uniform(minimum_x, maximum_x, size=renew_inds.size)
-                units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
+                if distribution == "uniform":
+                    units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
+
+                elif distribution == "multimodal":
+                    units_locations[:, 1][renew_inds] = _generate_multimodal(
+                        rng, renew_inds.size, num_modes, minimum_y, maximum_y
+                    )
                 units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
+
             else:
                 solution_found = True
                 break
 
-    if not solution_found:
-        if distance_strict:
-            raise ValueError(
-                f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=} "
-                "You can use distance_strict=False or reduce minimum distance"
-            )
-        else:
-            warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
+        if not solution_found:
+            if distance_strict:
+                raise ValueError(
+                    f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=} "
+                    "You can use distance_strict=False or reduce minimum distance"
+                )
+            else:
+                warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
 
     return units_locations
 

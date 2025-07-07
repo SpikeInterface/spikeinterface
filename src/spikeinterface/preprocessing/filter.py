@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-from ..core import get_chunk_with_margin
+from spikeinterface.core import get_chunk_with_margin
 
 
 _common_filter_docs = """**filter_kwargs : dict
@@ -322,10 +322,10 @@ class NotchFilterRecording(BasePreprocessor):
 
 
 # functions for API
-filter = define_function_from_class(source_class=FilterRecording, name="filter")
-bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
-notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
-highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
+filter = define_function_handling_dict_from_class(source_class=FilterRecording, name="filter")
+bandpass_filter = define_function_handling_dict_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
+notch_filter = define_function_handling_dict_from_class(source_class=NotchFilterRecording, name="notch_filter")
+highpass_filter = define_function_handling_dict_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
 
 
 def causal_filter(
@@ -399,12 +399,33 @@ highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
 
 
 def fix_dtype(recording, dtype):
+    """
+    Fix recording dtype for preprocessing, by always returning a numpy.dtype.
+    If `dtype` is not provided, the recording dtype is returned.
+    If the dtype is unsigned, it raises a ValueError.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording to fix the dtype for
+    dtype : str | numpy.dtype
+        A specified dtype to return as numpy.dtype
+
+    Returns
+    -------
+    fixed_dtype : numpy.dtype
+        The fixed numpy.dtype
+    """
     if dtype is None:
         dtype = recording.get_dtype()
     dtype = np.dtype(dtype)
 
     # if uint --> force int
     if dtype.kind == "u":
-        dtype = np.dtype(dtype.str.replace("u", "i"))
+        raise ValueError(
+            "Unsigned types are not supported, since they don't ineract well with "
+            "various preprocessing steps. You can use "
+            "`spikeinterface.preprocessing.unsigned_to_signed` to convert the recording to a signed type."
+        )
 
     return dtype

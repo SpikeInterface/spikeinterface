@@ -6,6 +6,7 @@ import warnings
 from copy import deepcopy
 import platform
 from tqdm.auto import tqdm
+from warnings import warn
 
 import numpy as np
 
@@ -15,8 +16,8 @@ from threadpoolctl import threadpool_limits
 
 from .misc_metrics import compute_num_spikes, compute_firing_rates
 
-from ..core import get_random_data_chunks, compute_sparsity
-from ..core.template_tools import get_template_extremum_channel
+from spikeinterface.core import get_random_data_chunks, compute_sparsity
+from spikeinterface.core.template_tools import get_template_extremum_channel
 
 _possible_pc_metric_names = [
     "isolation_distance",
@@ -41,6 +42,9 @@ _default_params = dict(
         max_spikes=10000, min_spikes=10, min_fr=0.0, n_neighbors=4, n_components=10, radius_um=100, peak_sign="neg"
     ),
     silhouette=dict(method=("simplified",)),
+    isolation_distance=dict(),
+    l_ratio=dict(),
+    d_prime=dict(),
 )
 
 
@@ -52,13 +56,14 @@ def get_quality_pca_metric_list():
 def compute_pc_metrics(
     sorting_analyzer,
     metric_names=None,
+    metric_params=None,
     qm_params=None,
     unit_ids=None,
     seed=None,
     n_jobs=1,
     progress_bar=False,
     mp_context=None,
-    max_threads_per_process=None,
+    max_threads_per_worker=None,
 ) -> dict:
     """
     Calculate principal component derived metrics.
@@ -70,7 +75,7 @@ def compute_pc_metrics(
     metric_names : list of str, default: None
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
-    qm_params : dict or None
+    metric_params : dict or None
         Dictionary with parameters for each PC metric function.
     unit_ids : list of int or None
         List of unit ids to compute metrics for.
@@ -86,6 +91,14 @@ def compute_pc_metrics(
     pc_metrics : dict
         The computed PC metrics.
     """
+
+    if qm_params is not None and metric_params is None:
+        deprecation_msg = (
+            "`qm_params` is deprecated and will be removed in version 0.104.0. Please use metric_params instead"
+        )
+        warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
+        metric_params = qm_params
+
     pca_ext = sorting_analyzer.get_extension("principal_components")
     assert pca_ext is not None, "calculate_pc_metrics() need extension 'principal_components'"
 
@@ -93,8 +106,8 @@ def compute_pc_metrics(
 
     if metric_names is None:
         metric_names = _possible_pc_metric_names.copy()
-    if qm_params is None:
-        qm_params = _default_params
+    if metric_params is None:
+        metric_params = _default_params
 
     extremum_channels = get_template_extremum_channel(sorting_analyzer)
 
@@ -144,10 +157,14 @@ def compute_pc_metrics(
         neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
 
         labels = all_labels[np.isin(all_labels, neighbor_unit_ids)]
-        pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
+        if pca_ext.params["mode"] == "concatenated":
+            pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)]
+        else:
+            pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
 
-        func_args = (pcs_flat, labels, non_nn_metrics, unit_id, unit_ids, qm_params, max_threads_per_process)
+        func_args = (pcs_flat, labels, non_nn_metrics, unit_id, unit_ids, metric_params, max_threads_per_worker)
+
         items.append(func_args)
 
     if not run_in_parallel and non_nn_metrics:
@@ -184,7 +201,7 @@ def compute_pc_metrics(
             units_loop = tqdm(units_loop, desc=f"calculate {metric_name} metric", total=len(unit_ids))
 
         func = _nn_metric_name_to_func[metric_name]
-        metric_params = qm_params[metric_name] if metric_name in qm_params else {}
+        metric_params = metric_params[metric_name] if metric_name in metric_params else {}
 
         for _, unit_id in units_loop:
             try:
@@ -208,28 +225,6 @@ def compute_pc_metrics(
                 pc_metrics["nn_unit_id"][unit_id] = nn_unit_id
             elif metric_name == "nn_noise_overlap":
                 pc_metrics["nn_noise_overlap"][unit_id] = res
-
-    return pc_metrics
-
-
-def calculate_pc_metrics(
-    sorting_analyzer, metric_names=None, qm_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
-):
-    warnings.warn(
-        "The `calculate_pc_metrics` function is deprecated and will be removed in 0.103.0. Please use compute_pc_metrics instead",
-        category=DeprecationWarning,
-        stacklevel=2,
-    )
-
-    pc_metrics = compute_pc_metrics(
-        sorting_analyzer,
-        metric_names=metric_names,
-        qm_params=qm_params,
-        unit_ids=unit_ids,
-        seed=seed,
-        n_jobs=n_jobs,
-        progress_bar=progress_bar,
-    )
 
     return pc_metrics
 
@@ -977,16 +972,17 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
 
 
 def pca_metrics_one_unit(args):
-    (pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params, max_threads_per_process) = args
 
-    if max_threads_per_process is None:
-        return _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params)
+    (pcs_flat, labels, metric_names, unit_id, unit_ids, metric_params, max_threads_per_worker) = args
+
+    if max_threads_per_worker is None:
+        return _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, metric_params)
     else:
-        with threadpool_limits(limits=int(max_threads_per_process)):
-            return _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params)
+        with threadpool_limits(limits=int(max_threads_per_worker)):
+            return _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, metric_params)
 
 
-def _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params):
+def _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, metric_params):
     pc_metrics = {}
     # metrics
     if "isolation_distance" in metric_names or "l_ratio" in metric_names:
@@ -1015,7 +1011,7 @@ def _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, qm_
     if "nearest_neighbor" in metric_names:
         try:
             nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(
-                pcs_flat, labels, unit_id, **qm_params["nearest_neighbor"]
+                pcs_flat, labels, unit_id, **metric_params["nearest_neighbor"]
             )
         except:
             nn_hit_rate = np.nan
@@ -1024,7 +1020,7 @@ def _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, qm_
         pc_metrics["nn_miss_rate"] = nn_miss_rate
 
     if "silhouette" in metric_names:
-        silhouette_method = qm_params["silhouette"]["method"]
+        silhouette_method = metric_params["silhouette"]["method"]
         if "simplified" in silhouette_method:
             try:
                 unit_silhouette_score = simplified_silhouette_score(pcs_flat, labels, unit_id)

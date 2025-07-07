@@ -39,7 +39,7 @@ from spikeinterface.qualitymetrics import (
     compute_firing_ranges,
     compute_amplitude_cv_metrics,
     compute_sd_ratio,
-    get_synchrony_counts,
+    _get_synchrony_counts,
     compute_quality_metrics,
 )
 
@@ -69,7 +69,7 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
     assert calculated_metrics == ["snr"]
 
     small_sorting_analyzer.compute(
-        {"quality_metrics": {"metric_names": list(qm_params.keys()), "qm_params": qm_params}}
+        {"quality_metrics": {"metric_names": list(qm_params.keys()), "metric_params": qm_params}}
     )
     small_sorting_analyzer.compute({"quality_metrics": {"metric_names": ["snr"]}})
 
@@ -96,13 +96,13 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
     # check that, when parameters are changed, the data and metadata are updated
     old_snr_data = deepcopy(quality_metric_extension.get_data()["snr"].values)
     small_sorting_analyzer.compute(
-        {"quality_metrics": {"metric_names": ["snr"], "qm_params": {"snr": {"peak_mode": "peak_to_peak"}}}}
+        {"quality_metrics": {"metric_names": ["snr"], "metric_params": {"snr": {"peak_mode": "peak_to_peak"}}}}
     )
     new_quality_metric_extension = small_sorting_analyzer.get_extension("quality_metrics")
     new_snr_data = new_quality_metric_extension.get_data()["snr"].values
 
     assert np.all(old_snr_data != new_snr_data)
-    assert new_quality_metric_extension.params["qm_params"]["snr"]["peak_mode"] == "peak_to_peak"
+    assert new_quality_metric_extension.params["metric_params"]["snr"]["peak_mode"] == "peak_to_peak"
 
     # check that all quality metrics are deleted when parents are recomputed, even after
     # recomputation
@@ -120,7 +120,7 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
 
 def test_metric_names_in_same_order(small_sorting_analyzer):
     """
-    Computes sepecified quality metrics and checks order is propogated.
+    Computes sepecified quality metrics and checks order is propagated.
     """
     specified_metric_names = ["firing_range", "snr", "amplitude_cutoff"]
     small_sorting_analyzer.compute("quality_metrics", metric_names=specified_metric_names)
@@ -280,10 +280,10 @@ def test_unit_id_order_independence(small_sorting_analyzer):
     }
 
     quality_metrics_1 = compute_quality_metrics(
-        small_sorting_analyzer, metric_names=get_quality_metric_list(), qm_params=qm_params
+        small_sorting_analyzer, metric_names=get_quality_metric_list(), metric_params=qm_params
     )
     quality_metrics_2 = compute_quality_metrics(
-        small_sorting_analyzer_2, metric_names=get_quality_metric_list(), qm_params=qm_params
+        small_sorting_analyzer_2, metric_names=get_quality_metric_list(), metric_params=qm_params
     )
 
     for metric, metric_2_data in quality_metrics_2.items():
@@ -316,7 +316,7 @@ def _sorting_violation():
     spike_labels = spike_labels[mask]
 
     unit_ids = ["a", "b", "c"]
-    sorting = NumpySorting.from_times_labels(spike_times, spike_labels, sampling_frequency, unit_ids=unit_ids)
+    sorting = NumpySorting.from_samples_and_labels(spike_times, spike_labels, sampling_frequency, unit_ids=unit_ids)
 
     return sorting
 
@@ -352,7 +352,7 @@ def test_synchrony_counts_no_sync():
     one_spike["sample_index"] = spike_times
     one_spike["unit_index"] = spike_units
 
-    sync_count = get_synchrony_counts(one_spike, np.array((2)), [0])
+    sync_count = _get_synchrony_counts(one_spike, np.array([2, 4, 8]), [0])
 
     assert np.all(sync_count[0] == np.array([0]))
 
@@ -372,7 +372,7 @@ def test_synchrony_counts_one_sync():
     two_spikes["sample_index"] = np.concatenate((spike_indices, added_spikes_indices))
     two_spikes["unit_index"] = np.concatenate((spike_labels, added_spikes_labels))
 
-    sync_count = get_synchrony_counts(two_spikes, np.array((2)), [0, 1])
+    sync_count = _get_synchrony_counts(two_spikes, np.array([2, 4, 8]), [0, 1])
 
     assert np.all(sync_count[0] == np.array([1, 1]))
 
@@ -392,7 +392,7 @@ def test_synchrony_counts_one_quad_sync():
     four_spikes["sample_index"] = np.concatenate((spike_indices, added_spikes_indices))
     four_spikes["unit_index"] = np.concatenate((spike_labels, added_spikes_labels))
 
-    sync_count = get_synchrony_counts(four_spikes, np.array((2, 4)), [0, 1, 2, 3])
+    sync_count = _get_synchrony_counts(four_spikes, np.array([2, 4, 8]), [0, 1, 2, 3])
 
     assert np.all(sync_count[0] == np.array([1, 1, 1, 1]))
     assert np.all(sync_count[1] == np.array([1, 1, 1, 1]))
@@ -409,7 +409,7 @@ def test_synchrony_counts_not_all_units():
     three_spikes["sample_index"] = np.concatenate((spike_indices, added_spikes_indices))
     three_spikes["unit_index"] = np.concatenate((spike_labels, added_spikes_labels))
 
-    sync_count = get_synchrony_counts(three_spikes, np.array((2)), [0, 1, 2])
+    sync_count = _get_synchrony_counts(three_spikes, np.array([2, 4, 8]), [0, 1, 2])
 
     assert np.all(sync_count[0] == np.array([0, 1, 1]))
 
@@ -610,9 +610,9 @@ def test_calculate_rp_violations(sorting_analyzer_violations):
 def test_synchrony_metrics(sorting_analyzer_simple):
     sorting_analyzer = sorting_analyzer_simple
     sorting = sorting_analyzer.sorting
-    synchrony_sizes = (2, 3, 4)
-    synchrony_metrics = compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=synchrony_sizes)
-    print(synchrony_metrics)
+    synchrony_metrics = compute_synchrony_metrics(sorting_analyzer)
+
+    synchrony_sizes = np.array([2, 4, 8])
 
     # check returns
     for size in synchrony_sizes:
@@ -625,10 +625,8 @@ def test_synchrony_metrics(sorting_analyzer_simple):
         sorting_sync = add_synchrony_to_sorting(sorting, sync_event_ratio=sync_level)
         sorting_analyzer_sync = create_sorting_analyzer(sorting_sync, sorting_analyzer.recording, format="memory")
 
-        previous_synchrony_metrics = compute_synchrony_metrics(
-            previous_sorting_analyzer, synchrony_sizes=synchrony_sizes
-        )
-        current_synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_sync, synchrony_sizes=synchrony_sizes)
+        previous_synchrony_metrics = compute_synchrony_metrics(previous_sorting_analyzer)
+        current_synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_sync)
         print(current_synchrony_metrics)
         # check that all values increased
         for i, col in enumerate(previous_synchrony_metrics._fields):
@@ -647,22 +645,17 @@ def test_synchrony_metrics_unit_id_subset(sorting_analyzer_simple):
 
     unit_ids_subset = [3, 7]
 
-    synchrony_sizes = (2,)
-    (synchrony_metrics,) = compute_synchrony_metrics(
-        sorting_analyzer_simple, synchrony_sizes=synchrony_sizes, unit_ids=unit_ids_subset
-    )
+    synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_simple, unit_ids=unit_ids_subset)
 
-    assert list(synchrony_metrics.keys()) == [3, 7]
+    assert list(synchrony_metrics.sync_spike_2.keys()) == [3, 7]
+    assert list(synchrony_metrics.sync_spike_4.keys()) == [3, 7]
+    assert list(synchrony_metrics.sync_spike_8.keys()) == [3, 7]
 
 
 def test_synchrony_metrics_no_unit_ids(sorting_analyzer_simple):
 
-    # all_unit_ids = sorting_analyzer_simple.sorting.unit_ids
-
-    synchrony_sizes = (2,)
-    (synchrony_metrics,) = compute_synchrony_metrics(sorting_analyzer_simple, synchrony_sizes=synchrony_sizes)
-
-    assert np.all(list(synchrony_metrics.keys()) == sorting_analyzer_simple.unit_ids)
+    synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_simple)
+    assert np.all(list(synchrony_metrics.sync_spike_2.keys()) == sorting_analyzer_simple.unit_ids)
 
 
 @pytest.mark.sortingcomponents

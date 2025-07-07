@@ -11,25 +11,26 @@ from __future__ import annotations
 
 
 from collections import namedtuple
-
 import math
-import numpy as np
 import warnings
+import importlib.util
 
-from ..postprocessing import correlogram_for_one_segment
-from ..core import SortingAnalyzer, get_noise_levels
-from ..core.template_tools import (
+import numpy as np
+
+from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
+from spikeinterface.postprocessing import correlogram_for_one_segment
+from spikeinterface.core import SortingAnalyzer, get_noise_levels
+from spikeinterface.core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
     get_dense_templates_array,
 )
 
 
-try:
-    import numba
-
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ModuleNotFoundError as err:
+else:
     HAVE_NUMBA = False
 
 
@@ -376,8 +377,8 @@ def compute_refrac_period_violations(
     res = namedtuple("rp_violations", ["rp_contamination", "rp_violations"])
 
     if not HAVE_NUMBA:
-        print("Error: numba is not installed.")
-        print("compute_refrac_period_violations cannot run without numba.")
+        warnings.warn("Error: numba is not installed.")
+        warnings.warn("compute_refrac_period_violations cannot run without numba.")
         return None
 
     sorting = sorting_analyzer.sorting
@@ -520,7 +521,7 @@ _default_params["sliding_rp_violation"] = dict(
 )
 
 
-def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
+def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     """
     Compute synchrony counts, the number of simultaneous spikes with sizes `synchrony_sizes`.
 
@@ -528,10 +529,10 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     ----------
     spikes : np.array
         Structured numpy array with fields ("sample_index", "unit_index", "segment_index").
-    synchrony_sizes : numpy array
-        The synchrony sizes to compute. Should be pre-sorted.
     all_unit_ids : list or None, default: None
         List of unit ids to compute the synchrony metrics. Expecting all units.
+    synchrony_sizes : None or np.array, default: None
+        The synchrony sizes to compute. Should be pre-sorted.
 
     Returns
     -------
@@ -565,37 +566,38 @@ def get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     return synchrony_counts
 
 
-def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_ids=None):
+def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=None):
     """
     Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
-    "synchrony_size" spikes at the exact same sample index.
+    spikes at the exact same sample index, with synchrony sizes 2, 4 and 8.
 
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object.
-    synchrony_sizes : list or tuple, default: (2, 4, 8)
-        The synchrony sizes to compute.
     unit_ids : list or None, default: None
         List of unit ids to compute the synchrony metrics. If None, all units are used.
+    synchrony_sizes: None, default: None
+        Deprecated argument. Please use private `_get_synchrony_counts` if you need finer control over number of synchronous spikes.
 
     Returns
     -------
     sync_spike_{X} : dict
         The synchrony metric for synchrony size X.
-        Returns are as many as synchrony_sizes.
 
     References
     ----------
     Based on concepts described in [Grün]_
     This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
     """
-    assert min(synchrony_sizes) > 1, "Synchrony sizes must be greater than 1"
-    # Sort the synchrony times so we can slice numpy arrays, instead of using dicts
-    synchrony_sizes_np = np.array(synchrony_sizes, dtype=np.int16)
-    synchrony_sizes_np.sort()
 
-    res = namedtuple("synchrony_metrics", [f"sync_spike_{size}" for size in synchrony_sizes_np])
+    if synchrony_sizes is not None:
+        warning_message = "Custom `synchrony_sizes` is deprecated; the `synchrony_metrics` will be computed using `synchrony_sizes = [2,4,8]`"
+        warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
+
+    synchrony_sizes = np.array([2, 4, 8])
+
+    res = namedtuple("synchrony_metrics", [f"sync_spike_{size}" for size in synchrony_sizes])
 
     sorting = sorting_analyzer.sorting
 
@@ -606,10 +608,10 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
 
     spikes = sorting.to_spike_vector()
     all_unit_ids = sorting.unit_ids
-    synchrony_counts = get_synchrony_counts(spikes, synchrony_sizes_np, all_unit_ids)
+    synchrony_counts = _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids)
 
     synchrony_metrics_dict = {}
-    for sync_idx, synchrony_size in enumerate(synchrony_sizes_np):
+    for sync_idx, synchrony_size in enumerate(synchrony_sizes):
         sync_id_metrics_dict = {}
         for i, unit_id in enumerate(all_unit_ids):
             if unit_id not in unit_ids:
@@ -623,7 +625,7 @@ def compute_synchrony_metrics(sorting_analyzer, synchrony_sizes=(2, 4, 8), unit_
     return res(**synchrony_metrics_dict)
 
 
-_default_params["synchrony"] = dict(synchrony_sizes=(2, 4, 8))
+_default_params["synchrony"] = dict()
 
 
 def compute_firing_ranges(sorting_analyzer, bin_size_s=5, percentiles=(5, 95), unit_ids=None):
@@ -1395,6 +1397,7 @@ def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, cont
 
 
 if HAVE_NUMBA:
+    import numba
 
     @numba.jit(nopython=True, nogil=True, cache=False)
     def _compute_nb_violations_numba(spike_train, t_r):
@@ -1466,8 +1469,11 @@ def compute_sd_ratio(
     num_spikes : dict
         The number of spikes, across all segments, for each unit ID.
     """
-    import numba
-    from ..curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
+
+    from spikeinterface.curation.curation_tools import find_duplicated_spikes
+
+    kwargs, job_kwargs = split_job_kwargs(kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     sorting = sorting_analyzer.sorting
 
@@ -1482,9 +1488,15 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
 
+    if not HAVE_NUMBA:
+        warnings.warn(
+            "'sd_ratio' metric computation requires numba. Install it with >>> pip install numba. "
+            "SD ratio metric will be set to NaN"
+        )
+        return {unit_id: np.nan for unit_id in unit_ids}
+
     if sorting_analyzer.has_extension("spike_amplitudes"):
         amplitudes_ext = sorting_analyzer.get_extension("spike_amplitudes")
-        # spike_amplitudes = amplitudes_ext.get_data(outputs="by_unit")
         spike_amplitudes = amplitudes_ext.get_data()
     else:
         warnings.warn(
@@ -1495,7 +1507,7 @@ def compute_sd_ratio(
         return {unit_id: np.nan for unit_id in unit_ids}
 
     noise_levels = get_noise_levels(
-        sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std"
+        sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std", **job_kwargs
     )
     best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
     n_spikes = sorting.count_num_spikes_per_unit()
@@ -1511,18 +1523,17 @@ def compute_sd_ratio(
         spk_amp = []
 
         for segment_index in range(sorting_analyzer.get_num_segments()):
-            # spike_train = sorting_analyzer.sorting.get_unit_spike_train(unit_id, segment_index=segment_index).astype(
-            #     np.int64, copy=False
-            # )
+
             spike_mask = (spikes["unit_index"] == unit_index) & (spikes["segment_index"] == segment_index)
             spike_train = spikes[spike_mask]["sample_index"].astype(np.int64, copy=False)
             amplitudes = spike_amplitudes[spike_mask]
 
-            censored_indices = _find_duplicated_spikes_keep_first_iterative(
+            censored_indices = find_duplicated_spikes(
                 spike_train,
                 censored_period,
+                method="keep_first_iterative",
             )
-            # spk_amp.append(np.delete(spike_amplitudes[segment_index][unit_id], censored_indices))
+
             spk_amp.append(np.delete(amplitudes, censored_indices))
 
         spk_amp = np.concatenate([spk_amp[i] for i in range(len(spk_amp))])

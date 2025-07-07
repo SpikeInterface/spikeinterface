@@ -15,7 +15,7 @@ from spikeinterface.core.generate import (
 )
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
-from spikeinterface.sortingcomponents.motion import Motion
+from spikeinterface.core.motion import Motion
 
 from spikeinterface.generation.drift_tools import (
     InjectDriftingTemplatesRecording,
@@ -399,8 +399,10 @@ def generate_hybrid_recording(
     probe = recording.get_probe()
     num_segments = recording.get_num_segments()
     dtype = recording.dtype
-    durations = np.array([recording.get_duration(segment_index) for segment_index in range(num_segments)])
     num_samples = np.array([recording.get_num_samples(segment_index) for segment_index in range(num_segments)])
+    # since the recording can have timestamps with some small gaps, we use the number of samples to compute
+    # the duration used for the sorting generation
+    durations = num_samples / sampling_frequency
     channel_locations = probe.contact_positions
 
     assert (

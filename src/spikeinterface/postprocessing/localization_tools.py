@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import warnings
+import importlib.util
 
 import numpy as np
 
-try:
-    import numba
+from spikeinterface.core import SortingAnalyzer, Templates, compute_sparsity
+from spikeinterface.core.template_tools import _get_nbefore, get_dense_templates_array, get_template_extremum_channel
 
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ImportError:
+else:
     HAVE_NUMBA = False
-
-
-from spikeinterface.core import compute_sparsity, SortingAnalyzer, Templates
-from spikeinterface.core.template_tools import get_template_extremum_channel, _get_nbefore, get_dense_templates_array
 
 
 def compute_monopolar_triangulation(
@@ -110,7 +109,7 @@ def compute_monopolar_triangulation(
         # wf is (nsample, nchan) - chann is only nieghboor
         wf = templates[i, :, :][:, chan_inds]
         if feature == "ptp":
-            wf_data = wf.ptp(axis=0)
+            wf_data = np.ptp(wf, axis=0)
         elif feature == "energy":
             wf_data = np.linalg.norm(wf, axis=0)
         elif feature == "peak_voltage":
@@ -188,7 +187,7 @@ def compute_center_of_mass(
         wf = templates[i, :, :]
 
         if feature == "ptp":
-            wf_data = (wf[:, chan_inds]).ptp(axis=0)
+            wf_data = np.ptp(wf[:, chan_inds], axis=0)
         elif feature == "mean":
             wf_data = (wf[:, chan_inds]).mean(axis=0)
         elif feature == "energy":
@@ -359,14 +358,13 @@ def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance
     import scipy.optimize
 
     x0, bounds = make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um)
-
     if optimizer == "least_square":
         args = (wf_data, local_contact_locations)
         try:
             output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args=args)
             return tuple(output["x"])
         except Exception as e:
-            print(f"scipy.optimize.least_squares error: {e}")
+            warnings.warn(f"scipy.optimize.least_squares error: {e}")
             return (np.nan, np.nan, np.nan, np.nan)
 
     if optimizer == "minimize_with_log_penality":
@@ -381,7 +379,7 @@ def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance
             alpha = (wf_data * q).sum() / np.square(q).sum()
             return (*output["x"], alpha)
         except Exception as e:
-            print(f"scipy.optimize.minimize error: {e}")
+            warnings.warn(f"scipy.optimize.minimize error: {e}")
             return (np.nan, np.nan, np.nan, np.nan)
 
 
@@ -655,7 +653,9 @@ def get_convolution_weights(
 
 
 if HAVE_NUMBA:
-    enforce_decrease_shells = numba.jit(enforce_decrease_shells_data, nopython=True)
+    from numba import jit
+
+    enforce_decrease_shells = jit(enforce_decrease_shells_data, nopython=True)
 
 
 def compute_location_max_channel(

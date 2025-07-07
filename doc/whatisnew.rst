@@ -8,6 +8,10 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.102.3.rst
+  releases/0.102.2.rst
+  releases/0.102.1.rst
+  releases/0.102.0.rst
   releases/0.101.2.rst
   releases/0.101.1.rst
   releases/0.101.0.rst
@@ -44,6 +48,31 @@ Release notes
   releases/0.9.9.rst
   releases/0.9.1.rst
 
+
+Version 0.102.3
+===============
+
+* Minor release with bug fixes
+
+Version 0.102.2
+===============
+
+* Minor release with bug fixes
+
+Version 0.102.1
+===============
+
+* Minor release with bug fixes
+
+Version 0.102.0
+===============
+
+* Added auto-label functions in curation module (#2918)
+* Refactored and improved auto-merge functions in curation module (#3435, #3601)
+* Added `spikeinterface.load()` function to load any SpikeInterface object (#3613, #3651)
+* Improved handling of time in base recording (#3509, #3623)
+* Multi-segment handling of motion interpolation (#3659)
+* Support for Numpy 2.0 and Zarr<3.0 (#3481,#3598)
 
 Version 0.101.2
 ===============

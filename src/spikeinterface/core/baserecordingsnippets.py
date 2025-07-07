@@ -6,7 +6,6 @@ import numpy as np
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
 from .base import BaseExtractor
-from .core_tools import check_json
 from .recording_tools import check_probe_do_not_overlap
 
 from warnings import warn
@@ -16,8 +15,6 @@ class BaseRecordingSnippets(BaseExtractor):
     """
     Mixin that handles all probe and channel operations
     """
-
-    has_default_locations = False
 
     def __init__(self, sampling_frequency: float, channel_ids: list[str, int], dtype: np.dtype):
         BaseExtractor.__init__(self, channel_ids)
@@ -54,14 +51,6 @@ class BaseRecordingSnippets(BaseExtractor):
         else:
             return True
 
-    def has_scaled(self):
-        warn(
-            "`has_scaled` has been deprecated and will be removed in 0.103.0. Please use `has_scaleable_traces()`",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.has_scaleable_traces()
-
     def has_probe(self) -> bool:
         return "contact_vector" in self.get_property_keys()
 
@@ -71,9 +60,6 @@ class BaseRecordingSnippets(BaseExtractor):
     def is_filtered(self):
         # the is_filtered is handle with annotation
         return self._annotations.get("is_filtered", False)
-
-    def _channel_slice(self, channel_ids, renamed_channel_ids=None):
-        raise NotImplementedError
 
     def set_probe(self, probe, group_mode="by_probe", in_place=False):
         """
@@ -234,21 +220,6 @@ class BaseRecordingSnippets(BaseExtractor):
         for probe in probegroup.probes:
             probes_info.append(probe.annotations)
         self.annotate(probes_info=probes_info)
-
-        return sub_recording
-
-    def set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
-
-        warning_msg = (
-            "`set_probes` is now a private function and the public function will be "
-            "removed in 0.103.0. Please use `set_probe` or `set_probegroup` instead"
-        )
-
-        warn(warning_msg, category=DeprecationWarning, stacklevel=2)
-
-        sub_recording = self._set_probes(
-            probe_or_probegroup=probe_or_probegroup, group_mode=group_mode, in_place=in_place
-        )
 
         return sub_recording
 
@@ -444,25 +415,6 @@ class BaseRecordingSnippets(BaseExtractor):
 
         return recording2d
 
-    # utils
-    def channel_slice(self, channel_ids, renamed_channel_ids=None):
-        """
-        Returns a new object with sliced channels.
-
-        Parameters
-        ----------
-        channel_ids : np.array or list
-            The list of channels to keep
-        renamed_channel_ids : np.array or list, default: None
-            A list of renamed channels
-
-        Returns
-        -------
-        BaseRecordingSnippets
-            The object with sliced channels
-        """
-        return self._channel_slice(channel_ids, renamed_channel_ids=renamed_channel_ids)
-
     def select_channels(self, channel_ids):
         """
         Returns a new object with sliced channels.
@@ -560,10 +512,11 @@ class BaseRecordingSnippets(BaseExtractor):
             recordings = []
         elif outputs == "dict":
             recordings = {}
-        for value in np.unique(values):
+        for value in np.unique(values).tolist():
             (inds,) = np.nonzero(values == value)
             new_channel_ids = self.get_channel_ids()[inds]
             subrec = self.select_channels(new_channel_ids)
+            subrec.set_annotation("split_by_property", value=property)
             if outputs == "list":
                 recordings.append(subrec)
             elif outputs == "dict":

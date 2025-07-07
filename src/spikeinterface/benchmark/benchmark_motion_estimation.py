@@ -8,15 +8,15 @@ import time
 import numpy as np
 
 from spikeinterface.core import get_noise_levels
-from .benchmark_base import Benchmark, BenchmarkStudy
-from .benchmark_plot_tools import _simpleaxis
+from spikeinterface.core.motion import Motion
 from spikeinterface.sortingcomponents.motion import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.widgets import plot_probe_map
 
-from spikeinterface.sortingcomponents.motion import Motion
+from .benchmark_base import Benchmark, BenchmarkStudy
+from .benchmark_plot_tools import despine
 
 # import MEArec as mr
 
@@ -86,7 +86,7 @@ class MotionEstimationBenchmark(Benchmark):
     def run(self, **job_kwargs):
         p = self.params
 
-        noise_levels = get_noise_levels(self.recording, return_scaled=False)
+        noise_levels = get_noise_levels(self.recording, return_scaled=False, **job_kwargs)
 
         t0 = time.perf_counter()
         peaks = detect_peaks(self.recording, noise_levels=noise_levels, **p["detect_kwargs"], **job_kwargs)
@@ -109,6 +109,8 @@ class MotionEstimationBenchmark(Benchmark):
             estimate_motion=t4 - t3,
         )
 
+        self.result["peaks"] = peaks
+        self.result["peak_locations"] = peak_locations
         self.result["step_run_times"] = step_run_times
         self.result["raw_motion"] = motion
 
@@ -131,6 +133,8 @@ class MotionEstimationBenchmark(Benchmark):
         self.result["motion"] = motion
 
     _run_key_saved = [
+        ("peaks", "npy"),
+        ("peak_locations", "npy"),
         ("raw_motion", "Motion"),
         ("step_run_times", "pickle"),
     ]
@@ -161,7 +165,9 @@ class MotionEstimationStudy(BenchmarkStudy):
     def plot_true_drift(self, case_keys=None, scaling_probe=1.5, figsize=(8, 6)):
         self.plot_drift(case_keys=case_keys, tested_drift=False, scaling_probe=scaling_probe, figsize=figsize)
 
-    def plot_drift(self, case_keys=None, gt_drift=True, tested_drift=True, scaling_probe=1.0, figsize=(8, 6)):
+    def plot_drift(
+        self, case_keys=None, gt_drift=True, tested_drift=True, raster=False, scaling_probe=1.0, figsize=(8, 6)
+    ):
         import matplotlib.pyplot as plt
 
         if case_keys is None:
@@ -177,7 +183,7 @@ class MotionEstimationStudy(BenchmarkStudy):
             # probe and units
             ax = ax0 = fig.add_subplot(gs[:2])
             plot_probe_map(bench.recording, ax=ax)
-            _simpleaxis(ax)
+            despine(ax)
             unit_locations = bench.unit_locations
             ax.scatter(unit_locations[:, 0], unit_locations[:, 1], alpha=0.7, s=100)
             ax.set_ylabel("depth (um)")
@@ -195,6 +201,13 @@ class MotionEstimationStudy(BenchmarkStudy):
 
             # for i in range(self.gt_unit_positions.shape[1]):
             #     ax.plot(temporal_bins_s, self.gt_unit_positions[:, i], alpha=0.5, ls="--", c="0.5")
+            if raster:
+                peaks = bench.result["peaks"]
+                peak_locations = bench.result["peak_locations"]
+                rec = bench.recording
+                x = peaks["sample_index"] / rec.sampling_frequency
+                y = peak_locations[bench.direction]
+                ax.scatter(x, y, alpha=0.2, s=2, c=np.abs(peaks["amplitude"]), cmap="inferno")
 
             for i in range(gt_motion.displacement[0].shape[1]):
                 depth = motion.spatial_bins_um[i]
@@ -204,7 +217,7 @@ class MotionEstimationStudy(BenchmarkStudy):
                     ax.plot(motion.temporal_bins_s[0], motion.displacement[0][:, i] + depth, color="cyan", lw=2)
 
             ax.set_xlabel("time (s)")
-            _simpleaxis(ax)
+            despine(ax)
             ax.set_yticks([])
             ax.spines["left"].set_visible(False)
 
@@ -217,7 +230,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 
             ax = ax2 = fig.add_subplot(gs[7])
             ax2.sharey(ax0)
-            _simpleaxis(ax)
+            despine(ax)
             ax.hist(unit_locations[:, bench.direction_dim], bins=50, orientation="horizontal", color="0.5")
             ax.set_yticks([])
             ax.set_xlabel("# neurons")
@@ -277,7 +290,7 @@ class MotionEstimationStudy(BenchmarkStudy):
             ax.plot(motion.temporal_bins_s[0], mean_error)
             ax.set_xlabel("time (s)")
             ax.set_ylabel("error")
-            _simpleaxis(ax)
+            despine(ax)
             if lim is not None:
                 ax.set_ylim(0, lim)
 
@@ -288,7 +301,7 @@ class MotionEstimationStudy(BenchmarkStudy):
             ax.axvline(probe_y_max, color="k", ls="--", alpha=0.5)
             ax.set_xlabel("depth (um)")
             ax.set_ylabel("error")
-            _simpleaxis(ax)
+            despine(ax)
             if lim is not None:
                 ax.set_ylim(0, lim)
 
@@ -336,13 +349,13 @@ class MotionEstimationStudy(BenchmarkStudy):
         ax.set_ylabel("Error [μm]")
         if show_legend:
             ax.legend()
-        _simpleaxis(ax)
+        despine(ax)
 
         ax1 = axes[1]
         # ax.set_ylabel('error')
         ax1.set_yticks([])
         ax1.set_xticks([])
-        _simpleaxis(ax1)
+        despine(ax1)
 
         ax2 = axes[2]
         ax2.set_yticks([])
@@ -353,7 +366,7 @@ class MotionEstimationStudy(BenchmarkStudy):
         ax2.axvline(probe_y_min, color="k", ls="--", alpha=0.5)
         ax2.axvline(probe_y_max, color="k", ls="--", alpha=0.5)
 
-        _simpleaxis(ax2)
+        despine(ax2)
 
         # ax1.sharey(ax0)
         # ax2.sharey(ax0)
@@ -517,7 +530,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         else:
 #             ax = axes[0]
 #         plot_probe_map(self.recording, ax=ax)
-#         _simpleaxis(ax)
+#         despine(ax)
 
 #         mr_recording = mr.load_recordings(self.mearec_filename)
 
@@ -547,7 +560,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 
 #         # ax.set_ylim(ymin, ymax)
 #         ax.set_xlabel("time (s)")
-#         _simpleaxis(ax)
+#         despine(ax)
 #         ax.set_yticks([])
 #         ax.spines["left"].set_visible(False)
 
@@ -563,7 +576,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         else:
 #             ax = axes[2]
 #         # plot_probe_map(self.recording, ax=ax)
-#         _simpleaxis(ax)
+#         despine(ax)
 
 #         ax.hist(self.gt_unit_positions[30, :], 50, orientation="horizontal", color="0.5")
 #         ax.set_yticks([])
@@ -592,7 +605,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 
 #         ax0 = fig.add_subplot(gs[0])
 #         plot_probe_map(self.recording, ax=ax0)
-#         _simpleaxis(ax0)
+#         despine(ax0)
 
 #         # ymin, ymax = ax.get_ylim()
 #         ax0.set_ylabel("depth (um)")
@@ -608,7 +621,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         # ax.plot([xmin, xmax], [probe_y_min, probe_y_min], 'k--', alpha=0.5)
 #         # ax.plot([xmin, xmax], [probe_y_max, probe_y_max], 'k--', alpha=0.5)
 
-#         _simpleaxis(ax)
+#         despine(ax)
 #         # ax.set_yticks([])
 #         # ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
 #         ax.spines["left"].set_visible(False)
@@ -640,7 +653,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #             ax2.axhline(probe_y_max, color="k", ls="--", alpha=0.5)
 
 #             ax2.set_xlabel("density")
-#             _simpleaxis(ax2)
+#             despine(ax2)
 #             # ax.set_ylabel('')
 #             ax.set_yticks([])
 #             ax2.sharey(ax0)
@@ -662,7 +675,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #             else:
 #                 ax0 = ax = axes[0]
 #             plot_probe_map(self.recording, ax=ax)
-#             _simpleaxis(ax)
+#             despine(ax)
 
 #             ymin, ymax = ax.get_ylim()
 #             ax.set_ylabel("depth (um)")
@@ -690,7 +703,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #             else:
 #                 ax1 = ax = axes[0]
 
-#         _simpleaxis(ax)
+#         despine(ax)
 
 #         x = self.selected_peaks["sample_index"] / self.recording.get_sampling_frequency()
 #         y = self.peak_locations["y"]
@@ -713,7 +726,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #             else:
 #                 ax2 = ax = axes[1]
 
-#         _simpleaxis(ax)
+#         despine(ax)
 #         y = peak_locations_corrected["y"]
 #         ax.scatter(x, y, s=1, color="k", alpha=alpha)
 
@@ -756,12 +769,12 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         ax.legend()
 #         ax.set_ylabel("drift estimated and GT(um)")
 #         ax.set_xlabel("time (s)")
-#         _simpleaxis(ax)
+#         despine(ax)
 
 #         ax = axs[1]
 #         ax.set_ylabel("error (um)")
 #         ax.set_xlabel("time (s)")
-#         _simpleaxis(ax)
+#         despine(ax)
 
 #     def view_errors(self, figsize=(15, 10), lim=None):
 #         fig = plt.figure(figsize=figsize)
@@ -792,7 +805,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         ax.plot(self.temporal_bins_s, mean_error)
 #         ax.set_xlabel("time (s)")
 #         ax.set_ylabel("error")
-#         _simpleaxis(ax)
+#         despine(ax)
 #         if lim is not None:
 #             ax.set_ylim(0, lim)
 
@@ -803,7 +816,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #         ax.axvline(probe_y_max, color="k", ls="--", alpha=0.5)
 #         ax.set_xlabel("depth (um)")
 #         ax.set_ylabel("error")
-#         _simpleaxis(ax)
+#         despine(ax)
 #         if lim is not None:
 #             ax.set_ylim(0, lim)
 
@@ -837,13 +850,13 @@ class MotionEstimationStudy(BenchmarkStudy):
 #     ax.set_ylabel("Error [μm]")
 #     if show_legend:
 #         ax.legend()
-#     _simpleaxis(ax)
+#     despine(ax)
 
 #     ax1 = axes[1]
 #     # ax.set_ylabel('error')
 #     ax1.set_yticks([])
 #     ax1.set_xticks([])
-#     _simpleaxis(ax1)
+#     despine(ax1)
 
 #     ax2 = axes[2]
 #     ax2.set_yticks([])
@@ -854,7 +867,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #     ax2.axvline(probe_y_min, color="k", ls="--", alpha=0.5)
 #     ax2.axvline(probe_y_max, color="k", ls="--", alpha=0.5)
 
-#     _simpleaxis(ax2)
+#     despine(ax2)
 
 #     # ax1.sharey(ax0)
 #     # ax2.sharey(ax0)
@@ -914,7 +927,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #     # ax.legend()
 #     ax.set_ylabel("depth (um)")
 #     ax.set_xlabel("time (s)")
-#     _simpleaxis(ax)
+#     despine(ax)
 
 
 # def plot_speed_several_benchmarks(benchmarks, detailed=True, ax=None, colors=None):
@@ -942,6 +955,6 @@ class MotionEstimationStudy(BenchmarkStudy):
 
 #     # ax.legend()
 #     ax.set_ylabel("speed (s)")
-#     _simpleaxis(ax)
+#     despine(ax)
 #     ax.set_xticks([])
 #     # ax.set_xticks(np.arange(len(benchmarks)), [i.title for i in benchmarks])

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 from typing import Tuple
 import numpy as np
 import math
@@ -11,50 +13,91 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
-from ..core import SortingAnalyzer, Templates
-from ..core.template_tools import get_template_extremum_channel
-from ..postprocessing import compute_correlograms
-from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
+from spikeinterface.core import SortingAnalyzer
+from spikeinterface.qualitymetrics import compute_refrac_period_violations, compute_firing_rates
 
 from .mergeunitssorting import MergeUnitsSorting
 from .curation_tools import resolve_merging_graph
 
-
-_possible_presets = ["similarity_correlograms", "x_contaminations", "temporal_splits", "feature_neighbors"]
+_compute_merge_presets = {
+    "similarity_correlograms": [
+        "num_spikes",
+        "remove_contaminated",
+        "unit_locations",
+        "template_similarity",
+        "correlogram",
+        "quality_score",
+    ],
+    "temporal_splits": [
+        "num_spikes",
+        "remove_contaminated",
+        "unit_locations",
+        "template_similarity",
+        "presence_distance",
+        "quality_score",
+    ],
+    "x_contaminations": [
+        "num_spikes",
+        "remove_contaminated",
+        "unit_locations",
+        "template_similarity",
+        "cross_contamination",
+        "quality_score",
+    ],
+    "feature_neighbors": [
+        "num_spikes",
+        "snr",
+        "remove_contaminated",
+        "unit_locations",
+        "knn",
+        "quality_score",
+    ],
+}
 
 _required_extensions = {
-    "unit_locations": ["unit_locations"],
+    "unit_locations": ["templates", "unit_locations"],
     "correlogram": ["correlograms"],
-    "template_similarity": ["template_similarity"],
-    "knn": ["spike_locations", "spike_amplitudes"],
+    "snr": ["templates", "noise_levels"],
+    "template_similarity": ["templates", "template_similarity"],
+    "knn": ["templates", "spike_locations", "spike_amplitudes"],
 }
 
 
-def get_potential_auto_merge(
+_default_step_params = {
+    "num_spikes": {"min_spikes": 100},
+    "snr": {"min_snr": 2},
+    "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+    "unit_locations": {"max_distance_um": 150},
+    "correlogram": {
+        "corr_diff_thresh": 0.16,
+        "censor_correlograms_ms": 0.15,
+        "sigma_smooth_ms": 0.6,
+        "adaptative_window_thresh": 0.5,
+    },
+    "template_similarity": {"template_diff_thresh": 0.25},
+    "presence_distance": {"presence_distance_thresh": 100},
+    "knn": {"k_nn": 10},
+    "cross_contamination": {
+        "cc_thresh": 0.1,
+        "p_value": 0.2,
+        "refractory_period_ms": 1.0,
+        "censored_period_ms": 0.3,
+    },
+    "quality_score": {"firing_contamination_balance": 1.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+}
+
+
+def compute_merge_unit_groups(
     sorting_analyzer: SortingAnalyzer,
     preset: str | None = "similarity_correlograms",
-    resolve_graph: bool = False,
-    min_spikes: int = 100,
-    min_snr: float = 2,
-    max_distance_um: float = 150.0,
-    corr_diff_thresh: float = 0.16,
-    template_diff_thresh: float = 0.25,
-    contamination_thresh: float = 0.2,
-    presence_distance_thresh: float = 100,
-    p_value: float = 0.2,
-    cc_thresh: float = 0.1,
-    censored_period_ms: float = 0.3,
-    refractory_period_ms: float = 1.0,
-    sigma_smooth_ms: float = 0.6,
-    adaptative_window_thresh: float = 0.5,
-    censor_correlograms_ms: float = 0.15,
-    firing_contamination_balance: float = 2.5,
-    k_nn: int = 10,
-    knn_kwargs: dict | None = None,
-    presence_distance_kwargs: dict | None = None,
+    resolve_graph: bool = True,
+    steps_params: dict = None,
+    compute_needed_extensions: bool = True,
     extra_outputs: bool = False,
     steps: list[str] | None = None,
-) -> list[tuple[int | str, int | str]] | Tuple[tuple[int | str, int | str], dict]:
+    force_copy: bool = True,
+    **job_kwargs,
+) -> list[tuple[int | str, int | str]] | Tuple[list[tuple[int | str, int | str]], dict]:
     """
     Algorithm to find and check potential merges between units.
 
@@ -78,6 +121,434 @@ def get_potential_auto_merge(
 
         Q = f(1 - (k + 1)C)
 
+    IMPORTANT: internally, all computations are relying on extensions of the analyzer, that are computed
+    with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to
+    have a finer control on these values, please precompute the extensions before applying the auto_merge
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer
+    preset : "similarity_correlograms" | "x_contaminations" | "temporal_splits" | "feature_neighbors" | None, default: "similarity_correlograms"
+        The preset to use for the auto-merge. Presets combine different steps into a recipe and focus on:
+
+        * | "similarity_correlograms": mainly focused on template similarity and correlograms.
+          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_locations",
+          | "template_similarity", "correlogram", "quality_score"
+        * | "x_contaminations": similar to "similarity_correlograms", but checks for cross-contamination instead of correlograms.
+          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_locations",
+          | "template_similarity", "cross_contamination", "quality_score"
+        * | "temporal_splits": focused on finding temporal splits using presence distance.
+          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_locations",
+          | "template_similarity", "presence_distance", "quality_score"
+        * | "feature_neighbors": focused on finding unit pairs whose spikes are close in the feature space using kNN.
+          | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_locations",
+          | "knn", "quality_score"
+        If `preset` is None, you can specify the steps manually with the `steps` parameter.
+    resolve_graph : bool, default: True
+        If True, the function resolves the potential unit pairs to be merged into multiple-unit merges.
+    compute_needed_extensions : bool, default : True
+        Should we force the computation of needed extensions, if not already computed?
+    extra_outputs : bool, default: False
+        If True, an additional dictionary (`outs`) with processed data is returned.
+    steps : None or list of str, default: None
+        Which steps to run, if no preset is used.
+        Pontential steps : "num_spikes", "snr", "remove_contaminated", "unit_locations", "correlogram",
+        "template_similarity", "presence_distance", "cross_contamination", "knn", "quality_score"
+        Please check steps explanations above!
+    steps_params : dict
+        A dictionary whose keys are the steps, and keys are steps parameters.
+    force_copy : boolean, default: True
+        When new extensions are computed, the default is to make a copy of the analyzer, to avoid overwriting
+        already computed extensions. False if you want to overwrite
+
+    Returns
+    -------
+    merge_unit_groups:
+        List of groups that need to be merge.
+        When `resolve_graph` is true (default) a list of tuples of 2+ elements
+        If `resolve_graph` is false then a list of tuple of 2 elements is returned instead.
+    outs:
+        Returned only when extra_outputs=True
+        A dictionary that contains data for debugging and plotting.
+
+    References
+    ----------
+    This function used to be inspired and built upon similar functions from Lussac [Llobet]_,
+    done by Aurelien Wyngaard and Victor Llobet.
+    https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
+
+    However, it has been greatly consolidated and refined depending on the presets.
+    """
+    import scipy
+
+    sorting = sorting_analyzer.sorting
+    unit_ids = sorting.unit_ids
+
+    if preset is None and steps is None:
+        raise ValueError("You need to specify a preset or steps for the auto-merge function")
+    elif steps is not None:
+        # steps has precedence on presets
+        pass
+    elif preset is not None:
+        if preset not in _compute_merge_presets:
+            raise ValueError(f"preset must be one of {list(_compute_merge_presets.keys())}")
+        steps = _compute_merge_presets[preset]
+
+    # check at least one extension is needed
+    at_least_one_extension_to_compute = False
+    for step in steps:
+        assert step in _default_step_params, f"{step} is not a valid step"
+        if step in _required_extensions:
+            for ext in _required_extensions[step]:
+                if sorting_analyzer.has_extension(ext):
+                    continue
+                if not compute_needed_extensions:
+                    raise ValueError(f"{step} requires {ext} extension")
+                at_least_one_extension_to_compute = True
+
+    if force_copy and at_least_one_extension_to_compute:
+        # To avoid erasing the extensions of the user
+        sorting_analyzer = sorting_analyzer.copy()
+
+    n = unit_ids.size
+    pair_mask = np.triu(np.arange(n), 1) > 0
+    outs = dict()
+
+    for step in steps:
+
+        if step in _required_extensions:
+            for ext in _required_extensions[step]:
+                if sorting_analyzer.has_extension(ext):
+                    continue
+
+                # special case for templates
+                if ext == "templates" and not sorting_analyzer.has_extension("random_spikes"):
+                    sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
+                else:
+                    sorting_analyzer.compute(ext, **job_kwargs)
+
+        params = _default_step_params.get(step).copy()
+        if steps_params is not None and step in steps_params:
+            params.update(steps_params[step])
+
+        # STEP : remove units with too few spikes
+        if step == "num_spikes":
+            num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
+            to_remove = num_spikes < params["min_spikes"]
+            pair_mask[to_remove, :] = False
+            pair_mask[:, to_remove] = False
+            outs["num_spikes"] = to_remove
+
+        # STEP : remove units with too small SNR
+        elif step == "snr":
+            qm_ext = sorting_analyzer.get_extension("quality_metrics")
+            if qm_ext is None:
+                sorting_analyzer.compute("quality_metrics", metric_names=["snr"], **job_kwargs)
+                qm_ext = sorting_analyzer.get_extension("quality_metrics")
+
+            snrs = qm_ext.get_data()["snr"].values
+            to_remove = snrs < params["min_snr"]
+            pair_mask[to_remove, :] = False
+            pair_mask[:, to_remove] = False
+            outs["snr"] = to_remove
+
+        # STEP : remove contaminated auto corr
+        elif step == "remove_contaminated":
+            contaminations, nb_violations = compute_refrac_period_violations(
+                sorting_analyzer,
+                refractory_period_ms=params["refractory_period_ms"],
+                censored_period_ms=params["censored_period_ms"],
+            )
+            nb_violations = np.array(list(nb_violations.values()))
+            contaminations = np.array(list(contaminations.values()))
+            to_remove = contaminations > params["contamination_thresh"]
+            pair_mask[to_remove, :] = False
+            pair_mask[:, to_remove] = False
+            outs["remove_contaminated"] = to_remove
+
+        # STEP : unit positions are estimated roughly with channel
+        elif step == "unit_locations":
+            location_ext = sorting_analyzer.get_extension("unit_locations")
+            unit_locations = location_ext.get_data()[:, :2]
+
+            unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
+            pair_mask = pair_mask & (unit_distances <= params["max_distance_um"])
+            outs["unit_distances"] = unit_distances
+
+        # STEP : potential auto merge by correlogram
+        elif step == "correlogram":
+            correlograms_ext = sorting_analyzer.get_extension("correlograms")
+            correlograms, bins = correlograms_ext.get_data()
+            censor_ms = params["censor_correlograms_ms"]
+            sigma_smooth_ms = params["sigma_smooth_ms"]
+            mask = (bins[:-1] >= -censor_ms) & (bins[:-1] < censor_ms)
+            correlograms[:, :, mask] = 0
+            correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
+            # find correlogram window for each units
+            win_sizes = np.zeros(n, dtype=int)
+            for unit_ind in range(n):
+                auto_corr = correlograms_smoothed[unit_ind, unit_ind, :]
+                thresh = np.max(auto_corr) * params["adaptative_window_thresh"]
+                win_size = get_unit_adaptive_window(auto_corr, thresh)
+                win_sizes[unit_ind] = win_size
+            correlogram_diff = compute_correlogram_diff(
+                sorting,
+                correlograms_smoothed,
+                win_sizes,
+                pair_mask=pair_mask,
+            )
+            # print(correlogram_diff)
+            pair_mask = pair_mask & (correlogram_diff < params["corr_diff_thresh"])
+            outs["correlograms"] = correlograms
+            outs["bins"] = bins
+            outs["correlograms_smoothed"] = correlograms_smoothed
+            outs["correlogram_diff"] = correlogram_diff
+            outs["win_sizes"] = win_sizes
+
+        # STEP : check if potential merge with CC also have template similarity
+        elif step == "template_similarity":
+            template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
+            templates_similarity = template_similarity_ext.get_data()
+            templates_diff = 1 - templates_similarity
+            pair_mask = pair_mask & (templates_diff < params["template_diff_thresh"])
+            outs["templates_diff"] = templates_diff
+
+        # STEP : check the vicinity of the spikes
+        elif step == "knn":
+            pair_mask = get_pairs_via_nntree(sorting_analyzer, **params, pair_mask=pair_mask)
+
+        # STEP : check how the rates overlap in times
+        elif step == "presence_distance":
+            presence_distance_kwargs = params.copy()
+            presence_distance_thresh = presence_distance_kwargs.pop("presence_distance_thresh")
+            num_samples = [
+                sorting_analyzer.get_num_samples(segment_index) for segment_index in range(sorting.get_num_segments())
+            ]
+            presence_distances = compute_presence_distance(
+                sorting, pair_mask, num_samples=num_samples, **presence_distance_kwargs
+            )
+            pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
+            outs["presence_distances"] = presence_distances
+
+        # STEP : check if the cross contamination is significant
+        elif step == "cross_contamination":
+            refractory = (
+                params["censored_period_ms"],
+                params["refractory_period_ms"],
+            )
+            CC, p_values = compute_cross_contaminations(
+                sorting_analyzer, pair_mask, params["cc_thresh"], refractory, contaminations
+            )
+            pair_mask = pair_mask & (p_values > params["p_value"])
+            outs["cross_contaminations"] = CC, p_values
+
+        # STEP : validate the potential merges with CC increase the contamination quality metrics
+        elif step == "quality_score":
+            pair_mask, pairs_decreased_score = check_improve_contaminations_score(
+                sorting_analyzer,
+                pair_mask,
+                contaminations,
+                params["firing_contamination_balance"],
+                params["refractory_period_ms"],
+                params["censored_period_ms"],
+            )
+            outs["pairs_decreased_score"] = pairs_decreased_score
+
+    # FINAL STEP : create the final list from pair_mask boolean matrix
+    ind1, ind2 = np.nonzero(pair_mask)
+    merge_unit_groups = list(zip(unit_ids[ind1], unit_ids[ind2]))
+
+    if resolve_graph:
+        merge_unit_groups = resolve_merging_graph(sorting, merge_unit_groups)
+
+    if extra_outputs:
+        return merge_unit_groups, outs
+    else:
+        return merge_unit_groups
+
+
+def resolve_pairs(existing_merges, new_merges):
+    """
+    Convenient function used to resolve nested merges when merging units recursively. This is mostly only
+    used internally by auto_merge_units, to get a condensed representation of all the merges that
+    have been done. Thus, one can use the plot_potential_merge widget written by Alessio to visualize
+    the merges that have been done.
+
+    Parameters
+    ----------
+
+    existing_merges : dict
+        The keys are the unit ids and the values are the list of unit ids to merge with
+    new_merges : dict
+        The keys are the new units ids that are merged, and the values are the list of unit ids to merge with
+
+    Returns
+    -------
+
+    resolved_merges : dict
+        The keys are the unit_ids, and the values are the list of unit_ids to merge with, solving the potential
+        nested merges.
+
+
+    """
+
+    if existing_merges is None:
+        return new_merges.copy()
+    else:
+        resolved_merges = existing_merges.copy()
+        old_keys = list(existing_merges.keys())
+        for key, pair in new_merges.items():
+            nested_merge = np.flatnonzero([i in pair for i in old_keys])
+            if len(nested_merge) == 0:
+                resolved_merges.update({key: pair})
+            else:
+                for n in nested_merge:
+                    previous_merges = resolved_merges.pop(old_keys[n])
+                    pair.remove(old_keys[n])
+                    pair += previous_merges
+                    resolved_merges.update({key: pair})
+        return resolved_merges
+
+
+def _auto_merge_units_single_iteration(
+    sorting_analyzer: SortingAnalyzer,
+    compute_merge_kwargs: dict = {},
+    apply_merge_kwargs: dict = {},
+    extra_outputs: bool = False,
+    force_copy: bool = True,
+    raise_error: bool = False,
+    **job_kwargs,
+) -> SortingAnalyzer:
+    """
+    Compute merge unit groups and apply it on a SortingAnalyzer. Used by auto_merge_units, see documentation there.
+    Internally uses `compute_merge_unit_groups()`
+
+    Parameters
+    ----------
+
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer to be merged
+    compute_merge_kwargs : dict
+        The parameters to be passed to compute_merge_unit_groups()
+    apply_merge_kwargs : dict
+        The parameters to be passed to merge_units()
+    extra_outputs : bool, default: False
+        If True, additional outputs are returned
+    force_copy : bool, default: True
+        If True, the sorting_analyzer is copied before applying the merges
+    raise_error : bool, default: False
+        If True, an error is raised if the merges can not be done. If False, a warning is issued.
+
+    Returns
+    -------
+    sorting_analyzer:
+        The new sorting analyzer where all the merges from all the presets have been applied
+
+    resolved_merges, merge_unit_groups, outs:
+        Returned only when extra_outputs=True
+        A list with the merges performed, and dictionaries that contains data for debugging and plotting.
+    """
+
+    if force_copy:
+        # To avoid erasing the extensions of the user
+        sorting_analyzer = sorting_analyzer.copy()
+
+    merge_unit_groups = compute_merge_unit_groups(
+        sorting_analyzer, **compute_merge_kwargs, extra_outputs=extra_outputs, force_copy=False, **job_kwargs
+    )
+
+    if extra_outputs:
+        merge_unit_groups, outs = merge_unit_groups
+
+    if len(merge_unit_groups) > 0:
+        merging_mode = apply_merge_kwargs.get("merging_mode", "soft")
+        sparsity_overlap = apply_merge_kwargs.get("sparsity_overlap", 0.75)
+        mergeable = sorting_analyzer.are_units_mergeable(
+            merge_unit_groups, merging_mode=merging_mode, sparsity_overlap=sparsity_overlap
+        )
+        ## Removes units that can not be merged
+        for merge_unit_group, is_mergeable in mergeable.items():
+            if not is_mergeable:
+                if raise_error:
+                    raise ValueError(
+                        f"Units {merge_unit_group} can not be merged with the current sparsity_overlap. Merging is stopped"
+                    )
+                else:
+                    warnings.warn(
+                        f"Units {merge_unit_group} can not be merged with the current sparsity_overlap. Merging is skipped",
+                    )
+                    merge_unit_groups.remove(list(merge_unit_group))
+
+        merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
+            merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
+        )
+    else:
+        merged_analyzer = sorting_analyzer
+        new_unit_ids = []
+
+    resolved_merges = {key: value for (key, value) in zip(new_unit_ids, merge_unit_groups)}
+
+    if extra_outputs:
+        return merged_analyzer, resolved_merges, merge_unit_groups, outs
+    else:
+        return merged_analyzer
+
+
+def get_potential_auto_merge(
+    sorting_analyzer: SortingAnalyzer,
+    preset: str | None = "similarity_correlograms",
+    resolve_graph: bool = False,
+    min_spikes: int = 100,
+    min_snr: float = 2,
+    max_distance_um: float = 150.0,
+    corr_diff_thresh: float = 0.16,
+    template_diff_thresh: float = 0.25,
+    contamination_thresh: float = 0.2,
+    presence_distance_thresh: float = 100,
+    p_value: float = 0.2,
+    cc_thresh: float = 0.1,
+    censored_period_ms: float = 0.3,
+    refractory_period_ms: float = 1.0,
+    sigma_smooth_ms: float = 0.6,
+    adaptative_window_thresh: float = 0.5,
+    censor_correlograms_ms: float = 0.15,
+    firing_contamination_balance: float = 1.5,
+    k_nn: int = 10,
+    knn_kwargs: dict | None = None,
+    presence_distance_kwargs: dict | None = None,
+    extra_outputs: bool = False,
+    steps: list[str] | None = None,
+) -> list[tuple[int | str, int | str]] | Tuple[tuple[int | str, int | str], dict]:
+    """
+    This function is deprecated. Use compute_merge_unit_groups() instead.
+    This will be removed in 0.103.0
+
+    Algorithm to find and check potential merges between units.
+
+    The merges are proposed based on a series of steps with different criteria:
+
+        * "num_spikes": enough spikes are found in each unit for computing the correlogram (`min_spikes`)
+        * "snr": the SNR of the units is above a threshold (`min_snr`)
+        * "remove_contaminated": each unit is not contaminated (by checking auto-correlogram - `contamination_thresh`)
+        * "unit_locations": estimated unit locations are close enough (`max_distance_um`)
+        * "correlogram": the cross-correlograms of the two units are similar to each auto-corrleogram (`corr_diff_thresh`)
+        * "template_similarity": the templates of the two units are similar (`template_diff_thresh`)
+        * "presence_distance": the presence of the units is complementary in time (`presence_distance_thresh`)
+        * "cross_contamination": the cross-contamination is not significant (`cc_thresh` and `p_value`)
+        * "knn": the two units are close in the feature space
+        * "quality_score": the unit "quality score" is increased after the merge
+
+    The "quality score" factors in the increase in firing rate (**f**) due to the merge and a possible increase in
+    contamination (**C**), wheighted by a factor **k** (`firing_contamination_balance`).
+
+    .. math::
+
+        Q = f(1 - (k + 1)C)
+
+    IMPORTANT: internally, all computations are relying on extensions of the analyzer, that are computed
+    with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to
+    have a finer control on these values, please precompute the extensions before applying the auto_merge
 
     Parameters
     ----------
@@ -133,7 +604,7 @@ def get_potential_auto_merge(
         Parameter to detect the window size in correlogram estimation.
     censor_correlograms_ms : float, default: 0.15
         The period to censor on the auto and cross-correlograms.
-    firing_contamination_balance : float, default: 2.5
+    firing_contamination_balance : float, default: 1.5
         Parameter to control the balance between firing rate and contamination in computing unit "quality score".
     k_nn : int, default 5
         The number of neighbors to consider for every spike in the recording.
@@ -164,216 +635,205 @@ def get_potential_auto_merge(
     done by Aurelien Wyngaard and Victor Llobet.
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
     """
-    import scipy
+    warnings.warn(
+        "get_potential_auto_merge() is deprecated. Use compute_merge_unit_groups() instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
-    sorting = sorting_analyzer.sorting
-    unit_ids = sorting.unit_ids
+    presence_distance_kwargs = presence_distance_kwargs or dict()
+    knn_kwargs = knn_kwargs or dict()
+    return compute_merge_unit_groups(
+        sorting_analyzer,
+        preset,
+        resolve_graph,
+        steps_params={
+            "num_spikes": {"min_spikes": min_spikes},
+            "snr": {"min_snr": min_snr},
+            "remove_contaminated": {
+                "contamination_thresh": contamination_thresh,
+                "refractory_period_ms": refractory_period_ms,
+                "censored_period_ms": censored_period_ms,
+            },
+            "unit_locations": {"max_distance_um": max_distance_um},
+            "correlogram": {
+                "corr_diff_thresh": corr_diff_thresh,
+                "censor_correlograms_ms": censor_correlograms_ms,
+                "sigma_smooth_ms": sigma_smooth_ms,
+                "adaptative_window_thresh": adaptative_window_thresh,
+            },
+            "template_similarity": {"template_diff_thresh": template_diff_thresh},
+            "presence_distance": {"presence_distance_thresh": presence_distance_thresh, **presence_distance_kwargs},
+            "knn": {"k_nn": k_nn, **knn_kwargs},
+            "cross_contamination": {
+                "cc_thresh": cc_thresh,
+                "p_value": p_value,
+                "refractory_period_ms": refractory_period_ms,
+                "censored_period_ms": censored_period_ms,
+            },
+            "quality_score": {
+                "firing_contamination_balance": firing_contamination_balance,
+                "refractory_period_ms": refractory_period_ms,
+                "censored_period_ms": censored_period_ms,
+            },
+        },
+        compute_needed_extensions=True,
+        extra_outputs=extra_outputs,
+        steps=steps,
+    )
 
-    # to get fast computation we will not analyse pairs when:
-    #    * not enough spikes for one of theses
-    #    * auto correlogram is contaminated
-    #    * to far away one from each other
 
-    all_steps = [
-        "num_spikes",
-        "snr",
-        "remove_contaminated",
-        "unit_locations",
-        "correlogram",
-        "template_similarity",
-        "presence_distance",
-        "knn",
-        "cross_contamination",
-        "quality_score",
-    ]
+def auto_merge_units(
+    sorting_analyzer: SortingAnalyzer,
+    presets: list | None = ["similarity_correlograms"],
+    steps_params: dict = None,
+    steps: list[str] | None = None,
+    recursive: bool = False,
+    censor_ms=None,
+    sparsity_overlap=0.75,
+    merging_mode="soft",
+    new_id_strategy="append",
+    raise_error: bool = False,
+    extra_outputs: bool = False,
+    force_copy: bool = True,
+    **job_kwargs,
+) -> SortingAnalyzer:
+    """
+    Automatically finds and apply merges.
+    This function enables one to launch several merging presets in sequence and also to apply each
+    step recursively.
+    Merges are applied sequentially or until no more merges are done, one preset at a time, and extensions
+    are not recomputed thanks to the merging units. Internally, the function uses _auto_merge_units_single_iteration()
+    that is called for every preset and/or combinations of steps
 
-    if preset is not None and preset not in _possible_presets:
-        raise ValueError(f"preset must be one of {_possible_presets}")
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer
+    presets : str or list, default = "similarity_correlograms"
+        A single preset or a list of presets, that should be applied iteratively to the data
+    steps_params : dict or list of dict, default None
+        The params that should be used for the steps or presets. Should be a single dict if only one steps,
+        or a list of dict if multiples steps (same size as presets)
+    steps : list or list of list, default None
+        The list of steps that should be applied. If list of list is provided, then these lists will be applied
+        iteratively. Mutually exclusive with presets
+    recursive : bool, default: False
+        If True, then each presets of the list is applied until no further merges can be done, before trying
+        the next one
+    censor_ms : None or float, default: None
+        When merging units, any spikes violating this refractory period will be discarded.
+    merging_mode : "soft" | "hard", default: "soft"
+        How merges are performed. In the "soft" mode, merges will be approximated, with no smart merging
+        of the extension data.
+    sparsity_overlap : float, default 0.75
+        The percentage of overlap that units should share in order to accept merges. If this criteria is not
+        achieved, soft merging will not be performed.
+    new_id_strategy : "append" | "take_first", default: "append"
+            The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+                * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
+                * "take_first" : new_unit_ids will be the first unit_id of every list of merges
+    raise_error : bool, default: False
+        If True, an error is raised if the merges can not be done. Otherwise, warning are displayed
+    extra_outputs : bool, default: False
+        If True, additional list of merges applied at every preset, and dictionary (`outs`) with processed data are returned.
+    force_copy : boolean, default: True
+        When new extensions are computed, the default is to make a copy of the analyzer, to avoid overwriting
+        already computed extensions. False if you want to overwrite
 
-    if steps is None:
-        if preset is None:
-            if steps is None:
-                raise ValueError("You need to specify a preset or steps for the auto-merge function")
-        elif preset == "similarity_correlograms":
-            steps = [
-                "num_spikes",
-                "remove_contaminated",
-                "unit_locations",
-                "template_similarity",
-                "correlogram",
-                "quality_score",
-            ]
-        elif preset == "temporal_splits":
-            steps = [
-                "num_spikes",
-                "remove_contaminated",
-                "unit_locations",
-                "template_similarity",
-                "presence_distance",
-                "quality_score",
-            ]
-        elif preset == "x_contaminations":
-            steps = [
-                "num_spikes",
-                "remove_contaminated",
-                "unit_locations",
-                "template_similarity",
-                "cross_contamination",
-                "quality_score",
-            ]
-        elif preset == "feature_neighbors":
-            steps = [
-                "num_spikes",
-                "snr",
-                "remove_contaminated",
-                "unit_locations",
-                "knn",
-                "quality_score",
-            ]
+    IMPORTANT: internally, all computations are relying on extensions of the analyzer, that are computed
+    with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to
+    have a finer control on these values, please precompute the extensions before applying the auto_merge
 
-    for step in steps:
-        if step in _required_extensions:
-            for ext in _required_extensions[step]:
-                if not sorting_analyzer.has_extension(ext):
-                    raise ValueError(f"{step} requires {ext} extension")
+    If you have errors on sparsity_overlap, this is because you are trying to perform soft_merges for units
+    that are barely overlapping. While in theory this should not happen, if this is the case, it means that either
+    you are trying to perform too aggressive merges (and thus check params), and/or that you should switch to hard merges.
 
-    n = unit_ids.size
-    pair_mask = np.triu(np.arange(n)) > 0
-    outs = dict()
+    Returns
+    -------
+    sorting_analyzer:
+        The new sorting analyzer where all the merges from all the presets have been applied
+    merges, outs:
+        Returned only when extra_outputs=True
+        A list with all the merges performed at every steps, and dictionaries that contains data for debugging and plotting.
+    """
 
-    for step in steps:
+    if isinstance(presets, str):
+        presets = [presets]
 
-        assert step in all_steps, f"{step} is not a valid step"
+    if (steps is not None) and (presets is not None):
+        raise Exception("presets and steps are mutually exclusive")
 
-        # STEP : remove units with too few spikes
-        if step == "num_spikes":
-            num_spikes = sorting.count_num_spikes_per_unit(outputs="array")
-            to_remove = num_spikes < min_spikes
-            pair_mask[to_remove, :] = False
-            pair_mask[:, to_remove] = False
+    if presets is not None:
+        to_be_launched = presets
+        launch_mode = "presets"
+    elif steps is not None:
+        all_lists = np.all([isinstance(el, list) for el in steps])
+        to_be_launched = steps
+        if not all_lists:
+            to_be_launched = [to_be_launched]
+        launch_mode = "steps"
 
-        # STEP : remove units with too small SNR
-        elif step == "snr":
-            qm_ext = sorting_analyzer.get_extension("quality_metrics")
-            if qm_ext is None:
-                sorting_analyzer.compute("noise_levels")
-                sorting_analyzer.compute("quality_metrics", metric_names=["snr"])
-                qm_ext = sorting_analyzer.get_extension("quality_metrics")
+    if launch_mode == "steps":
+        if not isinstance(steps_params, list):
+            steps_params = [steps_params]
 
-            snrs = qm_ext.get_data()["snr"].values
-            to_remove = snrs < min_snr
-            pair_mask[to_remove, :] = False
-            pair_mask[:, to_remove] = False
-
-        # STEP : remove contaminated auto corr
-        elif step == "remove_contaminated":
-            contaminations, nb_violations = compute_refrac_period_violations(
-                sorting_analyzer, refractory_period_ms=refractory_period_ms, censored_period_ms=censored_period_ms
-            )
-            nb_violations = np.array(list(nb_violations.values()))
-            contaminations = np.array(list(contaminations.values()))
-            to_remove = contaminations > contamination_thresh
-            pair_mask[to_remove, :] = False
-            pair_mask[:, to_remove] = False
-
-        # STEP : unit positions are estimated roughly with channel
-        elif step == "unit_locations" in steps:
-            location_ext = sorting_analyzer.get_extension("unit_locations")
-            unit_locations = location_ext.get_data()[:, :2]
-
-            unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
-            pair_mask = pair_mask & (unit_distances <= max_distance_um)
-            outs["unit_distances"] = unit_distances
-
-        # STEP : potential auto merge by correlogram
-        elif step == "correlogram" in steps:
-            correlograms_ext = sorting_analyzer.get_extension("correlograms")
-            correlograms, bins = correlograms_ext.get_data()
-            mask = (bins[:-1] >= -censor_correlograms_ms) & (bins[:-1] < censor_correlograms_ms)
-            correlograms[:, :, mask] = 0
-            correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
-            # find correlogram window for each units
-            win_sizes = np.zeros(n, dtype=int)
-            for unit_ind in range(n):
-                auto_corr = correlograms_smoothed[unit_ind, unit_ind, :]
-                thresh = np.max(auto_corr) * adaptative_window_thresh
-                win_size = get_unit_adaptive_window(auto_corr, thresh)
-                win_sizes[unit_ind] = win_size
-            correlogram_diff = compute_correlogram_diff(
-                sorting,
-                correlograms_smoothed,
-                win_sizes,
-                pair_mask=pair_mask,
-            )
-            # print(correlogram_diff)
-            pair_mask = pair_mask & (correlogram_diff < corr_diff_thresh)
-            outs["correlograms"] = correlograms
-            outs["bins"] = bins
-            outs["correlograms_smoothed"] = correlograms_smoothed
-            outs["correlogram_diff"] = correlogram_diff
-            outs["win_sizes"] = win_sizes
-
-        # STEP : check if potential merge with CC also have template similarity
-        elif step == "template_similarity" in steps:
-            template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
-            templates_similarity = template_similarity_ext.get_data()
-            templates_diff = 1 - templates_similarity
-            pair_mask = pair_mask & (templates_diff < template_diff_thresh)
-            outs["templates_diff"] = templates_diff
-
-        # STEP : check the vicinity of the spikes
-        elif step == "knn" in steps:
-            if knn_kwargs is None:
-                knn_kwargs = dict()
-            pair_mask = get_pairs_via_nntree(sorting_analyzer, k_nn, pair_mask, **knn_kwargs)
-
-        # STEP : check how the rates overlap in times
-        elif step == "presence_distance" in steps:
-            presence_distance_kwargs = presence_distance_kwargs or dict()
-            num_samples = [
-                sorting_analyzer.get_num_samples(segment_index) for segment_index in range(sorting.get_num_segments())
-            ]
-            presence_distances = compute_presence_distance(
-                sorting, pair_mask, num_samples=num_samples, **presence_distance_kwargs
-            )
-            pair_mask = pair_mask & (presence_distances > presence_distance_thresh)
-            outs["presence_distances"] = presence_distances
-
-        # STEP : check if the cross contamination is significant
-        elif step == "cross_contamination" in steps:
-            refractory = (censored_period_ms, refractory_period_ms)
-            CC, p_values = compute_cross_contaminations(
-                sorting_analyzer, pair_mask, cc_thresh, refractory, contaminations
-            )
-            pair_mask = pair_mask & (p_values > p_value)
-            outs["cross_contaminations"] = CC, p_values
-
-        # STEP : validate the potential merges with CC increase the contamination quality metrics
-        elif step == "quality_score" in steps:
-            pair_mask, pairs_decreased_score = check_improve_contaminations_score(
-                sorting_analyzer,
-                pair_mask,
-                contaminations,
-                firing_contamination_balance,
-                refractory_period_ms,
-                censored_period_ms,
-            )
-            outs["pairs_decreased_score"] = pairs_decreased_score
-
-    # FINAL STEP : create the final list from pair_mask boolean matrix
-    ind1, ind2 = np.nonzero(pair_mask)
-    potential_merges = list(zip(unit_ids[ind1], unit_ids[ind2]))
-
-    # some methods return identities ie (1,1) which we can cleanup first.
-    potential_merges = [(ids[0], ids[1]) for ids in potential_merges if ids[0] != ids[1]]
-
-    if resolve_graph:
-        potential_merges = resolve_merging_graph(sorting, potential_merges)
+    if steps_params is not None:
+        assert len(steps_params) == len(to_be_launched), f"steps params should have the same size as {launch_mode}"
+    else:
+        steps_params = [None] * len(to_be_launched)
 
     if extra_outputs:
-        return potential_merges, outs
+        all_merging_groups = []
+        all_outs = []
+        resolved_merges = {}
+
+    if force_copy:
+        sorting_analyzer = sorting_analyzer.copy()
+
+    apply_merge_kwargs = {
+        "censor_ms": censor_ms,
+        "sparsity_overlap": sparsity_overlap,
+        "merging_mode": merging_mode,
+        "new_id_strategy": new_id_strategy,
+    }
+
+    for to_launch, params in zip(to_be_launched, steps_params):
+
+        if launch_mode == "presets":
+            compute_merge_kwargs = {"preset": to_launch}
+        elif launch_mode == "steps":
+            compute_merge_kwargs = {"steps": to_launch}
+
+        compute_merge_kwargs.update({"steps_params": params})
+        found_merges = True
+
+        while found_merges:
+            num_units = len(sorting_analyzer.unit_ids)
+            sorting_analyzer = _auto_merge_units_single_iteration(
+                sorting_analyzer,
+                compute_merge_kwargs,
+                apply_merge_kwargs=apply_merge_kwargs,
+                extra_outputs=extra_outputs,
+                raise_error=raise_error,
+                force_copy=False,
+                **job_kwargs,
+            )
+
+            if extra_outputs:
+                sorting_analyzer, new_merges, merge_unit_groups, outs = sorting_analyzer
+                all_merging_groups += [merge_unit_groups]
+                resolved_merges = resolve_pairs(resolved_merges, new_merges)
+                all_outs += [outs]
+            if not recursive:
+                found_merges = False
+            else:
+                found_merges = len(sorting_analyzer.unit_ids) < num_units
+
+    if extra_outputs:
+        return sorting_analyzer, resolved_merges, merge_unit_groups, all_outs
     else:
-        return potential_merges
+        return sorting_analyzer
 
 
 def get_pairs_via_nntree(sorting_analyzer, k_nn=5, pair_mask=None, **knn_kwargs):
@@ -550,8 +1010,12 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float) -> int:
     peaks = peaks[keep]
 
     if peaks.size == 0:
-        # If none of the peaks crossed the threshold, redo with threshold/2.
-        return get_unit_adaptive_window(auto_corr, threshold / 2)
+        # If threshold is too small and no peaks, then the problem is not feasible
+        if threshold < 1e-5:
+            return 1
+        else:
+            # If none of the peaks crossed the threshold, redo with threshold/2.
+            return get_unit_adaptive_window(auto_corr, threshold / 2)
 
     # keep the last peak (nearest to center)
     win_size = auto_corr.shape[0] // 2 - peaks[-1]
@@ -661,10 +1125,10 @@ def check_improve_contaminations_score(
         f_new = compute_firing_rates(sorting_analyzer_new)[unit_id1]
 
         # old and new scores
-        k = firing_contamination_balance
-        score_1 = f_1 * (1 - (k + 1) * c_1)
-        score_2 = f_2 * (1 - (k + 1) * c_2)
-        score_new = f_new * (1 - (k + 1) * c_new)
+        k = 1 + firing_contamination_balance
+        score_1 = f_1 * (1 - k * c_1)
+        score_2 = f_2 * (1 - k * c_2)
+        score_new = f_new * (1 - k * c_new)
 
         if score_new < score_1 or score_new < score_2:
             # the score is not improved
@@ -1022,7 +1486,6 @@ def estimate_cross_contamination(
     n_violations = compute_nb_coincidence(spike_train1, spike_train2, t_r) - compute_nb_coincidence(
         spike_train1, spike_train2, t_c
     )
-
     estimation = 1 - ((n_violations * T) / (2 * N1 * N2 * t_r) - 1.0) / (C1 - 1.0) if C1 != 1.0 else -np.inf
     if limit is None:
         return estimation

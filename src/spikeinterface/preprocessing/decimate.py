@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import numpy as np
 from spikeinterface.core.core_tools import (
-    define_function_from_class,
+    define_function_handling_dict_from_class,
 )
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
-from ..core import BaseRecordingSegment
+from spikeinterface.core import BaseRecordingSegment
 
 
 class DecimateRecording(BasePreprocessor):
@@ -63,18 +63,15 @@ class DecimateRecording(BasePreprocessor):
                 f"Consider combining DecimateRecording with FrameSliceRecording for fine control on the recording start/end frames."
             )
         self._decimation_offset = decimation_offset
-        resample_rate = self._orig_samp_freq / self._decimation_factor
+        decimated_sampling_frequency = self._orig_samp_freq / self._decimation_factor
 
-        BasePreprocessor.__init__(self, recording, sampling_frequency=resample_rate)
+        BasePreprocessor.__init__(self, recording, sampling_frequency=decimated_sampling_frequency)
 
-        # in case there was a time_vector, it will be dropped for sanity.
-        # This is not necessary but consistent with ResampleRecording
         for parent_segment in recording._recording_segments:
-            parent_segment.time_vector = None
             self.add_recording_segment(
                 DecimateRecordingSegment(
                     parent_segment,
-                    resample_rate,
+                    decimated_sampling_frequency,
                     self._orig_samp_freq,
                     decimation_factor,
                     decimation_offset,
@@ -93,22 +90,26 @@ class DecimateRecordingSegment(BaseRecordingSegment):
     def __init__(
         self,
         parent_recording_segment,
-        resample_rate,
+        decimated_sampling_frequency,
         parent_rate,
         decimation_factor,
         decimation_offset,
         dtype,
     ):
-        if parent_recording_segment.t_start is None:
-            new_t_start = None
+        if parent_recording_segment.time_vector is not None:
+            time_vector = parent_recording_segment.time_vector[decimation_offset::decimation_factor]
+            decimated_sampling_frequency = None
+            t_start = None
         else:
-            new_t_start = parent_recording_segment.t_start + decimation_offset / parent_rate
+            time_vector = None
+            if parent_recording_segment.t_start is None:
+                t_start = None
+            else:
+                t_start = parent_recording_segment.t_start + (decimation_offset / parent_rate)
 
         # Do not use BasePreprocessorSegment bcause we have to reset the sampling rate!
         BaseRecordingSegment.__init__(
-            self,
-            sampling_frequency=resample_rate,
-            t_start=new_t_start,
+            self, sampling_frequency=decimated_sampling_frequency, t_start=t_start, time_vector=time_vector
         )
         self._parent_segment = parent_recording_segment
         self._decimation_factor = decimation_factor
@@ -135,4 +136,4 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         ].astype(self._dtype)
 
 
-decimate = define_function_from_class(source_class=DecimateRecording, name="decimate")
+decimate = define_function_handling_dict_from_class(source_class=DecimateRecording, name="decimate")

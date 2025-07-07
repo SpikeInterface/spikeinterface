@@ -11,6 +11,7 @@ from spikeinterface.core.generate import NoiseGeneratorRecording
 from spikeinterface.core.recording_tools import (
     write_binary_recording,
     write_memory_recording,
+    get_random_recording_slices,
     get_random_data_chunks,
     get_chunk_with_margin,
     get_closest_channels,
@@ -167,6 +168,17 @@ def test_write_memory_recording():
         shm.unlink()
 
 
+def test_get_random_recording_slices():
+    rec = generate_recording(num_channels=1, sampling_frequency=1000.0, durations=[10.0, 20.0])
+    rec_slices = get_random_recording_slices(
+        rec, method="full_random", num_chunks_per_segment=20, chunk_duration="500ms", margin_frames=0, seed=0
+    )
+    assert len(rec_slices) == 40
+    for seg_ind, start, stop in rec_slices:
+        assert stop - start == 500
+        assert seg_ind in (0, 1)
+
+
 def test_get_random_data_chunks():
     rec = generate_recording(num_channels=1, sampling_frequency=1000.0, durations=[10.0, 20.0])
     chunks = get_random_data_chunks(rec, num_chunks_per_segment=50, chunk_size=500, seed=0)
@@ -182,16 +194,17 @@ def test_get_closest_channels():
 
 
 def test_get_noise_levels():
+    job_kwargs = dict(n_jobs=1, progress_bar=True)
     rec = generate_recording(num_channels=2, sampling_frequency=1000.0, durations=[60.0])
 
-    noise_levels_1 = get_noise_levels(rec, return_scaled=False)
-    noise_levels_2 = get_noise_levels(rec, return_scaled=False)
+    noise_levels_1 = get_noise_levels(rec, return_in_uV=False, **job_kwargs)
+    noise_levels_2 = get_noise_levels(rec, return_in_uV=False, **job_kwargs)
 
     rec.set_channel_gains(0.1)
     rec.set_channel_offsets(0)
-    noise_levels = get_noise_levels(rec, return_scaled=True, force_recompute=True)
+    noise_levels = get_noise_levels(rec, return_in_uV=True, force_recompute=True, **job_kwargs)
 
-    noise_levels = get_noise_levels(rec, return_scaled=True, method="std")
+    noise_levels = get_noise_levels(rec, return_in_uV=True, method="std", **job_kwargs)
 
     # Generate a recording following a gaussian distribution to check the result of get_noise.
     std = 6.0
@@ -201,8 +214,10 @@ def test_get_noise_levels():
     recording = NumpyRecording(traces, 30000)
 
     assert np.all(noise_levels_1 == noise_levels_2)
-    assert np.allclose(get_noise_levels(recording, return_scaled=False), [std, std], rtol=1e-2, atol=1e-3)
-    assert np.allclose(get_noise_levels(recording, method="std", return_scaled=False), [std, std], rtol=1e-2, atol=1e-3)
+    assert np.allclose(get_noise_levels(recording, return_in_uV=False, **job_kwargs), [std, std], rtol=1e-2, atol=1e-3)
+    assert np.allclose(
+        get_noise_levels(recording, method="std", return_in_uV=False, **job_kwargs), [std, std], rtol=1e-2, atol=1e-3
+    )
 
 
 def test_get_noise_levels_output():
@@ -216,10 +231,21 @@ def test_get_noise_levels_output():
     traces = rng.normal(loc=10.0, scale=std, size=(num_samples, num_channels))
     recording = NumpyRecording(traces_list=traces, sampling_frequency=sampling_frequency)
 
-    std_estimated_with_mad = get_noise_levels(recording, method="mad", return_scaled=False, chunk_size=1_000)
+    std_estimated_with_mad = get_noise_levels(
+        recording,
+        method="mad",
+        return_in_uV=False,
+        random_slices_kwargs=dict(num_chunks_per_segment=40, chunk_size=1_000, seed=seed),
+    )
+    print(std_estimated_with_mad)
     assert np.allclose(std_estimated_with_mad, [std, std], rtol=1e-2, atol=1e-3)
 
-    std_estimated_with_std = get_noise_levels(recording, method="std", return_scaled=False, chunk_size=1_000)
+    std_estimated_with_std = get_noise_levels(
+        recording,
+        method="std",
+        return_in_uV=False,
+        random_slices_kwargs=dict(num_chunks_per_segment=40, chunk_size=1_000, seed=seed),
+    )
     assert np.allclose(std_estimated_with_std, [std, std], rtol=1e-2, atol=1e-3)
 
 
@@ -333,14 +359,16 @@ def test_do_recording_attributes_match():
 
 if __name__ == "__main__":
     # Create a temporary folder using the standard library
-    import tempfile
+    # import tempfile
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        tmp_path = Path(tmpdirname)
-        test_write_binary_recording(tmp_path)
-    test_write_memory_recording()
+    # with tempfile.TemporaryDirectory() as tmpdirname:
+    #     tmp_path = Path(tmpdirname)
+    #     test_write_binary_recording(tmp_path)
+    # test_write_memory_recording()
 
-    test_get_random_data_chunks()
-    test_get_closest_channels()
-    test_get_noise_levels()
-    test_order_channels_by_depth()
+    test_get_random_recording_slices()
+    # test_get_random_data_chunks()
+    # test_get_closest_channels()
+    # test_get_noise_levels()
+    # test_get_noise_levels_output()
+    # test_order_channels_by_depth()

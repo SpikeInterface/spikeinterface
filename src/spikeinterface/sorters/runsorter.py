@@ -13,11 +13,11 @@ from spikeinterface import DEV_MODE
 import spikeinterface
 
 
-from .. import __version__ as si_version
+from spikeinterface import __version__ as si_version
 
 
-from ..core import BaseRecording, NumpySorting, load_extractor
-from ..core.core_tools import check_json, is_editable_mode
+from spikeinterface.core import BaseRecording, NumpySorting, load
+from spikeinterface.core.core_tools import check_json, is_editable_mode
 from .sorterlist import sorter_dict
 from .utils import (
     SpikeSortingError,
@@ -27,7 +27,6 @@ from .utils import (
     has_singularity,
     has_spython,
     has_docker_nvidia_installed,
-    get_nvidia_docker_dependecies,
 )
 from .container_tools import (
     find_recording_folders,
@@ -71,7 +70,7 @@ _common_param_doc = """
     ----------
     sorter_name : str
         The sorter name
-    recording : RecordingExtractor
+    recording : RecordingExtractor | dict of RecordingExtractor
         The recording extractor to be spike sorted
     folder : str or Path
         Path to output folder
@@ -96,21 +95,15 @@ _common_param_doc = """
         If True, the output Sorting is returned as a Sorting
     delete_container_files : bool, default: True
         If True, the container temporary files are deleted after the sorting is done
-    output_folder : None, default: None
-        Do not use. Deprecated output function to be removed in 0.103.
     **sorter_params : keyword args
         Spike sorter specific arguments (they can be retrieved with `get_default_sorter_params(sorter_name_or_class)`)
 
-    Returns
-    -------
-    BaseSorting | None
-        The spike sorted data (it `with_output` is True) or None (if `with_output` is False)
     """
 
 
 def run_sorter(
     sorter_name: str,
-    recording: BaseRecording,
+    recording: BaseRecording | dict,
     folder: Optional[str] = None,
     remove_existing_folder: bool = False,
     delete_output_folder: bool = False,
@@ -120,25 +113,20 @@ def run_sorter(
     singularity_image: Optional[Union[bool, str]] = False,
     delete_container_files: bool = True,
     with_output: bool = True,
-    output_folder: None = None,
     **sorter_params,
 ):
     """
     Generic function to run a sorter via function approach.
-
     {}
+    Returns
+    -------
+    BaseSorting | dict of BaseSorting | None
+        The spike sorted data (it `with_output` is True) or None (if `with_output` is False)
 
     Examples
     --------
     >>> sorting = run_sorter("tridesclous", recording)
     """
-
-    if output_folder is not None and folder is None:
-        deprecation_msg = (
-            "`output_folder` is deprecated and will be removed in version 0.103.0 Please use folder instead"
-        )
-        folder = output_folder
-        warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
 
     common_kwargs = dict(
         sorter_name=sorter_name,
@@ -151,6 +139,21 @@ def run_sorter(
         with_output=with_output,
         **sorter_params,
     )
+
+    if isinstance(recording, dict):
+
+        all_kwargs = common_kwargs
+        all_kwargs.update(
+            dict(
+                docker_image=docker_image,
+                singularity_image=singularity_image,
+                delete_container_files=delete_container_files,
+            )
+        )
+        all_kwargs.pop("recording")
+
+        dict_of_sorters = _run_sorter_by_dict(dict_of_recordings=recording, **all_kwargs)
+        return dict_of_sorters
 
     if docker_image or singularity_image:
         common_kwargs.update(dict(delete_container_files=delete_container_files))
@@ -202,6 +205,46 @@ def run_sorter(
 run_sorter.__doc__ = run_sorter.__doc__.format(_common_param_doc)
 
 
+def _run_sorter_by_dict(dict_of_recordings: dict, folder: str | Path | None = None, **run_sorter_params):
+    """
+    Applies `run_sorter` to each recording in a dict of recordings and saves
+    the results.
+    {}
+    Returns
+    -------
+    dict
+        Dictionary of `BaseSorting`s, with the same keys as the input dict of `BaseRecording`s.
+    """
+
+    sorter_name = run_sorter_params.get("sorter_name")
+    remove_existing_folder = run_sorter_params.get("remove_existing_folder")
+
+    if folder is None:
+        folder = Path(sorter_name + "_output")
+
+    folder = Path(folder)
+    folder.mkdir(exist_ok=remove_existing_folder)
+
+    sorter_dict = {}
+    for group_key, recording in dict_of_recordings.items():
+        sorter_dict[group_key] = run_sorter(recording=recording, folder=folder / f"{group_key}", **run_sorter_params)
+
+    info_file = folder / "spikeinterface_info.json"
+    info = dict(
+        version=spikeinterface.__version__,
+        dev_mode=spikeinterface.DEV_MODE,
+        object="Group[SorterFolder]",
+        dict_keys=list(dict_of_recordings.keys()),
+    )
+    with open(info_file, mode="w") as f:
+        json.dump(check_json(info), f, indent=4)
+
+    return sorter_dict
+
+
+_run_sorter_by_dict.__doc__ = _run_sorter_by_dict.__doc__.format(_common_param_doc)
+
+
 def run_sorter_local(
     sorter_name,
     recording,
@@ -211,7 +254,6 @@ def run_sorter_local(
     verbose=False,
     raise_error=True,
     with_output=True,
-    output_folder=None,
     **sorter_params,
 ):
     """
@@ -236,19 +278,10 @@ def run_sorter_local(
         If False, the process continues and the error is logged in the log file
     with_output : bool, default: True
         If True, the output Sorting is returned as a Sorting
-    output_folder : None, default: None
-        Do not use. Deprecated output function to be removed in 0.103.
     **sorter_params : keyword args
     """
     if isinstance(recording, list):
         raise Exception("If you want to run several sorters/recordings use run_sorter_jobs(...)")
-
-    if output_folder is not None and folder is None:
-        deprecation_msg = (
-            "`output_folder` is deprecated and will be removed in version 0.103.0 Please use folder instead"
-        )
-        folder = output_folder
-        warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
 
     SorterClass = sorter_dict[sorter_name]
 
@@ -295,7 +328,6 @@ def run_sorter_container(
     installation_mode="auto",
     spikeinterface_version=None,
     spikeinterface_folder_source=None,
-    output_folder: None = None,
     **sorter_params,
 ):
     """
@@ -310,8 +342,6 @@ def run_sorter_container(
         The container mode : "docker" or "singularity"
     container_image : str, default: None
         The container image name and tag. If None, the default container image is used
-    output_folder : str, default: None
-        Path to output folder
     remove_existing_folder : bool, default: True
         If True and output_folder exists yet then delete
     delete_output_folder : bool, default: False
@@ -346,13 +376,6 @@ def run_sorter_container(
     """
 
     assert installation_mode in ("auto", "pypi", "github", "folder", "dev", "no-install")
-
-    if output_folder is not None and folder is None:
-        deprecation_msg = (
-            "`output_folder` is deprecated and will be removed in version 0.103.0 Please use folder instead"
-        )
-        folder = output_folder
-        warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
     spikeinterface_version = spikeinterface_version or si_version
 
     if extra_requirements is None:
@@ -408,7 +431,7 @@ def run_sorter_container(
     py_script = f"""
 import json
 from pathlib import Path
-from spikeinterface import load_extractor
+from spikeinterface import load
 from spikeinterface.sorters import run_sorter_local
 
 if __name__ == '__main__':
@@ -417,9 +440,9 @@ if __name__ == '__main__':
     json_rec = Path('{parent_folder_unix}/in_container_recording.json')
     pickle_rec = Path('{parent_folder_unix}/in_container_recording.pickle')
     if json_rec.exists():
-        recording = load_extractor(json_rec)
+        recording = load(json_rec)
     else:
-        recording = load_extractor(pickle_rec)
+        recording = load(pickle_rec)
 
     # load params in container
     with open('{parent_folder_unix}/in_container_params.json', encoding='utf8', mode='r') as f:
@@ -480,8 +503,10 @@ if __name__ == '__main__':
             extra_kwargs["container_requires_gpu"] = True
 
             if platform.system() == "Linux" and not has_docker_nvidia_installed():
+                from .utils import get_nvidia_docker_dependencies
+
                 warn(
-                    f"nvidia-required but none of \n{get_nvidia_docker_dependecies()}\n were found. "
+                    f"nvidia-required but none of \n{get_nvidia_docker_dependencies()}\n were found. "
                     f"This may result in an error being raised during sorting. Try "
                     "installing `nvidia-container-toolkit`, including setting the "
                     "configuration steps, if running into errors."
@@ -652,7 +677,7 @@ if __name__ == '__main__':
                 sorting = SorterClass.get_result_from_folder(folder)
             except Exception as e:
                 try:
-                    sorting = load_extractor(in_container_sorting_folder)
+                    sorting = load(in_container_sorting_folder)
                 except FileNotFoundError:
                     SpikeSortingError(f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
 

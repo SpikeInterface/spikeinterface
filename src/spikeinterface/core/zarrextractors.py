@@ -11,19 +11,83 @@ from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment, minimum_spike_dtype
 from .core_tools import define_function_from_class, check_json
 from .job_tools import split_job_kwargs
-from .recording_tools import determine_cast_unsigned
 from .core_tools import is_path_remote
 
 
-def anononymous_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: dict | None = None):
-    if is_path_remote(str(folder_path)) and storage_options is None:
-        try:
-            root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
-        except Exception as e:
-            storage_options = {"anon": True}
-            root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: dict | None = None):
+    """
+    Open a zarr folder with super powers.
+
+    The function tries to open a zarr folder with the following options:
+    - zarr.open_consolidated (if mode is not "a" or "r+")
+    - zarr.open
+
+    For remote paths, the function tries to open the folder with:
+    - the provided storage options (if storage_options is not None)
+    - anon=True/False is storage_options is None
+
+    Parameters
+    ----------
+    folder_path : str | Path
+        The path to the zarr folder
+    mode : str, optional
+        The mode to open the zarr folder in, default: "r"
+    storage_options : dict | None, optional
+        The storage options to use when opening the zarr folder, default: None
+
+    Returns
+    -------
+    root: zarr.hierarchy.Group
+        The zarr root group object
+
+    Raises
+    ------
+    ValueError
+        Raised if the folder cannot be opened in the specified mode with the given storage options.
+    """
+    import zarr
+
+    # if mode is append or read/write, we try to open the folder with zarr.open
+    # since zarr.open_consolidated does not support creating new groups/datasets
+    if mode in ("a", "r+"):
+        open_funcs = (zarr.open,)
     else:
-        root = zarr.open(str(folder_path), mode="r", storage_options=storage_options)
+        open_funcs = (zarr.open_consolidated, zarr.open)
+
+    # if storage_options is None, we try to open the folder with and without anonymous access
+    # if storage_options is not None, we try to open the folder with the given storage options
+    if storage_options is None or storage_options == {}:
+        storage_options_to_test = ({"anon": True}, {"anon": False})
+    else:
+        storage_options_to_test = (storage_options,)
+
+    root = None
+    exception = None
+    if is_path_remote(str(folder_path)):
+        for open_func in open_funcs:
+            if root is not None:
+                break
+            for storage_options in storage_options_to_test:
+                try:
+                    root = open_func(str(folder_path), mode=mode, storage_options=storage_options)
+                    break
+                except Exception as e:
+                    exception = e
+                    pass
+    else:
+        if not Path(folder_path).is_dir():
+            raise ValueError(f"Folder {folder_path} does not exist")
+        for open_func in open_funcs:
+            try:
+                root = open_func(str(folder_path), mode=mode, storage_options=storage_options)
+                break
+            except Exception as e:
+                exception = e
+                pass
+    if root is None:
+        raise ValueError(
+            f"Cannot open {folder_path} in mode {mode} with storage_options {storage_options}.\nException: {exception}"
+        )
     return root
 
 
@@ -41,6 +105,8 @@ class ZarrRecordingExtractor(BaseRecording):
         which enables to load data from open buckets.
     storage_options : dict or None
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
+    load_compression_ratio : bool, default: False
+        If True, the compression ratio is loaded from the zarr file and annotated in the recording.
 
     Returns
     -------
@@ -48,11 +114,13 @@ class ZarrRecordingExtractor(BaseRecording):
         The recording Extractor
     """
 
-    def __init__(self, folder_path: Path | str, storage_options: dict | None = None):
+    def __init__(
+        self, folder_path: Path | str, storage_options: dict | None = None, load_compression_ratio: bool = False
+    ):
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
-        self._root = anononymous_zarr_open(folder_path, mode="r", storage_options=storage_options)
+        self._root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
 
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
@@ -71,9 +139,10 @@ class ZarrRecordingExtractor(BaseRecording):
         dtype = np.dtype(dtype)
         t_starts = self._root.get("t_starts", None)
 
-        total_nbytes = 0
-        total_nbytes_stored = 0
-        cr_by_segment = {}
+        if load_compression_ratio:
+            total_nbytes = 0
+            total_nbytes_stored = 0
+            cr_by_segment = {}
         for segment_index in range(num_segments):
             trace_name = f"traces_seg{segment_index}"
             assert (
@@ -95,17 +164,18 @@ class ZarrRecordingExtractor(BaseRecording):
                 time_kwargs["sampling_frequency"] = sampling_frequency
 
             rec_segment = ZarrRecordingSegment(self._root, trace_name, **time_kwargs)
-
-            nbytes_segment = self._root[trace_name].nbytes
-            nbytes_stored_segment = self._root[trace_name].nbytes_stored
-            if nbytes_stored_segment > 0:
-                cr_by_segment[segment_index] = nbytes_segment / nbytes_stored_segment
-            else:
-                cr_by_segment[segment_index] = np.nan
-
-            total_nbytes += nbytes_segment
-            total_nbytes_stored += nbytes_stored_segment
             self.add_recording_segment(rec_segment)
+
+            if load_compression_ratio:
+                nbytes_segment = self._root[trace_name].nbytes
+                nbytes_stored_segment = self._root[trace_name].nbytes_stored
+                if nbytes_stored_segment > 0:
+                    cr_by_segment[segment_index] = nbytes_segment / nbytes_stored_segment
+                else:
+                    cr_by_segment[segment_index] = np.nan
+
+                total_nbytes += nbytes_segment
+                total_nbytes_stored += nbytes_stored_segment
 
         # load probe
         probe_dict = self._root.attrs.get("probe", None)
@@ -124,14 +194,19 @@ class ZarrRecordingExtractor(BaseRecording):
         annotations = self._root.attrs.get("annotations", None)
         if annotations is not None:
             self.annotate(**annotations)
-        # annotate compression ratios
-        if total_nbytes_stored > 0:
-            cr = total_nbytes / total_nbytes_stored
-        else:
-            cr = np.nan
-        self.annotate(compression_ratio=cr, compression_ratio_segments=cr_by_segment)
+        if load_compression_ratio:
+            # annotate compression ratios
+            if total_nbytes_stored > 0:
+                cr = total_nbytes / total_nbytes_stored
+            else:
+                cr = np.nan
+            self.annotate(compression_ratio=cr, compression_ratio_segments=cr_by_segment)
 
-        self._kwargs = {"folder_path": folder_path_kwarg, "storage_options": storage_options}
+        self._kwargs = {
+            "folder_path": folder_path_kwarg,
+            "storage_options": storage_options,
+            "load_compression_ratio": load_compression_ratio,
+        }
 
     @staticmethod
     def write_recording(
@@ -192,7 +267,7 @@ class ZarrSortingExtractor(BaseSorting):
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
-        zarr_root = anononymous_zarr_open(folder_path, mode="r", storage_options=storage_options)
+        zarr_root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
 
         if zarr_group is None:
             self._root = zarr_root
@@ -271,7 +346,7 @@ def read_zarr(
     """
     # TODO @alessio : we should have something more explicit in our zarr format to tell which object it is.
     # for the futur SortingAnalyzer we will have this 2 fields!!!
-    root = anononymous_zarr_open(folder_path, mode="r", storage_options=storage_options)
+    root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
     if "channel_ids" in root.keys():
         return read_zarr_recording(folder_path, storage_options=storage_options)
     elif "unit_ids" in root.keys():
@@ -317,7 +392,6 @@ def get_default_zarr_compressor(clevel: int = 5):
     Blosc.compressor
         The compressor object that can be used with the save to zarr function
     """
-    assert ZarrRecordingExtractor.installed, ZarrRecordingExtractor.installation_mesg
     from numcodecs import Blosc
 
     return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)
@@ -382,7 +456,7 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
 
 # Recording
 def add_recording_to_zarr_group(
-    recording: BaseRecording, zarr_group: zarr.hierarchy.Group, verbose=False, auto_cast_uint=True, dtype=None, **kwargs
+    recording: BaseRecording, zarr_group: zarr.hierarchy.Group, verbose=False, dtype=None, **kwargs
 ):
     zarr_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
@@ -414,7 +488,6 @@ def add_recording_to_zarr_group(
         filters=filters_traces,
         dtype=dtype,
         channel_chunk_size=channel_chunk_size,
-        auto_cast_uint=auto_cast_uint,
         verbose=verbose,
         **job_kwargs,
     )
@@ -458,7 +531,6 @@ def add_traces_to_zarr(
     compressor=None,
     filters=None,
     verbose=False,
-    auto_cast_uint=True,
     **job_kwargs,
 ):
     """
@@ -482,8 +554,6 @@ def add_traces_to_zarr(
         List of zarr filters
     verbose : bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint : bool, default: True
-        If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
     """
     from .job_tools import (
@@ -500,10 +570,6 @@ def add_traces_to_zarr(
 
     if dtype is None:
         dtype = recording.get_dtype()
-    if auto_cast_uint:
-        cast_unsigned = determine_cast_unsigned(recording, dtype)
-    else:
-        cast_unsigned = False
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
@@ -529,7 +595,7 @@ def add_traces_to_zarr(
     # use executor (loop or workers)
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
-    init_args = (recording, zarr_datasets, dtype, cast_unsigned)
+    init_args = (recording, zarr_datasets, dtype)
     executor = ChunkRecordingExecutor(
         recording, func, init_func, init_args, verbose=verbose, job_name="write_zarr_recording", **job_kwargs
     )
@@ -537,7 +603,7 @@ def add_traces_to_zarr(
 
 
 # used by write_zarr_recording + ChunkRecordingExecutor
-def _init_zarr_worker(recording, zarr_datasets, dtype, cast_unsigned):
+def _init_zarr_worker(recording, zarr_datasets, dtype):
     import zarr
 
     # create a local dict per worker
@@ -545,7 +611,6 @@ def _init_zarr_worker(recording, zarr_datasets, dtype, cast_unsigned):
     worker_ctx["recording"] = recording
     worker_ctx["zarr_datasets"] = zarr_datasets
     worker_ctx["dtype"] = np.dtype(dtype)
-    worker_ctx["cast_unsigned"] = cast_unsigned
 
     return worker_ctx
 
@@ -558,11 +623,12 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx["recording"]
     dtype = worker_ctx["dtype"]
     zarr_dataset = worker_ctx["zarr_datasets"][segment_index]
-    cast_unsigned = worker_ctx["cast_unsigned"]
 
     # apply function
     traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
+        start_frame=start_frame,
+        end_frame=end_frame,
+        segment_index=segment_index,
     )
     traces = traces.astype(dtype)
     zarr_dataset[start_frame:end_frame, :] = traces
