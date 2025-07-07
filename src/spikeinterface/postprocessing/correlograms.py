@@ -166,9 +166,6 @@ class ComputeCorrelograms(AnalyzerExtension):
                 if unit_involved_in_merge is False:
                     old_to_new_unit_index_map[old_unit_index] = new_sorting_analyzer.sorting.id_to_index(old_unit)
 
-            need_to_append = False
-            delete_from = 1
-
             correlograms, new_bins = deepcopy(self.get_data())
 
             for new_unit_id, merge_unit_group in zip(new_unit_ids, merge_unit_groups):
@@ -197,6 +194,12 @@ class ComputeCorrelograms(AnalyzerExtension):
                     new_correlograms[new_index_2, new_index_1, :] = correlograms[old_index_2, old_index_1, :]
 
             new_data = dict(ccgs=new_correlograms, bins=new_bins)
+        return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        # TODO: for now we just copy
+        new_ccgs, new_bins = _compute_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params)
+        new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data
 
     def _run(self, verbose=False):
