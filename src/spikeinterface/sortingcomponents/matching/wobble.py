@@ -54,6 +54,9 @@ class WobbleParameters:
         The engine to use for the convolutions
     torch_device : string in ["cpu", "cuda", None]. Default "cpu"
         Controls torch device if the torch engine is selected
+    shared_memory : bool, default True
+        If True, the overlaps are stored in shared memory, which is more efficient when 
+        using numerous cores
 
     Notes
     -----
@@ -77,6 +80,7 @@ class WobbleParameters:
     scale_amplitudes: bool = False
     engine: str = "numpy"
     torch_device: str = "cpu"
+    shared_memory: bool = True
 
     def __post_init__(self):
         assert self.amplitude_variance >= 0, "amplitude_variance must be a non-negative scalar"
@@ -361,6 +365,7 @@ class WobbleMatch(BaseTemplateMatching):
         parameters={},
         engine="numpy",
         torch_device="cpu",
+        shared_memory=True,
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
@@ -398,6 +403,25 @@ class WobbleMatch(BaseTemplateMatching):
         pairwise_convolution = convolve_templates(
             compressed_templates, params.jitter_factor, params.approx_rank, template_meta.jittered_indices, sparsity
         )
+        
+        self.shared_memory = shared_memory
+
+        if self.shared_memory:
+            self.max_overlaps = max([len(o) for o in pairwise_convolution])
+            num_samples = len(pairwise_convolution[0][0])
+            num_templates = len(templates_array)
+            num_jittered = num_templates * params.jitter_factor
+            from spikeinterface.core.core_tools import make_shared_array
+            arr, shm = make_shared_array((num_templates*self.max_overlaps, num_samples), dtype=np.float32)
+            for jittered_index in range(num_jittered):
+                units_are_overlapping = sparsity.unit_overlap[jittered_index, :]
+                overlapping_units = np.where(units_are_overlapping)[0]
+                print("toto", overlapping_units)
+                n_overlaps = len(overlapping_units)
+                start_index = jittered_index * self.max_overlaps
+                arr[start_index : start_index + n_overlaps, :] = pairwise_convolution[jittered_index]
+            self.overlaps = arr
+            self.shm = shm
 
         norm_squared = compute_template_norm(sparsity.visible_channels, templates_array)
 
@@ -423,6 +447,11 @@ class WobbleMatch(BaseTemplateMatching):
         # buffer_ms = 10
         # self.margin = int(buffer_ms*1e-3 * recording.sampling_frequency)
         self.margin = 300  # To ensure equivalence with spike-psvae version of the algorithm
+
+    def clean(self):
+        if self.shared_memory:
+            self.shm.close()
+            self.shm.unlink()
 
     def _push_to_torch(self):
         if self.engine == "torch":

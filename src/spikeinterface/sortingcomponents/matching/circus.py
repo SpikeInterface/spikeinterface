@@ -138,7 +138,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
     torch_device : string in ["cpu", "cuda", None]. Default "cpu"
         Controls torch device if the torch engine is selected
     shared_memory : bool, default True
-        If True, the templates are stored in shared memory, which is more efficient when 
+        If True, the overlaps are stored in shared memory, which is more efficient when 
         using numerous cores
     -----
     """
@@ -562,6 +562,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
 
     def clean(self):
         if self.shared_memory:
+            self.shm.close()
             self.shm.unlink()
 
 
