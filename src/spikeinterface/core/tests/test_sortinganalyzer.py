@@ -201,6 +201,41 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     assert "number" in sorting_analyzer.sorting.get_property_keys()
 
 
+def test_create_by_dict():
+    """
+    Generates a recording and sorting which are split into dicts and fed to create_sorting_analyzer.
+    Interally, this aggregates the dicts of recordings and sortings. This test checks that the
+    unit structure is maintained from the dicts to the analyzer. Then checks that the function
+    fails if the dict keys are different for the recordings and the sortings.
+    """
+
+    rec, sort = generate_ground_truth_recording(num_channels=6)
+
+    rec.set_property(key="group", values=[1, 2, 1, 1, 2, 2])
+    sort.set_property(key="group", values=[2, 2, 2, 1, 2, 2, 2, 1, 2, 1])
+
+    unit_ids = sort.unit_ids
+
+    split_sort = {key: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == key]) for key in [1, 2]}
+
+    analyzer = create_sorting_analyzer(split_sort, rec.split_by("group"))
+    analyzer_unit_ids = analyzer.unit_ids
+
+    assert set(analyzer.unit_ids) == set(sort.unit_ids)
+    assert np.all(analyzer_unit_ids[analyzer.get_sorting_property("group") == 1] == split_sort[1].unit_ids)
+    assert np.all(analyzer_unit_ids[analyzer.get_sorting_property("group") == 2] == split_sort[2].unit_ids)
+
+    assert np.all(sort.get_unit_spike_train(unit_id="5") == analyzer.sorting.get_unit_spike_train(unit_id="5"))
+
+    split_sort_bad_keys = {
+        bad_key: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == key])
+        for bad_key, key in zip([3, 4], [1, 2])
+    }
+
+    with pytest.raises(ValueError):
+        analyzer = create_sorting_analyzer(split_sort_bad_keys, rec.split_by("group"))
+
+
 def test_load_without_runtime_info(tmp_path, dataset):
     import zarr
 

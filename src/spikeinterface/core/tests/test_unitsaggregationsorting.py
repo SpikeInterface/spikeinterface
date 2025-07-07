@@ -149,5 +149,22 @@ def test_unit_aggregation_does_not_preserve_ids_not_the_same_type():
     assert list(aggregated_sorting.get_unit_ids()) == ["0", "1", "2", "3", "4"]
 
 
+def test_aggregation_of_dicts():
+    """
+    Tests `aggregate_units` when the input is a dict of sortings. Checks that
+    the unit structure is maintained by the aggregation.
+    """
+
+    sorting1 = generate_sorting(num_units=4)
+    sorting2 = generate_sorting(num_units=2)
+
+    aggregated_sorting = aggregate_units({"a": sorting1, "b": sorting2})
+
+    assert aggregated_sorting.get_num_units() == 6
+    assert np.all(
+        aggregated_sorting.get_property(key="units_aggregation_key") == np.array(["a", "a", "a", "a", "b", "b"])
+    )
+
+
 if __name__ == "__main__":
     test_unitsaggregationsorting()

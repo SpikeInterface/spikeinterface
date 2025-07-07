@@ -338,9 +338,11 @@ Running spike sorting by group is indeed a very common need.
 
 A :py:class:`~spikeinterface.core.BaseRecording` object has the ability to split itself into a dictionary of
 sub-recordings given a certain property (see :py:meth:`~spikeinterface.core.BaseRecording.split_by`).
-So it is easy to loop over this dictionary and sequentially run spike sorting on these sub-recordings.
-The :py:func:`~spikeinterface.sorters.run_sorter` method can also accept the dictionary which is returned
+The :py:func:`~spikeinterface.sorters.run_sorter` method can accept the dictionary which is returned
 by :py:meth:`~spikeinterface.core.BaseRecording.split_by` and will return a dictionary of sortings.
+In turn, these can be fed directly to :py:meth:`~spikeinterface.core.create_sorting_analyzer` to make
+a SortingAnalyzer. For more control, you can loop over the dictionary returned by :py:meth:`~spikeinterface.core.BaseRecording.split_by`
+and sequentially run spike sorting on these sub-recordings.
 
 In this example, we create a 16-channel recording with 4 tetrodes:
 
@@ -397,7 +399,7 @@ In this example, we create a 16-channel recording with 4 tetrodes:
 
 
 Note: you can feed the dict of sortings and dict of recordings directly to :code:`create_sorting_analyzer` to make
-a SortingAnalyzer from the split data. Read more: :ref:`how_to/process_by_channel_group`_.
+a SortingAnalyzer from the split data. :ref:`Read more <how_to/process_by_channel_group>`.
 
 
 Handling multi-segment recordings

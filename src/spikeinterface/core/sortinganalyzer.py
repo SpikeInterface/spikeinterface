@@ -64,10 +64,10 @@ def create_sorting_analyzer(
 
     Parameters
     ----------
-    sorting : Sorting
-        The sorting object
-    recording : Recording
-        The recording object
+    sorting : Sorting | dict
+        The sorting object, or a dict of them
+    recording : Recording | dict
+        The recording object, or a dict of them
     folder : str or Path or None, default: None
         The folder where analyzer is cached
     format : "memory | "binary_folder" | "zarr", default: "memory"
@@ -141,7 +141,7 @@ def create_sorting_analyzer(
             )
 
         aggregated_recording = aggregate_channels(recording)
-        aggregated_sorting = aggregate_units(sorting_list=list(sorting.values()))
+        aggregated_sorting = aggregate_units(sorting)
 
         return create_sorting_analyzer(
             sorting=aggregated_sorting,

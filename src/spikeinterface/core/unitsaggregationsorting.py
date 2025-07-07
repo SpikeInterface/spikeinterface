@@ -126,8 +126,8 @@ class UnitsAggregationSorting(BaseSorting):
         if len(sorting_keys) > 0:
             aggregation_keys = []
             for sort_key, sort in zip(sorting_keys, sorting_list):
-                aggregation_keys.append([sort_key] * sort.get_num_units())
-            self.set_property(key="aggregation_keys", value=aggregation_keys)
+                aggregation_keys += [sort_key] * sort.get_num_units()
+            self.set_property(key="units_aggregation_key", values=aggregation_keys)
 
         # add segments
         for i_seg in range(num_segments):
