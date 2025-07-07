@@ -12,11 +12,11 @@ The main ideas you need to know before starting:
 Choosing the installer + an environment manager + a package installer is a nightmare for beginners.
 The main options are:
   * use "uv" : a new, fast and simple package manager. We recommend this for beginners on every os.
-  * use "anaconda", which does everything. The most popular but theses days it is becoming
-    a bad idea because : ultra slow by default and aggressive licensing by default (not always free anymore).
+  * use "anaconda", which does everything. Used to be very popular but theses days it is becoming
+    a bad idea because : slow by default and aggressive licensing on the default channel (not always free anymore).
     You need to play with "community channels" to make it free again, which is too complicated for beginners.
     Do not go this way.
-  * use python from the system or python.org + venv + pip : good idea for linux users.
+  * use python from the system or python.org + venv + pip : good and simple idea for linux users.
 
 Here we propose a step by step recipe for beginers based on **"uv"**.
 We used to recommend installing with anaconda. It will be kept here for a while but we do not recommend it anymore.
@@ -33,24 +33,28 @@ Kilosort, Ironclust and HDSort are MATLAB based and need to be installed from so
 
 1. On macOS and Linux. Open a terminal and do
    `$ curl -LsSf https://astral.sh/uv/install.sh | sh`
-1. On windows. Open a powershell and do
+1. On windows. Open a terminal using with CMD
    `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
 2. exit session and log again.
 3. Download with right click and save this file corresponding in "Documents" folder:
     * [`requirements_stable.txt`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/requirements_stable.txt)
 4. open terminal or powershell
 5. `uv venv si_env --python 3.11`
-6. For Mac/Linux `source si_env/bin/activate` (you should have `(si_env)` in your terminal) or for Powershell `si_env\Scripts\activate`
-7. `uv pip install -r Documents/requirements_stable.txt`
+6. For Mac/Linux `source si_env/bin/activate` (you should have `(si_env)` in your terminal)
+6. For windows `si_env\Scripts\activate`
+7. `uv pip install -r Documents/beginner_requirements_stable.txt` or `uv pip install -r Documents/beginner_requirements_rolling.txt`
 
 
-More detail on [uv here](https://github.com/astral-sh/uv).
+More details on [uv here](https://github.com/astral-sh/uv).
+
 
 ## Installing before release
 
 Some tools in the spikeinteface ecosystem are getting regular bug fixes (spikeinterface, spikeinterface-gui, probeinterface, python-neo, sortingview).
-We are making releases 2 to 4 times a year. In between releases if you want to install from source you can use the `requirements_rolling.txt` file to create the environment. This will install the packages of the ecosystem from source.
+We are making releases 2 to 4 times a year. In between releases if you want to install from source you can use the `beginner_requirements_rolling.txt` file to create the environment. This will install the packages of the ecosystem from source.
 This is a good way to test if a patch fixes your issue.
+
+
 
 
 ### Check the installation
