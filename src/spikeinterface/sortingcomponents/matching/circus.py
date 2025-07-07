@@ -219,7 +219,9 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             from spikeinterface.core.core_tools import make_shared_array
             arr, shm = make_shared_array((self.num_templates*self.max_overlaps, num_samples), dtype=np.float32)
             for i in range(self.num_templates):
-                arr[i * self.max_overlaps : (i + 1) * self.max_overlaps, :] = self.overlaps[i]
+                n_overlaps = len(self.unit_overlaps_indices[i])
+                start_index = i * self.max_overlaps
+                arr[start_index : start_index + n_overlaps, :] = self.overlaps[i]
             self.overlaps = arr
             self.shm = shm
 
@@ -425,7 +427,9 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                     myindices = selection[0, idx]
 
                     if self.shared_memory:
-                        local_overlaps = self.overlaps[best_cluster_ind * self.max_overlaps : (best_cluster_ind + 1) * self.max_overlaps, :]
+                        n_overlaps = len(self.unit_overlaps_indices[best_cluster_ind])
+                        start_index = best_cluster_ind * self.max_overlaps
+                        local_overlaps = self.overlaps[start_index : start_index + n_overlaps]
                     else:
                         local_overlaps = self.overlaps[best_cluster_ind]
                     
@@ -507,7 +511,9 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                     tmp_best, tmp_peak = sub_selection[:, i]
                     diff_amp = diff_amplitudes[i] * self.norms[tmp_best]
                     if self.shared_memory:
-                        local_overlaps = self.overlaps[tmp_best*self.max_overlaps : (tmp_best+1)*self.max_overlaps, :]
+                        n_overlaps = len(self.unit_overlaps_indices[tmp_best])
+                        start_index = tmp_best * self.max_overlaps
+                        local_overlaps = self.overlaps[start_index : start_index + n_overlaps]
                     else:
                         local_overlaps = self.overlaps[tmp_best]
                     overlapping_templates = self.units_overlaps[tmp_best]
@@ -553,6 +559,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         spikes = spikes[order]
 
         return spikes
+
+    def clean(self):
+        if self.shared_memory:
+            self.shm.unlink()
 
 
 class CircusPeeler(BaseTemplateMatching):

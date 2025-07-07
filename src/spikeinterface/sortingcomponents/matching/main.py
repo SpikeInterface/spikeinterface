@@ -58,6 +58,8 @@ def find_spikes_from_templates(
         gather_mode="memory",
         squeeze_output=True,
     )
+    node0.clean()
+
     if extra_outputs:
         outputs = node0.get_extra_outputs()
         return spikes, outputs
