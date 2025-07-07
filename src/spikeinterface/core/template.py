@@ -31,7 +31,7 @@ class Templates:
         Array of unit IDs. If `None`, defaults to an array of increasing integers.
     probe: Probe, default: None
         A `probeinterface.Probe` object
-    is_scaled : bool, optional default: True
+    is_in_uV : bool, optional default: True
         If True, it means that the templates are in uV, otherwise they are in raw ADC values.
     check_for_consistent_sparsity : bool, optional default: None
         When passing a sparsity_mask, this checks that the templates array is also sparse and that it matches the
@@ -61,7 +61,7 @@ class Templates:
     templates_array: np.ndarray
     sampling_frequency: float
     nbefore: int
-    is_scaled: bool = True
+    is_in_uV: bool = True
 
     sparsity_mask: np.ndarray = None
     channel_ids: np.ndarray = None
@@ -206,7 +206,7 @@ class Templates:
             unit_ids=self.unit_ids,
             probe=self.probe,
             check_for_consistent_sparsity=self.check_for_consistent_sparsity,
-            is_scaled=self.is_scaled,
+            is_in_uV=self.is_in_uV,
         )
 
     def get_one_template_dense(self, unit_index):
@@ -257,7 +257,7 @@ class Templates:
             "unit_ids": self.unit_ids,
             "sampling_frequency": self.sampling_frequency,
             "nbefore": self.nbefore,
-            "is_scaled": self.is_scaled,
+            "is_in_uV": self.is_in_uV,
             "probe": self.probe.to_dict() if self.probe is not None else None,
         }
 
@@ -270,7 +270,7 @@ class Templates:
             unit_ids=np.asarray(data["unit_ids"]),
             sampling_frequency=data["sampling_frequency"],
             nbefore=data["nbefore"],
-            is_scaled=data["is_scaled"],
+            is_in_uV=data["is_in_uV"],
             probe=data["probe"] if data["probe"] is None else Probe.from_dict(data["probe"]),
         )
 
@@ -304,7 +304,7 @@ class Templates:
 
         zarr_group.attrs["sampling_frequency"] = self.sampling_frequency
         zarr_group.attrs["nbefore"] = self.nbefore
-        zarr_group.attrs["is_scaled"] = self.is_scaled
+        zarr_group.attrs["is_in_uV"] = self.is_in_uV
 
         if self.sparsity_mask is not None:
             zarr_group.create_dataset("sparsity_mask", data=self.sparsity_mask)
@@ -362,7 +362,7 @@ class Templates:
         nbefore = zarr_group.attrs["nbefore"]
 
         # TODO: Consider eliminating the True and make it required
-        is_scaled = zarr_group.attrs.get("is_scaled", True)
+        is_in_uV = zarr_group.attrs.get("is_in_uV", True)
 
         sparsity_mask = None
         if "sparsity_mask" in zarr_group:
@@ -380,7 +380,7 @@ class Templates:
             channel_ids=channel_ids,
             unit_ids=unit_ids,
             probe=probe,
-            is_scaled=is_scaled,
+            is_in_uV=is_in_uV,
         )
 
     @staticmethod
