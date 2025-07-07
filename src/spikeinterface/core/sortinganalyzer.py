@@ -1185,18 +1185,18 @@ class SortingAnalyzer:
 
     def merge_units(
         self,
-        merge_unit_groups,
-        new_unit_ids=None,
-        censor_ms=None,
-        merging_mode="soft",
-        sparsity_overlap=0.75,
-        new_id_strategy="append",
-        return_new_unit_ids=False,
-        format="memory",
-        folder=None,
-        verbose=False,
+        merge_unit_groups: list[list[str | int]] | list[tuple[str | int]],
+        new_unit_ids: list[int | str] | None = None,
+        censor_ms: float | None = None,
+        merging_mode: str = "soft",
+        sparsity_overlap: float = 0.75,
+        new_id_strategy: str = "append",
+        return_new_unit_ids: bool = False,
+        format: str = "memory",
+        folder: Path | str | None = None,
+        verbose: bool = False,
         **job_kwargs,
-    ) -> "SortingAnalyzer":
+    ) -> "SortingAnalyzer | tuple[SortingAnalyzer, list[int | str]]":
         """
         This method is equivalent to `save_as()` but with a list of merges that have to be achieved.
         Merges units by creating a new SortingAnalyzer object with the appropriate merges
@@ -2243,6 +2243,7 @@ class AnalyzerExtension:
                     ext_data_file.name == "params.json"
                     or ext_data_file.name == "info.json"
                     or ext_data_file.name == "run_info.json"
+                    or str(ext_data_file.name).startswith("._")  # ignore AppleDouble format files
                 ):
                     continue
                 ext_data_name = ext_data_file.stem

@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.13.3"]  # Lower and higher versions we support, bug in 3.13.4 adjust when fixed
+        python-version: ["3.10", "3.13"]  # Lower and higher versions we support
         os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
