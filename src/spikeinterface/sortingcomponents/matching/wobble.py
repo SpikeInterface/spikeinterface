@@ -55,7 +55,7 @@ class WobbleParameters:
     torch_device : string in ["cpu", "cuda", None]. Default "cpu"
         Controls torch device if the torch engine is selected
     shared_memory : bool, default True
-        If True, the overlaps are stored in shared memory, which is more efficient when 
+        If True, the overlaps are stored in shared memory, which is more efficient when
         using numerous cores
 
     Notes
@@ -403,7 +403,7 @@ class WobbleMatch(BaseTemplateMatching):
         pairwise_convolution = convolve_templates(
             compressed_templates, params.jitter_factor, params.approx_rank, template_meta.jittered_indices, sparsity
         )
-        
+
         self.shared_memory = shared_memory
 
         if self.shared_memory:
@@ -412,6 +412,7 @@ class WobbleMatch(BaseTemplateMatching):
             num_templates = len(templates_array)
             num_jittered = num_templates * params.jitter_factor
             from spikeinterface.core.core_tools import make_shared_array
+
             arr, shm = make_shared_array((num_jittered, self.max_overlaps, num_samples), dtype=np.float32)
             for jittered_index in range(num_jittered):
                 units_are_overlapping = sparsity.unit_overlap[jittered_index, :]
