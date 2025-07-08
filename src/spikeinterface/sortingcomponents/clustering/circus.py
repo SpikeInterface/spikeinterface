@@ -54,8 +54,7 @@ class CircusClustering:
         "few_waveforms": None,
         "ms_before": 2.0,
         "ms_after": 2.0,
-        # "remove_small_snr": False,
-        "remove_small_snr": True,
+        "remove_small_snr": False,
         "seed": None,
         "noise_threshold": 4,
         "rank": 5,
@@ -154,6 +153,12 @@ class CircusClustering:
         split_kwargs["seed"] = params["seed"]
         split_kwargs["min_size_split"] = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 50)
         split_kwargs["clusterer_kwargs"] = params["hdbscan_kwargs"]
+        
+        # split_kwargs = dict(
+        #     clusterer="isosplit6",
+        #     neighbours_mask=neighbours_mask,
+        #     waveforms_sparse_mask=sparse_mask,
+        # )
 
         if params["debug"]:
             debug_folder = tmp_folder / "split"
