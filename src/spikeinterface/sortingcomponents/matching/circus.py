@@ -316,7 +316,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
     def get_extra_outputs(self):
         output = {}
         for key in self._more_output_keys:
-            output[key] = getattr(self, key)
+            if key == 'overlaps' and self.shared_memory:
+                output[key] = self.overlaps.copy()
+            else:
+                output[key] = getattr(self, key)
         return output
 
     def get_trace_margin(self):
@@ -559,13 +562,17 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         return spikes
 
     def clean(self):
-        if self.shared_memory:
+        if self.shared_memory and self.shm is not None:
+            self.overlaps = None
             self.shm.close()
             self.shm.unlink()
+            self.shm = None
 
     def __del__(self):
-        if self.shared_memory:
+        if self.shared_memory and self.shm is not None:
+            self.overlaps = None
             self.shm.close()
+            self.shm = None
 
 
 class CircusPeeler(BaseTemplateMatching):

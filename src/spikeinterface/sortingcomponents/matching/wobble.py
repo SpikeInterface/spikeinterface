@@ -448,10 +448,17 @@ class WobbleMatch(BaseTemplateMatching):
         self.margin = 300  # To ensure equivalence with spike-psvae version of the algorithm
 
     def clean(self):
-        if self.shared_memory:
-            del self.template_meta
+        if self.shared_memory and self.shm is not None:
+            self.template_meta = None
             self.shm.close()
             self.shm.unlink()
+            self.shm = None
+    
+    def __del__(self):
+        if self.shared_memory and self.shm is not None:
+            self.template_meta = None
+            self.shm.close()
+            self.shm = None
 
     def _push_to_torch(self):
         if self.engine == "torch":
@@ -465,10 +472,6 @@ class WobbleMatch(BaseTemplateMatching):
 
     def get_trace_margin(self):
         return self.margin
-
-    def __del__(self):
-        if self.shared_memory:
-            self.shm.close()
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
 
