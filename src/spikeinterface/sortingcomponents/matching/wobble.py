@@ -465,7 +465,7 @@ class WobbleMatch(BaseTemplateMatching):
 
     def get_trace_margin(self):
         return self.margin
-    
+
     def __del__(self):
         if self.shared_memory:
             self.shm.close()

@@ -563,7 +563,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             del self.overlaps
             self.shm.close()
             self.shm.unlink()
-    
+
     def __del__(self):
         if self.shared_memory:
             self.shm.close()
