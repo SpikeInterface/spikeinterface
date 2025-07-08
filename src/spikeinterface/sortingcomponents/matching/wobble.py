@@ -453,7 +453,7 @@ class WobbleMatch(BaseTemplateMatching):
             self.shm.close()
             self.shm.unlink()
             self.shm = None
-    
+
     def __del__(self):
         if self.shared_memory and self.shm is not None:
             self.template_meta = None

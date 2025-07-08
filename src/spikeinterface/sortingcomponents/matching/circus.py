@@ -316,7 +316,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
     def get_extra_outputs(self):
         output = {}
         for key in self._more_output_keys:
-            if key == 'overlaps' and self.shared_memory:
+            if key == "overlaps" and self.shared_memory:
                 output[key] = self.overlaps.copy()
             else:
                 output[key] = getattr(self, key)

@@ -61,7 +61,7 @@ def find_spikes_from_templates(
 
     if extra_outputs:
         outputs = node0.get_extra_outputs()
-    
+
     node0.clean()
 
     if extra_outputs:
