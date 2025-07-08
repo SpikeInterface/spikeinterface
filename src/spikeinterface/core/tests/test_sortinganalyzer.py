@@ -250,7 +250,7 @@ def test_SortingAnalyzer_tmp_recording(dataset):
     assert not sorting_analyzer_saved.has_temporary_recording()
     assert isinstance(sorting_analyzer_saved.recording, type(recording))
 
-    recording_sliced = recording.channel_slice(recording.channel_ids[:-1])
+    recording_sliced = recording.select_channels(recording.channel_ids[:-1])
 
     # wrong channels
     with pytest.raises(ValueError):

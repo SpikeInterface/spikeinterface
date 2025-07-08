@@ -297,7 +297,6 @@ class BaseRecording(BaseRecordingSnippets):
         order: "C" | "F" | None = None,
         return_scaled: bool | None = None,
         return_in_uV: bool = False,
-        cast_unsigned: bool = False,
     ) -> np.ndarray:
         """Returns traces from recording.
 
@@ -320,9 +319,6 @@ class BaseRecording(BaseRecordingSnippets):
         return_in_uV : bool, default: False
             If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
             traces are scaled to uV
-        cast_unsigned : bool, default: False
-            If True and the traces are unsigned, they are cast to integer and centered
-            (an offset of (2**nbits) is subtracted)
 
         Returns
         -------
@@ -344,17 +340,6 @@ class BaseRecording(BaseRecordingSnippets):
         if order is not None:
             assert order in ["C", "F"]
             traces = np.asanyarray(traces, order=order)
-
-        if cast_unsigned:
-            dtype = traces.dtype
-            # if dtype is unsigned, return centered signed signal
-            if dtype.kind == "u":
-                itemsize = dtype.itemsize
-                assert itemsize < 8, "Cannot upcast uint64!"
-                nbits = dtype.itemsize * 8
-                # upcast to int with double itemsize
-                traces = traces.astype(f"int{2 * (dtype.itemsize) * 8}") - 2 ** (nbits - 1)
-                traces = traces.astype(f"int{dtype.itemsize * 8}")
 
         # Handle deprecated return_scaled parameter
         if return_scaled is not None:
@@ -383,21 +368,6 @@ class BaseRecording(BaseRecordingSnippets):
                 offsets = offsets[channel_indices].astype("float32", copy=False)
                 traces = traces.astype("float32", copy=False) * gains + offsets
         return traces
-
-    def has_scaled_traces(self) -> bool:
-        """Checks if the recording has scaled traces
-
-        Returns
-        -------
-        bool
-            True if the recording has scaled traces, False otherwise
-        """
-        warnings.warn(
-            "`has_scaled_traces` is deprecated and will be removed in 0.103.0. Use has_scaleable_traces() instead",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.has_scaled()
 
     def get_time_info(self, segment_index=None) -> dict:
         """
@@ -740,17 +710,6 @@ class BaseRecording(BaseRecordingSnippets):
 
         return ChannelSliceRecording(self, renamed_channel_ids=new_channel_ids)
 
-    def _channel_slice(self, channel_ids, renamed_channel_ids=None):
-        from .channelslice import ChannelSliceRecording
-
-        warnings.warn(
-            "Recording.channel_slice will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
-        return sub_recording
-
     def _remove_channels(self, remove_channel_ids):
         from .channelslice import ChannelSliceRecording
 
@@ -893,8 +852,6 @@ class BaseRecording(BaseRecordingSnippets):
         time_axis=None,
         file_paths_length=None,
         file_offset=None,
-        file_suffix=None,
-        file_paths_lenght=None,
     ):
         """
         Check is the recording is binary compatible with some constrain on
@@ -905,14 +862,6 @@ class BaseRecording(BaseRecordingSnippets):
           * file_offset
           * file_suffix
         """
-
-        # spelling typo need to fix
-        if file_paths_lenght is not None:
-            warnings.warn(
-                "`file_paths_lenght` is deprecated and will be removed in 0.103.0 please use `file_paths_length`"
-            )
-            if file_paths_length is None:
-                file_paths_length = file_paths_lenght
 
         if not self.is_binary_compatible():
             return False
