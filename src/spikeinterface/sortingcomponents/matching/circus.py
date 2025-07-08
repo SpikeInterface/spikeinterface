@@ -217,11 +217,10 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             self.max_overlaps = max([len(o) for o in self.overlaps])
             num_samples = len(self.overlaps[0][0])
             from spikeinterface.core.core_tools import make_shared_array
-            arr, shm = make_shared_array((self.num_templates*self.max_overlaps, num_samples), dtype=np.float32)
+            arr, shm = make_shared_array((self.num_templates, self.max_overlaps, num_samples), dtype=np.float32)
             for i in range(self.num_templates):
                 n_overlaps = len(self.unit_overlaps_indices[i])
-                start_index = i * self.max_overlaps
-                arr[start_index : start_index + n_overlaps, :] = self.overlaps[i]
+                arr[i, :n_overlaps] = self.overlaps[i]
             self.overlaps = arr
             self.shm = shm
 
@@ -429,7 +428,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                     if self.shared_memory:
                         n_overlaps = len(self.unit_overlaps_indices[best_cluster_ind])
                         start_index = best_cluster_ind * self.max_overlaps
-                        local_overlaps = self.overlaps[start_index : start_index + n_overlaps]
+                        local_overlaps = self.overlaps[best_cluster_ind, :n_overlaps]
                     else:
                         local_overlaps = self.overlaps[best_cluster_ind]
                     
@@ -512,8 +511,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                     diff_amp = diff_amplitudes[i] * self.norms[tmp_best]
                     if self.shared_memory:
                         n_overlaps = len(self.unit_overlaps_indices[tmp_best])
-                        start_index = tmp_best * self.max_overlaps
-                        local_overlaps = self.overlaps[start_index : start_index + n_overlaps]
+                        local_overlaps = self.overlaps[tmp_best, :n_overlaps]
                     else:
                         local_overlaps = self.overlaps[tmp_best]
                     overlapping_templates = self.units_overlaps[tmp_best]
