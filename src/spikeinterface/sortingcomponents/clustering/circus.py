@@ -143,7 +143,7 @@ class CircusClustering:
         split_kwargs["seed"] = params["seed"]
         split_kwargs["min_size_split"] = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 50)
         split_kwargs["clusterer_kwargs"] = params["hdbscan_kwargs"]
-        #split_kwargs["clusterer"] = "isocut5"
+        # split_kwargs["clusterer"] = "isocut5"
 
         if params["debug"]:
             debug_folder = tmp_folder / "split"

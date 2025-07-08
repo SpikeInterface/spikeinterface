@@ -138,7 +138,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
     torch_device : string in ["cpu", "cuda", None]. Default "cpu"
         Controls torch device if the torch engine is selected
     shared_memory : bool, default True
-        If True, the overlaps are stored in shared memory, which is more efficient when 
+        If True, the overlaps are stored in shared memory, which is more efficient when
         using numerous cores
     -----
     """
@@ -217,6 +217,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             self.max_overlaps = max([len(o) for o in self.overlaps])
             num_samples = len(self.overlaps[0][0])
             from spikeinterface.core.core_tools import make_shared_array
+
             arr, shm = make_shared_array((self.num_templates, self.max_overlaps, num_samples), dtype=np.float32)
             for i in range(self.num_templates):
                 n_overlaps = len(self.unit_overlaps_indices[i])
@@ -431,7 +432,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                         local_overlaps = self.overlaps[best_cluster_ind, :n_overlaps]
                     else:
                         local_overlaps = self.overlaps[best_cluster_ind]
-                    
+
                     overlapping_templates = self.unit_overlaps_indices[best_cluster_ind]
                     table = self.unit_overlaps_tables[best_cluster_ind]
 
