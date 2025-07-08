@@ -428,7 +428,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
 
                     if self.shared_memory:
                         n_overlaps = len(self.unit_overlaps_indices[best_cluster_ind])
-                        start_index = best_cluster_ind * self.max_overlaps
                         local_overlaps = self.overlaps[best_cluster_ind, :n_overlaps]
                     else:
                         local_overlaps = self.overlaps[best_cluster_ind]
