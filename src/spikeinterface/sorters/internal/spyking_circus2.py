@@ -36,7 +36,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "merging": {"max_distance_um": 50},
         "clustering": {"method": "circus", "method_kwargs": dict()},
         "matching": {"method": "circus-omp-svd", "method_kwargs": dict()},
-        "online_mode": False,
         "apply_preprocessing": True,
         "templates_from_svd": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
