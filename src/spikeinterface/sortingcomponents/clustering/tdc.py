@@ -52,13 +52,21 @@ class TdcClustering:
         "clustering": {
             "recursive_depth": 3,
             "split_radius_um": 40.0,
-            "clusterer": "hdbscan",
+            # "clusterer": "hdbscan",
+            # "clusterer_kwargs": {
+            #     "min_cluster_size": 10,
+            #     "min_samples": 1,
+            #     "allow_single_cluster": True,
+            #     "cluster_selection_method": "eom",
+            # },
+            # "clusterer": "isocut5",
+            # "clusterer_kwargs": {
+            #     "min_cluster_size" : 10,
+            # },
+            "clusterer": "isosplit6",
             "clusterer_kwargs": {
-                "min_cluster_size": 10,
-                "min_samples": 1,
-                "allow_single_cluster": True,
-                "cluster_selection_method": "eom",
             },
+
             "do_merge": True,
             "merge_kwargs": {
                 "similarity_metric": "l1",

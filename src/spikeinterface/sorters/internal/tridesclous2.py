@@ -64,8 +64,10 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "sparsity_threshold": 1.5,
             # "peak_shift_ms": 0.2,
         },
-        "matching": {"method": "tdc-peeler", "method_kwargs": {}},
-        "job_kwargs": {"n_jobs": -1},
+        # "matching": {"method": "tdc-peeler", "method_kwargs": {}},
+        "matching": {"method": "wobble", "method_kwargs": {}},
+        # "job_kwargs": {"n_jobs": -1},
+        "job_kwargs": {},
         "save_array": True,
     }
 
@@ -235,7 +237,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
 
         sparsity_threshold = params["templates"]["sparsity_threshold"]
-        sparsity = compute_sparsity(templates_dense, noise_levels=noise_levels, threshold=sparsity_threshold)
+        sparsity = compute_sparsity(templates_dense, method="snr", noise_levels=noise_levels, threshold=sparsity_threshold)
         templates = templates_dense.to_sparse(sparsity)
         templates = remove_empty_templates(templates)
 
@@ -248,6 +250,36 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         spikes = find_spikes_from_templates(
             recording_for_peeler, method=matching_method, method_kwargs=matching_params, **job_kwargs
         )
+
+        final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)
+        final_spikes["sample_index"] = spikes["sample_index"]
+        final_spikes["unit_index"] = spikes["cluster_index"]
+        final_spikes["segment_index"] = spikes["segment_index"]
+        sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
+
+
+        ## DEBUG auto merge
+        auto_merge = True
+        if auto_merge:
+            from spikeinterface.sorters.internal.spyking_circus2 import final_cleaning_circus
+
+            # max_distance_um = merging_params.get("max_distance_um", 50)
+            # merging_params["max_distance_um"] = max(max_distance_um, 2 * max_motion)
+
+            analyzer_final =  final_cleaning_circus(
+                recording_for_peeler,
+                sorting,
+                templates,
+                similarity_kwargs={"method": "l1", "support": "union", "max_lag_ms": 0.1},
+                sparsity_overlap=0.5,
+                censor_ms=3.0,
+                max_distance_um=50,
+                template_diff_thresh=np.arange(0.05, 0.4, 0.05),
+                debug_folder=None,
+                **job_kwargs,
+            )
+            sorting = NumpySorting.from_sorting(analyzer_final.sorting)
+
 
         if params["save_array"]:
             sorting_pre_peeler = sorting_pre_peeler.save(folder=sorter_output_folder / "sorting_pre_peeler")
@@ -262,12 +294,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 pickle.dump(templates.to_dict(), f)
 
 
-        final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)
-        final_spikes["sample_index"] = spikes["sample_index"]
-        final_spikes["unit_index"] = spikes["cluster_index"]
-        final_spikes["segment_index"] = spikes["segment_index"]
+        # final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)
+        # final_spikes["sample_index"] = spikes["sample_index"]
+        # final_spikes["unit_index"] = spikes["cluster_index"]
+        # final_spikes["segment_index"] = spikes["segment_index"]
+        # sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
-        sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
         return sorting

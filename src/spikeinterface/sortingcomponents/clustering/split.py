@@ -304,6 +304,10 @@ class LocalFeatureClustering:
                 is_split = np.setdiff1d(possible_labels, [-1]).size > 1
             else:
                 is_split = False
+        elif clusterer == "isosplit6":
+            import isosplit6
+            possible_labels = isosplit6.isosplit6(final_features)
+            is_split = np.setdiff1d(possible_labels, [-1]).size > 1
         else:
             raise ValueError(f"wrong clusterer {clusterer}. Possible options are 'hdbscan' or 'isocut5'.")
 
