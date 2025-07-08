@@ -434,6 +434,8 @@ def plot_performances_vs_snr(
     show_legend=True,
     with_sigmoid_fit=True,
     show_average_by_bin=False,
+    scatter_size=4,
+    num_bin_average=20,
     axs=None,
 ):
     """
@@ -461,6 +463,10 @@ def plot_performances_vs_snr(
         Show sigmoid that fit the performances.
     show_average_by_bin : bool, default False
         Instead of the sigmoid an average by bins can be plotted.
+    scatter_size : int, default 4
+        scatter size
+    num_bin_average : int, default 2
+        Num bin for average
     axs : matplotlib.axes.Axes | None, default: None
         The axs to use for plotting. Should be the same size as len(performance_names).
 
@@ -536,7 +542,7 @@ def plot_performances_vs_snr(
             all_xs = np.concatenate(all_xs)
             all_ys = np.concatenate(all_ys)
 
-            ax.scatter(all_xs, all_ys, marker=".", label=label, color=color)
+            ax.scatter(all_xs, all_ys, marker=".", label=label, color=color, s=scatter_size)
             ax.set_ylabel(performance_name)
 
             if with_sigmoid_fit:
@@ -547,9 +553,10 @@ def plot_performances_vs_snr(
             if show_average_by_bin:
                 from scipy.stats import binned_statistic
 
-                bins = np.linspace(np.min(all_xs), np.max(all_xs), 20)
-                average, bins, count = binned_statistic(all_xs, all_ys, statistic="mean", bins=bins)
-                ax.plot(bins[:-1] + (bins[1] - bins[0]) / 2.0, average, color=color)
+                bins = np.percentile(all_xs, np.linspace(0, 100, num_bin_average + 1))
+                bin_centers = bins[:-1] + np.diff(bins) / 2.
+                average, bins, _ = binned_statistic(all_xs, all_ys, statistic="mean", bins=bins)
+                ax.plot(bin_centers, average, color=color)
 
         ax.set_ylim(-0.05, 1.05)
 
