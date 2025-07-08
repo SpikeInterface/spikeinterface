@@ -1,3 +1,5 @@
+.. _process_by_group:
+
 Process a recording by channel group
 ====================================
 
@@ -212,6 +214,6 @@ from one of the "group"s as follows:
 
 .. code-block:: python
 
-    aggretation_keys = analyzer.get_sorting_property("units_aggregation_key")
+    aggretation_keys = analyzer.get_sorting_property("aggregate_units_key")
     group_0_keys = analyzer.unit_ids[aggretation_keys == 0]
     group_0_analzyer = analyzer.select_units(unit_ids = group_0_keys)

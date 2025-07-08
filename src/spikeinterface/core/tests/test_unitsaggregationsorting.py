@@ -162,7 +162,7 @@ def test_aggregation_of_dicts():
 
     assert aggregated_sorting.get_num_units() == 6
     assert np.all(
-        aggregated_sorting.get_property(key="units_aggregation_key") == np.array(["a", "a", "a", "a", "b", "b"])
+        aggregated_sorting.get_property(key="aggregate_units_key") == np.array(["a", "a", "a", "a", "b", "b"])
     )
 
 

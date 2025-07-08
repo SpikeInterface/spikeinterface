@@ -38,7 +38,7 @@ class ChannelsAggregationRecording(BaseRecording):
         self._recordings = recording_list
 
         for group_id, recording in zip(recording_ids, recording_list):
-            recording.set_property("channels_aggregation_key", [group_id] * recording.get_num_channels())
+            recording.set_property("aggregate_channels_key", [group_id] * recording.get_num_channels())
 
         self._perform_consistency_checks()
         sampling_frequency = recording_list[0].get_sampling_frequency()

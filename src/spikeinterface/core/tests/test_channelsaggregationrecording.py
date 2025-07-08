@@ -144,7 +144,7 @@ def test_aggregation_split_by_and_manual():
 
     aggregated_rec_manual = aggregate_channels(split_recs_manual)
 
-    assert np.all(aggregated_rec_manual.get_property("channels_aggregation_key") == ["a", "a", "a", "a", "b", "b"])
+    assert np.all(aggregated_rec_manual.get_property("aggregate_channels_key") == ["a", "a", "a", "a", "b", "b"])
     check_recordings_equal(aggregated_rec, aggregated_rec_manual, check_annotations=False, check_properties=True)
 
 
@@ -166,9 +166,9 @@ def test_aggregation_labeling_for_lists():
     recording1 = generate_recording(num_channels=4, durations=[20], set_probe=False)
     recording2 = generate_recording(num_channels=2, durations=[20], set_probe=False)
 
-    # If we don't label at all, aggregation will add a 'channels_aggregation_key' label
+    # If we don't label at all, aggregation will add a 'aggregate_channels_key' label
     aggregated_recording = aggregate_channels([recording1, recording2])
-    group_property = aggregated_recording.get_property("channels_aggregation_key")
+    group_property = aggregated_recording.get_property("aggregate_channels_key")
     assert np.all(group_property == [0, 0, 0, 0, 1, 1])
 
     # If we have different group labels, these should be respected
@@ -195,9 +195,9 @@ def test_aggretion_labelling_for_dicts():
     recording1 = generate_recording(num_channels=4, durations=[20], set_probe=False)
     recording2 = generate_recording(num_channels=2, durations=[20], set_probe=False)
 
-    # If we don't label at all, aggregation will add a 'channels_aggregation_key' label based on the dict keys
+    # If we don't label at all, aggregation will add a 'aggregate_channels_key' label based on the dict keys
     aggregated_recording = aggregate_channels({0: recording1, "cat": recording2})
-    group_property = aggregated_recording.get_property("channels_aggregation_key")
+    group_property = aggregated_recording.get_property("aggregate_channels_key")
     assert np.all(group_property == [0, 0, 0, 0, "cat", "cat"])
 
     # If we have different group labels, these should be respected
