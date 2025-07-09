@@ -137,7 +137,7 @@ class BaseMultiComparison(BaseComparison):
         for comp_name, comp in self.comparisons.items():
             for u1 in comp.hungarian_match_12.index.values:
                 u2 = comp.hungarian_match_12[u1]
-                if u2 != -1:
+                if u2 != -1 and u2 != "":
                     name_1, name_2 = comp_name
                     node1 = name_1, u1
                     node2 = name_2, u2

@@ -122,7 +122,7 @@ print(traces.shape)
 ##############################################################################
 # You can also get a recording with a subset of channels (i.e. a channel slice):
 
-recording4 = recording3.channel_slice(channel_ids=["a", "c", "e"])
+recording4 = recording3.select_channels(channel_ids=["a", "c", "e"])
 print(recording4)
 print(recording4.get_channel_ids())
 

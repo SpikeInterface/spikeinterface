@@ -1,4 +1,5 @@
 from .alphaomega import AlphaOmegaRecordingExtractor, AlphaOmegaEventExtractor, read_alphaomega, read_alphaomega_event
+from .axon import AxonRecordingExtractor, read_axon
 from .axona import AxonaRecordingExtractor, read_axona
 from .biocam import BiocamRecordingExtractor, read_biocam
 from .blackrock import BlackrockRecordingExtractor, BlackrockSortingExtractor, read_blackrock, read_blackrock_sorting
@@ -44,6 +45,7 @@ from .neo_utils import get_neo_streams, get_neo_num_blocks
 
 neo_recording_extractors_dict = {
     AlphaOmegaRecordingExtractor: dict(wrapper_string="read_alphaomega", wrapper_class=read_alphaomega),
+    AxonRecordingExtractor: dict(wrapper_string="read_axon", wrapper_class=read_axon),
     AxonaRecordingExtractor: dict(wrapper_string="read_axona", wrapper_class=read_axona),
     BiocamRecordingExtractor: dict(wrapper_string="read_biocam", wrapper_class=read_biocam),
     BlackrockRecordingExtractor: dict(wrapper_string="read_blackrock", wrapper_class=read_blackrock),
@@ -85,4 +87,19 @@ neo_event_extractors_dict = {
     Plexon2EventExtractor: dict(wrapper_string="read_plexon2_event", wrapper_class=read_plexon2_event),
     SpikeGLXEventExtractor: dict(wrapper_string="read_spikeglx_event", wrapper_class=read_spikeglx_event),
     MaxwellEventExtractor: dict(wrapper_string="read_maxwell_event", wrapper_class=read_maxwell_event),
+}
+
+
+# Utils dicts used for get_neo_extractor and get_neo_streams
+neo_recording_class_dict = {
+    rec_class.__name__.replace("Recording", "").replace("Extractor", "").lower(): rec_class
+    for rec_class in neo_recording_extractors_dict.keys()
+}
+neo_sorting_class_dict = {
+    sort_class.__name__.replace("Sorting", "").replace("Extractor", "").lower(): sort_class
+    for sort_class in neo_sorting_extractors_dict.keys()
+}
+neo_event_class_dict = {
+    event_class.__name__.replace("Event", "").replace("Extractor", "").lower(): event_class
+    for event_class in neo_event_extractors_dict.keys()
 }

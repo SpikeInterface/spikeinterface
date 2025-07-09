@@ -77,7 +77,6 @@ class AlphaOmegaEventExtractor(NeoBaseEventExtractor):
         The folder path to the AlphaOmega events.
     """
 
-    mode = "folder"
     NeoRawIOClass = "AlphaOmegaRawIO"
     handle_event_frame_directly = True
 

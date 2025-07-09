@@ -40,6 +40,7 @@ from spikeinterface.extractors.extractor_classes import (
     Spike2RecordingExtractor,
     EDFRecordingExtractor,
     Plexon2RecordingExtractor,
+    AxonRecordingExtractor,
 )
 
 from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
@@ -218,7 +219,7 @@ class NeuroNexusRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroNexusRecordingExtractor
     downloads = ["neuronexus"]
     entities = [
-        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "0"}),
+        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "ai-pri"}),
     ]
 
 
@@ -292,6 +293,12 @@ class TdTRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = TdtRecordingExtractor
     downloads = ["tdt"]
     entities = [("tdt/aep_05", {"stream_id": "1"})]
+
+
+class AxonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = AxonRecordingExtractor
+    downloads = ["axon"]
+    entities = ["axon/extracellular_data/four_electrodes/24606005_SampleData.abf"]
 
 
 class AxonaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):

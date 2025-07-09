@@ -18,7 +18,7 @@ from spikeinterface.curation import apply_sortingview_curation
 
 parent_folder = Path(__file__).parent
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
-KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
+KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_API_KEY"))
 
 
 # this needs to be run only once: if we want to regenerate we need to start with sorting result

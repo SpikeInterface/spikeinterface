@@ -458,6 +458,22 @@ def make_possible_match(agreement_scores, min_score):
     return possible_match_12, possible_match_21
 
 
+def _empty_match_series(unit1_ids, unit2_ids):
+    # construct empty series of match with the correct dtype for best match and hugarian match
+    import pandas as pd
+
+    match_12 = pd.Series(data=np.zeros(unit1_ids.size, dtype=unit2_ids.dtype), index=unit1_ids)
+    if unit2_ids.dtype.kind == "i":
+        match_12[:] = -1
+    elif unit2_ids.dtype.kind == "U":
+        match_12[:] = ""
+    elif unit2_ids.dtype.kind == "O":
+        match_12[:] = ""
+    else:
+        raise ValueError("make_best_match or make_hungarian_match has unit_ids dtype wich are not  'i' or 'U'")
+    return match_12
+
+
 def make_best_match(agreement_scores, min_score) -> "tuple[pd.Series, pd.Series]":
     """
     Given an agreement matrix and a min_score threshold.
@@ -486,16 +502,14 @@ def make_best_match(agreement_scores, min_score) -> "tuple[pd.Series, pd.Series]
 
     scores = agreement_scores.values.copy()
 
-    best_match_12 = pd.Series(index=unit1_ids, dtype=unit2_ids.dtype)
-    best_match_12[:] = -1
+    best_match_12 = _empty_match_series(unit1_ids, unit2_ids)
     for i1, u1 in enumerate(unit1_ids):
         if scores.shape[1] > 0:
             ind_max = np.argmax(scores[i1, :])
             if scores[i1, ind_max] >= min_score:
                 best_match_12[u1] = unit2_ids[ind_max]
 
-    best_match_21 = pd.Series(index=unit2_ids, dtype=unit1_ids.dtype)
-    best_match_21[:] = -1
+    best_match_21 = _empty_match_series(unit2_ids, unit1_ids)
     for i2, u2 in enumerate(unit2_ids):
         if scores.shape[0] > 0:
             ind_max = np.argmax(scores[:, i2])
@@ -538,10 +552,8 @@ def make_hungarian_match(agreement_scores, min_score):
 
     [inds1, inds2] = linear_sum_assignment(-scores)
 
-    hungarian_match_12 = pd.Series(index=unit1_ids, dtype=unit2_ids.dtype)
-    hungarian_match_12[:] = -1
-    hungarian_match_21 = pd.Series(index=unit2_ids, dtype=unit1_ids.dtype)
-    hungarian_match_21[:] = -1
+    hungarian_match_12 = _empty_match_series(unit1_ids, unit2_ids)
+    hungarian_match_21 = _empty_match_series(unit2_ids, unit1_ids)
 
     for i1, i2 in zip(inds1, inds2):
         u1 = unit1_ids[i1]
