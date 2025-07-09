@@ -1,5 +1,3 @@
-import numpy as np
-
 from spikeinterface.core.template import Templates
 
 from spikeinterface.generation import (

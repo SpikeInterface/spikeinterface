@@ -567,7 +567,7 @@ In this example:
     # run kilosort2.5 without drift correction
     params_kilosort2_5 = {'do_correction': False}
 
-    sorting = si.run_sorter('kilosort2_5', rec, output_folder=base_folder / 'kilosort2.5_output',
+    sorting = si.run_sorter('kilosort2_5', rec, folder=base_folder / 'kilosort2.5_output',
                             docker_image=True, verbose=True, **params_kilosort2_5)
 
 .. code:: ipython3

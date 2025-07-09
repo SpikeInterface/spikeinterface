@@ -358,6 +358,26 @@ with shape (num_units, num_units, num_bins) with all correlograms for each pair 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_correlograms`
 
 
+acgs_3d
+^^^^^^^
+
+This extension computes the 3D Autocorrelograms (3D-ACG) from units' spike times to analyze how a neuron's temporal
+firing pattern varies with its firing rate. The 3D-ACG, described in [Beau]_ et al., 2025, provides rich
+representations of a unit's spike train statistics while accounting for firing rate modulations.
+
+.. code-block:: python
+
+    acg3d = sorting_analyzer.compute(
+        input="acgs_3d",
+        window_ms=50.0,
+        bin_ms=1.0,
+        num_firing_rate_quantiles=10,
+        smoothing_factor=250,
+    )
+
+For more information, see :py:func:`~spikeinterface.postprocessing.compute_acgs_3d`
+
+
 isi_histograms
 ^^^^^^^^^^^^^^
 

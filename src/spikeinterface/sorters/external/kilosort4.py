@@ -163,6 +163,7 @@ class Kilosort4Sorter(BaseSorter):
             cluster_spikes,
             save_sorting,
             get_run_parameters,
+            setup_logger,
         )
         from kilosort.io import load_probe, RecordingExtractorAsArray, BinaryFiltered, save_preprocessing
         from kilosort.parameters import DEFAULT_SETTINGS
@@ -170,11 +171,7 @@ class Kilosort4Sorter(BaseSorter):
         import time
         import torch
         import numpy as np
-
-        if verbose:
-            import logging
-
-            logging.basicConfig(level=logging.INFO)
+        import logging
 
         if version.parse(cls.get_sorter_version()) < version.parse("4.0.16"):
             raise RuntimeError(
@@ -182,6 +179,37 @@ class Kilosort4Sorter(BaseSorter):
                 "in SpikeInterface. "
                 "Please upgrade Kilosort version."
             )
+
+        # setup kilosort's console and file log handlers
+        setup_logger_takes_verbose_console = version.parse(cls.get_sorter_version()) > version.parse("4.0.18")
+        logger_is_named = version.parse(cls.get_sorter_version()) > version.parse("4.0.20")
+
+        if setup_logger_takes_verbose_console:
+            # v4.0.19 and higher
+            setup_logger(sorter_output_folder, verbose_console=False)
+        else:
+            # v4.0.16, v4.0.17, v4.0.18
+            setup_logger(sorter_output_folder)
+
+        # if verbose is False, set the stream handler's log
+        # level to logging.WARNING to preserve original
+        # behavior prior to addition of setup_logger() above
+        if not verbose:
+            if logger_is_named:
+                # v4.0.21 and above
+                logger = logging.getLogger("kilosort")
+            else:
+                # v4.0.16, v4.0.17, v4.0.18, v4.0.19, v4.0.20
+                logger = logging.getLogger("")
+
+            # find the stream handler
+            stream_handler = None
+            for handler in logger.handlers:
+                if type(handler) == logging.StreamHandler:
+                    stream_handler = handler
+                    break
+
+            stream_handler.setLevel(logging.WARNING)
 
         sorter_output_folder = sorter_output_folder.absolute()
 
@@ -235,7 +263,8 @@ class Kilosort4Sorter(BaseSorter):
         settings_ks["n_chan_bin"] = recording.get_num_channels()
         settings_ks["fs"] = recording.sampling_frequency
         if not do_CAR:
-            print("Skipping common average reference.")
+            if verbose:
+                print("Skipping common average reference.")
 
         tic0 = time.time()
 
@@ -252,7 +281,7 @@ class Kilosort4Sorter(BaseSorter):
         bad_channels = params["bad_channels"]
         clear_cache = params["clear_cache"]
 
-        filename, data_dir, results_dir, probe = set_files(
+        set_files_kwargs = dict(
             settings=settings,
             filename=filename,
             probe=probe,
@@ -261,6 +290,10 @@ class Kilosort4Sorter(BaseSorter):
             results_dir=results_dir,
             bad_channels=bad_channels,
         )
+        if version.parse(ks_version) >= version.parse("4.0.34"):
+            set_files_kwargs.update(dict(shank_idx=None))
+
+        filename, data_dir, results_dir, probe = set_files(**set_files_kwargs)
 
         ops = initialize_ops(
             settings=settings,
@@ -271,6 +304,8 @@ class Kilosort4Sorter(BaseSorter):
             device=device,
             save_preprocessed_copy=save_preprocessed_copy,
         )
+        if version.parse(ks_version) >= version.parse("4.0.34"):
+            ops = ops[0]
 
         n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact, _, _ = (
             get_run_parameters(ops)
@@ -280,7 +315,8 @@ class Kilosort4Sorter(BaseSorter):
         if not params["skip_kilosort_preprocessing"]:
             ops = compute_preprocessing(ops=ops, device=device, tic0=tic0, file_object=file_object)
         else:
-            print("Skipping kilosort preprocessing.")
+            if verbose:
+                print("Skipping kilosort preprocessing.")
             bfile = BinaryFiltered(
                 filename=ops["filename"],
                 n_chan_bin=n_chan_bin,
@@ -309,7 +345,8 @@ class Kilosort4Sorter(BaseSorter):
         torch.random.manual_seed(1)
 
         if not params["do_correction"]:
-            print("Skipping drift correction.")
+            if verbose:
+                print("Skipping drift correction.")
             ops["nblocks"] = 0
 
         drift_kwargs = dict(
@@ -401,7 +438,9 @@ class Kilosort4Sorter(BaseSorter):
         chanMap = np.arange(n_chan)
         xc = positions[:, 0]
         yc = positions[:, 1]
-        kcoords = groups.astype(float)
+        unique_groups = set(groups)
+        group_map = {group: idx for idx, group in enumerate(unique_groups)}
+        kcoords = np.array([group_map[group] for group in groups], dtype=int)
 
         probe = {
             "chanMap": chanMap,

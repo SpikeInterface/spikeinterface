@@ -56,15 +56,15 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="memory", sparse=False, return_scaled=True, sparsity=None
+        sorting, recording, format="memory", sparse=False, return_in_uV=True, sparsity=None
     )
-    assert sorting_analyzer.return_scaled
+    assert sorting_analyzer.return_in_uV
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="memory", sparse=False, return_scaled=False, sparsity=None
+        sorting, recording, format="memory", sparse=False, return_in_uV=False, sparsity=None
     )
-    assert not sorting_analyzer.return_scaled
+    assert not sorting_analyzer.return_in_uV
 
     # test set_sorting_property
     sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
@@ -104,9 +104,9 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
         folder=folder,
         sparse=False,
         sparsity=None,
-        return_scaled=False,
+        return_in_uV=False,
     )
-    assert not sorting_analyzer.return_scaled
+    assert not sorting_analyzer.return_in_uV
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     # test set_sorting_property
@@ -158,7 +158,7 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
         folder=folder,
         sparse=False,
         sparsity=None,
-        return_scaled=False,
+        return_in_uV=False,
         overwrite=True,
         backend_options={"saving_options": {"compressor": None}},
     )
@@ -250,7 +250,7 @@ def test_SortingAnalyzer_tmp_recording(dataset):
     assert not sorting_analyzer_saved.has_temporary_recording()
     assert isinstance(sorting_analyzer_saved.recording, type(recording))
 
-    recording_sliced = recording.channel_slice(recording.channel_ids[:-1])
+    recording_sliced = recording.select_channels(recording.channel_ids[:-1])
 
     # wrong channels
     with pytest.raises(ValueError):
@@ -329,7 +329,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         assert data["result_two"].size == original_sorting.to_spike_vector().size
         assert np.array_equal(data["result_two"], sorting_analyzer.get_extension("dummy").data["result_two"])
 
-        assert sorting_analyzer2.return_scaled == sorting_analyzer.return_scaled
+        assert sorting_analyzer2.return_in_uV == sorting_analyzer.return_in_uV
 
         assert sorting_analyzer2.sparsity == sorting_analyzer.sparsity
 

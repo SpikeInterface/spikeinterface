@@ -7,7 +7,7 @@ import numpy as np
 from spikeinterface import load
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
-from spikeinterface.extractors import NwbRecordingExtractor, NwbSortingExtractor
+from spikeinterface.extractors.extractor_classes import NwbRecordingExtractor, NwbSortingExtractor
 
 
 @pytest.mark.streaming_extractors
@@ -73,7 +73,7 @@ def test_recording_s3_nwb_remfile():
         assert full_traces.shape == (num_frames, num_chans)
         assert full_traces.dtype == dtype
 
-    if rec.has_scaled():
+    if rec.has_scaleable_traces():
         trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
         assert trace_scaled.dtype == "float32"
 
@@ -103,7 +103,7 @@ def test_recording_s3_nwb_remfile_file_like(tmp_path):
         assert full_traces.shape == (num_frames, num_chans)
         assert full_traces.dtype == dtype
 
-    if rec.has_scaled():
+    if rec.has_scaleable_traces():
         trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
         assert trace_scaled.dtype == "float32"
 

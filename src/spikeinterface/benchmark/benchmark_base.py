@@ -9,7 +9,7 @@ import numpy as np
 import time
 
 
-from spikeinterface.core import SortingAnalyzer
+from spikeinterface.core import SortingAnalyzer, NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface import load, create_sorting_analyzer, load_sorting_analyzer
 from spikeinterface.widgets import get_some_colors
@@ -118,12 +118,23 @@ class BenchmarkStudy:
             if isinstance(data, tuple):
                 # old case : rec + sorting
                 rec, gt_sorting = data
-                analyzer = create_sorting_analyzer(
-                    gt_sorting, rec, sparse=True, format="binary_folder", folder=local_analyzer_folder
-                )
-                analyzer.compute("random_spikes")
-                analyzer.compute("templates")
-                analyzer.compute("noise_levels")
+
+                if gt_sorting is not None:
+                    analyzer = create_sorting_analyzer(
+                        gt_sorting, rec, sparse=True, format="binary_folder", folder=local_analyzer_folder
+                    )
+                    analyzer.compute("random_spikes")
+                    analyzer.compute("templates")
+                    analyzer.compute("noise_levels")
+                else:
+                    # some study/benchmark has no GT sorting
+                    # in that case we still need an analyzer for internal API
+                    gt_sorting = NumpySorting.from_samples_and_labels(
+                        [np.array([])], [np.array([])], rec.sampling_frequency, unit_ids=None
+                    )
+                    analyzer = create_sorting_analyzer(
+                        gt_sorting, rec, sparse=False, format="binary_folder", folder=local_analyzer_folder
+                    )
             else:
                 # new case : analzyer
                 assert isinstance(data, SortingAnalyzer)
@@ -133,8 +144,6 @@ class BenchmarkStudy:
                     analyzer = data.save_as(format="binary_folder", folder=local_analyzer_folder)
                 else:
                     analyzer = data
-
-                rec, gt_sorting = analyzer.recording, analyzer.sorting
 
             analyzers_path[key] = str(analyzer.folder.resolve())
 
@@ -176,17 +185,15 @@ class BenchmarkStudy:
         self.levels = self.info["levels"]
 
         for key, folder in self.analyzers_path.items():
-            analyzer = load_sorting_analyzer(folder)
+            analyzer = load_sorting_analyzer(folder, load_extensions=False)
             self.analyzers[key] = analyzer
             # the sorting is in memory here we take the saved one because comparisons need to pickle it later
             sorting = load(analyzer.folder / "sorting")
-            self.datasets[key] = analyzer.recording, sorting
-
-        # for rec_file in (self.folder / "datasets" / "recordings").glob("*.pickle"):
-        #     key = rec_file.stem
-        #     rec = load(rec_file)
-        #     gt_sorting = load(self.folder / f"datasets" / "gt_sortings" / key)
-        #     self.datasets[key] = (rec, gt_sorting)
+            if analyzer.has_recording():
+                recording = analyzer.recording
+            else:
+                recording = None
+            self.datasets[key] = recording, sorting
 
         with open(self.folder / "cases.pickle", "rb") as f:
             self.cases = pickle.load(f)
@@ -570,7 +577,10 @@ class Benchmark:
             elif format == "zarr_templates":
                 self.result[k].to_zarr(folder / k)
             elif format == "sorting_analyzer":
-                pass
+                analyzer_folder = folder / k
+                if analyzer_folder.exists():
+                    shutil.rmtree(analyzer_folder)
+                self.result[k].save_as(format="binary_folder", folder=analyzer_folder)
             else:
                 raise ValueError(f"Save error {k} {format}")
 
@@ -600,15 +610,26 @@ class Benchmark:
             elif format == "sorting":
                 from spikeinterface.core import load_extractor
 
-                result[k] = load(folder / k)
+                sorting_folder = folder / k
+                if sorting_folder.exists():
+                    result[k] = load(sorting_folder)
             elif format == "Motion":
                 from spikeinterface.core.motion import Motion
 
-                result[k] = Motion.load(folder / k)
+                motion_folder = folder / k
+                if motion_folder.exists():
+                    result[k] = Motion.load(motion_folder)
             elif format == "zarr_templates":
                 from spikeinterface.core.template import Templates
 
-                result[k] = Templates.from_zarr(folder / k)
+                zarr_folder = folder / k
+                if zarr_folder.exists():
+
+                    result[k] = Templates.from_zarr(zarr_folder)
+            elif format == "sorting_analyzer":
+                analyzer_folder = folder / k
+                if analyzer_folder.exists():
+                    result[k] = load_sorting_analyzer(analyzer_folder)
 
         return result
 

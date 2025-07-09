@@ -28,8 +28,8 @@ def get_neuropixels_sample_shifts(
         Neuropixels probes typically have 384 channels.
     num_channels_per_adc : int, default: 12
         Number of channels assigned to each ADC on the probe.
-        Neuropixels 1.0 probes have 12 ADCs, each handling 32 channels.
-        Neuropixels 2.0 probes have 16 ADCs.
+        Neuropixels 1.0 probes have 32 ADCs, each handling 12 channels.
+        Neuropixels 2.0 probes have 24 ADCs, each handling 16 channels.
     num_cycles : int or None, default: None
         Number of cycles in the ADC sampling sequence.
         Neuropixels 1.0 probes have 13 cycles for AP (action potential) signals
@@ -57,7 +57,7 @@ def get_neuropixels_sample_shifts(
     return sample_shifts
 
 
-def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
+def get_neuropixels_channel_groups(num_channels=384, num_channels_per_adc=12):
     """
     Returns groups of simultaneously sampled channels on a Neuropixels probe.
 
@@ -85,8 +85,8 @@ def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
         All currently available Neuropixels variants have 384 channels.
     num_channels_per_adc : int, default: 12
         The number of channels per ADC on the probe.
-        Neuropixels 1.0 probes have 12 ADCs.
-        Neuropixels 2.0 probes have 16 ADCs.
+        Neuropixels 1.0 probes have 32 ADCs, each handling 12 channels.
+        Neuropixels 2.0 probes have 24 ADCs, each handling 16 channels.
 
     Returns
     -------

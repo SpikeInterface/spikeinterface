@@ -546,7 +546,7 @@ def test_inject_templates():
 
         # Check dumpability
         saved_loaded = load(rec.to_dict())
-        check_recordings_equal(rec, saved_loaded, return_scaled=False)
+        check_recordings_equal(rec, saved_loaded, return_in_uV=False)
 
 
 def test_transformsorting():
@@ -654,7 +654,8 @@ if __name__ == "__main__":
     # test_generate_recording()
     # test_generate_single_fake_waveform()
     # test_transformsorting()
-    test_generate_templates()
+    test_generate_unit_locations()
+    # test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
     # test_generate_sorting_with_spikes_on_borders()
