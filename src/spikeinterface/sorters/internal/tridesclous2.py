@@ -29,32 +29,36 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
     _default_params = {
         "apply_preprocessing": True,
         "apply_motion_correction": False,
-        "motion_correction": {"preset": "nonrigid_fast_and_accurate"},
+        "motion_correction": {"preset": "dredge_fast"},
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "waveforms": {
             "ms_before": 0.5,
             "ms_after": 1.5,
             "radius_um": 120.0,
         },
-        "filtering": {"freq_min": 150.0, "freq_max": 8000.0, "ftype":"bessel"},
+        "filtering": {"freq_min": 150.0, "freq_max": 5000.0, "ftype":"bessel", "filter_order": 2,},
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "svd": {"n_components": 6},
+        # "svd": {"n_components": 6},
+        "svd": {"n_components": 4},
         "clustering": {
             "recursive_depth": 5,
             "split_radius_um": 40.0,
-            "clusterer": "hdbscan",
+            # "clusterer": "hdbscan",
+            # "clusterer_kwargs": {
+            #     "min_cluster_size": 10,
+            #     "min_samples": 1,
+            #     "allow_single_cluster": True,
+            #     "cluster_selection_method": "eom",
+            # },
+            "clusterer": "isosplit6",
             "clusterer_kwargs": {
-                "min_cluster_size": 10,
-                "min_samples": 1,
-                "allow_single_cluster": True,
-                "cluster_selection_method": "eom",
-            },
+            },            
             "do_merge": True,
             "merge_kwargs": {
                 "similarity_metric": "l1",
-                "num_shifts": 3,
-                "similarity_thresh": 0.8,
+                "num_shifts": 4,
+                "similarity_thresh": 0.75,
             }
         },
         "templates": {
@@ -64,8 +68,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "sparsity_threshold": 1.5,
             # "peak_shift_ms": 0.2,
         },
-        # "matching": {"method": "tdc-peeler", "method_kwargs": {}},
-        "matching": {"method": "wobble", "method_kwargs": {}},
+        "matching": {"method": "tdc-peeler", "method_kwargs": {}},
+        # "matching": {"method": "wobble", "method_kwargs": {}},
         # "job_kwargs": {"n_jobs": -1},
         "job_kwargs": {},
         "save_array": True,
@@ -90,7 +94,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "2.0"
+        return "2.1"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -148,7 +152,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 )
 
             recording = zscore(recording, dtype="float32")
-            recording = whiten(recording, dtype="float32", mode="local", radius_um=100.0)
+            # whitening is really bad when dirft correction is applied and this changd nothing when no dirft
+            # recording = whiten(recording, dtype="float32", mode="local", radius_um=100.0)
 
             # used only if "folder" or "zarr"
             cache_folder = sorter_output_folder / "cache_preprocessing"
