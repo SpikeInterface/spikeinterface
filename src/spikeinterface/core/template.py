@@ -209,6 +209,22 @@ class Templates:
             is_scaled=self.is_scaled,
         )
 
+    def to_dense(self):
+        if not self.are_templates_sparse():
+            return self
+        else:
+            return Templates(
+                templates_array=self.get_dense_templates(),
+                sampling_frequency=self.sampling_frequency,
+                nbefore=self.nbefore,
+                sparsity_mask=None,
+                channel_ids=self.channel_ids,
+                unit_ids=self.unit_ids,
+                probe=self.probe,
+                check_for_consistent_sparsity=False,
+                is_scaled=self.is_scaled,
+            )
+
     def get_one_template_dense(self, unit_index):
         if self.sparsity is None:
             template = self.templates_array[unit_index, :, :]

@@ -1,17 +1,9 @@
 from __future__ import annotations
 
-# """Sorting components: clustering"""
+import importlib
 from pathlib import Path
 
 import numpy as np
-
-try:
-    import hdbscan
-
-    HAVE_HDBSCAN = True
-except:
-    HAVE_HDBSCAN = False
-
 import random, string
 
 from spikeinterface.core import get_global_tmp_folder, Templates
@@ -28,11 +20,20 @@ from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_chann
 
 class CircusClustering:
     """
-    hdbscan clustering on peak_locations previously done by localize_peaks()
+    Circus clustering is based on several local clustering achieved with a 
+    divide-and-conquer strategy. It uses the `hdbscan` or `isosplit6` clustering algorithms to
+    perform the local clusterings with an iterative and greedy strategy. 
+    More precisely, it first extracts waveforms from the recording,
+    then performs a Truncated SVD to reduce the dimensionality of the waveforms.
+    For every peak, it extracts the SVD features and performs local clustering, grouping the peaks
+    by channel indices. The clustering is done recursively, and the clusters are merged
+    based on a similarity metric. The final output is a set of labels for each peak,
+    indicating the cluster to which it belongs.
     """
 
     _default_params = {
-        "hdbscan_kwargs": {
+        "clusterer" : "isosplit6",  # 'isosplit6', 'hdbscan', 'isocut5'
+        "clusterer_kwargs": {
             "min_cluster_size": 20,
             "cluster_selection_epsilon": 0.5,
             "cluster_selection_method": "leaf",
@@ -56,8 +57,7 @@ class CircusClustering:
         "ms_after": 2.0,
         "remove_small_snr": False,
         "seed": None,
-        "noise_threshold": 4,
-        "rank": 5,
+        "noise_threshold": 2,
         "templates_from_svd": True,
         "noise_levels": None,
         "tmp_folder": None,
@@ -74,7 +74,13 @@ class CircusClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
-        assert HAVE_HDBSCAN, "random projections clustering needs hdbscan to be installed"
+
+        clusterer = params.get("clusterer", "hdbscan")
+        assert clusterer in ["isosplit6", "hdbscan", "isocut5"], "Circus clustering only supports isosplit6, isocut5 or hdbscan"
+        if clusterer in ["isosplit6", "hdbscan"]:
+            have_dep = importlib.util.find_spec(clusterer)
+            if not have_dep:
+                raise RuntimeError(f"using {clusterer} as a clusterer needs {clusterer} to be installed")
 
         d = params
         verbose = d["verbose"]
@@ -151,15 +157,10 @@ class CircusClustering:
         split_kwargs["neighbours_mask"] = neighbours_mask
         split_kwargs["waveforms_sparse_mask"] = sparse_mask
         split_kwargs["seed"] = params["seed"]
-        split_kwargs["min_size_split"] = 2 * params["hdbscan_kwargs"].get("min_cluster_size", 50)
-        split_kwargs["clusterer_kwargs"] = params["hdbscan_kwargs"]
+        split_kwargs["min_size_split"] = 2 * params["clusterer_kwargs"].get("min_cluster_size", 50)
+        split_kwargs["clusterer_kwargs"] = params["clusterer_kwargs"]
+        split_kwargs["clusterer"] = params["clusterer"]
         
-        # split_kwargs = dict(
-        #     clusterer="isosplit6",
-        #     neighbours_mask=neighbours_mask,
-        #     waveforms_sparse_mask=sparse_mask,
-        # )
-
         if params["debug"]:
             debug_folder = tmp_folder / "split"
         else:
@@ -229,16 +230,15 @@ class CircusClustering:
             )
 
         if params["remove_small_snr"] :
-            templates_array = templates.templates_array
-            best_channels = np.argmax(np.abs(templates_array[:, nbefore, :]), axis=1)
-            peak_snrs = np.abs(templates_array[:, nbefore, :])
-            best_snrs_ratio = (peak_snrs / params["noise_levels"])[np.arange(len(peak_snrs)), best_channels]
+            sparsity = compute_sparsity(templates, 
+                                        method="snr", 
+                                        amplitude_mode="peak_to_peak",
+                                        noise_levels=params["noise_levels"], 
+                                        threshold=params["noise_threshold"])
+            valid_templates = sparsity.mask.sum(axis=1) > 0
             old_unit_ids = templates.unit_ids.copy()
-            valid_templates = best_snrs_ratio > params["noise_threshold"]
-
             mask = np.isin(peak_labels, old_unit_ids[~valid_templates])
             peak_labels[mask] = -1
-
             templates = templates.select_units(templates.unit_ids[valid_templates])
 
         labels = templates.unit_ids
@@ -246,18 +246,6 @@ class CircusClustering:
         if params["debug"]:
             templates_folder = tmp_folder / "dense_templates"
             templates.to_zarr(folder_path=templates_folder)
-
-        # sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
-        # templates = templates.to_sparse(sparsity)
-        # empty_templates = templates.sparsity_mask.sum(axis=1) == 0
-        # old_unit_ids = templates.unit_ids.copy()
-        # templates = remove_empty_templates(templates)
-
-        # mask = np.isin(peak_labels, old_unit_ids[empty_templates])
-        # peak_labels[mask] = -1
-
-        # labels = np.unique(peak_labels)
-        # labels = labels[labels >= 0]
 
         if params["remove_mixtures"]:
             if verbose:

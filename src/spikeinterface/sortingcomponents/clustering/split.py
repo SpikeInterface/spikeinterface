@@ -299,7 +299,7 @@ class LocalFeatureClustering:
             min_dip = clusterer_kwargs.get("min_dip", 1.5)
             if dipscore > min_dip:
                 mask = final_features[:, 0] > cutpoint
-                if np.sum(mask) > min_cluster_size and np.sum(~mask):
+                if np.sum(mask) > min_cluster_size and np.sum(~mask) > min_cluster_size:
                     possible_labels[mask] = 1
                 is_split = np.setdiff1d(possible_labels, [-1]).size > 1
             else:

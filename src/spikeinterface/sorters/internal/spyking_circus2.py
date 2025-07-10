@@ -34,16 +34,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
-        "clustering": {"method": "circus-clustering", "method_kwargs": dict()},
-        # "matching": {"method": "circus-omp-svd", "method_kwargs": dict()},
-        "matching": {"method": "wobble", "method_kwargs": dict()},
+        "clustering": {"method": "circus-clustering", "method_kwargs": dict(remove_small_snr=True)},
+        "matching": {"method": "circus-omp-svd", "method_kwargs": dict()},
+        #"matching": {"method": "wobble", "method_kwargs": dict()},
         "apply_preprocessing": True,
         "templates_from_svd": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "chunk_preprocessing": {"memory_limit": None},
         "multi_units_only": False,
-        # "job_kwargs": {"n_jobs": 0.75},
-        "job_kwargs": {"n_jobs": None},
+        "job_kwargs": {"n_jobs": 0.5},
         "seed": 42,
         "deterministic_peaks_detection": False,
         "debug": False,
@@ -118,7 +117,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_after = params["general"].get("ms_after", 2)
         radius_um = params["general"].get("radius_um", 100)
         peak_sign = params["detection"].get("peak_sign", "neg")
-        templates_from_svd = params["templates_from_svd"]
+        templates_from_svd = params.get("templates_from_svd", True)
         deterministic = params["deterministic_peaks_detection"]
         debug = params["debug"]
         seed = params["seed"]
@@ -286,7 +285,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             if verbose:
                 print("Kept %d peaks for clustering" % len(selected_peaks))
 
-            clustering_method = params["clustering"].get("method", "graph_clustering")
+            clustering_method = params["clustering"].get("method", "circus-clustering")
             clustering_params = params["clustering"].get("method_kwargs", dict())
 
             if clustering_method == "circus-clustering":
@@ -305,7 +304,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 clustering_params["templates_from_svd"] = templates_from_svd
                 clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
                 clustering_params["debug"] = debug
-                clustering_params["noise_threshold"] = detection_params.get("detect_threshold", 4)
+                clustering_params["noise_threshold"] = detection_params.get("detect_threshold", 4)/2
             elif clustering_method == "graph_clustering":
                 clustering_params = {
                     "ms_before": ms_before,
