@@ -42,7 +42,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "chunk_preprocessing": {"memory_limit": None},
         "multi_units_only": False,
-        "job_kwargs": {"n_jobs": 0.5},
+        "job_kwargs": {},
         "seed": 42,
         "deterministic_peaks_detection": False,
         "debug": False,

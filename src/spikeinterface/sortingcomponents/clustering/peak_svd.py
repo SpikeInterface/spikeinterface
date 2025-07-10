@@ -116,12 +116,9 @@ def extract_peaks_svd(
         max_motion = max(abs(e) for e in motion.get_boundaries())
         margin = np.min(channel_distance[channel_distance>0]) * 2
         # margin = 0
-        print("margin", margin, "max_motion", max_motion, "radius_um", radius_um, "total_radius_um", radius_um + max_motion + margin)
         wf_sparsity_mask = channel_distance <= (radius_um + max_motion + margin)
         final_sparsity_mask = channel_distance <= radius_um
-        print("wf_sparsity_mask", np.sum(wf_sparsity_mask, axis=1))
 
-        print("final_sparsity_mask", np.sum(final_sparsity_mask, axis=1))
     else:
         if sparsity_mask is None:
             wf_sparsity_mask = channel_distance <= radius_um

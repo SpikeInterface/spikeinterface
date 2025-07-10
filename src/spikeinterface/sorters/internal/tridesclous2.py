@@ -294,10 +294,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             np.save(sorter_output_folder / "peaks.npy", peaks)
             np.save(sorter_output_folder / "clustering_label.npy", clustering_label)
             np.save(sorter_output_folder / "spikes.npy", spikes)
-            import pickle
-            with open(sorter_output_folder / "templates.pickle", "wb") as f:
-                pickle.dump(templates.to_dict(), f)
-
+            templates.to_zarr(sorter_output_folder / "templates.zarr")
 
         # final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)
         # final_spikes["sample_index"] = spikes["sample_index"]
