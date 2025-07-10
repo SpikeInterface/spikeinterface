@@ -451,7 +451,7 @@ if __name__ == '__main__':
     # run in container
     output_folder = '{output_folder_unix}'
     sorting = run_sorter_local(
-        '{sorter_name}', recording, output_folder=output_folder,
+        '{sorter_name}', recording, folder=output_folder,
         remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
         verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
     )
