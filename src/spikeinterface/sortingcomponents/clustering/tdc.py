@@ -52,6 +52,7 @@ class TdcClustering:
         "clustering": {
             "recursive_depth": 3,
             "split_radius_um": 40.0,
+
             # "clusterer": "hdbscan",
             # "clusterer_kwargs": {
             #     "min_cluster_size": 10,

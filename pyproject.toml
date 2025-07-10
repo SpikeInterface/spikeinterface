@@ -161,10 +161,11 @@ test = [
     # streaming templates
     "s3fs",
 
-    # tridesclous
+    # tridesclous2
     "numba<0.61.0;python_version<'3.13'",
     "numba>=0.61.0;python_version>='3.13'",
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
+    "isosplit6",
 
     # for sortingview backend
     "sortingview>=0.12.0",
