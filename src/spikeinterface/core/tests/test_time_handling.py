@@ -411,9 +411,10 @@ class TestTimeHandling:
             spike_indexes = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
             rec_times = times_recording.get_times(segment_index=segment_index)
 
+            times_in_recording = rec_times[spike_indexes]
             assert np.array_equal(
                 spike_times,
-                rec_times[spike_indexes],
+                times_in_recording,
             )
 
     def _get_sorting_with_recording_attached(self, recording_for_durations, recording_to_attach):
