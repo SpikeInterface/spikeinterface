@@ -123,9 +123,9 @@ class Plexon2EventExtractor(NeoBaseEventExtractor):
 
     NeoRawIOClass = "Plexon2RawIO"
 
-    def __init__(self, folder_path, block_index=None):
+    def __init__(self, folder_path, block_index=None, use_names_as_ids=True):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
-        NeoBaseEventExtractor.__init__(self, block_index=block_index, **neo_kwargs)
+        NeoBaseEventExtractor.__init__(self, block_index=block_index, use_names_as_ids=use_names_as_ids, **neo_kwargs)
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
