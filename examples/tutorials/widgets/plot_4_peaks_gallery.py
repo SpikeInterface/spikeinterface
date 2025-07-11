@@ -16,9 +16,7 @@ import spikeinterface.full as si
 ##############################################################################
 # First, let's generate a simulated dataset
 
-local_path = si.generate_ground_truth_recording()
-rec, sorting = si.read_mearec(local_path)
-
+rec, sorting = si.generate_ground_truth_recording()
 
 ##############################################################################
 # Let's filter and detect peaks on it
