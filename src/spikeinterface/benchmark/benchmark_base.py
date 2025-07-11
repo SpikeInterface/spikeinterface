@@ -349,7 +349,7 @@ class BenchmarkStudy:
             df.index.names = self.levels
         return df
 
-    def get_grouped_keys_mapping(self, levels_to_group_by=None):
+    def get_grouped_keys_mapping(self, levels_to_group_by=None, case_keys=None):
         """
         Return a dictionary of grouped keys.
 
@@ -357,6 +357,8 @@ class BenchmarkStudy:
         ----------
         levels_to_group_by : list
             A list of levels to group by.
+        case_keys : list
+            Optionaly a sub list of case_keys to consider
 
         Returns
         -------
@@ -366,18 +368,19 @@ class BenchmarkStudy:
         labels : dict
             A dictionary of labels, with the new keys as keys and the labels as values.
         """
-        cases = list(self.cases.keys())
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
         if levels_to_group_by is None or self.levels is None:
-            keys_mapping = {key: [key] for key in cases}
+            keys_mapping = {key: [key] for key in case_keys}
         elif len(self.levels) == 1:
-            keys_mapping = {key: [key] for key in cases}
+            keys_mapping = {key: [key] for key in case_keys}
         else:
             study_levels = self.levels
             assert np.all(
                 [l in study_levels for l in levels_to_group_by]
             ), f"levels_to_group_by must be in {study_levels}, got {levels_to_group_by}"
             keys_mapping = {}
-            for key in cases:
+            for key in case_keys:
                 new_key = tuple(key[list(study_levels).index(level)] for level in levels_to_group_by)
                 if len(new_key) == 1:
                     new_key = new_key[0]
@@ -386,7 +389,7 @@ class BenchmarkStudy:
                 keys_mapping[new_key].append(key)
 
         if levels_to_group_by is None:
-            labels = {key: self.cases[key]["label"] for key in cases}
+            labels = {key: self.cases[key]["label"] for key in case_keys}
         else:
             key0 = list(keys_mapping.keys())[0]
             if isinstance(key0, tuple):
