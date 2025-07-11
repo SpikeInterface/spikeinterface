@@ -469,6 +469,7 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **Klusta** :code:`run_sorter(sorter_name='klusta')`
 * **Mountainsort4** :code:`run_sorter(sorter_name='mountainsort4')`
 * **Mountainsort5** :code:`run_sorter(sorter_name='mountainsort5')`
+* **RT-Sort** :code:`run_sorter(sorter_name='rt-sort')`
 * **SpyKING Circus** :code:`run_sorter(sorter_name='spykingcircus')`
 * **Tridesclous** :code:`run_sorter(sorter_name='tridesclous')`
 * **Wave clus** :code:`run_sorter(sorter_name='waveclus')`
