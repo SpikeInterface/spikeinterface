@@ -5,14 +5,13 @@ build:
   os: "ubuntu-24.04"
   tools:
     python: "3.12"
-  jobs:
-    create_environment:
-      - asdf plugin add uv
-      - asdf install uv latest
-      - asdf global uv latest
-      - UV_PROJECT_ENVIRONMENT=$READTHEDOCS_VIRTUALENV_PATH uv sync --optional docs
-    install:
-      - "true"
+  commands:
+    - asdf plugin add uv
+    - asdf install uv latest
+    - asdf global uv latest
+    - uv venv $READTHEDOCS_VIRTUALENV_PATH
+    - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv --preview pip install .[docs]
+    - python -m sphinx -T -b html -d docs/_build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
 
 sphinx:
   # Path to your Sphinx configuration file.
