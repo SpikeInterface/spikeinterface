@@ -333,12 +333,17 @@ def compute_similarity_with_templates_array(
     mask = np.ones((num_templates, other_num_templates, num_channels), dtype=bool)
 
     if sparsity is not None and other_sparsity is not None:
+
+        # make the input more flexible with either The object or the array mask
+        sparsity_mask = sparsity.mask if isinstance(sparsity, ChannelSparsity) else sparsity
+        other_sparsity_mask = other_sparsity.mask if isinstance(other_sparsity, ChannelSparsity) else other_sparsity
+
         if support == "intersection":
-            mask = np.logical_and(sparsity.mask[:, np.newaxis, :], other_sparsity.mask[np.newaxis, :, :])
+            mask = np.logical_and(sparsity_mask[:, np.newaxis, :], other_sparsity_mask[np.newaxis, :, :])
         elif support == "union":
-            mask = np.logical_and(sparsity.mask[:, np.newaxis, :], other_sparsity.mask[np.newaxis, :, :])
+            mask = np.logical_and(sparsity_mask[:, np.newaxis, :], other_sparsity_mask[np.newaxis, :, :])
             units_overlaps = np.sum(mask, axis=2) > 0
-            mask = np.logical_or(sparsity.mask[:, np.newaxis, :], other_sparsity.mask[np.newaxis, :, :])
+            mask = np.logical_or(sparsity_mask[:, np.newaxis, :], other_sparsity_mask[np.newaxis, :, :])
             mask[~units_overlaps] = False
 
     assert num_shifts < num_samples, "max_lag is too large"

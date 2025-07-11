@@ -25,7 +25,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
         "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2, "margin_ms": 10},
-        "whitening": {"mode": "local", "regularize": False},
+        "whitening": {"mode": "local", "regularize": True},
         "detection": {"method": "matched_filtering", "method_kwargs": dict(peak_sign="neg", detect_threshold=5)},
         "selection": {
             "method": "uniform",
@@ -34,14 +34,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
-        "clustering": {"method": "circus", "method_kwargs": dict()},
+        "clustering": {"method": "circus-clustering", "method_kwargs": dict(remove_small_snr=True)},
         "matching": {"method": "circus-omp-svd", "method_kwargs": dict()},
+        #"matching": {"method": "wobble", "method_kwargs": dict()},
         "apply_preprocessing": True,
         "templates_from_svd": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "chunk_preprocessing": {"memory_limit": None},
         "multi_units_only": False,
-        "job_kwargs": {"n_jobs": 0.75},
+        "job_kwargs": {},
         "seed": 42,
         "deterministic_peaks_detection": False,
         "debug": False,
@@ -116,7 +117,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_after = params["general"].get("ms_after", 2)
         radius_um = params["general"].get("radius_um", 100)
         peak_sign = params["detection"].get("peak_sign", "neg")
-        templates_from_svd = params["templates_from_svd"]
+        templates_from_svd = params.get("templates_from_svd", True)
         deterministic = params["deterministic_peaks_detection"]
         debug = params["debug"]
         seed = params["seed"]
@@ -284,10 +285,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             if verbose:
                 print("Kept %d peaks for clustering" % len(selected_peaks))
 
-            clustering_method = params["clustering"].get("method", "graph_clustering")
+            clustering_method = params["clustering"].get("method", "circus-clustering")
             clustering_params = params["clustering"].get("method_kwargs", dict())
 
-            if clustering_method == "circus":
+            if clustering_method == "circus-clustering":
                 clustering_params["waveforms"] = {}
                 clustering_params["sparsity"] = sparsity_kwargs
                 clustering_params["neighbors_radius_um"] = 50
@@ -300,10 +301,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 clustering_params["ms_after"] = ms_after
                 clustering_params["verbose"] = verbose
                 clustering_params["seed"] = seed
+                clustering_params["remove_small_snr"] = True
                 clustering_params["templates_from_svd"] = templates_from_svd
                 clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
                 clustering_params["debug"] = debug
-                clustering_params["noise_threshold"] = detection_params.get("detect_threshold", 4)
+                clustering_params["noise_threshold"] = detection_params.get("detect_threshold", 5)
             elif clustering_method == "graph_clustering":
                 clustering_params = {
                     "ms_before": ms_before,
@@ -341,19 +343,20 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     ms_after,
                     **job_kwargs,
                 )
-            elif len(outputs) == 5:
-                _, peak_labels, svd_model, svd_features, sparsity_mask = outputs
+            else :
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+                # _, peak_labels, svd_model, svd_features, sparsity_mask = outputs
+                _, peak_labels, more_outs = outputs
 
-                templates = get_templates_from_peaks_and_svd(
+                templates, _ = get_templates_from_peaks_and_svd(
                     recording_w,
                     selected_peaks,
                     peak_labels,
                     ms_before,
                     ms_after,
-                    svd_model,
-                    svd_features,
-                    sparsity_mask,
+                    more_outs["svd_model"],
+                    more_outs["peaks_svd"],
+                    more_outs["peak_svd_sparse_mask"],
                     operator="median",
                 )
 
@@ -464,7 +467,7 @@ def final_cleaning_circus(
     recording,
     sorting,
     templates,
-    similarity_kwargs={"method": "l2", "support": "union", "max_lag_ms": 0.1},
+    similarity_kwargs={"method": "l1", "support": "union", "max_lag_ms": 0.1},
     sparsity_overlap=0.5,
     censor_ms=3.0,
     max_distance_um=50,
@@ -478,7 +481,7 @@ def final_cleaning_circus(
 
     # First we compute the needed extensions
     analyzer = create_sorting_analyzer_with_existing_templates(sorting, recording, templates)
-    analyzer.compute("unit_locations", method="monopolar_triangulation")
+    analyzer.compute("unit_locations", method="center_of_mass", **job_kwargs)
     analyzer.compute("template_similarity", **similarity_kwargs)
 
     if debug_folder is not None:

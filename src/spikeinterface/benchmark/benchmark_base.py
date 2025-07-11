@@ -9,6 +9,7 @@ import numpy as np
 import time
 
 
+from spikeinterface.core import SortingAnalyzer, ChannelSparsity, NumpySorting
 from spikeinterface.core import SortingAnalyzer, NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface import load, create_sorting_analyzer, load_sorting_analyzer
@@ -120,8 +121,29 @@ class BenchmarkStudy:
                 rec, gt_sorting = data
 
                 if gt_sorting is not None:
+                    if "gt_unit_locations" in gt_sorting.get_property_keys():
+                        # if real units locations is present then use it for a better sparsity
+                        # then the real max channel is used
+                        radius_um = 100.
+                        channel_ids = rec.channel_ids
+                        unit_ids = gt_sorting.unit_ids
+                        gt_unit_locations = gt_sorting.get_property("gt_unit_locations")
+                        channel_locations = rec.get_channel_locations()
+                        max_channel_indices = np.argmin(np.linalg.norm(gt_unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :], axis=2), axis=1)
+                        mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
+                        distances = np.linalg.norm(channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
+                        for unit_ind, unit_id in enumerate(unit_ids):
+                            chan_ind = max_channel_indices[unit_ind]
+                            (chan_inds,) = np.nonzero(distances[chan_ind, :] <= radius_um)
+                            mask[unit_ind, chan_inds] = True
+                        sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
+                        sparse =False
+                    else:
+                        sparse = True
+                        sparsity = None
+
                     analyzer = create_sorting_analyzer(
-                        gt_sorting, rec, sparse=True, format="binary_folder", folder=local_analyzer_folder
+                        gt_sorting, rec, sparse=sparse, sparsity=sparsity, format="binary_folder", folder=local_analyzer_folder
                     )
                     analyzer.compute("random_spikes")
                     analyzer.compute("templates")
@@ -135,6 +157,7 @@ class BenchmarkStudy:
                     analyzer = create_sorting_analyzer(
                         gt_sorting, rec, sparse=False, format="binary_folder", folder=local_analyzer_folder
                     )
+
             else:
                 # new case : analzyer
                 assert isinstance(data, SortingAnalyzer)
@@ -254,6 +277,8 @@ class BenchmarkStudy:
 
         for key in job_keys:
             benchmark = self.create_benchmark(key)
+            if verbose:
+                print("### Run benchmark", key, "###")
             t0 = time.perf_counter()
             benchmark.run(**job_kwargs)
             t1 = time.perf_counter()
@@ -383,6 +408,8 @@ class BenchmarkStudy:
 
         job_keys = []
         for key in case_keys:
+            if verbose:
+                print("### Compute result", key, "###")
             benchmark = self.benchmarks[key]
             assert benchmark is not None
             benchmark.compute_result(**result_params)
