@@ -14,10 +14,9 @@ import matplotlib.pyplot as plt
 import spikeinterface.full as si
 
 ##############################################################################
-# First, let's download a simulated dataset
-# from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+# First, let's generate a simulated dataset
 
-local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
+local_path = si.generate_ground_truth_recording()
 rec, sorting = si.read_mearec(local_path)
 
 
