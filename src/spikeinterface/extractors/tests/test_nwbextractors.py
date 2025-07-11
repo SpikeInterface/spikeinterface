@@ -208,24 +208,6 @@ def test_nwb_extractor_channel_ids_retrieval(generate_nwbfile, use_pynwb):
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
-def test_electrical_series_name_backcompatibility(generate_nwbfile, use_pynwb):
-    """
-    Test that the channel_ids are retrieved from the electrodes table ONLY from the corresponding
-    region of the electrical series
-    """
-    path_to_nwbfile, nwbfile_with_ecephys_content = generate_nwbfile
-    electrical_series_name_list = ["ElectricalSeries1", "ElectricalSeries2"]
-    for electrical_series_name in electrical_series_name_list:
-        with pytest.deprecated_call():
-            recording_extractor = NwbRecordingExtractor(
-                path_to_nwbfile,
-                electrical_series_name=electrical_series_name,
-                use_pynwb=use_pynwb,
-            )
-            assert recording_extractor.electrical_series_path == f"acquisition/{electrical_series_name}"
-
-
-@pytest.mark.parametrize("use_pynwb", [True, False])
 def test_nwb_extractor_property_retrieval(generate_nwbfile, use_pynwb):
     """
     Test that the property is retrieved from the electrodes table ONLY from the corresponding
