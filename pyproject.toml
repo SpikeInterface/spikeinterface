@@ -193,6 +193,7 @@ docs = [
     "numpydoc",
     "ipython",
     "sphinxcontrib-jquery",
+    "matploblib",
 
     # for notebooks in the gallery
     "pandas", # in the modules gallery comparison tutorial
