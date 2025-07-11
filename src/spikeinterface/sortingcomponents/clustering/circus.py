@@ -213,7 +213,7 @@ class CircusClustering:
             channel_ids=recording.channel_ids,
             unit_ids=templates.unit_ids[valid_templates],
             probe=recording.get_probe(),
-            is_scaled=False,
+            is_in_uV=False,
         )
 
         if params["debug"]:

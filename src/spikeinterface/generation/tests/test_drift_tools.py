@@ -65,7 +65,7 @@ def make_some_templates():
         sampling_frequency=sampling_frequency,
         nbefore=nbefore,
         probe=probe,
-        is_scaled=True,
+        is_in_uV=True,
     )
 
     return templates

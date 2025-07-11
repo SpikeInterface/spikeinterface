@@ -113,7 +113,7 @@ class DriftingTemplatesWidget(BaseWidget):
             templates_array,
             self.drifting_templates.sampling_frequency,
             self.drifting_templates.nbefore,
-            is_scaled=self.drifting_templates.is_scaled,
+            is_in_uV=self.drifting_templates.is_in_uV,
             sparsity_mask=None,
             channel_ids=self.drifting_templates.channel_ids,
             unit_ids=self.drifting_templates.unit_ids,

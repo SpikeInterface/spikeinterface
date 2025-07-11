@@ -221,7 +221,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             nbefore=nbefore,
             sparsity_mask=None,
             probe=recording_for_peeler.get_probe(),
-            is_scaled=False,
+            is_in_uV=False,
         )
 
         # TODO : try other methods for sparsity
