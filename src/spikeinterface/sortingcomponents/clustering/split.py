@@ -293,7 +293,7 @@ class LocalFeatureClustering:
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
             del clust
         elif clusterer == "isocut5":
-            min_cluster_size = clusterer_kwargs["min_cluster_size"]
+            min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)
             dipscore, cutpoint = isocut5(final_features[:, 0])
             possible_labels = np.zeros(final_features.shape[0])
             min_dip = clusterer_kwargs.get("min_dip", 1.5)
@@ -306,7 +306,12 @@ class LocalFeatureClustering:
                 is_split = False
         elif clusterer == "isosplit6":
             import isosplit6
+            min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)
             possible_labels = isosplit6.isosplit6(final_features)
+            for i in np.unique(possible_labels):
+                mask = possible_labels == i
+                if np.sum(mask) < min_cluster_size:
+                    possible_labels[mask] = -1
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
         else:
             raise ValueError(f"wrong clusterer {clusterer}. Possible options are 'hdbscan' or 'isocut5'.")
