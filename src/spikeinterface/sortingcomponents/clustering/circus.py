@@ -78,7 +78,7 @@ class CircusClustering:
         clusterer = params.get("clusterer", "hdbscan")
         assert clusterer in ["isosplit6", "hdbscan", "isocut5"], "Circus clustering only supports isosplit6, isocut5 or hdbscan"
         if clusterer in ["isosplit6", "hdbscan"]:
-            have_dep = importlib.util.find_spec(clusterer)
+            have_dep = importlib.util.find_spec(clusterer) is not None
             if not have_dep:
                 raise RuntimeError(f"using {clusterer} as a clusterer needs {clusterer} to be installed")
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import importlib
 
 from .si_based import ComponentsBasedSorter
 
@@ -188,6 +189,19 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         clustering_kwargs["waveforms"] = params["waveforms"].copy()
         clustering_kwargs["clustering"] = params["clustering"].copy()
 
+        if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
+            # this is a patch to make the github CI because isosplit is installable on python > 3.11
+            have_sisosplit6 = importlib.util.find_spec("isosplit6")  is not None
+            if not have_sisosplit6:
+                if verbose:
+                    print("By default tridesclous2 need isosplit6 package for better reults please install it, automatically switch to hdbscan instead")
+                clustering_kwargs["clustering"]["clusterer"] = "hdbscan"
+                clustering_kwargs["clustering"]["clusterer_kwargs"] = {
+                    "min_cluster_size": 10,
+                    "min_samples": 1,
+                    "allow_single_cluster": True,
+                    "cluster_selection_method": "eom",
+                }
 
         unit_ids, clustering_label, more_outs = find_cluster_from_peaks(
             recording, peaks, method="tdc-clustering", method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs

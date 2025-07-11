@@ -165,7 +165,10 @@ test = [
     "numba<0.61.0;python_version<'3.13'",
     "numba>=0.61.0;python_version>='3.13'",
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
-    "isosplit6",
+    
+    # isosplit is needed for trideclous2 noramaly but isosplit is only build until python3.11
+    # so lets wait a new build of isosplit6
+    # "isosplit6",
 
     # for sortingview backend
     "sortingview>=0.12.0",
