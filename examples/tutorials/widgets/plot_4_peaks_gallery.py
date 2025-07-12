@@ -23,8 +23,7 @@ recording, sorting = si.generate_ground_truth_recording()
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-rec_filtered = si.bandpass_filter(recording=recording, sorting = si.generate_ground_truth_recording()
-, freq_min=300.0, freq_max=6000.0, margin_ms=5.0)
+rec_filtered = si.bandpass_filter(recording=recording, freq_min=300.0, freq_max=6000.0, margin_ms=5.0)
 print(rec_filtered)
 peaks = detect_peaks(
     recording=rec_filtered,
