@@ -88,6 +88,7 @@ important for your research:
 Curation Module
 ---------------
 If you use the :code:`get_potential_auto_merge` method from the curation module, please cite [Llobet]_
+
 If you use :code:`auto_label_units` or :code:`train_model`, please cite [Jain]_
 
 References
