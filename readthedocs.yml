@@ -11,7 +11,7 @@ build:
     - asdf global uv latest
     - uv venv $READTHEDOCS_VIRTUALENV_PATH
     - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv --preview pip install .[docs]
-    - python -m sphinx -T -b html -d _build/doctrees -D language=en . $READTHEDOCS_OUTPUT/html
+    - python -m sphinx -T -b html -d doc/_build/doctrees -D language=en  doc $READTHEDOCS_OUTPUT/html
 
 sphinx:
   # Path to your Sphinx configuration file.
