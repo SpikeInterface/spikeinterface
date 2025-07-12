@@ -16,17 +16,18 @@ import spikeinterface.full as si
 ##############################################################################
 # First, let's generate a simulated dataset
 
-rec, sorting = si.generate_ground_truth_recording()
+recording, sorting = si.generate_ground_truth_recording()
 
 ##############################################################################
 # Let's filter and detect peaks on it
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-rec_filtred = si.bandpass_filter(recording=rec, freq_min=300.0, freq_max=6000.0, margin_ms=5.0)
-print(rec_filtred)
+rec_filtered = si.bandpass_filter(recording=recording, sorting = si.generate_ground_truth_recording()
+, freq_min=300.0, freq_max=6000.0, margin_ms=5.0)
+print(rec_filtered)
 peaks = detect_peaks(
-    recording=rec_filtred,
+    recording=rec_filtered,
     method="locally_exclusive",
     peak_sign="neg",
     detect_threshold=6,
@@ -50,14 +51,14 @@ print(peaks.dtype.fields.keys())
 # This "peaks" vector can be used in several widgets, for instance
 # plot_peak_activity()
 
-si.plot_peak_activity(recording=rec_filtred, peaks=peaks)
+si.plot_peak_activity(recording=rec_filtered, peaks=peaks)
 
 plt.show()
 
 ##############################################################################
-# can be also animated with bin_duration_s=1.
+# can be also animated with bin_duration_s=1. The animation only works if you
+# run this code locally
 
-si.plot_peak_activity(recording=rec_filtred, peaks=peaks, bin_duration_s=1.0)
-
+si.plot_peak_activity(recording=rec_filtered, peaks=peaks, bin_duration_s=1.0)
 
 plt.show()
