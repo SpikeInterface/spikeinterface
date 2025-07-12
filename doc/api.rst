@@ -76,7 +76,7 @@ Low-level
     .. autoclass:: ChunkRecordingExecutor
 
 
-Back-compatibility with ``WaveformExtractor`` (version < 0.101.0)
+Back-compatibility with ``WaveformExtractor`` (version > 0.100.0)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: spikeinterface.core
@@ -179,6 +179,8 @@ spikeinterface.preprocessing
     .. autofunction:: correct_motion
     .. autofunction:: get_motion_presets
     .. autofunction:: get_motion_parameters_preset
+    .. autofunction:: load_motion_info
+    .. autofunction:: save_motion_info
     .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
     .. autofunction:: directional_derivative
