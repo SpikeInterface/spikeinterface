@@ -9,7 +9,7 @@ work with data from two tetrodes, each with four channels.
 We'll start by importing some functions we'll use in this How To guide
 """
 
-import spikeinterface.preprocessing as sipp
+import spikeinterface.preprocessing as spre
 from spikeinterface.widgets import plot_traces, plot_probe_map
 from spikeinterface import generate_ground_truth_recording
 
@@ -51,7 +51,10 @@ tetrode_group = ProbeGroup()
 tetrode_group.add_probe(tetrode_1)
 tetrode_group.add_probe(tetrode_2)
 
-# Give each channel an id
+# Now we need to "wire" our tetrodes to ensure that each contact
+# can be associated with the correct channel when we attach it
+# to the recording. In this example we are just using `range`
+# but see ProbeInterface for more tutorials on wiring
 tetrode_group.set_global_device_channel_indices(range(8))
 
 ##############################################################################
@@ -63,12 +66,15 @@ plot_probe_map(recording_with_probe)
 
 ##############################################################################
 # Looks good! Many people preprocess and sort their tetrode data separately for
-# each tetrode. We can do this by labelling each channel, then using `split_by`
-# to split the recording. The output is a dictionary of recordings, with the
-# tetrode number as the keys of the dict.
+# each tetrode. When we use `set_probegroup`, the channels are automatically
+# labelled by which probe in the probe group they belong to. We can access
+# this labeling using the "group" property.
 
-recording_with_probe.set_property('tetrode_number', [0,0,0,0,1,1,1,1])
-grouped_recordings = recording_with_probe.split_by('tetrode_number')
+print(recording_with_probe.get_property("group"))
+
+# We can then use this information to split the recording by the group property:
+
+grouped_recordings = recording_with_probe.split_by('group')
 print(grouped_recordings)
 
 ##############################################################################
@@ -77,15 +83,15 @@ print(grouped_recordings)
 # Tetrodes often have dead channels, so it is advised to try and detect
 # and remove these
 
-recording_good_channels = sipp.detect_and_remove_bad_channels(recording_with_probe)
+recording_good_channels = spre.detect_and_remove_bad_channels(recording_with_probe)
 
 ##############################################################################
 # Now that we have a grouped recording with only good channels, we can start a
 # standard spike sorting pipeline. For instance, we can do some preprocessing
 # and plot the traces.
 
-preprocessed_recording = sipp.common_reference(
-    sipp.bandpass_filter(
+preprocessed_recording = spre.common_reference(
+    spre.bandpass_filter(
         grouped_recordings
     )
 )
@@ -94,4 +100,7 @@ print(preprocessed_recording)
 plot_traces(preprocessed_recording[0])
 
 ##############################################################################
-# We are now ready to sort. To read more about sorting by group, see :ref:`sorting-by-channel-group`.
+# We are now ready to sort. To read more about sorting by group, see
+# :ref:`sorting-by-channel-group`. Note that many modern sorters are designed
+# to sort data from high-density probes and will fail for tetrodes. Please read
+# each spike sorter's documentation to find out if it is appropriate for tetrodes.
