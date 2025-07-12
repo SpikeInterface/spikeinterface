@@ -24,10 +24,12 @@ Motion Correction
 If you use the :code:`correct_motion` method in the preprocessing module, please cite [Garcia]_
 as well as the references that correspond to the :code:`preset` you used:
 
-- :code:`nonrigid_accurate` [Windolf]_ [Varol]_
-- :code:`nonrigid_fast_and_accurate` [Windolf]_ [Varol]_ [Pachitariu]_
+- :code:`nonrigid_accurate` [Windolf_a]_ [Varol]_
+- :code:`nonrigid_fast_and_accurate` [Windolf_a]_ [Varol]_ [Pachitariu]_
 - :code:`rigid_fast` *no additional citation needed*
 - :code:`kilosort_like` [Pachitariu]_
+- :code:`dredge_ap` [Windolf_b]_
+- :code:`dredge_lfp` [Windolf_b]_
 - :code:`medicine` [Watters]_
 
 Sorters Module
@@ -152,6 +154,8 @@ References
 
 .. [Watters] `MEDiCINe: Motion Correction for Neural Electrophysiology Recordings. 2025. <https://www.eneuro.org/content/12/3/ENEURO.0529-24.2025>`_
 
-.. [Windolf] `Robust Online Multiband Drift Estimation in Electrophysiology Data. 2022. <https://www.biorxiv.org/content/10.1101/2022.12.04.519043v2>`_
+.. [Windolf_a] `Robust Online Multiband Drift Estimation in Electrophysiology Data. 2022. <https://www.biorxiv.org/content/10.1101/2022.12.04.519043v2>`_
+
+.. [Windolf_b] `DREDge: robust motion correction for high-density extracellular recordings across species. 2023 <https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1>`
 
 .. [Yger] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
