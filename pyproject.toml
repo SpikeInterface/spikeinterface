@@ -30,6 +30,7 @@ dependencies = [
     "packaging",
     "pydantic",
     "numcodecs<0.16.0", # For supporting zarr < 3
+    "pynapple>=0.9.2",
 ]
 
 [build-system]
@@ -160,6 +161,9 @@ test = [
 
     # streaming templates
     "s3fs",
+
+    # exporters
+    "pynapple",
 
     # tridesclous
     "numba<0.61.0;python_version<'3.13'",
