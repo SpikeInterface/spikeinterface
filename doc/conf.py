@@ -129,6 +129,7 @@ sphinx_gallery_conf = {
                                        '../examples/tutorials/qualitymetrics',
                                        '../examples/tutorials/comparison',
                                        '../examples/tutorials/widgets',
+                                       '../examples/tutorials/forhowto',
                                        ]),
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_*',
