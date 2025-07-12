@@ -19,3 +19,4 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     auto_curation_prediction
     physical_units
     customize_a_plot
+    ../tutorials/forhowto/plot_1_working_with_tetrodes
