@@ -605,6 +605,7 @@ def save_motion_info(motion_info, folder, overwrite=False):
 def load_motion_info(folder):
     """
     Loads a motion info dict from folder
+
     Parameters
     ----------
     folder : str | Path
@@ -612,8 +613,9 @@ def load_motion_info(folder):
 
     Notes
     -----
-    Loads both current Motion implmemntation as well as the
+    Loads both current Motion implementation as well as the
     legacy Motion format
+
     """
     from spikeinterface.core.motion import Motion
 
