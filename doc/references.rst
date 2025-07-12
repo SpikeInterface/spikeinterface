@@ -88,6 +88,7 @@ important for your research:
 Curation Module
 ---------------
 If you use the :code:`get_potential_auto_merge` method from the curation module, please cite [Llobet]_
+If you use :code:`auto_label_units` or :code:`train_model`, please cite [Jain]_
 
 References
 ----------
@@ -120,7 +121,9 @@ References
 
 .. [IBL] `Spike sorting pipeline for the International Brain Laboratory. 2022. <https://figshare.com/articles/online_resource/Spike_sorting_pipeline_for_the_International_Brain_Laboratory/19705522/3>`_
 
-.. [Jackson] Quantitative assessment of extracellular multichannel recording quality using measures of cluster separation. Society of Neuroscience Abstract. 2005.
+.. [Jackson] `Quantitative assessment of extracellular multichannel recording quality using measures of cluster separation. Society of Neuroscience Abstract. 2005. <https://www.sciencedirect.com/science/article/abs/pii/S0306452204008425>`_
+
+.. [Jain] `UnitRefine: A Community Toolbox for Automated Spike Sorting Curation. 2025 <https://www.biorxiv.org/content/10.1101/2025.03.30.645770v1>`_
 
 .. [Jia] `High-density extracellular probes reveal dendritic backpropagation and facilitate neuron classification. 2019 <https://journals.physiology.org/doi/full/10.1152/jn.00680.2018>`_
 
@@ -134,7 +137,7 @@ References
 
 .. [Niediek] `Reliable Analysis of Single-Unit Recordings from the Human Brain under Noisy Conditions: Tracking Neurons over Hours. 2016. <https://pubmed.ncbi.nlm.nih.gov/27930664/>`_
 
-.. [npyx] `NeuroPyxels: loading, processing and plotting Neuropixels data in python. 2021. <https://doi.org/10.5281/zenodo.5509776>_`
+.. [npyx] `NeuroPyxels: loading, processing and plotting Neuropixels data in python. 2021. <https://doi.org/10.5281/zenodo.5509776>`_
 
 .. [Pachitariu] `Spike sorting with Kilosort4. 2024. <https://pubmed.ncbi.nlm.nih.gov/38589517/>`_
 
@@ -156,6 +159,6 @@ References
 
 .. [Windolf_a] `Robust Online Multiband Drift Estimation in Electrophysiology Data. 2022. <https://www.biorxiv.org/content/10.1101/2022.12.04.519043v2>`_
 
-.. [Windolf_b] `DREDge: robust motion correction for high-density extracellular recordings across species. 2023 <https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1>`
+.. [Windolf_b] `DREDge: robust motion correction for high-density extracellular recordings across species. 2023 <https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1>`_
 
 .. [Yger] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
