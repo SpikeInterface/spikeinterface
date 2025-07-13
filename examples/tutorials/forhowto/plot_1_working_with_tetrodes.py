@@ -67,7 +67,7 @@ plot_probe_map(recording_with_probe)
 
 ##############################################################################
 # Looks good! Many people preprocess and sort their tetrode data separately for
-# each tetrode. When we use `set_probegroup`, the channels are automatically
+# each tetrode. When we use :code:`set_probegroup`, the channels are automatically
 # labelled by which probe in the probe group they belong to. We can access
 # this labeling using the "group" property.
 
