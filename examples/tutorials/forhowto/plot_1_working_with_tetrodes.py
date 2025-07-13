@@ -36,7 +36,7 @@ recording, _ = generate_ground_truth_recording(
 # results more easily. Eventually, we will sort each tetrode separately, so their
 # relative distance won't affect the results.
 
-# Technically, we will add each tetrode to a `ProbeGroup`. Read more in the ProbeInterface
+# Technically, we will add each tetrode to a :code:`ProbeGroup`. Read more in the ProbeInterface
 # docs.
 
 # Create each individual tetrode
