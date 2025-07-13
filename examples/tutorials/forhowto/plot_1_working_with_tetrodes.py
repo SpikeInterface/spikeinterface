@@ -30,10 +30,11 @@ recording, _ = generate_ground_truth_recording(
 ##############################################################################
 # We now need to define the probe. This will tell the recording which channels came from
 # which tetrode. To do this, we will use the `generate_tetrode` function from `ProbeInterface`
-# to generate two 4-channel probes (representing one tetrode each). We will artificially
-# move the second tetrode away from the first by 100 microns. This is just so we can
-# visualize the results more easily: in practice, it is rare to know the actually
-# distance between tetrodes in a tetrode bundle.
+# to generate two 4-channel probes (representing one tetrode each). In our case, since we
+# don't know the relative distances between the tetrodes, we will move the second
+# tetrode away from the first by 100 microns. This is just so we can visualize the
+# results more easily. Eventually, we will sort each tetrode separately, so their
+# relative distance won't affect the results.
 
 # Technically, we will add each tetrode to a `ProbeGroup`. Read more in the ProbeInterface
 # docs.
