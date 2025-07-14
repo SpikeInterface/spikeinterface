@@ -568,6 +568,19 @@ def correct_motion(
 
 
 def save_motion_info(motion_info, folder, overwrite=False):
+    """
+    Saves motion info
+
+    Parameters
+    ----------
+    motion_info : dict
+        The returned motion_info from running `compute_motion`
+    folder : str | Path
+        The path for saving the `motion_info`
+    overwrite : bool, default: False
+        Whether to overwrite the folder location when saving motion info
+
+    """
     folder = Path(folder)
     if folder.is_dir():
         if not overwrite:
@@ -590,6 +603,20 @@ def save_motion_info(motion_info, folder, overwrite=False):
 
 
 def load_motion_info(folder):
+    """
+    Loads a motion info dict from folder
+
+    Parameters
+    ----------
+    folder : str | Path
+        The folder containing the motion info to load
+
+    Notes
+    -----
+    Loads both current Motion implementation as well as the
+    legacy Motion format
+
+    """
     from spikeinterface.core.motion import Motion
 
     folder = Path(folder)
