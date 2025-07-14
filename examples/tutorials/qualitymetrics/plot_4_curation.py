@@ -11,20 +11,15 @@ quality metrics that you have calculated.
 # Import the modules and/or functions necessary from spikeinterface
 
 import spikeinterface.core as si
-import spikeinterface.extractors as se
 
-from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.qualitymetrics import compute_quality_metrics
 
 
 ##############################################################################
-# Let's download a simulated dataset
-# from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-#
-# Let's imagine that the ground-truth sorting is in fact the output of a sorter.
+# Let's generate a simulated dataset, and imagine that the ground-truth
+# sorting is in fact the output of a sorter.
 
-local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-recording, sorting = se.read_mearec(file_path=local_path)
+recording, sorting = si.generate_ground_truth_recording()
 print(recording)
 print(sorting)
 

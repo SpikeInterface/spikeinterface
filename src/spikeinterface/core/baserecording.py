@@ -852,6 +852,7 @@ class BaseRecording(BaseRecordingSnippets):
         time_axis=None,
         file_paths_length=None,
         file_offset=None,
+        file_suffix=None,
     ):
         """
         Check is the recording is binary compatible with some constrain on

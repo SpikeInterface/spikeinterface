@@ -101,9 +101,8 @@ The :py:mod:`spikeinterface.extractors` module is designed to load and save reco
    :gutter: 2
 
    .. grid-item-card:: Read various formats
-      :link-type: ref
-      :link: sphx_glr_tutorials_extractors_plot_1_read_various_formats.py
-      :img-top: /tutorials/extractors/images/thumb/sphx_glr_plot_1_read_various_formats_thumb.png
+      :link: how_to/read_various_formats.html
+      :img-top: how_to/read_various_formats_files/read_various_formats_12_0.png
       :img-alt: Read various formats
       :class-card: gallery-card
       :text-align: center
