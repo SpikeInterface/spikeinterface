@@ -12,7 +12,7 @@ and in many cases the easiest way to run them is to do so via Docker or Singular
 **This is the approach we recommend for all users.**
 To run containerized sorters see our documentation here: :ref:`containerizedsorters`.
 
-There are some cases where users will need to install the spike sorting algorithms on your own computer. If you
+There are some cases where you will need to install the spike sorting algorithms on your own computer. If you
 are on a system where it is infeasible to run Docker or Singularity containers, or if you are actively developing the
 spike sorting software, you will likely need to install each spike sorter yourself.
 
