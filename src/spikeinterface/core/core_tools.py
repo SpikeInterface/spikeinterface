@@ -429,6 +429,11 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
             not_possible.append(p)
             continue
 
+        # check path is not a remote path
+        if is_path_remote(p):
+            not_possible.append(p)
+            continue
+
         # If windows path check have same drive
         if isinstance(p, WindowsPath) and isinstance(relative_folder, WindowsPath):
             # check that on same drive
