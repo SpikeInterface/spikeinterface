@@ -59,7 +59,7 @@ tetrode_group.add_probe(tetrode_2)
 tetrode_group.set_global_device_channel_indices(range(8))
 
 ##############################################################################
-# We can now attach the :code:`tetrode_group` to our recording. To check this worked, we'll
+# We can now attach the :code:`tetrode_group` to our recording. To check if this worked, we'll
 # plot the probe map
 
 recording_with_probe = recording.set_probegroup(tetrode_group)
