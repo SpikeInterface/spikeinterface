@@ -69,7 +69,7 @@ plot_probe_map(recording_with_probe)
 # Looks good! Now that the recording is aware of the probe geometry, we can
 # begin a standard spike sorting pipeline. First, we can apply preprocessing.
 # Note that we apply this preprocessing on the entire bundle of tetrodes.
-# This is appropriate for a common reference filter because the tetrodes
+# This is appropriate for a common reference because the tetrodes
 # share the same background noise.
 
 preprocessed_recording = spre.bandpass_filter(
