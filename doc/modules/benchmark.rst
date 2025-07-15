@@ -1,8 +1,7 @@
 Benchmark module
 ================
 
-This module contains machinery to compare some sorters against ground truth in many multiple situtation.
-
+This module contains machinery to compare some sorters against ground truth in multiple situations.
 
 ..notes::
 
@@ -13,22 +12,21 @@ This module contains machinery to compare some sorters against ground truth in m
 This module also aims to benchmark sorting components (detection, clustering, motion, template matching) using the
 same base class :py:func:`~spikeinterface.benchmark.BenchmarkStudy()` but specialized to a targeted component.
 
-By design, the main class handle the concept of "levels" : this allows to compare several complexities at the same time.
+By design, the main class handles the concept of "levels" : this allows you to compare several complexities at the same time.
 For instance, compare kilosort4 vs kilsort2.5 (level 0) for different noises amplitudes (level 1) combined with
-several motion vectors (leevel 2).
+several motion vectors (level 2).
 
 **Example: compare many sorters : a ground truth study**
 
 We have a high level class to compare many sorters against ground truth: :py:func:`~spikeinterface.benchmark.SorterStudy()`
 
-
-A study is a systematic performance comparison of several ground truth recordings with several sorters or several cases
+A study is a systematic performance comparison of several ground truth recordings with several sorters or several cases,
 like the different parameter sets.
 
 The study class proposes high-level tool functions to run many ground truth comparisons with many "cases"
 on many recordings and then collect and aggregate results in an easy way.
 
-The all mechanism is based on an intrinsic organization into a "study_folder" with several subfolders:
+The mechanism is based on an intrinsic organization into a "study_folder" with several subfolders:
 
   * datasets: contains ground truth datasets
   * sorters : contains outputs of sorters
@@ -39,24 +37,20 @@ The all mechanism is based on an intrinsic organization into a "study_folder" wi
 
 .. code-block:: python
 
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-
-    import spikeinterface.extractors as se
+    import spikeinterface as si
     import spikeinterface.widgets as sw
     from spikeinterface.benchmark import SorterStudy
 
-
     # generate 2 simulated datasets (could be also mearec files)
-    rec0, gt_sorting0 = generate_ground_truth_recording(num_channels=4, durations=[30.], seed=42)
-    rec1, gt_sorting1 = generate_ground_truth_recording(num_channels=4, durations=[30.], seed=91)
+    rec0, gt_sorting0 = si.generate_ground_truth_recording(num_channels=4, durations=[30.], seed=42)
+    rec1, gt_sorting1 = si.generate_ground_truth_recording(num_channels=4, durations=[30.], seed=91)
 
     datasets = {
         "toy0": (rec0, gt_sorting0),
         "toy1": (rec1, gt_sorting1),
     }
 
-    # define some "cases" here we want to test tridesclous2 on 2 datasets and spykingcircus2 on one dataset
+    # define some "cases". Here we want to test tridesclous2 on 2 datasets and spykingcircus2 on one dataset
     # so it is a two level study (sorter_name, dataset)
     # this could be more complicated like (sorter_name, dataset, params)
     cases = {
@@ -74,20 +68,21 @@ The all mechanism is based on an intrinsic organization into a "study_folder" wi
             "label": "spykingcircus2 on tetrode0",
             "dataset": "toy0",
             "params": {
-                "sorter_name": "spykingcircus",
+                "sorter_name": "spykingcircus2",
                 "docker_image": True
             },
         },
     }
-    # this initilizes a folder
+    # this initializes a folder
+    study_folder = "my_study_folder"
     study = SorterStudy.create(study_folder=study_folder, datasets=datasets, cases=cases,
                                     levels=["sorter_name", "dataset"])
 
 
-    # This internally do run_sorter() for all cases in one function
+    # This internally does run_sorter() for all cases in one function
     study.run()
 
-    # Run the benchmark : this internanly do compare_sorter_to_ground_truth() for all cases
+    # Run the benchmark : this internally does compare_sorter_to_ground_truth() for all cases
     study.compute_results()
 
     # Collect comparisons one by one
@@ -104,9 +99,9 @@ The all mechanism is based on an intrinsic organization into a "study_folder" wi
         m = comp.get_confusion_matrix()
         w_comp = sw.plot_agreement_matrix(sorting_comparison=comp)
 
-    # Collect synthetic dataframes and display
+    # Collect synthetic dataframes and display.
     # As shown previously, the performance is returned as a pandas dataframe.
-    # The spikeinterface.comparison.get_performance_by_unit() function,
+    # The spikeinterface.comparison.get_performance_by_unit() function
     # gathers all the outputs in the study folder and merges them into a single dataframe.
     # Same idea for spikeinterface.comparison.get_count_units()
 
@@ -116,13 +111,10 @@ The all mechanism is based on an intrinsic organization into a "study_folder" wi
     # this is a dataframe
     unit_counts = study.get_count_units()
 
-    # Study also have several plotting methods for plotting the result
+    # Study also has several plotting methods for plotting the result
     study.plot_agreement_matrix()
     study.plot_unit_counts()
     study.plot_performances(mode="ordered")
-    study.plot_performances(mode="snr")
-
-
 
 
 Benchmark spike collisions

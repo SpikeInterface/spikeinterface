@@ -4,6 +4,8 @@
     %load_ext autoreload
     %autoreload 2
 
+.. _handle-drift-with-spikeinterface:
+
 Handle motion/drift with spikeinterface
 =======================================
 
