@@ -133,7 +133,7 @@ def create_sorting_analyzer(
     sparsity off (or give external sparsity) like this.
     """
 
-    if isinstance(sorting, dict) & isinstance(recording, dict):
+    if isinstance(sorting, dict) and isinstance(recording, dict):
 
         if sorting.keys() != recording.keys():
             raise ValueError(

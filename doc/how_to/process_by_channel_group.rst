@@ -215,5 +215,5 @@ from one of the "group"s as follows:
 .. code-block:: python
 
     aggretation_keys = analyzer.get_sorting_property("aggregate_units_key")
-    group_0_keys = analyzer.unit_ids[aggretation_keys == 0]
-    group_0_analzyer = analyzer.select_units(unit_ids = group_0_keys)
+    unit_ids_group_0 = analyzer.unit_ids[aggretation_keys == 0]
+    group_0_analzyer = analyzer.select_units(unit_ids = unit_ids_group_0)
