@@ -105,6 +105,7 @@ class SpikeGLXRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.lf"}),
         ("spikeglx/Noise4Sam_g0", {"stream_id": "nidq"}),
         ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap-SYNC"}),
+        ("spiekglx/onebox/run_with_only_adc", {"stream_id": "obx0"}),
     ]
 
 
