@@ -12,7 +12,7 @@ and in many cases the easiest way to run them is to do so via Docker or Singular
 **This is the approach we recommend for all users.**
 To run containerized sorters see our documentation here: :ref:`containerizedsorters`.
 
-There are some cases where users will need to install the spike sorting algorithms in their own environment. If you
+There are some cases where you will need to install the spike sorting algorithms on your own computer. If you
 are on a system where it is infeasible to run Docker or Singularity containers, or if you are actively developing the
 spike sorting software, you will likely need to install each spike sorter yourself.
 
@@ -24,7 +24,7 @@ opencl (Tridesclous) to use hardware acceleration (GPU).
 Here is a list of the implemented wrappers and some instructions to install them on your local machine.
 Installation instructions are given for an **Ubuntu** platform. Please check the documentation of the different spike
 sorters to retrieve installation instructions for other operating systems.
-We use **pip** to install packages, but **conda** should also work in many cases.
+We use **pip** to install packages, but **conda** or **uv** should also work in many cases.
 
 Some novel spike sorting algorithms are implemented directly in SpikeInterface using the
 :py:mod:`spikeinterface.sortingcomponents` module. Checkout the :ref:`get_started/install_sorters:SpikeInterface-based spike sorters` section of this page
@@ -140,10 +140,12 @@ Kilosort4
 
 * Python, requires CUDA for GPU acceleration (highly recommended)
 * Url: https://github.com/MouseLand/Kilosort
-* Authors: Marius Pachitariu, Shashwat Sridhar, Carsen Stringer
+* Authors: Marius Pachitariu, Shashwat Sridhar, Carsen Stringer, Jacob Pennington
 * Installation::
 
-      pip install kilosort==4.0 torch
+      pip install kilosort
+      pip uninstall torch
+      pip install torch --index-url https://download.pytorch.org/whl/cu118
 
 * For more installation instruction refer to https://github.com/MouseLand/Kilosort
 
@@ -240,7 +242,7 @@ Waveclus
 * Also supports Snippets (waveform cutouts) objects (:py:class:`~spikeinterface.core.BaseSnippets`)
 * Url: https://github.com/csn-le/wave_clus/wiki
 * Authors: Fernando Chaure, Hernan Rey and Rodrigo Quian Quiroga
-* Installation needs Matlab::
+* Installation requires Matlab::
 
       git clone https://github.com/csn-le/wave_clus/
       # provide installation path by setting the WAVECLUS_PATH environment variable
@@ -270,7 +272,7 @@ with SpikeInterface.
 SpykingCircus2
 ^^^^^^^^^^^^^^
 
-This is a upgraded version of SpykingCircus, natively written in SpikeInterface.
+This is an upgraded version of SpykingCircus, natively written in SpikeInterface.
 The main differences are located in the clustering (now using on-the-fly features and less prone to finding
 noise clusters), and in the template-matching procedure, which is now a fully orthogonal matching pursuit,
 working not only at peak times but at all times, recovering more spikes close to noise thresholds.
@@ -289,7 +291,7 @@ Tridesclous2
 ^^^^^^^^^^^^
 
 This is an upgraded version of Tridesclous, natively written in SpikeInterface.
-#Same add his notes.
+
 
 * Python
 * Requires: HDBSCAN and Numba
@@ -314,7 +316,7 @@ Klusta (LEGACY)
 * Authors: Cyrille Rossant, Shabnam Kadir, Dan Goodman, Max Hunter, Kenneth Harris
 * Installation::
 
-       pip install Cython h5py tqdm
+       pip install cython h5py tqdm
        pip install click klusta klustakwik2
 
 * See also: https://github.com/kwikteam/phy
