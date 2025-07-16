@@ -47,6 +47,7 @@ class BenchmarkStudy:
         self.levels = None
         self.colors_by_case = None
         self.colors_by_levels = {}
+        self.labels_by_levels = {}
         self.scan_folder()
 
     @classmethod
@@ -391,11 +392,15 @@ class BenchmarkStudy:
         if levels_to_group_by is None:
             labels = {key: self.cases[key]["label"] for key in case_keys}
         else:
-            key0 = list(keys_mapping.keys())[0]
-            if isinstance(key0, tuple):
-                labels = {key: "-".join(key) for key in keys_mapping}
+            level_key = tuple(levels_to_group_by) if len(levels_to_group_by) > 1 else levels_to_group_by[0]
+            if level_key in self.labels_by_levels:
+                labels = self.labels_by_levels[level_key]
             else:
-                labels = {key: key for key in keys_mapping}
+                key0 = list(keys_mapping.keys())[0]
+                if isinstance(key0, tuple):
+                    labels = {key: "-".join(key) for key in keys_mapping}
+                else:
+                    labels = {key: key for key in keys_mapping}
 
         return keys_mapping, labels
 
@@ -698,15 +703,15 @@ class MixinStudyUnitCount:
             gt_sorting = comp.sorting1
             sorting = comp.sorting2
 
-            count_units.loc[key, "num_gt"] = len(gt_sorting.get_unit_ids())
-            count_units.loc[key, "num_sorter"] = len(sorting.get_unit_ids())
-            count_units.loc[key, "num_well_detected"] = comp.count_well_detected_units(well_detected_score)
+            count_units.at[key, "num_gt"] = len(gt_sorting.get_unit_ids())
+            count_units.at[key, "num_sorter"] = len(sorting.get_unit_ids())
+            count_units.at[key, "num_well_detected"] = comp.count_well_detected_units(well_detected_score)
 
             if comp.exhaustive_gt:
-                count_units.loc[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
-                count_units.loc[key, "num_overmerged"] = comp.count_overmerged_units(overmerged_score)
-                count_units.loc[key, "num_false_positive"] = comp.count_false_positive_units(redundant_score)
-                count_units.loc[key, "num_bad"] = comp.count_bad_units()
+                count_units.at[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
+                count_units.at[key, "num_overmerged"] = comp.count_overmerged_units(overmerged_score)
+                count_units.at[key, "num_false_positive"] = comp.count_false_positive_units(redundant_score)
+                count_units.at[key, "num_bad"] = comp.count_bad_units()
 
         return count_units
 
