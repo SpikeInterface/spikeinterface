@@ -29,13 +29,21 @@ _shared_job_kwargs_doc = """**job_kwargs : keyword arguments for parallel proces
                 - chunk_duration : str or float or None
                     Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
             * n_jobs : int | float
-                Number of jobs to use. With -1 the number of jobs is the same as number of cores.
-                Using a float between 0 and 1 will use that fraction of the total cores.
+                Number of workers that will be requested during multiprocessing. Note that
+                the OS determines how this is distributed, but for convenience one can use
+                  * -1 the number of workers is the same as number of cores (from os.cpu_count())
+                  * float between 0 and 1 uses fraction of total cores (from os.cpu_count())
             * progress_bar : bool
                 If True, a progress bar is printed
             * mp_context : "fork" | "spawn" | None, default: None
                 Context for multiprocessing. It can be None, "fork" or "spawn".
                 Note that "fork" is only safely available on LINUX systems
+            * pool_engine : "process" | "thread", default: "process"
+                Whether to use a ProcessPoolExecutor or ThreadPoolExecutor for multiprocessing
+            * max_threads_per_worker : int | None, default: 1
+                Sets the limit for the number of thread per process using threadpoolctl module
+                Only applies in an n_jobs>1 context
+                If None, then no limits are applied.
     """
 
 
