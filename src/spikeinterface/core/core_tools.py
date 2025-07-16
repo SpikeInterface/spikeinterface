@@ -428,7 +428,8 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
             not_possible.append(p)
             continue
 
-        # check path is not a remote path
+        # check path is not a remote path, see 
+        # https://github.com/SpikeInterface/spikeinterface/issues/4045
         if is_path_remote(p):
             not_possible.append(p)
             continue
