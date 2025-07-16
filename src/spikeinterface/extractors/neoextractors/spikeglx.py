@@ -74,9 +74,8 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         )
 
         self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), load_sync_channel=load_sync_channel))
-        
-        
-        stream_is_nidq = "nidq" in self.stream_id 
+
+        stream_is_nidq = "nidq" in self.stream_id
         stream_is_one_box = "obx" in self.stream_id
         stream_is_sync = "SYNC" in self.stream_id
 
