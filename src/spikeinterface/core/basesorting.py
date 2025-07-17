@@ -269,6 +269,8 @@ class BaseSorting(BaseExtractor):
             return spike_times
 
         # Use the native spiking times if available
+        # Some instances might implement a method themselves to access spike times directly without having to convert
+        # (e.g. NWB extractors)
         if hasattr(segment, "get_unit_spike_train_in_seconds"):
             return segment.get_unit_spike_train_in_seconds(unit_id=unit_id, start_time=start_time, end_time=end_time)
 
