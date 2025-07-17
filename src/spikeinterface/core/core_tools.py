@@ -423,11 +423,19 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
     relative_folder = Path(relative_folder).resolve().absolute()
     not_possible = []
     for p in path_list:
-        p = Path(p)
         # check path is not an URL
         if "http" in str(p):
             not_possible.append(p)
             continue
+
+        # check path is not a remote path, see
+        # https://github.com/SpikeInterface/spikeinterface/issues/4045
+        if is_path_remote(p):
+            not_possible.append(p)
+            continue
+
+        # convert to Path
+        p = Path(p)
 
         # If windows path check have same drive
         if isinstance(p, WindowsPath) and isinstance(relative_folder, WindowsPath):
