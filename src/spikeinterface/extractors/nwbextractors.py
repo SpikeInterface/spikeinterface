@@ -442,8 +442,6 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
     file_path : str, Path, or None
         Path to the NWB file or an s3 URL. Use this parameter to specify the file location
         if not using the `file` parameter.
-    electrical_series_name : str or None, default: None
-        Deprecated, use `electrical_series_path` instead.
     electrical_series_path : str or None, default: None
         The name of the ElectricalSeries object within the NWB file. This parameter is crucial
         when the NWB file contains multiple ElectricalSeries objects. It helps in identifying
@@ -511,7 +509,6 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
     def __init__(
         self,
         file_path: str | Path | None = None,  # provide either this or file
-        electrical_series_name: str | None = None,  # deprecated
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 1_000,
         stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None,
@@ -529,18 +526,6 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
             raise ValueError("Provide either file_path or file, not both")
         if file_path is None and file is None:
             raise ValueError("Provide either file_path or file")
-
-        if electrical_series_name is not None:
-            warning_msg = (
-                "The `electrical_series_name` parameter is deprecated and will be removed in version 0.101.0.\n"
-                "Use `electrical_series_path` instead."
-            )
-            if electrical_series_path is None:
-                warning_msg += f"\nSetting `electrical_series_path` to 'acquisition/{electrical_series_name}'."
-                electrical_series_path = f"acquisition/{electrical_series_name}"
-            else:
-                warning_msg += f"\nIgnoring `electrical_series_name` and using the provided `electrical_series_path`."
-            warnings.warn(warning_msg, DeprecationWarning, stacklevel=2)
 
         self.file_path = file_path
         self.stream_mode = stream_mode
