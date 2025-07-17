@@ -5,8 +5,9 @@ import numpy as np
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-from spikeinterface.core import get_random_data_chunks, get_noise_levels
+from spikeinterface.core import get_noise_levels
 from spikeinterface.core.generate import NoiseGeneratorRecording
+from spikeinterface.core.job_tools import split_job_kwargs
 
 
 class SilencedPeriodsRecording(BasePreprocessor):
@@ -48,6 +49,8 @@ class SilencedPeriodsRecording(BasePreprocessor):
         available_modes = ("zeros", "noise")
         num_seg = recording.get_num_segments()
 
+        random_chunk_kwargs, job_kwargs = split_job_kwargs(random_chunk_kwargs) 
+
         if num_seg == 1:
             if isinstance(list_periods, (list, np.ndarray)) and np.array(list_periods).ndim == 2:
                 # when unique segment accept list instead of of list of list/arrays
@@ -74,7 +77,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
                 random_slices_kwargs = random_chunk_kwargs.copy()
                 random_slices_kwargs["seed"] = seed
                 noise_levels = get_noise_levels(
-                    recording, return_scaled=False, random_slices_kwargs=random_slices_kwargs
+                    recording, return_scaled=False, random_slices_kwargs=random_slices_kwargs, **job_kwargs
                 )
             noise_generator = NoiseGeneratorRecording(
                 num_channels=recording.get_num_channels(),
@@ -97,7 +100,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
             rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_generator, seg_index)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording, list_periods=list_periods, mode=mode, seed=seed)
+        self._kwargs = dict(recording=recording, list_periods=list_periods, mode=mode, seed=seed, noise_levels=noise_levels)
         self._kwargs.update(random_chunk_kwargs)
 
 
