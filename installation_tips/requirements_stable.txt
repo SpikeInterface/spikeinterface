@@ -1,13 +1,8 @@
 spikeinterface[full,widgets]
-numpy<2
 jupyterlab
 PySide6<6.8
-numba
-zarr
 hdbscan
 pyqtgraph
-ipywidgets
-ipympl
 ephyviewer
 spikeinterface-gui
-kilosort
+kilosort>4.0.30

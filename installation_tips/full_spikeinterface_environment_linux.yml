@@ -34,4 +34,4 @@ dependencies:
     - spikeinterface[full,widgets]
     - spikeinterface-gui
     - tridesclous
-    # - phy==2.0b5
+    - kilosort

@@ -27,8 +27,7 @@ dependencies:
   - ipympl
   - pip:
     - ephyviewer
-    - MEArec
     - spikeinterface[full,widgets]
     - spikeinterface-gui
     - tridesclous
-    # - phy==2.0b5
+    - kilosort
