@@ -374,55 +374,6 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None, axs=None):
     return fig
 
 
-def plot_performances(study, mode="ordered", performance_names=("accuracy", "precision", "recall"), case_keys=None):
-    """
-    Plot performances over case for a study.
-
-    Parameters
-    ----------
-    study : BenchmarkStudy
-        A study object.
-    mode : "ordered" | "snr" | "swarm", default: "ordered"
-        Which plot mode to use:
-
-        * "ordered": plot performance metrics vs unit indices ordered by decreasing accuracy
-        * "snr": plot performance metrics vs snr
-        * "swarm": plot performance metrics as a swarm plot (see seaborn.swarmplot for details)
-    performance_names : list or tuple, default: ("accuracy", "precision", "recall")
-        Which performances to plot ("accuracy", "precision", "recall")
-    case_keys : list or None
-        A selection of cases to plot, if None, then all.
-
-    Returns
-    -------
-    fig : matplotlib.figure.Figure
-        The resulting figure containing the plots
-    """
-    if mode == "snr":
-        warnings.warn(
-            "Use study.plot_performances_vs_snr() instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return plot_performances_vs_snr(study, case_keys=case_keys, performance_names=performance_names)
-    elif mode == "ordered":
-        warnings.warn(
-            "Use study.plot_performances_ordered() instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return plot_performances_ordered(study, case_keys=case_keys, performance_names=performance_names)
-    elif mode == "swarm":
-        warnings.warn(
-            "Use study.plot_performances_swarm() instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return plot_performances_swarm(study, case_keys=case_keys, performance_names=performance_names)
-    else:
-        raise ValueError("plot_performances() : wrong mode ")
-
-
 def plot_performances_vs_snr(
     study,
     case_keys=None,

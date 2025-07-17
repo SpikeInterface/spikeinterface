@@ -80,8 +80,9 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         ignore_timestamps_errors: bool = None,
     ):
         if ignore_timestamps_errors is not None:
+            dep_msg = "OpenEphysLegacyRecordingExtractor: `ignore_timestamps_errors` is deprecated. It will be removed in version 0.104.0 and is currently ignored"
             warnings.warn(
-                "OpenEphysLegacyRecordingExtractor: ignore_timestamps_errors is deprecated and is ignored",
+                dep_msg,
                 DeprecationWarning,
                 stacklevel=2,
             )
@@ -161,8 +162,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
         if load_sync_channel:
             warning_message = (
-                "OpenEphysBinaryRecordingExtractor: load_sync_channel is deprecated and will"
-                "be removed in version 0.104, use the stream_name or stream_id to load the sync stream if needed"
+                "OpenEphysBinaryRecordingExtractor: `load_sync_channel` is deprecated and will"
+                "be removed in version 0.104, use the `stream_name` or `stream_id` to load the sync stream if needed"
             )
             warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
 
