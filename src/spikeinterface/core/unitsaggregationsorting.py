@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import math
 import warnings
 import numpy as np
 
-from .core_tools import define_function_from_class
-from .base import BaseExtractor
-from .basesorting import BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
+from spikeinterface.core.segmentutils import _check_sampling_frequencies
 
 
 class UnitsAggregationSorting(BaseSorting):
@@ -18,6 +20,8 @@ class UnitsAggregationSorting(BaseSorting):
         List of BaseSorting objects to aggregate
     renamed_unit_ids: array-like
         If given, unit ids are renamed as provided. If None, unit ids are sequential integers.
+    sampling_frequency_max_diff : float, default: 0
+        Maximum allowed difference of sampling frequencies across recordings
 
     Returns
     -------
@@ -25,7 +29,7 @@ class UnitsAggregationSorting(BaseSorting):
         The aggregated sorting object
     """
 
-    def __init__(self, sorting_list, renamed_unit_ids=None):
+    def __init__(self, sorting_list, renamed_unit_ids=None, sampling_frequency_max_diff=0):
         unit_map = {}
 
         num_all_units = sum([sort.get_num_units() for sort in sorting_list])
@@ -59,13 +63,14 @@ class UnitsAggregationSorting(BaseSorting):
                 unit_map[unit_ids[u_id]] = {"sorting_id": s_i, "unit_id": unit_id}
                 u_id += 1
 
-        sampling_frequency = sorting_list[0].get_sampling_frequency()
+        sampling_frequencies = [sort.sampling_frequency for sort in sorting_list]
         num_segments = sorting_list[0].get_num_segments()
 
-        ok1 = all(sampling_frequency == sort.get_sampling_frequency() for sort in sorting_list)
-        ok2 = all(num_segments == sort.get_num_segments() for sort in sorting_list)
-        if not (ok1 and ok2):
-            raise ValueError("Sortings don't have the same sampling_frequency/num_segments")
+        _check_sampling_frequencies(sampling_frequencies, sampling_frequency_max_diff)
+        sampling_frequency = sampling_frequencies[0]
+        num_segments_ok = all(num_segments == sort.get_num_segments() for sort in sorting_list)
+        if not num_segments_ok:
+            raise ValueError("Sortings don't have the same num_segments")
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
