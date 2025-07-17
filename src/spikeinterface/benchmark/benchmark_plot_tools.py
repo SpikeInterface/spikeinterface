@@ -6,12 +6,11 @@ from .benchmark_tools import sigmoid, fit_sigmoid
 
 
 def despine(ax_or_axes):
-    import seaborn as sns
-
     if not isinstance(ax_or_axes, (list, tuple, np.ndarray)):
         ax_or_axes = [ax_or_axes]
     for ax in np.array(ax_or_axes).flatten():
-        sns.despine(ax=ax)
+        for loc in ("top", "right", ):
+            ax.spines[loc].set_visible(False)
 
 
 def clean_axis(ax):
@@ -114,7 +113,7 @@ def aggregate_dataframe_by_levels(df, study, case_keys=None, levels_to_group_by=
     return df, new_case_keys, labels, colors
 
 
-def plot_run_times(study, case_keys=None, levels_to_group_by=None, figsize=None, ax=None):
+def plot_run_times(study, case_keys=None, mode="bar", levels_to_group_by=None, figsize=None, ax=None):
     """
     Plot run times for a BenchmarkStudy.
 
@@ -163,66 +162,45 @@ def plot_run_times(study, case_keys=None, levels_to_group_by=None, figsize=None,
         colors = study.get_colors(levels_to_group_by=levels_to_group_by)
         keys_mapping, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_group_by, case_keys=case_keys)
 
-        x, height, yerr, color = [], [], [], []
-        for i, key in enumerate(keys_mapping):
-            rt = run_times.xs(key, level=levels_to_group_by).values
-            x.append(i + 1)
-            height.append(np.mean(rt))
-            if rt.size > 1:
-                yerr.append(np.std(rt))
-            else:
-                yerr.append(0)
-            color.append(colors[key])
+        if mode == "bar":
+            x, height, yerr, color = [], [], [], []
+            for i, key in enumerate(keys_mapping):
+                if len(levels_to_group_by) == 1:
+                    rt = run_times.xs((key,), level=levels_to_group_by).values.flatten()
+                else:
+                    rt = run_times.xs(key, level=levels_to_group_by).values.flatten()
+                x.append(i + 1)
+                height.append(np.mean(rt))
+                if rt.size > 1:
+                    yerr.append(np.std(rt))
+                else:
+                    yerr.append(0)
+                color.append(colors[key])
+            ax.bar(x, height, yerr=yerr, color=color, ecolor='k')
 
-        ax.bar(x, height, yerr=yerr, color=color, ecolor='k')
+        elif mode == "box":
+            rts =[]
+            for i, key in enumerate(keys_mapping):
+                if len(levels_to_group_by) == 1:
+                    rt = run_times.xs((key,), level=levels_to_group_by).values.flatten()
+                else:
+                    rt = run_times.xs(key, level=levels_to_group_by).values.flatten()
+                rts.append(rt)
+            lines = ax.boxplot(rts)
+            for k in lines:
+                for i, e in enumerate(lines[k]):
+                    # small hack to control the colors
+                    if len(lines[k]) == len(rts):
+                        color = colors[list(keys_mapping.keys())[i]]
+                    elif len(lines[k]) == len(rts) * 2:
+                        color = colors[list(keys_mapping.keys())[i // 2]]
+                    else:
+                        color= 'k'
+                    e.set_color(color) 
+
         ax.set_ylabel("Run times (s)")
         ax.set_xticks(np.arange(len(labels)) + 1)
         ax.set_xticklabels(list(labels.values()), rotation=45.0)
-
-
-        # import seaborn as sns
-
-        # run_times, case_keys, labels, colors = aggregate_dataframe_by_levels(run_times, study, case_keys, levels_to_group_by)
-        # palette_keys = case_keys
-
-        # if levels_to_group_by is None:
-        #     x = None
-        #     hue = case_keys
-        #     plt_fun = sns.barplot
-        # elif len(levels_to_group_by) == 1:
-        #     x = None
-        #     hue = levels_to_group_by[0]
-        #     plt_fun = sns.boxplot
-        # elif len(levels_to_group_by) == 2:
-        #     # here we need to override the colors, since we are using x and hue
-        #     # to displaye the 2 levels. We need to set the colors for the hue level alone
-        #     x, hue = levels_to_group_by
-        #     hues = np.unique([c[1] for c in case_keys])
-        #     colors = study.get_colors(levels_to_group_by=[hue])
-        #     plt_fun = sns.boxplot
-        #     palette_keys = hues
-        # else:
-        #     # we aggregate levels into the same column and use the last level as hue
-        #     levels_to_aggregate = levels_to_group_by[:-1]
-        #     hue = levels_to_group_by[-1]
-        #     x = " / ".join(levels_to_aggregate)
-        #     run_times.loc[:, x] = run_times.index.map(lambda x: " / ".join(map(str, x[:-1])))
-        #     hues = np.unique([c[-1] for c in case_keys])
-        #     colors = study.get_colors(levels_to_group_by=[hue])
-        #     plt_fun = sns.barplot
-        #     palette_keys = hues
-
-        # assert all(
-        #     [key in colors for key in palette_keys]
-        # ), f"colors must have a color for each palette key: {palette_keys}"
-
-        # plt_fun(data=run_times, y="run_times", x=x, hue=hue, ax=ax, palette=colors)
-
-        # despine(ax)
-        # if levels_to_group_by is None:
-        #     h, l = ax.get_legend_handles_labels()
-        #     ax.legend(h, list(labels.values()))
-        # ax.set_ylabel("run time (s)")
 
     return fig
 
@@ -286,7 +264,10 @@ def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None
                 y = count_units.at[key, col]
                 yerr = None
             else:
-                all_y = count_units.xs(key, level=levels_to_group_by)[col].values
+                if len(levels_to_group_by) == 1:
+                    all_y = count_units.xs((key, ), level=levels_to_group_by)[col].values
+                else:
+                    all_y = count_units.xs(key, level=levels_to_group_by)[col].values
                 y = np.mean(all_y)
                 if len(all_y) > 1:
                     yerr = [np.std(all_y)]
@@ -321,93 +302,6 @@ def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None
     ax.set_xticks(np.arange(len(xticklabels)) + 1)
     ax.set_xticklabels(xticklabels, rotation=45.0)
     ax.legend()
-
-
-    # if levels_to_group_by is None:
-    #     columns = count_units.columns.tolist()
-    #     columns.remove("num_gt")
-    #     columns.remove("num_sorter")
-
-    #     ncol = len(columns)
-
-    #     colors = get_some_colors(columns, color_engine="auto", map_name="hot")
-    #     colors["num_well_detected"] = "green"
-
-    #     xticklabels = []
-    #     for i, key in enumerate(case_keys):
-    #         for c, col in enumerate(columns):
-    #             x = i + 1 + c / (ncol + 1)
-    #             y = count_units.loc[key, col]
-    #             if not "well_detected" in col:
-    #                 y = -y
-
-    #             if i == 0:
-    #                 label = col.replace("num_", "").replace("_", " ").title()
-    #             else:
-    #                 label = None
-    #             ax.bar([x], [y], width=1 / (ncol + 2), label=label, color=colors[col])
-    #         xticklabels.append(study.cases[key]["label"])
-    #     ax.set_xticks(np.arange(len(case_keys)) + 1)
-    #     ax.set_xticklabels(xticklabels, rotation=45.0)
-    #     ax.legend()
-
-    # else:
-
-        # import pandas as pd
-        # import seaborn as sns
-
-        # count_units, case_keys, _, _ = aggregate_dataframe_by_levels(count_units, study, case_keys, levels_to_group_by)
-        # count_units = count_units.drop(columns=["num_gt", "num_sorter"])
-        # if "num_bad" in count_units.columns:
-        #     count_units = count_units.drop(columns=["num_bad"])
-
-        # # set hue based on exhaustive GT
-        # if "num_overmerged" in count_units.columns:
-        #     hue_order = ["Well Detected", "False Positive", "Redundant", "Overmerged"]
-        # else:
-        #     hue_order = ["Well Detected"]
-
-        # for col in count_units.columns:
-        #     vals = count_units[col].values
-        #     if not "well_detected" in col:
-        #         vals = -vals
-        #     col_name = col.replace("num_", "").replace("_", " ").title()
-        #     count_units.loc[:, col_name] = vals
-        #     del count_units[col]
-
-        # columns = count_units.columns.tolist()
-        # if colors is None:
-        #     colors = get_some_colors(columns, color_engine="auto", map_name="hot")
-        #     colors["Well Detected"] = "green"
-        # else:
-        #     assert all([col in colors for col in columns]), f"colors must have a color for each column: {columns}"
-
-        # df = pd.melt(
-        #     count_units.reset_index(),
-        #     id_vars=levels_to_group_by,
-        #     value_vars=columns,
-        #     var_name="Unit class",
-        #     value_name="Count",
-        # )
-
-        # if len(levels_to_group_by) > 1:
-        #     x = " / ".join(levels_to_group_by)
-        #     df.loc[:, x] = df.apply(lambda r: " / ".join([str(r[col]) for col in levels_to_group_by]), axis=1)
-        #     df = df.drop(columns=levels_to_group_by)
-        # else:
-        #     x = levels_to_group_by[0]
-
-        # sns.barplot(
-        #     data=df,
-        #     x=x,
-        #     y="Count",
-        #     hue="Unit class",
-        #     ax=ax,
-        #     hue_order=hue_order,
-        #     palette=colors,
-        # )
-
-        # despine(ax)
 
     return fig
 
