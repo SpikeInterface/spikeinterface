@@ -205,7 +205,7 @@ def plot_run_times(study, case_keys=None, mode="bar", levels_to_group_by=None, f
     return fig
 
 
-def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None, columns=None, with_rectangle=True, figsize=None, ax=None):
+def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None, columns=None, with_rectangle=True, revert_bad=True, figsize=None, ax=None):
     """
     Plot unit counts for a study: "num_well_detected", "num_false_positive", "num_redundant", "num_overmerged"
 
@@ -219,6 +219,12 @@ def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None
         A list of levels to keep. Unit counts are aggregated by these levels.
     colors : dict | None, default: None
         A dictionary of colors to use for each class ("Well Detected", "False Positive", "Redundant", "Overmerged").
+    columns : None | list
+        Optionaly select which columns to display
+    with_rectangle : bool
+        Add or not a grouping colored rectangle for each case.
+    revert_bad : bool
+        Revert or not bad columns ('num_false_positive', 'num_redundant', 'num_overmerged' ...)
     figsize : tuple | None, default: None
         The size of the figure.
     ax : matplotlib.axes.Axes | None, default: None
@@ -250,6 +256,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None
         columns.remove("num_sorter")
 
     ncol = len(columns)
+    width = 1 / (ncol + 2)
 
     colors = get_some_colors(columns, color_engine="auto", map_name="hot")
     colors["num_well_detected"] = "green"
@@ -274,14 +281,14 @@ def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None
                 else:
                     yerr = None
 
-            if not "well_detected" in col:
+            if not "well_detected" in col and revert_bad:
                 y = -y
 
             if i == 0:
                 label = col.replace("num_", "").replace("_", " ").title()
             else:
                 label = None
-            ax.bar([x], [y], yerr=yerr, width=1 / (ncol + 2), label=label, color=colors[col])
+            ax.bar([x], [y], yerr=yerr, width=width, label=label, color=colors[col])
 
             if yerr is None:
                 ymin = min(ymin, y)
@@ -291,15 +298,14 @@ def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None
                 ymax = max(ymax, y + yerr[0])                
     
     if with_rectangle:
-        w = 1 / (ncol + 1)
-        spacing = w * .3
+        spacing = width * .3
         for i, key in enumerate(keys_mapping):
-            rect = plt.Rectangle((i + 1 - w/2 - spacing, ymin), 1 - spacing, ymax - ymin,
+            rect = plt.Rectangle((i + 1 - width/2 - spacing, ymin), 1 - spacing, ymax - ymin,
                                  linewidth=2, edgecolor=case_colors[key], facecolor='none')
             ax.add_patch(rect)
 
     xticklabels = list(labels.values())
-    ax.set_xticks(np.arange(len(xticklabels)) + 1)
+    ax.set_xticks(np.arange(len(xticklabels)) + 1.5 - width)
     ax.set_xticklabels(xticklabels, rotation=45.0)
     ax.legend()
 
