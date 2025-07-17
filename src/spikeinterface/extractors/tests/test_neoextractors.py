@@ -43,7 +43,7 @@ from spikeinterface.extractors.extractor_classes import (
     AxonRecordingExtractor,
 )
 
-from spikeinterface.extractors.neoextractors.intan import read_intan_segmented
+from spikeinterface.extractors.neoextractors.intan import IntanSegmentedRecordingExtractor
 
 from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
 
@@ -186,7 +186,7 @@ class IntanRecordingTestMultipleFilesFormat(RecordingCommonTestSuite, unittest.T
 
 
 class IntanSegmentedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
-    ExtractorClass = read_intan_segmented
+    ExtractorClass = IntanSegmentedRecordingExtractor
     downloads = ["intan"]
     entities = [
         "intan/test_tetrode_240502_162925",

@@ -20,7 +20,7 @@ from spikeinterface.core import (
 # sorting/recording/event from neo
 from .neoextractors import *
 from .neoextractors import read_neuroscope
-from .neoextractors.intan import read_intan_segmented
+from .neoextractors.intan import read_intan_segmented, IntanSegmentedRecordingExtractor
 
 # non-NEO objects implemented in neo folder
 # keep for reference Currently pulling from neoextractor __init__

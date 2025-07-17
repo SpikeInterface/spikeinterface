@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core import concatenate_recordings
+from spikeinterface.core.segmentutils import ConcatenateSegmentRecording
 from .neobaseextractor import NeoBaseRecordingExtractor
 
 
@@ -107,19 +107,12 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
 read_intan = define_function_from_class(source_class=IntanRecordingExtractor, name="read_intan")
 
 
-def read_intan_segmented(
-    folder_path,
-    stream_id=None,
-    stream_name=None,
-    all_annotations=False,
-    use_names_as_ids=False,
-    ignore_integrity_checks: bool = False,
-):
+class IntanSegmentedRecordingExtractor(ConcatenateSegmentRecording):
     """
-    Read Intan traditional format split files from a folder and concatenate them in temporal order.
+    Class for reading Intan traditional format split files from a folder and concatenating them in temporal order.
 
     Intan traditional format creates multiple files with time-based naming when recording for extended
-    periods. This function automatically sorts the files by filename and concatenates them
+    periods. This class automatically sorts the files by filename and concatenates them
     to create a continuous recording.
 
     Parameters
@@ -140,44 +133,62 @@ def read_intan_segmented(
         check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
         the attribute `discontinuous_timestamps` to True in the underlying neo object.
 
-    Returns
-    -------
-    recording : ConcatenatedRecordingExtractor
-        Concatenated recording from all split files in temporal order
-
     Examples
     --------
-    >>> from spikeinterface.extractors import read_intan_segmented
-    >>> recording = read_intan_segmented("/path/to/intan/folder")
+    >>> from spikeinterface.extractors import IntanSegmentedRecordingExtractor
+    >>> recording = IntanSegmentedRecordingExtractor("/path/to/intan/folder")
     """
-    folder_path = Path(folder_path)
 
-    if not folder_path.exists() or not folder_path.is_dir():
-        raise ValueError(f"Folder path {folder_path} does not exist or is not a directory")
+    def __init__(
+        self,
+        folder_path,
+        stream_id=None,
+        stream_name=None,
+        all_annotations=False,
+        use_names_as_ids=False,
+        ignore_integrity_checks: bool = False,
+    ):
+        folder_path = Path(folder_path)
 
-    # Find all Intan files
-    file_path_list = [p for p in folder_path.iterdir() if p.suffix.lower() in [".rhd", ".rhs"]]
+        if not folder_path.exists() or not folder_path.is_dir():
+            raise ValueError(f"Folder path {folder_path} does not exist or is not a directory")
 
-    if not file_path_list:
-        raise ValueError(f"No Intan files (.rhd or .rhs) found in {folder_path}")
+        # Find all Intan files
+        file_path_list = [p for p in folder_path.iterdir() if p.suffix.lower() in [".rhd", ".rhs"]]
 
-    # Sort files by filename (natural sort)
-    file_path_list.sort(key=lambda x: x.name)
+        if not file_path_list:
+            raise ValueError(f"No Intan files (.rhd or .rhs) found in {folder_path}")
 
-    # Read each file and create recording list
-    recording_list = []
-    for file_path in file_path_list:
-        recording = read_intan(
-            file_path,
+        # Sort files by filename (natural sort)
+        file_path_list.sort(key=lambda x: x.name)
+
+        # Read each file and create recording list
+        recording_list = []
+        for file_path in file_path_list:
+            recording = read_intan(
+                file_path,
+                stream_id=stream_id,
+                stream_name=stream_name,
+                all_annotations=all_annotations,
+                use_names_as_ids=use_names_as_ids,
+                ignore_integrity_checks=ignore_integrity_checks,
+            )
+            recording_list.append(recording)
+
+        # Initialize the parent class with the recording list
+        ConcatenateSegmentRecording.__init__(self, recording_list)
+
+        # Update kwargs to include our specific parameters
+        self._kwargs = dict(
+            folder_path=str(Path(folder_path).resolve()),
             stream_id=stream_id,
             stream_name=stream_name,
             all_annotations=all_annotations,
             use_names_as_ids=use_names_as_ids,
             ignore_integrity_checks=ignore_integrity_checks,
         )
-        recording_list.append(recording)
 
-    # Concatenate all recordings
-    concatenated_recording = concatenate_recordings(recording_list=recording_list)
 
-    return concatenated_recording
+read_intan_segmented = define_function_from_class(
+    source_class=IntanSegmentedRecordingExtractor, name="read_intan_segmented"
+)
