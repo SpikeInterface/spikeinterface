@@ -105,6 +105,7 @@ NEO-based
     .. autofunction:: read_blackrock
     .. autofunction:: read_ced
     .. autofunction:: read_intan
+    .. autofunction:: read_intan_segmented
     .. autofunction:: read_maxwell
     .. autofunction:: read_mearec
     .. autofunction:: read_mcsraw

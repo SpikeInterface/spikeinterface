@@ -127,6 +127,7 @@ For raw recording formats, we currently support:
 * **EDF** :py:func:`~spikeinterface.extractors.read_edf()`
 * **IBL streaming** :py:func:`~spikeinterface.extractors.read_ibl_recording()`
 * **Intan** :py:func:`~spikeinterface.extractors.read_intan()`
+* **Intan segmented** :py:func:`~spikeinterface.extractors.read_intan_segmented()`
 * **MaxWell** :py:func:`~spikeinterface.extractors.read_maxwell()`
 * **MCS H5** :py:func:`~spikeinterface.extractors.read_mcsh5()`
 * **MCS RAW** :py:func:`~spikeinterface.extractors.read_mcsraw()`
