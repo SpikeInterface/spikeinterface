@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core import concatenate_recordings
 from .neobaseextractor import NeoBaseRecordingExtractor
 
 
@@ -104,3 +105,54 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
 
 
 read_intan = define_function_from_class(source_class=IntanRecordingExtractor, name="read_intan")
+
+
+def read_intan_segmented(folder_path, **kwargs):
+    """
+    Read Intan traditional format split files from a folder and concatenate them in temporal order.
+    
+    Intan traditional format creates multiple files with time-based naming when recording for extended
+    periods. This function automatically sorts the files by filename and concatenates them
+    to create a continuous recording.
+    
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the folder containing split Intan files (.rhd or .rhs extensions)
+    **kwargs
+        Additional keyword arguments passed to read_intan() for each file
+        
+    Returns
+    -------
+    recording : ConcatenatedRecordingExtractor
+        Concatenated recording from all split files in temporal order
+        
+    Examples
+    --------
+    >>> from spikeinterface.extractors import read_intan_segmented
+    >>> recording = read_intan_segmented("/path/to/intan/folder")
+    """
+    folder_path = Path(folder_path)
+    
+    if not folder_path.exists() or not folder_path.is_dir():
+        raise ValueError(f"Folder path {folder_path} does not exist or is not a directory")
+    
+    # Find all Intan files
+    file_path_list = [p for p in folder_path.iterdir() if p.suffix.lower() in ['.rhd', '.rhs']]
+    
+    if not file_path_list:
+        raise ValueError(f"No Intan files (.rhd or .rhs) found in {folder_path}")
+    
+    # Sort files by filename (natural sort)
+    file_path_list.sort(key=lambda x: x.name)
+    
+    # Read each file and create recording list
+    recording_list = []
+    for file_path in file_path_list:
+        recording = read_intan(file_path, **kwargs)
+        recording_list.append(recording)
+    
+    # Concatenate all recordings
+    concatenated_recording = concatenate_recordings(recording_list=recording_list)
+    
+    return concatenated_recording
