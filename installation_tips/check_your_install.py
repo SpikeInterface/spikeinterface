@@ -1,6 +1,5 @@
 from pathlib import Path
 import platform
-import os
 import shutil
 import argparse
 import warnings

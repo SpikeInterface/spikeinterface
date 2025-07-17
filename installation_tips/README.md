@@ -37,19 +37,19 @@ This environment will install:
    `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
 3. Exit the session and log in again.
 4. Download with right click and save this file in your "Documents" folder:
-    * [`requirements_stable.txt`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/requirements_stable.txt) for stable release
+    * [`beginner_requirements_stable.txt`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/beginner_requirements_stable.txt) for stable release
 5. Open terminal or powershell and run:
 6. `uv venv si_env --python 3.12`
 7. Activate your virtual environment by running:
    - For Mac/Linux: `source si_env/bin/activate` (you should see `(si_env)` in your terminal)
    - For Windows: `si_env\Scripts\activate`
-8. Run `uv pip install -r Documents/requirements_stable.txt`
+8. Run `uv pip install -r Documents/beginner_requirements_stable.txt`
 
 
 ## Installing before release (from source)
 
 Some tools in the spikeinteface ecosystem are getting regular bug fixes (spikeinterface, spikeinterface-gui, probeinterface, neo).
-We are making releases 2 to 4 times a year. In between releases if you want to install from source you can use the `requirements_rolling.txt` file to create the environment instead of the `requirements_stable.txt` file. This will install the packages of the ecosystem from source.
+We are making releases 2 to 4 times a year. In between releases if you want to install from source you can use the `beginner_requirements_rolling.txt` file to create the environment instead of the `beginner_requirements_stable.txt` file. This will install the packages of the ecosystem from source.
 This is a good way to test if a patch fixes your issue.
 
 
@@ -81,24 +81,14 @@ Steps:
 
 1. Download Anaconda individual edition [here](https://www.anaconda.com/download)
 2. Run the installer. Check the box “Add anaconda3 to my Path environment variable”. It makes life easier for beginners.
-3. Download with right click + save the file corresponding to your operating system, and put it in "Documents" folder
-    * [`full_spikeinterface_environment_windows.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/full_spikeinterface_environment_windows.yml)
-    * [`full_spikeinterface_environment_mac.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/full_spikeinterface_environment_mac.yml)
-    * [`full_spikeinterface_environment_linux.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/full_spikeinterface_environment_linux.yml)
+3. Download with right click + save the enfironment YAML file ([`beginner_conda_env_stable.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/main/installation_tips/beginner_conda_env_stable.yml)) and put it in "Documents" folder
 4. Then open the "Anaconda Command Prompt" (if Windows, search in your applications) or the Terminal (for Mac users)
 5. If not in the "Documents" folder type `cd Documents`
-6. Then run this depending on your OS:
-    * `conda env create --file full_spikeinterface_environment_windows.yml`
-    * `conda env create --file full_spikeinterface_environment_mac.yml`
-
+6. Run this command to create the environment:
+   ```bash
+   conda env create --file beginner_conda_env_stable.yml
+   ```
 
 Done! Before running a spikeinterface script you will need to "select" this "environment" with `conda activate si_env`.
 
 Note for **Linux** users: this conda recipe should work but we recommend strongly to use **pip + virtualenv**.
-
-
-## Installing before release (from source)
-
-Some tools in the spikeinteface ecosystem are getting regular bug fixes (spikeinterface, spikeinterface-gui, probeinterface, neo).
-We are making releases 2 to 4 times a year. In between releases if you want to install from source you can use the `full_spikeinterface_environment_rolling_updates.yml` file to create the environment. This will install the packages of the ecosystem from source.
-This is a good way to test if a patch fixes your issue.
