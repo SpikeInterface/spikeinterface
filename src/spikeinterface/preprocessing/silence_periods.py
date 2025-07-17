@@ -37,6 +37,12 @@ class SilencedPeriodsRecording(BasePreprocessor):
         - "noise": The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel
                    basis
+    job_kwargs : dict
+        Keyword arguments for the joblib parallelization. If you want to use
+        `job_kwargs`, you need to pass them as a dictionary with the key "job_kwargs".
+        For example, `job_kwargs={"num_workers": 4}`.
+        Note that this is not used for the `get_noise_levels` function, which has its own
+        `random_slices_kwargs` argument.
     **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
@@ -45,11 +51,9 @@ class SilencedPeriodsRecording(BasePreprocessor):
         The recording extractor after silencing some periods
     """
 
-    def __init__(self, recording, list_periods, mode="zeros", noise_levels=None, seed=None, **random_chunk_kwargs):
+    def __init__(self, recording, list_periods, mode="zeros", noise_levels=None, seed=None, job_kwargs=dict(), **random_chunk_kwargs):
         available_modes = ("zeros", "noise")
         num_seg = recording.get_num_segments()
-
-        random_chunk_kwargs, job_kwargs = split_job_kwargs(random_chunk_kwargs) 
 
         if num_seg == 1:
             if isinstance(list_periods, (list, np.ndarray)) and np.array(list_periods).ndim == 2:
