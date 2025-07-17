@@ -130,7 +130,7 @@ def load(
 
 def load_extractor(file_or_folder_or_dict, base_folder=None) -> "BaseExtractor":
     warnings.warn(
-        "load_extractor() is deprecated and will be removed in the future. Please use load() instead.",
+        "load_extractor() is deprecated and will be removed in version 0.104.0. Please use load() instead.",
         DeprecationWarning,
         stacklevel=2,
     )

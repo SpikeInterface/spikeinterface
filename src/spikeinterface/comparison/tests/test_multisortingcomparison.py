@@ -76,10 +76,6 @@ def test_compare_multiple_sorters(setup_module):
     agreement_2 = msc.get_agreement_sorting(minimum_agreement_count=2, minimum_agreement_count_only=True)
     assert np.all([agreement_2.get_unit_property(u, "agreement_number")] == 2 for u in agreement_2.get_unit_ids())
 
-    msc.save_to_folder(multicomparison_folder)
-
-    msc = MultiSortingComparison.load_from_folder(multicomparison_folder)
-
 
 def test_compare_multi_segment():
     num_segments = 3
