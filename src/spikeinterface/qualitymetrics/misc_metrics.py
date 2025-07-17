@@ -979,6 +979,7 @@ def _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign):
 
     return amplitudes_by_units
 
+
 def compute_amplitude_cutoffs(
     sorting_analyzer,
     peak_sign="neg",
