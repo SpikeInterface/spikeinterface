@@ -107,7 +107,7 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
 read_intan = define_function_from_class(source_class=IntanRecordingExtractor, name="read_intan")
 
 
-class IntanSegmentedRecordingExtractor(ConcatenateSegmentRecording):
+class IntanSplitFilesRecordingExtractor(ConcatenateSegmentRecording):
     """
     Class for reading Intan traditional format split files from a folder and concatenating them in temporal order.
 
@@ -135,8 +135,8 @@ class IntanSegmentedRecordingExtractor(ConcatenateSegmentRecording):
 
     Examples
     --------
-    >>> from spikeinterface.extractors import IntanSegmentedRecordingExtractor
-    >>> recording = IntanSegmentedRecordingExtractor("/path/to/intan/folder")
+    >>> from spikeinterface.extractors import IntanSplitFilesRecordingExtractor
+    >>> recording = IntanSplitFilesRecordingExtractor("/path/to/intan/folder")
     """
 
     def __init__(
@@ -189,6 +189,6 @@ class IntanSegmentedRecordingExtractor(ConcatenateSegmentRecording):
         )
 
 
-read_intan_segmented = define_function_from_class(
-    source_class=IntanSegmentedRecordingExtractor, name="read_intan_segmented"
+read_split_intan_files = define_function_from_class(
+    source_class=IntanSplitFilesRecordingExtractor, name="read_split_intan_files"
 )

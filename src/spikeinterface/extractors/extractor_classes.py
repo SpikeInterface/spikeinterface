@@ -20,7 +20,7 @@ from spikeinterface.core import (
 # sorting/recording/event from neo
 from .neoextractors import *
 from .neoextractors import read_neuroscope
-from .neoextractors.intan import read_intan_segmented, IntanSegmentedRecordingExtractor
+from .neoextractors.intan import read_split_intan_files, IntanSplitFilesRecordingExtractor
 
 # non-NEO objects implemented in neo folder
 # keep for reference Currently pulling from neoextractor __init__
@@ -201,6 +201,6 @@ __all__.extend(
         "read_binary",  # convenience function for binary formats
         "read_zarr",
         "read_neuroscope",  # convenience function for neuroscope
-        "read_intan_segmented",  # convenience function for segmented intan files
+        "read_split_intan_files",  # convenience function for segmented intan files
     ]
 )
