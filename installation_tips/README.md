@@ -101,4 +101,5 @@ Note for **Linux** users: this conda recipe should work but we recommend strongl
 
 
 
-[^1]: Although uv installation instructions are for the Powershell. Our sorter scripts are for the CMD Prompt. Using both terminals is possible.
+[^1]: Although uv installation instructions are for the Powershell, our sorter scripts are for the CMD Prompt. After the initial installation with Powershell, any session that will have sorting requires the CMD Prompt. If you do not
+plan to spike sort in a session either shell could be used.
