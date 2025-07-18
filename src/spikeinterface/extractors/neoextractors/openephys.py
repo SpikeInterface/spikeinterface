@@ -80,8 +80,9 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         ignore_timestamps_errors: bool = None,
     ):
         if ignore_timestamps_errors is not None:
+            dep_msg = "OpenEphysLegacyRecordingExtractor: `ignore_timestamps_errors` is deprecated. It will be removed in version 0.104.0 and is currently ignored"
             warnings.warn(
-                "OpenEphysLegacyRecordingExtractor: ignore_timestamps_errors is deprecated and is ignored",
+                dep_msg,
                 DeprecationWarning,
                 stacklevel=2,
             )
@@ -161,8 +162,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
         if load_sync_channel:
             warning_message = (
-                "OpenEphysBinaryRecordingExtractor: load_sync_channel is deprecated and will"
-                "be removed in version 0.104, use the stream_name or stream_id to load the sync stream if needed"
+                "OpenEphysBinaryRecordingExtractor: `load_sync_channel` is deprecated and will"
+                "be removed in version 0.104, use the `stream_name` or `stream_id` to load the sync stream if needed"
             )
             warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
 
@@ -353,20 +354,20 @@ def read_openephys(folder_path, **kwargs):
     load_sync_channel : bool, default: False
         If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
         If True, the SYNC channel is loaded and can be accessed in the analog signals.
-        For open ephsy binary format only
+        For open ephys binary format only
     load_sync_timestamps : bool, default: False
         If True, the synchronized_timestamps are loaded and set as times to the recording.
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
         to be uniform and linearly increasing.
-        For open ephsy binary format only
+        For open ephys binary format only
     experiment_names : str, list, or None, default: None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
         E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
-        For open ephsy binary format only
+        For open ephys binary format only
     ignore_timestamps_errors : bool, default: False
         Ignore the discontinuous timestamps errors in neo
-        For open ephsy legacy format only
+        For open ephys legacy format only
 
 
     Returns

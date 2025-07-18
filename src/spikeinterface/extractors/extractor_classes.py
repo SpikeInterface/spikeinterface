@@ -19,6 +19,7 @@ from spikeinterface.core import (
 
 # sorting/recording/event from neo
 from .neoextractors import *
+from .neoextractors import read_neuroscope
 
 # non-NEO objects implemented in neo folder
 # keep for reference Currently pulling from neoextractor __init__
@@ -84,7 +85,7 @@ from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
 #    * A mapping from the original class to its wrapper string (because of __all__)
 #    * A mapping from format to the class wrapper for convenience (exposed to users for ease of use)
 #
-# To achieve these there goals we do the following:
+# To achieve these three goals we do the following:
 #
 # 1) we line up each class with its wrapper that returns a snakecase version of the class (in some docs called
 #    the "function" version, although this is just a wrapper of the underlying class)
@@ -161,7 +162,7 @@ _snippets_extractor_full_dict = {
 # (e.g. 'intan' , 'kilosort') and values being the appropriate Extractor class returned as its wrapper
 # (e.g. IntanRecordingExtractor, KiloSortSortingExtractor)
 # An important note is the the formats are returned after performing `.lower()` so a format like
-# SpikeGLX will be a key of 'spikeglx'
+# SpikeGLX will have a key of 'spikeglx'
 # for example if we wanted to create a recording from an intan file we could do the following:
 # >>> recording = se.recording_extractor_full_dict['intan'](file_path='path/to/data.rhd')
 
@@ -198,5 +199,6 @@ __all__.extend(
         "snippets_extractor_full_dict",
         "read_binary",  # convenience function for binary formats
         "read_zarr",
+        "read_neuroscope",  # convenience function for neuroscope
     ]
 )

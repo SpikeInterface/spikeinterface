@@ -288,9 +288,11 @@ class TestKilosort4Long:
         self._check_arguments(cluster_spikes, expected_arguments)
 
     def test_save_sorting_arguments(self):
-        expected_arguments = ["ops", "results_dir", "st", "clu", "tF", "Wall", "imin", "tic0", "save_extra_vars"]
-
-        expected_arguments.append("save_preprocessed_copy")
+        expected_arguments = [
+            "ops", "results_dir", "st", "clu", "tF", "Wall", "imin", "tic0", "save_extra_vars", "save_preprocessed_copy"
+        ]
+        if parse(kilosort.__version__) >= parse("4.0.39"):
+            expected_arguments.append("skip_dat_path")
 
         self._check_arguments(save_sorting, expected_arguments)
 
