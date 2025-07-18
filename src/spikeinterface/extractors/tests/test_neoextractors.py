@@ -190,7 +190,8 @@ class IntanSplitFilesRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = IntanSplitFilesRecordingExtractor
     downloads = ["intan"]
     entities = [
-        "intan/test_tetrode_240502_162925",
+        ("intan/test_tetrode_240502_162925", {"mode": "concatenate"}),
+        ("intan/test_tetrode_240502_162925", {"mode": "append"}),
     ]
 
 

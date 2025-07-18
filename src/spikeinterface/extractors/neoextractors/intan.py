@@ -110,16 +110,20 @@ read_intan = define_function_from_class(source_class=IntanRecordingExtractor, na
 
 class IntanSplitFilesRecordingExtractor(ConcatenateSegmentRecording, AppendSegmentRecording):
     """
-    Class for reading Intan traditional format split files from a folder and concatenating them in temporal order.
+    Class for reading Intan traditional format split files from a folder and
+    concatenating/appending them in temporal order.
 
-    Intan traditional format creates multiple files with time-based naming when recording for extended
-    periods. This class automatically sorts the files by filename and concatenates them
-    to create a continuous recording.
+    Intan traditional format creates multiple files with time-based naming when recording
+    for extended periods. This class automatically sorts the files by filename and concatenates
+    them to create a continuous recording (monosegment) or appends them to a multisegment recording.
 
     Parameters
     ----------
     folder_path : str or Path
         Path to the folder containing split Intan files (.rhd or .rhs extensions)
+    mode : "concatenate" | "append": default: "concatenate"
+        The determines whether to concatenate intan files to make a monosegment or to append them
+        to make a multisegment recording
     stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
     stream_name : str, default: None
@@ -143,13 +147,20 @@ class IntanSplitFilesRecordingExtractor(ConcatenateSegmentRecording, AppendSegme
     def __init__(
         self,
         folder_path,
-        mode: Literal["append" | "concatenate"] = "concatenate",
+        mode: Literal["append", "concatenate"] = "concatenate",
         stream_id=None,
         stream_name=None,
         all_annotations=False,
         use_names_as_ids=False,
         ignore_integrity_checks: bool = False,
     ):
+
+        if mode not in ("append", "concatenate"):
+            mode_error = (
+                "Possible options for the `mode` argument are 'concatenate' or 'append', you have entered " f"{mode}."
+            )
+            raise ValueError(mode_error)
+
         folder_path = Path(folder_path)
 
         if not folder_path.exists() or not folder_path.is_dir():
