@@ -111,6 +111,10 @@ def detect_peaks(
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
     job_kwargs["mp_context"] = method_class.preferred_mp_context
 
+    if method_class.need_noise_levels:
+        random_chunk_kwargs = method_kwargs.pop("random_chunk_kwargs", {})
+        method_kwargs["noise_levels"] = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs, **job_kwargs)
+
     node0 = method_class(recording, **method_kwargs)
     nodes = [node0]
 
@@ -384,6 +388,7 @@ class DetectPeakByChannel(PeakDetectorWrapper):
 
     name = "by_channel"
     engine = "numpy"
+    need_noise_levels = True
     preferred_mp_context = None
     params_doc = """
     peak_sign: "neg" | "pos" | "both", default: "neg"
@@ -410,12 +415,11 @@ class DetectPeakByChannel(PeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         noise_levels=None,
+
         random_chunk_kwargs={},
     ):
         assert peak_sign in ("both", "neg", "pos")
 
-        if noise_levels is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
@@ -466,6 +470,7 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
 
     name = "by_channel_torch"
     engine = "torch"
+    need_noise_levels = True
     preferred_mp_context = "spawn"
     params_doc = """
     peak_sign: "neg" | "pos" | "both", default: "neg"
@@ -510,8 +515,6 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        if noise_levels is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
@@ -538,6 +541,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
 
     name = "locally_exclusive"
     engine = "numba"
+    need_noise_levels = True
     preferred_mp_context = None
     params_doc = (
         DetectPeakByChannel.params_doc
@@ -571,8 +575,6 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         # )
 
         assert peak_sign in ("both", "neg", "pos")
-        if noise_levels is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
@@ -633,6 +635,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
     name = "matched_filtering"
     engine = "numba"
+    need_noise_levels = False
     preferred_mp_context = None
     params_doc = (
         DetectPeakByChannel.params_doc
@@ -780,6 +783,7 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
 
     name = "locally_exclusive_torch"
     engine = "torch"
+    need_noise_levels = True
     preferred_mp_context = "spawn"
     params_doc = (
         DetectPeakByChannel.params_doc
@@ -1069,6 +1073,7 @@ if HAVE_TORCH:
 class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
     name = "locally_exclusive_cl"
     engine = "opencl"
+    need_noise_levels = True
     preferred_mp_context = None
     params_doc = (
         DetectPeakLocallyExclusive.params_doc
@@ -1091,8 +1096,7 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
     ):
         # TODO refactor with other classes
         assert peak_sign in ("both", "neg", "pos")
-        if noise_levels is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+        
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)
