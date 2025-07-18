@@ -113,9 +113,7 @@ def detect_peaks(
 
     if method_class.need_noise_levels:
         random_chunk_kwargs = method_kwargs.pop("random_chunk_kwargs", {})
-        method_kwargs["noise_levels"] = get_noise_levels(
-            recording, return_scaled=False, **random_chunk_kwargs, **job_kwargs
-        )
+        method_kwargs["noise_levels"] = get_noise_levels(recording, return_in_uV=False, **random_chunk_kwargs, **job_kwargs)
 
     node0 = method_class(recording, **method_kwargs)
     nodes = [node0]
