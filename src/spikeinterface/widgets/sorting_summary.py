@@ -88,7 +88,7 @@ class SortingSummaryWidget(BaseWidget):
 
         if unit_table_properties is not None:
             warnings.warn(
-                "plot_sorting_summary() : unit_table_properties is deprecated, use displayed_unit_properties instead",
+                "plot_sorting_summary() : `unit_table_properties` is deprecated and will be removed in version 0.104.0, use `displayed_unit_properties` instead",
                 category=DeprecationWarning,
                 stacklevel=2,
             )

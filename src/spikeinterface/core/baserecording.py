@@ -982,7 +982,7 @@ class BaseRecordingSegment(BaseSegment):
                 sample_index = time_s * self.sampling_frequency
             else:
                 sample_index = (time_s - self.t_start) * self.sampling_frequency
-            sample_index = np.round(sample_index).astype(int)
+            sample_index = np.round(sample_index).astype(np.int64)
         else:
             sample_index = np.searchsorted(self.time_vector, time_s, side="right") - 1
 
