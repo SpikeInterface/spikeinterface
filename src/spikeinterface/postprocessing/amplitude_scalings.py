@@ -128,6 +128,9 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
 
         return new_data
 
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        return self.data.copy()
+
     def _get_pipeline_nodes(self):
 
         recording = self.sorting_analyzer.recording

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import warnings
 import importlib.util
 
 import numpy as np
 
-from .basesorting import BaseSorting
-from .numpyextractors import NumpySorting
+from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.basesorting import BaseSorting
+from spikeinterface.core.numpyextractors import NumpySorting
 
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
@@ -226,6 +228,7 @@ def random_spikes_selection(
     return random_spikes_indices
 
 
+### MERGING ZONE ###
 def apply_merges_to_sorting(
     sorting: BaseSorting,
     merge_unit_groups: list[list[int | str]] | list[tuple[int | str]],
@@ -319,12 +322,69 @@ def apply_merges_to_sorting(
                 keep_mask[group_indices[inds + 1]] = False
 
     spikes = spikes[keep_mask]
-    sorting = NumpySorting(spikes, sorting.sampling_frequency, all_unit_ids)
+    merge_sorting = NumpySorting(spikes, sorting.sampling_frequency, all_unit_ids)
+    set_properties_after_merging(merge_sorting, sorting, merge_unit_groups, new_unit_ids=new_unit_ids)
 
     if return_extra:
-        return sorting, keep_mask, new_unit_ids
+        return merge_sorting, keep_mask, new_unit_ids
     else:
-        return sorting
+        return merge_sorting
+
+
+def set_properties_after_merging(
+    sorting_post_merge: BaseSorting,
+    sorting_pre_merge: BaseSorting,
+    merge_unit_groups: list[list[int | str]],
+    new_unit_ids: list[int | str],
+):
+    """
+    Add properties to the merge sorting object after merging units.
+    The properties of the merged units are propagated only if they are the same
+    for all units in the merge group.
+
+    Parameters
+    ----------
+    sorting_post_merge : BaseSorting
+        The Sorting object after merging units.
+    sorting_pre_merge : BaseSorting
+        The Sorting object before merging units.
+    merge_unit_groups : list
+        The groups of unit ids that were merged.
+    new_unit_ids : list
+        A list of new unit_ids for each merge.
+    """
+    prop_keys = sorting_pre_merge.get_property_keys()
+    pre_unit_ids = sorting_pre_merge.unit_ids
+    post_unit_ids = sorting_post_merge.unit_ids
+
+    kept_unit_ids = post_unit_ids[np.isin(post_unit_ids, pre_unit_ids)]
+    keep_pre_inds = sorting_pre_merge.ids_to_indices(kept_unit_ids)
+    keep_post_inds = sorting_post_merge.ids_to_indices(kept_unit_ids)
+
+    for key in prop_keys:
+        parent_values = sorting_pre_merge.get_property(key)
+
+        # propagate keep values
+        shape = (len(sorting_post_merge.unit_ids),) + parent_values.shape[1:]
+        new_values = np.empty(shape=shape, dtype=parent_values.dtype)
+        new_values[keep_post_inds] = parent_values[keep_pre_inds]
+        for new_id, merge_group in zip(new_unit_ids, merge_unit_groups):
+            merged_indices = sorting_pre_merge.ids_to_indices(merge_group)
+            merge_values = parent_values[merged_indices]
+            same_property_values = np.all([np.array_equal(m, merge_values[0]) for m in merge_values[1:]])
+            new_index = sorting_post_merge.id_to_index(new_id)
+            if same_property_values:
+                # and new values only if they are all similar
+                new_values[new_index] = merge_values[0]
+            else:
+                default_missing_values = BaseExtractor.default_missing_property_values
+                new_values[new_index] = default_missing_values[parent_values.dtype.kind]
+        sorting_post_merge.set_property(key, new_values)
+
+    # set is_merged property
+    is_merged = np.ones(len(sorting_post_merge.unit_ids), dtype=bool)
+    is_merged[keep_post_inds] = False
+    sorting_post_merge.set_property("is_merged", is_merged)
 
 
 def _get_ids_after_merging(old_unit_ids, merge_unit_groups, new_unit_ids):
@@ -375,7 +435,7 @@ def _get_ids_after_merging(old_unit_ids, merge_unit_groups, new_unit_ids):
 
 def generate_unit_ids_for_merge_group(old_unit_ids, merge_unit_groups, new_unit_ids=None, new_id_strategy="append"):
     """
-    Function to generate new units ids during a merging procedure. If new_units_ids
+    Function to generate new units ids during a merging procedure. If `new_units_ids`
     are provided, it will return these unit ids, checking that they have the the same
     length as `merge_unit_groups`.
 
@@ -440,3 +500,301 @@ def generate_unit_ids_for_merge_group(old_unit_ids, merge_unit_groups, new_unit_
             raise ValueError("wrong new_id_strategy")
 
     return new_unit_ids
+
+
+### SPLITTING ZONE ###
+def apply_splits_to_sorting(
+    sorting: BaseSorting,
+    unit_splits: dict[int | str, list[list[int | str]]],
+    new_unit_ids: list[list[int | str]] | None = None,
+    return_extra: bool = False,
+    new_id_strategy: str = "append",
+):
+    """
+    Apply a the splits to a sorting object.
+
+    This function is not lazy and creates a new NumpySorting with a compact spike_vector as fast as possible.
+    The `unit_splits` should be a dict with the unit ids as keys and a list of lists of spike indices as values.
+    For each split, the list of spike indices should contain the indices of the spikes to be assigned to each split and
+    it should be complete (i.e. the sum of the lengths of the sublists must equal the number of spikes in the unit).
+    If `new_unit_ids` is not None, it will use these new unit ids for the split units.
+    If `new_unit_ids` is None, it will generate new unit ids according to `new_id_strategy`.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The Sorting object to apply splits.
+    unit_splits : dict
+        A dictionary with the split unit id as key and a list of lists of spike indices for each split.
+        The split indices for each unit MUST be a list of lists, where each sublist (at least two) contains the
+        indices of the spikes to be assigned to the each split. The sum of the lengths of the sublists must equal
+        the number of spikes in the unit.
+    new_unit_ids : list | None, default: None
+        List of new unit_ids for each split. If given, it needs to have the same length as `unit_splits`.
+        and each element must have the same length as the corresponding list of split indices.
+        If None, new ids will be generated.
+    return_extra : bool, default: False
+        If True, also return the new_unit_ids.
+    new_id_strategy : "append" | "split", default: "append"
+        The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+
+            * "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
+            * "split" : new_unit_ids will be the created as {split_unit_id]-{split_number}
+                        (e.g. when splitting unit "13" in 2: "13-0" / "13-1").
+                        Only works if unit_ids are str otherwise switch to "append"
+
+    Returns
+    -------
+    sorting : NumpySorting
+        The newly create sorting with the split units.
+    """
+    check_unit_splits_consistency(unit_splits, sorting)
+    spikes = sorting.to_spike_vector().copy()
+
+    # here we assume that unit_splits split_indices are already full.
+    # this is true when running via apply_curation
+
+    new_unit_ids = generate_unit_ids_for_split(
+        sorting.unit_ids, unit_splits, new_unit_ids=new_unit_ids, new_id_strategy=new_id_strategy
+    )
+    all_unit_ids = _get_ids_after_splitting(sorting.unit_ids, unit_splits, new_unit_ids)
+    all_unit_ids = list(all_unit_ids)
+
+    num_seg = sorting.get_num_segments()
+    seg_lims = np.searchsorted(spikes["segment_index"], np.arange(0, num_seg + 2))
+    segment_slices = [(seg_lims[i], seg_lims[i + 1]) for i in range(num_seg)]
+
+    # using this function vaoid to use the mask approach and simplify a lot the algo
+    spike_vector_list = [spikes[s0:s1] for s0, s1 in segment_slices]
+    spike_indices = spike_vector_to_indices(spike_vector_list, sorting.unit_ids, absolute_index=True)
+
+    for unit_id in sorting.unit_ids:
+        if unit_id in unit_splits:
+            split_indices = unit_splits[unit_id]
+            new_split_ids = new_unit_ids[list(unit_splits.keys()).index(unit_id)]
+
+            for split, new_unit_id in zip(split_indices, new_split_ids):
+                new_unit_index = all_unit_ids.index(new_unit_id)
+                # split_indices are a concatenation across segments with absolute indices
+                # so we need to concatenate the spike indices across segments
+                spike_indices_unit = np.concatenate(
+                    [spike_indices[segment_index][unit_id] for segment_index in range(num_seg)]
+                )
+                spikes["unit_index"][spike_indices_unit[split]] = new_unit_index
+        else:
+            new_unit_index = all_unit_ids.index(unit_id)
+            for segment_index in range(num_seg):
+                spike_inds = spike_indices[segment_index][unit_id]
+                spikes["unit_index"][spike_inds] = new_unit_index
+    split_sorting = NumpySorting(spikes, sorting.sampling_frequency, all_unit_ids)
+    set_properties_after_splits(
+        split_sorting,
+        sorting,
+        list(unit_splits.keys()),
+        new_unit_ids=new_unit_ids,
+    )
+
+    if return_extra:
+        return split_sorting, new_unit_ids
+    else:
+        return split_sorting
+
+
+def set_properties_after_splits(
+    sorting_post_split: BaseSorting,
+    sorting_pre_split: BaseSorting,
+    split_unit_ids: list[int | str],
+    new_unit_ids: list[list[int | str]],
+):
+    """
+    Add properties to the split sorting object after splitting units.
+    The properties of the split units are propagated to the new split units.
+
+    Parameters
+    ----------
+    sorting_post_split : BaseSorting
+        The Sorting object after splitting units.
+    sorting_pre_split : BaseSorting
+        The Sorting object before splitting units.
+    split_unit_ids : list
+        The unit ids that were split.
+    new_unit_ids : list
+        A list of new unit_ids for each split.
+    """
+    prop_keys = sorting_pre_split.get_property_keys()
+    pre_unit_ids = sorting_pre_split.unit_ids
+    post_unit_ids = sorting_post_split.unit_ids
+
+    kept_unit_ids = post_unit_ids[np.isin(post_unit_ids, pre_unit_ids)]
+    keep_pre_inds = sorting_pre_split.ids_to_indices(kept_unit_ids)
+    keep_post_inds = sorting_post_split.ids_to_indices(kept_unit_ids)
+
+    for key in prop_keys:
+        parent_values = sorting_pre_split.get_property(key)
+
+        # propagate keep values
+        shape = (len(sorting_post_split.unit_ids),) + parent_values.shape[1:]
+        new_values = np.empty(shape=shape, dtype=parent_values.dtype)
+        new_values[keep_post_inds] = parent_values[keep_pre_inds]
+        for split_unit, new_split_ids in zip(split_unit_ids, new_unit_ids):
+            split_index = sorting_pre_split.id_to_index(split_unit)
+            split_value = parent_values[split_index]
+            # propagate the split value to all new unit ids
+            new_unit_indices = sorting_post_split.ids_to_indices(new_split_ids)
+            new_values[new_unit_indices] = split_value
+        sorting_post_split.set_property(key, new_values)
+
+    # set is_merged property
+    is_split = np.ones(len(sorting_post_split.unit_ids), dtype=bool)
+    is_split[keep_post_inds] = False
+    sorting_post_split.set_property("is_split", is_split)
+
+
+def generate_unit_ids_for_split(old_unit_ids, unit_splits, new_unit_ids=None, new_id_strategy="append"):
+    """
+    Function to generate new units ids during a splitting procedure. If `new_units_ids`
+    are provided, it will return these unit ids, checking that they are consistent with
+    `unit_splits`.
+
+    Parameters
+    ----------
+    old_unit_ids : np.array
+        The old unit_ids.
+    unit_splits : dict
+
+    new_unit_ids : list | None, default: None
+        Optional new unit_ids for split units. If given, it needs to have the same length as `merge_unit_groups`.
+        If None, new ids will be generated.
+    new_id_strategy : "append" | "split", default: "append"
+        The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+
+            * "append" : new_units_ids will be added at the end of max(sorging.unit_ids)
+            * "split" : new_unit_ids will be the created as {split_unit_id]-{split_number}
+                        (e.g. when splitting unit "13" in 2: "13-0" / "13-1").
+                        Only works if unit_ids are str otherwise switch to "append"
+
+    Returns
+    -------
+    new_unit_ids : list of lists
+        The new units_ids associated with the merges.
+    """
+    assert new_id_strategy in ["append", "split"], "new_id_strategy should be 'append' or 'split'"
+    old_unit_ids = np.asarray(old_unit_ids)
+
+    if new_unit_ids is not None:
+        for split_unit, new_split_ids in zip(unit_splits.values(), new_unit_ids):
+            # then only doing a consistency check
+            assert len(split_unit) == len(new_split_ids), "new_unit_ids should have the same len as unit_splits.values"
+            # new_unit_ids can also be part of old_unit_ids only inside the same group:
+            assert all(
+                new_split_id not in old_unit_ids for new_split_id in new_split_ids
+            ), "new_unit_ids already exists but outside the split groups"
+    else:
+        dtype = old_unit_ids.dtype
+        if np.issubdtype(dtype, np.integer) and new_id_strategy == "split":
+            warnings.warn("new_id_strategy 'split' is not compatible with integer unit_ids. Switching to 'append'.")
+            new_id_strategy = "append"
+
+        new_unit_ids = []
+        current_unit_ids = old_unit_ids.copy()
+        for unit_to_split, split_indices in unit_splits.items():
+            num_splits = len(split_indices)
+            # select new_unit_ids greater that the max id, event greater than the numerical str ids
+            if new_id_strategy == "append":
+                if np.issubdtype(dtype, np.character):
+                    # dtype str
+                    if all(p.isdigit() for p in current_unit_ids):
+                        # All str are digit : we can generate a max
+                        m = max(int(p) for p in current_unit_ids) + 1
+                        new_units_for_split = [str(m + i) for i in range(num_splits)]
+                    else:
+                        # we cannot automatically find new names
+                        new_units_for_split = [f"{unit_to_split}-split{i}" for i in range(num_splits)]
+                else:
+                    # dtype int
+                    new_units_for_split = list(max(current_unit_ids) + 1 + np.arange(num_splits, dtype=dtype))
+                # we append the new split unit ids to continue to increment the max id
+                current_unit_ids = np.concatenate([current_unit_ids, new_units_for_split])
+            elif new_id_strategy == "split":
+                # we made sure that dtype is not integer
+                new_units_for_split = [f"{unit_to_split}-{i}" for i in np.arange(len(split_indices))]
+            new_unit_ids.append(new_units_for_split)
+
+    return new_unit_ids
+
+
+def check_unit_splits_consistency(unit_splits, sorting):
+    """
+    Function to check the consistency of unit_splits indices with the sorting object.
+    It checks that the split indices for each unit are a list of lists, where each sublist (at least two)
+    contains the indices of the spikes to be assigned to each split. The sum of the lengths
+    of the sublists must equal the number of spikes in the unit.
+
+    Parameters
+    ----------
+    unit_splits : dict
+        A dictionary with the split unit id as key and a list of numpy arrays or lists of spike indices for each split.
+    sorting : BaseSorting
+        The sorting object containing spike information.
+
+    Raises
+    ------
+    ValueError
+        If the unit_splits are not in the expected format or if the total number of spikes in the splits does not match
+        the number of spikes in the unit.
+    """
+    num_spikes = sorting.count_num_spikes_per_unit()
+    for unit_id, split_indices in unit_splits.items():
+        if not isinstance(split_indices, (list, np.ndarray)):
+            raise ValueError(f"unit_splits[{unit_id}] should be a list or numpy array, got {type(split_indices)}")
+        if not all(isinstance(indices, (list, np.ndarray)) for indices in split_indices):
+            raise ValueError(f"unit_splits[{unit_id}] should be a list of lists or numpy arrays")
+        if len(split_indices) < 2:
+            raise ValueError(f"unit_splits[{unit_id}] should have at least two splits")
+        total_spikes_in_split = sum(len(indices) for indices in split_indices)
+        if total_spikes_in_split != num_spikes[unit_id]:
+            raise ValueError(
+                f"Total spikes in unit {unit_id} split ({total_spikes_in_split}) does not match the number of spikes in the unit ({num_spikes[unit_id]})"
+            )
+
+
+def _get_ids_after_splitting(old_unit_ids, split_units, new_unit_ids):
+    """
+    Function to get the list of unique unit_ids after some splits, with given new_units_ids would
+    be provided.
+
+    Every new unit_id will be added at the end if not already present.
+
+    Parameters
+    ----------
+    old_unit_ids : np.array
+        The old unit_ids.
+    split_units : dict
+        A dict of split units. Each element needs to have at least two elements (two units to split).
+    new_unit_ids : list | None
+        A new unit_ids for split units. If given, it needs to have the same length as `split_units` values.
+
+    Returns
+    -------
+
+    all_unit_ids :  The unit ids in the split sorting
+        The units_ids that will be present after splits
+
+    """
+    old_unit_ids = np.asarray(old_unit_ids)
+    dtype = old_unit_ids.dtype
+    if dtype.kind == "U":
+        # the new dtype can be longer
+        dtype = "U"
+
+    assert len(new_unit_ids) == len(split_units), "new_unit_ids should have the same len as merge_unit_groups"
+    for new_unit_in_split, unit_to_split in zip(new_unit_ids, split_units.keys()):
+        assert len(new_unit_in_split) == len(
+            split_units[unit_to_split]
+        ), "new_unit_ids should have the same len as split_units values"
+
+    all_unit_ids = list(old_unit_ids.copy())
+    for split_unit, split_new_units in zip(split_units, new_unit_ids):
+        all_unit_ids.remove(split_unit)
+        all_unit_ids.extend(split_new_units)
+    return np.array(all_unit_ids, dtype=dtype)

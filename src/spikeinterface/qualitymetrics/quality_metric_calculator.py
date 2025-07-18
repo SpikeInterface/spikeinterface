@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import warnings
+from itertools import chain
 from copy import deepcopy
 
 import numpy as np
@@ -147,6 +148,33 @@ class ComputeQualityMetrics(AnalyzerExtension):
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
         metrics.loc[new_unit_ids, :] = self._compute_metrics(
             new_sorting_analyzer, new_unit_ids, verbose, metric_names, **job_kwargs
+        )
+
+        # we need to fix the dtypes after we compute everything because we have nans
+        # we can iterate through the columns and convert them back to the dtype
+        # of the original quality dataframe.
+        for column in old_metrics.columns:
+            metrics[column] = metrics[column].astype(old_metrics[column].dtype)
+
+        new_data = dict(metrics=metrics)
+        return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        import pandas as pd
+
+        metric_names = self.params["metric_names"]
+        old_metrics = self.data["metrics"]
+
+        all_unit_ids = new_sorting_analyzer.unit_ids
+        new_unit_ids_f = list(chain(*new_unit_ids))
+        not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids_f)]
+
+        # this creates a new metrics dictionary, but the dtype for everything will be
+        # object. So we will need to fix this later after computing metrics
+        metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
+        metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
+        metrics.loc[new_unit_ids_f, :] = self._compute_metrics(
+            new_sorting_analyzer, new_unit_ids_f, verbose, metric_names, **job_kwargs
         )
 
         # we need to fix the dtypes after we compute everything because we have nans

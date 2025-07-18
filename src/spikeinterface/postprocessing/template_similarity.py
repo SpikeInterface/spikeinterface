@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import warnings
+from itertools import chain
 import importlib.util
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
@@ -124,6 +125,58 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
             if unit_id in new_unit_ids:
                 new_index = list(new_unit_ids).index(unit_id)
+                similarity[unit_ind, :] = new_similarity[new_index, :]
+                similarity[:, unit_ind] = new_similarity[new_index, :]
+
+        return dict(similarity=similarity)
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        num_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
+        all_templates_array = get_dense_templates_array(
+            new_sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
+        )
+
+        new_unit_ids_f = list(chain(*new_unit_ids))
+        keep = np.isin(new_sorting_analyzer.unit_ids, new_unit_ids_f)
+        new_templates_array = all_templates_array[keep, :, :]
+        if new_sorting_analyzer.sparsity is None:
+            new_sparsity = None
+        else:
+            new_sparsity = ChannelSparsity(
+                new_sorting_analyzer.sparsity.mask[keep, :], new_unit_ids_f, new_sorting_analyzer.channel_ids
+            )
+
+        new_similarity = compute_similarity_with_templates_array(
+            new_templates_array,
+            all_templates_array,
+            method=self.params["method"],
+            num_shifts=num_shifts,
+            support=self.params["support"],
+            sparsity=new_sparsity,
+            other_sparsity=new_sorting_analyzer.sparsity,
+        )
+
+        old_similarity = self.data["similarity"]
+
+        all_new_unit_ids = new_sorting_analyzer.unit_ids
+        n = all_new_unit_ids.size
+        similarity = np.zeros((n, n), dtype=old_similarity.dtype)
+
+        # copy old similarity
+        for unit_ind1, unit_id1 in enumerate(all_new_unit_ids):
+            if unit_id1 not in new_unit_ids_f:
+                old_ind1 = self.sorting_analyzer.sorting.id_to_index(unit_id1)
+                for unit_ind2, unit_id2 in enumerate(all_new_unit_ids):
+                    if unit_id2 not in new_unit_ids_f:
+                        old_ind2 = self.sorting_analyzer.sorting.id_to_index(unit_id2)
+                        s = self.data["similarity"][old_ind1, old_ind2]
+                        similarity[unit_ind1, unit_ind2] = s
+                        similarity[unit_ind2, unit_ind1] = s
+
+        # insert new similarity both way
+        for unit_ind, unit_id in enumerate(all_new_unit_ids):
+            if unit_id in new_unit_ids_f:
+                new_index = list(new_unit_ids_f).index(unit_id)
                 similarity[unit_ind, :] = new_similarity[new_index, :]
                 similarity[:, unit_ind] = new_similarity[new_index, :]
 

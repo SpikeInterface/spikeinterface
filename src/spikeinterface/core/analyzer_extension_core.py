@@ -9,6 +9,7 @@ It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
 
+import warnings
 import numpy as np
 
 from .sortinganalyzer import AnalyzerExtension, register_result_extension
@@ -90,6 +91,11 @@ class ComputeRandomSpikes(AnalyzerExtension):
             selected_mask = np.zeros(spikes.size, dtype=bool)
             selected_mask[random_spikes_indices] = True
             new_data["random_spikes_indices"] = np.flatnonzero(selected_mask[keep_mask])
+        return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        new_data = dict()
+        new_data["random_spikes_indices"] = self.data["random_spikes_indices"].copy()
         return new_data
 
     def _get_data(self):
@@ -243,8 +249,6 @@ class ComputeWaveforms(AnalyzerExtension):
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
-        new_data = dict()
-
         waveforms = self.data["waveforms"]
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         if keep_mask is not None:
@@ -274,6 +278,11 @@ class ComputeWaveforms(AnalyzerExtension):
                 waveforms = waveforms[:, :, :new_num_chans]
 
         return dict(waveforms=waveforms)
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        # splitting only affects random spikes, not waveforms
+        new_data = dict(waveforms=self.data["waveforms"].copy())
+        return new_data
 
     def get_waveforms_one_unit(self, unit_id, force_dense: bool = False):
         """
@@ -554,6 +563,49 @@ class ComputeTemplates(AnalyzerExtension):
 
         return new_data
 
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        if not new_sorting_analyzer.has_extension("waveforms"):
+            warnings.warn(
+                "Splitting templates without the 'waveforms' extension will simply copy the template of the unit that "
+                "was split to the new split units. This is not recommended and may lead to incorrect results. It is "
+                "recommended to compute the 'waveforms' extension before splitting, or to use 'hard' splitting mode.",
+            )
+        new_data = dict()
+        for operator, arr in self.data.items():
+            # we first copy the unsplit units
+            new_array = np.zeros((len(new_sorting_analyzer.unit_ids), arr.shape[1], arr.shape[2]), dtype=arr.dtype)
+            new_analyzer_unit_ids = list(new_sorting_analyzer.unit_ids)
+            unsplit_unit_ids = [unit_id for unit_id in self.sorting_analyzer.unit_ids if unit_id not in split_units]
+            new_indices = np.array([new_analyzer_unit_ids.index(unit_id) for unit_id in unsplit_unit_ids])
+            old_indices = self.sorting_analyzer.sorting.ids_to_indices(unsplit_unit_ids)
+            new_array[new_indices, ...] = arr[old_indices, ...]
+
+            for split_unit_id, new_splits in zip(split_units, new_unit_ids):
+                if new_sorting_analyzer.has_extension("waveforms"):
+                    for new_unit_id in new_splits:
+                        split_unit_index = new_sorting_analyzer.sorting.id_to_index(new_unit_id)
+                        wfs = new_sorting_analyzer.get_extension("waveforms").get_waveforms_one_unit(
+                            new_unit_id, force_dense=True
+                        )
+
+                        if operator == "average":
+                            arr = np.average(wfs, axis=0)
+                        elif operator == "std":
+                            arr = np.std(wfs, axis=0)
+                        elif operator == "median":
+                            arr = np.median(wfs, axis=0)
+                        elif "percentile" in operator:
+                            _, percentile = operator.splot("_")
+                            arr = np.percentile(wfs, float(percentile), axis=0)
+                        new_array[split_unit_index, ...] = arr
+                else:
+                    split_unit_index = self.sorting_analyzer.sorting.id_to_index(split_unit_id)
+                    old_template = arr[split_unit_index, ...]
+                    new_indices = new_sorting_analyzer.sorting.ids_to_indices(new_splits)
+                    new_array[new_indices, ...] = np.tile(old_template, (len(new_splits), 1, 1))
+            new_data[operator] = new_array
+        return new_data
+
     def _get_data(self, operator="average", percentile=None, outputs="numpy"):
         if operator != "percentile":
             key = operator
@@ -724,6 +776,10 @@ class ComputeNoiseLevels(AnalyzerExtension):
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
+        # this does not depend on units
+        return self.data.copy()
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # this does not depend on units
         return self.data.copy()
 
