@@ -1059,8 +1059,6 @@ class SortingAnalyzer:
                 unit_splits=split_units,
                 new_unit_ids=split_new_unit_ids,
             )
-        # TODO: sam/pierre would create a curation field / curation.json with the applied merges.
-        # What do you think?
 
         backend_options = {} if backend_options is None else backend_options
 
