@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import pytest
 
 from spikeinterface.generation import generate_ground_truth_recording
@@ -15,6 +14,9 @@ def test_export_analyzer_to_pynapple():
     Then tests if error is raised when there is a key mismatch between
     metadata and sorting analyzer.
     """
+
+    # import inside as pandas not a core dependency
+    import pandas as pd
 
     rec, sort = generate_ground_truth_recording(num_units=6)
     analyzer = create_sorting_analyzer(sorting=sort, recording=rec)
