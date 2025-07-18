@@ -525,6 +525,107 @@ def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
+def test_get_unit_spike_train_in_seconds(tmp_path, use_pynwb):
+    """Test that get_unit_spike_train_in_seconds returns accurate timestamps without double conversion."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+
+    nwbfile = mock_NWBFile()
+
+    # Add units with known spike times
+    t_start = 5.0
+    sampling_frequency = 1000.0
+    spike_times_unit_a = np.array([5.1, 5.2, 5.3, 6.0, 6.5])  # Absolute times
+    spike_times_unit_b = np.array([5.05, 5.15, 5.25, 5.35, 6.1])  # Absolute times
+
+    nwbfile.add_unit(spike_times=spike_times_unit_a)
+    nwbfile.add_unit(spike_times=spike_times_unit_b)
+
+    file_path = tmp_path / "test.nwb"
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        sampling_frequency=sampling_frequency,
+        t_start=t_start,
+        use_pynwb=use_pynwb,
+    )
+
+    # Test full spike trains
+    spike_times_a_direct = sorting_extractor.get_unit_spike_train_in_seconds(unit_id=0)
+    spike_times_a_legacy = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=True)
+
+    spike_times_b_direct = sorting_extractor.get_unit_spike_train_in_seconds(unit_id=1)
+    spike_times_b_legacy = sorting_extractor.get_unit_spike_train(unit_id=1, return_times=True)
+
+    # Both methods should return exact timestamps since return_times now uses get_unit_spike_train_in_seconds
+    np.testing.assert_array_equal(spike_times_a_direct, spike_times_unit_a)
+    np.testing.assert_array_equal(spike_times_b_direct, spike_times_unit_b)
+    np.testing.assert_array_equal(spike_times_a_legacy, spike_times_unit_a)
+    np.testing.assert_array_equal(spike_times_b_legacy, spike_times_unit_b)
+
+    # Test time filtering
+    start_time = 5.2
+    end_time = 6.1
+
+    # Direct method with time filtering
+    spike_times_a_filtered = sorting_extractor.get_unit_spike_train_in_seconds(
+        unit_id=0, start_time=start_time, end_time=end_time
+    )
+    spike_times_b_filtered = sorting_extractor.get_unit_spike_train_in_seconds(
+        unit_id=1, start_time=start_time, end_time=end_time
+    )
+
+    # Expected filtered results
+    expected_a = spike_times_unit_a[(spike_times_unit_a >= start_time) & (spike_times_unit_a < end_time)]
+    expected_b = spike_times_unit_b[(spike_times_unit_b >= start_time) & (spike_times_unit_b < end_time)]
+
+    np.testing.assert_array_equal(spike_times_a_filtered, expected_a)
+    np.testing.assert_array_equal(spike_times_b_filtered, expected_b)
+
+    # Test edge cases
+    # Start time filtering only
+    spike_times_from_start = sorting_extractor.get_unit_spike_train_in_seconds(unit_id=0, start_time=5.25)
+    expected_from_start = spike_times_unit_a[spike_times_unit_a >= 5.25]
+    np.testing.assert_array_equal(spike_times_from_start, expected_from_start)
+
+    # End time filtering only
+    spike_times_to_end = sorting_extractor.get_unit_spike_train_in_seconds(unit_id=0, end_time=6.0)
+    expected_to_end = spike_times_unit_a[spike_times_unit_a < 6.0]
+    np.testing.assert_array_equal(spike_times_to_end, expected_to_end)
+
+    # Test that direct method avoids frame conversion rounding errors
+    # by comparing exact values that would be lost in frame conversion
+    precise_times = np.array([5.1001, 5.1002, 5.1003])
+    nwbfile_precise = mock_NWBFile()
+    nwbfile_precise.add_unit(spike_times=precise_times)
+
+    file_path_precise = tmp_path / "test_precise.nwb"
+    with NWBHDF5IO(path=file_path_precise, mode="w") as io:
+        io.write(nwbfile_precise)
+
+    sorting_precise = NwbSortingExtractor(
+        file_path=file_path_precise,
+        sampling_frequency=sampling_frequency,
+        t_start=t_start,
+        use_pynwb=use_pynwb,
+    )
+
+    # Direct method should preserve exact precision
+    direct_precise = sorting_precise.get_unit_spike_train_in_seconds(unit_id=0)
+    np.testing.assert_array_equal(direct_precise, precise_times)
+
+    # Both methods should now preserve exact precision since return_times uses get_unit_spike_train_in_seconds
+    legacy_precise = sorting_precise.get_unit_spike_train(unit_id=0, return_times=True)
+    # Both methods should be exactly equal since return_times now avoids double conversion
+    np.testing.assert_array_equal(direct_precise, precise_times)
+    np.testing.assert_array_equal(legacy_precise, precise_times)
+    # Verify both methods return identical results
+    np.testing.assert_array_equal(direct_precise, legacy_precise)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
 def test_multiple_unit_tables(tmp_path, use_pynwb):
     from pynwb.misc import Units
     from pynwb import NWBHDF5IO
