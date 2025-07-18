@@ -27,23 +27,12 @@ Here is the how!
 
 import matplotlib.pyplot as plt
 
-from spikeinterface import download_dataset
-from spikeinterface import create_sorting_analyzer, load_sorting_analyzer
-import spikeinterface.extractors as se
+from spikeinterface import create_sorting_analyzer, load_sorting_analyzer, generate_ground_truth_recording
 
 ##############################################################################
-# First let's use the repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
-# to download a MEArec dataset. It is a simulated dataset that contains "ground truth"
-# sorting information:
+# First let's generate a simulated recording and sorting
 
-repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-remote_path = "mearec/mearec_test_10s.h5"
-local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-
-##############################################################################
-# Let's now instantiate the recording and sorting objects:
-
-recording, sorting = se.read_mearec(local_path)
+recording, sorting = generate_ground_truth_recording()
 print(recording)
 print(sorting)
 

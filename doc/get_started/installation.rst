@@ -81,14 +81,16 @@ Requirements
 
   * numpy
   * probeinterface
-  * neo>=0.9.0
-  * joblib
+  * neo
   * threadpoolctl
   * tqdm
+  * zarr
+  * pydantic
+  * numcodecs
+  * packaging
 
 Sub-modules have more dependencies, so you should also install:
 
-  * zarr
   * h5py
   * scipy
   * pandas
@@ -98,8 +100,13 @@ Sub-modules have more dependencies, so you should also install:
   * matplotlib
   * numba
   * distinctipy
+  * skops
+  * huggingface_hub
   * cuda-python (for non-macOS users)
 
+
+For developers we offer a :code:`[dev]` option which installs testing, documentation, and linting packages necessary
+for testing and building the docs.
 
 All external spike sorters can be either run inside containers (Docker or Singularity - see :ref:`containerizedsorters`)
 or must be installed independently (see :ref:`get_started/install_sorters:Installing Spike Sorters`).
