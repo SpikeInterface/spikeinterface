@@ -599,8 +599,9 @@ class ComputeTemplates(AnalyzerExtension):
                             arr = np.percentile(wfs, float(percentile), axis=0)
                         new_array[split_unit_index, ...] = arr
                 else:
-                    old_template = arr[self.sorting_analyzer.sorting.ids_to_indices([split_unit_id])[0], ...]
-                    new_indices = np.array([new_unit_ids.index(unit_id) for unit_id in new_splits])
+                    split_unit_index = self.sorting_analyzer.sorting.id_to_index(split_unit_id)
+                    old_template = arr[split_unit_index, ...]
+                    new_indices = new_sorting_analyzer.sorting.ids_to_indices(new_splits)
                     new_array[new_indices, ...] = np.tile(old_template, (len(new_splits), 1, 1))
             new_data[operator] = new_array
         return new_data

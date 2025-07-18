@@ -5,8 +5,9 @@ import importlib.util
 
 import numpy as np
 
-from .basesorting import BaseSorting
-from .numpyextractors import NumpySorting
+from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.basesorting import BaseSorting
+from spikeinterface.core.numpyextractors import NumpySorting
 
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
@@ -321,12 +322,69 @@ def apply_merges_to_sorting(
                 keep_mask[group_indices[inds + 1]] = False
 
     spikes = spikes[keep_mask]
-    sorting = NumpySorting(spikes, sorting.sampling_frequency, all_unit_ids)
+    merge_sorting = NumpySorting(spikes, sorting.sampling_frequency, all_unit_ids)
+    set_properties_after_merging(merge_sorting, sorting, merge_unit_groups, new_unit_ids=new_unit_ids)
 
     if return_extra:
-        return sorting, keep_mask, new_unit_ids
+        return merge_sorting, keep_mask, new_unit_ids
     else:
-        return sorting
+        return merge_sorting
+
+
+def set_properties_after_merging(
+    sorting_post_merge: BaseSorting,
+    sorting_pre_merge: BaseSorting,
+    merge_unit_groups: list[list[int | str]],
+    new_unit_ids: list[int | str],
+):
+    """
+    Add properties to the merge sorting object after merging units.
+    The properties of the merged units are propagated only if they are the same
+    for all units in the merge group.
+
+    Parameters
+    ----------
+    sorting_post_merge : BaseSorting
+        The Sorting object after merging units.
+    sorting_pre_merge : BaseSorting
+        The Sorting object before merging units.
+    merge_unit_groups : list
+        The groups of unit ids that were merged.
+    new_unit_ids : list
+        A list of new unit_ids for each merge.
+    """
+    prop_keys = sorting_pre_merge.get_property_keys()
+    pre_unit_ids = sorting_pre_merge.unit_ids
+    post_unit_ids = sorting_post_merge.unit_ids
+
+    kept_unit_ids = post_unit_ids[np.isin(post_unit_ids, pre_unit_ids)]
+    keep_pre_inds = sorting_pre_merge.ids_to_indices(kept_unit_ids)
+    keep_post_inds = sorting_post_merge.ids_to_indices(kept_unit_ids)
+
+    for key in prop_keys:
+        parent_values = sorting_pre_merge.get_property(key)
+
+        # propagate keep values
+        shape = (len(sorting_post_merge.unit_ids),) + parent_values.shape[1:]
+        new_values = np.empty(shape=shape, dtype=parent_values.dtype)
+        new_values[keep_post_inds] = parent_values[keep_pre_inds]
+        for new_id, merge_group in zip(new_unit_ids, merge_unit_groups):
+            merged_indices = sorting_pre_merge.ids_to_indices(merge_group)
+            merge_values = parent_values[merged_indices]
+            same_property_values = np.all([np.array_equal(m, merge_values[0]) for m in merge_values[1:]])
+            new_index = sorting_post_merge.id_to_index(new_id)
+            if same_property_values:
+                # and new values only if they are all similar
+                new_values[new_index] = merge_values[0]
+            else:
+                default_missing_values = BaseExtractor.default_missing_property_values
+                new_values[new_index] = default_missing_values[parent_values.dtype.kind]
+        sorting_post_merge.set_property(key, new_values)
+
+    # set is_merged property
+    is_merged = np.ones(len(sorting_post_merge.unit_ids), dtype=bool)
+    is_merged[keep_post_inds] = False
+    sorting_post_merge.set_property("is_merged", is_merged)
 
 
 def _get_ids_after_merging(old_unit_ids, merge_unit_groups, new_unit_ids):
@@ -528,12 +586,68 @@ def apply_splits_to_sorting(
             for segment_index in range(num_seg):
                 spike_inds = spike_indices[segment_index][unit_id]
                 spikes["unit_index"][spike_inds] = new_unit_index
-    sorting = NumpySorting(spikes, sorting.sampling_frequency, all_unit_ids)
+    split_sorting = NumpySorting(spikes, sorting.sampling_frequency, all_unit_ids)
+    set_properties_after_splits(
+        split_sorting,
+        sorting,
+        list(unit_splits.keys()),
+        new_unit_ids=new_unit_ids,
+    )
 
     if return_extra:
-        return sorting, new_unit_ids
+        return split_sorting, new_unit_ids
     else:
-        return sorting
+        return split_sorting
+
+
+def set_properties_after_splits(
+    sorting_post_split: BaseSorting,
+    sorting_pre_split: BaseSorting,
+    split_unit_ids: list[int | str],
+    new_unit_ids: list[list[int | str]],
+):
+    """
+    Add properties to the split sorting object after splitting units.
+    The properties of the split units are propagated to the new split units.
+
+    Parameters
+    ----------
+    sorting_post_split : BaseSorting
+        The Sorting object after splitting units.
+    sorting_pre_split : BaseSorting
+        The Sorting object before splitting units.
+    split_unit_ids : list
+        The unit ids that were split.
+    new_unit_ids : list
+        A list of new unit_ids for each split.
+    """
+    prop_keys = sorting_pre_split.get_property_keys()
+    pre_unit_ids = sorting_pre_split.unit_ids
+    post_unit_ids = sorting_post_split.unit_ids
+
+    kept_unit_ids = post_unit_ids[np.isin(post_unit_ids, pre_unit_ids)]
+    keep_pre_inds = sorting_pre_split.ids_to_indices(kept_unit_ids)
+    keep_post_inds = sorting_post_split.ids_to_indices(kept_unit_ids)
+
+    for key in prop_keys:
+        parent_values = sorting_pre_split.get_property(key)
+
+        # propagate keep values
+        shape = (len(sorting_post_split.unit_ids),) + parent_values.shape[1:]
+        new_values = np.empty(shape=shape, dtype=parent_values.dtype)
+        new_values[keep_post_inds] = parent_values[keep_pre_inds]
+        for split_unit, new_split_ids in zip(split_unit_ids, new_unit_ids):
+            split_index = sorting_pre_split.id_to_index(split_unit)
+            split_value = parent_values[split_index]
+            # propagate the split value to all new unit ids
+            new_unit_indices = sorting_post_split.ids_to_indices(new_split_ids)
+            new_values[new_unit_indices] = split_value
+        sorting_post_split.set_property(key, new_values)
+
+    # set is_merged property
+    is_split = np.ones(len(sorting_post_split.unit_ids), dtype=bool)
+    is_split[keep_post_inds] = False
+    sorting_post_split.set_property("is_split", is_split)
 
 
 def generate_unit_ids_for_split(old_unit_ids, unit_splits, new_unit_ids=None, new_id_strategy="append"):
