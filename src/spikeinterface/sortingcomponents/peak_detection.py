@@ -419,6 +419,8 @@ class DetectPeakByChannel(PeakDetectorWrapper):
     ):
         assert peak_sign in ("both", "neg", "pos")
 
+        if noise_levels is None:
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **random_chunk_kwargs)
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
@@ -513,7 +515,8 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
         assert peak_sign in ("both", "neg", "pos")
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
-
+        if noise_levels is None:
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **random_chunk_kwargs)
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
@@ -574,6 +577,8 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         # )
 
         assert peak_sign in ("both", "neg", "pos")
+        if noise_levels is None:
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **random_chunk_kwargs)
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
@@ -661,7 +666,6 @@ class DetectPeakMatchedFiltering(PeakDetector):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        noise_levels=None,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
     ):
@@ -1095,7 +1099,8 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
     ):
         # TODO refactor with other classes
         assert peak_sign in ("both", "neg", "pos")
-
+        if noise_levels is None:
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **random_chunk_kwargs)
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)
