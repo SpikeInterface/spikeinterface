@@ -33,12 +33,11 @@ class Split(BaseModel):
             "If labels, the split is defined by a list of labels for each spike (`labels`). "
         ),
     )
-    indices: Optional[Union[List[int], List[List[int]]]] = Field(
+    indices: Optional[List[List[int]]] = Field(
         default=None,
         description=(
-            "List of indices for the split. If a list of indices, the unit is splt in 2 (provided indices/others). "
-            "If a list of lists, the unit is split in multiple groups (one for each list of indices), plus an optional "
-            "extra if the spike train has more spikes than the sum of the indices in the lists."
+            "List of indices for the split. The unit is split in multiple groups (one for each list of indices), "
+            "plus an optional extra if the spike train has more spikes than the sum of the indices in the lists."
         ),
     )
     labels: Optional[List[int]] = Field(default=None, description="List of labels for the split")
