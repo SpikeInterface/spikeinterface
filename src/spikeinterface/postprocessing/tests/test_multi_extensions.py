@@ -236,7 +236,7 @@ def test_SortingAnalyzer_split_all_extensions(dataset_to_split, sparse):
     unsplit_unit_ids = sorting_analyzer.unit_ids[~np.isin(sorting_analyzer.unit_ids, units_to_split)]
     splits = {}
     for unit in units_to_split:
-        splits[unit] = np.arange(num_spikes[unit] // 2)
+        splits[unit] = [np.arange(num_spikes[unit] // 2), np.arange(num_spikes[unit] // 2, num_spikes[unit])]
 
     analyzer_split, split_unit_ids = sorting_analyzer.split_units(split_units=splits, return_new_unit_ids=True)
     split_unit_ids = list(np.concatenate(split_unit_ids))

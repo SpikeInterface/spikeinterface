@@ -33,10 +33,10 @@ from .core_tools import (
 )
 from .sorting_tools import (
     generate_unit_ids_for_merge_group,
-    _get_ids_after_merging,
     generate_unit_ids_for_split,
+    check_unit_splits_consistency,
+    _get_ids_after_merging,
     _get_ids_after_splitting,
-    _get_full_unit_splits,
 )
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
@@ -1280,21 +1280,11 @@ class SortingAnalyzer:
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
 
         if len(merge_unit_groups) == 0:
-            # TODO I think we should raise an error or at least make a copy and not return itself
-            if return_new_unit_ids:
-                return self, []
-            else:
-                return self
+            raise ValueError("Merging requires at least one group of units to merge")
 
         for units in merge_unit_groups:
-            # TODO more checks like one units is only in one group
             if len(units) < 2:
                 raise ValueError("Merging requires at least two units to merge")
-
-        # TODO : no this function did not exists before
-        if not isinstance(merge_unit_groups[0], (list, tuple)):
-            # keep backward compatibility : the previous behavior was only one merge
-            merge_unit_groups = [merge_unit_groups]
 
         new_unit_ids = generate_unit_ids_for_merge_group(
             self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy
@@ -1339,6 +1329,9 @@ class SortingAnalyzer:
         ----------
         split_units : dict
             A dictionary with the keys being the unit ids to split and the values being the split indices.
+            The split indices for each unit MUST be a list of lists, where each sublist (at least two) contains the
+            indices of the spikes to be assigned to the each split. The sum of the lengths of the sublists must equal
+            the number of spikes in the unit.
         new_unit_ids : None | list, default: None
             A new unit_ids for split units. If given, it needs to have the same length as `merge_unit_groups`. If None,
             merged units will have the first unit_id of every lists of merges
@@ -1366,14 +1359,9 @@ class SortingAnalyzer:
             folder = clean_zarr_folder_name(folder)
 
         if len(split_units) == 0:
-            # TODO I think we should raise an error or at least make a copy and not return itself
-            if return_new_unit_ids:
-                return self, []
-            else:
-                return self
+            raise ValueError("Splitting requires at least one unit to split")
 
-        # TODO: add some checks
-        split_units = _get_full_unit_splits(split_units, self.sorting)
+        check_unit_splits_consistency(split_units, self.sorting)
 
         new_unit_ids = generate_unit_ids_for_split(self.unit_ids, split_units, new_unit_ids, new_id_strategy)
         all_unit_ids = _get_ids_after_splitting(self.unit_ids, split_units, new_unit_ids=new_unit_ids)
