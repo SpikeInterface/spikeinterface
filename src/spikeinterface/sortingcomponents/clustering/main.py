@@ -33,9 +33,12 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
+    from spikeinterface.sortingcomponents.clustering.method_list import clustering_methods
+    
     assert (
         method in clustering_methods
     ), f"Method for clustering do not exists, should be in {list(clustering_methods.keys())}"
+
 
     method_class = clustering_methods[method]
     params = method_class._default_params.copy()
