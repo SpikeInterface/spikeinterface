@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 import importlib.util
 
 import numpy as np
@@ -576,6 +577,10 @@ def generate_unit_ids_for_split(old_unit_ids, unit_splits, new_unit_ids=None, ne
             ), "new_unit_ids already exists but outside the split groups"
     else:
         dtype = old_unit_ids.dtype
+        if np.issubdtype(dtype, np.integer) and new_id_strategy == "split":
+            warnings.warn("new_id_strategy 'split' is not compatible with integer unit_ids. Switching to 'append'.")
+            new_id_strategy = "append"
+
         new_unit_ids = []
         for unit_to_split, split_indices in unit_splits.items():
             num_splits = len(split_indices)
@@ -589,18 +594,16 @@ def generate_unit_ids_for_split(old_unit_ids, unit_splits, new_unit_ids=None, ne
                         new_unit_ids.append([str(m + i) for i in range(num_splits)])
                     else:
                         # we cannot automatically find new names
-                        new_unit_ids.append([f"split{i}" for i in range(num_splits)])
+                        new_unit_ids.append([f"{unit_to_split}-split{i}" for i in range(num_splits)])
                 else:
                     # dtype int
                     new_unit_ids.append(list(max(old_unit_ids) + 1 + np.arange(num_splits, dtype=dtype)))
+                # we append the last unit id to the list of old unit ids so that  the new unit ids
+                # will continue to increment
                 old_unit_ids = np.concatenate([old_unit_ids, new_unit_ids[-1]])
             elif new_id_strategy == "split":
-                if np.issubdtype(dtype, np.character):
-                    new_unit_ids.append([f"{unit_to_split}-{i}" for i in np.arange(len(split_indices))])
-                else:
-                    # dtype int
-                    new_unit_ids.append(list(max(old_unit_ids) + 1 + np.arange(num_splits, dtype=dtype)))
-                    old_unit_ids = np.concatenate([old_unit_ids, new_unit_ids[-1]])
+                # we made sure that dtype is not integer
+                new_unit_ids.append([f"{unit_to_split}-{i}" for i in np.arange(len(split_indices))])
 
     return new_unit_ids
 
