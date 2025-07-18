@@ -9,7 +9,7 @@ Exporting to Pynapple
 
 The python package `Pynapple <https://pynapple.org/>`_ is often used for combining ephys
 and behavioral data. It can be used to decode behavior, make tuning curves and compute spectrograms.
-The :py:func:`~spikeinterface.exporters.to_pynapple_TsGroup` function allows you to convert a
+The :py:func:`~spikeinterface.exporters.to_pynapple_tsgroup` function allows you to convert a
 SortingAnalyzer to Pynapple's `TsGroup` object.
 
 **Note** : When creating the `TsGroup`, we will use the underlying time support of the SortingAnalyzer.
@@ -26,12 +26,12 @@ save method. We attach the analyzer's quality metrics as metadata.
 .. code-block:: python
 
     import spikeinterface as si
-    from spikeinterface.exporters import to_pynapple_TsGroup
+    from spikeinterface.exporters import to_pynapple_tsgroup
 
     # load in an analyzer
     analyzer = si.load_sorting_analyzer("path/to/analyzer")
 
-    my_tsGroup = to_pynapple_TsGroup(
+    my_tsGroup = to_pynapple_tsgroup(
         sorting_analyzer=analyzer,
         metadata=analyzer.get_extension("quality_metrics").get_data()
     )

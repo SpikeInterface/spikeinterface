@@ -1,21 +1,22 @@
-from spikeinterface.core import SortingAnalyzer
+from spikeinterface.core import SortingAnalyzer, BaseSorting
 import pandas as pd
+import numpy as np
 
 
-def to_pynapple_TsGroup(
-    sorting_analyzer: SortingAnalyzer,
-    metadata: pd.DataFrame | None = None,
+def to_pynapple_tsgroup(
+    sorting_analyzer_or_sorting: SortingAnalyzer | BaseSorting,
+    metadata: pd.DataFrame | dict | None = None,
 ):
     """
     Returns a pynapple TsGroup object based on spike train data.
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
+    sorting_analyzer_or_sorting : SortingAnalyzer
         A SortingAnalyzer object
-    metadata : pd.DataFrame | None, default: None
-        Unit-based metdata to attach to TsGroup. Input Dataframe must have keys
-        equal to the `unit_id`s of the `sorting_analyzer`.
+    metadata : pd.DataFrame | dict | None, default: None
+        Metadata associated with each unit. Metadata names are pulled from DataFrame columns
+        or dictionary keys. The length of the metadata should match the number of units.
 
     Returns
     -------
@@ -24,15 +25,41 @@ def to_pynapple_TsGroup(
     """
     from pynapple import TsGroup, Ts
 
-    unit_ids = sorting_analyzer.unit_ids
-    spikes_trains = {
-        unit_id: sorting_analyzer.sorting.get_unit_spike_train(unit_id=unit_id, return_times=True)
-        for unit_id in unit_ids
-    }
+    if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
+        sorting = sorting_analyzer_or_sorting.sorting
+    elif isinstance(sorting_analyzer_or_sorting, BaseSorting):
+        sorting = sorting_analyzer_or_sorting
+    else:
+        raise TypeError("The function `to_pynapple_tsgroup` only accepts a SortingAnalyzer or Sorting object.")
 
-    spike_train_TsGroup = TsGroup(
+    unit_ids = sorting.unit_ids
+    spikes_trains = {unit_id: sorting.get_unit_spike_train(unit_id=unit_id, return_times=True) for unit_id in unit_ids}
+
+    # Look for good metadata to add, if there is a sorting analyzer
+    if metadata is None and isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
+
+        metadata_list = []
+        if (unit_locations := sorting_analyzer_or_sorting.get_extension("unit_locations")) is not None:
+            array_of_unit_locations = unit_locations.get_data()
+            n_dims = np.shape(sorting_analyzer_or_sorting.get_extension("unit_locations").get_data())[1]
+            pd_of_unit_locations = pd.DataFrame(
+                array_of_unit_locations, columns=["x", "y", "z"][:n_dims], index=unit_ids
+            )
+            metadata_list.append(pd_of_unit_locations)
+        if (quality_metrics := sorting_analyzer_or_sorting.get_extension("quality_metrics")) is not None:
+            metadata_list.append(quality_metrics.get_data())
+        if (template_metrics := sorting_analyzer_or_sorting.get_extension("template_metrics")) is not None:
+            metadata_list.append(template_metrics.get_data())
+
+        if len(metadata_list) > 0:
+            metadata = pd.concat(metadata_list, axis=1)
+
+            # pynapple requires integer indices
+            metadata.index = metadata.index.astype("int")
+
+    spike_train_tsgroup = TsGroup(
         {int(unit_id): Ts(spike_train) for unit_id, spike_train in spikes_trains.items()},
         metadata=metadata,
     )
 
-    return spike_train_TsGroup
+    return spike_train_tsgroup
