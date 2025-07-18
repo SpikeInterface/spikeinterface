@@ -369,21 +369,6 @@ class BaseRecording(BaseRecordingSnippets):
                 traces = traces.astype("float32", copy=False) * gains + offsets
         return traces
 
-    def has_scaled_traces(self) -> bool:
-        """Checks if the recording has scaled traces
-
-        Returns
-        -------
-        bool
-            True if the recording has scaled traces, False otherwise
-        """
-        warnings.warn(
-            "`has_scaled_traces` is deprecated and will be removed in 0.103.0. Use has_scaleable_traces() instead",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.has_scaled()
-
     def get_time_info(self, segment_index=None) -> dict:
         """
         Retrieves the timing attributes for a given segment index. As with
@@ -725,17 +710,6 @@ class BaseRecording(BaseRecordingSnippets):
 
         return ChannelSliceRecording(self, renamed_channel_ids=new_channel_ids)
 
-    def _channel_slice(self, channel_ids, renamed_channel_ids=None):
-        from .channelslice import ChannelSliceRecording
-
-        warnings.warn(
-            "Recording.channel_slice will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
-        return sub_recording
-
     def _remove_channels(self, remove_channel_ids):
         from .channelslice import ChannelSliceRecording
 
@@ -879,7 +853,6 @@ class BaseRecording(BaseRecordingSnippets):
         file_paths_length=None,
         file_offset=None,
         file_suffix=None,
-        file_paths_lenght=None,
     ):
         """
         Check is the recording is binary compatible with some constrain on
@@ -890,14 +863,6 @@ class BaseRecording(BaseRecordingSnippets):
           * file_offset
           * file_suffix
         """
-
-        # spelling typo need to fix
-        if file_paths_lenght is not None:
-            warnings.warn(
-                "`file_paths_lenght` is deprecated and will be removed in 0.103.0 please use `file_paths_length`"
-            )
-            if file_paths_length is None:
-                file_paths_length = file_paths_lenght
 
         if not self.is_binary_compatible():
             return False
@@ -1017,7 +982,7 @@ class BaseRecordingSegment(BaseSegment):
                 sample_index = time_s * self.sampling_frequency
             else:
                 sample_index = (time_s - self.t_start) * self.sampling_frequency
-            sample_index = np.round(sample_index).astype(int)
+            sample_index = np.round(sample_index).astype(np.int64)
         else:
             sample_index = np.searchsorted(self.time_vector, time_s, side="right") - 1
 

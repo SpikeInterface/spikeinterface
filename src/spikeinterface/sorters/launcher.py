@@ -233,13 +233,11 @@ def run_sorter_by_property(
     recording,
     grouping_property,
     folder,
-    mode_if_folder_exists=None,
     engine="loop",
     engine_kwargs=None,
     verbose=False,
     docker_image=None,
     singularity_image=None,
-    working_folder: None = None,
     **sorter_params,
 ):
     """
@@ -261,10 +259,6 @@ def run_sorter_by_property(
         Property to split by before sorting
     folder : str | Path
         The working directory.
-    mode_if_folder_exists : bool or None, default: None
-        Must be None. This is deprecated.
-        If not None then a warning is raise.
-        Will be removed in next release.
     engine : "loop" | "joblib" | "dask" | "slurm", default: "loop"
         Which engine to use to run sorter.
     engine_kwargs : dict
@@ -294,20 +288,6 @@ def run_sorter_by_property(
                                             engine_kwargs={"n_jobs": 4})
 
     """
-    if mode_if_folder_exists is not None:
-        warnings.warn(
-            "run_sorter_by_property(): mode_if_folder_exists is not used anymore and will be removed in 0.102.0",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-    if working_folder is not None:
-        warnings.warn(
-            "`working_folder` is deprecated and will be removed in 0.103. Please use folder instead",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        folder = working_folder
 
     working_folder = Path(folder).absolute()
 

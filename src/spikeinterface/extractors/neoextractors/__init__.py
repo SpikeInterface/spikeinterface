@@ -1,4 +1,5 @@
 from .alphaomega import AlphaOmegaRecordingExtractor, AlphaOmegaEventExtractor, read_alphaomega, read_alphaomega_event
+from .axon import AxonRecordingExtractor, read_axon
 from .axona import AxonaRecordingExtractor, read_axona
 from .biocam import BiocamRecordingExtractor, read_biocam
 from .blackrock import BlackrockRecordingExtractor, BlackrockSortingExtractor, read_blackrock, read_blackrock_sorting
@@ -44,6 +45,7 @@ from .neo_utils import get_neo_streams, get_neo_num_blocks
 
 neo_recording_extractors_dict = {
     AlphaOmegaRecordingExtractor: dict(wrapper_string="read_alphaomega", wrapper_class=read_alphaomega),
+    AxonRecordingExtractor: dict(wrapper_string="read_axon", wrapper_class=read_axon),
     AxonaRecordingExtractor: dict(wrapper_string="read_axona", wrapper_class=read_axona),
     BiocamRecordingExtractor: dict(wrapper_string="read_biocam", wrapper_class=read_biocam),
     BlackrockRecordingExtractor: dict(wrapper_string="read_blackrock", wrapper_class=read_blackrock),

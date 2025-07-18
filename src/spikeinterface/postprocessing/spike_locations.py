@@ -146,7 +146,7 @@ class ComputeSpikeLocations(AnalyzerExtension):
         )
         self.data["spike_locations"] = spike_locations
 
-    def _get_data(self, outputs="numpy"):
+    def _get_data(self, outputs="numpy", concatenated=False):
         all_spike_locations = self.data["spike_locations"]
         if outputs == "numpy":
             return all_spike_locations
@@ -160,6 +160,16 @@ class ComputeSpikeLocations(AnalyzerExtension):
                 for unit_id in unit_ids:
                     inds = spike_indices[segment_index][unit_id]
                     spike_locations_by_units[segment_index][unit_id] = all_spike_locations[inds]
+
+            if concatenated:
+                locations_by_units_concatenated = {
+                    unit_id: np.concatenate(
+                        [locs_in_segment[unit_id] for locs_in_segment in spike_locations_by_units.values()]
+                    )
+                    for unit_id in unit_ids
+                }
+                return locations_by_units_concatenated
+
             return spike_locations_by_units
         else:
             raise ValueError(f"Wrong .get_data(outputs={outputs})")

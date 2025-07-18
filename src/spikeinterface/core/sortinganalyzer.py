@@ -981,6 +981,7 @@ class SortingAnalyzer:
                 mergeable, masks = self.are_units_mergeable(
                     merge_unit_groups,
                     sparsity_overlap=sparsity_overlap,
+                    merging_mode=merging_mode,
                     return_masks=True,
                 )
 
@@ -2354,6 +2355,7 @@ class AnalyzerExtension:
                     ext_data_file.name == "params.json"
                     or ext_data_file.name == "info.json"
                     or ext_data_file.name == "run_info.json"
+                    or str(ext_data_file.name).startswith("._")  # ignore AppleDouble format files
                 ):
                     continue
                 ext_data_name = ext_data_file.stem

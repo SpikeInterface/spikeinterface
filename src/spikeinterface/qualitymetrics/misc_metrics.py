@@ -805,17 +805,12 @@ _default_params["amplitude_cv"] = dict(
 
 def _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign):
     # used by compute_amplitude_cutoffs and compute_amplitude_medians
-    amplitudes_by_units = {}
-    if sorting_analyzer.has_extension("spike_amplitudes"):
-        spikes = sorting_analyzer.sorting.to_spike_vector()
-        ext = sorting_analyzer.get_extension("spike_amplitudes")
-        all_amplitudes = ext.get_data()
-        for unit_id in unit_ids:
-            unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
-            spike_mask = spikes["unit_index"] == unit_index
-            amplitudes_by_units[unit_id] = all_amplitudes[spike_mask]
+
+    if (spike_amplitudes_extension := sorting_analyzer.get_extension("spike_amplitudes")) is not None:
+        return spike_amplitudes_extension.get_data(outputs="by_unit", concatenated=True)
 
     elif sorting_analyzer.has_extension("waveforms"):
+        amplitudes_by_units = {}
         waveforms_ext = sorting_analyzer.get_extension("waveforms")
         before = waveforms_ext.nbefore
         extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign)

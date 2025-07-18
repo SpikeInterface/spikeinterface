@@ -8,22 +8,17 @@ After spike sorting, you might want to validate the 'goodness' of the sorted uni
 """
 
 import spikeinterface.core as si
-import spikeinterface.extractors as se
-from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.qualitymetrics import (
     compute_snrs,
     compute_firing_rates,
     compute_isi_violations,
-    calculate_pc_metrics,
     compute_quality_metrics,
 )
 
 ##############################################################################
-# First, let's download a simulated dataset
-# from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+# First, let's generate a simulated recording and sorting
 
-local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-recording, sorting = se.read_mearec(local_path)
+recording, sorting = si.generate_ground_truth_recording()
 print(recording)
 print(sorting)
 
@@ -70,7 +65,7 @@ print(metrics)
 
 ##############################################################################
 # Some metrics are based on the principal component scores, so the exwtension
-# need to be computed before. For instance:
+# must be computed before. For instance:
 
 analyzer.compute("principal_components", n_components=3, mode="by_channel_global", whiten=True)
 
