@@ -171,7 +171,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                         old_ind2 = self.sorting_analyzer.sorting.id_to_index(unit_id2)
                         s = self.data["similarity"][old_ind1, old_ind2]
                         similarity[unit_ind1, unit_ind2] = s
-                        similarity[unit_ind1, unit_ind2] = s
+                        similarity[unit_ind2, unit_ind1] = s
 
         # insert new similarity both way
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
