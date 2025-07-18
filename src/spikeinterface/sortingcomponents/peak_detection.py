@@ -668,6 +668,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
+        noise_levels=None,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
     ):
