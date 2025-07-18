@@ -9,6 +9,7 @@ It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
 
+import warnings
 import numpy as np
 
 from .sortinganalyzer import AnalyzerExtension, register_result_extension
@@ -563,6 +564,12 @@ class ComputeTemplates(AnalyzerExtension):
         return new_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        if not new_sorting_analyzer.has_extension("waveforms"):
+            warnings.warn(
+                "Splitting templates without the 'waveforms' extension will simply copy the template of the unit that "
+                "was split to the new split units. This is not recommended and may lead to incorrect results. It is "
+                "recommended to compute the 'waveforms' extension before splitting, or to use 'hard' splitting mode.",
+            )
         new_data = dict()
         for operator, arr in self.data.items():
             # we first copy the unsplit units

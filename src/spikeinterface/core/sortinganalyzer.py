@@ -900,14 +900,15 @@ class SortingAnalyzer:
         folder=None,
         unit_ids=None,
         merge_unit_groups=None,
-        split_units=None,
         censor_ms=None,
         merging_mode="soft",
         sparsity_overlap=0.75,
-        verbose=False,
         merge_new_unit_ids=None,
+        split_units=None,
+        splitting_mode="soft",
         split_new_unit_ids=None,
         backend_options=None,
+        verbose=False,
         **job_kwargs,
     ) -> "SortingAnalyzer":
         """
@@ -925,18 +926,21 @@ class SortingAnalyzer:
         merge_unit_groups : list/tuple of lists/tuples or None, default: None
             A list of lists for every merge group. Each element needs to have at least two elements
             (two units to merge). If `merge_unit_groups` is not None, `new_unit_ids` must be given.
-        split_units : dict or None, default: None
-            A dictionary with the keys being the unit ids to split and the values being the split indices.
         censor_ms : None or float, default: None
             When merging units, any spikes violating this refractory period will be discarded.
         merging_mode : "soft" | "hard", default: "soft"
             How merges are performed. In the "soft" mode, merges will be approximated, with no smart merging
-            of the extension data.
+            of the extension data. In the "hard" mode, the extensions for merged units will be recomputed.
         sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
             achieved, soft merging will not be performed.
         merge_new_unit_ids : list or None, default: None
             The new unit ids for merged units. Required if `merge_unit_groups` is not None.
+        split_units : dict or None, default: None
+            A dictionary with the keys being the unit ids to split and the values being the split indices.
+        splitting_mode : "soft" | "hard", default: "soft"
+            How splits are performed. In the "soft" mode, splits will be approximated, with no smart splitting.
+            If `splitting_mode` is "hard", the extensons for split units willbe recomputed.
         split_new_unit_ids : list or None, default: None
             The new unit ids for split units. Required if `split_units` is not None.
         verbose : bool, default: False
@@ -1125,11 +1129,11 @@ class SortingAnalyzer:
                     recompute_dict[extension_name] = extension.params
             else:
                 # split
-                try:
+                if splitting_mode == "soft":
                     new_sorting_analyzer.extensions[extension_name] = extension.split(
                         new_sorting_analyzer, split_units=split_units, new_unit_ids=split_new_unit_ids, verbose=verbose
                     )
-                except NotImplementedError:
+                elif splitting_mode == "hard":
                     recompute_dict[extension_name] = extension.params
 
         if len(recompute_dict) > 0:
