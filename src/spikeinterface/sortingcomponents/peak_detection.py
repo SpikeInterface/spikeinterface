@@ -113,7 +113,9 @@ def detect_peaks(
 
     if method_class.need_noise_levels:
         random_chunk_kwargs = method_kwargs.pop("random_chunk_kwargs", {})
-        method_kwargs["noise_levels"] = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs, **job_kwargs)
+        method_kwargs["noise_levels"] = get_noise_levels(
+            recording, return_scaled=False, **random_chunk_kwargs, **job_kwargs
+        )
 
     node0 = method_class(recording, **method_kwargs)
     nodes = [node0]
@@ -415,7 +417,6 @@ class DetectPeakByChannel(PeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         noise_levels=None,
-
         random_chunk_kwargs={},
     ):
         assert peak_sign in ("both", "neg", "pos")
@@ -1096,7 +1097,7 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
     ):
         # TODO refactor with other classes
         assert peak_sign in ("both", "neg", "pos")
-        
+
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)
