@@ -1321,6 +1321,49 @@ class NwbSortingSegment(BaseSortingSegment):
         start_frame: Optional[int] = None,
         end_frame: Optional[int] = None,
     ) -> np.ndarray:
+        # Convert frame boundaries to time boundaries
+        start_time = None
+        end_time = None
+
+        if start_frame is not None:
+            start_time = start_frame / self._sampling_frequency + self._t_start
+
+        if end_frame is not None:
+            end_time = end_frame / self._sampling_frequency + self._t_start
+
+        # Get spike times in seconds
+        spike_times = self.get_unit_spike_train_in_seconds(unit_id=unit_id, start_time=start_time, end_time=end_time)
+
+        # Convert to frames
+        frames = np.round((spike_times - self._t_start) * self._sampling_frequency)
+        return frames.astype("int64", copy=False)
+
+    def get_unit_spike_train_in_seconds(
+        self,
+        unit_id,
+        start_time: Optional[float] = None,
+        end_time: Optional[float] = None,
+    ) -> np.ndarray:
+        """Get the spike train times for a unit in seconds.
+
+        This method returns spike times directly in seconds without conversion
+        to frames, avoiding double conversion for NWB files that already store
+        spike times as timestamps.
+
+        Parameters
+        ----------
+        unit_id
+            The unit id to retrieve spike train for
+        start_time : float, default: None
+            The start time in seconds for spike train extraction
+        end_time : float, default: None
+            The end time in seconds for spike train extraction
+
+        Returns
+        -------
+        spike_times : np.ndarray
+            Spike times in seconds
+        """
         # Extract the spike times for the unit
         unit_index = self.parent_extractor.id_to_index(unit_id)
         if unit_index == 0:
@@ -1330,19 +1373,17 @@ class NwbSortingSegment(BaseSortingSegment):
         end_index = self.spike_times_index_data[unit_index]
         spike_times = self.spike_times_data[start_index:end_index]
 
-        # Transform spike times to frames and subset
-        frames = np.round((spike_times - self._t_start) * self._sampling_frequency)
-
+        # Filter by time range if specified
         start_index = 0
-        if start_frame is not None:
-            start_index = np.searchsorted(frames, start_frame, side="left")
+        if start_time is not None:
+            start_index = np.searchsorted(spike_times, start_time, side="left")
 
-        if end_frame is not None:
-            end_index = np.searchsorted(frames, end_frame, side="left")
+        if end_time is not None:
+            end_index = np.searchsorted(spike_times, end_time, side="left")
         else:
-            end_index = frames.size
+            end_index = spike_times.size
 
-        return frames[start_index:end_index].astype("int64", copy=False)
+        return spike_times[start_index:end_index].astype("float64", copy=False)
 
 
 def _find_timeseries_from_backend(group, path="", result=None, backend="hdf5"):
