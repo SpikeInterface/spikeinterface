@@ -30,7 +30,6 @@ dependencies = [
     "packaging",
     "pydantic",
     "numcodecs<0.16.0", # For supporting zarr < 3
-    "pynapple>=0.9.2",
 ]
 
 [build-system]
