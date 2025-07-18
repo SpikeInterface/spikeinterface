@@ -154,7 +154,7 @@ def plot_run_times(study, case_keys=None, mode="bar", levels_to_group_by=None, f
             labels.append(study.cases[key]["label"])
             rt = run_times.at[key, "run_times"]
             ax.bar(i, rt, width=0.8, color=colors[key])
-        ax.set_xticks(np.arange(labels))
+        ax.set_xticks(np.arange(len(labels)))
         ax.set_xticklabels(labels, rotation=45.0)
         ax.set_ylabel("Run times (s)")
 
