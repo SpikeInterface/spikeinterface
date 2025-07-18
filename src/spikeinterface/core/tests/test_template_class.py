@@ -7,7 +7,7 @@ from spikeinterface.core.sparsity import ChannelSparsity
 from probeinterface import generate_multi_columns_probe
 
 
-def generate_test_template(template_type, is_scaled=True) -> Templates:
+def generate_test_template(template_type, is_in_uV=True) -> Templates:
     num_units = 3
     num_samples = 5
     num_channels = 4
@@ -28,7 +28,7 @@ def generate_test_template(template_type, is_scaled=True) -> Templates:
             probe=probe,
             unit_ids=unit_ids,
             channel_ids=channel_ids,
-            is_scaled=is_scaled,
+            is_in_uV=is_in_uV,
         )
     elif template_type == "sparse":  # sparse with sparse templates
         sparsity_mask = np.array(
@@ -53,7 +53,7 @@ def generate_test_template(template_type, is_scaled=True) -> Templates:
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
             probe=probe,
-            is_scaled=is_scaled,
+            is_in_uV=is_in_uV,
             unit_ids=unit_ids,
             channel_ids=channel_ids,
         )
@@ -68,16 +68,16 @@ def generate_test_template(template_type, is_scaled=True) -> Templates:
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
             probe=probe,
-            is_scaled=is_scaled,
+            is_in_uV=is_in_uV,
             unit_ids=unit_ids,
             channel_ids=channel_ids,
         )
 
 
-@pytest.mark.parametrize("is_scaled", [True, False])
+@pytest.mark.parametrize("is_in_uV", [True, False])
 @pytest.mark.parametrize("template_type", ["dense", "sparse"])
-def test_pickle_serialization(template_type, is_scaled, tmp_path):
-    template = generate_test_template(template_type, is_scaled)
+def test_pickle_serialization(template_type, is_in_uV, tmp_path):
+    template = generate_test_template(template_type, is_in_uV)
 
     # Dump to pickle
     pkl_path = tmp_path / "templates.pkl"
@@ -91,10 +91,10 @@ def test_pickle_serialization(template_type, is_scaled, tmp_path):
     assert template == template_reloaded
 
 
-@pytest.mark.parametrize("is_scaled", [True, False])
+@pytest.mark.parametrize("is_in_uV", [True, False])
 @pytest.mark.parametrize("template_type", ["dense", "sparse"])
-def test_json_serialization(template_type, is_scaled):
-    template = generate_test_template(template_type, is_scaled)
+def test_json_serialization(template_type, is_in_uV):
+    template = generate_test_template(template_type, is_in_uV)
 
     json_str = template.to_json()
     template_reloaded_from_json = Templates.from_json(json_str)
@@ -102,10 +102,10 @@ def test_json_serialization(template_type, is_scaled):
     assert template == template_reloaded_from_json
 
 
-@pytest.mark.parametrize("is_scaled", [True, False])
+@pytest.mark.parametrize("is_in_uV", [True, False])
 @pytest.mark.parametrize("template_type", ["dense", "sparse"])
-def test_get_dense_templates(template_type, is_scaled):
-    template = generate_test_template(template_type, is_scaled)
+def test_get_dense_templates(template_type, is_in_uV):
+    template = generate_test_template(template_type, is_in_uV)
     dense_templates = template.get_dense_templates()
     assert dense_templates.shape == (template.num_units, template.num_samples, template.num_channels)
 
@@ -115,10 +115,10 @@ def test_initialization_fail_with_dense_templates():
         template = generate_test_template(template_type="sparse_with_dense_templates")
 
 
-@pytest.mark.parametrize("is_scaled", [True, False])
+@pytest.mark.parametrize("is_in_uV", [True, False])
 @pytest.mark.parametrize("template_type", ["dense", "sparse"])
-def test_save_and_load_zarr(template_type, is_scaled, tmp_path):
-    original_template = generate_test_template(template_type, is_scaled)
+def test_save_and_load_zarr(template_type, is_in_uV, tmp_path):
+    original_template = generate_test_template(template_type, is_in_uV)
 
     zarr_path = tmp_path / "templates.zarr"
     original_template.to_zarr(str(zarr_path))
@@ -129,10 +129,10 @@ def test_save_and_load_zarr(template_type, is_scaled, tmp_path):
     assert original_template == loaded_template
 
 
-@pytest.mark.parametrize("is_scaled", [True, False])
+@pytest.mark.parametrize("is_in_uV", [True, False])
 @pytest.mark.parametrize("template_type", ["dense", "sparse"])
-def test_select_units(template_type, is_scaled):
-    template = generate_test_template(template_type, is_scaled)
+def test_select_units(template_type, is_in_uV):
+    template = generate_test_template(template_type, is_in_uV)
     selected_unit_ids = ["unit_a", "unit_c"]
     selected_unit_ids_indices = [0, 2]
 
@@ -149,10 +149,10 @@ def test_select_units(template_type, is_scaled):
         assert np.array_equal(selected_template.sparsity_mask, template.sparsity_mask[selected_unit_ids_indices])
 
 
-@pytest.mark.parametrize("is_scaled", [True, False])
+@pytest.mark.parametrize("is_in_uV", [True, False])
 @pytest.mark.parametrize("template_type", ["dense"])
-def test_select_channels(template_type, is_scaled):
-    template = generate_test_template(template_type, is_scaled)
+def test_select_channels(template_type, is_in_uV):
+    template = generate_test_template(template_type, is_in_uV)
     selected_channel_ids = ["channel1", "channel3"]
     selected_channel_ids_indices = [0, 2]
 

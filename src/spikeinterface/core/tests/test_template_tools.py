@@ -48,7 +48,7 @@ def _get_templates_object_from_sorting_analyzer(sorting_analyzer):
         sparsity_mask=None,
         channel_ids=sorting_analyzer.channel_ids,
         unit_ids=sorting_analyzer.unit_ids,
-        is_scaled=sorting_analyzer.return_in_uV,
+        is_in_uV=sorting_analyzer.return_in_uV,
     )
     return templates
 

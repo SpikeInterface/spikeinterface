@@ -74,7 +74,7 @@ def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, ret
         channel_ids=recording.channel_ids,
         unit_ids=gt_sorting.unit_ids,
         probe=recording.get_probe(),
-        is_scaled=return_scaled,
+        is_in_uV=return_scaled,
     )
     return gt_templates
 

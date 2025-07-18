@@ -459,7 +459,7 @@ def generate_drifting_recording(
         sampling_frequency=sampling_frequency,
         nbefore=nbefore,
         probe=probe,
-        is_scaled=True,
+        is_in_uV=True,
     )
 
     drifting_templates = DriftingTemplates.from_static_templates(templates)

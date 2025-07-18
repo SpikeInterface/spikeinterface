@@ -166,7 +166,7 @@ class DriftingTemplates(Templates):
             nbefore=templates.nbefore,
             probe=templates.probe,
             sparsity_mask=templates.sparsity_mask,
-            is_scaled=templates.is_scaled,
+            is_in_uV=templates.is_in_uV,
             unit_ids=templates.unit_ids,
             channel_ids=templates.channel_ids,
         )
