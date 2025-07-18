@@ -1,10 +1,11 @@
 from __future__ import annotations
+from typing import Literal
 from pathlib import Path
 
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core.segmentutils import ConcatenateSegmentRecording
+from spikeinterface.core.segmentutils import ConcatenateSegmentRecording, AppendSegmentRecording
 from .neobaseextractor import NeoBaseRecordingExtractor
 
 
@@ -107,7 +108,7 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
 read_intan = define_function_from_class(source_class=IntanRecordingExtractor, name="read_intan")
 
 
-class IntanSplitFilesRecordingExtractor(ConcatenateSegmentRecording):
+class IntanSplitFilesRecordingExtractor(ConcatenateSegmentRecording, AppendSegmentRecording):
     """
     Class for reading Intan traditional format split files from a folder and concatenating them in temporal order.
 
@@ -142,6 +143,7 @@ class IntanSplitFilesRecordingExtractor(ConcatenateSegmentRecording):
     def __init__(
         self,
         folder_path,
+        mode: Literal["append" | "concatenate"] = "concatenate",
         stream_id=None,
         stream_name=None,
         all_annotations=False,
@@ -176,11 +178,15 @@ class IntanSplitFilesRecordingExtractor(ConcatenateSegmentRecording):
             recording_list.append(recording)
 
         # Initialize the parent class with the recording list
-        ConcatenateSegmentRecording.__init__(self, recording_list)
+        if mode == "concatenate":
+            ConcatenateSegmentRecording.__init__(self, recording_list)
+        elif mode == "append":
+            AppendSegmentRecording.__init__(self, recording_list)
 
         # Update kwargs to include our specific parameters
         self._kwargs = dict(
             folder_path=str(Path(folder_path).resolve()),
+            mode=mode,
             stream_id=stream_id,
             stream_name=stream_name,
             all_annotations=all_annotations,
