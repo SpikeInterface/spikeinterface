@@ -1,11 +1,10 @@
 from spikeinterface.core import SortingAnalyzer, BaseSorting
-import pandas as pd
 import numpy as np
 
 
 def to_pynapple_tsgroup(
     sorting_analyzer_or_sorting: SortingAnalyzer | BaseSorting,
-    metadata: pd.DataFrame | dict | None = None,
+    metadata=None,
 ):
     """
     Returns a pynapple TsGroup object based on spike train data.
@@ -30,13 +29,17 @@ def to_pynapple_tsgroup(
     elif isinstance(sorting_analyzer_or_sorting, BaseSorting):
         sorting = sorting_analyzer_or_sorting
     else:
-        raise TypeError("The function `to_pynapple_tsgroup` only accepts a SortingAnalyzer or Sorting object.")
+        raise TypeError(
+            f"The `sorting_analyzer_or_sorting` argument must be a SortingAnalyzer or Sorting object, not a {type(sorting_analyzer_or_sorting)} type object."
+        )
 
     unit_ids = sorting.unit_ids
     spikes_trains = {unit_id: sorting.get_unit_spike_train(unit_id=unit_id, return_times=True) for unit_id in unit_ids}
 
     # Look for good metadata to add, if there is a sorting analyzer
     if metadata is None and isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
+
+        import pandas as pd
 
         metadata_list = []
         if (unit_locations := sorting_analyzer_or_sorting.get_extension("unit_locations")) is not None:
