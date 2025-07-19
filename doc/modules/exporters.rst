@@ -10,18 +10,19 @@ Exporting to Pynapple
 The python package `Pynapple <https://pynapple.org/>`_ is often used for combining ephys
 and behavioral data. It can be used to decode behavior, make tuning curves and compute spectrograms.
 The :py:func:`~spikeinterface.exporters.to_pynapple_tsgroup` function allows you to convert a
-SortingAnalyzer to Pynapple's `TsGroup` object.
+SortingAnalyzer to Pynapple's ``TsGroup`` object.
 
-**Note** : When creating the `TsGroup`, we will use the underlying time support of the SortingAnalyzer.
-How this works depends on your acquisition system. You can use the `get_times` method on a recording
+**Note** : When creating the ``TsGroup``, we will use the underlying time support of the SortingAnalyzer.
+How this works depends on your acquisition system. You can use the ``get_times`` method on a recording
 to see the time support of your recording.
 
-When making the `TsGroup`, you can also attach useful metadata such as the quality metrics of each unit
+When making the ``TsGroup``, you can also attach useful metadata such as the quality metrics of each unit
 or the location of the unit in the brain. You can pass any pandas DataFrame, whose index contains the
-`unit_id`s of your sorting object.
+``unit_id`` s of your sorting object.
 
-The following code creates a `TsGroup` from a `SortingAnalyzer`, then save's it using `Pynapple`'s
-save method. We attach the analyzer's quality metrics as metadata.
+The following code creates a ``TsGroup`` from a ``SortingAnalyzer``, then save's it using ``Pynapple``'s
+save method. You can include any metadata as a pandas DataFrame. Here, we include the ``analyzer`` s
+quality metics.
 
 .. code-block:: python
 
@@ -31,12 +32,12 @@ save method. We attach the analyzer's quality metrics as metadata.
     # load in an analyzer
     analyzer = si.load_sorting_analyzer("path/to/analyzer")
 
-    my_tsGroup = to_pynapple_tsgroup(
+    my_tsgroup = to_pynapple_tsgroup(
         sorting_analyzer=analyzer,
         metadata=analyzer.get_extension("quality_metrics").get_data()
     )
 
-    my_tsGroup.save("my_tsgroup_output.npz")
+    my_tsgroup.save("my_tsgroup_output.npz")
 
 
 Exporting to Phy
