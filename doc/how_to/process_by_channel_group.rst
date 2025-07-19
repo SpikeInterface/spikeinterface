@@ -146,7 +146,7 @@ We can also sort a recording for each channel group separately. It is not necess
 a recording by channel group in order to sort by channel group.
 
 There are two ways to sort a recording by channel group. First, we can pass a dictionary to the
-`run_sorter` function. Since the preprocessing-by-group method above returns a dict, we can
+``run_sorter`` function. Since the preprocessing-by-group method above returns a dict, we can
 simply pass this output. Alternatively, for more control, we can loop over the recordings
 ourselves.
 
