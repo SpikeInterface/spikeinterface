@@ -80,9 +80,13 @@ preprocessed_recording = spre.bandpass_filter(
 
 ##############################################################################
 # Tetrodes often have dead channels, so it is advised to try and detect
-# and remove these
+# and remove these. For tetrodes, we should use a detection method which
+# doesn't depend on the channel locations such as std or mad:
 
-recording_good_channels = spre.detect_and_remove_bad_channels(preprocessed_recording)
+recording_good_channels = spre.detect_and_remove_bad_channels(
+    preprocessed_recording,
+    method = "std",
+)
 
 ##############################################################################
 # It can be a good idea to sort your tetrode data separately for each tetrode.
