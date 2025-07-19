@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 from probeinterface import read_probeinterface, write_probeinterface
@@ -452,7 +453,7 @@ class BaseRecording(BaseRecordingSnippets):
         rs = self._recording_segments[segment_index]
         return rs.get_end_time()
 
-    def has_time_vector(self, segment_index=None):
+    def has_time_vector(self, segment_index: Optional[int] = None):
         """Check if the segment of the recording has a time vector.
 
         Parameters
@@ -982,7 +983,7 @@ class BaseRecordingSegment(BaseSegment):
                 sample_index = time_s * self.sampling_frequency
             else:
                 sample_index = (time_s - self.t_start) * self.sampling_frequency
-            sample_index = np.round(sample_index).astype(int)
+            sample_index = np.round(sample_index).astype(np.int64)
         else:
             sample_index = np.searchsorted(self.time_vector, time_s, side="right") - 1
 

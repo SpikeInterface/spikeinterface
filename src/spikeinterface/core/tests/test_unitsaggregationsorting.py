@@ -164,7 +164,23 @@ def test_aggregation_of_dicts():
     assert np.all(
         aggregated_sorting.get_property(key="aggregate_units_key") == np.array(["a", "a", "a", "a", "b", "b"])
     )
+    
+
+def test_sampling_frequency_max_diff():
+    """Test that the sampling frequency max diff is respected."""
+    sorting1 = generate_sorting(sampling_frequency=30000, num_units=3)
+    sorting2 = generate_sorting(sampling_frequency=30000.01, num_units=3)
+    sorting3 = generate_sorting(sampling_frequency=30000.001, num_units=3)
+
+    # Default is 0, so should not raise an error
+    with pytest.raises(ValueError):
+        aggregate_units([sorting1, sorting2, sorting3])
+
+    # This should not raise an warning
+    with pytest.warns(UserWarning):
+        aggregate_units([sorting1, sorting2, sorting3], sampling_frequency_max_diff=0.02)
+
 
 
 if __name__ == "__main__":
-    test_unitsaggregationsorting()
+    test_sampling_frequency_max_diff()
