@@ -18,4 +18,5 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     auto_curation_training
     auto_curation_prediction
     physical_units
+    unsigned_to_signed
     customize_a_plot
