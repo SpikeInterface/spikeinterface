@@ -152,8 +152,9 @@ ourselves.
 
 **Option 1 : Automatic splitting (Recommended)**
 
-Simply pass the split recording to the `run_sorter` function, as if it was a non-split recording.
-This will return a dict of sortings, with the keys corresponding to the groups.
+Simply pass the split recording to the ``run_sorter`` function, as if it was a non-split recording.
+This will return a dict of sortings, with the same keys as the dict of recordings that were
+passed to ``run_sorter``.
 
 .. code-block:: python
 
@@ -199,7 +200,15 @@ Creating a SortingAnalyzer by Channel Group
 The code above generates a dictionary of recording objects and a dictionary of sorting objects.
 When making a :ref:`SortingAnalyzer <modules/core:SortingAnalyzer>`, we can pass these dictionaries and
 a single analyzer will be created, with the recordings and sortings appropriately aggregated.
-This works in the exact same way as creating a sorting analyzer from a single recording and sorting:
+
+The dictionary of recordings and dictionary of sortings must have the same keys. E.g. if you
+use ``split_by("group")``, the keys of your dict of recordings will be the values of the ``group``
+property of the recording. Then the dict of sortings should also have these keys.
+Note that if you use the internal functions, like we do in the code-block below, you don't need to
+keep track of keys yourself. SpikeInterface will do this for you automatically.
+
+The code for create ``SortingAnalyzer`` from dicts of recordings and sortings is very similar to that for
+creating a sorting analyzer from a single recording and sorting:
 
 .. code-block:: python
 

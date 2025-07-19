@@ -227,6 +227,7 @@ def test_create_by_dict():
 
     assert np.all(sort.get_unit_spike_train(unit_id="5") == analyzer.sorting.get_unit_spike_train(unit_id="5"))
 
+    # make a dict of sortings with keys which don't match the recordings keys
     split_sort_bad_keys = {
         bad_key: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == key])
         for bad_key, key in zip([3, 4], [1, 2])
@@ -234,6 +235,15 @@ def test_create_by_dict():
 
     with pytest.raises(ValueError):
         analyzer = create_sorting_analyzer(split_sort_bad_keys, rec.split_by("group"))
+
+    # make a dict of sortings, in a different order than the recording. This should
+    # still work
+    split_sort_different_order = {
+        2: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == 2]),
+        1: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == 1]),
+    }
+    combined_analyzer = create_sorting_analyzer(split_sort_different_order, rec.split_by("group"))
+    assert np.all(sort.get_unit_spike_train(unit_id="5") == combined_analyzer.sorting.get_unit_spike_train(unit_id="5"))
 
 
 def test_load_without_runtime_info(tmp_path, dataset):
