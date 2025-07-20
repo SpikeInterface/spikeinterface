@@ -2,7 +2,7 @@ Unsigned to Signed Data types
 =============================
 
 As of version 0.103.0 SpikeInterface has changed one of its defaults for interacting with
-:code:`Recording`` objects. We no longer autocast unsigned dtypes to signed implicitly. This
+:code:`Recording` objects. We no longer autocast unsigned dtypes to signed implicitly. This
 means that some users of SpikeInterface will need to add one additional line of code to their scripts
 to explicitly handle this conversion.
 
@@ -12,7 +12,7 @@ Why this matters?
 
 For those that want a deeper understanding of dtypes `NumPy provides a great explanation <https://numpy.org/doc/stable/reference/arrays.dtypes.html>`_.
 For our purposes it is important to know that many pieces of recording equipment opt to store their electrophysiological data as unsigned integers,
-which provides the benefit of reduces the necessary file size. In order to convert to real units these file formats only need to store a :code:`gain`
+which provides the benefit of reducing the necessary file size. In order to convert to real units these file formats only need to store a :code:`gain`
 and an :code:`offset`. Our :code:`RecordingExtractor`'s maintain the dtype that the file format utilizes, which means that some of our
 :code:`RecordingExtractor`'s will have unsigned dtypes.
 
@@ -40,7 +40,7 @@ For users that receive an error because their :code:`Recording` is unsigned, the
     recording = se.read_intan('path/to/my/file.rhd', stream_id='0')
     # to get a signed version of our Recording we use the following function
     recording_signed = spre.unsigned_to_signed(recording)
-    # we can use all functions that we used previously in our scripts
+    # we can now apply any preprocessing functions like normal, e.g.
     recording_filtered = spre.bandpass_filter(recording_signed)
 
 
