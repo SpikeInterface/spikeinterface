@@ -56,7 +56,7 @@ If you are curious if your :code:`Recording` is unsigned you can simply check th
     # use method on the Recording object
     print(recording.get_dtype())
 
-In either case, if the dtype displayed has a :code:`u`at the beginning (e.g. :code:`uint16`) then your recording is
+In either case, if the dtype displayed has a :code:`u` at the beginning (e.g. :code:`uint16`) then your recording is
 unsigned. If it doesn't have the :code:`u` (e.g. :code:`int16`) then it is signed and would not need this preprocessing step.
 
 Additional Notes
@@ -69,7 +69,7 @@ Additional Notes
 2) Using :code:`unsigned_to_signed` in versions less than 0.103.0 does not hurt your scripts. This
    option was available previously along with the implicit option. Adding this into scripts with old
    versions of SpikeInterface will still work and will "future-proof" your scripts for when you
-    update to a version greater than or equal to 0.103.0.
+   update to a version greater than or equal to 0.103.0.
 
 3) For additional information on units and scaling in SpikeInterface see :ref:`physical_units`.
 
