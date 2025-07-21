@@ -11,6 +11,7 @@ on:
 
 env:
   KACHERY_API_KEY: ${{ secrets.KACHERY_API_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}

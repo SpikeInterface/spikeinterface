@@ -75,9 +75,12 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
         self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), load_sync_channel=load_sync_channel))
 
-        stream_is_nidq_or_sync = "nidq" in self.stream_id or "SYNC" in self.stream_id
-        if stream_is_nidq_or_sync:
-            # Do not add probe information for the sync or nidq stream. Early return
+        stream_is_nidq = "nidq" in self.stream_id
+        stream_is_one_box = "obx" in self.stream_id
+        stream_is_sync = "SYNC" in self.stream_id
+
+        if stream_is_nidq or stream_is_one_box or stream_is_sync:
+            # Do not add probe information for the one box, nidq or sync streams. Early return
             return None
 
         # Checks if the probe information is available and adds location, shanks and sample shift if available.
