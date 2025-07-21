@@ -4,6 +4,10 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 
+from spikeinterface.core.template import Templates
+from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.waveform_tools import estimate_templates
+
 
 # TODO find a way to attach a a sparse_mask to a given features (waveforms, pca, tsvd ....)
 
@@ -230,8 +234,6 @@ def get_templates_from_peaks_and_recording(
     templates : Templates
         The estimated templates object.
     """
-    from spikeinterface.core.template import Templates
-    from spikeinterface.core.basesorting import minimum_spike_dtype
 
     mask = peak_labels > -1
     valid_peaks = peaks[mask]
@@ -247,7 +249,7 @@ def get_templates_from_peaks_and_recording(
     spikes["unit_index"] = indices
     spikes["segment_index"] = valid_peaks["segment_index"]
 
-    from spikeinterface.core.waveform_tools import estimate_templates
+    
 
     templates_array = estimate_templates(
         recording,
@@ -317,7 +319,7 @@ def get_templates_from_peaks_and_svd(
     final_sparsity_mask: np.array
         The final sparsity mask. Note that the template object is dense but with zeros.        
     """
-    from spikeinterface.core.template import Templates
+    
 
     assert operator in ["average", "median"], "operator should be either 'average' or 'median'"
     mask = peak_labels > -1
