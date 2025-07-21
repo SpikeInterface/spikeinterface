@@ -361,8 +361,13 @@ class Templates:
         sampling_frequency = zarr_group.attrs["sampling_frequency"]
         nbefore = zarr_group.attrs["nbefore"]
 
-        # TODO: Consider eliminating the True and make it required
-        is_in_uV = zarr_group.attrs.get("is_in_uV", True)
+
+        if "is_scaled" in zarr_group.attrs:
+            # prior to 0.103.0 "is_in_uV" was named "is_scaled", so for backward compatibility:
+            is_in_uV = zarr_group.attrs["is_scaled"]
+        else:
+            # TODO: Consider eliminating the True and make it required
+            is_in_uV = zarr_group.attrs.get("is_in_uV", True)
 
         sparsity_mask = None
         if "sparsity_mask" in zarr_group:
