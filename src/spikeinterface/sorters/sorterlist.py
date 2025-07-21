@@ -37,11 +37,9 @@ sorter_full_list = [
     Kilosort3Sorter,
     Kilosort4Sorter,
     PyKilosortSorter,
-    KlustaSorter,
     Mountainsort4Sorter,
     Mountainsort5Sorter,
     RTSortSorter,
-    SpykingcircusSorter,
     TridesclousSorter,
     WaveClusSorter,
     WaveClusSnippetsSorter,
@@ -52,6 +50,9 @@ sorter_full_list = [
     SimpleSorter,
 ]
 
+# archived
+archived_sorter_list = [KlustaSorter, SpykingcircusSorter, TridesclousSorter, YassSorter]
+
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}
 
 
@@ -59,6 +60,12 @@ def available_sorters():
     """Lists available sorters."""
 
     return sorted(list(sorter_dict.keys()))
+
+
+def archived_sorters():
+    """Lists archived sorters."""
+
+    return sorted([s.sorter_name for s in archived_sorter_list])
 
 
 def installed_sorters():

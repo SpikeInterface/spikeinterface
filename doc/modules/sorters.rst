@@ -466,23 +466,28 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **Kilosort2.5** :code:`run_sorter(sorter_name='kilosort2_5')`
 * **Kilosort3** :code:`run_sorter(sorter_name='kilosort3')`
 * **PyKilosort** :code:`run_sorter(sorter_name='pykilosort')`
-* **Klusta** :code:`run_sorter(sorter_name='klusta')`
 * **Mountainsort4** :code:`run_sorter(sorter_name='mountainsort4')`
 * **Mountainsort5** :code:`run_sorter(sorter_name='mountainsort5')`
-* **RT-Sort** :code:`run_sorter(sorter_name='rt-sort')`
-* **SpyKING Circus** :code:`run_sorter(sorter_name='spykingcircus')`
-* **Tridesclous** :code:`run_sorter(sorter_name='tridesclous')`
+* **RTSort** :code:`run_sorter(sorter_name='rtsort')`
 * **Wave clus** :code:`run_sorter(sorter_name='waveclus')`
 * **Combinato** :code:`run_sorter(sorter_name='combinato')`
 * **HDSort** :code:`run_sorter(sorter_name='hdsort')`
-* **YASS** :code:`run_sorter(sorter_name='yass')`
 
-
-Here a list of internal sorter based on `spikeinterface.sortingcomponents`; they are totally
+Here is a list of internal sorter based on `spikeinterface.sortingcomponents`; they are totally
 experimental for now:
 
 * **Spyking Circus2** :code:`run_sorter(sorter_name='spykingcircus2')`
 * **Tridesclous2** :code:`run_sorter(sorter_name='tridesclous2')`
+
+
+Here is the list of legacy sorters that are no longer supported, but can still be run
+with an older version of SpikeInterface:
+
+* **Klusta** :code:`run_sorter(sorter_name='klusta')`
+* **SpyKING Circus** :code:`run_sorter(sorter_name='spykingcircus')`
+* **Tridesclous** :code:`run_sorter(sorter_name='tridesclous')`
+* **YASS** :code:`run_sorter(sorter_name='yass')`
+
 
 In 2024, we expect to add many more sorters to this list.
 
