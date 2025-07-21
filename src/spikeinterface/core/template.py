@@ -361,7 +361,6 @@ class Templates:
         sampling_frequency = zarr_group.attrs["sampling_frequency"]
         nbefore = zarr_group.attrs["nbefore"]
 
-
         if "is_scaled" in zarr_group.attrs:
             # prior to 0.103.0 "is_in_uV" was named "is_scaled", so for backward compatibility:
             is_in_uV = zarr_group.attrs["is_scaled"]
