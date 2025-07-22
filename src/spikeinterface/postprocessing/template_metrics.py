@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 import warnings
+from itertools import chain
 from copy import deepcopy
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
@@ -188,6 +189,26 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
         metrics.loc[new_unit_ids, :] = self._compute_metrics(
             new_sorting_analyzer, new_unit_ids, verbose, metric_names, **job_kwargs
+        )
+
+        new_data = dict(metrics=metrics)
+        return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        import pandas as pd
+
+        metric_names = self.params["metric_names"]
+        old_metrics = self.data["metrics"]
+
+        all_unit_ids = new_sorting_analyzer.unit_ids
+        new_unit_ids_f = list(chain(*new_unit_ids))
+        not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids_f)]
+
+        metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
+
+        metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
+        metrics.loc[new_unit_ids_f, :] = self._compute_metrics(
+            new_sorting_analyzer, new_unit_ids_f, verbose, metric_names, **job_kwargs
         )
 
         new_data = dict(metrics=metrics)
