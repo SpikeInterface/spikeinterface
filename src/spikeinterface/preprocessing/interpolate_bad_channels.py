@@ -133,11 +133,11 @@ class DetectAndInterpolateBadChannelsRecording(InterpolateBadChannelsRecording):
         self._kwargs.update(all_bad_channels_kwargs)
 
 
-detect_and_interpolate_bad_channels = define_function_handling_dict_from_class(
-    source_class=DetectAndInterpolateBadChannelsRecording, name="detect_and_interpolate_bad_channels"
-)
 DetectAndInterpolateBadChannelsRecording.__doc__ = DetectAndInterpolateBadChannelsRecording.__doc__.format(
     _bad_channel_detection_kwargs_doc
+)
+detect_and_interpolate_bad_channels = define_function_handling_dict_from_class(
+    source_class=DetectAndInterpolateBadChannelsRecording, name="detect_and_interpolate_bad_channels"
 )
 
 
