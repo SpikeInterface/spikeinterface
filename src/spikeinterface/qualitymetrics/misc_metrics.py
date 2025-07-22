@@ -184,7 +184,10 @@ def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     mean_high_counts = np.mean(high_counts)
     std_high_counts = np.std(high_counts)
     if std_high_counts == 0:
-        warnings.warn("All the high-amplitude bins have the same size. Please consider changing n_bins.")
+        warnings.warn(
+            "All the high-amplitude bins have the same size. Please consider changing n_bins. "
+            "Setting noise cutoff to NaN"
+        )
         return np.nan, ratio
 
     cutoff = (mean_low_counts - mean_high_counts) / std_high_counts
