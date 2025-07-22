@@ -169,7 +169,7 @@ def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     ratio = mean_low_counts / maximum_bin_height
 
     if len(high_indices) == 0:
-        warnings.warn("No bin is selected as the reference region. Please increase high_quantile.")
+        warnings.warn("No bin is selected as the reference region. Please increase high_quantile. Setting noise cutoff to NaN")
         return np.nan, ratio
 
     if len(high_indices) == 1:
