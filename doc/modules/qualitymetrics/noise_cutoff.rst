@@ -16,7 +16,7 @@ instead, it directly compares counts in the low‐amplitude bins to counts in hi
 
    For each unit, divide all amplitudes into `n_bins` equally spaced bins over the range of the amplitude.
    If the number of spikes is large, you may consider using a larger `n_bins`. For a small number of spikes, consider a smaller `n_bins`.
-   Let `n_i` denote the count in the :math:`i`-th bin.
+   Let :math:`n_i` denote the count in the :math:`i`-th bin.
 
 2. **Identify the “low” region**
     - Compute the amplitude value at the specified `low_quantile` (for example, 0.10 = 10th percentile), denoted as :math:`\text{amp}_{low}`.
