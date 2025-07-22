@@ -1,4 +1,4 @@
-Noise cutoff
+Noise cutoff (:code:`noise_cutoff`)
 ========================================
 
 Calculation
