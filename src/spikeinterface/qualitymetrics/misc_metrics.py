@@ -175,7 +175,7 @@ def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     if len(high_indices) == 1:
         warnings.warn(
             "Only one bin is selected as the reference region, and thus the standard deviation cannot be computed. "
-            "Please increase high_quantile."
+            "Please increase high_quantile. Setting noise cutoff to NaN"
         )
         return np.nan, ratio
 
