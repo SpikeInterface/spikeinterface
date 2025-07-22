@@ -67,9 +67,9 @@ Expectation and use
 -------------------
 
 Noise cutoff attempts to describe whether an amplitude distribution is cut off.
-Larger values of `cutoff` and `ratio` suggest that the distribution is cut-off. 
-IBL uses the default value of 1 to choose the number of lower bins, with a suggested threshold of 5 for `cutoff` and 0.1 for `ratio` to determine whether a unit is cut off or not. 
-In practice, the IBL threshold is quite conservative, and a lower threshold might be better for your data. 
+Larger values of `cutoff` and `ratio` suggest that the distribution is cut-off.
+IBL uses the default value of 1 to choose the number of lower bins, with a suggested threshold of 5 for `cutoff` and 0.1 for `ratio` to determine whether a unit is cut off or not.
+In practice, the IBL threshold is quite conservative, and a lower threshold might be better for your data.
 We suggest plotting the data using the `plot_amplitudes` widget to view your data when choosing your threshold.
 It is suggested to use this metric when the amplitude histogram is **unimodal**.
 
