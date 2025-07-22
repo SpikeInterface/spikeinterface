@@ -160,7 +160,9 @@ def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     high_indices = np.where(bin_edges[:-1] >= high_quantile_value)[0]
 
     if len(low_indices) == 0:
-        warnings.warn("No bin is selected to test cutoff. Please increase low_quantile. Setting noise cutoff and ratio to NaN")
+        warnings.warn(
+            "No bin is selected to test cutoff. Please increase low_quantile. Setting noise cutoff and ratio to NaN"
+        )
         return np.nan, np.nan
 
     # compute ratio between low-amplitude bins and the largest bin
@@ -169,7 +171,9 @@ def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     ratio = mean_low_counts / maximum_bin_height
 
     if len(high_indices) == 0:
-        warnings.warn("No bin is selected as the reference region. Please increase high_quantile. Setting noise cutoff to NaN")
+        warnings.warn(
+            "No bin is selected as the reference region. Please increase high_quantile. Setting noise cutoff to NaN"
+        )
         return np.nan, ratio
 
     if len(high_indices) == 1:
