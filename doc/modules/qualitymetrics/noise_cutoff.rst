@@ -1,11 +1,11 @@
-Noise cutoff (:code:`noise_cutoff`)
+Noise cutoff
 ========================================
 
 Calculation
 -----------
 
 
-Metric describing whether an amplitude distribution is cut off as it approaches zero, similar to  :ref:`amplitude cutoff <amp_cutoff>` but without a Gaussian assumption.
+Metric describing whether an amplitude distribution is cut off as it approaches zero, similar to _amp_cutoff  :ref:`amplitude cutoff <amp_cutoff>` but without a Gaussian assumption.
 
 The **noise cutoff** metric assesses whether a unit’s spike‐amplitude distribution is truncated
 at the low-end, which may be due to the high amplitude detection threshold in the deconvolution step,
@@ -24,7 +24,7 @@ instead, it directly compares counts in the low‐amplitude bins to counts in hi
     - Compute
 
     .. math::
-        L_{\mathrm{bins}} = \bigl\{i : \text{upper\_edge}(i) \le \text{amp}_{low}\bigr\}, \quad
+        L_{\mathrm{bins}} = \bigl\{i : \text{upper_edge}_i \le \text{amp}_{low}\bigr\}, \quad
         \mu_{\mathrm{low}} = \frac{1}{|L_{\mathrm{bins}}|}\sum_{i\in L_{\mathrm{bins}}} n_i.
 
 3. **Identify the “high” region**
@@ -34,7 +34,7 @@ instead, it directly compares counts in the low‐amplitude bins to counts in hi
    - Compute
 
     .. math::
-        H_{\mathrm{bins}} &= \bigl\{i : \text{lower\_edge}(i)\ge \text{amp}_{high}\bigr\}, \\
+        H_{\mathrm{bins}} &= \bigl\{i : \text{lower_edge}_i \ge \text{amp}_{high}\bigr\}, \\
         \mu_{\mathrm{high}} &= \frac{1}{|H_{\mathrm{bins}}|}\sum_{i\in H_{\mathrm{bins}}} n_i, \quad
         \sigma_{\mathrm{high}} = \sqrt{\frac{1}{|H_{\mathrm{bins}}|-1}\sum_{i\in H_{\mathrm{bins}}}\bigl(n_i-\mu_{\mathrm{high}} \bigr)^2}.
 
@@ -67,7 +67,10 @@ Expectation and use
 -------------------
 
 Noise cutoff attempts to describe whether an amplitude distribution is cut off.
-If the distribution is not truncated at the low-end, one would expect cutoff to be less than 5 and ratio less than 0.1.
+Larger values of `cutoff` and `ratio` suggest that the distribution is cut-off. 
+IBL uses the default value of 1 to choose the number of lower bins, with a suggested threshold of 5 for `cutoff` and 0.1 for `ratio` to determine whether a unit is cut off or not. 
+In practice, the IBL threshold is quite conservative, and a lower threshold might be better for your data. 
+We suggest plotting the data using the `plot_amplitudes` widget to view your data when choosing your threshold.
 It is suggested to use this metric when the amplitude histogram is **unimodal**.
 
 The metric is loosely based on [Hill]_'s amplitude cutoff, but is here adapted (originally by [IBL2024]_) to avoid making the Gaussianity assumption on spike distributions.
