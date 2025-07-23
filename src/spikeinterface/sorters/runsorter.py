@@ -46,9 +46,11 @@ SORTER_DOCKER_MAP = dict(
     mountainsort4="mountainsort4",
     mountainsort5="mountainsort5",
     pykilosort="pykilosort",
+    rtsort="rtsort",
     spykingcircus="spyking-circus",
     spykingcircus2="spyking-circus2",
-    rtsort="rtsort",
+    tridesclous="tridesclous",
+    tridesclous2="tridesclous2",
     # Matlab compiled sorters:
     hdsort="hdsort-compiled",
     ironclust="ironclust-compiled",
@@ -61,7 +63,6 @@ SORTER_DOCKER_MAP = dict(
     # archived
     # klusta="klusta",
     # yass="yass",
-    # tridesclous="tridesclous"
 )
 
 SORTER_DOCKER_MAP = {k: f"{REGISTRY}/{v}-base" for k, v in SORTER_DOCKER_MAP.items()}
