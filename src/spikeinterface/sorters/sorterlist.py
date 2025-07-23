@@ -40,6 +40,7 @@ sorter_full_list = [
     Mountainsort4Sorter,
     Mountainsort5Sorter,
     RTSortSorter,
+    SpykingcircusSorter,
     TridesclousSorter,
     WaveClusSorter,
     WaveClusSnippetsSorter,
@@ -51,7 +52,7 @@ sorter_full_list = [
 ]
 
 # archived
-archived_sorter_list = [KlustaSorter, SpykingcircusSorter, TridesclousSorter, YassSorter]
+archived_sorter_list = [KlustaSorter, YassSorter]
 
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}
 

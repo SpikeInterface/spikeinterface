@@ -469,6 +469,8 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **Mountainsort4** :code:`run_sorter(sorter_name='mountainsort4')`
 * **Mountainsort5** :code:`run_sorter(sorter_name='mountainsort5')`
 * **RTSort** :code:`run_sorter(sorter_name='rtsort')`
+* **SpyKING Circus** :code:`run_sorter(sorter_name='spykingcircus')`
+* **Tridesclous** :code:`run_sorter(sorter_name='tridesclous')`
 * **Wave clus** :code:`run_sorter(sorter_name='waveclus')`
 * **Combinato** :code:`run_sorter(sorter_name='combinato')`
 * **HDSort** :code:`run_sorter(sorter_name='hdsort')`
@@ -484,8 +486,6 @@ Here is the list of legacy sorters that are no longer supported, but can still b
 with an older version of SpikeInterface:
 
 * **Klusta** :code:`run_sorter(sorter_name='klusta')`
-* **SpyKING Circus** :code:`run_sorter(sorter_name='spykingcircus')`
-* **Tridesclous** :code:`run_sorter(sorter_name='tridesclous')`
 * **YASS** :code:`run_sorter(sorter_name='yass')`
 
 
