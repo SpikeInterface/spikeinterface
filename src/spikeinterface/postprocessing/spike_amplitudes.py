@@ -72,6 +72,10 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
 
         return new_data
 
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        # splitting only changes random spikes assignments
+        return self.data.copy()
+
     def _get_pipeline_nodes(self):
 
         recording = self.sorting_analyzer.recording
@@ -111,7 +115,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         )
         self.data["amplitudes"] = amps
 
-    def _get_data(self, outputs="numpy"):
+    def _get_data(self, outputs="numpy", concatenated=False):
         all_amplitudes = self.data["amplitudes"]
         if outputs == "numpy":
             return all_amplitudes
@@ -125,6 +129,16 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
                 for unit_id in unit_ids:
                     inds = spike_indices[segment_index][unit_id]
                     amplitudes_by_units[segment_index][unit_id] = all_amplitudes[inds]
+
+            if concatenated:
+                amplitudes_by_units_concatenated = {
+                    unit_id: np.concatenate(
+                        [amps_in_segment[unit_id] for amps_in_segment in amplitudes_by_units.values()]
+                    )
+                    for unit_id in unit_ids
+                }
+                return amplitudes_by_units_concatenated
+
             return amplitudes_by_units
         else:
             raise ValueError(f"Wrong .get_data(outputs={outputs}); possibilities are `numpy` or `by_unit`")

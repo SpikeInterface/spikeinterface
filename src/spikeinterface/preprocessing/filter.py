@@ -423,9 +423,11 @@ def fix_dtype(recording, dtype):
     # if uint --> force int
     if dtype.kind == "u":
         raise ValueError(
-            "Unsigned types are not supported, since they don't ineract well with "
+            "Unsigned types are not supported, since they don't interact well with "
             "various preprocessing steps. You can use "
             "`spikeinterface.preprocessing.unsigned_to_signed` to convert the recording to a signed type."
+            "For more information, please see "
+            "https://spikeinterface.readthedocs.io/en/stable/how_to/unsigned_to_signed.html"
         )
 
     return dtype

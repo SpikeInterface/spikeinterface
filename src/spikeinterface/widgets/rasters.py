@@ -4,8 +4,8 @@ import numpy as np
 from warnings import warn
 
 from spikeinterface.core import SortingAnalyzer, BaseSorting
-from .base import BaseWidget, to_attr
-from .utils import get_some_colors
+from .base import BaseWidget, to_attr, default_backend_kwargs
+from .utils import get_some_colors, validate_segment_indices, get_segment_durations
 
 
 class BaseRasterWidget(BaseWidget):
@@ -16,14 +16,19 @@ class BaseRasterWidget(BaseWidget):
 
     Parameters
     ----------
-    spike_train_data : dict
-        A dict of spike trains, indexed by the unit_id
-    y_axis_data : dict
-        A dict of the y-axis data, indexed by the unit_id
+    spike_train_data : dict of dicts
+        A dict of dicts where the structure is spike_train_data[segment_index][unit_id].
+    y_axis_data : dict of dicts
+        A dict of dicts where the structure is y_axis_data[segment_index][unit_id].
+        For backwards compatibility, a flat dict indexed by unit_id will be internally
+        converted to a dict of dicts with segment 0.
     unit_ids : array-like | None, default: None
         List of unit_ids to plot
-    total_duration : int | None, default: None
-        Duration of spike_train_data in seconds.
+    segment_indices : list | None, default: None
+        For multi-segment data, specifies which segment(s) to plot. If None, uses all available segments.
+        For single-segment data, this parameter is ignored.
+    durations : list | None, default: None
+        List of durations per segment of spike_train_data in seconds.
     plot_histograms : bool, default: False
         Plot histogram of y-axis data in another subplot
     bins : int | None, default: None
@@ -49,6 +54,8 @@ class BaseRasterWidget(BaseWidget):
         Ticks on y-axis, passed to `set_yticks`. If None, default ticks are used.
     hide_unit_selector : bool, default: False
         For sortingview backend, if True the unit selector is not displayed
+    segment_boundary_kwargs : dict | None, default: None
+        Additional arguments for the segment boundary lines, passed to `matplotlib.axvline`
     backend : str | None, default None
         Which plotting backend to use e.g. 'matplotlib', 'ipywidgets'. If None, uses
         default from `get_default_plotter_backend`.
@@ -59,7 +66,8 @@ class BaseRasterWidget(BaseWidget):
         spike_train_data: dict,
         y_axis_data: dict,
         unit_ids: list | None = None,
-        total_duration: int | None = None,
+        segment_indices: list | None = None,
+        durations: list | None = None,
         plot_histograms: bool = False,
         bins: int | None = None,
         scatter_decimate: int = 1,
@@ -72,13 +80,72 @@ class BaseRasterWidget(BaseWidget):
         y_label: str | None = None,
         y_ticks: bool = False,
         hide_unit_selector: bool = True,
+        segment_boundary_kwargs: dict | None = None,
         backend: str | None = None,
         **backend_kwargs,
     ):
 
+        # Set default segment boundary kwargs if not provided
+        if segment_boundary_kwargs is None:
+            segment_boundary_kwargs = {"color": "gray", "linestyle": "--", "alpha": 0.7}
+
+        # Process the data
+        available_segments = list(spike_train_data.keys())
+        available_segments.sort()  # Ensure consistent ordering
+
+        # Determine which segments to use
+        if segment_indices is None:
+            # Use all segments by default
+            segments_to_use = available_segments
+        elif isinstance(segment_indices, list):
+            # Multiple segments specified
+            for idx in segment_indices:
+                if idx not in available_segments:
+                    raise ValueError(f"segment_index {idx} not found in avialable segments {available_segments}")
+            segments_to_use = segment_indices
+        else:
+            raise ValueError("segment_index must be `list` or `None`")
+
+        # Get all unit IDs present in any segment if not specified
+        if unit_ids is None:
+            all_units = set()
+            for seg_idx in segments_to_use:
+                all_units.update(spike_train_data[seg_idx].keys())
+            unit_ids = list(all_units)
+
+        # Calculate cumulative durations for segment boundaries
+        segment_boundaries = np.cumsum(durations)
+        cumulative_durations = np.concatenate([[0], segment_boundaries])
+
+        # Concatenate data across segments with proper time offsets
+        concatenated_spike_trains = {unit_id: np.array([]) for unit_id in unit_ids}
+        concatenated_y_axis = {unit_id: np.array([]) for unit_id in unit_ids}
+
+        for offset, spike_train_segment, y_axis_segment in zip(
+            cumulative_durations,
+            [spike_train_data[idx] for idx in segments_to_use],
+            [y_axis_data[idx] for idx in segments_to_use],
+        ):
+            # Process each unit in the current segment
+            for unit_id, spike_times in spike_train_segment.items():
+                if unit_id not in unit_ids:
+                    continue
+
+                # Get y-axis values for this unit
+                y_values = y_axis_segment[unit_id]
+
+                # Apply offset to spike times
+                adjusted_times = spike_times + offset
+
+                # Add to concatenated data
+                concatenated_spike_trains[unit_id] = np.concatenate(
+                    [concatenated_spike_trains[unit_id], adjusted_times]
+                )
+                concatenated_y_axis[unit_id] = np.concatenate([concatenated_y_axis[unit_id], y_values])
+
         plot_data = dict(
-            spike_train_data=spike_train_data,
-            y_axis_data=y_axis_data,
+            spike_train_data=concatenated_spike_trains,
+            y_axis_data=concatenated_y_axis,
             unit_ids=unit_ids,
             plot_histograms=plot_histograms,
             y_lim=y_lim,
@@ -88,11 +155,13 @@ class BaseRasterWidget(BaseWidget):
             unit_colors=unit_colors,
             y_label=y_label,
             title=title,
-            total_duration=total_duration,
+            durations=durations,
             plot_legend=plot_legend,
             bins=bins,
             y_ticks=y_ticks,
             hide_unit_selector=hide_unit_selector,
+            segment_boundaries=segment_boundaries,
+            segment_boundary_kwargs=segment_boundary_kwargs,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -135,6 +204,8 @@ class BaseRasterWidget(BaseWidget):
         y_axis_data = dp.y_axis_data
 
         for unit_id in unit_ids:
+            if unit_id not in spike_train_data:
+                continue  # Skip this unit if not in data
 
             unit_spike_train = spike_train_data[unit_id][:: dp.scatter_decimate]
             unit_y_data = y_axis_data[unit_id][:: dp.scatter_decimate]
@@ -156,6 +227,11 @@ class BaseRasterWidget(BaseWidget):
                 count, bins = np.histogram(unit_y_data, bins=bins)
                 ax_hist.plot(count, bins[:-1], color=unit_colors[unit_id], alpha=0.8)
 
+        # Add segment boundary lines if provided
+        if getattr(dp, "segment_boundaries", None) is not None:
+            for boundary in dp.segment_boundaries:
+                scatter_ax.axvline(boundary, **dp.segment_boundary_kwargs)
+
         if dp.plot_histograms:
             ax_hist = self.axes.flatten()[1]
             ax_hist.set_ylim(scatter_ax.get_ylim())
@@ -172,7 +248,7 @@ class BaseRasterWidget(BaseWidget):
             scatter_ax.set_ylim(*dp.y_lim)
         x_lim = dp.x_lim
         if x_lim is None:
-            x_lim = [0, dp.total_duration]
+            x_lim = [0, np.sum(dp.durations)]
         scatter_ax.set_xlim(x_lim)
 
         if dp.y_ticks:
@@ -298,15 +374,32 @@ class RasterWidget(BaseRasterWidget):
     def __init__(
         self,
         sorting_analyzer_or_sorting: SortingAnalyzer | BaseSorting | None = None,
-        segment_index: int | None = None,
+        segment_indices: int | None = None,
         unit_ids: list | None = None,
         time_range: list | None = None,
         color="k",
         backend: str | None = None,
         sorting: BaseSorting | None = None,
         sorting_analyzer: SortingAnalyzer | None = None,
+        segment_index: int | None = None,
         **backend_kwargs,
     ):
+
+        import warnings
+
+        # Handle deprecation of segment_index parameter
+        if segment_index is not None:
+            warnings.warn(
+                "The 'segment_index' parameter is deprecated and will be removed in a future version. "
+                "Use 'segment_indices' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if segment_indices is None:
+                if isinstance(segment_index, int):
+                    segment_indices = [segment_index]
+                else:
+                    segment_indices = segment_index
 
         if sorting is not None:
             # When removed, make `sorting_analyzer_or_sorting` a required argument rather than None.
@@ -320,30 +413,40 @@ class RasterWidget(BaseRasterWidget):
 
         sorting = self.ensure_sorting(sorting_analyzer_or_sorting)
 
-        if sorting.get_num_segments() > 1:
-            if segment_index is None:
-                warn("More than one segment available! Using `segment_index = 0`.")
-                segment_index = 0
-        else:
-            segment_index = 0
+        segment_indices = validate_segment_indices(segment_indices, sorting)
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
-        all_spiketrains = {
-            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index, return_times=True)
-            for unit_id in unit_ids
-        }
+        # Create dict of dicts structure
+        spike_train_data = {}
+        y_axis_data = {}
 
+        # Create a lookup dictionary for unit indices
+        unit_indices_map = {unit_id: i for i, unit_id in enumerate(unit_ids)}
+
+        # Estimate segment duration from max spike time in each segment
+        durations = get_segment_durations(sorting, segment_indices)
+
+        # Extract spike data for all segments and units at once
+        spike_train_data = {seg_idx: {} for seg_idx in segment_indices}
+        y_axis_data = {seg_idx: {} for seg_idx in segment_indices}
+
+        for seg_idx in segment_indices:
+            for unit_id in unit_ids:
+                # Get spikes for this segment and unit
+                spike_times = (
+                    sorting.get_unit_spike_train(unit_id=unit_id, segment_index=seg_idx) / sorting.sampling_frequency
+                )
+
+                # Store data
+                spike_train_data[seg_idx][unit_id] = spike_times
+                y_axis_data[seg_idx][unit_id] = unit_indices_map[unit_id] * np.ones(len(spike_times))
+
+        # Apply time range filtering if specified
         if time_range is not None:
             assert len(time_range) == 2, "'time_range' should be a list with start and end time in seconds"
-            for unit_id in unit_ids:
-                unit_st = all_spiketrains[unit_id]
-                all_spiketrains[unit_id] = unit_st[(time_range[0] < unit_st) & (unit_st < time_range[1])]
-
-        raster_locations = {
-            unit_id: unit_index * np.ones(len(all_spiketrains[unit_id])) for unit_index, unit_id in enumerate(unit_ids)
-        }
+            # Let BaseRasterWidget handle the filtering
 
         unit_indices = list(range(len(unit_ids)))
 
@@ -354,14 +457,16 @@ class RasterWidget(BaseRasterWidget):
         y_ticks = {"ticks": unit_indices, "labels": unit_ids}
 
         plot_data = dict(
-            spike_train_data=all_spiketrains,
-            y_axis_data=raster_locations,
+            spike_train_data=spike_train_data,
+            y_axis_data=y_axis_data,
+            segment_indices=segment_indices,
             x_lim=time_range,
             y_label="Unit id",
             unit_ids=unit_ids,
             unit_colors=unit_colors,
             plot_histograms=None,
             y_ticks=y_ticks,
+            durations=durations,
         )
 
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
