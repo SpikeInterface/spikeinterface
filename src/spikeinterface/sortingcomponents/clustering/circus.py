@@ -241,6 +241,7 @@ class CircusClustering:
             peak_labels[mask] = -1
             templates = templates.select_units(templates.unit_ids[valid_templates])
 
+
         labels = templates.unit_ids
 
         if params["debug"]:

@@ -271,7 +271,7 @@ def get_templates_from_peaks_and_recording(
         channel_ids=recording.channel_ids,
         unit_ids=labels,
         probe=recording.get_probe(),
-        is_scaled=False,
+        is_in_uV=False,
     )
 
     return templates
@@ -358,7 +358,7 @@ def get_templates_from_peaks_and_svd(
         channel_ids=recording.channel_ids,
         unit_ids=labels,
         probe=recording.get_probe(),
-        is_scaled=False,
+        is_in_uV=False,
     )
 
     return dense_templates, final_sparsity_mask

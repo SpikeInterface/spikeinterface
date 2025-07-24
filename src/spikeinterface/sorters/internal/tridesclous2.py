@@ -252,7 +252,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             unit_ids=sorting_pre_peeler.unit_ids,
             sparsity_mask=None,
             probe=recording_for_peeler.get_probe(),
-            is_scaled=False,
+            is_in_uV=False,
         )
 
         sparsity_threshold = params["templates"]["sparsity_threshold"]
