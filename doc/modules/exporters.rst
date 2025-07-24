@@ -21,9 +21,9 @@ or the location of the unit in the brain. You can pass any pandas DataFrame, who
 ``unit_id`` s of your sorting object. By default, if computed, we attach the quality metrics, template
 metrics and unit locations.
 
-The following code creates a ``TsGroup`` from a ``SortingAnalyzer``, then save's it using ``Pynapple``'s
-save method. You can include any metadata as a pandas DataFrame. Here, we include the ``analyzer`` s
-quality metics.
+The following code creates a ``TsGroup`` from a ``SortingAnalyzer``, then saves it using ``Pynapple``'s
+save method. You can include any metadata as a pandas DataFrame. Here, we include the ``analyzer`` 's
+quality metrics.
 
 .. code-block:: python
 
