@@ -3,7 +3,8 @@ import numpy as np
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks, clustering_methods
+from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+from spikeinterface.sortingcomponents.clustering.method_list import clustering_methods
 from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
 from spikeinterface.sortingcomponents.clustering.graph_tools import create_graph_from_peak_features
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd

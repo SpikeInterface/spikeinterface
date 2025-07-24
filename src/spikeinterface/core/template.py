@@ -231,7 +231,7 @@ class Templates:
                 unit_ids=self.unit_ids,
                 probe=self.probe,
                 check_for_consistent_sparsity=False,
-                is_scaled=self.is_scaled,
+                is_in_uV=self.is_in_uV,
             )
 
     def get_one_template_dense(self, unit_index):
