@@ -52,7 +52,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
     """
 
     extension_name = "quality_metrics"
-    depend_on = ["templates", "noise_levels"]
+    depend_on = []
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True

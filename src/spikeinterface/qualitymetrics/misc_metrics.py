@@ -9,7 +9,7 @@ Implementations here have been refactored to support the multi-segment API of sp
 
 from __future__ import annotations
 
-
+from .utils import _has_required_metrics
 from collections import namedtuple
 import math
 import warnings
@@ -213,14 +213,18 @@ def compute_snrs(
     snrs : dict
         Computed signal to noise ratio for each unit.
     """
-    assert sorting_analyzer.has_extension("noise_levels")
+
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+
+    if not _has_required_metrics(sorting_analyzer, required_extensions=["noise_levels"], metric_name="snr"):
+        return {unit_id: np.nan for unit_id in unit_ids}
+
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
     assert peak_sign in ("neg", "pos", "both")
     assert peak_mode in ("extremum", "at_index", "peak_to_peak")
 
-    if unit_ids is None:
-        unit_ids = sorting_analyzer.unit_ids
     channel_ids = sorting_analyzer.channel_ids
 
     extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, mode=peak_mode)
@@ -1033,29 +1037,25 @@ def compute_drift_metrics(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    if sorting_analyzer.has_extension("spike_locations"):
-        spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
-        spike_locations = spike_locations_ext.get_data()
-        # spike_locations_by_unit = spike_locations_ext.get_data(outputs="by_unit")
-        spikes = sorting.to_spike_vector()
-        spike_locations_by_unit = {}
-        for unit_id in unit_ids:
-            unit_index = sorting.id_to_index(unit_id)
-            # TODO @alessio this is very slow this sjould be done with spike_vector_to_indices() in code
-            spike_mask = spikes["unit_index"] == unit_index
-            spike_locations_by_unit[unit_id] = spike_locations[spike_mask]
-
-    else:
-        warnings.warn(
-            "The drift metrics require the `spike_locations` waveform extension. "
-            "Use the `postprocessing.compute_spike_locations()` function. "
-            "Drift metrics will be set to NaN"
-        )
+    if not _has_required_metrics(
+        sorting_analyzer, required_extensions=["spike_locations"], metric_name="drift_metrics"
+    ):
         empty_dict = {unit_id: np.nan for unit_id in unit_ids}
         if return_positions:
             return res(empty_dict, empty_dict, empty_dict), np.nan
         else:
             return res(empty_dict, empty_dict, empty_dict)
+
+    spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
+    spike_locations = spike_locations_ext.get_data()
+    # spike_locations_by_unit = spike_locations_ext.get_data(outputs="by_unit")
+    spikes = sorting.to_spike_vector()
+    spike_locations_by_unit = {}
+    for unit_id in unit_ids:
+        unit_index = sorting.id_to_index(unit_id)
+        # TODO @alessio this is very slow this sjould be done with spike_vector_to_indices() in code
+        spike_mask = spikes["unit_index"] == unit_index
+        spike_locations_by_unit[unit_id] = spike_locations[spike_mask]
 
     interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
     assert direction in spike_locations.dtype.names, (
@@ -1488,24 +1488,19 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
 
+    if not _has_required_metrics(
+        sorting_analyzer, required_extensions=["templates", "spike_amplitudes"], metric_name="sd_ratio"
+    ):
+        return {unit_id: np.nan for unit_id in unit_ids}
+
+    spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
+
     if not HAVE_NUMBA:
         warnings.warn(
             "'sd_ratio' metric computation requires numba. Install it with >>> pip install numba. "
             "SD ratio metric will be set to NaN"
         )
         return {unit_id: np.nan for unit_id in unit_ids}
-
-    if sorting_analyzer.has_extension("spike_amplitudes"):
-        amplitudes_ext = sorting_analyzer.get_extension("spike_amplitudes")
-        spike_amplitudes = amplitudes_ext.get_data()
-    else:
-        warnings.warn(
-            "The `sd_ratio` metric require the `spike_amplitudes` waveform extension. "
-            "Use the `postprocessing.compute_spike_amplitudes()` functions. "
-            "SD ratio metric will be set to NaN"
-        )
-        return {unit_id: np.nan for unit_id in unit_ids}
-
     noise_levels = get_noise_levels(
         sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std", **job_kwargs
     )

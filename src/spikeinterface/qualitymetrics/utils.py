@@ -1,6 +1,33 @@
 from __future__ import annotations
 
 import numpy as np
+import warnings
+
+
+def _has_required_metrics(sorting_analyzer, required_extensions, metric_name):
+
+    not_computed_required_extensions = []
+    for ext in required_extensions:
+        if sorting_analyzer.has_extension(ext) is False:
+            not_computed_required_extensions.append(ext)
+
+    if len(not_computed_required_extensions) > 0:
+        warnings_string = (
+            f"The `{metric_name}` metric requires the {not_computed_required_extensions} waveform extensions.\n"
+        )
+        warnings_string += "Use the sorting_analyzer.compute("
+        for count, ext in enumerate(not_computed_required_extensions):
+            if count == len(not_computed_required_extensions) - 1:
+                warnings_string += f"{ext}"
+            else:
+                warnings_string += f"{ext}, "
+        warnings_string += f") methods to compute.\n{metric_name} metric will be set to NaN."
+        warnings.warn(warnings_string)
+
+        return False
+
+    else:
+        return True
 
 
 def create_ground_truth_pc_distributions(center_locations, total_points):
