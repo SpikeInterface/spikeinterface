@@ -43,6 +43,8 @@ from spikeinterface.extractors.extractor_classes import (
     AxonRecordingExtractor,
 )
 
+from spikeinterface.extractors.neoextractors.intan import IntanSplitFilesRecordingExtractor
+
 from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
 
 from spikeinterface.extractors.tests.common_tests import (
@@ -181,6 +183,15 @@ class IntanRecordingTestMultipleFilesFormat(RecordingCommonTestSuite, unittest.T
         ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "RHD2000 auxiliary input channel"}),
         ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "USB board ADC input channel"}),
         ("intan/intan_fps_test_231117_052500/info.rhd", {"stream_name": "USB board digital input channel"}),
+    ]
+
+
+class IntanSplitFilesRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = IntanSplitFilesRecordingExtractor
+    downloads = ["intan"]
+    entities = [
+        ("intan/test_tetrode_240502_162925", {"mode": "concatenate"}),
+        ("intan/test_tetrode_240502_162925", {"mode": "append"}),
     ]
 
 
