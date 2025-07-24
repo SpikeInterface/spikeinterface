@@ -177,6 +177,7 @@ spikeinterface.preprocessing
     .. autofunction:: clip
     .. autofunction:: common_reference
     .. autofunction:: correct_lsb
+    .. autofunction:: compute_motion
     .. autofunction:: correct_motion
     .. autofunction:: get_motion_presets
     .. autofunction:: get_motion_parameters_preset
@@ -184,6 +185,8 @@ spikeinterface.preprocessing
     .. autofunction:: save_motion_info
     .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
+    .. autofunction:: detect_and_interpolate_bad_channels
+    .. autofunction:: detect_and_remove_bad_channels
     .. autofunction:: directional_derivative
     .. autofunction:: filter
     .. autofunction:: gaussian_filter
