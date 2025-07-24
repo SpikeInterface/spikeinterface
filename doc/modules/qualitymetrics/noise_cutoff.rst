@@ -14,13 +14,13 @@ instead, it directly compares counts in the low‐amplitude bins to counts in hi
 
 1. **Build a histogram**
 
-   For each unit, divide all amplitudes into `n_bins` equally spaced bins over the range of the amplitude.
-   If the number of spikes is large, you may consider using a larger `n_bins`. For a small number of spikes, consider a smaller `n_bins`.
+   For each unit, divide all amplitudes into ``n_bins`` equally spaced bins over the range of the amplitude.
+   If the number of spikes is large, you may consider using a larger ``n_bins``. For a small number of spikes, consider a smaller ``n_bins``.
    Let :math:`n_i` denote the count in the :math:`i`-th bin.
 
 2. **Identify the “low” region**
-    - Compute the amplitude value at the specified `low_quantile` (for example, 0.10 = 10th percentile), denoted as :math:`\text{amp}_{low}`.
-    - Find all histogram bins whose upper edge is below that quantile value.  These bins form the “low‐quantile region”.
+    - Compute the amplitude value at the specified ``low_quantile`` (for example, 0.10 = 10th percentile), denoted as :math:`\text{amp}_{low}`.
+    - Find all histogram bins whose upper edge is below that quantile value.  These bins form the "low‐quantile region".
     - Compute
 
     .. math::
@@ -29,8 +29,8 @@ instead, it directly compares counts in the low‐amplitude bins to counts in hi
 
 3. **Identify the “high” region**
 
-   - Compute the amplitude value at the specified `high_quantile` (for example, 0.25 = top 25th percentile), denoted as :math:`\text{amp}_{high}`.
-   - Find all histogram bins whose lower edge is greater than that quantile value.  These bins form the “high‐quantile region.”
+   - Compute the amplitude value at the specified ``high_quantile`` (for example, 0.25 = top 25th percentile), denoted as :math:`\text{amp}_{high}`.
+   - Find all histogram bins whose lower edge is greater than that quantile value.  These bins form the "high‐quantile region".
    - Compute
 
     .. math::
@@ -46,8 +46,8 @@ instead, it directly compares counts in the low‐amplitude bins to counts in hi
      \mathrm{cutoff} = \frac{\mu_{\mathrm{low}} - \mu_{\mathrm{high}}}{\sigma_{\mathrm{high}}}.
 
 
-   - If no low‐quantile bins exist, a warning is issued and `cutoff = NaN`.
-   - If no high‐quantile bins exist or :math:`\sigma_{\mathrm{high}} = 0`, a warning is issued and `cutoff = NaN`.
+   - If no low‐quantile bins exist, a warning is issued and ``cutoff = NaN``.
+   - If no high‐quantile bins exist or :math:`\sigma_{\mathrm{high}} = 0`, a warning is issued and ``cutoff = NaN``.
 
 5. **Compute the low-to-peak ratio**
 
@@ -61,19 +61,20 @@ instead, it directly compares counts in the low‐amplitude bins to counts in hi
    - If there are no low bins, :math:`\mathrm{ratio} = NaN`.
 
 
-Together, (cutoff, ratio) quantify how suppressed the low‐end of the amplitude distribution is relative to the top quantile and to the peak.
+Together, ``(cutoff, ratio)`` quantify how suppressed the low‐end of the amplitude distribution is relative to the top quantile and to the peak.
 
 Expectation and use
 -------------------
 
 Noise cutoff attempts to describe whether an amplitude distribution is cut off.
-Larger values of `cutoff` and `ratio` suggest that the distribution is cut-off.
-IBL uses the default value of 1 to choose the number of lower bins, with a suggested threshold of 5 for `cutoff` and 0.1 for `ratio` to determine whether a unit is cut off or not.
-In practice, the IBL threshold is quite conservative, and a lower threshold might be better for your data.
-We suggest plotting the data using the `plot_amplitudes` widget to view your data when choosing your threshold.
+Larger values of ``cutoff`` and ``ratio`` suggest that the distribution is cut-off.
+IBL uses the default value of 1 (equivalent to e.g. ``low_quantile=0.01, n_bins=100``) to choose the number of
+lower bins, with a suggested threshold of 5 for ``cutoff`` to determine whether a unit is cut off or not.
+In practice, the IBL threshold is quite conservative, and a lower threshold might work better for your data.
+We suggest plotting the data using the  :py:func:`~spikeinterface.widgets.plot_amplitudes` widget to view your data when choosing your threshold.
 It is suggested to use this metric when the amplitude histogram is **unimodal**.
 
-The metric is loosely based on [Hill]_'s amplitude cutoff, but is here adapted (originally by [IBL2024]_) to avoid making the Gaussianity assumption on spike distributions.
+The metric is loosely based on [Hill]_'s amplitude cutoff, but is here adapted (originally by [IBL2024]_) to avoid making the Gaussian assumption on spike distributions.
 
 Example code
 ------------
@@ -118,8 +119,8 @@ Links to original implementations
 
 * From `IBL implementation <https://github.com/int-brain-lab/ibllib/blob/2e1f91c622ba8dbd04fc53946c185c99451ce5d6/brainbox/metrics/single_units.py>`_
 
-Note: Compared to the original implementation, we have added a comparison between the low-amplitude bins to the largest bin (`noise_ratio`).
-The selection of low-amplitude bins is based on the `low_quantile` rather than the number of bins.
+Note: Compared to the original implementation, we have added a comparison between the low-amplitude bins to the largest bin (``noise_ratio``).
+The selection of low-amplitude bins is based on the ``low_quantile`` rather than the number of bins.
 
 Literature
 ----------
