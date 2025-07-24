@@ -9,7 +9,7 @@ Implementations here have been refactored to support the multi-segment API of sp
 
 from __future__ import annotations
 
-from .utils import _has_required_metrics
+from .utils import _has_required_extensions
 from collections import namedtuple
 import math
 import warnings
@@ -217,7 +217,7 @@ def compute_snrs(
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
 
-    if not _has_required_metrics(sorting_analyzer, required_extensions=["noise_levels"], metric_name="snr"):
+    if not _has_required_extensions(sorting_analyzer, required_extensions=["noise_levels"], metric_name="snr"):
         return {unit_id: np.nan for unit_id in unit_ids}
 
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
@@ -1037,7 +1037,7 @@ def compute_drift_metrics(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    if not _has_required_metrics(
+    if not _has_required_extensions(
         sorting_analyzer, required_extensions=["spike_locations"], metric_name="drift_metrics"
     ):
         empty_dict = {unit_id: np.nan for unit_id in unit_ids}
@@ -1488,7 +1488,7 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
 
-    if not _has_required_metrics(
+    if not _has_required_extensions(
         sorting_analyzer, required_extensions=["templates", "spike_amplitudes"], metric_name="sd_ratio"
     ):
         return {unit_id: np.nan for unit_id in unit_ids}

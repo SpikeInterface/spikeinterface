@@ -4,7 +4,7 @@ import numpy as np
 import warnings
 
 
-def _has_required_metrics(sorting_analyzer, required_extensions, metric_name):
+def _has_required_extensions(sorting_analyzer, required_extensions, metric_name):
 
     not_computed_required_extensions = []
     for ext in required_extensions:
