@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - '**/kilosort4.py'
+      - '**/test_kilosort4_ci.py'
 
 jobs:
   versions:
