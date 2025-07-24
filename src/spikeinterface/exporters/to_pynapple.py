@@ -5,6 +5,7 @@ import numpy as np
 def to_pynapple_tsgroup(
     sorting_analyzer_or_sorting: SortingAnalyzer | BaseSorting,
     metadata=None,
+    segment_index=None,
 ):
     """
     Returns a pynapple TsGroup object based on spike train data.
@@ -16,6 +17,8 @@ def to_pynapple_tsgroup(
     metadata : pd.DataFrame | dict | None, default: None
         Metadata associated with each unit. Metadata names are pulled from DataFrame columns
         or dictionary keys. The length of the metadata should match the number of units.
+    segment_index : int | None, default: None
+        The segment index. Can be None if mono-segment sorting.
 
     Returns
     -------
@@ -34,7 +37,10 @@ def to_pynapple_tsgroup(
         )
 
     unit_ids = sorting.unit_ids
-    spikes_trains = {unit_id: sorting.get_unit_spike_train(unit_id=unit_id, return_times=True) for unit_id in unit_ids}
+    spikes_trains = {
+        unit_id: sorting.get_unit_spike_train(unit_id=unit_id, return_times=True, segment_index=segment_index)
+        for unit_id in unit_ids
+    }
 
     # Look for good metadata to add, if there is a sorting analyzer
     if metadata is None and isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):

@@ -8,17 +8,18 @@ Exporting to Pynapple
 ---------------------
 
 The python package `Pynapple <https://pynapple.org/>`_ is often used for combining ephys
-and behavioral data. It can be used to decode behavior, make tuning curves and compute spectrograms.
+and behavioral data. It can be used to decode behavior, make tuning curves, compute spectrograms, and more!
 The :py:func:`~spikeinterface.exporters.to_pynapple_tsgroup` function allows you to convert a
-SortingAnalyzer to Pynapple's ``TsGroup`` object.
+SortingAnalyzer to Pynapple's ``TsGroup`` object on the fly.
 
 **Note** : When creating the ``TsGroup``, we will use the underlying time support of the SortingAnalyzer.
 How this works depends on your acquisition system. You can use the ``get_times`` method on a recording
-to see the time support of your recording.
+(``my_recording.get_times()``) to find the time support of your recording.
 
 When making the ``TsGroup``, you can also attach useful metadata such as the quality metrics of each unit
 or the location of the unit in the brain. You can pass any pandas DataFrame, whose index contains the
-``unit_id`` s of your sorting object.
+``unit_id`` s of your sorting object. By default, if computed, we attach the quality metrics, template
+metrics and unit locations.
 
 The following code creates a ``TsGroup`` from a ``SortingAnalyzer``, then save's it using ``Pynapple``'s
 save method. You can include any metadata as a pandas DataFrame. Here, we include the ``analyzer`` s
@@ -39,6 +40,9 @@ quality metics.
 
     my_tsgroup.save("my_tsgroup_output.npz")
 
+If you have a multi-segment sorting, you need to pass the ``segment_index`` argument to the
+``to_pynapple_tsgroup`` function. This way, you can generate on ``TsGroup`` per segment.
+ You can later concatenate these ``TsGroup``s using Pynapple's ``concatenate`` functionality.
 
 Exporting to Phy
 ----------------
