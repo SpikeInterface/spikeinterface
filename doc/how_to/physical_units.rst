@@ -1,3 +1,5 @@
+.. _physical_units:
+
 Working with physical units in SpikeInterface recordings
 ========================================================
 
