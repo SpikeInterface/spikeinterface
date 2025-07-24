@@ -216,8 +216,6 @@ def test_unit_structure_in_output(small_sorting_analyzer):
             sorting_analyzer=small_sorting_analyzer, unit_ids=["#4", "#9"], **qm_param
         )
 
-        print(metric_name)
-
         if isinstance(result_all, dict):
             assert list(result_all.keys()) == ["#3", "#9", "#4"]
             assert list(result_sub.keys()) == ["#4", "#9"]

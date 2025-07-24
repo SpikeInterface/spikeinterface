@@ -1,5 +1,3 @@
-.. _recording-by-channel-group:
-
 Process a recording by channel group
 ====================================
 
