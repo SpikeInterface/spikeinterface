@@ -132,7 +132,7 @@ class UnitsAggregationSorting(BaseSorting):
             aggregation_keys = []
             for sort_key, sort in zip(sorting_keys, sorting_list):
                 aggregation_keys += [sort_key] * sort.get_num_units()
-            self.set_property(key="aggregate_units_key", values=aggregation_keys)
+            self.set_property(key="aggregation_key", values=aggregation_keys)
 
         # add segments
         for i_seg in range(num_segments):

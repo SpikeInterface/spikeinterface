@@ -47,6 +47,7 @@ def create_sorting_analyzer(
     folder=None,
     sparse=True,
     sparsity=None,
+    set_sparsity_by_dict_key=False,
     return_scaled=None,
     return_in_uV=True,
     overwrite=False,
@@ -81,6 +82,8 @@ def create_sorting_analyzer(
         You can control `estimate_sparsity()` : all extra arguments are propagated to it (included job_kwargs)
     sparsity : ChannelSparsity or None, default: None
         The sparsity used to compute exensions. If this is given, `sparse` is ignored.
+    set_sparsity_by_dict_key : bool, default: False
+        If True and passing recording and sortings dicts, will set the sparsity based on the dict keys.
     return_scaled : bool | None, default: None
         DEPRECATED. Use return_in_uV instead.
         All extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
@@ -142,6 +145,9 @@ def create_sorting_analyzer(
 
         aggregated_recording = aggregate_channels(recording)
         aggregated_sorting = aggregate_units(sorting)
+
+        if set_sparsity_by_dict_key:
+            sparsity_kwargs = {"method": "by_property", "by_property": "aggregation_key"}
 
         return create_sorting_analyzer(
             sorting=aggregated_sorting,
