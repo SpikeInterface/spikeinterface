@@ -10,7 +10,7 @@ from spikeinterface.extractors import NumpySorting  # TODO: Create separate sort
 class RTSortSorter(BaseSorter):
     """RTSort sorter object"""
 
-    sorter_name = "rt-sort"
+    sorter_name = "rtsort"
 
     _default_params = {
         "detection_model": "neuropixels",
