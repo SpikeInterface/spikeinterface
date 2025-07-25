@@ -473,9 +473,9 @@ class BenchmarkStudy:
             unit_locations_ext = sorting_analyzer.get_extension("unit_locations")
             return unit_locations_ext.get_data()
 
-    def get_templates(self, key, operator="average"):
+    def get_templates(self, key, operator="average", outputs='numpy'):
         sorting_analyzer = self.get_sorting_analyzer(case_key=key)
-        templates = sorting_analyzer.get_extenson("templates").get_data(operator=operator)
+        templates = sorting_analyzer.get_extension("templates").get_data(operator=operator, outputs=outputs)
         return templates
 
     def compute_metrics(self, case_keys=None, metric_names=["snr", "firing_rate"], force=False, **job_kwargs):

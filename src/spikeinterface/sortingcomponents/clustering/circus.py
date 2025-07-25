@@ -11,8 +11,7 @@ from spikeinterface.core import get_global_tmp_folder
 from .clustering_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
-from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.sortingcomponents.tools import remove_empty_templates, _get_optimal_n_jobs
+from spikeinterface.sortingcomponents.tools import _get_optimal_n_jobs
 from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
 from spikeinterface.sortingcomponents.clustering.merge import merge_peak_labels_from_templates
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
@@ -55,7 +54,6 @@ class CircusClustering:
         "few_waveforms": None,
         "ms_before": 2.0,
         "ms_after": 2.0,
-        "remove_small_snr": False,
         "seed": None,
         "noise_threshold": 2,
         "templates_from_svd": True,
@@ -229,17 +227,6 @@ class CircusClustering:
                 is_in_uV=False
             )
 
-        if params["remove_small_snr"] :
-            sparsity = compute_sparsity(templates, 
-                                        method="snr", 
-                                        amplitude_mode="peak_to_peak",
-                                        noise_levels=params["noise_levels"], 
-                                        threshold=params["noise_threshold"])
-            valid_templates = sparsity.mask.sum(axis=1) > 0
-            old_unit_ids = templates.unit_ids.copy()
-            mask = np.isin(peak_labels, old_unit_ids[~valid_templates])
-            peak_labels[mask] = -1
-            templates = templates.select_units(templates.unit_ids[valid_templates])
 
 
         labels = templates.unit_ids

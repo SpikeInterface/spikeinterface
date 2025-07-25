@@ -360,9 +360,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     operator="median",
                 )
 
-            sparsity = compute_sparsity(templates, noise_levels, **sparsity_kwargs)
-            templates = templates.to_sparse(sparsity)
-            templates = remove_empty_templates(templates)
+            from spikeinterface.sortingcomponents.tools import clean_templates
+            templates = clean_templates(
+                templates,
+                noise_levels=noise_levels,
+                min_snr=detection_params.get("detect_threshold", 5),
+                max_jitter_ms=0.1,
+                remove_empty=True,
+            )
+
+            if verbose:
+                print("Kept %d clean clusters" % len(templates.unit_ids))
 
             if debug:
                 templates.to_zarr(folder_path=clustering_folder / "templates")
