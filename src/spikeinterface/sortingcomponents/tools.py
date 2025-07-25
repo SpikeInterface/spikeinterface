@@ -504,7 +504,7 @@ def clean_templates(templates,
                                     amplitude_mode="peak_to_peak",
                                     noise_levels=noise_levels, 
                                     threshold=min_snr)
-        to_select = templates.unit_ids[np.where(sparsity.mask.sum(axis=1) > 0)[0]]
+        to_select = templates.unit_ids[np.flatnonzero(sparsity.mask.sum(axis=1) > 0)]
         templates = templates.select_units(to_select)
 
     return templates

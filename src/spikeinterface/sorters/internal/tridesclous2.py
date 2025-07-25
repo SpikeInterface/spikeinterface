@@ -67,6 +67,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "ms_after": 3.0,
             "max_spikes_per_unit": 400,
             "sparsity_threshold": 1.5,
+            "min_snr": 2.5,
             # "peak_shift_ms": 0.2,
         },
         "matching": {"method": "tdc-peeler", "method_kwargs": {}},
@@ -107,6 +108,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.preprocessing import correct_motion
         from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
+        from spikeinterface.sortingcomponents.tools import clean_templates
 
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
@@ -258,7 +260,16 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         sparsity_threshold = params["templates"]["sparsity_threshold"]
         sparsity = compute_sparsity(templates_dense, method="snr", noise_levels=noise_levels, threshold=sparsity_threshold)
         templates = templates_dense.to_sparse(sparsity)
-        templates = remove_empty_templates(templates)
+        # templates = remove_empty_templates(templates)
+
+        templates = clean_templates(templates_dense, 
+                    sparsify_threshold=params["templates"]["sparsity_threshold"],
+                    noise_levels=noise_levels, 
+                    min_snr=params["templates"]["min_snr"],
+                    max_jitter_ms=None, 
+                    remove_empty=True)
+
+
 
         ## peeler
         matching_method = params["matching"]["method"]

@@ -104,6 +104,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.sortingcomponents.tools import check_probe_for_drift_correction
+        from spikeinterface.sortingcomponents.tools import clean_templates
 
         job_kwargs = fix_job_kwargs(params["job_kwargs"])
         job_kwargs.update({"progress_bar": verbose})
@@ -360,7 +361,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     operator="median",
                 )
 
-            from spikeinterface.sortingcomponents.tools import clean_templates
+            
             templates = clean_templates(
                 templates,
                 noise_levels=noise_levels,
