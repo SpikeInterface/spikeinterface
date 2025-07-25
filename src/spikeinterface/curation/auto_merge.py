@@ -480,9 +480,13 @@ def _auto_merge_units_single_iteration(
                     )
                     merge_unit_groups.remove(list(merge_unit_group))
 
-        merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
-            merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
-        )
+        if len(merge_unit_groups) > 0:
+            merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
+                merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
+            )
+        else:
+            merged_analyzer = sorting_analyzer
+            new_unit_ids = []
     else:
         merged_analyzer = sorting_analyzer
         new_unit_ids = []

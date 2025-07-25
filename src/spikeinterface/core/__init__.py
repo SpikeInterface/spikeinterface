@@ -143,13 +143,6 @@ from .old_api_utils import (
 # templates addition
 # from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates
 
-# template tools
-from .template_tools import (
-    get_template_amplitudes,
-    get_template_extremum_channel,
-    get_template_extremum_channel_peak_shift,
-    get_template_extremum_amplitude,
-)
 
 # channel sparsity
 from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
@@ -165,6 +158,15 @@ from .sortinganalyzer import (
     get_available_analyzer_extensions,
     get_default_analyzer_extension_params,
 )
+
+# template tools
+from .template_tools import (
+    get_template_amplitudes,
+    get_template_extremum_channel,
+    get_template_extremum_channel_peak_shift,
+    get_template_extremum_amplitude,
+)
+
 
 from .analyzer_extension_core import (
     ComputeRandomSpikes,

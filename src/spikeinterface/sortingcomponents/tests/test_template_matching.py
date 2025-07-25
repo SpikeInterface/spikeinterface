@@ -4,7 +4,9 @@ from pathlib import Path
 
 from spikeinterface import NumpySorting, create_sorting_analyzer, get_noise_levels, compute_sparsity
 
-from spikeinterface.sortingcomponents.matching import find_spikes_from_templates, matching_methods
+from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
+from spikeinterface.sortingcomponents.matching.method_list import matching_methods
+
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 

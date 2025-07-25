@@ -531,7 +531,6 @@ class GroundTruthComparison(BasePairSorterComparison):
                 score = self.agreement_scores.at[u1, u2]
                 if score >= self.well_detected_score:
                     well_detected_ids.append(u2)
-
         return well_detected_ids
 
     def count_well_detected_units(self, well_detected_score):
