@@ -4,7 +4,7 @@ import numpy as np
 
 def to_pynapple_tsgroup(
     sorting_analyzer_or_sorting: SortingAnalyzer | BaseSorting,
-    metadata=None,
+    attach_unit_metadata=True,
     segment_index=None,
 ):
     """
@@ -14,9 +14,10 @@ def to_pynapple_tsgroup(
     ----------
     sorting_analyzer_or_sorting : SortingAnalyzer
         A SortingAnalyzer object
-    metadata : pd.DataFrame | dict | None, default: None
-        Metadata associated with each unit. Metadata names are pulled from DataFrame columns
-        or dictionary keys. The length of the metadata should match the number of units.
+    attach_unit_metadata : bool, default: True
+        If True, any relevant available metadata is attached to the TsGroup. Will attach
+        `unit_locations`, `quality_metrics` and `template_metrics` if computed. If False,
+        no metadata is included.
     segment_index : int | None, default: None
         The segment index. Can be None if mono-segment sorting.
 
@@ -43,7 +44,8 @@ def to_pynapple_tsgroup(
     }
 
     # Look for good metadata to add, if there is a sorting analyzer
-    if metadata is None and isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
+    metadata = None
+    if attach_unit_metadata and isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
 
         import pandas as pd
 
