@@ -69,16 +69,18 @@ plot_probe_map(recording_with_probe)
 # Looks good! Now that the recording is aware of the probe geometry, we can
 # begin a standard spike sorting pipeline. First, we can apply preprocessing.
 # Note that we apply this preprocessing on the entire bundle of tetrodes.
-# This is appropriate for a common reference because the tetrodes
-# share the same background noise.
 
-preprocessed_recording = spre.bandpass_filter(
-    spre.common_reference(
-        recording_with_probe
-    )
-)
+preprocessed_recording = spre.bandpass_filter(recording_with_probe)
 
 ##############################################################################
+# WARNING: a very common preprocessing step is to apply a common median
+# reference. This subtracts the median signal from all channels to help
+# remove noise. However, for a tetrode, a spike is often seen on all
+# channels. So removing the median can remove the entire spike!
+# This is still a danger if you have two tetrodes in a bundle, which
+# might pick up the same spike, but  becomes less dangerous
+# as the number of tetrodes in your bundle increases.
+#
 # Tetrodes often have dead channels, so it is advised to try and detect
 # and remove these. For tetrodes, we should use a detection method which
 # doesn't depend on the channel locations such as std or mad:
