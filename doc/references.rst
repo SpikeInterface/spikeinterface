@@ -43,6 +43,7 @@ please include the appropriate citation for the :code:`sorter_name` parameter yo
 - :code:`herdingspikes` [Muthmann]_ [Hilgen]_
 - :code:`kilosort`  [Pachitariu]_
 - :code:`mountainsort` [Chung]_
+- :code:`rt-sort` [van_der_Molen]_
 - :code:`spykingcircus` [Yger]_
 - :code:`wavclus` [Chaure]_
 - :code:`yass` [Lee]_
@@ -153,6 +154,8 @@ References
 .. [Siegle] `Survey of Spiking in the Mouse Visual System Reveals Functional Hierarchy. 2021. <https://pubmed.ncbi.nlm.nih.gov/33473216/>`_
 
 .. [UMS] `UltraMegaSort2000 - Spike sorting and quality metrics for extracellular spike data. 2011. <https://github.com/danamics/UMS2K>`_
+
+.. [van_der_Molen] `RT-Sort: An action potential propagation-based algorithm for real time spike detection and sorting with millisecond latencies. 2024. <https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0312438>`_
 
 .. [Varol] `Decentralized Motion Inference and Registration of Neuropixel Data. 2021. <https://ieeexplore.ieee.org/document/9414145>`_
 

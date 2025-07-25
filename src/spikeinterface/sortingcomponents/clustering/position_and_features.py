@@ -180,7 +180,7 @@ class PositionAndFeaturesClustering:
                 nbefore=nbefore,
                 sparsity_mask=None,
                 probe=recording.get_probe(),
-                is_scaled=False,
+                is_in_uV=False,
             )
 
             labels, peak_labels = remove_duplicates_via_matching(

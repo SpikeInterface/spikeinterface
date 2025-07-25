@@ -127,10 +127,25 @@ curation_ids_str = {
 # Test dictionary format for merges with string IDs
 curation_ids_str_dict = {**curation_ids_str, "merges": {"u50": ["u3", "u6"], "u51": ["u10", "u14", "u20"]}}
 
+# This is a failure example with duplicated merge
+duplicate_merge = curation_ids_int.copy()
+duplicate_merge["merge_unit_groups"] = [[3, 6, 10], [10, 14, 20]]
+
 # Test with splits
 curation_with_splits = {
-    **curation_ids_int,
-    "splits": [{"unit_id": 2, "mode": "indices", "indices": [[0, 1, 2], [3, 4, 5]], "new_unit_ids": [50, 51]}],
+    "format_version": "2",
+    "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
+    "label_definitions": {
+        "quality": {"label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
+        "putative_type": {
+            "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral"],
+            "exclusive": False,
+        },
+    },
+    "manual_labels": [
+        {"unit_id": 2, "quality": ["good"], "putative_type": ["excitatory", "pyramidal"]},
+    ],
+    "splits": [{"unit_id": 2, "mode": "indices", "indices": [[0, 1, 2], [3, 4, 5]]}],
 }
 
 # Test dictionary format for splits
@@ -243,13 +258,142 @@ def test_apply_curation():
     assert sorting_curated.get_property("quality", ids=[2])[0] == "noise"
     assert sorting_curated.get_property("excitatory", ids=[2])[0]
 
-    # Test with splits
-    sorting_curated = apply_curation(sorting, curation_with_splits)
-    assert sorting_curated.get_property("quality", ids=[1])[0] == "good"
-
     # Test analyzer
     analyzer_curated = apply_curation(analyzer, curation_ids_int)
     assert "quality" in analyzer_curated.sorting.get_property_keys()
+
+
+def test_apply_curation_with_split():
+    recording, sorting = generate_ground_truth_recording(durations=[10.0], num_units=9, seed=2205)
+    sorting = sorting.rename_units(np.array([1, 2, 3, 6, 10, 14, 20, 31, 42]))
+    analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
+
+    sorting_curated = apply_curation(sorting, curation_with_splits)
+    # the split indices are not complete, so an extra unit is added
+    assert len(sorting_curated.unit_ids) == len(sorting.unit_ids) + 2
+
+    assert 2 not in sorting_curated.unit_ids
+    split_unit_ids = [43, 44, 45]
+    for unit_id in split_unit_ids:
+        assert unit_id in sorting_curated.unit_ids
+        assert sorting_curated.get_property("quality", ids=[unit_id])[0] == "good"
+        assert sorting_curated.get_property("excitatory", ids=[unit_id])[0]
+        assert sorting_curated.get_property("pyramidal", ids=[unit_id])[0]
+
+    analyzer_curated = apply_curation(analyzer, curation_with_splits)
+    assert len(analyzer_curated.sorting.unit_ids) == len(analyzer.sorting.unit_ids) + 2
+
+    assert 2 not in analyzer_curated.unit_ids
+    for unit_id in split_unit_ids:
+        assert unit_id in analyzer_curated.unit_ids
+        assert analyzer_curated.sorting.get_property("quality", ids=[unit_id])[0] == "good"
+        assert analyzer_curated.sorting.get_property("excitatory", ids=[unit_id])[0]
+        assert analyzer_curated.sorting.get_property("pyramidal", ids=[unit_id])[0]
+
+
+def test_apply_curation_with_split_multi_segment():
+    recording, sorting = generate_ground_truth_recording(durations=[10.0, 10.0], num_units=9, seed=2205)
+    sorting = sorting.rename_units(np.array([1, 2, 3, 6, 10, 14, 20, 31, 42]))
+    analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
+    num_segments = sorting.get_num_segments()
+
+    curation_with_splits_multi_segment = curation_with_splits.copy()
+
+    # we make a split so that each subsplit will have all spikes from different segments
+    split_unit_id = curation_with_splits_multi_segment["splits"][0]["unit_id"]
+    sv = sorting.to_spike_vector()
+    unit_index = sorting.id_to_index(split_unit_id)
+    spikes_from_split_unit = sv[sv["unit_index"] == unit_index]
+
+    split_indices = []
+    cum_spikes = 0
+    for segment_index in range(num_segments):
+        spikes_in_segment = spikes_from_split_unit[spikes_from_split_unit["segment_index"] == segment_index]
+        split_indices.append(np.arange(0, len(spikes_in_segment)) + cum_spikes)
+        cum_spikes += len(spikes_in_segment)
+
+    curation_with_splits_multi_segment["splits"][0]["indices"] = split_indices
+
+    sorting_curated = apply_curation(sorting, curation_with_splits_multi_segment)
+
+    assert len(sorting_curated.unit_ids) == len(sorting.unit_ids) + 1
+    assert 2 not in sorting_curated.unit_ids
+    assert 43 in sorting_curated.unit_ids
+    assert 44 in sorting_curated.unit_ids
+
+    # check that spike trains are correctly split across segments
+    for seg_index in range(num_segments):
+        st_43 = sorting_curated.get_unit_spike_train(43, segment_index=seg_index)
+        st_44 = sorting_curated.get_unit_spike_train(44, segment_index=seg_index)
+        if seg_index == 0:
+            assert len(st_43) > 0
+            assert len(st_44) == 0
+        else:
+            assert len(st_43) == 0
+            assert len(st_44) > 0
+
+
+def test_apply_curation_splits_with_mask():
+    recording, sorting = generate_ground_truth_recording(durations=[10.0], num_units=9, seed=2205)
+    sorting = sorting.rename_units(np.array([1, 2, 3, 6, 10, 14, 20, 31, 42]))
+    analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
+
+    # Get number of spikes for unit 2
+    num_spikes = sorting.count_num_spikes_per_unit()[2]
+
+    # Create split labels that assign spikes to 3 different clusters
+    split_labels = np.zeros(num_spikes, dtype=int)
+    split_labels[: num_spikes // 3] = 0  # First third to cluster 0
+    split_labels[num_spikes // 3 : 2 * num_spikes // 3] = 1  # Second third to cluster 1
+    split_labels[2 * num_spikes // 3 :] = 2  # Last third to cluster 2
+
+    curation_with_mask_split = {
+        "format_version": "2",
+        "unit_ids": [1, 2, 3, 6, 10, 14, 20, 31, 42],
+        "label_definitions": {
+            "quality": {"label_options": ["good", "noise", "MUA", "artifact"], "exclusive": True},
+            "putative_type": {
+                "label_options": ["excitatory", "inhibitory", "pyramidal", "mitral"],
+                "exclusive": False,
+            },
+        },
+        "manual_labels": [
+            {"unit_id": 2, "quality": ["good"], "putative_type": ["excitatory", "pyramidal"]},
+        ],
+        "splits": [
+            {
+                "unit_id": 2,
+                "mode": "labels",
+                "labels": split_labels.tolist(),
+                "new_unit_ids": [43, 44, 45],
+            }
+        ],
+    }
+
+    sorting_curated = apply_curation(sorting, curation_with_mask_split)
+
+    # Check results
+    assert len(sorting_curated.unit_ids) == len(sorting.unit_ids) + 2  # Original units - 1 (split) + 3 (new)
+    assert 2 not in sorting_curated.unit_ids  # Original unit should be removed
+
+    # Check new split units
+    split_unit_ids = [43, 44, 45]
+    for unit_id in split_unit_ids:
+        assert unit_id in sorting_curated.unit_ids
+        # Check properties are propagated
+        assert sorting_curated.get_property("quality", ids=[unit_id])[0] == "good"
+        assert sorting_curated.get_property("excitatory", ids=[unit_id])[0]
+        assert sorting_curated.get_property("pyramidal", ids=[unit_id])[0]
+
+    # Check analyzer
+    analyzer_curated = apply_curation(analyzer, curation_with_mask_split)
+    assert len(analyzer_curated.sorting.unit_ids) == len(analyzer.sorting.unit_ids) + 2
+
+    # Verify split sizes
+    spike_counts = analyzer_curated.sorting.count_num_spikes_per_unit()
+    assert spike_counts[43] == num_spikes // 3  # First third
+    assert spike_counts[44] == num_spikes // 3  # Second third
+    assert spike_counts[45] == num_spikes - 2 * (num_spikes // 3)  # Remainder
 
 
 if __name__ == "__main__":
@@ -259,3 +403,5 @@ if __name__ == "__main__":
     test_curation_label_to_vectors()
     test_curation_label_to_dataframe()
     test_apply_curation()
+    test_apply_curation_with_split_multi_segment()
+    test_apply_curation_splits_with_mask()
