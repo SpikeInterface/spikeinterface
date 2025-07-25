@@ -1,3 +1,5 @@
+.. _process_by_group:
+
 Process a recording by channel group
 ====================================
 
@@ -99,8 +101,8 @@ to any preprocessing function.
     referenced_recording = spre.common_reference(filtered_recording)
     good_channels_recording = spre.detect_and_remove_bad_channels(filtered_recording)
 
-We can then aggregate the recordings back together using the ``aggregate_channels`` function.
-Note that we do not need to do this to sort the data (see :ref:`sorting-by-channel-group`).
+If needed, we could aggregate the recordings back together using the ``aggregate_channels`` function.
+Note: you do not need to do this to sort the data (see :ref:`sorting-by-channel-group`).
 
 .. code-block:: python
 
@@ -143,14 +145,16 @@ Sorting a Recording by Channel Group
 We can also sort a recording for each channel group separately. It is not necessary to preprocess
 a recording by channel group in order to sort by channel group.
 
-There are two ways to sort a recording by channel group. First, we can simply pass the output from
-our preprocessing-by-group method above. Second, for more control, we can loop over the recordings
+There are two ways to sort a recording by channel group. First, we can pass a dictionary to the
+``run_sorter`` function. Since the preprocessing-by-group method above returns a dict, we can
+simply pass this output. Alternatively, for more control, we can loop over the recordings
 ourselves.
 
-**Option 1 : Automatic splitting**
+**Option 1 : Automatic splitting (Recommended)**
 
-Simply pass the split recording to the `run_sorter` function, as if it was a non-split recording.
-This will return a dict of sortings, with the keys corresponding to the groups.
+Simply pass the split recording to the ``run_sorter`` function, as if it was a non-split recording.
+This will return a dict of sortings, with the same keys as the dict of recordings that were
+passed to ``run_sorter``.
 
 .. code-block:: python
 
@@ -160,10 +164,10 @@ This will return a dict of sortings, with the keys corresponding to the groups.
     # do preprocessing if needed
     pp_recording = spre.bandpass_filter(split_recording)
 
-     dict_of_sortings = run_sorter(
-        sorter_name='kilosort2',
+    dict_of_sortings = run_sorter(
+        sorter_name='kilosort4',
         recording=pp_recording,
-        working_folder='working_path'
+        folder='my_kilosort4_sorting'
     )
 
 
@@ -188,3 +192,37 @@ to different groups.
             folder=f"folder_KS2_group{group}"
             )
         sortings[group] = sorting
+
+
+Creating a SortingAnalyzer by Channel Group
+-------------------------------------------
+
+The code above generates a dictionary of recording objects and a dictionary of sorting objects.
+When making a :ref:`SortingAnalyzer <modules/core:SortingAnalyzer>`, we can pass these dictionaries and
+a single analyzer will be created, with the recordings and sortings appropriately aggregated.
+
+The dictionary of recordings and dictionary of sortings must have the same keys. E.g. if you
+use ``split_by("group")``, the keys of your dict of recordings will be the values of the ``group``
+property of the recording. Then the dict of sortings should also have these keys.
+Note that if you use the internal functions, like we do in the code-block below, you don't need to
+keep track of keys yourself. SpikeInterface will do this for you automatically.
+
+The code for create ``SortingAnalyzer`` from dicts of recordings and sortings is very similar to that for
+creating a sorting analyzer from a single recording and sorting:
+
+.. code-block:: python
+
+    dict_of_recordings = preprocessed_recording.split_by("group")
+    dict_of_sortings = run_sorter(sorter_name="mountainsort5", recording = dict_of_recordings)
+
+    analyzer = create_sorting_analyzer(sorting=dict_of_sortings, recording=dict_of_recordings)
+
+
+The code above creates a *single* sorting analyzer called :code:`analyzer`. You can select the units
+from one of the "group"s as follows:
+
+.. code-block:: python
+
+    aggretation_keys = analyzer.get_sorting_property("aggregation_key")
+    unit_ids_group_0 = analyzer.unit_ids[aggretation_keys == 0]
+    group_0_analzyer = analyzer.select_units(unit_ids = unit_ids_group_0)
