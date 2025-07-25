@@ -141,6 +141,7 @@ test_extractors = [
     # Commenting out for release
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    "pynapple",
 ]
 
 test_preprocessing = [
@@ -160,6 +161,9 @@ test = [
 
     # streaming templates
     "s3fs",
+
+    # exporters
+    "pynapple",
 
     # tridesclous
     "numba<0.61.0;python_version<'3.13'",
