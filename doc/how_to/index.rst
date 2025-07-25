@@ -20,3 +20,4 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     physical_units
     unsigned_to_signed
     customize_a_plot
+    ../tutorials/forhowto/plot_1_working_with_tetrodes
