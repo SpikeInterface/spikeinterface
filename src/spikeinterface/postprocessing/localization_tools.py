@@ -325,7 +325,7 @@ def compute_grid_convolution(
 
 def get_return_scaled(sorting_analyzer_or_templates):
     if isinstance(sorting_analyzer_or_templates, Templates):
-        return_scaled = sorting_analyzer_or_templates.is_scaled
+        return_scaled = sorting_analyzer_or_templates.is_in_uV
     else:
         return_scaled = sorting_analyzer_or_templates.return_scaled
     return return_scaled

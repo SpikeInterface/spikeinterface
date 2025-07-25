@@ -158,7 +158,7 @@ class RandomProjectionClustering:
             channel_ids=recording.channel_ids,
             unit_ids=unit_ids[valid_templates],
             probe=recording.get_probe(),
-            is_scaled=False,
+            is_in_uV=False,
         )
 
         sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])
