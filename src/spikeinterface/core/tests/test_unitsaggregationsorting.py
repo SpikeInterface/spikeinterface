@@ -161,9 +161,7 @@ def test_aggregation_of_dicts():
     aggregated_sorting = aggregate_units({"a": sorting1, "b": sorting2})
 
     assert aggregated_sorting.get_num_units() == 6
-    assert np.all(
-        aggregated_sorting.get_property(key="aggregate_units_key") == np.array(["a", "a", "a", "a", "b", "b"])
-    )
+    assert np.all(aggregated_sorting.get_property(key="aggregation_key") == np.array(["a", "a", "a", "a", "b", "b"]))
 
 
 def test_sampling_frequency_max_diff():

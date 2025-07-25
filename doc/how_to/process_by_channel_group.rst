@@ -223,6 +223,6 @@ from one of the "group"s as follows:
 
 .. code-block:: python
 
-    aggretation_keys = analyzer.get_sorting_property("aggregate_units_key")
+    aggretation_keys = analyzer.get_sorting_property("aggregation_key")
     unit_ids_group_0 = analyzer.unit_ids[aggretation_keys == 0]
     group_0_analzyer = analyzer.select_units(unit_ids = unit_ids_group_0)
