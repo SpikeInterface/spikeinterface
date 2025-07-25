@@ -15,6 +15,8 @@ from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 import time
 
+import importlib
+
 
 def job_kwargs():
     return dict(n_jobs=1, chunk_size=10000, progress_bar=True, mp_context="spawn")
@@ -66,6 +68,13 @@ def test_find_cluster_from_peaks(clustering_method, recording, peaks, peak_locat
         method_kwargs["peak_locations"] = peak_locations
     if clustering_method in ("sliding_hdbscan", "position_and_pca"):
         method_kwargs["waveform_mode"] = "shared_memory"
+    
+    if clustering_method == "tdc-clustering":
+        # skip tdc-clustering if not isosplit6
+        have_isosplit6 = importlib.util.find_spec("numba") is not None
+        if not have_isosplit6:
+            return
+    
 
     t0 = time.perf_counter()
     labels, peak_labels = find_cluster_from_peaks(
