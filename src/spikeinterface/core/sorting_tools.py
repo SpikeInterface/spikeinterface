@@ -383,7 +383,7 @@ def set_properties_after_merging(
                 # and new values only if they are all similar
                 new_values[new_index] = merge_values[0]
             else:
-                
+
                 new_values[new_index] = default_missing_values[parent_values.dtype.kind]
         sorting_post_merge.set_property(key, new_values)
 
