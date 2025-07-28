@@ -423,6 +423,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         # unit 0, 2, ... should be removed
         assert np.all(~np.isin(data["result_two"], [0, 2]))
 
+        # test merges
         if format != "memory":
             if format == "zarr":
                 folder = cache_folder / f"test_SortingAnalyzer_merge_soft_with_{format}.zarr"
@@ -432,10 +433,14 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
                 shutil.rmtree(folder)
         else:
             folder = None
-        sorting_analyzer4 = sorting_analyzer.merge_units(merge_unit_groups=[[0, 1]], format=format, folder=folder)
+        sorting_analyzer4, new_unit_ids = sorting_analyzer.merge_units(
+            merge_unit_groups=[[0, 1]], format=format, folder=folder, return_new_unit_ids=True
+        )
         assert 0 not in sorting_analyzer4.unit_ids
         assert 1 not in sorting_analyzer4.unit_ids
         assert len(sorting_analyzer4.unit_ids) == len(sorting_analyzer.unit_ids) - 1
+        is_merged_values = sorting_analyzer4.sorting.get_property("is_merged")
+        assert is_merged_values[sorting_analyzer4.sorting.ids_to_indices(new_unit_ids)][0]
 
         if format != "memory":
             if format == "zarr":
@@ -446,13 +451,50 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
                 shutil.rmtree(folder)
         else:
             folder = None
-        sorting_analyzer5 = sorting_analyzer.merge_units(
-            merge_unit_groups=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, merging_mode="hard"
+        sorting_analyzer5, new_unit_ids = sorting_analyzer.merge_units(
+            merge_unit_groups=[[0, 1]],
+            new_unit_ids=[50],
+            format=format,
+            folder=folder,
+            merging_mode="hard",
+            return_new_unit_ids=True,
         )
         assert 0 not in sorting_analyzer5.unit_ids
         assert 1 not in sorting_analyzer5.unit_ids
         assert len(sorting_analyzer5.unit_ids) == len(sorting_analyzer.unit_ids) - 1
         assert 50 in sorting_analyzer5.unit_ids
+        is_merged_values = sorting_analyzer5.sorting.get_property("is_merged")
+        assert is_merged_values[sorting_analyzer5.sorting.id_to_index(50)]
+
+        # test splitting
+        if format != "memory":
+            if format == "zarr":
+                folder = cache_folder / f"test_SortingAnalyzer_split_with_{format}.zarr"
+            else:
+                folder = cache_folder / f"test_SortingAnalyzer_split_with_{format}"
+            if folder.exists():
+                shutil.rmtree(folder)
+        else:
+            folder = None
+        split_units = {}
+        num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit()
+        units_to_split = sorting_analyzer.unit_ids[:2]
+        for unit in units_to_split:
+            for unit in units_to_split:
+                split_units[unit] = [
+                    np.arange(num_spikes[unit] // 2),
+                    np.arange(num_spikes[unit] // 2, num_spikes[unit]),
+                ]
+
+        sorting_analyzer6, split_new_unit_ids = sorting_analyzer.split_units(
+            split_units=split_units, format=format, folder=folder, return_new_unit_ids=True
+        )
+        for unit_to_split in units_to_split:
+            assert unit_to_split not in sorting_analyzer6.unit_ids
+        assert len(sorting_analyzer6.unit_ids) == len(sorting_analyzer.unit_ids) + 2
+        is_split_values = sorting_analyzer6.sorting.get_property("is_split")
+        for new_unit_ids in split_new_unit_ids:
+            assert all(is_split_values[sorting_analyzer6.sorting.ids_to_indices(new_unit_ids)])
 
     # test compute with extension-specific params
     sorting_analyzer.compute(["dummy"], extension_params={"dummy": {"param1": 5.5}})
@@ -534,6 +576,14 @@ class DummyAnalyzerExtension(AnalyzerExtension):
                 keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_groups[id])
                 new_data["result_three"][unit_ind] = arr[keep_unit_indices].mean(axis=0)
 
+        return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        new_data = dict()
+        new_data["result_one"] = self.data["result_one"]
+        spikes = new_sorting_analyzer.sorting.to_spike_vector()
+        new_data["result_two"] = spikes["unit_index"].copy()
+        new_data["result_three"] = np.zeros((len(new_sorting_analyzer.unit_ids), 2))
         return new_data
 
     def _get_data(self):
