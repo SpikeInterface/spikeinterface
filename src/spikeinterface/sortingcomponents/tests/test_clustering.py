@@ -61,20 +61,21 @@ def peak_locations_fixture(recording, peaks, job_kwargs):
     return run_peak_locations(recording, peaks, job_kwargs)
 
 
-@pytest.mark.parametrize("clustering_method", list(clustering_methods.keys()))
+
+clustering_method_keys = list(clustering_methods.keys())
+have_isosplit6 = importlib.util.find_spec("numba") is not None
+if "tdc-clustering" in clustering_methods_keys and not have_isosplit6:
+    # skip tdc-clustering if not isosplit6
+    clustering_method_keys.remove("tdc-clustering")
+
+
+@pytest.mark.parametrize("clustering_method", clustering_method_keys)
 def test_find_cluster_from_peaks(clustering_method, recording, peaks, peak_locations):
     method_kwargs = {}
     if clustering_method in ("position", "position_and_pca"):
         method_kwargs["peak_locations"] = peak_locations
     if clustering_method in ("sliding_hdbscan", "position_and_pca"):
         method_kwargs["waveform_mode"] = "shared_memory"
-    
-    if clustering_method == "tdc-clustering":
-        # skip tdc-clustering if not isosplit6
-        have_isosplit6 = importlib.util.find_spec("numba") is not None
-        if not have_isosplit6:
-            return
-    
 
     t0 = time.perf_counter()
     labels, peak_labels = find_cluster_from_peaks(
