@@ -363,6 +363,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 )
                 # this release the peak_svd memmap file
                 del more_outs
+                del outputs
 
             templates = clean_templates(
                 templates,
