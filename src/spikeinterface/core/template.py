@@ -199,7 +199,6 @@ class Templates:
             )
 
         assert isinstance(sparsity, ChannelSparsity), "sparsity should be of type ChannelSparsity"
-        
 
         assert self.sparsity_mask is None, "Templates should be dense"
 

@@ -19,9 +19,9 @@ from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_chann
 
 class CircusClustering:
     """
-    Circus clustering is based on several local clustering achieved with a 
+    Circus clustering is based on several local clustering achieved with a
     divide-and-conquer strategy. It uses the `hdbscan` or `isosplit6` clustering algorithms to
-    perform the local clusterings with an iterative and greedy strategy. 
+    perform the local clusterings with an iterative and greedy strategy.
     More precisely, it first extracts waveforms from the recording,
     then performs a Truncated SVD to reduce the dimensionality of the waveforms.
     For every peak, it extracts the SVD features and performs local clustering, grouping the peaks
@@ -31,7 +31,7 @@ class CircusClustering:
     """
 
     _default_params = {
-        "clusterer" : "hdbscan",  # 'isosplit6', 'hdbscan', 'isocut5'
+        "clusterer": "hdbscan",  # 'isosplit6', 'hdbscan', 'isocut5'
         "clusterer_kwargs": {
             "min_cluster_size": 20,
             "cluster_selection_epsilon": 0.5,
@@ -74,7 +74,11 @@ class CircusClustering:
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
 
         clusterer = params.get("clusterer", "hdbscan")
-        assert clusterer in ["isosplit6", "hdbscan", "isocut5"], "Circus clustering only supports isosplit6, isocut5 or hdbscan"
+        assert clusterer in [
+            "isosplit6",
+            "hdbscan",
+            "isocut5",
+        ], "Circus clustering only supports isosplit6, isocut5 or hdbscan"
         if clusterer in ["isosplit6", "hdbscan"]:
             have_dep = importlib.util.find_spec(clusterer) is not None
             if not have_dep:
@@ -158,7 +162,7 @@ class CircusClustering:
         split_kwargs["min_size_split"] = 2 * params["clusterer_kwargs"].get("min_cluster_size", 50)
         split_kwargs["clusterer_kwargs"] = params["clusterer_kwargs"]
         split_kwargs["clusterer"] = params["clusterer"]
-        
+
         if params["debug"]:
             debug_folder = tmp_folder / "split"
         else:
@@ -211,12 +215,15 @@ class CircusClustering:
 
         if params["do_merge"]:
             peak_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = merge_peak_labels_from_templates(
-                peaks, peak_labels, templates.unit_ids,
-                templates.templates_array, sparse_mask2,
-                **params["merge_kwargs"]
+                peaks,
+                peak_labels,
+                templates.unit_ids,
+                templates.templates_array,
+                sparse_mask2,
+                **params["merge_kwargs"],
             )
 
-            templates  = Templates(
+            templates = Templates(
                 templates_array=merge_template_array,
                 sampling_frequency=fs,
                 nbefore=templates.nbefore,
@@ -224,10 +231,8 @@ class CircusClustering:
                 channel_ids=recording.channel_ids,
                 unit_ids=new_unit_ids,
                 probe=recording.get_probe(),
-                is_in_uV=False
+                is_in_uV=False,
             )
-
-
 
         labels = templates.unit_ids
 
@@ -252,7 +257,6 @@ class CircusClustering:
         else:
             if verbose:
                 print("Kept %d raw clusters" % len(labels))
-
 
         more_outs = dict(
             svd_model=svd_model,

@@ -36,7 +36,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "merging": {"max_distance_um": 50},
         "clustering": {"method": "circus-clustering", "method_kwargs": dict(remove_small_snr=True)},
         "matching": {"method": "circus-omp-svd", "method_kwargs": dict()},
-        #"matching": {"method": "wobble", "method_kwargs": dict()},
+        # "matching": {"method": "wobble", "method_kwargs": dict()},
         "apply_preprocessing": True,
         "templates_from_svd": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
@@ -344,8 +344,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     ms_after,
                     **job_kwargs,
                 )
-            else :
+            else:
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+
                 # _, peak_labels, svd_model, svd_features, sparsity_mask = outputs
                 _, peak_labels, more_outs = outputs
 
@@ -361,7 +362,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     operator="median",
                 )
 
-            
             templates = clean_templates(
                 templates,
                 noise_levels=noise_levels,

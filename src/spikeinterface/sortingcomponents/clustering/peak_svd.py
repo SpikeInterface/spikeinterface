@@ -106,7 +106,6 @@ def extract_peaks_svd(
 
     node0 = PeakRetriever(recording, peaks)
 
-
     channel_distance = get_channel_distances(recording)
 
     if motion_aware:
@@ -114,7 +113,7 @@ def extract_peaks_svd(
         # we need to increase the radius by the max motion for the waveforms mask
         # the final mask of svd will be th small one
         max_motion = max(abs(e) for e in motion.get_boundaries())
-        margin = np.min(channel_distance[channel_distance>0]) * 2
+        margin = np.min(channel_distance[channel_distance > 0]) * 2
         # margin = 0
         wf_sparsity_mask = channel_distance <= (radius_um + max_motion + margin)
         final_sparsity_mask = channel_distance <= radius_um
@@ -124,8 +123,6 @@ def extract_peaks_svd(
             wf_sparsity_mask = channel_distance <= radius_um
         else:
             wf_sparsity_mask = sparsity_mask
-
-
 
     node1 = ExtractSparseWaveforms(
         recording,
@@ -141,7 +138,11 @@ def extract_peaks_svd(
         if motion is None:
             raise ValueError("For motion aware PCA motion must provided")
         node2 = MotionAwareTemporalPCAProjection(
-            recording, parents=[node0, node1], return_output=True, pca_model=svd_model, motion=motion,
+            recording,
+            parents=[node0, node1],
+            return_output=True,
+            pca_model=svd_model,
+            motion=motion,
             # interpolation_method="linear",
             interpolation_method="cubic",
             final_sparsity_mask=final_sparsity_mask,

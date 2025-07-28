@@ -957,9 +957,6 @@ def make_collision_events(sorting, delta, progress_bar=False):
         ("delta_frame", "int64"),
     ]
 
-
-
-
     collision_events = []
 
     loop = enumerate(unit_ids)

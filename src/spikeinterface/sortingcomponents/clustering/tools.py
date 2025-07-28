@@ -249,8 +249,6 @@ def get_templates_from_peaks_and_recording(
     spikes["unit_index"] = indices
     spikes["segment_index"] = valid_peaks["segment_index"]
 
-    
-
     templates_array = estimate_templates(
         recording,
         spikes,
@@ -317,9 +315,8 @@ def get_templates_from_peaks_and_svd(
     dense_templates : Templates
         The estimated templates object as a dense template (but internanally contain sparse channels).
     final_sparsity_mask: np.array
-        The final sparsity mask. Note that the template object is dense but with zeros.        
+        The final sparsity mask. Note that the template object is dense but with zeros.
     """
-    
 
     assert operator in ["average", "median"], "operator should be either 'average' or 'median'"
     mask = peak_labels > -1

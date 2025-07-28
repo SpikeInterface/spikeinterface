@@ -374,7 +374,7 @@ def set_properties_after_merging(
         shape = (len(sorting_post_merge.unit_ids),) + parent_values.shape[1:]
         new_values = np.empty(shape=shape, dtype=parent_values.dtype)
         new_values[keep_post_inds] = parent_values[keep_pre_inds]
-        
+
         for new_id, merge_group in zip(new_unit_ids, merge_unit_groups):
             merged_indices = sorting_pre_merge.ids_to_indices(merge_group)
             merge_values = parent_values[merged_indices]

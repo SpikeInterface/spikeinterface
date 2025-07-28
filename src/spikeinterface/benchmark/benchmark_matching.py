@@ -102,7 +102,6 @@ class MatchingStudy(BenchmarkStudy, MixinStudyUnitCount):
         else:
             fig = axs[0].figure
 
-
         for count, key in enumerate(case_keys):
             label = self.cases[key]["label"]
             templates_array = self.get_sorting_analyzer(key).get_extension("templates").get_templates(outputs="numpy")
@@ -118,7 +117,7 @@ class MatchingStudy(BenchmarkStudy, MixinStudyUnitCount):
                 # good_only=False,
                 good_only=True,
             )
-            
+
             ax.set_title(label)
 
         return fig

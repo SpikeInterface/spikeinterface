@@ -306,6 +306,7 @@ class LocalFeatureClustering:
                 is_split = False
         elif clusterer == "isosplit6":
             import isosplit6
+
             min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)
             possible_labels = isosplit6.isosplit6(final_features)
             for i in np.unique(possible_labels):

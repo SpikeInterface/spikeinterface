@@ -37,7 +37,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "ms_after": 1.5,
             "radius_um": 120.0,
         },
-        "filtering": {"freq_min": 150.0, "freq_max": 5000.0, "ftype":"bessel", "filter_order": 2,},
+        "filtering": {
+            "freq_min": 150.0,
+            "freq_max": 5000.0,
+            "ftype": "bessel",
+            "filter_order": 2,
+        },
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
         # "svd": {"n_components": 6},
@@ -53,14 +58,13 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             #     "cluster_selection_method": "eom",
             # },
             "clusterer": "isosplit6",
-            "clusterer_kwargs": {
-            },            
+            "clusterer_kwargs": {},
             "do_merge": True,
             "merge_kwargs": {
                 "similarity_metric": "l1",
                 "num_shifts": 4,
                 "similarity_thresh": 0.75,
-            }
+            },
         },
         "templates": {
             "ms_before": 2.0,
@@ -193,10 +197,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
             # this is a patch to make the github CI because isosplit is installable on python > 3.11
-            have_sisosplit6 = importlib.util.find_spec("isosplit6")  is not None
+            have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
             if not have_sisosplit6:
                 if verbose:
-                    print("By default tridesclous2 need isosplit6 package for better reults please install it, automatically switch to hdbscan instead")
+                    print(
+                        "By default tridesclous2 need isosplit6 package for better reults please install it, automatically switch to hdbscan instead"
+                    )
                 clustering_kwargs["clustering"]["clusterer"] = "hdbscan"
                 clustering_kwargs["clustering"]["clusterer_kwargs"] = {
                     "min_cluster_size": 10,
@@ -208,7 +214,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         unit_ids, clustering_label, more_outs = find_cluster_from_peaks(
             recording, peaks, method="tdc-clustering", method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs
         )
-
 
         # peak_shifts = extra_out["peak_shifts"]
         # new_peaks = peaks.copy()
@@ -225,14 +230,13 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if verbose:
             print(f"find_cluster_from_peaks(): {sorting_pre_peeler.unit_ids.size} cluster found")
 
-
         recording_for_peeler = recording
 
         # if "templates" in more_outs:
         #     # No, bad idea because templates are too short
         #     # clustering also give templates
         #     templates = more_outs["templates"]
-        
+
         # we recompute the template even if the clustering give it already because we use different ms_before/ms_after
         nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.0)
         nafter = int(params["templates"]["ms_after"] * sampling_frequency / 1000.0)
@@ -258,18 +262,20 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
 
         sparsity_threshold = params["templates"]["sparsity_threshold"]
-        sparsity = compute_sparsity(templates_dense, method="snr", noise_levels=noise_levels, threshold=sparsity_threshold)
+        sparsity = compute_sparsity(
+            templates_dense, method="snr", noise_levels=noise_levels, threshold=sparsity_threshold
+        )
         templates = templates_dense.to_sparse(sparsity)
         # templates = remove_empty_templates(templates)
 
-        templates = clean_templates(templates_dense, 
-                    sparsify_threshold=params["templates"]["sparsity_threshold"],
-                    noise_levels=noise_levels, 
-                    min_snr=params["templates"]["min_snr"],
-                    max_jitter_ms=None, 
-                    remove_empty=True)
-
-
+        templates = clean_templates(
+            templates_dense,
+            sparsify_threshold=params["templates"]["sparsity_threshold"],
+            noise_levels=noise_levels,
+            min_snr=params["templates"]["min_snr"],
+            max_jitter_ms=None,
+            remove_empty=True,
+        )
 
         ## peeler
         matching_method = params["matching"]["method"]
@@ -287,7 +293,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         final_spikes["segment_index"] = spikes["segment_index"]
         sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
-
         ## DEBUG auto merge
         auto_merge = True
         if auto_merge:
@@ -296,7 +301,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             # max_distance_um = merging_params.get("max_distance_um", 50)
             # merging_params["max_distance_um"] = max(max_distance_um, 2 * max_motion)
 
-            analyzer_final =  final_cleaning_circus(
+            analyzer_final = final_cleaning_circus(
                 recording_for_peeler,
                 sorting,
                 templates,
@@ -309,7 +314,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 **job_kwargs,
             )
             sorting = NumpySorting.from_sorting(analyzer_final.sorting)
-
 
         if params["save_array"]:
             sorting_pre_peeler = sorting_pre_peeler.save(folder=sorter_output_folder / "sorting_pre_peeler")

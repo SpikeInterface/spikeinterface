@@ -9,7 +9,10 @@ def despine(ax_or_axes):
     if not isinstance(ax_or_axes, (list, tuple, np.ndarray)):
         ax_or_axes = [ax_or_axes]
     for ax in np.array(ax_or_axes).flatten():
-        for loc in ("top", "right", ):
+        for loc in (
+            "top",
+            "right",
+        ):
             ax.spines[loc].set_visible(False)
 
 
@@ -36,17 +39,18 @@ def plot_study_legend(study, case_keys=None, levels_to_group_by=None, ax=None, f
     else:
         fig = ax.get_figure()
 
-
     if levels_to_group_by is None:
         colors = study.get_colors()
         for k in case_keys:
             ax.plot([], color=colors[k], label=study.cases[k]["label"])
     else:
         colors = study.get_colors(levels_to_group_by=levels_to_group_by)
-        case_group_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_group_by, case_keys=case_keys)
+        case_group_keys, labels = study.get_grouped_keys_mapping(
+            levels_to_group_by=levels_to_group_by, case_keys=case_keys
+        )
         for k in case_group_keys.keys():
             ax.plot([], color=colors[k], label=labels[k])
-    
+
     ax.legend()
     clean_axis(ax)
     return fig
@@ -89,7 +93,7 @@ def aggregate_dataframe_by_levels(df, study, case_keys=None, levels_to_group_by=
         if not isinstance(levels_to_group_by, list):
             levels_to_group_by = [levels_to_group_by]
         drop_levels = [l for l in study.levels if l not in levels_to_group_by]
-        df = df.droplevel(drop_levels)#.sort_index()
+        df = df.droplevel(drop_levels)  # .sort_index()
         if len(levels_to_group_by) > 1:
             df = df.reorder_levels(levels_to_group_by)
         new_case_keys = list(np.unique(df.index))
@@ -102,7 +106,7 @@ def aggregate_dataframe_by_levels(df, study, case_keys=None, levels_to_group_by=
                 labels = {key: "-".join(key) for key in new_case_keys}
             else:
                 labels = {key: key for key in new_case_keys}
-        
+
         # get colors
         colors = study.get_colors(levels_to_group_by=levels_to_group_by)
     else:
@@ -160,7 +164,9 @@ def plot_run_times(study, case_keys=None, mode="bar", levels_to_group_by=None, f
 
     else:
         colors = study.get_colors(levels_to_group_by=levels_to_group_by)
-        keys_mapping, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_group_by, case_keys=case_keys)
+        keys_mapping, labels = study.get_grouped_keys_mapping(
+            levels_to_group_by=levels_to_group_by, case_keys=case_keys
+        )
 
         if mode == "bar":
             x, height, yerr, color = [], [], [], []
@@ -176,10 +182,10 @@ def plot_run_times(study, case_keys=None, mode="bar", levels_to_group_by=None, f
                 else:
                     yerr.append(0)
                 color.append(colors[key])
-            ax.bar(x, height, yerr=yerr, color=color, ecolor='k')
+            ax.bar(x, height, yerr=yerr, color=color, ecolor="k")
 
         elif mode == "box":
-            rts =[]
+            rts = []
             for i, key in enumerate(keys_mapping):
                 if len(levels_to_group_by) == 1:
                     rt = run_times.xs((key,), level=levels_to_group_by).values.flatten()
@@ -195,8 +201,8 @@ def plot_run_times(study, case_keys=None, mode="bar", levels_to_group_by=None, f
                     elif len(lines[k]) == len(rts) * 2:
                         color = colors[list(keys_mapping.keys())[i // 2]]
                     else:
-                        color= 'k'
-                    e.set_color(color) 
+                        color = "k"
+                    e.set_color(color)
 
         ax.set_ylabel("Run times (s)")
         ax.set_xticks(np.arange(len(labels)) + 1)
@@ -205,7 +211,17 @@ def plot_run_times(study, case_keys=None, mode="bar", levels_to_group_by=None, f
     return fig
 
 
-def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None, columns=None, with_rectangle=True, revert_bad=True, figsize=None, ax=None):
+def plot_unit_counts(
+    study,
+    case_keys=None,
+    levels_to_group_by=None,
+    colors=None,
+    columns=None,
+    with_rectangle=True,
+    revert_bad=True,
+    figsize=None,
+    ax=None,
+):
     """
     Plot unit counts for a study: "num_well_detected", "num_false_positive", "num_redundant", "num_overmerged"
 
@@ -250,7 +266,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None
 
     keys_mapping, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_group_by, case_keys=case_keys)
 
-    if columns is None :
+    if columns is None:
         columns = count_units.columns.tolist()
         columns.remove("num_gt")
         columns.remove("num_sorter")
@@ -262,7 +278,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None
     colors["num_well_detected"] = "green"
 
     case_colors = study.get_colors(levels_to_group_by=levels_to_group_by)
-    
+
     ymin, ymax = np.inf, -np.inf
     for i, key in enumerate(keys_mapping):
         for c, col in enumerate(columns):
@@ -272,7 +288,7 @@ def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None
                 yerr = None
             else:
                 if len(levels_to_group_by) == 1:
-                    all_y = count_units.xs((key, ), level=levels_to_group_by)[col].values
+                    all_y = count_units.xs((key,), level=levels_to_group_by)[col].values
                 else:
                     all_y = count_units.xs(key, level=levels_to_group_by)[col].values
                 y = np.mean(all_y)
@@ -295,13 +311,19 @@ def plot_unit_counts(study, case_keys=None, levels_to_group_by=None, colors=None
                 ymax = max(ymax, y)
             else:
                 ymin = min(ymin, y - yerr[0])
-                ymax = max(ymax, y + yerr[0])                
-    
+                ymax = max(ymax, y + yerr[0])
+
     if with_rectangle:
-        spacing = width * .3
+        spacing = width * 0.3
         for i, key in enumerate(keys_mapping):
-            rect = plt.Rectangle((i + 1 - width/2 - spacing, ymin), 1 - spacing, ymax - ymin,
-                                 linewidth=2, edgecolor=case_colors[key], facecolor='none')
+            rect = plt.Rectangle(
+                (i + 1 - width / 2 - spacing, ymin),
+                1 - spacing,
+                ymax - ymin,
+                linewidth=2,
+                edgecolor=case_colors[key],
+                facecolor="none",
+            )
             ax.add_patch(rect)
 
     xticklabels = list(labels.values())
@@ -449,7 +471,9 @@ def plot_performances_vs_snr(
 
         ax = axs[count]
         if levels_to_group_by is not None:
-            case_group_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_group_by, case_keys=case_keys)
+            case_group_keys, labels = study.get_grouped_keys_mapping(
+                levels_to_group_by=levels_to_group_by, case_keys=case_keys
+            )
         else:
             labels = {k: study.cases[k]["label"] for k in case_keys}
             case_group_keys = {k: [k] for k in case_keys}
@@ -497,12 +521,11 @@ def plot_performances_vs_snr(
                     std_y_fit = np.nanstd(np.stack(all_y_fit, axis=1), axis=1)
                     ax.fill_between(xfit, average_y_fit - std_y_fit, average_y_fit + std_y_fit, color=color, alpha=0.5)
 
-
             if show_average_by_bin:
                 from scipy.stats import binned_statistic
 
                 bins = np.percentile(np.concatenate(all_xs), np.linspace(0, 100, num_bin_average + 1))
-                bin_centers = bins[:-1] + np.diff(bins) / 2.
+                bin_centers = bins[:-1] + np.diff(bins) / 2.0
                 all_average = []
                 for x, y in zip(all_xs, all_ys):
                     average, bins, _ = binned_statistic(x, y, statistic="mean", bins=bins)
@@ -515,15 +538,12 @@ def plot_performances_vs_snr(
                     std_y = np.nanstd(np.stack(all_average, axis=1), axis=1)
                     ax.fill_between(bin_centers, average_y - std_y, average_y + std_y, color=color, alpha=0.5)
 
-
-
             # accumulate x and y and make one final plot
             all_xs = np.concatenate(all_xs)
             all_ys = np.concatenate(all_ys)
 
             ax.scatter(all_xs, all_ys, marker=".", label=label, color=color, s=scatter_size)
             ax.set_ylabel(performance_name)
-
 
         ax.set_ylim(-0.05, 1.05)
 
@@ -780,7 +800,13 @@ def plot_performances_comparison(
 
 
 def plot_performances_vs_depth_and_snr(
-    study, performance_name="accuracy", case_keys=None, figsize=None, levels_to_group_by=None, map_name="viridis", axs=None
+    study,
+    performance_name="accuracy",
+    case_keys=None,
+    figsize=None,
+    levels_to_group_by=None,
+    map_name="viridis",
+    axs=None,
 ):
     """
     Plot performances vs depth and snr for a study.

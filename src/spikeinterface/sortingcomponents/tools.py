@@ -460,23 +460,22 @@ def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):
     return recording_slices
 
 
-def clean_templates(templates, 
-                    sparsify_threshold=0.25,
-                    noise_levels=None, 
-                    min_snr=None, 
-                    max_jitter_ms=None, 
-                    remove_empty=True):
+def clean_templates(
+    templates, sparsify_threshold=0.25, noise_levels=None, min_snr=None, max_jitter_ms=None, remove_empty=True
+):
     """
     Clean a Templates object by removing empty units and applying sparsity if provided.
     """
 
     ## First we sparsify the templates (using peak-to-peak amplitude avoid sign issues)
     if sparsify_threshold is not None:
-        sparsity = compute_sparsity(templates, 
-                                    method="snr", 
-                                    amplitude_mode="peak_to_peak",
-                                    noise_levels=noise_levels, 
-                                    threshold=sparsify_threshold)
+        sparsity = compute_sparsity(
+            templates,
+            method="snr",
+            amplitude_mode="peak_to_peak",
+            noise_levels=noise_levels,
+            threshold=sparsify_threshold,
+        )
         if templates.are_templates_sparse():
             templates = templates.to_dense()
         templates = templates.to_sparse(sparsity)
@@ -488,22 +487,24 @@ def clean_templates(templates,
     ## We keep only units with a max jitter
     if max_jitter_ms is not None:
         max_jitter = int(max_jitter_ms * templates.sampling_frequency / 1000.0)
-        
+
         shifts = get_template_extremum_channel_peak_shift(templates)
         to_select = []
         for unit_id in templates.unit_ids:
             if np.abs(shifts[unit_id]) <= max_jitter:
                 to_select += [unit_id]
         templates = templates.select_units(to_select)
-    
+
     ## We remove units with a low SNR
     if min_snr is not None:
         assert noise_levels is not None, "noise_levels must be provided if min_snr is set"
-        sparsity = compute_sparsity(templates.to_dense(), 
-                                    method="snr", 
-                                    amplitude_mode="peak_to_peak",
-                                    noise_levels=noise_levels, 
-                                    threshold=min_snr)
+        sparsity = compute_sparsity(
+            templates.to_dense(),
+            method="snr",
+            amplitude_mode="peak_to_peak",
+            noise_levels=noise_levels,
+            threshold=min_snr,
+        )
         to_select = templates.unit_ids[np.flatnonzero(sparsity.mask.sum(axis=1) > 0)]
         templates = templates.select_units(to_select)
 
