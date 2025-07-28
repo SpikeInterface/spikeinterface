@@ -698,7 +698,7 @@ class ComputeTemplates(AnalyzerExtension):
                 channel_ids=self.sorting_analyzer.channel_ids,
                 unit_ids=unit_ids,
                 probe=self.sorting_analyzer.get_probe(),
-                is_scaled=self.sorting_analyzer.return_in_uV,
+                is_in_uV=self.sorting_analyzer.return_in_uV,
             )
         else:
             raise ValueError("`outputs` must be 'numpy' or 'Templates'")
