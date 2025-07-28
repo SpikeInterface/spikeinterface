@@ -141,7 +141,6 @@ test_extractors = [
     # Commenting out for release
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
-    "pynapple",
 ]
 
 test_preprocessing = [
