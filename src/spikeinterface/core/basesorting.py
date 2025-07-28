@@ -658,8 +658,8 @@ class BaseSorting(BaseExtractor):
             sortings = {}
         for value in np.unique(values).tolist():
             (inds,) = np.nonzero(values == value)
-            new_channel_ids = self.unit_ids[inds]
-            subsort = self.select_units(new_channel_ids)
+            new_unit_ids = self.unit_ids[inds]
+            subsort = self.select_units(new_unit_ids)
             subsort.set_annotation("split_by_property", value=property)
             if outputs == "list":
                 sortings.append(subsort)
