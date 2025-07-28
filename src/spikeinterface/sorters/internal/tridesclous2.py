@@ -96,7 +96,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "2.1"
+        return "2025.07"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
