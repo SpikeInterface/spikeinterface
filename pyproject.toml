@@ -202,6 +202,7 @@ docs = [
     "networkx",
     "skops", # For automated curation
     "scikit-learn", # For automated curation
+    "huggingface_hub", # For automated curation
     # Download data
     "pooch>=1.8.2",
     "datalad>=1.0.2",
