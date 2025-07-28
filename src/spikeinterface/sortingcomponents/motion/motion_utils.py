@@ -78,10 +78,13 @@ def get_spatial_windows(
         num_windows = int((max_ - min_) // win_step_um)
 
         if num_windows < 1:
-            raise Exception(
+            num_windows = 1
+            warnings.warn(
+                f"You trying to estimation motion with non-rigid on a too short probe!"
                 f"get_spatial_windows(): {win_step_um=}/{win_scale_um=}/{win_margin_um=} are too large for the "
                 f"probe size (depth range={np.ptp(contact_depths)}). You can try to reduce them or use rigid motion."
             )
+
         border = ((max_ - min_) % win_step_um) / 2
         window_centers = np.arange(num_windows + 1) * win_step_um + min_ + border
         windows = []
