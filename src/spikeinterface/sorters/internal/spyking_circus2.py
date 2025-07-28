@@ -361,6 +361,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     more_outs["peak_svd_sparse_mask"],
                     operator="median",
                 )
+                # this release the peak_svd memmap file
+                del more_outs
 
             templates = clean_templates(
                 templates,
