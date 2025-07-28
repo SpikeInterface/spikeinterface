@@ -44,15 +44,11 @@ class CollisionGTComparison(GroundTruthComparison):
 
         GroundTruthComparison.__init__(self, gt_sorting, tested_sorting, **kwargs)
 
-        
-
         self.collision_lag = collision_lag
         self.nbins = nbins
 
         self.detect_gt_collision()
         self.compute_all_pair_collision_bins()
-
-        
 
     def detect_gt_collision(self):
         delta = int(self.collision_lag / 1000 * self.sampling_frequency)
@@ -143,29 +139,29 @@ class CollisionGTComparison(GroundTruthComparison):
         labels_st1 = self._labels_st1
         gt_unit_ids = self.sorting1.unit_ids
 
-        nbins = bins.size -1 
+        nbins = bins.size - 1
         n = len(gt_unit_ids)
         all_tp = np.zeros((n, n, nbins), dtype="int64")
         all_fn = np.zeros((n, n, nbins), dtype="int64")
 
-        unit_ids1 = collision_events['unit_id1']
-        unit_indices1 = collision_events['unit_index1']
-        unit_ids2 = collision_events['unit_id2']
-        unit_indices2 = collision_events['unit_index2']
+        unit_ids1 = collision_events["unit_id1"]
+        unit_indices1 = collision_events["unit_index1"]
+        unit_ids2 = collision_events["unit_id2"]
+        unit_indices2 = collision_events["unit_index2"]
 
-        spike_indices1 = collision_events['index1']
-        spike_indices2 = collision_events['index2']
-        delta_frame = collision_events['delta_frame']
+        spike_indices1 = collision_events["index1"]
+        spike_indices2 = collision_events["index2"]
+        delta_frame = collision_events["delta_frame"]
         delta_frame
-        delta_bin = np.clip(np.floor((delta_frame - bins[0]) / (bins[1] - bins[0])), 0, nbins-1).astype('int64')
-        inv_delta_bin = np.clip(np.floor((-delta_frame - bins[0]) / (bins[1] - bins[0])), 0, nbins-1).astype('int64')
+        delta_bin = np.clip(np.floor((delta_frame - bins[0]) / (bins[1] - bins[0])), 0, nbins - 1).astype("int64")
+        inv_delta_bin = np.clip(np.floor((-delta_frame - bins[0]) / (bins[1] - bins[0])), 0, nbins - 1).astype("int64")
 
         seg_index = 0
 
         loop = range(len(unit_ids1))
         if self.progress_bar:
             loop = tqdm(loop, desc="collision by bin")
-        
+
         for c in loop:
 
             score1 = labels_st1[unit_ids1[c]][seg_index][spike_indices1[c]]
@@ -186,7 +182,6 @@ class CollisionGTComparison(GroundTruthComparison):
 
         self.all_tp = all_tp
         self.all_fn = all_fn
-
 
     def compute_collision_by_similarity(self, similarity_matrix, unit_ids=None, good_only=False, min_accuracy=0.9):
         if unit_ids is None:

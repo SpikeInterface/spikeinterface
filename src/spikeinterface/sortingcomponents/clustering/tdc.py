@@ -7,12 +7,7 @@ import random
 import string
 import shutil
 
-from spikeinterface.core import (
-    get_channel_distances,
-    get_global_tmp_folder,
-    Templates,
-    ChannelSparsity
-)
+from spikeinterface.core import get_channel_distances, get_global_tmp_folder, Templates, ChannelSparsity
 
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
@@ -25,6 +20,7 @@ from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
 
 from spikeinterface.sortingcomponents.clustering.split import split_clusters
+
 # from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
 from spikeinterface.sortingcomponents.clustering.merge import merge_peak_labels_from_templates
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
@@ -37,10 +33,8 @@ class TdcClustering:
     """
 
     _default_params = {
-
         "motion": None,
         "seed": None,
-
         # "folder": None,
         "waveforms": {
             "ms_before": 0.5,
@@ -52,7 +46,6 @@ class TdcClustering:
         "clustering": {
             "recursive_depth": 3,
             "split_radius_um": 40.0,
-
             # "clusterer": "hdbscan",
             # "clusterer_kwargs": {
             #     "min_cluster_size": 10,
@@ -65,19 +58,17 @@ class TdcClustering:
             #     "min_cluster_size" : 10,
             # },
             "clusterer": "isosplit6",
-            "clusterer_kwargs": {
-            },
-
+            "clusterer_kwargs": {},
             "do_merge": True,
             "merge_kwargs": {
                 "similarity_metric": "l1",
                 "num_shifts": 3,
                 "similarity_thresh": 0.8,
-            }        
+            },
         },
         "clean": {
             "minimum_cluster_size": 25,
-        }
+        },
     }
 
     @classmethod
@@ -101,20 +92,19 @@ class TdcClustering:
             motion_aware=motion_aware,
             motion=motion,
             **params["extract_peaks_svd_kwargs"],
-            **job_kwargs
+            **job_kwargs,
         )
 
         if motion is not None:
-           # also return peaks with new channel index
-           peaks_svd, sparse_mask, svd_model, moved_peaks = outs
-           peaks = moved_peaks
+            # also return peaks with new channel index
+            peaks_svd, sparse_mask, svd_model, moved_peaks = outs
+            peaks = moved_peaks
         else:
-           peaks_svd, sparse_mask, svd_model = outs
+            peaks_svd, sparse_mask, svd_model = outs
 
         # Clustering: channel index > split > merge
         split_radius_um = params["clustering"]["split_radius_um"]
         neighbours_mask = get_channel_distances(recording) < split_radius_um
-
 
         original_labels = peaks["channel_index"]
 
@@ -123,7 +113,6 @@ class TdcClustering:
 
         clusterer = params["clustering"].get("clusterer", "hdbscan")
         clusterer_kwargs = params["clustering"].get("clusterer_kwargs", {})
-
 
         features = dict(
             peaks=peaks,
@@ -167,13 +156,18 @@ class TdcClustering:
 
         if params["clustering"]["do_merge"]:
 
-            post_merge_label, merge_template_array, merge_sparsity_mask, new_unit_ids = merge_peak_labels_from_templates(
-                peaks, post_split_label, dense_templates.unit_ids,
-                dense_templates.templates_array, template_sparse_mask,
-                **params["clustering"]["merge_kwargs"]
+            post_merge_label, merge_template_array, merge_sparsity_mask, new_unit_ids = (
+                merge_peak_labels_from_templates(
+                    peaks,
+                    post_split_label,
+                    dense_templates.unit_ids,
+                    dense_templates.templates_array,
+                    template_sparse_mask,
+                    **params["clustering"]["merge_kwargs"],
+                )
             )
-            
-            dense_templates  = Templates(
+
+            dense_templates = Templates(
                 templates_array=merge_template_array,
                 sampling_frequency=dense_templates.sampling_frequency,
                 nbefore=dense_templates.nbefore,
@@ -181,18 +175,16 @@ class TdcClustering:
                 channel_ids=recording.channel_ids,
                 unit_ids=new_unit_ids,
                 probe=recording.get_probe(),
-                is_in_uV=False
+                is_in_uV=False,
             )
             template_sparse_mask = merge_sparsity_mask
 
-            
             # todo handle shifts
             # peak_shifts = np.zeros(post_split_label.size, dtype="int64")
 
         else:
             post_merge_label = post_split_label.copy()
             # peak_shifts = np.zeros(post_split_label.size, dtype="int64")
-
 
         sparsity = ChannelSparsity(template_sparse_mask, dense_templates.unit_ids, recording.channel_ids)
         templates = dense_templates.to_sparse(sparsity)
@@ -211,7 +203,7 @@ class TdcClustering:
         post_clean_label[mask] = -1
         final_peak_labels = post_clean_label
         labels_set = np.unique(final_peak_labels)
-        labels_set = labels_set[labels_set>=0]
+        labels_set = labels_set[labels_set >= 0]
         templates = templates.select_units(labels_set)
 
         # if need_folder_rm:
@@ -221,5 +213,5 @@ class TdcClustering:
 
         more_outs = dict(
             templates=templates,
-        )        
+        )
         return labels_set, final_peak_labels, more_outs

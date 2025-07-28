@@ -125,26 +125,38 @@ class BenchmarkStudy:
                     if "gt_unit_locations" in gt_sorting.get_property_keys():
                         # if real units locations is present then use it for a better sparsity
                         # then the real max channel is used
-                        radius_um = 100.
+                        radius_um = 100.0
                         channel_ids = rec.channel_ids
                         unit_ids = gt_sorting.unit_ids
                         gt_unit_locations = gt_sorting.get_property("gt_unit_locations")
                         channel_locations = rec.get_channel_locations()
-                        max_channel_indices = np.argmin(np.linalg.norm(gt_unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :], axis=2), axis=1)
+                        max_channel_indices = np.argmin(
+                            np.linalg.norm(
+                                gt_unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :], axis=2
+                            ),
+                            axis=1,
+                        )
                         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
-                        distances = np.linalg.norm(channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
+                        distances = np.linalg.norm(
+                            channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2
+                        )
                         for unit_ind, unit_id in enumerate(unit_ids):
                             chan_ind = max_channel_indices[unit_ind]
                             (chan_inds,) = np.nonzero(distances[chan_ind, :] <= radius_um)
                             mask[unit_ind, chan_inds] = True
                         sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
-                        sparse =False
+                        sparse = False
                     else:
                         sparse = True
                         sparsity = None
 
                     analyzer = create_sorting_analyzer(
-                        gt_sorting, rec, sparse=sparse, sparsity=sparsity, format="binary_folder", folder=local_analyzer_folder
+                        gt_sorting,
+                        rec,
+                        sparse=sparse,
+                        sparsity=sparsity,
+                        format="binary_folder",
+                        folder=local_analyzer_folder,
                     )
                     analyzer.compute("random_spikes")
                     analyzer.compute("templates")
@@ -473,7 +485,7 @@ class BenchmarkStudy:
             unit_locations_ext = sorting_analyzer.get_extension("unit_locations")
             return unit_locations_ext.get_data()
 
-    def get_templates(self, key, operator="average", outputs='numpy'):
+    def get_templates(self, key, operator="average", outputs="numpy"):
         sorting_analyzer = self.get_sorting_analyzer(case_key=key)
         templates = sorting_analyzer.get_extension("templates").get_data(operator=operator, outputs=outputs)
         return templates

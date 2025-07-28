@@ -88,7 +88,6 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         all_unit_ids = list(comp.sorting1.get_unit_ids())
         template_inds = [all_unit_ids.index(u) for u in dp.unit_ids]
 
-
         templates_array = dp.templates_array[template_inds, :, :].copy()
         flat_templates = templates_array.reshape(templates_array.shape[0], -1)
 

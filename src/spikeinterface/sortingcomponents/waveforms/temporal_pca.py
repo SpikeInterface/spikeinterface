@@ -404,7 +404,7 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
 
         num_peaks = waveforms.shape[0]
         projected_waveforms = np.zeros((num_peaks, self.n_components, self.out_num_channels), dtype=self.dtype)
-        new_channel_indices = np.zeros((num_peaks, ), dtype="int64")
+        new_channel_indices = np.zeros((num_peaks,), dtype="int64")
         if num_peaks > 0:
             temporal_waveforms = to_temporal_representation(waveforms)
             projected_temporal_waveforms = self.pca_model.transform(temporal_waveforms)
@@ -429,7 +429,6 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
                 # # new_channel_indices[i] = new_chan_index
                 # if chan_index != new_chan_index:
                 #     print(chan_index, new_chan_index, self.channel_locations[chan_index], self.channel_locations[new_chan_index])
-
 
                 # interpolate the svd to the original position
                 wf_local_chans = np.flatnonzero(self.wf_sparsity_mask[chan_index, :])
@@ -457,18 +456,16 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
                         #     new_chan_index = chan_index
                         #     final_local_chans = np.flatnonzero(self.final_sparsity_mask[new_chan_index, :])
                         new_channel_indices[i] = new_chan_index
-                        
+
                         channel_select = np.flatnonzero(np.isin(wf_local_chans, final_local_chans))
                         if channel_select.size != self.out_num_channels:
-                            # sparsity not cover the channel change                            
+                            # sparsity not cover the channel change
                             new_chan_index = chan_index
                             final_local_chans = np.flatnonzero(self.final_sparsity_mask[new_chan_index, :])
                             channel_select = np.flatnonzero(np.isin(wf_local_chans, final_local_chans))
 
                         new_channel_indices[i] = new_chan_index
-                        
+
                     projected_waveforms[i, c, : final_local_chans.size] = projected_full_wf[channel_select]
-
-
 
         return (projected_waveforms.astype(self.dtype, copy=False), new_channel_indices)

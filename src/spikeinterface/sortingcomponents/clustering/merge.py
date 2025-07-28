@@ -756,13 +756,16 @@ find_pair_method_list = [
 find_pair_method_dict = {e.name: e for e in find_pair_method_list}
 
 
-
-def merge_peak_labels_from_templates(peaks, peak_labels, unit_ids,
-                                     templates_array, sparsity_mask,
-                                     similarity_metric="l1",
-                                     similarity_thresh=0.8,
-                                     num_shifts=3,
-                                     ):
+def merge_peak_labels_from_templates(
+    peaks,
+    peak_labels,
+    unit_ids,
+    templates_array,
+    sparsity_mask,
+    similarity_metric="l1",
+    similarity_thresh=0.8,
+    num_shifts=3,
+):
     """
     Low level function used in sorting components for merging templates based on similarity metrics.
 
@@ -771,10 +774,9 @@ def merge_peak_labels_from_templates(peaks, peak_labels, unit_ids,
     templates_array is dense (num_templates, num_total_channel) but have a sparsity_mask compagion
     """
     assert len(unit_ids) == templates_array.shape[0]
-    
+
     from spikeinterface.postprocessing.template_similarity import compute_similarity_with_templates_array
     from scipy.sparse.csgraph import connected_components
-
 
     similarity = compute_similarity_with_templates_array(
         templates_array,
@@ -791,11 +793,10 @@ def merge_peak_labels_from_templates(peaks, peak_labels, unit_ids,
     # fig, ax = plt.subplots()
     # ax.hist(similarity.flatten(), bins=np.linspace(0, 1, 50), log=True)
     # ax.axvline(similarity_thresh)
-    
+
     keep_template = np.ones(templates_array.shape[0], dtype="bool")
     clean_labels = peak_labels.copy()
     n_components, group_labels = connected_components(pair_mask, directed=False, return_labels=True)
-
 
     # print("merges", templates_array.shape[0], "to", n_components)
 
@@ -824,11 +825,12 @@ def merge_peak_labels_from_templates(peaks, peak_labels, unit_ids,
                     clean_labels[peak_labels == label] = unit_ids[g0]
                     keep_template[l] = False
             weights /= weights.sum()
-            merge_template_array[g0, :, :] = np.sum(merge_template_array[merge_group, :, :] * weights[:, np.newaxis, np.newaxis], axis=0)
+            merge_template_array[g0, :, :] = np.sum(
+                merge_template_array[merge_group, :, :] * weights[:, np.newaxis, np.newaxis], axis=0
+            )
             merge_sparsity_mask[g0, :] = np.all(sparsity_mask[merge_group, :], axis=0)
-    
+
     merge_template_array = merge_template_array[keep_template, :, :]
     merge_sparsity_mask = merge_sparsity_mask[keep_template, :]
 
     return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids
-    

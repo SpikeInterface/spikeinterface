@@ -83,5 +83,6 @@ if __name__ == "__main__":
     # test_estimate_and_correct_motion()
     # test_get_motion_parameters_preset()
     from pathlib import Path
+
     cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "preprocessing"
     test_compute_motion_fails(cache_folder)

@@ -82,7 +82,7 @@ class GraphClustering:
             motion=motion,
             seed=params["seed"],
             **params["extract_peaks_svd_kwargs"],
-            **job_kwargs
+            **job_kwargs,
         )
 
         # some method need a symetric matrix
@@ -202,7 +202,6 @@ class GraphClustering:
             peak_svd_sparse_mask=sparse_mask,
         )
         return labels_set, peak_labels, more_outs
-
 
 
 def _remove_small_cluster(peak_labels, min_size=1):
