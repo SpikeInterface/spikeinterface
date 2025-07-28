@@ -83,7 +83,8 @@ def create_sorting_analyzer(
     sparsity : ChannelSparsity or None, default: None
         The sparsity used to compute exensions. If this is given, `sparse` is ignored.
     set_sparsity_by_dict_key : bool, default: False
-        If True and passing recording and sortings dicts, will set the sparsity based on the dict keys.
+        If True and passing recording and sorting dicts, will set the sparsity based on the dict keys,
+        and other `sparsity_kwargs` are overwritten. If False, use other sparsity settings.
     return_scaled : bool | None, default: None
         DEPRECATED. Use return_in_uV instead.
         All extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
