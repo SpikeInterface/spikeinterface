@@ -80,7 +80,7 @@ def get_spatial_windows(
         if num_windows < 1:
             num_windows = 1
             warnings.warn(
-                f"You trying to estimation motion with non-rigid on a too short probe!"
+                f"You are trying to estimate motion with `non-rigid` on a probe that is too short!"
                 f"get_spatial_windows(): {win_step_um=}/{win_scale_um=}/{win_margin_um=} are too large for the "
                 f"probe size (depth range={np.ptp(contact_depths)}). You can try to reduce them or use rigid motion."
             )
