@@ -16,7 +16,7 @@ class UnitsAggregationSorting(BaseSorting):
 
     Parameters
     ----------
-    sorting_list: list
+    sorting_list: list | dict
         List of BaseSorting objects to aggregate
     renamed_unit_ids: array-like
         If given, unit ids are renamed as provided. If None, unit ids are sequential integers.
@@ -31,6 +31,11 @@ class UnitsAggregationSorting(BaseSorting):
 
     def __init__(self, sorting_list, renamed_unit_ids=None, sampling_frequency_max_diff=0):
         unit_map = {}
+
+        sorting_keys = []
+        if isinstance(sorting_list, dict):
+            sorting_keys = list(sorting_list.keys())
+            sorting_list = list(sorting_list.values())
 
         num_all_units = sum([sort.get_num_units() for sort in sorting_list])
         if renamed_unit_ids is not None:
@@ -121,6 +126,13 @@ class UnitsAggregationSorting(BaseSorting):
                 self.set_property(key=prop_name, values=prop_values)
             except Exception as ext:
                 warnings.warn(f"Skipping property '{prop_name}' as numpy cannot concatente. Numpy error: {ext}")
+
+        # add a label to each unit, with which sorting it came from
+        if len(sorting_keys) > 0:
+            aggregation_keys = []
+            for sort_key, sort in zip(sorting_keys, sorting_list):
+                aggregation_keys += [sort_key] * sort.get_num_units()
+            self.set_property(key="aggregation_key", values=aggregation_keys)
 
         # add segments
         for i_seg in range(num_segments):
