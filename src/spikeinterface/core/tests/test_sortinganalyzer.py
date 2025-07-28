@@ -215,10 +215,9 @@ def test_create_by_dict():
     sort.set_property(key="group", values=[2, 2, 2, 1, 2, 2, 2, 1, 2, 1])
 
     unit_ids = sort.unit_ids
-
-    split_sort = {key: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == key]) for key in [1, 2]}
-
-    analyzer = create_sorting_analyzer(split_sort, rec.split_by("group"))
+    split_sort = sort.split_by("group")
+    split_rec = rec.split_by("group")
+    analyzer = create_sorting_analyzer(split_sort, split_rec)
     analyzer_unit_ids = analyzer.unit_ids
 
     assert set(analyzer.unit_ids) == set(sort.unit_ids)
