@@ -367,7 +367,7 @@ def set_properties_after_merging(
         parent_values = sorting_pre_merge.get_property(key)
         if parent_values.dtype.kind not in default_missing_values:
             # if the property is boolean or integer there is no missing values so we skip
-            # for instance reccussive "is_merged" will not be propagated
+            # for instance recursive "is_merged" will not be propagated
             continue
 
         # propagate keep values
