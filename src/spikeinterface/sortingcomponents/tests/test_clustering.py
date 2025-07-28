@@ -68,6 +68,7 @@ if "tdc-clustering" in clustering_method_keys and not have_isosplit6:
     # skip tdc-clustering if not isosplit6
     clustering_method_keys.remove("tdc-clustering")
 
+
 @pytest.mark.parametrize("clustering_method", clustering_method_keys)
 def test_find_cluster_from_peaks(clustering_method, recording, peaks, peak_locations):
     method_kwargs = {}
