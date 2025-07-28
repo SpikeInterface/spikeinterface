@@ -64,7 +64,7 @@ def peak_locations_fixture(recording, peaks, job_kwargs):
 
 clustering_method_keys = list(clustering_methods.keys())
 have_isosplit6 = importlib.util.find_spec("numba") is not None
-if "tdc-clustering" in clustering_methods_keys and not have_isosplit6:
+if "tdc-clustering" in clustering_method_keys and not have_isosplit6:
     # skip tdc-clustering if not isosplit6
     clustering_method_keys.remove("tdc-clustering")
 
