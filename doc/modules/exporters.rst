@@ -7,7 +7,7 @@ used frameworks.
 Exporting to Pynapple
 ---------------------
 
-The python package `Pynapple <https://pynapple.org/>`_ is often used for combining ephys
+The Python package `Pynapple <https://pynapple.org/>`_ is often used for combining ephys
 and behavioral data. It can be used to decode behavior, make tuning curves, compute spectrograms, and more!
 The :py:func:`~spikeinterface.exporters.to_pynapple_tsgroup` function allows you to convert a
 SortingAnalyzer to Pynapple's ``TsGroup`` object on the fly.
@@ -44,7 +44,7 @@ save method.
     my_tsgroup.save("my_tsgroup_output.npz")
 
 If you have a multi-segment sorting, you need to pass the ``segment_index`` argument to the
-``to_pynapple_tsgroup`` function. This way, you can generate on ``TsGroup`` per segment.
+``to_pynapple_tsgroup`` function. This way, you can generate one ``TsGroup`` per segment.
  You can later concatenate these ``TsGroup`` s using Pynapple's ``concatenate`` functionality.
 
 Exporting to Phy

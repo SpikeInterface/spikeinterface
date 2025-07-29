@@ -44,7 +44,7 @@ def to_pynapple_tsgroup(
     unit_ids_castable = True
     try:
         unit_ids_ints = [int(unit_id) for unit_id in unit_ids]
-    except:
+    except ValueError:
         warn_msg = "Pynapple requires integer unit ids, but `unit_ids` cannot be cast to int. "
         warn_msg += "We will set the index of the TsGroup to [0,1,2,...] and attach the original "
         warn_msg += "unit ids to the TsGroup as metadata with the name 'unit_id'."
