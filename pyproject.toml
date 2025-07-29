@@ -26,7 +26,7 @@ dependencies = [
     "tqdm",
     "zarr>=2.18,<3",
     "neo>=0.14.1",
-    "probeinterface>=0.2.23",
+    "probeinterface>=0.3.0",
     "packaging",
     "pydantic",
     "numcodecs<0.16.0", # For supporting zarr < 3

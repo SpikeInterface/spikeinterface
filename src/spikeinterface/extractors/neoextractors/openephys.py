@@ -229,29 +229,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                         self.set_probe(probe, in_place=True, group_mode="by_shank")
                     else:
                         self.set_probe(probe, in_place=True)
+                    # get inter-sample shifts based on the probe information and mux channels
+                    sample_shifts = get_neuropixels_sample_shifts_from_probe(probe, stream_name=self.stream_name)
 
-                    # this handles a breaking change in probeinterface after v0.2.18
-                    # in the new version, the Neuropixels model name is stored in the "model_name" annotation,
-                    # rather than in the "probe_name" annotation
-                    model_name = probe.annotations.get("model_name", None)
-                    if model_name is None:
-                        model_name = probe.annotations["probe_name"]
-
-                    # load num_channels_per_adc depending on probe type
-                    if "2.0" in model_name:
-                        num_channels_per_adc = 16
-                        num_cycles_in_adc = 16
-                        total_channels = 384
-                    else:  # NP1.0
-                        num_channels_per_adc = 12
-                        num_cycles_in_adc = 13 if "AP" in stream_name else 12
-                        total_channels = 384
-
-                    # sample_shifts is generated from total channels (384) channels
-                    # when only some channels are saved we need to slice this vector (like we do for the probe)
-                    sample_shifts = get_neuropixels_sample_shifts(
-                        total_channels, num_channels_per_adc, num_cycles_in_adc
-                    )
                     if self.get_num_channels() != total_channels:
                         # need slice because not all channel are saved
                         chans = probeinterface.get_saved_channel_indices_from_openephys_settings(

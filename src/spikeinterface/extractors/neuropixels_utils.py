@@ -1,13 +1,51 @@
 from __future__ import annotations
 
+import warnings
 import numpy as np
 from typing import Optional
+
+from probeinterface import Probe
+
+
+def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "ap") -> np.ndarray:
+    """
+    Get the inter-sample shifts for Neuropixels probes based on the probe information.
+
+    Parameters
+    ----------
+    probe : Probe
+        The probe object containing channel and ADC information.
+
+    Returns
+    -------
+    sample_shifts : np.ndarray
+        Array of relative phase shifts for each channel.
+    """
+    # get inter-sample shifts based on the probe information and mux channels
+    model_description = probe.annotations.get("model_description", None)
+    num_channels_per_adc = probe.annotations.get("num_channels_per_adc", None)
+    mux_channels = probe.contact_annotations["mux_channels"]
+
+    if "2.0" in model_description:
+        # for Neuropixels 2.0 (and newer), the number of cycles in ADC is equal to the number of channels per ADC
+        num_cycles_in_adc = num_channels_per_adc
+    else:
+        # for Neuropixels 1.0 technology, the number of cycles for the AP stream is +1 because
+        # the last cycle is used for the LFP stream
+        num_cycles_in_adc = num_channels_per_adc + 1 if "ap" in stream_name.lower() else num_channels_per_adc
+    sample_shifts = np.zeros_like(adc_indices)
+
+    for mux_channel in mux_channels:
+        sample_shifts[mux_channels == mux_channel] = np.arange(num_channels_per_adc) / num_cycles
+
+    return sample_shifts
 
 
 def get_neuropixels_sample_shifts(
     num_channels: int = 384, num_channels_per_adc: int = 12, num_cycles: Optional[int] = None
 ) -> np.ndarray:
     """
+    DEPRECATED
     Calculate the relative sampling phase (inter-sample shifts) for each channel
     in Neuropixels probes due to ADC multiplexing.
 
@@ -43,6 +81,12 @@ def get_neuropixels_sample_shifts(
         Array of relative phase shifts for each channel, with values ranging from 0 to 1,
         representing the fractional delay within the sampling period due to sequential ADC sampling.
     """
+    warnings.warn(
+        "`get_neuropixels_sample_shifts` is deprecated and will be removed on 0.105.0. "
+        "Use `get_neuropixels_sample_shifts_from_probe` instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if num_cycles is None:
         num_cycles = num_channels_per_adc
 
