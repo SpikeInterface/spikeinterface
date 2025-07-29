@@ -131,8 +131,11 @@ class CircusClustering:
 
         svd_model = TruncatedSVD(params["n_svd"], random_state=params["seed"])
         svd_model.fit(wfs)
-        features_folder = tmp_folder / "tsvd_features"
-        features_folder.mkdir(exist_ok=True)
+        if params["debug"]:
+            features_folder = tmp_folder / "tsvd_features"
+            features_folder.mkdir(exist_ok=True)
+        else:
+            features_folder = None
 
         peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
             recording,
