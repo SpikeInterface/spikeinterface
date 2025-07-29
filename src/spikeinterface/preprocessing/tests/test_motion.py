@@ -60,6 +60,7 @@ def test_compute_motion_fails(create_cache_folder):
     # this recording has too few channels for the motion correction to work
     rec = generate_recording(durations=[5], num_channels=1)
     motion, motion_info = compute_motion(rec, raise_error=False, output_motion_info=True)
+    print(motion)
 
     assert motion is None
     assert motion_info["motion"] is None
