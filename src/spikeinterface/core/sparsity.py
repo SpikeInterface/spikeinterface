@@ -439,7 +439,7 @@ class ChannelSparsity:
             return_scaled = templates_or_sorting_analyzer.return_scaled
         elif isinstance(templates_or_sorting_analyzer, Templates):
             assert noise_levels is not None, "To compute sparsity from snr you need to provide noise_levels"
-            return_scaled = templates_or_sorting_analyzer.is_scaled
+            return_scaled = templates_or_sorting_analyzer.is_in_uV
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
@@ -491,9 +491,9 @@ class ChannelSparsity:
                 "You can set `return_scaled=True` when computing the templates."
             )
         elif isinstance(templates_or_sorting_analyzer, Templates):
-            assert templates_or_sorting_analyzer.is_scaled, (
+            assert templates_or_sorting_analyzer.is_in_uV, (
                 "To compute sparsity from amplitude you need to have scaled templates. "
-                "You can set `is_scaled=True` when creating the Templates object."
+                "You can set `is_in_uV=True` when creating the Templates object."
             )
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")

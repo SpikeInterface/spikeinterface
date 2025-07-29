@@ -37,7 +37,7 @@ def find_spikes_from_templates(
     outputs:
         Optionaly returns for debug purpose.
     """
-    from .method_list import matching_methods
+    from spikeinterface.sortingcomponents.matching.method_list import matching_methods
 
     assert method in matching_methods, f"The 'method' {method} is not valid. Use a method from {matching_methods}"
 

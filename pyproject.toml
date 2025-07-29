@@ -161,10 +161,14 @@ test = [
     # streaming templates
     "s3fs",
 
-    # tridesclous
+    # tridesclous2
     "numba<0.61.0;python_version<'3.13'",
     "numba>=0.61.0;python_version>='3.13'",
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
+
+    # isosplit is needed for trideclous2 noramaly but isosplit is only build until python3.11
+    # so lets wait a new build of isosplit6
+    # "isosplit6",
 
     # for sortingview backend
     "sortingview>=0.12.0",
@@ -202,9 +206,7 @@ docs = [
     "networkx",
     "skops", # For automated curation
     "scikit-learn", # For automated curation
-    # Download data
-    "pooch>=1.8.2",
-    "datalad>=1.0.2",
+    "huggingface_hub", # For automated curation
 
     # for release we need pypi, so this needs to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
