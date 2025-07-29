@@ -16,8 +16,8 @@ from threadpoolctl import threadpool_limits
 
 from .misc_metrics import compute_num_spikes, compute_firing_rates
 
-from ..core import get_random_data_chunks, compute_sparsity
-from ..core.template_tools import get_template_extremum_channel
+from spikeinterface.core import get_random_data_chunks, compute_sparsity
+from spikeinterface.core.template_tools import get_template_extremum_channel
 
 _possible_pc_metric_names = [
     "isolation_distance",
@@ -225,28 +225,6 @@ def compute_pc_metrics(
                 pc_metrics["nn_unit_id"][unit_id] = nn_unit_id
             elif metric_name == "nn_noise_overlap":
                 pc_metrics["nn_noise_overlap"][unit_id] = res
-
-    return pc_metrics
-
-
-def calculate_pc_metrics(
-    sorting_analyzer, metric_names=None, metric_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
-):
-    warnings.warn(
-        "The `calculate_pc_metrics` function is deprecated and will be removed in 0.103.0. Please use compute_pc_metrics instead",
-        category=DeprecationWarning,
-        stacklevel=2,
-    )
-
-    pc_metrics = compute_pc_metrics(
-        sorting_analyzer,
-        metric_names=metric_names,
-        metric_params=metric_params,
-        unit_ids=unit_ids,
-        seed=seed,
-        n_jobs=n_jobs,
-        progress_bar=progress_bar,
-    )
 
     return pc_metrics
 

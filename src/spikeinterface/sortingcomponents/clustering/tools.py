@@ -4,13 +4,17 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 
+from spikeinterface.core.template import Templates
+from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.waveform_tools import estimate_templates
+
 
 # TODO find a way to attach a a sparse_mask to a given features (waveforms, pca, tsvd ....)
 
 
 class FeaturesLoader:
     """
-    Feature can be computed in memory or in a folder contaning npy files.
+    Feature can be computed in memory or in a folder containing npy files.
 
     This class read the folder and behave like a dict of array lazily.
 
@@ -52,7 +56,7 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
     """
     Aggregate sparse features that have unaligned channels and realigned then on target_channels.
 
-    This is usefull to aligned back peaks waveform or pca or tsvd when detected a differents channels.
+    This is useful to aligned back peaks waveform or pca or tsvd when detected a differents channels.
 
 
     Parameters
@@ -87,7 +91,7 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
         peak_inds = np.flatnonzero(local_peaks["channel_index"] == chan)
         if np.all(np.isin(target_channels, sparse_chans)):
             # peaks feature channel have all target_channels
-            source_chans = np.flatnonzero(np.in1d(sparse_chans, target_channels))
+            source_chans = np.flatnonzero(np.isin(sparse_chans, target_channels))
             aligned_features[peak_inds, :, :] = sparse_feature[peak_indices[peak_inds], :, :][:, :, source_chans]
         else:
             # some channel are missing, peak are not removde
@@ -149,7 +153,7 @@ def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
     """
     Apply a shift a spike level to realign waveforms buffers.
 
-    This is usefull to compute template after merge when to cluster are shifted.
+    This is useful to compute template after merge when to cluster are shifted.
 
     A negative shift need the waveforms to be moved toward the right because the trough was too early.
     A positive shift need the waveforms to be moved toward the left because the trough was too late.
@@ -192,3 +196,166 @@ def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
             aligned_waveforms[mask, -shift:, :] = wfs[:, :-shift, :]
 
     return aligned_waveforms
+
+
+def get_templates_from_peaks_and_recording(
+    recording,
+    peaks,
+    peak_labels,
+    ms_before,
+    ms_after,
+    operator="average",
+    **job_kwargs,
+):
+    """
+    Get templates from recording using the estimate_templates function.
+    This function is a wrapper around the estimate_templates function from
+    spikeinterface.core.waveform_tools. The function returns the Templates
+
+    Parameters
+    ----------
+    recording : RecordingExtractor
+        The recording object containing the data.
+    peaks : numpy.ndarray
+        The peaks array containing the peak information.
+    peak_labels : numpy.ndarray
+        The labels for each peak.
+    ms_before : float
+        The time window before the peak in milliseconds.
+    ms_after : float
+        The time window after the peak in milliseconds.
+    operator : str
+        The operator to use for template estimation. Can be 'average' or 'median'.
+    job_kwargs : dict
+        Additional keyword arguments for the estimate_templates function.
+
+    Returns
+    -------
+    templates : Templates
+        The estimated templates object.
+    """
+
+    mask = peak_labels > -1
+    valid_peaks = peaks[mask]
+    valid_labels = peak_labels[mask]
+    labels, indices = np.unique(valid_labels, return_inverse=True)
+
+    fs = recording.get_sampling_frequency()
+    nbefore = int(ms_before * fs / 1000.0)
+    nafter = int(ms_after * fs / 1000.0)
+
+    spikes = np.zeros(valid_peaks.size, dtype=minimum_spike_dtype)
+    spikes["sample_index"] = valid_peaks["sample_index"]
+    spikes["unit_index"] = indices
+    spikes["segment_index"] = valid_peaks["segment_index"]
+
+    templates_array = estimate_templates(
+        recording,
+        spikes,
+        np.arange(len(labels)),
+        nbefore,
+        nafter,
+        operator=operator,
+        return_scaled=False,
+        job_name=None,
+        **job_kwargs,
+    )
+
+    templates = Templates(
+        templates_array=templates_array,
+        sampling_frequency=fs,
+        nbefore=nbefore,
+        sparsity_mask=None,
+        channel_ids=recording.channel_ids,
+        unit_ids=labels,
+        probe=recording.get_probe(),
+        is_in_uV=False,
+    )
+
+    return templates
+
+
+def get_templates_from_peaks_and_svd(
+    recording,
+    peaks,
+    peak_labels,
+    ms_before,
+    ms_after,
+    svd_model,
+    svd_features,
+    sparsity_mask,
+    operator="average",
+):
+    """
+    Get templates from recording using the SVD components
+
+    Parameters
+    ----------
+    recording: RecordingExtractor
+        The recording object containing the data.
+    peaks : numpy.ndarray
+        The peaks array containing the peak information.
+    peak_labels : numpy.ndarray
+        The labels for each peak.
+    ms_before : float
+        The time window before the peak in milliseconds.
+    ms_after : float
+        The time window after the peak in milliseconds.
+    svd_model : TruncatedSVD
+        The SVD model used to transform the data.
+    svd_features : numpy.ndarray
+        The SVD features array.
+    sparsity_mask : numpy.ndarray
+        The sparsity mask array.
+    operator : str
+        The operator to use for template estimation. Can be 'average' or 'median'.
+
+    Returns
+    -------
+    dense_templates : Templates
+        The estimated templates object as a dense template (but internanally contain sparse channels).
+    final_sparsity_mask: np.array
+        The final sparsity mask. Note that the template object is dense but with zeros.
+    """
+
+    assert operator in ["average", "median"], "operator should be either 'average' or 'median'"
+    mask = peak_labels > -1
+    valid_peaks = peaks[mask]
+    valid_labels = peak_labels[mask]
+    valid_svd_features = svd_features[mask]
+    labels = np.unique(valid_labels)
+
+    fs = recording.get_sampling_frequency()
+    nbefore = int(ms_before * fs / 1000.0)
+    nafter = int(ms_after * fs / 1000.0)
+    num_channels = recording.get_num_channels()
+
+    templates_array = np.zeros((len(labels), nbefore + nafter, num_channels), dtype=np.float32)
+    final_sparsity_mask = np.zeros((len(labels), num_channels), dtype="bool")
+    for unit_ind, label in enumerate(labels):
+        mask = valid_labels == label
+        local_peaks = valid_peaks[mask]
+        local_svd = valid_svd_features[mask]
+        peak_channels, b = np.unique(local_peaks["channel_index"], return_counts=True)
+        best_channel = peak_channels[np.argmax(b)]
+        sub_mask = local_peaks["channel_index"] == best_channel
+        final_sparsity_mask[unit_ind, :] = sparsity_mask[best_channel]
+        for count, i in enumerate(np.flatnonzero(sparsity_mask[best_channel])):
+            if operator == "average":
+                data = np.mean(local_svd[sub_mask, :, count], 0)
+            elif operator == "median":
+                data = np.median(local_svd[sub_mask, :, count], 0)
+            templates_array[unit_ind, :, i] = svd_model.inverse_transform(data.reshape(1, -1))
+
+    dense_templates = Templates(
+        templates_array=templates_array,
+        sampling_frequency=fs,
+        nbefore=nbefore,
+        sparsity_mask=None,
+        channel_ids=recording.channel_ids,
+        unit_ids=labels,
+        probe=recording.get_probe(),
+        is_in_uV=False,
+    )
+
+    return dense_templates, final_sparsity_mask

@@ -26,7 +26,7 @@ For spike train comparison, there are three use cases:
 
 A ground-truth dataset can be a paired recording, in which a neuron is recorded both extracellularly and with
 a patch or juxtacellular electrode (either **in vitro** or **in vivo**), or it can be a simulated dataset
-(**in silico**) using spiking activity simulators such as `MEArec`_.
+(**in silico**) using spiking activity simulators such as `MEArec <https://github.com/SpikeInterface/MEArec>`_.
 
 The comparison to ground-truth datasets is useful to benchmark spike sorting algorithms.
 
@@ -276,10 +276,8 @@ The :py:func:`~spikeinterface.comparison.compare_two_sorters()` returns the comp
     import spikeinterface.comparisons as sc
     import spikinterface.widgets as sw
 
-    # First, let's download a simulated dataset
-    local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
-    recording, sorting = se.read_mearec(local_path)
-
+    # First, let's generate a simulated dataset
+    recording, sorting = si.generate_ground_truth_recording()
     # Then run two spike sorters and compare their outputs.
     sorting_HS = ss.run_sorter(sorter_name='herdingspikes', recording=recording)
     sorting_TDC = ss.run_sorter(sorter_name='tridesclous', recording=recording)
@@ -332,9 +330,8 @@ Comparison of multiple sorters uses the following procedure:
 
 .. code-block:: python
 
-    # Download a simulated dataset
-    local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
-    recording, sorting = se.read_mearec(local_path)
+    # Generate a simulated dataset
+    recording, sorting = si.generate_ground_truth_recording()
 
     # Then run 3 spike sorters and compare their outputs.
     sorting_MS4 = ss.run_sorter(sorter_name='mountainsort4', recording=recording)

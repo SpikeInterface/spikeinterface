@@ -2,12 +2,19 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Literal, Dict, BinaryIO
 import warnings
+import importlib.util
 
 import numpy as np
 
 from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
+
+
+if importlib.util.find_spec("pynwb") is not None:
+    HAVE_PYNWB = True
+else:
+    HAVE_PYNWB = False
 
 
 def read_file_from_backend(
@@ -45,16 +52,6 @@ def read_file_from_backend(
             open_file = h5py.File(ffspec_file, "r")
         else:
             raise RuntimeError(f"{file_path} is not a valid HDF5 file!")
-
-    elif stream_mode == "ros3":
-        import h5py
-
-        assert file_path is not None, "file_path must be specified when using stream_mode='ros3'"
-
-        drivers = h5py.registered_drivers()
-        assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
-        assert "ros3" in drivers, assertion_msg
-        open_file = h5py.File(name=file_path, mode="r", driver="ros3")
 
     elif stream_mode == "remfile":
         import remfile
@@ -445,8 +442,6 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
     file_path : str, Path, or None
         Path to the NWB file or an s3 URL. Use this parameter to specify the file location
         if not using the `file` parameter.
-    electrical_series_name : str or None, default: None
-        Deprecated, use `electrical_series_path` instead.
     electrical_series_path : str or None, default: None
         The name of the ElectricalSeries object within the NWB file. This parameter is crucial
         when the NWB file contains multiple ElectricalSeries objects. It helps in identifying
@@ -514,7 +509,6 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
     def __init__(
         self,
         file_path: str | Path | None = None,  # provide either this or file
-        electrical_series_name: str | None = None,  # deprecated
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 1_000,
         stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None,
@@ -528,29 +522,10 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
         use_pynwb: bool = False,
     ):
 
-        if stream_mode == "ros3":
-            warnings.warn(
-                "The 'ros3' stream_mode is deprecated and will be removed in version 0.103.0. "
-                "Use 'fsspec' stream_mode instead.",
-                DeprecationWarning,
-            )
-
         if file_path is not None and file is not None:
             raise ValueError("Provide either file_path or file, not both")
         if file_path is None and file is None:
             raise ValueError("Provide either file_path or file")
-
-        if electrical_series_name is not None:
-            warning_msg = (
-                "The `electrical_series_name` parameter is deprecated and will be removed in version 0.101.0.\n"
-                "Use `electrical_series_path` instead."
-            )
-            if electrical_series_path is None:
-                warning_msg += f"\nSetting `electrical_series_path` to 'acquisition/{electrical_series_name}'."
-                electrical_series_path = f"acquisition/{electrical_series_name}"
-            else:
-                warning_msg += f"\nIgnoring `electrical_series_name` and using the provided `electrical_series_path`."
-            warnings.warn(warning_msg, DeprecationWarning, stacklevel=2)
 
         self.file_path = file_path
         self.stream_mode = stream_mode
@@ -568,9 +543,7 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
 
         # extract info
         if use_pynwb:
-            try:
-                import pynwb
-            except ImportError:
+            if not HAVE_PYNWB:
                 raise ImportError(self.installation_mesg)
 
             (
@@ -759,10 +732,13 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
         if "starting_time" in electrical_series.keys():
             t_start = electrical_series["starting_time"][()]
             sampling_frequency = electrical_series["starting_time"].attrs["rate"]
+            timestamps = None
         elif "timestamps" in electrical_series.keys():
             timestamps = electrical_series["timestamps"][:]
             t_start = timestamps[0]
             sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
+        else:
+            raise ValueError("TimeSeries must have either starting_time or timestamps")
 
         if load_time_vector and timestamps is not None:
             times_kwargs = dict(time_vector=electrical_series["timestamps"])
@@ -1054,13 +1030,6 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
         use_pynwb: bool = False,
     ):
 
-        if stream_mode == "ros3":
-            warnings.warn(
-                "The 'ros3' stream_mode is deprecated and will be removed in version 0.103.0. "
-                "Use 'fsspec' stream_mode instead.",
-                DeprecationWarning,
-            )
-
         self.stream_mode = stream_mode
         self.stream_cache_path = stream_cache_path
         self.electrical_series_path = electrical_series_path
@@ -1079,9 +1048,7 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
                 self.backend = "hdf5"
 
         if use_pynwb:
-            try:
-                import pynwb
-            except ImportError:
+            if not HAVE_PYNWB:
                 raise ImportError(self.installation_mesg)
 
             unit_ids, spike_times_data, spike_times_index_data = self._fetch_sorting_segment_info_pynwb(
@@ -1354,6 +1321,49 @@ class NwbSortingSegment(BaseSortingSegment):
         start_frame: Optional[int] = None,
         end_frame: Optional[int] = None,
     ) -> np.ndarray:
+        # Convert frame boundaries to time boundaries
+        start_time = None
+        end_time = None
+
+        if start_frame is not None:
+            start_time = start_frame / self._sampling_frequency + self._t_start
+
+        if end_frame is not None:
+            end_time = end_frame / self._sampling_frequency + self._t_start
+
+        # Get spike times in seconds
+        spike_times = self.get_unit_spike_train_in_seconds(unit_id=unit_id, start_time=start_time, end_time=end_time)
+
+        # Convert to frames
+        frames = np.round((spike_times - self._t_start) * self._sampling_frequency)
+        return frames.astype("int64", copy=False)
+
+    def get_unit_spike_train_in_seconds(
+        self,
+        unit_id,
+        start_time: Optional[float] = None,
+        end_time: Optional[float] = None,
+    ) -> np.ndarray:
+        """Get the spike train times for a unit in seconds.
+
+        This method returns spike times directly in seconds without conversion
+        to frames, avoiding double conversion for NWB files that already store
+        spike times as timestamps.
+
+        Parameters
+        ----------
+        unit_id
+            The unit id to retrieve spike train for
+        start_time : float, default: None
+            The start time in seconds for spike train extraction
+        end_time : float, default: None
+            The end time in seconds for spike train extraction
+
+        Returns
+        -------
+        spike_times : np.ndarray
+            Spike times in seconds
+        """
         # Extract the spike times for the unit
         unit_index = self.parent_extractor.id_to_index(unit_id)
         if unit_index == 0:
@@ -1363,19 +1373,17 @@ class NwbSortingSegment(BaseSortingSegment):
         end_index = self.spike_times_index_data[unit_index]
         spike_times = self.spike_times_data[start_index:end_index]
 
-        # Transform spike times to frames and subset
-        frames = np.round((spike_times - self._t_start) * self._sampling_frequency)
-
+        # Filter by time range if specified
         start_index = 0
-        if start_frame is not None:
-            start_index = np.searchsorted(frames, start_frame, side="left")
+        if start_time is not None:
+            start_index = np.searchsorted(spike_times, start_time, side="left")
 
-        if end_frame is not None:
-            end_index = np.searchsorted(frames, end_frame, side="left")
+        if end_time is not None:
+            end_index = np.searchsorted(spike_times, end_time, side="left")
         else:
-            end_index = frames.size
+            end_index = spike_times.size
 
-        return frames[start_index:end_index].astype("int64", copy=False)
+        return spike_times[start_index:end_index].astype("float64", copy=False)
 
 
 def _find_timeseries_from_backend(group, path="", result=None, backend="hdf5"):
@@ -1477,9 +1485,7 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
             self.backend = "zarr" if self.stream_mode == "zarr" else "hdf5"
 
         if use_pynwb:
-            try:
-                import pynwb
-            except ImportError:
+            if not HAVE_PYNWB:
                 raise ImportError(self.installation_mesg)
 
             channel_ids, sampling_frequency, dtype, segment_data, times_kwargs = self._fetch_recording_segment_info(
@@ -1572,6 +1578,8 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
             timestamps = timeseries.timestamps
             sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
             t_start = timestamps[0]
+        else:
+            raise ValueError("TimeSeries must have either starting_time or timestamps")
 
         if load_time_vector and timestamps is not None:
             times_kwargs = dict(time_vector=timestamps)

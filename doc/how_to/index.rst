@@ -17,3 +17,7 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     drift_with_lfp
     auto_curation_training
     auto_curation_prediction
+    physical_units
+    unsigned_to_signed
+    customize_a_plot
+    ../tutorials/forhowto/plot_1_working_with_tetrodes

@@ -10,8 +10,8 @@ from spikeinterface.widgets import (
 
 
 import numpy as np
-
-from .benchmark_base import Benchmark, BenchmarkStudy
+from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
+from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
@@ -35,7 +35,9 @@ class ClusteringBenchmark(Benchmark):
         )
         self.result["peak_labels"] = peak_labels
 
-    def compute_result(self, **result_params):
+    def compute_result(self, with_template=False, **job_kwargs):
+        # result_params, job_kwargs = split_job_kwargs(result_params)
+        job_kwargs = fix_job_kwargs(job_kwargs)
         self.noise = self.result["peak_labels"] < 0
         spikes = self.gt_sorting.to_spike_vector()
         self.result["sliced_gt_sorting"] = NumpySorting(
@@ -47,15 +49,18 @@ class ClusteringBenchmark(Benchmark):
         gt_unit_locations = self.gt_sorting.get_property("gt_unit_locations")
         if gt_unit_locations is None:
             print("'gt_unit_locations' is not a property of the sorting so compute it")
-            gt_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=True)
-            gt_analyzer.compute(["random_spikes", "templates"])
+            gt_analyzer = create_sorting_analyzer(
+                self.gt_sorting, self.recording, format="memory", sparse=True, **job_kwargs
+            )
+            gt_analyzer.compute("random_spikes")
+            gt_analyzer.compute("templates", **job_kwargs)
             ext = gt_analyzer.compute("unit_locations", method="monopolar_triangulation")
             gt_unit_locations = ext.get_data()
             self.gt_sorting.set_property("gt_unit_locations", gt_unit_locations)
 
         self.result["sliced_gt_sorting"].set_property("gt_unit_locations", gt_unit_locations)
 
-        self.result["clustering"] = NumpySorting.from_times_labels(
+        self.result["clustering"] = NumpySorting.from_samples_and_labels(
             data["sample_index"], self.result["peak_labels"][~self.noise], self.recording.sampling_frequency
         )
 
@@ -63,19 +68,20 @@ class ClusteringBenchmark(Benchmark):
             self.result["sliced_gt_sorting"], self.result["clustering"], exhaustive_gt=self.exhaustive_gt
         )
 
-        sorting_analyzer = create_sorting_analyzer(
-            self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False
-        )
-        sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("templates")
-        self.result["sliced_gt_templates"] = ext.get_data(outputs="Templates")
+        if with_template:
+            sorting_analyzer = create_sorting_analyzer(
+                self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False, **job_kwargs
+            )
+            sorting_analyzer.compute("random_spikes")
+            ext = sorting_analyzer.compute("templates", **job_kwargs)
+            self.result["sliced_gt_templates"] = ext.get_data(outputs="Templates")
 
-        sorting_analyzer = create_sorting_analyzer(
-            self.result["clustering"], self.recording, format="memory", sparse=False
-        )
-        sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("templates")
-        self.result["clustering_templates"] = ext.get_data(outputs="Templates")
+            sorting_analyzer = create_sorting_analyzer(
+                self.result["clustering"], self.recording, format="memory", sparse=False, **job_kwargs
+            )
+            sorting_analyzer.compute("random_spikes")
+            ext = sorting_analyzer.compute("templates", **job_kwargs)
+            self.result["clustering_templates"] = ext.get_data(outputs="Templates")
 
     _run_key_saved = [("peak_labels", "npy")]
 
@@ -88,7 +94,7 @@ class ClusteringBenchmark(Benchmark):
     ]
 
 
-class ClusteringStudy(BenchmarkStudy):
+class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
 
     benchmark_class = ClusteringBenchmark
 
@@ -175,6 +181,26 @@ class ClusteringStudy(BenchmarkStudy):
         from .benchmark_plot_tools import plot_performances_vs_snr
 
         return plot_performances_vs_snr(self, **kwargs)
+
+    def plot_performances_comparison(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performances_comparison
+
+        return plot_performances_comparison(self, *args, **kwargs)
+
+    def plot_performance_losses(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performance_losses
+
+        return plot_performance_losses(self, *args, **kwargs)
+
+    def plot_performances_vs_depth_and_snr(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_depth_and_snr
+
+        return plot_performances_vs_depth_and_snr(self, *args, **kwargs)
+
+    def plot_performances_ordered(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performances_ordered
+
+        return plot_performances_ordered(self, *args, **kwargs)
 
     def plot_error_metrics(self, metric="cosine", case_keys=None, figsize=(15, 5)):
 
@@ -343,104 +369,6 @@ class ClusteringStudy(BenchmarkStudy):
         fig.subplots_adjust(right=0.85)
         cbar_ax = fig.add_axes([0.9, 0.1, 0.025, 0.75])
         fig.colorbar(im, cax=cbar_ax, label=metric)
-
-        return fig
-
-    def plot_unit_losses(self, cases_before, cases_after, metric="agreement", figsize=None):
-
-        fig, axs = plt.subplots(ncols=len(cases_before), nrows=1, figsize=figsize)
-
-        for count, (case_before, case_after) in enumerate(zip(cases_before, cases_after)):
-
-            ax = axs[count]
-            dataset_key = self.cases[case_before]["dataset"]
-            _, gt_sorting1 = self.datasets[dataset_key]
-            positions = gt_sorting1.get_property("gt_unit_locations")
-
-            analyzer = self.get_sorting_analyzer(case_before)
-            metrics_before = analyzer.get_extension("quality_metrics").get_data()
-            x = metrics_before["snr"].values
-
-            y_before = self.get_result(case_before)["gt_comparison"].get_performance()[metric].values
-            y_after = self.get_result(case_after)["gt_comparison"].get_performance()[metric].values
-            ax.set_ylabel("depth (um)")
-            ax.set_ylabel("snr")
-            if count > 0:
-                ax.set_ylabel("")
-                ax.set_yticks([], [])
-            im = ax.scatter(positions[:, 1], x, c=(y_after - y_before), cmap="coolwarm")
-            im.set_clim(-1, 1)
-            # fig.colorbar(im, ax=ax)
-            # ax.set_title(k)
-
-        fig.subplots_adjust(right=0.85)
-        cbar_ax = fig.add_axes([0.9, 0.1, 0.025, 0.75])
-        cbar = fig.colorbar(im, cax=cbar_ax, label=metric)
-        # cbar.set_clim(-1, 1)
-
-        return fig
-
-    def plot_comparison_clustering(
-        self,
-        case_keys=None,
-        performance_names=["accuracy", "recall", "precision"],
-        colors=["g", "b", "r"],
-        ylim=(-0.1, 1.1),
-        figsize=None,
-    ):
-
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-        import pylab as plt
-
-        num_methods = len(case_keys)
-        fig, axs = plt.subplots(ncols=num_methods, nrows=num_methods, figsize=(10, 10))
-        for i, key1 in enumerate(case_keys):
-            for j, key2 in enumerate(case_keys):
-                if len(axs.shape) > 1:
-                    ax = axs[i, j]
-                else:
-                    ax = axs[j]
-                comp1 = self.get_result(key1)["gt_comparison"]
-                comp2 = self.get_result(key2)["gt_comparison"]
-                if i <= j:
-                    for performance, color in zip(performance_names, colors):
-                        perf1 = comp1.get_performance()[performance]
-                        perf2 = comp2.get_performance()[performance]
-                        ax.plot(perf2, perf1, ".", label=performance, color=color)
-
-                    ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
-                    ax.set_ylim(ylim)
-                    ax.set_xlim(ylim)
-                    ax.spines[["right", "top"]].set_visible(False)
-                    ax.set_aspect("equal")
-
-                    label1 = self.cases[key1]["label"]
-                    label2 = self.cases[key2]["label"]
-                    if j == i:
-                        ax.set_ylabel(f"{label1}")
-                    else:
-                        ax.set_yticks([])
-                    if i == j:
-                        ax.set_xlabel(f"{label2}")
-                    else:
-                        ax.set_xticks([])
-                    if i == num_methods - 1 and j == num_methods - 1:
-                        patches = []
-                        import matplotlib.patches as mpatches
-
-                        for color, name in zip(colors, performance_names):
-                            patches.append(mpatches.Patch(color=color, label=name))
-                        ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
-                else:
-                    ax.spines["bottom"].set_visible(False)
-                    ax.spines["left"].set_visible(False)
-                    ax.spines["top"].set_visible(False)
-                    ax.spines["right"].set_visible(False)
-                    ax.set_xticks([])
-                    ax.set_yticks([])
-
-        plt.tight_layout(h_pad=0, w_pad=0)
 
         return fig
 

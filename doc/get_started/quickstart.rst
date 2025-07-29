@@ -336,7 +336,7 @@ Alternatively we can pass a full dictionary containing the parameters:
 
     # parameters set by params dictionary
     sorting_TDC_2 = ss.run_sorter(
-        sorter_name="tridesclous", recording=recording_preprocessed, output_folder="tdc_output2", **other_params
+        sorter_name="tridesclous", recording=recording_preprocessed, folder="tdc_output2", **other_params
     )
     print(sorting_TDC_2)
 

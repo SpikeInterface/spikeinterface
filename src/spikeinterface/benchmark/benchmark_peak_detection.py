@@ -8,10 +8,10 @@ from spikeinterface.widgets import (
 )
 from spikeinterface.comparison.comparisontools import make_matching_events
 from spikeinterface.core import get_noise_levels
-
+from spikeinterface.benchmark.benchmark_plot_tools import despine
 
 import numpy as np
-
+from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .benchmark_base import Benchmark, BenchmarkStudy
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
@@ -37,11 +37,14 @@ class PeakDetectionBenchmark(Benchmark):
         self.result["peaks"] = peaks
 
     def compute_result(self, **result_params):
-
-        sorting_analyzer = create_sorting_analyzer(self.gt_sorting, self.recording, format="memory", sparse=False)
+        result_params, job_kwargs = split_job_kwargs(result_params)
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        sorting_analyzer = create_sorting_analyzer(
+            self.gt_sorting, self.recording, format="memory", sparse=False, **job_kwargs
+        )
         sorting_analyzer.compute("random_spikes")
-        sorting_analyzer.compute("templates")
-        sorting_analyzer.compute("spike_amplitudes")
+        sorting_analyzer.compute("templates", **job_kwargs)
+        sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
         self.result["gt_amplitudes"] = sorting_analyzer.get_extension("spike_amplitudes").get_data()
         self.result["gt_templates"] = sorting_analyzer.get_extension("templates").get_data()
 
@@ -90,9 +93,10 @@ class PeakDetectionBenchmark(Benchmark):
         print("Only {0:.2f}% of gt peaks are matched to detected peaks".format(ratio))
 
         sorting_analyzer = create_sorting_analyzer(
-            self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False
+            self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False, **job_kwargs
         )
-        sorting_analyzer.compute({"random_spikes": {}, "templates": {}})
+        sorting_analyzer.compute("random_spikes")
+        sorting_analyzer.compute("templates", **job_kwargs)
 
         self.result["templates"] = sorting_analyzer.get_extension("templates").get_data()
 
@@ -148,54 +152,29 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["sliced_gt_comparison"], ax=ax)
 
-    def plot_performances_vs_snr(self, case_keys=None, figsize=(15, 15), detect_threshold=None):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-
-        import matplotlib.pyplot as plt
-
-        fig, axs = plt.subplots(ncols=1, nrows=3, figsize=figsize)
-
-        for count, k in enumerate(("accuracy", "recall", "precision")):
-
-            ax = axs[count]
-            for key in case_keys:
-                color = self.get_colors()[key]
-                label = self.cases[key]["label"]
-
-                analyzer = self.get_sorting_analyzer(key)
-                metrics = analyzer.get_extension("quality_metrics").get_data()
-                x = metrics["snr"].values
-                y = self.get_result(key)["sliced_gt_comparison"].get_performance()[k].values
-                ax.scatter(x, y, marker=".", label=label, color=color)
-                ax.set_title(k)
-                if detect_threshold is not None:
-                    ymin, ymax = ax.get_ylim()
-                    ax.plot([detect_threshold, detect_threshold], [ymin, ymax], "k--")
-
-                popt = fit_sigmoid(x, y, p0=None)
-                xfit = np.linspace(0, max(metrics["snr"].values), 100)
-                ax.plot(xfit, sigmoid(xfit, *popt), color=color)
-
-            if count == 2:
-                ax.legend()
-
-    def plot_detected_amplitudes(self, case_keys=None, figsize=(15, 5), detect_threshold=None):
+    def plot_detected_amplitudes(self, case_keys=None, figsize=(15, 5), detect_threshold=None, axs=None):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
         import matplotlib.pyplot as plt
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+        if axs is None:
+            fig, axs = plt.subplots(ncols=len(case_keys), figsize=figsize, squeeze=False)
+        else:
+            fig = axs[0].get_figure()
+            assert len(axs) == len(case_keys), "axs should be the same length as case_keys"
 
         for count, key in enumerate(case_keys):
-            ax = axs[0, count]
+            ax = axs[count]
+            despine(ax)
             data1 = self.get_result(key)["peaks"]["amplitude"]
             data2 = self.get_result(key)["gt_amplitudes"]
+            color = self.get_colors()[key]
             bins = np.linspace(data2.min(), data2.max(), 100)
-            ax.hist(data1, bins=bins, alpha=0.5, label="detected")
-            ax.hist(data2, bins=bins, alpha=0.5, label="gt")
-            ax.set_title(self.cases[key]["label"])
+            ax.hist(data1, bins=bins, label="detected", histtype="step", color=color, linewidth=2)
+            ax.hist(data2, bins=bins, alpha=0.1, label="gt", color="k")
+            ax.set_yscale("log")
+            # ax.set_title(self.cases[key]["label"])
             ax.legend()
             if detect_threshold is not None:
                 noise_levels = get_noise_levels(self.benchmarks[key].recording, return_scaled=False).mean()
@@ -226,13 +205,62 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.set_ylabel("# frames")
             ax.set_xlabel("unit id")
 
-    def plot_template_similarities(self, case_keys=None, metric="l2", figsize=(15, 5), detect_threshold=None):
+    def plot_mean_deltas(self, case_keys=None, figsize=(15, 5), ax=None):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
         import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=figsize, squeeze=True)
+        if ax is None:
+            fig, ax = plt.subplots(1, figsize=figsize)
+        else:
+            fig = ax.get_figure()
+
+        results = {}
+        labels = []
+        colors = []
+        for count, key in enumerate(case_keys):
+            gt_sorting = self.benchmarks[key].gt_sorting
+            results[key] = []
+            labels += [self.cases[key]["label"]]
+            data = self.get_result(key)["matches"]
+            for unit_ind, unit_id in enumerate(gt_sorting.unit_ids):
+                mask = data["labels"] == unit_id
+                results[key] += [np.mean(data["deltas"][mask])]
+
+            colors += [self.get_colors()[key]]
+        despine(ax)
+        plots = ax.violinplot(
+            results.values(),
+            range(len(case_keys)),
+            showmeans=True,
+            showmedians=False,
+            showextrema=False,
+        )
+
+        # Set the color of the violin patches
+        for pc, color in zip(plots["bodies"], colors):
+            pc.set_facecolor(color)
+            pc.set_edgecolor(color)
+
+        plots["cmeans"].set_colors(colors)
+
+        # ax.set_title(self.cases[key]["label"])
+        ax.set_xticks(range(len(case_keys)), labels, rotation=45)
+        ax.set_ylabel("# frames")
+        # ax.set_xlabel("unit id")
+
+    def plot_template_similarities(self, case_keys=None, metric="l2", figsize=(15, 5), detect_threshold=None, ax=None):
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+        import matplotlib.pyplot as plt
+
+        if ax is None:
+            fig, ax = plt.subplots(ncols=1, nrows=1, figsize=figsize, squeeze=True)
+        else:
+            fig = ax.get_figure()
+
         for key in case_keys:
 
             import sklearn.metrics
@@ -248,6 +276,8 @@ class PeakDetectionStudy(BenchmarkStudy):
                 b = found_templates[i].flatten()
 
                 if metric == "cosine":
+                    import sklearn.metrics
+
                     distances[i] = sklearn.metrics.pairwise.cosine_similarity(a[None, :], b[None, :])[0, 0]
                 else:
                     distances[i] = sklearn.metrics.pairwise_distances(a[None, :], b[None, :], metric)[0, 0]
@@ -260,7 +290,7 @@ class PeakDetectionStudy(BenchmarkStudy):
             x = metrics["snr"].values
             y = distances
             ax.scatter(x, y, marker=".", label=label, color=color)
-
+            despine(ax)
             popt = fit_sigmoid(x, y, p0=None)
             xfit = np.linspace(0, max(metrics["snr"].values), 100)
             ax.plot(xfit, sigmoid(xfit, *popt), color=color)
@@ -272,3 +302,4 @@ class PeakDetectionStudy(BenchmarkStudy):
         ax.legend()
         ax.set_xlabel("snr")
         ax.set_ylabel(metric)
+        return fig

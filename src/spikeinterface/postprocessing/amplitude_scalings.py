@@ -11,7 +11,7 @@ from spikeinterface.core.sortinganalyzer import register_result_extension, Analy
 
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
 
-from ..core.template_tools import get_dense_templates_array, _get_nbefore
+from spikeinterface.core.template_tools import get_dense_templates_array, _get_nbefore
 
 
 class ComputeAmplitudeScalings(AnalyzerExtension):
@@ -127,6 +127,9 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
                 new_data["collision_mask"] = self.data["collision_mask"][keep_mask]
 
         return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        return self.data.copy()
 
     def _get_pipeline_nodes(self):
 

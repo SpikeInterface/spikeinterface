@@ -48,7 +48,7 @@ def find_spikes_from_templates(
     outputs:
         Optionaly returns for debug purpose.
     """
-    from .method_list import matching_methods
+    from spikeinterface.sortingcomponents.matching.method_list import matching_methods
 
     assert method in matching_methods, f"The 'method' {method} is not valid. Use a method from {matching_methods}"
 
@@ -57,6 +57,9 @@ def find_spikes_from_templates(
     method_class = matching_methods[method]
     node0 = method_class(recording, **method_kwargs)
     nodes = [node0]
+    assert "templates" in method_kwargs, "You must provide templates in method_kwargs"
+    if len(method_kwargs["templates"].unit_ids) == 0:
+        return np.zeros(0, dtype=node0.get_dtype())
 
     gather_kwargs = gather_kwargs or {}
     names = ["spikes"]
@@ -71,8 +74,13 @@ def find_spikes_from_templates(
         names=names,
         **gather_kwargs,
     )
+
     if extra_outputs:
         outputs = node0.get_extra_outputs()
+
+    node0.clean()
+
+    if extra_outputs:
         return spikes, outputs
     else:
         return spikes

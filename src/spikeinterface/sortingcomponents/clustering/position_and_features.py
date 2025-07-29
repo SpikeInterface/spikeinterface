@@ -161,7 +161,7 @@ class PositionAndFeaturesClustering:
             name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
             tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
 
-            sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["unit_index"], fs)
+            sorting = NumpySorting.from_samples_and_labels(spikes["sample_index"], spikes["unit_index"], fs)
 
             nbefore = int(params["ms_before"] * fs / 1000.0)
             nafter = int(params["ms_after"] * fs / 1000.0)
@@ -180,7 +180,7 @@ class PositionAndFeaturesClustering:
                 nbefore=nbefore,
                 sparsity_mask=None,
                 probe=recording.get_probe(),
-                is_scaled=False,
+                is_in_uV=False,
             )
 
             labels, peak_labels = remove_duplicates_via_matching(

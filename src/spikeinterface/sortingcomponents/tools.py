@@ -11,10 +11,13 @@ except:
 
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.template import Templates
-
-from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractSparseWaveforms, PeakRetriever
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
-from spikeinterface.core.job_tools import split_job_kwargs
+from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
+from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
+from spikeinterface.core.sparsity import ChannelSparsity
+from spikeinterface.core.sparsity import compute_sparsity
+from spikeinterface.core.analyzer_extension_core import ComputeTemplates
+from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
 
 
 def make_multi_method_doc(methods, ident="    "):
@@ -170,7 +173,6 @@ def get_prototype_and_waveforms_from_recording(
     pipeline_nodes = [node]
 
     recording_slices = get_shuffled_recording_slices(recording, seed=seed, **job_kwargs)
-
     res = detect_peaks(
         recording,
         pipeline_nodes=pipeline_nodes,
@@ -179,7 +181,6 @@ def get_prototype_and_waveforms_from_recording(
         **detection_kwargs,
         **job_kwargs,
     )
-
     rng = np.random.RandomState(seed)
     indices = rng.permutation(np.arange(len(res[0])))
 
@@ -248,19 +249,144 @@ def check_probe_for_drift_correction(recording, dist_x_max=60):
         return True
 
 
-def cache_preprocessing(recording, mode="memory", memory_limit=0.5, delete_cache=True, **extra_kwargs):
-    save_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
+def _set_optimal_chunk_size(recording, job_kwargs, memory_limit=0.5, total_memory=None):
+    """
+    Set the optimal chunk size for a job given the memory_limit and the number of jobs
 
-    if mode == "memory":
+    Parameters
+    ----------
+
+    recording: Recording
+        The recording object
+    job_kwargs: dict
+        The job kwargs
+    memory_limit: float
+        The memory limit in fraction of available memory
+    total_memory: str, Default None
+        The total memory to use for the job in bytes
+
+    Returns
+    -------
+
+    job_kwargs: dict
+        The updated job kwargs
+    """
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    n_jobs = job_kwargs["n_jobs"]
+    if total_memory is None:
         if HAVE_PSUTIL:
             assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
             memory_usage = memory_limit * psutil.virtual_memory().available
-            if recording.get_total_memory_size() < memory_usage:
+            num_channels = recording.get_num_channels()
+            dtype_size_bytes = recording.get_dtype().itemsize
+            chunk_size = memory_usage / ((num_channels * dtype_size_bytes) * n_jobs)
+            chunk_duration = chunk_size / recording.get_sampling_frequency()
+            job_kwargs.update(dict(chunk_duration=f"{chunk_duration}s"))
+            job_kwargs = fix_job_kwargs(job_kwargs)
+        else:
+            import warnings
+
+            warnings.warn("psutil is required to use only a fraction of available memory")
+    else:
+        from spikeinterface.core.job_tools import convert_string_to_bytes
+
+        total_memory = convert_string_to_bytes(total_memory)
+        num_channels = recording.get_num_channels()
+        dtype_size_bytes = recording.get_dtype().itemsize
+        chunk_size = (num_channels * dtype_size_bytes) * n_jobs / total_memory
+        chunk_duration = chunk_size / recording.get_sampling_frequency()
+        job_kwargs.update(dict(chunk_duration=f"{chunk_duration}s"))
+        job_kwargs = fix_job_kwargs(job_kwargs)
+    return job_kwargs
+
+
+def _get_optimal_n_jobs(job_kwargs, ram_requested, memory_limit=0.25):
+    """
+    Set the optimal chunk size for a job given the memory_limit and the number of jobs
+
+    Parameters
+    ----------
+
+    recording: Recording
+        The recording object
+    ram_requested: int
+        The amount of RAM (in bytes) requested for the job
+    memory_limit: float
+        The memory limit in fraction of available memory
+
+    Returns
+    -------
+
+    job_kwargs: dict
+        The updated job kwargs
+    """
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    n_jobs = job_kwargs["n_jobs"]
+    if HAVE_PSUTIL:
+        assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
+        memory_usage = memory_limit * psutil.virtual_memory().available
+        n_jobs = max(1, int(min(n_jobs, memory_usage // ram_requested)))
+        job_kwargs.update(dict(n_jobs=n_jobs))
+    else:
+        import warnings
+
+        warnings.warn("psutil is required to use only a fraction of available memory")
+    return job_kwargs
+
+
+def cache_preprocessing(
+    recording, mode="memory", memory_limit=0.5, total_memory=None, delete_cache=True, **extra_kwargs
+):
+    """
+    Cache the preprocessing of a recording object
+
+    Parameters
+    ----------
+
+    recording: Recording
+        The recording object
+    mode: str
+        The mode to cache the preprocessing, can be 'memory', 'folder', 'zarr' or 'no-cache'
+    memory_limit: float
+        The memory limit in fraction of available memory
+    total_memory: str, Default None
+        The total memory to use for the job in bytes
+    delete_cache: bool
+        If True, delete the cache after the job
+    **extra_kwargs: dict
+        The extra kwargs for the job
+
+    Returns
+    -------
+
+    recording: Recording
+        The cached recording object
+    """
+
+    save_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
+
+    if mode == "memory":
+        if total_memory is None:
+            if HAVE_PSUTIL:
+                assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
+                memory_usage = memory_limit * psutil.virtual_memory().available
+                if recording.get_total_memory_size() < memory_usage:
+                    recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
+                else:
+                    import warnings
+
+                    warnings.warn("Recording too large to be preloaded in RAM...")
+            else:
+                import warnings
+
+                warnings.warn("psutil is required to preload in memory given only a fraction of available memory")
+        else:
+            if recording.get_total_memory_size() < total_memory:
                 recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
             else:
-                print("Recording too large to be preloaded in RAM...")
-        else:
-            print("psutil is required to preload in memory")
+                import warnings
+
+                warnings.warn("Recording too large to be preloaded in RAM...")
     elif mode == "folder":
         recording = recording.save_to_folder(**extra_kwargs)
     elif mode == "zarr":
@@ -288,8 +414,33 @@ def remove_empty_templates(templates):
         channel_ids=templates.channel_ids,
         unit_ids=templates.unit_ids[not_empty],
         probe=templates.probe,
-        is_scaled=templates.is_scaled,
+        is_in_uV=templates.is_in_uV,
     )
+
+
+def create_sorting_analyzer_with_existing_templates(sorting, recording, templates, remove_empty=True):
+    sparsity = templates.sparsity
+    templates_array = templates.get_dense_templates().copy()
+
+    if remove_empty:
+        non_empty_unit_ids = sorting.get_non_empty_unit_ids()
+        non_empty_sorting = sorting.remove_empty_units()
+        non_empty_unit_indices = sorting.ids_to_indices(non_empty_unit_ids)
+        templates_array = templates_array[non_empty_unit_indices]
+        sparsity_mask = sparsity.mask[non_empty_unit_indices, :]
+        sparsity = ChannelSparsity(sparsity_mask, non_empty_unit_ids, sparsity.channel_ids)
+    else:
+        non_empty_sorting = sorting
+
+    sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
+    sa.compute("random_spikes")
+    sa.extensions["templates"] = ComputeTemplates(sa)
+    sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
+    sa.extensions["templates"].data["average"] = templates_array
+    sa.extensions["templates"].data["std"] = np.zeros(templates_array.shape, dtype=np.float32)
+    sa.extensions["templates"].run_info["run_completed"] = True
+    sa.extensions["templates"].run_info["runtime_s"] = 0
+    return sa
 
 
 def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):
@@ -307,3 +458,54 @@ def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):
     recording_slices = rng.permutation(recording_slices)
 
     return recording_slices
+
+
+def clean_templates(
+    templates, sparsify_threshold=0.25, noise_levels=None, min_snr=None, max_jitter_ms=None, remove_empty=True
+):
+    """
+    Clean a Templates object by removing empty units and applying sparsity if provided.
+    """
+
+    ## First we sparsify the templates (using peak-to-peak amplitude avoid sign issues)
+    if sparsify_threshold is not None:
+        sparsity = compute_sparsity(
+            templates,
+            method="snr",
+            amplitude_mode="peak_to_peak",
+            noise_levels=noise_levels,
+            threshold=sparsify_threshold,
+        )
+        if templates.are_templates_sparse():
+            templates = templates.to_dense()
+        templates = templates.to_sparse(sparsity)
+
+    ## We removed non empty templates
+    if remove_empty:
+        templates = remove_empty_templates(templates)
+
+    ## We keep only units with a max jitter
+    if max_jitter_ms is not None:
+        max_jitter = int(max_jitter_ms * templates.sampling_frequency / 1000.0)
+
+        shifts = get_template_extremum_channel_peak_shift(templates)
+        to_select = []
+        for unit_id in templates.unit_ids:
+            if np.abs(shifts[unit_id]) <= max_jitter:
+                to_select += [unit_id]
+        templates = templates.select_units(to_select)
+
+    ## We remove units with a low SNR
+    if min_snr is not None:
+        assert noise_levels is not None, "noise_levels must be provided if min_snr is set"
+        sparsity = compute_sparsity(
+            templates.to_dense(),
+            method="snr",
+            amplitude_mode="peak_to_peak",
+            noise_levels=noise_levels,
+            threshold=min_snr,
+        )
+        to_select = templates.unit_ids[np.flatnonzero(sparsity.mask.sum(axis=1) > 0)]
+        templates = templates.select_units(to_select)
+
+    return templates

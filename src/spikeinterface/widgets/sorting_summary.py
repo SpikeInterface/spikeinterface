@@ -13,10 +13,10 @@ from .unit_locations import UnitLocationsWidget
 from .unit_templates import UnitTemplatesWidget
 
 
-from ..core import SortingAnalyzer
+from spikeinterface.core import SortingAnalyzer
 
 
-_default_displayed_unit_properties = ["firing_rate", "num_spikes", "x", "y", "amplitude_median", "snr", "rp_violation"]
+_default_displayed_unit_properties = ["firing_rate", "num_spikes", "x", "y", "amplitude_median", "snr", "rp_violations"]
 
 
 class SortingSummaryWidget(BaseWidget):
@@ -88,7 +88,7 @@ class SortingSummaryWidget(BaseWidget):
 
         if unit_table_properties is not None:
             warnings.warn(
-                "plot_sorting_summary() : unit_table_properties is deprecated, use displayed_unit_properties instead",
+                "plot_sorting_summary() : `unit_table_properties` is deprecated and will be removed in version 0.104.0, use `displayed_unit_properties` instead",
                 category=DeprecationWarning,
                 stacklevel=2,
             )

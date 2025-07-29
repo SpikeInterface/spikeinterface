@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import warnings
 
 import probeinterface
 
@@ -61,6 +62,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         all_annotations: bool = False,
         use_names_as_ids: bool = False,
     ):
+
         neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel=load_sync_channel)
         NeoBaseRecordingExtractor.__init__(
             self,
@@ -71,15 +73,26 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             **neo_kwargs,
         )
 
-        # open the corresponding stream probe for LF and AP
-        # if load_sync_channel=False
-        if "nidq" not in self.stream_id and not load_sync_channel:
-            signals_info_dict = {e["stream_name"]: e for e in self.neo_reader.signals_info_list}
-            meta_filename = signals_info_dict[self.stream_id]["meta_file"]
-            # Load probe geometry if available
-            if "lf" in self.stream_id:
-                meta_filename = meta_filename.replace(".lf", ".ap")
-            probe = probeinterface.read_spikeglx(meta_filename)
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), load_sync_channel=load_sync_channel))
+
+        stream_is_nidq = "nidq" in self.stream_id
+        stream_is_one_box = "obx" in self.stream_id
+        stream_is_sync = "SYNC" in self.stream_id
+
+        if stream_is_nidq or stream_is_one_box or stream_is_sync:
+            # Do not add probe information for the one box, nidq or sync streams. Early return
+            return None
+
+        # Checks if the probe information is available and adds location, shanks and sample shift if available.
+        signals_info_dict = {e["stream_name"]: e for e in self.neo_reader.signals_info_list}
+        meta_filename = signals_info_dict[self.stream_id]["meta_file"]
+
+        ap_meta_filename = meta_filename.replace(".lf", ".ap") if "lf" in self.stream_id else meta_filename
+        ap_meta_file_exists = Path(ap_meta_filename).exists()
+        add_probe_properties = ap_meta_file_exists and not load_sync_channel
+
+        if add_probe_properties:
+            probe = probeinterface.read_spikeglx(ap_meta_filename)
 
             if probe.shank_ids is not None:
                 self.set_probe(probe, in_place=True, group_mode="by_shank")
@@ -87,11 +100,13 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
                 self.set_probe(probe, in_place=True)
 
             # load num_channels_per_adc depending on probe type
-            ptype = probe.annotations["probe_type"]
+            model_name = probe.annotations.get("model_name", None)
+            if model_name is None:
+                model_name = probe.annotations["probe_name"]
 
-            if ptype in [21, 24]:  # NP2.0
+            if "2.0" in model_name:  # Neuropixels 2.0
                 num_channels_per_adc = 16
-                num_cycles_in_adc = 16  # TODO: Check this.
+                num_cycles_in_adc = 16
                 total_channels = 384
             else:  # NP1.0
                 num_channels_per_adc = 12
@@ -109,8 +124,12 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
                 sample_shifts = sample_shifts[chans]
 
             self.set_property("inter_sample_shift", sample_shifts)
-
-        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), load_sync_channel=load_sync_channel))
+        else:
+            warning_message = (
+                "Unable to find a corresponding metadata file for the recording. "
+                "The probe information will not be loaded. "
+            )
+            warnings.warn(warning_message, UserWarning, stacklevel=2)
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False):

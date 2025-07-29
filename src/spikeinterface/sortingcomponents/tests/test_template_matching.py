@@ -4,7 +4,9 @@ from pathlib import Path
 
 from spikeinterface import NumpySorting, create_sorting_analyzer, get_noise_levels, compute_sparsity
 
-from spikeinterface.sortingcomponents.matching import find_spikes_from_templates, matching_methods
+from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
+from spikeinterface.sortingcomponents.matching.method_list import matching_methods
+
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
@@ -102,7 +104,7 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
 
         gt_sorting = sorting_analyzer.sorting
 
-        sorting = NumpySorting.from_times_labels(
+        sorting = NumpySorting.from_samples_and_labels(
             spikes["sample_index"], spikes["cluster_index"], recording.sampling_frequency
         )
 

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..core import BaseSorting
-from ..core.core_tools import define_function_from_class
+from spikeinterface.core import BaseSorting
+from spikeinterface.core.core_tools import define_function_from_class
 from .basecomparison import BasePairComparison, MixinSpikeTrainComparison, MixinTemplateComparison
 from .comparisontools import (
     do_count_event,
@@ -15,7 +15,7 @@ from .comparisontools import (
     do_count_score,
     compute_performance,
 )
-from ..postprocessing import compute_template_similarity_by_pair
+from spikeinterface.postprocessing import compute_template_similarity_by_pair
 
 
 class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
@@ -34,7 +34,6 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
         chance_score: float = 0.1,
         ensure_symmetry: bool = False,
         agreement_method: str = "count",
-        n_jobs: int = 1,
         verbose: bool = False,
     ):
         if sorting1_name is None:
@@ -55,7 +54,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
             chance_score=chance_score,
             verbose=verbose,
         )
-        MixinSpikeTrainComparison.__init__(self, delta_time=delta_time, n_jobs=n_jobs)
+        MixinSpikeTrainComparison.__init__(self, delta_time=delta_time)
         self.set_frames_and_frequency(self.object_list)
 
         self.unit1_ids = self.sorting1.get_unit_ids()
@@ -144,8 +143,6 @@ class SymmetricSortingComparison(BasePairSorterComparison):
     agreement_method : "count" | "distance", default: "count"
         The method to compute agreement scores. The "count" method computes agreement scores from spike counts.
         The "distance" method computes agreement scores from spike time distance functions.
-    n_jobs : int, default: -1
-        Number of cores to use in parallel. Uses all available if -1
     verbose : bool, default: False
         If True, output is verbose
 
@@ -165,7 +162,6 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         match_score: float = 0.5,
         chance_score: float = 0.1,
         agreement_method: str = "count",
-        n_jobs: int = -1,
         verbose: bool = False,
     ):
         BasePairSorterComparison.__init__(
@@ -179,7 +175,6 @@ class SymmetricSortingComparison(BasePairSorterComparison):
             chance_score=chance_score,
             ensure_symmetry=True,
             agreement_method=agreement_method,
-            n_jobs=n_jobs,
             verbose=verbose,
         )
 
@@ -208,7 +203,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         return self.possible_match_21[unit2]
 
     def get_agreement_fraction(self, unit1=None, unit2=None):
-        if unit1 is None or unit1 == -1 or unit2 is None or unit2 == -1:
+        if unit1 is None or unit1 == -1 or unit1 == "" or unit2 is None or unit2 == -1 or unit2 == "":
             return 0
         else:
             return self.agreement_scores.at[unit1, unit2]
@@ -269,8 +264,6 @@ class GroundTruthComparison(BasePairSorterComparison):
     agreement_method : "count" | "distance", default: "count"
         The method to compute agreement scores. The "count" method computes agreement scores from spike counts.
         The "distance" method computes agreement scores from spike time distance functions.
-    n_jobs : int, default: -1
-        Number of cores to use in parallel. Uses all available if -1
     compute_labels : bool, default: False
         If True, labels are computed at instantiation
     compute_misclassifications : bool, default: False
@@ -298,7 +291,6 @@ class GroundTruthComparison(BasePairSorterComparison):
         chance_score: float = 0.1,
         exhaustive_gt: bool = False,
         agreement_method: str = "count",
-        n_jobs: int = -1,
         match_mode: str = "hungarian",
         compute_labels: bool = False,
         compute_misclassifications: bool = False,
@@ -321,7 +313,6 @@ class GroundTruthComparison(BasePairSorterComparison):
             chance_score=chance_score,
             ensure_symmetry=False,
             agreement_method=agreement_method,
-            n_jobs=n_jobs,
             verbose=verbose,
         )
         self.exhaustive_gt = exhaustive_gt
@@ -540,7 +531,6 @@ class GroundTruthComparison(BasePairSorterComparison):
                 score = self.agreement_scores.at[u1, u2]
                 if score >= self.well_detected_score:
                     well_detected_ids.append(u2)
-
         return well_detected_ids
 
     def count_well_detected_units(self, well_detected_score):
@@ -580,7 +570,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         false_positive_ids = []
         for u2 in self.unit2_ids:
             if u2 not in matched_units2:
-                if self.best_match_21[u2] == -1:
+                if self.best_match_21[u2] == -1 or self.best_match_21[u2] == "":
                     false_positive_ids.append(u2)
                 else:
                     u1 = self.best_match_21[u2]
@@ -624,7 +614,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         matched_units2 = list(self.hungarian_match_12.values)
         redundant_ids = []
         for u2 in self.unit2_ids:
-            if u2 not in matched_units2 and self.best_match_21[u2] != -1:
+            if u2 not in matched_units2 and self.best_match_21[u2] != -1 and self.best_match_21[u2] != "":
                 u1 = self.best_match_21[u2]
                 if u2 != self.best_match_12[u1]:
                     score = self.agreement_scores.at[u1, u2]

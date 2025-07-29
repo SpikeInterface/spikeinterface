@@ -1,6 +1,5 @@
 from __future__ import annotations
 import numpy as np
-import warnings
 
 from .template import Templates
 from .sortinganalyzer import SortingAnalyzer
@@ -23,6 +22,10 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_sc
         The dense templates (num_units, num_samples, num_channels)
     """
     if isinstance(one_object, Templates):
+        if return_scaled != one_object.is_in_uV:
+            raise ValueError(
+                f"get_dense_templates_array: return_scaled={return_scaled} is not possible Templates has the reverse"
+            )
         templates_array = one_object.get_dense_templates()
     elif isinstance(one_object, SortingAnalyzer):
         if return_scaled != one_object.return_scaled:
@@ -162,11 +165,15 @@ def get_template_extremum_channel(
     channel_ids = templates_or_sorting_analyzer.channel_ids
 
     # if SortingAnalyzer need to use global SortingAnalyzer return_scaled otherwise
-    # we use the Templates is_scaled
+    # we use the Templates is_in_uV
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-        return_scaled = templates_or_sorting_analyzer.return_scaled
+        # For backward compatibility
+        if hasattr(templates_or_sorting_analyzer, "return_scaled"):
+            return_scaled = templates_or_sorting_analyzer.return_scaled
+        else:
+            return_scaled = templates_or_sorting_analyzer.return_in_uV
     else:
-        return_scaled = templates_or_sorting_analyzer.is_scaled
+        return_scaled = templates_or_sorting_analyzer.is_in_uV
 
     peak_values = get_template_amplitudes(
         templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_scaled=return_scaled
@@ -211,11 +218,15 @@ def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak
     shifts = {}
 
     # We need to use the SortingAnalyzer return_scaled
-    # We need to use the Templates is_scaled
+    # We need to use the Templates is_in_uV
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-        return_scaled = templates_or_sorting_analyzer.return_scaled
+        # For backward compatibility
+        if hasattr(templates_or_sorting_analyzer, "return_scaled"):
+            return_scaled = templates_or_sorting_analyzer.return_scaled
+        else:
+            return_scaled = templates_or_sorting_analyzer.return_in_uV
     else:
-        return_scaled = templates_or_sorting_analyzer.is_scaled
+        return_scaled = templates_or_sorting_analyzer.is_in_uV
 
     templates_array = get_dense_templates_array(templates_or_sorting_analyzer, return_scaled=return_scaled)
 
@@ -274,9 +285,13 @@ def get_template_extremum_amplitude(
     extremum_channels_ids = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
 
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-        return_scaled = templates_or_sorting_analyzer.return_scaled
+        # For backward compatibility
+        if hasattr(templates_or_sorting_analyzer, "return_scaled"):
+            return_scaled = templates_or_sorting_analyzer.return_scaled
+        else:
+            return_scaled = templates_or_sorting_analyzer.return_in_uV
     else:
-        return_scaled = templates_or_sorting_analyzer.is_scaled
+        return_scaled = templates_or_sorting_analyzer.is_in_uV
 
     extremum_amplitudes = get_template_amplitudes(
         templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_scaled=return_scaled, abs_value=abs_value

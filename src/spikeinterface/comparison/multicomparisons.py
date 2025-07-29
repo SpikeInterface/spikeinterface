@@ -35,6 +35,9 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         Minimum agreement score to match units
     chance_score : float, default: 0.1
         Minimum agreement score to for a possible match
+    agreement_method : "count" | "distance", default: "count"
+        The method to compute agreement scores. The "count" method computes agreement scores from spike counts.
+        The "distance" method computes agreement scores from spike time distance functions.
     n_jobs : int, default: -1
        Number of cores to use in parallel. Uses all available if -1
     spiketrain_mode : "union" | "intersection", default: "union"
@@ -60,6 +63,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         delta_time=0.4,  # sampling_frequency=None,
         match_score=0.5,
         chance_score=0.1,
+        agreement_method="count",
         n_jobs=-1,
         spiketrain_mode="union",
         verbose=False,
@@ -73,9 +77,10 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             name_list=name_list,
             match_score=match_score,
             chance_score=chance_score,
+            n_jobs=n_jobs,
             verbose=verbose,
         )
-        MixinSpikeTrainComparison.__init__(self, delta_time=delta_time, n_jobs=n_jobs)
+        MixinSpikeTrainComparison.__init__(self, delta_time=delta_time, agreement_method=agreement_method)
         self.set_frames_and_frequency(self.object_list)
         self._spiketrain_mode = spiketrain_mode
         self._spiketrains = None
@@ -93,7 +98,8 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             sorting2_name=self.name_list[j],
             delta_time=self.delta_time,
             match_score=self.match_score,
-            n_jobs=self.n_jobs,
+            chance_score=self.chance_score,
+            agreement_method=self.agreement_method,
             verbose=False,
         )
         return comp
@@ -183,63 +189,6 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             min_agreement_count_only=minimum_agreement_count_only,
         )
         return sorting
-
-    def save_to_folder(self, save_folder):
-        warnings.warn(
-            "save_to_folder() is deprecated. "
-            "You should save and load the multi sorting comparison object using pickle."
-            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb'))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        for sorting in self.object_list:
-            assert sorting.check_serializability(
-                "json"
-            ), "MultiSortingComparison.save_to_folder() needs json serializable sortings"
-
-        save_folder = Path(save_folder)
-        save_folder.mkdir(parents=True, exist_ok=True)
-        filename = str(save_folder / "multicomparison.gpickle")
-        with open(filename, "wb") as f:
-            pickle.dump(self.graph, f, pickle.HIGHEST_PROTOCOL)
-        kwargs = {
-            "delta_time": float(self.delta_time),
-            "match_score": float(self.match_score),
-            "chance_score": float(self.chance_score),
-        }
-        with (save_folder / "kwargs.json").open("w") as f:
-            json.dump(kwargs, f)
-        sortings = {}
-        for name, sorting in zip(self.name_list, self.object_list):
-            sortings[name] = sorting.to_dict(recursive=True, relative_to=save_folder)
-        with (save_folder / "sortings.json").open("w") as f:
-            json.dump(sortings, f)
-
-    @staticmethod
-    def load_from_folder(folder_path):
-        warnings.warn(
-            "load_from_folder() is deprecated. "
-            "You should save and load the multi sorting comparison object using pickle."
-            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb'))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        folder_path = Path(folder_path)
-        with (folder_path / "kwargs.json").open() as f:
-            kwargs = json.load(f)
-        with (folder_path / "sortings.json").open() as f:
-            dict_sortings = json.load(f)
-        name_list = list(dict_sortings.keys())
-        sorting_list = [load(v, base_folder=folder_path) for v in dict_sortings.values()]
-        mcmp = MultiSortingComparison(sorting_list=sorting_list, name_list=list(name_list), do_matching=False, **kwargs)
-        filename = str(folder_path / "multicomparison.gpickle")
-        with open(filename, "rb") as f:
-            mcmp.graph = pickle.load(f)
-        # do step 3 and 4
-        mcmp._clean_graph()
-        mcmp._do_agreement()
-        mcmp._populate_spiketrains()
-        return mcmp
 
 
 class AgreementSortingExtractor(BaseSorting):

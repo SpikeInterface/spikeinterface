@@ -18,7 +18,7 @@ from spikeinterface.curation import apply_sortingview_curation
 
 parent_folder = Path(__file__).parent
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
-KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
+KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_API_KEY"))
 
 
 # this needs to be run only once: if we want to regenerate we need to start with sorting result
@@ -149,7 +149,7 @@ def test_false_positive_curation():
     times = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
     labels = np.random.randint(1, num_units + 1, size=num_spikes)
 
-    sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
+    sorting = se.NumpySorting.from_samples_and_labels(times, labels, sampling_frequency)
     # print("Sorting: {}".format(sorting.get_unit_ids()))
 
     json_file = parent_folder / "sv-sorting-curation-false-positive.json"
@@ -175,7 +175,7 @@ def test_label_inheritance_int():
     times = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
     labels = np.random.randint(1, 1 + num_units, size=num_spikes)  # 7 units: 1 to 7
 
-    sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
+    sorting = se.NumpySorting.from_samples_and_labels(times, labels, sampling_frequency)
 
     json_file = parent_folder / "sv-sorting-curation-int.json"
     sorting_merge = apply_sortingview_curation(sorting, uri_or_json=json_file)
@@ -217,7 +217,7 @@ def test_label_inheritance_str():
     times = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
     labels = np.random.choice(["a", "b", "c", "d", "e", "f", "g"], size=num_spikes)
 
-    sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
+    sorting = se.NumpySorting.from_samples_and_labels(times, labels, sampling_frequency)
     # print(f"Sorting: {sorting.get_unit_ids()}")
 
     # Apply curation

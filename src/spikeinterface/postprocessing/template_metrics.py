@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import numpy as np
 import warnings
+from itertools import chain
 from copy import deepcopy
 
-from ..core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from ..core.template_tools import get_template_extremum_channel
-from ..core.template_tools import get_dense_templates_array
+from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
+from spikeinterface.core.template_tools import get_template_extremum_channel
+from spikeinterface.core.template_tools import get_dense_templates_array
 
 # DEBUG = False
 
@@ -116,8 +117,6 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         **other_kwargs,
     ):
 
-        import pandas as pd
-
         # TODO alessio can you check this : this used to be in the function but now we have ComputeTemplateMetrics.function_factory()
         if include_multi_channel_metrics or (
             metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
@@ -153,10 +152,10 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         if delete_existing_metrics is False and tm_extension is not None:
 
             existing_metric_names = tm_extension.params["metric_names"]
-            existing_metric_names_propogated = [
+            existing_metric_names_propagated = [
                 metric_name for metric_name in existing_metric_names if metric_name not in metrics_to_compute
             ]
-            metric_names = metrics_to_compute + existing_metric_names_propogated
+            metric_names = metrics_to_compute + existing_metric_names_propagated
 
         params = dict(
             metric_names=metric_names,
@@ -190,6 +189,26 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
         metrics.loc[new_unit_ids, :] = self._compute_metrics(
             new_sorting_analyzer, new_unit_ids, verbose, metric_names, **job_kwargs
+        )
+
+        new_data = dict(metrics=metrics)
+        return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        import pandas as pd
+
+        metric_names = self.params["metric_names"]
+        old_metrics = self.data["metrics"]
+
+        all_unit_ids = new_sorting_analyzer.unit_ids
+        new_unit_ids_f = list(chain(*new_unit_ids))
+        not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids_f)]
+
+        metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
+
+        metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
+        metrics.loc[new_unit_ids_f, :] = self._compute_metrics(
+            new_sorting_analyzer, new_unit_ids_f, verbose, metric_names, **job_kwargs
         )
 
         new_data = dict(metrics=metrics)
@@ -328,7 +347,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
         existing_metrics = []
 
-        # Check if we need to propogate any old metrics. If so, we'll do that.
+        # Check if we need to propagate any old metrics. If so, we'll do that.
         # Otherwise, we'll avoid attempting to load an empty template_metrics.
         if set(self.params["metrics_to_compute"]) != set(self.params["metric_names"]):
 

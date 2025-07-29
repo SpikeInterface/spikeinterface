@@ -1,0 +1,35 @@
+name: si_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - numpy
+  - scipy
+  - joblib
+  - tqdm
+  - matplotlib
+  - h5py
+  - pandas
+  - xarray
+  - zarr<3
+  - scikit-learn
+  - hdbscan
+  - networkx
+  - pybind11
+  - loky
+  - numba
+  - jupyter
+  - pyqt=5
+  - pyqtgraph
+  - ipywidgets
+  - ipympl
+  - htop
+  - cxx-compiler
+  - libxcb
+  - pip:
+    - ephyviewer
+    - spikeinterface[full,widgets]
+    - spikeinterface-gui
+    - kilosort>4.0.30
