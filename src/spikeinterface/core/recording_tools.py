@@ -611,7 +611,6 @@ def get_random_data_chunks(
         )
         return_in_uV = return_scaled
 
-
     recording_slices = get_random_recording_slices(recording, **random_slices_kwargs)
 
     chunk_list = []

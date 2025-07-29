@@ -503,7 +503,6 @@ def extract_waveforms_to_single_buffer(
         )
         return_in_uV = return_scaled
 
-
     n_samples = nbefore + nafter
 
     dtype = np.dtype(dtype)
@@ -877,7 +876,6 @@ def estimate_templates_with_accumulator(
             stacklevel=2,
         )
         return_in_uV = return_scaled
-
 
     assert spikes.size > 0, "estimate_templates() need non empty sorting"
 

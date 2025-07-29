@@ -94,7 +94,7 @@ class TracesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        
+
         # Handle deprecated return_scaled parameter
         if return_scaled is not None:
             warnings.warn(

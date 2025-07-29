@@ -322,6 +322,7 @@ def compute_grid_convolution(
 
     return unit_location
 
+
 def get_return_in_uV(sorting_analyzer_or_templates):
     if isinstance(sorting_analyzer_or_templates, Templates):
         return_in_uV = sorting_analyzer_or_templates.is_in_uV
