@@ -177,7 +177,7 @@ class PeakDetectionStudy(BenchmarkStudy):
             # ax.set_title(self.cases[key]["label"])
             ax.legend()
             if detect_threshold is not None:
-                noise_levels = get_noise_levels(self.benchmarks[key].recording, return_scaled=False).mean()
+                noise_levels = get_noise_levels(self.benchmarks[key].recording, return_in_uV=False).mean()
                 ymin, ymax = ax.get_ylim()
                 abs_threshold = -detect_threshold * noise_levels
                 ax.plot([abs_threshold, abs_threshold], [ymin, ymax], "k--")

@@ -144,7 +144,7 @@ class PositionAndFeaturesClustering:
                 **job_kwargs,
             )
 
-            noise_levels = get_noise_levels(recording, return_scaled=False, **job_kwargs)
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **job_kwargs)
             labels, peak_labels = remove_duplicates(
                 wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, **params["cleaning_kwargs"]
             )

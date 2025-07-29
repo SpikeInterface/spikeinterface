@@ -390,8 +390,6 @@ def write_to_h5_dataset_format(
         If True, output is verbose (when chunks are used)
     return_scaled : bool | None, default: None
         DEPRECATED. Use return_in_uV instead.
-        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
-        traces are dumped to uV
     return_in_uV : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are dumped to uV
@@ -441,7 +439,7 @@ def write_to_h5_dataset_format(
             )
             return_in_uV = return_scaled
 
-        traces = recording.get_traces(return_scaled=return_in_uV)
+        traces = recording.get_traces(return_in_uV=return_in_uV)
         if dtype is not None:
             traces = traces.astype(dtype_file, copy=False)
         if time_axis == 1:
@@ -465,7 +463,7 @@ def write_to_h5_dataset_format(
                 segment_index=segment_index,
                 start_frame=i * chunk_size,
                 end_frame=min((i + 1) * chunk_size, num_frames),
-                return_scaled=return_in_uV if return_scaled is None else return_scaled,
+                return_in_uV=return_in_uV,
             )
             chunk_frames = traces.shape[0]
             if dtype is not None:
@@ -586,8 +584,11 @@ def get_random_data_chunks(
     ----------
     recording : BaseRecording
         The recording to get random chunks from
-    return_scaled : bool, default: False
-        If True, returned chunks are scaled to uV
+    return_scaled : bool | None, default: None
+        DEPRECATED. Use return_in_uV instead.
+    return_in_uV : bool, default: False
+        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+        traces are scaled to uV
     num_chunks_per_segment : int, default: 20
         Number of chunks per segment
     concatenated : bool, default: True
@@ -601,6 +602,16 @@ def get_random_data_chunks(
     chunk_list : np.array | list of np.array
         Array of concatenate chunks per segment
     """
+    # Handle deprecated return_scaled parameter
+    if return_scaled is not None:
+        warnings.warn(
+            "`return_scaled` is deprecated and will be removed in a future version. Use `return_in_uV` instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return_in_uV = return_scaled
+
+
     recording_slices = get_random_recording_slices(recording, **random_slices_kwargs)
 
     chunk_list = []
@@ -609,7 +620,7 @@ def get_random_data_chunks(
             start_frame=start_frame,
             end_frame=end_frame,
             segment_index=segment_index,
-            return_scaled=return_in_uV if return_scaled is None else return_scaled,
+            return_in_uV=return_in_uV,
         )
         chunk_list.append(traces_chunk)
 
@@ -673,7 +684,7 @@ def _noise_level_chunk(segment_index, start_frame, end_frame, worker_ctx):
         start_frame=start_frame,
         end_frame=end_frame,
         segment_index=segment_index,
-        return_scaled=worker_ctx["return_scaled"],
+        return_in_uV=worker_ctx["return_in_uV"],
     )
 
     if worker_ctx["method"] == "mad":
@@ -689,7 +700,7 @@ def _noise_level_chunk(segment_index, start_frame, end_frame, worker_ctx):
 def _noise_level_chunk_init(recording, return_in_uV, method):
     worker_ctx = {}
     worker_ctx["recording"] = recording
-    worker_ctx["return_scaled"] = return_in_uV
+    worker_ctx["return_in_uV"] = return_in_uV
     worker_ctx["method"] = method
     return worker_ctx
 
@@ -721,7 +732,6 @@ def get_noise_levels(
         The recording extractor to get noise levels
     return_scaled : bool | None, default: None
         DEPRECATED. Use return_in_uV instead.
-        If True, returned noise levels are scaled to uV
     return_in_uV : bool, default: True
         If True, returned noise levels are scaled to uV
     method : "mad" | "std", default: "mad"

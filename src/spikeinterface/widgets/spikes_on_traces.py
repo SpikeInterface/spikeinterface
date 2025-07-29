@@ -39,7 +39,7 @@ class SpikesOnTracesWidget(BaseWidget):
         * "line": classical for low channel count
         * "map": for high channel count use color heat map
         * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
-    return_scaled : bool, default: False
+    return_in_uV : bool, default: False
         If True and the recording has scaled traces, it plots the scaled traces
     cmap : str, default: "RdBu"
         matplotlib colormap used in mode "map"
@@ -73,7 +73,7 @@ class SpikesOnTracesWidget(BaseWidget):
         unit_colors=None,
         sparsity=None,
         mode="auto",
-        return_scaled=False,
+        return_in_uV=False,
         cmap="RdBu",
         show_channel_ids=False,
         color_groups=False,
@@ -123,7 +123,7 @@ class SpikesOnTracesWidget(BaseWidget):
             order_channel_by_depth=order_channel_by_depth,
             time_range=time_range,
             mode=mode,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
             cmap=cmap,
             show_channel_ids=show_channel_ids,
             color_groups=color_groups,

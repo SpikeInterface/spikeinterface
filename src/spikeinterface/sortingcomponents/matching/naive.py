@@ -31,7 +31,7 @@ class NaiveMatching(BaseTemplateMatching):
         self.templates_array = self.templates.get_dense_templates()
 
         if noise_levels is None:
-            noise_levels = get_noise_levels(recording, **random_chunk_kwargs, return_scaled=False)
+            noise_levels = get_noise_levels(recording, **random_chunk_kwargs, return_in_uV=False)
         self.abs_threholds = noise_levels * detect_threshold
         self.peak_sign = peak_sign
         channel_distance = get_channel_distances(recording)
