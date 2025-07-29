@@ -757,7 +757,7 @@ def make_ext_params_up_to_date(ext, old_params, new_params):
 #     if len(templates) > 0:
 #         ext = ComputeTemplates(sorting_analyzer)
 #         ext.params = dict(
-#             nbefore=nbefore, nafter=nafter, return_scaled=params["return_scaled"], operators=list(templates.keys())
+#             nbefore=nbefore, nafter=nafter,  operators=list(templates.keys())
 #         )
 #         for mode, arr in templates.items():
 #             ext.data[mode] = arr
