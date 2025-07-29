@@ -74,9 +74,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "min_snr": 2.5,
             # "peak_shift_ms": 0.2,
         },
-        "matching": {"method": "tdc-peeler", "method_kwargs": {}},
-        # "matching": {"method": "wobble", "method_kwargs": {}},
-        # "job_kwargs": {"n_jobs": -1},
+        "matching": {"method": "tdc-peeler", "method_kwargs": {}, "gather_mode": "memory"},
         "job_kwargs": {},
         "save_array": True,
     }
@@ -278,13 +276,22 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
 
         ## peeler
-        matching_method = params["matching"]["method"]
-        matching_params = params["matching"]["method_kwargs"].copy()
+        matching_method = params["matching"].pop("method")
+        gather_mode = params["matching"].pop("gather_mode", "memory")
+        matching_params = params["matching"].get("matching_kwargs", {}).copy()
         matching_params["templates"] = templates
-        if params["matching"]["method"] in ("tdc-peeler",):
+        if matching_method in ("tdc-peeler",):
             matching_params["noise_levels"] = noise_levels
+        gather_kwargs = {}
+        if gather_mode == "npy":
+            gather_kwargs["folder"] = sorter_output_folder / "matching"
         spikes = find_spikes_from_templates(
-            recording_for_peeler, method=matching_method, method_kwargs=matching_params, **job_kwargs
+            recording_for_peeler,
+            method=matching_method,
+            method_kwargs=matching_params,
+            gather_mode=gather_mode,
+            gather_kwargs=gather_kwargs,
+            **job_kwargs,
         )
 
         final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)
