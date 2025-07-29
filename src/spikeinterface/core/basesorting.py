@@ -626,6 +626,47 @@ class BaseSorting(BaseExtractor):
 
         return self.frame_slice(start_frame=start_frame, end_frame=end_frame)
 
+    def split_by(self, property="group", outputs="dict"):
+        """
+        Splits object based on a certain property (e.g. "group")
+
+        Parameters
+        ----------
+        property : str, default: "group"
+            The property to use to split the object, default: "group"
+        outputs : "dict" | "list", default: "dict"
+            Whether to return a dict or a list
+
+        Returns
+        -------
+        dict or list
+            A dict or list with grouped objects based on property
+
+        Raises
+        ------
+        ValueError
+            Raised when property is not present
+        """
+        assert outputs in ("list", "dict")
+        values = self.get_property(property)
+        if values is None:
+            raise ValueError(f"property {property} is not set")
+
+        if outputs == "list":
+            sortings = []
+        elif outputs == "dict":
+            sortings = {}
+        for value in np.unique(values).tolist():
+            (inds,) = np.nonzero(values == value)
+            new_unit_ids = self.unit_ids[inds]
+            subsort = self.select_units(new_unit_ids)
+            subsort.set_annotation("split_by_property", value=property)
+            if outputs == "list":
+                sortings.append(subsort)
+            elif outputs == "dict":
+                sortings[value] = subsort
+        return sortings
+
     def time_to_sample_index(self, time, segment_index=0):
         """
         Transform time in seconds into sample index
