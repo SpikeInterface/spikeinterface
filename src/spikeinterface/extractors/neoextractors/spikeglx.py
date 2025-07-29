@@ -99,23 +99,8 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             else:
                 self.set_probe(probe, in_place=True)
 
-            # load num_channels_per_adc depending on probe type
-            model_name = probe.annotations.get("model_name", None)
-            if model_name is None:
-                model_name = probe.annotations["probe_name"]
-
-            if "2.0" in model_name:  # Neuropixels 2.0
-                num_channels_per_adc = 16
-                num_cycles_in_adc = 16
-                total_channels = 384
-            else:  # NP1.0
-                num_channels_per_adc = 12
-                num_cycles_in_adc = 13 if "ap" in self.stream_id else 12
-                total_channels = 384
-
-            # sample_shifts is generated from total channels (384) channels
-            # when only some channels are saved we need to slice this vector (like we do for the probe)
-            sample_shifts = get_neuropixels_sample_shifts(total_channels, num_channels_per_adc, num_cycles_in_adc)
+            # get inter-sample shifts based on the probe information and mux channels
+            sample_shifts = get_neuropixels_sample_shifts_from_probe(probe, stream_name=self.stream_name)
             if self.get_num_channels() != total_channels:
                 # need slice because not all channel are saved
                 chans = probeinterface.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
