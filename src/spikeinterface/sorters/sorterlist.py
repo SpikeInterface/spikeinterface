@@ -52,6 +52,16 @@ sorter_full_list = [
     SimpleSorter,
 ]
 
+
+try:
+    # if the spikeinterface_kilosort_components source are installed on the machine
+    # then an extra sorter is added, this is expermimental at the moment.
+    from spikeinterface_kilosort_components.kilosort_like_sorter import Kilosort4LikeSorter
+
+    sorter_full_list.append(Kilosort4LikeSorter)
+except ImportError:
+    pass
+
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}
 
 

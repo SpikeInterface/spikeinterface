@@ -64,6 +64,9 @@ def test_run_sorter_jobs_joblib(job_list):
     print(sortings)
 
 
+@pytest.mark.skipif(
+    True, reason="tridesclous is already multiprocessing, processpoolexecutor cannot run it in parralel"
+)
 def test_run_sorter_jobs_processpoolexecutor(job_list, create_cache_folder):
     cache_folder = create_cache_folder
     if (cache_folder / "sorting_output").is_dir():

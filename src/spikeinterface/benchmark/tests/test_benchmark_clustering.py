@@ -38,7 +38,7 @@ def test_benchmark_clustering(create_cache_folder):
         peaks[dataset] = spikes
 
     cases = {}
-    for method in ["random_projections", "circus", "tdc_clustering"]:
+    for method in ["random_projections", "circus", "tdc-clustering"]:
         cases[method] = {
             "label": f"{method} on toy",
             "dataset": "toy",
