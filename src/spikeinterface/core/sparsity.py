@@ -790,7 +790,7 @@ def estimate_sparsity(
             sorting.unit_ids,
             nbefore,
             nafter,
-            return_scaled=False,
+            return_in_uV=False,
             job_name="estimate_sparsity",
             **job_kwargs,
         )

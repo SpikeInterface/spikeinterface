@@ -136,7 +136,7 @@ class PositionAndFeaturesClustering:
                 nbefore,
                 nafter,
                 mode="shared_memory",
-                return_scaled=False,
+                return_in_uV=False,
                 folder=None,
                 dtype=recording.get_dtype(),
                 sparsity_mask=None,
@@ -171,7 +171,7 @@ class PositionAndFeaturesClustering:
                 sorting.unit_ids,
                 nbefore,
                 nafter,
-                return_scaled=False,
+                return_in_uV=False,
                 **job_kwargs,
             )
             templates = Templates(

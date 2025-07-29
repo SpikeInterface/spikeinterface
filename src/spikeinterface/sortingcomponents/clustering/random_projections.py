@@ -140,7 +140,7 @@ class RandomProjectionClustering:
             unit_ids,
             nbefore,
             nafter,
-            return_scaled=False,
+            return_in_uV=False,
             job_name=None,
             **job_kwargs,
         )

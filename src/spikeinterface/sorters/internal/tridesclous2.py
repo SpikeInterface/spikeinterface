@@ -247,7 +247,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             sorting_pre_peeler.unit_ids,
             nbefore,
             nafter,
-            return_scaled=False,
+            return_in_uV=False,
             **job_kwargs,
         )
         templates_dense = Templates(
