@@ -34,7 +34,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
-        "clustering": {"method": "circus-clustering", "method_kwargs": dict(remove_small_snr=True)},
+        "clustering": {"method": "circus", "method_kwargs": dict()},
         "matching": {"method": "circus-omp-svd", "method_kwargs": dict(), "gather_mode": "memory"},
         "apply_preprocessing": True,
         "templates_from_svd": True,
@@ -386,8 +386,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_params["templates"] = templates
 
             if matching_method is not None:
+                gather_kwargs = {}
                 if gather_mode == "npy":
-                    gather_kwargs["folder"] = gather_kwargs.get("folder", sorter_output_folder / "matching")
+                    gather_kwargs["folder"] = sorter_output_folder / "matching"
                 spikes = find_spikes_from_templates(
                     recording_w,
                     matching_method,

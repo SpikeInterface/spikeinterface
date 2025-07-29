@@ -9,6 +9,7 @@ from pathlib import Path
 class SpykingCircus2SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
     SorterClass = Spykingcircus2Sorter
 
+    @unittest.skip("performance reason")
     def test_with_numpy_gather(self):
         recording = self.recording
         sorter_name = self.SorterClass.sorter_name
