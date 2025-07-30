@@ -25,9 +25,17 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "a
         Array of relative phase shifts for each channel.
     """
     # get inter-sample shifts based on the probe information and mux channels
-    model_description = probe.annotations.get("model_description", None)
+    model_description = probe.annotations.get("description", None)
     num_channels_per_adc = probe.annotations.get("num_channels_per_adc", None)
-    mux_channels = probe.contact_annotations["mux_channels"]
+    mux_channels = probe.contact_annotations.get("mux_channels", None)
+
+    if model_description is None or num_channels_per_adc is None or mux_channels is None:
+        warning_message = (
+            "Unable to find inter-sample shifts in the Neuropixels probe metadata. "
+            "The sample shifts will not be loaded. "
+        )
+        warnings.warn(warning_message, UserWarning, stacklevel=2)
+        return None
 
     if "2.0" in model_description:
         # for Neuropixels 2.0 (and newer), the number of cycles in ADC is equal to the number of channels per ADC
@@ -39,7 +47,7 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "a
 
     sample_shifts = np.zeros_like(mux_channels, dtype=float)
     for mux_channel in mux_channels:
-        sample_shifts[mux_channels == mux_channel] = np.arange(num_channels_per_adc) / num_cycles
+        sample_shifts[mux_channels == mux_channel] = np.arange(num_channels_per_adc) / num_cycles_in_adc
 
     return sample_shifts
 

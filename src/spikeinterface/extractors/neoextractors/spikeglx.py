@@ -5,13 +5,9 @@ import warnings
 
 import probeinterface
 
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
-
-
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
-
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
+from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts_from_probe
+from spikeinterface.extractors.neoextractors.neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
 
 
 class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
@@ -101,14 +97,16 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
             # get inter-sample shifts based on the probe information and mux channels
             sample_shifts = get_neuropixels_sample_shifts_from_probe(probe, stream_name=self.stream_name)
-            if self.get_num_channels() != total_channels:
-                # need slice because not all channel are saved
-                chans = probeinterface.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
-                # lets clip to 384 because this contains also the synchro channel
-                chans = chans[chans < total_channels]
-                sample_shifts = sample_shifts[chans]
+            total_channels = probe.annotations.get("num_readout_channels", 384)
+            if sample_shifts is not None:
+                if self.get_num_channels() != total_channels:
+                    # need slice because not all channel are saved
+                    chans = probeinterface.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
+                    # lets clip to 384 because this contains also the synchro channel
+                    chans = chans[chans < total_channels]
+                    sample_shifts = sample_shifts[chans]
 
-            self.set_property("inter_sample_shift", sample_shifts)
+                self.set_property("inter_sample_shift", sample_shifts)
         else:
             warning_message = (
                 "Unable to find a corresponding metadata file for the recording. "

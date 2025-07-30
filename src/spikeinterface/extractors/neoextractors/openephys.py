@@ -18,9 +18,8 @@ import warnings
 
 import probeinterface
 
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor, NeoBaseEventExtractor
-
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
+from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts_from_probe
+from spikeinterface.extractors.neoextractors.neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
 
 
 def drop_invalid_neo_arguments_for_version_0_12_0(neo_kwargs):
@@ -231,16 +230,17 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                         self.set_probe(probe, in_place=True)
                     # get inter-sample shifts based on the probe information and mux channels
                     sample_shifts = get_neuropixels_sample_shifts_from_probe(probe, stream_name=self.stream_name)
-
-                    if self.get_num_channels() != total_channels:
-                        # need slice because not all channel are saved
-                        chans = probeinterface.get_saved_channel_indices_from_openephys_settings(
-                            settings_file, oe_stream
-                        )
-                        # lets clip to 384 because this contains also the synchro channel
-                        chans = chans[chans < total_channels]
-                        sample_shifts = sample_shifts[chans]
-                    self.set_property("inter_sample_shift", sample_shifts)
+                    total_channels = probe.annotations.get("num_readout_channels", 384)
+                    if sample_shifts is not None:
+                        if self.get_num_channels() != total_channels:
+                            # need slice because not all channel are saved
+                            chans = probeinterface.get_saved_channel_indices_from_openephys_settings(
+                                settings_file, oe_stream
+                            )
+                            # lets clip to 384 because this contains also the synchro channel
+                            chans = chans[chans < total_channels]
+                            sample_shifts = sample_shifts[chans]
+                        self.set_property("inter_sample_shift", sample_shifts)
 
             # load synchronized timestamps and set_times to recording
             recording_folder = Path(folder_path) / record_node
@@ -317,7 +317,7 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
 
 def read_openephys(folder_path, **kwargs):
     """
-    Read "legacy" or "binary" Open Ephys formats
+    Read Open Ephys folder (in "binary" or "open ephys" legacy" format).
 
     Parameters
     ----------
