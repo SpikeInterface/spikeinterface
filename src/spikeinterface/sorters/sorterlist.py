@@ -37,7 +37,6 @@ sorter_full_list = [
     Kilosort3Sorter,
     Kilosort4Sorter,
     PyKilosortSorter,
-    KlustaSorter,
     Mountainsort4Sorter,
     Mountainsort5Sorter,
     RTSortSorter,
@@ -52,6 +51,8 @@ sorter_full_list = [
     SimpleSorter,
 ]
 
+# archived
+archived_sorter_list = [KlustaSorter, YassSorter]
 
 try:
     # if the spikeinterface_kilosort_components source are installed on the machine
@@ -69,6 +70,12 @@ def available_sorters():
     """Lists available sorters."""
 
     return sorted(list(sorter_dict.keys()))
+
+
+def archived_sorters():
+    """Lists archived sorters."""
+
+    return sorted([s.sorter_name for s in archived_sorter_list])
 
 
 def installed_sorters():
