@@ -15,6 +15,9 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "a
     ----------
     probe : Probe
         The probe object containing channel and ADC information.
+    stream_name : str, default: "ap"
+        The name of the stream for which to calculate the sample shifts.
+        This is used for Neuropixels 1.0 technology to correctly set the number of cycles.
 
     Returns
     -------
@@ -33,8 +36,8 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "a
         # for Neuropixels 1.0 technology, the number of cycles for the AP stream is +1 because
         # the last cycle is used for the LFP stream
         num_cycles_in_adc = num_channels_per_adc + 1 if "ap" in stream_name.lower() else num_channels_per_adc
-    sample_shifts = np.zeros_like(adc_indices)
 
+    sample_shifts = np.zeros_like(mux_channels, dtype=float)
     for mux_channel in mux_channels:
         sample_shifts[mux_channels == mux_channel] = np.arange(num_channels_per_adc) / num_cycles
 
@@ -82,7 +85,7 @@ def get_neuropixels_sample_shifts(
         representing the fractional delay within the sampling period due to sequential ADC sampling.
     """
     warnings.warn(
-        "`get_neuropixels_sample_shifts` is deprecated and will be removed on 0.105.0. "
+        "`get_neuropixels_sample_shifts` is deprecated and will be removed in 0.105.0. "
         "Use `get_neuropixels_sample_shifts_from_probe` instead.",
         DeprecationWarning,
         stacklevel=2,
@@ -103,6 +106,7 @@ def get_neuropixels_sample_shifts(
 
 def get_neuropixels_channel_groups(num_channels=384, num_channels_per_adc=12):
     """
+    DEPRECATED
     Returns groups of simultaneously sampled channels on a Neuropixels probe.
 
     The Neuropixels ADC sampling pattern is as follows:
@@ -137,7 +141,12 @@ def get_neuropixels_channel_groups(num_channels=384, num_channels_per_adc=12):
     groups : list
         A list of lists of simultaneously sampled channel indices
     """
-
+    warnings.warn(
+        "`get_neuropixels_channel_groups` is deprecated and will be removed in 0.105.0. "
+        "Use the `mux_channels` contact annotation from the `Probe` instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     groups = []
 
     for i in range(num_channels_per_adc):
