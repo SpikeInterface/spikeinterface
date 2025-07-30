@@ -75,13 +75,11 @@ class HybridUnitsRecording(InjectTemplatesRecording):
         seed=None,
     ):
 
-
         warnings.warn(
             "create_hybrid_units_recording() will be removed in 0.104.0 please use spiekinterface.generation.hybrid_tools instead",
             DeprecationWarning,
             stacklevel=2,
         )
-
 
         num_samples = [
             parent_recording.get_num_frames(seg_index) for seg_index in range(parent_recording.get_num_segments())
