@@ -28,8 +28,14 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "a
     model_description = probe.annotations.get("description", None)
     num_channels_per_adc = probe.annotations.get("num_channels_per_adc", None)
     mux_channels = probe.contact_annotations.get("mux_channels", None)
+    num_readouts_channels = probe.annotations.get("num_readout_channels", None)
 
-    if model_description is None or num_channels_per_adc is None or mux_channels is None:
+    if (
+        model_description is None
+        or num_channels_per_adc is None
+        or mux_channels is None
+        or num_readouts_channels is None
+    ):
         warning_message = (
             "Unable to find inter-sample shifts in the Neuropixels probe metadata. "
             "The sample shifts will not be loaded. "
@@ -93,7 +99,7 @@ def get_neuropixels_sample_shifts(
         representing the fractional delay within the sampling period due to sequential ADC sampling.
     """
     warnings.warn(
-        "`get_neuropixels_sample_shifts` is deprecated and will be removed in 0.105.0. "
+        "`get_neuropixels_sample_shifts` is deprecated and will be removed in 0.104.0. "
         "Use `get_neuropixels_sample_shifts_from_probe` instead.",
         DeprecationWarning,
         stacklevel=2,
@@ -150,7 +156,7 @@ def get_neuropixels_channel_groups(num_channels=384, num_channels_per_adc=12):
         A list of lists of simultaneously sampled channel indices
     """
     warnings.warn(
-        "`get_neuropixels_channel_groups` is deprecated and will be removed in 0.105.0. "
+        "`get_neuropixels_channel_groups` is deprecated and will be removed in 0.104.0. "
         "Use the `mux_channels` contact annotation from the `Probe` instead.",
         DeprecationWarning,
         stacklevel=2,
