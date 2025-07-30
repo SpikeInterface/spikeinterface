@@ -322,7 +322,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     ),
                 }
 
-            outputs = find_cluster_from_peaks(
+            matching_method = params["matching"].pop("method")
+            if matching_method is None:
+                templates_from_svd = True
+
+            clustering_outputs = find_cluster_from_peaks(
                 recording_w,
                 selected_peaks,
                 method=clustering_method,
@@ -331,8 +335,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 **job_kwargs,
             )
 
-            if len(outputs) == 2:
-                _, peak_labels = outputs
+            if len(clustering_outputs) == 2:
+                _, peak_labels = clustering_outputs
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_recording
 
                 templates = get_templates_from_peaks_and_recording(
@@ -346,8 +350,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             else:
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
-                # _, peak_labels, svd_model, svd_features, sparsity_mask = outputs
-                _, peak_labels, more_outs = outputs
+                _, peak_labels, more_outs = clustering_outputs
 
                 templates, _ = get_templates_from_peaks_and_svd(
                     recording_w,
@@ -360,9 +363,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     more_outs["peak_svd_sparse_mask"],
                     operator="median",
                 )
-                # this release the peak_svd memmap file
-                del more_outs
-                del outputs
 
             templates = clean_templates(
                 templates,
@@ -379,7 +379,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 templates.to_zarr(folder_path=clustering_folder / "templates")
 
             ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
-            matching_method = params["matching"].pop("method")
             gather_mode = params["matching"].pop("gather_mode", "memory")
             gather_kwargs = params["matching"].pop("gather_kwargs", {})
             matching_params = params["matching"].get("method_kwargs", {}).copy()
@@ -421,8 +420,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     recording_w,
                     peaks,
                     templates=templates,
-                    svd_model=svd_model,
-                    sparse_mask=sparsity_mask,
+                    svd_model=more_outs["svd_model"],
+                    sparse_mask=more_outs["peak_svd_sparse_mask"],
                     **job_kwargs,
                 )
 
@@ -434,6 +433,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 sorting["unit_index"] = peak_labels
                 sorting["segment_index"] = peaks["segment_index"]
                 sorting = NumpySorting(sorting, sampling_frequency, templates.unit_ids)
+
+            # this release the peak_svd memmap file
+            del clustering_outputs
 
             merging_params = params["merging"].copy()
             merging_params["debug_folder"] = sorter_output_folder / "merging"
