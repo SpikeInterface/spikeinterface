@@ -4,8 +4,8 @@
     %load_ext autoreload
     %autoreload 2
 
-Handle motion/drift with spikeinterface
-=======================================
+Handle motion/drift in your recording
+=====================================
 
 Spikeinterface offers a very flexible framework to handle drift as a
 preprocessing step. If you want to know more, please read the
