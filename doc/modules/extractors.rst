@@ -83,7 +83,7 @@ The actual reading will be done on demand using the :py:meth:`~spikeinterface.co
     recording_spikeglx = read_spikeglx(folder_path="spikeglx-folder")
 
     # this really does load the full 40GB into memory : not recommended!!!!!
-    traces = recording_spikeglx.get_traces(start_frame=None, end_frame=None, return_scaled=False)
+    traces = recording_spikeglx.get_traces(start_frame=None, end_frame=None, return_in_uV=False)
 
 
 
