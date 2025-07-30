@@ -263,7 +263,6 @@ def install_package_in_container(
         if extra is not None:
             cmd += f"{extra}"
         res_output = container_client.run_command(cmd)
-
     else:
         raise ValueError(f"install_package_incontainer, wrong installation_mode={installation_mode}")
 

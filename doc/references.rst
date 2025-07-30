@@ -43,7 +43,7 @@ please include the appropriate citation for the :code:`sorter_name` parameter yo
 - :code:`herdingspikes` [Muthmann]_ [Hilgen]_
 - :code:`kilosort`  [Pachitariu]_
 - :code:`mountainsort` [Chung]_
-- :code:`rt-sort` [van_der_Molen]_
+- :code:`rtsort` [van_der_Molen]_
 - :code:`spykingcircus` [Yger]_
 - :code:`wavclus` [Chaure]_
 - :code:`yass` [Lee]_

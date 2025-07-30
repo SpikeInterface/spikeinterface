@@ -18,8 +18,8 @@ from spikeinterface import __version__ as si_version
 
 from spikeinterface.core import BaseRecording, NumpySorting, load
 from spikeinterface.core.core_tools import check_json, is_editable_mode
-from .sorterlist import sorter_dict
-from .utils import (
+from spikeinterface.sorters.sorterlist import sorter_dict, archived_sorters
+from spikeinterface.sorters.utils import (
     SpikeSortingError,
     has_nvidia,
     has_docker,
@@ -28,7 +28,7 @@ from .utils import (
     has_spython,
     has_docker_nvidia_installed,
 )
-from .container_tools import (
+from spikeinterface.sorters.container_tools import (
     find_recording_folders,
     path_to_unix,
     windows_extractor_dict_to_unix,
@@ -43,14 +43,14 @@ SORTER_DOCKER_MAP = dict(
     combinato="combinato",
     herdingspikes="herdingspikes",
     kilosort4="kilosort4",
-    klusta="klusta",
     mountainsort4="mountainsort4",
     mountainsort5="mountainsort5",
     pykilosort="pykilosort",
+    rtsort="rtsort",
     spykingcircus="spyking-circus",
     spykingcircus2="spyking-circus2",
     tridesclous="tridesclous",
-    yass="yass",
+    tridesclous2="tridesclous2",
     # Matlab compiled sorters:
     hdsort="hdsort-compiled",
     ironclust="ironclust-compiled",
@@ -60,6 +60,9 @@ SORTER_DOCKER_MAP = dict(
     kilosort3="kilosort3-compiled",
     waveclus="waveclus-compiled",
     waveclus_snippets="waveclus-compiled",
+    # archived
+    # klusta="klusta",
+    # yass="yass",
 )
 
 SORTER_DOCKER_MAP = {k: f"{REGISTRY}/{v}-base" for k, v in SORTER_DOCKER_MAP.items()}
@@ -127,6 +130,11 @@ def run_sorter(
     --------
     >>> sorting = run_sorter("tridesclous", recording)
     """
+    if sorter_name in archived_sorters():
+        raise ValueError(
+            f"The sorter {sorter_name} is archived and no longer supported. "
+            "Please use a different sorter or an older version of SpikeInterface."
+        )
 
     common_kwargs = dict(
         sorter_name=sorter_name,
@@ -547,7 +555,7 @@ if __name__ == '__main__':
             res_output += str(container_client.run_command(cmd))
         need_si_install = "ModuleNotFoundError" in res_output
 
-    if need_si_install:
+    if need_si_install or installation_mode == "dev":
         # update pip in container
         cmd = f"pip install --user --upgrade pip"
         res_output = container_client.run_command(cmd)
