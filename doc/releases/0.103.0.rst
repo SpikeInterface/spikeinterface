@@ -12,17 +12,18 @@ Main changes:
 * Added ``PreprocessingPipeline`` class to handle, represent, and reproduce preprocessing steps (#3438, #4000, #3685)
 * Added ``3D-ACG`` postprocessing extension (#3860) and ``noise_cutoff`` quality metric (#4072)
 * Added ``RTSort`` as an external sorter (#3597)
-* Upgraded ``SpykingCircus2`` and ``Tridesclous2`` to v2025.07 (#3923)
+* Upgraded ``SpykingCircus2`` and ``Tridesclous2`` to ``v2025.07`` (#3923)
 * API and breaking changes:
 
-    * ``return_scaled`` --> ``return_in_uV`` in ``BaseRecording.get_traces()``
-    * ``is_scaled`` --> ``is_in_uV`` in ``Templates`` class
+    * ``return_scaled`` --> ``return_in_uV`` in ``BaseRecording.get_traces()`` (#4090)
+    * ``is_scaled`` --> ``is_in_uV`` in ``Templates`` class (#4036)
     * Unsigned integers not automatically cast to signed integers anymore in preprocessing (#3982) (see :ref:`unsigned_to_signed`)
 
 
 
 core:
 
+* More `return_scaled` > `return_in_uV` (#4090)
 * Fix set_properties_after_merging when property is boolean. (#4084)
 * Cast samples to int64 after round (#4061)
 * Check for remote paths in check_paths_relative (#4060)
@@ -40,6 +41,7 @@ core:
 
 extractors:
 
+* Updates for probeinterface v0.3.0 for inter-sample-shift computation (#4092)
 * Add append mode to `IntanSplitFile` building on #4070 (#4075)
 * Fix one box reading in spikeglx (#4069)
 * Add `Axon` recording (#4021)
@@ -147,6 +149,7 @@ continuous integration:
 
 packaging:
 
+* Requires `probeinterface>=0.3.0` (#4092)
 * Add `read_neuroscope` to `__all__` for extractors (#4064)
 * Release python version once testing with 3.13.5+ (#3991)
 * Cleanup unused import across codebase (#3972)
