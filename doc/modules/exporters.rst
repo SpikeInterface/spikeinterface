@@ -45,7 +45,7 @@ save method.
 
 If you have a multi-segment sorting, you need to pass the ``segment_index`` argument to the
 ``to_pynapple_tsgroup`` function. This way, you can generate one ``TsGroup`` per segment.
- You can later concatenate these ``TsGroup`` s using Pynapple's ``concatenate`` functionality.
+You can later concatenate these ``TsGroup`` s using Pynapple's ``concatenate`` functionality.
 
 Exporting to Phy
 ----------------

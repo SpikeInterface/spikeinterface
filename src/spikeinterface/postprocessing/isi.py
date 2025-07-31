@@ -26,7 +26,7 @@ class ComputeISIHistograms(AnalyzerExtension):
     bin_ms : float, default: 1
         The bin size in ms
     method : "auto" | "numpy" | "numba", default: "auto"
-        . If "auto" and numba is installed, numba is used, otherwise numpy is used
+        If "auto" and numba is installed, numba is used, otherwise numpy is used
 
     Returns
     -------

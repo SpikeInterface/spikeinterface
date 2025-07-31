@@ -27,23 +27,23 @@ class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
     gain_to_uV : float | None, default: 0.190734863
         Micro-volt conversion factor (ADC count → µV).
 
-        Where to look
-        -------------
-        • **Head-stage files** (64 neural chan.):
-            *settingsHeadstages.xml* →
-            `<CHANNEL … voltsperbit="1.907348633e-7" />`
-            → 0.190 734 863 µV per count.
+    Notes
+    -----
+    • **Head-stage files** (64 neural chan.):
+        *settingsHeadstages.xml* →
+        `<CHANNEL … voltsperbit="1.907348633e-7" />`
+        → 0.190 734 863 µV per count.
 
-        • **Analog-panel files** (32 aux chan., ±10 V range in our example):
-            *settingsAnalogPanel.xml* →
-            `<CHANNEL … voltsperbit="3.0517578125e-4" />`
-            → 305.175 781 µV per count.
+    • **Analog-panel files** (32 aux chan., ±10 V range in our example):
+        *settingsAnalogPanel.xml* →
+        `<CHANNEL … voltsperbit="3.0517578125e-4" />`
+        → 305.175 781 µV per count.
 
-        Use the value from the corresponding XML file when loading data.
-        If *gain_to_uV* is left as *None* the extractor assumes the
-        head-stage constant (0.190734863 µV/bit).  Different hardware
-        ranges will have different *voltsperbit* numbers, so always double-check
-        for your specific setup.
+    Use the value from the corresponding XML file when loading data.
+    If *gain_to_uV* is left as *None* the extractor assumes the
+    head-stage constant (0.190734863 µV/bit).  Different hardware
+    ranges will have different *voltsperbit* numbers, so always double-check
+    for your specific setup.
     """
 
     # Specific parameters for WhiteMatter format
