@@ -169,6 +169,9 @@ spikeinterface.preprocessing
 
 .. automodule:: spikeinterface.preprocessing
 
+    .. autofunction:: apply_preprocessing_pipeline
+    .. autofunction:: get_preprocessing_dict_from_analyzer
+    .. autofunction:: get_preprocessing_dict_from_file
     .. autofunction:: astype
     .. autofunction:: average_across_direction
     .. autofunction:: bandpass_filter
