@@ -35,7 +35,7 @@ def recording():
 
 
 def run_peaks(recording, job_kwargs):
-    noise_levels = get_noise_levels(recording, return_scaled=False)
+    noise_levels = get_noise_levels(recording, return_in_uV=False)
     return detect_peaks(
         recording,
         method="locally_exclusive",

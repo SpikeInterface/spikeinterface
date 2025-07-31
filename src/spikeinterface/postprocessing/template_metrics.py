@@ -247,7 +247,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             )
             template_metrics = pd.DataFrame(index=multi_index, columns=metric_names)
 
-        all_templates = get_dense_templates_array(sorting_analyzer, return_scaled=True)
+        all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
 
         channel_locations = sorting_analyzer.get_channel_locations()
 
@@ -561,7 +561,7 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     recover. The repolarization slope is defined as the dV/dT of the action potential
     between trough and baseline. The returned slope is in units of (unit of template)
     per second. By default traces are scaled to units of uV, controlled
-    by `sorting_analyzer.return_scaled`. In this case this function returns the slope
+    by `sorting_analyzer.return_in_uV`. In this case this function returns the slope
     in uV/s.
 
     Parameters
@@ -608,7 +608,7 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
     slope of the action potential after the peak, returning to the baseline
     in dV/dT. The returned slope is in units of (unit of template)
     per second. By default traces are scaled to units of uV, controlled
-    by `sorting_analyzer.return_scaled`. In this case this function returns the slope
+    by `sorting_analyzer.return_in_uV`. In this case this function returns the slope
     in uV/s. The slope is computed within a user-defined window after the peak.
 
     Parameters

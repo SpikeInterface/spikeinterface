@@ -183,7 +183,7 @@ class CircusClustering:
         )
 
         if params["noise_levels"] is None:
-            params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
+            params["noise_levels"] = get_noise_levels(recording, return_in_uV=False, **job_kwargs)
 
         if not params["templates_from_svd"]:
             from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_recording

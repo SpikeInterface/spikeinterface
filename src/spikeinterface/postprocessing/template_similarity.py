@@ -82,7 +82,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     ):
         num_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
         all_templates_array = get_dense_templates_array(
-            new_sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
+            new_sorting_analyzer, return_in_uV=self.sorting_analyzer.return_in_uV
         )
 
         keep = np.isin(new_sorting_analyzer.unit_ids, new_unit_ids)
@@ -133,7 +133,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         num_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
         all_templates_array = get_dense_templates_array(
-            new_sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
+            new_sorting_analyzer, return_in_uV=self.sorting_analyzer.return_in_uV
         )
 
         new_unit_ids_f = list(chain(*new_unit_ids))
@@ -185,7 +185,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     def _run(self, verbose=False):
         num_shifts = int(self.params["max_lag_ms"] * self.sorting_analyzer.sampling_frequency / 1000)
         templates_array = get_dense_templates_array(
-            self.sorting_analyzer, return_scaled=self.sorting_analyzer.return_scaled
+            self.sorting_analyzer, return_in_uV=self.sorting_analyzer.return_in_uV
         )
         sparsity = self.sorting_analyzer.sparsity
         similarity = compute_similarity_with_templates_array(
@@ -411,8 +411,8 @@ def compute_similarity_with_templates_array(
 def compute_template_similarity_by_pair(
     sorting_analyzer_1, sorting_analyzer_2, method="cosine", support="union", num_shifts=0
 ):
-    templates_array_1 = get_dense_templates_array(sorting_analyzer_1, return_scaled=True)
-    templates_array_2 = get_dense_templates_array(sorting_analyzer_2, return_scaled=True)
+    templates_array_1 = get_dense_templates_array(sorting_analyzer_1, return_in_uV=True)
+    templates_array_2 = get_dense_templates_array(sorting_analyzer_2, return_in_uV=True)
     sparsity_1 = sorting_analyzer_1.sparsity
     sparsity_2 = sorting_analyzer_2.sparsity
     similarity = compute_similarity_with_templates_array(
