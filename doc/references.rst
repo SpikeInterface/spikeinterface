@@ -43,7 +43,7 @@ please include the appropriate citation for the :code:`sorter_name` parameter yo
 - :code:`herdingspikes` [Muthmann]_ [Hilgen]_
 - :code:`kilosort`  [Pachitariu]_
 - :code:`mountainsort` [Chung]_
-- :code:`rt-sort` [van_der_Molen]_
+- :code:`rtsort` [van_der_Molen]_
 - :code:`spykingcircus` [Yger]_
 - :code:`wavclus` [Chaure]_
 - :code:`yass` [Lee]_
@@ -122,6 +122,8 @@ References
 .. [Hruschka] `Evolutionary algorithms for clustering gene-expression data. 2004. <https://www.researchgate.net/publication/220765683_Evolutionary_Algorithms_for_Clustering_Gene-Expression_Data>`_
 
 .. [IBL] `Spike sorting pipeline for the International Brain Laboratory. 2022. <https://figshare.com/articles/online_resource/Spike_sorting_pipeline_for_the_International_Brain_Laboratory/19705522/3>`_
+
+.. [IBL2024] `Spike sorting pipeline for the International Brain Laboratory - Version 2. 2024. <https://figshare.com/articles/online_resource/Spike_sorting_pipeline_for_the_International_Brain_Laboratory/19705522?file=49783080>`_
 
 .. [Jackson] `Quantitative assessment of extracellular multichannel recording quality using measures of cluster separation. Society of Neuroscience Abstract. 2005. <https://www.sciencedirect.com/science/article/abs/pii/S0306452204008425>`_
 

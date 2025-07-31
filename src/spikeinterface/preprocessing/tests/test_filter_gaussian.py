@@ -23,7 +23,7 @@ def test_filter_gaussian(tmp_path):
 
     # Check dumpability
     saved_loaded = load(rec_filtered.to_dict())
-    check_recordings_equal(rec_filtered, saved_loaded, return_scaled=False)
+    check_recordings_equal(rec_filtered, saved_loaded, return_in_uV=False)
 
     saved_1job = rec_filtered.save(folder=tmp_path / "1job")
     saved_2job = rec_filtered.save(folder=tmp_path / "2job", n_jobs=2, chunk_duration="1s")

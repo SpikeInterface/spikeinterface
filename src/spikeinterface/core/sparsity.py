@@ -436,15 +436,15 @@ class ChannelSparsity:
             ext = templates_or_sorting_analyzer.get_extension("noise_levels")
             assert ext is not None, "To compute sparsity from snr you need to compute 'noise_levels' first"
             noise_levels = ext.data["noise_levels"]
-            return_scaled = templates_or_sorting_analyzer.return_scaled
+            return_in_uV = templates_or_sorting_analyzer.return_in_uV
         elif isinstance(templates_or_sorting_analyzer, Templates):
             assert noise_levels is not None, "To compute sparsity from snr you need to provide noise_levels"
-            return_scaled = templates_or_sorting_analyzer.is_scaled
+            return_in_uV = templates_or_sorting_analyzer.is_in_uV
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
         peak_values = get_template_amplitudes(
-            templates_or_sorting_analyzer, peak_sign=peak_sign, mode=amplitude_mode, return_scaled=return_scaled
+            templates_or_sorting_analyzer, peak_sign=peak_sign, mode=amplitude_mode, return_in_uV=return_in_uV
         )
 
         for unit_ind, unit_id in enumerate(unit_ids):
@@ -486,20 +486,20 @@ class ChannelSparsity:
         channel_ids = templates_or_sorting_analyzer.channel_ids
 
         if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-            assert templates_or_sorting_analyzer.return_scaled, (
+            assert templates_or_sorting_analyzer.return_in_uV, (
                 "To compute sparsity from amplitude you need to have scaled templates. "
-                "You can set `return_scaled=True` when computing the templates."
+                "You can set `return_in_uV=True` when computing the templates."
             )
         elif isinstance(templates_or_sorting_analyzer, Templates):
-            assert templates_or_sorting_analyzer.is_scaled, (
+            assert templates_or_sorting_analyzer.is_in_uV, (
                 "To compute sparsity from amplitude you need to have scaled templates. "
-                "You can set `is_scaled=True` when creating the Templates object."
+                "You can set `is_in_uV=True` when creating the Templates object."
             )
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
         peak_values = get_template_amplitudes(
-            templates_or_sorting_analyzer, peak_sign=peak_sign, mode=amplitude_mode, return_scaled=True
+            templates_or_sorting_analyzer, peak_sign=peak_sign, mode=amplitude_mode, return_in_uV=True
         )
 
         for unit_ind, unit_id in enumerate(unit_ids):
@@ -790,7 +790,7 @@ def estimate_sparsity(
             sorting.unit_ids,
             nbefore,
             nafter,
-            return_scaled=False,
+            return_in_uV=False,
             job_name="estimate_sparsity",
             **job_kwargs,
         )

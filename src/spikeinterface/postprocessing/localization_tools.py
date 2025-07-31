@@ -82,7 +82,7 @@ def compute_monopolar_triangulation(
         sparsity = sorting_analyzer_or_templates.sparsity
 
     templates = get_dense_templates_array(
-        sorting_analyzer_or_templates, return_scaled=get_return_scaled(sorting_analyzer_or_templates)
+        sorting_analyzer_or_templates, return_in_uV=get_return_in_uV(sorting_analyzer_or_templates)
     )
     nbefore = _get_nbefore(sorting_analyzer_or_templates)
 
@@ -168,7 +168,7 @@ def compute_center_of_mass(
         sparsity = sorting_analyzer_or_templates.sparsity
 
     templates = get_dense_templates_array(
-        sorting_analyzer_or_templates, return_scaled=get_return_scaled(sorting_analyzer_or_templates)
+        sorting_analyzer_or_templates, return_in_uV=get_return_in_uV(sorting_analyzer_or_templates)
     )
     nbefore = _get_nbefore(sorting_analyzer_or_templates)
 
@@ -250,7 +250,7 @@ def compute_grid_convolution(
     contact_locations = sorting_analyzer_or_templates.get_channel_locations()
 
     templates = get_dense_templates_array(
-        sorting_analyzer_or_templates, return_scaled=get_return_scaled(sorting_analyzer_or_templates)
+        sorting_analyzer_or_templates, return_in_uV=get_return_in_uV(sorting_analyzer_or_templates)
     )
     nbefore = _get_nbefore(sorting_analyzer_or_templates)
     nafter = templates.shape[1] - nbefore
@@ -323,12 +323,12 @@ def compute_grid_convolution(
     return unit_location
 
 
-def get_return_scaled(sorting_analyzer_or_templates):
+def get_return_in_uV(sorting_analyzer_or_templates):
     if isinstance(sorting_analyzer_or_templates, Templates):
-        return_scaled = sorting_analyzer_or_templates.is_scaled
+        return_in_uV = sorting_analyzer_or_templates.is_in_uV
     else:
-        return_scaled = sorting_analyzer_or_templates.return_scaled
-    return return_scaled
+        return_in_uV = sorting_analyzer_or_templates.return_in_uV
+    return return_in_uV
 
 
 def make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um, initial_z=20):

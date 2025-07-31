@@ -91,10 +91,10 @@ If your data in MATLAB is stored as :code:`int16`, and you know the gain and off
                               gain_to_uV=gain_to_uV, offset_to_uV=offset_to_uV)
 
    recording.get_traces()  # Return traces in original units [type: int]
-   recording.get_traces(return_scaled=True)  # Return traces in micro volts (uV) [type: float]
+   recording.get_traces(return_in_uV=True)  # Return traces in micro volts (uV) [type: float]
 
 
-This will equip your recording object with capabilities to convert the data to float values in uV using the :code:`get_traces()` method with the :code:`return_scaled` parameter set to :code:`True`.
+This will equip your recording object with capabilities to convert the data to float values in uV using the :code:`get_traces()` method with the :code:`return_in_uV` parameter set to :code:`True`.
 
 .. note::
 

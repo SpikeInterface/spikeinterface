@@ -586,7 +586,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
 
         # if remove_median:
 
-        #     chunks = get_random_data_chunks(recording, return_scaled=False, concatenated=True, **random_chunk_kwargs)
+        #     chunks = get_random_data_chunks(recording, return_in_uV=False, concatenated=True, **random_chunk_kwargs)
         #     medians = np.median(chunks, axis=0)
         #     medians = medians[None, :]
         #     print('medians', medians, noise_levels)
@@ -708,7 +708,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
         self.weights = self.weights.reshape(self.num_templates * self.num_z_factors, -1)
         self.weights = csr_matrix(self.weights)
-        random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
+        random_data = get_random_data_chunks(recording, return_in_uV=False, **random_chunk_kwargs)
         conv_random_data = self.get_convolved_traces(random_data)
         medians = np.median(conv_random_data, axis=1)
         self.medians = medians[:, None]

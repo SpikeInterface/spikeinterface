@@ -338,9 +338,11 @@ Running spike sorting by group is indeed a very common need.
 
 A :py:class:`~spikeinterface.core.BaseRecording` object has the ability to split itself into a dictionary of
 sub-recordings given a certain property (see :py:meth:`~spikeinterface.core.BaseRecording.split_by`).
-So it is easy to loop over this dictionary and sequentially run spike sorting on these sub-recordings.
-The :py:func:`~spikeinterface.sorters.run_sorter` method can also accept the dictionary which is returned
+The :py:func:`~spikeinterface.sorters.run_sorter` method can accept the dictionary which is returned
 by :py:meth:`~spikeinterface.core.BaseRecording.split_by` and will return a dictionary of sortings.
+In turn, these can be fed directly to :py:meth:`~spikeinterface.core.create_sorting_analyzer` to make
+a SortingAnalyzer. For more control, you can loop over the dictionary returned by :py:meth:`~spikeinterface.core.BaseRecording.split_by`
+and sequentially run spike sorting on these sub-recordings.
 
 In this example, we create a 16-channel recording with 4 tetrodes:
 
@@ -394,6 +396,10 @@ In this example, we create a 16-channel recording with 4 tetrodes:
     for group, sub_recording in recordings.items():
         sorting = run_sorter(sorter_name='kilosort2', recording=recording, folder=f"folder_KS2_group{group}")
         sortings[group] = sorting
+
+
+Note: you can feed the dict of sortings and dict of recordings directly to :code:`create_sorting_analyzer` to make
+a SortingAnalyzer from the split data: :ref:`read more <process_by_group>`.
 
 
 Handling multi-segment recordings
@@ -466,23 +472,28 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **Kilosort2.5** :code:`run_sorter(sorter_name='kilosort2_5')`
 * **Kilosort3** :code:`run_sorter(sorter_name='kilosort3')`
 * **PyKilosort** :code:`run_sorter(sorter_name='pykilosort')`
-* **Klusta** :code:`run_sorter(sorter_name='klusta')`
 * **Mountainsort4** :code:`run_sorter(sorter_name='mountainsort4')`
 * **Mountainsort5** :code:`run_sorter(sorter_name='mountainsort5')`
-* **RT-Sort** :code:`run_sorter(sorter_name='rt-sort')`
+* **RTSort** :code:`run_sorter(sorter_name='rtsort')`
 * **SpyKING Circus** :code:`run_sorter(sorter_name='spykingcircus')`
 * **Tridesclous** :code:`run_sorter(sorter_name='tridesclous')`
 * **Wave clus** :code:`run_sorter(sorter_name='waveclus')`
 * **Combinato** :code:`run_sorter(sorter_name='combinato')`
 * **HDSort** :code:`run_sorter(sorter_name='hdsort')`
-* **YASS** :code:`run_sorter(sorter_name='yass')`
 
-
-Here a list of internal sorter based on `spikeinterface.sortingcomponents`; they are totally
+Here is a list of internal sorter based on `spikeinterface.sortingcomponents`; they are totally
 experimental for now:
 
 * **Spyking Circus2** :code:`run_sorter(sorter_name='spykingcircus2')`
 * **Tridesclous2** :code:`run_sorter(sorter_name='tridesclous2')`
+
+
+Here is the list of legacy sorters that are no longer supported, but can still be run
+with an older version of SpikeInterface:
+
+* **Klusta** :code:`run_sorter(sorter_name='klusta')`
+* **YASS** :code:`run_sorter(sorter_name='yass')`
+
 
 In 2024, we expect to add many more sorters to this list.
 
