@@ -117,7 +117,9 @@ def aggregate_dataframe_by_levels(df, study, case_keys=None, levels_to_group_by=
     return df, new_case_keys, labels, colors
 
 
-def plot_run_times(study, case_keys=None, mode="bar", levels_to_group_by=None, figsize=None, ax=None):
+def plot_run_times(
+    study, case_keys=None, mode="bar", levels_to_group_by=None, xticks_rotation=45.0, figsize=None, ax=None
+):
     """
     Plot run times for a BenchmarkStudy.
 
@@ -205,8 +207,11 @@ def plot_run_times(study, case_keys=None, mode="bar", levels_to_group_by=None, f
                     e.set_color(color)
 
         ax.set_ylabel("Run times (s)")
-        ax.set_xticks(np.arange(len(labels)) + 1)
-        ax.set_xticklabels(list(labels.values()), rotation=45.0)
+        labels_list = [labels[k] for k in keys_mapping]
+        ax.set_xticks(np.arange(len(labels_list)) + 1)
+        ax.set_xticklabels(labels_list, rotation=xticks_rotation)
+
+        despine(ax)
 
     return fig
 
@@ -219,6 +224,7 @@ def plot_unit_counts(
     columns=None,
     with_rectangle=True,
     revert_bad=True,
+    xticks_rotation=45.0,
     figsize=None,
     ax=None,
 ):
@@ -326,10 +332,13 @@ def plot_unit_counts(
             )
             ax.add_patch(rect)
 
-    xticklabels = list(labels.values())
+    labels_list = [labels[k] for k in keys_mapping]
+    xticklabels = labels_list
     ax.set_xticks(np.arange(len(xticklabels)) + 1.5 - width)
-    ax.set_xticklabels(xticklabels, rotation=45.0)
+    ax.set_xticklabels(xticklabels, rotation=xticks_rotation)
     ax.legend()
+
+    despine(ax)
 
     return fig
 
