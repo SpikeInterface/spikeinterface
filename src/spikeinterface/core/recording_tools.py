@@ -434,7 +434,7 @@ def write_to_h5_dataset_format(
         # Handle deprecated return_scaled parameter
         if return_scaled is not None:
             warnings.warn(
-                "`return_scaled` is deprecated and will be removed in version 0.104.0. Use `return_in_uV` instead.",
+                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
                 category=DeprecationWarning,
             )
             return_in_uV = return_scaled
@@ -605,7 +605,7 @@ def get_random_data_chunks(
     # Handle deprecated return_scaled parameter
     if return_scaled is not None:
         warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.104.0. Use `return_in_uV` instead.",
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
             category=DeprecationWarning,
             stacklevel=2,
         )
@@ -752,7 +752,7 @@ def get_noise_levels(
     # Handle deprecated return_scaled parameter
     if return_scaled is not None:
         warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.104.0. Use `return_in_uV` instead.",
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
             category=DeprecationWarning,
         )
         return_in_uV = return_scaled

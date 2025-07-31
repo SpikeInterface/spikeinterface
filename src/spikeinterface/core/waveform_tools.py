@@ -93,7 +93,7 @@ def extract_waveforms_to_buffers(
     # Handle deprecated return_scaled parameter
     if return_scaled is not None:
         warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.104.0. Use `return_in_uV` instead.",
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
             category=DeprecationWarning,
             stacklevel=2,
         )
@@ -497,7 +497,7 @@ def extract_waveforms_to_single_buffer(
     # Handle deprecated return_scaled parameter
     if return_scaled is not None:
         warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.104.0. Use `return_in_uV` instead.",
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
             category=DeprecationWarning,
             stacklevel=2,
         )
@@ -780,7 +780,7 @@ def estimate_templates(
     # Handle deprecated return_scaled parameter
     if return_scaled is not None:
         warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.104.0. Use `return_in_uV` instead.",
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
             category=DeprecationWarning,
             stacklevel=2,
         )
@@ -871,7 +871,7 @@ def estimate_templates_with_accumulator(
     # Handle deprecated return_scaled parameter
     if return_scaled is not None:
         warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.104.0. Use `return_in_uV` instead.",
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
             category=DeprecationWarning,
             stacklevel=2,
         )
