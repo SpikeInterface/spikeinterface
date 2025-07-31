@@ -37,7 +37,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         - "noise": The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel
                    basis
-    **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
+    **noise_levels_kwargs : Keyword arguments for `spikeinterface.core.get_noise_levels()` function
 
     Returns
     -------
@@ -52,7 +52,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         mode="zeros",
         noise_levels=None,
         seed=None,
-        **random_chunk_kwargs,
+        **noise_levels_kwargs,
     ):
         available_modes = ("zeros", "noise")
         num_seg = recording.get_num_segments()
@@ -80,10 +80,10 @@ class SilencedPeriodsRecording(BasePreprocessor):
 
         if mode in ["noise"]:
             if noise_levels is None:
-                random_slices_kwargs, job_kwargs = split_job_kwargs(random_chunk_kwargs)
-                random_slices_kwargs["seed"] = seed
+                noise_levels_kwargs["return_in_uV"] = False
+                noise_levels_kwargs["seed"] = seed
                 noise_levels = get_noise_levels(
-                    recording, return_in_uV=False, random_slices_kwargs=random_slices_kwargs, **job_kwargs
+                    recording, **noise_levels_kwargs
                 )
             noise_generator = NoiseGeneratorRecording(
                 num_channels=recording.get_num_channels(),
@@ -109,7 +109,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         self._kwargs = dict(
             recording=recording, list_periods=list_periods, mode=mode, seed=seed, noise_levels=noise_levels
         )
-        self._kwargs.update(random_chunk_kwargs)
+        self._kwargs.update(noise_levels_kwargs)
 
 
 class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
