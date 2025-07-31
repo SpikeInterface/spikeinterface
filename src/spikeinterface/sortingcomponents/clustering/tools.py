@@ -256,7 +256,7 @@ def get_templates_from_peaks_and_recording(
         nbefore,
         nafter,
         operator=operator,
-        return_scaled=False,
+        return_in_uV=False,
         job_name=None,
         **job_kwargs,
     )

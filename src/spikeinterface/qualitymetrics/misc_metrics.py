@@ -1663,13 +1663,13 @@ def compute_sd_ratio(
         return {unit_id: np.nan for unit_id in unit_ids}
 
     noise_levels = get_noise_levels(
-        sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std", **job_kwargs
+        sorting_analyzer.recording, return_in_uV=sorting_analyzer.return_in_uV, method="std", **job_kwargs
     )
     best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
     n_spikes = sorting.count_num_spikes_per_unit()
 
     if correct_for_template_itself:
-        tamplates_array = get_dense_templates_array(sorting_analyzer, return_scaled=sorting_analyzer.return_scaled)
+        tamplates_array = get_dense_templates_array(sorting_analyzer, return_in_uV=sorting_analyzer.return_in_uV)
 
     spikes = sorting.to_spike_vector()
     sd_ratio = {}

@@ -120,7 +120,7 @@ class SlidingNNClustering:
             nbefore,
             nafter,
             mode=d["waveform_mode"],
-            return_scaled=False,
+            return_in_uV=False,
             folder=wf_folder,
             dtype=dtype,
             sparsity_mask=sparsity_mask,

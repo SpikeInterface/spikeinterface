@@ -194,7 +194,7 @@ def test_detect_bad_channels_ibl(num_channels):
         chunk_size=int(0.3 * recording.sampling_frequency),
         seed=0,
         concatenated=False,
-        return_scaled=True,
+        return_in_uV=True,
     )
 
     random_data = get_random_data_chunks(recording, **random_chunk_kwargs)

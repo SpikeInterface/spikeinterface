@@ -62,7 +62,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job
         nbefore,
         nafter,
         mode="shared_memory",
-        return_scaled=False,
+        return_in_uV=False,
         sparsity_mask=sparsity_mask,
         copy=True,
         verbose=False,

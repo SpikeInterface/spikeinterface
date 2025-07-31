@@ -151,7 +151,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 motion_folder = sorter_output_folder / "motion"
                 params["motion_correction"].update({"folder": motion_folder})
                 noise_levels = get_noise_levels(
-                    recording_f, return_scaled=False, random_slices_kwargs={"seed": seed}, **job_kwargs
+                    recording_f, return_in_uV=False, random_slices_kwargs={"seed": seed}, **job_kwargs
                 )
                 params["detect_kwargs"] = {"noise_levels": noise_levels}
                 recording_f = correct_motion(recording_f, **params["motion_correction"], **job_kwargs)
@@ -173,7 +173,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         recording_w = whiten(recording_f, **whitening_kwargs)
 
         noise_levels = get_noise_levels(
-            recording_w, return_scaled=False, random_slices_kwargs={"seed": seed}, **job_kwargs
+            recording_w, return_in_uV=False, random_slices_kwargs={"seed": seed}, **job_kwargs
         )
 
         if recording_w.check_serializability("json"):

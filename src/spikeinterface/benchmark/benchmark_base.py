@@ -435,7 +435,7 @@ class BenchmarkStudy:
             benchmark.compute_result(**result_params)
             benchmark.save_result(self.folder / "results" / self.key_to_str(key))
 
-    def create_sorting_analyzer_gt(self, case_keys=None, return_scaled=True, random_params={}, **job_kwargs):
+    def create_sorting_analyzer_gt(self, case_keys=None, return_in_uV=True, random_params={}, **job_kwargs):
         print("###### Study.create_sorting_analyzer_gt() is not used anymore!!!!!!")
         # if case_keys is None:
         #     case_keys = self.cases.keys()
@@ -450,7 +450,7 @@ class BenchmarkStudy:
         #     folder = base_folder / self.key_to_str(dataset_key)
         #     recording, gt_sorting = self.datasets[dataset_key]
         #     sorting_analyzer = create_sorting_analyzer(
-        #         gt_sorting, recording, format="binary_folder", folder=folder, return_scaled=return_scaled
+        #         gt_sorting, recording, format="binary_folder", folder=folder, return_in_uV=return_in_uV
         #     )
         #     sorting_analyzer.compute("random_spikes", **random_params)
         #     sorting_analyzer.compute("templates", **job_kwargs)

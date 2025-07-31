@@ -196,12 +196,12 @@ def synchronize_neuropixel_streams(recording_ref, recording_other):
     raise NotImplementedError
 
     synhcro_chan_id = recording_ref.channel_ids[-1]
-    trig_ref = recording_ref.get_traces(channel_ids=[synhcro_chan_id], return_scaled=False)
+    trig_ref = recording_ref.get_traces(channel_ids=[synhcro_chan_id], return_in_uV=False)
     trig_ref = trig_ref[:, 0]
     times_ref = recording_ref.get_times()
 
     synhcro_chan_id = recording_other.channel_ids[-1]
-    trig_other = recording_other.get_traces(channel_ids=[synhcro_chan_id], return_scaled=False)
+    trig_other = recording_other.get_traces(channel_ids=[synhcro_chan_id], return_in_uV=False)
     trig_other = trig_other[:, 0]
     times_other = recording_other.get_times()
 
