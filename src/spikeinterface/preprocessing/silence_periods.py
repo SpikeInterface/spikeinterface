@@ -37,12 +37,6 @@ class SilencedPeriodsRecording(BasePreprocessor):
         - "noise": The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel
                    basis
-    job_kwargs : dict
-        Keyword arguments for the joblib parallelization. If you want to use
-        `job_kwargs`, you need to pass them as a dictionary with the key "job_kwargs".
-        For example, `job_kwargs={"num_workers": 4}`.
-        Note that this is not used for the `get_noise_levels` function, which has its own
-        `random_slices_kwargs` argument.
     **random_chunk_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
