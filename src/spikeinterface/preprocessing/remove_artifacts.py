@@ -182,7 +182,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
                     nbefore=nbefore,
                     nafter=nafter,
                     operator=mode,
-                    return_scaled=False,
+                    return_in_uV=False,
                 )
                 artifacts = {}
                 for i, label in enumerate(sorting.unit_ids):

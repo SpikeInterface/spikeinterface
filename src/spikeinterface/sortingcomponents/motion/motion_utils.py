@@ -84,7 +84,6 @@ def get_spatial_windows(
                 f"get_spatial_windows(): {win_step_um=}/{win_scale_um=}/{win_margin_um=} are too large for the "
                 f"probe size (depth range={np.ptp(contact_depths)}). Switching to rigid motion."
             )
-
         border = ((max_ - min_) % win_step_um) / 2
         window_centers = np.arange(num_windows + 1) * win_step_um + min_ + border
         windows = []

@@ -70,7 +70,7 @@ class WaveformThresholder(WaveformsNode):
 
         self.noise_levels = noise_levels
         if self.noise_levels is None:
-            self.noise_levels = get_noise_levels(self.recording, **random_chunk_kwargs, return_scaled=False)
+            self.noise_levels = get_noise_levels(self.recording, **random_chunk_kwargs, return_in_uV=False)
 
         self._kwargs.update(
             dict(feature=feature, threshold=threshold, operator=operator, noise_levels=self.noise_levels)

@@ -312,7 +312,7 @@ By default, the following metrics are computed:
 The units of :code:`recovery_slope` and :code:`repolarization_slope` depend on the
 input. Voltages are based on the units of the template. By default this is :math:`\mu V`
 but can be the raw output from the recording device (this depends on the
-:code:`return_scaled` parameter, read more here: :ref:`modules/core:SortingAnalyzer`).
+:code:`return_in_uV` parameter, read more here: :ref:`modules/core:SortingAnalyzer`).
 Distances are in :math:`\mu m` and times are in seconds. So, for example, if the
 templates are in units of :math:`\mu V` then: :code:`repolarization_slope` is in
 :math:`mV / s`; :code:`peak_to_trough_ratio` is in :math:`\mu m` and the
