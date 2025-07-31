@@ -117,7 +117,9 @@ def aggregate_dataframe_by_levels(df, study, case_keys=None, levels_to_group_by=
     return df, new_case_keys, labels, colors
 
 
-def plot_run_times(study, case_keys=None, mode="bar", levels_to_group_by=None, xticks_rotation=45., figsize=None, ax=None):
+def plot_run_times(
+    study, case_keys=None, mode="bar", levels_to_group_by=None, xticks_rotation=45.0, figsize=None, ax=None
+):
     """
     Plot run times for a BenchmarkStudy.
 
@@ -208,7 +210,7 @@ def plot_run_times(study, case_keys=None, mode="bar", levels_to_group_by=None, x
         labels_list = [labels[k] for k in keys_mapping]
         ax.set_xticks(np.arange(len(labels_list)) + 1)
         ax.set_xticklabels(labels_list, rotation=xticks_rotation)
-        
+
         despine(ax)
 
     return fig
@@ -222,7 +224,7 @@ def plot_unit_counts(
     columns=None,
     with_rectangle=True,
     revert_bad=True,
-    xticks_rotation=45.,
+    xticks_rotation=45.0,
     figsize=None,
     ax=None,
 ):
