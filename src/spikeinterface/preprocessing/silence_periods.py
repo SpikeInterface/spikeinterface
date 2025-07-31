@@ -82,9 +82,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
             if noise_levels is None:
                 noise_levels_kwargs["return_in_uV"] = False
                 noise_levels_kwargs["seed"] = seed
-                noise_levels = get_noise_levels(
-                    recording, **noise_levels_kwargs
-                )
+                noise_levels = get_noise_levels(recording, **noise_levels_kwargs)
             noise_generator = NoiseGeneratorRecording(
                 num_channels=recording.get_num_channels(),
                 sampling_frequency=recording.sampling_frequency,
