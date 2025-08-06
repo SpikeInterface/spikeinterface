@@ -754,3 +754,83 @@ find_pair_method_list = [
     NormalizedTemplateDiff,
 ]
 find_pair_method_dict = {e.name: e for e in find_pair_method_list}
+
+
+def merge_peak_labels_from_templates(
+    peaks,
+    peak_labels,
+    unit_ids,
+    templates_array,
+    sparsity_mask,
+    similarity_metric="l1",
+    similarity_thresh=0.8,
+    num_shifts=3,
+):
+    """
+    Low level function used in sorting components for merging templates based on similarity metrics.
+
+    This is mostly used in clustering method to clean possible oversplits.
+
+    templates_array is dense (num_templates, num_total_channel) but have a sparsity_mask compagion
+    """
+    assert len(unit_ids) == templates_array.shape[0]
+
+    from spikeinterface.postprocessing.template_similarity import compute_similarity_with_templates_array
+    from scipy.sparse.csgraph import connected_components
+
+    similarity = compute_similarity_with_templates_array(
+        templates_array,
+        templates_array,
+        method=similarity_metric,
+        num_shifts=num_shifts,
+        support="union",
+        sparsity=sparsity_mask,
+        other_sparsity=sparsity_mask,
+    )
+    pair_mask = similarity > similarity_thresh
+
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots()
+    # ax.hist(similarity.flatten(), bins=np.linspace(0, 1, 50), log=True)
+    # ax.axvline(similarity_thresh)
+
+    keep_template = np.ones(templates_array.shape[0], dtype="bool")
+    clean_labels = peak_labels.copy()
+    n_components, group_labels = connected_components(pair_mask, directed=False, return_labels=True)
+
+    # print("merges", templates_array.shape[0], "to", n_components)
+
+    merge_template_array = templates_array.copy()
+    merge_sparsity_mask = sparsity_mask.copy()
+    new_unit_ids = np.zeros(n_components, dtype=unit_ids.dtype)
+    for c in range(n_components):
+        merge_group = np.flatnonzero(group_labels == c)
+        g0 = merge_group[0]
+        new_unit_ids[c] = unit_ids[g0]
+        if len(merge_group) > 1:
+            weights = np.zeros(len(merge_group), dtype=np.float32)
+
+            # import matplotlib.pyplot as plt
+            # fig, ax = plt.subplots()
+            # for i, l in enumerate(merge_group):
+            #     temp_flat = merge_template_array[l, :, :].T.flatten()
+            #     ax.plot(temp_flat)
+            # sim = similarity[merge_group[0], merge_group[1]]
+            # ax.set_title(f"{sim} {similarity_thresh}")
+
+            for i, l in enumerate(merge_group):
+                label = unit_ids[l]
+                weights[i] = np.sum(peak_labels == label)
+                if i > 0:
+                    clean_labels[peak_labels == label] = unit_ids[g0]
+                    keep_template[l] = False
+            weights /= weights.sum()
+            merge_template_array[g0, :, :] = np.sum(
+                merge_template_array[merge_group, :, :] * weights[:, np.newaxis, np.newaxis], axis=0
+            )
+            merge_sparsity_mask[g0, :] = np.all(sparsity_mask[merge_group, :], axis=0)
+
+    merge_template_array = merge_template_array[keep_template, :, :]
+    merge_sparsity_mask = merge_sparsity_mask[keep_template, :]
+
+    return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids

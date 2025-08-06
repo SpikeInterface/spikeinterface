@@ -15,7 +15,7 @@ def test_select_peaks():
     recording, _ = make_dataset()
 
     # by_channel
-    noise_levels = get_noise_levels(recording, return_scaled=False)
+    noise_levels = get_noise_levels(recording, return_in_uV=False)
     peaks = detect_peaks(
         recording,
         method="by_channel",

@@ -109,7 +109,12 @@ from .recording_tools import (
     get_chunk_with_margin,
     order_channels_by_depth,
 )
-from .sorting_tools import spike_vector_to_spike_trains, random_spikes_selection, apply_merges_to_sorting
+from .sorting_tools import (
+    spike_vector_to_spike_trains,
+    random_spikes_selection,
+    apply_merges_to_sorting,
+    apply_splits_to_sorting,
+)
 
 from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_with_accumulator
 from .snippets_tools import snippets_from_sorting
@@ -138,13 +143,6 @@ from .old_api_utils import (
 # templates addition
 # from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates
 
-# template tools
-from .template_tools import (
-    get_template_amplitudes,
-    get_template_extremum_channel,
-    get_template_extremum_channel_peak_shift,
-    get_template_extremum_amplitude,
-)
 
 # channel sparsity
 from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
@@ -160,6 +158,15 @@ from .sortinganalyzer import (
     get_available_analyzer_extensions,
     get_default_analyzer_extension_params,
 )
+
+# template tools
+from .template_tools import (
+    get_template_amplitudes,
+    get_template_extremum_channel,
+    get_template_extremum_channel_peak_shift,
+    get_template_extremum_amplitude,
+)
+
 
 from .analyzer_extension_core import (
     ComputeRandomSpikes,

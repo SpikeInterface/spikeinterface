@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
@@ -284,22 +286,34 @@ class LocalFeatureClustering:
             from hdbscan import HDBSCAN
 
             clust = HDBSCAN(**clusterer_kwargs, core_dist_n_jobs=1)
-            clust.fit(final_features)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore")
+                clust.fit(final_features)
             possible_labels = clust.labels_
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
             del clust
         elif clusterer == "isocut5":
-            min_cluster_size = clusterer_kwargs["min_cluster_size"]
+            min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)
             dipscore, cutpoint = isocut5(final_features[:, 0])
             possible_labels = np.zeros(final_features.shape[0])
             min_dip = clusterer_kwargs.get("min_dip", 1.5)
             if dipscore > min_dip:
                 mask = final_features[:, 0] > cutpoint
-                if np.sum(mask) > min_cluster_size and np.sum(~mask):
+                if np.sum(mask) > min_cluster_size and np.sum(~mask) > min_cluster_size:
                     possible_labels[mask] = 1
                 is_split = np.setdiff1d(possible_labels, [-1]).size > 1
             else:
                 is_split = False
+        elif clusterer == "isosplit6":
+            import isosplit6
+
+            min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)
+            possible_labels = isosplit6.isosplit6(final_features)
+            for i in np.unique(possible_labels):
+                mask = possible_labels == i
+                if np.sum(mask) < min_cluster_size:
+                    possible_labels[mask] = -1
+            is_split = np.setdiff1d(possible_labels, [-1]).size > 1
         else:
             raise ValueError(f"wrong clusterer {clusterer}. Possible options are 'hdbscan' or 'isocut5'.")
 

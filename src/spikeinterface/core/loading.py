@@ -130,7 +130,7 @@ def load(
 
 def load_extractor(file_or_folder_or_dict, base_folder=None) -> "BaseExtractor":
     warnings.warn(
-        "load_extractor() is deprecated and will be removed in the future. Please use load() instead.",
+        "load_extractor() is deprecated and will be removed in version 0.104.0. Please use load() instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -196,6 +196,12 @@ def _guess_object_from_local_folder(folder):
         with open(folder / "spikeinterface_info.json", "r") as f:
             spikeinterface_info = json.load(f)
             return _guess_object_from_dict(spikeinterface_info)
+    elif (
+        (folder / "sorter_output").is_dir()
+        and (folder / "spikeinterface_params.json").is_file()
+        and (folder / "spikeinterface_log.json").is_file()
+    ):
+        return "SorterFolder"
     elif (folder / "waveforms").is_dir():
         # before the SortingAnlazer, it was WaveformExtractor (v<0.101)
         return "WaveformExtractor"
@@ -212,12 +218,19 @@ def _guess_object_from_local_folder(folder):
         return "Recording|Sorting"
 
 
-def _load_object_from_folder(folder, object_type, **kwargs):
+def _load_object_from_folder(folder, object_type: str, **kwargs):
+
     if object_type == "SortingAnalyzer":
         from .sortinganalyzer import load_sorting_analyzer
 
         analyzer = load_sorting_analyzer(folder, **kwargs)
         return analyzer
+
+    elif object_type == "SorterFolder":
+        from spikeinterface.sorters import read_sorter_folder
+
+        sorting = read_sorter_folder(folder)
+        return sorting
 
     elif object_type == "Motion":
         from spikeinterface.core.motion import Motion
@@ -243,6 +256,16 @@ def _load_object_from_folder(folder, object_type, **kwargs):
                 if f.is_file():
                     si_file = f
         return BaseExtractor.load(si_file, base_folder=folder)
+
+    elif object_type.startswith("Group"):
+
+        sub_object_type = object_type.split("[")[1].split("]")[0]
+        with open(folder / "spikeinterface_info.json", "r") as f:
+            spikeinterface_info = json.load(f)
+        group_keys = spikeinterface_info.get("dict_keys")
+
+        group_of_objects = {key: _load_object_from_folder(folder / str(key), sub_object_type) for key in group_keys}
+        return group_of_objects
 
 
 def _guess_object_from_zarr(zarr_folder):

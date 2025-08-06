@@ -40,7 +40,10 @@ from spikeinterface.extractors.extractor_classes import (
     Spike2RecordingExtractor,
     EDFRecordingExtractor,
     Plexon2RecordingExtractor,
+    AxonRecordingExtractor,
 )
+
+from spikeinterface.extractors.neoextractors.intan import IntanSplitFilesRecordingExtractor
 
 from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
 
@@ -104,6 +107,7 @@ class SpikeGLXRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.lf"}),
         ("spikeglx/Noise4Sam_g0", {"stream_id": "nidq"}),
         ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap-SYNC"}),
+        ("spikeglx/onebox/run_with_only_adc/myRun_g0", {"stream_id": "obx0"}),
     ]
 
 
@@ -182,6 +186,15 @@ class IntanRecordingTestMultipleFilesFormat(RecordingCommonTestSuite, unittest.T
     ]
 
 
+class IntanSplitFilesRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = IntanSplitFilesRecordingExtractor
+    downloads = ["intan"]
+    entities = [
+        ("intan/test_tetrode_240502_162925", {"mode": "concatenate"}),
+        ("intan/test_tetrode_240502_162925", {"mode": "append"}),
+    ]
+
+
 class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroScopeRecordingExtractor
     downloads = ["neuroscope"]
@@ -218,7 +231,7 @@ class NeuroNexusRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroNexusRecordingExtractor
     downloads = ["neuronexus"]
     entities = [
-        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "0"}),
+        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "ai-pri"}),
     ]
 
 
@@ -292,6 +305,12 @@ class TdTRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = TdtRecordingExtractor
     downloads = ["tdt"]
     entities = [("tdt/aep_05", {"stream_id": "1"})]
+
+
+class AxonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = AxonRecordingExtractor
+    downloads = ["axon"]
+    entities = ["axon/extracellular_data/four_electrodes/24606005_SampleData.abf"]
 
 
 class AxonaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):

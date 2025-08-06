@@ -79,14 +79,6 @@ class BaseSnippets(BaseRecordingSnippets):
     def get_num_segments(self):
         return len(self._snippets_segments)
 
-    def has_scaled_snippets(self):
-        warn(
-            "`has_scaled_snippets` is deprecated and will be removed in version 0.103.0. Please use `has_scaleable_traces()` instead",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.has_scaleable_traces()
-
     def get_frames(self, indices=None, segment_index: Union[int, None] = None):
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
@@ -132,7 +124,7 @@ class BaseSnippets(BaseRecordingSnippets):
         # Handle deprecated return_scaled parameter
         if return_scaled is not None:
             warn(
-                "`return_scaled` is deprecated and will be removed in a future version. Use `return_in_uV` instead.",
+                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
                 category=DeprecationWarning,
                 stacklevel=2,
             )
@@ -193,7 +185,7 @@ class BaseSnippets(BaseRecordingSnippets):
         # Handle deprecated return_scaled parameter
         if return_scaled is not None:
             warn(
-                "`return_scaled` is deprecated and will be removed in a future version. Use `return_in_uV` instead.",
+                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
                 category=DeprecationWarning,
                 stacklevel=2,
             )

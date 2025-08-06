@@ -370,8 +370,8 @@ Noise levels can be estimated on the scaled traces or on the raw
 .. code:: ipython3
 
     # we can estimate the noise on the scaled traces (microV) or on the raw one (which is in our case int16).
-    noise_levels_microV = si.get_noise_levels(rec, return_scaled=True)
-    noise_levels_int16 = si.get_noise_levels(rec, return_scaled=False)
+    noise_levels_microV = si.get_noise_levels(rec, return_in_uV=True)
+    noise_levels_int16 = si.get_noise_levels(rec, return_in_uV=False)
 
 .. code:: ipython3
 
@@ -567,7 +567,7 @@ In this example:
     # run kilosort2.5 without drift correction
     params_kilosort2_5 = {'do_correction': False}
 
-    sorting = si.run_sorter('kilosort2_5', rec, output_folder=base_folder / 'kilosort2.5_output',
+    sorting = si.run_sorter('kilosort2_5', rec, folder=base_folder / 'kilosort2.5_output',
                             docker_image=True, verbose=True, **params_kilosort2_5)
 
 .. code:: ipython3

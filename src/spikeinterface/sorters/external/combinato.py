@@ -143,7 +143,7 @@ class CombinatoSorter(BaseSorter):
                 time_axis=0,
                 single_axis=True,
                 chunk_memory=params["chunk_memory"],
-                return_scaled=True,
+                return_in_uV=True,
             )
 
     @classmethod

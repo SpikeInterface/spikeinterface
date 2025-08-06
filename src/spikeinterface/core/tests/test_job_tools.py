@@ -306,7 +306,7 @@ def test_get_best_job_kwargs():
 #     )
 #     # print(rec)
 
-#     noise_levels = get_noise_levels(rec, return_scaled=False)
+#     noise_levels = get_noise_levels(rec, return_in_uV=False)
 #     for job_kwargs in all_job_kwargs:
 #         print()
 #         print(job_kwargs)

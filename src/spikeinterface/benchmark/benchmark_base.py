@@ -9,6 +9,7 @@ import numpy as np
 import time
 
 
+from spikeinterface.core import SortingAnalyzer, ChannelSparsity, NumpySorting
 from spikeinterface.core import SortingAnalyzer, NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface import load, create_sorting_analyzer, load_sorting_analyzer
@@ -46,6 +47,7 @@ class BenchmarkStudy:
         self.levels = None
         self.colors_by_case = None
         self.colors_by_levels = {}
+        self.labels_by_levels = {}
         self.scan_folder()
 
     @classmethod
@@ -120,8 +122,41 @@ class BenchmarkStudy:
                 rec, gt_sorting = data
 
                 if gt_sorting is not None:
+                    if "gt_unit_locations" in gt_sorting.get_property_keys():
+                        # if real units locations is present then use it for a better sparsity
+                        # then the real max channel is used
+                        radius_um = 100.0
+                        channel_ids = rec.channel_ids
+                        unit_ids = gt_sorting.unit_ids
+                        gt_unit_locations = gt_sorting.get_property("gt_unit_locations")
+                        channel_locations = rec.get_channel_locations()
+                        max_channel_indices = np.argmin(
+                            np.linalg.norm(
+                                gt_unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :], axis=2
+                            ),
+                            axis=1,
+                        )
+                        mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
+                        distances = np.linalg.norm(
+                            channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2
+                        )
+                        for unit_ind, unit_id in enumerate(unit_ids):
+                            chan_ind = max_channel_indices[unit_ind]
+                            (chan_inds,) = np.nonzero(distances[chan_ind, :] <= radius_um)
+                            mask[unit_ind, chan_inds] = True
+                        sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
+                        sparse = False
+                    else:
+                        sparse = True
+                        sparsity = None
+
                     analyzer = create_sorting_analyzer(
-                        gt_sorting, rec, sparse=True, format="binary_folder", folder=local_analyzer_folder
+                        gt_sorting,
+                        rec,
+                        sparse=sparse,
+                        sparsity=sparsity,
+                        format="binary_folder",
+                        folder=local_analyzer_folder,
                     )
                     analyzer.compute("random_spikes")
                     analyzer.compute("templates")
@@ -135,6 +170,7 @@ class BenchmarkStudy:
                     analyzer = create_sorting_analyzer(
                         gt_sorting, rec, sparse=False, format="binary_folder", folder=local_analyzer_folder
                     )
+
             else:
                 # new case : analzyer
                 assert isinstance(data, SortingAnalyzer)
@@ -254,6 +290,8 @@ class BenchmarkStudy:
 
         for key in job_keys:
             benchmark = self.create_benchmark(key)
+            if verbose:
+                print("### Run benchmark", key, "###")
             t0 = time.perf_counter()
             benchmark.run(**job_kwargs)
             t1 = time.perf_counter()
@@ -324,7 +362,7 @@ class BenchmarkStudy:
             df.index.names = self.levels
         return df
 
-    def get_grouped_keys_mapping(self, levels_to_group_by=None):
+    def get_grouped_keys_mapping(self, levels_to_group_by=None, case_keys=None):
         """
         Return a dictionary of grouped keys.
 
@@ -332,6 +370,8 @@ class BenchmarkStudy:
         ----------
         levels_to_group_by : list
             A list of levels to group by.
+        case_keys : list
+            Optionaly a sub list of case_keys to consider
 
         Returns
         -------
@@ -341,18 +381,19 @@ class BenchmarkStudy:
         labels : dict
             A dictionary of labels, with the new keys as keys and the labels as values.
         """
-        cases = list(self.cases.keys())
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
         if levels_to_group_by is None or self.levels is None:
-            keys_mapping = {key: [key] for key in cases}
+            keys_mapping = {key: [key] for key in case_keys}
         elif len(self.levels) == 1:
-            keys_mapping = {key: [key] for key in cases}
+            keys_mapping = {key: [key] for key in case_keys}
         else:
             study_levels = self.levels
             assert np.all(
                 [l in study_levels for l in levels_to_group_by]
             ), f"levels_to_group_by must be in {study_levels}, got {levels_to_group_by}"
             keys_mapping = {}
-            for key in cases:
+            for key in case_keys:
                 new_key = tuple(key[list(study_levels).index(level)] for level in levels_to_group_by)
                 if len(new_key) == 1:
                     new_key = new_key[0]
@@ -361,13 +402,17 @@ class BenchmarkStudy:
                 keys_mapping[new_key].append(key)
 
         if levels_to_group_by is None:
-            labels = {key: self.cases[key]["label"] for key in cases}
+            labels = {key: self.cases[key]["label"] for key in case_keys}
         else:
-            key0 = list(keys_mapping.keys())[0]
-            if isinstance(key0, tuple):
-                labels = {key: "-".join(key) for key in keys_mapping}
+            level_key = tuple(levels_to_group_by) if len(levels_to_group_by) > 1 else levels_to_group_by[0]
+            if level_key in self.labels_by_levels:
+                labels = self.labels_by_levels[level_key]
             else:
-                labels = {key: key for key in keys_mapping}
+                key0 = list(keys_mapping.keys())[0]
+                if isinstance(key0, tuple):
+                    labels = {key: "-".join(key) for key in keys_mapping}
+                else:
+                    labels = {key: key for key in keys_mapping}
 
         return keys_mapping, labels
 
@@ -383,12 +428,14 @@ class BenchmarkStudy:
 
         job_keys = []
         for key in case_keys:
+            if verbose:
+                print("### Compute result", key, "###")
             benchmark = self.benchmarks[key]
             assert benchmark is not None
             benchmark.compute_result(**result_params)
             benchmark.save_result(self.folder / "results" / self.key_to_str(key))
 
-    def create_sorting_analyzer_gt(self, case_keys=None, return_scaled=True, random_params={}, **job_kwargs):
+    def create_sorting_analyzer_gt(self, case_keys=None, return_in_uV=True, random_params={}, **job_kwargs):
         print("###### Study.create_sorting_analyzer_gt() is not used anymore!!!!!!")
         # if case_keys is None:
         #     case_keys = self.cases.keys()
@@ -403,7 +450,7 @@ class BenchmarkStudy:
         #     folder = base_folder / self.key_to_str(dataset_key)
         #     recording, gt_sorting = self.datasets[dataset_key]
         #     sorting_analyzer = create_sorting_analyzer(
-        #         gt_sorting, recording, format="binary_folder", folder=folder, return_scaled=return_scaled
+        #         gt_sorting, recording, format="binary_folder", folder=folder, return_in_uV=return_in_uV
         #     )
         #     sorting_analyzer.compute("random_spikes", **random_params)
         #     sorting_analyzer.compute("templates", **job_kwargs)
@@ -438,9 +485,9 @@ class BenchmarkStudy:
             unit_locations_ext = sorting_analyzer.get_extension("unit_locations")
             return unit_locations_ext.get_data()
 
-    def get_templates(self, key, operator="average"):
+    def get_templates(self, key, operator="average", outputs="numpy"):
         sorting_analyzer = self.get_sorting_analyzer(case_key=key)
-        templates = sorting_analyzer.get_extenson("templates").get_data(operator=operator)
+        templates = sorting_analyzer.get_extension("templates").get_data(operator=operator, outputs=outputs)
         return templates
 
     def compute_metrics(self, case_keys=None, metric_names=["snr", "firing_rate"], force=False, **job_kwargs):
@@ -668,15 +715,15 @@ class MixinStudyUnitCount:
             gt_sorting = comp.sorting1
             sorting = comp.sorting2
 
-            count_units.loc[key, "num_gt"] = len(gt_sorting.get_unit_ids())
-            count_units.loc[key, "num_sorter"] = len(sorting.get_unit_ids())
-            count_units.loc[key, "num_well_detected"] = comp.count_well_detected_units(well_detected_score)
+            count_units.at[key, "num_gt"] = len(gt_sorting.get_unit_ids())
+            count_units.at[key, "num_sorter"] = len(sorting.get_unit_ids())
+            count_units.at[key, "num_well_detected"] = comp.count_well_detected_units(well_detected_score)
 
             if comp.exhaustive_gt:
-                count_units.loc[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
-                count_units.loc[key, "num_overmerged"] = comp.count_overmerged_units(overmerged_score)
-                count_units.loc[key, "num_false_positive"] = comp.count_false_positive_units(redundant_score)
-                count_units.loc[key, "num_bad"] = comp.count_bad_units()
+                count_units.at[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
+                count_units.at[key, "num_overmerged"] = comp.count_overmerged_units(overmerged_score)
+                count_units.at[key, "num_false_positive"] = comp.count_false_positive_units(redundant_score)
+                count_units.at[key, "num_bad"] = comp.count_bad_units()
 
         return count_units
 
