@@ -175,7 +175,7 @@ Especially for acute Neuropixels-like probes, this is a crucial step.
 
 The motion estimation step comes after peak detection and peak localization. Read more about
 it in the :ref:`_motion_correction` modules doc, and a more practical guide in the
-:ref:`handle-drift-with-spikeinterface` How To.
+:ref:`handle-drift-in-your-recording` How To.
 
 Here is an example with non-rigid motion estimation:
 

@@ -4,7 +4,7 @@
 Motion/drift correction
 =======================
 
-See a practical guide to motion correction in our How To guide: :ref:`handle-drift-with-spikeinterface`.
+See a practical guide to motion correction in our How To guide: :ref:`handle-drift-in-your-recording`.
 
 Overview
 --------
