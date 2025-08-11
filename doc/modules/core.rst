@@ -61,7 +61,7 @@ with 16 channels:
     # retrieve traces after scaling to uV
     # (requires 'gain_to_uV' and 'offset_to_uV' properties)
     traces_uV = recording.get_traces(start_frame=100, end_frame=200, segment_index=0,
-                                     return_scaled=True)
+                                     return_in_uV=True)
     # set/get a new channel property (e.g. "quality")
     recording.set_property(key="quality", values=["good"] * num_channels)
     quality_values = recording.get_property("quality")
@@ -96,7 +96,7 @@ with 16 channels:
 **Note**:
 Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units (uV), you can apply a gain and an offset.
 Many devices have their own gains and offsets necessary to convert their data and these values are handled by SpikeInterface for its extractors. This
-is triggered by the :code:`return_in_uV` parameter in :code:`get_traces()`, (see above example), which will return the traces in uV. Read more in our how to guide, :ref:`working-with-physical-units`.
+is triggered by the :code:`return_in_uV` parameter in :code:`get_traces()`, (see above example), which will return the traces in uV. Read more in our how to guide, :ref:`physical_units`.
 
 
 Sorting

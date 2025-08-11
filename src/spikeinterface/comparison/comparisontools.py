@@ -8,6 +8,8 @@ from spikeinterface.core.basesorting import BaseSorting
 
 import numpy as np
 
+from tqdm.auto import tqdm
+
 
 def count_matching_events(times1, times2: np.ndarray | list, delta: int = 10):
     """
@@ -617,7 +619,7 @@ def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclass
         for u1 in unit1_ids:
             u2 = unit_map12[u1]
             sts = sts1[u1][seg_index]
-            if u2 != -1:
+            if u2 != -1 and u2 != "":
                 lab_st1 = labels_st1[u1][seg_index]
                 lab_st2 = labels_st2[u2][seg_index]
                 mapped_st = sorting2.get_unit_spike_train(u2, seg_index)
@@ -811,7 +813,7 @@ def do_count_score(event_counts1, event_counts2, match_12, match_event_count):
     for i1, u1 in enumerate(unit1_ids):
         u2 = match_12[u1]
         count_score.at[u1, "tested_id"] = u2
-        if u2 == -1:
+        if u2 == -1 or u2 == "":
             count_score.at[u1, "num_tested"] = 0
             count_score.at[u1, "tp"] = 0
             count_score.at[u1, "fp"] = 0
@@ -924,7 +926,7 @@ def make_matching_events(times1, times2, delta):
     return matching_event
 
 
-def make_collision_events(sorting, delta):
+def make_collision_events(sorting, delta, progress_bar=False):
     """
     Similar to count_matching_events but get index instead of counting.
     Used for collision detection
@@ -939,8 +941,8 @@ def make_collision_events(sorting, delta):
     Returns
     -------
     collision_events : numpy array
-            dtype =  [('index1', 'int64'), ('unit_id1', 'int64'),
-                      ('index2', 'int64'), ('unit_id2', 'int64'),
+            dtype =  [('index1', 'int64'), ('unit_id1', 'int64'), ('unit_index1', 'int64'),
+                      ('index2', 'int64'), ('unit_id2', 'int64'), ('unit_index2', 'int64'),
                       ('delta', 'int64')]
         1d of all collision
     """
@@ -948,24 +950,36 @@ def make_collision_events(sorting, delta):
     dtype = [
         ("index1", "int64"),
         ("unit_id1", unit_ids.dtype),
+        ("unit_index1", "int64"),
         ("index2", "int64"),
         ("unit_id2", unit_ids.dtype),
+        ("unit_index2", "int64"),
         ("delta_frame", "int64"),
     ]
 
     collision_events = []
-    for i, u1 in enumerate(unit_ids):
-        times1 = sorting.get_unit_spike_train(u1)
 
-        for u2 in unit_ids[i + 1 :]:
-            times2 = sorting.get_unit_spike_train(u2)
+    loop = enumerate(unit_ids)
+    if progress_bar:
+        loop = tqdm(loop, desc="detect collisions", total=len(unit_ids))
+
+    for unit_index1, unit_id1 in loop:
+        times1 = sorting.get_unit_spike_train(unit_id1)
+
+        for unit_index2, unit_id2 in enumerate(unit_ids):
+            if unit_index2 <= unit_index1:
+                continue
+
+            times2 = sorting.get_unit_spike_train(unit_id2)
 
             matching_event = make_matching_events(times1, times2, delta)
             ce = np.zeros(matching_event.size, dtype=dtype)
             ce["index1"] = matching_event["index1"]
-            ce["unit_id1"] = u1
+            ce["unit_id1"] = unit_id1
+            ce["unit_index1"] = unit_index1
             ce["index2"] = matching_event["index2"]
-            ce["unit_id2"] = u2
+            ce["unit_id2"] = unit_id2
+            ce["unit_index2"] = unit_index2
             ce["delta_frame"] = matching_event["delta_frame"]
 
             collision_events.append(ce)

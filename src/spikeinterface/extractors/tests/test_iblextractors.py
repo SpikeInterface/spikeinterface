@@ -47,10 +47,10 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
                 pytest.skip(f"Skipping test due to KeyError: {e}")
             else:
                 raise
-        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
+        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_in_uV=True)
         cls.small_unscaled_trace = cls.recording.get_traces(
             start_frame=5, end_frame=26
-        )  # return_scaled=False is SI default
+        )  # return_in_uV=False is SI default
 
     def test_get_stream_names(self):
         stream_names = IblRecordingExtractor.get_stream_names(eid=self.eid, one=self.one)
@@ -126,10 +126,10 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
         except:
             pytest.skip("Skipping test due to server being down.")
         cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", load_sync_channel=True, one=cls.one)
-        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
+        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_in_uV=True)
         cls.small_unscaled_trace = cls.recording.get_traces(
             start_frame=5, end_frame=26
-        )  # return_scaled=False is SI default
+        )  # return_in_uV=False is SI default
 
     def test_dtype(self):
         expected_datatype = "int16"

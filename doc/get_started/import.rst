@@ -73,7 +73,7 @@ For example:
 .. code-block:: python
 
     from spikeinterface.preprocessing import bandpass_filter, common_reference
-    from spikeinterface.core import extract_waveforms
+    from spikeinterface.core import create_sorting_analyzer
     from spikeinterface.extractors import read_binary
 
 As mentioned this approach only imports exactly what you plan on using so it is the most minimalist. It does require

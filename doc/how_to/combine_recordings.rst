@@ -1,5 +1,5 @@
-Combine recordings in SpikeInterface
-====================================
+Combine recordings (concatenate or append)
+==========================================
 
 In this tutorial we will walk through combining multiple recording objects. Sometimes this occurs due to hardware
 settings (e.g. Intan software has a default setting of new files every 1 minute) or the experimenter decides to

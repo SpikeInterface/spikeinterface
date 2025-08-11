@@ -72,13 +72,17 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
 
         return new_data
 
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        # splitting only changes random spikes assignments
+        return self.data.copy()
+
     def _get_pipeline_nodes(self):
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
 
         peak_sign = self.params["peak_sign"]
-        return_scaled = self.sorting_analyzer.return_scaled
+        return_in_uV = self.sorting_analyzer.return_in_uV
 
         extremum_channels_indices = get_template_extremum_channel(
             self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
@@ -93,7 +97,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
             parents=[spike_retriever_node],
             return_output=True,
             peak_shifts=peak_shifts,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
         )
         nodes = [spike_retriever_node, spike_amplitudes_node]
         return nodes
@@ -111,7 +115,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         )
         self.data["amplitudes"] = amps
 
-    def _get_data(self, outputs="numpy"):
+    def _get_data(self, outputs="numpy", concatenated=False):
         all_amplitudes = self.data["amplitudes"]
         if outputs == "numpy":
             return all_amplitudes
@@ -125,6 +129,16 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
                 for unit_id in unit_ids:
                     inds = spike_indices[segment_index][unit_id]
                     amplitudes_by_units[segment_index][unit_id] = all_amplitudes[inds]
+
+            if concatenated:
+                amplitudes_by_units_concatenated = {
+                    unit_id: np.concatenate(
+                        [amps_in_segment[unit_id] for amps_in_segment in amplitudes_by_units.values()]
+                    )
+                    for unit_id in unit_ids
+                }
+                return amplitudes_by_units_concatenated
+
             return amplitudes_by_units
         else:
             raise ValueError(f"Wrong .get_data(outputs={outputs}); possibilities are `numpy` or `by_unit`")
@@ -142,11 +156,11 @@ class SpikeAmplitudeNode(PipelineNode):
         parents=None,
         return_output=True,
         peak_shifts=None,
-        return_scaled=True,
+        return_in_uV=True,
     ):
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
-        self.return_scaled = return_scaled
-        if return_scaled and recording.has_scaleable_traces():
+        self.return_in_uV = return_in_uV
+        if return_in_uV and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
             self._offsets = recording.get_channel_gains()
@@ -163,7 +177,7 @@ class SpikeAmplitudeNode(PipelineNode):
         self._margin = np.max(np.abs(self._peak_shifts))
         self._kwargs.update(
             peak_shifts=peak_shifts,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
         )
 
     def get_dtype(self):

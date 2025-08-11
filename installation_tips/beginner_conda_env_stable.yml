@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.11
+  - python=3.12
   - pip
   - numpy
   - scipy
@@ -13,7 +13,7 @@ dependencies:
   - h5py
   - pandas
   - xarray
-  - zarr
+  - zarr<3
   - scikit-learn
   - hdbscan
   - networkx
@@ -25,10 +25,11 @@ dependencies:
   - pyqtgraph
   - ipywidgets
   - ipympl
+  - htop
+  - cxx-compiler
+  - libxcb
   - pip:
     - ephyviewer
-    - MEArec
     - spikeinterface[full,widgets]
     - spikeinterface-gui
-    - tridesclous
-    # - phy==2.0b5
+    - kilosort>4.0.30

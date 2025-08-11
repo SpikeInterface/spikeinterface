@@ -83,7 +83,7 @@ The actual reading will be done on demand using the :py:meth:`~spikeinterface.co
     recording_spikeglx = se.read_spikeglx(folder_path="spikeglx-folder")
 
     # this really does load the full 40GB into memory : not recommended!!!!!
-    traces = recording_spikeglx.get_traces(start_frame=None, end_frame=None, return_scaled=False)
+    traces = recording_spikeglx.get_traces(start_frame=None, end_frame=None, return_in_uV=False)
 
 
 
@@ -128,6 +128,7 @@ For raw recording formats, we currently support:
 * **EDF** :py:func:`~spikeinterface.extractors.read_edf()`
 * **IBL streaming** :py:func:`~spikeinterface.extractors.read_ibl_recording()`
 * **Intan** :py:func:`~spikeinterface.extractors.read_intan()`
+* **Intan split files** :py:func:`~spikeinterface.extractors.read_split_intan_files()`
 * **MaxWell** :py:func:`~spikeinterface.extractors.read_maxwell()`
 * **MCS H5** :py:func:`~spikeinterface.extractors.read_mcsh5()`
 * **MCS RAW** :py:func:`~spikeinterface.extractors.read_mcsraw()`

@@ -170,7 +170,7 @@ class WaveClusSorter(BaseSorter):
                     time_axis=0,
                     single_axis=True,
                     chunk_memory=params["chunk_memory"],
-                    return_scaled=rec_sliced.has_scaleable_traces(),
+                    return_in_uV=rec_sliced.has_scaleable_traces(),
                 )
 
         if verbose:

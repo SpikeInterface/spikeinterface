@@ -221,13 +221,13 @@ def detect_bad_channels(
 
     # Adjust random chunk kwargs based on method
     if method in ("std", "mad"):
-        random_chunk_kwargs["return_scaled"] = False
+        random_chunk_kwargs["return_in_uV"] = False
         random_chunk_kwargs["concatenated"] = True
     elif method == "coherence+psd":
-        random_chunk_kwargs["return_scaled"] = True
+        random_chunk_kwargs["return_in_uV"] = True
         random_chunk_kwargs["concatenated"] = False
     elif method == "neighborhood_r2":
-        random_chunk_kwargs["return_scaled"] = False
+        random_chunk_kwargs["return_in_uV"] = False
         random_chunk_kwargs["concatenated"] = False
 
     random_data = get_random_data_chunks(recording_hp, **random_chunk_kwargs)

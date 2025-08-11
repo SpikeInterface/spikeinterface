@@ -147,7 +147,7 @@ class PositionAndPCAClustering:
             nbefore,
             nafter,
             mode=params["waveform_mode"],
-            return_scaled=False,
+            return_in_uV=False,
             folder=wf_folder,
             dtype=recording.get_dtype(),
             sparsity_mask=sparsity_mask,
@@ -157,7 +157,7 @@ class PositionAndPCAClustering:
 
         noise = get_random_data_chunks(
             recording,
-            return_scaled=False,
+            return_in_uV=False,
             num_chunks_per_segment=params["noise_size"],
             chunk_size=nbefore + nafter,
             concatenated=False,
@@ -214,7 +214,7 @@ class PositionAndPCAClustering:
             nbefore,
             nafter,
             mode=params["waveform_mode"],
-            return_scaled=False,
+            return_in_uV=False,
             folder=wf_folder,
             dtype=recording.get_dtype(),
             sparsity_mask=sparsity_mask3,

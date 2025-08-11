@@ -13,9 +13,10 @@ matching_methods = {
     "wobble": WobbleMatch,
 }
 
+
 try:
     # Kilosort licence (GPL 3) is forcing us to make and use an external package
-    from spikeinterface_kilosort_components import KiloSortMatching
+    from spikeinterface_kilosort_components.kilosort_matching import KiloSortMatching
 
     matching_methods["kilosort-matching"] = KiloSortMatching
 except ImportError:

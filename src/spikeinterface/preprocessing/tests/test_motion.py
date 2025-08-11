@@ -58,8 +58,9 @@ def test_compute_motion_fails(create_cache_folder):
     is `None`.
     """
     # this recording has too few channels for the motion correction to work
-    rec = generate_recording(durations=[5])
+    rec = generate_recording(durations=[5], num_channels=1)
     motion, motion_info = compute_motion(rec, raise_error=False, output_motion_info=True)
+    print(motion)
 
     assert motion is None
     assert motion_info["motion"] is None
@@ -80,5 +81,8 @@ def test_compute_motion_fails(create_cache_folder):
 if __name__ == "__main__":
     # print(correct_motion.__doc__)
     # test_estimate_and_correct_motion()
-    test_get_motion_parameters_preset()
-    test_compute_motion_fails()
+    # test_get_motion_parameters_preset()
+    from pathlib import Path
+
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "preprocessing"
+    test_compute_motion_fails(cache_folder)

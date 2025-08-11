@@ -4,10 +4,11 @@
     %load_ext autoreload
     %autoreload 2
 
-.. _handle-drift-with-spikeinterface:
 
-Handle motion/drift with spikeinterface
-=======================================
+.. _handle-drift-in-your-recording:
+
+Handle motion/drift in your recording
+=====================================
 
 Spikeinterface offers a very flexible framework to handle drift as a
 preprocessing step. If you want to know more, please read the
@@ -1324,8 +1325,6 @@ A preset is a nested dict that contains theses methods/parameters.
 Run motion correction with one function!
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Correcting for drift is easy! You just need to run a single function. We
-will try this function with some presets.
 
 Here we also save the motion correction results into a folder to be able
 to load them later.
