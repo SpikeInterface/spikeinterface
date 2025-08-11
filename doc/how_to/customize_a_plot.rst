@@ -1,3 +1,5 @@
+.. _customize-a-plot:
+
 Customize a plot
 ================
 

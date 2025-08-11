@@ -1,3 +1,5 @@
+.. _sorting-components-module:
+
 Sorting Components module
 =========================
 
@@ -52,11 +54,9 @@ follows:
         peak_sign='neg',
         detect_threshold=5,
         exclude_sweep_ms=0.2,
-        radius_um=100,
         noise_levels=None,
         random_chunk_kwargs={},
-        outputs='numpy_compact',
-        engine='numpy',
+        gather_mode='memory',
         **job_kwargs,
     )
 
@@ -95,9 +95,15 @@ follows:
 
     job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
 
-    peak_locations = localize_peaks(recording=recording, peaks=peaks, method='center_of_mass',
-                                    radius_um=70., ms_before=0.3, ms_after=0.6,
-                                    **job_kwargs)
+    peak_locations = localize_peaks(
+        recording=recording,
+        peaks=peaks,
+        method='center_of_mass',
+        radius_um=70.,
+        ms_before=0.3,
+        ms_after=0.6,
+        **job_kwargs
+    )
 
 
 Currently, the following methods are implemented:
@@ -165,19 +171,11 @@ Motion estimation
 -----------------
 
 Recently, drift estimation has been added to some of the available spike sorters (Kilosort 2.5, 3)
-Especially for Neuropixels-like probes, this is a crucial step.
+Especially for acute Neuropixels-like probes, this is a crucial step.
 
-Several methods have been proposed to correct for drift, but only one is currently implemented in SpikeInterface.
-See `Decentralized Motion Inference and Registration of Neuropixel Data <https://ieeexplore.ieee.org/document/9414145>`_
-for more details.
-
-The motion estimation step comes after peak detection and peak localization.
-The idea is to divide the recording into time bins and estimate the relative motion between temporal bins.
-
-This method has two options:
-
-  * rigid drift : one motion vector is estimated for the entire probe
-  * non-rigid drift : one motion vector is estimated per depth bin
+The motion estimation step comes after peak detection and peak localization. Read more about
+it in the :ref:`_motion_correction` modules doc, and a more practical guide in the
+:ref:`handle-drift-in-your-recording` How To.
 
 Here is an example with non-rigid motion estimation:
 
@@ -191,20 +189,29 @@ Here is an example with non-rigid motion estimation:
 
 
     from spikeinterface.sortingcomponents.motion import estimate_motion
-    motion, temporal_bins, spatial_bins,
-                extra_check = estimate_motion(recording=recording, peaks=peaks, peak_locations=peak_locations,
-                                              direction='y', bin_s=10., bin_um=10., margin_um=0.,
-                                              method='decentralized_registration',
-                                              rigid=False, win_shape='gaussian', win_step_um=50., win_sigma_um=150.,
-                                              progress_bar=True, verbose=True)
+    motion = estimate_motion(
+        recording=recording,
+        peaks=peaks,
+        peak_locations=peak_locations,
+        direction='y',
+        bin_s=10.,
+        bin_um=10.,
+        margin_um=0.,
+        method='decentralized',
+        rigid=False,
+        win_shape='gaussian',
+        win_step_um=50.,
+        progress_bar=True,
+        verbose=True
+    )
 
 In this example, because it is a non-rigid estimation, :code:`motion` is a 2d array (num_time_bins, num_spatial_bins).
-
+We could now check the ``motion`` object and see if we need to apply a correction.
 
 Motion interpolation
 --------------------
 
-The estimated motion can be used to interpolate traces, in other words, for drift correction.
+The estimated motion can be used to interpolate traces to attempt to correct for drift.
 One possible way is to make an interpolation sample-by-sample to compensate for the motion.
 The :py:class:`~spikeinterface.sortingcomponents.motion.InterpolateMotionRecording` is a preprocessing
 step doing this. This preprocessing is *lazy*, so that interpolation is done on-the-fly. However, the class needs the
@@ -213,14 +220,16 @@ estimation).
 
 Here is a short example that depends on the output of "Motion interpolation":
 
-
 .. code-block:: python
 
   from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
 
-  recording_corrected = InterpolateMotionRecording(recording=recording_with_drift, motion=motion, temporal_bins=temporal_bins, spatial_bins=spatial_bins
-                                                   spatial_interpolation_method='kriging',
-                                                   border_mode='remove_channels')
+  recording_corrected = InterpolateMotionRecording(
+      recording=recording_with_drift,
+      motion=motion,
+      spatial_interpolation_method='kriging',
+      border_mode='remove_channels'
+  )
 
 **Notes**:
   * :code:`spatial_interpolation_method` "kriging" or "iwd" do not play a big role.
