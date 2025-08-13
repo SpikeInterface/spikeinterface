@@ -130,9 +130,9 @@ class ComputeQualityMetrics(AnalyzerExtension):
                             self.sorting_analyzer.has_extension(name) is False for name in extension_name.split("|")
                         ):
                             need_more_extensions = True
-                            warning_text += f"    {metric} requires {extension_name}\n"
                             if metric in computable_metrics_to_compute:
                                 computable_metrics_to_compute.remove(metric)
+                                warning_text += f"    {metric} requires {metric_dependencies}\n"
             warning_text += "To include these metrics, compute the required extensions using `sorting_analyzer.compute('extension_name')"
             if need_more_extensions:
                 warnings.warn(warning_text)
