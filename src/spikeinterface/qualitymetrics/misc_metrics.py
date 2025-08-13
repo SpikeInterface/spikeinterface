@@ -26,7 +26,6 @@ from spikeinterface.core.template_tools import (
     get_dense_templates_array,
 )
 
-
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
     HAVE_NUMBA = True
@@ -78,14 +77,8 @@ def compute_noise_cutoffs(sorting_analyzer, high_quantile=0.25, low_quantile=0.1
 
     noise_cutoff_dict = {}
     noise_ratio_dict = {}
-    if not sorting_analyzer.has_extension("spike_amplitudes"):
-        warnings.warn(
-            "`compute_noise_cutoffs` requires the 'spike_amplitudes` extension. Please run sorting_analyzer.compute('spike_amplitudes') to be able to compute `noise_cutoff`"
-        )
-        for unit_id in unit_ids:
-            noise_cutoff_dict[unit_id] = np.nan
-            noise_ratio_dict[unit_id] = np.nan
-        return res(noise_cutoff_dict, noise_ratio_dict)
+
+    _has_required_extensions(sorting_analyzer, metric_name="noise_cutoff")
 
     amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
     peak_sign = amplitude_extension.params["peak_sign"]
@@ -378,8 +371,7 @@ def compute_snrs(
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
 
-    if not _has_required_extensions(sorting_analyzer, required_extensions=["noise_levels"], metric_name="snr"):
-        return {unit_id: np.nan for unit_id in unit_ids}
+    _has_required_extensions(sorting_analyzer, metric_name="snr")
 
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
@@ -912,12 +904,9 @@ def compute_amplitude_cv_metrics(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    if sorting_analyzer.has_extension(amplitude_extension):
-        amps = sorting_analyzer.get_extension(amplitude_extension).get_data()
-    else:
-        warnings.warn("compute_amplitude_cv_metrics() need 'spike_amplitudes' or 'amplitude_scalings'")
-        empty_dict = {unit_id: np.nan for unit_id in unit_ids}
-        return empty_dict
+    _has_required_extensions(sorting_analyzer, metric_name="amplitude_cv")
+
+    amps = sorting_analyzer.get_extension(amplitude_extension).get_data()
 
     # precompute segment slice
     segment_slices = []
@@ -1044,35 +1033,30 @@ def compute_amplitude_cutoffs(
         unit_ids = sorting_analyzer.unit_ids
 
     all_fraction_missing = {}
-    if sorting_analyzer.has_extension("spike_amplitudes") or sorting_analyzer.has_extension("waveforms"):
+    _has_required_extensions(sorting_analyzer, metric_name="amplitude_cutoff")
 
-        invert_amplitudes = False
-        if (
-            sorting_analyzer.has_extension("spike_amplitudes")
-            and sorting_analyzer.get_extension("spike_amplitudes").params["peak_sign"] == "pos"
-        ):
-            invert_amplitudes = True
-        elif sorting_analyzer.has_extension("waveforms") and peak_sign == "pos":
-            invert_amplitudes = True
+    invert_amplitudes = False
+    if (
+        sorting_analyzer.has_extension("spike_amplitudes")
+        and sorting_analyzer.get_extension("spike_amplitudes").params["peak_sign"] == "pos"
+    ):
+        invert_amplitudes = True
+    elif sorting_analyzer.has_extension("waveforms") and peak_sign == "pos":
+        invert_amplitudes = True
 
-        amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
+    amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
 
-        for unit_id in unit_ids:
-            amplitudes = amplitudes_by_units[unit_id]
-            if invert_amplitudes:
-                amplitudes = -amplitudes
+    for unit_id in unit_ids:
+        amplitudes = amplitudes_by_units[unit_id]
+        if invert_amplitudes:
+            amplitudes = -amplitudes
 
-            all_fraction_missing[unit_id] = amplitude_cutoff(
-                amplitudes, num_histogram_bins, histogram_smoothing_value, amplitudes_bins_min_ratio
-            )
+        all_fraction_missing[unit_id] = amplitude_cutoff(
+            amplitudes, num_histogram_bins, histogram_smoothing_value, amplitudes_bins_min_ratio
+        )
 
-        if np.any(np.isnan(list(all_fraction_missing.values()))):
-            warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
-
-    else:
-        warnings.warn("compute_amplitude_cutoffs need 'spike_amplitudes' or 'waveforms' extension")
-        for unit_id in unit_ids:
-            all_fraction_missing[unit_id] = np.nan
+    if np.any(np.isnan(list(all_fraction_missing.values()))):
+        warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
 
     return all_fraction_missing
 
@@ -1110,15 +1094,12 @@ def compute_amplitude_medians(sorting_analyzer, peak_sign="neg", unit_ids=None):
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
 
+    _has_required_extensions(sorting_analyzer, metric_name="amplitude_median")
+
     all_amplitude_medians = {}
-    if sorting_analyzer.has_extension("spike_amplitudes") or sorting_analyzer.has_extension("waveforms"):
-        amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
-        for unit_id in unit_ids:
-            all_amplitude_medians[unit_id] = np.median(amplitudes_by_units[unit_id])
-    else:
-        warnings.warn("compute_amplitude_medians need 'spike_amplitudes' or 'waveforms' extension")
-        for unit_id in unit_ids:
-            all_amplitude_medians[unit_id] = np.nan
+    amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
+    for unit_id in unit_ids:
+        all_amplitude_medians[unit_id] = np.median(amplitudes_by_units[unit_id])
 
     return all_amplitude_medians
 
@@ -1644,10 +1625,7 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
 
-    if not _has_required_extensions(
-        sorting_analyzer, required_extensions=["templates", "spike_amplitudes"], metric_name="sd_ratio"
-    ):
-        return {unit_id: np.nan for unit_id in unit_ids}
+    _has_required_extensions(sorting_analyzer, metric_name="sd_ratio")
 
     spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
 

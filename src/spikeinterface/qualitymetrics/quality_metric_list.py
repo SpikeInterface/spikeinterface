@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+# a dict containing the extension dependencies for each metric
+metric_extension_dependencies = {
+    "snr": ["noise_levels", "templates"],
+    "amplitude_cutoff": ["spike_amplitudes|waveforms", "templates"],
+    "amplitude_median": ["spike_amplitudes|waveforms", "templates"],
+    "amplitude_cv": ["spike_amplitudes|amplitude_scalings", "templates"],
+    "drift": ["spike_locations"],
+    "sd_ratio": ["templates", "spike_amplitudes"],
+    "noise_cutoff": ["spike_amplitudes"],
+}
+
 
 from .misc_metrics import (
     compute_num_spikes,
@@ -54,6 +65,7 @@ _misc_metric_name_to_func = {
     "sd_ratio": compute_sd_ratio,
     "noise_cutoff": compute_noise_cutoffs,
 }
+
 
 # a dict converting the name of the metric for computation to the output of that computation
 qm_compute_name_to_column_names = {
