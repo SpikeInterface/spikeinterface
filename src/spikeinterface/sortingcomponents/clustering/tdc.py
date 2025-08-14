@@ -7,10 +7,7 @@ import random
 import string
 import shutil
 
-from spikeinterface.core import (
-    get_channel_distances,
-    get_global_tmp_folder,
-)
+from spikeinterface.core import get_channel_distances, get_global_tmp_folder, Templates, ChannelSparsity
 
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
@@ -23,7 +20,11 @@ from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
 
 from spikeinterface.sortingcomponents.clustering.split import split_clusters
-from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
+
+# from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
+from spikeinterface.sortingcomponents.clustering.merge import merge_peak_labels_from_templates
+from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
 
 
 class TdcClustering:
@@ -32,26 +33,41 @@ class TdcClustering:
     """
 
     _default_params = {
-        "folder": None,
+        "motion": None,
+        "seed": None,
+        # "folder": None,
         "waveforms": {
             "ms_before": 0.5,
             "ms_after": 1.5,
             "radius_um": 120.0,
         },
-        "svd": {"n_components": 6},
+        "extract_peaks_svd_kwargs": dict(n_components=5),
+        # "svd": {"n_components": 6},
         "clustering": {
             "recursive_depth": 3,
             "split_radius_um": 40.0,
-            "clusterer": "hdbscan",
-            "clusterer_kwargs": {
-                "min_cluster_size": 10,
-                "min_samples": 1,
-                "allow_single_cluster": True,
-                "cluster_selection_method": "eom",
-            },
+            # "clusterer": "hdbscan",
+            # "clusterer_kwargs": {
+            #     "min_cluster_size": 10,
+            #     "min_samples": 1,
+            #     "allow_single_cluster": True,
+            #     "cluster_selection_method": "eom",
+            # },
+            # "clusterer": "isocut5",
+            # "clusterer_kwargs": {
+            #     "min_cluster_size" : 10,
+            # },
+            "clusterer": "isosplit6",
+            "clusterer_kwargs": {},
             "do_merge": True,
-            "merge_radius_um": 40.0,
-            "threshold_diff": 1.5,
+            "merge_kwargs": {
+                "similarity_metric": "l1",
+                "num_shifts": 3,
+                "similarity_thresh": 0.8,
+            },
+        },
+        "clean": {
+            "minimum_cluster_size": 25,
         },
     }
 
@@ -59,88 +75,32 @@ class TdcClustering:
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         import hdbscan
 
-        if params["folder"] is None:
-            randname = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
-            clustering_folder = get_global_tmp_folder() / f"tdcclustering_{randname}"
-            clustering_folder.mkdir(parents=True, exist_ok=True)
-            need_folder_rm = True
-        else:
-            clustering_folder = Path(params["folder"])
-            need_folder_rm = False
-
-        sampling_frequency = recording.sampling_frequency
-
         ms_before = params["waveforms"]["ms_before"]
         ms_after = params["waveforms"]["ms_after"]
-
-        nbefore = int(ms_before * sampling_frequency / 1000.0)
-        nafter = int(ms_after * sampling_frequency / 1000.0)
-
-        # SVD for time compression
-        few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=5000, margin=(nbefore, nafter))
-        few_wfs = extract_waveform_at_max_channel(
-            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
-        )
-
-        wfs = few_wfs[:, :, 0]
-        from sklearn.decomposition import TruncatedSVD
-
-        tsvd = TruncatedSVD(params["svd"]["n_components"])
-        tsvd.fit(wfs)
-
-        model_folder = clustering_folder / "tsvd_model"
-
-        model_folder.mkdir(exist_ok=True)
-        with open(model_folder / "pca_model.pkl", "wb") as f:
-            pickle.dump(tsvd, f)
-
-        model_params = {
-            "ms_before": ms_before,
-            "ms_after": ms_after,
-            "sampling_frequency": float(sampling_frequency),
-        }
-        with open(model_folder / "params.json", "w") as f:
-            json.dump(model_params, f)
-
-        # features
-
-        features_folder = clustering_folder / "features"
-        node0 = PeakRetriever(recording, peaks)
-
         radius_um = params["waveforms"]["radius_um"]
-        node1 = ExtractSparseWaveforms(
+
+        motion = params["motion"]
+        motion_aware = motion is not None
+
+        # extract svd
+        outs = extract_peaks_svd(
             recording,
-            parents=[node0],
-            return_output=True,
+            peaks,
             ms_before=ms_before,
             ms_after=ms_after,
             radius_um=radius_um,
+            motion_aware=motion_aware,
+            motion=motion,
+            **params["extract_peaks_svd_kwargs"],
+            **job_kwargs,
         )
 
-        model_folder_path = clustering_folder / "tsvd_model"
-
-        node2 = TemporalPCAProjection(
-            recording, parents=[node0, node1], return_output=True, model_folder_path=model_folder_path
-        )
-
-        pipeline_nodes = [node0, node1, node2]
-
-        run_node_pipeline(
-            recording,
-            pipeline_nodes,
-            job_kwargs,
-            gather_mode="npy",
-            gather_kwargs=dict(exist_ok=True),
-            folder=features_folder,
-            names=["sparse_wfs", "sparse_tsvd"],
-        )
-        # TODO make this generic in GatherNPY ???
-        sparse_mask = node1.neighbours_mask
-        np.save(features_folder / "sparse_mask.npy", sparse_mask)
-        np.save(features_folder / "peaks.npy", peaks)
-
-        # to be able to delete feature folder
-        del pipeline_nodes, node0, node1, node2
+        if motion is not None:
+            # also return peaks with new channel index
+            peaks_svd, sparse_mask, svd_model, moved_peaks = outs
+            peaks = moved_peaks
+        else:
+            peaks_svd, sparse_mask, svd_model = outs
 
         # Clustering: channel index > split > merge
         split_radius_um = params["clustering"]["split_radius_um"]
@@ -154,25 +114,21 @@ class TdcClustering:
         clusterer = params["clustering"].get("clusterer", "hdbscan")
         clusterer_kwargs = params["clustering"].get("clusterer_kwargs", {})
 
+        features = dict(
+            peaks=peaks,
+            peaks_svd=peaks_svd,
+        )
+
         post_split_label, split_count = split_clusters(
             original_labels,
             recording,
-            features_folder,
+            # features_folder,
+            features,
             method="local_feature_clustering",
             method_kwargs=dict(
                 clusterer=clusterer,
                 clusterer_kwargs=clusterer_kwargs,
-                # clusterer="hdbscan",
-                # clusterer_kwargs={
-                #     "min_cluster_size": min_cluster_size,
-                #     "allow_single_cluster": True,
-                #     # "cluster_selection_method": "eom",
-                #     "cluster_selection_method": "leaf",
-                # },
-                # clusterer="isocut5",
-                # clusterer_kwargs={"min_cluster_size": min_cluster_size},
-                feature_name="sparse_tsvd",
-                # feature_name="sparse_wfs",
+                feature_name="peaks_svd",
                 neighbours_mask=neighbours_mask,
                 waveforms_sparse_mask=sparse_mask,
                 min_size_split=min_cluster_size,
@@ -181,42 +137,57 @@ class TdcClustering:
             recursive=True,
             recursive_depth=params["clustering"]["recursive_depth"],
             returns_split_count=True,
-            debug_folder=clustering_folder / "figure_debug_split",
+            # debug_folder=clustering_folder / "figure_debug_split",
+            debug_folder=None,
             **job_kwargs,
         )
 
-        if params["clustering"]["do_merge"]:
-            merge_radius_um = params["clustering"]["merge_radius_um"]
-            threshold_diff = params["clustering"]["threshold_diff"]
+        dense_templates, template_sparse_mask = get_templates_from_peaks_and_svd(
+            recording,
+            peaks,
+            post_split_label,
+            ms_before,
+            ms_after,
+            svd_model,
+            peaks_svd,
+            sparse_mask,
+            operator="average",
+        )
 
-            post_merge_label, peak_shifts = merge_clusters(
-                peaks,
-                post_split_label,
-                recording,
-                features_folder,
-                radius_um=merge_radius_um,
-                # method="project_distribution",
-                # method_kwargs=dict(
-                #     waveforms_sparse_mask=sparse_mask,
-                #     feature_name="sparse_wfs",
-                #     projection="centroid",
-                #     criteria="distrib_overlap",
-                #     threshold_overlap=0.3,
-                #     min_cluster_size=min_cluster_size + 1,
-                #     num_shift=5,
-                # ),
-                method="normalized_template_diff",
-                method_kwargs=dict(
-                    waveforms_sparse_mask=sparse_mask,
-                    threshold_diff=threshold_diff,
-                    min_cluster_size=min_cluster_size + 1,
-                    num_shift=5,
-                ),
-                **job_kwargs,
+        if params["clustering"]["do_merge"]:
+
+            post_merge_label, merge_template_array, merge_sparsity_mask, new_unit_ids = (
+                merge_peak_labels_from_templates(
+                    peaks,
+                    post_split_label,
+                    dense_templates.unit_ids,
+                    dense_templates.templates_array,
+                    template_sparse_mask,
+                    **params["clustering"]["merge_kwargs"],
+                )
             )
+
+            dense_templates = Templates(
+                templates_array=merge_template_array,
+                sampling_frequency=dense_templates.sampling_frequency,
+                nbefore=dense_templates.nbefore,
+                sparsity_mask=None,
+                channel_ids=recording.channel_ids,
+                unit_ids=new_unit_ids,
+                probe=recording.get_probe(),
+                is_in_uV=False,
+            )
+            template_sparse_mask = merge_sparsity_mask
+
+            # todo handle shifts
+            # peak_shifts = np.zeros(post_split_label.size, dtype="int64")
+
         else:
             post_merge_label = post_split_label.copy()
-            peak_shifts = np.zeros(post_split_label.size, dtype="int64")
+            # peak_shifts = np.zeros(post_split_label.size, dtype="int64")
+
+        sparsity = ChannelSparsity(template_sparse_mask, dense_templates.unit_ids, recording.channel_ids)
+        templates = dense_templates.to_sparse(sparsity)
 
         # sparse_wfs = np.load(features_folder / "sparse_wfs.npy", mmap_mode="r")
 
@@ -225,18 +196,22 @@ class TdcClustering:
 
         # clean very small cluster before peeler
         post_clean_label = post_merge_label.copy()
-
-        minimum_cluster_size = 25
+        minimum_cluster_size = params["clean"]["minimum_cluster_size"]
         labels_set, count = np.unique(post_clean_label, return_counts=True)
         to_remove = labels_set[count < minimum_cluster_size]
         mask = np.isin(post_clean_label, to_remove)
         post_clean_label[mask] = -1
-
-        labels_set = np.unique(post_clean_label)
+        final_peak_labels = post_clean_label
+        labels_set = np.unique(final_peak_labels)
         labels_set = labels_set[labels_set >= 0]
+        templates = templates.select_units(labels_set)
 
-        if need_folder_rm:
-            shutil.rmtree(clustering_folder)
+        # if need_folder_rm:
+        #     shutil.rmtree(clustering_folder)
 
-        extra_out = {"peak_shifts": peak_shifts}
-        return labels_set, post_clean_label, extra_out
+        # extra_out = {"peak_shifts": peak_shifts}
+
+        more_outs = dict(
+            templates=templates,
+        )
+        return labels_set, final_peak_labels, more_outs

@@ -31,8 +31,11 @@ class TracesWidget(BaseWidget):
         * "line": classical for low channel count
         * "map": for high channel count use color heat map
         * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
-    return_scaled : bool, default: False
-        If True and the recording has scaled traces, it plots the scaled traces
+    return_scaled : bool | None, default: None
+            DEPRECATED. Use return_in_uV instead.
+    return_in_uV : bool, default: False
+        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+        traces are scaled to uV
     events : np.array | list[np.narray] or None, default: None
         Events to display as vertical lines.
         The numpy arrays cen either be of dtype float, with event times in seconds,
@@ -72,7 +75,8 @@ class TracesWidget(BaseWidget):
         order_channel_by_depth=False,
         time_range=None,
         mode="auto",
-        return_scaled=False,
+        return_scaled=None,
+        return_in_uV=False,
         cmap="RdBu_r",
         show_channel_ids=False,
         events=None,
@@ -90,6 +94,16 @@ class TracesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+
+        # Handle deprecated return_scaled parameter
+        if return_scaled is not None:
+            warnings.warn(
+                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            return_in_uV = return_scaled
+
         if isinstance(recording, BaseRecording):
             recordings = {"rec": recording}
             rec0 = recording
@@ -160,7 +174,7 @@ class TracesWidget(BaseWidget):
         cmap = cmap
 
         times_in_range, list_traces, frame_range, channel_ids = _get_trace_list(
-            recordings, channel_ids, time_range, segment_index, return_scaled=return_scaled, times=times
+            recordings, channel_ids, time_range, segment_index, return_in_uV=return_in_uV, times=times
         )
 
         list_traces = [traces * scale for traces in list_traces]
@@ -271,7 +285,7 @@ class TracesWidget(BaseWidget):
             order_channel_by_depth=order_channel_by_depth,
             tile_size=tile_size,
             num_timepoints_per_row=int(seconds_per_row * fs),
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -459,7 +473,7 @@ class TracesWidget(BaseWidget):
                 align_items="center",
             )
 
-        self.return_scaled = data_plot["return_scaled"]
+        self.return_in_uV = data_plot["return_in_uV"]
 
         self.widget = widgets.AppLayout(
             center=self.figure.canvas,
@@ -542,7 +556,7 @@ class TracesWidget(BaseWidget):
             channel_ids,
             time_range,
             segment_index,
-            return_scaled=self.return_scaled,
+            return_in_uV=self.return_in_uV,
             times=times,
         )
 
@@ -663,17 +677,17 @@ class TracesWidget(BaseWidget):
         app.exec()
 
 
-def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_scaled=False, times=None):
+def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_in_uV=False, times=None):
     # function also used in ipywidgets plotter
     k0 = list(recordings.keys())[0]
     rec0 = recordings[k0]
 
     fs = rec0.get_sampling_frequency()
 
-    if return_scaled:
+    if return_in_uV:
         assert all(
             rec.has_scaleable_traces() for rec in recordings.values()
-        ), "Some recording layers do not have scaled traces. Use `return_scaled=False`"
+        ), "Some recording layers do not have scaled traces. Use `return_in_uV=False`"
     if times is not None:
         frame_range = np.searchsorted(times, time_range)
         times = times[frame_range[0] : frame_range[1]]
@@ -690,7 +704,7 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_s
             channel_ids=channel_ids,
             start_frame=frame_range[0],
             end_frame=frame_range[1],
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
         )
 
         list_traces.append(traces)

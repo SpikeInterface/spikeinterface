@@ -15,7 +15,7 @@ def test_features_from_peaks():
 
     job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
 
-    noise_levels = get_noise_levels(recording, return_scaled=False)
+    noise_levels = get_noise_levels(recording, return_in_uV=False)
 
     peaks = detect_peaks(
         recording,

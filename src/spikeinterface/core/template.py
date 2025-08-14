@@ -191,7 +191,15 @@ class Templates:
     def to_sparse(self, sparsity):
         # Turn a dense representation of templates into a sparse one, given some sparsity.
         # Note that nothing prevent Templates tobe empty after sparsification if the sparse mask have no channels for some units
+        if isinstance(sparsity, np.ndarray):
+            sparsity = ChannelSparsity(
+                mask=sparsity,
+                unit_ids=self.unit_ids,
+                channel_ids=self.channel_ids,
+            )
+
         assert isinstance(sparsity, ChannelSparsity), "sparsity should be of type ChannelSparsity"
+
         assert self.sparsity_mask is None, "Templates should be dense"
 
         # if np.any(sparsity.mask.sum(axis=1) == 0):
@@ -208,6 +216,22 @@ class Templates:
             check_for_consistent_sparsity=self.check_for_consistent_sparsity,
             is_in_uV=self.is_in_uV,
         )
+
+    def to_dense(self):
+        if not self.are_templates_sparse():
+            return self
+        else:
+            return Templates(
+                templates_array=self.get_dense_templates(),
+                sampling_frequency=self.sampling_frequency,
+                nbefore=self.nbefore,
+                sparsity_mask=None,
+                channel_ids=self.channel_ids,
+                unit_ids=self.unit_ids,
+                probe=self.probe,
+                check_for_consistent_sparsity=False,
+                is_in_uV=self.is_in_uV,
+            )
 
     def get_one_template_dense(self, unit_index):
         if self.sparsity is None:

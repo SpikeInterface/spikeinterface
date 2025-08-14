@@ -60,7 +60,7 @@ def test_waveform_tools(create_cache_folder):
     nafter = int(4.0 * sampling_frequency / 1000.0)
 
     dtype = recording.get_dtype()
-    # return_scaled = False
+    # return_in_uV = False
 
     spikes = sorting.to_spike_vector()
 
@@ -247,6 +247,7 @@ def test_estimate_templates():
 
 
 if __name__ == "__main__":
-    # test_waveform_tools()
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "core"
+    test_waveform_tools(cache_folder)
     test_estimate_templates_with_accumulator()
-    # test_estimate_templates()
+    test_estimate_templates()

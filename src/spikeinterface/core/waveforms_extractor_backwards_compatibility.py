@@ -101,7 +101,7 @@ def extract_waveforms(
         folder=folder,
         sparse=sparse,
         sparsity=sparsity,
-        return_scaled=return_scaled,
+        return_in_uV=return_scaled,
         **sparsity_kwargs,
     )
 
@@ -178,7 +178,7 @@ class MockWaveformExtractor:
 
     @property
     def return_scaled(self) -> bool:
-        return self.sorting_analyzer.get_extension("waveforms").params["return_scaled"]
+        return self.sorting_analyzer.return_in_uV
 
     @property
     def dtype(self):
@@ -454,7 +454,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
     with open(params_file, "r") as f:
         params = json.load(f)
 
-    return_scaled = params["return_scaled"]
+    return_in_uV = params["return_scaled"]
 
     sparsity_file = folder / "sparsity.json"
     if sparsity_file.exists():
@@ -495,7 +495,7 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
             sorting = load(folder / "sorting.pickle", base_folder=folder)
 
     sorting_analyzer = SortingAnalyzer.create_memory(
-        sorting, recording, sparsity=sparsity, return_scaled=return_scaled, rec_attributes=rec_attributes
+        sorting, recording, sparsity=sparsity, return_in_uV=return_in_uV, rec_attributes=rec_attributes
     )
 
     # waveforms
@@ -742,7 +742,6 @@ def make_ext_params_up_to_date(ext, old_params, new_params):
 #         ext.params = dict(
 #             ms_before=params["ms_before"],
 #             ms_after=params["ms_after"],
-#             return_scaled=params["return_scaled"],
 #             dtype=params["dtype"],
 #         )
 #         ext.data["waveforms"] = waveforms
@@ -758,7 +757,7 @@ def make_ext_params_up_to_date(ext, old_params, new_params):
 #     if len(templates) > 0:
 #         ext = ComputeTemplates(sorting_analyzer)
 #         ext.params = dict(
-#             nbefore=nbefore, nafter=nafter, return_scaled=params["return_scaled"], operators=list(templates.keys())
+#             nbefore=nbefore, nafter=nafter,  operators=list(templates.keys())
 #         )
 #         for mode, arr in templates.items():
 #             ext.data[mode] = arr
