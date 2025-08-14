@@ -1944,17 +1944,6 @@ def _sort_extensions_by_dependency(extensions):
     extensions_list = list(extensions.keys())
     extension_params = list(extensions.values())
 
-    # Always move quality metrics to the end, to maximise number of metrics computed
-    if "quality_metrics" in extensions_list:
-
-        qm_arg = extensions_list.index("quality_metrics")
-
-        extension_params.pop(qm_arg)
-        extension_params.append(extensions["quality_metrics"])
-
-        extensions_list.pop(qm_arg)
-        extensions_list.append("quality_metrics")
-
     i = 0
     while i < len(extensions_list):
 
