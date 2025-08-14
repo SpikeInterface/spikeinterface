@@ -9,12 +9,40 @@ from spikeinterface.core import (
     aggregate_units,
 )
 
+from spikeinterface.qualitymetrics import compute_snrs
+
 
 from spikeinterface.qualitymetrics import (
     compute_quality_metrics,
 )
 
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
+
+
+def test_warnings_errors_when_missing_deps():
+    """
+    If the user requests to compute a quality metric which depends on an extension
+    that has not been computed, this should error. If the user uses the default
+    quality metrics (i.e. they do not explicitly request the specific metrics),
+    this should report a warning about which metrics could not be computed.
+    We check this behavior in this test.
+    """
+
+    recording, sorting = generate_ground_truth_recording()
+    analyzer = create_sorting_analyzer(sorting=sorting, recording=recording)
+
+    # user tries to use `compute_snrs` without templates. Should error
+    with pytest.raises(ValueError):
+        compute_snrs(analyzer)
+
+    # user asks for drift metrics without spike_locations. Should error
+    with pytest.raises(ValueError):
+        analyzer.compute("quality_metrics", metric_names=["drift"])
+
+    # user doesn't specify which metrics to compute. Should return a warning
+    # about which metrics have not been computed.
+    with pytest.warns(Warning):
+        analyzer.compute("quality_metrics")
 
 
 def test_compute_quality_metrics(sorting_analyzer_simple):

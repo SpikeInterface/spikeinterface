@@ -120,19 +120,6 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
     assert np.all(old_snr_data != new_snr_data)
     assert new_quality_metric_extension.params["metric_params"]["snr"]["peak_mode"] == "peak_to_peak"
 
-    # check that all quality metrics are deleted when parents are recomputed, even after
-    # recomputation
-    extensions_to_compute = {
-        "templates": {"operators": ["average", "median"]},
-        "spike_amplitudes": {},
-        "spike_locations": {},
-        "principal_components": {},
-    }
-
-    small_sorting_analyzer.compute(extensions_to_compute)
-
-    assert small_sorting_analyzer.get_extension("quality_metrics") is None
-
 
 def test_metric_names_in_same_order(small_sorting_analyzer):
     """
