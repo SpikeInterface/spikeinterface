@@ -180,6 +180,8 @@ and doesn't save anything. If we wanted to save the extension we should have sta
 Available postprocessing extensions
 -----------------------------------
 
+.. _postprocessing_noise_levels:
+
 noise_levels
 ^^^^^^^^^^^^
 
@@ -192,7 +194,7 @@ As an extension, this expects the :code:`Recording` as input and the computed va
 
 
 
-
+.. _postprocessing_principal_components:
 
 principal_components
 ^^^^^^^^^^^^^^^^^^^^
@@ -232,7 +234,7 @@ and is not well suited for high-density probes.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_template_similarity`
 
-
+.. _postprocessing_spike_amplitudes:
 
 spike_amplitudes
 ^^^^^^^^^^^^^^^^
@@ -249,6 +251,7 @@ each spike.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_spike_amplitudes`
 
+.. _postprocessing_spike_locations:
 
 spike_locations
 ^^^^^^^^^^^^^^^
