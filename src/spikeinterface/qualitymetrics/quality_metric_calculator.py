@@ -95,10 +95,6 @@ class ComputeQualityMetrics(AnalyzerExtension):
                 pc_metrics.remove("nn_isolation")
                 pc_metrics.remove("nn_noise_overlap")
                 metric_names += pc_metrics
-            # if spike_locations are not available, drift is removed from the list
-            if not self.sorting_analyzer.has_extension("spike_locations"):
-                if "drift" in metric_names:
-                    metric_names.remove("drift")
 
         metric_params_ = get_default_qm_params()
         for k in metric_params_:

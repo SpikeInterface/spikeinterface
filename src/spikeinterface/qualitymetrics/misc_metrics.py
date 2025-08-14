@@ -1174,14 +1174,7 @@ def compute_drift_metrics(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    if not _has_required_extensions(
-        sorting_analyzer, required_extensions=["spike_locations"], metric_name="drift_metrics"
-    ):
-        empty_dict = {unit_id: np.nan for unit_id in unit_ids}
-        if return_positions:
-            return res(empty_dict, empty_dict, empty_dict), np.nan
-        else:
-            return res(empty_dict, empty_dict, empty_dict)
+    _has_required_extensions(sorting_analyzer, metric_name="drift")
 
     spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
     spike_locations = spike_locations_ext.get_data()
