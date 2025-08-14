@@ -65,7 +65,7 @@ def test_highpass_spatial_filter_real_data(lagc):
 
     if DEBUG:
         fig, axs = plt.subplots(ncols=4)
-        axs[0].imshow(si_recording.get_traces(return_scaled=True))
+        axs[0].imshow(si_recording.get_traces(return_in_uV=True))
         axs[0].set_title("SI Raw")
         axs[1].imshow(ibl_data.T)
         axs[1].set_title("IBL Raw")
@@ -126,11 +126,11 @@ def test_dtype_stability(dtype):
 
     assert highpass_spatial_filter.dtype == dtype
 
-    filtered_data_unscaled = highpass_spatial_filter.get_traces(return_scaled=False)
+    filtered_data_unscaled = highpass_spatial_filter.get_traces(return_in_uV=False)
 
     assert filtered_data_unscaled.dtype == dtype
 
-    filtered_data_scaled = highpass_spatial_filter.get_traces(return_scaled=True)
+    filtered_data_scaled = highpass_spatial_filter.get_traces(return_in_uV=True)
 
     assert filtered_data_scaled.dtype == np.float32
 
@@ -207,7 +207,7 @@ def run_si_highpass_filter(si_recording, ntr_pad, ntr_tap, lagc, butter_kwargs, 
     )
 
     if get_traces:
-        si_filtered = si_highpass_spatial_filter.get_traces(return_scaled=True)
+        si_filtered = si_highpass_spatial_filter.get_traces(return_in_uV=True)
     else:
         si_filtered = False
 

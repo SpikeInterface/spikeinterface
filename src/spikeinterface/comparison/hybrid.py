@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 from pathlib import Path
 from typing import List, Union
 import numpy as np
@@ -21,6 +23,8 @@ from spikeinterface.core.generate import (
 
 class HybridUnitsRecording(InjectTemplatesRecording):
     """
+    DEPRECATED, will be removed in 0.104.0
+
     Class for creating a hybrid recording where additional units are added
     to an existing recording.
 
@@ -70,6 +74,13 @@ class HybridUnitsRecording(InjectTemplatesRecording):
         injected_sorting_folder: Union[str, Path, None] = None,
         seed=None,
     ):
+
+        warnings.warn(
+            "create_hybrid_units_recording() will be removed in 0.104.0 please use `spikeinterface.generation.hybrid_tools` instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         num_samples = [
             parent_recording.get_num_frames(seg_index) for seg_index in range(parent_recording.get_num_segments())
         ]
@@ -125,6 +136,8 @@ class HybridUnitsRecording(InjectTemplatesRecording):
 
 class HybridSpikesRecording(InjectTemplatesRecording):
     """
+    DEPRECATED, will be removed in 0.104.0
+
     Class for creating a hybrid recording where additional spikes are added
     to already existing units.
 
@@ -166,6 +179,13 @@ class HybridSpikesRecording(InjectTemplatesRecording):
         refractory_period_ms: float = 1.5,
         injected_sorting_folder: Union[str, Path, None] = None,
     ) -> None:
+
+        warnings.warn(
+            "create_hybrid_spikes_recording() will be removed in 0.104.0 please use `spikeinterface.generation.hybrid_tools`  instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         if isinstance(wvf_extractor, (Path, str)):
             wvf_extractor = load_waveforms(wvf_extractor)
 

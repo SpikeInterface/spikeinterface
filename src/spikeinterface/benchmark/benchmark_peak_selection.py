@@ -187,7 +187,7 @@ class PeakSelectionStudy(BenchmarkStudy):
 #                     ms_before=2.5,
 #                     ms_after=3.5,
 #                     max_spikes_per_unit=500,
-#                     return_scaled=False,
+#                     return_in_uV=False,
 #                     **self.job_kwargs,
 #                 )
 
@@ -501,7 +501,7 @@ class PeakSelectionStudy(BenchmarkStudy):
 
 #         ax = axs[1, 0]
 
-#         noise_levels = get_noise_levels(self.recording, return_scaled=False)
+#         noise_levels = get_noise_levels(self.recording, return_in_uV=False)
 #         snrs = self.peaks["amplitude"] / noise_levels[self.peaks["channel_index"]]
 #         garbage_snrs = self.garbage_peaks["amplitude"] / noise_levels[self.garbage_peaks["channel_index"]]
 #         amin, amax = snrs.min(), snrs.max()

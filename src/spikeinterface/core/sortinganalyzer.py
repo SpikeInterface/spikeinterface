@@ -21,8 +21,7 @@ import probeinterface
 
 import spikeinterface
 
-from .baserecording import BaseRecording
-from .basesorting import BaseSorting
+from spikeinterface.core import BaseRecording, BaseSorting, aggregate_channels, aggregate_units
 
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
 from .core_tools import (
@@ -54,6 +53,7 @@ def create_sorting_analyzer(
     folder=None,
     sparse=True,
     sparsity=None,
+    set_sparsity_by_dict_key=False,
     return_scaled=None,
     return_in_uV=True,
     overwrite=False,
@@ -71,10 +71,10 @@ def create_sorting_analyzer(
 
     Parameters
     ----------
-    sorting : Sorting
-        The sorting object
-    recording : Recording
-        The recording object
+    sorting : Sorting | dict
+        The sorting object, or a dict of them
+    recording : Recording | dict
+        The recording object, or a dict of them
     folder : str or Path or None, default: None
         The folder where analyzer is cached
     format : "memory | "binary_folder" | "zarr", default: "memory"
@@ -88,6 +88,9 @@ def create_sorting_analyzer(
         You can control `estimate_sparsity()` : all extra arguments are propagated to it (included job_kwargs)
     sparsity : ChannelSparsity or None, default: None
         The sparsity used to compute exensions. If this is given, `sparse` is ignored.
+    set_sparsity_by_dict_key : bool, default: False
+        If True and passing recording and sorting dicts, will set the sparsity based on the dict keys,
+        and other `sparsity_kwargs` are overwritten. If False, use other sparsity settings.
     return_scaled : bool | None, default: None
         DEPRECATED. Use return_in_uV instead.
         All extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
@@ -139,6 +142,34 @@ def create_sorting_analyzer(
     In some situation, sparsity is not needed, so to make it fast creation, you need to turn
     sparsity off (or give external sparsity) like this.
     """
+
+    if isinstance(sorting, dict) and isinstance(recording, dict):
+
+        if sorting.keys() != recording.keys():
+            raise ValueError(
+                f"Keys of `sorting`, {sorting.keys()}, and `recording`, {recording.keys()}, dicts do not match."
+            )
+
+        aggregated_recording = aggregate_channels(recording)
+        aggregated_sorting = aggregate_units(sorting)
+
+        if set_sparsity_by_dict_key:
+            sparsity_kwargs = {"method": "by_property", "by_property": "aggregation_key"}
+
+        return create_sorting_analyzer(
+            sorting=aggregated_sorting,
+            recording=aggregated_recording,
+            format=format,
+            folder=folder,
+            sparse=sparse,
+            sparsity=sparsity,
+            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
+            overwrite=overwrite,
+            backend_options=backend_options,
+            **sparsity_kwargs,
+        )
+
     if format != "memory":
         if format == "zarr":
             if not is_path_remote(folder):
@@ -168,7 +199,7 @@ def create_sorting_analyzer(
     # Handle deprecated return_scaled parameter
     if return_scaled is not None:
         warnings.warn(
-            "`return_scaled` is deprecated and will be removed in a future version. Use `return_in_uV` instead.",
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
             category=DeprecationWarning,
             stacklevel=2,
         )

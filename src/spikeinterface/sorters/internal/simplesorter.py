@@ -98,7 +98,7 @@ class SimpleSorter(ComponentsBasedSorter):
             noise_levels = np.ones(num_chans, dtype="float32")
         else:
             recording = recording_raw
-            noise_levels = get_noise_levels(recording, return_scaled=False)
+            noise_levels = get_noise_levels(recording, return_in_uV=False)
 
         # recording = cache_preprocessing(recording, **job_kwargs, **params["cache_preprocessing"])
 

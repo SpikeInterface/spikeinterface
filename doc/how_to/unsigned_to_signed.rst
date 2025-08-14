@@ -1,5 +1,7 @@
-Unsigned to Signed Data types
-=============================
+.. _unsigned_to_signed:
+
+Handle unsigned data types
+==========================
 
 As of version 0.103.0 SpikeInterface has changed one of its defaults for interacting with
 :code:`Recording` objects. We no longer autocast unsigned dtypes to signed implicitly. This

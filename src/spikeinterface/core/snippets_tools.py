@@ -46,7 +46,7 @@ def snippets_from_sorting(recording, sorting, nbefore=20, nafter=44, wf_folder=N
         nbefore,
         nafter,
         mode=mode,
-        return_scaled=False,
+        return_in_uV=False,
         folder=folder,
         dtype=recording.get_dtype(),
         sparsity_mask=None,

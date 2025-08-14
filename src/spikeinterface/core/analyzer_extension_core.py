@@ -739,7 +739,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
     The noise levels do not depend on the unit list, only the recording, but it is a convenient way to
     retrieve the noise levels directly ine the WaveformExtractor.
 
-    Note that the noise levels can be scaled or not, depending on the `return_scaled` parameter
+    Note that the noise levels can be scaled or not, depending on the `return_in_uV` parameter
     of the `SortingAnalyzer`.
 
     Parameters

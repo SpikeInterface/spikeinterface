@@ -86,7 +86,7 @@ def test_compare_real_data_with_ibl():
     ibl_bad_channel_labels = get_ibl_bad_channel_labels(num_channels, bad_channel_indexes)
 
     ibl_data = ibl_recording.read(slice(None), slice(None), sync=False)[:, :-1].T  # cut sync channel
-    si_interpolated = si_interpolated_recording.get_traces(return_scaled=True)
+    si_interpolated = si_interpolated_recording.get_traces(return_in_uV=True)
     ibl_interpolated = voltage.interpolate_bad_channels(
         ibl_data, ibl_bad_channel_labels, x=ibl_recording.geometry["x"], y=ibl_recording.geometry["y"]
     ).T

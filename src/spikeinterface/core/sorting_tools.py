@@ -361,13 +361,20 @@ def set_properties_after_merging(
     keep_pre_inds = sorting_pre_merge.ids_to_indices(kept_unit_ids)
     keep_post_inds = sorting_post_merge.ids_to_indices(kept_unit_ids)
 
+    default_missing_values = BaseExtractor.default_missing_property_values
+
     for key in prop_keys:
         parent_values = sorting_pre_merge.get_property(key)
+        if parent_values.dtype.kind not in default_missing_values:
+            # if the property is boolean or integer there is no missing values so we skip
+            # for instance recursive "is_merged" will not be propagated
+            continue
 
         # propagate keep values
         shape = (len(sorting_post_merge.unit_ids),) + parent_values.shape[1:]
         new_values = np.empty(shape=shape, dtype=parent_values.dtype)
         new_values[keep_post_inds] = parent_values[keep_pre_inds]
+
         for new_id, merge_group in zip(new_unit_ids, merge_unit_groups):
             merged_indices = sorting_pre_merge.ids_to_indices(merge_group)
             merge_values = parent_values[merged_indices]
@@ -377,7 +384,7 @@ def set_properties_after_merging(
                 # and new values only if they are all similar
                 new_values[new_index] = merge_values[0]
             else:
-                default_missing_values = BaseExtractor.default_missing_property_values
+
                 new_values[new_index] = default_missing_values[parent_values.dtype.kind]
         sorting_post_merge.set_property(key, new_values)
 

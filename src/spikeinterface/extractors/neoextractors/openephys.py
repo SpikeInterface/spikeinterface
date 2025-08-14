@@ -18,9 +18,8 @@ import warnings
 
 import probeinterface
 
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor, NeoBaseEventExtractor
-
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
+from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts_from_probe
+from spikeinterface.extractors.neoextractors.neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
 
 
 def drop_invalid_neo_arguments_for_version_0_12_0(neo_kwargs):
@@ -229,38 +228,19 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                         self.set_probe(probe, in_place=True, group_mode="by_shank")
                     else:
                         self.set_probe(probe, in_place=True)
-
-                    # this handles a breaking change in probeinterface after v0.2.18
-                    # in the new version, the Neuropixels model name is stored in the "model_name" annotation,
-                    # rather than in the "probe_name" annotation
-                    model_name = probe.annotations.get("model_name", None)
-                    if model_name is None:
-                        model_name = probe.annotations["probe_name"]
-
-                    # load num_channels_per_adc depending on probe type
-                    if "2.0" in model_name:
-                        num_channels_per_adc = 16
-                        num_cycles_in_adc = 16
-                        total_channels = 384
-                    else:  # NP1.0
-                        num_channels_per_adc = 12
-                        num_cycles_in_adc = 13 if "AP" in stream_name else 12
-                        total_channels = 384
-
-                    # sample_shifts is generated from total channels (384) channels
-                    # when only some channels are saved we need to slice this vector (like we do for the probe)
-                    sample_shifts = get_neuropixels_sample_shifts(
-                        total_channels, num_channels_per_adc, num_cycles_in_adc
-                    )
-                    if self.get_num_channels() != total_channels:
-                        # need slice because not all channel are saved
-                        chans = probeinterface.get_saved_channel_indices_from_openephys_settings(
-                            settings_file, oe_stream
-                        )
-                        # lets clip to 384 because this contains also the synchro channel
-                        chans = chans[chans < total_channels]
-                        sample_shifts = sample_shifts[chans]
-                    self.set_property("inter_sample_shift", sample_shifts)
+                    # get inter-sample shifts based on the probe information and mux channels
+                    sample_shifts = get_neuropixels_sample_shifts_from_probe(probe, stream_name=self.stream_name)
+                    if sample_shifts is not None:
+                        num_readout_channels = probe.annotations.get("num_readout_channels")
+                        if self.get_num_channels() != num_readout_channels:
+                            # need slice because not all channels are saved
+                            chans = probeinterface.get_saved_channel_indices_from_openephys_settings(
+                                settings_file, oe_stream
+                            )
+                            # lets clip to num_readout_channels because this contains also the synchro channel
+                            chans = chans[chans < num_readout_channels]
+                            sample_shifts = sample_shifts[chans]
+                        self.set_property("inter_sample_shift", sample_shifts)
 
             # load synchronized timestamps and set_times to recording
             recording_folder = Path(folder_path) / record_node
@@ -337,7 +317,7 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
 
 def read_openephys(folder_path, **kwargs):
     """
-    Read "legacy" or "binary" Open Ephys formats
+    Read Open Ephys folder (in "binary" or "open ephys" legacy" format).
 
     Parameters
     ----------
