@@ -254,7 +254,7 @@ spike_amplitudes
 ^^^^^^^^^^^^^^^^
 
 This extension computes the amplitude of each spike as the value of the traces on the extremum channel at the times of
-each spike. The extremum channel is compute from the templates.
+each spike. The extremum channel is computed from the templates.
 
 **NOTE:** computing spike amplitudes is highly recommended before calculating amplitude-based quality metrics, such as
 :ref:`amp_cutoff` and :ref:`amp_median`.

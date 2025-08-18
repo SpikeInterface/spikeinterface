@@ -125,7 +125,7 @@ Optionally any parameter from the preset can be overwritten:
         )
     )
 
-Importantly, all the result and intermediate computations can returned to a motion object, for further loading,
+Importantly, all the results and intermediate computations can returned to a motion object, for further loading,
 verification and visualisation.
 
 .. code-block:: python
@@ -137,7 +137,7 @@ verification and visualisation.
     plot_motion(motion)
 
 Alternatively, you can save the motion (and related motion info) in a folder. The folder will contain
-the motion vector itself, as well as detected peaks, peak location, and more.
+the motion vector itself, as well as detected peaks, peak locations, and more.
 
 .. code-block:: python
 

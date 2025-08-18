@@ -34,7 +34,7 @@ a subset of units from a spike sorting output and to perform some merges:
     remove_unit_ids = [1, 2]
     sorting_analyzer2 = sorting_analyzer.remove_units(remove_unit_ids=remove_unit_ids)
 
-    # merge units 4 and 5, and units 7, 8 and 12
+    # merge units 4 and 5, and separately merge units 7, 8 and 12
     merge_unit_groups = [[4, 5], [7, 8, 12]]
     sorting_analyzer3 = sorting_analyzer2.merge_units(
         merge_unit_groups=merge_unit_groups,
@@ -190,7 +190,7 @@ prone to wrong merges. To do so, you'll need to do the following:
 
 The extra keyword ``recursive`` specifies that for each presets/sequences of steps, merges are performed
 until no further merges are possible. The ``job_kwargs`` are the parameters for the parallelization.
-**Be careful: the merges can not be reverted, so be sure to not erase your analyzer and instead create a one**
+**Be careful: the merges can not be reverted, so be sure to not erase your analyzer and instead create a new one**
 
 
 Manual curation
