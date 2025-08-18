@@ -62,7 +62,7 @@ One challenging task for motion correction is to determine the parameters.
 The high level :py:func:`~spikeinterface.preprocessing.correct_motion()` proposes the concept of a **"preset"** that already
 has predefined parameters, in order to achieve a calibrated behavior.
 
-We currently have  presets:
+We currently have these presets:
 
   * **"dredge"**: The official implementation of DREDGE, used in [Windolf2023]_.
   * **"dredge_fast"**: A faster implementation of DREDGE, which should give similar results.
