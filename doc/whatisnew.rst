@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.103.0.rst
   releases/0.102.3.rst
   releases/0.102.2.rst
   releases/0.102.1.rst
@@ -47,6 +48,22 @@ Release notes
   releases/0.10.0.rst
   releases/0.9.9.rst
   releases/0.9.1.rst
+
+
+Version 0.103.0
+===============
+
+* Simplified pipelines for group processing (#4005, #4037) (see :ref:`process_by_group`)
+* Added curation pydantic model and splitting in curation module (#3760, #3817)
+* Added ``PreprocessingPipeline`` class to handle, represent, and reproduce preprocessing steps (#3438, #4000, #3685)
+* Added ``3D-ACG`` postprocessing extension (#3860) and ``noise_cutoff`` quality metric (#4072)
+* Added ``RTSort`` as an external sorter (#3597)
+* Upgraded ``SpykingCircus2`` and ``Tridesclous2`` to ``v2025.07`` (#3923)
+* API and breaking changes:
+
+    * ``return_scaled`` --> ``return_in_uV`` in ``BaseRecording.get_traces()`` (#3794, #4090, #4093)
+    * ``is_scaled`` --> ``is_in_uV`` in ``Templates`` class (#4036)
+    * Unsigned integers not automatically cast to signed integers anymore in preprocessing (#3982) (see :ref:`unsigned_to_signed`)
 
 
 Version 0.102.3

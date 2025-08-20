@@ -964,6 +964,7 @@ class NwbRecordingSegment(BaseRecordingSegment):
 
 class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
     """Load an NWBFile as a SortingExtractor.
+
     Parameters
     ----------
     file_path : str or Path
@@ -987,7 +988,7 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
         This is the time at which the corresponding ElectricalSeries start. NWB stores its spikes as times
         and the `t_start` is used to convert the times to seconds. Concrently, the returned frames are computed as:
 
-        `frames = (times - t_start) * sampling_frequency`.
+        ``frames = (times - t_start) * sampling_frequency``
 
         As SpikeInterface always considers the first frame to be at the beginning of the recording independently
         of the `t_start`.
@@ -995,10 +996,11 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
         When a `t_start` is not provided it will be inferred from the corresponding ElectricalSeries with name equal
         to `electrical_series_path`. The `t_start` then will be either the `ElectricalSeries.starting_time` or the
         first timestamp in the `ElectricalSeries.timestamps`.
+
     cache : bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
-    storage_options : dict | None = None,
+    storage_options : dict | None, default: None
         These are the additional kwargs (e.g. AWS credentials) that are passed to the zarr.open convenience function.
         This is only used on the "zarr" stream_mode.
     use_pynwb : bool, default: False
@@ -1009,6 +1011,7 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
     -------
     sorting : NwbSortingExtractor
         The sorting extractor for the NWB file.
+
     """
 
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
