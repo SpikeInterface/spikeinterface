@@ -1,6 +1,6 @@
 """
-Working with tetrodes
-=====================
+Work with tetrodes
+==================
 
 Tetrodes are a common recording method for electrophysiological data. It is also common
 to record from several tetrodes at the same time. In this 'how to' we'll see how to

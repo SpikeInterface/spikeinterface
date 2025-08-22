@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from spikeinterface.core import SortingAnalyzer, BaseSorting
 import numpy as np
 from warnings import warn
