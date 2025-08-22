@@ -225,6 +225,16 @@ def isosplit(X, initial_labels=None, n_init=200, max_iterations_per_pass=500, mi
     if initial_labels is None:
         from sklearn.cluster import KMeans
 
+        # JM ?
+        if n_init >= X.shape[0]:
+            # protect against too high n_init compared to sample size
+            factor = min_cluster_size * 4
+            n_init = max(1, X.shape[0] // factor)
+        elif n_init > (X.shape[0] // min_cluster_size):
+            # protect against too high n_init compared to min_cluster_size
+            factor = min_cluster_size * 2
+            n_init = max(1, X.shape[0] // factor)
+        
         clusterer = KMeans(n_clusters=n_init)
         labels = clusterer.fit_predict(X)
         labels = ensure_continuous_labels(labels)
