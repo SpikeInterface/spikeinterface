@@ -145,18 +145,18 @@ def test_isosplit():
 
     labels = isosplit(data, isocut_threshold=2., n_init=200)
 
-    DEBUG = True
-    if DEBUG :
-        import matplotlib.pyplot as plt
+    # DEBUG = True
+    # if DEBUG :
+    #     import matplotlib.pyplot as plt
 
-        if data.shape[1] == 2:
-            fig, ax = plt.subplots()
-            ax.scatter(data[:, 0], data[:, 1], s=1, c=labels)
-        else:
-            fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
-            ax.scatter(data[:, 0], data[:, 1], data[:, 2], s=1, c=labels)
+    #     if data.shape[1] == 2:
+    #         fig, ax = plt.subplots()
+    #         ax.scatter(data[:, 0], data[:, 1], s=1, c=labels)
+    #     else:
+    #         fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+    #         ax.scatter(data[:, 0], data[:, 1], data[:, 2], s=1, c=labels)
         
-        plt.show()
+    #     plt.show()
 
 
 if __name__ == "__main__":
