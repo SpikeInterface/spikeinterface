@@ -682,10 +682,10 @@ def remove_duplicates_via_matching(
     return labels, new_labels
 
 
-def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_threshold=None):
+def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=2.0, cosine_threshold=None):
     import sklearn
 
-    from spikeinterface.sortingcomponents.clustering.isocut5 import isocut5
+    from spikeinterface.sortingcomponents.clustering.isosplit_isocut import isocut
 
     new_labels = peak_labels.copy()
 
@@ -756,7 +756,7 @@ def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_t
                                 v = t_i - t_j
                                 pr_i = np.dot(data_i, v)
                                 pr_j = np.dot(data_j, v)
-                                diptest, _ = isocut5(np.concatenate((pr_i, pr_j)))
+                                diptest, _ = isocut(np.concatenate((pr_i, pr_j)))
                                 diptests[i][j] = diptest
 
                             if diptest < min_dip:
