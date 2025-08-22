@@ -32,15 +32,15 @@ These two preprocessors will not compute anything at instantiation, but the comp
 
     traces = recording_cmr.get_traces(start_frame=100_000, end_frame=200_000)
 
-Some internal sorters (see :ref:`modules/sorters:Internal Sorters`) can work directly on these preprocessed objects so there is no need to
+Most sorters (see :ref:`modules/sorters:Internal Sorters`) can work directly on these preprocessed objects so there is no need to
 save the object:
 
 .. code-block:: python
 
-    # here the spykingcircus2 sorter engine directly uses the lazy "recording_cmr" object
+    # here the spykingcircus2 sorter directly uses the lazy "recording_cmr" object
     sorting = run_sorter(sorter='spykingcircus2', recording=recording_cmr, sorter_name='spykingcircus2')
 
-Most of the external sorters, however, will need a binary file as input, so we can optionally save the processed
+Some sorters, however, will need a binary file as input, so we can optionally save the processed
 recording with the efficient SpikeInterface :code:`save()` function:
 
 .. code-block:: python
@@ -51,7 +51,7 @@ In this case, the :code:`save()` function will process in parallel our original 
 CMR, and save it to a binary file in the "/path/to/preprocessed" folder. The :code:`recording_saved` is yet another
 :code:`~spikeinterface.core.BaseRecording` which maps directly to the newly created binary file, for very quick access.
 
-**NOTE:** all sorters will automatically perform the saving operation internally.
+**NOTE:** some sorters will automatically perform the saving operation internally.
 
 The Preprocessing Pipeline
 --------------------------
@@ -64,7 +64,7 @@ bad channels step. We first make the appropriate dictionary
 
 .. code-block:: python
 
-    from spikeinterface.preprocessing import apply_pipeline, PreprocessingPipeline
+    from spikeinterface.preprocessing import apply_preprocessing_pipeline, PreprocessingPipeline
 
     preprocessing_dict = {
         'highpass_filter': {'freq_min': 250},
@@ -72,11 +72,11 @@ bad channels step. We first make the appropriate dictionary
         'detect_and_remove_bad_channels': {},
     }
 
-We can then pass this dictionary to the :code:`apply_pipeline` function to make a preprocessed recording
+We can then pass this dictionary to the :code:`apply_preprocessing_pipeline` function to make a preprocessed recording
 
 .. code-block:: python
 
-    preprocessed_recording = apply_pipeline(recording, preprocessing_dict)
+    preprocessed_recording = apply_preprocessing_pipeline(recording, preprocessing_dict)
 
 Alternatively, we can construct a :code:`PreprocessingPipeline`, allowing us to investigate the pipeline before
 using it.
@@ -139,7 +139,7 @@ Once we have the pipeline, we can apply it to a recording in the same way as app
 
 .. code-block:: python
 
-    preprocessed_recording_again = apply_pipeline(recording, preprocessing_pipeline)
+    preprocessed_recording_again = apply_preprocessing_pipeline(recording, preprocessing_pipeline)
 
 To share the pipeline you have made with another lab, you can simply share the dictionary. The dictionary
 can also be obtained from the pipeline object directly:
@@ -211,7 +211,7 @@ Important aspects of filtering functions:
 common_reference()
 ^^^^^^^^^^^^^^^^^^
 
-A very common operation to remove the noise is to re-reference traces.
+A very common operation to remove noise is to re-reference traces.
 This is implemented with the :code:`common_reference()` function.
 
 There are various options when combining :code:`operator` and :code:`reference` arguments:
@@ -232,14 +232,14 @@ In fact, there is a small delay (less that a sampling period) in between channel
 For instance this is the case for Neuropixels devices.
 
 Applying :code:`common_reference()` on this data does not correctly remove artifacts, since we first need to compensate
-for these small delays! This is exactly what :code:`phase_shift()` does.
+for these small delays. This is exactly what :code:`phase_shift()` does.
 
 This function relies on an internal property of the recording called :code:`inter_sample_shift`.
 For Neuropixels recordings (read with the :py:func:`~spikeinterface.extractors.read_spikeglx` or the
 :py:func:`~spikeinterface.extractors.read_openephys` functions), the :code:`inter_sample_shift` is automatically loaded
 from the metadata and set.
 
-Calling :code:`phase_shift()` alone has almost no effect, but combined with :code:`common_reference()` it makes a real
+Calling :code:`phase_shift()` alone has almost no effect, but combined with :code:`common_reference()` it can make a real
 difference on artifact removal.
 
 
@@ -326,7 +326,8 @@ The :code:`detect_bad_channels()` can be used to detect bad channels with severa
 approach to detect bad channels with abnormally high power and the :code:`coherence+psd` method (introduced by [IBL_spikesorting]_),
 which detects bad channels looking at both coherence with other channels and PSD power in the high-frequency range.
 
-Note: The :code:`coherence+psd` method must be run on individual probes/shanks separately since it uses the coherence of the signal across the depth of the probe. See `Processing a Recording by Channel Group <https://spikeinterface.readthedocs.io/en/latest/how_to/process_by_channel_group.html?highlight=split_by>`_ for more information.
+Note: The :code:`coherence+psd` method must be run on individual probes/shanks separately since it uses the coherence of the signal across the depth of the probe.
+See `Processing a Recording by Channel Group <https://spikeinterface.readthedocs.io/en/latest/how_to/process_by_channel_group.html?highlight=split_by>`_ for more information.
 
 The function returns both the :code:`bad_channel_ids` and :code:`channel_labels`, which can be :code:`good`, :code:`noise`, :code:`dead`,
 or :code:`out` (outside of the brain). Note that the :code:`dead` and :code:`out` are only available with the :code:`coherence+psd` method.
@@ -410,7 +411,7 @@ is subtracted, and the traces are finally cast to :code:`int16`:
 zero_channel_pad()
 ^^^^^^^^^^^^^^^^^^
 
-Pads a recording with extra channels that containing only zeros. This step can be useful when a certain shape is
+Pads a recording with extra channels that contain only zeros. This step can be useful when a certain shape is
 required.
 
 .. code-block:: python
@@ -449,7 +450,7 @@ explanation.
 deepinterpolation() (experimental)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The step (experimental) applies the inference step of a DeepInterpolation denoiser model [DeepInterpolation]_.
+This step (experimental) applies the inference step of a DeepInterpolation denoiser model [DeepInterpolation]_.
 
 * :py:func:`~spikeinterface.preprocessing.deepinterpolation()`
 
@@ -462,12 +463,12 @@ How to implement "IBL destriping" or "SpikeGLX CatGT" in SpikeInterface
 
 SpikeGLX has a built-in function called `CatGT <https://billkarsh.github.io/SpikeGLX/help/dmx_vs_gbl/dmx_vs_gbl/>`_
 to apply some preprocessing on the traces to remove noise and artifacts.
+
 IBL also has a standardized pipeline for preprocessed traces a bit similar to CatGT which is called "destriping" [IBL_spikesorting]_.
-In both these cases, the traces are entirely read, processed and written back to a file.
+In both these cases, the entire traces are read, processed and written back to a file.
 
 SpikeInterface can reproduce similar results without the need to write back to a file by building a *lazy*
 preprocessing chain. Optionally, the result can still be written to a binary (or a zarr) file.
-
 
 Here is a recipe to mimic the **IBL destriping**:
 
@@ -481,7 +482,6 @@ Here is a recipe to mimic the **IBL destriping**:
     rec = highpass_spatial_filter(recording=rec)
     # optional
     rec.save(folder='clean_traces', n_jobs=10, chunk_duration='1s', progres_bar=True)
-
 
 
 Here is a recipe to mimic the **SpikeGLX CatGT**:
@@ -503,7 +503,6 @@ Of course, these pipelines can be enhanced and customized using other available 
 
 Preprocessing on Snippets
 -------------------------
-
 
 Some preprocessing steps are available also for :py:class:`~spikeinterface.core.BaseSnippets` objects:
 
