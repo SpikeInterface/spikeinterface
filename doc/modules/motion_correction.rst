@@ -125,7 +125,7 @@ Optionally any parameter from the preset can be overwritten:
         )
     )
 
-Importantly, all the results and intermediate computations can returned to a motion object, for further loading,
+Importantly, all the results and intermediate computations can be returned to a motion object, for further loading,
 verification and visualization.
 
 .. code-block:: python
