@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import subprocess  # TODO: decide best format for this
-from subprocess import check_output, CalledProcessError
 import importlib.util
+import subprocess  # TODO: decide best format for this
+from subprocess import CalledProcessError, check_output
 
 
 class SpikeSortingError(RuntimeError):
@@ -13,7 +13,7 @@ def get_bash_path():
     """Return path to existing bash install."""
     try:
         return check_output(["which bash"], shell=True).decode().strip("\n")
-    except CalledProcessError as e:
+    except CalledProcessError:
         raise Exception("Bash is not installed or accessible on your system.")
 
 
@@ -32,14 +32,14 @@ def get_matlab_shell_name():
         # CalledProcessError if not defined
         matlab_shell_name = check_output(["which $MATLAB_SHELL"], shell=True).decode().strip("\n").split("/")[-1]
         return matlab_shell_name
-    except CalledProcessError as e:
+    except CalledProcessError:
         pass
     try:
         # Either of "", "bash", "zsh", "fish",...
         # CalledProcessError if not defined
         df_shell_name = check_output(["which $SHELL"], shell=True).decode().strip("\n").split("/")[-1]
         return df_shell_name
-    except CalledProcessError as e:
+    except CalledProcessError:
         pass
     return "sh"
 
@@ -65,7 +65,7 @@ def has_nvidia():
     """
     cuda_spec = importlib.util.find_spec("cuda")
     if cuda_spec is not None:
-        from cuda import cuda
+        import cuda.bindings.driver as cuda
     else:
         raise Exception(
             "This sorter requires cuda, but the package 'cuda-python' is not installed. You can install it with:\npip install cuda-python"
