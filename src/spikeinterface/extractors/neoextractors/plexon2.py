@@ -118,14 +118,20 @@ class Plexon2EventExtractor(NeoBaseEventExtractor):
     Parameters
     ----------
     folder_path : str
+        Path to the .pl2 file.
+    block_index : int, default: None
+        Block index to read from, by default None.
+    use_names_as_ids : bool, default: False
+        If True, use channel names as identifiers instead of channel IDs.
+        Channel names must be unique when this option is enabled.
 
     """
 
     NeoRawIOClass = "Plexon2RawIO"
 
-    def __init__(self, folder_path, block_index=None):
+    def __init__(self, folder_path, block_index=None, use_names_as_ids=False):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
-        NeoBaseEventExtractor.__init__(self, block_index=block_index, **neo_kwargs)
+        NeoBaseEventExtractor.__init__(self, block_index=block_index, use_names_as_ids=use_names_as_ids, **neo_kwargs)
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
