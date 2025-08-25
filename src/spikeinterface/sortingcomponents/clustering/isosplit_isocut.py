@@ -159,8 +159,8 @@ if HAVE_NUMBA:
     # num_bins_factor = 1
     float_0 = np.array([0.0])
 
-    @numba.jit(nopython=True)
 
+    @numba.jit(nopython=True)
     def isocut(samples): # , sample_weights=None isosplit6 not handle weight anymore
 
         assert samples.ndim == 1
@@ -216,14 +216,15 @@ if HAVE_NUMBA:
         return dipscore, cutpoint
 
 
+
 ##########################
 # isosplit zone
 
 
-def isosplit(X, initial_labels=None, n_init=200, max_iterations_per_pass=500, min_cluster_size=10, isocut_threshold=2.0):
+def isosplit(X, initial_labels=None, n_init=200, max_iterations_per_pass=500, min_cluster_size=10, isocut_threshold=2.0, final_full_redistribution=False):
 
     if initial_labels is None:
-        from sklearn.cluster import KMeans
+        
 
         # JM ?
         if n_init >= X.shape[0]:
@@ -235,22 +236,28 @@ def isosplit(X, initial_labels=None, n_init=200, max_iterations_per_pass=500, mi
             factor = min_cluster_size * 2
             n_init = max(1, X.shape[0] // factor)
         
-        clusterer = KMeans(n_clusters=n_init)
-        labels = clusterer.fit_predict(X)
+
+        # from sklearn.cluster import KMeans, MiniBatchKMeans
+        # clusterer = KMeans(n_clusters=n_init)
+        # labels = clusterer.fit_predict(X)
+
+        # scipy looks faster than scikit learn for initial labels        
+        from scipy.cluster.vq import kmeans2
+        _, labels = kmeans2(X, n_init,  minit='points')
+
         labels = ensure_continuous_labels(labels)
+
     else:
         labels = ensure_continuous_labels(initial_labels)
     
-    # important note : the initial labels is also the indices in the centroid/covmat/comparisons_made
-    # this avoid to reduce these arrays at each iteration
 
 
-    # Sam: active label here is 0-base contrary to the original code
+    # Implementation note : active label here is 0-base contrary to the original code
+    # importantly : the initial labels is also the indices in the centroid/covmat/comparisons_made
+    # this avoid to reduce these arrays at each iteration (and this cost memory allocation)
     active_labels = np.unique(labels)
     n_cluster_init = active_labels.size
     active_labels_mask = np.ones(n_cluster_init, dtype="bool")
-    
-
 
     centroids = np.zeros((n_cluster_init, X.shape[1]), dtype=X.dtype)
     covmats = np.zeros((n_cluster_init, X.shape[1], X.shape[1]), dtype=X.dtype)
@@ -292,7 +299,7 @@ def isosplit(X, initial_labels=None, n_init=200, max_iterations_per_pass=500, mi
                 # These will be closest pairs of active clusters that have not yet
                 # been compared in this pass
                 pairs = get_pairs_to_compare(centroids, comparisons_made, active_labels_mask)
-                # print( 'n active', np.sum(active_labels_mask), 'pairs', len(pairs), 'something_merged', something_merged)
+                # print('pairs', len(pairs))
 
                 if len(pairs) == 0:
                     # no pairs : break this iteration
@@ -316,22 +323,12 @@ def isosplit(X, initial_labels=None, n_init=200, max_iterations_per_pass=500, mi
                 compute_centroids_and_covmats(X, centroids, covmats, labels, active_labels, clusters_changed_mask)
 
                 if np.any(clusters_removed_mask):
+                    # a merge append because one cluster disappear
                     something_merged = True
                 
                 active_labels_mask &= ~clusters_removed_mask
-                # active_labels = np.unique(labels)
                 active_labels = np.flatnonzero(active_labels_mask)
-                # print(active_labels.size, np.flatnonzero(clusters_removed_mask).size)
-                
-                # # reduce new centroids and orther arrays
-                # keep = np.isin(active_labels, new_active_labels)
-                # centroids = centroids[keep]
-                # covmats = covmats[keep]
-                # comparisons_made = comparisons_made[keep, :][:, keep]
-                # clusters_changed_vec_in_iteration = clusters_changed_vec_in_iteration[keep]
-                # # clusters_changed_vec_in_pass = clusters_changed_vec_in_pass[keep]
-                # active_labels = new_active_labels
-                # n_cluster = active_labels.size
+
 
         # new pass or not
         if something_merged:
@@ -345,6 +342,12 @@ def isosplit(X, initial_labels=None, n_init=200, max_iterations_per_pass=500, mi
         if not something_merged:
             # If we are done, do one last pass for final redistributes
             final_pass = True
+            if final_full_redistribution:
+                # Optionaly re explore all pairs by reseting the matrix
+                # Note : this is new in the python implementation compared to isosplit6 C++
+                comparisons_made[active_labels_mask, :] = False
+                comparisons_made[:, active_labels_mask] = False
+
         # print('final_pass', final_pass)
 
 
@@ -368,23 +371,61 @@ def ensure_continuous_labels(labels):
     return final_labels
 
 
-def compute_centroids_and_covmats(X, centroids, covmats, labels, label_set, to_compute_mask):
 
-    for label in label_set:
-        # important note here : the label is also the index in original label set
-        i = label
-        if not to_compute_mask[i]:
-            continue
-        inds = np.flatnonzero(labels == label)
-        if inds.size > 0:
-            centroids[i, :] = np.mean(X[inds, :], axis=0)
-            if inds.size > 1:
-                # this avoid wrning for cluster of size 1
-                covmats[i, :, :] = np.cov(X[inds, :].T)
-        else:
-            # print('empty centroids')
+# covariance and centroid are a bit slow in pure numpy, so the formal numba version with loops  is faster
+# def compute_centroids_and_covmats(X, centroids, covmats, labels, label_set, to_compute_mask):
+#     for label in label_set:
+#         # important note here : the label is also the index in original label set
+#         i = label
+#         if not to_compute_mask[i]:
+#             continue
+#         inds = np.flatnonzero(labels == label)
+#         if inds.size > 0:
+#             centroids[i, :] = np.mean(X[inds, :], axis=0)
+#             if inds.size > 1:
+#                 # this avoid wrning for cluster of size 1
+#                 covmats[i, :, :] = np.cov(X[inds, :].T)
+#         else:
+#             # print('empty centroids')
+#             centroids[i, :] = 0.
+#             covmats[i, :, :] = 0.
+
+
+@numba.jit(nopython=True)
+def compute_centroids_and_covmats(X, centroids, covmats, labels, label_set, to_compute_mask):
+    ## manual loop with numba to be faster
+    
+    count = np.zeros(centroids.shape[0], dtype='int64')
+    for i in range(centroids.shape[0]):
+        if to_compute_mask[i]:
             centroids[i, :] = 0.
             covmats[i, :, :] = 0.
+
+    for i in range(X.shape[0]):
+        ind = labels[i]
+        if to_compute_mask[ind]:
+            centroids[ind, :] += X[i, :]
+            count[ind] += 1
+
+    for i in range(centroids.shape[0]):
+        if to_compute_mask[i] and count[i] > 0:
+            centroids[i, :] /= count[i]
+
+    for i in range(X.shape[0]):
+        ind = labels[i]
+        if to_compute_mask[ind]:
+            centered = X[i, :] - centroids[ind, :]
+            for m1 in range(X.shape[1]):
+                for m2 in range(m1, X.shape[1]):
+                    v = centered[m1] * centered[m2]
+                    covmats[ind, m1, m2] += v
+                    covmats[ind, m2, m1] += v
+
+    for i in range(centroids.shape[0]):
+        if to_compute_mask[i] and count[i] > 0:
+            covmats[i, :, :] /= count[i]
+
+
 
 
 # @numba.jit(nopython=True)
@@ -416,6 +457,7 @@ def get_pairs_to_compare(centroids, comparisons_made, active_labels_mask):
     return pairs
 
 if HAVE_NUMBA:
+
     @numba.jit(nopython=True)
     def compute_distances(centroids, comparisons_made, active_labels_mask):
         n = centroids.shape[0]
@@ -424,10 +466,7 @@ if HAVE_NUMBA:
         for i1 in range(n):
             if not active_labels_mask[i1]:
                 continue
-            for i2 in range(n):
-                # JM ? why not i2 > i1 to avoid the full loop
-                # if i2 <= i1:
-                #     continue
+            for i2 in range(i1, n):
                 if i1 == i2:
                     continue
                 if not active_labels_mask[i2]:
@@ -435,10 +474,9 @@ if HAVE_NUMBA:
                 if comparisons_made[i1, i2]:
                     continue
                 
-                dists[i1, i2] = np.sqrt(np.sum((centroids[i1, :] - centroids[i2, :])**2))
-                # d = np.sqrt(np.sum((centroids[i1, :] - centroids[i2, :])**2))
-                # dists[i1, i2] = d
-                # dists[i2, i1] = d
+                d = np.sqrt(np.sum((centroids[i1, :] - centroids[i2, :])**2))
+                dists[i1, i2] = d
+                dists[i2, i1] = d
 
         return dists
 
@@ -456,9 +494,9 @@ def merge_test(X1, X2, centroid1, centroid2, covmat1, covmat2, isocut_threshold)
     V = inv_avg_covmat @ V
     V /= np.linalg.norm(V)
 
-    # JM ?
-    # projection12 = np.concatenate((X1 , X2 )) @ V
-    projection12 = (np.concatenate((X1 , X2 )) - centroid1[None, :]) @ V
+    # this two are equivalent (offset, the later is more intuitive)
+    projection12 = np.concatenate((X1 , X2 )) @ V
+    # projection12 = (np.concatenate((X1 , X2 )) - centroid1[None, :]) @ V
 
     dipscore, cutpoint = isocut(projection12)
 
@@ -492,13 +530,14 @@ def compare_pairs(X, labels, pairs, centroids, covmats, min_cluster_size, isocut
     total_num_label_changes = 0
 
     for p in range(len(pairs)):
-        # i1, i2 = pairs[p]
-        # label1, label2 = active_labels[i1], active_labels[i2]
         label1, label2 = pairs[p]
 
 
-        inds1 = np.flatnonzero(labels == label1)
-        inds2 = np.flatnonzero(labels == label2)
+        # inds1 = np.flatnonzero(labels == label1)
+        # inds2 = np.flatnonzero(labels == label2)
+        inds1, = np.nonzero(labels == label1)
+        inds2, = np.nonzero(labels == label2)
+
         if (inds1.size > 0) and (inds2.size > 0):
             if (inds1.size < min_cluster_size) and (inds2.size < min_cluster_size):
                 do_merge = True
@@ -516,10 +555,11 @@ def compare_pairs(X, labels, pairs, centroids, covmats, min_cluster_size, isocut
                 # redistribute
                 something_was_redistributed = False
 
-                # JM ? why somethings the labels invert thenself ????
-                
-                modified_inds1 = np.flatnonzero(L12[:inds1.size] == 2)
-                modified_inds2 = np.flatnonzero(L12[inds1.size:] == 1)
+                # modified_inds1 = np.flatnonzero(L12[:inds1.size] == 2)
+                # modified_inds2 = np.flatnonzero(L12[inds1.size:] == 1)
+                modified_inds1, = np.nonzero(L12[:inds1.size] == 2)
+                modified_inds2, = np.nonzero(L12[inds1.size:] == 1)
+
 
                 # protect against pure swaping between label1<>label2
                 pure_swaping  = modified_inds1.size != inds1.size and modified_inds2.size != inds2.size
