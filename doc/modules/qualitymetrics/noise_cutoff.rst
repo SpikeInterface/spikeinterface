@@ -90,7 +90,7 @@ Example code
     unit_ids = ...
 
     # Compute noise_cutoff:
-    summary_dict = compute_noise_cutoff(
+    summary_dict = compute_noise_cutoffs(
         sorting_analyzer=sorting_analyzer
         high_quantile=0.25,
         low_quantile=0.10,
@@ -101,7 +101,7 @@ Example code
 Reference
 ---------
 
-.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_noise_cutoff
+.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_noise_cutoffs
 
 Examples with plots
 -------------------
