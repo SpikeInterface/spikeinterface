@@ -5,7 +5,7 @@ spikeinterface.core
 -------------------
 .. automodule:: spikeinterface.core
 
-    .. autofunction:: load_extractor
+    .. autofunction:: load
     .. autoclass:: BaseRecording
         :members:
     .. autoclass:: BaseSorting
@@ -27,7 +27,7 @@ spikeinterface.core
     .. autoclass:: BinaryRecordingExtractor
     .. autoclass:: ZarrRecordingExtractor
     .. autoclass:: BinaryFolderRecording
-    .. autoclass:: NpzFolderSorting
+    .. autoclass:: NumpyFolderSorting
     .. autoclass:: NpyFolderSnippets
     .. autoclass:: NumpyRecording
     .. autoclass:: NumpySorting
@@ -169,6 +169,9 @@ spikeinterface.preprocessing
 
 .. automodule:: spikeinterface.preprocessing
 
+    .. autofunction:: apply_preprocessing_pipeline
+    .. autofunction:: get_preprocessing_dict_from_analyzer
+    .. autofunction:: get_preprocessing_dict_from_file
     .. autofunction:: astype
     .. autofunction:: average_across_direction
     .. autofunction:: bandpass_filter
@@ -244,6 +247,7 @@ spikeinterface.sorters
 
     .. autofunction:: available_sorters
     .. autofunction:: installed_sorters
+    .. autofunction:: archived_sorters
     .. autofunction:: get_default_sorter_params
     .. autofunction:: get_sorter_params_description
     .. autofunction:: print_sorter_versions

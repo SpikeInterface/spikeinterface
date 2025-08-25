@@ -161,8 +161,8 @@ class AmplitudesWidget(BaseRasterWidget):
         # If using SortingView, extract just the first segment's data as flat dicts
         if is_sortingview:
             first_segment = segment_indices[0]
-            plot_data["spike_train_data"] = spiketrains_by_segment[first_segment]
-            plot_data["y_axis_data"] = amplitudes_by_segment[first_segment]
+            plot_data["spike_train_data"] = {first_segment: spiketrains_by_segment[first_segment]}
+            plot_data["y_axis_data"] = {first_segment: amplitudes_by_segment[first_segment]}
         else:
             # Otherwise use the full dict of dicts structure with all segments
             plot_data["spike_train_data"] = spiketrains_by_segment
