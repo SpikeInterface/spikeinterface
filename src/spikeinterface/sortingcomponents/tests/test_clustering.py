@@ -9,7 +9,7 @@ from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_s
 from spikeinterface.sortingcomponents.clustering.graph_tools import create_graph_from_peak_features
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
-from spikeinterface.core import get_noise_levels
+from spikeinterface.core import get_noise_levels, set_global_job_kwargs
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
@@ -121,13 +121,15 @@ def test_templates_from_svd(recording, peaks, job_kwargs):
 
 
 if __name__ == "__main__":
-    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
+    job_kwargs = dict(n_jobs=0.8, chunk_size=30_000, progress_bar=True)
+    set_global_job_kwargs(**job_kwargs)
+    
     recording, sorting = make_dataset()
     peaks = run_peaks(recording, job_kwargs)
     peak_locations = run_peak_locations(recording, peaks, job_kwargs)
     # method = "position_and_pca"
-    method = "circus-clustering"
-    # method = "tdc-clustering"
+    # method = "circus-clustering"
+    method = "tdc-clustering"
     # method = "random_projections"
     # method = "graph-clustering"
 

@@ -53,12 +53,10 @@ class TdcClustering:
             #     "allow_single_cluster": True,
             #     "cluster_selection_method": "eom",
             # },
-            # "clusterer": "isocut5",
-            # "clusterer_kwargs": {
-            #     "min_cluster_size" : 10,
-            # },
-            "clusterer": "isosplit6",
-            "clusterer_kwargs": {},
+            # "clusterer": "isosplit6",
+            # "clusterer_kwargs": {},
+            "clusterer": "isosplit",
+            "clusterer_kwargs": {"n_init":50, "min_cluster_size": 10, "max_iterations_per_pass": 500, "isocut_threshold": 2.0},
             "do_merge": True,
             "merge_kwargs": {
                 "similarity_metric": "l1",
