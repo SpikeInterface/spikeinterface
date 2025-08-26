@@ -31,6 +31,8 @@ from __future__ import annotations
 
 import numpy as np
 
+import warnings
+
 try:
     import numba
 
@@ -243,7 +245,9 @@ def isosplit(X, initial_labels=None, n_init=200, max_iterations_per_pass=500, mi
 
         # scipy looks faster than scikit learn for initial labels
         from scipy.cluster.vq import kmeans2
-        _, labels = kmeans2(X, n_init,  minit='points')
+        with warnings.catch_warnings():
+            # sometimes the kmeans do not found enought cluster which should not be an issue
+            _, labels = kmeans2(X, n_init,  minit='points')
 
         labels = ensure_continuous_labels(labels)
 
@@ -287,13 +291,13 @@ def isosplit(X, initial_labels=None, n_init=200, max_iterations_per_pass=500, mi
             
 
             if iteration_number > max_iterations_per_pass:
-                print("Warning: max iterations per pass exceeded")
+                print("isosplit : max iterations per pass exceeded")
                 break
             
-            if active_labels.size == 0:
+            if active_labels.size <= 1:
                 break
 
-            if active_labels.size > 0:
+            if active_labels.size > 1:
                 
                 # Find the pairs to compare on this iteration
                 # These will be closest pairs of active clusters that have not yet
