@@ -241,7 +241,7 @@ def isosplit(X, initial_labels=None, n_init=200, max_iterations_per_pass=500, mi
         # clusterer = KMeans(n_clusters=n_init)
         # labels = clusterer.fit_predict(X)
 
-        # scipy looks faster than scikit learn for initial labels        
+        # scipy looks faster than scikit learn for initial labels
         from scipy.cluster.vq import kmeans2
         _, labels = kmeans2(X, n_init,  minit='points')
 
