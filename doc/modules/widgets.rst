@@ -6,17 +6,14 @@ Widgets module
 The :py:mod:`spikeinterface.widgets` module includes plotting function to visualize recordings,
 sortings, waveforms, and more.
 
-Since version 0.95.0, the :py:mod:`spikeinterface.widgets` module supports multiple backends:
+The :py:mod:`spikeinterface.widgets` module supports multiple backends:
 
 * | :code:`matplotlib`: static rendering using the `matplotlib <https://matplotlib.org/>`_ package
 * | :code:`ipywidgets`: interactive rendering within a jupyter notebook using the
   | `ipywidgets <https://ipywidgets.readthedocs.io/en/stable/>`_ package
 * | :code:`sortingview`: web-based and interactive rendering using the `sortingview <https://github.com/magland/sortingview>`_
   | and `FIGURL <https://github.com/flatironinstitute/figurl>`_ packages.
-
-Version 0.99.0 also comes with this new backend:
-
-* :code:`ephyviewer`: interactive Qt based using the `ephyviewer <https://ephyviewer.readthedocs.io/en/latest/>`_ package
+* | :code:`ephyviewer`: interactive Qt based using the `ephyviewer <https://ephyviewer.readthedocs.io/en/latest/>`_ package
 
 
 Installing backends
@@ -44,8 +41,8 @@ To install it, run:
 Install ipywidgets
 ^^^^^^^^^^^^^^^^^^
 
-The :code:`ipywidgets` backend allows users to interact with the plot, for example, by selecting units or
-scrolling through a time series.
+The :code:`ipywidgets` backend allows users to interact with the plot when you plot it in
+a Jupyter Notebook. For example, in certain widgets you can select units or scroll through a time series.
 
 To install it, run:
 
@@ -94,7 +91,6 @@ Install ephyviewer
 
 This backend is Qt based with PyQt5, PyQt6 or PySide6 support. Qt is sometimes tedious to install.
 
-
 For a pip-based installation, run:
 
 .. code-block:: bash
@@ -122,15 +118,17 @@ A default backend for a SpikeInterface session can be set with the
 
 .. code-block:: python
 
+    import spikeinterface.widgets as sw
+
     # matplotlib backend
-    set_default_plotter_backend(backend="ipywidgets")
-    print(get_default_plotter_backend())
+    sw.set_default_plotter_backend(backend="ipywidgets")
+    print(sw.get_default_plotter_backend())
     # >>> "ipywidgets"
 
 All :code:`plot_*` functions return a :code:`BackendPlotter` instance.
 Different backend-specific plotters can expose different attributes. For example, the :code:`matplotlib`
 plotter has the :code:`figure`, :code:`ax`, and :code:`axes` (for multi-axes plots) attributes to enable further
-customization.
+customization. To learn more about customization read our how to guide, :ref:`customize-a-plot`.
 
 
 matplotlib
@@ -186,7 +184,7 @@ sortingview
 
 The :code:`plot_*(..., backend="sortingview")` generate web-based GUIs, which are also shareable with a link (provided
 that :code:`kachery-cloud` is correctly setup, see :ref:`sorting_view`).
-The functions have the following additional arguments:
+The functions has the following additional arguments:
 
   * :code:`generate_url`: If True, the figurl URL is generated and printed. Default True
   * :code:`display`: If True and in jupyter notebook/lab, the widget is displayed in the cell. Default True
@@ -269,14 +267,16 @@ Available plotting functions
 * :py:func:`~spikeinterface.widgets.plot_crosscorrelograms` (backends: :code:`matplotlib`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_isi_distribution` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_motion` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_drift_raster_map` (backends: :code:`matplotlib`, :code:`ipywidgets`)
 * :py:func:`~spikeinterface.widgets.plot_multicomparison_agreement` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_multicomparison_agreement_by_sorter` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_multicomparison_graph` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_peak_activity` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_probe_map` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_quality_metrics` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
-* :py:func:`~spikeinterface.widgets.plot_rasters` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_rasters` (backends: :code:`matplotlib`, :code:`ipywidgets`)
 * :py:func:`~spikeinterface.widgets.plot_sorting_summary` (backends: :code:`sortingview`)
+* :py:func:`~spikeinterface.widgets.plot_spike_amplitudes` (backends: :code:`matplotlib`, :code:`ipywidgets`)
 * :py:func:`~spikeinterface.widgets.plot_spike_locations` (backends: :code:`matplotlib`, :code:`ipywidgets`)
 * :py:func:`~spikeinterface.widgets.plot_spikes_on_traces` (backends: :code:`matplotlib`, :code:`ipywidgets`)
 * :py:func:`~spikeinterface.widgets.plot_template_metrics` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
