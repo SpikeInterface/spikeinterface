@@ -80,6 +80,6 @@ def sorting_analyzer_simple():
     sorting_analyzer.compute("noise_levels")
     sorting_analyzer.compute("waveforms", **job_kwargs)
     sorting_analyzer.compute("templates")
-    sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
+    sorting_analyzer.compute(["spike_amplitudes", "spike_locations"], **job_kwargs)
 
     return sorting_analyzer

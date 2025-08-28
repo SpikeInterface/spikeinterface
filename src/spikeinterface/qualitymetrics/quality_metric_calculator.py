@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 from itertools import chain
-from copy import deepcopy
+from copy import deepcopy, copy
 
 import numpy as np
 from warnings import warn
@@ -19,6 +19,7 @@ from .quality_metric_list import (
     _possible_pc_metric_names,
     qm_compute_name_to_column_names,
     column_name_to_column_dtype,
+    metric_extension_dependencies,
 )
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
@@ -53,7 +54,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
     """
 
     extension_name = "quality_metrics"
-    depend_on = ["templates", "noise_levels"]
+    depend_on = []
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
@@ -83,7 +84,9 @@ class ComputeQualityMetrics(AnalyzerExtension):
             metric_params = qm_params
             warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
 
+        metric_names_is_none = False
         if metric_names is None:
+            metric_names_is_none = True
             metric_names = list(_misc_metric_name_to_func.keys())
             # if PC is available, PC metrics are automatically added to the list
             if self.sorting_analyzer.has_extension("principal_components") and not skip_pc_metrics:
@@ -92,10 +95,6 @@ class ComputeQualityMetrics(AnalyzerExtension):
                 pc_metrics.remove("nn_isolation")
                 pc_metrics.remove("nn_noise_overlap")
                 metric_names += pc_metrics
-            # if spike_locations are not available, drift is removed from the list
-            if not self.sorting_analyzer.has_extension("spike_locations"):
-                if "drift" in metric_names:
-                    metric_names.remove("drift")
 
         metric_params_ = get_default_qm_params()
         for k in metric_params_:
@@ -114,6 +113,26 @@ class ComputeQualityMetrics(AnalyzerExtension):
             ]
             metric_names = metrics_to_compute + existing_metric_names_propagated
 
+        ## Deal with dependencies
+        computable_metrics_to_compute = copy(metrics_to_compute)
+        if metric_names_is_none:
+            need_more_extensions = False
+            warning_text = "Some metrics you are trying to compute depend on other extensions:\n"
+            for metric in metrics_to_compute:
+                metric_dependencies = metric_extension_dependencies.get(metric)
+                if metric_dependencies is not None:
+                    for extension_name in metric_dependencies:
+                        if all(
+                            self.sorting_analyzer.has_extension(name) is False for name in extension_name.split("|")
+                        ):
+                            need_more_extensions = True
+                            if metric in computable_metrics_to_compute:
+                                computable_metrics_to_compute.remove(metric)
+                                warning_text += f"    {metric} requires {metric_dependencies}\n"
+            warning_text += "To include these metrics, compute the required extensions using `sorting_analyzer.compute('extension_name')"
+            if need_more_extensions:
+                warnings.warn(warning_text)
+
         params = dict(
             metric_names=metric_names,
             peak_sign=peak_sign,
@@ -121,7 +140,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
             metric_params=metric_params_,
             skip_pc_metrics=skip_pc_metrics,
             delete_existing_metrics=delete_existing_metrics,
-            metrics_to_compute=metrics_to_compute,
+            metrics_to_compute=computable_metrics_to_compute,
         )
 
         return params
