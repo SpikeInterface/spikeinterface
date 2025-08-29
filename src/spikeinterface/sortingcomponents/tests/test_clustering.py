@@ -123,7 +123,7 @@ def test_templates_from_svd(recording, peaks, job_kwargs):
 if __name__ == "__main__":
     job_kwargs = dict(n_jobs=0.8, chunk_size=30_000, progress_bar=True)
     set_global_job_kwargs(**job_kwargs)
-    
+
     recording, sorting = make_dataset()
     peaks = run_peaks(recording, job_kwargs)
     peak_locations = run_peak_locations(recording, peaks, job_kwargs)

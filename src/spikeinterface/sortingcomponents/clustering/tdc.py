@@ -45,7 +45,7 @@ class TdcClustering:
         # "svd": {"n_components": 6},
         "clustering": {
             "recursive_depth": 3,
-            "split_radius_um": 40.,
+            "split_radius_um": 40.0,
             # "clusterer": "hdbscan",
             # "clusterer_kwargs": {
             #     "min_cluster_size": 10,
@@ -56,7 +56,12 @@ class TdcClustering:
             # "clusterer": "isosplit6",
             # "clusterer_kwargs": {},
             "clusterer": "isosplit",
-            "clusterer_kwargs": {"n_init":50, "min_cluster_size": 10, "max_iterations_per_pass": 500, "isocut_threshold": 2.0},
+            "clusterer_kwargs": {
+                "n_init": 50,
+                "min_cluster_size": 10,
+                "max_iterations_per_pass": 500,
+                "isocut_threshold": 2.0,
+            },
             "do_merge": True,
             "merge_kwargs": {
                 "similarity_metric": "l1",
@@ -105,7 +110,6 @@ class TdcClustering:
         neighbours_mask = get_channel_distances(recording) < split_radius_um
 
         original_labels = peaks["channel_index"]
-
 
         clusterer = params["clustering"].get("clusterer", "isosplit")
         clusterer_kwargs = params["clustering"].get("clusterer_kwargs", {})
