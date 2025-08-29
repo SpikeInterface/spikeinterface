@@ -533,7 +533,7 @@ if HAVE_NUMBA:
         V = centroid2 - centroid1
         avg_covmat = (covmat1 + covmat2) / 2.0
         inv_avg_covmat = np.linalg.inv(avg_covmat)
-        V = inv_avg_covmat.astype("float64") @ V.astype("float64")
+        V = inv_avg_covmat.astype(X1.dtype) @ V.astype(X1.dtype)
         V /= np.linalg.norm(V)
 
         # this two are equivalent (offset, the later is more intuitive)
