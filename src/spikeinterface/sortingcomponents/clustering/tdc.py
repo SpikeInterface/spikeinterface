@@ -45,7 +45,7 @@ class TdcClustering:
         # "svd": {"n_components": 6},
         "clustering": {
             "recursive_depth": 3,
-            "split_radius_um": 40.0,
+            "split_radius_um": 40.,
             # "clusterer": "hdbscan",
             # "clusterer_kwargs": {
             #     "min_cluster_size": 10,
@@ -63,6 +63,7 @@ class TdcClustering:
                 "num_shifts": 3,
                 "similarity_thresh": 0.8,
             },
+            "min_size_split": 10,
         },
         "clean": {
             "minimum_cluster_size": 25,
@@ -71,7 +72,6 @@ class TdcClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
-        import hdbscan
 
         ms_before = params["waveforms"]["ms_before"]
         ms_after = params["waveforms"]["ms_after"]
@@ -106,10 +106,8 @@ class TdcClustering:
 
         original_labels = peaks["channel_index"]
 
-        min_cluster_size = 50
-        # min_cluster_size = 10
 
-        clusterer = params["clustering"].get("clusterer", "hdbscan")
+        clusterer = params["clustering"].get("clusterer", "isosplit")
         clusterer_kwargs = params["clustering"].get("clusterer_kwargs", {})
 
         features = dict(
@@ -129,7 +127,7 @@ class TdcClustering:
                 feature_name="peaks_svd",
                 neighbours_mask=neighbours_mask,
                 waveforms_sparse_mask=sparse_mask,
-                min_size_split=min_cluster_size,
+                min_size_split=params["clustering"]["min_size_split"],
                 n_pca_features=3,
             ),
             recursive=True,

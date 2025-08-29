@@ -57,14 +57,17 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             #     "allow_single_cluster": True,
             #     "cluster_selection_method": "eom",
             # },
-            "clusterer": "isosplit6",
-            "clusterer_kwargs": {},
+            # "clusterer": "isosplit6",
+            # "clusterer_kwargs": {},
+            "clusterer": "isosplit",
+            "clusterer_kwargs": {"n_init":50, "min_cluster_size": 10, "max_iterations_per_pass": 500, "isocut_threshold": 2.0},
             "do_merge": True,
             "merge_kwargs": {
                 "similarity_metric": "l1",
                 "num_shifts": 4,
                 "similarity_thresh": 0.75,
             },
+            "min_size_split": 25,
         },
         "templates": {
             "ms_before": 2.0,
@@ -98,7 +101,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "2025.07"
+        return "2025.08"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -194,20 +197,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         clustering_kwargs["clustering"] = params["clustering"].copy()
 
         if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
-            # this is a patch to make the github CI because isosplit is installable on python > 3.11
             have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
             if not have_sisosplit6:
-                if verbose:
-                    print(
-                        "By default tridesclous2 need isosplit6 package for better reults please install it, automatically switch to hdbscan instead"
-                    )
-                clustering_kwargs["clustering"]["clusterer"] = "hdbscan"
-                clustering_kwargs["clustering"]["clusterer_kwargs"] = {
-                    "min_cluster_size": 10,
-                    "min_samples": 1,
-                    "allow_single_cluster": True,
-                    "cluster_selection_method": "eom",
-                }
+                raise ValueError("You want to run tridesclous with the isosplit6 (the C++) implementation, bu this is not installed, do pip install isosplit6")
 
         unit_ids, clustering_label, more_outs = find_cluster_from_peaks(
             recording, peaks, method="tdc-clustering", method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs
