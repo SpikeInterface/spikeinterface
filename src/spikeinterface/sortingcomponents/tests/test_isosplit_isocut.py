@@ -1,5 +1,7 @@
 import numpy as np
 
+import pytest
+
 try:
     import numba
     from spikeinterface.sortingcomponents.clustering.isosplit_isocut import isocut, isosplit
@@ -9,8 +11,8 @@ except ImportError:
     HAVE_NUMBA = False
 
 
+@pytest.mark.skipif(not HAVE_NUMBA)
 def test_isocut():
-    print("HAVE_NUMBA", HAVE_NUMBA)
     if not HAVE_NUMBA:
         return
 
@@ -19,7 +21,7 @@ def test_isocut():
 
     dipscore, cutpoint = isocut(np.array([0, 1, 1, 2]))
     assert dipscore == 0.9427680482325083
-    assert cutpoint == 1.
+    assert cutpoint == 1.0
 
     z = np.array(
         [
@@ -100,9 +102,10 @@ def test_isocut():
     assert np.abs(cutpoint - 0.09881018) < 0.001
 
 
+@pytest.mark.skipif(not HAVE_NUMBA)
 def make_nd_blob(
     dim=3,
-    n_lcuster=5,
+    n_clusters=5,
     cluster_size=1000,
     seed=None,
 ):
@@ -110,7 +113,7 @@ def make_nd_blob(
 
     data = []
     gt_label = []
-    for i in range(n_lcuster):
+    for i in range(n_clusters):
         if isinstance(cluster_size, int):
             size = cluster_size
         elif isinstance(cluster_size, tuple):
@@ -127,7 +130,7 @@ def make_nd_blob(
 
         one_cluster = np.random.multivariate_normal(center, cov, size=size)
         data.append(one_cluster)
-        gt_label.append(np.ones(size)*i)
+        gt_label.append(np.ones(size) * i)
     data = np.concatenate(data)
     gt_label = np.concatenate(gt_label)
 
@@ -136,14 +139,16 @@ def make_nd_blob(
 
 def test_isosplit():
 
-    data, gt_label = make_nd_blob(dim=2,
-                            n_lcuster=6,
-                            cluster_size=(200, 800),
-                            seed=2205,
-                            )
+    data, gt_label = make_nd_blob(
+        dim=2,
+        n_clusters=3,
+        cluster_size=(200, 800),
+        seed=2406,
+    )
 
-
-    labels = isosplit(data, isocut_threshold=2., n_init=200)
+    labels = isosplit(data, isocut_threshold=2.0, n_init=200)
+    # the beauty is that it discovers the number of clusters automatically, at least for this this seed :)
+    assert np.unique(labels).size == 3
 
     # DEBUG = True
     # if DEBUG :
@@ -155,7 +160,7 @@ def test_isosplit():
     #     else:
     #         fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
     #         ax.scatter(data[:, 0], data[:, 1], data[:, 2], s=1, c=labels)
-        
+
     #     plt.show()
 
 

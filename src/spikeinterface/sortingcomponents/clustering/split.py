@@ -15,7 +15,7 @@ from .tools import aggregate_sparse_features, FeaturesLoader
 
 try:
     import numba
-    
+
 except:
     pass  # isocut requires numba
 
@@ -296,6 +296,7 @@ class LocalFeatureClustering:
             del clust
         elif clusterer == "isosplit":
             from spikeinterface.sortingcomponents.clustering.isosplit_isocut import isosplit
+
             possible_labels = isosplit(final_features, **clusterer_kwargs)
 
             # min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)

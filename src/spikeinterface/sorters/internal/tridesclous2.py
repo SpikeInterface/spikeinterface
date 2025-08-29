@@ -60,7 +60,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             # "clusterer": "isosplit6",
             # "clusterer_kwargs": {},
             "clusterer": "isosplit",
-            "clusterer_kwargs": {"n_init":50, "min_cluster_size": 10, "max_iterations_per_pass": 500, "isocut_threshold": 2.0},
+            "clusterer_kwargs": {
+                "n_init": 50,
+                "min_cluster_size": 10,
+                "max_iterations_per_pass": 500,
+                "isocut_threshold": 2.0,
+            },
             "do_merge": True,
             "merge_kwargs": {
                 "similarity_metric": "l1",
@@ -199,7 +204,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
             have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
             if not have_sisosplit6:
-                raise ValueError("You want to run tridesclous with the isosplit6 (the C++) implementation, bu this is not installed, do pip install isosplit6")
+                raise ValueError(
+                    "You want to run tridesclous with the isosplit6 (the C++) implementation, bu this is not installed, do pip install isosplit6"
+                )
 
         unit_ids, clustering_label, more_outs = find_cluster_from_peaks(
             recording, peaks, method="tdc-clustering", method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs

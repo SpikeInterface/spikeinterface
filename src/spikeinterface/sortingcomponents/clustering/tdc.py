@@ -44,7 +44,7 @@ class TdcClustering:
         "extract_peaks_svd_kwargs": dict(n_components=5),
         "split": {
             "recursive_depth": 3,
-            "split_radius_um": 40.,
+            "split_radius_um": 40.0,
             # "clusterer": "hdbscan",
             # "clusterer_kwargs": {
             #     "min_cluster_size": 10,
@@ -55,8 +55,20 @@ class TdcClustering:
             # "clusterer": "isosplit6",
             # "clusterer_kwargs": {},
             "clusterer": "isosplit",
-            "clusterer_kwargs": {"n_init":50, "min_cluster_size": 10, "max_iterations_per_pass": 500, "isocut_threshold": 2.0},
-            "min_size_split": 25,
+
+            "clusterer_kwargs": {
+                "n_init": 50,
+                "min_cluster_size": 10,
+                "max_iterations_per_pass": 500,
+                "isocut_threshold": 2.0,
+            },
+            "do_merge": True,
+            "merge_kwargs": {
+                "similarity_metric": "l1",
+                "num_shifts": 3,
+                "similarity_thresh": 0.8,
+            },
+            "min_size_split": 10,
         },
         "do_merge_with_features": True,
         "merge_features_kwargs": {
