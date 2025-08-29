@@ -11,7 +11,7 @@ except ImportError:
     HAVE_NUMBA = False
 
 
-@pytest.mark.skipif(not HAVE_NUMBA, "no numba")
+@pytest.mark.skipif(not HAVE_NUMBA, reason="no numba")
 def test_isocut():
     if not HAVE_NUMBA:
         return
@@ -102,7 +102,7 @@ def test_isocut():
     assert np.abs(cutpoint - 0.09881018) < 0.001
 
 
-@pytest.mark.skipif(not HAVE_NUMBA, "no numba")
+
 def make_nd_blob(
     dim=3,
     n_clusters=5,
@@ -135,7 +135,7 @@ def make_nd_blob(
 
     return data, gt_label
 
-
+@pytest.mark.skipif(not HAVE_NUMBA, reason="no numba")
 def test_isosplit():
 
     data, gt_label = make_nd_blob(
