@@ -92,7 +92,7 @@ def test_apply_merges_to_sorting():
     sorting2 = apply_merges_to_sorting(sorting1, [["a", "b"]], censor_ms=None)
     spikes2 = sorting2.to_spike_vector()
     assert sorting2.unit_ids.size == 2
-    assert sorting1.to_spike_vector().size == sorting1.to_spike_vector().size
+    assert sorting1.to_spike_vector().size == sorting2.to_spike_vector().size
     assert np.array_equal(["c", "merge0"], sorting2.unit_ids)
     assert np.array_equal(
         spikes1[spikes1["unit_index"] == 2]["sample_index"], spikes2[spikes2["unit_index"] == 0]["sample_index"]
