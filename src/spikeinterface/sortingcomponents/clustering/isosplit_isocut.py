@@ -437,72 +437,71 @@ def ensure_continuous_labels(labels):
 #             centroids[i, :] = 0.
 #             covmats[i, :, :] = 0.
 
-
-@numba.jit(nopython=True)
-def compute_centroids_and_covmats(X, centroids, covmats, labels, label_set, to_compute_mask):
-    ## manual loop with numba to be faster
-
-    count = np.zeros(centroids.shape[0], dtype="int64")
-    for i in range(centroids.shape[0]):
-        if to_compute_mask[i]:
-            centroids[i, :] = 0.0
-            covmats[i, :, :] = 0.0
-
-    for i in range(X.shape[0]):
-        ind = labels[i]
-        if to_compute_mask[ind]:
-            centroids[ind, :] += X[i, :]
-            count[ind] += 1
-
-    for i in range(centroids.shape[0]):
-        if to_compute_mask[i] and count[i] > 0:
-            centroids[i, :] /= count[i]
-
-    for i in range(X.shape[0]):
-        ind = labels[i]
-        if to_compute_mask[ind]:
-            centered = X[i, :] - centroids[ind, :]
-            for m1 in range(X.shape[1]):
-                for m2 in range(m1, X.shape[1]):
-                    v = centered[m1] * centered[m2]
-                    covmats[ind, m1, m2] += v
-                    covmats[ind, m2, m1] += v
-
-    for i in range(centroids.shape[0]):
-        if to_compute_mask[i] and count[i] > 0:
-            covmats[i, :, :] /= count[i]
-
-
-# @numba.jit(nopython=True)
-def get_pairs_to_compare(centroids, comparisons_made, active_labels_mask):
-    n = centroids.shape[0]
-
-    dists = compute_distances(centroids, comparisons_made, active_labels_mask)
-    best_inds = np.argmin(dists, axis=1)
-
-    # already_choosen = np.zeros(n, dtype="bool")
-    pairs = []
-    for i1 in range(n):
-        if not active_labels_mask[i1]:  # or already_choosen[i1]:
-            continue
-        i2 = best_inds[i1]
-        if (best_inds[i2] == i1) and not (np.isinf(dists[i1, i2])) and i2 > i1:  #  and not already_choosen[i2]:
-            # mutual closest
-            # if already_choosen[i1] or already_choosen[i2]:
-            #     print("get_pairs_to_compare() louce!! already_choosen", i1, i2)
-            #     print( (i2, i1) in pairs, pairs,)
-            pairs.append((i1, i2))
-            # already_choosen[i1] = True
-            # already_choosen[i2] = True
-            dists[i1, :] = np.inf
-            dists[i2, :] = np.inf
-            dists[:, i1] = np.inf
-            dists[:, i2] = np.inf
-
-    return pairs
-
-
 if HAVE_NUMBA:
+    @numba.jit(nopython=True)
+    def compute_centroids_and_covmats(X, centroids, covmats, labels, label_set, to_compute_mask):
+        ## manual loop with numba to be faster
+
+        count = np.zeros(centroids.shape[0], dtype="int64")
+        for i in range(centroids.shape[0]):
+            if to_compute_mask[i]:
+                centroids[i, :] = 0.0
+                covmats[i, :, :] = 0.0
+
+        for i in range(X.shape[0]):
+            ind = labels[i]
+            if to_compute_mask[ind]:
+                centroids[ind, :] += X[i, :]
+                count[ind] += 1
+
+        for i in range(centroids.shape[0]):
+            if to_compute_mask[i] and count[i] > 0:
+                centroids[i, :] /= count[i]
+
+        for i in range(X.shape[0]):
+            ind = labels[i]
+            if to_compute_mask[ind]:
+                centered = X[i, :] - centroids[ind, :]
+                for m1 in range(X.shape[1]):
+                    for m2 in range(m1, X.shape[1]):
+                        v = centered[m1] * centered[m2]
+                        covmats[ind, m1, m2] += v
+                        covmats[ind, m2, m1] += v
+
+        for i in range(centroids.shape[0]):
+            if to_compute_mask[i] and count[i] > 0:
+                covmats[i, :, :] /= count[i]
+
+
+    @numba.jit(nopython=True)
+    def get_pairs_to_compare(centroids, comparisons_made, active_labels_mask):
+        n = centroids.shape[0]
+
+        dists = compute_distances(centroids, comparisons_made, active_labels_mask)
+        best_inds = np.argmin(dists, axis=1)
+
+        # already_choosen = np.zeros(n, dtype="bool")
+        pairs = []
+        for i1 in range(n):
+            if not active_labels_mask[i1]:  # or already_choosen[i1]:
+                continue
+            i2 = best_inds[i1]
+            if (best_inds[i2] == i1) and not (np.isinf(dists[i1, i2])) and i2 > i1:  #  and not already_choosen[i2]:
+                # mutual closest
+                # if already_choosen[i1] or already_choosen[i2]:
+                #     print("get_pairs_to_compare() louce!! already_choosen", i1, i2)
+                #     print( (i2, i1) in pairs, pairs,)
+                pairs.append((i1, i2))
+                # already_choosen[i1] = True
+                # already_choosen[i2] = True
+                dists[i1, :] = np.inf
+                dists[i2, :] = np.inf
+                dists[:, i1] = np.inf
+                dists[:, i2] = np.inf
+
+        return pairs
+
+
 
     @numba.jit(nopython=True)
     def compute_distances(centroids, comparisons_made, active_labels_mask):
@@ -536,7 +535,7 @@ if HAVE_NUMBA:
         V = centroid2 - centroid1
         avg_covmat = (covmat1 + covmat2) / 2.0
         inv_avg_covmat = np.linalg.inv(avg_covmat)
-        V = inv_avg_covmat @ V
+        V = inv_avg_covmat.astype('float64') @ V.astype('float64')
         V /= np.linalg.norm(V)
 
         # this two are equivalent (offset, the later is more intuitive)
