@@ -438,6 +438,7 @@ def ensure_continuous_labels(labels):
 #             covmats[i, :, :] = 0.
 
 if HAVE_NUMBA:
+
     @numba.jit(nopython=True)
     def compute_centroids_and_covmats(X, centroids, covmats, labels, label_set, to_compute_mask):
         ## manual loop with numba to be faster
@@ -472,7 +473,6 @@ if HAVE_NUMBA:
             if to_compute_mask[i] and count[i] > 0:
                 covmats[i, :, :] /= count[i]
 
-
     @numba.jit(nopython=True)
     def get_pairs_to_compare(centroids, comparisons_made, active_labels_mask):
         n = centroids.shape[0]
@@ -500,8 +500,6 @@ if HAVE_NUMBA:
                 dists[:, i2] = np.inf
 
         return pairs
-
-
 
     @numba.jit(nopython=True)
     def compute_distances(centroids, comparisons_made, active_labels_mask):
@@ -535,7 +533,7 @@ if HAVE_NUMBA:
         V = centroid2 - centroid1
         avg_covmat = (covmat1 + covmat2) / 2.0
         inv_avg_covmat = np.linalg.inv(avg_covmat)
-        V = inv_avg_covmat.astype('float64') @ V.astype('float64')
+        V = inv_avg_covmat.astype("float64") @ V.astype("float64")
         V /= np.linalg.norm(V)
 
         # this two are equivalent (offset, the later is more intuitive)
