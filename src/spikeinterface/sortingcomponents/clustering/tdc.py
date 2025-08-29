@@ -70,7 +70,7 @@ class TdcClustering:
             },
             "min_size_split": 10,
         },
-        "do_merge_with_features": True,
+        "do_merge_with_features": False,
         "merge_features_kwargs": {
             "merge_radius_um":50.,
             "criteria": "isocut",

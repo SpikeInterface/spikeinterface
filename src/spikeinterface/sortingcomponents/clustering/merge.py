@@ -483,8 +483,8 @@ class ProjectDistribution:
         else:
             final_shift = 0
 
-        # if DEBUG:
-        if dipscore < 4:
+        if DEBUG:
+        # if dipscore < 4:
             import matplotlib.pyplot as plt
 
             flatten_wfs0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1)
