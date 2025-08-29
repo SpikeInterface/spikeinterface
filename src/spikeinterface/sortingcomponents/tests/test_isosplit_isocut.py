@@ -11,7 +11,7 @@ except ImportError:
     HAVE_NUMBA = False
 
 
-@pytest.mark.skipif(not HAVE_NUMBA)
+@pytest.mark.skipif(not HAVE_NUMBA, "no numba")
 def test_isocut():
     if not HAVE_NUMBA:
         return
@@ -102,7 +102,7 @@ def test_isocut():
     assert np.abs(cutpoint - 0.09881018) < 0.001
 
 
-@pytest.mark.skipif(not HAVE_NUMBA)
+@pytest.mark.skipif(not HAVE_NUMBA, "no numba")
 def make_nd_blob(
     dim=3,
     n_clusters=5,
@@ -118,11 +118,10 @@ def make_nd_blob(
             size = cluster_size
         elif isinstance(cluster_size, tuple):
             lim0, lim1 = cluster_size
-            size = rng.uniform() * (lim1 - lim0) + lim0
+            size = int(rng.uniform() * (lim1 - lim0) + lim0)
         else:
             raise ValueError("Bad boy")
 
-        size = 1000
         center = rng.uniform(size=(dim)) * 10
         # cov = rng.uniform(size=(dim, dim)) * 2
         # cov = cov + cov.T
@@ -142,12 +141,18 @@ def test_isosplit():
     data, gt_label = make_nd_blob(
         dim=2,
         n_clusters=3,
-        cluster_size=(200, 800),
+        cluster_size=(400, 800),
         seed=2406,
     )
+    data = data.astype("float64")
 
-    labels = isosplit(data, isocut_threshold=2.0, n_init=200)
+    labels = isosplit(data, isocut_threshold=2.0, n_init=40)
     # the beauty is that it discovers the number of clusters automatically, at least for this this seed :)
+    assert np.unique(labels).size == 3
+
+    # check that numba handle the 2 dtypes
+    data = data.astype("float32")
+    labels = isosplit(data, isocut_threshold=2.0, n_init=40)
     assert np.unique(labels).size == 3
 
     # DEBUG = True
