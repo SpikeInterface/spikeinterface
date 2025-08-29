@@ -10,6 +10,7 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
+
 @pytest.mark.skipif(not HAVE_NUMBA)
 def test_isocut():
     if not HAVE_NUMBA:
@@ -20,7 +21,7 @@ def test_isocut():
 
     dipscore, cutpoint = isocut(np.array([0, 1, 1, 2]))
     assert dipscore == 0.9427680482325083
-    assert cutpoint == 1.
+    assert cutpoint == 1.0
 
     z = np.array(
         [
@@ -129,7 +130,7 @@ def make_nd_blob(
 
         one_cluster = np.random.multivariate_normal(center, cov, size=size)
         data.append(one_cluster)
-        gt_label.append(np.ones(size)*i)
+        gt_label.append(np.ones(size) * i)
     data = np.concatenate(data)
     gt_label = np.concatenate(gt_label)
 
@@ -138,14 +139,14 @@ def make_nd_blob(
 
 def test_isosplit():
 
-    data, gt_label = make_nd_blob(dim=2,
-                            n_clusters=3,
-                            cluster_size=(200, 800),
-                            seed=2406,
-                            )
+    data, gt_label = make_nd_blob(
+        dim=2,
+        n_clusters=3,
+        cluster_size=(200, 800),
+        seed=2406,
+    )
 
-
-    labels = isosplit(data, isocut_threshold=2., n_init=200)
+    labels = isosplit(data, isocut_threshold=2.0, n_init=200)
     # the beauty is that it discovers the number of clusters automatically, at least for this this seed :)
     assert np.unique(labels).size == 3
 
@@ -159,7 +160,7 @@ def test_isosplit():
     #     else:
     #         fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
     #         ax.scatter(data[:, 0], data[:, 1], data[:, 2], s=1, c=labels)
-        
+
     #     plt.show()
 
 

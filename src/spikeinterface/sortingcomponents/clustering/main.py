@@ -6,6 +6,7 @@ from spikeinterface.core.job_tools import fix_job_kwargs, _shared_job_kwargs_doc
 
 import copy
 
+
 def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={}, extra_outputs=False, **job_kwargs):
     """
     Find cluster from peaks.
