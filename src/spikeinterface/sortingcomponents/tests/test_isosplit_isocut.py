@@ -1,5 +1,7 @@
 import numpy as np
 
+import pytest
+
 try:
     import numba
     from spikeinterface.sortingcomponents.clustering.isosplit_isocut import isocut, isosplit
@@ -8,9 +10,8 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
-
+@pytest.mark.skipif(not HAVE_NUMBA)
 def test_isocut():
-    print("HAVE_NUMBA", HAVE_NUMBA)
     if not HAVE_NUMBA:
         return
 
@@ -100,9 +101,10 @@ def test_isocut():
     assert np.abs(cutpoint - 0.09881018) < 0.001
 
 
+@pytest.mark.skipif(not HAVE_NUMBA)
 def make_nd_blob(
     dim=3,
-    n_lcuster=5,
+    n_clusters=5,
     cluster_size=1000,
     seed=None,
 ):
@@ -110,7 +112,7 @@ def make_nd_blob(
 
     data = []
     gt_label = []
-    for i in range(n_lcuster):
+    for i in range(n_clusters):
         if isinstance(cluster_size, int):
             size = cluster_size
         elif isinstance(cluster_size, tuple):
@@ -137,13 +139,15 @@ def make_nd_blob(
 def test_isosplit():
 
     data, gt_label = make_nd_blob(dim=2,
-                            n_lcuster=6,
+                            n_clusters=3,
                             cluster_size=(200, 800),
-                            seed=2205,
+                            seed=2406,
                             )
 
 
     labels = isosplit(data, isocut_threshold=2., n_init=200)
+    # the beauty is that it discovers the number of clusters automatically, at least for this this seed :)
+    assert np.unique(labels).size == 3
 
     # DEBUG = True
     # if DEBUG :
