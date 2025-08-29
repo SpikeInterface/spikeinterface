@@ -167,4 +167,3 @@ def test_isosplit():
 if __name__ == "__main__":
     # test_isocut()
     test_isosplit()
-
