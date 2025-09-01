@@ -1,4 +1,4 @@
-name: Checks uv instalation from Installation Tips
+name: Checks uv installation from Installation Tips
 
 on:
   workflow_dispatch:
@@ -30,7 +30,7 @@ jobs:
     - name: Install requirements
       run: uv pip install -r ./installation_tips/beginner_requirements_stable.txt
     - name: Check Installation Tips
-      run: python ./installation_tips/check_your_install.py --ci # ci flag turns off gui
+      run: python ./installation_tips/check_your_install.py --ci --short # ci flag turns off gui
     - name: Windows cleanup
       if: ${{ matrix.os == 'windows-latest' }}
       run: python ./installation_tips/cleanup_for_windows.py
