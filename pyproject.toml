@@ -100,7 +100,7 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib>=3.6", # matplotlib.colormaps
-    "cuda-python; platform_system != 'Darwin'",
+    "cuda-python>=11.8.6; platform_system != 'Darwin'",
     "numba>=0.59",
     "skops",
     "huggingface_hub"
