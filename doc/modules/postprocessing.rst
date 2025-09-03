@@ -196,6 +196,8 @@ and doesn't save anything. If we wanted to save the extensions as we compute the
 Available postprocessing extensions
 -----------------------------------
 
+.. _postprocessing_noise_levels:
+
 noise_levels
 ^^^^^^^^^^^^
 
@@ -204,12 +206,11 @@ As an extension, this expects the :code:`Recording` as input and the computed va
 
 .. code-block:: python
 
-    # compute the noise from a recording
-    noise = compute_noise_level(recording=recording)
-
     # compute the noise from an analyzer
     noise = sorting_analyzer.compute("noise_levels")
 
+
+.. _postprocessing_principal_components:
 
 principal_components
 ^^^^^^^^^^^^^^^^^^^^
@@ -248,7 +249,7 @@ and is not well suited for high-density probes.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_template_similarity`
 
-
+.. _postprocessing_spike_amplitudes:
 
 spike_amplitudes
 ^^^^^^^^^^^^^^^^
@@ -265,6 +266,7 @@ each spike. The extremum channel is computed from the templates.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_spike_amplitudes`
 
+.. _postprocessing_spike_locations:
 
 spike_locations
 ^^^^^^^^^^^^^^^
