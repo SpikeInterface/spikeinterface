@@ -715,13 +715,17 @@ def neg_hessian_likelihood_term(Ub, Ub_prevcur=None, Ub_curprev=None):
     Together with the term arising from the regularization, this constructs the
     coefficients matrix in our linear problem.
     """
-    negHUb = -Ub - Ub.T
+    # compute negHUb = -Ub - Ub.T with only 1 copy
+    negHUb = -Ub
+    negHUb -= Ub.T
+
     diagonal_terms = np.diagonal(negHUb) + Ub.sum(1) + Ub.sum(0)
     if Ub_prevcur is None:
         np.fill_diagonal(negHUb, diagonal_terms)
     else:
         diagonal_terms += Ub_prevcur.sum(0) + Ub_curprev.sum(1)
         np.fill_diagonal(negHUb, diagonal_terms)
+
     return negHUb
 
 
@@ -872,7 +876,9 @@ def thomas_solve(
     Lambda_s_offdiag = laplacian(T, eps=0, lambd=-lambda_s / 2)
 
     # initialize block-LU stuff and forward variable
-    alpha_hat_b = L_t[0] + Lambda_s_diagb + neg_hessian_likelihood_term(Us[0], **online_kw_hess(0))
+    alpha_hat_b = neg_hessian_likelihood_term(Us[0], **online_kw_hess(0))
+    alpha_hat_b += L_t[0]
+    alpha_hat_b += Lambda_s_diagb
     targets = np.c_[Lambda_s_offdiag, newton_rhs(Us[0], Ds[0], **online_kw_rhs(0))]
     res = solve(alpha_hat_b, targets, assume_a="pos")
     assert res.shape == (T, T + 1)
@@ -886,8 +892,10 @@ def thomas_solve(
         else:
             Lambda_s_diagb = laplacian(T, eps=eps, lambd=lambda_s / 2, ridge_mask=had_weights[b])
 
-        Ab = L_t[b] + Lambda_s_diagb + neg_hessian_likelihood_term(Us[b], **online_kw_hess(b))
-        alpha_hat_b = Ab - Lambda_s_offdiag @ gamma_hats[b - 1]
+        alpha_hat_b = neg_hessian_likelihood_term(Us[b], **online_kw_hess(b))
+        alpha_hat_b += L_t[b]
+        alpha_hat_b += Lambda_s_diagb
+        alpha_hat_b -= Lambda_s_offdiag @ gamma_hats[b - 1]
         targets[:, T] = newton_rhs(Us[b], Ds[b], **online_kw_rhs(b))
         targets[:, T] -= Lambda_s_offdiag @ ys[b - 1]
         res = solve(alpha_hat_b, targets)
