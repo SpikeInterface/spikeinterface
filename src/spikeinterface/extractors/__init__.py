@@ -56,6 +56,7 @@ def __getattr__(extractor_name):
                 "Importing classes at __init__ has been deprecated in favor of only importing function-size wrappers "
                 "and will be removed in 0.105.0. For developers that prefer working with the class versions of extractors "
                 "they can be imported from spikeinterface.extractors.extractor_classes"
+                f"For class {reading_function.__name__}"
             )
             warn(dep_msg)
             return reading_function
