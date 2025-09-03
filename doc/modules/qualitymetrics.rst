@@ -39,7 +39,7 @@ If :ref:`postprocessing_noise_levels` and ``templates`` are computed, add:
 
 - :doc:`qualitymetrics/snr`
 
-If the recording, :ref:`postprocessing_spike_amplitudes`and ``templates`` are available, add:
+If the recording, :ref:`postprocessing_spike_amplitudes` and ``templates`` are available, add:
 
 - :doc:`qualitymetrics/sd_ratio`
 
@@ -61,7 +61,7 @@ You can compute the default metrics using the following code snippet:
     # compute the metrics
     sorting_analyzer.compute("quality_metrics")
 
-    # get the metrics in the form as a pandas DataFrame
+    # get the metrics in the form of a pandas DataFrame
     quality_metrics = sorting_analyzer.get_extension("quality_metrics").get_data()
 
     # print the metrics that have been computed
@@ -69,7 +69,6 @@ You can compute the default metrics using the following code snippet:
 
 Some metrics are very slow to compute when the number of units it large. So by default, the following metrics are not computed:
 
-- :doc:`qualitymetrics/isolation_distance`
 - The ``nn_noise_overlap`` from :doc:`qualitymetrics/nearest_neighbor`
 
 Some metrics make use of :ref:`principal component analysis <postprocessing_principal_components>` (PCA) to reduce the dimensionality of computations.
@@ -80,9 +79,10 @@ If you only want to compute a subset of metrics, you can use convenience functio
 .. code-block:: python
 
     from spikeinterface.quality_metrics import compute_isi_violations
-    compute_isi_violations(sorting_analyzer, isi_threshold_ms=3.0)
+    isi_violations = compute_isi_violations(sorting_analyzer, isi_threshold_ms=3.0)
 
-or use the ``compute`` method
+This function returns the result of the computation but does not save it into the `sorting_analyzer`.
+To save the result in your analyzer, you can use the ``compute`` method:
 
 .. code-block:: python
 
