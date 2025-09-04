@@ -40,7 +40,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     The cluster_id column is used as the merge key to combine properties from multiple files.
     All loaded properties are added to the sorting extractor as unit properties, with some
     renamed for SpikeInterface conventions: 'group' becomes 'quality', 'cluster_id'
-    becomes 'original_cluster_id'. These properties can be accessed via get_property().
+    becomes 'original_cluster_id'. These properties can be accessed via ``sorting.get_property()`` function.
     """
 
     installation_mesg = (
