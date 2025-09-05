@@ -31,7 +31,7 @@ class CircusClustering:
     """
 
     _default_params = {
-        "clusterer": "hdbscan",  # 'isosplit6', 'hdbscan', 'isocut5'
+        "clusterer": "hdbscan",  # 'isosplit6', 'hdbscan', 'isosplit'
         "clusterer_kwargs": {
             "min_cluster_size": 20,
             "cluster_selection_epsilon": 0.5,
@@ -77,8 +77,8 @@ class CircusClustering:
         assert clusterer in [
             "isosplit6",
             "hdbscan",
-            "isocut5",
-        ], "Circus clustering only supports isosplit6, isocut5 or hdbscan"
+            "isosplit",
+        ], "Circus clustering only supports isosplit6, isosplit or hdbscan"
         if clusterer in ["isosplit6", "hdbscan"]:
             have_dep = importlib.util.find_spec(clusterer) is not None
             if not have_dep:
