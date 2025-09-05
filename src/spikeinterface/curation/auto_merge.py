@@ -480,9 +480,13 @@ def _auto_merge_units_single_iteration(
                     )
                     merge_unit_groups.remove(list(merge_unit_group))
 
-        merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
-            merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
-        )
+        if len(merge_unit_groups) > 0:
+            merged_analyzer, new_unit_ids = sorting_analyzer.merge_units(
+                merge_unit_groups, return_new_unit_ids=True, **apply_merge_kwargs, **job_kwargs
+            )
+        else:
+            merged_analyzer = sorting_analyzer
+            new_unit_ids = []
     else:
         merged_analyzer = sorting_analyzer
         new_unit_ids = []
@@ -635,8 +639,9 @@ def get_potential_auto_merge(
     done by Aurelien Wyngaard and Victor Llobet.
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
     """
+    # deprecation moved to 0.105.0 for @zm711
     warnings.warn(
-        "get_potential_auto_merge() is deprecated. Use compute_merge_unit_groups() instead",
+        "get_potential_auto_merge() is deprecated and will be removed in version 0.105.0. Use compute_merge_unit_groups() instead",
         DeprecationWarning,
         stacklevel=2,
     )

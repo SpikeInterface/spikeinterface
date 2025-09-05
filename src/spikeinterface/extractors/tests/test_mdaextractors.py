@@ -19,7 +19,7 @@ def test_mda_extractors(create_cache_folder):
     rec_mda = MdaRecordingExtractor(cache_folder / "mdatest")
     probe = rec_mda.get_probe()
 
-    check_recordings_equal(rec, rec_mda, return_scaled=False)
+    check_recordings_equal(rec, rec_mda, return_in_uV=False)
 
     # Write without setting max_channel
     MdaSortingExtractor.write_sorting(sort, cache_folder / "mdatest" / "firings.mda")

@@ -5,13 +5,9 @@ import warnings
 
 import probeinterface
 
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
-
-
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
-
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
+from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts_from_probe
+from spikeinterface.extractors.neoextractors.neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
 
 
 class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
@@ -75,9 +71,12 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
         self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), load_sync_channel=load_sync_channel))
 
-        stream_is_nidq_or_sync = "nidq" in self.stream_id or "SYNC" in self.stream_id
-        if stream_is_nidq_or_sync:
-            # Do not add probe information for the sync or nidq stream. Early return
+        stream_is_nidq = "nidq" in self.stream_id
+        stream_is_one_box = "obx" in self.stream_id
+        stream_is_sync = "SYNC" in self.stream_id
+
+        if stream_is_nidq or stream_is_one_box or stream_is_sync:
+            # Do not add probe information for the one box, nidq or sync streams. Early return
             return None
 
         # Checks if the probe information is available and adds location, shanks and sample shift if available.
@@ -96,31 +95,17 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             else:
                 self.set_probe(probe, in_place=True)
 
-            # load num_channels_per_adc depending on probe type
-            model_name = probe.annotations.get("model_name", None)
-            if model_name is None:
-                model_name = probe.annotations["probe_name"]
-
-            if "2.0" in model_name:  # Neuropixels 2.0
-                num_channels_per_adc = 16
-                num_cycles_in_adc = 16
-                total_channels = 384
-            else:  # NP1.0
-                num_channels_per_adc = 12
-                num_cycles_in_adc = 13 if "ap" in self.stream_id else 12
-                total_channels = 384
-
-            # sample_shifts is generated from total channels (384) channels
-            # when only some channels are saved we need to slice this vector (like we do for the probe)
-            sample_shifts = get_neuropixels_sample_shifts(total_channels, num_channels_per_adc, num_cycles_in_adc)
-            if self.get_num_channels() != total_channels:
-                # need slice because not all channel are saved
-                chans = probeinterface.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
-                # lets clip to 384 because this contains also the synchro channel
-                chans = chans[chans < total_channels]
-                sample_shifts = sample_shifts[chans]
-
-            self.set_property("inter_sample_shift", sample_shifts)
+            # get inter-sample shifts based on the probe information and mux channels
+            sample_shifts = get_neuropixels_sample_shifts_from_probe(probe, stream_name=self.stream_name)
+            if sample_shifts is not None:
+                num_readout_channels = probe.annotations.get("num_readout_channels")
+                if self.get_num_channels() != num_readout_channels:
+                    # need slice because not all channels are saved
+                    chans = probeinterface.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
+                    # lets clip to num_readout_channels because this contains also the synchro channel
+                    chans = chans[chans < num_readout_channels]
+                    sample_shifts = sample_shifts[chans]
+                self.set_property("inter_sample_shift", sample_shifts)
         else:
             warning_message = (
                 "Unable to find a corresponding metadata file for the recording. "

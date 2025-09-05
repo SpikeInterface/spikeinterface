@@ -139,7 +139,7 @@ class SlidingHdbscanClustering:
             nbefore,
             nafter,
             mode=d["waveform_mode"],
-            return_scaled=False,
+            return_in_uV=False,
             folder=wf_folder,
             dtype=dtype,
             sparsity_mask=sparsity_mask,
@@ -150,7 +150,7 @@ class SlidingHdbscanClustering:
         # noise
         noise = get_random_data_chunks(
             recording,
-            return_scaled=False,
+            return_in_uV=False,
             num_chunks_per_segment=d["noise_size"],
             chunk_size=nbefore + nafter,
             concatenated=False,
@@ -435,7 +435,7 @@ class SlidingHdbscanClustering:
 
         # extact again waveforms based on new sparsity mask depending on main_chan
         dtype = recording.get_dtype()
-        # ~ return_scaled = False
+        # ~ return_return_in_uVscaled = False
         peak_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
         keep = peak_labels >= 0
         num_keep = np.sum(keep)
@@ -459,7 +459,7 @@ class SlidingHdbscanClustering:
             nbefore,
             nafter,
             mode=d["waveform_mode"],
-            return_scaled=False,
+            return_in_uV=False,
             folder=wf_folder,
             dtype=recording.get_dtype(),
             sparsity_mask=sparsity_mask2,

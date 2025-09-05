@@ -61,7 +61,7 @@ with 16 channels:
     # retrieve traces after scaling to uV
     # (requires 'gain_to_uV' and 'offset_to_uV' properties)
     traces_uV = recording.get_traces(start_frame=100, end_frame=200, segment_index=0,
-                                     return_scaled=True)
+                                     return_in_uV=True)
     # set/get a new channel property (e.g. "quality")
     recording.set_property(key="quality", values=["good"] * num_channels)
     quality_values = recording.get_property("quality")
@@ -76,9 +76,9 @@ with 16 channels:
     recording_slice_frames = recording.frame_slice(start_frame=0,
                                                    end_frame=int(10*sampling_frequency))
     # get new recording with the first 4 channels
-    recording_slice_chans = recording.channel_slice(channel_ids=channel_ids[:4])
+    recording_slice_chans = recording.select_channels(channel_ids=channel_ids[:4])
     # remove last two channels
-    recording_rm_chans = recording.remove_channels(channel_ids=channel_ids[-2:])
+    recording_rm_chans = recording.remove_channels(remove_channel_ids=channel_ids[-2:])
 
     # set channel grouping (assume we have 4 groups of 4 channels, e.g. tetrodes)
     groups = [0] * 4 + [1] * 4 + [2] * 4 + [3] * 4
@@ -89,13 +89,14 @@ with 16 channels:
     # sliced recordings as values
 
     # set times (for synchronization) - assume our times start at 300 seconds
+    num_samples = recording.get_num_samples()
     timestamps = np.arange(num_samples) / sampling_frequency + 300
     recording.set_times(times=timestamps, segment_index=0)
 
 **Note**:
 Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units (uV), you can apply a gain and an offset.
 Many devices have their own gains and offsets necessary to convert their data and these values are handled by SpikeInterface for its extractors. This
-is triggered by the :code:`return_scaled` parameter in :code:`get_traces()`, (see above example), which will return the traces in uV.
+is triggered by the :code:`return_in_uV` parameter in :code:`get_traces()`, (see above example), which will return the traces in uV. Read more in our how to guide, :ref:`physical_units`.
 
 
 Sorting
@@ -118,7 +119,7 @@ with 10 units:
 .. code-block:: python
 
     unit_ids = sorting.unit_ids
-    num_channels = sorting.get_num_units()
+    num_units = sorting.get_num_units()
     sampling_frequency = sorting.sampling_frequency
 
     # retrieve spike trains for a unit (returned as sample indices)
@@ -178,8 +179,8 @@ to perform further analysis, such as calculating :code:`waveforms` and :code:`te
 Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* and the physical *scaling*.
 Sparsity defines the channels on which waveforms and templates are calculated using, for example,  a
 physical distance from the channel with the largest peak amplitude (see the :ref:`modules/core:Sparsity` section). Scaling, set by
-the :code:`return_scaled` argument, determines whether the data is converted from integer values to :math:`\mu V` or not.
-By default, :code:`return_scaled` is true and all processed data voltage values are in :math:`\mu V` (e.g., waveforms, templates, spike amplitudes, etc.).
+the :code:`return_in_uV` argument, determines whether the data is converted from integer values to :math:`\mu V` or not.
+By default, :code:`return_in_uV` is true and all processed data voltage values are in :math:`\mu V` (e.g., waveforms, templates, spike amplitudes, etc.).
 
 Now we will create a :code:`SortingAnalyzer` called :code:`sorting_analyzer`.
 
@@ -217,6 +218,7 @@ is run again with one of the backends supplied.
 
 .. code-block:: python
 
+    from pathlib import Path
     # create a "processed" folder
     processed_folder = Path("processed")
 
@@ -266,8 +268,7 @@ The :code:`sorting_analyzer` object implements convenient functions to access th
 
     num_channels = sorting_analyzer.get_num_channels()
     num_units = sorting_analyzer.get_num_units()
-    sampling_frequency = sorting_analyzer.get_sampling_frequency()
-    # or: sampling_frequency = sorting_analyzer.sampling_frequency
+    sampling_frequency = sorting_analyzer.sampling_frequency
     total_num_samples = sorting_analyzer.get_total_samples()
     total_duration = sorting_analyzer.get_total_duration()
 
@@ -689,6 +690,7 @@ In this example, we create a recording and a sorting object from numpy objects:
 .. code-block:: python
 
     import numpy as np
+    from spikeinterface.core import NumpyRecording, NumpySorting
 
     # in-memory recording
     sampling_frequency = 30_000.
@@ -697,7 +699,10 @@ In this example, we create a recording and a sorting object from numpy objects:
     num_channels = 16
     random_traces = np.random.randn(num_samples, num_channels)
 
-    recording_memory = NumpyRecording(traces_list=[random_traces])
+    recording_memory = NumpyRecording(
+        traces_list=[random_traces]
+        sampling_frequency=sampling_frequency,
+    )
     # with more elements in `traces_list` we can make multi-segment objects
 
     # in-memory sorting
@@ -706,7 +711,7 @@ In this example, we create a recording and a sorting object from numpy objects:
     spike_trains = []
     labels = []
     for i in range(num_units):
-        spike_trains_i = np.random.randint(low=0, high=num_samples, size=num_spikes_unit)
+        spike_trains_i = list(np.random.randint(low=0, high=num_samples, size=num_spikes_unit))
         labels_i = [i] * num_spikes_unit
         spike_trains += spike_trains_i
         labels += labels_i
@@ -751,7 +756,7 @@ the new objects will be *views* of the original ones.
 
     # keep one channel of every tenth channel
     keep_ids = recording.channel_ids[::10]
-    sub_recording = recording.channel_slice(channel_ids=keep_ids)
+    sub_recording = recording.select_channels(channel_ids=keep_ids)
 
     # keep between 5min and 12min
     fs = recording.sampling_frequency
@@ -870,13 +875,15 @@ They are useful to make examples, tests, and small demos:
 
 .. code-block:: python
 
+    from spikeinterface.core import generate_recording, generate_sorting, generate_snippets
+
     # recording with 2 segments and 4 channels
     recording = generate_recording(num_channels=4, sampling_frequency=30000.,
                                    durations=[10.325, 3.5], set_probe=True)
 
     # sorting with 2 segments and 5 units
     sorting = generate_sorting(num_units=5, sampling_frequency=30000., durations=[10.325, 3.5],
-                               firing_rate=15, refractory_period=1.5)
+                               firing_rates=15, refractory_period_ms=1.5)
 
     # snippets of 60 samples on 2 channels from 5 units
     snippets = generate_snippets(nbefore=20, nafter=40, num_channels=2,
@@ -929,7 +936,8 @@ WaveformExtractor
 ^^^^^^^^^^^^^^^^^
 
 This is now a legacy object that can still be accessed through the :py:class:`MockWaveformExtractor`. It is kept
-for backward compatibility.
+for backward compatibility. You can convert a ``WaveformExtractor`` to a ``SortingAnalyzer``
+easily, :ref:`using this guide <tutorials/waveform_extractor_to_sorting_analyzer:From WaveformExtractor to SortingAnalyzer>`.
 
 The :py:class:`~spikeinterface.core.WaveformExtractor` class is the core object to combine a
 :py:class:`~spikeinterface.core.BaseRecording` and a :py:class:`~spikeinterface.core.BaseSorting` object.

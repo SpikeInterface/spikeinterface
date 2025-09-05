@@ -1,7 +1,7 @@
 Generation module
 =================
 
-The :py:mod:`spikeinterface.generation` provides functions to generate recordings containing spikes,
+The :py:mod:`spikeinterface.generation` module provides functions to generate recordings containing spikes,
 which can be used as "ground-truth" for benchmarking spike sorting algorithms.
 
 There are several approaches to generating such recordings.

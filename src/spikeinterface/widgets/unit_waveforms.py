@@ -167,7 +167,7 @@ class UnitWaveformsWidget(BaseWidget):
 
         # get templates
         if isinstance(sorting_analyzer_or_templates, Templates):
-            templates = sorting_analyzer_or_templates.select_units(unit_ids).templates_array
+            templates = sorting_analyzer_or_templates.select_units(unit_ids).to_dense().templates_array
             nbefore = sorting_analyzer_or_templates.nbefore
             self.templates_ext = None
             templates_shading = None

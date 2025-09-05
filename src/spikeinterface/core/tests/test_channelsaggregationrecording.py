@@ -2,6 +2,7 @@ import numpy as np
 
 from spikeinterface.core import aggregate_channels
 from spikeinterface.core import generate_recording
+from spikeinterface.core.testing import check_recordings_equal
 
 
 def test_channelsaggregationrecording():
@@ -114,6 +115,39 @@ def test_split_then_aggreate_preserve_user_property():
     assert np.all(old_properties_ids_dict == new_properties_ids_dict)
 
 
+def test_aggregation_split_by_and_manual():
+    """
+    We can either split recordings automatically using "split_by" or manually by
+    constructing dictionaries. This test checks the two are equivalent. We skip
+    the annoations check since the "split_by" also saves an annotation to save what
+    property we split by.
+    """
+
+    rec1 = generate_recording(num_channels=6)
+    rec1_channel_ids = rec1.get_channel_ids()
+    rec1.set_property(key="brain_area", values=["a", "a", "b", "a", "b", "a"])
+
+    split_recs = rec1.split_by("brain_area")
+
+    aggregated_rec = aggregate_channels(split_recs)
+
+    rec_a_channel_ids = aggregated_rec.channel_ids[aggregated_rec.get_property("brain_area") == "a"]
+    rec_b_channel_ids = aggregated_rec.channel_ids[aggregated_rec.get_property("brain_area") == "b"]
+
+    assert np.all(rec_a_channel_ids == split_recs["a"].channel_ids)
+    assert np.all(rec_b_channel_ids == split_recs["b"].channel_ids)
+
+    split_recs_manual = {
+        "a": rec1.select_channels(channel_ids=rec1_channel_ids[rec1.get_property("brain_area") == "a"]),
+        "b": rec1.select_channels(channel_ids=rec1_channel_ids[rec1.get_property("brain_area") == "b"]),
+    }
+
+    aggregated_rec_manual = aggregate_channels(split_recs_manual)
+
+    assert np.all(aggregated_rec_manual.get_property("aggregation_key") == ["a", "a", "a", "a", "b", "b"])
+    check_recordings_equal(aggregated_rec, aggregated_rec_manual, check_annotations=False, check_properties=True)
+
+
 def test_channel_aggregation_preserve_ids():
 
     recording1 = generate_recording(num_channels=3, durations=[10], set_probe=False)  # To avoid location check
@@ -132,9 +166,9 @@ def test_aggregation_labeling_for_lists():
     recording1 = generate_recording(num_channels=4, durations=[20], set_probe=False)
     recording2 = generate_recording(num_channels=2, durations=[20], set_probe=False)
 
-    # If we don't label at all, aggregation will add a 'group' label
+    # If we don't label at all, aggregation will add a 'aggregation_key' label
     aggregated_recording = aggregate_channels([recording1, recording2])
-    group_property = aggregated_recording.get_property("group")
+    group_property = aggregated_recording.get_property("aggregation_key")
     assert np.all(group_property == [0, 0, 0, 0, 1, 1])
 
     # If we have different group labels, these should be respected
@@ -161,9 +195,9 @@ def test_aggretion_labelling_for_dicts():
     recording1 = generate_recording(num_channels=4, durations=[20], set_probe=False)
     recording2 = generate_recording(num_channels=2, durations=[20], set_probe=False)
 
-    # If we don't label at all, aggregation will add a 'group' label based on the dict keys
+    # If we don't label at all, aggregation will add a 'aggregation_key' label based on the dict keys
     aggregated_recording = aggregate_channels({0: recording1, "cat": recording2})
-    group_property = aggregated_recording.get_property("group")
+    group_property = aggregated_recording.get_property("aggregation_key")
     assert np.all(group_property == [0, 0, 0, 0, "cat", "cat"])
 
     # If we have different group labels, these should be respected

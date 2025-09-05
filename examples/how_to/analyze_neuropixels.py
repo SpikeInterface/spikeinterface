@@ -143,8 +143,8 @@ rec
 #
 
 # we can estimate the noise on the scaled traces (microV) or on the raw one (which is in our case int16).
-noise_levels_microV = si.get_noise_levels(rec, return_scaled=True)
-noise_levels_int16 = si.get_noise_levels(rec, return_scaled=False)
+noise_levels_microV = si.get_noise_levels(rec, return_in_uV=True)
+noise_levels_int16 = si.get_noise_levels(rec, return_in_uV=False)
 
 
 fig, ax = plt.subplots()
