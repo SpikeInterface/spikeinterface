@@ -224,7 +224,7 @@ def export_to_ibl_gui(
             lfp_recording,
             num_chunks_per_segment=psd_num_chunks,
             chunk_duration=f"{psd_chunk_duration_s}s",
-            return_scaled=True,
+            return_in_uV=True,
             concatenated=True,
         )
         psd = np.zeros((welch_win_length_samples // 2 + 1, lfp_sample_data.shape[1]), dtype=np.float32)

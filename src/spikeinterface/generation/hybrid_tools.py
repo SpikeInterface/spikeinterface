@@ -77,7 +77,7 @@ def estimate_templates_from_recording(
     nafter = int(ms_after * sampling_frequency / 1000.0)
 
     job_kwargs = job_kwargs or {}
-    templates_array = estimate_templates(recording, spikes, unit_ids, nbefore, nafter, **job_kwargs)
+    templates_array = estimate_templates(recording, spikes, unit_ids, nbefore, nafter, return_in_uV=False, **job_kwargs)
 
     sparsity_mask = None
     channel_ids = recording.channel_ids

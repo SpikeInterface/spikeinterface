@@ -11,6 +11,7 @@ It is a 2-step approach:
 
 from __future__ import annotations
 from pathlib import Path
+import warnings
 
 import numpy as np
 
@@ -62,8 +63,11 @@ def extract_waveforms_to_buffers(
         N samples after spike
     mode: "memmap" | "shared_memory", default: "memmap"
         The mode to use for the buffer
-    return_scaled: bool, default: False
-        Scale traces before exporting to buffer or not
+    return_scaled : bool | None, default: None
+        DEPRECATED. Use return_in_uV instead.
+    return_in_uV : bool, default: True
+        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+        traces are scaled to uV
     folder: str or path or None, default: None
         In case of memmap mode, folder to save npy files
     dtype: numpy.dtype, default: None
@@ -86,10 +90,19 @@ def extract_waveforms_to_buffers(
         Optionally return in case of shared_memory if copy=False.
         Dictionary to "construct" array in workers process (memmap file or sharemem info)
     """
+    # Handle deprecated return_scaled parameter
+    if return_scaled is not None:
+        warnings.warn(
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return_in_uV = return_scaled
+
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     if dtype is None:
-        if return_scaled:
+        if return_in_uV:
             dtype = recording.get_dtype()
         else:
             dtype = "float32"
@@ -106,7 +119,7 @@ def extract_waveforms_to_buffers(
         arrays_info,
         nbefore,
         nafter,
-        return_scaled,
+        return_in_uV,
         mode=mode,
         sparsity_mask=sparsity_mask,
         **job_kwargs,
@@ -217,7 +230,7 @@ def distribute_waveforms_to_buffers(
     arrays_info,
     nbefore,
     nafter,
-    return_scaled,
+    return_in_uV,
     mode="memmap",
     sparsity_mask=None,
     job_name=None,
@@ -247,7 +260,7 @@ def distribute_waveforms_to_buffers(
         N samples before spike
     nafter: int
         N samples after spike
-    return_scaled: bool
+    return_in_uV: bool
         Scale traces before exporting to buffer or not.
     mode: "memmap" | "shared_memory", default: "memmap"
         Mode to use
@@ -275,7 +288,7 @@ def distribute_waveforms_to_buffers(
         arrays_info,
         nbefore,
         nafter,
-        return_scaled,
+        return_in_uV,
         inds_by_unit,
         mode,
         sparsity_mask,
@@ -293,7 +306,7 @@ distribute_waveforms_to_buffers.__doc__ = distribute_waveforms_to_buffers.__doc_
 
 # used by ChunkRecordingExecutor
 def _init_worker_distribute_buffers(
-    recording, unit_ids, spikes, arrays_info, nbefore, nafter, return_scaled, inds_by_unit, mode, sparsity_mask
+    recording, unit_ids, spikes, arrays_info, nbefore, nafter, return_in_uV, inds_by_unit, mode, sparsity_mask
 ):
     # create a local dict per worker
     worker_dict = {}
@@ -330,7 +343,7 @@ def _init_worker_distribute_buffers(
 
     worker_dict["nbefore"] = nbefore
     worker_dict["nafter"] = nafter
-    worker_dict["return_scaled"] = return_scaled
+    worker_dict["return_in_uV"] = return_in_uV
     worker_dict["inds_by_unit"] = inds_by_unit
     worker_dict["sparsity_mask"] = sparsity_mask
     worker_dict["mode"] = mode
@@ -346,7 +359,7 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
     spikes = worker_dict["spikes"]
     nbefore = worker_dict["nbefore"]
     nafter = worker_dict["nafter"]
-    return_scaled = worker_dict["return_scaled"]
+    return_in_uV = worker_dict["return_in_uV"]
     inds_by_unit = worker_dict["inds_by_unit"]
     sparsity_mask = worker_dict["sparsity_mask"]
 
@@ -374,7 +387,7 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
 
         # load trace in memory
         traces = recording.get_traces(
-            start_frame=start, end_frame=end, segment_index=segment_index, return_scaled=return_scaled
+            start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
         )
 
         for unit_ind, unit_id in enumerate(unit_ids):
@@ -450,8 +463,11 @@ def extract_waveforms_to_single_buffer(
         N samples after spike
     mode: "memmap" | "shared_memory", default: "memmap"
         The mode to use for the buffer
-    return_scaled: bool, default: False
-        Scale traces before exporting to buffer or not
+    return_scaled : bool | None, default: None
+        DEPRECATED. Use return_in_uV instead.
+    return_in_uV : bool, default: False
+        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+        traces are scaled to uV
     file_path: str or path or None, default: None
         In case of memmap mode, file to save npy file
     dtype: numpy.dtype, default: None
@@ -477,6 +493,16 @@ def extract_waveforms_to_single_buffer(
         Optionally return in case of shared_memory if copy=False.
         Dictionary to "construct" array in workers process (memmap file or sharemem info)
     """
+
+    # Handle deprecated return_scaled parameter
+    if return_scaled is not None:
+        warnings.warn(
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return_in_uV = return_scaled
+
     n_samples = nbefore + nafter
 
     dtype = np.dtype(dtype)
@@ -522,7 +548,7 @@ def extract_waveforms_to_single_buffer(
             wf_array_info,
             nbefore,
             nafter,
-            return_scaled,
+            return_in_uV,
             mode,
             sparsity_mask,
         )
@@ -548,7 +574,7 @@ def extract_waveforms_to_single_buffer(
 
 
 def _init_worker_distribute_single_buffer(
-    recording, spikes, wf_array_info, nbefore, nafter, return_scaled, mode, sparsity_mask
+    recording, spikes, wf_array_info, nbefore, nafter, return_in_uV, mode, sparsity_mask
 ):
     worker_dict = {}
     worker_dict["recording"] = recording
@@ -556,7 +582,7 @@ def _init_worker_distribute_single_buffer(
     worker_dict["spikes"] = spikes
     worker_dict["nbefore"] = nbefore
     worker_dict["nafter"] = nafter
-    worker_dict["return_scaled"] = return_scaled
+    worker_dict["return_in_uV"] = return_in_uV
     worker_dict["sparsity_mask"] = sparsity_mask
     worker_dict["mode"] = mode
 
@@ -591,7 +617,7 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
     spikes = worker_dict["spikes"]
     nbefore = worker_dict["nbefore"]
     nafter = worker_dict["nafter"]
-    return_scaled = worker_dict["return_scaled"]
+    return_in_uV = worker_dict["return_in_uV"]
     sparsity_mask = worker_dict["sparsity_mask"]
     all_waveforms = worker_dict["all_waveforms"]
 
@@ -617,7 +643,7 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
 
         # load trace in memory
         traces = recording.get_traces(
-            start_frame=start, end_frame=end, segment_index=segment_index, return_scaled=return_scaled
+            start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
         )
 
         for spike_index in range(l0, l1):
@@ -739,8 +765,11 @@ def estimate_templates(
         Number of samples to cut out before a spike
     nafter: int
         Number of samples to cut out after a spike
-    return_scaled: bool, default: True
-        If True, the traces are scaled before averaging
+    return_scaled : bool | None, default: None
+        DEPRECATED. Use return_in_uV instead.
+    return_in_uV : bool, default: True
+        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+        traces are scaled to uV
 
     Returns
     -------
@@ -748,13 +777,21 @@ def estimate_templates(
         The average templates with shape (num_units, nbefore + nafter, num_channels)
 
     """
+    # Handle deprecated return_scaled parameter
+    if return_scaled is not None:
+        warnings.warn(
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return_in_uV = return_scaled
 
     if job_name is None:
         job_name = "estimate_templates"
 
     if operator == "average":
         templates_array = estimate_templates_with_accumulator(
-            recording, spikes, unit_ids, nbefore, nafter, return_scaled=return_scaled, job_name=job_name, **job_kwargs
+            recording, spikes, unit_ids, nbefore, nafter, return_in_uV=return_in_uV, job_name=job_name, **job_kwargs
         )
     elif operator == "median":
         all_waveforms, wf_array_info = extract_waveforms_to_single_buffer(
@@ -764,7 +801,7 @@ def estimate_templates(
             nbefore,
             nafter,
             mode="shared_memory",
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
             copy=False,
             **job_kwargs,
         )
@@ -817,8 +854,11 @@ def estimate_templates_with_accumulator(
         Number of samples to cut out before a spike
     nafter: int
         Number of samples to cut out after a spike
-    return_scaled: bool, default: True
-        If True, the traces are scaled before averaging
+    return_scaled : bool | None, default: None
+        DEPRECATED. Use return_in_uV instead.
+    return_in_uV : bool, default: True
+        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+        traces are scaled to uV
     return_std: bool, default: False
         If True, the standard deviation is also computed.
 
@@ -827,6 +867,15 @@ def estimate_templates_with_accumulator(
     templates_array: np.array
         The average templates with shape (num_units, nbefore + nafter, num_channels)
     """
+
+    # Handle deprecated return_scaled parameter
+    if return_scaled is not None:
+        warnings.warn(
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return_in_uV = return_scaled
 
     assert spikes.size > 0, "estimate_templates() need non empty sorting"
 
@@ -859,7 +908,7 @@ def estimate_templates_with_accumulator(
         dtype,
         nbefore,
         nafter,
-        return_scaled,
+        return_in_uV,
     )
 
     if job_name is None:
@@ -915,14 +964,14 @@ def _init_worker_estimate_templates(
     dtype,
     nbefore,
     nafter,
-    return_scaled,
+    return_in_uV,
 ):
     worker_dict = {}
     worker_dict["recording"] = recording
     worker_dict["spikes"] = spikes
     worker_dict["nbefore"] = nbefore
     worker_dict["nafter"] = nafter
-    worker_dict["return_scaled"] = return_scaled
+    worker_dict["return_in_uV"] = return_in_uV
 
     from multiprocessing.shared_memory import SharedMemory
     import multiprocessing
@@ -959,7 +1008,7 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
     waveform_accumulator_per_worker = worker_dict["waveform_accumulator_per_worker"]
     waveform_squared_accumulator_per_worker = worker_dict.get("waveform_squared_accumulator_per_worker", None)
     worker_index = worker_dict["worker_index"]
-    return_scaled = worker_dict["return_scaled"]
+    return_in_uV = worker_dict["return_in_uV"]
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
 
@@ -983,7 +1032,7 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
 
         # load trace in memory
         traces = recording.get_traces(
-            start_frame=start, end_frame=end, segment_index=segment_index, return_scaled=return_scaled
+            start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
         )
 
         for spike_index in range(l0, l1):

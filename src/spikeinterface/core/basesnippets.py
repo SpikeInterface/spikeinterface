@@ -124,7 +124,7 @@ class BaseSnippets(BaseRecordingSnippets):
         # Handle deprecated return_scaled parameter
         if return_scaled is not None:
             warn(
-                "`return_scaled` is deprecated and will be removed in a future version. Use `return_in_uV` instead.",
+                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
                 category=DeprecationWarning,
                 stacklevel=2,
             )
@@ -185,7 +185,7 @@ class BaseSnippets(BaseRecordingSnippets):
         # Handle deprecated return_scaled parameter
         if return_scaled is not None:
             warn(
-                "`return_scaled` is deprecated and will be removed in a future version. Use `return_in_uV` instead.",
+                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
                 category=DeprecationWarning,
                 stacklevel=2,
             )

@@ -82,7 +82,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         sorting = self.sorting_analyzer.sorting
 
         peak_sign = self.params["peak_sign"]
-        return_scaled = self.sorting_analyzer.return_scaled
+        return_in_uV = self.sorting_analyzer.return_in_uV
 
         extremum_channels_indices = get_template_extremum_channel(
             self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
@@ -97,7 +97,7 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
             parents=[spike_retriever_node],
             return_output=True,
             peak_shifts=peak_shifts,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
         )
         nodes = [spike_retriever_node, spike_amplitudes_node]
         return nodes
@@ -156,11 +156,11 @@ class SpikeAmplitudeNode(PipelineNode):
         parents=None,
         return_output=True,
         peak_shifts=None,
-        return_scaled=True,
+        return_in_uV=True,
     ):
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
-        self.return_scaled = return_scaled
-        if return_scaled and recording.has_scaleable_traces():
+        self.return_in_uV = return_in_uV
+        if return_in_uV and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
             self._offsets = recording.get_channel_gains()
@@ -177,7 +177,7 @@ class SpikeAmplitudeNode(PipelineNode):
         self._margin = np.max(np.abs(self._peak_shifts))
         self._kwargs.update(
             peak_shifts=peak_shifts,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
         )
 
     def get_dtype(self):

@@ -6,12 +6,14 @@ from .benchmark_tools import sigmoid, fit_sigmoid
 
 
 def despine(ax_or_axes):
-    import seaborn as sns
-
     if not isinstance(ax_or_axes, (list, tuple, np.ndarray)):
         ax_or_axes = [ax_or_axes]
     for ax in np.array(ax_or_axes).flatten():
-        sns.despine(ax=ax)
+        for loc in (
+            "top",
+            "right",
+        ):
+            ax.spines[loc].set_visible(False)
 
 
 def clean_axis(ax):
@@ -23,7 +25,7 @@ def clean_axis(ax):
     ax.get_yaxis().tick_left()
 
 
-def plot_study_legend(study, case_keys=None, ax=None):
+def plot_study_legend(study, case_keys=None, levels_to_group_by=None, ax=None, figsize=None):
     """
     Make a ax with only legend
     """
@@ -37,16 +39,24 @@ def plot_study_legend(study, case_keys=None, ax=None):
     else:
         fig = ax.get_figure()
 
-    colors = study.get_colors()
+    if levels_to_group_by is None:
+        colors = study.get_colors()
+        for k in case_keys:
+            ax.plot([], color=colors[k], label=study.cases[k]["label"])
+    else:
+        colors = study.get_colors(levels_to_group_by=levels_to_group_by)
+        case_group_keys, labels = study.get_grouped_keys_mapping(
+            levels_to_group_by=levels_to_group_by, case_keys=case_keys
+        )
+        for k in case_group_keys.keys():
+            ax.plot([], color=colors[k], label=labels[k])
 
-    for k in case_keys:
-        ax.plot([], color=colors[k], label=study.cases[k]["label"])
     ax.legend()
     clean_axis(ax)
     return fig
 
 
-def aggregate_levels(df, study, case_keys=None, levels_to_keep=None):
+def aggregate_dataframe_by_levels(df, study, case_keys=None, levels_to_group_by=None):
     """
     Aggregate a DataFrame by dropping levels not to keep.
 
@@ -58,7 +68,7 @@ def aggregate_levels(df, study, case_keys=None, levels_to_keep=None):
         A study object.
     case_keys : list | None, default: None
         A list of case keys to use. If None, then all cases are used.
-    levels_to_keep : list | None, default: None
+    levels_to_group_by : list | None, default: None
         A list of levels to keep. If None, the original dataframe, keys, labels and colros are returned.
     map_name : str | None, default: None
         The name of the map to use for colors.
@@ -79,20 +89,26 @@ def aggregate_levels(df, study, case_keys=None, levels_to_keep=None):
     if case_keys is None:
         case_keys = list(study.cases.keys())
 
-    if levels_to_keep is not None:
-        if not isinstance(levels_to_keep, list):
-            levels_to_keep = [levels_to_keep]
-        drop_levels = [l for l in study.levels if l not in levels_to_keep]
-        df = df.droplevel(drop_levels).sort_index()
-        if len(levels_to_keep) > 1:
-            df = df.reorder_levels(levels_to_keep)
+    if levels_to_group_by is not None:
+        if not isinstance(levels_to_group_by, list):
+            levels_to_group_by = [levels_to_group_by]
+        drop_levels = [l for l in study.levels if l not in levels_to_group_by]
+        df = df.droplevel(drop_levels)  # .sort_index()
+        if len(levels_to_group_by) > 1:
+            df = df.reorder_levels(levels_to_group_by)
         new_case_keys = list(np.unique(df.index))
-        if isinstance(df.index, pd.MultiIndex):
-            labels = {key: "-".join(key) for key in new_case_keys}
+
+        level_key = tuple(levels_to_group_by) if len(levels_to_group_by) > 1 else levels_to_group_by[0]
+        if level_key in study.labels_by_levels:
+            labels = study.labels_by_levels[level_key]
         else:
-            labels = {key: key for key in new_case_keys}
+            if isinstance(df.index, pd.MultiIndex):
+                labels = {key: "-".join(key) for key in new_case_keys}
+            else:
+                labels = {key: key for key in new_case_keys}
+
         # get colors
-        colors = study.get_colors(levels_to_group_by=levels_to_keep)
+        colors = study.get_colors(levels_to_group_by=levels_to_group_by)
     else:
         new_case_keys = case_keys
         labels = {key: study.cases[key]["label"] for key in case_keys}
@@ -101,7 +117,9 @@ def aggregate_levels(df, study, case_keys=None, levels_to_keep=None):
     return df, new_case_keys, labels, colors
 
 
-def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=None):
+def plot_run_times(
+    study, case_keys=None, mode="bar", levels_to_group_by=None, xticks_rotation=45.0, figsize=None, ax=None
+):
     """
     Plot run times for a BenchmarkStudy.
 
@@ -111,7 +129,7 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
         A study object.
     case_keys : list | None, default: None
         A selection of cases to plot, if None, then all.
-    levels_to_keep : list | None, default: None
+    levels_to_group_by : list | None, default: None
         A list of levels to keep. Run times are aggregated by these levels.
     show_legend : bool, default True
         Show legend or not
@@ -135,65 +153,81 @@ def plot_run_times(study, case_keys=None, levels_to_keep=None, figsize=None, ax=
     else:
         fig = ax.get_figure()
 
-    if levels_to_keep is None:
+    if levels_to_group_by is None:
         colors = study.get_colors()
         labels = []
         for i, key in enumerate(case_keys):
             labels.append(study.cases[key]["label"])
             rt = run_times.at[key, "run_times"]
             ax.bar(i, rt, width=0.8, color=colors[key])
-        ax.set_xticks(np.arange(len(case_keys)))
+        ax.set_xticks(np.arange(len(labels)))
         ax.set_xticklabels(labels, rotation=45.0)
         ax.set_ylabel("Run times (s)")
 
     else:
-        import seaborn as sns
+        colors = study.get_colors(levels_to_group_by=levels_to_group_by)
+        keys_mapping, labels = study.get_grouped_keys_mapping(
+            levels_to_group_by=levels_to_group_by, case_keys=case_keys
+        )
 
-        run_times, case_keys, labels, colors = aggregate_levels(run_times, study, case_keys, levels_to_keep)
-        palette_keys = case_keys
+        if mode == "bar":
+            x, height, yerr, color = [], [], [], []
+            for i, key in enumerate(keys_mapping):
+                if len(levels_to_group_by) == 1:
+                    rt = run_times.xs((key,), level=levels_to_group_by).values.flatten()
+                else:
+                    rt = run_times.xs(key, level=levels_to_group_by).values.flatten()
+                x.append(i + 1)
+                height.append(np.mean(rt))
+                if rt.size > 1:
+                    yerr.append(np.std(rt))
+                else:
+                    yerr.append(0)
+                color.append(colors[key])
+            ax.bar(x, height, yerr=yerr, color=color, ecolor="k")
 
-        if levels_to_keep is None:
-            x = None
-            hue = case_keys
-            plt_fun = sns.barplot
-        elif len(levels_to_keep) == 1:
-            x = None
-            hue = levels_to_keep[0]
-            plt_fun = sns.boxplot
-        elif len(levels_to_keep) == 2:
-            # here we need to override the colors, since we are using x and hue
-            # to displaye the 2 levels. We need to set the colors for the hue level alone
-            x, hue = levels_to_keep
-            hues = np.unique([c[1] for c in case_keys])
-            colors = study.get_colors(levels_to_group_by=[hue])
-            plt_fun = sns.boxplot
-            palette_keys = hues
-        else:
-            # we aggregate levels into the same column and use the last level as hue
-            levels_to_aggregate = levels_to_keep[:-1]
-            hue = levels_to_keep[-1]
-            x = " / ".join(levels_to_aggregate)
-            run_times.loc[:, x] = run_times.index.map(lambda x: " / ".join(map(str, x[:-1])))
-            hues = np.unique([c[-1] for c in case_keys])
-            colors = study.get_colors(levels_to_group_by=[hue])
-            plt_fun = sns.barplot
-            palette_keys = hues
+        elif mode == "box":
+            rts = []
+            for i, key in enumerate(keys_mapping):
+                if len(levels_to_group_by) == 1:
+                    rt = run_times.xs((key,), level=levels_to_group_by).values.flatten()
+                else:
+                    rt = run_times.xs(key, level=levels_to_group_by).values.flatten()
+                rts.append(rt)
+            lines = ax.boxplot(rts)
+            for k in lines:
+                for i, e in enumerate(lines[k]):
+                    # small hack to control the colors
+                    if len(lines[k]) == len(rts):
+                        color = colors[list(keys_mapping.keys())[i]]
+                    elif len(lines[k]) == len(rts) * 2:
+                        color = colors[list(keys_mapping.keys())[i // 2]]
+                    else:
+                        color = "k"
+                    e.set_color(color)
 
-        assert all(
-            [key in colors for key in palette_keys]
-        ), f"colors must have a color for each palette key: {palette_keys}"
-
-        plt_fun(data=run_times, y="run_times", x=x, hue=hue, ax=ax, palette=colors)
+        ax.set_ylabel("Run times (s)")
+        labels_list = [labels[k] for k in keys_mapping]
+        ax.set_xticks(np.arange(len(labels_list)) + 1)
+        ax.set_xticklabels(labels_list, rotation=xticks_rotation)
 
         despine(ax)
-        if levels_to_keep is None:
-            h, l = ax.get_legend_handles_labels()
-            ax.legend(h, list(labels.values()))
-        ax.set_ylabel("run time (s)")
+
     return fig
 
 
-def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, figsize=None, ax=None):
+def plot_unit_counts(
+    study,
+    case_keys=None,
+    levels_to_group_by=None,
+    colors=None,
+    columns=None,
+    with_rectangle=True,
+    revert_bad=True,
+    xticks_rotation=45.0,
+    figsize=None,
+    ax=None,
+):
     """
     Plot unit counts for a study: "num_well_detected", "num_false_positive", "num_redundant", "num_overmerged"
 
@@ -203,10 +237,16 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
         A study object.
     case_keys : list or None
         A selection of cases to plot, if None, then all.
-    levels_to_keep : list | None, default: None
+    levels_to_group_by : list | None, default: None
         A list of levels to keep. Unit counts are aggregated by these levels.
     colors : dict | None, default: None
         A dictionary of colors to use for each class ("Well Detected", "False Positive", "Redundant", "Overmerged").
+    columns : None | list
+        Optionaly select which columns to display
+    with_rectangle : bool
+        Add or not a grouping colored rectangle for each case.
+    revert_bad : bool
+        Revert or not bad columns ('num_false_positive', 'num_redundant', 'num_overmerged' ...)
     figsize : tuple | None, default: None
         The size of the figure.
     ax : matplotlib.axes.Axes | None, default: None
@@ -218,8 +258,6 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
         The resulting figure containing the plots
     """
     import matplotlib.pyplot as plt
-    import pandas as pd
-    import seaborn as sns
     from spikeinterface.widgets.utils import get_some_colors
 
     if case_keys is None:
@@ -232,88 +270,75 @@ def plot_unit_counts(study, case_keys=None, levels_to_keep=None, colors=None, fi
 
     count_units = study.get_count_units(case_keys=case_keys)
 
-    if levels_to_keep is None:
+    keys_mapping, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_group_by, case_keys=case_keys)
+
+    if columns is None:
         columns = count_units.columns.tolist()
         columns.remove("num_gt")
         columns.remove("num_sorter")
 
-        ncol = len(columns)
+    ncol = len(columns)
+    width = 1 / (ncol + 2)
 
-        colors = get_some_colors(columns, color_engine="auto", map_name="hot")
-        colors["num_well_detected"] = "green"
+    colors = get_some_colors(columns, color_engine="auto", map_name="hot")
+    colors["num_well_detected"] = "green"
 
-        xticklabels = []
-        for i, key in enumerate(case_keys):
-            for c, col in enumerate(columns):
-                x = i + 1 + c / (ncol + 1)
-                y = count_units.loc[key, col]
-                if not "well_detected" in col:
-                    y = -y
+    case_colors = study.get_colors(levels_to_group_by=levels_to_group_by)
 
-                if i == 0:
-                    label = col.replace("num_", "").replace("_", " ").title()
+    ymin, ymax = np.inf, -np.inf
+    for i, key in enumerate(keys_mapping):
+        for c, col in enumerate(columns):
+            x = i + 1 + c / (ncol + 1)
+            if levels_to_group_by is None:
+                y = count_units.at[key, col]
+                yerr = None
+            else:
+                if len(levels_to_group_by) == 1:
+                    all_y = count_units.xs((key,), level=levels_to_group_by)[col].values
                 else:
-                    label = None
-                ax.bar([x], [y], width=1 / (ncol + 2), label=label, color=colors[col])
-            xticklabels.append(study.cases[key]["label"])
-        ax.set_xticks(np.arange(len(case_keys)) + 1)
-        ax.set_xticklabels(xticklabels, rotation=45.0)
-        ax.legend()
+                    all_y = count_units.xs(key, level=levels_to_group_by)[col].values
+                y = np.mean(all_y)
+                if len(all_y) > 1:
+                    yerr = [np.std(all_y)]
+                else:
+                    yerr = None
 
-    else:
+            if not "well_detected" in col and revert_bad:
+                y = -y
 
-        count_units, case_keys, _, _ = aggregate_levels(count_units, study, case_keys, levels_to_keep)
-        count_units = count_units.drop(columns=["num_gt", "num_sorter"])
-        if "num_bad" in count_units.columns:
-            count_units = count_units.drop(columns=["num_bad"])
+            if i == 0:
+                label = col.replace("num_", "").replace("_", " ").title()
+            else:
+                label = None
+            ax.bar([x], [y], yerr=yerr, width=width, label=label, color=colors[col])
 
-        # set hue based on exhaustive GT
-        if "num_overmerged" in count_units.columns:
-            hue_order = ["Well Detected", "False Positive", "Redundant", "Overmerged"]
-        else:
-            hue_order = ["Well Detected"]
+            if yerr is None:
+                ymin = min(ymin, y)
+                ymax = max(ymax, y)
+            else:
+                ymin = min(ymin, y - yerr[0])
+                ymax = max(ymax, y + yerr[0])
 
-        for col in count_units.columns:
-            vals = count_units[col].values
-            if not "well_detected" in col:
-                vals = -vals
-            col_name = col.replace("num_", "").replace("_", " ").title()
-            count_units.loc[:, col_name] = vals
-            del count_units[col]
+    if with_rectangle:
+        spacing = width * 0.3
+        for i, key in enumerate(keys_mapping):
+            rect = plt.Rectangle(
+                (i + 1 - width / 2 - spacing, ymin),
+                1 - spacing,
+                ymax - ymin,
+                linewidth=2,
+                edgecolor=case_colors[key],
+                facecolor="none",
+            )
+            ax.add_patch(rect)
 
-        columns = count_units.columns.tolist()
-        if colors is None:
-            colors = get_some_colors(columns, color_engine="auto", map_name="hot")
-            colors["Well Detected"] = "green"
-        else:
-            assert all([col in colors for col in columns]), f"colors must have a color for each column: {columns}"
+    labels_list = [labels[k] for k in keys_mapping]
+    xticklabels = labels_list
+    ax.set_xticks(np.arange(len(xticklabels)) + 1.5 - width)
+    ax.set_xticklabels(xticklabels, rotation=xticks_rotation)
+    ax.legend()
 
-        df = pd.melt(
-            count_units.reset_index(),
-            id_vars=levels_to_keep,
-            value_vars=columns,
-            var_name="Unit class",
-            value_name="Count",
-        )
-
-        if len(levels_to_keep) > 1:
-            x = " / ".join(levels_to_keep)
-            df.loc[:, x] = df.apply(lambda r: " / ".join([str(r[col]) for col in levels_to_keep]), axis=1)
-            df = df.drop(columns=levels_to_keep)
-        else:
-            x = levels_to_keep[0]
-
-        sns.barplot(
-            data=df,
-            x=x,
-            y="Count",
-            hue="Unit class",
-            ax=ax,
-            hue_order=hue_order,
-            palette=colors,
-        )
-
-        despine(ax)
+    despine(ax)
 
     return fig
 
@@ -380,11 +405,13 @@ def plot_performances_vs_snr(
     figsize=None,
     performance_names=("accuracy", "recall", "precision"),
     snr_dataset_reference=None,
-    levels_to_keep=None,
+    levels_to_group_by=None,
     orientation="vertical",
     show_legend=True,
     with_sigmoid_fit=True,
     show_average_by_bin=False,
+    scatter_size=4,
+    num_bin_average=20,
     axs=None,
 ):
     """
@@ -402,7 +429,7 @@ def plot_performances_vs_snr(
         Names of the performance metrics to plot. Default is ("accuracy", "recall", "precision").
     snr_dataset_reference : str | None, default: None
         Reference dataset key to use for SNR. If None, the SNR of each dataset is used.
-    levels_to_keep : list | None, default: None
+    levels_to_group_by : list | None, default: None
         Levels to group by when mapping case keys.
     orientation : "vertical" | "horizontal", default: "vertical"
         The orientation of the plot.
@@ -412,6 +439,10 @@ def plot_performances_vs_snr(
         Show sigmoid that fit the performances.
     show_average_by_bin : bool, default False
         Instead of the sigmoid an average by bins can be plotted.
+    scatter_size : int, default 4
+        scatter size
+    num_bin_average : int, default 2
+        Num bin for average
     axs : matplotlib.axes.Axes | None, default: None
         The axs to use for plotting. Should be the same size as len(performance_names).
 
@@ -448,13 +479,15 @@ def plot_performances_vs_snr(
     for count, performance_name in enumerate(performance_names):
 
         ax = axs[count]
-        if levels_to_keep is not None:
-            case_group_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_keep)
+        if levels_to_group_by is not None:
+            case_group_keys, labels = study.get_grouped_keys_mapping(
+                levels_to_group_by=levels_to_group_by, case_keys=case_keys
+            )
         else:
             labels = {k: study.cases[k]["label"] for k in case_keys}
             case_group_keys = {k: [k] for k in case_keys}
 
-        colors = study.get_colors(levels_to_group_by=levels_to_keep)
+        colors = study.get_colors(levels_to_group_by=levels_to_group_by)
 
         assert all(
             [key in colors for key in case_group_keys]
@@ -483,24 +516,43 @@ def plot_performances_vs_snr(
                 all_xs.append(x)
                 all_ys.append(y)
 
-            # accumulate x and y and make one final plot
-            all_xs = np.concatenate(all_xs)
-            all_ys = np.concatenate(all_ys)
-
-            ax.scatter(all_xs, all_ys, marker=".", label=label, color=color)
-            ax.set_ylabel(performance_name)
-
             if with_sigmoid_fit:
-                popt = fit_sigmoid(all_xs, all_ys, p0=None)
-                xfit = np.linspace(0, max(x), 100)
-                ax.plot(xfit, sigmoid(xfit, *popt), color=color)
+                max_snr = max(np.max(x) for x in all_xs)
+                xfit = np.linspace(0, max_snr, 100)
+                all_y_fit = []
+                for x, y in zip(all_xs, all_ys):
+                    popt = fit_sigmoid(x, y, p0=None)
+                    fit_y = sigmoid(xfit, *popt)
+                    all_y_fit.append(fit_y)
+                average_y_fit = np.nanmean(np.stack(all_y_fit, axis=1), axis=1)
+                ax.plot(xfit, average_y_fit, color=color)
+                if len(all_y_fit) > 1:
+                    std_y_fit = np.nanstd(np.stack(all_y_fit, axis=1), axis=1)
+                    ax.fill_between(xfit, average_y_fit - std_y_fit, average_y_fit + std_y_fit, color=color, alpha=0.5)
 
             if show_average_by_bin:
                 from scipy.stats import binned_statistic
 
-                bins = np.linspace(np.min(all_xs), np.max(all_xs), 20)
-                average, bins, count = binned_statistic(all_xs, all_ys, statistic="mean", bins=bins)
-                ax.plot(bins[:-1] + (bins[1] - bins[0]) / 2.0, average, color=color)
+                bins = np.percentile(np.concatenate(all_xs), np.linspace(0, 100, num_bin_average + 1))
+                bin_centers = bins[:-1] + np.diff(bins) / 2.0
+                all_average = []
+                for x, y in zip(all_xs, all_ys):
+                    average, bins, _ = binned_statistic(x, y, statistic="mean", bins=bins)
+                    ax.plot(bin_centers, average, color=color, lw=0.5)
+                    all_average.append(average)
+
+                average_y = np.nanmean(np.stack(all_average, axis=1), axis=1)
+                ax.plot(bin_centers, average_y, color=color)
+                if len(all_average) > 1:
+                    std_y = np.nanstd(np.stack(all_average, axis=1), axis=1)
+                    ax.fill_between(bin_centers, average_y - std_y, average_y + std_y, color=color, alpha=0.5)
+
+            # accumulate x and y and make one final plot
+            all_xs = np.concatenate(all_xs)
+            all_ys = np.concatenate(all_ys)
+
+            ax.scatter(all_xs, all_ys, marker=".", label=label, color=color, s=scatter_size)
+            ax.set_ylabel(performance_name)
 
         ax.set_ylim(-0.05, 1.05)
 
@@ -516,7 +568,7 @@ def plot_performances_ordered(
     study,
     case_keys=None,
     performance_names=("accuracy", "recall", "precision"),
-    levels_to_keep=None,
+    levels_to_group_by=None,
     orientation="vertical",
     show_legend=True,
     figsize=None,
@@ -533,7 +585,7 @@ def plot_performances_ordered(
         A selection of cases to plot, if None, then all.
     performance_names : list | tuple, default: ("accuracy", "recall", "precision")
         A list of performance names to plot.
-    levels_to_keep : list | None, default: None
+    levels_to_group_by : list | None, default: None
         A list of levels to keep. Performances are aggregated by these levels.
     orientation : "vertical" | "horizontal", default: "vertical"
         The orientation of the plot.
@@ -557,7 +609,7 @@ def plot_performances_ordered(
         case_keys = list(study.cases.keys())
 
     perfs = study.get_performance_by_unit(case_keys=case_keys)
-    perfs, case_keys, labels, colors = aggregate_levels(perfs, study, case_keys, levels_to_keep)
+    perfs, case_keys, labels, colors = aggregate_dataframe_by_levels(perfs, study, case_keys, levels_to_group_by)
     assert all([key in colors for key in case_keys]), f"colors must have a color for each case key: {case_keys}"
 
     if axs is None:
@@ -596,7 +648,7 @@ def plot_performances_swarm(
     case_keys=None,
     performance_names=("accuracy", "recall", "precision"),
     figsize=None,
-    levels_to_keep=None,
+    levels_to_group_by=None,
     performance_colors={"accuracy": "g", "recall": "b", "precision": "r"},
     ax=None,
 ):
@@ -609,7 +661,7 @@ def plot_performances_swarm(
         A selection of cases to plot, if None, then all.
     performance_names : list | tuple, default: ("accuracy", "recall", "precision")
         A list of performance names to plot.
-    levels_to_keep : list | None, default: None
+    levels_to_group_by : list | None, default: None
         A list of levels to keep. Performances are aggregated by these levels.
     performance_colors : dict, default: {"accuracy": "g", "recall": "b", "precision": "r"}
         A dictionary of colors to use for each performance name.
@@ -632,7 +684,7 @@ def plot_performances_swarm(
         case_keys = list(study.cases.keys())
 
     perfs = study.get_performance_by_unit(case_keys=case_keys)
-    perfs, case_keys, _, _ = aggregate_levels(perfs, study, case_keys, levels_to_keep)
+    perfs, case_keys, _, _ = aggregate_dataframe_by_levels(perfs, study, case_keys, levels_to_group_by)
 
     assert all(
         [key in performance_colors for key in performance_names]
@@ -666,7 +718,7 @@ def plot_performances_comparison(
     figsize=None,
     performance_names=("accuracy", "recall", "precision"),
     performance_colors={"accuracy": "g", "recall": "b", "precision": "r"},
-    levels_to_keep=None,
+    levels_to_group_by=None,
     ylim=(-0.1, 1.1),
 ):
     """
@@ -684,7 +736,7 @@ def plot_performances_comparison(
         A list of performance names to plot.
     performance_colors : dict, default: {"accuracy": "g", "recall": "b", "precision": "r"}
         A dictionary of colors to use for each performance name.
-    levels_to_keep : list | None, default: None
+    levels_to_group_by : list | None, default: None
         A list of levels to keep. Performances are aggregated by these levels.
     ylim : tuple, default: (-0.1, 1.1)
         The y-axis limits.
@@ -698,7 +750,7 @@ def plot_performances_comparison(
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
-    case_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_keep)
+    case_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_group_by, case_keys=case_keys)
 
     num_methods = len(case_keys)
     assert num_methods >= 2, "plot_performances_comparison need at least 2 cases!"
@@ -757,7 +809,13 @@ def plot_performances_comparison(
 
 
 def plot_performances_vs_depth_and_snr(
-    study, performance_name="accuracy", case_keys=None, figsize=None, levels_to_keep=None, map_name="viridis", axs=None
+    study,
+    performance_name="accuracy",
+    case_keys=None,
+    figsize=None,
+    levels_to_group_by=None,
+    map_name="viridis",
+    axs=None,
 ):
     """
     Plot performances vs depth and snr for a study.
@@ -769,7 +827,7 @@ def plot_performances_vs_depth_and_snr(
         The performance metric to plot.
     case_keys : list | None, default: None
         A selection of cases to plot, if None, then all.
-    levels_to_keep : list | None, default: None
+    levels_to_group_by : list | None, default: None
         A list of levels to keep. Performances are aggregated by these levels.
     map_name : str | None, default: "viridis"
         The name of the map to use for colors.
@@ -788,7 +846,7 @@ def plot_performances_vs_depth_and_snr(
     if case_keys is None:
         case_keys = list(study.cases.keys())
 
-    case_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_keep)
+    case_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_group_by, case_keys=case_keys)
 
     if axs is None:
         fig, axs = plt.subplots(ncols=len(case_keys), figsize=figsize, squeeze=True)

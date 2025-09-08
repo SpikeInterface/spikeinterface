@@ -4,6 +4,48 @@ Exporters module
 The :py:mod:`spikeinterface.exporters` module includes functions to export SpikeInterface objects to other commonly
 used frameworks.
 
+Exporting to Pynapple
+---------------------
+
+The Python package `Pynapple <https://pynapple.org/>`_ is often used for combining ephys
+and behavioral data. It can be used to decode behavior, make tuning curves, compute spectrograms, and more!
+The :py:func:`~spikeinterface.exporters.to_pynapple_tsgroup` function allows you to convert a
+SortingAnalyzer to Pynapple's ``TsGroup`` object on the fly.
+
+**Note** : When creating the ``TsGroup``, we will use the underlying time support of the SortingAnalyzer.
+How this works depends on your acquisition system. You can use the ``get_times`` method on a recording
+(``my_recording.get_times()``) to find the time support of your recording.
+
+When constructed, if ``attach_unit_metadata`` is set to ``True``, any relevant unit information
+is propagated to the ``TsGroup``. The ``to_pynapple_tsgroup`` checks if unit locations, quality
+metrics and template metrics have been computed. Whatever has been computed is attached to the
+returned object. For more control, set ``attach_unit_metadata`` to ``False`` and attach metadata
+using ``Pynapple``'s ``set_info`` method.
+
+The following code creates a ``TsGroup`` from a ``SortingAnalyzer``, then saves it using ``Pynapple``'s
+save method.
+
+.. code-block:: python
+
+    import spikeinterface as si
+    from spikeinterface.exporters import to_pynapple_tsgroup
+
+    # load in an analyzer
+    analyzer = si.load_sorting_analyzer("path/to/analyzer")
+
+    my_tsgroup = to_pynapple_tsgroup(
+        sorting_analyzer=analyzer,
+        attach_unit_metadata=True,
+    )
+
+    # Note: can add metadata using e.g.
+    # my_tsgroup.set_info({'brain_region': ['MEC', 'MEC', ...]})
+
+    my_tsgroup.save("my_tsgroup_output.npz")
+
+If you have a multi-segment sorting, you need to pass the ``segment_index`` argument to the
+``to_pynapple_tsgroup`` function. This way, you can generate one ``TsGroup`` per segment.
+You can later concatenate these ``TsGroup`` s using Pynapple's ``concatenate`` functionality.
 
 Exporting to Phy
 ----------------

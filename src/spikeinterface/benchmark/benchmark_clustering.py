@@ -35,8 +35,8 @@ class ClusteringBenchmark(Benchmark):
         )
         self.result["peak_labels"] = peak_labels
 
-    def compute_result(self, **result_params):
-        result_params, job_kwargs = split_job_kwargs(result_params)
+    def compute_result(self, with_template=False, **job_kwargs):
+        # result_params, job_kwargs = split_job_kwargs(result_params)
         job_kwargs = fix_job_kwargs(job_kwargs)
         self.noise = self.result["peak_labels"] < 0
         spikes = self.gt_sorting.to_spike_vector()
@@ -68,19 +68,20 @@ class ClusteringBenchmark(Benchmark):
             self.result["sliced_gt_sorting"], self.result["clustering"], exhaustive_gt=self.exhaustive_gt
         )
 
-        sorting_analyzer = create_sorting_analyzer(
-            self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False, **job_kwargs
-        )
-        sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("templates", **job_kwargs)
-        self.result["sliced_gt_templates"] = ext.get_data(outputs="Templates")
+        if with_template:
+            sorting_analyzer = create_sorting_analyzer(
+                self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False, **job_kwargs
+            )
+            sorting_analyzer.compute("random_spikes")
+            ext = sorting_analyzer.compute("templates", **job_kwargs)
+            self.result["sliced_gt_templates"] = ext.get_data(outputs="Templates")
 
-        sorting_analyzer = create_sorting_analyzer(
-            self.result["clustering"], self.recording, format="memory", sparse=False, **job_kwargs
-        )
-        sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("templates", **job_kwargs)
-        self.result["clustering_templates"] = ext.get_data(outputs="Templates")
+            sorting_analyzer = create_sorting_analyzer(
+                self.result["clustering"], self.recording, format="memory", sparse=False, **job_kwargs
+            )
+            sorting_analyzer.compute("random_spikes")
+            ext = sorting_analyzer.compute("templates", **job_kwargs)
+            self.result["clustering_templates"] = ext.get_data(outputs="Templates")
 
     _run_key_saved = [("peak_labels", "npy")]
 

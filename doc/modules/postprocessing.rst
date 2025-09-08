@@ -1,11 +1,29 @@
 Postprocessing module
 =====================
 
+SpikeInterface's postprocessing is centered around the :py:class:`~spikeinterface.core.SortingAnalyzer`
+object. This combines recording and sorting information, and can be used to compute lots of information
+you might be interested in: waveforms, templates, correlograms, spike amplitudes and more. We hope this
+object can also serve as a basis for other tools, and is already used by SpikeInterface-GUI, SortingView
+and NeuroConv.
+
+Learn how to make a SortingAnalyzer in `our tutorial
+<https://spikeinterface.readthedocs.io/en/latest/tutorials/core/plot_4_sorting_analyzer.html>`_
+
 .. _extensions:
 
 After spike sorting, we can use the :py:mod:`~spikeinterface.postprocessing` module to further post-process
-the spike sorting output. Most of the post-processing functions require a
-:py:class:`~spikeinterface.core.SortingAnalyzer` as input.
+the spike sorting output. First, make a :py:class:`~spikeinterface.core.SortingAnalyzer` object. We can
+then compute "extensions" of the sorting analyzer. If you'd like to play with the extensions on a
+simulated analyzer, we can create a simulated one as follows:
+
+.. code-block:: python
+
+    import spikeinterface.core as si
+
+    recording, sorting = si.generate_ground_truth_recording()
+    sorting_analyzer = si.create_sorting_analyzer(sorting=sorting, recording=recording)
+
 
 .. _waveform_extensions:
 
@@ -26,8 +44,6 @@ To check what extensions have already been calculated for a :code:`SortingAnalyz
 
 .. code-block:: python
 
-    import spikeinterface as si
-
     available_extension_names = sorting_analyzer.get_loaded_extension_names()
     print(available_extension_names)
 
@@ -43,12 +59,12 @@ To load the extension object you can run:
     ext = sorting_analyzer.get_extension("spike_amplitudes")
     ext_data = ext.get_data()
 
-Here :code:`ext` is the extension object (in this case the :code:`SpikeAmplitudeCalculator`), and :code:`ext_data` will
+Here :code:`ext` is the extension object (in this case the :code:`ComputeSpikeAmplitudes`), and :code:`ext_data` will
 contain the actual amplitude data. Note that different extensions might have different ways to return the extension.
 You can use :code:`ext.get_data?` for documentation.
 
 
-To check what extensions spikeinterface can calculate, you can use the :code:`get_computable_extensions` method.
+To check what extensions spikeinterface can calculate, you can use the :code:`get_computable_extensions` method:
 
 .. code-block:: python
 
@@ -103,7 +119,7 @@ You can also compute several extensions at the same time by passing a list:
 
 .. code-block:: python
 
-    sorting_analyzer.compute(["principal_components", "templates"])
+    sorting_analyzer.compute(["random_spikes", "waveforms", "principal_components"])
 
 You might want to change the parameters. Two parameters of principal_components are :code:`n_components` and :code:`mode`.
 We can choose these as follows:
@@ -118,8 +134,9 @@ than one thing:
 .. code-block:: python
 
     compute_dict = {
+        'random_spikes': {},
         'principal_components': {'n_components': 3, 'mode': 'by_channel_local'},
-        'templates': {'operators': ["average"]}
+        'templates': {'operators': ["average"]},
     }
     sorting_analyzer.compute(compute_dict)
 
@@ -146,7 +163,6 @@ Extensions are generally saved in two ways, suitable for two workflows:
    :code:`sorting_analyzer.compute('waveforms', save=False)`).
 
 
-
 **NOTE**: We recommend choosing a workflow and sticking with it. Either keep everything on disk or keep everything in memory until
 you'd like to save. A mixture can lead to unexpected behavior. For example, consider the following code
 
@@ -163,7 +179,7 @@ you'd like to save. A mixture can lead to unexpected behavior. For example, cons
 
 Here the random_spikes extension is **not** saved. The :code:`sorting_analyzer` is **still** saved in memory. The :code:`save_as` method only made a snapshot
 of the sorting analyzer which is saved in a folder. Hence :code:`compute` doesn't know about the folder
-and doesn't save anything. If we wanted to save the extension we should have started with a non-memory sorting analyzer:
+and doesn't save anything. If we wanted to save the extensions as we compute them, we should have started with a "binary_folder" sorting analyzer:
 
 .. code::
 
@@ -180,6 +196,8 @@ and doesn't save anything. If we wanted to save the extension we should have sta
 Available postprocessing extensions
 -----------------------------------
 
+.. _postprocessing_noise_levels:
+
 noise_levels
 ^^^^^^^^^^^^
 
@@ -188,11 +206,11 @@ As an extension, this expects the :code:`Recording` as input and the computed va
 
 .. code-block:: python
 
-    noise = compute_noise_level(recording=recording)
+    # compute the noise from an analyzer
+    noise = sorting_analyzer.compute("noise_levels")
 
 
-
-
+.. _postprocessing_principal_components:
 
 principal_components
 ^^^^^^^^^^^^^^^^^^^^
@@ -219,7 +237,6 @@ For more information, see :py:func:`~spikeinterface.postprocessing.compute_princ
 template_similarity
 ^^^^^^^^^^^^^^^^^^^
 
-
 This extension computes the similarity of the templates to each other. This information could be used for automatic
 merging. Currently, the only available similarity method is the cosine similarity, which is the angle between the
 high-dimensional flattened template arrays. Note that cosine similarity does not take into account amplitude differences
@@ -232,13 +249,13 @@ and is not well suited for high-density probes.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_template_similarity`
 
-
+.. _postprocessing_spike_amplitudes:
 
 spike_amplitudes
 ^^^^^^^^^^^^^^^^
 
 This extension computes the amplitude of each spike as the value of the traces on the extremum channel at the times of
-each spike.
+each spike. The extremum channel is computed from the templates.
 
 **NOTE:** computing spike amplitudes is highly recommended before calculating amplitude-based quality metrics, such as
 :ref:`amp_cutoff` and :ref:`amp_median`.
@@ -249,6 +266,7 @@ each spike.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_spike_amplitudes`
 
+.. _postprocessing_spike_locations:
 
 spike_locations
 ^^^^^^^^^^^^^^^
@@ -267,7 +285,7 @@ with center of mass (:code:`method="center_of_mass"` - fast, but less accurate),
         input="spike_locations",
         ms_before=0.5,
         ms_after=0.5,
-        spike_retriever_kwargs=dict(
+        spike_retriver_kwargs=dict(
             channel_from_template=True,
             radius_um=50,
             peak_sign="neg"
@@ -312,7 +330,7 @@ By default, the following metrics are computed:
 The units of :code:`recovery_slope` and :code:`repolarization_slope` depend on the
 input. Voltages are based on the units of the template. By default this is :math:`\mu V`
 but can be the raw output from the recording device (this depends on the
-:code:`return_scaled` parameter, read more here: :ref:`modules/core:SortingAnalyzer`).
+:code:`return_in_uV` parameter, read more here: :ref:`modules/core:SortingAnalyzer`).
 Distances are in :math:`\mu m` and times are in seconds. So, for example, if the
 templates are in units of :math:`\mu V` then: :code:`repolarization_slope` is in
 :math:`mV / s`; :code:`peak_to_trough_ratio` is in :math:`\mu m` and the
@@ -387,8 +405,8 @@ This extension computes the histograms of inter-spike-intervals. The computed ou
 
 .. code-block:: python
 
-    isi =  sorting_analyer.compute(
-        input="isi_histograms"
+    isi =  sorting_analyzer.compute(
+        input="isi_histograms",
         window_ms=50.0,
         bin_ms=1.0,
         method="auto"

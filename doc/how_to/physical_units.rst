@@ -1,7 +1,8 @@
+
 .. _physical_units:
 
-Working with physical units in SpikeInterface recordings
-========================================================
+Work with physical units in SpikeInterface recordings
+=====================================================
 
 In neurophysiology recordings, data is often stored in raw ADC (Analog-to-Digital Converter) integer values but needs to be analyzed in physical units.
 For extracellular recordings, this is typically microvolts (µV), but some recording devices may use different physical units.

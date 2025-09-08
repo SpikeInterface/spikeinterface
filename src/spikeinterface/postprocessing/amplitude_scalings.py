@@ -136,9 +136,9 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
 
-        return_scaled = self.sorting_analyzer.return_scaled
+        return_in_uV = self.sorting_analyzer.return_in_uV
 
-        all_templates = get_dense_templates_array(self.sorting_analyzer, return_scaled=return_scaled)
+        all_templates = get_dense_templates_array(self.sorting_analyzer, return_in_uV=return_in_uV)
         nbefore = _get_nbefore(self.sorting_analyzer)
         nafter = all_templates.shape[1] - nbefore
 
@@ -203,7 +203,7 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
             nafter=nafter,
             cut_out_before=cut_out_before,
             cut_out_after=cut_out_after,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
             handle_collisions=handle_collisions,
             delta_collision_samples=delta_collision_samples,
         )
@@ -251,13 +251,13 @@ class AmplitudeScalingNode(PipelineNode):
         nafter,
         cut_out_before,
         cut_out_after,
-        return_scaled,
+        return_in_uV,
         handle_collisions,
         delta_collision_samples,
     ):
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
-        self.return_scaled = return_scaled
-        if return_scaled and recording.has_scaleable_traces():
+        self.return_in_uV = return_in_uV
+        if return_in_uV and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
             self._offsets = recording.get_channel_gains()
@@ -294,7 +294,7 @@ class AmplitudeScalingNode(PipelineNode):
             nafter=nafter,
             cut_out_before=cut_out_before,
             cut_out_after=cut_out_after,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
             handle_collisions=handle_collisions,
             delta_collision_samples=delta_collision_samples,
         )
@@ -696,7 +696,7 @@ def _plot_one_collision(
         center_spike["sample_index"] + max_delta + cut_out_samples,
         recording.get_num_samples(segment_index=center_spike["segment_index"]),
     )
-    tr_overlap = recording.get_traces(start_frame=sf, end_frame=ef, channel_ids=channel_ids, return_scaled=True)
+    tr_overlap = recording.get_traces(start_frame=sf, end_frame=ef, channel_ids=channel_ids, return_in_uV=True)
     ts = np.arange(sf, ef) / recording.sampling_frequency * 1000
     max_tr = np.max(np.abs(tr_overlap))
 

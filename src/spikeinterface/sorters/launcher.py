@@ -32,19 +32,19 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
 
     For **engine="loop"** this is equivalent to:
 
-    ..code::
+    .. code-block:: python
 
         for job in job_list:
             run_sorter(**job)
 
     The following engines block the I/O:
-      * "loop"
-      * "joblib"
-      * "multiprocessing"
-      * "dask"
+        * "loop"
+        * "joblib"
+        * "multiprocessing"
+        * "dask"
 
     The following engines are *asynchronous*:
-      * "slurm"
+        * "slurm"
 
     Where *blocking* means that this function is blocking until the results are returned.
     This is in opposition to *asynchronous*, where the function returns `None` almost immediately (aka non-blocking),
@@ -60,27 +60,27 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs=None, return_output=F
         The engine to run the list.
     engine_kwargs : dict
         Parameters to be passed to the underlying engine.
-        * loop : None
-        * joblib :
-            - n_jobs : int
-                The maximum number of concurrently running jobs (default=-1, tries to use all CPUs)
-            - backend : str
-                Specify the parallelization backend implementation (default="loky")
-        * multiprocessing :
-            - max_workers : int
-                maximum number of processes (default=2)
-            - mp_context : str
-                multiprocessing context (default=None)
-        * dask :
-            - client : dask.distributed.Client
-                Dask client to connect to (required)
-        * slurm :
-            - tmp_script_folder : str,Path
-                the folder in which the job scripts are created (default=None, create a random temporary directory)
-            - sbatch_args: dict
-                dictionary of arguments to be passed to the sbatch command. They will be automatically prefixed with --.
-                Arguments must be in the format slurm specify, see the [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html)
-                for a list of possible arguments (default={"cpus-per-task": 1, "mem": "1G"})
+            * loop : None
+            * joblib :
+                - n_jobs : int
+                    The maximum number of concurrently running jobs (default=-1, tries to use all CPUs)
+                - backend : str
+                    Specify the parallelization backend implementation (default="loky")
+            * multiprocessing :
+                - max_workers : int
+                    maximum number of processes (default=2)
+                - mp_context : str
+                    multiprocessing context (default=None)
+            * dask :
+                - client : dask.distributed.Client
+                    Dask client to connect to (required)
+            * slurm :
+                - tmp_script_folder : str,Path
+                    the folder in which the job scripts are created (default=None, create a random temporary directory)
+                - sbatch_args: dict
+                    dictionary of arguments to be passed to the sbatch command. They will be automatically prefixed with --.
+                    Arguments must be in the format slurm specify, see the [documentation for `sbatch`](https://slurm.schedmd.com/sbatch.html)
+                    for a list of possible arguments (default={"cpus-per-task": 1, "mem": "1G"})
 
     return_output : bool, default: False
         Return a sortings or None.
