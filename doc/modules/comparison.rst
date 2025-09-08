@@ -1,7 +1,6 @@
 Comparison module
 =================
 
-
 SpikeInterface has a :py:mod:`~spikeinterface.comparison` module, which contains functions and tools to compare
 spike trains and templates (useful for tracking units over multiple sessions).
 
@@ -132,7 +131,7 @@ Given:
    4. **Compute performances**
 
       With the list of matched units we can compute performance metrics.
-      Given : **tp** the number of true positive events, **fp** number of false
+      Given: **tp** the number of true positive events, **fp** number of false
       positive events, **fn** the number of false negative events, **num_gt** the number
       of events of the matched tested units, the following metrics are computed for each GT unit:
 
@@ -142,7 +141,7 @@ Given:
         * false_discovery_rate = fp / (tp + fp)
         * miss_rate = fn / num_gt
 
-      The overall performances can be visualised with the **confusion matrix**, where
+      The overall performances can be visualized with the **confusion matrix**, where
       the last column contains the **FN** counts and the last row contains the **FP** counts.
 
     .. image:: ../images/spikecomparison_confusion.png
@@ -215,14 +214,15 @@ An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for 
 
 .. code-block:: python
 
-    local_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
-    recording, sorting_true = read_mearec(local_path)
+    from spikeinterface.widgets import plot_agreement_matrix, plot_confusion_matrix
+    from spikeinterface.generation import generate_ground_truth_recording
+    from spikeinterface.sorters import run_sorter
 
+    recording, sorting_true = generate_ground_truth_recording()
 
     # run a sorter and compare to ground truth
-    sorting_HS = run_sorter(sorter_name='herdingspike', recording=recording)
+    sorting_HS = run_sorter(sorter_name='herdingspikes', recording=recording)
     cmp_gt_HS = sc.compare_sorter_to_ground_truth(sorting_true, sorting_HS, exhaustive_gt=True)
-
 
     # To have an overview of the match we can use the ordered agreement matrix
     plot_agreement_matrix(cmp_gt_HS, ordered=True)
@@ -231,7 +231,6 @@ An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for 
     # then it computes several performance metrics: accuracy, recall, precision
     #
     perf = cmp_gt_HS.get_performance()
-
 
     # The confusion matrix is also a good summary of the score as it has
     # the same shape as an agreement matrix, but it contains an extra column for FN
@@ -271,20 +270,20 @@ The :py:func:`~spikeinterface.comparison.compare_two_sorters()` returns the comp
 .. code-block:: python
 
     import spikeinterface as si
-    import spikeinterface.extractors as se
     import spikeinterface.sorters as ss
-    import spikeinterface.comparisons as sc
-    import spikinterface.widgets as sw
+    import spikeinterface.comparison as scmp
+    import spikeinterface.widgets as sw
 
     # First, let's generate a simulated dataset
     recording, sorting = si.generate_ground_truth_recording()
+
     # Then run two spike sorters and compare their outputs.
     sorting_HS = ss.run_sorter(sorter_name='herdingspikes', recording=recording)
     sorting_TDC = ss.run_sorter(sorter_name='tridesclous', recording=recording)
 
     # Run the comparison
     # Let's see how to inspect and access this matching.
-    cmp_HS_TDC = sc.compare_two_sorters(
+    cmp_HS_TDC = scmp.compare_two_sorters(
         sorting1=sorting_HS,
         sorting2=sorting_TDC,
         sorting1_name='HS',
@@ -339,7 +338,7 @@ Comparison of multiple sorters uses the following procedure:
     sorting_TDC = ss.run_sorter(sorter_name='tridesclous', recording=recording)
 
     # Compare multiple spike sorter outputs
-    mcmp = sc.compare_multiple_sorters(
+    mcmp = scmp.compare_multiple_sorters(
         sorting_list=[sorting_MS4, sorting_HS, sorting_TDC],
         name_list=['MS4', 'HS', 'TDC'],
         verbose=True,
@@ -354,7 +353,7 @@ Comparison of multiple sorters uses the following procedure:
     print(mcmp.comparisons[('MS4', 'TDC')].get_matching())
 
     # The global multi comparison can be visualized with this graph
-    sw.plot_multicomp_graph(multi_comparison=mcmp)
+    sw.plot_multicomparison_graph(multi_comparison=mcmp)
 
     # Consensus-based method
     #

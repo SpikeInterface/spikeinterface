@@ -12,7 +12,7 @@ Curation with the ``SortingAnalyzer``
 -------------------------------------
 
 The :py:class:`~spikeinterface.core.SortingAnalyzer`, as seen in previous modules,
-is a powerful tool to posprocess the spike sorting output, as it can compute many
+is a powerful tool to postprocess the spike sorting output, as it can compute many
 extensions and metrics to further characterize the spike sorting results.
 
 To facilitate the spike sorting workflow, the :py:class:`~spikeinterface.core.SortingAnalyzer`
@@ -34,7 +34,7 @@ a subset of units from a spike sorting output and to perform some merges:
     remove_unit_ids = [1, 2]
     sorting_analyzer2 = sorting_analyzer.remove_units(remove_unit_ids=remove_unit_ids)
 
-    # merge some units
+    # merge units 4 and 5, and separately merge units 7, 8 and 12
     merge_unit_groups = [[4, 5], [7, 8, 12]]
     sorting_analyzer3 = sorting_analyzer2.merge_units(
         merge_unit_groups=merge_unit_groups,
@@ -98,7 +98,8 @@ The function can act both on a ``BaseSorting`` or a ``SortingAnalyzer`` object.
     clean_sorting = remove_redundant_units(
         sorting,
         duplicate_threshold=0.9,
-        remove_strategy="max_spikes"
+        remove_strategy="max_spikes",
+        align=False,
     )
 
     # remove redundant units from SortingAnalyzer object
@@ -106,14 +107,14 @@ The function can act both on a ``BaseSorting`` or a ``SortingAnalyzer`` object.
     clean_sorting = remove_redundant_units(
         sorting_analyzer,
         duplicate_threshold=0.9,
-        remove_strategy="min_shift"
+        remove_strategy="minimum_shift",
     )
     # in order to have a SortingAnalyer with only the non-redundant units one must
     # select the designed units remembering to give format and folder if one wants
     # a persistent SortingAnalyzer.
     clean_sorting_analyzer = sorting_analyzer.select_units(clean_sorting.unit_ids)
 
-We recommend using the ``SortingAnalyzer`` approach, since the ``min_shift`` strategy keeps
+We recommend using the ``SortingAnalyzer`` approach, since the ``minimum_shift`` strategy keeps
 the unit (among the redundant ones), with a better template alignment.
 
 
@@ -139,13 +140,13 @@ merges. It offers multiple "presets" and the flexibility to apply individual ste
 
     # merges is a list of unit pairs, with unit_ids to be merged.
     merge_unit_pairs = compute_merge_unit_groups(
-        analyzer=analyzer,
+        sorting_analyzer=analyzer,
         preset="similarity_correlograms",
     )
     # with resolve_graph=True, merges_resolved is a list of merge groups,
     # which can contain more than two units
     merge_unit_groups = compute_merge_unit_groups(
-        analyzer=analyzer,
+        sorting_analyzer=analyzer,
         preset="similarity_correlograms",
         resolve_graph=True
     )
@@ -189,14 +190,14 @@ prone to wrong merges. To do so, you'll need to do the following:
 
 The extra keyword ``recursive`` specifies that for each presets/sequences of steps, merges are performed
 until no further merges are possible. The ``job_kwargs`` are the parameters for the parallelization.
-**Be careful that the merges can not be reverted, so be sure to not erase your analyzer and create a new variable**
+**Be careful: the merges can not be reverted, so be sure to not erase your analyzer and instead create a new one**
 
 
 Manual curation
 ---------------
 
 While automatic curation tools can be very useful, manual curation is still widely used to
-clean spike sorting outputs and it is sometoimes necessary to have a human in the loop.
+clean spike sorting outputs and it is sometimes necessary to have a human in the loop.
 
 
 Curation format
