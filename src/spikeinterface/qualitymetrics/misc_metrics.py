@@ -1146,7 +1146,7 @@ def compute_waveform_ptp_medians(sorting_analyzer, unit_ids=None):
     return all_waveform_ptp_medians
 
 
-_default_params["waveform_ptp_median"] = dict(peak_sign="neg")
+_default_params["waveform_ptp_median"] = dict()
 
 
 def compute_drift_metrics(
