@@ -2,6 +2,29 @@ from __future__ import annotations
 
 import numpy as np
 
+from spikeinterface.qualitymetrics.quality_metric_list import metric_extension_dependencies
+
+
+def _has_required_extensions(sorting_analyzer, metric_name):
+
+    required_extensions = metric_extension_dependencies[metric_name]
+
+    not_computed_required_extensions = []
+    for ext in required_extensions:
+        if all(sorting_analyzer.has_extension(name) is False for name in ext.split("|")):
+            not_computed_required_extensions.append(ext)
+
+    if len(not_computed_required_extensions) > 0:
+        warnings_string = f"The `{metric_name}` metric requires the {not_computed_required_extensions} extensions.\n"
+        warnings_string += "Use the sorting_analyzer.compute(["
+        for count, ext in enumerate(not_computed_required_extensions):
+            if count == len(not_computed_required_extensions) - 1:
+                warnings_string += f"'{ext}'"
+            else:
+                warnings_string += f"'{ext}', "
+        warnings_string += f"]) method to compute."
+        raise ValueError(warnings_string)
+
 
 def create_ground_truth_pc_distributions(center_locations, total_points):
     """
