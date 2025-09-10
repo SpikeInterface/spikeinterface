@@ -127,7 +127,7 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_target
 #     templates: numpy.array
 #         Templates shape : (len(labels_set), num_samples, total_channels)
 #     """
-    
+
 #     # NOTE SAM I think this is wrong, we should remove
 
 #     n = len(labels_set)

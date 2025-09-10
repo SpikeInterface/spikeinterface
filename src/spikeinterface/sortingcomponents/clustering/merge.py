@@ -33,7 +33,7 @@ def merge_peak_labels_from_features(
     template_sparse_mask,
     recording,
     features_dict_or_folder,
-    radius_um=70.,
+    radius_um=70.0,
     method="project_distribution",
     method_kwargs={},
     **job_kwargs,
@@ -57,7 +57,6 @@ def merge_peak_labels_from_features(
         template_sparse_mask,
         recording,
         features_dict_or_folder,
-
         # sparse_wfs,
         # sparse_mask,
         radius_um=radius_um,
@@ -66,18 +65,13 @@ def merge_peak_labels_from_features(
         **job_kwargs,
     )
 
-    clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = \
+    clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = (
         _apply_pair_mask_on_labels_and_recompute_templates(
-            pair_mask,
-            peak_labels,
-            unit_ids,
-            templates_array, 
-            template_sparse_mask
+            pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask
         )
+    )
 
     return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids
-
-
 
 
 def find_merge_pairs_from_features(
@@ -87,8 +81,7 @@ def find_merge_pairs_from_features(
     templates_array,
     template_sparse_mask,
     recording,
-    features_dict_or_folder,      
-
+    features_dict_or_folder,
     # sparse_wfs,
     # sparse_mask,
     radius_um=70,
@@ -120,7 +113,6 @@ def find_merge_pairs_from_features(
 
     # compute template (no shift at this step)
 
-
     # templates = compute_template_from_sparse(
     #     peaks, peak_labels, labels_set, sparse_wfs, sparse_mask, total_channels, peak_shifts=None
     # )
@@ -131,12 +123,10 @@ def find_merge_pairs_from_features(
     # ms_after = features['ms_after']
     # svd_model = features['svd_model']
 
-
     # templates, final_sparsity_mask = get_templates_from_peaks_and_svd(
-    #     recording, peaks, peak_labels, ms_before, ms_after, svd_model, peaks_svd, sparse_mask, operator="average",        
+    #     recording, peaks, peak_labels, ms_before, ms_after, svd_model, peaks_svd, sparse_mask, operator="average",
     # )
     # dense_templates_array = templates.templates_array
-
 
     labels_set = unit_ids.tolist()
 
@@ -319,8 +309,6 @@ class ProjectDistribution:
             final_shift = 0
             return is_merge, label0, label1, final_shift, merge_value
 
-
-
         inds = np.concatenate([inds0, inds1])
         labels = np.zeros(inds.size, dtype="int")
         labels[inds0.size :] = 1
@@ -331,7 +319,6 @@ class ProjectDistribution:
         cut = np.searchsorted(labels, 1)
         wfs0 = wfs[:cut, :, :]
         wfs1 = wfs[cut:, :, :]
-
 
         # num_samples = template0.shape[0]
 
@@ -368,7 +355,6 @@ class ProjectDistribution:
         # wfs1 = wfs1_[:, best_shift : best_shift + template0.shape[0], :]
         # template1 = template1_[best_shift : best_shift + template0.shape[0], :]
 
-        
         feat0 = wfs0.reshape(wfs0.shape[0], -1)
         feat1 = wfs1.reshape(wfs1.shape[0], -1)
         feat = np.concatenate([feat0, feat1], axis=0)
@@ -377,10 +363,10 @@ class ProjectDistribution:
 
         if use_svd:
             from sklearn.decomposition import TruncatedSVD
+
             n_pca_features = 3
             tsvd = TruncatedSVD(n_pca_features, random_state=seed)
             feat = tsvd.fit_transform(feat)
-
 
         if isinstance(n_pca_features, float):
             assert 0 < n_pca_features < 1, "n_components should be in ]0, 1["
@@ -416,7 +402,6 @@ class ProjectDistribution:
         # else:
         #     feat = feat
 
-
         feat0 = feat[:cut]
         feat1 = feat[cut:]
 
@@ -446,7 +431,6 @@ class ProjectDistribution:
 
         feat0 = feat[:cut]
         feat1 = feat[cut:]
-
 
         if criteria == "isocut":
             dipscore, cutpoint = isocut(feat)
@@ -484,7 +468,7 @@ class ProjectDistribution:
             final_shift = 0
 
         if DEBUG:
-        # if dipscore < 4:
+            # if dipscore < 4:
             import matplotlib.pyplot as plt
 
             flatten_wfs0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1)
@@ -570,33 +554,25 @@ def merge_peak_labels_from_templates(
     )
     pair_mask = similarity > similarity_thresh
 
-
-    clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = \
+    clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = (
         _apply_pair_mask_on_labels_and_recompute_templates(
-            pair_mask,
-            peak_labels,
-            unit_ids,
-            templates_array, 
-            template_sparse_mask
+            pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask
         )
+    )
 
     return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids
 
+
 def _apply_pair_mask_on_labels_and_recompute_templates(
-    pair_mask,
-    peak_labels,
-    unit_ids,
-    templates_array, 
-    template_sparse_mask
+    pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask
 ):
     """
     Resolve pairs graph.
     Apply to new labels.
     Recompute templates.
     """
-    
-    from scipy.sparse.csgraph import connected_components
 
+    from scipy.sparse.csgraph import connected_components
 
     keep_template = np.ones(templates_array.shape[0], dtype="bool")
     clean_labels = peak_labels.copy()
@@ -638,4 +614,3 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
     merge_sparsity_mask = merge_sparsity_mask[keep_template, :]
 
     return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids
-
