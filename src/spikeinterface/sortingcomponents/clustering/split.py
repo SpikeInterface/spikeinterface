@@ -214,7 +214,7 @@ class LocalFeatureClustering:
         neighbours_mask=None,
         waveforms_sparse_mask=None,
         min_size_split=25,
-        n_pca_features=2,
+        n_pca_features=3,
         seed=None,
         projection_mode="tsvd",
         minimum_overlap_ratio=0.25,
@@ -320,6 +320,7 @@ class LocalFeatureClustering:
             raise ValueError(f"wrong clusterer {clusterer}. Possible options are 'hdbscan/isosplit/isosplit6'.")
 
         DEBUG = False  # only for Sam or dirty hacking
+        # DEBUG = True
 
         if debug_folder is not None or DEBUG:
             import matplotlib.pyplot as plt
@@ -347,7 +348,7 @@ class LocalFeatureClustering:
                 ax.plot(flatten_wfs[mask].T, color=colors[k], alpha=0.1)
                 if k > -1:
                     ax.plot(np.median(flatten_wfs[mask].T, axis=1), color=colors[k], lw=2)
-                ax.set_xlabel("PCA features")
+                ax.set_xlabel(f"PCA features")
 
                 ax = axs[3]
                 if n_pca_features == 1:
@@ -357,7 +358,7 @@ class LocalFeatureClustering:
                     ax.plot(final_features[mask].T, color=colors[k], alpha=0.1)
                 if k > -1 and n_pca_features > 1:
                     ax.plot(np.median(final_features[mask].T, axis=1), color=colors[k], lw=2)
-                ax.set_xlabel("Projected PCA features")
+                ax.set_xlabel(f"Projected PCA features, dim{final_features.shape[1]}")
 
             if tsvd is not None:
                 ax = axs[2]
