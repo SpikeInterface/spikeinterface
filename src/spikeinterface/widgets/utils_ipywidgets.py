@@ -18,21 +18,25 @@ def check_ipywidget_backend():
 class TimeSlider(W.HBox):
     value = traitlets.Tuple(traitlets.Int(), traitlets.Int(), traitlets.Int())
 
-    def __init__(self, durations, sampling_frequency, time_range, times=None, **kwargs):
+    def __init__(self, durations, sampling_frequency, time_range, times=None, t_starts=None, **kwargs):
         self.num_segments = len(durations)
         self.frame_limits = [int(sampling_frequency * d) for d in durations]
         self.sampling_frequency = sampling_frequency
         self.segment_index = 0
 
         if times is not None:
-            assert len(times) == len(durations)
+            assert len(times) == len(durations), "times should be a list of arrays with one array per segment"
             times_segment = times[self.segment_index]
             start_frame, end_frame = np.searchsorted(times_segment, time_range)
             self.times = times
+            self.t_starts = None
         else:
-            start_frame = int(time_range[0] * sampling_frequency)
-            end_frame = int(time_range[1] * sampling_frequency)
+            assert t_starts is not None
+            t_start_segment = t_starts[self.segment_index]
+            start_frame = int((time_range[0] - t_start_segment) * sampling_frequency)
+            end_frame = int((time_range[1] - t_start_segment) * sampling_frequency)
             self.times = None
+            self.t_starts = t_starts
 
         self.frame_range = (start_frame, end_frame)
 
@@ -139,7 +143,7 @@ class TimeSlider(W.HBox):
             if self.times is not None:
                 start_frame = int(np.searchsorted(self.times[self.segment_index], [new_time])[0])
             else:
-                start_frame = int(new_time * self.sampling_frequency)
+                start_frame = int((new_time - self.t_starts[self.segment_index]) * self.sampling_frequency)
         else:
             start_frame = new_frame
         delta_s = self.window_sizer.value
@@ -155,7 +159,7 @@ class TimeSlider(W.HBox):
         if self.times is not None:
             start_time = self.times[self.segment_index][start_frame]
         else:
-            start_time = start_frame / self.sampling_frequency
+            start_time = start_frame / self.sampling_frequency + self.t_starts[self.segment_index]
 
         if update_label:
             self.time_label.unobserve(self.time_label_changed, names="value", type="change")
