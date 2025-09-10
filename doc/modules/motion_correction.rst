@@ -4,21 +4,24 @@
 Motion/drift correction
 =======================
 
+See a practical guide to motion correction in our How To guide: :ref:`handle-drift-in-your-recording`.
+
 Overview
 --------
 
-Mechanical drift, often observed in recordings, is currently a major issue for spike sorting. This is especially striking
-with the new generation of high-density devices used for in-vivo electrophysiology such as the neuropixel electrodes.
-The first sorter that introduced motion/drift correction as a prepossessing step was Kilosort2.5 (see [Steinmetz2021]_ [SteinmetzDataset]_)
+Mechanical drift, often observed in recordings when a probe is acutely inserted, is currently a major issue for spike sorting. This is especially striking
+with the new generation of high-density devices used for in-vivo electrophysiology such as the NeuroPixels probes.
+The first sorter that introduced motion/drift correction as a prepossessing step was Kilosort2.5 (see [Steinmetz2021]_ [SteinmetzDataset]_ [Pachitariu2023]_)
 
-Long story short, the main idea is the same as the one used for non-rigid image registration, for example with calcium
+The first algorithm used the same ideas as those used for non-rigid image registration, for example with calcium
 imaging. However, because with extracellular recording we do not have a proper image to use as a reference, the main idea
 of the algorithm is create an "image" via the activity profile of the cells during a given time window. Assuming this
 activity profile should be kept constant over time, the motion can be estimated, by blocks, along the probe's insertion axis
 (i.e. depth) so that we can interpolate the traces to compensate for this estimated motion.
-Users with a need to handle drift were currently forced to stick to the use of Kilosort2.5 or pyKilosort (see [Pachitariu2023]_). Recently, the Paninski
-group from Columbia University introduced a possibly more accurate method to estimate the drift (see [Varol2021]_
-and [Windolf2023]_), but this new method has not yet been integrated into any sorter.
+
+There are now several algorithms which try to correct for drift as a preprocessing step: the Paninski
+group from Columbia University introduced DREDGE (see [Varol2021]_
+and [Windolf2023]_), and the Jazayeri lab introduced MEDiCINe ([Watters]_).
 
 Because motion registration is a hard topic, with numerous hypotheses and/or implementations details that might have a large
 impact on the spike sorting performances (see [Garcia2023]_), in SpikeInterface, we developed a full motion estimation
@@ -26,7 +29,7 @@ and interpolation framework to make all these methods accessible in one place. T
 **the drift correction can be applied to a recording as a preprocessing step, and
 then used for any sorter!** In short, the motion correction is decoupled from the sorter itself.
 
-This gives the user an incredible flexibility to check/test and correct the drift before the sorting process.
+This gives the user flexibility to check/test and correct the drift before the sorting process.
 
 Here is an overview of motion correction as part of preprocessing a recording:
 
@@ -59,16 +62,20 @@ One challenging task for motion correction is to determine the parameters.
 The high level :py:func:`~spikeinterface.preprocessing.correct_motion()` proposes the concept of a **"preset"** that already
 has predefined parameters, in order to achieve a calibrated behavior.
 
-We currently have 3 presets:
+We currently have these presets:
 
-  * **"nonrigid_accurate"**: It consists of *monopolar triangulation + decentralized + inverse distance weighted*
-                             This is the slowest combination but maybe the most accurate. The main bottleneck of this preset is the monopolar
+  * **"dredge"**: The official implementation of DREDGE, used in [Windolf2023]_.
+  * **"dredge_fast"**: A faster implementation of DREDGE, which should give similar results.
+  * **"nonrigid_accurate"**: A precursor to DREDGE. This consists of *monopolar triangulation + decentralized + inverse distance weighted*
+                             It is the slowest combination, but maybe the most accurate. The main bottleneck of this preset is the monopolar
                              triangulation for the estimation of the peaks positions. To speed it up, one could think about subsampling the
                              space of all the detected peaks. Introduced by the Paninski group ([Varol2021]_, [Windolf2023]_)
-  * **"rigid_fast"**: a fast, but not very accurate method. It uses *center of mass + decentralized + inverse distance weighted*
+  * **"medicine"**: A wrapped version of MEDiCINe, [Watters]_.
+  * **"nonrigid_fast_and_accurate"**: A mixture of Kilosort and DREDGE ideas. Roughly: grid_convolution + decentralized motion estimation.
+  * **"rigid_fast"**: A fast, but not very accurate method. It uses *center of mass + decentralized + inverse distance weighted*
                       To be used as check and/or control on a recording to check the presence of drift.
                       Note that, in this case the drift is considered as "rigid" over the electrode.
-  * **"kilosort_like"**: It consists of *grid convolution + iterative_template + kriging*, to mimic what is done in Kilosort (see [Pachitariu2023]_).
+  * **"kilosort_like"**: This consists of *grid convolution + iterative_template + kriging*, to mimic what is done in Kilosort (see [Pachitariu2023]_).
                          Note that this is not exactly 100% what Kilosort is doing, because the peak detection is done with a template matching
                          in Kilosort, while in SpikeInterface we use a threshold-based method. However, this "preset" gives similar
                          results to Kilosort2.5.
@@ -104,21 +111,33 @@ Optionally any parameter from the preset can be overwritten:
 
 .. code-block:: python
 
-    rec_corrected = correct_motion(recording=rec, preset="nonrigid_accurate",
-                                   detect_kwargs=dict(
-                                       detect_threshold=10.),
-                                   estimate_motion_kwargs=dict(
-                                       histogram_depth_smooth_um=8.,
-                                       time_horizon_s=120.,
-                                   ),
-                                   correct_motion_kwargs=dict(
-                                        spatial_interpolation_method="kriging",
-                                   )
-                                   )
+    rec_corrected = correct_motion(
+        recording=rec, preset="nonrigid_accurate",
+        detect_kwargs=dict(
+            detect_threshold=10.
+        ),
+        estimate_motion_kwargs=dict(
+            histogram_depth_smooth_um=8.,
+            time_horizon_s=120.,
+        ),
+        correct_motion_kwargs=dict(
+            spatial_interpolation_method="kriging",
+        )
+    )
 
-Importantly, all the result and intermediate computations can be saved into a folder for further loading
-and verification. The folder will contain the motion vector itself of course but also detected peaks, peak location, and more.
+Importantly, all the results and intermediate computations can be returned to a motion object, for further loading,
+verification and visualization.
 
+.. code-block:: python
+
+    motion_folder = '/somewhere/to/save/the/motion'
+    rec_corrected, motion = correct_motion(recording=rec, preset="nonrigid_accurate", output_motion=True)
+
+    from spikeinterface.widgets import plot_motion
+    plot_motion(motion)
+
+Alternatively, you can save the motion (and related motion info) in a folder. The folder will contain
+the motion vector itself, as well as detected peaks, peak locations, and more.
 
 .. code-block:: python
 
@@ -127,7 +146,6 @@ and verification. The folder will contain the motion vector itself of course but
 
     # and then
     motion_info = load_motion_info(motion_folder)
-
 
 
 Low-level API
@@ -143,7 +161,6 @@ working properly for your particular case.
 
 
 The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is internally equivalent to this:
-
 
 .. code-block:: python
 
@@ -162,28 +179,30 @@ The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
                                     max_distance_um=150.0, **job_kwargs)
 
     # Step 2: motion inference
-    motion = estimate_motion(recording=rec,
-                             peaks=peaks,
-                             peak_locations=peak_locations,
-                             method="decentralized",
-                             direction="y",
-                             bin_duration_s=2.0,
-                             bin_um=5.0,
-                             win_step_um=50.0,
-                             win_sigma_um=150.0)
+    motion = estimate_motion(
+      recording=rec,
+      peaks=peaks,
+      peak_locations=peak_locations,
+      method="decentralized",
+      direction="y",
+      bin_um=5.0,
+    )
 
     # Step 3: motion interpolation
     # this step is lazy
-    rec_corrected = interpolate_motion(recording=rec, motion=motion,
-                                       border_mode="remove_channels",
-                                       spatial_interpolation_method="kriging",
-                                       sigma_um=30.)
+    rec_corrected = interpolate_motion(
+        recording=rec,
+        motion=motion,
+        border_mode="remove_channels",
+        spatial_interpolation_method="kriging",
+        sigma_um=30.
+    )
 
 
 Preprocessing details
 ---------------------
 
-The function :py:func:`~spikeinterface.preprocessing.correct_motion()` requires an already preprocessed recording.
+The function :py:func:`~spikeinterface.preprocessing.correct_motion()` requires a preprocessed recording.
 
 It is important to keep in mind that the preprocessing can have a strong impact on the motion estimation.
 
@@ -236,3 +255,5 @@ References
 .. [Pachitariu2023] `Solving the spike sorting problem with Kilosort <https://www.biorxiv.org/content/10.1101/2023.01.07.523036v1>`_
 
 .. [Garcia2023] `A modular approach to handle in-vivo drift correction for high-density extracellular recordings <https://www.biorxiv.org/content/10.1101/2023.06.29.546882v1>`_
+
+.. [Watters] `MEDiCINe: Motion Correction for Neural Electrophysiology Recordings. 2025. <https://www.eneuro.org/content/12/3/ENEURO.0529-24.2025>`_

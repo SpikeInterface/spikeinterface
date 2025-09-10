@@ -4,6 +4,9 @@
     %load_ext autoreload
     %autoreload 2
 
+
+.. _handle-drift-in-your-recording:
+
 Handle motion/drift in your recording
 =====================================
 

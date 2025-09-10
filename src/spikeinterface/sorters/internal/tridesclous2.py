@@ -205,7 +205,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
             if not have_sisosplit6:
                 raise ValueError(
-                    "You want to run tridesclous with the isosplit6 (the C++) implementation, bu this is not installed, do pip install isosplit6"
+                    "You want to run tridesclous2 with the isosplit6 (the C++) implementation, but this is not installed, please `pip install isosplit6`"
                 )
 
         unit_ids, clustering_label, more_outs = find_cluster_from_peaks(
