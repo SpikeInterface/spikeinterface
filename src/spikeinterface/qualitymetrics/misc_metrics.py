@@ -1602,21 +1602,11 @@ def compute_sd_ratio(
 
     from spikeinterface.curation.curation_tools import find_duplicated_spikes
 
-    kwargs, job_kwargs = split_job_kwargs(kwargs)
-    job_kwargs = fix_job_kwargs(job_kwargs)
-
     sorting = sorting_analyzer.sorting
 
     censored_period = int(round(censored_period_ms * 1e-3 * sorting_analyzer.sampling_frequency))
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
-
-    if not sorting_analyzer.has_recording():
-        warnings.warn(
-            "The `sd_ratio` metric cannot work with a recordless SortingAnalyzer object"
-            "SD ratio metric will be set to NaN"
-        )
-        return {unit_id: np.nan for unit_id in unit_ids}
 
     _has_required_extensions(sorting_analyzer, metric_name="sd_ratio")
 
