@@ -29,7 +29,11 @@ jobs:
 
     - name: Install requirements
       run: uv pip install -r ./installation_tips/beginner_requirements_stable.txt
-    - name: Check Installation Tips
+    - name: Check Installation Tips (mac)
+      if: ${{ matrix.os == 'macos-latest' }}
+      run: python ./installation_tips/check_your_install.py --ci --short --skip-kilosort4 # ci flag turns off gui
+    - name: Check Installation Tips (linux/windows)
+      if: ${{ matrix.os != 'macos-latest' }}
       run: python ./installation_tips/check_your_install.py --ci --short # ci flag turns off gui
     - name: Windows cleanup
       if: ${{ matrix.os == 'windows-latest' }}

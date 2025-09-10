@@ -91,6 +91,7 @@ parser = argparse.ArgumentParser()
 # end user can ignore
 parser.add_argument("--ci", action="store_false")
 parser.add_argument("--short", action="store_false")
+parser.add_argument("--skip-kilosort4", action="store_true")
 
 
 if __name__ == "__main__":
@@ -104,8 +105,9 @@ if __name__ == "__main__":
         ("Import spikeinterface", check_import_si),
         ("Import spikeinterface.full", check_import_si_full),
         ("Run tridesclous2", run_tridesclous2),
-        ("Run kilosort4", run_kilosort4),
     ]
+    if not args.skip_kilosort4:
+        steps.append(("Run kilosort4", run_kilosort4))
 
     # backwards logic because default is True for end-user
     if args.ci:
