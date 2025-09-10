@@ -32,12 +32,13 @@ from __future__ import annotations
 import numpy as np
 
 import warnings
+import importlib
 
-try:
-    import numba
-
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ImportError:
+    import numba
+else:
     HAVE_NUMBA = False
 
 
