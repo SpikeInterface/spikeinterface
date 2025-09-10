@@ -11,6 +11,7 @@ metric_extension_dependencies = {
     "drift": ["spike_locations"],
     "sd_ratio": ["templates", "spike_amplitudes"],
     "noise_cutoff": ["spike_amplitudes"],
+    "waveform_ptp_median": ["templates", "waveforms"],
 }
 
 
@@ -30,6 +31,7 @@ from .misc_metrics import (
     compute_amplitude_cv_metrics,
     compute_sd_ratio,
     compute_noise_cutoffs,
+    compute_waveform_ptp_medians,
 )
 
 from .pca_metrics import (
@@ -64,6 +66,7 @@ _misc_metric_name_to_func = {
     "drift": compute_drift_metrics,
     "sd_ratio": compute_sd_ratio,
     "noise_cutoff": compute_noise_cutoffs,
+    "waveform_ptp_median": compute_waveform_ptp_medians,
 }
 
 
@@ -96,6 +99,7 @@ qm_compute_name_to_column_names = {
     "silhouette": ["silhouette"],
     "silhouette_full": ["silhouette_full"],
     "noise_cutoff": ["noise_cutoff", "noise_ratio"],
+    "waveform_ptp_median": ["waveform_ptp_median"],
 }
 
 # this dict allows us to ensure the appropriate dtype of metrics rather than allow Pandas to infer them
@@ -133,4 +137,5 @@ column_name_to_column_dtype = {
     "silhouette_full": float,
     "noise_cutoff": float,
     "noise_ratio": float,
+    "waveform_ptp_median": float,
 }
