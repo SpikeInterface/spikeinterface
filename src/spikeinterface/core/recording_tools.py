@@ -692,6 +692,11 @@ def _noise_level_chunk(segment_index, start_frame, end_frame, worker_ctx):
         noise_levels = np.median(np.abs(one_chunk - med), axis=0) / 0.6744897501960817
     elif worker_ctx["method"] == "std":
         noise_levels = np.std(one_chunk, axis=0)
+    elif worker_ctx["method"] == "rms":
+        # sqrt(1/n * (x0^2 + ... + xn^2))
+        squared_voltages = np.square(one_chunk)
+        summed_squared_voltages = np.sum(squared_voltages, axis=0)
+        noise_levels = np.sqrt(summed_squared_voltages / one_chunk.shape[0])
 
     return noise_levels
 
@@ -708,7 +713,7 @@ def get_noise_levels(
     recording: "BaseRecording",
     return_scaled: bool | None = None,
     return_in_uV: bool = True,
-    method: Literal["mad", "std"] = "mad",
+    method: Literal["mad", "std", "rms"] = "mad",
     force_recompute: bool = False,
     random_slices_kwargs: dict = {},
     **kwargs,
@@ -733,7 +738,7 @@ def get_noise_levels(
         DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: True
         If True, returned noise levels are scaled to uV
-    method : "mad" | "std", default: "mad"
+    method : "mad" | "std" | "rms", default: "mad"
         The method to use to estimate noise levels
     force_recompute : bool
         If True, noise levels are recomputed even if they are already stored in the recording extractor

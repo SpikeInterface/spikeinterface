@@ -15,7 +15,7 @@ try:
     import scipy.spatial
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
-    from .isocut5 import isocut5
+    from .isosplit_isocut import isocut
 
 except:
     pass
@@ -426,8 +426,8 @@ class ProjectDistribution:
         waveforms_sparse_mask=None,
         feature_name="sparse_tsvd",
         projection="centroid",
-        criteria="diptest",
-        threshold_diptest=0.5,
+        criteria="isocut",
+        isocut_threshold=0.5,
         threshold_percentile=80.0,
         threshold_overlap=0.4,
         min_cluster_size=50,
@@ -522,9 +522,9 @@ class ProjectDistribution:
         else:
             raise ValueError(f"bad projection {projection}")
 
-        if criteria == "diptest":
-            dipscore, cutpoint = isocut5(feat)
-            is_merge = dipscore < threshold_diptest
+        if criteria == "isocut":
+            dipscore, cutpoint = isocut(feat)
+            is_merge = dipscore < isocut_threshold
             merge_value = dipscore
         elif criteria == "percentile":
             l0 = np.percentile(feat0, threshold_percentile)
