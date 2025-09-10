@@ -22,7 +22,10 @@ from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAP
 from spikeinterface.sortingcomponents.clustering.split import split_clusters
 
 # from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
-from spikeinterface.sortingcomponents.clustering.merge import merge_peak_labels_from_templates, merge_peak_labels_from_features
+from spikeinterface.sortingcomponents.clustering.merge import (
+    merge_peak_labels_from_templates,
+    merge_peak_labels_from_features,
+)
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
 
@@ -55,7 +58,6 @@ class TdcClustering:
             # "clusterer": "isosplit6",
             # "clusterer_kwargs": {},
             "clusterer": "isosplit",
-
             "clusterer_kwargs": {
                 "n_init": 50,
                 "min_cluster_size": 10,
@@ -71,11 +73,7 @@ class TdcClustering:
             "min_size_split": 10,
         },
         "do_merge_with_features": False,
-        "merge_features_kwargs": {
-            "merge_radius_um":50.,
-            "criteria": "isocut",
-            "isocut_threshold": 2.0
-        },
+        "merge_features_kwargs": {"merge_radius_um": 50.0, "criteria": "isocut", "isocut_threshold": 2.0},
         "do_merge_with_templates": True,
         "merge_template_kwargs": {
             "similarity_metric": "l1",
@@ -122,7 +120,6 @@ class TdcClustering:
         neighbours_mask = get_channel_distances(recording) <= split_radius_um
 
         original_labels = peaks["channel_index"]
-
 
         clusterer = params["split"]["clusterer"]
         clusterer_kwargs = params["split"]["clusterer_kwargs"]
@@ -186,29 +183,24 @@ class TdcClustering:
                 radius_um=merge_radius_um,
                 method="project_distribution",
                 method_kwargs=dict(
-                    feature_name="peaks_svd",
-                    waveforms_sparse_mask=sparse_mask,
-                    **merge_features_kwargs
-                    ),
-                **job_kwargs
+                    feature_name="peaks_svd", waveforms_sparse_mask=sparse_mask, **merge_features_kwargs
+                ),
+                **job_kwargs,
             )
         else:
             post_merge_label1 = post_split_label.copy()
-        
+
         if params["do_merge_with_templates"]:
-            post_merge_label2, templates_array, template_sparse_mask, unit_ids = (
-                merge_peak_labels_from_templates(
-                    peaks,
-                    post_merge_label1,
-                    unit_ids,
-                    templates_array,
-                    template_sparse_mask,
-                    **params["merge_template_kwargs"],
-                )
+            post_merge_label2, templates_array, template_sparse_mask, unit_ids = merge_peak_labels_from_templates(
+                peaks,
+                post_merge_label1,
+                unit_ids,
+                templates_array,
+                template_sparse_mask,
+                **params["merge_template_kwargs"],
             )
         else:
             post_merge_label2 = post_merge_label1.copy()
-        
 
         dense_templates = Templates(
             templates_array=templates_array,
@@ -220,7 +212,6 @@ class TdcClustering:
             probe=recording.get_probe(),
             is_in_uV=False,
         )
-
 
         sparsity = ChannelSparsity(template_sparse_mask, unit_ids, recording.channel_ids)
         templates = dense_templates.to_sparse(sparsity)
@@ -243,9 +234,7 @@ class TdcClustering:
         templates = templates.select_units(labels_set)
         labels_set = templates.unit_ids
 
-
         more_outs = dict(
             templates=templates,
         )
         return labels_set, final_peak_labels, more_outs
-
