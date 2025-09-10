@@ -82,7 +82,6 @@ class TdcClustering:
             "num_shifts": 3,
             "similarity_thresh": 0.8,
         },
-
         "clean": {
             "minimum_cluster_size": 10,
         },
