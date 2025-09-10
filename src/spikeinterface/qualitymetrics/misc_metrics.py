@@ -1628,9 +1628,7 @@ def compute_sd_ratio(
             "SD ratio metric will be set to NaN"
         )
         return {unit_id: np.nan for unit_id in unit_ids}
-    noise_levels = get_noise_levels(
-        sorting_analyzer.recording, return_in_uV=sorting_analyzer.return_in_uV, method="std", **job_kwargs
-    )
+    noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
     best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
     n_spikes = sorting.count_num_spikes_per_unit()
 

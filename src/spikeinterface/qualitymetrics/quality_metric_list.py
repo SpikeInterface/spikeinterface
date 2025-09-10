@@ -9,7 +9,7 @@ metric_extension_dependencies = {
     "amplitude_median": ["spike_amplitudes|waveforms", "templates"],
     "amplitude_cv": ["spike_amplitudes|amplitude_scalings", "templates"],
     "drift": ["spike_locations"],
-    "sd_ratio": ["templates", "spike_amplitudes"],
+    "sd_ratio": ["templates", "noise_levels", "spike_amplitudes"],
     "noise_cutoff": ["spike_amplitudes"],
 }
 
