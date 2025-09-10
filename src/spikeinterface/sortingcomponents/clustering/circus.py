@@ -59,7 +59,7 @@ class CircusClustering:
         "templates_from_svd": True,
         "noise_levels": None,
         "tmp_folder": None,
-        "do_merge": True,
+        "do_merge_with_templates": True,
         "merge_kwargs": {
             "similarity_metric": "l1",
             "num_shifts": 3,
@@ -216,7 +216,7 @@ class CircusClustering:
                 operator="median",
             )
 
-        if params["do_merge"]:
+        if params["do_merge_with_templates"]:
             peak_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = merge_peak_labels_from_templates(
                 peaks,
                 peak_labels,
