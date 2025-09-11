@@ -80,7 +80,7 @@ class UnitProbeMapWidget(BaseWidget):
 
         probe_shape_kwargs = dict(facecolor="w", edgecolor="k", lw=0.5, alpha=1.0)
 
-        templates = get_dense_templates_array(sorting_analyzer, return_scaled=True)
+        templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
         templates = templates[sorting_analyzer.sorting.ids_to_indices(dp.unit_ids), :, :]
 
         all_poly_contact = []

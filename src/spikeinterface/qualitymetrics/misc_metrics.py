@@ -9,7 +9,7 @@ Implementations here have been refactored to support the multi-segment API of sp
 
 from __future__ import annotations
 
-
+from .utils import _has_required_extensions
 from collections import namedtuple
 import math
 import warnings
@@ -26,7 +26,6 @@ from spikeinterface.core.template_tools import (
     get_dense_templates_array,
 )
 
-
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
     HAVE_NUMBA = True
@@ -35,6 +34,161 @@ else:
 
 
 _default_params = dict()
+
+
+def compute_noise_cutoffs(sorting_analyzer, high_quantile=0.25, low_quantile=0.1, n_bins=100, unit_ids=None):
+    """
+    A metric to determine if a unit's amplitude distribution is cut off as it approaches zero, without assuming a Gaussian distribution.
+
+    Based on the histogram of the (transformed) amplitude:
+
+    1. This method compares counts in the lower-amplitude bins to counts in the top 'high_quantile' of the amplitude range.
+    It computes the mean and std of an upper quantile of the distribution, and calculates how many standard deviations away
+    from that mean the lower-quantile bins lie.
+
+    2. The method also compares the counts in the lower-amplitude bins to the count in the highest bin and return their ratio.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
+    high_quantile : float, default: 0.25
+        Quantile of the amplitude range above which values are treated as "high" (e.g. 0.25 = top 25%), the reference region.
+    low_quantile : int, default: 0.1
+        Quantile of the amplitude range below which values are treated as "low" (e.g. 0.1 = lower 10%), the test region.
+    n_bins: int, default: 100
+        The number of bins to use to compute the amplitude histogram.
+    unit_ids : list or None
+        List of unit ids to compute the amplitude cutoffs. If None, all units are used.
+
+    Returns
+    -------
+    noise_cutoff_dict : dict of floats
+        Estimated metrics based on the amplitude distribution, for each unit ID.
+
+    References
+    ----------
+    Inspired by metric described in [IBL2024]_
+
+    """
+    res = namedtuple("cutoff_metrics", ["noise_cutoff", "noise_ratio"])
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+
+    noise_cutoff_dict = {}
+    noise_ratio_dict = {}
+
+    _has_required_extensions(sorting_analyzer, metric_name="noise_cutoff")
+
+    amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
+    peak_sign = amplitude_extension.params["peak_sign"]
+    if peak_sign == "both":
+        raise TypeError(
+            '`peak_sign` should either be "pos" or "neg". You can set `peak_sign` as an argument when you compute spike_amplitudes.'
+        )
+
+    amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
+
+    for unit_id in unit_ids:
+        amplitudes = amplitudes_by_units[unit_id]
+
+        # We assume the noise (zero values) is on the lower tail of the amplitude distribution.
+        # But if peak_sign == 'neg', the noise will be on the higher tail, so we flip the distribution.
+        if peak_sign == "neg":
+            amplitudes = -amplitudes
+
+        cutoff, ratio = _noise_cutoff(amplitudes, high_quantile=high_quantile, low_quantile=low_quantile, n_bins=n_bins)
+        noise_cutoff_dict[unit_id] = cutoff
+        noise_ratio_dict[unit_id] = ratio
+
+    return res(noise_cutoff_dict, noise_ratio_dict)
+
+
+_default_params["noise_cutoff"] = dict(high_quantile=0.25, low_quantile=0.1, n_bins=100)
+
+
+def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
+    """
+    A metric to determine if a unit's amplitude distribution is cut off as it approaches zero, without assuming a Gaussian distribution.
+
+    Based on the histogram of the (transformed) amplitude:
+
+    1. This method compares counts in the lower-amplitude bins to counts in the higher_amplitude bins.
+    It computes the mean and std of an upper quantile of the distribution, and calculates how many standard deviations away
+    from that mean the lower-quantile bins lie.
+
+    2. The method also compares the counts in the lower-amplitude bins to the count in the highest bin and return their ratio.
+
+    Parameters
+    ----------
+    amps : array-like
+        Spike amplitudes.
+    high_quantile : float, default: 0.25
+        Quantile of the amplitude range above which values are treated as "high" (e.g. 0.25 = top 25%), the reference region.
+    low_quantile : int, default: 0.1
+        Quantile of the amplitude range below which values are treated as "low" (e.g. 0.1 = lower 10%), the test region.
+    n_bins: int, default: 100
+        The number of bins to use to compute the amplitude histogram.
+
+    Returns
+    -------
+    cutoff : float
+        (mean(lower_bins_count) - mean(high_bins_count)) / std(high_bins_count)
+    ratio: float
+        mean(lower_bins_count) / highest_bin_count
+
+    """
+    n_per_bin, bin_edges = np.histogram(amps, bins=n_bins)
+
+    maximum_bin_height = np.max(n_per_bin)
+
+    low_quantile_value = np.quantile(amps, q=low_quantile)
+
+    # the indices for low-amplitude bins
+    low_indices = np.where(bin_edges[1:] <= low_quantile_value)[0]
+
+    high_quantile_value = np.quantile(amps, q=1 - high_quantile)
+
+    # the indices for high-amplitude bins
+    high_indices = np.where(bin_edges[:-1] >= high_quantile_value)[0]
+
+    if len(low_indices) == 0:
+        warnings.warn(
+            "No bin is selected to test cutoff. Please increase low_quantile. Setting noise cutoff and ratio to NaN"
+        )
+        return np.nan, np.nan
+
+    # compute ratio between low-amplitude bins and the largest bin
+    low_counts = n_per_bin[low_indices]
+    mean_low_counts = np.mean(low_counts)
+    ratio = mean_low_counts / maximum_bin_height
+
+    if len(high_indices) == 0:
+        warnings.warn(
+            "No bin is selected as the reference region. Please increase high_quantile. Setting noise cutoff to NaN"
+        )
+        return np.nan, ratio
+
+    if len(high_indices) == 1:
+        warnings.warn(
+            "Only one bin is selected as the reference region, and thus the standard deviation cannot be computed. "
+            "Please increase high_quantile. Setting noise cutoff to NaN"
+        )
+        return np.nan, ratio
+
+    # compute cutoff from low-amplitude and high-amplitude bins
+    high_counts = n_per_bin[high_indices]
+    mean_high_counts = np.mean(high_counts)
+    std_high_counts = np.std(high_counts)
+    if std_high_counts == 0:
+        warnings.warn(
+            "All the high-amplitude bins have the same size. Please consider changing n_bins. "
+            "Setting noise cutoff to NaN"
+        )
+        return np.nan, ratio
+
+    cutoff = (mean_low_counts - mean_high_counts) / std_high_counts
+    return cutoff, ratio
 
 
 def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
@@ -213,14 +367,17 @@ def compute_snrs(
     snrs : dict
         Computed signal to noise ratio for each unit.
     """
-    assert sorting_analyzer.has_extension("noise_levels")
+
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+
+    _has_required_extensions(sorting_analyzer, metric_name="snr")
+
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
     assert peak_sign in ("neg", "pos", "both")
     assert peak_mode in ("extremum", "at_index", "peak_to_peak")
 
-    if unit_ids is None:
-        unit_ids = sorting_analyzer.unit_ids
     channel_ids = sorting_analyzer.channel_ids
 
     extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, mode=peak_mode)
@@ -747,12 +904,9 @@ def compute_amplitude_cv_metrics(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    if sorting_analyzer.has_extension(amplitude_extension):
-        amps = sorting_analyzer.get_extension(amplitude_extension).get_data()
-    else:
-        warnings.warn("compute_amplitude_cv_metrics() need 'spike_amplitudes' or 'amplitude_scalings'")
-        empty_dict = {unit_id: np.nan for unit_id in unit_ids}
-        return empty_dict
+    _has_required_extensions(sorting_analyzer, metric_name="amplitude_cv")
+
+    amps = sorting_analyzer.get_extension(amplitude_extension).get_data()
 
     # precompute segment slice
     segment_slices = []
@@ -879,35 +1033,30 @@ def compute_amplitude_cutoffs(
         unit_ids = sorting_analyzer.unit_ids
 
     all_fraction_missing = {}
-    if sorting_analyzer.has_extension("spike_amplitudes") or sorting_analyzer.has_extension("waveforms"):
+    _has_required_extensions(sorting_analyzer, metric_name="amplitude_cutoff")
 
-        invert_amplitudes = False
-        if (
-            sorting_analyzer.has_extension("spike_amplitudes")
-            and sorting_analyzer.get_extension("spike_amplitudes").params["peak_sign"] == "pos"
-        ):
-            invert_amplitudes = True
-        elif sorting_analyzer.has_extension("waveforms") and peak_sign == "pos":
-            invert_amplitudes = True
+    invert_amplitudes = False
+    if (
+        sorting_analyzer.has_extension("spike_amplitudes")
+        and sorting_analyzer.get_extension("spike_amplitudes").params["peak_sign"] == "pos"
+    ):
+        invert_amplitudes = True
+    elif sorting_analyzer.has_extension("waveforms") and peak_sign == "pos":
+        invert_amplitudes = True
 
-        amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
+    amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
 
-        for unit_id in unit_ids:
-            amplitudes = amplitudes_by_units[unit_id]
-            if invert_amplitudes:
-                amplitudes = -amplitudes
+    for unit_id in unit_ids:
+        amplitudes = amplitudes_by_units[unit_id]
+        if invert_amplitudes:
+            amplitudes = -amplitudes
 
-            all_fraction_missing[unit_id] = amplitude_cutoff(
-                amplitudes, num_histogram_bins, histogram_smoothing_value, amplitudes_bins_min_ratio
-            )
+        all_fraction_missing[unit_id] = amplitude_cutoff(
+            amplitudes, num_histogram_bins, histogram_smoothing_value, amplitudes_bins_min_ratio
+        )
 
-        if np.any(np.isnan(list(all_fraction_missing.values()))):
-            warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
-
-    else:
-        warnings.warn("compute_amplitude_cutoffs need 'spike_amplitudes' or 'waveforms' extension")
-        for unit_id in unit_ids:
-            all_fraction_missing[unit_id] = np.nan
+    if np.any(np.isnan(list(all_fraction_missing.values()))):
+        warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
 
     return all_fraction_missing
 
@@ -945,15 +1094,12 @@ def compute_amplitude_medians(sorting_analyzer, peak_sign="neg", unit_ids=None):
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
 
+    _has_required_extensions(sorting_analyzer, metric_name="amplitude_median")
+
     all_amplitude_medians = {}
-    if sorting_analyzer.has_extension("spike_amplitudes") or sorting_analyzer.has_extension("waveforms"):
-        amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
-        for unit_id in unit_ids:
-            all_amplitude_medians[unit_id] = np.median(amplitudes_by_units[unit_id])
-    else:
-        warnings.warn("compute_amplitude_medians need 'spike_amplitudes' or 'waveforms' extension")
-        for unit_id in unit_ids:
-            all_amplitude_medians[unit_id] = np.nan
+    amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
+    for unit_id in unit_ids:
+        all_amplitude_medians[unit_id] = np.median(amplitudes_by_units[unit_id])
 
     return all_amplitude_medians
 
@@ -1028,29 +1174,18 @@ def compute_drift_metrics(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    if sorting_analyzer.has_extension("spike_locations"):
-        spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
-        spike_locations = spike_locations_ext.get_data()
-        # spike_locations_by_unit = spike_locations_ext.get_data(outputs="by_unit")
-        spikes = sorting.to_spike_vector()
-        spike_locations_by_unit = {}
-        for unit_id in unit_ids:
-            unit_index = sorting.id_to_index(unit_id)
-            # TODO @alessio this is very slow this sjould be done with spike_vector_to_indices() in code
-            spike_mask = spikes["unit_index"] == unit_index
-            spike_locations_by_unit[unit_id] = spike_locations[spike_mask]
+    _has_required_extensions(sorting_analyzer, metric_name="drift")
 
-    else:
-        warnings.warn(
-            "The drift metrics require the `spike_locations` waveform extension. "
-            "Use the `postprocessing.compute_spike_locations()` function. "
-            "Drift metrics will be set to NaN"
-        )
-        empty_dict = {unit_id: np.nan for unit_id in unit_ids}
-        if return_positions:
-            return res(empty_dict, empty_dict, empty_dict), np.nan
-        else:
-            return res(empty_dict, empty_dict, empty_dict)
+    spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
+    spike_locations = spike_locations_ext.get_data()
+    # spike_locations_by_unit = spike_locations_ext.get_data(outputs="by_unit")
+    spikes = sorting.to_spike_vector()
+    spike_locations_by_unit = {}
+    for unit_id in unit_ids:
+        unit_index = sorting.id_to_index(unit_id)
+        # TODO @alessio this is very slow this sjould be done with spike_vector_to_indices() in code
+        spike_mask = spikes["unit_index"] == unit_index
+        spike_locations_by_unit[unit_id] = spike_locations[spike_mask]
 
     interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
     assert direction in spike_locations.dtype.names, (
@@ -1483,32 +1618,24 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
 
+    _has_required_extensions(sorting_analyzer, metric_name="sd_ratio")
+
+    spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
+
     if not HAVE_NUMBA:
         warnings.warn(
             "'sd_ratio' metric computation requires numba. Install it with >>> pip install numba. "
             "SD ratio metric will be set to NaN"
         )
         return {unit_id: np.nan for unit_id in unit_ids}
-
-    if sorting_analyzer.has_extension("spike_amplitudes"):
-        amplitudes_ext = sorting_analyzer.get_extension("spike_amplitudes")
-        spike_amplitudes = amplitudes_ext.get_data()
-    else:
-        warnings.warn(
-            "The `sd_ratio` metric require the `spike_amplitudes` waveform extension. "
-            "Use the `postprocessing.compute_spike_amplitudes()` functions. "
-            "SD ratio metric will be set to NaN"
-        )
-        return {unit_id: np.nan for unit_id in unit_ids}
-
     noise_levels = get_noise_levels(
-        sorting_analyzer.recording, return_scaled=sorting_analyzer.return_scaled, method="std", **job_kwargs
+        sorting_analyzer.recording, return_in_uV=sorting_analyzer.return_in_uV, method="std", **job_kwargs
     )
     best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
     n_spikes = sorting.count_num_spikes_per_unit()
 
     if correct_for_template_itself:
-        tamplates_array = get_dense_templates_array(sorting_analyzer, return_scaled=sorting_analyzer.return_scaled)
+        tamplates_array = get_dense_templates_array(sorting_analyzer, return_in_uV=sorting_analyzer.return_in_uV)
 
     spikes = sorting.to_spike_vector()
     sd_ratio = {}

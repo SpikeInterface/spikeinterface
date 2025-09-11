@@ -415,7 +415,7 @@ class DetectPeakByChannel(PeakDetectorWrapper):
         assert peak_sign in ("both", "neg", "pos")
 
         if noise_levels is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **random_chunk_kwargs)
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
@@ -511,7 +511,7 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
         if noise_levels is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **random_chunk_kwargs)
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
@@ -572,13 +572,13 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
 
         assert peak_sign in ("both", "neg", "pos")
         if noise_levels is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **random_chunk_kwargs)
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
 
         # if remove_median:
 
-        #     chunks = get_random_data_chunks(recording, return_scaled=False, concatenated=True, **random_chunk_kwargs)
+        #     chunks = get_random_data_chunks(recording, return_in_uV=False, concatenated=True, **random_chunk_kwargs)
         #     medians = np.median(chunks, axis=0)
         #     medians = medians[None, :]
         #     print('medians', medians, noise_levels)
@@ -699,7 +699,7 @@ class DetectPeakMatchedFiltering(PeakDetector):
 
         self.weights = self.weights.reshape(self.num_templates * self.num_z_factors, -1)
         self.weights = csr_matrix(self.weights)
-        random_data = get_random_data_chunks(recording, return_scaled=False, **random_chunk_kwargs)
+        random_data = get_random_data_chunks(recording, return_in_uV=False, **random_chunk_kwargs)
         conv_random_data = self.get_convolved_traces(random_data)
         medians = np.median(conv_random_data, axis=1)
         self.medians = medians[:, None]
@@ -1092,7 +1092,7 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
         # TODO refactor with other classes
         assert peak_sign in ("both", "neg", "pos")
         if noise_levels is None:
-            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **random_chunk_kwargs)
         abs_thresholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)

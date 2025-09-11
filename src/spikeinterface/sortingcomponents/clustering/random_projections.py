@@ -132,7 +132,7 @@ class RandomProjectionClustering:
         nafter = int(params["waveforms"]["ms_after"] * fs / 1000.0)
 
         if params["noise_levels"] is None:
-            params["noise_levels"] = get_noise_levels(recording, return_scaled=False, **job_kwargs)
+            params["noise_levels"] = get_noise_levels(recording, return_in_uV=False, **job_kwargs)
 
         templates_array = estimate_templates(
             recording,
@@ -140,7 +140,7 @@ class RandomProjectionClustering:
             unit_ids,
             nbefore,
             nafter,
-            return_scaled=False,
+            return_in_uV=False,
             job_name=None,
             **job_kwargs,
         )
@@ -158,7 +158,7 @@ class RandomProjectionClustering:
             channel_ids=recording.channel_ids,
             unit_ids=unit_ids[valid_templates],
             probe=recording.get_probe(),
-            is_scaled=False,
+            is_in_uV=False,
         )
 
         sparsity = compute_sparsity(templates, noise_levels=params["noise_levels"], **params["sparsity"])

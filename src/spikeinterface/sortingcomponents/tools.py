@@ -15,7 +15,9 @@ from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffe
 from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.sparsity import ChannelSparsity
+from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
+from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
 
 
 def make_multi_method_doc(methods, ident="    "):
@@ -60,7 +62,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job
         nbefore,
         nafter,
         mode="shared_memory",
-        return_scaled=False,
+        return_in_uV=False,
         sparsity_mask=sparsity_mask,
         copy=True,
         verbose=False,
@@ -412,7 +414,7 @@ def remove_empty_templates(templates):
         channel_ids=templates.channel_ids,
         unit_ids=templates.unit_ids[not_empty],
         probe=templates.probe,
-        is_scaled=templates.is_scaled,
+        is_in_uV=templates.is_in_uV,
     )
 
 
@@ -456,3 +458,54 @@ def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):
     recording_slices = rng.permutation(recording_slices)
 
     return recording_slices
+
+
+def clean_templates(
+    templates, sparsify_threshold=0.25, noise_levels=None, min_snr=None, max_jitter_ms=None, remove_empty=True
+):
+    """
+    Clean a Templates object by removing empty units and applying sparsity if provided.
+    """
+
+    ## First we sparsify the templates (using peak-to-peak amplitude avoid sign issues)
+    if sparsify_threshold is not None:
+        sparsity = compute_sparsity(
+            templates,
+            method="snr",
+            amplitude_mode="peak_to_peak",
+            noise_levels=noise_levels,
+            threshold=sparsify_threshold,
+        )
+        if templates.are_templates_sparse():
+            templates = templates.to_dense()
+        templates = templates.to_sparse(sparsity)
+
+    ## We removed non empty templates
+    if remove_empty:
+        templates = remove_empty_templates(templates)
+
+    ## We keep only units with a max jitter
+    if max_jitter_ms is not None:
+        max_jitter = int(max_jitter_ms * templates.sampling_frequency / 1000.0)
+
+        shifts = get_template_extremum_channel_peak_shift(templates)
+        to_select = []
+        for unit_id in templates.unit_ids:
+            if np.abs(shifts[unit_id]) <= max_jitter:
+                to_select += [unit_id]
+        templates = templates.select_units(to_select)
+
+    ## We remove units with a low SNR
+    if min_snr is not None:
+        assert noise_levels is not None, "noise_levels must be provided if min_snr is set"
+        sparsity = compute_sparsity(
+            templates.to_dense(),
+            method="snr",
+            amplitude_mode="peak_to_peak",
+            noise_levels=noise_levels,
+            threshold=min_snr,
+        )
+        to_select = templates.unit_ids[np.flatnonzero(sparsity.mask.sum(axis=1) > 0)]
+        templates = templates.select_units(to_select)
+
+    return templates

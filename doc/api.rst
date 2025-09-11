@@ -5,7 +5,7 @@ spikeinterface.core
 -------------------
 .. automodule:: spikeinterface.core
 
-    .. autofunction:: load_extractor
+    .. autofunction:: load
     .. autoclass:: BaseRecording
         :members:
     .. autoclass:: BaseSorting
@@ -27,7 +27,7 @@ spikeinterface.core
     .. autoclass:: BinaryRecordingExtractor
     .. autoclass:: ZarrRecordingExtractor
     .. autoclass:: BinaryFolderRecording
-    .. autoclass:: NpzFolderSorting
+    .. autoclass:: NumpyFolderSorting
     .. autoclass:: NpyFolderSnippets
     .. autoclass:: NumpyRecording
     .. autoclass:: NumpySorting
@@ -105,6 +105,7 @@ NEO-based
     .. autofunction:: read_blackrock
     .. autofunction:: read_ced
     .. autofunction:: read_intan
+    .. autofunction:: read_split_intan_files
     .. autofunction:: read_maxwell
     .. autofunction:: read_mearec
     .. autofunction:: read_mcsraw
@@ -168,6 +169,9 @@ spikeinterface.preprocessing
 
 .. automodule:: spikeinterface.preprocessing
 
+    .. autofunction:: apply_preprocessing_pipeline
+    .. autofunction:: get_preprocessing_dict_from_analyzer
+    .. autofunction:: get_preprocessing_dict_from_file
     .. autofunction:: astype
     .. autofunction:: average_across_direction
     .. autofunction:: bandpass_filter
@@ -176,6 +180,7 @@ spikeinterface.preprocessing
     .. autofunction:: clip
     .. autofunction:: common_reference
     .. autofunction:: correct_lsb
+    .. autofunction:: compute_motion
     .. autofunction:: correct_motion
     .. autofunction:: get_motion_presets
     .. autofunction:: get_motion_parameters_preset
@@ -183,6 +188,8 @@ spikeinterface.preprocessing
     .. autofunction:: save_motion_info
     .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
+    .. autofunction:: detect_and_interpolate_bad_channels
+    .. autofunction:: detect_and_remove_bad_channels
     .. autofunction:: directional_derivative
     .. autofunction:: filter
     .. autofunction:: gaussian_filter
@@ -240,6 +247,7 @@ spikeinterface.sorters
 
     .. autofunction:: available_sorters
     .. autofunction:: installed_sorters
+    .. autofunction:: archived_sorters
     .. autofunction:: get_default_sorter_params
     .. autofunction:: get_sorter_params_description
     .. autofunction:: print_sorter_versions

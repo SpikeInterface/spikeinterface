@@ -234,7 +234,7 @@ def test_BaseRecording(create_cache_folder):
 
     # Both return_scaled and return_in_uV raise error when no gain_to_uV/offset_to_uV properties
     with pytest.raises(ValueError):
-        traces_float32 = rec_int16.get_traces(return_in_uV=True)
+        traces_float32 = rec_int16.get_traces(return_scaled=True)
     with pytest.raises(ValueError):
         traces_float32 = rec_int16.get_traces(return_in_uV=True)
 

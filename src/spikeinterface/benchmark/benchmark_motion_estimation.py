@@ -86,7 +86,7 @@ class MotionEstimationBenchmark(Benchmark):
     def run(self, **job_kwargs):
         p = self.params
 
-        noise_levels = get_noise_levels(self.recording, return_scaled=False, **job_kwargs)
+        noise_levels = get_noise_levels(self.recording, return_in_uV=False, **job_kwargs)
 
         t0 = time.perf_counter()
         peaks = detect_peaks(self.recording, noise_levels=noise_levels, **p["detect_kwargs"], **job_kwargs)
@@ -440,7 +440,7 @@ class MotionEstimationStudy(BenchmarkStudy):
 #             if self.folder.exists() and not self.overwrite:
 #                 raise ValueError(f"The folder {self.folder} is not empty")
 
-#         self.noise_levels = get_noise_levels(self.recording, return_scaled=False)
+#         self.noise_levels = get_noise_levels(self.recording, return_in_uV=False)
 
 #         t0 = time.perf_counter()
 #         self.peaks = detect_peaks(

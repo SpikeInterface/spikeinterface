@@ -64,7 +64,7 @@ folder = "analyzer_folder"
 analyzer = create_sorting_analyzer(sorting=sorting,
                                    recording=recording,
                                    format="binary_folder",
-                                   return_scaled=True, # this is the default to attempt to return scaled
+                                   return_in_uV=True, # this is the default to attempt to return scaled
                                    folder=folder
                                    )
 print(analyzer)

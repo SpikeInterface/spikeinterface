@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
@@ -13,7 +15,7 @@ from .tools import aggregate_sparse_features, FeaturesLoader
 
 try:
     import numba
-    from .isocut5 import isocut5
+
 except:
     pass  # isocut requires numba
 
@@ -192,7 +194,7 @@ class LocalFeatureClustering:
     The idea simple :
      * agregate features (svd or even waveforms) with sparse channel.
      * run a local feature reduction (pca or svd)
-     * try a new split (hdscan or isocut5)
+     * try a new split (hdscan or isosplit)
     """
 
     name = "local_feature_clustering"
@@ -206,11 +208,13 @@ class LocalFeatureClustering:
         debug_folder=None,
         clusterer="hdbscan",
         clusterer_kwargs={"min_cluster_size": 25, "min_samples": 5},
+        # clusterer="isosplit",
+        # clusterer_kwargs={"n_init":50, "min_cluster_size": 25, "max_iterations_per_pass": 500, "isocut_threshold": 2.0},
         feature_name="sparse_tsvd",
         neighbours_mask=None,
         waveforms_sparse_mask=None,
         min_size_split=25,
-        n_pca_features=2,
+        n_pca_features=3,
         seed=None,
         projection_mode="tsvd",
         minimum_overlap_ratio=0.25,
@@ -284,26 +288,39 @@ class LocalFeatureClustering:
             from hdbscan import HDBSCAN
 
             clust = HDBSCAN(**clusterer_kwargs, core_dist_n_jobs=1)
-            clust.fit(final_features)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore")
+                clust.fit(final_features)
             possible_labels = clust.labels_
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
             del clust
-        elif clusterer == "isocut5":
-            min_cluster_size = clusterer_kwargs["min_cluster_size"]
-            dipscore, cutpoint = isocut5(final_features[:, 0])
-            possible_labels = np.zeros(final_features.shape[0])
-            min_dip = clusterer_kwargs.get("min_dip", 1.5)
-            if dipscore > min_dip:
-                mask = final_features[:, 0] > cutpoint
-                if np.sum(mask) > min_cluster_size and np.sum(~mask):
-                    possible_labels[mask] = 1
-                is_split = np.setdiff1d(possible_labels, [-1]).size > 1
-            else:
-                is_split = False
+        elif clusterer == "isosplit":
+            from spikeinterface.sortingcomponents.clustering.isosplit_isocut import isosplit
+
+            possible_labels = isosplit(final_features, **clusterer_kwargs)
+
+            # min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)
+            # for i in np.unique(possible_labels):
+            #     mask = possible_labels == i
+            #     if np.sum(mask) < min_cluster_size:
+            #         possible_labels[mask] = -1
+            is_split = np.setdiff1d(possible_labels, [-1]).size > 1
+        elif clusterer == "isosplit6":
+            # this use the official C++ isosplit6 from Jeremy Magland
+            import isosplit6
+
+            min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)
+            possible_labels = isosplit6.isosplit6(final_features)
+            for i in np.unique(possible_labels):
+                mask = possible_labels == i
+                if np.sum(mask) < min_cluster_size:
+                    possible_labels[mask] = -1
+            is_split = np.setdiff1d(possible_labels, [-1]).size > 1
         else:
-            raise ValueError(f"wrong clusterer {clusterer}. Possible options are 'hdbscan' or 'isocut5'.")
+            raise ValueError(f"wrong clusterer {clusterer}. Possible options are 'hdbscan/isosplit/isosplit6'.")
 
         DEBUG = False  # only for Sam or dirty hacking
+        # DEBUG = True
 
         if debug_folder is not None or DEBUG:
             import matplotlib.pyplot as plt
@@ -331,7 +348,7 @@ class LocalFeatureClustering:
                 ax.plot(flatten_wfs[mask].T, color=colors[k], alpha=0.1)
                 if k > -1:
                     ax.plot(np.median(flatten_wfs[mask].T, axis=1), color=colors[k], lw=2)
-                ax.set_xlabel("PCA features")
+                ax.set_xlabel(f"PCA features")
 
                 ax = axs[3]
                 if n_pca_features == 1:
@@ -341,7 +358,7 @@ class LocalFeatureClustering:
                     ax.plot(final_features[mask].T, color=colors[k], alpha=0.1)
                 if k > -1 and n_pca_features > 1:
                     ax.plot(np.median(final_features[mask].T, axis=1), color=colors[k], lw=2)
-                ax.set_xlabel("Projected PCA features")
+                ax.set_xlabel(f"Projected PCA features, dim{final_features.shape[1]}")
 
             if tsvd is not None:
                 ax = axs[2]

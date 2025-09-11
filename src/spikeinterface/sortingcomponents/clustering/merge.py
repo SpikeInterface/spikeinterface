@@ -15,246 +15,75 @@ try:
     import scipy.spatial
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
-    from .isocut5 import isocut5
+    from .isosplit_isocut import isocut
 
 except:
     pass
-from .tools import aggregate_sparse_features, FeaturesLoader, compute_template_from_sparse
+from .tools import aggregate_sparse_features, FeaturesLoader
 
 
 DEBUG = False
 
 
-def merge_clusters(
+def merge_peak_labels_from_features(
     peaks,
     peak_labels,
+    unit_ids,
+    templates_array,
+    template_sparse_mask,
     recording,
     features_dict_or_folder,
-    radius_um=70,
-    method="waveforms_lda",
+    radius_um=70.0,
+    method="project_distribution",
     method_kwargs={},
     **job_kwargs,
 ):
     """
-    Merge cluster using differents methods.
-
-    Parameters
-    ----------
-    peaks: numpy.ndarray 1d
-        detected peaks (or a subset)
-    peak_labels: numpy.ndarray 1d
-        original label before merge
-        peak_labels.size == peaks.size
-    recording: Recording object
-        A recording object
-    features_dict_or_folder: dict or folder
-        A dictionary of features precomputed with peak_pipeline or a folder containing npz file for features.
-    method: str
-        The method used
-    method_kwargs: dict
-        Option for the method.
-    Returns
-    -------
-    merge_peak_labels: numpy.ndarray 1d
-        New vectors label after merges.
-    peak_shifts: numpy.ndarray 1d
-        A vector of sample shift to be reverse applied on original sample_index on peak detection
-        Negative shift means too early.
-        Posituve shift means too late.
-        So the correction must be applied like this externally:
-        final_peaks = peaks.copy()
-        final_peaks['sample_index'] -= peak_shifts
-
+    Merge cluster from all features with distribution pair by pair.
+    Support eventually multi method.
     """
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     features = FeaturesLoader.from_dict_or_folder(features_dict_or_folder)
-    sparse_wfs = features["sparse_wfs"]
-    sparse_mask = features["sparse_mask"]
+    # sparse_wfs = features["sparse_wfs"]
+    # sparse_mask = features["sparse_mask"]
 
-    labels_set, pair_mask, pair_shift, pair_values = find_merge_pairs(
+    labels_set, pair_mask, pair_shift, pair_values = find_merge_pairs_from_features(
         peaks,
         peak_labels,
+        unit_ids,
+        templates_array,
+        template_sparse_mask,
         recording,
         features_dict_or_folder,
-        sparse_wfs,
-        sparse_mask,
+        # sparse_wfs,
+        # sparse_mask,
         radius_um=radius_um,
         method=method,
         method_kwargs=method_kwargs,
         **job_kwargs,
     )
 
-    if DEBUG:
-        import matplotlib.pyplot as plt
+    clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = (
+        _apply_pair_mask_on_labels_and_recompute_templates(
+            pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask
+        )
+    )
 
-        fig, ax = plt.subplots()
-        ax.matshow(pair_values)
-
-        pair_values[~pair_mask] = 20
-
-        import hdbscan
-
-        fig, ax = plt.subplots()
-        clusterer = hdbscan.HDBSCAN(metric="precomputed", min_cluster_size=2, allow_single_cluster=True)
-        clusterer.fit(pair_values)
-        # print(clusterer.labels_)
-        clusterer.single_linkage_tree_.plot(cmap="viridis", colorbar=True)
-        # ~ fig, ax = plt.subplots()
-        # ~ clusterer.minimum_spanning_tree_.plot(edge_cmap='viridis',
-        # ~ edge_alpha=0.6,
-        # ~ node_size=80,
-        # ~ edge_linewidth=2)
-
-        graph = clusterer.single_linkage_tree_.to_networkx()
-
-        import scipy.cluster
-
-        fig, ax = plt.subplots()
-        scipy.cluster.hierarchy.dendrogram(clusterer.single_linkage_tree_.to_numpy(), ax=ax)
-
-        import networkx as nx
-
-        fig = plt.figure()
-        nx.draw_networkx(graph)
-        plt.show()
-
-        plt.show()
-
-    merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="partial")
-    # merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full")
-
-    group_shifts = resolve_final_shifts(labels_set, merges, pair_mask, pair_shift)
-
-    # apply final label and shift
-    merge_peak_labels = peak_labels.copy()
-    peak_shifts = np.zeros(peak_labels.size, dtype="int64")
-    for merge, shifts in zip(merges, group_shifts):
-        label0 = merge[0]
-        mask = np.isin(peak_labels, merge)
-        merge_peak_labels[mask] = label0
-        for l, label1 in enumerate(merge):
-            if l == 0:
-                # the first label is the reference (shift=0)
-                continue
-            peak_shifts[peak_labels == label1] = shifts[l]
-
-    return merge_peak_labels, peak_shifts
+    return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids
 
 
-def resolve_final_shifts(labels_set, merges, pair_mask, pair_shift):
-    labels_set = list(labels_set)
-
-    group_shifts = []
-    for merge in merges:
-        shifts = np.zeros(len(merge), dtype="int64")
-
-        label_inds = [labels_set.index(label) for label in merge]
-
-        label0 = merge[0]
-        ind0 = label_inds[0]
-
-        # First find relative shift to label0 (l=0) in the subgraph
-        local_pair_mask = pair_mask[label_inds, :][:, label_inds]
-        local_pair_shift = None
-        G = None
-        for l, label1 in enumerate(merge):
-            if l == 0:
-                # the first label is the reference (shift=0)
-                continue
-            ind1 = label_inds[l]
-            if local_pair_mask[0, l]:
-                # easy case the pair label0<>label1 was existing
-                shift = pair_shift[ind0, ind1]
-            else:
-                # more complicated case need to find intermediate label and propagate the shift!!
-                if G is None:
-                    # the the graph only once and only if needed
-                    G = nx.from_numpy_array(local_pair_mask | local_pair_mask.T)
-                    local_pair_shift = pair_shift[label_inds, :][:, label_inds]
-                    local_pair_shift += local_pair_shift.T
-
-                shift_chain = nx.shortest_path(G, source=l, target=0)
-                shift = 0
-                for i in range(len(shift_chain) - 1):
-                    shift += local_pair_shift[shift_chain[i + 1], shift_chain[i]]
-            shifts[l] = shift
-
-        group_shifts.append(shifts)
-
-    return group_shifts
-
-
-def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"):
-    """
-    Agglomerate merge pairs into final merge groups.
-
-    The merges are ordered by label.
-
-    """
-
-    labels_set = np.array(labels_set)
-
-    merges = []
-
-    graph = nx.from_numpy_array(pair_mask | pair_mask.T)
-    # put real nodes names for debugging
-    maps = dict(zip(np.arange(labels_set.size), labels_set))
-    graph = nx.relabel_nodes(graph, maps)
-
-    groups = list(nx.connected_components(graph))
-    for group in groups:
-        if len(group) == 1:
-            continue
-        sub_graph = graph.subgraph(group)
-        # print(group, sub_graph)
-        cliques = list(nx.find_cliques(sub_graph))
-        if len(cliques) == 1 and len(cliques[0]) == len(group):
-            # the sub graph is full connected: no ambiguity
-            # merges.append(labels_set[cliques[0]])
-            merges.append(cliques[0])
-        elif len(cliques) > 1:
-            # the subgraph is not fully connected
-            if connection_mode == "full":
-                # node merge
-                pass
-            elif connection_mode == "partial":
-                group = list(group)
-                # merges.append(labels_set[group])
-                merges.append(group)
-            elif connection_mode == "clique":
-                raise NotImplementedError
-            else:
-                raise ValueError
-
-            if DEBUG:
-                import matplotlib.pyplot as plt
-
-                fig = plt.figure()
-                nx.draw_networkx(sub_graph)
-                plt.show()
-
-    if DEBUG:
-        import matplotlib.pyplot as plt
-
-        fig = plt.figure()
-        nx.draw_networkx(graph)
-        plt.show()
-
-    # ensure ordered label
-    merges = [np.sort(merge) for merge in merges]
-
-    return merges
-
-
-def find_merge_pairs(
+def find_merge_pairs_from_features(
     peaks,
     peak_labels,
+    unit_ids,
+    templates_array,
+    template_sparse_mask,
     recording,
     features_dict_or_folder,
-    sparse_wfs,
-    sparse_mask,
+    # sparse_wfs,
+    # sparse_mask,
     radius_um=70,
     method="project_distribution",
     method_kwargs={},
@@ -270,25 +99,38 @@ def find_merge_pairs(
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     # features_dict_or_folder = Path(features_dict_or_folder)
+    # features = FeaturesLoader.from_dict_or_folder(features_dict_or_folder)
 
     # peaks = features_dict_or_folder['peaks']
-    total_channels = recording.get_num_channels()
+    # total_channels = recording.get_num_channels()
 
     # sparse_wfs = features['sparse_wfs']
 
-    labels_set = np.setdiff1d(peak_labels, [-1]).tolist()
-    n = len(labels_set)
+    n = len(unit_ids)
     pair_mask = np.triu(np.ones((n, n), dtype="bool")) & ~np.eye(n, dtype="bool")
     pair_shift = np.zeros((n, n), dtype="int64")
     pair_values = np.zeros((n, n), dtype="float64")
 
     # compute template (no shift at this step)
 
-    templates = compute_template_from_sparse(
-        peaks, peak_labels, labels_set, sparse_wfs, sparse_mask, total_channels, peak_shifts=None
-    )
+    # templates = compute_template_from_sparse(
+    #     peaks, peak_labels, labels_set, sparse_wfs, sparse_mask, total_channels, peak_shifts=None
+    # )
 
-    max_chans = np.argmax(np.max(np.abs(templates), axis=1), axis=1)
+    # peaks_svd = features['peaks_svd']
+    # sparse_mask = features['sparse_mask']
+    # ms_before = features['ms_before']
+    # ms_after = features['ms_after']
+    # svd_model = features['svd_model']
+
+    # templates, final_sparsity_mask = get_templates_from_peaks_and_svd(
+    #     recording, peaks, peak_labels, ms_before, ms_after, svd_model, peaks_svd, sparse_mask, operator="average",
+    # )
+    # dense_templates_array = templates.templates_array
+
+    labels_set = unit_ids.tolist()
+
+    max_chans = np.argmax(np.max(np.abs(templates_array), axis=1), axis=1)
 
     channel_locs = recording.get_channel_locations()
     template_locs = channel_locs[max_chans, :]
@@ -317,7 +159,7 @@ def find_merge_pairs(
             features_dict_or_folder,
             peak_labels,
             labels_set,
-            templates,
+            templates_array,
             method,
             method_kwargs,
             max_threads_per_worker,
@@ -330,7 +172,7 @@ def find_merge_pairs(
             jobs.append(pool.submit(find_pair_function_wrapper, label0, label1))
 
         if progress_bar:
-            iterator = tqdm(jobs, desc=f"find_merge_pairs with {method}", total=len(jobs))
+            iterator = tqdm(jobs, desc=f"find_merge_pairs_from_features with {method}", total=len(jobs))
         else:
             iterator = jobs
 
@@ -355,7 +197,7 @@ def find_pair_worker_init(
     features_dict_or_folder,
     original_labels,
     labels_set,
-    templates,
+    templates_array,
     method,
     method_kwargs,
     max_threads_per_worker,
@@ -366,7 +208,7 @@ def find_pair_worker_init(
     _ctx["recording"] = recording
     _ctx["original_labels"] = original_labels
     _ctx["labels_set"] = labels_set
-    _ctx["templates"] = templates
+    _ctx["templates_array"] = templates_array
     _ctx["method"] = method
     _ctx["method_kwargs"] = method_kwargs
     _ctx["method_class"] = find_pair_method_dict[method]
@@ -389,7 +231,7 @@ def find_pair_function_wrapper(label0, label1):
             label0,
             label1,
             _ctx["labels_set"],
-            _ctx["templates"],
+            _ctx["templates_array"],
             _ctx["original_labels"],
             _ctx["peaks"],
             _ctx["features"],
@@ -408,8 +250,6 @@ class ProjectDistribution:
     The idea is :
       * project the waveform (or features) samples on a 1d axis (using  LDA for instance).
       * check that it is the same or not distribution (diptest, distrib_overlap, ...)
-
-
     """
 
     name = "project_distribution"
@@ -419,33 +259,40 @@ class ProjectDistribution:
         label0,
         label1,
         labels_set,
-        templates,
+        templates_array,
         original_labels,
         peaks,
         features,
         waveforms_sparse_mask=None,
         feature_name="sparse_tsvd",
         projection="centroid",
-        criteria="diptest",
-        threshold_diptest=0.5,
+        criteria="isocut",
+        isocut_threshold=2.0,
         threshold_percentile=80.0,
         threshold_overlap=0.4,
         min_cluster_size=50,
-        num_shift=2,
+        # num_shift=2,
+        n_pca_features=3,
+        seed=None,
+        projection_mode="tsvd",
+        minimum_overlap_ratio=0.75,
     ):
-        if num_shift > 0:
-            assert feature_name == "sparse_wfs"
-        sparse_wfs = features[feature_name]
+        # if num_shift > 0:
+        #     assert feature_name == "sparse_wfs"
 
-        assert waveforms_sparse_mask is not None
+        sparse_wfs = features[feature_name]
+        # sparse_mask = features["sparse_mask"]
+        sparse_mask = waveforms_sparse_mask
+
+        assert sparse_mask is not None
 
         (inds0,) = np.nonzero(original_labels == label0)
         chans0 = np.unique(peaks["channel_index"][inds0])
-        target_chans0 = np.flatnonzero(np.all(waveforms_sparse_mask[chans0, :], axis=0))
+        target_chans0 = np.flatnonzero(np.all(sparse_mask[chans0, :], axis=0))
 
         (inds1,) = np.nonzero(original_labels == label1)
         chans1 = np.unique(peaks["channel_index"][inds1])
-        target_chans1 = np.flatnonzero(np.all(waveforms_sparse_mask[chans1, :], axis=0))
+        target_chans1 = np.flatnonzero(np.all(sparse_mask[chans1, :], axis=0))
 
         if inds0.size < min_cluster_size or inds1.size < min_cluster_size:
             is_merge = False
@@ -453,26 +300,31 @@ class ProjectDistribution:
             final_shift = 0
             return is_merge, label0, label1, final_shift, merge_value
 
-        target_chans = np.intersect1d(target_chans0, target_chans1)
+        target_intersect_chans = np.intersect1d(target_chans0, target_chans1)
+        target_union_chans = np.union1d(target_chans0, target_chans1)
+
+        if (len(target_intersect_chans) / len(target_union_chans)) < minimum_overlap_ratio:
+            is_merge = False
+            merge_value = 0
+            final_shift = 0
+            return is_merge, label0, label1, final_shift, merge_value
 
         inds = np.concatenate([inds0, inds1])
         labels = np.zeros(inds.size, dtype="int")
         labels[inds0.size :] = 1
-        wfs, out = aggregate_sparse_features(peaks, inds, sparse_wfs, waveforms_sparse_mask, target_chans)
+        wfs, out = aggregate_sparse_features(peaks, inds, sparse_wfs, sparse_mask, target_intersect_chans)
         wfs = wfs[~out]
         labels = labels[~out]
 
         cut = np.searchsorted(labels, 1)
-        wfs0_ = wfs[:cut, :, :]
-        wfs1_ = wfs[cut:, :, :]
+        wfs0 = wfs[:cut, :, :]
+        wfs1 = wfs[cut:, :, :]
 
-        template0_ = np.mean(wfs0_, axis=0)
-        template1_ = np.mean(wfs1_, axis=0)
-        num_samples = template0_.shape[0]
+        # num_samples = template0.shape[0]
 
-        template0 = template0_[num_shift : num_samples - num_shift, :]
+        # template0 = template0_[num_shift : num_samples - num_shift, :]
 
-        wfs0 = wfs0_[:, num_shift : num_samples - num_shift, :]
+        # wfs0 = wfs0_[:, num_shift : num_samples - num_shift, :]
 
         # best shift strategy 1 = max cosine
         # values = []
@@ -492,39 +344,97 @@ class ProjectDistribution:
         # best_shift = np.argmin(values)
 
         # best shift strategy 3 : average delta argmin between channels
-        channel_shift = np.argmax(np.abs(template1_), axis=0) - np.argmax(np.abs(template0_), axis=0)
-        mask = np.abs(channel_shift) <= num_shift
-        channel_shift = channel_shift[mask]
-        if channel_shift.size > 0:
-            best_shift = int(np.round(np.mean(channel_shift))) + num_shift
-        else:
-            best_shift = num_shift
+        # channel_shift = np.argmax(np.abs(template1_), axis=0) - np.argmax(np.abs(template0_), axis=0)
+        # mask = np.abs(channel_shift) <= num_shift
+        # channel_shift = channel_shift[mask]
+        # if channel_shift.size > 0:
+        #     best_shift = int(np.round(np.mean(channel_shift))) + num_shift
+        # else:
+        #     best_shift = num_shift
 
-        wfs1 = wfs1_[:, best_shift : best_shift + template0.shape[0], :]
-        template1 = template1_[best_shift : best_shift + template0.shape[0], :]
+        # wfs1 = wfs1_[:, best_shift : best_shift + template0.shape[0], :]
+        # template1 = template1_[best_shift : best_shift + template0.shape[0], :]
+
+        feat0 = wfs0.reshape(wfs0.shape[0], -1)
+        feat1 = wfs1.reshape(wfs1.shape[0], -1)
+        feat = np.concatenate([feat0, feat1], axis=0)
+
+        use_svd = True
+
+        if use_svd:
+            from sklearn.decomposition import TruncatedSVD
+
+            n_pca_features = 3
+            tsvd = TruncatedSVD(n_pca_features, random_state=seed)
+            feat = tsvd.fit_transform(feat)
+
+        if isinstance(n_pca_features, float):
+            assert 0 < n_pca_features < 1, "n_components should be in ]0, 1["
+            nb_dimensions = min(feat.shape[0], feat.shape[1])
+            if projection_mode == "pca":
+                from sklearn.decomposition import PCA
+
+                tsvd = PCA(nb_dimensions, whiten=True)
+            elif projection_mode == "tsvd":
+                from sklearn.decomposition import TruncatedSVD
+
+                tsvd = TruncatedSVD(nb_dimensions, random_state=seed)
+            feat = tsvd.fit_transform(feat)
+            n_explain = np.sum(np.cumsum(tsvd.explained_variance_ratio_) <= n_pca_features) + 1
+            feat = feat[:, :n_explain]
+            n_pca_features = feat.shape[1]
+        elif isinstance(n_pca_features, int):
+            if feat.shape[1] > n_pca_features:
+                if projection_mode == "pca":
+                    from sklearn.decomposition import PCA
+
+                    tsvd = PCA(n_pca_features, whiten=True)
+                elif projection_mode == "tsvd":
+                    from sklearn.decomposition import TruncatedSVD
+
+                    tsvd = TruncatedSVD(n_pca_features, random_state=seed)
+
+                feat = tsvd.fit_transform(feat)
+            else:
+                feat = feat
+                tsvd = None
+
+        # else:
+        #     feat = feat
+
+        feat0 = feat[:cut]
+        feat1 = feat[cut:]
 
         if projection == "lda":
-            wfs_0_1 = np.concatenate([wfs0, wfs1], axis=0)
-            flat_wfs = wfs_0_1.reshape(wfs_0_1.shape[0], -1)
-            feat = LinearDiscriminantAnalysis(n_components=1).fit_transform(flat_wfs, labels)
+            # wfs_0_1 = np.concatenate([wfs0, wfs1], axis=0)
+            # flat_wfs = wfs_0_1.reshape(wfs_0_1.shape[0], -1)
+            feat = LinearDiscriminantAnalysis(n_components=1).fit_transform(feat, labels)
             feat = feat[:, 0]
-            feat0 = feat[:cut]
-            feat1 = feat[cut:]
 
         elif projection == "centroid":
+            # vector_0_1 = template1 - template0
+            # vector_0_1 /= np.sum(vector_0_1**2)
+            # feat0 = np.sum((wfs0 - template0[np.newaxis, :, :]) * vector_0_1[np.newaxis, :, :], axis=(1, 2))
+            # feat1 = np.sum((wfs1 - template0[np.newaxis, :, :]) * vector_0_1[np.newaxis, :, :], axis=(1, 2))
+            # # feat  = np.sum((wfs_0_1 - template0[np.newaxis, :, :]) * vector_0_1[np.newaxis, :, :], axis=(1, 2))
+            # feat = np.concatenate([feat0, feat1], axis=0)
+
+            # this is flatten
+            template0 = np.mean(feat0, axis=0)
+            template1 = np.mean(feat1, axis=0)
             vector_0_1 = template1 - template0
             vector_0_1 /= np.sum(vector_0_1**2)
-            feat0 = np.sum((wfs0 - template0[np.newaxis, :, :]) * vector_0_1[np.newaxis, :, :], axis=(1, 2))
-            feat1 = np.sum((wfs1 - template0[np.newaxis, :, :]) * vector_0_1[np.newaxis, :, :], axis=(1, 2))
-            # feat  = np.sum((wfs_0_1 - template0[np.newaxis, :, :]) * vector_0_1[np.newaxis, :, :], axis=(1, 2))
-            feat = np.concatenate([feat0, feat1], axis=0)
+            feat = np.sum((feat - template0[np.newaxis, :]) * vector_0_1[np.newaxis, :], axis=1)
 
         else:
             raise ValueError(f"bad projection {projection}")
 
-        if criteria == "diptest":
-            dipscore, cutpoint = isocut5(feat)
-            is_merge = dipscore < threshold_diptest
+        feat0 = feat[:cut]
+        feat1 = feat[cut:]
+
+        if criteria == "isocut":
+            dipscore, cutpoint = isocut(feat)
+            is_merge = dipscore < isocut_threshold
             merge_value = dipscore
         elif criteria == "percentile":
             l0 = np.percentile(feat0, threshold_percentile)
@@ -532,6 +442,7 @@ class ProjectDistribution:
             is_merge = l0 >= l1
             merge_value = l0 - l1
         elif criteria == "distrib_overlap":
+
             lim0 = min(np.min(feat0), np.min(feat1))
             lim1 = max(np.max(feat0), np.max(feat1))
             bin_size = (lim1 - lim0) / 200.0
@@ -551,11 +462,13 @@ class ProjectDistribution:
             raise ValueError(f"bad criteria {criteria}")
 
         if is_merge:
-            final_shift = best_shift - num_shift
+            # final_shift = best_shift - num_shift
+            final_shift = 0
         else:
             final_shift = 0
 
         if DEBUG:
+            # if dipscore < 4:
             import matplotlib.pyplot as plt
 
             flatten_wfs0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1)
@@ -583,7 +496,7 @@ class ProjectDistribution:
             ax.plot(bins[:-1], pdf0, color="C0")
             ax.plot(bins[:-1], pdf1, color="C1")
 
-            if criteria == "diptest":
+            if criteria == "isocut":
                 ax.set_title(f"{dipscore:.4f} {is_merge}")
             elif criteria == "percentile":
                 ax.set_title(f"{l0:.4f} {l1:.4f} {is_merge}")
@@ -602,155 +515,102 @@ class ProjectDistribution:
         return is_merge, label0, label1, final_shift, merge_value
 
 
-class NormalizedTemplateDiff:
-    """
-    Compute the normalized (some kind of) template differences.
-    And merge if below a threshold.
-    Do this at several shift.
-
-    """
-
-    name = "normalized_template_diff"
-
-    @staticmethod
-    def merge(
-        label0,
-        label1,
-        labels_set,
-        templates,
-        original_labels,
-        peaks,
-        features,
-        waveforms_sparse_mask=None,
-        threshold_diff=1.5,
-        min_cluster_size=50,
-        num_shift=5,
-    ):
-        assert waveforms_sparse_mask is not None
-
-        (inds0,) = np.nonzero(original_labels == label0)
-        chans0 = np.unique(peaks["channel_index"][inds0])
-        target_chans0 = np.flatnonzero(np.all(waveforms_sparse_mask[chans0, :], axis=0))
-
-        (inds1,) = np.nonzero(original_labels == label1)
-        chans1 = np.unique(peaks["channel_index"][inds1])
-        target_chans1 = np.flatnonzero(np.all(waveforms_sparse_mask[chans1, :], axis=0))
-
-        # if inds0.size < min_cluster_size or inds1.size < min_cluster_size:
-        #     is_merge = False
-        #     merge_value = 0
-        #     final_shift = 0
-        #     return is_merge, label0, label1, final_shift, merge_value
-
-        target_chans = np.intersect1d(target_chans0, target_chans1)
-        union_chans = np.union1d(target_chans0, target_chans1)
-
-        ind0 = list(labels_set).index(label0)
-        template0 = templates[ind0][:, target_chans]
-
-        ind1 = list(labels_set).index(label1)
-        template1 = templates[ind1][:, target_chans]
-
-        num_samples = template0.shape[0]
-        # norm = np.mean(np.abs(template0)) + np.mean(np.abs(template1))
-        norm = np.mean(np.abs(template0) + np.abs(template1))
-
-        # norm_per_channel = np.max(np.abs(template0) + np.abs(template1), axis=0) / 2.
-        norm_per_channel = (np.max(np.abs(template0), axis=0) + np.max(np.abs(template1), axis=0)) * 0.5
-        # norm_per_channel = np.max(np.abs(template0)) + np.max(np.abs(template1)) / 2.
-        # print(norm_per_channel)
-
-        all_shift_diff = []
-        # all_shift_diff_by_channel = []
-        for shift in range(-num_shift, num_shift + 1):
-            temp0 = template0[num_shift : num_samples - num_shift, :]
-            temp1 = template1[num_shift + shift : num_samples - num_shift + shift, :]
-            # d = np.mean(np.abs(temp0 - temp1)) / (norm)
-            # d = np.max(np.abs(temp0 - temp1)) / (norm)
-            diff_per_channel = np.abs(temp0 - temp1) / norm
-
-            diff_max = np.max(diff_per_channel, axis=0)
-
-            # diff = np.max(diff_per_channel)
-            diff = np.average(diff_max, weights=norm_per_channel)
-            # diff = np.average(diff_max)
-            all_shift_diff.append(diff)
-            # diff_by_channel = np.mean(np.abs(temp0 - temp1), axis=0) / (norm)
-            # all_shift_diff_by_channel.append(diff_by_channel)
-            # d = np.mean(diff_by_channel)
-            # all_shift_diff.append(d)
-        normed_diff = np.min(all_shift_diff)
-
-        is_merge = normed_diff < threshold_diff
-
-        if is_merge:
-            merge_value = normed_diff
-            final_shift = np.argmin(all_shift_diff) - num_shift
-
-            # diff_by_channel = all_shift_diff_by_channel[np.argmin(all_shift_diff)]
-        else:
-            final_shift = 0
-            merge_value = np.nan
-
-        # print('merge_value', merge_value, 'final_shift', final_shift, 'is_merge', is_merge)
-
-        DEBUG = False
-        # DEBUG = True
-        # if DEBUG and ( 0. < normed_diff < .4):
-        # if 0.5 < normed_diff < 4:
-        if DEBUG and is_merge:
-            # if DEBUG:
-
-            import matplotlib.pyplot as plt
-
-            fig, axs = plt.subplots(nrows=3)
-
-            temp0 = template0[num_shift : num_samples - num_shift, :]
-            temp1 = template1[num_shift + final_shift : num_samples - num_shift + final_shift, :]
-
-            diff_per_channel = np.abs(temp0 - temp1) / norm
-            diff = np.max(diff_per_channel)
-
-            m0 = temp0.T.flatten()
-            m1 = temp1.T.flatten()
-
-            ax = axs[0]
-            ax.plot(m0, color="C0", label=f"{label0} {inds0.size}")
-            ax.plot(m1, color="C1", label=f"{label1} {inds1.size}")
-
-            ax.set_title(
-                f"union{union_chans.size} intersect{target_chans.size} \n {normed_diff:.3f} {final_shift} {is_merge}"
-            )
-            ax.legend()
-
-            ax = axs[1]
-
-            # ~ temp0 = template0[num_shift : num_samples - num_shift, :]
-            # ~ temp1 = template1[num_shift + shift : num_samples - num_shift + shift, :]
-            ax.plot(np.abs(m0 - m1))
-            # ax.axhline(norm, ls='--', color='k')
-            ax = axs[2]
-            ax.plot(diff_per_channel.T.flatten())
-            ax.axhline(threshold_diff, ls="--")
-            ax.axhline(normed_diff)
-
-            # ax.axhline(normed_diff, ls='-', color='b')
-            # ax.plot(norm, ls='--')
-            # ax.plot(diff_by_channel)
-
-            # ax.plot(np.abs(m0) + np.abs(m1))
-
-            # ax.plot(np.abs(m0 - m1) / (np.abs(m0) + np.abs(m1)))
-
-            # ax.set_title(f"{norm=:.3f}")
-
-            plt.show()
-
-        return is_merge, label0, label1, final_shift, merge_value
-
-
 find_pair_method_list = [
     ProjectDistribution,
-    NormalizedTemplateDiff,
 ]
 find_pair_method_dict = {e.name: e for e in find_pair_method_list}
+
+
+def merge_peak_labels_from_templates(
+    peaks,
+    peak_labels,
+    unit_ids,
+    templates_array,
+    template_sparse_mask,
+    similarity_metric="l1",
+    similarity_thresh=0.8,
+    num_shifts=3,
+):
+    """
+    Low level function used in sorting components for merging templates based on similarity metrics.
+
+    This is mostly used in clustering method to clean possible oversplits.
+
+    templates_array is dense (num_templates, num_total_channel) but have a template_sparse_mask compagion
+    """
+    assert len(unit_ids) == templates_array.shape[0]
+
+    from spikeinterface.postprocessing.template_similarity import compute_similarity_with_templates_array
+    from scipy.sparse.csgraph import connected_components
+
+    similarity = compute_similarity_with_templates_array(
+        templates_array,
+        templates_array,
+        method=similarity_metric,
+        num_shifts=num_shifts,
+        support="union",
+        sparsity=template_sparse_mask,
+        other_sparsity=template_sparse_mask,
+    )
+    pair_mask = similarity > similarity_thresh
+
+    clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = (
+        _apply_pair_mask_on_labels_and_recompute_templates(
+            pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask
+        )
+    )
+
+    return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids
+
+
+def _apply_pair_mask_on_labels_and_recompute_templates(
+    pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask
+):
+    """
+    Resolve pairs graph.
+    Apply to new labels.
+    Recompute templates.
+    """
+
+    from scipy.sparse.csgraph import connected_components
+
+    keep_template = np.ones(templates_array.shape[0], dtype="bool")
+    clean_labels = peak_labels.copy()
+    n_components, group_labels = connected_components(pair_mask, directed=False, return_labels=True)
+
+    # print("merges", templates_array.shape[0], "to", n_components)
+
+    merge_template_array = templates_array.copy()
+    merge_sparsity_mask = template_sparse_mask.copy()
+    new_unit_ids = np.zeros(n_components, dtype=unit_ids.dtype)
+    for c in range(n_components):
+        merge_group = np.flatnonzero(group_labels == c)
+        g0 = merge_group[0]
+        new_unit_ids[c] = unit_ids[g0]
+        if len(merge_group) > 1:
+            weights = np.zeros(len(merge_group), dtype=np.float32)
+
+            # import matplotlib.pyplot as plt
+            # fig, ax = plt.subplots()
+            # for i, l in enumerate(merge_group):
+            #     temp_flat = merge_template_array[l, :, :].T.flatten()
+            #     ax.plot(temp_flat)
+            # sim = similarity[merge_group[0], merge_group[1]]
+            # ax.set_title(f"{sim} {similarity_thresh}")
+
+            for i, l in enumerate(merge_group):
+                label = unit_ids[l]
+                weights[i] = np.sum(peak_labels == label)
+                if i > 0:
+                    clean_labels[peak_labels == label] = unit_ids[g0]
+                    keep_template[l] = False
+            weights /= weights.sum()
+            merge_template_array[g0, :, :] = np.sum(
+                merge_template_array[merge_group, :, :] * weights[:, np.newaxis, np.newaxis], axis=0
+            )
+            merge_sparsity_mask[g0, :] = np.all(template_sparse_mask[merge_group, :], axis=0)
+
+    merge_template_array = merge_template_array[keep_template, :, :]
+    merge_sparsity_mask = merge_sparsity_mask[keep_template, :]
+
+    return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids

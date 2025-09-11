@@ -43,6 +43,7 @@ please include the appropriate citation for the :code:`sorter_name` parameter yo
 - :code:`herdingspikes` [Muthmann]_ [Hilgen]_
 - :code:`kilosort`  [Pachitariu]_
 - :code:`mountainsort` [Chung]_
+- :code:`rtsort` [van_der_Molen]_
 - :code:`spykingcircus` [Yger]_
 - :code:`wavclus` [Chaure]_
 - :code:`yass` [Lee]_
@@ -122,6 +123,8 @@ References
 
 .. [IBL] `Spike sorting pipeline for the International Brain Laboratory. 2022. <https://figshare.com/articles/online_resource/Spike_sorting_pipeline_for_the_International_Brain_Laboratory/19705522/3>`_
 
+.. [IBL2024] `Spike sorting pipeline for the International Brain Laboratory - Version 2. 2024. <https://figshare.com/articles/online_resource/Spike_sorting_pipeline_for_the_International_Brain_Laboratory/19705522?file=49783080>`_
+
 .. [Jackson] `Quantitative assessment of extracellular multichannel recording quality using measures of cluster separation. Society of Neuroscience Abstract. 2005. <https://www.sciencedirect.com/science/article/abs/pii/S0306452204008425>`_
 
 .. [Jain] `UnitRefine: A Community Toolbox for Automated Spike Sorting Curation. 2025 <https://www.biorxiv.org/content/10.1101/2025.03.30.645770v1>`_
@@ -153,6 +156,8 @@ References
 .. [Siegle] `Survey of Spiking in the Mouse Visual System Reveals Functional Hierarchy. 2021. <https://pubmed.ncbi.nlm.nih.gov/33473216/>`_
 
 .. [UMS] `UltraMegaSort2000 - Spike sorting and quality metrics for extracellular spike data. 2011. <https://github.com/danamics/UMS2K>`_
+
+.. [van_der_Molen] `RT-Sort: An action potential propagation-based algorithm for real time spike detection and sorting with millisecond latencies. 2024. <https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0312438>`_
 
 .. [Varol] `Decentralized Motion Inference and Registration of Neuropixel Data. 2021. <https://ieeexplore.ieee.org/document/9414145>`_
 

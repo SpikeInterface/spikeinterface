@@ -1,5 +1,5 @@
-Build a full Sorting pipeline with dicts
-========================================
+Build a full spike sorting pipeline with dicts
+==============================================
 
 When using ``SpikeInterface`` there are two phases. First, you should
 play: try to figure out any special steps or parameters you need to play
@@ -122,7 +122,7 @@ and in the terminal ``help(si.bandpass_fitler)``)
             Margin in ms on border to avoid border effect
         dtype : dtype or None
             The dtype of the returned traces. If None, the dtype of the parent recording is used
-        **filter_kwargs : dict
+        \*\*filter_kwargs : dict
             Certain keyword arguments for `scipy.signal` filters:
                 filter_order : order
                     The order of the filter. Note as filtering is applied with scipy's

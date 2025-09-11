@@ -25,7 +25,7 @@ def test_benchmark_matching(create_cache_folder):
 
     # templates sparse
     gt_templates = compute_gt_templates(
-        recording, gt_sorting, ms_before=2.0, ms_after=3.0, return_scaled=False, **job_kwargs
+        recording, gt_sorting, ms_before=2.0, ms_after=3.0, return_in_uV=False, **job_kwargs
     )
     noise_levels = get_noise_levels(recording, **job_kwargs)
     sparsity = compute_sparsity(gt_templates, noise_levels, method="snr", amplitude_mode="peak_to_peak", threshold=0.25)

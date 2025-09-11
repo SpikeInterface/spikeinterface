@@ -79,10 +79,10 @@ class GraphClustering:
             ms_after=ms_after,
             radius_um=radius_um,
             motion_aware=motion_aware,
-            motion=None,
+            motion=motion,
             seed=params["seed"],
             **params["extract_peaks_svd_kwargs"],
-            # **job_kwargs
+            **job_kwargs,
         )
 
         # some method need a symetric matrix
@@ -196,7 +196,12 @@ class GraphClustering:
         labels_set = np.unique(peak_labels)
         labels_set = labels_set[labels_set >= 0]
 
-        return labels_set, peak_labels, svd_model, peaks_svd, sparse_mask
+        more_outs = dict(
+            svd_model=svd_model,
+            peaks_svd=peaks_svd,
+            peak_svd_sparse_mask=sparse_mask,
+        )
+        return labels_set, peak_labels, more_outs
 
 
 def _remove_small_cluster(peak_labels, min_size=1):

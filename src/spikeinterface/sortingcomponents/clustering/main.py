@@ -4,6 +4,8 @@ from .method_list import *
 
 from spikeinterface.core.job_tools import fix_job_kwargs, _shared_job_kwargs_doc
 
+import copy
+
 
 def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={}, extra_outputs=False, **job_kwargs):
     """
@@ -33,12 +35,14 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
+    from spikeinterface.sortingcomponents.clustering.method_list import clustering_methods
+
     assert (
         method in clustering_methods
     ), f"Method for clustering do not exists, should be in {list(clustering_methods.keys())}"
 
     method_class = clustering_methods[method]
-    params = method_class._default_params.copy()
+    params = copy.deepcopy(method_class._default_params.copy())
     params.update(**method_kwargs)
 
     outputs = method_class.main_function(recording, peaks, params, job_kwargs=job_kwargs)

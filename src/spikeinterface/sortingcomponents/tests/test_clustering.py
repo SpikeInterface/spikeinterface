@@ -3,16 +3,19 @@ import numpy as np
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks, clustering_methods
+from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+from spikeinterface.sortingcomponents.clustering.method_list import clustering_methods
 from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
 from spikeinterface.sortingcomponents.clustering.graph_tools import create_graph_from_peak_features
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
-from spikeinterface.core import get_noise_levels
+from spikeinterface.core import get_noise_levels, set_global_job_kwargs
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 import time
+
+import importlib
 
 
 def job_kwargs():
@@ -32,7 +35,7 @@ def recording():
 
 
 def run_peaks(recording, job_kwargs):
-    noise_levels = get_noise_levels(recording, return_scaled=False)
+    noise_levels = get_noise_levels(recording, return_in_uV=False)
     return detect_peaks(
         recording,
         method="locally_exclusive",
@@ -58,7 +61,15 @@ def peak_locations_fixture(recording, peaks, job_kwargs):
     return run_peak_locations(recording, peaks, job_kwargs)
 
 
-@pytest.mark.parametrize("clustering_method", list(clustering_methods.keys()))
+clustering_method_keys = list(clustering_methods.keys())
+have_isosplit6 = importlib.util.find_spec("isosplit6") is not None
+
+if "tdc-clustering" in clustering_method_keys and not have_isosplit6:
+    # skip tdc-clustering if not isosplit6
+    clustering_method_keys.remove("tdc-clustering")
+
+
+@pytest.mark.parametrize("clustering_method", clustering_method_keys)
 def test_find_cluster_from_peaks(clustering_method, recording, peaks, peak_locations):
     method_kwargs = {}
     if clustering_method in ("position", "position_and_pca"):
@@ -110,16 +121,19 @@ def test_templates_from_svd(recording, peaks, job_kwargs):
 
 
 if __name__ == "__main__":
-    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
+    job_kwargs = dict(n_jobs=0.8, chunk_size=30_000, progress_bar=True)
+    set_global_job_kwargs(**job_kwargs)
+
     recording, sorting = make_dataset()
     peaks = run_peaks(recording, job_kwargs)
-    # peak_locations = run_peak_locations(recording, peaks, job_kwargs)
+    peak_locations = run_peak_locations(recording, peaks, job_kwargs)
     # method = "position_and_pca"
-    # method = "circus"
-    # method = "tdc_clustering"
+    # method = "circus-clustering"
+    method = "tdc-clustering"
     # method = "random_projections"
+    # method = "graph-clustering"
 
-    # test_find_cluster_from_peaks(method, recording, peaks, peak_locations)
+    test_find_cluster_from_peaks(method, recording, peaks, peak_locations)
 
     # test_extract_peaks_svd(recording, peaks, job_kwargs)
-    test_create_graph_from_peak_features(recording, peaks, job_kwargs)
+    # test_create_graph_from_peak_features(recording, peaks, job_kwargs)
