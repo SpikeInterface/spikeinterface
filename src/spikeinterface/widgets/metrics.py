@@ -206,7 +206,6 @@ class MetricsBaseWidget(BaseWidget):
         if self.data_plot["selected_columns"] is None or set(selected_metrics) != set(
             self.data_plot["selected_columns"]
         ):
-            print("updating plot...")
             self.data_plot["unit_ids"] = unit_ids
             self.data_plot["selected_columns"] = selected_metrics
             self.figure.clf()
