@@ -493,3 +493,39 @@ class EventSelector(W.VBox):
         events_index = events_index if events_index < len(self.events) else len(self.events["time"]) - 1
         self.value = events_index
         self.events_list.value = self.event_options[events_index]
+
+
+# Widget for selecting multiple metrics
+class MetricsSelector(W.VBox):
+    value = traitlets.List()
+
+    def __init__(self, metric_names, initial_metrics=None, **kwargs):
+        self.metric_names = list(metric_names)
+        if initial_metrics is None:
+            # Default: first 2 metrics if available
+            self.value = self.metric_names[:2]
+        else:
+            self.value = initial_metrics
+
+        label = W.Label("Metrics", layout=W.Layout(justify_content="center"))
+
+        self.selector = W.SelectMultiple(
+            options=self.metric_names,
+            value=tuple(self.value),
+            disabled=False,
+            layout=W.Layout(height="100%", width="3cm", align="center"),
+        )
+
+        super(W.VBox, self).__init__(children=[label, self.selector], **kwargs)
+
+        self.selector.observe(self.on_selector_changed, names=["value"], type="change")
+        self.observe(self.value_changed, names=["value"], type="change")
+
+    def on_selector_changed(self, change=None):
+        metrics = list(self.selector.value)
+        self.value = metrics
+
+    def value_changed(self, change=None):
+        self.selector.unobserve(self.on_selector_changed, names=["value"], type="change")
+        self.selector.value = tuple(change["new"])
+        self.selector.observe(self.on_selector_changed, names=["value"], type="change")
