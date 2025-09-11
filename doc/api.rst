@@ -376,6 +376,7 @@ such as merging and splitting units, as well as defining labels for units.
     .. autopydantic_model:: CurationModel
     .. autopydantic_model:: Merge
     .. autopydantic_model:: Split
+    .. autopydantic_model:: ManualLabel
     .. autopydantic_model:: LabelDefinition
 
 Deprecated
