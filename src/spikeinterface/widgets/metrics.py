@@ -129,8 +129,6 @@ class MetricsBaseWidget(BaseWidget):
 
                 if i == num_metrics - 1:
                     self.axes[i, j].set_xlabel(m2, fontsize=10)
-                # if j == 0:
-                #     self.axes[i, j].set_ylabel(m1, fontsize=10)
                 self.axes[i, j].set_xticklabels([])
                 self.axes[i, j].set_yticklabels([])
                 self.axes[i, j].spines["top"].set_visible(False)
