@@ -356,14 +356,27 @@ spikeinterface.curation
 .. automodule:: spikeinterface.curation
 
     .. autofunction:: apply_curation
-    .. autofunction:: get_potential_auto_merge
+    .. autofunction:: compute_merge_unit_groups
     .. autofunction:: find_redundant_units
     .. autofunction:: remove_redundant_units
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
-    .. autofunction:: load_model
     .. autofunction:: auto_label_units
+    .. autofunction:: load_model
     .. autofunction:: train_model
+
+Curation Model
+~~~~~~~~~~~~~~
+
+This section describes the ``pydantic`` curation model classes used to represent and manage curation actions
+such as merging and splitting units, as well as defining labels for units.
+
+.. automodule:: spikeinterface.curation.curation_model
+
+    .. autopydantic_model:: CurationModel
+    .. autopydantic_model:: Merge
+    .. autopydantic_model:: Split
+    .. autopydantic_model:: LabelDefinition
 
 Deprecated
 ~~~~~~~~~~
@@ -371,6 +384,7 @@ Deprecated
     :noindex:
 
     .. autofunction:: apply_sortingview_curation
+    .. autofunction:: get_potential_auto_merge
     .. autoclass:: CurationSorting
     .. autoclass:: MergeUnitsSorting
     .. autoclass:: SplitUnitSorting

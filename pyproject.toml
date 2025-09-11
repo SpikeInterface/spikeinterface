@@ -194,12 +194,13 @@ test = [
 
 docs = [
     "Sphinx",
+    "ipython",
     "sphinx_rtd_theme>=1.2",
     "sphinx-gallery",
     "sphinx-design",
     "numpydoc",
-    "ipython",
     "sphinxcontrib-jquery",
+    "autodoc_pydantic",
 
     # for notebooks in the gallery
     "MEArec", # Use as an example
