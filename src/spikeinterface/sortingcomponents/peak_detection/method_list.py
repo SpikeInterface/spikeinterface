@@ -8,7 +8,7 @@ from .locally_exclusive import (
     LocallyExclusiveOpenCLPeakDetector,
 )
 
-detection_methods = {
+detect_peak_methods = {
     "locally_exclusive": LocallyExclusivePeakDetector,
     "locally_exclusive_torch": LocallyExclusiveTorchPeakDetector,
     "locally_exclusive_cl": LocallyExclusiveOpenCLPeakDetector,

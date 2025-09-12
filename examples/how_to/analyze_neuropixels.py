@@ -169,8 +169,12 @@ ax.set_xlabel('noise  [microV]')
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
-peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16,
-                     detect_threshold=5, radius_um=50., **job_kwargs)
+peaks = detect_peaks(rec,
+                    method='locally_exclusive', 
+                    method_kwargs=dict(
+                         noise_levels=noise_levels_int16,
+                     detect_threshold=5, radius_um=50.),
+                     job_kwargs=job_kwargs)
 peaks
 
 # +

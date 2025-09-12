@@ -39,11 +39,14 @@ def run_peaks(recording, job_kwargs):
     return detect_peaks(
         recording,
         method="locally_exclusive",
-        peak_sign="neg",
-        detect_threshold=5,
-        exclude_sweep_ms=0.1,
-        noise_levels=noise_levels,
-        **job_kwargs,
+        method_kwargs=dict(
+            peak_sign="neg",
+            detect_threshold=5,
+            exclude_sweep_ms=0.1,
+            noise_levels=noise_levels,
+
+        ),
+        job_kwargs=job_kwargs,
     )
 
 

@@ -33,7 +33,7 @@ class PeakDetectionBenchmark(Benchmark):
         self.result = {}
 
     def run(self, **job_kwargs):
-        peaks = detect_peaks(self.recording, self.method, **self.params, **job_kwargs)
+        peaks = detect_peaks(self.recording, self.method, method_kwargs=self.params, job_kwargs=job_kwargs)
         self.result["peaks"] = peaks
 
     def compute_result(self, **result_params):

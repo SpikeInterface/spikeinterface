@@ -9,7 +9,7 @@ import pytest
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, ExtractSparseWaveforms
-from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
+from spikeinterface.sortingcomponents.peak_localization.method_list import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.waveforms.features_from_peaks import PeakToPeakFeature
 
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCADenoising
@@ -259,17 +259,21 @@ def test_iterative_peak_detection_thresholds(recording, job_kwargs, pca_model_fo
 
 def test_detect_peaks_by_channel(recording, job_kwargs, torch_job_kwargs):
     peaks_by_channel_np = detect_peaks(
-        recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
+        recording, method="by_channel",
+        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1), 
+        job_kwargs=job_kwargs,
     )
 
     if HAVE_TORCH:
         peaks_by_channel_torch = detect_peaks(
             recording,
             method="by_channel_torch",
-            peak_sign="neg",
-            detect_threshold=5,
-            exclude_sweep_ms=0.1,
-            **torch_job_kwargs,
+            method_kwargs=dict(
+                peak_sign="neg",
+                detect_threshold=5,
+                exclude_sweep_ms=0.1,
+            ),
+            job_kwargs=torch_job_kwargs,
         )
 
         # Test that torch and numpy implementation match
@@ -278,11 +282,15 @@ def test_detect_peaks_by_channel(recording, job_kwargs, torch_job_kwargs):
 
 def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs):
     peaks_by_channel_np = detect_peaks(
-        recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
+        recording, method="by_channel", 
+        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
+        job_kwargs=job_kwargs,
     )
 
     peaks_local_numba = detect_peaks(
-        recording, method="locally_exclusive", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
+        recording, method="locally_exclusive",
+        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
+        job_kwargs=job_kwargs,
     )
     assert len(peaks_by_channel_np) > len(peaks_local_numba)
 
@@ -290,10 +298,12 @@ def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs)
         peaks_local_torch = detect_peaks(
             recording,
             method="locally_exclusive_torch",
-            peak_sign="neg",
-            detect_threshold=5,
-            exclude_sweep_ms=0.1,
-            **torch_job_kwargs,
+            method_kwargs=dict(
+                peak_sign="neg",
+                detect_threshold=5,
+                exclude_sweep_ms=0.1,
+            ),
+            job_kwargs=torch_job_kwargs,
         )
         assert np.isclose(np.array(len(peaks_local_numba)), np.array(len(peaks_local_torch)), rtol=0.1)
 
@@ -301,17 +311,21 @@ def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs)
         peaks_local_cl = detect_peaks(
             recording,
             method="locally_exclusive_cl",
-            peak_sign="neg",
-            detect_threshold=5,
-            exclude_sweep_ms=0.1,
-            **job_kwargs,
+            method_kwargs=dict(
+                peak_sign="neg",
+                detect_threshold=5,
+                exclude_sweep_ms=0.1,
+            ),
+            job_kwargs=job_kwargs,
         )
         assert len(peaks_local_numba) == len(peaks_local_cl)
 
 
 def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs):
     peaks_by_channel_np = detect_peaks(
-        recording, method="locally_exclusive", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
+        recording, method="locally_exclusive", 
+        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
+        job_kwargs=job_kwargs
     )
 
     ms_before = 1.0
@@ -323,24 +337,28 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
     peaks_local_mf_filtering = detect_peaks(
         recording,
         method="matched_filtering",
-        peak_sign="neg",
-        detect_threshold=5,
-        exclude_sweep_ms=0.1,
-        prototype=prototype,
-        ms_before=1.0,
-        **job_kwargs,
+        method_kwargs=dict(
+            peak_sign="neg",
+            detect_threshold=5,
+            exclude_sweep_ms=0.1,
+            prototype=prototype,
+            ms_before=1.0,
+        ),
+        job_kwargs=job_kwargs,
     )
     assert len(peaks_local_mf_filtering) > len(peaks_by_channel_np)
 
     peaks_local_mf_filtering_both = detect_peaks(
         recording,
         method="matched_filtering",
-        peak_sign="both",
-        detect_threshold=5,
-        exclude_sweep_ms=0.1,
-        prototype=prototype,
-        ms_before=1.0,
-        **job_kwargs,
+        method_kwargs=dict(
+            peak_sign="both",
+            detect_threshold=5,
+            exclude_sweep_ms=0.1,
+            prototype=prototype,
+            ms_before=1.0,
+        ),
+        job_kwargs=job_kwargs,
     )
     assert len(peaks_local_mf_filtering_both) > len(peaks_local_mf_filtering)
 
@@ -412,11 +430,13 @@ def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs, t
     peaks, ptp, peak_locations = detect_peaks(
         recording,
         method="locally_exclusive",
-        peak_sign="neg",
-        detect_threshold=5,
-        exclude_sweep_ms=0.1,
+        method_kwargs=dict(
+            peak_sign="neg",
+            detect_threshold=5,
+            exclude_sweep_ms=0.1,
+        ),
         pipeline_nodes=pipeline_nodes,
-        **job_kwargs,
+        job_kwargs=job_kwargs,
     )
     assert peaks.shape[0] == ptp.shape[0]
     assert peaks.shape[0] == peak_locations.shape[0]
@@ -429,14 +449,16 @@ def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs, t
     peaks2, ptp2, peak_locations2 = detect_peaks(
         recording,
         method="locally_exclusive",
-        peak_sign="neg",
-        detect_threshold=5,
-        exclude_sweep_ms=0.1,
+        method_kwargs=dict(
+            peak_sign="neg",
+            detect_threshold=5,
+            exclude_sweep_ms=0.1,
+        ),
         pipeline_nodes=pipeline_nodes,
         gather_mode="npy",
         folder=folder,
         names=["peaks", "ptps", "peak_locations"],
-        **job_kwargs,
+        job_kwargs=job_kwargs,
     )
     peak_file = folder / "peaks.npy"
     assert peak_file.is_file()
@@ -460,11 +482,13 @@ def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs, t
         peaks_torch, ptp_torch, peak_locations_torch = detect_peaks(
             recording,
             method="locally_exclusive_torch",
-            peak_sign="neg",
-            detect_threshold=5,
-            exclude_sweep_ms=0.1,
+                method_kwargs=dict(
+                peak_sign="neg",
+                detect_threshold=5,
+                exclude_sweep_ms=0.1,
+            ),
             pipeline_nodes=pipeline_nodes,
-            **torch_job_kwargs,
+            job_kwargs=torch_job_kwargs,
         )
         assert peaks_torch.shape[0] == ptp_torch.shape[0]
         assert peaks_torch.shape[0] == peak_locations_torch.shape[0]
@@ -474,11 +498,13 @@ def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs, t
         peaks_cl, ptp_cl, peak_locations_cl = detect_peaks(
             recording,
             method="locally_exclusive_cl",
-            peak_sign="neg",
-            detect_threshold=5,
-            exclude_sweep_ms=0.1,
+            method_kwargs=dict(
+                peak_sign="neg",
+                detect_threshold=5,
+                exclude_sweep_ms=0.1,
+            ),
             pipeline_nodes=pipeline_nodes,
-            **job_kwargs,
+            job_kwargs=job_kwargs,
         )
         assert peaks_cl.shape[0] == ptp_cl.shape[0]
         assert peaks_cl.shape[0] == peak_locations_cl.shape[0]

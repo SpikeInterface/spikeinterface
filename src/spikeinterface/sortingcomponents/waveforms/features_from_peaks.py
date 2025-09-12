@@ -7,7 +7,7 @@ import numpy as np
 
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core import get_channel_distances
-from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass, LocalizeMonopolarTriangulation
+from spikeinterface.sortingcomponents.peak_localization.method_list import LocalizeCenterOfMass, LocalizeMonopolarTriangulation
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
     PeakRetriever,

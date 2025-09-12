@@ -138,7 +138,9 @@ class TemporalPCBaseNode(WaveformsNode):
         """
 
         # Detect peaks and sub-sample them
-        peaks = detect_peaks(recording, **detect_peaks_params, **job_kwargs)
+        method_kwargs = detect_peaks_params.copy()
+        method = method_kwargs.pop('method')
+        peaks = detect_peaks(recording, method=method, method_kwargs=method_kwargs, job_kwargs=job_kwargs)
         peaks = select_peaks(peaks, **peak_selection_params)  # How to select n_peaks
 
         # Creates a numpy sorting object where the spike times are the peak times and the unit ids are the peak channel

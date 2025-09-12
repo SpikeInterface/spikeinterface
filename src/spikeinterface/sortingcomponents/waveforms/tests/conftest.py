@@ -27,5 +27,5 @@ def generated_recording():
 @pytest.fixture(scope="module")
 def detected_peaks(generated_recording, chunk_executor_kwargs):
     recording = generated_recording
-    peaks = detect_peaks(recording=recording, **chunk_executor_kwargs)
+    peaks = detect_peaks(recording=recording, job_kwargs=chunk_executor_kwargs)
     return peaks

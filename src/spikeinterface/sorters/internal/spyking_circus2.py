@@ -229,7 +229,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     get_prototype_and_waveforms_from_peaks,
                 )
 
-                peaks = detect_peaks(recording_w, "locally_exclusive", **detection_params, **job_kwargs)
+                peaks = detect_peaks(recording_w, method="locally_exclusive", method_kwargs=detection_params, job_kwargs=job_kwargs)
                 prototype, waveforms, _ = get_prototype_and_waveforms_from_peaks(
                     recording_w,
                     peaks,
@@ -257,7 +257,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             recording_w, seed=params["seed"], **job_kwargs
         )
 
-        peaks = detect_peaks(recording_w, detection_method, **detection_params, **job_kwargs)
+        peaks = detect_peaks(recording_w, method=detection_method, method_kwargs=detection_params, job_kwargs=job_kwargs)
         order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
         peaks = peaks[order]
 

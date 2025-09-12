@@ -182,7 +182,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # detection
         detection_params = params["detection"].copy()
         detection_params["noise_levels"] = noise_levels
-        all_peaks = detect_peaks(recording, method="locally_exclusive", **detection_params, **job_kwargs)
+        all_peaks = detect_peaks(recording, method="locally_exclusive", method_kwargs=detection_params, job_kwargs=job_kwargs)
 
         if verbose:
             print(f"detect_peaks(): {len(all_peaks)} peaks found")
