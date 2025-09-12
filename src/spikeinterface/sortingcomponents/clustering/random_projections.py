@@ -15,10 +15,10 @@ except:
 
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.waveform_tools import estimate_templates
-from .clustering_tools import remove_duplicates_via_matching
+from .cleaning_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
-from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
+from spikeinterface.sortingcomponents.waveforms.features_from_peaks import RandomProjectionsFeature
 from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.sortingcomponents.tools import remove_empty_templates

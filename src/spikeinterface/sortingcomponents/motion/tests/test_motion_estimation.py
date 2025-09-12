@@ -5,7 +5,7 @@ import pytest
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.motion import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
+from spikeinterface.sortingcomponents.peak_localization.method_list import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 
@@ -32,11 +32,15 @@ def setup_dataset_and_peaks(cache_folder):
     peaks, peak_locations = detect_peaks(
         recording,
         method="locally_exclusive",
-        peak_sign="neg",
-        detect_threshold=5,
-        exclude_sweep_ms=0.1,
-        chunk_size=10000,
-        progress_bar=True,
+        method_kwargs=dict(
+            peak_sign="neg",
+            detect_threshold=5,
+            exclude_sweep_ms=0.1,
+        ),
+        job_kwargs=dict(
+            chunk_size=10000,
+            progress_bar=True,
+        ),
         pipeline_nodes=pipeline_nodes,
     )
 
@@ -158,7 +162,7 @@ def test_estimate_motion(dataset):
                 direction="y",
                 bin_s=1.0,
                 bin_um=10.0,
-                margin_um=5,
+                hist_margin_um=5,
                 extra_outputs=True,
                 win_step_um=100.0,
                 win_scale_um=100.0,

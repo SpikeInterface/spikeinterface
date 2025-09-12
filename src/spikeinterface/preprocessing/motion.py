@@ -416,12 +416,14 @@ def compute_motion(
         pipeline_nodes = None
 
         t0 = time.perf_counter()
-        peaks = detect_peaks(recording, noise_levels=noise_levels, pipeline_nodes=None, **detect_kwargs, **job_kwargs)
+        method_kwargs = detect_kwargs.copy()
+        method_kwargs["noise_levels"] = noise_levels
+        peaks = detect_peaks(recording, method_kwargs=method_kwargs, pipeline_nodes=None, job_kwargs=job_kwargs)
         t1 = time.perf_counter()
         # select some peaks
         peaks = select_peaks(peaks, **select_kwargs, **job_kwargs)
         t2 = time.perf_counter()
-        peak_locations = localize_peaks(recording, peaks, **localize_peaks_kwargs, **job_kwargs)
+        peak_locations = localize_peaks(recording, peaks, method_kwargs=localize_peaks_kwargs, job_kwargs=job_kwargs)
         t3 = time.perf_counter()
 
         run_times = dict(

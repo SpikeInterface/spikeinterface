@@ -117,6 +117,10 @@ def fix_job_kwargs(runtime_job_kwargs):
 
     job_kwargs = get_global_job_kwargs()
 
+    if runtime_job_kwargs is None:
+        # in this case this will be the global job_kwargs
+        runtime_job_kwargs = dict()
+
     # deprecation with backward compatibility
     # this can be removed in 0.104.0
     if "max_threads_per_process" in runtime_job_kwargs:
