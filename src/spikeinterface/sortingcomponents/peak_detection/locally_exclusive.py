@@ -90,32 +90,9 @@ class LocallyExclusivePeakDetector(PeakDetector):
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         assert HAVE_NUMBA, "You need to install numba"
 
-        # if medians is not None:
-        #     traces = traces - medians
-
-        traces_center = traces[self.exclude_sweep_size:-self.exclude_sweep_size, :]
-
-        if self.peak_sign in ("pos", "both"):
-            peak_mask = traces_center > self.abs_thresholds[None, :]
-            peak_mask = _numba_detect_peak_pos(
-                traces, traces_center, peak_mask, self.exclude_sweep_size, self.abs_thresholds, self.peak_sign, self.neighbours_mask
-            )
-
-        if self.peak_sign in ("neg", "both"):
-            if self.peak_sign == "both":
-                peak_mask_pos = peak_mask.copy()
-
-            peak_mask = traces_center < -self.abs_thresholds[None, :]
-            peak_mask = _numba_detect_peak_neg(
-                traces, traces_center, peak_mask, self.exclude_sweep_size, self.abs_thresholds, self.peak_sign, self.neighbours_mask
-            )
-
-            if self.peak_sign == "both":
-                peak_mask = peak_mask | peak_mask_pos
-
-        # Find peaks and correct for time shift
-        peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
-        peak_sample_ind += self.exclude_sweep_size
+        peak_sample_ind, peak_chan_ind = detect_peaks_numba_locally_exclusive_on_chunk(
+            traces, self.peak_sign, self.abs_thresholds, self.exclude_sweep_size, self.neighbours_mask
+        )
 
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
 
@@ -129,6 +106,39 @@ class LocallyExclusivePeakDetector(PeakDetector):
 
 if HAVE_NUMBA:
     import numba
+
+    def detect_peaks_numba_locally_exclusive_on_chunk(traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask):
+
+        # if medians is not None:
+        #     traces = traces - medians
+
+        traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
+
+        if peak_sign in ("pos", "both"):
+            peak_mask = traces_center > abs_thresholds[None, :]
+            peak_mask = _numba_detect_peak_pos(
+                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
+            )
+
+        if peak_sign in ("neg", "both"):
+            if peak_sign == "both":
+                peak_mask_pos = peak_mask.copy()
+
+            peak_mask = traces_center < -abs_thresholds[None, :]
+            peak_mask = _numba_detect_peak_neg(
+                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
+            )
+
+            if peak_sign == "both":
+                peak_mask = peak_mask | peak_mask_pos
+
+        # Find peaks and correct for time shift
+        peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
+        peak_sample_ind += exclude_sweep_size
+
+        return peak_sample_ind, peak_chan_ind
+
+
 
     @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_pos(
