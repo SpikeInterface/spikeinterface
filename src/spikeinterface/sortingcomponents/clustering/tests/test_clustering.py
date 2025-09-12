@@ -5,7 +5,7 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
 from spikeinterface.sortingcomponents.clustering.method_list import clustering_methods
-from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
+from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
 from spikeinterface.sortingcomponents.clustering.graph_tools import create_graph_from_peak_features
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
@@ -62,11 +62,6 @@ def peak_locations_fixture(recording, peaks, job_kwargs):
 
 
 clustering_method_keys = list(clustering_methods.keys())
-have_isosplit6 = importlib.util.find_spec("isosplit6") is not None
-
-if "tdc-clustering" in clustering_method_keys and not have_isosplit6:
-    # skip tdc-clustering if not isosplit6
-    clustering_method_keys.remove("tdc-clustering")
 
 
 @pytest.mark.parametrize("clustering_method", clustering_method_keys)
@@ -85,6 +80,7 @@ def test_find_cluster_from_peaks(clustering_method, recording, peaks, peak_locat
     print(clustering_method, "found", len(labels), "clusters in ", t1 - t0)
 
 
+# TODO move to waveforms tests
 def test_extract_peaks_svd(recording, peaks, job_kwargs):
     peaks_svd, sparse_mask, svd_model = extract_peaks_svd(recording, peaks, n_components=5, **job_kwargs)
     assert peaks_svd.shape[0] == peaks.shape[0]

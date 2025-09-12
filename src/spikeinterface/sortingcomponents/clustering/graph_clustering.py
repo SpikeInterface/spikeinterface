@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 
 
-from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
+from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
 from spikeinterface.sortingcomponents.clustering.graph_tools import create_graph_from_peak_features
 
 

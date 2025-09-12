@@ -8,12 +8,12 @@ import random, string
 
 from spikeinterface.core import get_global_tmp_folder, Templates
 from spikeinterface.core import get_global_tmp_folder
-from .clustering_tools import remove_duplicates_via_matching
+from .cleaning_tools import remove_duplicates_via_matching
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.tools import _get_optimal_n_jobs
-from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
-from spikeinterface.sortingcomponents.clustering.merge import merge_peak_labels_from_templates
+from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
+from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak_labels_from_templates
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 
 
@@ -156,7 +156,7 @@ class CircusClustering:
             np.save(features_folder / "peaks.npy", peaks)
 
         original_labels = peaks["channel_index"]
-        from spikeinterface.sortingcomponents.clustering.split import split_clusters
+        from spikeinterface.sortingcomponents.clustering.splitting_tools import split_clusters
 
         split_kwargs = params["split_kwargs"].copy()
         split_kwargs["neighbours_mask"] = neighbours_mask
