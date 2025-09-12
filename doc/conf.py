@@ -63,6 +63,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
+    'sphinxcontrib.autodoc_pydantic',
     'sphinx.ext.autosectionlabel',
     'sphinx_design',
     'sphinxcontrib.jquery',
@@ -76,6 +77,8 @@ autosectionlabel_prefix_document = True
 
 numpydoc_show_class_members = False
 
+autodoc_pydantic_model_show_json = True
+autodoc_pydantic_model_show_config_summary = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

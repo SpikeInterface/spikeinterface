@@ -243,7 +243,7 @@ def apply_curation(
     if isinstance(curation_dict_or_model, dict):
         curation_model = CurationModel(**curation_dict_or_model)
     else:
-        curation_model = curation_dict_or_model
+        curation_model = curation_dict_or_model.model_copy(deep=True)
 
     if not np.array_equal(np.asarray(curation_model.unit_ids), sorting_or_analyzer.unit_ids):
         raise ValueError("unit_ids from the curation_dict do not match the one from Sorting or SortingAnalyzer")

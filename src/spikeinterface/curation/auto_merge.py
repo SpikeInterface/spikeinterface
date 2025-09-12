@@ -144,6 +144,7 @@ def compute_merge_unit_groups(
         * | "feature_neighbors": focused on finding unit pairs whose spikes are close in the feature space using kNN.
           | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_locations",
           | "knn", "quality_score"
+
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
     resolve_graph : bool, default: True
         If True, the function resolves the potential unit pairs to be merged into multiple-unit merges.

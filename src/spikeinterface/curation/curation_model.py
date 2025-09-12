@@ -104,6 +104,13 @@ class CurationModel(BaseModel):
 
     @classmethod
     def check_manual_labels(cls, values):
+        """
+        Checks and validates the manual labels in the curation model.
+
+          * Checks if the unit_ids in each manual label exist in the unit_ids list.
+          * Validates that each label in the manual labels exists in the label_definitions.
+
+        """
         unit_ids = list(values["unit_ids"])
         manual_labels = values.get("manual_labels")
         if manual_labels is None:
@@ -135,6 +142,15 @@ class CurationModel(BaseModel):
 
     @classmethod
     def check_merges(cls, values):
+        """
+        Checks and validates the merges in the curation model.
+
+          * Checks if the unit_ids in each merge group exist in the unit_ids list.
+          * Validates that each merge group has at least two unit IDs.
+          * Ensures that any new_unit_id provided does not already exist in the unit_ids list.
+          * Converts merges from dict format to list of Merge objects if necessary.
+
+        """
         unit_ids = list(values["unit_ids"])
         merges = values.get("merges")
         if merges is None:
@@ -184,15 +200,14 @@ class CurationModel(BaseModel):
     def check_splits(cls, values):
         """
         Checks and validates the splits in the curation model.
-        If `splits` is a dictionary with unit_id as key and split indices as values,
-        it converts it to a list of Split objects.
-        Each Split object is then validated:
-        - Checks if the unit_id exists in the unit_ids list.
-        - Validates the mode (indices or labels).
-        - If mode is indices, checks that indices are defined and not empty, and that there are no duplicate indices.
-        - If mode is labels, checks that labels are defined and not empty.
-        - Validates new unit IDs if provided, ensuring they are not already in the unit_ids list and match the
-          number of splits.
+
+          * Checks if the unit_id exists in the unit_ids list.
+          * Validates the mode (indices or labels).
+          * If mode is indices, checks that indices are defined and not empty, and that there are no duplicate indices.
+          * If mode is labels, checks that labels are defined and not empty.
+          * | Validates new unit IDs if provided, ensuring they are not already in the unit_ids list and match the
+            | number of splits.
+
         """
         unit_ids = list(values["unit_ids"])
         splits = values.get("splits")
@@ -279,6 +294,11 @@ class CurationModel(BaseModel):
 
     @classmethod
     def check_removed(cls, values):
+        """
+        Checks and validates the removed units in the curation model.
+        If `removed` is None, it initializes it as an empty list.
+        It then checks that each unit ID in `removed` exists in the `unit_ids` list.
+        """
         unit_ids = list(values["unit_ids"])
         removed = values.get("removed")
         if removed is None:
@@ -293,6 +313,11 @@ class CurationModel(BaseModel):
 
     @classmethod
     def convert_old_format(cls, values):
+        """
+        Converts old curation formats (v0 and v1) to the current format (v2).
+        v0 (sortingview) format is converted to v2 by extracting labels, merges, and unit IDs.
+        v1 format is updated to v2 by renaming fields and ensuring the structure matches the v2 format.
+        """
         format_version = values.get("format_version", "0")
         if format_version == "0":
             print("Conversion from format version v0 (sortingview) to v2")
