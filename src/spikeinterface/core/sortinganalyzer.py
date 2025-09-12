@@ -22,6 +22,7 @@ import probeinterface
 import spikeinterface
 
 from spikeinterface.core import BaseRecording, BaseSorting, aggregate_channels, aggregate_units
+from spikeinterface.core.waveform_tools import has_exceeding_spikes
 
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
 from .core_tools import (
@@ -371,6 +372,15 @@ class SortingAnalyzer:
         # check that multiple probes are non-overlapping
         all_probes = recording.get_probegroup().probes
         check_probe_do_not_overlap(all_probes)
+
+        if has_exceeding_spikes(sorting=sorting, recording=recording):
+            warnings.warn(
+                "Your sorting has spikes with samples times greater than your recording length. These spikes have been removed."
+            )
+            # import here to avoid circular import
+            from spikeinterface.curation.remove_excess_spikes import RemoveExcessSpikesSorting
+
+            sorting = RemoveExcessSpikesSorting(sorting=sorting, recording=recording)
 
         if format == "memory":
             sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_in_uV, rec_attributes=None)
