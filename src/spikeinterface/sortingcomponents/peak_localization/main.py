@@ -5,12 +5,7 @@ import numpy as np
 from .method_list import localization_methods
 from ..tools import make_multi_method_doc
 
-from spikeinterface.core.job_tools import (
-    split_job_kwargs,
-    fix_job_kwargs,
-    _shared_job_kwargs_doc
-)
-
+from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs, _shared_job_kwargs_doc
 
 
 from spikeinterface.core.node_pipeline import (
@@ -20,16 +15,19 @@ from spikeinterface.core.node_pipeline import (
     ExtractDenseWaveforms,
 )
 
-def localize_peaks(recording, 
-                   peaks, 
-                   method="center_of_mass", 
-                   ms_before=0.5, 
-                   ms_after=0.5, 
-                   gather_mode="memory",
-                   gather_kwargs=dict(),
-                   folder=None,
-                   names=None,
-                   **kwargs) -> np.ndarray:
+
+def localize_peaks(
+    recording,
+    peaks,
+    method="center_of_mass",
+    ms_before=0.5,
+    ms_after=0.5,
+    gather_mode="memory",
+    gather_kwargs=dict(),
+    folder=None,
+    names=None,
+    **kwargs,
+) -> np.ndarray:
     """Localize peak (spike) in 2D or 3D depending the method.
 
     When a probe is 2D then:
@@ -78,11 +76,11 @@ def localize_peaks(recording,
     ), f"Method {method} is not supported. Choose from {localization_methods.keys()}"
 
     peak_retriever = PeakRetriever(recording, peaks)
-    
+
     extract_dense_waveforms = ExtractDenseWaveforms(
-            recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
-        )
-    
+        recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
+    )
+
     method_class = localization_methods[method]
 
     if method == "grid_convolution" and "prototype" not in method_kwargs:
@@ -90,6 +88,7 @@ def localize_peaks(recording,
         # extract prototypes silently
 
         from ..tools import get_prototype_and_waveforms_from_peaks
+
         job_kwargs["progress_bar"] = False
         method_kwargs["prototype"], _, _ = get_prototype_and_waveforms_from_peaks(
             recording, peaks=peak_retriever.peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
@@ -97,25 +96,23 @@ def localize_peaks(recording,
 
     localization_nodes = method_class(recording, parents=[peak_retriever, extract_dense_waveforms], **method_kwargs)
 
-    pipeline_nodes = [
-        peak_retriever,
-        extract_dense_waveforms,
-        localization_nodes
-    ]
-    
+    pipeline_nodes = [peak_retriever, extract_dense_waveforms, localization_nodes]
+
     job_name = f"localize peaks ({method})"
-    peak_locations = run_node_pipeline(recording, 
-                                       pipeline_nodes, 
-                                       job_kwargs, 
-                                       job_name=job_name, 
-                                       gather_mode=gather_mode,
-                                       squeeze_output=True,
-                                       names=names,
-                                       folder=folder,
-                                       **gather_kwargs,
-                                    )
+    peak_locations = run_node_pipeline(
+        recording,
+        pipeline_nodes,
+        job_kwargs,
+        job_name=job_name,
+        gather_mode=gather_mode,
+        squeeze_output=True,
+        names=names,
+        folder=folder,
+        **gather_kwargs,
+    )
 
     return peak_locations
+
 
 method_doc = make_multi_method_doc(list(localization_methods.values()))
 localize_peaks.__doc__ = localize_peaks.__doc__.format(method_doc=method_doc, job_doc=_shared_job_kwargs_doc)

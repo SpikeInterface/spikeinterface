@@ -8,7 +8,6 @@ from .base import LocalizeBase
 from spikeinterface.core.node_pipeline import (
     find_parent_of_type,
     WaveformsNode,
-
 )
 
 from spikeinterface.postprocessing.unit_locations import dtype_localize_by_method
@@ -18,6 +17,7 @@ from spikeinterface.postprocessing.localization_tools import (
     solve_monopolar_triangulation,
     enforce_decrease_shells_data,
 )
+
 
 class LocalizeMonopolarTriangulation(LocalizeBase):
     """Localize peaks using the monopolar triangulation method.

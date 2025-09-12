@@ -9,7 +9,10 @@ from spikeinterface.core import (
     get_template_extremum_channel,
 )
 
-from spikeinterface.sortingcomponents.peak_detection.method_list import LocallyExclusivePeakDetector, MatchedFilteringPeakDetector
+from spikeinterface.sortingcomponents.peak_detection.method_list import (
+    LocallyExclusivePeakDetector,
+    MatchedFilteringPeakDetector,
+)
 
 
 from .base import BaseTemplateMatching, _base_matching_dtype

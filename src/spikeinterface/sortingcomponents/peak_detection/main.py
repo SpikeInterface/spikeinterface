@@ -4,17 +4,14 @@ import copy
 import numpy as np
 from .method_list import *
 
-from spikeinterface.core.job_tools import (
-    split_job_kwargs,
-    fix_job_kwargs,
-    _shared_job_kwargs_doc
-)
+from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs, _shared_job_kwargs_doc
 
 from ..tools import make_multi_method_doc
 
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
 )
+
 
 def detect_peaks(
     recording,
@@ -61,7 +58,7 @@ def detect_peaks(
         If None (default), the function iterates over the entire duration of the recording.
 
     {method_doc}
-    
+
     {job_doc}
 
     Returns
@@ -85,6 +82,7 @@ def detect_peaks(
 
     if method_class.need_noise_levels:
         from spikeinterface.core.recording_tools import get_noise_levels
+
         random_chunk_kwargs = method_kwargs.pop("random_chunk_kwargs", {})
         if "noise_levels" not in method_kwargs:
             method_kwargs["noise_levels"] = get_noise_levels(
@@ -126,7 +124,7 @@ def detect_peaks(
         names=names,
         skip_after_n_peaks=skip_after_n_peaks,
         recording_slices=recording_slices,
-        **gather_kwargs
+        **gather_kwargs,
     )
     return outs
 

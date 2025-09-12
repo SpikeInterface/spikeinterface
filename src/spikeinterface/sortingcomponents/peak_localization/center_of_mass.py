@@ -15,6 +15,7 @@ from spikeinterface.postprocessing.unit_locations import dtype_localize_by_metho
 
 from .base import LocalizeBase
 
+
 class LocalizeCenterOfMass(LocalizeBase):
     """Localize peaks using the center of mass method
 

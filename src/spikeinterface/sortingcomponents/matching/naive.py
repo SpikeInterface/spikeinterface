@@ -7,7 +7,6 @@ import numpy as np
 from spikeinterface.core import get_noise_levels, get_channel_distances
 
 
-
 from .base import BaseTemplateMatching, _base_matching_dtype
 
 
@@ -45,7 +44,9 @@ class NaiveMatching(BaseTemplateMatching):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
-        from spikeinterface.sortingcomponents.peak_detection.locally_exclusive import detect_peaks_numba_locally_exclusive_on_chunk
+        from spikeinterface.sortingcomponents.peak_detection.locally_exclusive import (
+            detect_peaks_numba_locally_exclusive_on_chunk,
+        )
 
         if self.margin > 0:
             peak_traces = traces[self.margin : -self.margin, :]

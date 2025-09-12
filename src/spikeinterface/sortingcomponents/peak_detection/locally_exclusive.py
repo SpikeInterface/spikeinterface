@@ -31,6 +31,7 @@ else:
 
 from .by_channel import ByChannelPeakDetector
 
+
 class LocallyExclusivePeakDetector(PeakDetector):
     """Detect peaks using the "locally exclusive" method."""
 
@@ -55,7 +56,7 @@ class LocallyExclusivePeakDetector(PeakDetector):
         radius_um=50,
         noise_levels=None,
         random_chunk_kwargs={},
-        return_output=True
+        return_output=True,
     ):
         if not HAVE_NUMBA:
             raise ModuleNotFoundError('"locally_exclusive" needs numba which is not installed')
@@ -102,12 +103,15 @@ class LocallyExclusivePeakDetector(PeakDetector):
         local_peaks["amplitude"] = peak_amplitude
         local_peaks["segment_index"] = segment_index
 
-        return (local_peaks, )
+        return (local_peaks,)
+
 
 if HAVE_NUMBA:
     import numba
 
-    def detect_peaks_numba_locally_exclusive_on_chunk(traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask):
+    def detect_peaks_numba_locally_exclusive_on_chunk(
+        traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask
+    ):
 
         # if medians is not None:
         #     traces = traces - medians
@@ -137,8 +141,6 @@ if HAVE_NUMBA:
         peak_sample_ind += exclude_sweep_size
 
         return peak_sample_ind, peak_chan_ind
-
-
 
     @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_pos(
@@ -191,7 +193,6 @@ if HAVE_NUMBA:
         return peak_mask
 
 
-
 class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):
     """Detect peaks using the "locally exclusive" method with pytorch."""
 
@@ -218,21 +219,23 @@ class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):
         radius_um=50,
         return_tensor=False,
         random_chunk_kwargs={},
-        return_output=True
+        return_output=True,
     ):
         if not HAVE_TORCH:
             raise ModuleNotFoundError('"by_channel_torch" needs torch which is not installed')
-        
-        ByChannelTorchPeakDetector.__init__(self, 
-                                            recording,
-                                            peak_sign,
-                                            detect_threshold,
-                                            exclude_sweep_ms,
-                                            noise_levels,
-                                            device,
-                                            return_tensor,
-                                            random_chunk_kwargs,
-                                            return_output)
+
+        ByChannelTorchPeakDetector.__init__(
+            self,
+            recording,
+            peak_sign,
+            detect_threshold,
+            exclude_sweep_ms,
+            noise_levels,
+            device,
+            return_tensor,
+            random_chunk_kwargs,
+            return_output,
+        )
 
         self.channel_distance = get_channel_distances(recording)
         self.neighbour_indices_by_chan = []
@@ -250,7 +253,8 @@ class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         from .by_channel import _torch_detect_peaks
-        peak_sample_ind, peak_chan_ind, peak_amplitude =  _torch_detect_peaks(
+
+        peak_sample_ind, peak_chan_ind, peak_amplitude = _torch_detect_peaks(
             traces, self.peak_sign, self.abs_thresholds, self.exclude_sweep_size, self.neighbours_idxs, self.device
         )
 
@@ -263,8 +267,7 @@ class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):
             local_peaks["channel_index"] = peak_chan_ind
             local_peaks["amplitude"] = peak_amplitude
             local_peaks["segment_index"] = segment_index
-        return (local_peaks, )
-
+        return (local_peaks,)
 
 
 class LocallyExclusiveOpenCLPeakDetector(LocallyExclusivePeakDetector):
@@ -272,13 +275,12 @@ class LocallyExclusiveOpenCLPeakDetector(LocallyExclusivePeakDetector):
     engine = "opencl"
     preferred_mp_context = None
     params_doc = (
-       LocallyExclusiveTorchPeakDetector.params_doc
-       + """
+        LocallyExclusiveTorchPeakDetector.params_doc
+        + """
     opencl_context_kwargs: None or dict
        kwargs to create the opencl context
     """
     )
-
 
     def __init__(
         self,
@@ -289,26 +291,18 @@ class LocallyExclusiveOpenCLPeakDetector(LocallyExclusivePeakDetector):
         radius_um=50,
         noise_levels=None,
         random_chunk_kwargs={},
-        opencl_context_kwargs={}
+        opencl_context_kwargs={},
     ):
         if not HAVE_PYOPENCL:
             raise ModuleNotFoundError('"locally_exclusive_cl" needs pyopencl which is not installed')
 
-        LocallyExclusivePeakDetector.__init__(self, 
-                                            recording,
-                                            peak_sign,
-                                            detect_threshold,
-                                            exclude_sweep_ms,
-                                            radius_um,
-                                            noise_levels,
-                                            random_chunk_kwargs)
+        LocallyExclusivePeakDetector.__init__(
+            self, recording, peak_sign, detect_threshold, exclude_sweep_ms, radius_um, noise_levels, random_chunk_kwargs
+        )
 
-        self.executor = OpenCLDetectPeakExecutor(self.abs_thresholds, 
-                                            self.exclude_sweep_size, 
-                                            self.neighbours_mask, 
-                                            self.peak_sign,
-                                            **opencl_context_kwargs)
-
+        self.executor = OpenCLDetectPeakExecutor(
+            self.abs_thresholds, self.exclude_sweep_size, self.neighbours_mask, self.peak_sign, **opencl_context_kwargs
+        )
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         peak_sample_ind, peak_chan_ind = self.executor.detect_peak(traces)
@@ -321,7 +315,7 @@ class LocallyExclusiveOpenCLPeakDetector(LocallyExclusivePeakDetector):
         local_peaks["amplitude"] = peak_amplitude
         local_peaks["segment_index"] = segment_index
 
-        return (local_peaks, )
+        return (local_peaks,)
 
 
 class OpenCLDetectPeakExecutor:

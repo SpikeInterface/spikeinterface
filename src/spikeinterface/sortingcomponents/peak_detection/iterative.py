@@ -16,6 +16,7 @@ from spikeinterface.core.node_pipeline import (
 
 expanded_base_peak_dtype = np.dtype(base_peak_dtype + [("iteration", "int8")])
 
+
 class IterativePeakDetector(PeakDetector):
     """
     A class that iteratively detects peaks in the recording by applying a peak detector, waveform extraction,
@@ -106,9 +107,11 @@ class IterativePeakDetector(PeakDetector):
                 old_detect_treshold = self.peak_detector_node.detect_threshold
                 old_abs_thresholds = self.peak_detector_node.abs_thresholds
                 self.peak_detector_node.detect_threshold = self.tresholds[iteration]
-                self.peak_detector_node.abs_tresholds = old_abs_thresholds * self.tresholds[iteration] / old_detect_treshold
+                self.peak_detector_node.abs_tresholds = (
+                    old_abs_thresholds * self.tresholds[iteration] / old_detect_treshold
+                )
 
-            (local_peaks, ) = self.peak_detector_node.compute(
+            (local_peaks,) = self.peak_detector_node.compute(
                 traces=traces_chunk,
                 start_frame=start_frame,
                 end_frame=end_frame,

@@ -3,6 +3,7 @@ import numpy as np
 
 from spikeinterface.sortingcomponents.clustering.splitting_tools import split_clusters
 
+
 # T ODO
 def test_split():
     pass

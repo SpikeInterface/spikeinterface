@@ -17,7 +17,10 @@ from spikeinterface.sortingcomponents.peak_detection.iterative import IterativeP
 
 
 from spikeinterface.sortingcomponents.peak_detection.by_channel import ByChannelPeakDetector, ByChannelTorchPeakDetector
-from spikeinterface.sortingcomponents.peak_detection.locally_exclusive import LocallyExclusivePeakDetector, LocallyExclusiveTorchPeakDetector
+from spikeinterface.sortingcomponents.peak_detection.locally_exclusive import (
+    LocallyExclusivePeakDetector,
+    LocallyExclusiveTorchPeakDetector,
+)
 
 
 from spikeinterface.core.node_pipeline import run_node_pipeline

@@ -23,6 +23,7 @@ else:
 
 from .by_channel import ByChannelPeakDetector
 
+
 class MatchedFilteringPeakDetector(PeakDetector):
     """Detect peaks using the 'matched_filtering' method."""
 
@@ -57,7 +58,7 @@ class MatchedFilteringPeakDetector(PeakDetector):
         radius_um=50,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
-        return_output=True
+        return_output=True,
     ):
         PeakDetector.__init__(self, recording, return_output=return_output)
         from scipy.sparse import csr_matrix
@@ -162,7 +163,7 @@ class MatchedFilteringPeakDetector(PeakDetector):
         local_peaks["z"] = z_ind
 
         # return is always a tuple
-        return (local_peaks, )
+        return (local_peaks,)
 
     def get_convolved_traces(self, traces):
         from scipy.signal import oaconvolve
@@ -171,9 +172,10 @@ class MatchedFilteringPeakDetector(PeakDetector):
         scalar_products = self.weights.dot(tmp)
         return scalar_products
 
+
 if HAVE_NUMBA:
     import numba
-    
+
     @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_matched_filtering(
         traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask, num_channels

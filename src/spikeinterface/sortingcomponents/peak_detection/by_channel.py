@@ -18,7 +18,6 @@ else:
     HAVE_TORCH = False
 
 
-
 class ByChannelPeakDetector(PeakDetector):
     """Detect peaks using the "by channel" method."""
 
@@ -67,10 +66,10 @@ class ByChannelPeakDetector(PeakDetector):
 
     def get_trace_margin(self):
         return self.exclude_sweep_size
-    
+
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
-    
-        traces_center = traces[self.exclude_sweep_size:-self.exclude_sweep_size, :]
+
+        traces_center = traces[self.exclude_sweep_size : -self.exclude_sweep_size, :]
         length = traces_center.shape[0]
 
         if self.peak_sign in ("pos", "both"):
@@ -78,7 +77,8 @@ class ByChannelPeakDetector(PeakDetector):
             for i in range(self.exclude_sweep_size):
                 peak_mask &= traces_center > traces[i : i + length, :]
                 peak_mask &= (
-                    traces_center >= traces[self.exclude_sweep_size + i + 1 : self.exclude_sweep_size + i + 1 + length, :]
+                    traces_center
+                    >= traces[self.exclude_sweep_size + i + 1 : self.exclude_sweep_size + i + 1 + length, :]
                 )
 
         if self.peak_sign in ("neg", "both"):
@@ -89,7 +89,8 @@ class ByChannelPeakDetector(PeakDetector):
             for i in range(self.exclude_sweep_size):
                 peak_mask &= traces_center < traces[i : i + length, :]
                 peak_mask &= (
-                    traces_center <= traces[self.exclude_sweep_size + i + 1 : self.exclude_sweep_size + i + 1 + length, :]
+                    traces_center
+                    <= traces[self.exclude_sweep_size + i + 1 : self.exclude_sweep_size + i + 1 + length, :]
                 )
 
             if self.peak_sign == "both":
@@ -99,7 +100,7 @@ class ByChannelPeakDetector(PeakDetector):
         peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
         # correct for time shift
         peak_sample_ind += self.exclude_sweep_size
-        
+
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
 
         local_peaks = np.zeros(peak_sample_ind.size, dtype=self.get_dtype())
@@ -108,8 +109,8 @@ class ByChannelPeakDetector(PeakDetector):
         local_peaks["amplitude"] = peak_amplitude
         local_peaks["segment_index"] = segment_index
 
-        return (local_peaks, )
-    
+        return (local_peaks,)
+
 
 class ByChannelTorchPeakDetector(ByChannelPeakDetector):
     """Detect peaks using the "by channel" method with pytorch."""
@@ -156,21 +157,23 @@ class ByChannelTorchPeakDetector(ByChannelPeakDetector):
             raise ModuleNotFoundError('"by_channel_torch" needs torch which is not installed')
 
         import torch.cuda
-        ByChannelPeakDetector.__init__(self, 
-                                       recording, 
-                                       peak_sign,
-                                       detect_threshold,
-                                       exclude_sweep_ms,
-                                       noise_levels,
-                                       random_chunk_kwargs,
-                                       return_output)
-        
+
+        ByChannelPeakDetector.__init__(
+            self,
+            recording,
+            peak_sign,
+            detect_threshold,
+            exclude_sweep_ms,
+            noise_levels,
+            random_chunk_kwargs,
+            return_output,
+        )
+
         if device is None:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
         else:
             self.device = device
         self.return_tensor = return_tensor
-
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         peak_sample_ind, peak_chan_ind, peak_amplitude = _torch_detect_peaks(
@@ -186,7 +189,8 @@ class ByChannelTorchPeakDetector(ByChannelPeakDetector):
             local_peaks["amplitude"] = peak_amplitude
             local_peaks["segment_index"] = segment_index
 
-        return (local_peaks, )
+        return (local_peaks,)
+
 
 if HAVE_TORCH:
     import torch
@@ -231,7 +235,11 @@ if HAVE_TORCH:
         traces = traces[exclude_sweep_size:-exclude_sweep_size, :]
         num_samples, num_channels = traces.shape
         dtype = torch.float32
-        empty_return_value = (torch.tensor([], dtype=dtype), torch.tensor([], dtype=dtype), torch.tensor([], dtype=dtype))
+        empty_return_value = (
+            torch.tensor([], dtype=dtype),
+            torch.tensor([], dtype=dtype),
+            torch.tensor([], dtype=dtype),
+        )
 
         # The function uses maxpooling to look for maximum
         if peak_sign == "neg":
