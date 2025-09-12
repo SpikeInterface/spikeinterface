@@ -162,7 +162,7 @@ def test_estimate_motion(dataset):
                 direction="y",
                 bin_s=1.0,
                 bin_um=10.0,
-                margin_um=5,
+                hist_margin_um=5,
                 extra_outputs=True,
                 win_step_um=100.0,
                 win_scale_um=100.0,
