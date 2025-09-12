@@ -180,7 +180,7 @@ peaks
 # +
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
-peak_locations = localize_peaks(rec, peaks, method='center_of_mass', radius_um=50., **job_kwargs)
+peak_locations = localize_peaks(rec, peaks, method='center_of_mass', method_kwargs=dict(radius_um=50.), job_kwargs=job_kwargs)
 # -
 
 # ### Check for drifts

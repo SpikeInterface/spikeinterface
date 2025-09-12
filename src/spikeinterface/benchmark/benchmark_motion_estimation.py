@@ -99,7 +99,7 @@ class MotionEstimationBenchmark(Benchmark):
             selected_peaks = peaks
 
         t2 = time.perf_counter()
-        peak_locations = localize_peaks(self.recording, selected_peaks, **p["localize_kwargs"], **job_kwargs)
+        peak_locations = localize_peaks(self.recording, selected_peaks, method_kwargs=p["localize_kwargs"], job_kwargs=job_kwargs)
         t3 = time.perf_counter()
         motion = estimate_motion(self.recording, selected_peaks, peak_locations, **p["estimate_motion_kwargs"])
         t4 = time.perf_counter()

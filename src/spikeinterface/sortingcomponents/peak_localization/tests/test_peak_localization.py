@@ -21,22 +21,22 @@ def test_localize_peaks():
 
     list_locations = []
 
-    peak_locations = localize_peaks(recording, peaks, method="center_of_mass", **job_kwargs)
+    peak_locations = localize_peaks(recording, peaks, method="center_of_mass", job_kwargs=job_kwargs)
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("com", peak_locations))
 
-    peak_locations = localize_peaks(recording, peaks, method="grid_convolution", **job_kwargs)
+    peak_locations = localize_peaks(recording, peaks, method="grid_convolution", job_kwargs=job_kwargs)
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("grid_convolution", peak_locations))
 
     peak_locations = localize_peaks(
-        recording, peaks, method="monopolar_triangulation", optimizer="least_square", **job_kwargs
+        recording, peaks, method="monopolar_triangulation", method_kwargs=dict(optimizer="least_square"), job_kwargs=job_kwargs
     )
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("least_square", peak_locations))
 
     peak_locations = localize_peaks(
-        recording, peaks, method="monopolar_triangulation", optimizer="minimize_with_log_penality", **job_kwargs
+        recording, peaks, method="monopolar_triangulation", method_kwargs=dict(optimizer="minimize_with_log_penality"), job_kwargs=job_kwargs
     )
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("minimize_with_log_penality", peak_locations))
@@ -45,9 +45,11 @@ def test_localize_peaks():
         recording,
         peaks,
         method="monopolar_triangulation",
-        optimizer="minimize_with_log_penality",
-        enforce_decrease=True,
-        **job_kwargs,
+        method_kwargs=dict(
+            optimizer="minimize_with_log_penality",
+            enforce_decrease=True,
+        ),
+        job_kwargs=job_kwargs,
     )
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("minimize_with_log_penality", peak_locations))
@@ -56,10 +58,12 @@ def test_localize_peaks():
         recording,
         peaks,
         method="monopolar_triangulation",
-        optimizer="minimize_with_log_penality",
-        enforce_decrease=True,
-        feature="energy",
-        **job_kwargs,
+        method_kwargs=dict(
+            optimizer="minimize_with_log_penality",
+            enforce_decrease=True,
+            feature="energy",
+        ),
+        job_kwargs=job_kwargs,
     )
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("minimize_with_log_penality_energy", peak_locations))
@@ -67,11 +71,13 @@ def test_localize_peaks():
     peak_locations = localize_peaks(
         recording,
         peaks,
-        method="monopolar_triangulation",
-        optimizer="minimize_with_log_penality",
-        enforce_decrease=True,
-        feature="peak_voltage",
-        **job_kwargs,
+        method_kwargs=dict(
+            method="monopolar_triangulation",
+            optimizer="minimize_with_log_penality",
+            enforce_decrease=True,
+            feature="peak_voltage",
+        ),
+        job_kwargs=job_kwargs,
     )
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("minimize_with_log_penality_v_peak", peak_locations))

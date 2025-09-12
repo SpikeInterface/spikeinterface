@@ -99,10 +99,12 @@ follows:
         recording=recording,
         peaks=peaks,
         method='center_of_mass',
-        radius_um=70.,
-        ms_before=0.3,
-        ms_after=0.6,
-        **job_kwargs
+        method_kwargs=dict(
+          radius_um=70.,
+          ms_before=0.3,
+          ms_after=0.6,
+        ),
+        job_kwargs=job_kwargs,
     )
 
 

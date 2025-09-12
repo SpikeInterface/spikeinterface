@@ -17,7 +17,7 @@ from spikeinterface.core.node_pipeline import (
 
 def detect_peaks(
     recording,
-    method="locally_exclusive",
+    method=None,
     method_kwargs=None,
     pipeline_nodes=None,
     gather_mode="memory",
@@ -42,6 +42,7 @@ def detect_peaks(
         The detection method to use. See `detection_methods` for available methods.
     method_kwargs : dict
         Params specific of the method.
+        Important note, for flexibility,  if method=None, then the method can be given inside the method_kwargs dict.
     pipeline_nodes : None or list[PipelineNode]
         Optional additional PipelineNode need to computed just after detection time.
         This avoid reading the recording multiple times.
@@ -67,8 +68,6 @@ def detect_peaks(
 
     {method_doc}
 
-    {job_doc}
-
     Returns
     -------
     peaks: array
@@ -93,6 +92,16 @@ def detect_peaks(
     else:
         if method_kwargs is None:
             method_kwargs = dict()
+    
+    if "method" in method_kwargs:
+        # for flexibility the caller can put method inside method_kwargs
+        assert  method is None
+        method_kwargs = method_kwargs.copy()
+        method = method_kwargs.pop("method")
+    
+    if method is None:
+        warnings.warn("detect_peaks() method should be explicitly given, nicely 'locally_exclusive' is used")
+        method = "locally_exclusive"
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     job_kwargs["mp_context"] = method_class.preferred_mp_context
@@ -148,4 +157,4 @@ def detect_peaks(
 
 
 method_doc = make_multi_method_doc(list(detect_peak_methods.values()))
-detect_peaks.__doc__ = detect_peaks.__doc__.format(method_doc=method_doc, job_doc=_shared_job_kwargs_doc)
+detect_peaks.__doc__ = detect_peaks.__doc__.format(method_doc=method_doc)

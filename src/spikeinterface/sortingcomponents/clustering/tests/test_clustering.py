@@ -56,7 +56,7 @@ def peaks_fixture(recording, job_kwargs):
 
 
 def run_peak_locations(recording, peaks, job_kwargs):
-    return localize_peaks(recording, peaks, method="center_of_mass", **job_kwargs)
+    return localize_peaks(recording, peaks, method="center_of_mass", job_kwargs=job_kwargs)
 
 
 @pytest.fixture(name="peak_locations", scope="module")
