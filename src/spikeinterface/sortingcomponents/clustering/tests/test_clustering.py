@@ -44,7 +44,6 @@ def run_peaks(recording, job_kwargs):
             detect_threshold=5,
             exclude_sweep_ms=0.1,
             noise_levels=noise_levels,
-
         ),
         job_kwargs=job_kwargs,
     )
