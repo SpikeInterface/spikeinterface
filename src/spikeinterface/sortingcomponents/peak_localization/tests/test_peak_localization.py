@@ -14,7 +14,8 @@ def test_localize_peaks():
     job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
 
     peaks = detect_peaks(
-        recording, method="locally_exclusive",
+        recording,
+        method="locally_exclusive",
         method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
         job_kwargs=job_kwargs,
     )

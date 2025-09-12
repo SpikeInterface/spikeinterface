@@ -259,8 +259,9 @@ def test_iterative_peak_detection_thresholds(recording, job_kwargs, pca_model_fo
 
 def test_detect_peaks_by_channel(recording, job_kwargs, torch_job_kwargs):
     peaks_by_channel_np = detect_peaks(
-        recording, method="by_channel",
-        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1), 
+        recording,
+        method="by_channel",
+        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
         job_kwargs=job_kwargs,
     )
 
@@ -282,13 +283,15 @@ def test_detect_peaks_by_channel(recording, job_kwargs, torch_job_kwargs):
 
 def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs):
     peaks_by_channel_np = detect_peaks(
-        recording, method="by_channel", 
+        recording,
+        method="by_channel",
         method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
         job_kwargs=job_kwargs,
     )
 
     peaks_local_numba = detect_peaks(
-        recording, method="locally_exclusive",
+        recording,
+        method="locally_exclusive",
         method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
         job_kwargs=job_kwargs,
     )
@@ -323,9 +326,10 @@ def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs)
 
 def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs):
     peaks_by_channel_np = detect_peaks(
-        recording, method="locally_exclusive", 
+        recording,
+        method="locally_exclusive",
         method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
-        job_kwargs=job_kwargs
+        job_kwargs=job_kwargs,
     )
 
     ms_before = 1.0
@@ -482,7 +486,7 @@ def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs, t
         peaks_torch, ptp_torch, peak_locations_torch = detect_peaks(
             recording,
             method="locally_exclusive_torch",
-                method_kwargs=dict(
+            method_kwargs=dict(
                 peak_sign="neg",
                 detect_threshold=5,
                 exclude_sweep_ms=0.1,
