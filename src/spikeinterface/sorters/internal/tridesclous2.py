@@ -283,16 +283,16 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         matching_params["templates"] = templates
         if matching_method in ("tdc-peeler",):
             matching_params["noise_levels"] = noise_levels
-        gather_kwargs = {}
+        
+        pipeline_kwargs = dict(gather_mode=gather_mode)
         if gather_mode == "npy":
-            gather_kwargs["folder"] = sorter_output_folder / "matching"
+            pipeline_kwargs["folder"] = sorter_output_folder / "matching"
         spikes = find_spikes_from_templates(
             recording_for_peeler,
             method=matching_method,
             method_kwargs=matching_params,
-            gather_mode=gather_mode,
-            gather_kwargs=gather_kwargs,
-            **job_kwargs,
+            pipeline_kwargs=pipeline_kwargs,
+            job_kwargs=job_kwargs,
         )
 
         final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)

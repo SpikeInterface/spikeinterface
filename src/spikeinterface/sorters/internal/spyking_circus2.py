@@ -188,7 +188,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         detection_params = params["detection"].get("method_kwargs", dict())
         detection_params["radius_um"] = radius_um / 2
         detection_params["exclude_sweep_ms"] = exclude_sweep_ms
-        detection_params["noise_levels"] = noise_levels
+        # detection_params["noise_levels"] = noise_levels  @pierre j'ai enlevé ça
 
         selection_method = params["selection"].get("method", "uniform")
         selection_params = params["selection"].get("method_kwargs", dict())
@@ -221,6 +221,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     ms_before=ms_before,
                     ms_after=ms_after,
                     seed=seed,
+                    noise_levels=noise_levels, # for locally exclusive @ pierre c'est moi qui ai ajjouté ça
                     **detection_params,
                     **job_kwargs,
                 )
@@ -252,15 +253,23 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             waveforms = None
             detection_method = "locally_exclusive"
 
+        pipeline_kwargs = dict()
         if skip_peaks:
-            detection_params["skip_after_n_peaks"] = n_peaks
+            # detection_params["skip_after_n_peaks"] = n_peaks
+            pipeline_kwargs["skip_after_n_peaks"] = n_peaks
 
-        detection_params["recording_slices"] = get_shuffled_recording_slices(
+        # detection_params["recording_slices"] = get_shuffled_recording_slices(
+        #     recording_w, seed=params["seed"], **job_kwargs
+        # )
+        pipeline_kwargs["recording_slices"] = get_shuffled_recording_slices(
             recording_w, seed=params["seed"], **job_kwargs
         )
 
+        # @pierre t'avais un bug ici : detection_params contiet noise level alors que c'est du matched filtering!!
         peaks = detect_peaks(
-            recording_w, method=detection_method, method_kwargs=detection_params, job_kwargs=job_kwargs
+            recording_w, method=detection_method, method_kwargs=detection_params,
+            pipeline_kwargs=pipeline_kwargs, 
+            job_kwargs=job_kwargs
         )
         order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
         peaks = peaks[order]
@@ -390,16 +399,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             matching_params["templates"] = templates
 
             if matching_method is not None:
-                gather_kwargs = {}
+                pipeline_kwargs = dict(
+                    gather_mode=gather_mode,
+                )
                 if gather_mode == "npy":
-                    gather_kwargs["folder"] = sorter_output_folder / "matching"
+                    pipeline_kwargs["folder"] = sorter_output_folder / "matching"
                 spikes = find_spikes_from_templates(
                     recording_w,
                     matching_method,
                     method_kwargs=matching_params,
-                    gather_mode=gather_mode,
-                    gather_kwargs=gather_kwargs,
-                    **job_kwargs,
+                    pipeline_kwargs=pipeline_kwargs,
+                    job_kwargs=job_kwargs,
                 )
 
                 if debug:

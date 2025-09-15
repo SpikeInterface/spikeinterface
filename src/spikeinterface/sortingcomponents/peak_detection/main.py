@@ -61,6 +61,7 @@ def detect_peaks(
         warnings.warn(
             "The signature of detect_peaks() has changed, now method_kwargs and job_kwargs are dinstinct params."
         )
+        print('ici old_kwargs', old_kwargs)
         assert job_kwargs is None
         assert method_kwargs is None
         method_kwargs, job_kwargs = split_job_kwargs(old_kwargs)
