@@ -2,9 +2,9 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
+from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline, PipelineNode
 from spikeinterface.sortingcomponents.motion import estimate_motion
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
 from spikeinterface.sortingcomponents.peak_localization.method_list import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
@@ -24,25 +24,52 @@ def setup_dataset_and_peaks(cache_folder):
 
     recording, sorting = make_dataset()
     # detect and localize
-    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=0.1, ms_after=0.3, return_output=False)
-    pipeline_nodes = [
-        extract_dense_waveforms,
-        LocalizeCenterOfMass(recording, parents=[extract_dense_waveforms], radius_um=60.0),
-    ]
-    peaks, peak_locations = detect_peaks(
+    peak_detector_class = detect_peak_methods["locally_exclusive"]
+    peak_detector = peak_detector_class(
         recording,
-        method="locally_exclusive",
-        method_kwargs=dict(
-            peak_sign="neg",
-            detect_threshold=5,
-            exclude_sweep_ms=0.1,
-        ),
+        peak_sign="neg",
+        detect_threshold=5,
+        exclude_sweep_ms=0.1,
+        return_output=True,
+    )
+    extract_dense_waveforms = ExtractDenseWaveforms(
+        recording,
+        ms_before=0.1,
+        ms_after=0.3,
+        return_output=False,
+        parents=[peak_detector]
+    )
+    peak_localizer = LocalizeCenterOfMass(
+        recording,
+        parents=[peak_detector, extract_dense_waveforms],
+        radius_um=60.0,
+    )
+    nodes = [
+        peak_detector,
+        extract_dense_waveforms,
+        peak_localizer,
+    ]
+
+    peaks, peak_locations = run_node_pipeline(
+        recording,
+        nodes=nodes,
         job_kwargs=dict(
             chunk_size=10000,
             progress_bar=True,
         ),
-        pipeline_nodes=pipeline_nodes,
     )
+
+    # peaks, peak_locations = detect_peaks(
+    #     recording,
+    #     method="locally_exclusive",
+    #     method_kwargs=dict(
+    #     ),
+    #     job_kwargs=dict(
+    #         chunk_size=10000,
+    #         progress_bar=True,
+    #     ),
+    #     pipeline_nodes=pipeline_nodes,
+    # )
 
     peaks_path = cache_folder / "dataset_peaks.npy"
     np.save(peaks_path, peaks)

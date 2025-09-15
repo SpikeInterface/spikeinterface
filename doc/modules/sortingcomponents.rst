@@ -56,8 +56,7 @@ follows:
         exclude_sweep_ms=0.2,
         noise_levels=None,
         random_chunk_kwargs={},
-        gather_mode='memory',
-        **job_kwargs,
+        job_kwargs=job_kwargs,
     )
 
 The output :code:`peaks` is a NumPy array with a length of the number of peaks found and the following dtype:

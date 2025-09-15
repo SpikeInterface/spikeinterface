@@ -19,13 +19,7 @@ def detect_peaks(
     recording,
     method=None,
     method_kwargs=None,
-    pipeline_nodes=None,
-    gather_mode="memory",
-    gather_kwargs=dict(),
-    folder=None,
-    names=None,
-    skip_after_n_peaks=None,
-    recording_slices=None,
+    pipeline_kwargs=None,
     job_kwargs=None,
     **old_kwargs,
 ):
@@ -43,28 +37,11 @@ def detect_peaks(
     method_kwargs : dict
         Params specific of the method.
         Important note, for flexibility,  if method=None, then the method can be given inside the method_kwargs dict.
-    pipeline_nodes : None or list[PipelineNode]
-        Optional additional PipelineNode need to computed just after detection time.
-        This avoid reading the recording multiple times.
-    gather_mode : str
-        How to gather the results:
-        * "memory": results are returned as in-memory numpy arrays
-        * "npy": results are stored to .npy files in `folder`
-    gather_kwargs : dict, optional
-        The kwargs for the gather method
-    folder : str or Path
-        If gather_mode is "npy", the folder where the files are created.
-    names : list
-        List of strings with file stems associated with returns.
-    skip_after_n_peaks : None | int
-        Skip the computation after n_peaks.
-        This is not an exact because internally this skip is done per worker in average.
+    pipeline_kwargs : dict
+        Dict transmited to run_node_pipelines to handle fine details
+        like : gather_mode/folder/skip_after_n_peaks/recording_slices
     job_kwargs : dict | None, default None
         A job kwargs dict. If None or empty dict, then the global one is used.
-    recording_slices : None | list[tuple]
-        Optionaly give a list of slices to run the pipeline only on some chunks of the recording.
-        It must be a list of (segment_index, frame_start, frame_stop).
-        If None (default), the function iterates over the entire duration of the recording.
 
     {method_doc}
 
@@ -78,10 +55,6 @@ def detect_peaks(
     This peak detection ported from tridesclous into spikeinterface.
 
     """
-
-    assert method in detect_peak_methods, f"Method {method} is not supported. Choose from {detect_peak_methods.keys()}"
-
-    method_class = detect_peak_methods[method]
 
     if len(old_kwargs) > 0:
         # This is the old behavior and will be remove in 0.105.0
@@ -102,8 +75,11 @@ def detect_peaks(
         method = method_kwargs.pop("method")
     
     if method is None:
-        warnings.warn("detect_peaks() method should be explicitly given, nicely 'locally_exclusive' is used")
+        warnings.warn("detect_peaks() method should be explicitly given, 'locally_exclusive' is used by default")
         method = "locally_exclusive"
+
+    assert method in detect_peak_methods, f"Method {method} is not supported. Choose from {detect_peak_methods.keys()}"
+    method_class = detect_peak_methods[method]
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     job_kwargs["mp_context"] = method_class.preferred_mp_context
@@ -121,39 +97,17 @@ def detect_peaks(
     node0 = method_class(recording, **method_kwargs)
     nodes = [node0]
 
+    if pipeline_kwargs is None:
+        pipeline_kwargs = dict()
     job_name = f"detect peaks ({method})"
-    if pipeline_nodes is None:
-        squeeze_output = True
-    else:
-        squeeze_output = False
-        if len(pipeline_nodes) == 1:
-            plural = ""
-        else:
-            plural = "s"
-        job_name += f" + {len(pipeline_nodes)} node{plural}"
-
-        # because node are modified inplace (insert parent) they need to copy incase
-        # the same pipeline is run several times
-        pipeline_nodes = copy.deepcopy(pipeline_nodes)
-        for node in pipeline_nodes:
-            if node.parents is None:
-                node.parents = [node0]
-            else:
-                node.parents = [node0] + node.parents
-            nodes.append(node)
 
     outs = run_node_pipeline(
         recording,
         nodes,
         job_kwargs,
         job_name=job_name,
-        gather_mode=gather_mode,
-        squeeze_output=squeeze_output,
-        folder=folder,
-        names=names,
-        skip_after_n_peaks=skip_after_n_peaks,
-        recording_slices=recording_slices,
-        **gather_kwargs,
+        squeeze_output = True,
+        **pipeline_kwargs
     )
     return outs
 

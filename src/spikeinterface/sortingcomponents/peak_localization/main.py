@@ -24,10 +24,11 @@ def localize_peaks(
     method_kwargs=None,
     ms_before=0.5,
     ms_after=0.5,
-    gather_mode="memory",
-    gather_kwargs=dict(),
-    folder=None,
-    names=None,
+    pipeline_kwargs=None,
+    # gather_mode="memory",
+    # gather_kwargs=dict(),
+    # folder=None,
+    # names=None,
     job_kwargs=None,
     **old_kwargs,
 ) -> np.ndarray:
@@ -52,16 +53,9 @@ def localize_peaks(
         The number of milliseconds to include before the peak of the spike
     ms_after : float
         The number of milliseconds to include after the peak of the spike
-    gather_mode : str
-        How to gather the results:
-        * "memory": results are returned as in-memory numpy arrays
-        * "npy": results are stored to .npy files in `folder`
-    gather_kwargs : dict, optional
-        The kwargs for the gather method
-    folder : str or Path
-        If gather_mode is "npy", the folder where the files are created.
-    names : list
-        List of strings with file stems associated with returns.
+    pipeline_kwargs : dict
+        Dict transmited to run_node_pipelines to handle fine details
+        like : gather_mode/folder/skip_after_n_peaks/recording_slices
     job_kwargs : dict | None, default None
         A job kwargs dict. If None or empty dict, then the global one is used.
 
@@ -122,17 +116,21 @@ def localize_peaks(
 
     pipeline_nodes = [peak_retriever, extract_dense_waveforms, localization_nodes]
 
+    if pipeline_kwargs is None:
+        pipeline_kwargs = dict()
+
     job_name = f"localize peaks ({method})"
     peak_locations = run_node_pipeline(
         recording,
         pipeline_nodes,
         job_kwargs,
         job_name=job_name,
-        gather_mode=gather_mode,
         squeeze_output=True,
-        names=names,
-        folder=folder,
-        **gather_kwargs,
+        **pipeline_kwargs
+        # gather_mode=gather_mode,
+        # names=names,
+        # folder=folder,
+        # **gather_kwargs,
     )
 
     return peak_locations
