@@ -25,12 +25,11 @@ def estimate_motion(
     win_scale_um=300.0,
     win_margin_um=None,
     method="dredge_ap",
-    method_kwargs=None,
     extra_outputs=False,
     progress_bar=False,
     verbose=False,
     margin_um=None,
-    **flatten_kwargs,
+    **method_kwargs,
 ) -> Motion | tuple[Motion, dict]:
     """
     Estimate motion with several possible methods.
@@ -89,12 +88,6 @@ def estimate_motion(
         Optional output if `extra_outputs=True`
         This dict contain histogram, pairwise_displacement usefull for ploting.
     """
-
-    if len(flatten_kwargs) > 0:
-        # for flexibility method_kwargs can be gien flatten in the function instead of 
-        assert method_kwargs is None
-        method_kwargs = flatten_kwargs
-
 
     if margin_um is not None:
         warnings.warn("estimate_motion() margin_um has been removed used hist_margin_um or win_margin_um")
