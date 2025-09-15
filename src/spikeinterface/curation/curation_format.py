@@ -243,7 +243,7 @@ def apply_curation(
     if isinstance(curation_dict_or_model, dict):
         curation_model = CurationModel(**curation_dict_or_model)
     else:
-        curation_model = curation_dict_or_model.model_copy(deep=True)
+        curation_model = curation_dict_or_model
 
     if not np.array_equal(np.asarray(curation_model.unit_ids), sorting_or_analyzer.unit_ids):
         raise ValueError("unit_ids from the curation_dict do not match the one from Sorting or SortingAnalyzer")
@@ -280,8 +280,6 @@ def apply_curation(
                 verbose=verbose,
                 **job_kwargs,
             )
-        for i, merge_unit_id in enumerate(new_unit_ids):
-            curation_model.merges[i].new_unit_id = merge_unit_id
 
     # 3. Split units
     if len(curation_model.splits) > 0:
@@ -313,8 +311,6 @@ def apply_curation(
                 format="memory",
                 verbose=verbose,
             )
-        for i, split_unit_ids in enumerate(new_unit_ids):
-            curation_model.splits[i].new_unit_ids = split_unit_ids
 
     # 4. Apply labels
     apply_curation_labels(curated_sorting_or_analyzer, curation_model)
