@@ -1,15 +1,11 @@
 from __future__ import annotations
-
-
 import numpy as np
-import warnings
 
 
 from spikeinterface.core.node_pipeline import (
     find_parent_of_type,
     WaveformsNode,
 )
-
 
 from spikeinterface.postprocessing.unit_locations import dtype_localize_by_method
 
@@ -24,7 +20,6 @@ class LocalizeCenterOfMass(LocalizeBase):
     See spikeinterface.postprocessing.unit_locations.
     """
 
-    need_waveforms = True
     name = "center_of_mass"
     params_doc = """
     radius_um: float

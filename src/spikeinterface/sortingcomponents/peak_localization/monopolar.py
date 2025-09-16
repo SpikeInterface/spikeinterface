@@ -28,7 +28,6 @@ class LocalizeMonopolarTriangulation(LocalizeBase):
     See spikeinterface.postprocessing.unit_locations.
     """
 
-    need_waveforms = True
     name = "monopolar_triangulation"
     params_doc = """
     radius_um: float
