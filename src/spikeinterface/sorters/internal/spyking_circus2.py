@@ -99,7 +99,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         # this is importanted only on demand because numba import are too heavy
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
-        from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+        from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.sortingcomponents.tools import check_probe_for_drift_correction
@@ -335,7 +335,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     ),
                 }
 
-            outputs = find_cluster_from_peaks(
+            outputs = find_clusters_from_peaks(
                 recording_w,
                 selected_peaks,
                 method=clustering_method,
