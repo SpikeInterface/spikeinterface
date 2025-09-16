@@ -361,6 +361,7 @@ class WobbleMatch(BaseTemplateMatching):
 
     name = "wobble"
     need_noise_levels = False
+
     params_doc = """
     parameters : dict
         Parameters for the WobbleMatch algorithm. See WobbleParameters dataclass for more details.

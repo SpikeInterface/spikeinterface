@@ -4,6 +4,7 @@ import numpy as np
 import warnings
 
 from .method_list import *
+
 from spikeinterface.core.node_pipeline import run_node_pipeline
 
 from ..tools import make_multi_method_doc
@@ -83,6 +84,7 @@ def find_spikes_from_templates(
             method_kwargs["noise_levels"] = get_noise_levels(
                 recording, return_in_uV=False, **random_chunk_kwargs, **job_kwargs
             )
+
 
     node0 = method_class(recording, templates=templates, **method_kwargs)
     nodes = [node0]

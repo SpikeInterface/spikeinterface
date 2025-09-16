@@ -3,7 +3,7 @@ import numpy as np
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
 from spikeinterface.sortingcomponents.clustering.method_list import clustering_methods
 from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
 from spikeinterface.sortingcomponents.clustering.graph_tools import create_graph_from_peak_features
@@ -67,7 +67,7 @@ clustering_method_keys = list(clustering_methods.keys())
 
 
 @pytest.mark.parametrize("clustering_method", clustering_method_keys)
-def test_find_cluster_from_peaks(clustering_method, recording, peaks, peak_locations):
+def test_find_clusters_from_peaks(clustering_method, recording, peaks, peak_locations):
     method_kwargs = {}
     if clustering_method in ("position", "position_and_pca"):
         method_kwargs["peak_locations"] = peak_locations
@@ -75,7 +75,7 @@ def test_find_cluster_from_peaks(clustering_method, recording, peaks, peak_locat
         method_kwargs["waveform_mode"] = "shared_memory"
 
     t0 = time.perf_counter()
-    labels, peak_labels = find_cluster_from_peaks(
+    labels, peak_labels = find_clusters_from_peaks(
         recording, peaks, method=clustering_method, method_kwargs=method_kwargs
     )
     t1 = time.perf_counter()
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     # method = "random_projections"
     # method = "graph-clustering"
 
-    test_find_cluster_from_peaks(method, recording, peaks, peak_locations)
+    test_find_clusters_from_peaks(method, recording, peaks, peak_locations)
 
     # test_extract_peaks_svd(recording, peaks, job_kwargs)
     # test_create_graph_from_peak_features(recording, peaks, job_kwargs)
