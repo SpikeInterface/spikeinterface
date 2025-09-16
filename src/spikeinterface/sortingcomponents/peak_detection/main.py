@@ -20,6 +20,7 @@ def detect_peaks(
     method=None,
     method_kwargs=None,
     pipeline_kwargs=None,
+    verbose=False,
     job_kwargs=None,
     **old_kwargs,
 ):
@@ -40,6 +41,8 @@ def detect_peaks(
     pipeline_kwargs : dict
         Dict transmited to run_node_pipelines to handle fine details
         like : gather_mode/folder/skip_after_n_peaks/recording_slices
+    verbose : Bool, default: False
+        If True, output is verbose
     job_kwargs : dict | None, default None
         A job kwargs dict. If None or empty dict, then the global one is used.
 
@@ -108,6 +111,7 @@ def detect_peaks(
         job_kwargs,
         job_name=job_name,
         squeeze_output = True,
+        verbose=verbose,
         **pipeline_kwargs
     )
     return outs
