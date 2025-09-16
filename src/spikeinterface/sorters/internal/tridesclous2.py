@@ -278,7 +278,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         matching_method = params["matching"].pop("method")
         gather_mode = params["matching"].pop("gather_mode", "memory")
         matching_params = params["matching"].get("matching_kwargs", {}).copy()
-        matching_params["templates"] = templates
         if matching_method in ("tdc-peeler",):
             matching_params["noise_levels"] = noise_levels
         gather_kwargs = {}
@@ -286,6 +285,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             gather_kwargs["folder"] = sorter_output_folder / "matching"
         spikes = find_spikes_from_templates(
             recording_for_peeler,
+            templates,
             method=matching_method,
             method_kwargs=matching_params,
             gather_mode=gather_mode,

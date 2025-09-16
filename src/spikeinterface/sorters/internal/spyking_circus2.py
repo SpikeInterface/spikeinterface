@@ -383,7 +383,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             gather_mode = params["matching"].pop("gather_mode", "memory")
             gather_kwargs = params["matching"].pop("gather_kwargs", {})
             matching_params = params["matching"].get("method_kwargs", {}).copy()
-            matching_params["templates"] = templates
 
             if matching_method is not None:
                 gather_kwargs = {}
@@ -391,6 +390,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     gather_kwargs["folder"] = sorter_output_folder / "matching"
                 spikes = find_spikes_from_templates(
                     recording_w,
+                    templates,
                     matching_method,
                     method_kwargs=matching_params,
                     gather_mode=gather_mode,
