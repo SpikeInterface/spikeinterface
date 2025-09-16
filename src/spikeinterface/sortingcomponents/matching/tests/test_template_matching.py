@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from pathlib import Path
 
-from spikeinterface import NumpySorting, create_sorting_analyzer, get_noise_levels, compute_sparsity
+from spikeinterface import NumpySorting, create_sorting_analyzer, compute_sparsity
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.sortingcomponents.matching.method_list import matching_methods
@@ -40,19 +40,8 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=0.5)
     templates = templates.to_sparse(sparsity)
 
-    noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
-
     # sorting_analyzer
-    method_kwargs_all = {
-        "templates": templates,
-    }
     method_kwargs = {}
-    if method in (
-        "naive",
-        "tdc-peeler",
-        "circus",
-    ):
-        method_kwargs["noise_levels"] = noise_levels
 
     if method == "kilosort-matching":
         from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms
@@ -78,7 +67,6 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     #     "nafter": waveform_extractor.nafter,
     # }
 
-    method_kwargs.update(method_kwargs_all)
     spikes, info = find_spikes_from_templates(
         recording, templates, method=method, method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
     )

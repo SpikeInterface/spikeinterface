@@ -5,15 +5,6 @@ import warnings
 
 from .method_list import *
 
-# from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs
-# from spikeinterface.core import get_chunk_with_margin
-
-from spikeinterface.core.job_tools import (
-    split_job_kwargs,
-    _shared_job_kwargs_doc,
-    fix_job_kwargs
-)
-
 from spikeinterface.core.node_pipeline import run_node_pipeline
 
 from ..tools import make_multi_method_doc
@@ -61,8 +52,6 @@ def find_spikes_from_templates(
     outputs:
         Optionaly returns for debug purpose.
     """
-    from spikeinterface.sortingcomponents.matching.method_list import matching_methods
-
 
     if len(old_kwargs) > 0:
         # This is the old behavior and will be remove in 0.105.0
@@ -96,14 +85,13 @@ def find_spikes_from_templates(
                 recording, return_in_uV=False, **random_chunk_kwargs, **job_kwargs
             )
 
-    node0 = method_class(recording, templates=templates, method=method, method_kwargs=method_kwargs)
+
+    node0 = method_class(recording, templates=templates, **method_kwargs)
     nodes = [node0]
 
-    gather_kwargs = gather_kwargs or {}
     if pipeline_kwargs is None:
         pipeline_kwargs = dict()
 
-    # gather_kwargs = gather_kwargs or {}
     names = ["spikes"]
 
     spikes = run_node_pipeline(
@@ -115,8 +103,6 @@ def find_spikes_from_templates(
         names=names,
         verbose=verbose,
         **pipeline_kwargs
-        # gather_mode=gather_mode,
-        # **gather_kwargs,
     )
 
     if extra_outputs:
