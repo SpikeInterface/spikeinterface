@@ -47,8 +47,10 @@ class NaiveMatching(BaseTemplateMatching):
         self.templates_array = self.templates.get_dense_templates()
 
         if noise_levels is None:
-            noise_levels = get_noise_levels(recording, **random_chunk_kwargs, return_in_uV=False)
-        self.abs_threholds = noise_levels * detect_threshold
+            self.noise_levels = get_noise_levels(recording, **random_chunk_kwargs, return_in_uV=False)
+        else:
+            self.noise_levels = noise_levels
+        self.abs_threholds = self.noise_levels * detect_threshold
         self.peak_sign = peak_sign
         channel_distance = get_channel_distances(recording)
         self.neighbours_mask = channel_distance <= radius_um
@@ -88,6 +90,6 @@ class NaiveMatching(BaseTemplateMatching):
             cluster_index = np.argmin(dist)
 
             spikes["cluster_index"][i] = cluster_index
-            spikes["amplitude"][i] = 0.0
+            spikes["amplitude"][i] = 1.0
 
         return spikes

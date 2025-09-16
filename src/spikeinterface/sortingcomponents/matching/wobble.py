@@ -6,15 +6,18 @@ from typing import List, Tuple, Optional
 
 
 from .base import BaseTemplateMatching, _base_matching_dtype
-from spikeinterface.core.template import Templates
+import importlib.util
 
-try:
-    import torch
-    import torch.nn.functional as F
-
-    HAVE_TORCH = True
-    from torch.nn.functional import conv1d
-except ImportError:
+torch_spec = importlib.util.find_spec("torch")
+if torch_spec is not None:
+    torch_nn_functional_spec = importlib.util.find_spec("torch.nn")
+    if torch_nn_functional_spec is not None:
+        HAVE_TORCH = True
+        import torch
+        from torch.nn.functional import conv1d
+    else:
+        HAVE_TORCH = False
+else:
     HAVE_TORCH = False
 
 
