@@ -46,12 +46,55 @@ class TridesclousPeeler(BaseTemplateMatching):
     but the template are moving for the template matching.
     """
 
+    name = "tdc-peeler"
+    need_noise_levels = True
+    params_doc = """
+        peak_sign : str
+            'neg', 'pos' or 'both'
+        exclude_sweep_ms : float
+            The exclusion window (in ms) around a detected peak where other peaks cannot be detected.
+        peak_shift_ms : float
+            The shift (in ms) to apply to the detected peak to get the spike time.
+        detect_threshold : float
+            The threshold (in noise std) for peak detection.
+        noise_levels : array
+            The noise levels for each channel.
+        motion_aware : bool
+            If True, the peeler will use the motion and drifting_templates to move the templates
+            during the template matching. If False, the templates are static.
+        motion : Motion
+            The motion object used for moving the templates.
+        drifting_templates : DriftingTemplates
+            The drifting templates object used for moving the templates. If None, it will be created from the static templates.
+        interpolation_time_bin_size_s : float
+            The time bin size (in s) for interpolating the motion.
+        motion_step_um : float
+            The step size (in um) for precomputing the drifting templates.
+        use_fine_detector : bool
+            If True, a second peak detector based on matched filtering is used after the first level with a fast local detector.
+        detection_radius_um : float
+            The radius (in um) for local peak detection.
+        cluster_radius_um : float
+            The radius (in um) for finding nearby templates for amplitude fitting.
+        amplitude_fitting_radius_um : float
+            The radius (in um) for finding nearby channels for amplitude fitting.
+        sample_shift : int
+            The number of samples to shift when finding the best alignment for a template.
+        ms_before : float
+            The number of milliseconds to include before the peak of the spike for template matching.
+        ms_after : float
+            The number of milliseconds to include after the peak of the spike for template matching.
+        max_peeler_loop : int
+            The maximum number of peeler loops.
+        amplitude_limits : tuple
+            The amplitude limits for accepting a detected spike.
+    """
+
     def __init__(
         self,
         recording,
-        templates=None,
+        templates,
         return_output=True,
-        parents=None,
         peak_sign="neg",
         exclude_sweep_ms=0.5,
         peak_shift_ms=0.2,
@@ -75,7 +118,7 @@ class TridesclousPeeler(BaseTemplateMatching):
         amplitude_limits=(0.7, 1.4),
     ):
 
-        BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output, parents=parents)
+        BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
 
         self.motion_aware = motion_aware
 

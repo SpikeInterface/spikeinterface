@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from .naive import NaiveMatching
 from .tdc_peeler import TridesclousPeeler
-from .circus import CircusOMPSVDPeeler
+from .circus import CircusOMPPeeler
 from .wobble import WobbleMatch
 
 matching_methods = {
     "naive": NaiveMatching,
     "tdc-peeler": TridesclousPeeler,
-    "circus-omp-svd": CircusOMPSVDPeeler,
+    "circus-omp": CircusOMPPeeler,
     "wobble": WobbleMatch,
 }
 

@@ -11,12 +11,29 @@ from .base import BaseTemplateMatching, _base_matching_dtype
 
 
 class NaiveMatching(BaseTemplateMatching):
+
+    name = "naive"
+    need_noise_levels = True
+    params_doc = """
+    peak_sign : 'neg' | 'pos' | 'both'
+        The peak sign to use for detection
+    exclude_sweep_ms : float
+        The exclusion window (in ms) around a detected peak to exclude other peaks on neighboring channels
+    detect_threshold : float
+        The threshold for peak detection in term of k x MAD
+    noise_levels : None | array
+        If None the noise levels are estimated using random chunks of the recording. If array it should be an array of size (num_channels,) with the noise level of each channel
+    radius_um : float
+        The radius to define the neighborhood between channels in micrometers
+    random_chunk_kwargs : dict
+        The kwargs for get_noise_levels if noise_levels is None
+    """
+
     def __init__(
         self,
         recording,
+        templates,
         return_output=True,
-        parents=None,
-        templates=None,
         peak_sign="neg",
         exclude_sweep_ms=0.1,
         detect_threshold=5,
@@ -25,13 +42,15 @@ class NaiveMatching(BaseTemplateMatching):
         random_chunk_kwargs={},
     ):
 
-        BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
+        BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
 
         self.templates_array = self.templates.get_dense_templates()
 
         if noise_levels is None:
-            noise_levels = get_noise_levels(recording, **random_chunk_kwargs, return_in_uV=False)
-        self.abs_threholds = noise_levels * detect_threshold
+            self.noise_levels = get_noise_levels(recording, **random_chunk_kwargs, return_in_uV=False)
+        else:
+            self.noise_levels = noise_levels
+        self.abs_threholds = self.noise_levels * detect_threshold
         self.peak_sign = peak_sign
         channel_distance = get_channel_distances(recording)
         self.neighbours_mask = channel_distance <= radius_um
@@ -71,6 +90,6 @@ class NaiveMatching(BaseTemplateMatching):
             cluster_index = np.argmin(dist)
 
             spikes["cluster_index"][i] = cluster_index
-            spikes["amplitude"][i] = 0.0
+            spikes["amplitude"][i] = 1.0
 
         return spikes

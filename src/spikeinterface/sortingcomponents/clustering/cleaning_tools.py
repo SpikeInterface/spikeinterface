@@ -608,6 +608,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
 
             spikes, more_outputs = find_spikes_from_templates(
                 sub_recording,
+                templates,
                 method="circus-omp-svd",
                 method_kwargs=local_params,
                 extra_outputs=True,
