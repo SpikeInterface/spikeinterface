@@ -356,19 +356,32 @@ class WobbleMatch(BaseTemplateMatching):
     #     "templates": None,
     # }
 
+    name = "wobble"
+    need_noise_levels = True
+    params_doc = """
+    parameters : dict
+        Parameters for the WobbleMatch algorithm. See WobbleParameters dataclass for more details.
+    engine : string in ["numpy", "torch", "auto"]. Default "auto"
+            The engine to use for the convolutions
+    torch_device : string in ["cpu", "cuda", None]. Default "cpu"
+            Controls torch device if the torch engine is selected
+    shared_memory : bool, default True
+            If True, the overlaps are stored in shared memory, which is more efficient when
+            using numerous cores
+    """
+
     def __init__(
         self,
         recording,
+        templates,
         return_output=True,
-        parents=None,
-        templates=None,
         parameters={},
         engine="numpy",
         torch_device="cpu",
         shared_memory=True,
     ):
 
-        BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
+        BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
 
         templates_array = templates.get_dense_templates().astype(np.float32)
 

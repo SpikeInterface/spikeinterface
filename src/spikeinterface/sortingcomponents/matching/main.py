@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import warnings
 
 from .method_list import *
 
@@ -45,16 +46,13 @@ def find_spikes_from_templates(
         If True then a dict is also returned is also returned
     pipeline_kwargs : dict
         Dict transmited to run_node_pipelines to handle fine details
-        like : gather_mode/folder/skip_after_n_peaks/recording_slices
-
-    # gather_mode : "memory" | "npy", default: "memory"
-    #     If "memory" then the output is gathered in memory, if "npy" then the output is gathered on disk
-    # gather_kwargs : dict, optional
-    #     The kwargs for the gather method
+        like : gather_mode/folder/skip_after_n_peaks/recording_slices   
     verbose : Bool, default: False
         If True, output is verbose
     job_kwargs : dict
         Parameters for ChunkRecordingExecutor
+
+    {method_doc}
 
     Returns
     -------
@@ -82,9 +80,6 @@ def find_spikes_from_templates(
 
     assert method in matching_methods, f"The 'method' {method} is not valid. Use a method from {matching_methods}"
 
-    method_kwargs, job_kwargs = split_job_kwargs(kwargs)
-    job_kwargs = fix_job_kwargs(job_kwargs)
-
     method_class = matching_methods[method]
 
     #if method_class.full_convolution:
@@ -101,7 +96,7 @@ def find_spikes_from_templates(
                 recording, return_in_uV=False, **random_chunk_kwargs, **job_kwargs
             )
 
-    node0 = method_class(recording, templates=templates, **method_kwargs)
+    node0 = method_class(recording, templates=templates, method=method, method_kwargs=method_kwargs)
     nodes = [node0]
 
     gather_kwargs = gather_kwargs or {}
@@ -132,4 +127,4 @@ def find_spikes_from_templates(
 
 
 method_doc = make_multi_method_doc(list(matching_methods.values()))
-find_spikes_from_templates.__doc__ = find_spikes_from_templates.__doc__.format(method_doc=method_doc, job_doc=_shared_job_kwargs_doc)
+find_spikes_from_templates.__doc__ = find_spikes_from_templates.__doc__.format(method_doc=method_doc)

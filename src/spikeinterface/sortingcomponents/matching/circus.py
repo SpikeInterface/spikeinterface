@@ -104,7 +104,7 @@ def compute_overlaps(templates, num_samples, num_channels, sparsities):
     return new_overlaps
 
 
-class CircusOMPSVDPeeler(BaseTemplateMatching):
+class CircusOMPPeeler(BaseTemplateMatching):
     """
     Orthogonal Matching Pursuit inspired from Spyking Circus sorter
 
@@ -118,30 +118,35 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
 
     IMPORTANT NOTE: small chunks are more efficient for such Peeler,
     consider using 100ms chunk
-
-    Parameters
-    ----------
-    amplitude : tuple
-        (Minimal, Maximal) amplitudes allowed for every template
-    max_failures : int
-        Stopping criteria of the OMP algorithm, as number of retry while updating amplitudes
-    sparse_kwargs : dict
-        Parameters to extract a sparsity mask from the waveform_extractor, if not
-        already sparse.
-    rank : int, default: 5
-        Number of components used internally by the SVD
-    vicinity : int
-        Size of the area surrounding a spike to perform modification (expressed in terms
-        of template temporal width)
-    engine : string in ["numpy", "torch", "auto"]. Default "auto"
-        The engine to use for the convolutions
-    torch_device : string in ["cpu", "cuda", None]. Default "cpu"
-        Controls torch device if the torch engine is selected
-    shared_memory : bool, default True
-        If True, the overlaps are stored in shared memory, which is more efficient when
-        using numerous cores
-    -----
     """
+
+    name = "circus-omp"
+    need_noise_levels = False
+    params_doc = """
+        amplitude : tuple
+            (Minimal, Maximal) amplitudes allowed for every template
+        max_failures : int
+            Stopping criteria of the OMP algorithm, as number of retry while updating amplitudes
+        rank : int, default: 5
+            Number of components used internally by the SVD
+        vicinity : int
+            Size of the area surrounding a spike to perform modification (expressed in terms
+            of template temporal width)
+        ignore_inds : list
+            List of template indices to ignore during the matching
+        vicinity: int
+            Size of the area surrounding a spike to perform modification (expressed in terms
+            of template temporal width)
+        precomputed : dict | None
+            If not None, a dict with precomputed values for the templates
+        engine : string in ["numpy", "torch", "auto"]. Default "auto"
+            The engine to use for the convolutions
+        torch_device : string in ["cpu", "cuda", None]. Default "cpu"
+            Controls torch device if the torch engine is selected
+        shared_memory : bool, default True
+            If True, the overlaps are stored in shared memory, which is more efficient when
+            using numerous cores
+        """
 
     _more_output_keys = [
         "norms",
@@ -157,9 +162,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
     def __init__(
         self,
         recording,
+        templates,
         return_output=True,
-        parents=None,
-        templates=None,
         amplitudes=[0.6, np.inf],
         stop_criteria="max_failures",
         max_failures=5,
@@ -174,7 +178,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         torch_device="cpu",
     ):
 
-        BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
+        BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
 
         self.num_channels = recording.get_num_channels()
         self.num_samples = templates.num_samples
