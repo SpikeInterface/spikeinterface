@@ -84,10 +84,9 @@ def find_spikes_from_templates(
                 recording, return_in_uV=False, **random_chunk_kwargs, **job_kwargs
             )
 
-    node0 = method_class(recording, templates=templates, method=method, method_kwargs=method_kwargs)
+    node0 = method_class(recording, templates=templates, **method_kwargs)
     nodes = [node0]
 
-    gather_kwargs = gather_kwargs or {}
     if pipeline_kwargs is None:
         pipeline_kwargs = dict()
 
