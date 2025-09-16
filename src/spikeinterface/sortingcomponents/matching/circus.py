@@ -71,7 +71,6 @@ def compress_templates(
 
 
 def compute_overlaps(templates, num_samples, num_channels, sparsities):
-    import scipy.spatial
     import scipy
 
     num_templates = len(templates)

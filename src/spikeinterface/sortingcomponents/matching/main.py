@@ -4,16 +4,6 @@ import numpy as np
 import warnings
 
 from .method_list import *
-
-# from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs
-# from spikeinterface.core import get_chunk_with_margin
-
-from spikeinterface.core.job_tools import (
-    split_job_kwargs,
-    _shared_job_kwargs_doc,
-    fix_job_kwargs
-)
-
 from spikeinterface.core.node_pipeline import run_node_pipeline
 
 from ..tools import make_multi_method_doc
@@ -61,8 +51,6 @@ def find_spikes_from_templates(
     outputs:
         Optionaly returns for debug purpose.
     """
-    from spikeinterface.sortingcomponents.matching.method_list import matching_methods
-
 
     if len(old_kwargs) > 0:
         # This is the old behavior and will be remove in 0.105.0
