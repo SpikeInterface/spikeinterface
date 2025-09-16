@@ -19,15 +19,15 @@ from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_chann
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
 
-from spikeinterface.sortingcomponents.clustering.split import split_clusters
+from spikeinterface.sortingcomponents.clustering.splitting_tools import split_clusters
 
 # from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
-from spikeinterface.sortingcomponents.clustering.merge import (
+from spikeinterface.sortingcomponents.clustering.merging_tools import (
     merge_peak_labels_from_templates,
     merge_peak_labels_from_features,
 )
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
-from spikeinterface.sortingcomponents.clustering.peak_svd import extract_peaks_svd
+from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
 
 
 class TdcClustering:

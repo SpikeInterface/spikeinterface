@@ -100,6 +100,10 @@ def find_spikes_from_templates(
     nodes = [node0]
 
     gather_kwargs = gather_kwargs or {}
+    if pipeline_kwargs is None:
+        pipeline_kwargs = dict()
+
+    # gather_kwargs = gather_kwargs or {}
     names = ["spikes"]
 
     spikes = run_node_pipeline(

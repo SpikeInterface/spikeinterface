@@ -1,0 +1,140 @@
+from __future__ import annotations
+
+import warnings
+
+import numpy as np
+from .method_list import localization_methods
+from ..tools import make_multi_method_doc
+
+from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs, _shared_job_kwargs_doc
+
+
+from spikeinterface.core.node_pipeline import (
+    run_node_pipeline,
+    PeakRetriever,
+    SpikeRetriever,
+    ExtractDenseWaveforms,
+)
+
+
+def localize_peaks(
+    recording,
+    peaks,
+    method=None,
+    method_kwargs=None,
+    ms_before=0.5,
+    ms_after=0.5,
+    pipeline_kwargs=None,
+    # gather_mode="memory",
+    # gather_kwargs=dict(),
+    # folder=None,
+    # names=None,
+    job_kwargs=None,
+    **old_kwargs,
+) -> np.ndarray:
+    """Localize peak (spike) in 2D or 3D depending the method.
+
+    When a probe is 2D then:
+       * X is axis 0 of the probe
+       * Y is axis 1 of the probe
+       * Z is orthogonal to the plane of the probe
+
+    Parameters
+    ----------
+    recording : RecordingExtractor
+        The recording extractor object.
+    peaks : array
+        Peaks array, as returned by detect_peaks() in "compact_numpy" way.
+    method : str
+        The localization method to use. See `localization_methods` for available methods.
+    method_kwargs : dict
+        Params specific of the method.
+    ms_before : float
+        The number of milliseconds to include before the peak of the spike
+    ms_after : float
+        The number of milliseconds to include after the peak of the spike
+    pipeline_kwargs : dict
+        Dict transmited to run_node_pipelines to handle fine details
+        like : gather_mode/folder/skip_after_n_peaks/recording_slices
+    job_kwargs : dict | None, default None
+        A job kwargs dict. If None or empty dict, then the global one is used.
+
+    {method_doc}
+
+    Returns
+    -------
+    peak_locations: ndarray
+        Array with estimated location for each spike.
+        The dtype depends on the method. ("x", "y") or ("x", "y", "z", "alpha").
+    """
+    if len(old_kwargs) > 0:
+        # This is the old behavior and will be remove in 0.105.0
+        warnings.warn("The signature of localize_peaks() has changed, now method_kwargs and job_kwargs are dinstinct params.")
+        assert job_kwargs is None
+        assert method_kwargs is None
+        method_kwargs, job_kwargs = split_job_kwargs(old_kwargs)
+    else:
+        if method_kwargs is None:
+            method_kwargs = dict()
+
+    if "method" in method_kwargs:
+        # for flexibility the caller can put method inside method_kwargs
+        assert  method is None
+        method_kwargs = method_kwargs.copy()
+        method = method_kwargs.pop("method")
+
+    if method is None:
+        warnings.warn("localize_peaks() method should be explicitly given, nicely 'center_of_mass' is used")
+        method = "center_of_mass"
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
+
+    assert (
+        method in localization_methods
+    ), f"Method {method} is not supported. Choose from {localization_methods.keys()}"
+
+    peak_retriever = PeakRetriever(recording, peaks)
+
+    extract_dense_waveforms = ExtractDenseWaveforms(
+        recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
+    )
+
+    method_class = localization_methods[method]
+
+    if method == "grid_convolution" and "prototype" not in method_kwargs:
+        assert isinstance(peak_retriever, (PeakRetriever, SpikeRetriever))
+        # extract prototypes silently
+
+        from ..tools import get_prototype_and_waveforms_from_peaks
+
+        job_kwargs["progress_bar"] = False
+        method_kwargs["prototype"], _, _ = get_prototype_and_waveforms_from_peaks(
+            recording, peaks=peak_retriever.peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+        )
+
+    localization_nodes = method_class(recording, parents=[peak_retriever, extract_dense_waveforms], **method_kwargs)
+
+    pipeline_nodes = [peak_retriever, extract_dense_waveforms, localization_nodes]
+
+    if pipeline_kwargs is None:
+        pipeline_kwargs = dict()
+
+    job_name = f"localize peaks ({method})"
+    peak_locations = run_node_pipeline(
+        recording,
+        pipeline_nodes,
+        job_kwargs,
+        job_name=job_name,
+        squeeze_output=True,
+        **pipeline_kwargs
+        # gather_mode=gather_mode,
+        # names=names,
+        # folder=folder,
+        # **gather_kwargs,
+    )
+
+    return peak_locations
+
+
+method_doc = make_multi_method_doc(list(localization_methods.values()))
+localize_peaks.__doc__ = localize_peaks.__doc__.format(method_doc=method_doc, job_doc=_shared_job_kwargs_doc)

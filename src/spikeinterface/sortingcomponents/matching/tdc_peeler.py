@@ -9,7 +9,12 @@ from spikeinterface.core import (
     get_template_extremum_channel,
 )
 
-from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive, DetectPeakMatchedFiltering
+from spikeinterface.sortingcomponents.peak_detection.method_list import (
+    LocallyExclusivePeakDetector,
+    MatchedFilteringPeakDetector,
+)
+
+
 from .base import BaseTemplateMatching, _base_matching_dtype
 
 from spikeinterface.generation.drift_tools import DriftingTemplates
@@ -262,7 +267,7 @@ class TridesclousPeeler(BaseTemplateMatching):
         self.max_peeler_loop = max_peeler_loop
         self.amplitude_limits = amplitude_limits
 
-        self.fast_spike_detector = DetectPeakLocallyExclusive(
+        self.fast_spike_detector = LocallyExclusivePeakDetector(
             recording=recording,
             peak_sign=peak_sign,
             detect_threshold=detect_threshold,
@@ -287,7 +292,7 @@ class TridesclousPeeler(BaseTemplateMatching):
 
         self.use_fine_detector = use_fine_detector
         if self.use_fine_detector:
-            self.fine_spike_detector = DetectPeakMatchedFiltering(
+            self.fine_spike_detector = MatchedFilteringPeakDetector(
                 recording=recording,
                 prototype=prototype,
                 ms_before=templates.nbefore / sr * 1000.0,
@@ -300,7 +305,7 @@ class TridesclousPeeler(BaseTemplateMatching):
                     sigma_3d=2.5,
                     mode="exponential_3d",
                 ),
-                noise_levels=None,
+                # noise_levels=None,
             )
 
         self.detector_margin0 = self.fast_spike_detector.get_trace_margin()
@@ -453,7 +458,7 @@ class TridesclousPeeler(BaseTemplateMatching):
         # TODO change the threhold dynaically depending the level
         # peak_traces = traces[self.detector_margin : -self.detector_margin, :]
 
-        # peak_sample_ind, peak_chan_ind = DetectPeakLocallyExclusive.detect_peaks(
+        # peak_sample_ind, peak_chan_ind = LocallyExclusivePeakDetector.detect_peaks(
         #     peak_traces, self.peak_sign, self.abs_thresholds, self.peak_shift, self.neighbours_mask
         # )
 

@@ -182,7 +182,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # detection
         detection_params = params["detection"].copy()
         detection_params["noise_levels"] = noise_levels
-        all_peaks = detect_peaks(recording, method="locally_exclusive", **detection_params, **job_kwargs)
+        all_peaks = detect_peaks(
+            recording, method="locally_exclusive", method_kwargs=detection_params, job_kwargs=job_kwargs
+        )
 
         if verbose:
             print(f"detect_peaks(): {len(all_peaks)} peaks found")
@@ -280,17 +282,17 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         matching_params = params["matching"].get("matching_kwargs", {}).copy()
         if matching_method in ("tdc-peeler",):
             matching_params["noise_levels"] = noise_levels
-        gather_kwargs = {}
+        
+        pipeline_kwargs = dict(gather_mode=gather_mode)
         if gather_mode == "npy":
-            gather_kwargs["folder"] = sorter_output_folder / "matching"
+            pipeline_kwargs["folder"] = sorter_output_folder / "matching"
         spikes = find_spikes_from_templates(
             recording_for_peeler,
             templates,
             method=matching_method,
             method_kwargs=matching_params,
-            gather_mode=gather_mode,
-            gather_kwargs=gather_kwargs,
-            **job_kwargs,
+            pipeline_kwargs=pipeline_kwargs,
+            job_kwargs=job_kwargs,
         )
 
         final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)

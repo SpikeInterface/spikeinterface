@@ -155,32 +155,50 @@ def get_prototype_and_waveforms_from_recording(
     peaks : numpy.array
         The selected peaks used to extract waveforms.
     """
-    from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+    # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+    from spikeinterface.core.node_pipeline import run_node_pipeline
+    from spikeinterface.sortingcomponents.peak_detection.locally_exclusive import LocallyExclusivePeakDetector
     from spikeinterface.core.node_pipeline import ExtractSparseWaveforms
 
     detection_kwargs, job_kwargs = split_job_kwargs(all_kwargs)
 
-    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-    node = ExtractSparseWaveforms(
+    node0 = LocallyExclusivePeakDetector(
         recording,
-        parents=None,
+        return_output=True,
+        **detection_kwargs
+    )
+
+    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+    node1 = ExtractSparseWaveforms(
+        recording,
+        parents=[node0],
         return_output=True,
         ms_before=ms_before,
         ms_after=ms_after,
         radius_um=0,
     )
 
-    pipeline_nodes = [node]
+    nodes = [node0, node1]
 
     recording_slices = get_shuffled_recording_slices(recording, seed=seed, **job_kwargs)
-    res = detect_peaks(
+    # res = detect_peaks(
+    #     recording,
+    #     pipeline_nodes=pipeline_nodes,
+    #     skip_after_n_peaks=n_peaks,
+    #     recording_slices=recording_slices,
+    #     method="locally_exclusive",
+    #     method_kwargs=detection_kwargs,
+    #     job_kwargs=job_kwargs,
+    # )
+    res = run_node_pipeline(
         recording,
-        pipeline_nodes=pipeline_nodes,
+        nodes,
+        job_kwargs,
+        job_name="get protoype waveforms",
         skip_after_n_peaks=n_peaks,
         recording_slices=recording_slices,
-        **detection_kwargs,
-        **job_kwargs,
     )
+
     rng = np.random.RandomState(seed)
     indices = rng.permutation(np.arange(len(res[0])))
 

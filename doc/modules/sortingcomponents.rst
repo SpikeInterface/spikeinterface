@@ -56,8 +56,7 @@ follows:
         exclude_sweep_ms=0.2,
         noise_levels=None,
         random_chunk_kwargs={},
-        gather_mode='memory',
-        **job_kwargs,
+        job_kwargs=job_kwargs,
     )
 
 The output :code:`peaks` is a NumPy array with a length of the number of peaks found and the following dtype:
@@ -99,10 +98,12 @@ follows:
         recording=recording,
         peaks=peaks,
         method='center_of_mass',
-        radius_um=70.,
-        ms_before=0.3,
-        ms_after=0.6,
-        **job_kwargs
+        method_kwargs=dict(
+          radius_um=70.,
+          ms_before=0.3,
+          ms_after=0.6,
+        ),
+        job_kwargs=job_kwargs,
     )
 
 

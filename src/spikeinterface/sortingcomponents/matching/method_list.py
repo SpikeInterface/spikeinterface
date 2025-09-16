@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .naive import NaiveMatching
-from .tdc import TridesclousPeeler
+from .tdc_peeler import TridesclousPeeler
 from .circus import CircusOMPPeeler
 from .wobble import WobbleMatch
 
@@ -11,7 +11,6 @@ matching_methods = {
     "circus-omp": CircusOMPPeeler,
     "wobble": WobbleMatch,
 }
-
 
 try:
     # Kilosort licence (GPL 3) is forcing us to make and use an external package

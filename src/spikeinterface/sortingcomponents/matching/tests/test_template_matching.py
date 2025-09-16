@@ -59,7 +59,7 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
         from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-        peaks = detect_peaks(sorting_analyzer.recording, method="locally_exclusive", skip_after_n_peaks=5000)
+        peaks = detect_peaks(sorting_analyzer.recording, method="locally_exclusive", pipeline_kwargs=dict(skip_after_n_peaks=5000))
         few_wfs = extract_waveform_at_max_channel(sorting_analyzer.recording, peaks, ms_before=1, ms_after=2)
 
         wfs = few_wfs[:, :, 0]
@@ -121,9 +121,8 @@ if __name__ == "__main__":
     sorting_analyzer = get_sorting_analyzer()
     # method = "naive"
     # method = "tdc-peeler"
-    # method =  "circus"
     # method = "circus-omp-svd"
-    # method = "wobble"
-    method = "kilosort-matching"
+    method = "wobble"
+    # method = "kilosort-matching"
 
     test_find_spikes_from_templates(method, sorting_analyzer)
