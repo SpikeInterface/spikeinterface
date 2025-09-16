@@ -25,10 +25,7 @@ def localize_peaks(
     ms_before=0.5,
     ms_after=0.5,
     pipeline_kwargs=None,
-    # gather_mode="memory",
-    # gather_kwargs=dict(),
-    # folder=None,
-    # names=None,
+    verbose=False,
     job_kwargs=None,
     **old_kwargs,
 ) -> np.ndarray:
@@ -56,6 +53,8 @@ def localize_peaks(
     pipeline_kwargs : dict
         Dict transmited to run_node_pipelines to handle fine details
         like : gather_mode/folder/skip_after_n_peaks/recording_slices
+    verbose : Bool, default: False
+        If True, output is verbose
     job_kwargs : dict | None, default None
         A job kwargs dict. If None or empty dict, then the global one is used.
 
@@ -126,15 +125,12 @@ def localize_peaks(
         job_kwargs,
         job_name=job_name,
         squeeze_output=True,
+        verbose=verbose,
         **pipeline_kwargs
-        # gather_mode=gather_mode,
-        # names=names,
-        # folder=folder,
-        # **gather_kwargs,
     )
 
     return peak_locations
 
 
 method_doc = make_multi_method_doc(list(localization_methods.values()))
-localize_peaks.__doc__ = localize_peaks.__doc__.format(method_doc=method_doc, job_doc=_shared_job_kwargs_doc)
+localize_peaks.__doc__ = localize_peaks.__doc__.format(method_doc=method_doc)

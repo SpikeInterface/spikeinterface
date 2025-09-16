@@ -27,7 +27,6 @@ class LocalizeGridConvolution(LocalizeBase):
     See spikeinterface.postprocessing.unit_locations.
     """
 
-    need_waveforms = True
     name = "grid_convolution"
     params_doc = """
     radius_um: float, default: 40.0
