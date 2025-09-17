@@ -150,7 +150,7 @@ class TridesclousPeeler(BaseTemplateMatching):
                 self.sparse_templates_array_moved = templates_array_moved
 
             self.sparse_templates_array_static = None
-            
+
             self.dtype = self.sparse_templates_array_moved.dtype
 
             # interpolation bins edges
@@ -378,7 +378,7 @@ class TridesclousPeeler(BaseTemplateMatching):
                 )
                 if spikes.size > 0:
                     spikes_in_time_bin.append(spikes)
-                
+
                 # # DEBUG
                 # if spikes.size != np.unique(spikes).size:
                 #     print('In loop double spikes', spikes.size, np.unique(spikes).size)
@@ -387,7 +387,6 @@ class TridesclousPeeler(BaseTemplateMatching):
                 #     spikes2 = spikes2[order]
                 #     print(spikes2)
                 #     print()
-
 
                 level += 1
 
@@ -428,7 +427,6 @@ class TridesclousPeeler(BaseTemplateMatching):
         #     keep[inds+1] = 1
         #     print(all_spikes2[keep])
         #     # print(all_spikes2)
-
 
         #     import time
         #     time.sleep(0.5)
