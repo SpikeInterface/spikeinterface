@@ -371,6 +371,7 @@ def set_properties_after_merging(
         new_values = np.empty(shape=shape, dtype=parent_values.dtype)
         new_values[keep_post_inds] = parent_values[keep_pre_inds]
 
+        skip_property = False
         for new_id, merge_group in zip(new_unit_ids, merge_unit_groups):
             merged_indices = sorting_pre_merge.ids_to_indices(merge_group)
             merge_values = parent_values[merged_indices]
@@ -383,9 +384,12 @@ def set_properties_after_merging(
                 if parent_values.dtype.kind not in default_missing_values:
                     # if the property doesn't have a default missing value and it is not the same
                     # for all merged units, we skip it
-                    continue
-                new_values[new_index] = default_missing_values[parent_values.dtype.kind]
-        sorting_post_merge.set_property(key, new_values)
+                    skip_property = True
+                    break
+                else:
+                    new_values[new_index] = default_missing_values[parent_values.dtype.kind]
+        if not skip_property:
+            sorting_post_merge.set_property(key, new_values)
 
     # set is_merged property
     is_merged = np.ones(len(sorting_post_merge.unit_ids), dtype=bool)
