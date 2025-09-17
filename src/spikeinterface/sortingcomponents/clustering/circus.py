@@ -31,7 +31,7 @@ class CircusClustering:
     """
 
     _default_params = {
-        "clusterer": "hdbscan",  # 'isosplit6', 'hdbscan', 'isocut5'
+        "clusterer": "hdbscan",  # 'isosplit6', 'hdbscan', 'isosplit'
         "clusterer_kwargs": {
             "min_cluster_size": 20,
             "cluster_selection_epsilon": 0.5,
@@ -59,7 +59,7 @@ class CircusClustering:
         "templates_from_svd": True,
         "noise_levels": None,
         "tmp_folder": None,
-        "do_merge": True,
+        "do_merge_with_templates": True,
         "merge_kwargs": {
             "similarity_metric": "l1",
             "num_shifts": 3,
@@ -77,8 +77,8 @@ class CircusClustering:
         assert clusterer in [
             "isosplit6",
             "hdbscan",
-            "isocut5",
-        ], "Circus clustering only supports isosplit6, isocut5 or hdbscan"
+            "isosplit",
+        ], "Circus clustering only supports isosplit6, isosplit or hdbscan"
         if clusterer in ["isosplit6", "hdbscan"]:
             have_dep = importlib.util.find_spec(clusterer) is not None
             if not have_dep:
@@ -216,7 +216,7 @@ class CircusClustering:
                 operator="median",
             )
 
-        if params["do_merge"]:
+        if params["do_merge_with_templates"]:
             peak_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = merge_peak_labels_from_templates(
                 peaks,
                 peak_labels,

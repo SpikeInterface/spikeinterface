@@ -408,11 +408,15 @@ class TracesWidget(BaseWidget):
 
         if not self.rec0.has_time_vector(segment_index=data_plot["segment_index"]):
             times = None
+            t_starts = [
+                rec0.get_start_time(segment_index=segment_index) for segment_index in range(rec0.get_num_segments())
+            ]
         else:
             times = [
                 np.array(self.rec0.get_times(segment_index=segment_index))
                 for segment_index in range(self.rec0.get_num_segments())
             ]
+            t_starts = None
 
         # some widgets
         self.time_slider = TimeSlider(
@@ -420,6 +424,7 @@ class TracesWidget(BaseWidget):
             sampling_frequency=rec0.sampling_frequency,
             time_range=data_plot["time_range"],
             times=times,
+            t_starts=t_starts,
         )
         # handle times
         if data_plot["events"] is not None:
@@ -545,7 +550,9 @@ class TracesWidget(BaseWidget):
 
         if not self.rec0.has_time_vector(segment_index=segment_index):
             times = None
-            time_range = np.array([start_frame, end_frame]) / self.rec0.sampling_frequency
+            time_range = np.array([start_frame, end_frame]) / self.rec0.sampling_frequency + self.rec0.get_start_time(
+                segment_index=segment_index
+            )
         else:
             times = self.rec0.get_times(segment_index=segment_index)
             time_range = np.array([times[start_frame], times[end_frame]])

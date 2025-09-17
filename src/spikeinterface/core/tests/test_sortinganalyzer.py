@@ -606,6 +606,16 @@ def test_extension():
         register_result_extension(DummyAnalyzerExtension2)
 
 
+def test_excess_spikes(dataset):
+    """
+    If there are spikes that occur after the recording end time,
+    `create_sorting_analyzer` should cut them off and warn the user.
+    """
+    recording, sorting = dataset
+    with pytest.warns(UserWarning):
+        create_sorting_analyzer(sorting=sorting, recording=recording.time_slice(0, 1))
+
+
 def test_extensions_sorting():
 
     # nothing happens if all parents are on the left of the children
@@ -618,14 +628,14 @@ def test_extensions_sorting():
     assert list(sorted_extensions_2.keys()) == list(extensions_in_order.keys())
 
     # doing two movements
-    extensions_qm_left = {"quality_metrics": {}, "waveforms": {}, "templates": {}}
-    extensions_qm_correct = {"waveforms": {}, "templates": {}, "quality_metrics": {}}
+    extensions_qm_left = {"template_metrics": {}, "waveforms": {}, "templates": {}}
+    extensions_qm_correct = {"waveforms": {}, "templates": {}, "template_metrics": {}}
     sorted_extensions_3 = _sort_extensions_by_dependency(extensions_qm_left)
     assert list(sorted_extensions_3.keys()) == list(extensions_qm_correct.keys())
 
-    # should move parent (waveforms) left of child (quality_metrics), and move grandparent (random_spikes) left of parent
-    extensions_qm_left = {"quality_metrics": {}, "waveforms": {}, "templates": {}, "random_spikes": {}}
-    extensions_qm_correct = {"random_spikes": {}, "waveforms": {}, "templates": {}, "quality_metrics": {}}
+    # should move parent (waveforms) left of child (template_metrics), and move grandparent (random_spikes) left of parent
+    extensions_qm_left = {"template_metrics": {}, "waveforms": {}, "templates": {}, "random_spikes": {}}
+    extensions_qm_correct = {"random_spikes": {}, "waveforms": {}, "templates": {}, "template_metrics": {}}
     sorted_extensions_4 = _sort_extensions_by_dependency(extensions_qm_left)
     assert list(sorted_extensions_4.keys()) == list(extensions_qm_correct.keys())
 

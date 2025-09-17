@@ -49,8 +49,8 @@ for folder in folders:
 # -- Project information -----------------------------------------------------
 
 project = 'SpikeInterface'
-copyright = '2022, Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
-author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
+copyright = '2022-2025, SpikeInterface Team'
+author = 'SpikeInterface Team'
 
 
 # -- General configuration ---------------------------------------------------
