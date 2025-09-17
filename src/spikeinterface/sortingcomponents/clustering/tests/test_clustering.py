@@ -69,10 +69,6 @@ clustering_method_keys = list(clustering_methods.keys())
 @pytest.mark.parametrize("clustering_method", clustering_method_keys)
 def test_find_clusters_from_peaks(clustering_method, recording, peaks, peak_locations):
     method_kwargs = {}
-    if clustering_method in ("position", "position_and_pca"):
-        method_kwargs["peak_locations"] = peak_locations
-    if clustering_method in ("sliding_hdbscan", "position_and_pca"):
-        method_kwargs["waveform_mode"] = "shared_memory"
 
     t0 = time.perf_counter()
     labels, peak_labels = find_clusters_from_peaks(
@@ -126,8 +122,8 @@ if __name__ == "__main__":
     peaks = run_peaks(recording, job_kwargs)
     peak_locations = run_peak_locations(recording, peaks, job_kwargs)
     # method = "position_and_pca"
-    # method = "circus-clustering"
-    method = "tdc-clustering"
+    method = "iterative-isosplit"
+    #method = "iterative-hdbscan"
     # method = "random_projections"
     # method = "graph-clustering"
 

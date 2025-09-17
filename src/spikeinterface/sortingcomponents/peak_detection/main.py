@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import warnings
 
-import copy
-import numpy as np
 from .method_list import detect_peak_methods
 
-from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
 
 from ..tools import make_multi_method_doc
 

@@ -16,11 +16,14 @@ class GraphClustering:
     Then a classic algorithm like louvain or hdbscan is used.
     """
 
+    name = "graph-clustering"
+    need_noise_levels = False
     _default_params = {
-        "radius_um": 100.0,
-        "ms_before": 1.0,
-        "ms_after": 2.0,
-        "motion": None,
+        "peaks_svd": {"n_components": 5,
+                      "ms_before": 0.5,
+                      "ms_after": 1.5,
+                      "radius_um": 100.0,
+                      "motion": None},
         "seed": None,
         "graph_kwargs": dict(
             bin_mode="channels",
@@ -38,34 +41,48 @@ class GraphClustering:
             apply_local_svd=True,
             enforce_diagonal_to_zero=True,
         ),
-        "clustering_method": "hdbscan",
-        "clustering_kwargs": dict(
-            min_samples=1,
-            # n_jobs=-1,
+        "clusterer": dict(
+            method="hdbscan",
             core_dist_n_jobs=-1,
-            min_cluster_size=50,
-            cluster_selection_method="leaf",
-            # cluster_selection_method='eom',
+            min_cluster_size=20,
+            cluster_selection_method='eom',
             allow_single_cluster=True,
-            cluster_selection_epsilon=0.1,
         ),
-        "peak_locations": None,
-        "extract_peaks_svd_kwargs": dict(n_components=5),
+        "debug_folder" : None,
+        "verbose": True
     }
+
+    params_doc="""
+        peaks_svd : params for peak SVD features extraction. 
+        See spikeinterface.sortingcomponents.waveforms.peak_svd.extract_peaks_svd
+                        for more details.,
+        seed : Random seed for reproducibility.,
+        merge_from_templates : params for the merging step based on templates. See
+                 spikeinterface.sortingcomponents.clustering.merging_tools.merge_peak_labels_from_templates
+                 for more details.,
+        merge_from_features : params for the merging step based on features. See
+                    spikeinterface.sortingcomponents.clustering.merging_tools.merge_peak_labels_from_features
+                    for more details.,
+        debug_folder : If not None, a folder path where to save debug information.,
+        verbose : If True, print information during the process.
+    """
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
 
-        radius_um = params["radius_um"]
-        motion = params["motion"]
+        peaks_svd = params["peaks_svd"].copy()
+        radius_um = peaks_svd["radius_um"]
+        motion = peaks_svd["motion"]
         seed = params["seed"]
-        ms_before = params["ms_before"]
-        ms_after = params["ms_after"]
-        clustering_method = params["clustering_method"]
-        clustering_kwargs = params["clustering_kwargs"]
-        graph_kwargs = params["graph_kwargs"]
+        verbose = params["verbose"]
+        clustering_kwargs = params["clusterer"].copy()
+        graph_kwargs = params["graph_kwargs"].copy()
 
         motion_aware = motion is not None
+        peaks_svd.update(motion_aware=motion_aware)
+
+        if seed is not None:
+            peaks_svd.update(seed=seed)
 
         if graph_kwargs["bin_mode"] == "channels":
             assert radius_um >= graph_kwargs["neighbors_radius_um"] * 2
@@ -75,17 +92,18 @@ class GraphClustering:
         peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
             recording,
             peaks,
-            ms_before=ms_before,
-            ms_after=ms_after,
-            radius_um=radius_um,
-            motion_aware=motion_aware,
-            motion=motion,
-            seed=params["seed"],
-            **params["extract_peaks_svd_kwargs"],
+            **peaks_svd,
             **job_kwargs,
         )
 
         # some method need a symetric matrix
+        clustering_method = clustering_kwargs.pop("method")
+        assert clustering_method in ["networkx-louvain",
+                                     "sknetwork-louvain",
+                                     "sknetwork-leiden",
+                                     "leidenalg",
+                                     "hdbscan"]
+
         ensure_symetric = clustering_method in ("hdbscan",)
 
         distances = create_graph_from_peak_features(
@@ -93,17 +111,9 @@ class GraphClustering:
             peaks,
             peaks_svd,
             sparse_mask,
-            peak_locations=None,
-            # bin_um=bin_um,
             ensure_symetric=ensure_symetric,
             **graph_kwargs,
         )
-
-        # print(distances)
-        # print(distances.shape)
-        # print("sparsity: ", distances.indices.size / (distances.shape[0]**2))
-
-        # print("clustering_method", clustering_method)
 
         if clustering_method == "networkx-louvain":
             # using networkx : very slow (possible backend with cude  backend="cugraph",)
@@ -112,7 +122,7 @@ class GraphClustering:
             distances_bool = distances.copy()
             distances_bool.data[:] = 1
             G = nx.Graph(distances_bool)
-            communities = nx.community.louvain_communities(G, seed=seed)
+            communities = nx.community.louvain_communities(G, seed=seed, **clustering_kwargs)
             peak_labels = np.zeros(peaks.size, dtype=int)
             peak_labels[:] = -1
             k = 0
@@ -125,7 +135,7 @@ class GraphClustering:
         elif clustering_method == "sknetwork-louvain":
             from sknetwork.clustering import Louvain
 
-            classifier = Louvain()
+            classifier = Louvain(**clustering_kwargs)
             distances_bool = distances.copy()
             distances_bool.data[:] = 1
             peak_labels = classifier.fit_predict(distances_bool)
@@ -134,7 +144,7 @@ class GraphClustering:
         elif clustering_method == "sknetwork-leiden":
             from sknetwork.clustering import Leiden
 
-            classifier = Leiden()
+            classifier = Leiden(**clustering_kwargs)
             distances_bool = distances.copy()
             distances_bool.data[:] = 1
             peak_labels = classifier.fit_predict(distances_bool)
@@ -156,17 +166,8 @@ class GraphClustering:
 
         elif clustering_method == "hdbscan":
             from hdbscan import HDBSCAN
-
-            # from fast_hdbscan import HDBSCAN
-            # from sklearn.cluster import HDBSCAN
-
             import scipy.sparse
-
-            # need to make subgraph
             n_graph, connected_labels = scipy.sparse.csgraph.connected_components(distances, directed=False)
-
-            # print(np.unique(connected_labels))
-            # print("n_graph", n_graph)
             peak_labels = np.zeros(peaks.size, dtype="int64")
             peak_labels[:] = -1
 
@@ -178,12 +179,8 @@ class GraphClustering:
 
                 local_dist = distances[connected_nodes, :].tocsc()[:, connected_nodes].tocsr()
 
-                # import time
-                # t0 = time.perf_counter()
                 clusterer = HDBSCAN(metric="precomputed", **clustering_kwargs)
                 local_labels = clusterer.fit_predict(local_dist)
-                # t1 = time.perf_counter()
-                # print("hdbscan", t1-t0)
 
                 valid_clusters = np.flatnonzero(local_labels >= 0)
                 if valid_clusters.size:
@@ -192,6 +189,7 @@ class GraphClustering:
 
         else:
             raise ValueError("GraphClustering : wrong clustering_method")
+
 
         labels_set = np.unique(peak_labels)
         labels_set = labels_set[labels_set >= 0]

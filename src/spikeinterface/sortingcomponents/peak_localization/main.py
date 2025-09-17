@@ -3,10 +3,10 @@ from __future__ import annotations
 import warnings
 
 import numpy as np
-from .method_list import localization_methods
+from .method_list import peak_localization_methods
 from ..tools import make_multi_method_doc
 
-from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
 
 
 from spikeinterface.core.node_pipeline import (
@@ -89,8 +89,8 @@ def localize_peaks(
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     assert (
-        method in localization_methods
-    ), f"Method {method} is not supported. Choose from {localization_methods.keys()}"
+        method in peak_localization_methods
+    ), f"Method {method} is not supported. Choose from {peak_localization_methods.keys()}"
 
     peak_retriever = PeakRetriever(recording, peaks)
 
@@ -98,7 +98,7 @@ def localize_peaks(
         recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
     )
 
-    method_class = localization_methods[method]
+    method_class = peak_localization_methods[method]
 
     if method == "grid_convolution" and "prototype" not in method_kwargs:
         assert isinstance(peak_retriever, (PeakRetriever, SpikeRetriever))
@@ -132,5 +132,5 @@ def localize_peaks(
     return peak_locations
 
 
-method_doc = make_multi_method_doc(list(localization_methods.values()))
+method_doc = make_multi_method_doc(list(peak_localization_methods.values()))
 localize_peaks.__doc__ = localize_peaks.__doc__.format(method_doc=method_doc)

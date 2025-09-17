@@ -179,7 +179,7 @@ def _get_default_motion_params():
     params = dict()
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peak_methods
-    from spikeinterface.sortingcomponents.peak_localization import localize_peak_methods
+    from spikeinterface.sortingcomponents.peak_localization import peak_localization_methods
     from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion_methods, estimate_motion
 
     params["detect_kwargs"] = dict()
@@ -194,7 +194,7 @@ def _get_default_motion_params():
     params["select_kwargs"] = dict()
 
     params["localize_peaks_kwargs"] = dict()
-    for method_name, method_class in localize_peak_methods.items():
+    for method_name, method_class in peak_localization_methods.items():
         sig = inspect.signature(method_class.__init__)
         p = {k: v.default for k, v in sig.parameters.items() if k != "self" and v.default != inspect.Parameter.empty}
         p.pop("parents", None)
@@ -336,7 +336,7 @@ def compute_motion(
     # local import are important because "sortingcomponents" is not important by default
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
-    from spikeinterface.sortingcomponents.peak_localization import localize_peaks, localize_peak_methods
+    from spikeinterface.sortingcomponents.peak_localization import localize_peaks, peak_localization_methods
     from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
     from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion, estimate_motion_methods
 
@@ -389,7 +389,7 @@ def compute_motion(
 
         # node detect + localize
         method = localize_peaks_kwargs["method"]
-        method_class = localize_peak_methods[method]
+        method_class = peak_localization_methods[method]
         localize_peaks_kwargs_without_method = {
             key: localize_peaks_kwarg for key, localize_peaks_kwarg in localize_peaks_kwargs.items() if key != "method"
         }
@@ -538,8 +538,9 @@ def correct_motion(
     detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
         preset, detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs
     )
+    
     interpolate_motion_kwargs = _update_interpolation_kwargs(preset, interpolate_motion_kwargs)
-
+    
     motion, motion_info = compute_motion(
         recording,
         preset=preset,

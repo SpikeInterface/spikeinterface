@@ -45,35 +45,11 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         },
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        # "svd": {"n_components": 6},
         "svd": {"n_components": 4},
-        "clustering": {
-            "recursive_depth": 5,
-            "split_radius_um": 40.0,
-            # "clusterer": "hdbscan",
-            # "clusterer_kwargs": {
-            #     "min_cluster_size": 10,
-            #     "min_samples": 1,
-            #     "allow_single_cluster": True,
-            #     "cluster_selection_method": "eom",
-            # },
-            # "clusterer": "isosplit6",
-            # "clusterer_kwargs": {},
-            "clusterer": "isosplit",
-            "clusterer_kwargs": {
-                "n_init": 50,
-                "min_cluster_size": 10,
-                "max_iterations_per_pass": 500,
-                "isocut_threshold": 2.0,
-            },
-            "do_merge": True,
-            "merge_kwargs": {
-                "similarity_metric": "l1",
-                "num_shifts": 4,
-                "similarity_thresh": 0.75,
-            },
-            "min_size_split": 25,
-        },
+        #"clustering": {
+        #    "recursive_depth": 5,
+        #    "min_size_split": 25,
+        #},
         "templates": {
             "ms_before": 2.0,
             "ms_after": 3.0,
@@ -199,19 +175,24 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             print(f"select_peaks(): {len(peaks)} peaks kept for clustering")
 
         clustering_kwargs = {}
-        clustering_kwargs["folder"] = sorter_output_folder
-        clustering_kwargs["waveforms"] = params["waveforms"].copy()
-        clustering_kwargs["clustering"] = params["clustering"].copy()
+        clustering_kwargs["debug_folder"] = sorter_output_folder
+        clustering_kwargs["peak_svd"] = params["waveforms"].copy()
+        clustering_kwargs["peak_svd"].update(n_components=params["svd"].get("n_components", 4))
+        #clustering_kwargs["split"] = params["clustering"].copy()
 
-        if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
-            have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
-            if not have_sisosplit6:
-                raise ValueError(
-                    "You want to run tridesclous2 with the isosplit6 (the C++) implementation, but this is not installed, please `pip install isosplit6`"
-                )
-
+        #if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
+        #    have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
+        #    if not have_sisosplit6:
+        #        raise ValueError(
+        #            "You want to run tridesclous2 with the isosplit6 (the C++) implementation, but this is not installed, please `pip install isosplit6`"
+        #        )
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
-            recording, peaks, method="tdc-clustering", method_kwargs=clustering_kwargs, extra_outputs=True, **job_kwargs
+            recording, 
+            peaks, 
+            method="iterative-isosplit", 
+            method_kwargs=clustering_kwargs, 
+            extra_outputs=True, 
+            job_kwargs=job_kwargs
         )
 
         # peak_shifts = extra_out["peak_shifts"]

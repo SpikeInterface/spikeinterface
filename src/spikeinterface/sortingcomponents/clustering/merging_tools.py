@@ -36,7 +36,7 @@ def merge_peak_labels_from_features(
     radius_um=70.0,
     method="project_distribution",
     method_kwargs={},
-    **job_kwargs,
+    job_kwargs=None,
 ):
     """
     Merge cluster from all features with distribution pair by pair.

@@ -32,7 +32,7 @@ def split_clusters(
     recursive_depth=None,
     returns_split_count=False,
     debug_folder=None,
-    **job_kwargs,
+    job_kwargs=None,
 ):
     """
     Run recusrsively (or not) in a multi process pool a local split method.
@@ -206,10 +206,7 @@ class LocalFeatureClustering:
         features,
         recursion_level=1,
         debug_folder=None,
-        clusterer="hdbscan",
-        clusterer_kwargs={"min_cluster_size": 25, "min_samples": 5},
-        # clusterer="isosplit",
-        # clusterer_kwargs={"n_init":50, "min_cluster_size": 25, "max_iterations_per_pass": 500, "isocut_threshold": 2.0},
+        clusterer={"method" : "hdbscan", "min_cluster_size": 25, "min_samples": 5},
         feature_name="sparse_tsvd",
         neighbours_mask=None,
         waveforms_sparse_mask=None,
@@ -219,6 +216,14 @@ class LocalFeatureClustering:
         projection_mode="tsvd",
         minimum_overlap_ratio=0.25,
     ):
+        
+        clustering_kwargs = clusterer.copy()
+        clusterer_method = clustering_kwargs.pop("method")
+        
+        assert clusterer_method in ["hdbscan",
+                                    "isosplit",
+                                    "isosplit6"]
+
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
         # can be sparse_tsvd or sparse_wfs
@@ -283,21 +288,21 @@ class LocalFeatureClustering:
             else:
                 final_features = flatten_features
                 tsvd = None
-
-        if clusterer == "hdbscan":
+        
+        if clusterer_method == "hdbscan":
             from hdbscan import HDBSCAN
-
-            clust = HDBSCAN(**clusterer_kwargs, core_dist_n_jobs=1)
+            clustering_kwargs.update(core_dist_n_jobs=1)
+            clust = HDBSCAN(**clustering_kwargs)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore")
                 clust.fit(final_features)
             possible_labels = clust.labels_
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
             del clust
-        elif clusterer == "isosplit":
+        elif clusterer_method == "isosplit":
             from spikeinterface.sortingcomponents.clustering.isosplit_isocut import isosplit
 
-            possible_labels = isosplit(final_features, **clusterer_kwargs)
+            possible_labels = isosplit(final_features, **clustering_kwargs)
 
             # min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)
             # for i in np.unique(possible_labels):
@@ -305,11 +310,11 @@ class LocalFeatureClustering:
             #     if np.sum(mask) < min_cluster_size:
             #         possible_labels[mask] = -1
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
-        elif clusterer == "isosplit6":
+        elif clusterer_method == "isosplit6":
             # this use the official C++ isosplit6 from Jeremy Magland
             import isosplit6
 
-            min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)
+            min_cluster_size = clustering_kwargs.get("min_cluster_size", 25)
             possible_labels = isosplit6.isosplit6(final_features)
             for i in np.unique(possible_labels):
                 mask = possible_labels == i
