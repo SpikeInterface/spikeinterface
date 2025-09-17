@@ -11,6 +11,7 @@ class RTSortSorter(BaseSorter):
     """RTSort sorter object"""
 
     sorter_name = "rtsort"
+    gpu_capability = "nvidia-required"
 
     _default_params = {
         "detection_model": "neuropixels",
