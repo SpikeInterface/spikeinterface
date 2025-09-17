@@ -44,7 +44,7 @@ class GraphClustering:
         "clusterer": dict(
             method="hdbscan",
             core_dist_n_jobs=-1,
-            min_cluster_size=20,
+            min_cluster_size=2,
             cluster_selection_method='eom',
             allow_single_cluster=True,
         ),

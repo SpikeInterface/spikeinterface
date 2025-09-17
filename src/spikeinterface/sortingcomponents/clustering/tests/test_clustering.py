@@ -122,10 +122,10 @@ if __name__ == "__main__":
     peaks = run_peaks(recording, job_kwargs)
     peak_locations = run_peak_locations(recording, peaks, job_kwargs)
     # method = "position_and_pca"
-    method = "iterative-isosplit"
+    # method = "iterative-isosplit"
     #method = "iterative-hdbscan"
     # method = "random_projections"
-    # method = "graph-clustering"
+    method = "graph-clustering"
 
     test_find_clusters_from_peaks(method, recording, peaks, peak_locations)
 
