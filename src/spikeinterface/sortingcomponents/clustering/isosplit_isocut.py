@@ -239,7 +239,7 @@ if HAVE_NUMBA:
 
 
 def isosplit(
-    X, initial_labels=None, n_init=200, max_iterations_per_pass=500, min_cluster_size=10, isocut_threshold=2.0
+    X, initial_labels=None, n_init=200, max_iterations_per_pass=500, min_cluster_size=10, isocut_threshold=2.0, seed=None,
 ):
     """
     Implementtaion in python/numba of the isosplit algorithm done by Jeremy Magland
@@ -258,17 +258,19 @@ def isosplit(
 
     Parameters
     ----------
-    X: np.array
+    X : np.array
         Samples input to be clustered shape (num_samples, num_dim)
-    n_init: int, default 200
+    n_init : int, default 200
         Initial cluster number using kmeans
-    max_iterations_per_pass: int, default 500
+    max_iterations_per_pass : int, default 500
         Number of itertions per pass.
-    min_cluster_size: int, default 10
+    min_cluster_size : int, default 10
         Minimum cluster size. Too small clsuters are merged with neigbors.
-    isocut_threshold: float, default 2.0
+    isocut_threshold : float, default 2.0
         Threhold for the merging test when exploring the cluster pairs.
         Merge is applied when : dipscore < isocut_threshold.
+    seed : Int | None
+        Eventually a seed for the kmeans initial step.
 
     Returns
     -------
@@ -300,7 +302,7 @@ def isosplit(
 
         with warnings.catch_warnings():
             # sometimes the kmeans do not found enought cluster which should not be an issue
-            _, labels = kmeans2(X, n_init, minit="points")
+            _, labels = kmeans2(X, n_init, minit="points", seed=seed)
 
         labels = ensure_continuous_labels(labels)
 
