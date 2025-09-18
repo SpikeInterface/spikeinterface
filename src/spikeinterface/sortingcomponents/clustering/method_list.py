@@ -10,8 +10,8 @@ from .graph_clustering import GraphClustering
 
 clustering_methods = {
     "dummy": DummyClustering,
-    "hdbscan_positions": PositionsClustering,
-    "random_projections": RandomProjectionClustering,
+    "hdbscan-positions": PositionsClustering,
+    "random-projections": RandomProjectionClustering,
     "iterative-hdbscan": IterativeHDBSCANClustering,
     "iterative-isosplit": IterativeISOSPLITClustering,
     "graph-clustering": GraphClustering,

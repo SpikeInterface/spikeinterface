@@ -5,6 +5,8 @@ import importlib
 
 from .si_based import ComponentsBasedSorter
 
+from copy import deepcopy
+
 from spikeinterface.core import (
     get_noise_levels,
     NumpySorting,
@@ -46,10 +48,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
         "svd": {"n_components": 4},
-        #"clustering": {
-        #    "recursive_depth": 5,
-        #    "min_size_split": 25,
-        #},
+        "clustering": {
+           "recursive_depth": 5,
+        },
         "templates": {
             "ms_before": 2.0,
             "ms_after": 3.0,
@@ -82,7 +83,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "2025.08"
+        return "2025.09"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -90,7 +91,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
-        from spikeinterface.sortingcomponents.clustering.main import find_clusters_from_peaks
+        from spikeinterface.sortingcomponents.clustering.main import find_clusters_from_peaks, clustering_methods
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.preprocessing import correct_motion
         from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
@@ -174,11 +175,15 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if verbose:
             print(f"select_peaks(): {len(peaks)} peaks kept for clustering")
 
-        clustering_kwargs = {}
-        clustering_kwargs["debug_folder"] = sorter_output_folder
-        clustering_kwargs["peak_svd"] = params["waveforms"].copy()
-        clustering_kwargs["peak_svd"].update(n_components=params["svd"].get("n_components", 4))
-        #clustering_kwargs["split"] = params["clustering"].copy()
+
+        # routing clustering params into the big IterativeISOSPLITClustering params tree
+        clustering_kwargs = deepcopy(clustering_methods["iterative-isosplit"]._default_params)
+        clustering_kwargs["peaks_svd"].update(params["waveforms"])
+        clustering_kwargs["peaks_svd"].update(params["svd"])
+        clustering_kwargs["split"].update(params["clustering"])
+        if params["save_array"]:
+            clustering_kwargs["debug_folder"] = sorter_output_folder
+
 
         #if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
         #    have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
@@ -186,6 +191,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         #        raise ValueError(
         #            "You want to run tridesclous2 with the isosplit6 (the C++) implementation, but this is not installed, please `pip install isosplit6`"
         #        )
+
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
             recording, 
             peaks, 

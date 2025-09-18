@@ -42,7 +42,7 @@ class IterativeISOSPLITClustering:
         "split": {
             "split_radius_um": 40.0,
             "recursive": True,
-            "recursive_depth": 3,
+            "recursive_depth": 5,
             "method_kwargs" : {
                 "clusterer": {
                     "method" : "isosplit",
@@ -51,7 +51,7 @@ class IterativeISOSPLITClustering:
                     "max_iterations_per_pass": 500,
                     "isocut_threshold": 2.0,
                 },
-                "min_size_split": 10,
+                "min_size_split": 25,
                 "n_pca_features": 3,
             },
         },

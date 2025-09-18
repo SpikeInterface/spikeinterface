@@ -9,7 +9,7 @@ from .method_list import clustering_methods
 
 def find_clusters_from_peaks(recording,
                              peaks, 
-                             method="stupid", 
+                             method=None, 
                              method_kwargs={}, 
                              extra_outputs=False, 
                              verbose=False,

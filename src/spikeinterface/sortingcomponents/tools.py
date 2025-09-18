@@ -424,16 +424,8 @@ def remove_empty_templates(templates):
     """
     assert templates.sparsity_mask is not None, "Need sparse Templates object"
     not_empty = templates.sparsity_mask.sum(axis=1) > 0
-    return Templates(
-        templates_array=templates.templates_array[not_empty, :, :],
-        sampling_frequency=templates.sampling_frequency,
-        nbefore=templates.nbefore,
-        sparsity_mask=templates.sparsity_mask[not_empty, :],
-        channel_ids=templates.channel_ids,
-        unit_ids=templates.unit_ids[not_empty],
-        probe=templates.probe,
-        is_in_uV=templates.is_in_uV,
-    )
+    return templates.select(templates.unit_ids[not_empty])
+
 
 
 def create_sorting_analyzer_with_existing_templates(sorting, recording, templates, remove_empty=True):
