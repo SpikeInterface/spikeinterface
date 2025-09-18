@@ -219,7 +219,7 @@ def apply_curation(
         if len(merge_new_unit_ids) == 0:
             merge_new_unit_ids = None
         if isinstance(sorting_or_analyzer, BaseSorting):
-            curated_sorting_or_analyzer, _, new_unit_ids = apply_merges_to_sorting(
+            curated_sorting_or_analyzer, _, _ = apply_merges_to_sorting(
                 curated_sorting_or_analyzer,
                 merge_unit_groups=merge_unit_groups,
                 censor_ms=censor_ms,
@@ -227,7 +227,7 @@ def apply_curation(
                 return_extra=True,
             )
         else:
-            curated_sorting_or_analyzer, new_unit_ids = curated_sorting_or_analyzer.merge_units(
+            curated_sorting_or_analyzer, _ = curated_sorting_or_analyzer.merge_units(
                 merge_unit_groups=merge_unit_groups,
                 censor_ms=censor_ms,
                 merging_mode=merging_mode,
@@ -253,7 +253,7 @@ def apply_curation(
         if len(split_new_unit_ids) == 0:
             split_new_unit_ids = None
         if isinstance(sorting_or_analyzer, BaseSorting):
-            curated_sorting_or_analyzer, new_unit_ids = apply_splits_to_sorting(
+            curated_sorting_or_analyzer, _ = apply_splits_to_sorting(
                 curated_sorting_or_analyzer,
                 split_units,
                 new_unit_ids=split_new_unit_ids,
@@ -261,7 +261,7 @@ def apply_curation(
                 return_extra=True,
             )
         else:
-            curated_sorting_or_analyzer, new_unit_ids = curated_sorting_or_analyzer.split_units(
+            curated_sorting_or_analyzer, _ = curated_sorting_or_analyzer.split_units(
                 split_units,
                 new_id_strategy=new_id_strategy,
                 return_new_unit_ids=True,
