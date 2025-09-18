@@ -526,7 +526,6 @@ def run_node_pipeline(
     nodes,
     job_kwargs,
     job_name="pipeline",
-    # mp_context=None,
     gather_mode="memory",
     gather_kwargs={},
     squeeze_output=True,

@@ -18,7 +18,7 @@ from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
-
+from spikeinterface.core.recording_tools import get_noise_levels
 
 def make_multi_method_doc(methods, ident="    "):
     doc = ""
@@ -155,32 +155,54 @@ def get_prototype_and_waveforms_from_recording(
     peaks : numpy.array
         The selected peaks used to extract waveforms.
     """
-    from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+    # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+    from spikeinterface.core.node_pipeline import run_node_pipeline
+    from spikeinterface.sortingcomponents.peak_detection.locally_exclusive import LocallyExclusivePeakDetector
     from spikeinterface.core.node_pipeline import ExtractSparseWaveforms
 
     detection_kwargs, job_kwargs = split_job_kwargs(all_kwargs)
 
-    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-    node = ExtractSparseWaveforms(
+    if "noise_levels" not in detection_kwargs:
+        detection_kwargs = detection_kwargs.copy()
+        detection_kwargs["noise_levels"] = get_noise_levels(recording, return_in_uV=False)
+
+    node0 = LocallyExclusivePeakDetector(
         recording,
-        parents=None,
+        return_output=True,
+        **detection_kwargs
+    )
+
+    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+    node1 = ExtractSparseWaveforms(
+        recording,
+        parents=[node0],
         return_output=True,
         ms_before=ms_before,
         ms_after=ms_after,
         radius_um=0,
     )
 
-    pipeline_nodes = [node]
+    nodes = [node0, node1]
 
     recording_slices = get_shuffled_recording_slices(recording, seed=seed, **job_kwargs)
-    res = detect_peaks(
+    # res = detect_peaks(
+    #     recording,
+    #     pipeline_nodes=pipeline_nodes,
+    #     skip_after_n_peaks=n_peaks,
+    #     recording_slices=recording_slices,
+    #     method="locally_exclusive",
+    #     method_kwargs=detection_kwargs,
+    #     job_kwargs=job_kwargs,
+    # )
+    res = run_node_pipeline(
         recording,
-        pipeline_nodes=pipeline_nodes,
+        nodes,
+        job_kwargs,
+        job_name="get protoype waveforms",
         skip_after_n_peaks=n_peaks,
         recording_slices=recording_slices,
-        **detection_kwargs,
-        **job_kwargs,
     )
+
     rng = np.random.RandomState(seed)
     indices = rng.permutation(np.arange(len(res[0])))
 
@@ -406,16 +428,8 @@ def remove_empty_templates(templates):
     """
     assert templates.sparsity_mask is not None, "Need sparse Templates object"
     not_empty = templates.sparsity_mask.sum(axis=1) > 0
-    return Templates(
-        templates_array=templates.templates_array[not_empty, :, :],
-        sampling_frequency=templates.sampling_frequency,
-        nbefore=templates.nbefore,
-        sparsity_mask=templates.sparsity_mask[not_empty, :],
-        channel_ids=templates.channel_ids,
-        unit_ids=templates.unit_ids[not_empty],
-        probe=templates.probe,
-        is_in_uV=templates.is_in_uV,
-    )
+    return templates.select_units(templates.unit_ids[not_empty])
+
 
 
 def create_sorting_analyzer_with_existing_templates(sorting, recording, templates, remove_empty=True):

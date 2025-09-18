@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
 from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.comparison.comparisontools import make_matching_events

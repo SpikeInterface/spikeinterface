@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
 from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.widgets import (
@@ -30,8 +30,8 @@ class ClusteringBenchmark(Benchmark):
         self.result = {}
 
     def run(self, **job_kwargs):
-        labels, peak_labels = find_cluster_from_peaks(
-            self.recording, self.peaks, method=self.method, method_kwargs=self.method_kwargs, **job_kwargs
+        labels, peak_labels = find_clusters_from_peaks(
+            self.recording, self.peaks, method=self.method, method_kwargs=self.method_kwargs, job_kwargs=job_kwargs
         )
         self.result["peak_labels"] = peak_labels
 
