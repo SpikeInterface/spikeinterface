@@ -5,8 +5,6 @@ from spikeinterface.core.node_pipeline import (
     PeakDetector,
 )
 
-from spikeinterface.core.recording_tools import get_noise_levels
-
 torch_spec = importlib.util.find_spec("torch")
 if torch_spec is not None:
     torch_nn_functional_spec = importlib.util.find_spec("torch.nn")
@@ -37,9 +35,6 @@ class ByChannelPeakDetector(PeakDetector):
     noise_levels: array or None, default: None
         Estimated noise levels to use, if already computed
         If not provide then it is estimated from a random snippet of the data
-    random_chunk_kwargs: dict, default: dict()
-        A dict that contain option to randomize chunk for get_noise_levels().
-        Only used if noise_levels is None
     """
 
     def __init__(
@@ -49,16 +44,13 @@ class ByChannelPeakDetector(PeakDetector):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         noise_levels=None,
-        random_chunk_kwargs={},
         return_output=True,
     ):
         PeakDetector.__init__(self, recording, return_output=return_output)
         assert peak_sign in ("both", "neg", "pos")
 
-        if noise_levels is None:
-            self.noise_levels = get_noise_levels(recording, return_in_uV=False, **random_chunk_kwargs)
-        else:
-            self.noise_levels = noise_levels
+        assert noise_levels is not None
+        self.noise_levels = noise_levels
         self.abs_thresholds = self.noise_levels * detect_threshold
         self.exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         self.peak_sign = peak_sign
@@ -135,9 +127,6 @@ class ByChannelTorchPeakDetector(ByChannelPeakDetector):
             "cpu", "cuda", or None. If None and cuda is available, "cuda" is selected
     return_tensor : bool, default: False
         If True, the output is returned as a tensor, otherwise as a numpy array
-    random_chunk_kwargs: dict, default: dict()
-        A dict that contain option to randomize chunk for get_noise_levels().
-        Only used if noise_levels is None.
     """
 
     def __init__(
@@ -149,7 +138,6 @@ class ByChannelTorchPeakDetector(ByChannelPeakDetector):
         noise_levels=None,
         device=None,
         return_tensor=False,
-        random_chunk_kwargs={},
         return_output=True,
     ):
 
@@ -165,7 +153,6 @@ class ByChannelTorchPeakDetector(ByChannelPeakDetector):
             detect_threshold,
             exclude_sweep_ms,
             noise_levels,
-            random_chunk_kwargs,
             return_output,
         )
 

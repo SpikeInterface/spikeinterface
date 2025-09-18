@@ -22,7 +22,7 @@ from spikeinterface.sortingcomponents.peak_detection.locally_exclusive import (
     LocallyExclusiveTorchPeakDetector,
 )
 
-
+from spikeinterface.core import get_noise_levels
 from spikeinterface.core.node_pipeline import run_node_pipeline
 from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms_from_peaks
 
@@ -115,6 +115,7 @@ def pca_model_folder_path_fixture(recording, job_kwargs, tmp_path_factory):
 def peak_detector_kwargs(recording):
     peak_detector_keyword_arguments = dict(
         recording=recording,
+        noise_levels=get_noise_levels(recording, return_in_uV=False),
         exclude_sweep_ms=1.0,
         peak_sign="both",
         detect_threshold=5,
@@ -399,16 +400,21 @@ detection_classes = [
 
 @pytest.mark.parametrize("detection_class", detection_classes)
 def test_peak_sign_consistency(recording, job_kwargs, detection_class):
-    peak_sign = "neg"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
+    if detection_class.need_noise_levels:
+        kwargs = dict(recording=recording, noise_levels=get_noise_levels(recording,  return_in_uV=False))
+    else:
+        kwargs = dict(recording=recording)
+
+    kwargs["peak_sign"] = "neg"
+    peak_detection_node = detection_class(**kwargs)
     negative_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
 
-    peak_sign = "pos"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
+    kwargs["peak_sign"] = "pos"
+    peak_detection_node = detection_class(**kwargs)
     positive_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
 
-    peak_sign = "both"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
+    kwargs["peak_sign"] = "both"
+    peak_detection_node = detection_class(**kwargs)
     all_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
 
     # To account for exclusion of positive peaks that are to close to negative peaks.
@@ -566,7 +572,7 @@ if __name__ == "__main__":
         recording, job_kwargs_main, pca_model_folder_path_main, peak_detector_kwargs_main
     )
 
-    # test_peak_sign_consistency(recording, torch_job_kwargs_main, LocallyExclusiveTorchPeakDetector)
+    test_peak_sign_consistency(recording, torch_job_kwargs_main, LocallyExclusiveTorchPeakDetector)
     # test_peak_detection_with_pipeline(recording, job_kwargs_main, torch_job_kwargs_main, tmp_path)
 
     # test_detect_peaks_locally_exclusive_matched_filtering(

@@ -166,4 +166,4 @@ class RandomProjectionClustering:
         if verbose:
             print("Kept %d non-duplicated clusters" % len(labels))
 
-        return labels, peak_labels
+        return labels, peak_labels, dict()

@@ -68,11 +68,13 @@ def detect_peaks(
     else:
         if method_kwargs is None:
             method_kwargs = dict()
-    
+        else:
+            # sevral pop later
+            method_kwargs = method_kwargs.copy()
+
     if "method" in method_kwargs:
         # for flexibility the caller can put method inside method_kwargs
         assert  method is None
-        method_kwargs = method_kwargs.copy()
         method = method_kwargs.pop("method")
     
     if method is None:
@@ -87,12 +89,12 @@ def detect_peaks(
 
     if method_class.need_noise_levels:
         from spikeinterface.core.recording_tools import get_noise_levels
-
-        # TODO change this. THis is not the normal signature.
-        random_chunk_kwargs = method_kwargs.pop("random_chunk_kwargs", {})
         if "noise_levels" not in method_kwargs:
+            random_slices_kwargs = method_kwargs.pop("random_slices_kwargs", {})
+            # this warning will be added in version 0.104.0
+            # warnings.warn(f"detect_peaks() needs noise level with method {method}")
             method_kwargs["noise_levels"] = get_noise_levels(
-                recording, return_in_uV=False, **random_chunk_kwargs, **job_kwargs
+                recording, return_in_uV=False, random_slices_kwargs=random_slices_kwargs, **job_kwargs
             )
 
     node0 = method_class(recording, **method_kwargs)

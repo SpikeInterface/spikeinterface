@@ -53,6 +53,7 @@ def find_clusters_from_peaks(recording,
     method_class = clustering_methods[method]
     params = copy.deepcopy(method_class._default_params.copy())
     params.update(**method_kwargs)
+    params.update(verbose=verbose)
 
     outputs = method_class.main_function(recording, peaks, params, job_kwargs=job_kwargs)
 

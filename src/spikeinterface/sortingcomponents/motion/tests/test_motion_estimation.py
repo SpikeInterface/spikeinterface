@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from spikeinterface import get_noise_levels
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline, PipelineNode
 from spikeinterface.sortingcomponents.motion import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
@@ -27,6 +28,7 @@ def setup_dataset_and_peaks(cache_folder):
     peak_detector_class = detect_peak_methods["locally_exclusive"]
     peak_detector = peak_detector_class(
         recording,
+        noise_levels = get_noise_levels(recording, return_in_uV=False),
         peak_sign="neg",
         detect_threshold=5,
         exclude_sweep_ms=0.1,

@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from pathlib import Path
 
-from spikeinterface import NumpySorting, create_sorting_analyzer, compute_sparsity
+from spikeinterface import NumpySorting, create_sorting_analyzer, compute_sparsity, get_noise_levels
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.sortingcomponents.matching.method_list import matching_methods
@@ -60,6 +60,10 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
         spatial_components = model.components_.astype(np.float32)
         method_kwargs["spatial_components"] = spatial_components
         method_kwargs["temporal_components"] = temporal_components
+
+
+    if matching_methods[method].need_noise_levels:
+        method_kwargs["noise_levels"] = get_noise_levels(recording, return_in_uV=False)
 
     if method == "nearest-svd":
         from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms

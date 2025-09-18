@@ -10,7 +10,7 @@ else:
 from spikeinterface.core.node_pipeline import (
     PeakDetector,
 )
-from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
+from spikeinterface.core.recording_tools import get_channel_distances
 from .by_channel import ByChannelTorchPeakDetector
 
 torch_spec = importlib.util.find_spec("torch")
@@ -55,7 +55,6 @@ class LocallyExclusivePeakDetector(PeakDetector):
         exclude_sweep_ms=0.1,
         radius_um=50,
         noise_levels=None,
-        random_chunk_kwargs={},
         return_output=True,
     ):
         if not HAVE_NUMBA:
@@ -64,10 +63,9 @@ class LocallyExclusivePeakDetector(PeakDetector):
         PeakDetector.__init__(self, recording, return_output=return_output)
 
         assert peak_sign in ("both", "neg", "pos")
-        if noise_levels is None:
-            self.noise_levels = get_noise_levels(recording, return_in_uV=False, **random_chunk_kwargs)
-        else:
-            self.noise_levels = noise_levels
+        assert noise_levels is not None
+        self.noise_levels = noise_levels
+
         self.abs_thresholds = self.noise_levels * detect_threshold
         self.exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         self.radius_um = radius_um
@@ -233,7 +231,6 @@ class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):
             noise_levels,
             device,
             return_tensor,
-            random_chunk_kwargs,
             return_output,
         )
 
@@ -274,6 +271,7 @@ class LocallyExclusiveOpenCLPeakDetector(LocallyExclusivePeakDetector):
     name = "locally_exclusive_cl"
     engine = "opencl"
     preferred_mp_context = None
+    need_noise_levels = True
     params_doc = (
         LocallyExclusiveTorchPeakDetector.params_doc
         + """

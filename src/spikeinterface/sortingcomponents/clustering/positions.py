@@ -60,4 +60,4 @@ class PositionsClustering:
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
 
-        return labels, peak_labels
+        return labels, peak_labels, dict()

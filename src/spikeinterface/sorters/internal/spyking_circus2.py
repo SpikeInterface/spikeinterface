@@ -115,6 +115,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_before = params["general"].get("ms_before", 0.5)
         ms_after = params["general"].get("ms_after", 1.5)
         radius_um = params["general"].get("radius_um", 100)
+        detect_threshold = params["detection"]["method_kwargs"].get("detect_threshold", 5)
         peak_sign = params["detection"].get("peak_sign", "neg")
         deterministic = params["deterministic_peaks_detection"]
         debug = params["debug"]
@@ -304,7 +305,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             if verbose:
                 print("Kept %d peaks for clustering" % len(selected_peaks))
 
-            if clustering_method in ["iterative-hdbscan", "iterative-isosplit", "kilosort-clustering"]:
+            if clustering_method in ["iterative-hdbscan", "iterative-isosplit", "kilosort-clustering", "graph-clustering"]:
                 clustering_params.update(verbose= verbose)
                 clustering_params.update(seed=seed)
                 clustering_params.update(peak_svd=params["general"])
@@ -350,12 +351,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     operator="median",
                 )
                 # this release the peak_svd memmap file
-                del more_outs
+            
+            del more_outs
 
             templates = clean_templates(
                 templates,
                 noise_levels=noise_levels,
-                min_snr=detection_params.get("detect_threshold", 5),
+                min_snr=detect_threshold,
                 max_jitter_ms=0.1,
                 remove_empty=True,
             )
