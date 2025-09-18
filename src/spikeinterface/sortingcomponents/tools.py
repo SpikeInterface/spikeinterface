@@ -424,7 +424,7 @@ def remove_empty_templates(templates):
     """
     assert templates.sparsity_mask is not None, "Need sparse Templates object"
     not_empty = templates.sparsity_mask.sum(axis=1) > 0
-    return templates.select(templates.unit_ids[not_empty])
+    return templates.select_units(templates.unit_ids[not_empty])
 
 
 
