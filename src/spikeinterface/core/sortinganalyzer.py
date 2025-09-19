@@ -1072,6 +1072,10 @@ class SortingAnalyzer:
         if sorting_provenance is None:
             # if the original sorting object is not available anymore (kilosort folder deleted, ....), take the copy
             sorting_provenance = self.sorting
+        # add in-memory properties added to the analyzer
+        for key in self.sorting.get_property_keys():
+            if key not in sorting_provenance.get_property_keys():
+                sorting_provenance.set_property(key, self.sorting.get_property(key))
 
         if merge_unit_groups is None and split_units is None:
             # when only some unit_ids then the sorting must be sliced

@@ -238,8 +238,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                                 settings_file, oe_stream
                             )
                             # lets clip to num_readout_channels because this contains also the synchro channel
-                            chans = chans[chans < num_readout_channels]
-                            sample_shifts = sample_shifts[chans]
+                            if chans is not None:
+                                chans = chans[chans < num_readout_channels]
+                                sample_shifts = sample_shifts[chans]
                         self.set_property("inter_sample_shift", sample_shifts)
 
             # load synchronized timestamps and set_times to recording
