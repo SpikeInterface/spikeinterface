@@ -62,6 +62,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "matching": {"method": "tdc-peeler", "method_kwargs": {}, "gather_mode": "memory"},
         "job_kwargs": {},
         "save_array": True,
+        "debug": False,
+
     }
 
     _params_description = {
@@ -181,7 +183,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         clustering_kwargs["peaks_svd"].update(params["waveforms"])
         clustering_kwargs["peaks_svd"].update(params["svd"])
         clustering_kwargs["split"].update(params["clustering"])
-        if params["save_array"]:
+        if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
 
 

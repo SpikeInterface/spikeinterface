@@ -219,31 +219,34 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             clustering_folder.mkdir(parents=True, exist_ok=True)
             np.save(clustering_folder / "noise_levels.npy", noise_levels)
 
-        detection_params["random_chunk_kwargs"] = {"num_chunks_per_segment": 5, "seed": params["seed"]}
+        # detection_params["random_chunk_kwargs"] = {"num_chunks_per_segment": 5, "seed": params["seed"]}
 
         if detection_method == "matched_filtering":
             if not deterministic:
                 from spikeinterface.sortingcomponents.tools import (
                     get_prototype_and_waveforms_from_recording,
                 )
+                detection_params2 = detection_params.copy()
                 prototype, waveforms, _ = get_prototype_and_waveforms_from_recording(
                     recording_w,
                     n_peaks=10000,
                     ms_before=ms_before,
                     ms_after=ms_after,
                     seed=seed,
-                    noise_levels=noise_levels, # for locally exclusive @ pierre c'est moi qui ai ajjouté ça
-                    **detection_params.copy(),
+                    noise_levels=noise_levels,
+                    **detection_params2,
                     **job_kwargs,
                 )
             else:
                 from spikeinterface.sortingcomponents.tools import (
                     get_prototype_and_waveforms_from_peaks,
                 )
+                detection_params2 = detection_params.copy()
+                detection_params2["noise_levels"] = noise_levels
                 peaks = detect_peaks(
                     recording_w, 
                     method="locally_exclusive", 
-                    method_kwargs=detection_params.copy(), 
+                    method_kwargs=detection_params2,
                     job_kwargs=job_kwargs
                 )
                 prototype, waveforms, _ = get_prototype_and_waveforms_from_peaks(
@@ -253,7 +256,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     ms_before=ms_before,
                     ms_after=ms_after,
                     seed=seed,
-                    **detection_params.copy(),
                     **job_kwargs,
                 )
             detection_params["prototype"] = prototype
@@ -270,7 +272,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             )
             detect_pipeline_kwargs["skip_after_n_peaks"] = n_peaks
 
-        # @pierre t'avais un bug ici : detection_params contiet noise level alors que c'est du matched filtering!!
         peaks = detect_peaks(
             recording_w, 
             method=detection_method, 
