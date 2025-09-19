@@ -151,6 +151,8 @@ class TridesclousPeeler(BaseTemplateMatching):
 
             self.sparse_templates_array_static = None
 
+            self.dtype = self.sparse_templates_array_moved.dtype
+
             # interpolation bins edges
             self.interpolation_time_bins_s = []
             self.interpolation_time_bin_edges_s = []
@@ -171,6 +173,7 @@ class TridesclousPeeler(BaseTemplateMatching):
             self.interpolation_time_bins_s = None
             self.interpolation_time_bin_edges_s = None
             self.sparse_templates_array_static = templates.templates_array
+            self.dtype = self.sparse_templates_array_static.dtype
 
         extremum_chan = get_template_extremum_channel(templates, peak_sign=peak_sign, outputs="index")
         # as numpy vector
@@ -271,6 +274,7 @@ class TridesclousPeeler(BaseTemplateMatching):
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
 
         # TODO check if this is usefull
+        traces = traces.astype(self.dtype)
         residuals = traces.copy()
 
         if self.motion_aware:
@@ -375,10 +379,20 @@ class TridesclousPeeler(BaseTemplateMatching):
                 if spikes.size > 0:
                     spikes_in_time_bin.append(spikes)
 
+                # # DEBUG
+                # if spikes.size != np.unique(spikes).size:
+                #     print('In loop double spikes', spikes.size, np.unique(spikes).size)
+                #     spikes2 = spikes.copy()
+                #     order = np.argsort(spikes2['sample_index'])
+                #     spikes2 = spikes2[order]
+                #     print(spikes2)
+                #     print()
+
                 level += 1
 
                 # TODO concatenate all spikes for this instead of prev loop
-                spikes_prev_loop = spikes
+                # spikes_prev_loop = spikes
+                spikes_prev_loop = np.concatenate((spikes_prev_loop, spikes))
 
                 if (spikes.size == 0) or (level == self.max_peeler_loop):
                     if self.use_fine_detector and not use_fine_detector_level:
@@ -400,6 +414,22 @@ class TridesclousPeeler(BaseTemplateMatching):
             all_spikes = all_spikes[order]
         else:
             all_spikes = np.zeros(0, dtype=_base_matching_dtype)
+
+        # DEBUG
+        # if all_spikes.size != np.unique(all_spikes).size:
+        #     print('After loop double spikes', all_spikes.size, np.unique(all_spikes).size)
+        #     all_spikes2 = all_spikes.copy()
+        #     order = np.argsort(all_spikes2['sample_index'])
+        #     all_spikes2 = all_spikes2[order]
+        #     inds = np.flatnonzero(np.diff(all_spikes2[order]['sample_index']) == 0)
+        #     keep = np.zeros(all_spikes2.size, dtype='bool')
+        #     keep[inds] = 1
+        #     keep[inds+1] = 1
+        #     print(all_spikes2[keep])
+        #     # print(all_spikes2)
+
+        #     import time
+        #     time.sleep(0.5)
 
         return all_spikes
 
@@ -578,6 +608,7 @@ class TridesclousPeeler(BaseTemplateMatching):
                     if low_lim <= amp <= up_lim:
                         spikes["amplitude"][i] = amp
                         wanted_channel_mask = np.ones(traces.shape[1], dtype=bool)  # TODO move this before the loop
+                        # TODO check dtype are the same
                         construct_prediction_sparse(
                             spikes[i : i + 1],
                             traces,
