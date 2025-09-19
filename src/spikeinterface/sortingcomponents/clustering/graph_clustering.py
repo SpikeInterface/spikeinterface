@@ -33,7 +33,7 @@ class GraphClustering:
             # direction="y",
             normed_distances=True,
             # n_neighbors=15,
-            n_neighbors=50,
+            n_neighbors=5,
             # n_components=0.8,
             n_components=10,
             sparse_mode="knn",
@@ -42,11 +42,13 @@ class GraphClustering:
             enforce_diagonal_to_zero=True,
         ),
         "clusterer": dict(
-            method="hdbscan",
-            core_dist_n_jobs=-1,
-            min_cluster_size=2,
-            cluster_selection_method='eom',
-            allow_single_cluster=True,
+            method="sknetwork-louvain",
+            #min_samples=1,
+            #core_dist_n_jobs=-1,
+            #min_cluster_size=20,
+            #cluster_selection_method='leaf',
+            #allow_single_cluster=True,
+            #cluster_selection_epsilon=0.1
         ),
         "debug_folder" : None,
         "verbose": True

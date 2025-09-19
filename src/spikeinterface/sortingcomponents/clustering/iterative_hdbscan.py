@@ -39,10 +39,11 @@ class IterativeHDBSCANClustering:
                 "clusterer": {
                     "method" : "hdbscan",
                     "min_cluster_size": 20,
-                    "cluster_selection_method": "eom",
+                    "cluster_selection_epsilon": 0.5,
+                    "cluster_selection_method": "leaf",
                     "allow_single_cluster": True,
                 },
-                "n_pca_features": 0.9
+                "n_pca_features": 0.9,
             },
         },
         "merge_from_templates" : dict(),
