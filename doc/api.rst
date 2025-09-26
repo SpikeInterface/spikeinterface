@@ -470,3 +470,17 @@ Motion Correction
     .. autofunction:: interpolate_motion_on_traces
     .. autofunction:: clean_motion_vector
     .. autoclass:: InterpolateMotionRecording
+
+spikeinterface.benchmark
+------------------------
+
+.. automodule:: spikeinterface.benchmark
+
+
+    .. autoclass:: SorterStudy
+    .. autoclass:: PeakDetectionStudy
+    .. autoclass:: PeakLocalizationStudy
+    .. autoclass:: UnitLocalizationStudy
+    .. autoclass:: MotionEstimationStudy
+    .. autoclass:: ClusteringStudy
+    .. autoclass:: MatchingStudy
