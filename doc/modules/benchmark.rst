@@ -3,17 +3,17 @@ Benchmark module
 
 
 Historically, this module was used to compare/benchmark sorters against ground truth
-So then can be challenge in multiple situations (noise, drift, small snr,
-small spike rate, high density, small density, ...).
+With this, sorters can be challenge in multiple situations (noise, drift, small/high snr,
+small/high spike rate, high/small probe density, ...).
 
 The main idea is to generate a synthetic recording using the internal generators
 :py:func:`~spikeinterface.generation.generate_drifting_recording` or external tools
 like ***mearec**. And then to compare the output of each sorter to the ground truth sorting.
 Theses comparisons, then can be plotted in various ways to explore all strengths and weakness of
-sorters tools. The very first paper of spikeinterface was about that. TODO ref SI2020
+sorters tools. The very first paper of spikeinterface was about that, see [Buccino]_.
 
-Since version, 0.102.0 the concept of benchmark has been extended to benchmark specific steps of
-the sorting pipeline, for instance the motion estimation methods has been carrfully studied
+Since version, 0.102.0 the concept of *benchmark* has been extended to challenge/study specific 
+steps of the sorting pipeline, for instance the motion estimation methods has been carrfully studied
 in [Garcia2024]_ or some localisation methods has been compared in
 in TODO(ref peak localisation Yger Paper). Eventually, very specific details like the ability
 for a sorting to recover collision spikes can be studied like in [Garcia2022]_.
@@ -375,7 +375,15 @@ Lets be *open-and-reproducible-science*, this is so trendy. This 120 lines scrip
     study.run(verbose=True)
     study.compute_results()
 
+    study.plot_summary_errors()
+    study.plot_drift(raster=True, case_keys=[('zigzag', 'Mono + dredge')])
+    study.plot_errors(case_keys=[('zigzag', 'Mono + dredge')])
 
+.. image:: images/benchmark_estimation_fig1.png
+
+.. image:: images/benchmark_estimation_fig2.png
+
+.. image:: images/benchmark_estimation_fig3.png
 
 
 # TODO copy paste figures here
