@@ -476,11 +476,50 @@ spikeinterface.benchmark
 
 .. automodule:: spikeinterface.benchmark
 
-
     .. autoclass:: SorterStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_peak_detection
+
     .. autoclass:: PeakDetectionStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_peak_localization
+
     .. autoclass:: PeakLocalizationStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_peak_detection
+
     .. autoclass:: UnitLocalizationStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_motion_estimation
+
     .. autoclass:: MotionEstimationStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_clustering
+
     .. autoclass:: ClusteringStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_matching
+
     .. autoclass:: MatchingStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_plot_tools
+
+    .. autofunction:: plot_run_times
+    .. autofunction:: plot_unit_counts
+    .. autofunction:: plot_agreement_matrix
+    .. autofunction:: plot_performances_vs_snr
+    .. autofunction:: plot_performances_ordered
+    .. autofunction:: plot_performances_swarm
+    .. autofunction:: plot_performances_comparison
+    .. autofunction:: plot_performances_vs_depth_and_snr
+    .. autofunction:: plot_performance_losses
+
+
+        
+
+
+
+
+
+
+
