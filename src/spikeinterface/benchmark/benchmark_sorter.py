@@ -108,3 +108,5 @@ class SorterStudy(BenchmarkStudy, MixinStudyUnitCount):
         from .benchmark_plot_tools import plot_performance_losses
 
         return plot_performance_losses(self, *args, **kwargs)
+
+

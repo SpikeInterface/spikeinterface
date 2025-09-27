@@ -172,7 +172,7 @@ class PeakDetectionStudy(BenchmarkStudy):
         import matplotlib.pyplot as plt
 
         if ax is None:
-            fig, ax = plt.subplots(figsize=figsize, squeeze=False)
+            fig, ax = plt.subplots(figsize=figsize)
         else:
             fig = ax.get_figure()
 
