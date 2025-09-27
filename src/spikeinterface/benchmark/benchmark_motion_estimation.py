@@ -90,7 +90,7 @@ class MotionEstimationBenchmark(Benchmark):
 
         t0 = time.perf_counter()
         detect_kwargs = p["detect_kwargs"].copy()
-        detect_kwargs["noise_level"] = noise_levels
+        detect_kwargs["noise_levels"] = noise_levels
         peaks = detect_peaks(self.recording, method_kwargs=detect_kwargs, job_kwargs=job_kwargs)
         t1 = time.perf_counter()
         if p["select_kwargs"] is not None:
@@ -241,6 +241,8 @@ class MotionEstimationStudy(BenchmarkStudy):
             ax1.set_title(label)
 
             # ax0.set_ylim()
+        
+        return fig
 
     def plot_errors(self, case_keys=None, figsize=None, lim=None):
         import matplotlib.pyplot as plt
@@ -306,6 +308,8 @@ class MotionEstimationStudy(BenchmarkStudy):
             despine(ax)
             if lim is not None:
                 ax.set_ylim(0, lim)
+        
+        return fig
 
     def plot_summary_errors(self, case_keys=None, show_legend=True, figsize=(15, 5)):
         import matplotlib.pyplot as plt
@@ -369,6 +373,8 @@ class MotionEstimationStudy(BenchmarkStudy):
         ax2.axvline(probe_y_max, color="k", ls="--", alpha=0.5)
 
         despine(ax2)
+
+        return fig
 
         # ax1.sharey(ax0)
         # ax2.sharey(ax0)
