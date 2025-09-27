@@ -14,9 +14,9 @@ sorters tools. The very first paper of spikeinterface was about that, see [Bucci
 
 Since version, 0.102.0 the concept of *benchmark* has been extended to challenge/study specific 
 steps of the sorting pipeline, for instance the motion estimation methods has been carrfully studied
-in [Garcia2024]_ or some localisation methods has been compared in
-in TODO(ref peak localisation Yger Paper). Eventually, very specific details like the ability
-for a sorting to recover collision spikes can be studied like in [Garcia2022]_.
+in [Garcia2024]_ or some localisation methods has been compared in [Scopin2024]_.
+Also, a very specific details (the ability for a sorting to recover collision spike) has been
+studied in [Garcia2022]_.
 
 Now, almost all steps of the spike sorting step has implemented in spikeinterface and then
 all this steps can be benchmarked more or less the same way with dedicated classes:
@@ -48,7 +48,7 @@ All theses benchmark study classes share the same design :
     complexities at the same time. For instance, compare kilosort4 vs kilsort2.5 (level 0) for
     different noises amplitudes (level 1) combined with several motion vectors (level 2).
   * When plotting levels can be grouped to make averages.
-  * Internally, they almost all use the :py:mode:`~spikeinterface.comparison` module.
+  * Internally, they almost all use the :py:module:`~spikeinterface.comparison` module.
     In short this module can compare a set of spiketrains against set of ground truth spiketrains.
     The van diagram (True Posistive, False positive, False negative) against each ground truth units is
     performed.
@@ -167,7 +167,6 @@ Here a very simple code to compare this 2 methods.
 
 
 .. code-block:: python
-  
 
     import spikeinterface.full as si
     from spikeinterface.benchmark.benchmark_peak_detection import PeakDetectionStudy
@@ -176,29 +175,26 @@ Here a very simple code to compare this 2 methods.
 
     # generate
     rec_static, rec_drifting, gt_sorting, extra_infos = si.generate_drifting_recording(
-      probe_name="Neuropixel-128",
-      num_units=200,
-      duration=300.,
-      seed=2205,
-      extra_outputs=True,
+    probe_name="Neuropixels1-128",
+    num_units=200,
+    duration=300.,
+    seed=2205,
+    extra_outputs=True,
     )
 
-
-    # small trick to get the ground truth peaks
-    from spikeinterface.core.template_tools import get_template_extremum_channel
-    extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
-    spikes = sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
+    # small trick to get the ground truth peaks and max channels
+    extremum_channel_inds = dict(zip(gt_sorting.unit_ids, gt_sorting.get_property("max_channel_index")))
+    spikes = gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
     gt_peak = spikes
 
-    # step 1 : create cases
-    datasets ={
+    # step 1 : create dataset and cases dicts
+    datasets = {
         "data1": (rec_static, gt_sorting),
     }
 
-
     cases = {}
     cases["locally_exclusive"] = {
-        "label": f"{method} on toy",
+        "label": "locally_exclusive on toy",
         "dataset": "data1",
         "init_kwargs": {"gt_peaks": gt_peak},
         "params": {
@@ -210,32 +206,42 @@ Here a very simple code to compare this 2 methods.
     from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms_from_recording
     prototype, _, _ = get_prototype_and_waveforms_from_recording(rec_static, 5000, ms_before, ms_after)
     cases["matched_filtering"] = {
-        "label": f"{method} on toy",
+        "label": "matched_filtering on toy",
         "dataset": "data1",
         "init_kwargs": {"gt_peaks": gt_peak},
         "params": {
-        "method": "matched_filtering", "method_kwargs": {}},
+        "method": "matched_filtering", "method_kwargs": {"prototype": prototype, "ms_before": ms_before}},
     }
 
-    study_folder = "~/my_study_peak_detection"
+    study_folder = "my_study_peak_detection"
     study = PeakDetectionStudy.create(study_folder, datasets=datasets, cases=cases)
     print(study)
 
     # Step 2 : run
     study.run()
     # Step 3 : compute results
+    study.compute_analyzer_extension( {"templates":{}, "quality_metrics":{"metric_names": ["snr"]} } )
     study.compute_results()
 
     # study can be re loaded
+    study_folder = "my_study_peak_detection"
+
     study = PeakDetectionStudy(study_folder)
 
+
     # Step 4 : plots
-    study.plot_detected_amplitudes()
-    study.plot_performances_vs_snr()
-    study.plot_run_times()
+    fig = study.plot_detected_amplitude_distributions()
+    fig = study.plot_performances_vs_snr(performance_names=["accuracy"])
+    fig = study.plot_run_times()
 
 
-# TODO copy paste figures here
+.. image:: ../images/benchmark_peak_detection_fig1.png
+
+.. image:: ../images/benchmark_peak_detection_fig2.png
+
+.. image:: ../images/benchmark_peak_detection_fig3.png
+
+
 
 **Example 3: compare motion estimation methods**
 
@@ -379,11 +385,11 @@ Lets be *open-and-reproducible-science*, this is so trendy. This 120 lines scrip
     study.plot_drift(raster=True, case_keys=[('zigzag', 'Mono + dredge')])
     study.plot_errors(case_keys=[('zigzag', 'Mono + dredge')])
 
-.. image:: images/benchmark_estimation_fig1.png
+.. image:: ../images/benchmark_estimation_fig1.png
 
-.. image:: images/benchmark_estimation_fig2.png
+.. image:: ../images/benchmark_estimation_fig2.png
 
-.. image:: images/benchmark_estimation_fig3.png
+.. image:: ../images/benchmark_estimation_fig3.png
 
 
 # TODO copy paste figures here

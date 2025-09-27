@@ -21,7 +21,7 @@ If you use one of the following preprocessing methods, please cite the appropria
 
 Motion Correction
 -----------------
-If you use the :code:`correct_motion` method in the preprocessing module, please cite [Garcia]_
+If you use the :code:`correct_motion` method in the preprocessing module, please cite [Garcia2024]_
 as well as the references that correspond to the :code:`preset` you used:
 
 - :code:`nonrigid_accurate` [Windolf_a]_ [Varol]_
@@ -109,7 +109,9 @@ References
 
 .. [Diggelmann] `Automatic spike sorting for high-density microelectrode arrays. 2018. <https://pubmed.ncbi.nlm.nih.gov/30207864/>`_
 
-.. [Garcia] `A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. 2024. <https://pubmed.ncbi.nlm.nih.gov/38238082/>`_
+.. [Garcia2024] `A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. 2024. <https://pubmed.ncbi.nlm.nih.gov/38238082/>`_
+
+.. [Garcia2022] `How Do Spike Collisions Affect Spike Sorting Performance? <https://doi.org/10.1523/ENEURO.0105-22.2022>`_
 
 .. [Grün] `Impact of higher-order correlations on coincidence distributions of massively parallel data. 2007. <https://www.researchgate.net/publication/225145104_Impact_of_Higher-Order_Correlations_on_Coincidence_Distributions_of_Massively_Parallel_Data>`_
 
@@ -168,3 +170,6 @@ References
 .. [Windolf_b] `DREDge: robust motion correction for high-density extracellular recordings across species. 2023 <https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1>`_
 
 .. [Yger] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
+
+.. [Scopin2024] `Localization of neurons from extracellular footprints <https://doi.org/10.1016/j.jneumeth.2024.110297>`_
+
