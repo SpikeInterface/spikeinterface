@@ -95,6 +95,16 @@ class ClusteringBenchmark(Benchmark):
 
 
 class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
+    """
+    Benchmark study to compare clustering methods.
+
+    The ground truth sorting objects must be given and method outputs
+    will be compared to them.
+
+    The input of methods are the detected peaks. Because the clustering
+    can be performed on only a subset of the detected peaks, then selected peak
+    must be also given as index of all spikes.
+    """
 
     benchmark_class = ClusteringBenchmark
 

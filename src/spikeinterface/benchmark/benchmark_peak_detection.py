@@ -116,6 +116,13 @@ class PeakDetectionBenchmark(Benchmark):
 
 
 class PeakDetectionStudy(BenchmarkStudy):
+    """
+    Benchmark study to compare peak detection methods.
+
+    The ground truth sorting must be given. 
+    Peak detected by methods will be compared to the ground truth to estimate the
+    recall.
+    """
 
     benchmark_class = PeakDetectionBenchmark
 
