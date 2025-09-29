@@ -3,4 +3,4 @@
 # from .method_list import matching_methods
 
 from .method_list import peak_localization_methods
-from .main import localize_peaks
+from .main import localize_peaks, get_localization_pipeline_nodes
