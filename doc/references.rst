@@ -92,6 +92,13 @@ If you use the :code:`get_potential_auto_merge` method from the curation module,
 
 If you use :code:`auto_label_units` or :code:`train_model`, please cite [Jain]_
 
+Benchmark
+---------
+
+For adicts to benchmarking numerical methods in the context of spike sorting, if any attends to use the benchmark
+module please cite [Garcia2022]_, [Garcia2024]_ or [Scopin2024]_.
+
+
 References
 ----------
 

@@ -29,6 +29,7 @@ Currently, we have methods for:
 For some of these steps, implementations are in a very early stage and are still a bit *drafty*.
 Signature and behavior may change from time to time in this alpha period development.
 
+
 You can also have a look `spikeinterface blog <https://spikeinterface.github.io>`_ where there are more detailed
 notebooks on sorting components.
 
@@ -66,10 +67,14 @@ The output :code:`peaks` is a NumPy array with a length of the number of peaks f
     peak_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('amplitude', 'float64'), ('segment_index', 'int64')]
 
 
-Different methods are available with the :code:`method` argument:
+2 main different methods are available with the :code:`method` argument:
 
-* 'by_channel' (default): peaks are detected separately for each channel
 * 'locally_exclusive' (requires :code:`numba`): peaks on neighboring channels within a certain radius are excluded (not counted multiple times)
+* 'matched_filtering' (requires :code:`numba`): 
+
+Other variant are also implemented (but less tested):
+
+* 'by_channel' (default): peaks are detected separately for each channel, this should be used in high density probe layout.
 * 'by_channel_torch' (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for time deduplication
 * 'locally_exclusive_torch' (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for space-time deduplication
 
@@ -109,12 +114,20 @@ follows:
 
 Currently, the following methods are implemented:
 
-  * 'center_of_mass'
+  * 'center_of_mass' : the fastest and more intuitive. This method is not accurated on the
+    border of the probe, so for neuropixel only the 'y' axis will be well estimated.
+    For for in vitro, with square mea, all spikes on borders will also be biased.
   * 'monopolar_triangulation' with optimizer='least_square'
     This method is from Julien Boussard and Erdem Varol from the Paninski lab.
     This has been presented at `NeurIPS <https://nips.cc/Conferences/2021/ScheduleMultitrack?event=26709>`_
     see also `here <https://openreview.net/forum?id=ohfi44BZPC4>`_
-  * 'monopolar_triangulation' with optimizer='minimize_with_log_penality'
+    'monopolar_triangulation' has some variant with differents optimizers (default is 'minimize_with_log_penality')
+  * 'grid_convolution' : inspired by the kilosort approach. This consists of a convolution of traces with waveform
+     prototypes with varying local spatial footprint on the probe.
+
+
+Please have a look to [Scopin2024]_, for for details on theses methods.
+
 
 These methods are the same as implemented in :py:mod:`spikeinterface.postprocessing.unit_localization`
 
@@ -171,7 +184,8 @@ Implemented methods are the following:
 Motion estimation
 -----------------
 
-Recently, drift estimation has been added to some of the available spike sorters (Kilosort 2.5, 3)
+Drift estimation is implemented directly in spikeintertface. So even sorters that do not
+handle the drift can benefit from drift estimation/correction.
 Especially for acute Neuropixels-like probes, this is a crucial step.
 
 The motion estimation step comes after peak detection and peak localization. Read more about
@@ -194,20 +208,31 @@ Here is an example with non-rigid motion estimation:
         recording=recording,
         peaks=peaks,
         peak_locations=peak_locations,
-        direction='y',
-        bin_s=10.,
-        bin_um=10.,
-        margin_um=0.,
-        method='decentralized',
+        method="dredge_ap",
         rigid=False,
-        win_shape='gaussian',
-        win_step_um=50.,
+        win_shape="gaussian",
+        win_step_um=200.0,
+        win_scale_um=300.0,
+        win_margin_um=None,
+        bin_um=1.0,
+        bin_s=1.0,
+        direction='y',
         progress_bar=True,
         verbose=True
     )
 
-In this example, because it is a non-rigid estimation, :code:`motion` is a 2d array (num_time_bins, num_spatial_bins).
+In this example, because it is a non-rigid estimation, :code:`motion` handle a 2d array (num_time_bins, num_spatial_bins).
 We could now check the ``motion`` object and see if we need to apply a correction.
+
+Availables methods are:
+
+  * 'dredge_ap' : the more mature method at the moement, done by [Windolf_b]_
+  * 'decentralized' : more or less the ancester od 'dredge_ap'
+  * 'iterative_template' : this mimic bthe kilosort approach.
+  * 'medicine' : a more recent approach done in [Watters]_.
+
+A comparison of theses methods can be read in [Garcia2024]_.
+
 
 Motion interpolation
 --------------------
@@ -252,16 +277,24 @@ large features.
 The clustering step takes the recording and detected (and optionally selected) peaks as input and returns
 a label for every peak.
 
-At the moment, the implemention is quite experimental.
-These methods have been implemented:
+Some methods have been implemented with various ideas in mind. We really hope that this list will be extended 
+soon by tallented people willing to improve. This is a crucial and not well totally resolved step.
 
-  * | "position_clustering": use HDBSCAN on peak locations.
-  * | "sliding_hdbscan": clustering approach from tridesclous, with sliding spatial windows. PCA and HDBSCAN are run
-    | on local/sparse waveforms.
-  * | "position_pca_clustering": this method tries to use peak locations for a first clustering step and then perform
-    | further splits using PCA + HDBSCAN
+  * "iterative-hdbscan" : method used in spkyking-circus2. This performs local hdbscan clusetrings on
+     svd waveforms features.
+  * "iterative-isosplit" :  method used in tridesclous2. This performs local isosplit clusetrings on
+     svd waveforms features.
+  * "hdbscan-positions" : This performs a hdbscan clusetring based on the localizations of the spikes.
+    This mimic the herdingspikes approach : make the clustering on spike position only but more flexible
+    because more localization methods are availables.
+  * "random-projections" : attempt to make the feature from waveforms with random projections instead of the
+    good-old-scool-pca.
+  * "graph-clustering" : attempt to resolved the clusetring globally and not locally. This construct a global
+    but sparse distance matrix between all spikes. Can be slow. Then it perform 'classical' algos on
+    graph (Louvain, Leiden or even HDBSCAN). Promising method but not as afficient as the "iterative-isosplit" or
+    "iterative-hdbscan".
 
-Different methods may need different inputs (for instance some of them require peak locations and some do not).
+
 
 .. code-block:: python
 
@@ -269,10 +302,10 @@ Different methods may need different inputs (for instance some of them require p
   peaks = detect_peaks(recording, ...) # as in above example
 
   from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
-  labels, peak_labels = find_cluster_from_peaks(recording=recording, peaks=peaks, method="sliding_hdbscan")
+  labels, peak_labels = find_cluster_from_peaks(recording=recording, peaks=peaks, method="iterative-isosplit")
 
 
-* **labels** : contains all possible labels
+* **labels** : contains all possible labels (aka unit_ids)
 * **peak_labels** : vector with the same size as peaks containing the label for each peak
 
 
@@ -286,15 +319,90 @@ traces as a linear sum of a template plus a residual noise.
 
 At the moment, there are five methods implemented:
 
-  * 'naive': a very naive implemenation used as a reference for benchmarks
-  * 'tridesclous': the algorithm for template matching implemented in Tridesclous
-  * 'circus': the algorithm for template matching implemented in SpyKING-Circus
-  * 'circus-omp': a updated algorithm similar to SpyKING-Circus but with OMP (orthogonal matching
-    pursuit)
-  * 'wobble' : an algorithm loosely based on YASS that scales template amplitudes and shifts them in time
-    to match detected spikes
+  * 'nearest': a simple implemenation which is more or less a np.argmin for the spike waveforms against all template.
+  * 'nearest-svd': a smater implemenation than ''nearest' using svd compression and spatial sparsity.
+  * 'tdc-peeler': a simple idea similar to nearest. Perform nearest on local detected peaks, fit the amplitude and
+    remove it from tarces. Then re-run on residual. A bit naive but this is very fast.
+  * 'circus-omp': a more serious implemenation orthogonal template matching. This internally make a convolution
+    of traces with all templates with some svd decomposition tricks to be faster. This is quite accurate but
+    need lots of memory.
+  * 'wobble': this is a re implemenation of the yass template matching codes. Finally, very similar to 'circus-omp'.
+    This is the most accurate methods for discovering spike collisions.
 
-Preliminary benchmarks suggest that:
- * 'circus-omp' is very accurate, but a bit slow.
- * 'tridesclous' is the fastest with decent accuracy
- * 'wobble' is much faster and a bit more accurate than 'circus-omp'
+
+Node pipelines
+--------------
+
+Either :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks()` and
+:py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks()` need to walk throughout the entire
+recording traces. So this make reading traces and computing the preprocessing twice : this can be very slow!
+Hopefully, there is an internal machinery to avoid the 2 times traces reading : :py:func:`~spikeinterface.core.run_node_pipeline()`
+
+The *node pipeline* is api that run in parallel some *nodes* on all traces chunks and perform computation like
+**peak detection**, **peak localization**, **svd featuring**, ...
+
+Here a small example that make peak detection and localization at once.
+In the following, please note that there is a in middle node that do not output
+final results : the local waveforms extractor.
+
+
+.. code-block:: python
+
+  import spikeinterface.full as si
+
+  # generate
+  recording, _, _ = si.generate_drifting_recording(
+      probe_name="Neuropixels1-128",
+      num_units=200,
+      duration=300.,
+      seed=2205,
+      extra_outputs=False,
+  )
+
+  # lets makes a 3 nodes
+
+  # Node 0 : detect peak
+  noise_levels = si.get_noise_levels(recording, return_in_uV=False)
+  from spikeinterface.sortingcomponents.peak_detection.method_list import LocallyExclusivePeakDetector
+  node0 = LocallyExclusivePeakDetector(
+      recording,
+      return_output=True, # We want output from this node!!
+      # then specific params
+      noise_levels=noise_levels,
+      peak_sign="neg",
+      detect_threshold=5.,
+      exclude_sweep_ms=0.5
+  )
+
+  # Node 1 : extract local waveforms
+  from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
+  node1 = ExtractDenseWaveforms(
+      recording,
+      parents=[node0],
+      return_output=False, # We do NOT want to output all dense waveforms!!!!
+      # then specific params
+      ms_before=1.,
+      ms_after=1.5,
+  )
+
+  # Node 2 : localize peaks using local waveforms
+  from spikeinterface.sortingcomponents.peak_localization.method_list import LocalizeMonopolarTriangulation
+  node2 = LocalizeMonopolarTriangulation(
+      recording,
+      parents=[node0, node1],
+      return_output=True, # We want output from this node!!
+      # then specific params
+      radius_um=75.0,
+      optimizer="minimize_with_log_penality",
+  )
+
+  nodes = [node0, node1, node2]
+
+  # our dear jobs kwargs dict
+  job_kwargs = dict(n_jobs=-1, chunk_duration="500ms", progress_bar=True)
+
+  # only 2 nodes give outputs
+  from spikeinterface.core.node_pipeline import run_node_pipeline
+  peaks, peak_locations = run_node_pipeline(recording, nodes, job_kwargs, job_name="my pipeline", gather_mode="memory")
+
+  # we strongly hope that geeks from various lab will appreciate the design.
