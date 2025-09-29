@@ -26,11 +26,14 @@ Currently, we have methods for:
  * clustering
  * template matching
 
+
 For some of these steps, implementations are in a very early stage and are still a bit *drafty*.
 Signature and behavior may change from time to time in this alpha period development.
 
+An important concept to be discovered is the **node pipeline** machinery using the 
+:py:func:`~spikeinterface.core.run_node_pipeline()` functions.
 
-You can also have a look `spikeinterface blog <https://spikeinterface.github.io>`_ where there are more detailed
+You can also have a look `spikeinterface blog <https://TODO(ref script paper components)>`_ where there are more detailed
 notebooks on sorting components.
 
 
@@ -147,6 +150,85 @@ For instance, the 'monopolar_triangulation' method will have:
      * **'x'** is the width of the probe
      * **'y'** is the depth
      * **'z'** is orthogonal to the probe plane
+
+
+Node pipelines
+--------------
+
+Either :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks()` and
+:py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks()` need to walk throughout the entire
+recording traces. So this make reading traces and computing the preprocessing twice : this can be very slow!
+Hopefully, there is an internal machinery to avoid the 2 times traces reading : :py:func:`~spikeinterface.core.run_node_pipeline()`
+
+The *node pipeline* is api that run in parallel some *nodes* on all traces chunks and perform computation like
+**peak detection**, **peak localization**, **svd featuring**, ...
+
+Here a small example that make peak detection and localization at once.
+In the following, please note that there is a in middle node that do not output
+final results : the local waveforms extractor.
+
+
+.. code-block:: python
+
+  import spikeinterface.full as si
+
+  # generate
+  recording, _, _ = si.generate_drifting_recording(
+      probe_name="Neuropixels1-128",
+      num_units=200,
+      duration=300.,
+      seed=2205,
+      extra_outputs=False,
+  )
+
+  # lets makes a 3 nodes
+
+  # Node 0 : detect peak
+  noise_levels = si.get_noise_levels(recording, return_in_uV=False)
+  from spikeinterface.sortingcomponents.peak_detection.method_list import LocallyExclusivePeakDetector
+  node0 = LocallyExclusivePeakDetector(
+      recording,
+      return_output=True, # We want output from this node!!
+      # then specific params
+      noise_levels=noise_levels,
+      peak_sign="neg",
+      detect_threshold=5.,
+      exclude_sweep_ms=0.5
+  )
+
+  # Node 1 : extract local waveforms
+  from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
+  node1 = ExtractDenseWaveforms(
+      recording,
+      parents=[node0],
+      return_output=False, # We do NOT want to output all dense waveforms!!!!
+      # then specific params
+      ms_before=1.,
+      ms_after=1.5,
+  )
+
+  # Node 2 : localize peaks using local waveforms
+  from spikeinterface.sortingcomponents.peak_localization.method_list import LocalizeMonopolarTriangulation
+  node2 = LocalizeMonopolarTriangulation(
+      recording,
+      parents=[node0, node1],
+      return_output=True, # We want output from this node!!
+      # then specific params
+      radius_um=75.0,
+      optimizer="minimize_with_log_penality",
+  )
+
+  nodes = [node0, node1, node2]
+
+  # our dear jobs kwargs dict
+  job_kwargs = dict(n_jobs=-1, chunk_duration="500ms", progress_bar=True)
+
+  # only 2 nodes give outputs
+  from spikeinterface.core.node_pipeline import run_node_pipeline
+  peaks, peak_locations = run_node_pipeline(recording, nodes, job_kwargs, job_name="my pipeline", gather_mode="memory")
+
+  # We strongly hope that geeks from various lab will appreciate the design.
+  # We spent hours debating on how to do it.
 
 
 Peak selection
@@ -309,6 +391,16 @@ soon by tallented people willing to improve. This is a crucial and not well tota
 * **peak_labels** : vector with the same size as peaks containing the label for each peak
 
 
+Extract SVD from peaks
+----------------------
+
+
+Importantly many clustering function are using internally the 
+:py:func:`~spikeinterface.sortingcomponents.clusetring.extract_peaks_svd.extract_peaks_svd()`.
+This run a **node pipeline** that extract on a selected peaks set, etxract waveforms, sparsify then, and compress
+then on time axis using **svd**.
+
+
 Template matching
 -----------------
 
@@ -329,80 +421,3 @@ At the moment, there are five methods implemented:
   * 'wobble': this is a re implemenation of the yass template matching codes. Finally, very similar to 'circus-omp'.
     This is the most accurate methods for discovering spike collisions.
 
-
-Node pipelines
---------------
-
-Either :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks()` and
-:py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks()` need to walk throughout the entire
-recording traces. So this make reading traces and computing the preprocessing twice : this can be very slow!
-Hopefully, there is an internal machinery to avoid the 2 times traces reading : :py:func:`~spikeinterface.core.run_node_pipeline()`
-
-The *node pipeline* is api that run in parallel some *nodes* on all traces chunks and perform computation like
-**peak detection**, **peak localization**, **svd featuring**, ...
-
-Here a small example that make peak detection and localization at once.
-In the following, please note that there is a in middle node that do not output
-final results : the local waveforms extractor.
-
-
-.. code-block:: python
-
-  import spikeinterface.full as si
-
-  # generate
-  recording, _, _ = si.generate_drifting_recording(
-      probe_name="Neuropixels1-128",
-      num_units=200,
-      duration=300.,
-      seed=2205,
-      extra_outputs=False,
-  )
-
-  # lets makes a 3 nodes
-
-  # Node 0 : detect peak
-  noise_levels = si.get_noise_levels(recording, return_in_uV=False)
-  from spikeinterface.sortingcomponents.peak_detection.method_list import LocallyExclusivePeakDetector
-  node0 = LocallyExclusivePeakDetector(
-      recording,
-      return_output=True, # We want output from this node!!
-      # then specific params
-      noise_levels=noise_levels,
-      peak_sign="neg",
-      detect_threshold=5.,
-      exclude_sweep_ms=0.5
-  )
-
-  # Node 1 : extract local waveforms
-  from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
-  node1 = ExtractDenseWaveforms(
-      recording,
-      parents=[node0],
-      return_output=False, # We do NOT want to output all dense waveforms!!!!
-      # then specific params
-      ms_before=1.,
-      ms_after=1.5,
-  )
-
-  # Node 2 : localize peaks using local waveforms
-  from spikeinterface.sortingcomponents.peak_localization.method_list import LocalizeMonopolarTriangulation
-  node2 = LocalizeMonopolarTriangulation(
-      recording,
-      parents=[node0, node1],
-      return_output=True, # We want output from this node!!
-      # then specific params
-      radius_um=75.0,
-      optimizer="minimize_with_log_penality",
-  )
-
-  nodes = [node0, node1, node2]
-
-  # our dear jobs kwargs dict
-  job_kwargs = dict(n_jobs=-1, chunk_duration="500ms", progress_bar=True)
-
-  # only 2 nodes give outputs
-  from spikeinterface.core.node_pipeline import run_node_pipeline
-  peaks, peak_locations = run_node_pipeline(recording, nodes, job_kwargs, job_name="my pipeline", gather_mode="memory")
-
-  # we strongly hope that geeks from various lab will appreciate the design.

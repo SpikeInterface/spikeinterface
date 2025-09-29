@@ -82,7 +82,7 @@ def make_one_displacement_vector(
 
     Parameters
     ----------
-    drift_mode : "zigzag" | "bumps", default: "zigzag"
+    drift_mode : "zigzag" | "bumps" | "random_walk", default: "zigzag"
         The drift mode.
     duration : float, default: 600
         Duration in seconds
