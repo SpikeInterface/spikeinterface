@@ -405,14 +405,14 @@ Drift
 
 .. currentmodule:: spikeinterface.generation
 
-.. autofunction:: generate_drifting_recording
-.. autofunction:: generate_displacement_vector
-.. autofunction:: make_one_displacement_vector
-.. autofunction:: make_linear_displacement
-.. autofunction:: move_dense_templates
-.. autofunction:: interpolate_templates
-.. autoclass:: DriftingTemplates
-.. autoclass:: InjectDriftingTemplatesRecording
+    .. autofunction:: generate_drifting_recording
+    .. autofunction:: generate_displacement_vector
+    .. autofunction:: make_one_displacement_vector
+    .. autofunction:: make_linear_displacement
+    .. autofunction:: move_dense_templates
+    .. autofunction:: interpolate_templates
+    .. autoclass:: DriftingTemplates
+    .. autoclass:: InjectDriftingTemplatesRecording
 
 Hybrid
 ~~~~~~
@@ -457,7 +457,7 @@ Clustering
 ~~~~~~~~~~
 .. automodule:: spikeinterface.sortingcomponents.clustering
 
-    .. autofunction:: find_cluster_from_peaks
+    .. autofunction:: find_clusters_from_peaks
 
 Template Matching
 ~~~~~~~~~~~~~~~~~
@@ -491,7 +491,7 @@ spikeinterface.benchmark
 
     .. autoclass:: PeakLocalizationStudy
 
-.. automodule:: spikeinterface.benchmark.benchmark_peak_detection
+.. automodule:: spikeinterface.benchmark.benchmark_peak_localization 
 
     .. autoclass:: UnitLocalizationStudy
 
@@ -518,13 +518,3 @@ spikeinterface.benchmark
     .. autofunction:: plot_performances_comparison
     .. autofunction:: plot_performances_vs_depth_and_snr
     .. autofunction:: plot_performance_losses
-
-
-        
-
-
-
-
-
-
-

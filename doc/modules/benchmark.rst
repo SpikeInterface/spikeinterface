@@ -48,7 +48,7 @@ All theses benchmark study classes share the same design :
     complexities at the same time. For instance, compare kilosort4 vs kilsort2.5 (level 0) for
     different noises amplitudes (level 1) combined with several motion vectors (level 2).
   * When plotting levels can be grouped to make averages.
-  * Internally, they almost all use the :py:module:`~spikeinterface.comparison` module.
+  * Internally, they almost all use the :py:mod:`~spikeinterface.comparison` module.
     In short this module can compare a set of spiketrains against set of ground truth spiketrains.
     The van diagram (True Posistive, False positive, False negative) against each ground truth units is
     performed.

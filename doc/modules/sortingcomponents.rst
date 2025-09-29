@@ -383,8 +383,8 @@ soon by tallented people willing to improve. This is a crucial and not well tota
   from spikeinterface.sortingcomponents.peak_detection import detect_peaks
   peaks = detect_peaks(recording, ...) # as in above example
 
-  from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
-  labels, peak_labels = find_cluster_from_peaks(recording=recording, peaks=peaks, method="iterative-isosplit")
+  from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
+  labels, peak_labels = find_clusters_from_peaks(recording=recording, peaks=peaks, method="iterative-isosplit")
 
 
 * **labels** : contains all possible labels (aka unit_ids)

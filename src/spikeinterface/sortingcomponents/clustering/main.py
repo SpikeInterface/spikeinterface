@@ -17,7 +17,6 @@ def find_clusters_from_peaks(recording,
     """
     Find cluster from peaks.
 
-
     Parameters
     ----------
     recording : RecordingExtractor

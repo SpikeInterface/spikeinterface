@@ -170,8 +170,6 @@ References
 
 .. [Varol] `Decentralized Motion Inference and Registration of Neuropixel Data. 2021. <https://ieeexplore.ieee.org/document/9414145>`_
 
-.. [Watters] `MEDiCINe: Motion Correction for Neural Electrophysiology Recordings. 2025. <https://www.eneuro.org/content/12/3/ENEURO.0529-24.2025>`_
-
 .. [Windolf_a] `Robust Online Multiband Drift Estimation in Electrophysiology Data. 2022. <https://www.biorxiv.org/content/10.1101/2022.12.04.519043v2>`_
 
 .. [Windolf_b] `DREDge: robust motion correction for high-density extracellular recordings across species. 2023 <https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1>`_
