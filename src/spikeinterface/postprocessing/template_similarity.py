@@ -208,7 +208,9 @@ register_result_extension(ComputeTemplateSimilarity)
 compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
 
-def _compute_similarity_matrix_numpy(templates_array, other_templates_array, num_shifts, method, sparsity, other_sparsity, support="union"):
+def _compute_similarity_matrix_numpy(
+    templates_array, other_templates_array, num_shifts, method, sparsity, other_sparsity, support="union"
+):
 
     num_templates = templates_array.shape[0]
     num_samples = templates_array.shape[1]
@@ -274,7 +276,9 @@ if HAVE_NUMBA:
     import numba
 
     @numba.jit(nopython=True, parallel=True, fastmath=True, nogil=True)
-    def _compute_similarity_matrix_numba(templates_array, other_templates_array, num_shifts, method, sparsity, other_sparsity, support="union"):
+    def _compute_similarity_matrix_numba(
+        templates_array, other_templates_array, num_shifts, method, sparsity, other_sparsity, support="union"
+    ):
         num_templates = templates_array.shape[0]
         num_samples = templates_array.shape[1]
         num_channels = sparsity.shape[1]
@@ -305,11 +309,11 @@ if HAVE_NUMBA:
             tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
             for i in numba.prange(num_templates):
                 src_template = src_sliced_templates[i]
-                
+
                 ## Ideally we would like to use this but numba does not support well function with numpy and boolean arrays
                 ## So we inline the function here
-                #local_mask = get_mask_for_sparse_template(i, sparsity, other_sparsity, support=support)
-                
+                # local_mask = get_mask_for_sparse_template(i, sparsity, other_sparsity, support=support)
+
                 local_mask = np.ones((other_num_templates, num_channels), dtype=np.bool_)
 
                 if support == "intersection":
@@ -325,8 +329,7 @@ if HAVE_NUMBA:
                         sparsity[i], other_sparsity
                     )  # shape (num_templates, other_num_templates, num_channels)
                     local_mask[~units_overlaps] = False
-                
-                
+
                 overlapping_templates = np.flatnonzero(np.sum(local_mask, 1))
                 tgt_templates = tgt_sliced_templates[overlapping_templates]
                 for gcount in range(len(overlapping_templates)):
@@ -383,11 +386,7 @@ else:
     _compute_similarity_matrix = _compute_similarity_matrix_numpy
 
 
-
-def get_mask_for_sparse_template(template_index, 
-                                 sparsity, 
-                                 other_sparsity, 
-                                 support="union") -> np.ndarray:
+def get_mask_for_sparse_template(template_index, sparsity, other_sparsity, support="union") -> np.ndarray:
 
     other_num_templates = other_sparsity.shape[0]
     num_channels = sparsity.shape[1]
@@ -429,10 +428,10 @@ def compute_similarity_with_templates_array(
     assert (
         templates_array.shape[2] == other_templates_array.shape[2]
     ), "The number of channels in the templates should be the same for both arrays"
-    #num_templates = templates_array.shape[0]
+    # num_templates = templates_array.shape[0]
     num_samples = templates_array.shape[1]
-    #num_channels = templates_array.shape[2]
-    #other_num_templates = other_templates_array.shape[0]
+    # num_channels = templates_array.shape[2]
+    # other_num_templates = other_templates_array.shape[0]
 
     if sparsity is not None and other_sparsity is not None:
         sparsity_mask = sparsity.mask if isinstance(sparsity, ChannelSparsity) else sparsity
@@ -442,7 +441,9 @@ def compute_similarity_with_templates_array(
         other_sparsity_mask = np.ones((other_templates_array.shape[0], other_templates_array.shape[2]), dtype=bool)
 
     assert num_shifts < num_samples, "max_lag is too large"
-    distances = _compute_similarity_matrix(templates_array, other_templates_array, num_shifts, method, sparsity_mask, other_sparsity_mask, support=support)
+    distances = _compute_similarity_matrix(
+        templates_array, other_templates_array, num_shifts, method, sparsity_mask, other_sparsity_mask, support=support
+    )
 
     distances = np.min(distances, axis=0)
     similarity = 1 - distances
