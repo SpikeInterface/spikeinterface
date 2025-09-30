@@ -111,10 +111,18 @@ def test_equal_results_numba(params):
     other_sparsity_mask = np.ones((2, 5), dtype=bool)
 
     result_numpy = _compute_similarity_matrix_numba(
-        templates_array, other_templates_array, sparsity_mask=sparsity_mask, other_sparsity_mask=other_sparsity_mask, **params
+        templates_array,
+        other_templates_array,
+        sparsity_mask=sparsity_mask,
+        other_sparsity_mask=other_sparsity_mask,
+        **params,
     )
     result_numba = _compute_similarity_matrix_numpy(
-        templates_array, other_templates_array, sparsity_mask=sparsity_mask, other_sparsity_mask=other_sparsity_mask, **params
+        templates_array,
+        other_templates_array,
+        sparsity_mask=sparsity_mask,
+        other_sparsity_mask=other_sparsity_mask,
+        **params,
     )
 
     assert np.allclose(result_numpy, result_numba, 1e-3)
