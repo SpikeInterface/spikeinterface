@@ -209,7 +209,7 @@ compute_template_similarity = ComputeTemplateSimilarity.function_factory()
 
 
 def _compute_similarity_matrix_numpy(
-    templates_array, other_templates_array, num_shifts, method, sparsity, other_sparsity, support="union"
+    templates_array, other_templates_array, num_shifts, method, sparsity_mask, other_sparsity_mask, support="union"
 ):
 
     num_templates = templates_array.shape[0]
@@ -234,7 +234,7 @@ def _compute_similarity_matrix_numpy(
         tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
         for i in range(num_templates):
             src_template = src_sliced_templates[i]
-            local_mask = get_mask_for_sparse_template(i, sparsity, other_sparsity, support=support)
+            local_mask = get_mask_for_sparse_template(i, sparsity_mask, other_sparsity_mask, support=support)
             overlapping_templates = np.flatnonzero(np.sum(local_mask, 1))
             tgt_templates = tgt_sliced_templates[overlapping_templates]
             for gcount, j in enumerate(overlapping_templates):
@@ -277,11 +277,11 @@ if HAVE_NUMBA:
 
     @numba.jit(nopython=True, parallel=True, fastmath=True, nogil=True)
     def _compute_similarity_matrix_numba(
-        templates_array, other_templates_array, num_shifts, method, sparsity, other_sparsity, support="union"
+        templates_array, other_templates_array, num_shifts, method, sparsity_mask, other_sparsity_mask, support="union"
     ):
         num_templates = templates_array.shape[0]
         num_samples = templates_array.shape[1]
-        num_channels = sparsity.shape[1]
+        num_channels = templates_array.shape[2]
         other_num_templates = other_templates_array.shape[0]
 
         num_shifts_both_sides = 2 * num_shifts + 1
@@ -318,15 +318,15 @@ if HAVE_NUMBA:
 
                 if support == "intersection":
                     local_mask = np.logical_and(
-                        sparsity[i], other_sparsity
+                        sparsity_mask[i], other_sparsity_mask
                     )  # shape (num_templates, other_num_templates, num_channels)
                 elif support == "union":
                     local_mask = np.logical_and(
-                        sparsity[i], other_sparsity
+                        sparsity_mask[i], other_sparsity_mask
                     )  # shape (num_templates, other_num_templates, num_channels)
                     units_overlaps = np.sum(local_mask, axis=1) > 0
                     local_mask = np.logical_or(
-                        sparsity[i], other_sparsity
+                        sparsity_mask[i], other_sparsity_mask
                     )  # shape (num_templates, other_num_templates, num_channels)
                     local_mask[~units_overlaps] = False
 
@@ -433,11 +433,14 @@ def compute_similarity_with_templates_array(
     # num_channels = templates_array.shape[2]
     # other_num_templates = other_templates_array.shape[0]
 
-    if sparsity is not None and other_sparsity is not None:
+    if sparsity is not None:
         sparsity_mask = sparsity.mask if isinstance(sparsity, ChannelSparsity) else sparsity
-        other_sparsity_mask = other_sparsity.mask if isinstance(other_sparsity, ChannelSparsity) else other_sparsity
     else:
         sparsity_mask = np.ones((templates_array.shape[0], templates_array.shape[2]), dtype=bool)
+
+    if other_sparsity is not None:
+        other_sparsity_mask = other_sparsity.mask if isinstance(other_sparsity, ChannelSparsity) else other_sparsity
+    else:
         other_sparsity_mask = np.ones((other_templates_array.shape[0], other_templates_array.shape[2]), dtype=bool)
 
     assert num_shifts < num_samples, "max_lag is too large"
