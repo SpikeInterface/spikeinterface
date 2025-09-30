@@ -433,11 +433,14 @@ def compute_similarity_with_templates_array(
     # num_channels = templates_array.shape[2]
     # other_num_templates = other_templates_array.shape[0]
 
-    if sparsity is not None and other_sparsity is not None:
+    if sparsity is not None:
         sparsity_mask = sparsity.mask if isinstance(sparsity, ChannelSparsity) else sparsity
-        other_sparsity_mask = other_sparsity.mask if isinstance(other_sparsity, ChannelSparsity) else other_sparsity
     else:
         sparsity_mask = np.ones((templates_array.shape[0], templates_array.shape[2]), dtype=bool)
+
+    if other_sparsity is not None:
+        other_sparsity_mask = other_sparsity.mask if isinstance(other_sparsity, ChannelSparsity) else other_sparsity
+    else:
         other_sparsity_mask = np.ones((other_templates_array.shape[0], other_templates_array.shape[2]), dtype=bool)
 
     assert num_shifts < num_samples, "max_lag is too large"
