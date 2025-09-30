@@ -200,7 +200,16 @@ class CircusClustering:
                 ms_after,
                 **job_kwargs_local,
             )
-            sparse_mask2 = sparse_mask
+            
+            from spikeinterface.core.sparsity import compute_sparsity
+            sparse_mask2 = compute_sparsity(
+                templates,
+                method="snr",
+                amplitude_mode="peak_to_peak",
+                noise_levels=params["noise_levels"],
+                threshold=0.25,
+            ).mask
+
         else:
             from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
