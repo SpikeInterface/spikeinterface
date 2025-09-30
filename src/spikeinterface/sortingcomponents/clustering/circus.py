@@ -200,8 +200,9 @@ class CircusClustering:
                 ms_after,
                 **job_kwargs_local,
             )
-            
+
             from spikeinterface.core.sparsity import compute_sparsity
+
             sparse_mask2 = compute_sparsity(
                 templates,
                 method="snr",
