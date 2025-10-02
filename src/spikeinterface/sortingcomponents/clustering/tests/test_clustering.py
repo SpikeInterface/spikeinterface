@@ -65,6 +65,11 @@ def peak_locations_fixture(recording, peaks, job_kwargs):
 
 clustering_method_keys = list(clustering_methods.keys())
 
+# remove graph-clustering if sknetwork is not installed
+HAVE_SKNETWORK = importlib.util.find_spec("sknetwork") is not None
+if not HAVE_SKNETWORK:
+    clustering_method_keys.remove("graph-clustering")
+
 
 @pytest.mark.parametrize("clustering_method", clustering_method_keys)
 def test_find_clusters_from_peaks(clustering_method, recording, peaks, peak_locations):
