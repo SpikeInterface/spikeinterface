@@ -123,7 +123,7 @@ if __name__ == "__main__":
     peak_locations = run_peak_locations(recording, peaks, job_kwargs)
     # method = "position_and_pca"
     # method = "iterative-isosplit"
-    #method = "iterative-hdbscan"
+    # method = "iterative-hdbscan"
     # method = "random_projections"
     method = "graph-clustering"
 

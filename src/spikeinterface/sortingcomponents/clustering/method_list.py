@@ -21,6 +21,7 @@ clustering_methods = {
 try:
     # Kilosort licence (GPL 3) is forcing us to make and use an external package
     from spikeinterface_kilosort_components.kilosort_clustering import KiloSortClustering
+
     clustering_methods["kilosort-clustering"] = KiloSortClustering
 except ImportError:
     pass

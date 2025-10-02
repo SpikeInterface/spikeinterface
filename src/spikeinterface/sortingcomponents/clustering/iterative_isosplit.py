@@ -32,20 +32,14 @@ class IterativeISOSPLITClustering:
     _default_params = {
         "motion": None,
         "seed": None,
-        "peaks_svd": {
-            "n_components": 5,
-            "ms_before": 0.5,
-            "ms_after": 1.5,
-            "radius_um": 120.0,
-            "motion": None
-        },
+        "peaks_svd": {"n_components": 5, "ms_before": 0.5, "ms_after": 1.5, "radius_um": 120.0, "motion": None},
         "split": {
             "split_radius_um": 40.0,
             "recursive": True,
             "recursive_depth": 5,
-            "method_kwargs" : {
+            "method_kwargs": {
                 "clusterer": {
-                    "method" : "isosplit",
+                    "method": "isosplit",
                     "n_init": 50,
                     "min_cluster_size": 10,
                     "max_iterations_per_pass": 500,
@@ -55,25 +49,25 @@ class IterativeISOSPLITClustering:
                 "n_pca_features": 3,
             },
         },
-        "merge_from_templates" :{
+        "merge_from_templates": {
             "similarity_metric": "l1",
             "num_shifts": 3,
             "similarity_thresh": 0.8,
         },
-        "merge_from_features" : None,
+        "merge_from_features": None,
         "clean": {
             "minimum_cluster_size": 10,
         },
-        "debug_folder" : None,
-        "verbose": True
+        "debug_folder": None,
+        "verbose": True,
     }
 
     params_doc = """
-        peaks_svd : params for peak SVD features extraction. 
+        peaks_svd : params for peak SVD features extraction.
         See spikeinterface.sortingcomponents.waveforms.peak_svd.extract_peaks_svd
                         for more details.,
         seed : Random seed for reproducibility.,
-        split : params for the splitting step. See 
+        split : params for the splitting step. See
                  spikeinterface.sortingcomponents.clustering.splitting_tools.split_clusters
                  for more details.,
         merge_from_templates : params for the merging step based on templates. See
@@ -88,7 +82,6 @@ class IterativeISOSPLITClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
-
 
         ms_before = params["peaks_svd"]["ms_before"]
         ms_after = params["peaks_svd"]["ms_after"]
@@ -136,7 +129,6 @@ class IterativeISOSPLITClustering:
             peaks_svd=peaks_svd,
         )
 
-        
         split_params["returns_split_count"] = True
 
         if params["seed"] is not None:
@@ -253,19 +245,11 @@ class IterativeISOSPLITClustering:
         )
         return labels_set, final_peak_labels, more_outs
 
-
-
-
-
-
     # _default_params = {
     #     "clean": {
     #         "minimum_cluster_size": 10,
     #     },
     # }
-
-
-
 
     # @classmethod
     # def main_function(cls, recording, peaks, params, job_kwargs=dict()):
@@ -360,8 +344,8 @@ class IterativeISOSPLITClustering:
     #             radius_um=merge_radius_um,
     #             method="project_distribution",
     #             method_kwargs=dict(
-    #                 feature_name="sparse_tsvd", 
-    #                 waveforms_sparse_mask=sparse_mask, 
+    #                 feature_name="sparse_tsvd",
+    #                 waveforms_sparse_mask=sparse_mask,
     #                 **merge_features_kwargs
     #             ),
     #             **job_kwargs,

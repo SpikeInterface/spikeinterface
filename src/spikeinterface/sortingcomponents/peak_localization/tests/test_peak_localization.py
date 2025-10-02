@@ -31,13 +31,21 @@ def test_localize_peaks():
     list_locations.append(("grid_convolution", peak_locations))
 
     peak_locations = localize_peaks(
-        recording, peaks, method="monopolar_triangulation", method_kwargs=dict(optimizer="least_square"), job_kwargs=job_kwargs
+        recording,
+        peaks,
+        method="monopolar_triangulation",
+        method_kwargs=dict(optimizer="least_square"),
+        job_kwargs=job_kwargs,
     )
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("least_square", peak_locations))
 
     peak_locations = localize_peaks(
-        recording, peaks, method="monopolar_triangulation", method_kwargs=dict(optimizer="minimize_with_log_penality"), job_kwargs=job_kwargs
+        recording,
+        peaks,
+        method="monopolar_triangulation",
+        method_kwargs=dict(optimizer="minimize_with_log_penality"),
+        job_kwargs=job_kwargs,
     )
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("minimize_with_log_penality", peak_locations))

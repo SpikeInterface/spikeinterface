@@ -19,7 +19,7 @@ def find_spikes_from_templates(
     pipeline_kwargs=None,
     verbose=False,
     job_kwargs=None,
-    **old_kwargs
+    **old_kwargs,
 ) -> np.ndarray | tuple[np.ndarray, dict]:
     """Find spike from a recording from given templates.
 
@@ -37,7 +37,7 @@ def find_spikes_from_templates(
         If True then a dict is also returned is also returned
     pipeline_kwargs : dict
         Dict transmited to run_node_pipelines to handle fine details
-        like : gather_mode/folder/skip_after_n_peaks/recording_slices   
+        like : gather_mode/folder/skip_after_n_peaks/recording_slices
     verbose : Bool, default: False
         If True, output is verbose
     job_kwargs : dict
@@ -71,7 +71,7 @@ def find_spikes_from_templates(
 
     method_class = matching_methods[method]
 
-    #if method_class.full_convolution:
+    # if method_class.full_convolution:
     #   Maybe we need to automatically adjust the temporal chunks given templates and n_processes
 
     if len(templates.unit_ids) == 0:
@@ -80,7 +80,6 @@ def find_spikes_from_templates(
     if method_class.need_noise_levels:
         if "noise_levels" not in method_kwargs:
             raise ValueError(f"find_spikes_from_templates() method {method} need noise_levels")
-
 
     node0 = method_class(recording, templates=templates, **method_kwargs)
     nodes = [node0]
@@ -98,7 +97,7 @@ def find_spikes_from_templates(
         squeeze_output=True,
         names=names,
         verbose=verbose,
-        **pipeline_kwargs
+        **pipeline_kwargs,
     )
 
     if extra_outputs:

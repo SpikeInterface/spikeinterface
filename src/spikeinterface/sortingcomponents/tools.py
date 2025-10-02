@@ -20,6 +20,7 @@ from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
 from spikeinterface.core.recording_tools import get_noise_levels
 
+
 def make_multi_method_doc(methods, ident="    "):
     doc = ""
 
@@ -118,7 +119,12 @@ def get_prototype_and_waveforms_from_peaks(
         peaks, recording=recording, method="uniform", n_peaks=n_peaks, margin=(nbefore, nafter), seed=seed
     )
     waveforms = extract_waveform_at_max_channel(
-        recording, few_peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs, job_name="waveform prototype"
+        recording,
+        few_peaks,
+        ms_before=ms_before,
+        ms_after=ms_after,
+        job_kwargs=job_kwargs,
+        job_name="waveform prototype",
     )
 
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -168,11 +174,7 @@ def get_prototype_and_waveforms_from_recording(
         detection_kwargs = detection_kwargs.copy()
         detection_kwargs["noise_levels"] = get_noise_levels(recording, return_in_uV=False)
 
-    node0 = LocallyExclusivePeakDetector(
-        recording,
-        return_output=True,
-        **detection_kwargs
-    )
+    node0 = LocallyExclusivePeakDetector(recording, return_output=True, **detection_kwargs)
 
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
     node1 = ExtractSparseWaveforms(
@@ -435,7 +437,6 @@ def remove_empty_templates(templates):
     return templates.select_units(templates.unit_ids[not_empty])
 
 
-
 def create_sorting_analyzer_with_existing_templates(sorting, recording, templates, remove_empty=True):
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
@@ -464,7 +465,7 @@ def create_sorting_analyzer_with_existing_templates(sorting, recording, template
 def get_shuffled_recording_slices(recording, job_kwargs=None, seed=None):
     from spikeinterface.core.job_tools import ensure_chunk_size
     from spikeinterface.core.job_tools import divide_segment_into_chunks
-    
+
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
