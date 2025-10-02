@@ -105,14 +105,9 @@ class IterativeISOSPLITClustering:
         outs = extract_peaks_svd(
             recording,
             peaks,
-            # ms_before=ms_before,
-            # ms_after=ms_after,
-            # radius_um=radius_um,
+            job_kwargs=job_kwargs,
             motion_aware=motion_aware,
             **params_peak_svd,
-            # motion=motion,
-            # **params["extract_peaks_svd_kwargs"],
-            **job_kwargs,
         )
 
         if motion is not None:

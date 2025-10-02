@@ -81,7 +81,7 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     # }
 
     spikes, info = find_spikes_from_templates(
-        recording, templates, method=method, method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
+        recording, templates, method=method, method_kwargs=method_kwargs, extra_outputs=True, job_kwargs=job_kwargs
     )
 
     # print(info)

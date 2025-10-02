@@ -308,7 +308,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 max_distance_um=50,
                 template_diff_thresh=np.arange(0.05, 0.4, 0.05),
                 debug_folder=None,
-                **job_kwargs,
+                job_kwargs=job_kwargs,
             )
             sorting = NumpySorting.from_sorting(analyzer_final.sorting)
 

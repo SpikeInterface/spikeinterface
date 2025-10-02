@@ -20,10 +20,12 @@ def test_features_from_peaks():
     peaks = detect_peaks(
         recording,
         method="locally_exclusive",
-        peak_sign="neg",
-        detect_threshold=5,
-        noise_levels=noise_levels,
-        **job_kwargs,
+        method_kwargs=dict(
+            peak_sign="neg",
+            detect_threshold=5,
+            noise_levels=noise_levels,
+        ),
+        job_kwargs=job_kwargs,
     )
 
     feature_list = [
@@ -36,7 +38,7 @@ def test_features_from_peaks():
         "ptp": {"all_channels": False},
         "center_of_mass": {"radius_um": 120.0},
     }
-    features = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, **job_kwargs)
+    features = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, job_kwargs=job_kwargs)
 
     assert isinstance(features, tuple)
 
@@ -52,7 +54,7 @@ def test_features_from_peaks():
         amplitude,
         ptp,
         com,
-    ) = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, **job_kwargs)
+    ) = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, job_kwargs=job_kwargs)
     assert amplitude.ndim == 1  # because all_channels=False
     assert ptp.ndim == 1  # because all_channels=False
     assert com.ndim == 1
@@ -64,7 +66,7 @@ def test_features_from_peaks():
         amplitude,
         ptp,
     ) = compute_features_from_peaks(
-        recording, peaks, ["amplitude", "ptp"], feature_params={"amplitude": d, "ptp": d}, **job_kwargs
+        recording, peaks, ["amplitude", "ptp"], feature_params={"amplitude": d, "ptp": d}, job_kwargs=job_kwargs
     )
     assert amplitude.shape[0] == amplitude.shape[0]
     assert amplitude.shape[1] == recording.get_num_channels()

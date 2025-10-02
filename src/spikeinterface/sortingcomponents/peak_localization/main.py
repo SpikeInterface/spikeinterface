@@ -49,7 +49,7 @@ def get_localization_pipeline_nodes(
 
         method_kwargs = method_kwargs.copy()
         method_kwargs["prototype"], _, _ = get_prototype_and_waveforms_from_peaks(
-            recording, peaks=peak_source.peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+            recording, peaks=peak_source.peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
         )
 
     localization_nodes = method_class(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs)

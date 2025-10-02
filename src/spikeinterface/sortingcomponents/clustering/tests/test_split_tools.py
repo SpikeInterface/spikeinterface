@@ -4,7 +4,7 @@ import numpy as np
 from spikeinterface.sortingcomponents.clustering.splitting_tools import split_clusters
 
 
-# T ODO
+# TODO
 def test_split():
     pass
 

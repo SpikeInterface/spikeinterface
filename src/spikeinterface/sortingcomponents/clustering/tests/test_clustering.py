@@ -80,14 +80,14 @@ def test_find_clusters_from_peaks(clustering_method, recording, peaks, peak_loca
 
 # TODO move to waveforms tests
 def test_extract_peaks_svd(recording, peaks, job_kwargs):
-    peaks_svd, sparse_mask, svd_model = extract_peaks_svd(recording, peaks, n_components=5, **job_kwargs)
+    peaks_svd, sparse_mask, svd_model = extract_peaks_svd(recording, peaks, n_components=5, job_kwargs=job_kwargs)
     assert peaks_svd.shape[0] == peaks.shape[0]
     assert peaks_svd.shape[1] == 5
     assert peaks_svd.shape[2] == np.max(np.sum(sparse_mask, axis=1))
 
 
 def test_create_graph_from_peak_features(recording, peaks, job_kwargs):
-    peaks_svd, sparse_mask, svd_model = extract_peaks_svd(recording, peaks, n_components=5, **job_kwargs)
+    peaks_svd, sparse_mask, svd_model = extract_peaks_svd(recording, peaks, n_components=5, job_kwargs=job_kwargs)
 
     distances = create_graph_from_peak_features(
         recording,
@@ -100,7 +100,7 @@ def test_create_graph_from_peak_features(recording, peaks, job_kwargs):
 
 def test_templates_from_svd(recording, peaks, job_kwargs):
     peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
-        recording, peaks, n_components=1, ms_before=1, ms_after=1, **job_kwargs
+        recording, peaks, n_components=1, ms_before=1, ms_after=1, job_kwargs=job_kwargs
     )
     templates = get_templates_from_peaks_and_svd(
         recording,

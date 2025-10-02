@@ -94,8 +94,8 @@ class GraphClustering:
         peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
             recording,
             peaks,
+            job_kwargs=job_kwargs,
             **peaks_svd,
-            **job_kwargs,
         )
 
         # some method need a symetric matrix

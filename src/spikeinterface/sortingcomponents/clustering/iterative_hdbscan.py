@@ -94,8 +94,8 @@ class IterativeHDBSCANClustering:
         peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
             recording,
             peaks,
+            job_kwargs=job_kwargs,
             **peaks_svd,
-            **job_kwargs,
         )
 
         if debug_folder is not None:

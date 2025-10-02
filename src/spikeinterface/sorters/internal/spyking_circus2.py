@@ -234,8 +234,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     ms_after=ms_after,
                     seed=seed,
                     noise_levels=noise_levels,
+                    job_kwargs=job_kwargs,
                     **detection_params2,
-                    **job_kwargs,
                 )
             else:
                 from spikeinterface.sortingcomponents.tools import (
@@ -255,8 +255,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     n_peaks=10000,
                     ms_before=ms_before,
                     ms_after=ms_after,
+                    job_kwargs=job_kwargs,
                     seed=seed,
-                    **job_kwargs,
                 )
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
@@ -267,8 +267,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if skip_peaks:
             detect_pipeline_kwargs["recording_slices"] = get_shuffled_recording_slices(
                 recording_w, 
-                seed=params["seed"], 
-                **job_kwargs
+                job_kwargs=job_kwargs,
+                seed=params["seed"],
             )
             detect_pipeline_kwargs["skip_after_n_peaks"] = n_peaks
 
@@ -336,7 +336,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     peak_labels,
                     ms_before,
                     ms_after,
-                    **job_kwargs,
+                    job_kwargs=job_kwargs,
                 )
             else:
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
@@ -420,7 +420,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
                 if sorting.get_non_empty_unit_ids().size > 0:
                     final_analyzer = final_cleaning_circus(
-                        recording_w, sorting, templates, **merging_params, **job_kwargs
+                        recording_w, sorting, templates,  job_kwargs=job_kwargs, **merging_params
                     )
                     final_analyzer.save_as(format="binary_folder", folder=sorter_output_folder / "final_analyzer")
 
@@ -455,7 +455,7 @@ def final_cleaning_circus(
     max_distance_um=50,
     template_diff_thresh=np.arange(0.05, 0.5, 0.05),
     debug_folder=None,
-    **job_kwargs,
+    job_kwargs=None,
 ):
 
     from spikeinterface.sortingcomponents.tools import create_sorting_analyzer_with_existing_templates
