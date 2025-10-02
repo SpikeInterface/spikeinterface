@@ -606,6 +606,16 @@ def test_extension():
         register_result_extension(DummyAnalyzerExtension2)
 
 
+def test_excess_spikes(dataset):
+    """
+    If there are spikes that occur after the recording end time,
+    `create_sorting_analyzer` should cut them off and warn the user.
+    """
+    recording, sorting = dataset
+    with pytest.warns(UserWarning):
+        create_sorting_analyzer(sorting=sorting, recording=recording.time_slice(0, 1))
+
+
 def test_extensions_sorting():
 
     # nothing happens if all parents are on the left of the children
