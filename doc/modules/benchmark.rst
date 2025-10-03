@@ -9,13 +9,13 @@ small/high spike rate, high/small probe density, ...).
 The main idea is to generate a synthetic recording using the internal generators
 :py:func:`~spikeinterface.generation.generate_drifting_recording` or external tools
 like ***mearec**. And then to compare the output of each sorter to the ground truth sorting.
-Theses comparisons, then can be plotted in various ways to explore all strengths and weakness of
+Then, theses comparisons can be plotted in various ways to explore all strengths and weakness of
 sorters tools. The very first paper of spikeinterface was about that, see [Buccino]_.
 
 Since version, 0.102.0 the concept of *benchmark* has been extended to challenge/study specific 
 steps of the sorting pipeline, for instance the motion estimation methods has been carrfully studied
 in [Garcia2024]_ or some localisation methods has been compared in [Scopin2024]_.
-Also, a very specific details (the ability for a sorting to recover collision spike) has been
+Also, very specific details (the ability for a sorting to recover collision spike) has been
 studied in [Garcia2022]_.
 
 Now, almost all steps of the spike sorting step has implemented in spikeinterface and then
@@ -49,7 +49,7 @@ All theses benchmark study classes share the same design :
     different noises amplitudes (level 1) combined with several motion vectors (level 2).
   * When plotting levels can be grouped to make averages.
   * Internally, they almost all use the :py:mod:`~spikeinterface.comparison` module.
-    In short this module can compare a set of spiketrains against set of ground truth spiketrains.
+    In short this module can compare a set of spiketrains against ground truth spiketrains.
     The van diagram (True Posistive, False positive, False negative) against each ground truth units is
     performed.
     An internal agreement matrix is also constructed. With this machinery many metrics can be taken
@@ -58,7 +58,7 @@ All theses benchmark study classes share the same design :
     organization into a "study_folder" with several subfolders: results, sorting_analyzer, run_logs, 
     cases...
   * By design a **Study** class has an associated **Benchmark** class to delegated the storage and the
-    `compute_result()`
+    :code:`compute_result()`
 
 
 **Example 1: compare some sorters : a ground truth study**
@@ -156,7 +156,7 @@ Here a simple code block to generate
 
 
 The :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks()` function
-propse mainlly (with some variant) 2 main methods : 
+propose mainly (with some variants) 2 main methods : 
  
   * "locally_exclussive" : a multichannel peak detection by threhold crossing that taken
     in account the neighbor channels
@@ -175,11 +175,11 @@ Here a very simple code to compare this 2 methods.
 
     # generate
     rec_static, rec_drifting, gt_sorting, extra_infos = si.generate_drifting_recording(
-    probe_name="Neuropixels1-128",
-    num_units=200,
-    duration=300.,
-    seed=2205,
-    extra_outputs=True,
+        probe_name="Neuropixels1-128",
+        num_units=200,
+        duration=300.,
+        seed=2205,
+        extra_outputs=True,
     )
 
     # small trick to get the ground truth peaks and max channels
@@ -222,12 +222,12 @@ Here a very simple code to compare this 2 methods.
     # Step 3 : compute results
     study.compute_analyzer_extension( {"templates":{}, "quality_metrics":{"metric_names": ["snr"]} } )
     study.compute_results()
+    print(study)
 
     # study can be re loaded
     study_folder = "my_study_peak_detection"
 
     study = PeakDetectionStudy(study_folder)
-
 
     # Step 4 : plots
     fig = study.plot_detected_amplitude_distributions()
@@ -249,7 +249,7 @@ This paper [Garcia2024]_ was comparing sevral methods to estimate the motion in 
 This was a proof of concept of the modularity and benchmarks in spikeinterface.
 In summary, motion estimation is done in 3 steps : detect peaks, localize peaks and motion inference.
 For theses steps there are sevral possible methods, so combining and comparing performance was the main
-topic of this nichy paper.
+topic of this niche paper.
 
 This paper was using on the :code:`mearec` package for generation and a previous
 version of spikeinterface for benchmark but re-generating the same figures should be pretty easy in the
@@ -258,7 +258,8 @@ new version of spikeinterface.
 Note that since this puplication, new methods has been published (DREDGe and MEDiCINe) and implemented in spikeinterface
 so runnning a new comparison could make sens.
 
-Lets be *open-and-reproducible-science*, this is so trendy. This 120 lines script will make the job.
+Lets be *open-and-reproducible-science*, this is so trendy. This 120 lines script will make the same
+job done [Garcia2024]_.
 
 
 
@@ -392,11 +393,9 @@ Lets be *open-and-reproducible-science*, this is so trendy. This 120 lines scrip
 .. image:: ../images/benchmark_estimation_fig3.png
 
 
-# TODO copy paste figures here
-
 **Other examples**
 
-With some imagination and by exploring a bit this repo TODO(ref rep), testing new methods for spike sorting steps
+With some imagination and by exploring a bit
+this `repo <https://github.com/samuelgarcia/sorting_components_benchmark_paper>`_, testing new methods for spike sorting steps
 is now an easy task : clustering, template matching, motion estimation, peak detection, ...
 
-If you are interested in this have a look to this preprint TODOref.

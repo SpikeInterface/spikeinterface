@@ -27,6 +27,8 @@ recordings, as well as generating synthetic noise profiles of various types.
 Some of the generation functions are defined in the :py:mod:`spikeinterface.core.generate` module, but also exposed at the
 :py:mod:`spikeinterface.generation` level for convenience.
 
+.. image:: ../images/generation_overview.png
+
 
 Synthetic recordings
 --------------------
@@ -47,7 +49,7 @@ The module handles many details:
     spatial rules
   * templates shape are quite simple but can be controlled by many parameters (spheric/elipis,
     time dynamic, spatial propagation).
-  * spiketrains are poisoniam like distribution but then can be externaly given.
+  * spiketrains are Poisson like distribution but then can be externaly given.
   * there are helper functions to inject over synchronous spikes.
   * noises are gaussian and a covariance can be added on top of it using noise spatial decay.
   * The static and drifting recording are *'lazy'* : traces are generated on the fly (aka on demand).
@@ -75,7 +77,7 @@ Note the 4 outputs: the 2 recordings (static and drifting), the ground-truth sor
 with more outputs (unit motion, unit position, templates, ...)
 
 
-But it can also be more details:
+But it can also be run with more details:
 
 .. code-block:: python
 
@@ -139,7 +141,7 @@ But it can also be more details:
         # give (or not) the extra_infos dictionary
         extra_outputs=True,
         # and of course the seed : 
-        #  * if no idea what to put and want to mimic geeks put 42
+        #  * if no idea and want to mimic geeks put 42
         #  * if you are more ego centric put your birthday
         #  * if you recently became parent put the birthday of your child
         seed=2205,

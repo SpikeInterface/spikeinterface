@@ -18,13 +18,13 @@ For example, what is the performance of peak detection method 1 or 2, provided t
 same?
 
 Currently, we have methods for:
- * peak detection
- * peak localization
- * peak selection
- * motion estimation
- * motion interpolation
- * clustering
- * template matching
+ * **peak detection**
+ * **peak localization**
+ * **peak selection**
+ * **motion estimation**
+ * **motion interpolation**
+ * **clustering**
+ * **template matching**
 
 
 For some of these steps, implementations are in a very early stage and are still a bit *drafty*.
@@ -33,8 +33,8 @@ Signature and behavior may change from time to time in this alpha period develop
 An important concept to be discovered is the **node pipeline** machinery using the 
 :py:func:`~spikeinterface.core.run_node_pipeline()` functions.
 
-You can also have a look `spikeinterface blog <https://TODO(ref script paper components)>`_ where there are more detailed
-notebooks on sorting components.
+You can also have a look `spikeinterface <https://github.com/samuelgarcia/sorting_components_benchmark_paper>`_ 
+here there are more detailed notebooks on sorting components.
 
 
 Peak detection
@@ -72,14 +72,14 @@ The output :code:`peaks` is a NumPy array with a length of the number of peaks f
 
 2 main different methods are available with the :code:`method` argument:
 
-* 'locally_exclusive' (requires :code:`numba`): peaks on neighboring channels within a certain radius are excluded (not counted multiple times)
-* 'matched_filtering' (requires :code:`numba`): 
+* **'locally_exclusive'** (requires :code:`numba`): peaks on neighboring channels within a certain radius are excluded (not counted multiple times)
+* **'matched_filtering'** (requires :code:`numba`): 
 
-Other variant are also implemented (but less tested):
+Other variant are also implemented (but less tested or not so util):
 
-* 'by_channel' (default): peaks are detected separately for each channel, this should be used in high density probe layout.
-* 'by_channel_torch' (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for time deduplication
-* 'locally_exclusive_torch' (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for space-time deduplication
+* **'by_channel'** (default): peaks are detected separately for each channel, this should be used in high density probe layout.
+* **'by_channel_torch'** (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for time deduplication
+* **'locally_exclusive_torch'** (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for space-time deduplication
 
 **NOTE**: the torch implementations give slightly different results due to a different implementation.
 
@@ -117,15 +117,15 @@ follows:
 
 Currently, the following methods are implemented:
 
-  * 'center_of_mass' : the fastest and more intuitive. This method is not accurated on the
+  * **'center_of_mass'** : the fastest and more intuitive. This method is not accurated on the
     border of the probe, so for neuropixel only the 'y' axis will be well estimated.
     For for in vitro, with square mea, all spikes on borders will also be biased.
-  * 'monopolar_triangulation' with optimizer='least_square'
+  * **'monopolar_triangulation'** with optimizer='least_square'
     This method is from Julien Boussard and Erdem Varol from the Paninski lab.
     This has been presented at `NeurIPS <https://nips.cc/Conferences/2021/ScheduleMultitrack?event=26709>`_
     see also `here <https://openreview.net/forum?id=ohfi44BZPC4>`_
-    'monopolar_triangulation' has some variant with differents optimizers (default is 'minimize_with_log_penality')
-  * 'grid_convolution' : inspired by the kilosort approach. This consists of a convolution of traces with waveform
+    **'monopolar_triangulation'** has some variant with differents optimizers (default is 'minimize_with_log_penality')
+  * **'grid_convolution'** : inspired by the kilosort approach. This consists of a convolution of traces with waveform
      prototypes with varying local spatial footprint on the probe.
 
 
@@ -255,11 +255,11 @@ can be *hidden* by this process.
 
 Implemented methods are the following:
 
-  * 'uniform'
-  * 'uniform_locations'
-  * 'smart_sampling_amplitudes'
-  * 'smart_sampling_locations'
-  * 'smart_sampling_locations_and_time'
+  * **uniform'**
+  * **'uniform_locations'**
+  * **'smart_sampling_amplitudes'**
+  * **'smart_sampling_locations'**
+  * **'smart_sampling_locations_and_time'**
 
 
 
@@ -308,10 +308,10 @@ We could now check the ``motion`` object and see if we need to apply a correctio
 
 Availables methods are:
 
-  * 'dredge_ap' : the more mature method at the moement, done by [Windolf_b]_
-  * 'decentralized' : more or less the ancester od 'dredge_ap'
-  * 'iterative_template' : this mimic bthe kilosort approach.
-  * 'medicine' : a more recent approach done in [Watters]_.
+  * **'dredge_ap'** : the more mature method at the moement, done by [Windolf_b]_
+  * **'decentralized'** : more or less the ancester od 'dredge_ap'
+  * **'iterative_template'** : this mimic bthe kilosort approach.
+  * **'medicine'** : a more recent approach done in [Watters]_.
 
 A comparison of theses methods can be read in [Garcia2024]_.
 
@@ -362,19 +362,19 @@ a label for every peak.
 Some methods have been implemented with various ideas in mind. We really hope that this list will be extended 
 soon by tallented people willing to improve. This is a crucial and not well totally resolved step.
 
-  * "iterative-hdbscan" : method used in spkyking-circus2. This performs local hdbscan clusetrings on
+  * **'iterative-hdbscan'** : method used in spkyking-circus2. This performs local hdbscan clusetrings on
      svd waveforms features.
-  * "iterative-isosplit" :  method used in tridesclous2. This performs local isosplit clusetrings on
+  * **'iterative-isosplit'** :  method used in tridesclous2. This performs local isosplit clusetrings on
      svd waveforms features.
-  * "hdbscan-positions" : This performs a hdbscan clusetring based on the localizations of the spikes.
+  * **'hdbscan-positions'** : This performs a hdbscan clusetring based on the localizations of the spikes.
     This mimic the herdingspikes approach : make the clustering on spike position only but more flexible
     because more localization methods are availables.
-  * "random-projections" : attempt to make the feature from waveforms with random projections instead of the
+  * **'random-projections'** : attempt to make the feature from waveforms with random projections instead of the
     good-old-scool-pca.
-  * "graph-clustering" : attempt to resolved the clusetring globally and not locally. This construct a global
+  * **'graph-clustering'** : attempt to resolved the clusetring globally and not locally. This construct a global
     but sparse distance matrix between all spikes. Can be slow. Then it perform 'classical' algos on
-    graph (Louvain, Leiden or even HDBSCAN). Promising method but not as afficient as the "iterative-isosplit" or
-    "iterative-hdbscan".
+    graph (Louvain, Leiden or even HDBSCAN). Promising method but not as afficient as the 'iterative-isosplit' or
+    'iterative-hdbscan'.
 
 
 
@@ -411,13 +411,14 @@ traces as a linear sum of a template plus a residual noise.
 
 At the moment, there are five methods implemented:
 
-  * 'nearest': a simple implemenation which is more or less a np.argmin for the spike waveforms against all template.
-  * 'nearest-svd': a smater implemenation than ''nearest' using svd compression and spatial sparsity.
-  * 'tdc-peeler': a simple idea similar to nearest. Perform nearest on local detected peaks, fit the amplitude and
+  * **'nearest'**: a simple implemenation which is more or less a np.argmin distance for the spike waveforms against all templates.
+  * **'nearest-svd'**: a smarter implemenation than 'nearest' using svd compression and spatial sparsity.
+  * **'tdc-peeler'**: a simple idea similar to 'nearest'. Perform nearest on local detected peaks, fit the amplitude and
     remove it from tarces. Then re-run on residual. A bit naive but this is very fast.
-  * 'circus-omp': a more serious implemenation orthogonal template matching. This internally make a convolution
+  * **'circus-omp'**: a more serious implemenation orthogonal template matching. This internally make a convolution
     of traces with all templates with some svd decomposition tricks to be faster. This is quite accurate but
     need lots of memory.
-  * 'wobble': this is a re implemenation of the yass template matching codes. Finally, very similar to 'circus-omp'.
+  * **'wobble'**: this is a re implemenation of the yass template matching codes. Finally, very similar to 'circus-omp'.
     This is the most accurate methods for discovering spike collisions.
+
 
