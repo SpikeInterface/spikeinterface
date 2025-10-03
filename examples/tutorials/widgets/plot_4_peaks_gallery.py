@@ -34,7 +34,6 @@ peaks = detect_peaks(
         detect_threshold=6,
         exclude_sweep_ms=0.3,
         radius_um=100,
-        noise_levels=None,
     )
 )
 

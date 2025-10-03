@@ -117,6 +117,7 @@ def localize_peaks(
         # This is the old behavior and will be remove in 0.105.0
         warnings.warn(
             "The signature of localize_peaks() has changed, now method_kwargs and job_kwargs are dinstinct params."
+            "This warning will raise an error in version 0.105.0"
         )
         assert job_kwargs is None
         assert method_kwargs is None
