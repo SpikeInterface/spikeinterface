@@ -129,7 +129,7 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
             exclude_sweep_ms=exclude_sweep_ms,
             detect_threshold=detect_threshold,
             noise_levels=noise_levels,
-            radius_um=radius_um
+            radius_um=radius_um,
         )
 
         from spikeinterface.sortingcomponents.waveforms.waveform_utils import (
