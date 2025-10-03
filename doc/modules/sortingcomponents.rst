@@ -397,8 +397,8 @@ Extract SVD from peaks
 
 Importantly many clustering function are using internally the 
 :py:func:`~spikeinterface.sortingcomponents.clusetring.extract_peaks_svd.extract_peaks_svd()`.
-This run a **node pipeline** that extract on a selected peaks set, etxract waveforms, sparsify then, and compress
-then on time axis using **svd**.
+This runs a **node pipeline** that extracts on a selected peaks set, extracts waveforms, sparsifies them, and compresses
+them on time axis using **svd**.
 
 
 Template matching

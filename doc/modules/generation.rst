@@ -36,30 +36,30 @@ Synthetic recordings
 The easiest way is to generate 100% synthetic recording.
 
 The top level function is :py:func:`~spikeinterface.generate.generate_drifting_recording`.
-This function is generating at the same time a static recording and a drifting recording with
+This function generates both a static recording and a drifting recording with
 exactly the same units and spikes.
 
 The module handles many details:
 
   * any probe layout available in :py:mod:`probeinterface`
-  * many possible motion vectors (zigzag, bumps, random_walk) or combinasion of then
-  * no rigid drift, the motion vector is handle per units
-  * control on untis location : 'uniform' or 'by layer' (aka multi modal)
+  * many possible motion vectors (zigzag, bumps, random_walk) or combination of them
+  * no rigid drift, the motion vector is handled at the level of the units
+  * control on units' location : 'uniform' or 'by layer' (aka multi modal)
   * templates are generated step by step (typically 1um) along the motion axis using simple
     spatial rules
-  * templates shape are quite simple but can be controlled by many parameters (spheric/elipis,
+  * templates shape are quite simple but can be controlled by many parameters (spheric/elliptical,
     time dynamic, spatial propagation).
-  * spiketrains are Poisson like distribution but then can be externaly given.
-  * there are helper functions to inject over synchronous spikes.
-  * noises are gaussian and a covariance can be added on top of it using noise spatial decay.
+  * spiketrains have a Poisson-like distribution but can optionally be externally given by the user.
+  * there are helper functions to inject overly synchronous spikes.
+  * noise has a  Gaussian distribution with an optional covariance using noise spatial decay.
   * The static and drifting recording are *'lazy'* : traces are generated on the fly (aka on demand).
-    The only computation are the generation of the templates are perform at start.
+    The only computation is the generation of the templates which is performed at the start.
   * Parameters (firing, templates, locations, ...) can be controlled using ranges of values or can be 
     explicitly given unit by unit.
-  * All parameters are carfully seeded to ensure reproducibility (at least on the same system and numpy version).
+  * All parameters are carefully seeded to ensure reproducibility (at least on the same system and NumPy version).
 
 
-The simplest way is this:
+The simplest way to generate a synthetic recording is:
 
 .. code-block:: python
 
@@ -77,7 +77,7 @@ Note the 4 outputs: the 2 recordings (static and drifting), the ground-truth sor
 with more outputs (unit motion, unit position, templates, ...)
 
 
-But it can also be run with more details:
+But for finer control of the outputs one can input additional optional parameters:
 
 .. code-block:: python
 
@@ -123,8 +123,8 @@ But it can also be run with more details:
             ],
         ),
         # here we can control the parameters of the templates using ranges
-        # many more parameters are availables like : depolarization_ms, repolarization_ms, recovery_ms
-        # positive_amplitude, smooth_ms, propagation_speed, and ellispoid orientation...
+        # many more parameters are available like : depolarization_ms, repolarization_ms, recovery_ms
+        # positive_amplitude, smooth_ms, propagation_speed, and ellipsoid orientation...
         generate_templates_kwargs=dict(
             ms_before=1.5,
             ms_after=3.0,
@@ -134,7 +134,7 @@ But it can also be run with more details:
                 spatial_decay=(10, 45),
             ),
         ),
-        # control the firrinf of spiketrains
+        # control the firing of the spiketrains
         generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),
         # control the noise and covariance (spatial_decay)
         generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
@@ -150,7 +150,7 @@ But it can also be run with more details:
     si.plot_traces(rec_static, channel_ids=rec_static.channel_ids[10:15], time_range=(11, 11.5))
 
 And you should have something like this.
-This can looks a bit toyish but this has been proved to be very usefull to development sortingcomponents module.
+This can looks a bit toyish but this has been proven to be very useful to the development :py:mod:`sortingcomponents` module.
 
 .. image:: ../images/generation_fig1.png
 
@@ -159,7 +159,7 @@ This can looks a bit toyish but this has been proved to be very usefull to devel
 Control the drift vector
 ------------------------
 
-Here some various drift vector handled.
+In this example we inject different drift vectors to see how they influence the ultimate motion vectors.
 
 .. code-block:: python
 
