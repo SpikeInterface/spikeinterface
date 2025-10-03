@@ -121,7 +121,7 @@ class SimpleSorter(ComponentsBasedSorter):
 
         few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=5000, margin=(nbefore, nafter))
         few_wfs = extract_waveform_at_max_channel(
-            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
         )
 
         wfs = few_wfs[:, :, 0]

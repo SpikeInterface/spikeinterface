@@ -4,7 +4,7 @@ import json
 
 import numpy as np
 
-from spikeinterface.core import get_channel_distances
+from spikeinterface.core import get_channel_distances, fix_job_kwargs
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import (
@@ -29,7 +29,7 @@ def extract_peaks_svd(
     folder=None,
     seed=None,
     ensure_peak_same_sign=True,
-    **job_kwargs,
+    job_kwargs=None,
 ):
     """
     Extract the sparse waveform compress to SVD (PCA) on a local set of channel per peak.
@@ -46,21 +46,23 @@ def extract_peaks_svd(
     The output shape is (num_peaks, n_components, max_sparse_channel)
     """
 
+    job_kwargs = fix_job_kwargs(job_kwargs)
+
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
     nafter = int(ms_after * recording.sampling_frequency / 1000.0)
 
     # Step 1 : select a few peaks to fit the SVD
     if svd_model is None:
         few_peaks = select_peaks(
-            peaks, 
-            recording=recording, 
-            method="uniform", 
-            n_peaks=n_peaks_fit, 
-            margin=(nbefore, nafter),
-            seed=seed
+            peaks, recording=recording, method="uniform", n_peaks=n_peaks_fit, margin=(nbefore, nafter), seed=seed
         )
         few_wfs = extract_waveform_at_max_channel(
-            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, job_name="Fit peaks svd", **job_kwargs
+            recording,
+            few_peaks,
+            ms_before=ms_before,
+            ms_after=ms_after,
+            job_name="Fit peaks svd",
+            job_kwargs=job_kwargs,
         )
 
         wfs = few_wfs[:, :, 0]

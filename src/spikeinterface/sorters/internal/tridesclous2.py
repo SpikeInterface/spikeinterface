@@ -49,7 +49,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
         "svd": {"n_components": 4},
         "clustering": {
-           "recursive_depth": 5,
+            "recursive_depth": 5,
         },
         "templates": {
             "ms_before": 2.0,
@@ -63,7 +63,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "job_kwargs": {},
         "save_array": True,
         "debug": False,
-
     }
 
     _params_description = {
@@ -177,7 +176,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if verbose:
             print(f"select_peaks(): {len(peaks)} peaks kept for clustering")
 
-
         # routing clustering params into the big IterativeISOSPLITClustering params tree
         clustering_kwargs = deepcopy(clustering_methods["iterative-isosplit"]._default_params)
         clustering_kwargs["peaks_svd"].update(params["waveforms"])
@@ -186,8 +184,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
 
-
-        #if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
+        # if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
         #    have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
         #    if not have_sisosplit6:
         #        raise ValueError(
@@ -195,12 +192,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         #        )
 
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
-            recording, 
-            peaks, 
-            method="iterative-isosplit", 
-            method_kwargs=clustering_kwargs, 
-            extra_outputs=True, 
-            job_kwargs=job_kwargs
+            recording,
+            peaks,
+            method="iterative-isosplit",
+            method_kwargs=clustering_kwargs,
+            extra_outputs=True,
+            job_kwargs=job_kwargs,
         )
 
         # peak_shifts = extra_out["peak_shifts"]
@@ -271,7 +268,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         matching_params = params["matching"].get("matching_kwargs", {}).copy()
         if matching_method in ("tdc-peeler",):
             matching_params["noise_levels"] = noise_levels
-        
+
         pipeline_kwargs = dict(gather_mode=gather_mode)
         if gather_mode == "npy":
             pipeline_kwargs["folder"] = sorter_output_folder / "matching"
@@ -308,7 +305,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 max_distance_um=50,
                 template_diff_thresh=np.arange(0.05, 0.4, 0.05),
                 debug_folder=None,
-                **job_kwargs,
+                job_kwargs=job_kwargs,
             )
             sorting = NumpySorting.from_sorting(analyzer_final.sorting)
 

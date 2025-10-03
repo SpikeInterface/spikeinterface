@@ -62,7 +62,7 @@ def merge_peak_labels_from_features(
         radius_um=radius_um,
         method=method,
         method_kwargs=method_kwargs,
-        **job_kwargs,
+        job_kwargs=job_kwargs,
     )
 
     clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = (
@@ -87,7 +87,7 @@ def find_merge_pairs_from_features(
     radius_um=70,
     method="project_distribution",
     method_kwargs={},
-    **job_kwargs,
+    job_kwargs=None,
     # n_jobs=1,
     # mp_context="fork",
     # max_threads_per_worker=1,

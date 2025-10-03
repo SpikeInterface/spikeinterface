@@ -11,6 +11,7 @@ from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak
 from spikeinterface.sortingcomponents.clustering.splitting_tools import split_clusters
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
+
 class IterativeHDBSCANClustering:
     """
     Iterative HDBSCAN is based on several local clustering achieved with a
@@ -23,21 +24,19 @@ class IterativeHDBSCANClustering:
     based on a similarity metric. The final output is a set of labels for each peak,
     indicating the cluster to which it belongs.
     """
+
     name = "iterative-hdbscan"
     need_noise_levels = False
     _default_params = {
-        "peaks_svd": {"n_components": 5,
-                      "ms_before": 0.5,
-                      "ms_after": 1.5,
-                      "radius_um": 100.0},
+        "peaks_svd": {"n_components": 5, "ms_before": 0.5, "ms_after": 1.5, "radius_um": 100.0},
         "seed": None,
         "split": {
             "split_radius_um": 50.0,
             "recursive": True,
             "recursive_depth": 3,
-            "method_kwargs" : {
+            "method_kwargs": {
                 "clusterer": {
-                    "method" : "hdbscan",
+                    "method": "hdbscan",
                     "min_cluster_size": 20,
                     "cluster_selection_epsilon": 0.5,
                     "cluster_selection_method": "leaf",
@@ -46,13 +45,13 @@ class IterativeHDBSCANClustering:
                 "n_pca_features": 0.9,
             },
         },
-        "merge_from_templates" : dict(),
-        "merge_from_features" : None,
-        "debug_folder" : None,
-        "verbose": True
+        "merge_from_templates": dict(),
+        "merge_from_features": None,
+        "debug_folder": None,
+        "verbose": True,
     }
     params_doc = """
-        peaks_svd : params for peak SVD features extraction. 
+        peaks_svd : params for peak SVD features extraction.
         See spikeinterface.sortingcomponents.waveforms.peak_svd.extract_peaks_svd
                         for more details.,
         seed : Random seed for reproducibility.,
@@ -71,7 +70,7 @@ class IterativeHDBSCANClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
-        
+
         split_radius_um = params["split"].pop("split_radius_um", 50)
         peaks_svd = params["peaks_svd"]
         ms_before = peaks_svd["ms_before"]
@@ -86,7 +85,7 @@ class IterativeHDBSCANClustering:
             debug_folder = Path(debug_folder).absolute()
             debug_folder.mkdir(exist_ok=True)
             peaks_svd.update(features_folder=debug_folder / "features")
-        
+
         if seed is not None:
             peaks_svd.update(seed=seed)
             split["method_kwargs"].update(seed=seed)
@@ -94,21 +93,21 @@ class IterativeHDBSCANClustering:
         peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
             recording,
             peaks,
+            job_kwargs=job_kwargs,
             **peaks_svd,
-            **job_kwargs,
         )
 
         if debug_folder is not None:
             np.save(debug_folder / "sparse_mask.npy", sparse_mask)
             np.save(debug_folder / "peaks.npy", peaks)
 
-        split["method_kwargs"].update(waveforms_sparse_mask = sparse_mask)
+        split["method_kwargs"].update(waveforms_sparse_mask=sparse_mask)
         neighbours_mask = get_channel_distances(recording) <= split_radius_um
-        split["method_kwargs"].update(neighbours_mask = neighbours_mask)
-        split["method_kwargs"].update(min_size_split = 2 * min_cluster_size)
+        split["method_kwargs"].update(neighbours_mask=neighbours_mask)
+        split["method_kwargs"].update(min_size_split=2 * min_cluster_size)
 
         if debug_folder is not None:
-            split.update(debug_folder = debug_folder / "split")
+            split.update(debug_folder=debug_folder / "split")
 
         peak_labels = split_clusters(
             peaks["channel_index"],

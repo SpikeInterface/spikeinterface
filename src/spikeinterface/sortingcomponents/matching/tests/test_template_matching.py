@@ -45,10 +45,12 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
 
     if method == "kilosort-matching":
         from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms
+
         prototype, wfs, _ = get_prototype_and_waveforms(recording, ms_before=1, ms_after=2)
 
         n_components = 5
         from sklearn.cluster import KMeans
+
         wfs /= np.linalg.norm(wfs, axis=1)[:, None]
         model = KMeans(n_clusters=n_components, n_init=10).fit(wfs)
         temporal_components = model.cluster_centers_
@@ -56,20 +58,22 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
         temporal_components = temporal_components.astype(np.float32)
 
         from sklearn.decomposition import TruncatedSVD
+
         model = TruncatedSVD(n_components=n_components).fit(wfs)
         spatial_components = model.components_.astype(np.float32)
         method_kwargs["spatial_components"] = spatial_components
         method_kwargs["temporal_components"] = temporal_components
-
 
     if matching_methods[method].need_noise_levels:
         method_kwargs["noise_levels"] = get_noise_levels(recording, return_in_uV=False)
 
     if method == "nearest-svd":
         from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms
+
         _, wfs, _ = get_prototype_and_waveforms(recording, ms_before=1, ms_after=2)
         n_components = 5
         from sklearn.decomposition import TruncatedSVD
+
         svd_model = TruncatedSVD(n_components=n_components)
         svd_model.fit(wfs)
         method_kwargs["svd_model"] = svd_model
@@ -81,7 +85,7 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     # }
 
     spikes, info = find_spikes_from_templates(
-        recording, templates, method=method, method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
+        recording, templates, method=method, method_kwargs=method_kwargs, extra_outputs=True, job_kwargs=job_kwargs
     )
 
     # print(info)

@@ -28,7 +28,7 @@ def compute_features_from_peaks(
     feature_params={},
     ms_before=1.0,
     ms_after=1.0,
-    **job_kwargs,
+    job_kwargs=None,
 ):
     """Extract features on the fly from the recording given a list of peaks.
 
@@ -52,8 +52,8 @@ def compute_features_from_peaks(
         The duration in ms before the peak for extracting the features
     ms_after: float, default: 1.0
         The duration in ms  after the peakfor extracting the features
-
-    {}
+    job_kwargs : dict
+        job_kwargs
 
     Returns
     -------

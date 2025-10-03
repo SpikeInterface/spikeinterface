@@ -99,7 +99,9 @@ class MotionEstimationBenchmark(Benchmark):
             selected_peaks = peaks
 
         t2 = time.perf_counter()
-        peak_locations = localize_peaks(self.recording, selected_peaks, method_kwargs=p["localize_kwargs"], job_kwargs=job_kwargs)
+        peak_locations = localize_peaks(
+            self.recording, selected_peaks, method_kwargs=p["localize_kwargs"], job_kwargs=job_kwargs
+        )
         t3 = time.perf_counter()
         motion = estimate_motion(self.recording, selected_peaks, peak_locations, **p["estimate_motion_kwargs"])
         t4 = time.perf_counter()
@@ -250,7 +252,7 @@ class MotionEstimationStudy(BenchmarkStudy):
             ax1.set_title(label)
 
             # ax0.set_ylim()
-        
+
         return fig
 
     def plot_errors(self, case_keys=None, figsize=None, lim=None):
@@ -317,7 +319,7 @@ class MotionEstimationStudy(BenchmarkStudy):
             despine(ax)
             if lim is not None:
                 ax.set_ylim(0, lim)
-        
+
         return fig
 
     def plot_summary_errors(self, case_keys=None, show_legend=True, figsize=(15, 5)):

@@ -25,14 +25,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "sparsity": {"method": "snr", "amplitude_mode": "peak_to_peak", "threshold": 0.25},
         "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2, "margin_ms": 10},
         "whitening": {"mode": "local", "regularize": False},
-        "detection": {"method": "matched_filtering", 
-                      "method_kwargs": dict(peak_sign="neg", detect_threshold=5),
-                      "pipeline_kwargs" : dict()},
+        "detection": {
+            "method": "matched_filtering",
+            "method_kwargs": dict(peak_sign="neg", detect_threshold=5),
+            "pipeline_kwargs": dict(),
+        },
         "selection": {
             "method": "uniform",
-            "method_kwargs": dict(n_peaks_per_channel=5000, 
-                                  min_n_peaks=100000, 
-                                  select_per_channel=False),
+            "method_kwargs": dict(n_peaks_per_channel=5000, min_n_peaks=100000, select_per_channel=False),
         },
         "apply_motion_correction": True,
         "motion_correction": {"preset": "dredge_fast"},
@@ -151,10 +151,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 motion_correction_kwargs = params["motion_correction"].copy()
                 motion_correction_kwargs.update({"folder": motion_folder})
                 noise_levels = get_noise_levels(
-                    recording_f, 
-                    return_in_uV=False, 
-                    random_slices_kwargs={"seed": seed}, 
-                    **job_kwargs
+                    recording_f, return_in_uV=False, random_slices_kwargs={"seed": seed}, **job_kwargs
                 )
                 motion_correction_kwargs["detect_kwargs"] = {"noise_levels": noise_levels}
                 recording_f = correct_motion(recording_f, **motion_correction_kwargs, **job_kwargs)
@@ -176,10 +173,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         recording_w = whiten(recording_f, **whitening_kwargs)
 
         noise_levels = get_noise_levels(
-            recording_w, 
-            return_in_uV=False, 
-            random_slices_kwargs={"seed": seed}, 
-            **job_kwargs
+            recording_w, return_in_uV=False, random_slices_kwargs={"seed": seed}, **job_kwargs
         )
 
         if recording_w.check_serializability("json"):
@@ -198,7 +192,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         matching_method = params["matching"].get("method", "circus-omp")
         matching_params = params["matching"].get("matching_kwargs", dict()).copy()
-        matching_pipelines_kwargs= params["matching"].get("pipeline_kwargs", dict())
+        matching_pipelines_kwargs = params["matching"].get("pipeline_kwargs", dict())
 
         clustering_method = params["clustering"].get("method", "iterative-hdbscan")
         clustering_params = params["clustering"].get("method_kwargs", dict()).copy()
@@ -226,6 +220,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 from spikeinterface.sortingcomponents.tools import (
                     get_prototype_and_waveforms_from_recording,
                 )
+
                 detection_params2 = detection_params.copy()
                 prototype, waveforms, _ = get_prototype_and_waveforms_from_recording(
                     recording_w,
@@ -234,20 +229,18 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     ms_after=ms_after,
                     seed=seed,
                     noise_levels=noise_levels,
+                    job_kwargs=job_kwargs,
                     **detection_params2,
-                    **job_kwargs,
                 )
             else:
                 from spikeinterface.sortingcomponents.tools import (
                     get_prototype_and_waveforms_from_peaks,
                 )
+
                 detection_params2 = detection_params.copy()
                 detection_params2["noise_levels"] = noise_levels
                 peaks = detect_peaks(
-                    recording_w, 
-                    method="locally_exclusive", 
-                    method_kwargs=detection_params2,
-                    job_kwargs=job_kwargs
+                    recording_w, method="locally_exclusive", method_kwargs=detection_params2, job_kwargs=job_kwargs
                 )
                 prototype, waveforms, _ = get_prototype_and_waveforms_from_peaks(
                     recording_w,
@@ -255,30 +248,30 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     n_peaks=10000,
                     ms_before=ms_before,
                     ms_after=ms_after,
+                    job_kwargs=job_kwargs,
                     seed=seed,
-                    **job_kwargs,
                 )
             detection_params["prototype"] = prototype
             detection_params["ms_before"] = ms_before
             if debug:
                 np.save(clustering_folder / "waveforms.npy", waveforms)
                 np.save(clustering_folder / "prototype.npy", prototype)
-        
+
         if skip_peaks:
             detect_pipeline_kwargs["recording_slices"] = get_shuffled_recording_slices(
-                recording_w, 
-                seed=params["seed"], 
-                **job_kwargs
+                recording_w,
+                job_kwargs=job_kwargs,
+                seed=params["seed"],
             )
             detect_pipeline_kwargs["skip_after_n_peaks"] = n_peaks
 
         peaks = detect_peaks(
-            recording_w, 
-            method=detection_method, 
+            recording_w,
+            method=detection_method,
             method_kwargs=detection_params,
-            pipeline_kwargs=detect_pipeline_kwargs, 
+            pipeline_kwargs=detect_pipeline_kwargs,
             verbose=verbose,
-            job_kwargs=job_kwargs
+            job_kwargs=job_kwargs,
         )
         order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
         peaks = peaks[order]
@@ -298,16 +291,18 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         else:
             ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
             ## channels as flat as possible
-            selected_peaks = select_peaks(peaks, 
-                                          seed=seed, 
-                                          method=selection_method, 
-                                          **selection_params)
+            selected_peaks = select_peaks(peaks, seed=seed, method=selection_method, **selection_params)
 
             if verbose:
                 print("Kept %d peaks for clustering" % len(selected_peaks))
 
-            if clustering_method in ["iterative-hdbscan", "iterative-isosplit", "kilosort-clustering", "graph-clustering"]:
-                clustering_params.update(verbose= verbose)
+            if clustering_method in [
+                "iterative-hdbscan",
+                "iterative-isosplit",
+                "kilosort-clustering",
+                "graph-clustering",
+            ]:
+                clustering_params.update(verbose=verbose)
                 clustering_params.update(seed=seed)
                 clustering_params.update(peak_svd=params["general"])
                 if debug:
@@ -336,10 +331,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     peak_labels,
                     ms_before,
                     ms_after,
-                    **job_kwargs,
+                    job_kwargs=job_kwargs,
                 )
             else:
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+
                 templates, _ = get_templates_from_peaks_and_svd(
                     recording_w,
                     selected_peaks,
@@ -352,7 +348,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     operator="median",
                 )
                 # this release the peak_svd memmap file
-            
+
             del more_outs
 
             templates = clean_templates(
@@ -370,7 +366,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 templates.to_zarr(folder_path=clustering_folder / "templates")
 
             ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
-        
+
             spikes = find_spikes_from_templates(
                 recording_w,
                 templates,
@@ -420,7 +416,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
                 if sorting.get_non_empty_unit_ids().size > 0:
                     final_analyzer = final_cleaning_circus(
-                        recording_w, sorting, templates, **merging_params, **job_kwargs
+                        recording_w, sorting, templates, job_kwargs=job_kwargs, **merging_params
                     )
                     final_analyzer.save_as(format="binary_folder", folder=sorter_output_folder / "final_analyzer")
 
@@ -455,7 +451,7 @@ def final_cleaning_circus(
     max_distance_um=50,
     template_diff_thresh=np.arange(0.05, 0.5, 0.05),
     debug_folder=None,
-    **job_kwargs,
+    job_kwargs=None,
 ):
 
     from spikeinterface.sortingcomponents.tools import create_sorting_analyzer_with_existing_templates
