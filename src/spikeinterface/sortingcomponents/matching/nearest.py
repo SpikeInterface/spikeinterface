@@ -25,8 +25,6 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         If None the noise levels are estimated using random chunks of the recording. If array it should be an array of size (num_channels,) with the noise level of each channel
     radius_um : float
         The radius to define the neighborhood between channels in micrometers while detecting the peaks
-    random_chunk_kwargs : dict
-        The kwargs for get_noise_levels if noise_levels is None
     """
 
     def __init__(
@@ -39,17 +37,13 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         detect_threshold=5,
         noise_levels=None,
         radius_um=100.0,
-        random_chunk_kwargs={},
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
 
         self.templates_array = self.templates.get_dense_templates()
 
-        if noise_levels is None:
-            self.noise_levels = get_noise_levels(recording, **random_chunk_kwargs, return_in_uV=False)
-        else:
-            self.noise_levels = noise_levels
+        self.noise_levels = noise_levels
         self.abs_threholds = self.noise_levels * detect_threshold
         self.peak_sign = peak_sign
         channel_distance = get_channel_distances(recording)
@@ -124,7 +118,6 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
         detect_threshold=5,
         noise_levels=None,
         radius_um=100.0,
-        random_chunk_kwargs={},
     ):
 
         NearestTemplatesPeeler.__init__(
@@ -136,8 +129,7 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
             exclude_sweep_ms=exclude_sweep_ms,
             detect_threshold=detect_threshold,
             noise_levels=noise_levels,
-            radius_um=radius_um,
-            random_chunk_kwargs=random_chunk_kwargs,
+            radius_um=radius_um
         )
 
         from spikeinterface.sortingcomponents.waveforms.waveform_utils import (
