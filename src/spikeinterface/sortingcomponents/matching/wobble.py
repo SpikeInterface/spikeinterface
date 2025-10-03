@@ -278,10 +278,17 @@ class WobbleSparsity:
             Dataclass object for aggregating channel sparsity variables together.
         """
         visible_channels = templates.sparsity.mask
-        unit_overlap = np.sum(
-            np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2
-        )
-        unit_overlap = unit_overlap > 0
+        num_templates = templates.get_dense_templates().shape[0]
+        unit_overlap = np.zeros((num_templates, num_templates), dtype=bool)
+
+        for i in range(num_templates):
+            unit_overlap[i] = np.sum(np.logical_and(visible_channels[i], visible_channels), axis=1) > 0
+
+        #unit_overlap = np.sum(
+        #    np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2
+        #)
+        #unit_overlap = unit_overlap > 0
+        
         unit_overlap = np.repeat(unit_overlap, params.jitter_factor, axis=0)
         sparsity = cls(visible_channels=visible_channels, unit_overlap=unit_overlap)
         return sparsity
