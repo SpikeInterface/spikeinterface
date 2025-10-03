@@ -284,11 +284,11 @@ class WobbleSparsity:
         for i in range(num_templates):
             unit_overlap[i] = np.sum(np.logical_and(visible_channels[i], visible_channels), axis=1) > 0
 
-        #unit_overlap = np.sum(
+        # unit_overlap = np.sum(
         #    np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2
-        #)
-        #unit_overlap = unit_overlap > 0
-        
+        # )
+        # unit_overlap = unit_overlap > 0
+
         unit_overlap = np.repeat(unit_overlap, params.jitter_factor, axis=0)
         sparsity = cls(visible_channels=visible_channels, unit_overlap=unit_overlap)
         return sparsity

@@ -248,7 +248,7 @@ class CircusOMPPeeler(BaseTemplateMatching):
         else:
             sparsity = self.templates.sparsity.mask
 
-        #units_overlaps = np.sum(np.logical_and(sparsity[:, np.newaxis, :], sparsity[np.newaxis, :, :]), axis=2)
+        # units_overlaps = np.sum(np.logical_and(sparsity[:, np.newaxis, :], sparsity[np.newaxis, :, :]), axis=2)
         self.unit_overlaps_indices = {}
         self.units_overlaps = {}
         for i in range(self.num_templates):
