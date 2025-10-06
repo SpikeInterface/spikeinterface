@@ -46,7 +46,7 @@ class IterativeISOSPLITClustering:
                     "isocut_threshold": 2.0,
                 },
                 "min_size_split": 25,
-                "n_pca_features": 6,
+                "n_pca_features": 3,
             },
         },
         "merge_from_templates": {
