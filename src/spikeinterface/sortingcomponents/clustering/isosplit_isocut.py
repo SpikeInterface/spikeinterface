@@ -308,6 +308,7 @@ def isosplit(
 
         with warnings.catch_warnings():
             # sometimes the kmeans do not found enought cluster which should not be an issue
+            warnings.simplefilter("ignore")
             _, labels = kmeans2(X, n_init, minit="points", seed=seed)
 
         labels = ensure_continuous_labels(labels)

@@ -46,7 +46,7 @@ class IterativeISOSPLITClustering:
                     "isocut_threshold": 2.0,
                 },
                 "min_size_split": 25,
-                "n_pca_features": 3,
+                "n_pca_features": 6,
             },
         },
         "merge_from_templates": {
@@ -141,7 +141,11 @@ class IterativeISOSPLITClustering:
             features,
             method="local_feature_clustering",
             debug_folder=debug_folder,
+            
             job_kwargs=job_kwargs,
+            # job_kwargs=dict(n_jobs=1),
+
+
             **split_params,
             # method_kwargs=dict(
             #     clusterer=clusterer,

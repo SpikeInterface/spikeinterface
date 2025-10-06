@@ -301,7 +301,21 @@ class LocalFeatureClustering:
         elif clusterer_method == "isosplit":
             from spikeinterface.sortingcomponents.clustering.isosplit_isocut import isosplit
 
-            possible_labels = isosplit(final_features, **clustering_kwargs)
+            min_cluster_size = clustering_kwargs["min_cluster_size"]
+
+            # here the trick is that we do not except more than 4 to 5 clusters per iteration with a presplit of 5
+            num_samples = final_features.shape[0]
+            n_init = int(num_samples / 5 * 5)
+            if n_init > (num_samples // min_cluster_size):
+                # avoid warning in isosplit when sample_size is too small
+                factor = min_cluster_size * 2
+                n_init = max(1, num_samples // factor)            
+
+            clustering_kwargs_ = clustering_kwargs.copy()
+            clustering_kwargs_["n_init"] = n_init
+
+
+            possible_labels = isosplit(final_features, **clustering_kwargs_)
 
             # min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)
             # for i in np.unique(possible_labels):
