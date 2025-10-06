@@ -95,7 +95,7 @@ If you use :code:`auto_label_units` or :code:`train_model`, please cite [Jain]_
 Benchmark
 ---------
 
-For addicts to benchmarking numerical methods in the context of spike sorting, if any intends to use the benchmark
+For addicts to benchmarking numerical methods in the context of spike sorting, if you use the benchmark
 module please cite [Garcia2022]_, [Garcia2024]_ or [Scopin2024]_.
 
 
