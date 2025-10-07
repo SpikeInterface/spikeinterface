@@ -384,13 +384,9 @@ else:
 def get_overlapping_mask_for_one_template(template_index, sparsity, other_sparsity, support="union") -> np.ndarray:
 
     if support == "intersection":
-        mask = np.logical_and(
-            sparsity[template_index, :], other_sparsity
-        )  # shape (other_num_templates, num_channels)
+        mask = np.logical_and(sparsity[template_index, :], other_sparsity)  # shape (other_num_templates, num_channels)
     elif support == "union":
-        mask = np.logical_or(
-            sparsity[template_index, :], other_sparsity
-        )  # shape (other_num_templates, num_channels)
+        mask = np.logical_or(sparsity[template_index, :], other_sparsity)  # shape (other_num_templates, num_channels)
     elif support == "dense":
         mask = np.ones(other_sparsity.shape, dtype=bool)
     return mask
