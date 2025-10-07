@@ -234,7 +234,7 @@ def _compute_similarity_matrix_numpy(
         tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
         for i in range(num_templates):
             src_template = src_sliced_templates[i]
-            local_mask = get_mask_for_sparse_template(i, sparsity_mask, other_sparsity_mask, support=support)
+            local_mask = get_overlapping_mask_for_one_template(i, sparsity_mask, other_sparsity_mask, support=support)
             overlapping_templates = np.flatnonzero(np.sum(local_mask, 1))
             tgt_templates = tgt_sliced_templates[overlapping_templates]
             for gcount, j in enumerate(overlapping_templates):
@@ -312,23 +312,18 @@ if HAVE_NUMBA:
 
                 ## Ideally we would like to use this but numba does not support well function with numpy and boolean arrays
                 ## So we inline the function here
-                # local_mask = get_mask_for_sparse_template(i, sparsity, other_sparsity, support=support)
-
-                local_mask = np.ones((other_num_templates, num_channels), dtype=np.bool_)
+                # local_mask = get_overlapping_mask_for_one_template(i, sparsity, other_sparsity, support=support)
 
                 if support == "intersection":
                     local_mask = np.logical_and(
-                        sparsity_mask[i], other_sparsity_mask
-                    )  # shape (num_templates, other_num_templates, num_channels)
+                        sparsity_mask[i, :], other_sparsity_mask
+                    )  # shape (other_num_templates, num_channels)
                 elif support == "union":
-                    local_mask = np.logical_and(
-                        sparsity_mask[i], other_sparsity_mask
-                    )  # shape (num_templates, other_num_templates, num_channels)
-                    units_overlaps = np.sum(local_mask, axis=1) > 0
                     local_mask = np.logical_or(
-                        sparsity_mask[i], other_sparsity_mask
-                    )  # shape (num_templates, other_num_templates, num_channels)
-                    local_mask[~units_overlaps] = False
+                        sparsity_mask[i, :], other_sparsity_mask
+                    )  # shape (other_num_templates, num_channels)
+                elif support == "dense":
+                    local_mask = np.ones((other_num_templates, num_channels), dtype=np.bool_)
 
                 overlapping_templates = np.flatnonzero(np.sum(local_mask, 1))
                 tgt_templates = tgt_sliced_templates[overlapping_templates]
@@ -386,27 +381,18 @@ else:
     _compute_similarity_matrix = _compute_similarity_matrix_numpy
 
 
-def get_mask_for_sparse_template(template_index, sparsity, other_sparsity, support="union") -> np.ndarray:
-
-    other_num_templates = other_sparsity.shape[0]
-    num_channels = sparsity.shape[1]
-
-    mask = np.ones((other_num_templates, num_channels), dtype=np.bool_)
+def get_overlapping_mask_for_one_template(template_index, sparsity, other_sparsity, support="union") -> np.ndarray:
 
     if support == "intersection":
         mask = np.logical_and(
-            sparsity[template_index], other_sparsity
-        )  # shape (num_templates, other_num_templates, num_channels)
+            sparsity[template_index, :], other_sparsity
+        )  # shape (other_num_templates, num_channels)
     elif support == "union":
-        mask = np.logical_and(
-            sparsity[template_index], other_sparsity
-        )  # shape (num_templates, other_num_templates, num_channels)
-        units_overlaps = np.sum(mask, axis=1) > 0
         mask = np.logical_or(
-            sparsity[template_index], other_sparsity
-        )  # shape (num_templates, other_num_templates, num_channels)
-        mask[~units_overlaps] = False
-
+            sparsity[template_index, :], other_sparsity
+        )  # shape (other_num_templates, num_channels)
+    elif support == "dense":
+        mask = np.ones(other_sparsity.shape, dtype=bool)
     return mask
 
 
@@ -418,6 +404,8 @@ def compute_similarity_with_templates_array(
         method = "cosine"
 
     all_metrics = ["cosine", "l1", "l2"]
+
+    assert support in ["dense", "union", "intersection"], "support should be either dense, union or intersection"
 
     if method not in all_metrics:
         raise ValueError(f"compute_template_similarity (method {method}) not exists")
