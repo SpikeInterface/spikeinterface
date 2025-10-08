@@ -72,7 +72,8 @@ The output :code:`peaks` is a NumPy array with a length of the number of peaks f
 There are two different methods available with the :code:`method` argument:
 
 * **'locally_exclusive'** (requires :code:`numba`): peaks on neighboring channels within a certain radius are excluded (not counted multiple times)
-* **'matched_filtering'** (requires :code:`numba`): 
+* **'matched_filtering'** (requires :code:`numba`): a method based on convolution by a kernel that "looks like a spike"
+  at several spatial scales. This is a bit slower but can detect spikes with lower amplitude.
 
 Other variants are also implemented (but less tested or not so useful):
 
