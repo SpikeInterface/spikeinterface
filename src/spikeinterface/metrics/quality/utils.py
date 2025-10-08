@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.metrics.quality_metric_list import metric_extension_dependencies
+from spikeinterface.metrics.quality.quality_metric_list import metric_extension_dependencies
 
 
 def _has_required_extensions(sorting_analyzer, metric_name):

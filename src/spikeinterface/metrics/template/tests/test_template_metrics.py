@@ -3,7 +3,7 @@ from spikeinterface.postprocessing import ComputeTemplateMetrics, compute_templa
 import pytest
 import csv
 
-from spikeinterface.metrics.template.template_metrics import _single_channel_metric_name_to_func
+from spikeinterface.metrics.template.template_metrics_old import _single_channel_metric_name_to_func
 
 template_metrics = list(_single_channel_metric_name_to_func.keys())
 

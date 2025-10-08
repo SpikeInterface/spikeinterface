@@ -12,7 +12,7 @@ It also implements:
 import warnings
 import numpy as np
 
-from .sortinganalyzer import AnalyzerExtension, register_result_extension
+from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, register_result_extension
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
 from .recording_tools import get_noise_levels
 from .template import Templates
@@ -838,7 +838,7 @@ class BaseMetric:
         results: namedtuple
             The results of the metric function
         """
-        results = cls.metric_function(sorting_analyzer, unit_ids, **metric_params, **tmp_data)
+        results = cls.metric_function(sorting_analyzer, unit_ids, metric_params, tmp_data)
         return results
 
 
@@ -862,29 +862,49 @@ class BaseMetricExtension(AnalyzerExtension):
     need_backward_compatibility_on_load = False
     metric_list: list[BaseMetric] = None  # list of BaseMetric
 
+    @classmethod
+    def get_default_metric_params(cls):
+        """Get the default metric parameters.
+
+        Returns
+        -------
+        default_metric_params : dict
+            Dictionary of default metric parameters for each metric.
+        """
+        default_metric_params = {m.metric_name: m.metric_params for m in cls.metric_list}
+        return default_metric_params
+
     def _set_params(
         self,
-        metric_names=None,
-        metrics_to_compute=None,
-        metric_params=None,
-        delete_existing_metrics=False,
+        metric_names: list[str] | None = None,
+        metric_params: dict | None = None,
+        delete_existing_metrics: bool = False,
         **other_params,
     ):
-        """_summary_
+        """
+        Sets parameters for metric computation.
 
         Parameters
         ----------
-        metric_names : _type_, optional
-            _description_, by default None
-        metric_params : _type_, optional
-            _description_, by default None
-        delete_existing_metrics : bool, optional
+        metric_names : list[str] | None
+            List of metric names to compute. If None, all available metrics are computed.
+        metric_params : dict | None
+            Dictionary of metric parameters to override default parameters for specific metrics.
+            If None, default parameters for all metrics are used.
+        delete_existing_metrics : bool, default: False
+            If True, existing metrics in the extension will be deleted before computing new ones.
+        other_params : dict
+            Additional parameters for metric computation.
 
+        Returns
+        -------
+        params : dict
+            Dictionary of parameters for metric computation.
 
         Raises
         ------
         ValueError
-            _description_
+            If any of the metric names are not in the available metrics.
         """
         # check metric names
         if metric_names is None:
@@ -944,14 +964,34 @@ class BaseMetricExtension(AnalyzerExtension):
 
         return params
 
-    def _prepare_data(self):
-        """_summary_"""
+    def _prepare_data(self, unit_ids=None):
+        """Optional function to prepare shared data for metric computation."""
         # useful function to compute data that is shared across metrics (e.g., PCA)
-        pass
+        return {}
 
-    def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, metric_names=None, **job_kwargs):
+    def _compute_metrics(
+        self,
+        sorting_analyzer: SortingAnalyzer,
+        unit_ids: list[int | str] | None = None,
+        metric_names: list[str] | None = None,
+    ):
         """
-        Compute template metrics.
+        Compute metrics.
+
+        Parameters
+        ----------
+        sorting_analyzer : SortingAnalyzer
+            The SortingAnalyzer object.
+        unit_ids : list[int | str] | None, default: None
+            List of unit ids to compute metrics for. If None, all units are used.
+        metric_names : list[str] | None, default: None
+            List of metric names to compute. If None, all metrics in params["metric_names"]
+            are used.
+
+        Returns
+        -------
+        metrics : pd.DataFrame
+            DataFrame containing the computed metrics for each unit.
         """
         import pandas as pd
         from collections import namedtuple
@@ -977,128 +1017,11 @@ class BaseMetricExtension(AnalyzerExtension):
                 warnings.warn(f"Error computing metric {metric_name}: {e}")
                 res = namedtuple("MetricResult", metric.metric_columns)(*([np.nan] * len(metric.metric_columns)))
 
-            # res is a namedtuple with several dict
-            # so several columns
+            # res is a namedtuple with several dictionary entries (one per column)
             for i, col in enumerate(res._fields):
                 metrics.loc[unit_ids, col] = pd.Series(res[i])
 
-        # raise NotImplementedError("_compute_metrics must be implemented in subclass")
-        # import pandas as pd
-        # from scipy.signal import resample_poly
-
-        # sparsity = self.params["sparsity"]
-        # peak_sign = self.params["peak_sign"]
-        # upsampling_factor = self.params["upsampling_factor"]
-        # if unit_ids is None:
-        #     unit_ids = sorting_analyzer.unit_ids
-        # sampling_frequency = sorting_analyzer.sampling_frequency
-
-        # metrics_single_channel = [m for m in metric_names if m in get_single_channel_template_metric_names()]
-        # metrics_multi_channel = [m for m in metric_names if m in get_multi_channel_template_metric_names()]
-
-        # if sparsity is None:
-        #     extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="id")
-
-        #     template_metrics = pd.DataFrame(index=unit_ids, columns=metric_names)
-        # else:
-        #     extremum_channels_ids = sparsity.unit_id_to_channel_ids
-        #     index_unit_ids = []
-        #     index_channel_ids = []
-        #     for unit_id, sparse_channels in extremum_channels_ids.items():
-        #         index_unit_ids += [unit_id] * len(sparse_channels)
-        #         index_channel_ids += list(sparse_channels)
-        #     multi_index = pd.MultiIndex.from_tuples(
-        #         list(zip(index_unit_ids, index_channel_ids)), names=["unit_id", "channel_id"]
-        #     )
-        #     template_metrics = pd.DataFrame(index=multi_index, columns=metric_names)
-
-        # all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
-
-        # channel_locations = sorting_analyzer.get_channel_locations()
-
-        # for unit_id in unit_ids:
-        #     unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
-        #     template_all_chans = all_templates[unit_index]
-        #     chan_ids = np.array(extremum_channels_ids[unit_id])
-        #     if chan_ids.ndim == 0:
-        #         chan_ids = [chan_ids]
-        #     chan_ind = sorting_analyzer.channel_ids_to_indices(chan_ids)
-        #     template = template_all_chans[:, chan_ind]
-
-        #     # compute single_channel metrics
-        #     for i, template_single in enumerate(template.T):
-        #         if sparsity is None:
-        #             index = unit_id
-        #         else:
-        #             index = (unit_id, chan_ids[i])
-        #         if upsampling_factor > 1:
-        #             assert isinstance(upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
-        #             template_upsampled = resample_poly(template_single, up=upsampling_factor, down=1)
-        #             sampling_frequency_up = upsampling_factor * sampling_frequency
-        #         else:
-        #             template_upsampled = template_single
-        #             sampling_frequency_up = sampling_frequency
-
-        #         trough_idx, peak_idx = get_trough_and_peak_idx(template_upsampled)
-
-        #         for metric_name in metrics_single_channel:
-        #             func = _metric_name_to_func[metric_name]
-        #             try:
-        #                 value = func(
-        #                     template_upsampled,
-        #                     sampling_frequency=sampling_frequency_up,
-        #                     trough_idx=trough_idx,
-        #                     peak_idx=peak_idx,
-        #                     **self.params["metric_params"][metric_name],
-        #                 )
-        #             except Exception as e:
-        #                 warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
-        #                 value = np.nan
-        #             template_metrics.at[index, metric_name] = value
-
-        #     # compute metrics multi_channel
-        #     for metric_name in metrics_multi_channel:
-        #         # retrieve template (with sparsity if waveform extractor is sparse)
-        #         template = all_templates[unit_index, :, :]
-        #         if sorting_analyzer.is_sparse():
-        #             mask = sorting_analyzer.sparsity.mask[unit_index, :]
-        #             template = template[:, mask]
-
-        #         if template.shape[1] < self.min_channels_for_multi_channel_warning:
-        #             warnings.warn(
-        #                 f"With less than {self.min_channels_for_multi_channel_warning} channels, "
-        #                 "multi-channel metrics might not be reliable."
-        #             )
-        #         if sorting_analyzer.is_sparse():
-        #             channel_locations_sparse = channel_locations[sorting_analyzer.sparsity.mask[unit_index]]
-        #         else:
-        #             channel_locations_sparse = channel_locations
-
-        #         if upsampling_factor > 1:
-        #             assert isinstance(upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
-        #             template_upsampled = resample_poly(template, up=upsampling_factor, down=1, axis=0)
-        #             sampling_frequency_up = upsampling_factor * sampling_frequency
-        #         else:
-        #             template_upsampled = template
-        #             sampling_frequency_up = sampling_frequency
-
-        #         func = _metric_name_to_func[metric_name]
-        #         try:
-        #             value = func(
-        #                 template_upsampled,
-        #                 channel_locations=channel_locations_sparse,
-        #                 sampling_frequency=sampling_frequency_up,
-        #                 **self.params["metric_params"][metric_name],
-        #             )
-        #         except Exception as e:
-        #             warnings.warn(f"Error computing metric {metric_name} for unit {unit_id}: {e}")
-        #             value = np.nan
-        #         template_metrics.at[index, metric_name] = value
-
-        # # we use the convert_dtypes to convert the columns to the most appropriate dtype and avoid object columns
-        # # (in case of NaN values)
-        # template_metrics = template_metrics.convert_dtypes()
-        # return template_metrics
+        return metrics
 
     def _run(self, verbose=False):
 
@@ -1137,44 +1060,54 @@ class BaseMetricExtension(AnalyzerExtension):
     def _get_data(self):
         return self.data["metrics"]
 
-    def _select_extension_data(self, unit_ids):
-        """_summary_
+    def _select_extension_data(self, unit_ids: list[int | str]):
+        """
+        Select data for a subset of unit ids.
 
         Parameters
         ----------
-        unit_ids : _type_
-            _description_
+        unit_ids : list[int | str]
+            List of unit ids to select data for.
 
         Returns
         -------
-        _type_
-            _description_
+        dict
+            Dictionary containing the selected metrics DataFrame.
         """
         new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
         return dict(metrics=new_metrics)
 
     def _merge_extension_data(
-        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+        self,
+        merge_unit_groups: list[list[int | str]],
+        new_unit_ids: list[int | str],
+        new_sorting_analyzer: SortingAnalyzer,
+        keep_mask: np.ndarray | None = None,
+        verbose: bool = False,
+        **job_kwargs,
     ):
-        """_summary_
+        """
+        Merge extension data from the old metrics DataFrame into the new one.
 
         Parameters
         ----------
-        merge_unit_groups : _type_
-            _description_
-        new_unit_ids : _type_
-            _description_
-        new_sorting_analyzer : _type_
-            _description_
-        keep_mask : _type_, optional
-            _description_, by default None
-        verbose : bool, optional
-            _description_, by default False
+        merge_unit_groups : list[list[int | str]]
+            List of lists of unit ids to merge.
+        new_unit_ids : list[int | str]
+            List of new unit ids after merging.
+        new_sorting_analyzer : SortingAnalyzer
+            The new SortingAnalyzer object after merging.
+        keep_mask : np.ndarray | None, default: None
+            Mask to keep certain spikes (not used here).
+        verbose : bool, default: False
+            Whether to print verbose output.
+        job_kwargs : dict
+            Additional job keyword arguments.
 
         Returns
         -------
-        _type_
-            _description_
+        dict
+            Dictionary containing the merged metrics DataFrame.
         """
         import pandas as pd
 
@@ -1194,24 +1127,27 @@ class BaseMetricExtension(AnalyzerExtension):
         new_data = dict(metrics=metrics)
         return new_data
 
-    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
-        """_summary_
+    def _split_extension_data(
+        self,
+        split_units: dict[int | str, list[list[int]]],
+        new_unit_ids: list[list[int | str]],
+        new_sorting_analyzer: SortingAnalyzer,
+        verbose: bool = False,
+        **job_kwargs,
+    ):
+        """
+        Split extension data from the old metrics DataFrame into the new one.
 
         Parameters
         ----------
-        split_units : _type_
-            _description_
-        new_unit_ids : _type_
-            _description_
-        new_sorting_analyzer : _type_
-            _description_
-        verbose : bool, optional
-            _description_, by default False
-
-        Returns
-        -------
-        _type_
-            _description_
+        split_units : dict[int | str, list[list[int]]]
+            List of unit ids to split.
+        new_unit_ids : list[list[int | str]]
+            List of lists of new unit ids after splitting.
+        new_sorting_analyzer : SortingAnalyzer
+            The new SortingAnalyzer object after splitting.
+        verbose : bool, default: False
+            Whether to print verbose output.
         """
         import pandas as pd
         from itertools import chain
