@@ -1,9 +1,3 @@
-from .template_metrics import (
-    ComputeTemplateMetrics,
-    compute_template_metrics,
-    get_template_metric_names,
-)
-
 from .template_similarity import (
     ComputeTemplateSimilarity,
     compute_template_similarity,

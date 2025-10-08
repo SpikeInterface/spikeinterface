@@ -12,7 +12,7 @@ quality metrics that you have calculated.
 
 import spikeinterface.core as si
 
-from spikeinterface.qualitymetrics import compute_quality_metrics
+from spikeinterface.metrics import compute_quality_metrics
 
 
 ##############################################################################

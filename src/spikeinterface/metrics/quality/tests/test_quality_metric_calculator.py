@@ -9,10 +9,10 @@ from spikeinterface.core import (
     aggregate_units,
 )
 
-from spikeinterface.qualitymetrics import compute_snrs
+from spikeinterface.metrics import compute_snrs
 
 
-from spikeinterface.qualitymetrics import (
+from spikeinterface.metrics import (
     compute_quality_metrics,
 )
 

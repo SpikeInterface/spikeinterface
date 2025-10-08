@@ -12,13 +12,13 @@ from spikeinterface.core import (
     synthesize_random_firings,
 )
 
-from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
+from spikeinterface.metrics.utils import create_ground_truth_pc_distributions
 
-from spikeinterface.qualitymetrics.quality_metric_list import (
+from spikeinterface.metrics.quality_metric_list import (
     _misc_metric_name_to_func,
 )
 
-from spikeinterface.qualitymetrics import (
+from spikeinterface.metrics import (
     get_quality_metric_list,
     mahalanobis_metrics,
     lda_metrics,
@@ -43,7 +43,7 @@ from spikeinterface.qualitymetrics import (
     compute_quality_metrics,
 )
 
-from spikeinterface.qualitymetrics.misc_metrics import _noise_cutoff
+from spikeinterface.metrics.misc_metrics import _noise_cutoff
 
 from spikeinterface.core.basesorting import minimum_spike_dtype
 

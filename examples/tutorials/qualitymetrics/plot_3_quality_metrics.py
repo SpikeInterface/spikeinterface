@@ -8,7 +8,7 @@ After spike sorting, you might want to validate the 'goodness' of the sorted uni
 """
 
 import spikeinterface.core as si
-from spikeinterface.qualitymetrics import (
+from spikeinterface.metrics import (
     compute_snrs,
     compute_firing_rates,
     compute_isi_violations,

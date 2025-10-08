@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from spikeinterface.qualitymetrics import compute_pc_metrics, get_quality_pca_metric_list
+from spikeinterface.metrics import compute_pc_metrics, get_quality_pca_metric_list
 
 
 def test_compute_pc_metrics(small_sorting_analyzer):
@@ -58,7 +58,7 @@ def test_pca_metrics_multi_processing(small_sorting_analyzer):
 
 
 if __name__ == "__main__":
-    from spikeinterface.qualitymetrics.tests.conftest import make_small_analyzer
+    from spikeinterface.metrics.tests.conftest import make_small_analyzer
 
     small_sorting_analyzer = make_small_analyzer()
     test_calculate_pc_metrics(small_sorting_analyzer)

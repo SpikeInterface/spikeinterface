@@ -136,8 +136,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
 
         if metrics_kwargs is not None and metric_params is None:
             deprecation_msg = "`metrics_kwargs` is deprecated and will be removed in version 0.104.0. Please use `metric_params` instead"
-            deprecation_msg = "`metrics_kwargs` is deprecated and will be removed in version 0.104.0. Please use `metric_params` instead"
-
+            warnings.warn(deprecation_msg, DeprecationWarning)
             metric_params = {}
             for metric_name in metric_names:
                 metric_params[metric_name] = deepcopy(metrics_kwargs)

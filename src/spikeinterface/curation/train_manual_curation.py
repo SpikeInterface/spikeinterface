@@ -4,13 +4,13 @@ import numpy as np
 import json
 import spikeinterface
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.qualitymetrics import (
+from spikeinterface.metrics import (
     get_quality_metric_list,
     get_quality_pca_metric_list,
     qm_compute_name_to_column_names,
 )
 from spikeinterface.postprocessing import get_template_metric_names
-from spikeinterface.postprocessing.template_metrics import tm_compute_name_to_column_names
+from spikeinterface.metrics.template.template_metrics import tm_compute_name_to_column_names
 from pathlib import Path
 from copy import deepcopy
 
