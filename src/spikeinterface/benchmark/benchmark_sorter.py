@@ -50,7 +50,7 @@ class SorterStudy(BenchmarkStudy, MixinStudyUnitCount):
     but also to compare one sorter in challenging situation (drift, noise, ...).
     This can also be used to compare sorters with differents paramerters.
 
-    The ground truth sorting must be given and sorting output from sorter will be 
+    The ground truth sorting must be given and sorting output from sorter will be
     compared to then.
     """
 
@@ -108,5 +108,3 @@ class SorterStudy(BenchmarkStudy, MixinStudyUnitCount):
         from .benchmark_plot_tools import plot_performance_losses
 
         return plot_performance_losses(self, *args, **kwargs)
-
-

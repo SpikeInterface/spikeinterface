@@ -449,7 +449,7 @@ Noise
 ~~~~~
 
 .. currentmodule:: spikeinterface.generation
-    
+
     .. autofunction:: generate_noise
 
 
@@ -506,7 +506,7 @@ spikeinterface.benchmark
 
     .. autoclass:: PeakLocalizationStudy
 
-.. automodule:: spikeinterface.benchmark.benchmark_peak_localization 
+.. automodule:: spikeinterface.benchmark.benchmark_peak_localization
 
     .. autoclass:: UnitLocalizationStudy
 

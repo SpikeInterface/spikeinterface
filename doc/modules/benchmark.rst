@@ -12,7 +12,7 @@ like ***mearec**. And then to compare the output of each sorter to the ground tr
 Then, theses comparisons can be plotted in various ways to explore all strengths and weakness of
 sorters tools. The very first paper of spikeinterface was about that, see [Buccino]_.
 
-Since version, 0.102.0 the concept of *benchmark* has been extended to challenge/study specific 
+Since version, 0.102.0 the concept of *benchmark* has been extended to challenge/study specific
 steps of the sorting pipeline, for instance the motion estimation methods has been carrfully studied
 in [Garcia2024]_ or some localisation methods has been compared in [Scopin2024]_.
 Also, very specific details (the ability for a sorting to recover collision spike) has been
@@ -55,7 +55,7 @@ All theses benchmark study classes share the same design :
     An internal agreement matrix is also constructed. With this machinery many metrics can be taken
     to estimate the quality of a methods : accuracy, recall, precision
   * Study classes are persistent on disk. The mechanism is based on an intrinsic
-    organization into a "study_folder" with several subfolders: results, sorting_analyzer, run_logs, 
+    organization into a "study_folder" with several subfolders: results, sorting_analyzer, run_logs,
     cases...
   * By design a **Study** class has an associated **Benchmark** class to delegated the storage and the
     :code:`compute_result()`
@@ -114,14 +114,14 @@ Here a simple code block to generate
     # Step 2 : run
     # This internally does run_sorter() for all cases in one function
     study.run()
-    
+
     # Step 3 : compute results
     # Run the benchmark : this internally does compare_sorter_to_ground_truth() for all cases
     study.compute_results()
 
     # Step 4 : plots
     study.plot_performances_vs_snr()
-    study.plot_performances_ordered()    
+    study.plot_performances_ordered()
     study.plot_agreement_matrix()
     study.plot_unit_counts()
 
@@ -156,8 +156,8 @@ Here a simple code block to generate
 
 
 The :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks()` function
-propose mainly (with some variants) 2 main methods : 
- 
+propose mainly (with some variants) 2 main methods :
+
   * "locally_exclussive" : a multichannel peak detection by threhold crossing that taken
     in account the neighbor channels
   * "matched_filtering" : a method based on convolution by a kernel that "looks like a spike"
@@ -277,13 +277,13 @@ job done [Garcia2024]_.
 
     probe_name = 'Neuropixels1-128':
     num_units = 250
-    
+
     datasets = {}
     drift_info = {}
     static, drifting, sorting, info = si.generate_drifting_recording(
         num_units=num_units,
         duration=300.,
-        probe_name=probe_name, 
+        probe_name=probe_name,
         generate_sorting_kwargs=dict(
             firing_rates=(2.0, 8.0),
             refractory_period_ms=4.0
@@ -313,7 +313,7 @@ job done [Garcia2024]_.
     static, drifting, sorting, info = si.generate_drifting_recording(
         num_units=num_units,
         duration=300.,
-        probe_name=probe_name, 
+        probe_name=probe_name,
         generate_sorting_kwargs=dict(
             firing_rates=(2.0, 8.0),
             refractory_period_ms=4.0
@@ -377,7 +377,7 @@ job done [Garcia2024]_.
                     estimate_motion_kwargs=estimate_motion_kwargs,
                 ),
             )
-    
+
     study = MotionEstimationStudy(study_folder)
     study.run(verbose=True)
     study.compute_results()
@@ -398,4 +398,3 @@ job done [Garcia2024]_.
 With some imagination and by exploring a bit
 this `repo <https://github.com/samuelgarcia/sorting_components_benchmark_paper>`_, testing new methods for spike sorting steps
 is now an easy task : clustering, template matching, motion estimation, peak detection, ...
-

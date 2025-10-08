@@ -53,7 +53,7 @@ The module handles many details:
   * noise has a  Gaussian distribution with an optional covariance using noise spatial decay.
   * The static and drifting recording are *'lazy'* : traces are generated on the fly (aka on demand).
     The only computation is the generation of the templates which is performed at the start.
-  * Parameters (firing, templates, locations, ...) can be controlled using ranges of values or can be 
+  * Parameters (firing, templates, locations, ...) can be controlled using ranges of values or can be
     explicitly given unit by unit.
   * All parameters are carefully seeded to ensure reproducibility (at least on the same system and NumPy version).
 
@@ -139,7 +139,7 @@ But for finer control of the outputs one can input additional optional parameter
         generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
         # give (or not) the extra_infos dictionary
         extra_outputs=True,
-        # and of course the seed : 
+        # and of course the seed :
         #  * if no idea and want to mimic geeks put 42
         #  * if you are more ego centric put your birthday
         #  * if you recently became parent put the birthday of your child
