@@ -33,7 +33,6 @@ Some of the generation functions are defined in the :py:mod:`spikeinterface.core
 Synthetic recordings
 --------------------
 
-The easiest way is to generate 100% synthetic recording.
 
 The top level function is :py:func:`~spikeinterface.generate.generate_drifting_recording`.
 This function generates both a static recording and a drifting recording with
@@ -41,15 +40,15 @@ exactly the same units and spikes.
 
 The module handles many details:
 
-  * any probe layout available in :py:mod:`probeinterface`
-  * many possible motion vectors (zigzag, bumps, random_walk) or combination of them
-  * no rigid drift, the motion vector is handled at the level of the units
-  * control on units' location : 'uniform' or 'by layer' (aka multi modal)
+  * any probe layout available in :py:mod:`probeinterface`.
+  * many possible motion vectors (zigzag, bumps, random_walk) or combination of them.
+  * non-rigid drift, the motion vector is handled at the level of the units.
+  * control on units' location : 'uniform' or 'by layer' (aka multi modal).
   * templates are generated step by step (typically 1um) along the motion axis using simple
-    spatial rules
+    spatial rules.
   * templates shape are quite simple but can be controlled by many parameters (spheric/elliptical,
     time dynamic, spatial propagation).
-  * spiketrains have a Poisson-like distribution but can optionally be externally given by the user.
+  * spike trains have a Poisson-like distribution but can optionally be externally given by the user.
   * there are helper functions to inject overly synchronous spikes.
   * noise has a  Gaussian distribution with an optional covariance using noise spatial decay.
   * The static and drifting recording are *'lazy'* : traces are generated on the fly (aka on demand).
@@ -149,8 +148,7 @@ But for finer control of the outputs one can input additional optional parameter
 
     si.plot_traces(rec_static, channel_ids=rec_static.channel_ids[10:15], time_range=(11, 11.5))
 
-And you should have something like this.
-This can looks a bit toyish but this has been proven to be very useful to the development :py:mod:`sortingcomponents` module.
+The generated traces can look a bit toyish, but this generation module has proven to be very useful to the development :py:mod:`sortingcomponents` module.
 
 .. image:: ../images/generation_fig1.png
 
@@ -159,7 +157,7 @@ This can looks a bit toyish but this has been proven to be very useful to the de
 Control the drift vector
 ------------------------
 
-In this example we inject different drift vectors to see how they influence the ultimate motion vectors.
+In this example we inject different drift modes to see how they influence the final motion vectors.
 
 .. code-block:: python
 

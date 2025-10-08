@@ -18,6 +18,7 @@ For example, what is the performance of peak detection method 1 or 2, provided t
 same?
 
 Currently, we have methods for:
+
  * **peak detection**
  * **peak localization**
  * **peak selection**
@@ -27,11 +28,9 @@ Currently, we have methods for:
  * **template matching**
 
 
-For some of these steps, implementations are in a very early stage and are still a bit *drafty*.
-Signature and behavior may change from time to time in this alpha period development.
 
-An important concept is the **node pipeline** machinery using the 
-:py:func:`~spikeinterface.core.run_node_pipeline()` functions.
+An important concept is the **node pipeline** machinery, which uses the 
+:py:func:`~spikeinterface.core.run_node_pipeline()` function, and will be covered in the :ref:`node-pipelines` section.
 
 You can also have a look `spikeinterface <https://github.com/samuelgarcia/sorting_components_benchmark_paper>`_ 
 where there are more detailed notebooks on sorting components.
@@ -70,12 +69,12 @@ The output :code:`peaks` is a NumPy array with a length of the number of peaks f
     peak_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('amplitude', 'float64'), ('segment_index', 'int64')]
 
 
-There are 2 different methods available with the :code:`method` argument:
+There are two different methods available with the :code:`method` argument:
 
 * **'locally_exclusive'** (requires :code:`numba`): peaks on neighboring channels within a certain radius are excluded (not counted multiple times)
 * **'matched_filtering'** (requires :code:`numba`): 
 
-Other variant are also implemented (but less tested or not so useful):
+Other variants are also implemented (but less tested or not so useful):
 
 * **'by_channel'** : peaks are detected separately for each channel, this should be used in high density probe layout.
 * **'by_channel_torch'** (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for time deduplication
@@ -125,7 +124,7 @@ Currently, the following methods are implemented:
     This has been presented at `NeurIPS <https://nips.cc/Conferences/2021/ScheduleMultitrack?event=26709>`_
     see also `here <https://openreview.net/forum?id=ohfi44BZPC4>`_
     **'monopolar_triangulation'** has some variant with differents optimizers (default is 'minimize_with_log_penality')
-  * **'grid_convolution'** : inspired by the kilosort approach. This consists of a convolution of traces with waveform
+  * **'grid_convolution'** : inspired by the Kilosort approach. This consists of a convolution of traces with waveform
      prototypes with varying local spatial footprint on the probe.
 
 
@@ -152,20 +151,23 @@ For instance, the 'monopolar_triangulation' method will have:
      * **'z'** is orthogonal to the probe plane
 
 
+.. _node-pipelines:
+
 Node pipelines
 --------------
 
 Both :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks()` and
 :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks()` need to walk throughout the entire
-recording traces. So this make reading traces and computing the preprocessing twice : this can be very slow!
-Luckily, there is an internal machinery to avoid the 2 times traces reading : :py:func:`~spikeinterface.core.run_node_pipeline()`
+recording traces, duplicating the reading of the traces from disk and applying the preprocessing.
+This can be very slow!
+
+Luckily, there is an internal machinery to avoid the multiple passes over the traces: the :py:func:`~spikeinterface.core.run_node_pipeline()` function.
 
 The *node pipeline* is an API that runs user-selected *nodes* in parallel on all traces' chunks and performs computations like
 **peak detection**, **peak localization**, **svd featuring**, ...
 
 Here is a small example that does peak detection and localization at once.
-In the following, please note that there is a middle node that does not output
-final results : the local waveforms extractor.
+In the following, please note that there is an intermediate node, the `ExtractDenseWaveforms` node, that does not output final results (notice the `return_output=False`), but is needed to extract waveforms for the localization node.
 
 
 .. code-block:: python
@@ -255,7 +257,7 @@ can be *hidden* by this process.
 
 Implemented methods are the following:
 
-  * **uniform'**
+  * **'uniform'**
   * **'uniform_locations'**
   * **'smart_sampling_amplitudes'**
   * **'smart_sampling_locations'**
@@ -397,7 +399,7 @@ Extract SVD from peaks
 
 Importantly many clustering functions internally use the
 :py:func:`~spikeinterface.sortingcomponents.clusetring.extract_peaks_svd.extract_peaks_svd()`.
-This runs a **node pipeline** that extracts on a selected peaks set, extracts waveforms, sparsifies them, and compresses
+This runs a **node pipeline** on a selected peaks set that extracts waveforms, sparsifies them, and compresses
 them on the time axis using **svd**.
 
 

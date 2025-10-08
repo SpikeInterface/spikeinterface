@@ -34,7 +34,7 @@ SpikeInterface consists of several sub-packages which encapsulate all steps in a
 - :py:mod:`spikeinterface.curation` (under development)
 - :py:mod:`spikeinterface.generation`
 - :py:mod:`spikeinterface.benchmark`
-- :py:mod:`spikeinterface.sortingcomponents` (under development for ever)
+- :py:mod:`spikeinterface.sortingcomponents` (under development forever)
 
 
 .. image:: images/overview.png
