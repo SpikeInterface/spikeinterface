@@ -177,4 +177,3 @@ References
 .. [Yger] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
 
 .. [Scopin2024] `Localization of neurons from extracellular footprints <https://doi.org/10.1016/j.jneumeth.2024.110297>`_
-

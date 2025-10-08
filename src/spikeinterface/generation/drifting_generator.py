@@ -480,8 +480,6 @@ def generate_drifting_recording(
     max_channel_index = np.argmin(distances, axis=1)
     sorting.set_property("max_channel_index", max_channel_index)
 
-
-
     ## Important precompute displacement do not work on border and so do not work for tetrode
     # here we bypass the interpolation and regenrate templates at severals positions.
     ## drifting_templates.precompute_displacements(displacements_steps)

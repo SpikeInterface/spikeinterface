@@ -819,7 +819,7 @@ def plot_performances_vs_depth_and_snr(
 ):
     """
     Plot performances vs depth and snr for a study.
-    
+
     Parameters
     ----------
     study : BenchmarkStudy

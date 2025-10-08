@@ -29,10 +29,10 @@ Currently, we have methods for:
 
 
 
-An important concept is the **node pipeline** machinery, which uses the 
+An important concept is the **node pipeline** machinery, which uses the
 :py:func:`~spikeinterface.core.run_node_pipeline()` function, and will be covered in the :ref:`node-pipelines` section.
 
-You can also have a look `spikeinterface <https://github.com/samuelgarcia/sorting_components_benchmark_paper>`_ 
+You can also have a look `spikeinterface <https://github.com/samuelgarcia/sorting_components_benchmark_paper>`_
 where there are more detailed notebooks on sorting components.
 
 
@@ -362,7 +362,7 @@ large features.
 The clustering step takes the recording and detected (and optionally selected) peaks as input and returns
 a label for every peak.
 
-Some methods have been implemented with various ideas in mind. We really hope that this list will be extended 
+Some methods have been implemented with various ideas in mind. We really hope that this list will be extended
 soon by talented people willing to improve it. This is a crucial and not totally resolved step.
 
   * **'iterative-hdbscan'** : method used in spkyking-circus2. This performs local hdbscan clusetrings on
@@ -423,5 +423,3 @@ At the moment, there are five methods implemented:
     need lots of memory.
   * **'wobble'**: this is a re-implementation of the yass template matching code. Also very similar to 'circus-omp'.
     This is the most accurate methods for discovering spike collisions.
-
-
