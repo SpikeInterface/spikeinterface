@@ -1,11 +1,15 @@
-from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
-from spikeinterface.postprocessing import ComputeTemplateMetrics, compute_template_metrics
 import pytest
 import csv
 
-from spikeinterface.metrics.template.template_metrics_old import _single_channel_metric_name_to_func
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
+from spikeinterface.metrics.template import (
+    ComputeTemplateMetrics,
+    compute_template_metrics,
+    get_single_channel_template_metric_names,
+)
 
-template_metrics = list(_single_channel_metric_name_to_func.keys())
+
+template_metrics = get_single_channel_template_metric_names()
 
 
 def test_different_params_template_metrics(small_sorting_analyzer):

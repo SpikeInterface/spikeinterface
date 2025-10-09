@@ -8,26 +8,25 @@ from __future__ import annotations
 
 import numpy as np
 import warnings
-from itertools import chain
-from collections import namedtuple
 from copy import deepcopy
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array
 
-from .metrics_implementations import single_channel_metrics, multi_channel_metrics, get_trough_and_peak_idx
+from .metric_classes import single_channel_metrics, multi_channel_metrics
+from .metrics_implementations import get_trough_and_peak_idx
 
 
 MIN_CHANNELS_FOR_MULTI_CHANNEL_WARNING = 10
 
 
 def get_single_channel_template_metric_names():
-    return [m.name for m in single_channel_metrics]
+    return [m.metric_name for m in single_channel_metrics]
 
 
 def get_multi_channel_template_metric_names():
-    return [m.name for m in multi_channel_metrics]
+    return [m.metric_name for m in multi_channel_metrics]
 
 
 def get_template_metric_names():
@@ -119,7 +118,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         if include_multi_channel_metrics:
             metric_names += get_multi_channel_template_metric_names()
 
-        super()._set_params(
+        return super()._set_params(
             metric_names=metric_names,
             metric_params=metric_params,
             delete_existing_metrics=delete_existing_metrics,
@@ -148,11 +147,13 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
         extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="index")
         all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
+        channel_locations = sorting_analyzer.recording.get_channel_locations()
 
         templates_single = []
-        templates_multi = []
         troughs = {}
         peaks = {}
+        templates_multi = []
+        channel_locations_multi = []
         for unit_id in unit_ids:
             unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
             template_all_chans = all_templates[unit_index]
@@ -167,55 +168,44 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             trough_idx, peak_idx = get_trough_and_peak_idx(template_upsampled)
 
             templates_single.append(template_upsampled)
-            troughs.append(trough_idx)
-            peaks.append(peak_idx)
+            troughs[unit_id] = trough_idx
+            peaks[unit_id] = peak_idx
 
             if self.params["include_multi_channel_metrics"]:
-                channel_locations = sorting_analyzer.get_channel_locations()
-                if template_all_chans.shape[1] < MIN_CHANNELS_FOR_MULTI_CHANNEL_WARNING:
+                if sorting_analyzer.is_sparse():
+                    mask = sorting_analyzer.sparsity.mask[unit_index, :]
+                    template_multi = template_all_chans[:, mask]
+                    channel_location_multi = channel_locations[mask]
+                else:
+                    template_multi = template_all_chans
+                    channel_location_multi = channel_locations
+                if template_multi.shape[1] < MIN_CHANNELS_FOR_MULTI_CHANNEL_WARNING:
                     warnings.warn(
                         f"With less than {MIN_CHANNELS_FOR_MULTI_CHANNEL_WARNING} channels, "
                         "multi-channel metrics might not be reliable."
                     )
-                if sorting_analyzer.is_sparse():
-                    mask = sorting_analyzer.sparsity.mask[unit_index, :]
-                    template_multi = template_all_chans[:, mask]
-                else:
-                    template_multi = template_all_chans
 
                 if upsampling_factor > 1:
                     template_multi_upsampled = resample_poly(template_multi, up=upsampling_factor, down=1, axis=0)
                 else:
                     template_multi_upsampled = template_multi
                 templates_multi.append(template_multi_upsampled)
+                channel_locations_multi.append(channel_location_multi)
 
         tmp_data["troughs"] = troughs
         tmp_data["peaks"] = peaks
         tmp_data["templates_single"] = np.array(templates_single)
 
         if self.params["include_multi_channel_metrics"]:
-            tmp_data["templates_multi"] = np.array(templates_multi)
+            # templates_multi is a list of 2D arrays of shape (n_times, n_channels)
+            tmp_data["templates_multi"] = templates_multi
+            tmp_data["channel_locations_multi"] = channel_locations_multi
 
         return tmp_data
 
 
 register_result_extension(ComputeTemplateMetrics)
 compute_template_metrics = ComputeTemplateMetrics.function_factory()
-
-
-_default_function_kwargs = dict(
-    recovery_window_ms=0.7,
-    peak_relative_threshold=0.2,
-    peak_width_ms=0.1,
-    depth_direction="y",
-    min_channels_for_velocity=5,
-    min_r2_velocity=0.5,
-    exp_peak_function="ptp",
-    min_r2_exp_decay=0.5,
-    spread_threshold=0.2,
-    spread_smooth_um=20,
-    column_range=None,
-)
 
 
 def get_default_tm_params(metric_names=None):

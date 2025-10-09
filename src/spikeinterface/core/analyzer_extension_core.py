@@ -838,7 +838,13 @@ class BaseMetric:
         results: namedtuple
             The results of the metric function
         """
-        results = cls.metric_function(sorting_analyzer, unit_ids, metric_params, tmp_data)
+        results = cls.metric_function(
+            sorting_analyzer=sorting_analyzer, unit_ids=unit_ids, metric_params=metric_params, tmp_data=tmp_data
+        )
+        assert set(results._fields) == set(cls.metric_columns), (
+            f"Metric {cls.metric_name} returned columns {results._fields} "
+            f"but expected columns are {cls.metric_columns}"
+        )
         return results
 
 
@@ -918,7 +924,7 @@ class BaseMetricExtension(AnalyzerExtension):
         # check dependencies
         metrics_to_remove = []
         for metric_name in metric_names:
-            depends_on = [m.metric_name for m in self.metric_list if m.metric_name == metric_name][0].depends_on
+            depends_on = [m for m in self.metric_list if m.metric_name == metric_name][0].depends_on
             for dep in depends_on:
                 if "|" in dep:
                     # at least one of the dependencies must be present
@@ -961,7 +967,6 @@ class BaseMetricExtension(AnalyzerExtension):
             metric_params=metric_params,
             **other_params,
         )
-
         return params
 
     def _prepare_data(self, unit_ids=None):
@@ -996,26 +1001,32 @@ class BaseMetricExtension(AnalyzerExtension):
         import pandas as pd
         from collections import namedtuple
 
-        tmp_data = self._prepare_data()
         if unit_ids is None:
             unit_ids = sorting_analyzer.unit_ids
+        tmp_data = self._prepare_data(unit_ids=unit_ids)
         if metric_names is None:
             metric_names = self.params["metric_names"]
 
-        metrics = pd.DataFrame(index=unit_ids, columns=metric_names)
+        column_names = []
+        for metric in self.metric_list:
+            if metric.metric_name in metric_names:
+                column_names.extend(metric.metric_columns)
+
+        metrics = pd.DataFrame(index=unit_ids, columns=column_names)
 
         for metric_name in metric_names:
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
-            try:
-                res = metric.compute(
-                    self.sorting_analyzer,
-                    unit_ids=unit_ids,
-                    metric_params=self.params["metric_params"].get(metric_name, {}),
-                    tmp_data=tmp_data,
-                )
-            except Exception as e:
-                warnings.warn(f"Error computing metric {metric_name}: {e}")
-                res = namedtuple("MetricResult", metric.metric_columns)(*([np.nan] * len(metric.metric_columns)))
+            # try:
+            metric_params = self.params["metric_params"].get(metric_name, {})
+            res = metric.compute(
+                self.sorting_analyzer,
+                unit_ids=unit_ids,
+                metric_params=metric_params,
+                tmp_data=tmp_data,
+            )
+            # except Exception as e:
+            #     warnings.warn(f"Error computing metric {metric_name}: {e}")
+            #     res = namedtuple("MetricResult", metric.metric_columns)(*([np.nan] * len(metric.metric_columns)))
 
             # res is a namedtuple with several dictionary entries (one per column)
             for i, col in enumerate(res._fields):
@@ -1023,14 +1034,14 @@ class BaseMetricExtension(AnalyzerExtension):
 
         return metrics
 
-    def _run(self, verbose=False):
+    def _run(self, **job_kwargs):
 
         metrics_to_compute = self.params["metrics_to_compute"]
         delete_existing_metrics = self.params["delete_existing_metrics"]
 
         # compute the metrics which have been specified by the user
         computed_metrics = self._compute_metrics(
-            sorting_analyzer=self.sorting_analyzer, unit_ids=None, verbose=verbose, metric_names=metrics_to_compute
+            sorting_analyzer=self.sorting_analyzer, unit_ids=None, metric_names=metrics_to_compute
         )
 
         existing_metrics = []
@@ -1045,7 +1056,7 @@ class BaseMetricExtension(AnalyzerExtension):
 
         existing_metrics = []
         # here we get in the loaded via the dict only (to avoid full loading from disk after params reset)
-        extension = self.sorting_analyzer.extensions.get(self.name, None)
+        extension = self.sorting_analyzer.extensions.get(self.extension_name, None)
         if delete_existing_metrics is False and extension is not None and extension.data.get("metrics") is not None:
             existing_metrics = extension.params["metric_names"]
 
