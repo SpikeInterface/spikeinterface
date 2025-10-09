@@ -408,8 +408,8 @@ def plot_performances_vs_snr(
     levels_to_group_by=None,
     orientation="vertical",
     show_legend=True,
-    with_sigmoid_fit=True,
-    show_average_by_bin=False,
+    with_sigmoid_fit=False,
+    show_average_by_bin=True,
     scatter_size=4,
     num_bin_average=20,
     axs=None,
@@ -819,6 +819,7 @@ def plot_performances_vs_depth_and_snr(
 ):
     """
     Plot performances vs depth and snr for a study.
+
     Parameters
     ----------
     study : BenchmarkStudy

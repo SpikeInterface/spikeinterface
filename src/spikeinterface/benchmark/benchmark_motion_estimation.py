@@ -155,6 +155,15 @@ class MotionEstimationBenchmark(Benchmark):
 
 
 class MotionEstimationStudy(BenchmarkStudy):
+    """
+    Benchmark study to compare motion estimation methods.
+
+    The ground truth displaements of all units must be known and method outputs
+    will be compared to them.
+
+    See also :py:func:`~spikeinterface.generation.generate_drifting_recording`,
+    for generation drifting recording.
+    """
 
     benchmark_class = MotionEstimationBenchmark
 

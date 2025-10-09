@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import numpy as np
 import importlib.util
-from spikeinterface.core import get_noise_levels
 
 
 spike_dtype = [
@@ -606,10 +605,6 @@ class CircusPeeler(BaseTemplateMatching):
         matches
     detect_threshold : int
         The detection threshold
-    noise_levels : array
-        The noise levels, for every channels
-    random_chunk_kwargs : dict
-        Parameters for computing noise levels, if not provided (sub optimal)
     max_amplitude : float
         Maximal amplitude allowed for every template
     min_amplitude : float
@@ -629,20 +624,18 @@ class CircusPeeler(BaseTemplateMatching):
         self,
         recording,
         return_output=True,
-        parents=None,
         templates=None,
         peak_sign="neg",
         exclude_sweep_ms=0.1,
         jitter_ms=0.1,
         detect_threshold=5,
         noise_levels=None,
-        random_chunk_kwargs={},
         max_amplitude=1.5,
         min_amplitude=0.5,
         use_sparse_matrix_threshold=0.25,
     ):
 
-        BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
+        BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
 
         try:
             from sklearn.feature_extraction.image import extract_patches_2d
@@ -660,10 +653,6 @@ class CircusPeeler(BaseTemplateMatching):
         self.num_channels = recording.get_num_channels()
         self.num_samples = templates.num_samples
         self.num_templates = len(templates.unit_ids)
-
-        if noise_levels is None:
-            print("CircusPeeler : noise should be computed outside")
-            noise_levels = get_noise_levels(recording, **d["random_chunk_kwargs"], return_in_uV=False)
 
         self.abs_threholds = noise_levels * detect_threshold
 

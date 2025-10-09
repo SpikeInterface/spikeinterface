@@ -116,6 +116,13 @@ class PeakDetectionBenchmark(Benchmark):
 
 
 class PeakDetectionStudy(BenchmarkStudy):
+    """
+    Benchmark study to compare peak detection methods.
+
+    The ground truth sorting must be given.
+    Peak detected by methods will be compared to the ground truth to estimate the
+    recall.
+    """
 
     benchmark_class = PeakDetectionBenchmark
 
@@ -165,7 +172,7 @@ class PeakDetectionStudy(BenchmarkStudy):
         import matplotlib.pyplot as plt
 
         if ax is None:
-            fig, ax = plt.subplots(figsize=figsize, squeeze=False)
+            fig, ax = plt.subplots(figsize=figsize)
         else:
             fig = ax.get_figure()
 
