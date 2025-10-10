@@ -17,6 +17,7 @@ from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templat
 from .recording_tools import get_noise_levels
 from .template import Templates
 from .sorting_tools import random_spikes_selection
+from .job_tools import fix_job_kwargs, split_job_kwargs
 
 
 class ComputeRandomSpikes(AnalyzerExtension):
@@ -818,10 +819,11 @@ class BaseMetric:
     metric_params = {}  # to be defined in subclass
     metric_columns = []  # columns of the dataframe
     metric_dtypes = {}  # dtypes of the dataframe
+    needs_recording = False  # to be defined in subclass
     depends_on = []  # to be defined in subclass
 
     @classmethod
-    def compute(cls, sorting_analyzer, unit_ids, metric_params, tmp_data):
+    def compute(cls, sorting_analyzer, unit_ids, metric_params, tmp_data, job_kwargs):
         """Compute the metric.
 
         Parameters
@@ -832,6 +834,8 @@ class BaseMetric:
             Parameters to override the default metric parameters
         tmp_data : dict
             Temporary data to pass to the metric function
+        job_kwargs : dict
+            Job keyword arguments to control paralleization
 
         Returns
         -------
@@ -839,7 +843,11 @@ class BaseMetric:
             The results of the metric function
         """
         results = cls.metric_function(
-            sorting_analyzer=sorting_analyzer, unit_ids=unit_ids, metric_params=metric_params, tmp_data=tmp_data
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            metric_params=metric_params,
+            tmp_data=tmp_data,
+            job_kwargs=job_kwargs,
         )
         assert set(results._fields) == set(cls.metric_columns), (
             f"Metric {cls.metric_name} returned columns {results._fields} "
@@ -924,7 +932,8 @@ class BaseMetricExtension(AnalyzerExtension):
         # check dependencies
         metrics_to_remove = []
         for metric_name in metric_names:
-            depends_on = [m for m in self.metric_list if m.metric_name == metric_name][0].depends_on
+            metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
+            depends_on = metric.depends_on
             for dep in depends_on:
                 if "|" in dep:
                     # at least one of the dependencies must be present
@@ -944,6 +953,12 @@ class BaseMetricExtension(AnalyzerExtension):
                             f"Since it is not present, the metric will not be computed."
                         )
                         metrics_to_remove.append(metric_name)
+            if metric.needs_recording and not self.sorting_analyzer.has_recording():
+                warnings.warn(
+                    f"Metric {metric_name} requires a recording. "
+                    f"Since the SortingAnalyzer has no recording, the metric will not be computed."
+                )
+                metrics_to_remove.append(metric_name)
 
         for metric_name in metrics_to_remove:
             metric_names.remove(metric_name)
@@ -979,6 +994,7 @@ class BaseMetricExtension(AnalyzerExtension):
         sorting_analyzer: SortingAnalyzer,
         unit_ids: list[int | str] | None = None,
         metric_names: list[str] | None = None,
+        **job_kwargs,
     ):
         """
         Compute metrics.
@@ -999,7 +1015,6 @@ class BaseMetricExtension(AnalyzerExtension):
             DataFrame containing the computed metrics for each unit.
         """
         import pandas as pd
-        from collections import namedtuple
 
         if unit_ids is None:
             unit_ids = sorting_analyzer.unit_ids
@@ -1023,6 +1038,7 @@ class BaseMetricExtension(AnalyzerExtension):
                 unit_ids=unit_ids,
                 metric_params=metric_params,
                 tmp_data=tmp_data,
+                job_kwargs=job_kwargs,
             )
             # except Exception as e:
             #     warnings.warn(f"Error computing metric {metric_name}: {e}")
@@ -1039,9 +1055,12 @@ class BaseMetricExtension(AnalyzerExtension):
         metrics_to_compute = self.params["metrics_to_compute"]
         delete_existing_metrics = self.params["delete_existing_metrics"]
 
+        _, job_kwargs = split_job_kwargs(job_kwargs)
+        job_kwargs = fix_job_kwargs(job_kwargs)
+
         # compute the metrics which have been specified by the user
         computed_metrics = self._compute_metrics(
-            sorting_analyzer=self.sorting_analyzer, unit_ids=None, metric_names=metrics_to_compute
+            sorting_analyzer=self.sorting_analyzer, unit_ids=None, metric_names=metrics_to_compute, **job_kwargs
         )
 
         existing_metrics = []

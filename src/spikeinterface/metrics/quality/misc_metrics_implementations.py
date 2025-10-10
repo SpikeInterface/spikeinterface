@@ -9,7 +9,6 @@ Implementations here have been refactored to support the multi-segment API of sp
 
 from __future__ import annotations
 
-from .utils import _has_required_extensions
 from collections import namedtuple
 import math
 import warnings
@@ -77,8 +76,6 @@ def compute_noise_cutoffs(sorting_analyzer, high_quantile=0.25, low_quantile=0.1
 
     noise_cutoff_dict = {}
     noise_ratio_dict = {}
-
-    _has_required_extensions(sorting_analyzer, metric_name="noise_cutoff")
 
     amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
     peak_sign = amplitude_extension.params["peak_sign"]
@@ -370,8 +367,6 @@ def compute_snrs(
 
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
-
-    _has_required_extensions(sorting_analyzer, metric_name="snr")
 
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
@@ -904,8 +899,6 @@ def compute_amplitude_cv_metrics(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    _has_required_extensions(sorting_analyzer, metric_name="amplitude_cv")
-
     amps = sorting_analyzer.get_extension(amplitude_extension).get_data()
 
     # precompute segment slice
@@ -1033,7 +1026,6 @@ def compute_amplitude_cutoffs(
         unit_ids = sorting_analyzer.unit_ids
 
     all_fraction_missing = {}
-    _has_required_extensions(sorting_analyzer, metric_name="amplitude_cutoff")
 
     invert_amplitudes = False
     if (
@@ -1093,8 +1085,6 @@ def compute_amplitude_medians(sorting_analyzer, peak_sign="neg", unit_ids=None):
     sorting = sorting_analyzer.sorting
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
-
-    _has_required_extensions(sorting_analyzer, metric_name="amplitude_median")
 
     all_amplitude_medians = {}
     amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
@@ -1173,8 +1163,6 @@ def compute_drift_metrics(
     sorting = sorting_analyzer.sorting
     if unit_ids is None:
         unit_ids = sorting.unit_ids
-
-    _has_required_extensions(sorting_analyzer, metric_name="drift")
 
     spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
     spike_locations = spike_locations_ext.get_data()
@@ -1617,8 +1605,6 @@ def compute_sd_ratio(
             "SD ratio metric will be set to NaN"
         )
         return {unit_id: np.nan for unit_id in unit_ids}
-
-    _has_required_extensions(sorting_analyzer, metric_name="sd_ratio")
 
     spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
 

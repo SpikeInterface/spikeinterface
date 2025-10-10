@@ -39,11 +39,11 @@ from spikeinterface.metrics import (
     compute_firing_ranges,
     compute_amplitude_cv_metrics,
     compute_sd_ratio,
-    _get_synchrony_counts,
     compute_quality_metrics,
 )
 
-from spikeinterface.metrics.misc_metrics import _noise_cutoff
+
+from spikeinterface.metrics.quality.misc_metrics_implementations import _noise_cutoff, _get_synchrony_counts
 
 from spikeinterface.core.basesorting import minimum_spike_dtype
 

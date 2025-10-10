@@ -14,7 +14,7 @@ import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
 from threadpoolctl import threadpool_limits
 
-from .misc_metrics import compute_num_spikes, compute_firing_rates
+from .misc_metrics_implementations import compute_num_spikes, compute_firing_rates
 
 from spikeinterface.core import get_random_data_chunks, compute_sparsity
 from spikeinterface.core.template_tools import get_template_extremum_channel

@@ -16,7 +16,7 @@ from spikeinterface.metrics.template.metrics_implementations import (
 )
 
 
-def _peak_to_valley_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params):
+def _peak_to_valley_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
     ptv_result = namedtuple("PeakToValleyResult", ["peak_to_valley"])
     ptv_dict = {}
     sampling_frequency = sorting_analyzer.sampling_frequency
@@ -40,7 +40,7 @@ class PeakToValley(BaseMetric):
     metric_dtypes = {"peak_to_valley": float}
 
 
-def _peak_to_trough_ratio_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params):
+def _peak_to_trough_ratio_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
     ptratio_result = namedtuple("PeakToTroughRatioResult", ["peak_to_trough_ratio"])
     ptratio_dict = {}
     sampling_frequency = sorting_analyzer.sampling_frequency
@@ -64,7 +64,7 @@ class PeakToTroughRatio(BaseMetric):
     metric_dtypes = {"peak_to_trough_ratio": float}
 
 
-def _half_width_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params):
+def _half_width_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
     hw_result = namedtuple("HalfWidthResult", ["half_width"])
     hw_dict = {}
     sampling_frequency = sorting_analyzer.sampling_frequency
@@ -88,7 +88,7 @@ class HalfWidth(BaseMetric):
     metric_dtypes = {"half_width": float}
 
 
-def _repolarization_slope_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params):
+def _repolarization_slope_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
     repolarization_result = namedtuple("RepolarizationSlopeResult", ["repolarization_slope"])
     repolarization_dict = {}
     sampling_frequency = sorting_analyzer.sampling_frequency
@@ -111,7 +111,7 @@ class RepolarizationSlope(BaseMetric):
     metric_dtypes = {"repolarization_slope": float}
 
 
-def _recovery_slope_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params):
+def _recovery_slope_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
     recovery_result = namedtuple("RecoverySlopeResult", ["recovery_slope"])
     recovery_dict = {}
     sampling_frequency = sorting_analyzer.sampling_frequency
@@ -133,7 +133,7 @@ class RecoverySlope(BaseMetric):
     metric_dtypes = {"recovery_slope": float}
 
 
-def _number_of_peaks_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params):
+def _number_of_peaks_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
     num_peaks_result = namedtuple("NumberOfPeaksResult", ["num_positive_peaks", "num_negative_peaks"])
     num_positive_peaks_dict = {}
     num_negative_peaks_dict = {}
@@ -165,7 +165,7 @@ single_channel_metrics = [
 ]
 
 
-def _get_velocity_fits_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params):
+def _get_velocity_fits_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
     velocity_above_result = namedtuple("Velocities", ["velocity_above", "velocity_below"])
     velocity_above_dict = {}
     velocity_below_dict = {}
@@ -194,7 +194,7 @@ class VelocityFits(BaseMetric):
     metric_dtypes = {"velocity_above": float, "velocity_below": float}
 
 
-def _exp_decay_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params):
+def _exp_decay_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
     exp_decay_result = namedtuple("ExpDecayResult", ["exp_decay"])
     exp_decay_dict = {}
     templates_multi = tmp_data["templates_multi"]
@@ -216,7 +216,7 @@ class ExpDecay(BaseMetric):
     metric_dtypes = {"exp_decay": float}
 
 
-def _spread_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params):
+def _spread_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
     spread_result = namedtuple("SpreadResult", ["spread"])
     spread_dict = {}
     templates_multi = tmp_data["templates_multi"]

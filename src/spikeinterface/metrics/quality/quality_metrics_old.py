@@ -21,8 +21,8 @@ from .quality_metric_list import (
     column_name_to_column_dtype,
     metric_extension_dependencies,
 )
-from .misc_metrics import _default_params as misc_metrics_params
-from .pca_metrics import _default_params as pca_metrics_params
+from .misc_metrics_implementations import _default_params as misc_metrics_params
+from .pca_metrics_implementations import _default_params as pca_metrics_params
 
 
 class ComputeQualityMetrics(AnalyzerExtension):
