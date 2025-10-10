@@ -340,12 +340,15 @@ def generate_drifting_recording(
         ms_after=3.0,
         mode="ellipsoid",
         unit_params=dict(
-            alpha=(150.0, 500.0),
+            alpha=(100.0, 500.0),
             spatial_decay=(10, 45),
+            ellipse_shink=(0.2, 1),
+            ellipse_angle=(0, np.pi * 2),
+
         ),
     ),
     generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),
-    generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
+    generate_noise_kwargs=dict(noise_levels=(6.0, 8.0), spatial_decay=25.0),
     extra_outputs=False,
     seed=None,
 ):
