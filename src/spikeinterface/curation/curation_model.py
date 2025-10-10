@@ -378,19 +378,17 @@ class CurationModel(BaseModel):
         return values
 
     @model_validator(mode="after")
-    def validate_curation_dict(cls, values):
-        if values.format_version not in values.supported_versions:
+    def validate_curation_dict(self):
+        if self.format_version not in self.supported_versions:
             raise ValueError(
-                f"Format version {values.format_version} not supported. Only {values.supported_versions} are valid"
+                f"Format version {self.format_version} not supported. Only {self.supported_versions} are valid"
             )
 
-        labeled_unit_set = set([lbl.unit_id for lbl in values.manual_labels]) if values.manual_labels else set()
-        merged_units_set = (
-            set(chain.from_iterable(merge.unit_ids for merge in values.merges)) if values.merges else set()
-        )
-        split_units_set = set(split.unit_id for split in values.splits) if values.splits else set()
-        removed_set = set(values.removed) if values.removed else set()
-        unit_ids = values.unit_ids
+        labeled_unit_set = set([lbl.unit_id for lbl in self.manual_labels]) if self.manual_labels else set()
+        merged_units_set = set(chain.from_iterable(merge.unit_ids for merge in self.merges)) if self.merges else set()
+        split_units_set = set(split.unit_id for split in self.splits) if self.splits else set()
+        removed_set = set(self.removed) if self.removed else set()
+        unit_ids = self.unit_ids
 
         unit_set = set(unit_ids)
         if not labeled_unit_set.issubset(unit_set):
@@ -403,7 +401,7 @@ class CurationModel(BaseModel):
             raise ValueError("Curation format: some removed units are not in the unit list")
 
         # Check for units being merged multiple times
-        all_merging_groups = [set(merge.unit_ids) for merge in values.merges] if values.merges else []
+        all_merging_groups = [set(merge.unit_ids) for merge in self.merges] if self.merges else []
         for gp_1, gp_2 in combinations(all_merging_groups, 2):
             if len(gp_1.intersection(gp_2)) != 0:
                 raise ValueError("Curation format: some units belong to multiple merge groups")
@@ -416,19 +414,19 @@ class CurationModel(BaseModel):
         if len(merged_units_set.intersection(split_units_set)) != 0:
             raise ValueError("Curation format: some units were both merged and split")
 
-        for manual_label in values.manual_labels:
-            for label_key in values.label_definitions.keys():
+        for manual_label in self.manual_labels:
+            for label_key in self.label_definitions.keys():
                 if label_key in manual_label.labels:
                     unit_id = manual_label.unit_id
                     label_value = manual_label.labels[label_key]
                     if not isinstance(label_value, list):
                         raise ValueError(f"Curation format: manual_labels {unit_id} is invalid should be a list")
 
-                    is_exclusive = values.label_definitions[label_key].exclusive
+                    is_exclusive = self.label_definitions[label_key].exclusive
 
                     if is_exclusive and not len(label_value) <= 1:
                         raise ValueError(
                             f"Curation format: manual_labels {unit_id} {label_key} are exclusive labels. {label_value} is invalid"
                         )
 
-        return values
+        return self
