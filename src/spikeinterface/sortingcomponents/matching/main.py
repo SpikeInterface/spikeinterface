@@ -57,6 +57,7 @@ def find_spikes_from_templates(
         # This is the old behavior and will be remove in 0.105.0
         warnings.warn(
             "The signature of find_spikes_from_templates() has changed, now job_kwargs are in separated dict and not flatten"
+            "This warning will raise an error in version 0.105.0"
         )
         assert job_kwargs is None
         job_kwargs = old_kwargs

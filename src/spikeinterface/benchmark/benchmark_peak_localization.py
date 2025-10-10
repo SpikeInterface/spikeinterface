@@ -199,6 +199,14 @@ class UnitLocalizationBenchmark(Benchmark):
 
 
 class UnitLocalizationStudy(BenchmarkStudy):
+    """
+    Benchmark study to compare peaks localization methods.
+
+    The ground truth position of units must be known and method outputs
+    will be compared to them.
+
+    See also UnitLocalizationStudy.
+    """
 
     benchmark_class = UnitLocalizationBenchmark
 
