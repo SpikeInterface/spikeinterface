@@ -344,7 +344,6 @@ def generate_drifting_recording(
             spatial_decay=(10, 45),
             ellipse_shink=(0.2, 1),
             ellipse_angle=(0, np.pi * 2),
-
         ),
     ),
     generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),

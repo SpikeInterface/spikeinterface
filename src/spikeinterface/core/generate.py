@@ -1639,7 +1639,6 @@ def generate_single_fake_waveform(
     new_max = np.max(np.abs(wf))
     wf *= old_max / new_max
 
-
     # ensure the the peak to be extatly at nbefore (smooth can modify this)
     ind = np.argmin(wf)
     if ind > nbefore:
@@ -1659,7 +1658,7 @@ default_unit_params_range = dict(
     recovery_ms=(1.0, 1.5),
     positive_amplitude=(0.1, 0.25),
     smooth_ms=(0.03, 0.07),
-    spatial_decay=(10., 45.),
+    spatial_decay=(10.0, 45.0),
     propagation_speed=(250.0, 350.0),  # um  / ms
     ellipse_shink=(0.2, 1),
     ellipse_angle=(0, np.pi * 2),
