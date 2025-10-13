@@ -25,7 +25,7 @@ from .misc_metrics_implementations import _default_params as misc_metrics_params
 from .pca_metrics_implementations import _default_params as pca_metrics_params
 
 
-class ComputeQualityMetrics(AnalyzerExtension):
+class ComputeQualityMetricsOld(AnalyzerExtension):
     """
     Compute quality metrics on a `sorting_analyzer`.
 
@@ -53,7 +53,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
     principal_components are loaded automatically if already computed.
     """
 
-    extension_name = "quality_metrics"
+    extension_name = "quality_metrics_old"
     depend_on = []
     need_recording = False
     use_nodepipeline = False
@@ -315,7 +315,7 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
         existing_metrics = []
         # here we get in the loaded via the dict only (to avoid full loading from disk after params reset)
-        qm_extension = self.sorting_analyzer.extensions.get("quality_metrics", None)
+        qm_extension = self.sorting_analyzer.extensions.get(self.extension_name, None)
         if (
             delete_existing_metrics is False
             and qm_extension is not None
@@ -335,8 +335,8 @@ class ComputeQualityMetrics(AnalyzerExtension):
         return self.data["metrics"]
 
 
-register_result_extension(ComputeQualityMetrics)
-compute_quality_metrics = ComputeQualityMetrics.function_factory()
+register_result_extension(ComputeQualityMetricsOld)
+compute_quality_metrics = ComputeQualityMetricsOld.function_factory()
 
 
 def get_quality_metric_list():

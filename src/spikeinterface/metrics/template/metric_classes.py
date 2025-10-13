@@ -16,124 +16,117 @@ from spikeinterface.metrics.template.metrics_implementations import (
 )
 
 
-def _peak_to_valley_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    ptv_result = namedtuple("PeakToValleyResult", ["peak_to_valley"])
-    ptv_dict = {}
-    sampling_frequency = sorting_analyzer.sampling_frequency
+def single_channel_metric(unit_function, sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    result = {}
     templates_single = tmp_data["templates_single"]
     troughs = tmp_data.get("troughs", None)
     peaks = tmp_data.get("peaks", None)
+    sampling_frequency = tmp_data["sampling_frequency"]
     for unit_id in unit_ids:
         template_single = templates_single[sorting_analyzer.sorting.id_to_index(unit_id)]
         trough_idx = troughs[unit_id] if troughs is not None else None
         peak_idx = peaks[unit_id] if peaks is not None else None
-        value = get_peak_to_valley(template_single, sampling_frequency, trough_idx, peak_idx)
-        ptv_dict[unit_id] = value
-    return ptv_result(peak_to_valley=ptv_dict)
+        value = unit_function(template_single, sampling_frequency, trough_idx, peak_idx, **metric_params)
+        result[unit_id] = value
+    return result
 
 
 class PeakToValley(BaseMetric):
     metric_name = "peak_to_valley"
-    metric_function = _peak_to_valley_metric_function
     metric_params = {}
-    metric_columns = ["peak_to_valley"]
-    metric_dtypes = {"peak_to_valley": float}
+    metric_columns = {"peak_to_valley": float}
+    needs_tmp_data = True
 
+    @staticmethod
+    def _peak_to_valley_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        single_channel_metric(
+            unit_function=get_peak_to_valley,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
 
-def _peak_to_trough_ratio_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    ptratio_result = namedtuple("PeakToTroughRatioResult", ["peak_to_trough_ratio"])
-    ptratio_dict = {}
-    sampling_frequency = sorting_analyzer.sampling_frequency
-    templates_single = tmp_data["templates_single"]
-    troughs = tmp_data.get("troughs", None)
-    peaks = tmp_data.get("peaks", None)
-    for unit_id in unit_ids:
-        template_single = templates_single[sorting_analyzer.sorting.id_to_index(unit_id)]
-        trough_idx = troughs[unit_id] if troughs is not None else None
-        peak_idx = peaks[unit_id] if peaks is not None else None
-        value = get_peak_trough_ratio(template_single, sampling_frequency, trough_idx, peak_idx)
-        ptratio_dict[unit_id] = value
-    return ptratio_result(peak_to_trough_ratio=ptratio_dict)
+    metric_function = _peak_to_valley_metric_function
 
 
 class PeakToTroughRatio(BaseMetric):
     metric_name = "peak_trough_ratio"
-    metric_function = _peak_to_trough_ratio_metric_function
     metric_params = {}
-    metric_columns = ["peak_to_trough_ratio"]
-    metric_dtypes = {"peak_to_trough_ratio": float}
+    metric_columns = {"peak_to_trough_ratio": float}
+    needs_tmp_data = True
 
+    @staticmethod
+    def _peak_to_trough_ratio_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        single_channel_metric(
+            unit_function=get_peak_trough_ratio,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
 
-def _half_width_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    hw_result = namedtuple("HalfWidthResult", ["half_width"])
-    hw_dict = {}
-    sampling_frequency = sorting_analyzer.sampling_frequency
-    templates_single = tmp_data["templates_single"]
-    troughs = tmp_data.get("troughs", None)
-    peaks = tmp_data.get("peaks", None)
-    for unit_id in unit_ids:
-        template_single = templates_single[sorting_analyzer.sorting.id_to_index(unit_id)]
-        trough_idx = troughs[unit_id] if troughs is not None else None
-        peak_idx = peaks[unit_id] if peaks is not None else None
-        value = get_half_width(template_single, sampling_frequency, trough_idx, peak_idx)
-        hw_dict[unit_id] = value
-    return hw_result(half_width=hw_dict)
+    metric_function = _peak_to_trough_ratio_metric_function
 
 
 class HalfWidth(BaseMetric):
     metric_name = "half_width"
-    metric_function = _half_width_metric_function
     metric_params = {}
-    metric_columns = ["half_width"]
-    metric_dtypes = {"half_width": float}
+    metric_columns = {"half_width": float}
+    needs_tmp_data = True
 
+    @staticmethod
+    def _half_width_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        single_channel_metric(
+            unit_function=get_half_width,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
 
-def _repolarization_slope_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    repolarization_result = namedtuple("RepolarizationSlopeResult", ["repolarization_slope"])
-    repolarization_dict = {}
-    sampling_frequency = sorting_analyzer.sampling_frequency
-    templates_single = tmp_data["templates_single"]
-    troughs = tmp_data.get("troughs", None)
-    peaks = tmp_data.get("peaks", None)
-    for unit_id in unit_ids:
-        template_single = templates_single[sorting_analyzer.sorting.id_to_index(unit_id)]
-        trough_idx = troughs[unit_id] if troughs is not None else None
-        value = get_repolarization_slope(template_single, sampling_frequency, trough_idx)
-        repolarization_dict[unit_id] = value
-    return repolarization_result(repolarization_slope=repolarization_dict)
+    metric_function = _half_width_metric_function
 
 
 class RepolarizationSlope(BaseMetric):
     metric_name = "repolarization_slope"
-    metric_function = _repolarization_slope_metric_function
     metric_params = {}
-    metric_columns = ["repolarization_slope"]
-    metric_dtypes = {"repolarization_slope": float}
+    metric_columns = {"repolarization_slope": float}
+    needs_tmp_data = True
 
+    @staticmethod
+    def _repolarization_slope_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        single_channel_metric(
+            unit_function=get_repolarization_slope,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
 
-def _recovery_slope_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    recovery_result = namedtuple("RecoverySlopeResult", ["recovery_slope"])
-    recovery_dict = {}
-    sampling_frequency = sorting_analyzer.sampling_frequency
-    templates_single = tmp_data["templates_single"]
-    peaks = tmp_data.get("peaks", None)
-    for unit_id in unit_ids:
-        template_single = templates_single[sorting_analyzer.sorting.id_to_index(unit_id)]
-        peak_idx = peaks[unit_id] if peaks is not None else None
-        value = get_recovery_slope(template_single, sampling_frequency, peak_idx, **metric_params)
-        recovery_dict[unit_id] = value
-    return recovery_result(recovery_slope=recovery_dict)
+    metric_function = _repolarization_slope_metric_function
 
 
 class RecoverySlope(BaseMetric):
     metric_name = "recovery_slope"
-    metric_function = _recovery_slope_metric_function
     metric_params = {"recovery_window_ms": 0.7}
-    metric_columns = ["recovery_slope"]
-    metric_dtypes = {"recovery_slope": float}
+    metric_columns = {"recovery_slope": float}
+    needs_tmp_data = True
+
+    @staticmethod
+    def _recovery_slope_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        single_channel_metric(
+            unit_function=get_recovery_slope,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
+
+    metric_function = _recovery_slope_metric_function
 
 
-def _number_of_peaks_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
+def _number_of_peaks_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
     num_peaks_result = namedtuple("NumberOfPeaksResult", ["num_positive_peaks", "num_negative_peaks"])
     num_positive_peaks_dict = {}
     num_negative_peaks_dict = {}
@@ -151,8 +144,8 @@ class NumberOfPeaks(BaseMetric):
     metric_name = "number_of_peaks"
     metric_function = _number_of_peaks_metric_function
     metric_params = {"peak_relative_threshold": 0.2, "peak_width_ms": 0.1}
-    metric_columns = ["num_positive_peaks", "num_negative_peaks"]
-    metric_dtypes = {"num_positive_peaks": int, "num_negative_peaks": int}
+    metric_columns = {"num_positive_peaks": int, "num_negative_peaks": int}
+    needs_tmp_data = True
 
 
 single_channel_metrics = [
@@ -171,7 +164,7 @@ def _get_velocity_fits_metric_function(sorting_analyzer, unit_ids, tmp_data, met
     velocity_below_dict = {}
     templates_multi = tmp_data["templates_multi"]
     channel_locations_multi = tmp_data["channel_locations_multi"]
-    sampling_frequency = sorting_analyzer.sampling_frequency
+    sampling_frequency = tmp_data["sampling_frequency"]
     for unit_index, unit_id in enumerate(unit_ids):
         channel_locations = channel_locations_multi[unit_index]
         template = templates_multi[unit_index]
@@ -190,52 +183,57 @@ class VelocityFits(BaseMetric):
         "min_r2_velocity": 0.2,
         "column_range": None,
     }
-    metric_columns = ["velocity_above", "velocity_below"]
-    metric_dtypes = {"velocity_above": float, "velocity_below": float}
+    metric_columns = {"velocity_above": float, "velocity_below": float}
+    needs_tmp_data = True
 
 
-def _exp_decay_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    exp_decay_result = namedtuple("ExpDecayResult", ["exp_decay"])
-    exp_decay_dict = {}
+def multi_channel_metric(unit_function, sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    result = {}
     templates_multi = tmp_data["templates_multi"]
     channel_locations_multi = tmp_data["channel_locations_multi"]
-    sampling_frequency = sorting_analyzer.sampling_frequency
+    sampling_frequency = tmp_data["sampling_frequency"]
     for unit_index, unit_id in enumerate(unit_ids):
         channel_locations = channel_locations_multi[unit_index]
         template = templates_multi[unit_index]
-        value = get_exp_decay(template, channel_locations, sampling_frequency, **metric_params)
-        exp_decay_dict[unit_id] = value
-    return exp_decay_result(exp_decay=exp_decay_dict)
+        value = unit_function(template, channel_locations, sampling_frequency, **metric_params)
+        result[unit_id] = value
+    return result
 
 
 class ExpDecay(BaseMetric):
     metric_name = "exp_decay"
-    metric_function = _exp_decay_metric_function
     metric_params = {"exp_peak_function": "ptp", "min_r2_exp_decay": 0.2}
-    metric_columns = ["exp_decay"]
-    metric_dtypes = {"exp_decay": float}
+    metric_columns = {"exp_decay": float}
 
+    @staticmethod
+    def _exp_decay_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        multi_channel_metric(
+            unit_function=get_exp_decay,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
 
-def _spread_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    spread_result = namedtuple("SpreadResult", ["spread"])
-    spread_dict = {}
-    templates_multi = tmp_data["templates_multi"]
-    channel_locations_multi = tmp_data["channel_locations_multi"]
-    sampling_frequency = sorting_analyzer.sampling_frequency
-    for unit_index, unit_id in enumerate(unit_ids):
-        channel_locations = channel_locations_multi[unit_index]
-        template = templates_multi[unit_index]
-        value = get_spread(template, channel_locations, sampling_frequency, **metric_params)
-        spread_dict[unit_id] = value
-    return spread_result(spread=spread_dict)
+    metric_function = _exp_decay_metric_function
 
 
 class Spread(BaseMetric):
     metric_name = "spread"
-    metric_function = _spread_metric_function
     metric_params = {"depth_direction": "y", "spread_threshold": 0.5, "spread_smooth_um": 20, "column_range": None}
-    metric_columns = ["spread"]
-    metric_dtypes = {"spread": float}
+    metric_columns = {"spread": float}
+
+    @staticmethod
+    def _spread_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        multi_channel_metric(
+            unit_function=get_spread,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
+
+    metric_function = _spread_metric_function
 
 
 multi_channel_metrics = [

@@ -1614,6 +1614,7 @@ def compute_sd_ratio(
             "SD ratio metric will be set to NaN"
         )
         return {unit_id: np.nan for unit_id in unit_ids}
+    job_kwargs["progress_bar"] = False
     noise_levels = get_noise_levels(
         sorting_analyzer.recording, return_in_uV=sorting_analyzer.return_in_uV, method="std", **job_kwargs
     )

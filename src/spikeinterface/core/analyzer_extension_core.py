@@ -11,6 +11,7 @@ It also implements:
 
 import warnings
 import numpy as np
+from collections import namedtuple
 
 from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, register_result_extension
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
@@ -817,10 +818,11 @@ class BaseMetric:
     metric_name = None  # to be defined in subclass
     metric_function = None  # to be defined in subclass
     metric_params = {}  # to be defined in subclass
-    metric_columns = []  # columns of the dataframe
-    metric_dtypes = {}  # dtypes of the dataframe
+    metric_columns = {}  # column names and their dtypes of the dataframe
     needs_recording = False  # to be defined in subclass
-    depends_on = []  # to be defined in subclass
+    needs_tmp_data = False  # to be defined in subclass
+    needs_job_kwargs = False
+    depend_on = []  # to be defined in subclass
 
     @classmethod
     def compute(cls, sorting_analyzer, unit_ids, metric_params, tmp_data, job_kwargs):
@@ -842,17 +844,19 @@ class BaseMetric:
         results: namedtuple
             The results of the metric function
         """
-        results = cls.metric_function(
-            sorting_analyzer=sorting_analyzer,
-            unit_ids=unit_ids,
-            metric_params=metric_params,
-            tmp_data=tmp_data,
-            job_kwargs=job_kwargs,
-        )
-        assert set(results._fields) == set(cls.metric_columns), (
-            f"Metric {cls.metric_name} returned columns {results._fields} "
-            f"but expected columns are {cls.metric_columns}"
-        )
+        args = (sorting_analyzer, unit_ids)
+        if cls.needs_tmp_data:
+            args += (tmp_data,)
+        if cls.needs_job_kwargs:
+            args += (job_kwargs,)
+
+        results = cls.metric_function(args, **metric_params)
+
+        if isinstance(results, namedtuple):
+            assert set(results._fields) == set(list(cls.metric_columns.keys())), (
+                f"Metric {cls.metric_name} returned columns {results._fields} "
+                f"but expected columns are {cls.metric_columns.keys()}"
+            )
         return results
 
 
@@ -860,7 +864,7 @@ class BaseMetricExtension(AnalyzerExtension):
     """
     AnalyzerExtension that computes a metric and store the results in a dataframe.
 
-    This depends on one or more extensions (see `depends_on` attribute of the `BaseMetric` subclass).
+    This depends on one or more extensions (see `depend_on` attribute of the `BaseMetric` subclass).
 
     Returns
     -------
@@ -893,6 +897,8 @@ class BaseMetricExtension(AnalyzerExtension):
         metric_names: list[str] | None = None,
         metric_params: dict | None = None,
         delete_existing_metrics: bool = False,
+        # todo: remove
+        verbose: bool = True,
         **other_params,
     ):
         """
@@ -933,8 +939,8 @@ class BaseMetricExtension(AnalyzerExtension):
         metrics_to_remove = []
         for metric_name in metric_names:
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
-            depends_on = metric.depends_on
-            for dep in depends_on:
+            depend_on = metric.depend_on
+            for dep in depend_on:
                 if "|" in dep:
                     # at least one of the dependencies must be present
                     dep_options = dep.split("|")
@@ -980,6 +986,7 @@ class BaseMetricExtension(AnalyzerExtension):
             metrics_to_compute=metrics_to_compute,
             delete_existing_metrics=delete_existing_metrics,
             metric_params=metric_params,
+            verbose=verbose,
             **other_params,
         )
         return params
@@ -1025,28 +1032,37 @@ class BaseMetricExtension(AnalyzerExtension):
         column_names = []
         for metric in self.metric_list:
             if metric.metric_name in metric_names:
-                column_names.extend(metric.metric_columns)
+                column_names.extend(list(metric.metric_columns.keys()))
 
         metrics = pd.DataFrame(index=unit_ids, columns=column_names)
 
         for metric_name in metric_names:
+            if self.params["verbose"]:
+                print(f"Computing metric {metric_name}...")
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
-            # try:
-            metric_params = self.params["metric_params"].get(metric_name, {})
-            res = metric.compute(
-                self.sorting_analyzer,
-                unit_ids=unit_ids,
-                metric_params=metric_params,
-                tmp_data=tmp_data,
-                job_kwargs=job_kwargs,
-            )
-            # except Exception as e:
-            #     warnings.warn(f"Error computing metric {metric_name}: {e}")
-            #     res = namedtuple("MetricResult", metric.metric_columns)(*([np.nan] * len(metric.metric_columns)))
+            column_names = list(metric.metric_columns.keys())
+            try:
+                metric_params = self.params["metric_params"].get(metric_name, {})
+                res = metric.compute(
+                    self.sorting_analyzer,
+                    unit_ids=unit_ids,
+                    metric_params=metric_params,
+                    tmp_data=tmp_data,
+                    job_kwargs=job_kwargs,
+                )
+            except Exception as e:
+                warnings.warn(f"Error computing metric {metric_name}: {e}")
+                if len(column_names) == 1:
+                    res = {unit_id: np.nan for unit_id in unit_ids}
+                else:
+                    res = namedtuple("MetricResult", column_names)(*([np.nan] * len(column_names)))
 
             # res is a namedtuple with several dictionary entries (one per column)
-            for i, col in enumerate(res._fields):
-                metrics.loc[unit_ids, col] = pd.Series(res[i])
+            if isinstance(res, dict):
+                metrics.loc[unit_ids, column_names[0]] = pd.DataFrame(res.values(), index=unit_ids)
+            else:
+                for i, col in enumerate(res._fields):
+                    metrics.loc[unit_ids, col] = pd.Series(res[i])
 
         return metrics
 

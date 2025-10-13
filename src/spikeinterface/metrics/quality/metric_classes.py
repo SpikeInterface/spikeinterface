@@ -32,30 +32,30 @@ from spikeinterface.metrics.quality.pca_metrics_implementations import (
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
 
-# TODO: move to spiketrain metrics
-def _num_spikes_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    num_spikes_result = namedtuple("NumSpikesResult", ["num_spikes"])
-    result = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids, **metric_params)
-    return num_spikes_result(num_spikes=result)
+# # TODO: move to spiketrain metrics
+# def _num_spikes_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
+#     num_spikes_result = namedtuple("NumSpikesResult", ["num_spikes"])
+#     result = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids, **metric_params)
+#     return num_spikes_result(num_spikes=result)
 
 
 class NumSpikes(BaseMetric):
     metric_name = "num_spikes"
-    metric_function = _num_spikes_metric_function
+    metric_function = compute_num_spikes
     metric_params = {}
     metric_columns = ["num_spikes"]
     metric_dtypes = {"num_spikes": int}
 
 
-def _firing_rate_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    firing_rate_result = namedtuple("FiringRateResult", ["firing_rate"])
-    result = compute_firing_rates(sorting_analyzer, unit_ids=unit_ids)
-    return firing_rate_result(firing_rate=result)
+# def _firing_rate_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
+#     firing_rate_result = namedtuple("FiringRateResult", ["firing_rate"])
+#     result = compute_firing_rates(sorting_analyzer, unit_ids=unit_ids)
+#     return firing_rate_result(firing_rate=result)
 
 
 class FiringRate(BaseMetric):
     metric_name = "firing_rate"
-    metric_function = _firing_rate_metric_function
+    metric_function = compute_firing_rates
     metric_params = {}
     metric_columns = ["firing_rate"]
     metric_dtypes = {"firing_rate": float}
@@ -75,79 +75,42 @@ class NoiseCutoff(BaseMetric):
     metric_dtypes = {"noise_cutoff": float, "noise_ratio": float}
 
 
-def _presence_ratio_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    presence_ratio_result = namedtuple("PresenceRatioResult", ["presence_ratio"])
-    result = compute_presence_ratios(sorting_analyzer, unit_ids=unit_ids, **metric_params)
-    return presence_ratio_result(presence_ratio=result)
-
-
 class PresenceRatio(BaseMetric):
     metric_name = "presence_ratio"
-    metric_function = _presence_ratio_metric_function
+    metric_function = compute_presence_ratios
     metric_params = {"bin_duration_s": 60, "mean_fr_ratio_thresh": 0.0}
     metric_columns = ["presence_ratio"]
     metric_dtypes = {"presence_ratio": float}
 
 
-def _snr_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    snr_result = namedtuple("SNRResult", ["snr"])
-    result = compute_snrs(sorting_analyzer, unit_ids=unit_ids, **metric_params)
-    return snr_result(snr=result)
-
-
 class SNR(BaseMetric):
     metric_name = "snr"
-    metric_function = _snr_metric_function
+    metric_function = compute_snrs
     metric_params = {"peak_sign": "neg", "peak_mode": "extremum"}
     metric_columns = ["snr"]
     metric_dtypes = {"snr": float}
-    depends_on = ["noise_levels", "templates"]
-
-
-def _isi_violation_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    isi_violation_result = namedtuple("ISIViolationResult", ["isi_violations_ratio", "isi_violations_count"])
-    result = compute_isi_violations(sorting_analyzer, unit_ids=unit_ids, **metric_params)
-    return isi_violation_result(
-        isi_violations_ratio=result.isi_violations_ratio, isi_violations_count=result.isi_violations_count
-    )
+    depend_on = ["noise_levels", "templates"]
 
 
 class ISIViolation(BaseMetric):
     metric_name = "isi_violation"
-    metric_function = _isi_violation_metric_function
+    metric_function = compute_isi_violations
     metric_params = {"isi_threshold_ms": 1.5, "min_isi_ms": 0}
     metric_columns = ["isi_violations_ratio", "isi_violations_count"]
     metric_dtypes = {"isi_violations_ratio": float, "isi_violations_count": int}
 
 
-def _rp_violation_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    rp_violation_result = namedtuple("RPViolationResult", ["rp_contamination", "rp_violations"])
-    result = compute_refrac_period_violations(sorting_analyzer, unit_ids=unit_ids, **metric_params)
-    if result is None:
-        # Handle case when numba is not available
-        rp_contamination = {unit_id: None for unit_id in unit_ids}
-        rp_violations = {unit_id: None for unit_id in unit_ids}
-        return rp_violation_result(rp_contamination=rp_contamination, rp_violations=rp_violations)
-    return rp_violation_result(rp_contamination=result.rp_contamination, rp_violations=result.rp_violations)
-
-
 class RPViolation(BaseMetric):
     metric_name = "rp_violation"
-    metric_function = _rp_violation_metric_function
+    metric_function = compute_refrac_period_violations
     metric_params = {"refractory_period_ms": 1.0, "censored_period_ms": 0.0}
     metric_columns = ["rp_contamination", "rp_violations"]
     metric_dtypes = {"rp_contamination": float, "rp_violations": int}
 
 
-def _sliding_rp_violation_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    sliding_rp_violation_result = namedtuple("SlidingRPViolationResult", ["sliding_rp_violation"])
-    result = compute_sliding_rp_violations(sorting_analyzer, unit_ids=unit_ids, **metric_params)
-    return sliding_rp_violation_result(sliding_rp_violation=result)
-
-
 class SlidingRPViolation(BaseMetric):
     metric_name = "sliding_rp_violation"
-    metric_function = _sliding_rp_violation_metric_function
+    metric_function = compute_sliding_rp_violations
     metric_params = {
         "min_spikes": 0,
         "bin_size_ms": 0.25,
@@ -160,47 +123,25 @@ class SlidingRPViolation(BaseMetric):
     metric_dtypes = {"sliding_rp_violation": float}
 
 
-def _synchrony_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    synchrony_result = namedtuple("SynchronyResult", ["sync_spike_2", "sync_spike_4", "sync_spike_8"])
-    result = compute_synchrony_metrics(sorting_analyzer, unit_ids=unit_ids, **metric_params)
-    return synchrony_result(
-        sync_spike_2=result.sync_spike_2, sync_spike_4=result.sync_spike_4, sync_spike_8=result.sync_spike_8
-    )
-
-
 class Synchrony(BaseMetric):
     metric_name = "synchrony"
-    metric_function = _synchrony_metric_function
+    metric_function = compute_synchrony_metrics
     metric_params = {}
     metric_columns = ["sync_spike_2", "sync_spike_4", "sync_spike_8"]
     metric_dtypes = {"sync_spike_2": float, "sync_spike_4": float, "sync_spike_8": float}
 
 
-def _firing_range_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    firing_range_result = namedtuple("FiringRangeResult", ["firing_range"])
-    result = compute_firing_ranges(sorting_analyzer, unit_ids=unit_ids, **metric_params)
-    return firing_range_result(firing_range=result)
-
-
 class FiringRange(BaseMetric):
     metric_name = "firing_range"
-    metric_function = _firing_range_metric_function
+    metric_function = compute_firing_ranges
     metric_params = {"bin_size_s": 5, "percentiles": (5, 95)}
     metric_columns = ["firing_range"]
     metric_dtypes = {"firing_range": float}
 
 
-def _amplitude_cv_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    amplitude_cv_result = namedtuple("AmplitudeCVResult", ["amplitude_cv_median", "amplitude_cv_range"])
-    result = compute_amplitude_cv_metrics(sorting_analyzer, unit_ids=unit_ids, **metric_params)
-    return amplitude_cv_result(
-        amplitude_cv_median=result.amplitude_cv_median, amplitude_cv_range=result.amplitude_cv_range
-    )
-
-
 class AmplitudeCV(BaseMetric):
     metric_name = "amplitude_cv"
-    metric_function = _amplitude_cv_metric_function
+    metric_function = compute_amplitude_cv_metrics
     metric_params = {
         "average_num_spikes_per_bin": 50,
         "percentiles": (5, 95),
@@ -209,18 +150,12 @@ class AmplitudeCV(BaseMetric):
     }
     metric_columns = ["amplitude_cv_median", "amplitude_cv_range"]
     metric_dtypes = {"amplitude_cv_median": float, "amplitude_cv_range": float}
-    depends_on = ["spike_amplitudes|amplitude_scalings"]
-
-
-def _amplitude_cutoff_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    amplitude_cutoff_result = namedtuple("AmplitudeCutoffResult", ["amplitude_cutoff"])
-    result = compute_amplitude_cutoffs(sorting_analyzer, unit_ids=unit_ids, **metric_params)
-    return amplitude_cutoff_result(amplitude_cutoff=result)
+    depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
 class AmplitudeCutoff(BaseMetric):
     metric_name = "amplitude_cutoff"
-    metric_function = _amplitude_cutoff_metric_function
+    metric_function = compute_amplitude_cutoffs
     metric_params = {
         "peak_sign": "neg",
         "num_histogram_bins": 100,
@@ -229,33 +164,21 @@ class AmplitudeCutoff(BaseMetric):
     }
     metric_columns = ["amplitude_cutoff"]
     metric_dtypes = {"amplitude_cutoff": float}
-    depends_on = ["spike_amplitudes|amplitude_scalings"]
-
-
-def _amplitude_median_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    amplitude_median_result = namedtuple("AmplitudeMedianResult", ["amplitude_median"])
-    result = compute_amplitude_medians(sorting_analyzer, unit_ids=unit_ids, **metric_params)
-    return amplitude_median_result(amplitude_median=result)
+    depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
 class AmplitudeMedian(BaseMetric):
     metric_name = "amplitude_median"
-    metric_function = _amplitude_median_metric_function
+    metric_function = compute_amplitude_medians
     metric_params = {"peak_sign": "neg"}
     metric_columns = ["amplitude_median"]
     metric_dtypes = {"amplitude_median": float}
-    depends_on = ["spike_amplitudes"]
-
-
-def _drift_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
-    drift_result = namedtuple("DriftResult", ["drift_ptp", "drift_std", "drift_mad"])
-    result = compute_drift_metrics(sorting_analyzer, unit_ids=unit_ids, **metric_params)
-    return drift_result(drift_ptp=result.drift_ptp, drift_std=result.drift_std, drift_mad=result.drift_mad)
+    depend_on = ["spike_amplitudes"]
 
 
 class Drift(BaseMetric):
     metric_name = "drift"
-    metric_function = _drift_metric_function
+    metric_function = compute_drift_metrics
     metric_params = {
         "interval_s": 60,
         "min_spikes_per_interval": 100,
@@ -264,7 +187,7 @@ class Drift(BaseMetric):
     }
     metric_columns = ["drift_ptp", "drift_std", "drift_mad"]
     metric_dtypes = {"drift_ptp": float, "drift_std": float, "drift_mad": float}
-    depends_on = ["spike_locations"]
+    depend_on = ["spike_locations"]
 
 
 def _sd_ratio_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
@@ -284,7 +207,7 @@ class SDRatio(BaseMetric):
     metric_columns = ["sd_ratio"]
     metric_dtypes = {"sd_ratio": float}
     needs_recording = True
-    depends_on = ["templates", "spike_amplitudes"]
+    depend_on = ["templates", "spike_amplitudes"]
 
 
 # Group metrics into categories
@@ -340,7 +263,7 @@ class MahalanobisMetrics(BaseMetric):
     metric_params = {}
     metric_columns = ["isolation_distance", "l_ratio"]
     metric_dtypes = {"isolation_distance": float, "l_ratio": float}
-    depends_on = ["principal_components"]
+    depend_on = ["principal_components"]
 
 
 def _d_prime_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
@@ -375,7 +298,19 @@ class DPrimeMetrics(BaseMetric):
     metric_params = {}
     metric_columns = ["d_prime"]
     metric_dtypes = {"d_prime": float}
-    depends_on = ["principal_components"]
+    depend_on = ["principal_components"]
+
+
+def _nn_one_unit(args):
+    unit_id, pcs_flat, labels, metric_params = args
+
+    try:
+        nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id, **metric_params)
+    except:
+        nn_hit_rate = np.nan
+        nn_miss_rate = np.nan
+
+    return unit_id, nn_hit_rate, nn_miss_rate
 
 
 def _nearest_neighbor_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
@@ -384,21 +319,68 @@ def _nearest_neighbor_metric_function(sorting_analyzer, unit_ids, tmp_data, metr
     # Use pre-computed PCA data
     pca_data_per_unit = tmp_data["pca_data_per_unit"]
 
+    # Extract job parameters
+    n_jobs = job_kwargs.get("n_jobs", 1)
+    progress_bar = job_kwargs.get("progress_bar", False)
+    mp_context = job_kwargs.get("mp_context", None)
+
     nn_hit_rate_dict = {}
     nn_miss_rate_dict = {}
 
-    for unit_id in unit_ids:
-        pcs_flat = pca_data_per_unit[unit_id]["pcs_flat"]
-        labels = pca_data_per_unit[unit_id]["labels"]
+    if n_jobs == 1:
+        # Sequential processing
+        units_loop = unit_ids
+        if progress_bar:
+            from tqdm.auto import tqdm
 
-        try:
-            nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id, **metric_params)
-        except:
-            nn_hit_rate = np.nan
-            nn_miss_rate = np.nan
+            units_loop = tqdm(units_loop, desc="Nearest neighbor metrics")
 
-        nn_hit_rate_dict[unit_id] = nn_hit_rate
-        nn_miss_rate_dict[unit_id] = nn_miss_rate
+        for unit_id in units_loop:
+            pcs_flat = pca_data_per_unit[unit_id]["pcs_flat"]
+            labels = pca_data_per_unit[unit_id]["labels"]
+
+            try:
+                nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id, **metric_params)
+            except:
+                nn_hit_rate = np.nan
+                nn_miss_rate = np.nan
+
+            nn_hit_rate_dict[unit_id] = nn_hit_rate
+            nn_miss_rate_dict[unit_id] = nn_miss_rate
+    else:
+        # Parallel processing
+        import multiprocessing as mp
+        from concurrent.futures import ProcessPoolExecutor
+        import warnings
+        import platform
+
+        print(f"computing nearest neighbor metrics with n_jobs={n_jobs}, mp_context={mp_context}")
+
+        if mp_context is not None and platform.system() == "Windows":
+            assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+        elif mp_context == "fork" and platform.system() == "Darwin":
+            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
+
+        # Prepare arguments - only pass pickle-able data
+        args_list = []
+        for unit_id in unit_ids:
+            pcs_flat = pca_data_per_unit[unit_id]["pcs_flat"]
+            labels = pca_data_per_unit[unit_id]["labels"]
+            args_list.append((unit_id, pcs_flat, labels, metric_params))
+
+        with ProcessPoolExecutor(
+            max_workers=n_jobs,
+            mp_context=mp.get_context(mp_context) if mp_context else None,
+        ) as executor:
+            results = executor.map(_nn_one_unit, args_list)
+            if progress_bar:
+                from tqdm.auto import tqdm
+
+                results = tqdm(results, total=len(unit_ids), desc="Nearest neighbor metrics")
+
+            for unit_id, nn_hit_rate, nn_miss_rate in results:
+                nn_hit_rate_dict[unit_id] = nn_hit_rate
+                nn_miss_rate_dict[unit_id] = nn_miss_rate
 
     return nn_result(nn_hit_rate=nn_hit_rate_dict, nn_miss_rate=nn_miss_rate_dict)
 
@@ -409,7 +391,7 @@ class NearestNeighborMetrics(BaseMetric):
     metric_params = {"max_spikes": 10000, "n_neighbors": 5}
     metric_columns = ["nn_hit_rate", "nn_miss_rate"]
     metric_dtypes = {"nn_hit_rate": float, "nn_miss_rate": float}
-    depends_on = ["principal_components"]
+    depend_on = ["principal_components"]
 
 
 def _nn_advanced_one_unit(args):
@@ -549,7 +531,7 @@ class NearestNeighborAdvancedMetrics(BaseMetric):
     }
     metric_columns = ["nn_isolation", "nn_unit_id", "nn_noise_overlap"]
     metric_dtypes = {"nn_isolation": float, "nn_unit_id": "object", "nn_noise_overlap": float}
-    depends_on = ["principal_components", "waveforms", "templates"]
+    depend_on = ["principal_components", "waveforms", "templates"]
 
 
 def _silhouette_metric_function(sorting_analyzer, unit_ids, tmp_data, metric_params, job_kwargs):
@@ -584,7 +566,7 @@ class SilhouetteMetrics(BaseMetric):
     metric_params = {"method": "simplified"}
     metric_columns = ["silhouette"]
     metric_dtypes = {"silhouette": float}
-    depends_on = ["principal_components"]
+    depend_on = ["principal_components"]
 
 
 pca_metrics = [

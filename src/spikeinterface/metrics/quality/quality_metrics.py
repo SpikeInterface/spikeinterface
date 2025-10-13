@@ -123,12 +123,12 @@ class ComputeQualityMetrics(BaseMetricExtension):
         # Get extremum channels for neighbor selection in sparse mode
         extremum_channels = get_template_extremum_channel(self.sorting_analyzer)
 
-        tmp_data["dense_projections"] = dense_projections
-        tmp_data["spike_unit_indices"] = spike_unit_indices
-        tmp_data["all_labels"] = all_labels
-        tmp_data["extremum_channels"] = extremum_channels
-        tmp_data["pca_mode"] = pca_ext.params["mode"]
-        tmp_data["channel_ids"] = self.sorting_analyzer.channel_ids
+        # tmp_data["dense_projections"] = dense_projections
+        # tmp_data["spike_unit_indices"] = spike_unit_indices
+        # tmp_data["all_labels"] = all_labels
+        # tmp_data["extremum_channels"] = extremum_channels
+        # tmp_data["pca_mode"] = pca_ext.params["mode"]
+        # tmp_data["channel_ids"] = self.sorting_analyzer.channel_ids
 
         # Pre-compute spike counts and firing rates if advanced NN metrics are requested
         advanced_nn_metrics = ["nn_advanced"]  # Our grouped advanced NN metric

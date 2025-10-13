@@ -6,3 +6,7 @@ from .quality_metrics import (
     ComputeQualityMetrics,
     get_default_qm_params,
 )
+
+from .quality_metrics_old import (
+    compute_quality_metrics as compute_quality_metrics_old,
+)
