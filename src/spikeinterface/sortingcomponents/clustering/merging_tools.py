@@ -541,7 +541,6 @@ def merge_peak_labels_from_templates(
     assert len(unit_ids) == templates_array.shape[0]
 
     from spikeinterface.postprocessing.template_similarity import compute_similarity_with_templates_array
-    from scipy.sparse.csgraph import connected_components
 
     similarity = compute_similarity_with_templates_array(
         templates_array,
