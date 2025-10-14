@@ -192,6 +192,12 @@ class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
 
         return plot_performances_vs_snr(self, **kwargs)
 
+    def plot_performances_vs_firing_rate(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_firing_rate
+
+        return plot_performances_vs_firing_rate(self, **kwargs)
+
+
     def plot_performances_comparison(self, *args, **kwargs):
         from .benchmark_plot_tools import plot_performances_comparison
 
