@@ -1,5 +1,5 @@
 import pytest
-import csv
+import pandas as pd
 
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 from spikeinterface.metrics.template import (
@@ -7,6 +7,7 @@ from spikeinterface.metrics.template import (
     compute_template_metrics,
     get_single_channel_template_metric_names,
 )
+from spikeinterface.metrics.template.metrics import single_channel_metrics, multi_channel_metrics
 
 
 template_metrics = get_single_channel_template_metric_names()
@@ -20,39 +21,14 @@ def test_different_params_template_metrics(small_sorting_analyzer):
     compute_template_metrics(
         sorting_analyzer=small_sorting_analyzer,
         metric_names=["exp_decay", "spread", "half_width"],
-        metric_params={"exp_decay": {"recovery_window_ms": 0.8}, "spread": {"spread_smooth_um": 15}},
+        metric_params={"exp_decay": {"peak_function": "min"}, "spread": {"spread_smooth_um": 15}},
     )
 
     tm_extension = small_sorting_analyzer.get_extension("template_metrics")
     tm_params = tm_extension.params["metric_params"]
 
-    assert tm_params["exp_decay"]["recovery_window_ms"] == 0.8
-    assert tm_params["spread"]["recovery_window_ms"] == 0.7
-    assert tm_params["half_width"]["recovery_window_ms"] == 0.7
-
+    assert tm_params["exp_decay"]["peak_function"] == "min"
     assert tm_params["spread"]["spread_smooth_um"] == 15
-    assert tm_params["exp_decay"]["spread_smooth_um"] == 20
-    assert tm_params["half_width"]["spread_smooth_um"] == 20
-
-
-def test_backwards_compat_params_template_metrics(small_sorting_analyzer):
-    """
-    Computes template metrics using the metrics_kwargs keyword
-    """
-    compute_template_metrics(
-        sorting_analyzer=small_sorting_analyzer,
-        metric_names=["exp_decay", "spread"],
-        metrics_kwargs={"recovery_window_ms": 0.8},
-    )
-
-    tm_extension = small_sorting_analyzer.get_extension("template_metrics")
-    tm_params = tm_extension.params["metric_params"]
-
-    assert tm_params["exp_decay"]["recovery_window_ms"] == 0.8
-    assert tm_params["spread"]["recovery_window_ms"] == 0.8
-
-    assert tm_params["spread"]["spread_smooth_um"] == 20
-    assert tm_params["exp_decay"]["spread_smooth_um"] == 20
 
 
 def test_compute_new_template_metrics(small_sorting_analyzer):
@@ -96,7 +72,12 @@ def test_compute_new_template_metrics(small_sorting_analyzer):
 
     # check that, when parameters are changed, the old metrics are deleted
     small_sorting_analyzer.compute(
-        {"template_metrics": {"metric_names": ["exp_decay"], "metric_params": {"recovery_window_ms": 0.6}}}
+        {
+            "template_metrics": {
+                "metric_names": ["exp_decay"],
+                "metric_params": {"recovery_slope": {"recovery_window_ms": 0.6}},
+            }
+        }
     )
 
 
@@ -104,11 +85,13 @@ def test_metric_names_in_same_order(small_sorting_analyzer):
     """
     Computes sepecified template metrics and checks order is propagated.
     """
-    specified_metric_names = ["peak_trough_ratio", "num_negative_peaks", "half_width"]
-    small_sorting_analyzer.compute("template_metrics", metric_names=specified_metric_names)
-    tm_keys = small_sorting_analyzer.get_extension("template_metrics").get_data().keys()
-    for i in range(3):
-        assert specified_metric_names[i] == tm_keys[i]
+    specified_metric_names = ["peak_trough_ratio", "half_width", "peak_to_valley"]
+    small_sorting_analyzer.compute(
+        "template_metrics", metric_names=specified_metric_names, delete_existing_metrics=True
+    )
+    tm_columns = small_sorting_analyzer.get_extension("template_metrics").get_data().columns
+    for specified_name, column in zip(specified_metric_names, tm_columns):
+        assert specified_name == column
 
 
 def test_save_template_metrics(small_sorting_analyzer, create_cache_folder):
@@ -116,7 +99,11 @@ def test_save_template_metrics(small_sorting_analyzer, create_cache_folder):
     Computes template metrics in binary folder format. Then computes subsets of template
     metrics and checks if they are saved correctly.
     """
+    import pandas as pd
 
+    column_names = []
+    for m in single_channel_metrics:
+        column_names.extend(list(m.metric_columns.keys()))
     small_sorting_analyzer.compute("template_metrics")
 
     cache_folder = create_cache_folder
@@ -125,29 +112,24 @@ def test_save_template_metrics(small_sorting_analyzer, create_cache_folder):
     folder_analyzer = small_sorting_analyzer.save_as(format="binary_folder", folder=output_folder)
     template_metrics_filename = output_folder / "extensions" / "template_metrics" / "metrics.csv"
 
-    with open(template_metrics_filename) as metrics_file:
-        saved_metrics = csv.reader(metrics_file)
-        metric_names = next(saved_metrics)
+    saved_metrics = pd.read_csv(template_metrics_filename)
+    metric_names = saved_metrics.columns
 
-    for metric_name in template_metrics:
+    for metric_name in column_names:
         assert metric_name in metric_names
 
     folder_analyzer.compute("template_metrics", metric_names=["half_width"], delete_existing_metrics=False)
 
-    with open(template_metrics_filename) as metrics_file:
-        saved_metrics = csv.reader(metrics_file)
-        metric_names = next(saved_metrics)
-
-    for metric_name in template_metrics:
+    saved_metrics = pd.read_csv(template_metrics_filename)
+    metric_names = saved_metrics.columns
+    for metric_name in column_names:
         assert metric_name in metric_names
 
     folder_analyzer.compute("template_metrics", metric_names=["half_width"], delete_existing_metrics=True)
 
-    with open(template_metrics_filename) as metrics_file:
-        saved_metrics = csv.reader(metrics_file)
-        metric_names = next(saved_metrics)
-
-    for metric_name in template_metrics:
+    saved_metrics = pd.read_csv(template_metrics_filename)
+    metric_names = saved_metrics.columns
+    for metric_name in column_names:
         if metric_name == "half_width":
             assert metric_name in metric_names
         else:

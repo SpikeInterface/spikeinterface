@@ -43,7 +43,7 @@ from spikeinterface.metrics import (
 )
 
 
-from spikeinterface.metrics.quality.misc_metrics_implementations import _noise_cutoff, _get_synchrony_counts
+from spikeinterface.metrics.quality._old.misc_metrics_old import _noise_cutoff, _get_synchrony_counts
 
 from spikeinterface.core.basesorting import minimum_spike_dtype
 

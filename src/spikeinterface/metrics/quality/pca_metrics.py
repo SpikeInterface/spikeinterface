@@ -3,236 +3,353 @@
 from __future__ import annotations
 
 import warnings
-from copy import deepcopy
-import platform
-from tqdm.auto import tqdm
-from warnings import warn
-
+from collections import namedtuple
 import numpy as np
 
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
 from threadpoolctl import threadpool_limits
 
-from .misc_metrics_implementations import compute_num_spikes, compute_firing_rates
 
+from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core import get_random_data_chunks, compute_sparsity
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
-_possible_pc_metric_names = [
-    "isolation_distance",
-    "l_ratio",
-    "d_prime",
-    "nearest_neighbor",
-    "nn_isolation",
-    "nn_noise_overlap",
-    "silhouette",
-]
+from spikeinterface.metrics.spiketrain.metrics import compute_num_spikes, compute_firing_rates
 
 
-_default_params = dict(
-    nearest_neighbor=dict(
-        max_spikes=10000,
-        n_neighbors=5,
-    ),
-    nn_isolation=dict(
-        max_spikes=10000, min_spikes=10, min_fr=0.0, n_neighbors=4, n_components=10, radius_um=100, peak_sign="neg"
-    ),
-    nn_noise_overlap=dict(
-        max_spikes=10000, min_spikes=10, min_fr=0.0, n_neighbors=4, n_components=10, radius_um=100, peak_sign="neg"
-    ),
-    silhouette=dict(method=("simplified",)),
-    isolation_distance=dict(),
-    l_ratio=dict(),
-    d_prime=dict(),
-)
+def _mahalanobis_metrics_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    mahalanobis_result = namedtuple("MahalanobisResult", ["isolation_distance", "l_ratio"])
 
+    # Use pre-computed PCA data
+    pca_data_per_unit = tmp_data["pca_data_per_unit"]
 
-def get_quality_pca_metric_list():
-    """Get a list of the available PCA-based quality metrics."""
-    return deepcopy(_possible_pc_metric_names)
+    isolation_distance_dict = {}
+    l_ratio_dict = {}
 
-
-def compute_pc_metrics(
-    sorting_analyzer,
-    metric_names=None,
-    metric_params=None,
-    qm_params=None,
-    unit_ids=None,
-    seed=None,
-    n_jobs=1,
-    progress_bar=False,
-    mp_context=None,
-    max_threads_per_worker=None,
-) -> dict:
-    """
-    Calculate principal component derived metrics.
-
-    Parameters
-    ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object.
-    metric_names : list of str, default: None
-        The list of PC metrics to compute.
-        If not provided, defaults to all PC metrics.
-    metric_params : dict or None
-        Dictionary with parameters for each PC metric function.
-    unit_ids : list of int or None
-        List of unit ids to compute metrics for.
-    seed : int, default: None
-        Random seed value.
-    n_jobs : int
-        Number of jobs to parallelize metric computations.
-    progress_bar : bool
-        If True, progress bar is shown.
-
-    Returns
-    -------
-    pc_metrics : dict
-        The computed PC metrics.
-    """
-
-    if qm_params is not None and metric_params is None:
-        deprecation_msg = (
-            "`qm_params` is deprecated and will be removed in version 0.104.0. Please use metric_params instead"
-        )
-        warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
-        metric_params = qm_params
-
-    pca_ext = sorting_analyzer.get_extension("principal_components")
-    assert pca_ext is not None, "calculate_pc_metrics() need extension 'principal_components'"
-
-    sorting = sorting_analyzer.sorting
-
-    if metric_names is None:
-        metric_names = _possible_pc_metric_names.copy()
-    if metric_params is None:
-        metric_params = _default_params
-
-    extremum_channels = get_template_extremum_channel(sorting_analyzer)
-
-    if unit_ids is None:
-        unit_ids = sorting_analyzer.unit_ids
-    channel_ids = sorting_analyzer.channel_ids
-
-    # create output dict of dict  pc_metrics['metric_name'][unit_id]
-    pc_metrics = {k: {} for k in metric_names}
-    if "nearest_neighbor" in metric_names:
-        pc_metrics.pop("nearest_neighbor")
-        pc_metrics["nn_hit_rate"] = {}
-        pc_metrics["nn_miss_rate"] = {}
-
-    if "nn_isolation" in metric_names:
-        pc_metrics["nn_unit_id"] = {}
-
-    possible_nn_metrics = ["nn_isolation", "nn_noise_overlap"]
-
-    nn_metrics = list(set(metric_names).intersection(possible_nn_metrics))
-    non_nn_metrics = list(set(metric_names).difference(possible_nn_metrics))
-
-    # Compute nspikes and firing rate outside of main loop for speed
-    if nn_metrics:
-        n_spikes_all_units = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
-        fr_all_units = compute_firing_rates(sorting_analyzer, unit_ids=unit_ids)
-    else:
-        n_spikes_all_units = None
-        fr_all_units = None
-
-    run_in_parallel = n_jobs > 1
-
-    # this get dense projection for selected unit_ids
-    dense_projections, spike_unit_indices = pca_ext.get_some_projections(channel_ids=None, unit_ids=unit_ids)
-    all_labels = sorting.unit_ids[spike_unit_indices]
-
-    items = []
     for unit_id in unit_ids:
-        if sorting_analyzer.is_sparse():
-            neighbor_channel_ids = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
-            neighbor_unit_ids = [
-                other_unit for other_unit in unit_ids if extremum_channels[other_unit] in neighbor_channel_ids
-            ]
-        else:
-            neighbor_channel_ids = channel_ids
-            neighbor_unit_ids = unit_ids
-        neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
+        pcs_flat = pca_data_per_unit[unit_id]["pcs_flat"]
+        labels = pca_data_per_unit[unit_id]["labels"]
 
-        labels = all_labels[np.isin(all_labels, neighbor_unit_ids)]
-        if pca_ext.params["mode"] == "concatenated":
-            pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)]
-        else:
-            pcs = dense_projections[np.isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
-        pcs_flat = pcs.reshape(pcs.shape[0], -1)
+        try:
+            isolation_distance, l_ratio = mahalanobis_metrics(pcs_flat, labels, unit_id)
+        except:
+            isolation_distance = np.nan
+            l_ratio = np.nan
 
-        func_args = (pcs_flat, labels, non_nn_metrics, unit_id, unit_ids, metric_params, max_threads_per_worker)
+        isolation_distance_dict[unit_id] = isolation_distance
+        l_ratio_dict[unit_id] = l_ratio
 
-        items.append(func_args)
+    return mahalanobis_result(isolation_distance=isolation_distance_dict, l_ratio=l_ratio_dict)
 
-    if not run_in_parallel and non_nn_metrics:
-        units_loop = enumerate(unit_ids)
-        if progress_bar:
-            units_loop = tqdm(units_loop, desc="calculate pc_metrics", total=len(unit_ids))
 
-        for i, unit_id in units_loop:
-            pca_metrics_unit = pca_metrics_one_unit(items[i])
-            for metric_name, metric in pca_metrics_unit.items():
-                pc_metrics[metric_name][unit_id] = metric
-    elif run_in_parallel and non_nn_metrics:
+class MahalanobisMetrics(BaseMetric):
+    metric_name = "mahalanobis_metrics"
+    metric_function = _mahalanobis_metrics_function
+    metric_params = {}
+    metric_columns = {"isolation_distance": float, "l_ratio": float}
+    depend_on = ["principal_components"]
+    needs_tmp_data = True
+
+
+def _d_prime_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    # Use pre-computed PCA data
+    pca_data_per_unit = tmp_data["pca_data_per_unit"]
+
+    d_prime_dict = {}
+
+    for unit_id in unit_ids:
+        if len(unit_ids) == 1:
+            d_prime_dict[unit_id] = np.nan
+            continue
+
+        pcs_flat = pca_data_per_unit[unit_id]["pcs_flat"]
+        labels = pca_data_per_unit[unit_id]["labels"]
+
+        try:
+            d_prime = lda_metrics(pcs_flat, labels, unit_id)
+        except:
+            d_prime = np.nan
+
+        d_prime_dict[unit_id] = d_prime
+
+    return d_prime_dict
+
+
+class DPrimeMetrics(BaseMetric):
+    metric_name = "d_prime"
+    metric_function = _d_prime_metric_function
+    metric_params = {}
+    metric_columns = {"d_prime": float}
+    depend_on = ["principal_components"]
+    needs_tmp_data = True
+
+
+def _nn_one_unit(args):
+    unit_id, pcs_flat, labels, metric_params = args
+
+    try:
+        nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id, **metric_params)
+    except:
+        nn_hit_rate = np.nan
+        nn_miss_rate = np.nan
+
+    return unit_id, nn_hit_rate, nn_miss_rate
+
+
+def _nearest_neighbor_metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwargs, **metric_params):
+    nn_result = namedtuple("NearestNeighborResult", ["nn_hit_rate", "nn_miss_rate"])
+
+    # Use pre-computed PCA data
+    pca_data_per_unit = tmp_data["pca_data_per_unit"]
+
+    # Extract job parameters
+    n_jobs = job_kwargs.get("n_jobs", 1)
+    mp_context = job_kwargs.get("mp_context", None)
+
+    nn_hit_rate_dict = {}
+    nn_miss_rate_dict = {}
+
+    if n_jobs == 1:
+        # Sequential processing
+        units_loop = unit_ids
+
+        for unit_id in units_loop:
+            pcs_flat = pca_data_per_unit[unit_id]["pcs_flat"]
+            labels = pca_data_per_unit[unit_id]["labels"]
+
+            try:
+                nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id, **metric_params)
+            except:
+                nn_hit_rate = np.nan
+                nn_miss_rate = np.nan
+
+            nn_hit_rate_dict[unit_id] = nn_hit_rate
+            nn_miss_rate_dict[unit_id] = nn_miss_rate
+    else:
+        # Parallel processing
+        import multiprocessing as mp
+        from concurrent.futures import ProcessPoolExecutor
+        import warnings
+        import platform
+
         if mp_context is not None and platform.system() == "Windows":
             assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
         elif mp_context == "fork" and platform.system() == "Darwin":
             warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
 
+        # Prepare arguments - only pass pickle-able data
+        args_list = []
+        for unit_id in unit_ids:
+            pcs_flat = pca_data_per_unit[unit_id]["pcs_flat"]
+            labels = pca_data_per_unit[unit_id]["labels"]
+            args_list.append((unit_id, pcs_flat, labels, metric_params))
+
         with ProcessPoolExecutor(
             max_workers=n_jobs,
-            mp_context=mp.get_context(mp_context),
+            mp_context=mp.get_context(mp_context) if mp_context else None,
         ) as executor:
-            results = executor.map(pca_metrics_one_unit, items)
-            if progress_bar:
-                results = tqdm(results, total=len(unit_ids), desc="calculate_pc_metrics")
+            results = executor.map(_nn_one_unit, args_list)
 
-            for ui, pca_metrics_unit in enumerate(results):
-                unit_id = unit_ids[ui]
-                for metric_name, metric in pca_metrics_unit.items():
-                    pc_metrics[metric_name][unit_id] = metric
+            for unit_id, nn_hit_rate, nn_miss_rate in results:
+                nn_hit_rate_dict[unit_id] = nn_hit_rate
+                nn_miss_rate_dict[unit_id] = nn_miss_rate
 
-    for metric_name in nn_metrics:
-        units_loop = enumerate(unit_ids)
+    return nn_result(nn_hit_rate=nn_hit_rate_dict, nn_miss_rate=nn_miss_rate_dict)
+
+
+class NearestNeighborMetrics(BaseMetric):
+    metric_name = "nearest_neighbor"
+    metric_function = _nearest_neighbor_metric_function
+    metric_params = {"max_spikes": 10000, "n_neighbors": 5}
+    metric_columns = {"nn_hit_rate": float, "nn_miss_rate": float}
+    depend_on = ["principal_components"]
+    needs_tmp_data = True
+    needs_job_kwargs = True
+
+
+def _nn_advanced_one_unit(args):
+    unit_id, sorting_analyzer, n_spikes_all_units, fr_all_units, metric_params, seed = args
+
+    nn_isolation_params = {
+        k: v
+        for k, v in metric_params.items()
+        if k
+        in [
+            "max_spikes",
+            "min_spikes",
+            "min_fr",
+            "n_neighbors",
+            "n_components",
+            "radius_um",
+            "peak_sign",
+            "min_spatial_overlap",
+        ]
+    }
+    nn_noise_params = {
+        k: v
+        for k, v in metric_params.items()
+        if k in ["max_spikes", "min_spikes", "min_fr", "n_neighbors", "n_components", "radius_um", "peak_sign"]
+    }
+
+    # NN Isolation
+    try:
+        nn_isolation, nn_unit_id = nearest_neighbors_isolation(
+            sorting_analyzer,
+            unit_id,
+            n_spikes_all_units=n_spikes_all_units,
+            fr_all_units=fr_all_units,
+            seed=seed,
+            **nn_isolation_params,
+        )
+    except:
+        nn_isolation, nn_unit_id = np.nan, np.nan
+
+    # NN Noise Overlap
+    try:
+        nn_noise_overlap = nearest_neighbors_noise_overlap(
+            sorting_analyzer,
+            unit_id,
+            n_spikes_all_units=n_spikes_all_units,
+            fr_all_units=fr_all_units,
+            seed=seed,
+            **nn_noise_params,
+        )
+    except:
+        nn_noise_overlap = np.nan
+
+    return unit_id, nn_isolation, nn_unit_id, nn_noise_overlap
+
+
+def _nn_advanced_metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwargs, **metric_params):
+    nn_advanced_result = namedtuple("NNAdvancedResult", ["nn_isolation", "nn_noise_overlap"])
+
+    # Use pre-computed data
+    n_spikes_all_units = tmp_data["n_spikes_all_units"]
+    fr_all_units = tmp_data["fr_all_units"]
+
+    # Extract job parameters
+    n_jobs = job_kwargs.get("n_jobs", 1)
+    progress_bar = False
+    mp_context = job_kwargs.get("mp_context", None)
+    seed = job_kwargs.get("seed", None)
+
+    nn_isolation_dict = {}
+    nn_unit_id_dict = {}
+    nn_noise_overlap_dict = {}
+
+    if n_jobs == 1:
+        # Sequential processing
+        units_loop = unit_ids
         if progress_bar:
-            units_loop = tqdm(units_loop, desc=f"calculate {metric_name} metric", total=len(unit_ids))
+            from tqdm.auto import tqdm
 
-        func = _nn_metric_name_to_func[metric_name]
-        metric_params = metric_params[metric_name] if metric_name in metric_params else {}
+            units_loop = tqdm(units_loop, desc="Advanced NN metrics")
 
-        for _, unit_id in units_loop:
-            try:
-                res = func(
-                    sorting_analyzer,
-                    unit_id,
-                    seed=seed,
-                    n_spikes_all_units=n_spikes_all_units,
-                    fr_all_units=fr_all_units,
-                    **metric_params,
-                )
-            except:
-                if metric_name == "nn_isolation":
-                    res = (np.nan, np.nan)
-                elif metric_name == "nn_noise_overlap":
-                    res = np.nan
+        for unit_id in units_loop:
+            _, nn_isolation, nn_unit_id, nn_noise_overlap = _nn_advanced_one_unit(
+                (unit_id, sorting_analyzer, n_spikes_all_units, fr_all_units, metric_params, seed)
+            )
+            nn_isolation_dict[unit_id] = nn_isolation
+            nn_noise_overlap_dict[unit_id] = nn_noise_overlap
+    else:
+        # Parallel processing
+        import multiprocessing as mp
+        from concurrent.futures import ProcessPoolExecutor
+        import warnings
+        import platform
 
-            if metric_name == "nn_isolation":
-                nn_isolation, nn_unit_id = res
-                pc_metrics["nn_isolation"][unit_id] = nn_isolation
-                pc_metrics["nn_unit_id"][unit_id] = nn_unit_id
-            elif metric_name == "nn_noise_overlap":
-                pc_metrics["nn_noise_overlap"][unit_id] = res
+        if mp_context is not None and platform.system() == "Windows":
+            assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+        elif mp_context == "fork" and platform.system() == "Darwin":
+            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
 
-    return pc_metrics
+        # Prepare arguments
+        args_list = []
+        for unit_id in unit_ids:
+            args_list.append((unit_id, sorting_analyzer, n_spikes_all_units, fr_all_units, metric_params, seed))
+
+        with ProcessPoolExecutor(
+            max_workers=n_jobs,
+            mp_context=mp.get_context(mp_context) if mp_context else None,
+        ) as executor:
+            results = executor.map(_nn_advanced_one_unit, args_list)
+            if progress_bar:
+                from tqdm.auto import tqdm
+
+                results = tqdm(results, total=len(unit_ids), desc="Advanced NN metrics")
+
+            for unit_id, nn_isolation, nn_unit_id, nn_noise_overlap in results:
+                nn_isolation_dict[unit_id] = nn_isolation
+                nn_unit_id_dict[unit_id] = nn_unit_id
+                nn_noise_overlap_dict[unit_id] = nn_noise_overlap
+
+    return nn_advanced_result(nn_isolation=nn_isolation_dict, nn_noise_overlap=nn_noise_overlap_dict)
+
+
+class NearestNeighborAdvancedMetrics(BaseMetric):
+    metric_name = "nn_advanced"
+    metric_function = _nn_advanced_metric_function
+    metric_params = {
+        "max_spikes": 1000,
+        "min_spikes": 10,
+        "min_fr": 0.0,
+        "n_neighbors": 4,
+        "n_components": 10,
+        "radius_um": 100,
+        "peak_sign": "neg",
+        "min_spatial_overlap": 0.5,
+    }
+    metric_columns = {"nn_isolation": float, "nn_unit_id": "object", "nn_noise_overlap": float}
+    depend_on = ["principal_components", "waveforms", "templates"]
+    needs_tmp_data = True
+    needs_job_kwargs = True
+
+
+def _silhouette_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    # Use pre-computed PCA data
+    pca_data_per_unit = tmp_data["pca_data_per_unit"]
+
+    silhouette_dict = {}
+    method = metric_params.get("method", "simplified")
+
+    for unit_id in unit_ids:
+        pcs_flat = pca_data_per_unit[unit_id]["pcs_flat"]
+        labels = pca_data_per_unit[unit_id]["labels"]
+
+        try:
+            if method == "simplified":
+                silhouette_value = simplified_silhouette_score(pcs_flat, labels, unit_id)
+            else:  # method == "full"
+                silhouette_value = silhouette_score(pcs_flat, labels, unit_id)
+        except:
+            silhouette_value = np.nan
+
+        silhouette_dict[unit_id] = silhouette_value
+
+    return silhouette_dict
+
+
+class SilhouetteMetrics(BaseMetric):
+    metric_name = "silhouette"
+    metric_function = _silhouette_metric_function
+    metric_params = {"method": "simplified"}
+    metric_columns = {"silhouette": float}
+    depend_on = ["principal_components"]
+    needs_tmp_data = True
+
+
+pca_metrics_list = [
+    MahalanobisMetrics,
+    DPrimeMetrics,
+    NearestNeighborMetrics,
+    SilhouetteMetrics,
+    NearestNeighborAdvancedMetrics,
+]
 
 
 #################################################################
 # Code from spikemetrics
-
-
 def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
     """
     Calculate isolation distance and L-ratio (metrics computed from Mahalanobis distance).
@@ -969,75 +1086,3 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
     isolation = (target_nn_in_target + other_nn_in_other) / (n_spikes_target + n_spikes_other) / n_neighbors_adjusted
 
     return isolation
-
-
-def pca_metrics_one_unit(args):
-
-    (pcs_flat, labels, metric_names, unit_id, unit_ids, metric_params, max_threads_per_worker) = args
-
-    if max_threads_per_worker is None:
-        return _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, metric_params)
-    else:
-        with threadpool_limits(limits=int(max_threads_per_worker)):
-            return _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, metric_params)
-
-
-def _pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id, unit_ids, metric_params):
-    pc_metrics = {}
-    # metrics
-    if "isolation_distance" in metric_names or "l_ratio" in metric_names:
-        try:
-            isolation_distance, l_ratio = mahalanobis_metrics(pcs_flat, labels, unit_id)
-        except:
-            isolation_distance = np.nan
-            l_ratio = np.nan
-
-        if "isolation_distance" in metric_names:
-            pc_metrics["isolation_distance"] = isolation_distance
-        if "l_ratio" in metric_names:
-            pc_metrics["l_ratio"] = l_ratio
-
-    if "d_prime" in metric_names:
-        if len(unit_ids) == 1:
-            d_prime = np.nan
-        else:
-            try:
-                d_prime = lda_metrics(pcs_flat, labels, unit_id)
-            except:
-                d_prime = np.nan
-
-        pc_metrics["d_prime"] = d_prime
-
-    if "nearest_neighbor" in metric_names:
-        try:
-            nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(
-                pcs_flat, labels, unit_id, **metric_params["nearest_neighbor"]
-            )
-        except:
-            nn_hit_rate = np.nan
-            nn_miss_rate = np.nan
-        pc_metrics["nn_hit_rate"] = nn_hit_rate
-        pc_metrics["nn_miss_rate"] = nn_miss_rate
-
-    if "silhouette" in metric_names:
-        silhouette_method = metric_params["silhouette"]["method"]
-        if "simplified" in silhouette_method:
-            try:
-                unit_silhouette_score = simplified_silhouette_score(pcs_flat, labels, unit_id)
-            except:
-                unit_silhouette_score = np.nan
-            pc_metrics["silhouette"] = unit_silhouette_score
-        if "full" in silhouette_method:
-            try:
-                unit_silhouette_score = silhouette_score(pcs_flat, labels, unit_id)
-            except:
-                unit_silhouette_score = np.nan
-            pc_metrics["silhouette_full"] = unit_silhouette_score
-
-    return pc_metrics
-
-
-_nn_metric_name_to_func = {
-    "nn_isolation": nearest_neighbors_isolation,
-    "nn_noise_overlap": nearest_neighbors_noise_overlap,
-}

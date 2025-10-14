@@ -315,8 +315,8 @@ def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs)
         The sampling frequency of the template
     **kwargs: Required kwargs:
         - depth_direction: the direction to compute velocity above and below ("x", "y", or "z")
-        - min_channels_for_velocity: the minimum number of channels above or below to compute velocity
-        - min_r2_velocity: the minimum r2 to accept the velocity fit
+        - min_channels: the minimum number of channels above or below to compute velocity
+        - min_r2: the minimum r2 to accept the velocity fit
         - column_range: the range in um in the x-direction to consider channels for velocity
 
     Returns
@@ -327,13 +327,13 @@ def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs)
         The velocity below the max channel
     """
     assert "depth_direction" in kwargs, "depth_direction must be given as kwarg"
-    assert "min_channels_for_velocity" in kwargs, "min_channels_for_velocity must be given as kwarg"
-    assert "min_r2_velocity" in kwargs, "min_r2_velocity must be given as kwarg"
+    assert "min_channels" in kwargs, "min_channels must be given as kwarg"
+    assert "min_r2" in kwargs, "min_r2 must be given as kwarg"
     assert "column_range" in kwargs, "column_range must be given as kwarg"
 
     depth_direction = kwargs["depth_direction"]
-    min_channels_for_velocity = kwargs["min_channels_for_velocity"]
-    min_r2_velocity = kwargs["min_r2_velocity"]
+    min_channels_for_velocity = kwargs["min_channels"]
+    min_r2 = kwargs["min_r2"]
     column_range = kwargs["column_range"]
 
     depth_dim = 1 if depth_direction == "y" else 0
@@ -355,7 +355,7 @@ def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs)
         peak_times_ms_above = np.argmin(template_above, 0) / sampling_frequency * 1000 - max_peak_time
         distances_um_above = np.array([np.linalg.norm(cl - max_channel_location) for cl in channel_locations_above])
         velocity_above, _, score = fit_velocity(peak_times_ms_above, distances_um_above)
-        if score < min_r2_velocity:
+        if score < min_r2:
             velocity_above = np.nan
 
     # Compute velocity below
@@ -368,7 +368,7 @@ def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs)
         peak_times_ms_below = np.argmin(template_below, 0) / sampling_frequency * 1000 - max_peak_time
         distances_um_below = np.array([np.linalg.norm(cl - max_channel_location) for cl in channel_locations_below])
         velocity_below, _, score = fit_velocity(peak_times_ms_below, distances_um_below)
-        if score < min_r2_velocity:
+        if score < min_r2:
             velocity_below = np.nan
 
     return velocity_above, velocity_below
@@ -387,8 +387,8 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
     sampling_frequency : float
         The sampling frequency of the template
     **kwargs: Required kwargs:
-        - exp_peak_function: the function to use to compute the peak amplitude for the exp decay ("ptp" or "min")
-        - min_r2_exp_decay: the minimum r2 to accept the exp decay fit
+        - peak_function: the function to use to compute the peak amplitude for the exp decay ("ptp" or "min")
+        - min_r2: the minimum r2 to accept the exp decay fit
 
     Returns
     -------
@@ -401,14 +401,14 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
     def exp_decay(x, decay, amp0, offset):
         return amp0 * np.exp(-decay * x) + offset
 
-    assert "exp_peak_function" in kwargs, "exp_peak_function must be given as kwarg"
-    exp_peak_function = kwargs["exp_peak_function"]
-    assert "min_r2_exp_decay" in kwargs, "min_r2_exp_decay must be given as kwarg"
-    min_r2_exp_decay = kwargs["min_r2_exp_decay"]
+    assert "peak_function" in kwargs, "peak_function must be given as kwarg"
+    peak_function = kwargs["peak_function"]
+    assert "min_r2" in kwargs, "min_r2 must be given as kwarg"
+    min_r2 = kwargs["min_r2"]
     # exp decay fit
-    if exp_peak_function == "ptp":
+    if peak_function == "ptp":
         fun = np.ptp
-    elif exp_peak_function == "min":
+    elif peak_function == "min":
         fun = np.min
     peak_amplitudes = np.abs(fun(template, axis=0))
     max_channel_location = channel_locations[np.argmax(peak_amplitudes)]
@@ -433,7 +433,7 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
         r2 = r2_score(peak_amplitudes_sorted, exp_decay(channel_distances_sorted, *popt))
         exp_decay_value = popt[0]
 
-        if r2 < min_r2_exp_decay:
+        if r2 < min_r2:
             exp_decay_value = np.nan
     except:
         exp_decay_value = np.nan
@@ -493,3 +493,235 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs) -> flo
     spread = np.ptp(channel_depth_above_threshold)
 
     return spread
+
+
+def single_channel_metric(unit_function, sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    result = {}
+    templates_single = tmp_data["templates_single"]
+    troughs = tmp_data.get("troughs", None)
+    peaks = tmp_data.get("peaks", None)
+    sampling_frequency = tmp_data["sampling_frequency"]
+    for unit_index, unit_id in enumerate(unit_ids):
+        template_single = templates_single[unit_index]
+        trough_idx = troughs[unit_id] if troughs is not None else None
+        peak_idx = peaks[unit_id] if peaks is not None else None
+        metric_params["trough_idx"] = trough_idx
+        metric_params["peak_idx"] = peak_idx
+        value = unit_function(template_single, sampling_frequency, **metric_params)
+        result[unit_id] = value
+    return result
+
+
+class PeakToValley(BaseMetric):
+    metric_name = "peak_to_valley"
+    metric_params = {}
+    metric_columns = {"peak_to_valley": float}
+    needs_tmp_data = True
+
+    @staticmethod
+    def _peak_to_valley_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        return single_channel_metric(
+            unit_function=get_peak_to_valley,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
+
+    metric_function = _peak_to_valley_metric_function
+
+
+class PeakToTroughRatio(BaseMetric):
+    metric_name = "peak_trough_ratio"
+    metric_params = {}
+    metric_columns = {"peak_trough_ratio": float}
+    needs_tmp_data = True
+
+    @staticmethod
+    def _peak_to_trough_ratio_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        return single_channel_metric(
+            unit_function=get_peak_trough_ratio,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
+
+    metric_function = _peak_to_trough_ratio_metric_function
+
+
+class HalfWidth(BaseMetric):
+    metric_name = "half_width"
+    metric_params = {}
+    metric_columns = {"half_width": float}
+    needs_tmp_data = True
+
+    @staticmethod
+    def _half_width_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        return single_channel_metric(
+            unit_function=get_half_width,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
+
+    metric_function = _half_width_metric_function
+
+
+class RepolarizationSlope(BaseMetric):
+    metric_name = "repolarization_slope"
+    metric_params = {}
+    metric_columns = {"repolarization_slope": float}
+    needs_tmp_data = True
+
+    @staticmethod
+    def _repolarization_slope_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        return single_channel_metric(
+            unit_function=get_repolarization_slope,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
+
+    metric_function = _repolarization_slope_metric_function
+
+
+class RecoverySlope(BaseMetric):
+    metric_name = "recovery_slope"
+    metric_params = {"recovery_window_ms": 0.7}
+    metric_columns = {"recovery_slope": float}
+    needs_tmp_data = True
+
+    @staticmethod
+    def _recovery_slope_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        return single_channel_metric(
+            unit_function=get_recovery_slope,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
+
+    metric_function = _recovery_slope_metric_function
+
+
+def _number_of_peaks_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    num_peaks_result = namedtuple("NumberOfPeaksResult", ["num_positive_peaks", "num_negative_peaks"])
+    num_positive_peaks_dict = {}
+    num_negative_peaks_dict = {}
+    sampling_frequency = sorting_analyzer.sampling_frequency
+    templates_single = tmp_data["templates_single"]
+    for unit_index, unit_id in enumerate(unit_ids):
+        template_single = templates_single[unit_index]
+        num_positive, num_negative = get_number_of_peaks(template_single, sampling_frequency, **metric_params)
+        num_positive_peaks_dict[unit_id] = num_positive
+        num_negative_peaks_dict[unit_id] = num_negative
+    return num_peaks_result(num_positive_peaks=num_positive_peaks_dict, num_negative_peaks=num_negative_peaks_dict)
+
+
+class NumberOfPeaks(BaseMetric):
+    metric_name = "number_of_peaks"
+    metric_function = _number_of_peaks_metric_function
+    metric_params = {"peak_relative_threshold": 0.2, "peak_width_ms": 0.1}
+    metric_columns = {"num_positive_peaks": int, "num_negative_peaks": int}
+    needs_tmp_data = True
+
+
+single_channel_metrics = [
+    PeakToValley,
+    PeakToTroughRatio,
+    HalfWidth,
+    RepolarizationSlope,
+    RecoverySlope,
+    NumberOfPeaks,
+]
+
+
+def _get_velocity_fits_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    velocity_above_result = namedtuple("Velocities", ["velocity_above", "velocity_below"])
+    velocity_above_dict = {}
+    velocity_below_dict = {}
+    templates_multi = tmp_data["templates_multi"]
+    channel_locations_multi = tmp_data["channel_locations_multi"]
+    sampling_frequency = tmp_data["sampling_frequency"]
+    metric_params["depth_direction"] = tmp_data["depth_direction"]
+    for unit_index, unit_id in enumerate(unit_ids):
+        channel_locations = channel_locations_multi[unit_index]
+        template = templates_multi[unit_index]
+        vel_above, vel_below = get_velocity_fits(template, channel_locations, sampling_frequency, **metric_params)
+        velocity_above_dict[unit_id] = vel_above
+        velocity_below_dict[unit_id] = vel_below
+    return velocity_above_result(velocity_above=velocity_above_dict, velocity_below=velocity_below_dict)
+
+
+class VelocityFits(BaseMetric):
+    metric_name = "velocity_fits"
+    metric_function = _get_velocity_fits_metric_function
+    metric_params = {
+        "min_channels": 3,
+        "min_r2": 0.2,
+        "column_range": None,
+    }
+    metric_columns = {"velocity_above": float, "velocity_below": float}
+    needs_tmp_data = True
+
+
+def multi_channel_metric(unit_function, sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    result = {}
+    templates_multi = tmp_data["templates_multi"]
+    channel_locations_multi = tmp_data["channel_locations_multi"]
+    sampling_frequency = tmp_data["sampling_frequency"]
+    metric_params["depth_direction"] = tmp_data["depth_direction"]
+    for unit_index, unit_id in enumerate(unit_ids):
+        channel_locations = channel_locations_multi[unit_index]
+        template = templates_multi[unit_index]
+        value = unit_function(template, channel_locations, sampling_frequency, **metric_params)
+        result[unit_id] = value
+    return result
+
+
+class ExpDecay(BaseMetric):
+    metric_name = "exp_decay"
+    metric_params = {"peak_function": "ptp", "min_r2": 0.2}
+    metric_columns = {"exp_decay": float}
+    needs_tmp_data = True
+
+    @staticmethod
+    def _exp_decay_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        return multi_channel_metric(
+            unit_function=get_exp_decay,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
+
+    metric_function = _exp_decay_metric_function
+
+
+class Spread(BaseMetric):
+    metric_name = "spread"
+    metric_params = {"spread_threshold": 0.5, "spread_smooth_um": 20, "column_range": None}
+    metric_columns = {"spread": float}
+    needs_tmp_data = True
+
+    @staticmethod
+    def _spread_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+        return multi_channel_metric(
+            unit_function=get_spread,
+            sorting_analyzer=sorting_analyzer,
+            unit_ids=unit_ids,
+            tmp_data=tmp_data,
+            **metric_params,
+        )
+
+    metric_function = _spread_metric_function
+
+
+multi_channel_metrics = [
+    VelocityFits,
+    ExpDecay,
+    Spread,
+]

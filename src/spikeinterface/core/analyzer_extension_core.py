@@ -816,7 +816,6 @@ class BaseMetric:
     """
 
     metric_name = None  # to be defined in subclass
-    metric_function = None  # to be defined in subclass
     metric_params = {}  # to be defined in subclass
     metric_columns = {}  # column names and their dtypes of the dataframe
     needs_recording = False  # to be defined in subclass
@@ -824,12 +823,23 @@ class BaseMetric:
     needs_job_kwargs = False
     depend_on = []  # to be defined in subclass
 
+    # the metric function must have the signature:
+    # def metric_function(sorting_analyzer, unit_ids, **metric_params)
+    # or if needs_tmp_data=True
+    # def metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params)
+    # or if needs_job_kwargs=True
+    # def metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwargs, **metric_params)
+    # and must return a dict ({unit_id: values}) or namedtuple with fields matching metric_columns keys
+    metric_function = None  # to be defined in subclass
+
     @classmethod
     def compute(cls, sorting_analyzer, unit_ids, metric_params, tmp_data, job_kwargs):
         """Compute the metric.
 
         Parameters
         ----------
+        sorting_analyzer :  SortingAnalyzer
+            The input sorting analyzer
         unit_ids : list
             List of unit ids to compute the metric for
         metric_params : dict
@@ -850,9 +860,10 @@ class BaseMetric:
         if cls.needs_job_kwargs:
             args += (job_kwargs,)
 
-        results = cls.metric_function(args, **metric_params)
+        results = cls.metric_function(*args, **metric_params)
 
-        if isinstance(results, namedtuple):
+        # if namedtuple, check that columns are correct
+        if isinstance(results, tuple) and hasattr(results, "_fields"):
             assert set(results._fields) == set(list(cls.metric_columns.keys())), (
                 f"Metric {cls.metric_name} returned columns {results._fields} "
                 f"but expected columns are {cls.metric_columns.keys()}"
@@ -897,8 +908,7 @@ class BaseMetricExtension(AnalyzerExtension):
         metric_names: list[str] | None = None,
         metric_params: dict | None = None,
         delete_existing_metrics: bool = False,
-        # todo: remove
-        verbose: bool = True,
+        verbose: bool = False,
         **other_params,
     ):
         """
@@ -969,8 +979,13 @@ class BaseMetricExtension(AnalyzerExtension):
         for metric_name in metrics_to_remove:
             metric_names.remove(metric_name)
 
+        default_metric_params = {m.metric_name: m.metric_params for m in self.metric_list}
         if metric_params is None:
-            metric_params = {m.metric_name: m.metric_params for m in self.metric_list}
+            metric_params = default_metric_params
+        else:
+            for metric, params in metric_params.items():
+                default_metric_params[metric].update(params)
+            metric_params = default_metric_params
 
         metrics_to_compute = metric_names
         extension = self.sorting_analyzer.get_extension(self.extension_name)
@@ -991,7 +1006,7 @@ class BaseMetricExtension(AnalyzerExtension):
         )
         return params
 
-    def _prepare_data(self, unit_ids=None):
+    def _prepare_data(self, sorting_analyzer, unit_ids=None):
         """Optional function to prepare shared data for metric computation."""
         # useful function to compute data that is shared across metrics (e.g., PCA)
         return {}
@@ -1025,44 +1040,48 @@ class BaseMetricExtension(AnalyzerExtension):
 
         if unit_ids is None:
             unit_ids = sorting_analyzer.unit_ids
-        tmp_data = self._prepare_data(unit_ids=unit_ids)
+        tmp_data = self._prepare_data(sorting_analyzer=sorting_analyzer, unit_ids=unit_ids)
         if metric_names is None:
             metric_names = self.params["metric_names"]
 
-        column_names = []
-        for metric in self.metric_list:
-            if metric.metric_name in metric_names:
-                column_names.extend(list(metric.metric_columns.keys()))
+        column_names_dtypes = {}
+        for metric_name in metric_names:
+            metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
+            column_names_dtypes.update(metric.metric_columns)
 
-        metrics = pd.DataFrame(index=unit_ids, columns=column_names)
+        metrics = pd.DataFrame(index=unit_ids, columns=list(column_names_dtypes.keys()))
 
         for metric_name in metric_names:
             if self.params["verbose"]:
                 print(f"Computing metric {metric_name}...")
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
             column_names = list(metric.metric_columns.keys())
-            try:
-                metric_params = self.params["metric_params"].get(metric_name, {})
-                res = metric.compute(
-                    self.sorting_analyzer,
-                    unit_ids=unit_ids,
-                    metric_params=metric_params,
-                    tmp_data=tmp_data,
-                    job_kwargs=job_kwargs,
-                )
-            except Exception as e:
-                warnings.warn(f"Error computing metric {metric_name}: {e}")
-                if len(column_names) == 1:
-                    res = {unit_id: np.nan for unit_id in unit_ids}
-                else:
-                    res = namedtuple("MetricResult", column_names)(*([np.nan] * len(column_names)))
+            # try:
+            metric_params = self.params["metric_params"].get(metric_name, {})
+            res = metric.compute(
+                sorting_analyzer,
+                unit_ids=unit_ids,
+                metric_params=metric_params,
+                tmp_data=tmp_data,
+                job_kwargs=job_kwargs,
+            )
+            # except Exception as e:
+            #     warnings.warn(f"Error computing metric {metric_name}: {e}")
+            #     if len(column_names) == 1:
+            #         res = {unit_id: np.nan for unit_id in unit_ids}
+            #     else:
+            #         res = namedtuple("MetricResult", column_names)(*([np.nan] * len(column_names)))
 
             # res is a namedtuple with several dictionary entries (one per column)
             if isinstance(res, dict):
-                metrics.loc[unit_ids, column_names[0]] = pd.DataFrame(res.values(), index=unit_ids)
+                column_name = column_names[0]
+                metrics.loc[unit_ids, column_name] = pd.Series(res)
             else:
                 for i, col in enumerate(res._fields):
                     metrics.loc[unit_ids, col] = pd.Series(res[i])
+
+        for col, dtype in column_names_dtypes.items():
+            metrics[col] = metrics[col].astype(dtype)
 
         return metrics
 
@@ -1099,12 +1118,31 @@ class BaseMetricExtension(AnalyzerExtension):
         for metric_name in set(existing_metrics).difference(metrics_to_compute):
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
             # some metrics names produce data columns with other names. This deals with that.
-            for column_name in metric.column_names:
+            for column_name in metric.metric_columns:
                 computed_metrics[column_name] = extension.data["metrics"][column_name]
+
         self.data["metrics"] = computed_metrics
 
     def _get_data(self):
+        # convert to correct dtype
         return self.data["metrics"]
+
+    def _set_data(self, ext_data_name, data):
+        import pandas as pd
+
+        if ext_data_name != "metrics":
+            return
+        if not isinstance(data, pd.DataFrame):
+            return
+
+        metric_dtypes = {}
+        for m in self.metric_list:
+            metric_dtypes.update(m.metric_columns)
+
+        for col in data.columns:
+            if col in metric_dtypes:
+                data[col] = data[col].astype(metric_dtypes[col])
+        self.data[ext_data_name] = data
 
     def _select_extension_data(self, unit_ids: list[int | str]):
         """
@@ -1167,7 +1205,7 @@ class BaseMetricExtension(AnalyzerExtension):
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
         metrics.loc[new_unit_ids, :] = self._compute_metrics(
-            new_sorting_analyzer, new_unit_ids, verbose, metric_names, **job_kwargs
+            sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids, metric_names=metric_names, **job_kwargs
         )
 
         new_data = dict(metrics=metrics)
@@ -1209,7 +1247,7 @@ class BaseMetricExtension(AnalyzerExtension):
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
         metrics.loc[new_unit_ids_f, :] = self._compute_metrics(
-            new_sorting_analyzer, new_unit_ids_f, verbose, metric_names, **job_kwargs
+            sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids_f, metric_names=metric_names, **job_kwargs
         )
 
         new_data = dict(metrics=metrics)

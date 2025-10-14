@@ -14,8 +14,7 @@ from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array
 
-from .metric_classes import single_channel_metrics, multi_channel_metrics
-from .metrics_implementations import get_trough_and_peak_idx
+from .metrics import get_trough_and_peak_idx, single_channel_metrics, multi_channel_metrics
 
 
 MIN_CHANNELS_FOR_MULTI_CHANNEL_WARNING = 10
@@ -55,12 +54,12 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object
     metric_names : list or None, default: None
-        List of metrics to compute (see si.postprocessing.get_template_metric_names())
+        List of metrics to compute (see si.metrics.get_template_metric_names())
     delete_existing_metrics : bool, default: False
         If True, any template metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept, provided the `metric_params` are unchanged.
     metric_params : dict of dicts or None, default: None
         Dictionary with parameters for template metrics calculation.
-        Default parameters can be obtained with: `si.postprocessing.template_metrics.get_default_tm_params()`
+        Default parameters can be obtained with: `si.metrics.template_metrics.get_default_tm_params()`
     peak_sign : {"neg", "pos"}, default: "neg"
         Whether to use the positive ("pos") or negative ("neg") peaks to estimate extremum channels.
     upsampling_factor : int, default: 10
@@ -105,6 +104,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         peak_sign="neg",
         upsampling_factor=10,
         include_multi_channel_metrics=False,
+        depth_direction="y",
     ):
         if include_multi_channel_metrics or (
             metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
@@ -125,15 +125,15 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             peak_sign=peak_sign,
             upsampling_factor=upsampling_factor,
             include_multi_channel_metrics=include_multi_channel_metrics,
+            depth_direction=depth_direction,
         )
 
-    def _prepare_data(self, unit_ids):
+    def _prepare_data(self, sorting_analyzer, unit_ids):
         from scipy.signal import resample_poly
 
         # compute templates_single and templates_multi (if include_multi_channel_metrics is True)
         tmp_data = {}
 
-        sorting_analyzer = self.sorting_analyzer
         if unit_ids is None:
             unit_ids = sorting_analyzer.unit_ids
         peak_sign = self.params["peak_sign"]
@@ -144,6 +144,10 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         else:
             sampling_frequency_up = sampling_frequency
         tmp_data["sampling_frequency"] = sampling_frequency_up
+
+        include_multi_channel_metrics = self.params["include_multi_channel_metrics"] or any(
+            m in get_multi_channel_template_metric_names() for m in self.params["metrics_to_compute"]
+        )
 
         extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="index")
         all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
@@ -171,7 +175,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             troughs[unit_id] = trough_idx
             peaks[unit_id] = peak_idx
 
-            if self.params["include_multi_channel_metrics"]:
+            if include_multi_channel_metrics:
                 if sorting_analyzer.is_sparse():
                     mask = sorting_analyzer.sparsity.mask[unit_index, :]
                     template_multi = template_all_chans[:, mask]
@@ -196,10 +200,11 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         tmp_data["peaks"] = peaks
         tmp_data["templates_single"] = np.array(templates_single)
 
-        if self.params["include_multi_channel_metrics"]:
+        if include_multi_channel_metrics:
             # templates_multi is a list of 2D arrays of shape (n_times, n_channels)
             tmp_data["templates_multi"] = templates_multi
             tmp_data["channel_locations_multi"] = channel_locations_multi
+            tmp_data["depth_direction"] = self.params["depth_direction"]
 
         return tmp_data
 

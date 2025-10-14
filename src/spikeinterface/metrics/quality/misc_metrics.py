@@ -16,6 +16,7 @@ import importlib.util
 
 import numpy as np
 
+from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface.postprocessing import correlogram_for_one_segment
 from spikeinterface.core import SortingAnalyzer, get_noise_levels
@@ -25,6 +26,8 @@ from spikeinterface.core.template_tools import (
     get_dense_templates_array,
 )
 
+from ..spiketrain.metrics import NumSpikes, FiringRate
+
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
     HAVE_NUMBA = True
@@ -32,231 +35,7 @@ else:
     HAVE_NUMBA = False
 
 
-_default_params = dict()
-
-
-def compute_noise_cutoffs(sorting_analyzer, high_quantile=0.25, low_quantile=0.1, n_bins=100, unit_ids=None):
-    """
-    A metric to determine if a unit's amplitude distribution is cut off as it approaches zero, without assuming a Gaussian distribution.
-
-    Based on the histogram of the (transformed) amplitude:
-
-    1. This method compares counts in the lower-amplitude bins to counts in the top 'high_quantile' of the amplitude range.
-    It computes the mean and std of an upper quantile of the distribution, and calculates how many standard deviations away
-    from that mean the lower-quantile bins lie.
-
-    2. The method also compares the counts in the lower-amplitude bins to the count in the highest bin and return their ratio.
-
-    Parameters
-    ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object.
-    high_quantile : float, default: 0.25
-        Quantile of the amplitude range above which values are treated as "high" (e.g. 0.25 = top 25%), the reference region.
-    low_quantile : int, default: 0.1
-        Quantile of the amplitude range below which values are treated as "low" (e.g. 0.1 = lower 10%), the test region.
-    n_bins: int, default: 100
-        The number of bins to use to compute the amplitude histogram.
-    unit_ids : list or None
-        List of unit ids to compute the amplitude cutoffs. If None, all units are used.
-
-    Returns
-    -------
-    noise_cutoff_dict : dict of floats
-        Estimated metrics based on the amplitude distribution, for each unit ID.
-
-    References
-    ----------
-    Inspired by metric described in [IBL2024]_
-
-    """
-    res = namedtuple("cutoff_metrics", ["noise_cutoff", "noise_ratio"])
-    if unit_ids is None:
-        unit_ids = sorting_analyzer.unit_ids
-
-    noise_cutoff_dict = {}
-    noise_ratio_dict = {}
-
-    amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
-    peak_sign = amplitude_extension.params["peak_sign"]
-    if peak_sign == "both":
-        raise TypeError(
-            '`peak_sign` should either be "pos" or "neg". You can set `peak_sign` as an argument when you compute spike_amplitudes.'
-        )
-
-    amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
-
-    for unit_id in unit_ids:
-        amplitudes = amplitudes_by_units[unit_id]
-
-        # We assume the noise (zero values) is on the lower tail of the amplitude distribution.
-        # But if peak_sign == 'neg', the noise will be on the higher tail, so we flip the distribution.
-        if peak_sign == "neg":
-            amplitudes = -amplitudes
-
-        cutoff, ratio = _noise_cutoff(amplitudes, high_quantile=high_quantile, low_quantile=low_quantile, n_bins=n_bins)
-        noise_cutoff_dict[unit_id] = cutoff
-        noise_ratio_dict[unit_id] = ratio
-
-    return res(noise_cutoff_dict, noise_ratio_dict)
-
-
-_default_params["noise_cutoff"] = dict(high_quantile=0.25, low_quantile=0.1, n_bins=100)
-
-
-def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
-    """
-    A metric to determine if a unit's amplitude distribution is cut off as it approaches zero, without assuming a Gaussian distribution.
-
-    Based on the histogram of the (transformed) amplitude:
-
-    1. This method compares counts in the lower-amplitude bins to counts in the higher_amplitude bins.
-    It computes the mean and std of an upper quantile of the distribution, and calculates how many standard deviations away
-    from that mean the lower-quantile bins lie.
-
-    2. The method also compares the counts in the lower-amplitude bins to the count in the highest bin and return their ratio.
-
-    Parameters
-    ----------
-    amps : array-like
-        Spike amplitudes.
-    high_quantile : float, default: 0.25
-        Quantile of the amplitude range above which values are treated as "high" (e.g. 0.25 = top 25%), the reference region.
-    low_quantile : int, default: 0.1
-        Quantile of the amplitude range below which values are treated as "low" (e.g. 0.1 = lower 10%), the test region.
-    n_bins: int, default: 100
-        The number of bins to use to compute the amplitude histogram.
-
-    Returns
-    -------
-    cutoff : float
-        (mean(lower_bins_count) - mean(high_bins_count)) / std(high_bins_count)
-    ratio: float
-        mean(lower_bins_count) / highest_bin_count
-
-    """
-    n_per_bin, bin_edges = np.histogram(amps, bins=n_bins)
-
-    maximum_bin_height = np.max(n_per_bin)
-
-    low_quantile_value = np.quantile(amps, q=low_quantile)
-
-    # the indices for low-amplitude bins
-    low_indices = np.where(bin_edges[1:] <= low_quantile_value)[0]
-
-    high_quantile_value = np.quantile(amps, q=1 - high_quantile)
-
-    # the indices for high-amplitude bins
-    high_indices = np.where(bin_edges[:-1] >= high_quantile_value)[0]
-
-    if len(low_indices) == 0:
-        warnings.warn(
-            "No bin is selected to test cutoff. Please increase low_quantile. Setting noise cutoff and ratio to NaN"
-        )
-        return np.nan, np.nan
-
-    # compute ratio between low-amplitude bins and the largest bin
-    low_counts = n_per_bin[low_indices]
-    mean_low_counts = np.mean(low_counts)
-    ratio = mean_low_counts / maximum_bin_height
-
-    if len(high_indices) == 0:
-        warnings.warn(
-            "No bin is selected as the reference region. Please increase high_quantile. Setting noise cutoff to NaN"
-        )
-        return np.nan, ratio
-
-    if len(high_indices) == 1:
-        warnings.warn(
-            "Only one bin is selected as the reference region, and thus the standard deviation cannot be computed. "
-            "Please increase high_quantile. Setting noise cutoff to NaN"
-        )
-        return np.nan, ratio
-
-    # compute cutoff from low-amplitude and high-amplitude bins
-    high_counts = n_per_bin[high_indices]
-    mean_high_counts = np.mean(high_counts)
-    std_high_counts = np.std(high_counts)
-    if std_high_counts == 0:
-        warnings.warn(
-            "All the high-amplitude bins have the same size. Please consider changing n_bins. "
-            "Setting noise cutoff to NaN"
-        )
-        return np.nan, ratio
-
-    cutoff = (mean_low_counts - mean_high_counts) / std_high_counts
-    return cutoff, ratio
-
-
-def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
-    """
-    Compute the number of spike across segments.
-
-    Parameters
-    ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object.
-    unit_ids : list or None
-        The list of unit ids to compute the number of spikes. If None, all units are used.
-
-    Returns
-    -------
-    num_spikes : dict
-        The number of spikes, across all segments, for each unit ID.
-    """
-
-    sorting = sorting_analyzer.sorting
-    if unit_ids is None:
-        unit_ids = sorting.unit_ids
-    num_segs = sorting.get_num_segments()
-
-    num_spikes = {}
-    for unit_id in unit_ids:
-        n = 0
-        for segment_index in range(num_segs):
-            st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            n += st.size
-        num_spikes[unit_id] = n
-
-    return num_spikes
-
-
-_default_params["num_spikes"] = {}
-
-
-def compute_firing_rates(sorting_analyzer, unit_ids=None):
-    """
-    Compute the firing rate across segments.
-
-    Parameters
-    ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object.
-    unit_ids : list or None
-        The list of unit ids to compute the firing rate. If None, all units are used.
-
-    Returns
-    -------
-    firing_rates : dict of floats
-        The firing rate, across all segments, for each unit ID.
-    """
-
-    sorting = sorting_analyzer.sorting
-    if unit_ids is None:
-        unit_ids = sorting.unit_ids
-    total_duration = sorting_analyzer.get_total_duration()
-
-    firing_rates = {}
-    num_spikes = compute_num_spikes(sorting_analyzer)
-    for unit_id in unit_ids:
-        firing_rates[unit_id] = num_spikes[unit_id] / total_duration
-    return firing_rates
-
-
-_default_params["firing_rate"] = {}
-
-
-def compute_presence_ratios(sorting_analyzer, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0, unit_ids=None):
+def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0):
     """
     Calculate the presence ratio, the fraction of time the unit is firing above a certain threshold.
 
@@ -264,14 +43,14 @@ def compute_presence_ratios(sorting_analyzer, bin_duration_s=60.0, mean_fr_ratio
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object.
+    unit_ids : list or None
+        The list of unit ids to compute the presence ratio. If None, all units are used.
     bin_duration_s : float, default: 60
         The duration of each bin in seconds. If the duration is less than this value,
         presence_ratio is set to NaN.
     mean_fr_ratio_thresh : float, default: 0
         The unit is considered active in a bin if its firing rate during that bin.
         is strictly above `mean_fr_ratio_thresh` times its mean firing rate throughout the recording.
-    unit_ids : list or None
-        The list of unit ids to compute the presence ratio. If None, all units are used.
 
     Returns
     -------
@@ -331,17 +110,18 @@ def compute_presence_ratios(sorting_analyzer, bin_duration_s=60.0, mean_fr_ratio
     return presence_ratios
 
 
-_default_params["presence_ratio"] = dict(
-    bin_duration_s=60,
-    mean_fr_ratio_thresh=0.0,
-)
+class PresenceRatio(BaseMetric):
+    metric_name = "presence_ratio"
+    metric_function = compute_presence_ratios
+    metric_params = {"bin_duration_s": 60, "mean_fr_ratio_thresh": 0.0}
+    metric_columns = {"presence_ratio": float}
 
 
 def compute_snrs(
     sorting_analyzer,
+    unit_ids=None,
     peak_sign: str = "neg",
     peak_mode: str = "extremum",
-    unit_ids=None,
 ):
     """
     Compute signal to noise ratio.
@@ -350,14 +130,14 @@ def compute_snrs(
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object.
+    unit_ids : list or None
+        The list of unit ids to compute the SNR. If None, all units are used.
     peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the template to compute best channels.
     peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
         How to compute the amplitude.
         Extremum takes the maxima/minima
         At_index takes the value at t=sorting_analyzer.nbefore.
-    unit_ids : list or None
-        The list of unit ids to compute the SNR. If None, all units are used.
 
     Returns
     -------
@@ -391,10 +171,15 @@ def compute_snrs(
     return snrs
 
 
-_default_params["snr"] = dict(peak_sign="neg", peak_mode="extremum")
+class SNR(BaseMetric):
+    metric_name = "snr"
+    metric_function = compute_snrs
+    metric_params = {"peak_sign": "neg", "peak_mode": "extremum"}
+    metric_columns = {"snr": float}
+    depend_on = ["noise_levels", "templates"]
 
 
-def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0, unit_ids=None):
+def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5, min_isi_ms=0):
     """
     Calculate Inter-Spike Interval (ISI) violations.
 
@@ -407,6 +192,8 @@ def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0,
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object.
+    unit_ids : list or None
+        List of unit ids to compute the ISI violations. If None, all units are used.
     isi_threshold_ms : float, default: 1.5
         Threshold for classifying adjacent spikes as an ISI violation, in ms.
         This is the biophysical refractory period.
@@ -414,8 +201,6 @@ def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0,
         Minimum possible inter-spike interval, in ms.
         This is the artificial refractory period enforced.
         by the data acquisition system or post-processing algorithms.
-    unit_ids : list or None
-        List of unit ids to compute the ISI violations. If None, all units are used.
 
     Returns
     -------
@@ -480,11 +265,15 @@ def compute_isi_violations(sorting_analyzer, isi_threshold_ms=1.5, min_isi_ms=0,
     return res(isi_violations_ratio, isi_violations_count)
 
 
-_default_params["isi_violation"] = dict(isi_threshold_ms=1.5, min_isi_ms=0)
+class ISIViolation(BaseMetric):
+    metric_name = "isi_violation"
+    metric_function = compute_isi_violations
+    metric_params = {"isi_threshold_ms": 1.5, "min_isi_ms": 0}
+    metric_columns = {"isi_violations_ratio": float, "isi_violations_count": int}
 
 
 def compute_refrac_period_violations(
-    sorting_analyzer, refractory_period_ms: float = 1.0, censored_period_ms: float = 0.0, unit_ids=None
+    sorting_analyzer, unit_ids=None, refractory_period_ms: float = 1.0, censored_period_ms: float = 0.0
 ):
     """
     Calculate the number of refractory period violations.
@@ -497,13 +286,13 @@ def compute_refrac_period_violations(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object.
+    unit_ids : list or None
+        List of unit ids to compute the refractory period violations. If None, all units are used.
     refractory_period_ms : float, default: 1.0
         The period (in ms) where no 2 good spikes can occur.
     censored_period_ms : float, default: 0.0
         The period (in ms) where no 2 spikes can occur (because they are not detected, or
         because they were removed by another mean).
-    unit_ids : list or None
-        List of unit ids to compute the refractory period violations. If None, all units are used.
 
     Returns
     -------
@@ -526,6 +315,8 @@ def compute_refrac_period_violations(
     ----------
     Based on metrics described in [Llobet]_
     """
+    from spikeinterface.metrics.spiketrain.metrics import compute_num_spikes
+
     res = namedtuple("rp_violations", ["rp_contamination", "rp_violations"])
 
     if not HAVE_NUMBA:
@@ -574,18 +365,22 @@ def compute_refrac_period_violations(
     return res(rp_contamination, nb_violations)
 
 
-_default_params["rp_violation"] = dict(refractory_period_ms=1.0, censored_period_ms=0.0)
+class RPViolation(BaseMetric):
+    metric_name = "rp_violation"
+    metric_function = compute_refrac_period_violations
+    metric_params = {"refractory_period_ms": 1.0, "censored_period_ms": 0.0}
+    metric_columns = {"rp_contamination": float, "rp_violations": int}
 
 
 def compute_sliding_rp_violations(
     sorting_analyzer,
+    unit_ids=None,
     min_spikes=0,
     bin_size_ms=0.25,
     window_size_s=1,
     exclude_ref_period_below_ms=0.5,
     max_ref_period_ms=10,
     contamination_values=None,
-    unit_ids=None,
 ):
     """
     Compute sliding refractory period violations, a metric developed by IBL which computes
@@ -596,6 +391,8 @@ def compute_sliding_rp_violations(
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object.
+    unit_ids : list or None
+        List of unit ids to compute the sliding RP violations. If None, all units are used.
     min_spikes : int, default: 0
         Contamination  is set to np.nan if the unit has less than this many
         spikes across all segments.
@@ -609,8 +406,6 @@ def compute_sliding_rp_violations(
         Maximum refractory period to test in ms.
     contamination_values : 1d array or None, default: None
         The contamination values to test, If None, it is set to np.arange(0.5, 35, 0.5).
-    unit_ids : list or None
-        List of unit ids to compute the sliding RP violations. If None, all units are used.
 
     Returns
     -------
@@ -663,59 +458,18 @@ def compute_sliding_rp_violations(
     return contamination
 
 
-_default_params["sliding_rp_violation"] = dict(
-    min_spikes=0,
-    bin_size_ms=0.25,
-    window_size_s=1,
-    exclude_ref_period_below_ms=0.5,
-    max_ref_period_ms=10,
-    contamination_values=None,
-)
-
-
-def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
-    """
-    Compute synchrony counts, the number of simultaneous spikes with sizes `synchrony_sizes`.
-
-    Parameters
-    ----------
-    spikes : np.array
-        Structured numpy array with fields ("sample_index", "unit_index", "segment_index").
-    all_unit_ids : list or None, default: None
-        List of unit ids to compute the synchrony metrics. Expecting all units.
-    synchrony_sizes : None or np.array, default: None
-        The synchrony sizes to compute. Should be pre-sorted.
-
-    Returns
-    -------
-    synchrony_counts : np.ndarray
-        The synchrony counts for the synchrony sizes.
-
-    References
-    ----------
-    Based on concepts described in [Grün]_
-    This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
-    """
-
-    synchrony_counts = np.zeros((np.size(synchrony_sizes), len(all_unit_ids)), dtype=np.int64)
-
-    # compute the occurrence of each sample_index. Count >2 means there's synchrony
-    _, unique_spike_index, counts = np.unique(spikes["sample_index"], return_index=True, return_counts=True)
-
-    sync_indices = unique_spike_index[counts >= 2]
-    sync_counts = counts[counts >= 2]
-
-    for i, sync_index in enumerate(sync_indices):
-
-        num_of_syncs = sync_counts[i]
-        units_with_sync = [spikes[sync_index + a][1] for a in range(0, num_of_syncs)]
-
-        # Counts inclusively. E.g. if there are 3 simultaneous spikes, these are also added
-        # to the 2 simultaneous spike bins.
-        how_many_bins_to_add_to = np.size(synchrony_sizes[synchrony_sizes <= num_of_syncs])
-        synchrony_counts[:how_many_bins_to_add_to, units_with_sync] += 1
-
-    return synchrony_counts
+class SlidingRPViolation(BaseMetric):
+    metric_name = "sliding_rp_violation"
+    metric_function = compute_sliding_rp_violations
+    metric_params = {
+        "min_spikes": 0,
+        "bin_size_ms": 0.25,
+        "window_size_s": 1,
+        "exclude_ref_period_below_ms": 0.5,
+        "max_ref_period_ms": 10,
+        "contamination_values": None,
+    }
+    metric_columns = {"sliding_rp_violation": float}
 
 
 def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=None):
@@ -777,10 +531,14 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=N
     return res(**synchrony_metrics_dict)
 
 
-_default_params["synchrony"] = dict()
+class Synchrony(BaseMetric):
+    metric_name = "synchrony"
+    metric_function = compute_synchrony_metrics
+    metric_params = {}
+    metric_columns = {"sync_spike_2": float, "sync_spike_4": float, "sync_spike_8": float}
 
 
-def compute_firing_ranges(sorting_analyzer, bin_size_s=5, percentiles=(5, 95), unit_ids=None):
+def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percentiles=(5, 95)):
     """
     Calculate firing range, the range between the 5th and 95th percentiles of the firing rates distribution
     computed in non-overlapping time bins.
@@ -788,13 +546,13 @@ def compute_firing_ranges(sorting_analyzer, bin_size_s=5, percentiles=(5, 95), u
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
+        A SortingAnalyzer object.
+    unit_ids : list or None
+        List of unit ids to compute the firing range. If None, all units are used.
     bin_size_s : float, default: 5
         The size of the bin in seconds.
     percentiles : tuple, default: (5, 95)
         The percentiles to compute.
-    unit_ids : list or None
-        List of unit ids to compute the firing range. If None, all units are used.
 
     Returns
     -------
@@ -842,16 +600,20 @@ def compute_firing_ranges(sorting_analyzer, bin_size_s=5, percentiles=(5, 95), u
     return firing_ranges
 
 
-_default_params["firing_range"] = dict(bin_size_s=5, percentiles=(5, 95))
+class FiringRange(BaseMetric):
+    metric_name = "firing_range"
+    metric_function = compute_firing_ranges
+    metric_params = {"bin_size_s": 5, "percentiles": (5, 95)}
+    metric_columns = {"firing_range": float}
 
 
 def compute_amplitude_cv_metrics(
     sorting_analyzer,
+    unit_ids=None,
     average_num_spikes_per_bin=50,
     percentiles=(5, 95),
     min_num_bins=10,
     amplitude_extension="spike_amplitudes",
-    unit_ids=None,
 ):
     """
     Calculate coefficient of variation of spike amplitudes within defined temporal bins.
@@ -862,6 +624,8 @@ def compute_amplitude_cv_metrics(
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object.
+    unit_ids : list or None
+        List of unit ids to compute the amplitude spread. If None, all units are used.
     average_num_spikes_per_bin : int, default: 50
         The average number of spikes per bin. This is used to estimate a temporal bin size using the firing rate
         of each unit. For example, if a unit has a firing rate of 10 Hz, amd the average number of spikes per bin is
@@ -873,8 +637,6 @@ def compute_amplitude_cv_metrics(
         the median and range are set to NaN.
     amplitude_extension : str, default: "spike_amplitudes"
         The name of the extension to load the amplitudes from. "spike_amplitudes" or "amplitude_scalings".
-    unit_ids : list or None
-        List of unit ids to compute the amplitude spread. If None, all units are used.
 
     Returns
     -------
@@ -945,41 +707,26 @@ def compute_amplitude_cv_metrics(
     return res(amplitude_cv_medians, amplitude_cv_ranges)
 
 
-_default_params["amplitude_cv"] = dict(
-    average_num_spikes_per_bin=50, percentiles=(5, 95), min_num_bins=10, amplitude_extension="spike_amplitudes"
-)
-
-
-def _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign):
-    # used by compute_amplitude_cutoffs and compute_amplitude_medians
-
-    if (spike_amplitudes_extension := sorting_analyzer.get_extension("spike_amplitudes")) is not None:
-        return spike_amplitudes_extension.get_data(outputs="by_unit", concatenated=True)
-
-    elif sorting_analyzer.has_extension("waveforms"):
-        amplitudes_by_units = {}
-        waveforms_ext = sorting_analyzer.get_extension("waveforms")
-        before = waveforms_ext.nbefore
-        extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign)
-        for unit_id in unit_ids:
-            waveforms = waveforms_ext.get_waveforms_one_unit(unit_id, force_dense=False)
-            chan_id = extremum_channels_ids[unit_id]
-            if sorting_analyzer.is_sparse():
-                chan_ind = np.where(sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id] == chan_id)[0]
-            else:
-                chan_ind = sorting_analyzer.channel_ids_to_indices([chan_id])[0]
-            amplitudes_by_units[unit_id] = waveforms[:, before, chan_ind]
-
-    return amplitudes_by_units
+class AmplitudeCV(BaseMetric):
+    metric_name = "amplitude_cv"
+    metric_function = compute_amplitude_cv_metrics
+    metric_params = {
+        "average_num_spikes_per_bin": 50,
+        "percentiles": (5, 95),
+        "min_num_bins": 10,
+        "amplitude_extension": "spike_amplitudes",
+    }
+    metric_columns = {"amplitude_cv_median": float, "amplitude_cv_range": float}
+    depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
 def compute_amplitude_cutoffs(
     sorting_analyzer,
+    unit_ids=None,
     peak_sign="neg",
     num_histogram_bins=500,
     histogram_smoothing_value=3,
     amplitudes_bins_min_ratio=5,
-    unit_ids=None,
 ):
     """
     Calculate approximate fraction of spikes missing from a distribution of amplitudes.
@@ -988,6 +735,8 @@ def compute_amplitude_cutoffs(
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object.
+    unit_ids : list or None
+        List of unit ids to compute the amplitude cutoffs. If None, all units are used.
     peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the peaks.
     num_histogram_bins : int, default: 100
@@ -998,8 +747,6 @@ def compute_amplitude_cutoffs(
         The minimum ratio between number of amplitudes for a unit and the number of bins.
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set
         to NaN.
-    unit_ids : list or None
-        List of unit ids to compute the amplitude cutoffs. If None, all units are used.
 
     Returns
     -------
@@ -1053,12 +800,20 @@ def compute_amplitude_cutoffs(
     return all_fraction_missing
 
 
-_default_params["amplitude_cutoff"] = dict(
-    peak_sign="neg", num_histogram_bins=100, histogram_smoothing_value=3, amplitudes_bins_min_ratio=5
-)
+class AmplitudeCutoff(BaseMetric):
+    metric_name = "amplitude_cutoff"
+    metric_function = compute_amplitude_cutoffs
+    metric_params = {
+        "peak_sign": "neg",
+        "num_histogram_bins": 100,
+        "histogram_smoothing_value": 3,
+        "amplitudes_bins_min_ratio": 5,
+    }
+    metric_columns = {"amplitude_cutoff": float}
+    depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
-def compute_amplitude_medians(sorting_analyzer, peak_sign="neg", unit_ids=None):
+def compute_amplitude_medians(sorting_analyzer, unit_ids=None, peak_sign="neg"):
     """
     Compute median of the amplitude distributions (in absolute value).
 
@@ -1066,10 +821,10 @@ def compute_amplitude_medians(sorting_analyzer, peak_sign="neg", unit_ids=None):
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object.
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        The sign of the peaks.
     unit_ids : list or None
         List of unit ids to compute the amplitude medians. If None, all units are used.
+    peak_sign : "neg" | "pos" | "both", default: "neg"
+        The sign of the peaks.
 
     Returns
     -------
@@ -1094,18 +849,96 @@ def compute_amplitude_medians(sorting_analyzer, peak_sign="neg", unit_ids=None):
     return all_amplitude_medians
 
 
-_default_params["amplitude_median"] = dict(peak_sign="neg")
+class AmplitudeMedian(BaseMetric):
+    metric_name = "amplitude_median"
+    metric_function = compute_amplitude_medians
+    metric_params = {"peak_sign": "neg"}
+    metric_columns = {"amplitude_median": float}
+    depend_on = ["spike_amplitudes"]
+
+
+def compute_noise_cutoffs(sorting_analyzer, unit_ids=None, high_quantile=0.25, low_quantile=0.1, n_bins=100):
+    """
+    A metric to determine if a unit's amplitude distribution is cut off as it approaches zero, without assuming a Gaussian distribution.
+
+    Based on the histogram of the (transformed) amplitude:
+
+    1. This method compares counts in the lower-amplitude bins to counts in the top 'high_quantile' of the amplitude range.
+    It computes the mean and std of an upper quantile of the distribution, and calculates how many standard deviations away
+    from that mean the lower-quantile bins lie.
+
+    2. The method also compares the counts in the lower-amplitude bins to the count in the highest bin and return their ratio.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
+    unit_ids : list or None
+        List of unit ids to compute the amplitude cutoffs. If None, all units are used.
+    high_quantile : float, default: 0.25
+        Quantile of the amplitude range above which values are treated as "high" (e.g. 0.25 = top 25%), the reference region.
+    low_quantile : int, default: 0.1
+        Quantile of the amplitude range below which values are treated as "low" (e.g. 0.1 = lower 10%), the test region.
+    n_bins: int, default: 100
+        The number of bins to use to compute the amplitude histogram.
+
+    Returns
+    -------
+    noise_cutoff_dict : dict of floats
+        Estimated metrics based on the amplitude distribution, for each unit ID.
+
+    References
+    ----------
+    Inspired by metric described in [IBL2024]_
+
+    """
+    res = namedtuple("cutoff_metrics", ["noise_cutoff", "noise_ratio"])
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+
+    noise_cutoff_dict = {}
+    noise_ratio_dict = {}
+
+    amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
+    peak_sign = amplitude_extension.params["peak_sign"]
+    if peak_sign == "both":
+        raise TypeError(
+            '`peak_sign` should either be "pos" or "neg". You can set `peak_sign` as an argument when you compute spike_amplitudes.'
+        )
+
+    amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
+
+    for unit_id in unit_ids:
+        amplitudes = amplitudes_by_units[unit_id]
+
+        # We assume the noise (zero values) is on the lower tail of the amplitude distribution.
+        # But if peak_sign == 'neg', the noise will be on the higher tail, so we flip the distribution.
+        if peak_sign == "neg":
+            amplitudes = -amplitudes
+
+        cutoff, ratio = _noise_cutoff(amplitudes, high_quantile=high_quantile, low_quantile=low_quantile, n_bins=n_bins)
+        noise_cutoff_dict[unit_id] = cutoff
+        noise_ratio_dict[unit_id] = ratio
+
+    return res(noise_cutoff_dict, noise_ratio_dict)
+
+
+class NoiseCutoff(BaseMetric):
+    metric_name = "noise_cutoff"
+    metric_function = compute_noise_cutoffs
+    metric_params = {"high_quantile": 0.25, "low_quantile": 0.1, "n_bins": 100}
+    metric_columns = {"noise_cutoff": float, "noise_ratio": float}
 
 
 def compute_drift_metrics(
     sorting_analyzer,
+    unit_ids=None,
     interval_s=60,
     min_spikes_per_interval=100,
     direction="y",
     min_fraction_valid_intervals=0.5,
     min_num_bins=2,
     return_positions=False,
-    unit_ids=None,
 ):
     """
     Compute drifts metrics using estimated spike locations.
@@ -1125,6 +958,8 @@ def compute_drift_metrics(
     ----------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object.
+    unit_ids : list or None, default: None
+        List of unit ids to compute the drift metrics. If None, all units are used.
     interval_s : int, default: 60
         Interval length is seconds for computing spike depth.
     min_spikes_per_interval : int, default: 100
@@ -1140,8 +975,6 @@ def compute_drift_metrics(
         less bins, the metric values are set to NaN.
     return_positions : bool, default: False
         If True, median positions are returned (for debugging).
-    unit_ids : list or None, default: None
-        List of unit ids to compute the drift metrics. If None, all units are used.
 
     Returns
     -------
@@ -1260,7 +1093,177 @@ def compute_drift_metrics(
     return outs
 
 
-_default_params["drift"] = dict(interval_s=60, min_spikes_per_interval=100, direction="y", min_num_bins=2)
+class Drift(BaseMetric):
+    metric_name = "drift"
+    metric_function = compute_drift_metrics
+    metric_params = {
+        "interval_s": 60,
+        "min_spikes_per_interval": 100,
+        "direction": "y",
+        "min_num_bins": 2,
+    }
+    metric_columns = {"drift_ptp": float, "drift_std": float, "drift_mad": float}
+    depend_on = ["spike_locations"]
+
+
+def compute_sd_ratio(
+    sorting_analyzer: SortingAnalyzer,
+    unit_ids=None,
+    censored_period_ms: float = 4.0,
+    correct_for_drift: bool = True,
+    correct_for_template_itself: bool = True,
+    **kwargs,
+):
+    """
+    Computes the SD (Standard Deviation) of each unit's spike amplitudes, and compare it to the SD of noise.
+    In this case, noise refers to the global voltage trace on the same channel as the best channel of the unit.
+    (ideally (not implemented yet), the noise would be computed outside of spikes from the unit itself).
+
+    TODO: Take jitter into account.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
+    unit_ids : list or None, default: None
+        The list of unit ids to compute this metric. If None, all units are used.
+    censored_period_ms : float, default: 4.0
+        The censored period in milliseconds. This is to remove any potential bursts that could affect the SD.
+    correct_for_drift : bool, default: True
+        If True, will subtract the amplitudes sequentiially to significantly reduce the impact of drift.
+    correct_for_template_itself : bool, default:  True
+        If true, will take into account that the template itself impacts the standard deviation of the noise,
+        and will make a rough estimation of what that impact is (and remove it).
+    **kwargs : dict, default: {}
+        Keyword arguments for computing spike amplitudes and extremum channel.
+
+    Returns
+    -------
+    num_spikes : dict
+        The number of spikes, across all segments, for each unit ID.
+    """
+
+    from spikeinterface.curation.curation_tools import find_duplicated_spikes
+
+    kwargs, job_kwargs = split_job_kwargs(kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
+
+    sorting = sorting_analyzer.sorting
+
+    censored_period = int(round(censored_period_ms * 1e-3 * sorting_analyzer.sampling_frequency))
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+
+    if not sorting_analyzer.has_recording():
+        warnings.warn(
+            "The `sd_ratio` metric cannot work with a recordless SortingAnalyzer object"
+            "SD ratio metric will be set to NaN"
+        )
+        return {unit_id: np.nan for unit_id in unit_ids}
+
+    spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
+
+    if not HAVE_NUMBA:
+        warnings.warn(
+            "'sd_ratio' metric computation requires numba. Install it with >>> pip install numba. "
+            "SD ratio metric will be set to NaN"
+        )
+        return {unit_id: np.nan for unit_id in unit_ids}
+    job_kwargs["progress_bar"] = False
+    noise_levels = get_noise_levels(
+        sorting_analyzer.recording, return_in_uV=sorting_analyzer.return_in_uV, method="std", **job_kwargs
+    )
+    best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
+    n_spikes = sorting.count_num_spikes_per_unit()
+
+    if correct_for_template_itself:
+        tamplates_array = get_dense_templates_array(sorting_analyzer, return_in_uV=sorting_analyzer.return_in_uV)
+
+    spikes = sorting.to_spike_vector()
+    sd_ratio = {}
+    for unit_id in unit_ids:
+        unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+
+        spk_amp = []
+
+        for segment_index in range(sorting_analyzer.get_num_segments()):
+
+            spike_mask = (spikes["unit_index"] == unit_index) & (spikes["segment_index"] == segment_index)
+            spike_train = spikes[spike_mask]["sample_index"].astype(np.int64, copy=False)
+            amplitudes = spike_amplitudes[spike_mask]
+
+            censored_indices = find_duplicated_spikes(
+                spike_train,
+                censored_period,
+                method="keep_first_iterative",
+            )
+
+            spk_amp.append(np.delete(amplitudes, censored_indices))
+
+        spk_amp = np.concatenate([spk_amp[i] for i in range(len(spk_amp))])
+
+        if len(spk_amp) == 0:
+            sd_ratio[unit_id] = np.nan
+        elif len(spk_amp) == 1:
+            sd_ratio[unit_id] = 0.0
+        else:
+            if correct_for_drift:
+                unit_std = np.std(np.diff(spk_amp)) / np.sqrt(2)
+            else:
+                unit_std = np.std(spk_amp)
+
+            best_channel = best_channels[unit_id]
+            std_noise = noise_levels[best_channel]
+
+            if correct_for_template_itself:
+                # template = sorting_analyzer.get_template(unit_id, force_dense=True)[:, best_channel]
+
+                template = tamplates_array[unit_index, :, :][:, best_channel]
+                nsamples = template.shape[0]
+
+                # Computing the variance of a trace that is all 0 and n_spikes non-overlapping template.
+                # TODO: Take into account that templates for different segments might differ.
+                p = nsamples * n_spikes[unit_id] / sorting_analyzer.get_total_samples()
+                total_variance = p * np.mean(template**2) - p**2 * np.mean(template) ** 2
+
+                std_noise = np.sqrt(std_noise**2 - total_variance)
+
+            sd_ratio[unit_id] = unit_std / std_noise
+
+    return sd_ratio
+
+
+class SDRatio(BaseMetric):
+    metric_name = "sd_ratio"
+    metric_function = compute_sd_ratio
+    metric_params = {
+        "censored_period_ms": 4.0,
+        "correct_for_drift": True,
+        "correct_for_template_itself": True,
+    }
+    metric_columns = {"sd_ratio": float}
+    needs_recording = True
+    depend_on = ["templates", "spike_amplitudes"]
+
+
+# Group metrics into categories
+misc_metrics_list = [
+    NumSpikes,
+    FiringRate,
+    PresenceRatio,
+    SNR,
+    ISIViolation,
+    RPViolation,
+    SlidingRPViolation,
+    Synchrony,
+    FiringRange,
+    AmplitudeCV,
+    AmplitudeCutoff,
+    NoiseCutoff,
+    AmplitudeMedian,
+    Drift,
+    SDRatio,
+]
 
 
 ### LOW-LEVEL FUNCTIONS ###
@@ -1514,6 +1517,158 @@ def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, cont
     return confidence_score
 
 
+def _noise_cutoff(amps, high_quantile=0.25, low_quantile=0.1, n_bins=100):
+    """
+    A metric to determine if a unit's amplitude distribution is cut off as it approaches zero, without assuming a Gaussian distribution.
+
+    Based on the histogram of the (transformed) amplitude:
+
+    1. This method compares counts in the lower-amplitude bins to counts in the higher_amplitude bins.
+    It computes the mean and std of an upper quantile of the distribution, and calculates how many standard deviations away
+    from that mean the lower-quantile bins lie.
+
+    2. The method also compares the counts in the lower-amplitude bins to the count in the highest bin and return their ratio.
+
+    Parameters
+    ----------
+    amps : array-like
+        Spike amplitudes.
+    high_quantile : float, default: 0.25
+        Quantile of the amplitude range above which values are treated as "high" (e.g. 0.25 = top 25%), the reference region.
+    low_quantile : int, default: 0.1
+        Quantile of the amplitude range below which values are treated as "low" (e.g. 0.1 = lower 10%), the test region.
+    n_bins: int, default: 100
+        The number of bins to use to compute the amplitude histogram.
+
+    Returns
+    -------
+    cutoff : float
+        (mean(lower_bins_count) - mean(high_bins_count)) / std(high_bins_count)
+    ratio: float
+        mean(lower_bins_count) / highest_bin_count
+
+    """
+    n_per_bin, bin_edges = np.histogram(amps, bins=n_bins)
+
+    maximum_bin_height = np.max(n_per_bin)
+
+    low_quantile_value = np.quantile(amps, q=low_quantile)
+
+    # the indices for low-amplitude bins
+    low_indices = np.where(bin_edges[1:] <= low_quantile_value)[0]
+
+    high_quantile_value = np.quantile(amps, q=1 - high_quantile)
+
+    # the indices for high-amplitude bins
+    high_indices = np.where(bin_edges[:-1] >= high_quantile_value)[0]
+
+    if len(low_indices) == 0:
+        warnings.warn(
+            "No bin is selected to test cutoff. Please increase low_quantile. Setting noise cutoff and ratio to NaN"
+        )
+        return np.nan, np.nan
+
+    # compute ratio between low-amplitude bins and the largest bin
+    low_counts = n_per_bin[low_indices]
+    mean_low_counts = np.mean(low_counts)
+    ratio = mean_low_counts / maximum_bin_height
+
+    if len(high_indices) == 0:
+        warnings.warn(
+            "No bin is selected as the reference region. Please increase high_quantile. Setting noise cutoff to NaN"
+        )
+        return np.nan, ratio
+
+    if len(high_indices) == 1:
+        warnings.warn(
+            "Only one bin is selected as the reference region, and thus the standard deviation cannot be computed. "
+            "Please increase high_quantile. Setting noise cutoff to NaN"
+        )
+        return np.nan, ratio
+
+    # compute cutoff from low-amplitude and high-amplitude bins
+    high_counts = n_per_bin[high_indices]
+    mean_high_counts = np.mean(high_counts)
+    std_high_counts = np.std(high_counts)
+    if std_high_counts == 0:
+        warnings.warn(
+            "All the high-amplitude bins have the same size. Please consider changing n_bins. "
+            "Setting noise cutoff to NaN"
+        )
+        return np.nan, ratio
+
+    cutoff = (mean_low_counts - mean_high_counts) / std_high_counts
+    return cutoff, ratio
+
+
+def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
+    """
+    Compute synchrony counts, the number of simultaneous spikes with sizes `synchrony_sizes`.
+
+    Parameters
+    ----------
+    spikes : np.array
+        Structured numpy array with fields ("sample_index", "unit_index", "segment_index").
+    all_unit_ids : list or None, default: None
+        List of unit ids to compute the synchrony metrics. Expecting all units.
+    synchrony_sizes : None or np.array, default: None
+        The synchrony sizes to compute. Should be pre-sorted.
+
+    Returns
+    -------
+    synchrony_counts : np.ndarray
+        The synchrony counts for the synchrony sizes.
+
+    References
+    ----------
+    Based on concepts described in [Grün]_
+    This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
+    """
+
+    synchrony_counts = np.zeros((np.size(synchrony_sizes), len(all_unit_ids)), dtype=np.int64)
+
+    # compute the occurrence of each sample_index. Count >2 means there's synchrony
+    _, unique_spike_index, counts = np.unique(spikes["sample_index"], return_index=True, return_counts=True)
+
+    sync_indices = unique_spike_index[counts >= 2]
+    sync_counts = counts[counts >= 2]
+
+    for i, sync_index in enumerate(sync_indices):
+
+        num_of_syncs = sync_counts[i]
+        units_with_sync = [spikes[sync_index + a][1] for a in range(0, num_of_syncs)]
+
+        # Counts inclusively. E.g. if there are 3 simultaneous spikes, these are also added
+        # to the 2 simultaneous spike bins.
+        how_many_bins_to_add_to = np.size(synchrony_sizes[synchrony_sizes <= num_of_syncs])
+        synchrony_counts[:how_many_bins_to_add_to, units_with_sync] += 1
+
+    return synchrony_counts
+
+
+def _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign):
+    # used by compute_amplitude_cutoffs and compute_amplitude_medians
+
+    if (spike_amplitudes_extension := sorting_analyzer.get_extension("spike_amplitudes")) is not None:
+        return spike_amplitudes_extension.get_data(outputs="by_unit", concatenated=True)
+
+    elif sorting_analyzer.has_extension("waveforms"):
+        amplitudes_by_units = {}
+        waveforms_ext = sorting_analyzer.get_extension("waveforms")
+        before = waveforms_ext.nbefore
+        extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign)
+        for unit_id in unit_ids:
+            waveforms = waveforms_ext.get_waveforms_one_unit(unit_id, force_dense=False)
+            chan_id = extremum_channels_ids[unit_id]
+            if sorting_analyzer.is_sparse():
+                chan_ind = np.where(sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id] == chan_id)[0]
+            else:
+                chan_ind = sorting_analyzer.channel_ids_to_indices([chan_id])[0]
+            amplitudes_by_units[unit_id] = waveforms[:, before, chan_ind]
+
+    return amplitudes_by_units
+
+
 if HAVE_NUMBA:
     import numba
 
@@ -1549,137 +1704,3 @@ if HAVE_NUMBA:
             spike_train = spike_trains[spike_clusters == i]
             n_v = _compute_nb_violations_numba(spike_train, t_r)
             nb_rp_violations[i] += n_v
-
-
-def compute_sd_ratio(
-    sorting_analyzer: SortingAnalyzer,
-    censored_period_ms: float = 4.0,
-    correct_for_drift: bool = True,
-    correct_for_template_itself: bool = True,
-    unit_ids=None,
-    **kwargs,
-):
-    """
-    Computes the SD (Standard Deviation) of each unit's spike amplitudes, and compare it to the SD of noise.
-    In this case, noise refers to the global voltage trace on the same channel as the best channel of the unit.
-    (ideally (not implemented yet), the noise would be computed outside of spikes from the unit itself).
-
-    TODO: Take jitter into account.
-
-    Parameters
-    ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object.
-    censored_period_ms : float, default: 4.0
-        The censored period in milliseconds. This is to remove any potential bursts that could affect the SD.
-    correct_for_drift : bool, default: True
-        If True, will subtract the amplitudes sequentiially to significantly reduce the impact of drift.
-    correct_for_template_itself : bool, default:  True
-        If true, will take into account that the template itself impacts the standard deviation of the noise,
-        and will make a rough estimation of what that impact is (and remove it).
-    unit_ids : list or None, default: None
-        The list of unit ids to compute this metric. If None, all units are used.
-    **kwargs : dict, default: {}
-        Keyword arguments for computing spike amplitudes and extremum channel.
-
-    Returns
-    -------
-    num_spikes : dict
-        The number of spikes, across all segments, for each unit ID.
-    """
-
-    from spikeinterface.curation.curation_tools import find_duplicated_spikes
-
-    kwargs, job_kwargs = split_job_kwargs(kwargs)
-    job_kwargs = fix_job_kwargs(job_kwargs)
-
-    sorting = sorting_analyzer.sorting
-
-    censored_period = int(round(censored_period_ms * 1e-3 * sorting_analyzer.sampling_frequency))
-    if unit_ids is None:
-        unit_ids = sorting_analyzer.unit_ids
-
-    if not sorting_analyzer.has_recording():
-        warnings.warn(
-            "The `sd_ratio` metric cannot work with a recordless SortingAnalyzer object"
-            "SD ratio metric will be set to NaN"
-        )
-        return {unit_id: np.nan for unit_id in unit_ids}
-
-    spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
-
-    if not HAVE_NUMBA:
-        warnings.warn(
-            "'sd_ratio' metric computation requires numba. Install it with >>> pip install numba. "
-            "SD ratio metric will be set to NaN"
-        )
-        return {unit_id: np.nan for unit_id in unit_ids}
-    job_kwargs["progress_bar"] = False
-    noise_levels = get_noise_levels(
-        sorting_analyzer.recording, return_in_uV=sorting_analyzer.return_in_uV, method="std", **job_kwargs
-    )
-    best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
-    n_spikes = sorting.count_num_spikes_per_unit()
-
-    if correct_for_template_itself:
-        tamplates_array = get_dense_templates_array(sorting_analyzer, return_in_uV=sorting_analyzer.return_in_uV)
-
-    spikes = sorting.to_spike_vector()
-    sd_ratio = {}
-    for unit_id in unit_ids:
-        unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
-
-        spk_amp = []
-
-        for segment_index in range(sorting_analyzer.get_num_segments()):
-
-            spike_mask = (spikes["unit_index"] == unit_index) & (spikes["segment_index"] == segment_index)
-            spike_train = spikes[spike_mask]["sample_index"].astype(np.int64, copy=False)
-            amplitudes = spike_amplitudes[spike_mask]
-
-            censored_indices = find_duplicated_spikes(
-                spike_train,
-                censored_period,
-                method="keep_first_iterative",
-            )
-
-            spk_amp.append(np.delete(amplitudes, censored_indices))
-
-        spk_amp = np.concatenate([spk_amp[i] for i in range(len(spk_amp))])
-
-        if len(spk_amp) == 0:
-            sd_ratio[unit_id] = np.nan
-        elif len(spk_amp) == 1:
-            sd_ratio[unit_id] = 0.0
-        else:
-            if correct_for_drift:
-                unit_std = np.std(np.diff(spk_amp)) / np.sqrt(2)
-            else:
-                unit_std = np.std(spk_amp)
-
-            best_channel = best_channels[unit_id]
-            std_noise = noise_levels[best_channel]
-
-            if correct_for_template_itself:
-                # template = sorting_analyzer.get_template(unit_id, force_dense=True)[:, best_channel]
-
-                template = tamplates_array[unit_index, :, :][:, best_channel]
-                nsamples = template.shape[0]
-
-                # Computing the variance of a trace that is all 0 and n_spikes non-overlapping template.
-                # TODO: Take into account that templates for different segments might differ.
-                p = nsamples * n_spikes[unit_id] / sorting_analyzer.get_total_samples()
-                total_variance = p * np.mean(template**2) - p**2 * np.mean(template) ** 2
-
-                std_noise = np.sqrt(std_noise**2 - total_variance)
-
-            sd_ratio[unit_id] = unit_std / std_noise
-
-    return sd_ratio
-
-
-_default_params["sd_ratio"] = dict(
-    censored_period_ms=4.0,
-    correct_for_drift=True,
-    correct_for_template_itself=True,
-)
