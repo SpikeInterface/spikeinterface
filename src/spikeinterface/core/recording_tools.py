@@ -61,7 +61,7 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest):
     worker_ctx["byte_offset"] = byte_offest
     worker_ctx["dtype"] = np.dtype(dtype)
 
-    file_dict = {segment_index: open(file_path, "r+") for segment_index, file_path in file_path_dict.items()}
+    file_dict = {segment_index: open(file_path, "rb+") for segment_index, file_path in file_path_dict.items()}
     worker_ctx["file_dict"] = file_dict
 
     return worker_ctx
@@ -140,6 +140,47 @@ def write_binary_recording(
     executor.run()
 
 
+# # used by write_binary_recording + ChunkRecordingExecutor
+# def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
+#     # recover variables of the worker
+#     recording = worker_ctx["recording"]
+#     dtype = worker_ctx["dtype"]
+#     byte_offset = worker_ctx["byte_offset"]
+#     file = worker_ctx["file_dict"][segment_index]
+
+#     num_channels = recording.get_num_channels()
+#     dtype_size_bytes = np.dtype(dtype).itemsize
+
+#     # Calculate byte offsets for the start and end frames relative to the entire recording
+#     start_byte = byte_offset + start_frame * num_channels * dtype_size_bytes
+#     end_byte = byte_offset + end_frame * num_channels * dtype_size_bytes
+
+#     # The mmap offset must be a multiple of mmap.ALLOCATIONGRANULARITY
+#     memmap_offset, start_offset = divmod(start_byte, mmap.ALLOCATIONGRANULARITY)
+#     memmap_offset *= mmap.ALLOCATIONGRANULARITY
+
+#     # This maps in bytes the region of the memmap that corresponds to the chunk
+#     length = (end_byte - start_byte) + start_offset
+#     memmap_obj = mmap.mmap(file.fileno(), length=length, access=mmap.ACCESS_WRITE, offset=memmap_offset)
+
+#     # To use numpy semantics we use the array interface of the memmap object
+#     num_frames = end_frame - start_frame
+#     shape = (num_frames, num_channels)
+#     memmap_array = np.ndarray(shape=shape, dtype=dtype, buffer=memmap_obj, offset=start_offset)
+
+#     # Extract the traces and store them in the memmap array
+#     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+
+#     if traces.dtype != dtype:
+#         traces = traces.astype(dtype, copy=False)
+
+#     memmap_array[...] = traces
+
+#     memmap_obj.flush()
+
+#     memmap_obj.close()
+
+
 # used by write_binary_recording + ChunkRecordingExecutor
 def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
@@ -153,32 +194,14 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     # Calculate byte offsets for the start and end frames relative to the entire recording
     start_byte = byte_offset + start_frame * num_channels * dtype_size_bytes
-    end_byte = byte_offset + end_frame * num_channels * dtype_size_bytes
+    # end_byte = byte_offset + end_frame * num_channels * dtype_size_bytes
 
-    # The mmap offset must be a multiple of mmap.ALLOCATIONGRANULARITY
-    memmap_offset, start_offset = divmod(start_byte, mmap.ALLOCATIONGRANULARITY)
-    memmap_offset *= mmap.ALLOCATIONGRANULARITY
-
-    # This maps in bytes the region of the memmap that corresponds to the chunk
-    length = (end_byte - start_byte) + start_offset
-    memmap_obj = mmap.mmap(file.fileno(), length=length, access=mmap.ACCESS_WRITE, offset=memmap_offset)
-
-    # To use numpy semantics we use the array interface of the memmap object
-    num_frames = end_frame - start_frame
-    shape = (num_frames, num_channels)
-    memmap_array = np.ndarray(shape=shape, dtype=dtype, buffer=memmap_obj, offset=start_offset)
-
-    # Extract the traces and store them in the memmap array
     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
-
-    if traces.dtype != dtype:
-        traces = traces.astype(dtype, copy=False)
-
-    memmap_array[...] = traces
-
-    memmap_obj.flush()
-
-    memmap_obj.close()
+    
+    traces = traces.astype(dtype, order="c", copy=False)
+    
+    file.seek(start_byte)
+    file.write(traces.data)
 
 
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
