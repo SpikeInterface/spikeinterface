@@ -342,7 +342,7 @@ def generate_drifting_recording(
         unit_params=dict(
             alpha=(100.0, 500.0),
             spatial_decay=(10, 45),
-            ellipse_shink=(0.2, 1),
+            ellipse_shrink=(0.4, 1),
             ellipse_angle=(0, np.pi * 2),
         ),
     ),

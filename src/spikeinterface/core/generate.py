@@ -1660,7 +1660,7 @@ default_unit_params_range = dict(
     smooth_ms=(0.03, 0.07),
     spatial_decay=(10.0, 45.0),
     propagation_speed=(250.0, 350.0),  # um  / ms
-    ellipse_shink=(0.2, 1),
+    ellipse_shrink=(0.4, 1),
     ellipse_angle=(0, np.pi * 2),
 )
 
@@ -1826,7 +1826,7 @@ def generate_templates(
                 channel_locations,
                 units_locations[u],
                 x_factor=1,
-                y_factor=params["ellipse_shink"][u],
+                y_factor=params["ellipse_shrink"][u],
                 x_angle=0,
                 y_angle=0,
                 z_angle=params["ellipse_angle"][u],
