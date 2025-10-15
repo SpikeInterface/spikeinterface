@@ -26,11 +26,14 @@ def test_BaseRecording(create_cache_folder):
     num_samples = 30
     sampling_frequency = 10000
     dtype = "int16"
+    seed = None
+    rng = np.random.default_rng(seed=seed)
 
     file_paths = [cache_folder / f"test_base_recording_{i}.raw" for i in range(num_seg)]
     for i in range(num_seg):
         a = np.memmap(file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan))
-        a[:] = np.random.randn(*a.shape).astype(dtype)
+        a[:] = rng.normal(scale=5000, size=a.shape).astype(dtype)
+
     rec = BinaryRecordingExtractor(
         file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_chan, dtype=dtype
     )
@@ -201,6 +204,7 @@ def test_BaseRecording(create_cache_folder):
     positions2 = rec_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
     traces2 = rec2.get_traces(segment_index=0)
+
     assert np.array_equal(traces2, rec_p.get_traces(segment_index=0))
 
     # from probeinterface.plotting import plot_probe_group, plot_probe
@@ -468,5 +472,8 @@ def test_time_slice_with_time_vector():
 
 
 if __name__ == "__main__":
-    # test_BaseRecording()
-    test_interleaved_probegroups()
+    import tempfile
+    tmp_path = Path(tempfile.mkdtemp())
+
+    test_BaseRecording(tmp_path)
+    # test_interleaved_probegroups()
