@@ -160,14 +160,16 @@ def test_loading_provenance(create_cache_folder):
         noisy_channel_threshold=0.3,
         # this seed is for detect_bad_channels_kwargs this ensure the same random_chunk_kwargs
         # when several run
-        seed=2205
+        seed=2205,
     )
     pp_rec.save_to_folder(folder=cache_folder)
 
     loaded_pp_dict = get_preprocessing_dict_from_file(cache_folder / "provenance.pkl")
 
     pipeline_rec_applying_precomputed_kwargs = apply_preprocessing_pipeline(
-        rec, loaded_pp_dict, apply_precomputed_kwargs=True,
+        rec,
+        loaded_pp_dict,
+        apply_precomputed_kwargs=True,
     )
     pipeline_rec_ignoring_precomputed_kwargs = apply_preprocessing_pipeline(
         rec, loaded_pp_dict, apply_precomputed_kwargs=False
@@ -210,5 +212,6 @@ def test_loading_from_analyzer(create_cache_folder):
 if __name__ == "__main__":
     import tempfile
     from pathlib import Path
+
     tmp_folder = Path(tempfile.mkdtemp())
     test_loading_provenance(tmp_folder)
