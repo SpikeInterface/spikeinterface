@@ -586,8 +586,10 @@ if HAVE_NUMBA:
             (inds2,) = np.nonzero(labels == label2)
 
             if (inds1.size > 0) and (inds2.size > 0):
-                if (inds1.size < min_cluster_size) and (inds2.size < min_cluster_size):
+                # if (inds1.size < min_cluster_size) and (inds2.size < min_cluster_size):
+                if (inds1.size < min_cluster_size) or (inds2.size < min_cluster_size):
                     do_merge = True
+                    # do_merge = False
                 else:
                     X1 = X[inds1, :]
                     X2 = X[inds2, :]

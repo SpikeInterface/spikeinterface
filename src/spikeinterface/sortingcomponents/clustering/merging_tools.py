@@ -389,12 +389,14 @@ class ProjectDistribution:
                     from sklearn.decomposition import PCA
 
                     tsvd = PCA(n_pca_features, whiten=True)
+
                 elif projection_mode == "tsvd":
                     from sklearn.decomposition import TruncatedSVD
 
                     tsvd = TruncatedSVD(n_pca_features, random_state=seed)
 
                 feat = tsvd.fit_transform(feat)
+                
             else:
                 feat = feat
                 tsvd = None

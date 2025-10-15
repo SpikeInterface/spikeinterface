@@ -47,6 +47,9 @@ class IterativeISOSPLITClustering:
                 },
                 "min_size_split": 25,
                 "n_pca_features": 3,
+
+                # "projection_mode": "tsvd",
+                "projection_mode": "pca",
             },
         },
         "merge_from_templates": {

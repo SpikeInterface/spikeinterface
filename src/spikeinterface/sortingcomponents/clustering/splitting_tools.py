@@ -277,15 +277,20 @@ class LocalFeatureClustering:
                     from sklearn.decomposition import PCA
 
                     tsvd = PCA(n_pca_features, whiten=True)
+                    final_features = tsvd.fit_transform(flatten_features)
                 elif projection_mode == "tsvd":
                     from sklearn.decomposition import TruncatedSVD
 
                     tsvd = TruncatedSVD(n_pca_features, random_state=seed)
-
-                final_features = tsvd.fit_transform(flatten_features)
+                    final_features = tsvd.fit_transform(flatten_features)
+                
             else:
                 final_features = flatten_features
                 tsvd = None
+        elif n_pca_features is None:
+            final_features = flatten_features
+            tsvd = None
+
 
         if clusterer_method == "hdbscan":
             from hdbscan import HDBSCAN
@@ -317,11 +322,11 @@ class LocalFeatureClustering:
 
             possible_labels = isosplit(final_features, **clustering_kwargs_)
 
-            # min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)
-            # for i in np.unique(possible_labels):
-            #     mask = possible_labels == i
-            #     if np.sum(mask) < min_cluster_size:
-            #         possible_labels[mask] = -1
+            for i in np.unique(possible_labels):
+                mask = possible_labels == i
+                if np.sum(mask) < min_cluster_size:
+                    possible_labels[mask] = -1
+
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
         elif clusterer_method == "isosplit6":
             # this use the official C++ isosplit6 from Jeremy Magland
