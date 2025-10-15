@@ -18,26 +18,27 @@ from copy import deepcopy
 def get_default_classifier_search_spaces():
 
     from scipy.stats import uniform, randint
+    from skopt.space import Integer
 
     default_classifier_search_spaces = {
         "RandomForestClassifier": {
-            "n_estimators": [100, 150],
+            "n_estimators": Integer(low=100, high=150),
             "criterion": ["gini", "entropy"],
-            "min_samples_split": [2, 4],
-            "min_samples_leaf": [2, 4],
+            "min_samples_split": Integer(low=2, high=4),
+            "min_samples_leaf": Integer(low=2, high=4),
             "class_weight": ["balanced", "balanced_subsample"],
         },
         "AdaBoostClassifier": {
-            "learning_rate": [1, 2],
-            "n_estimators": [50, 100],
+            "learning_rate": Integer(low=1, high=2),
+            "n_estimators": Integer(low=50, high=100),
             "algorithm": ["SAMME", "SAMME.R"],
         },
         "GradientBoostingClassifier": {
             "learning_rate": uniform(0.05, 0.1),
             "n_estimators": randint(100, 150),
-            "max_depth": [2, 4],
-            "min_samples_split": [2, 4],
-            "min_samples_leaf": [2, 4],
+            "max_depth": Integer(low=2, high=4),
+            "min_samples_split": Integer(low=2, high=4),
+            "min_samples_leaf": Integer(low=2, high=4),
         },
         "SVC": {
             "C": uniform(0.001, 10.0),
@@ -51,13 +52,20 @@ def get_default_classifier_search_spaces():
             "max_iter": [100],
         },
         "XGBClassifier": {
-            "max_depth": [2, 4],
+            "max_depth": Integer(low=2, high=4),
             "eta": uniform(0.2, 0.5),
             "sampling_method": ["uniform"],
             "grow_policy": ["depthwise", "lossguide"],
         },
-        "CatBoostClassifier": {"depth": [2, 4], "learning_rate": uniform(0.05, 0.15), "n_estimators": [100, 150]},
-        "LGBMClassifier": {"learning_rate": uniform(0.05, 0.15), "n_estimators": randint(100, 150)},
+        "CatBoostClassifier": {
+            "depth": Integer(low=2, high=4),
+            "learning_rate": uniform(0.05, 0.15),
+            "n_estimators": Integer(low=100, high=150),
+        },
+        "LGBMClassifier": {
+            "learning_rate": uniform(0.05, 0.15),
+            "n_estimators": randint(100, 150),
+        },
         "MLPClassifier": {
             "activation": ["tanh", "relu"],
             "solver": ["adam"],
