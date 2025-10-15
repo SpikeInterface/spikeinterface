@@ -179,7 +179,7 @@ class IterativeISOSPLITClustering:
 
         if params["merge_from_features"]:
 
-            merge_from_features_kwargs = params["merge_features_kwargs"].copy()
+            merge_from_features_kwargs = params["merge_from_features"].copy()
             merge_radius_um = merge_from_features_kwargs.pop("merge_radius_um")
 
             post_merge_label1, templates_array, template_sparse_mask, unit_ids = merge_peak_labels_from_features(
