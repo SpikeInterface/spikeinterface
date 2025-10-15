@@ -18,27 +18,27 @@ from copy import deepcopy
 def get_default_classifier_search_spaces():
 
     from scipy.stats import uniform, randint
-    from skopt.space import Integer
 
+    # note: the top value of randint is exclusive
     default_classifier_search_spaces = {
         "RandomForestClassifier": {
-            "n_estimators": Integer(low=100, high=150),
+            "n_estimators": randint(low=100, high=150),
             "criterion": ["gini", "entropy"],
-            "min_samples_split": Integer(low=2, high=4),
-            "min_samples_leaf": Integer(low=2, high=4),
+            "min_samples_split": randint(low=2, high=5),
+            "min_samples_leaf": randint(low=2, high=5),
             "class_weight": ["balanced", "balanced_subsample"],
         },
         "AdaBoostClassifier": {
-            "learning_rate": Integer(low=1, high=2),
-            "n_estimators": Integer(low=50, high=100),
+            "learning_rate": randint(low=1, high=3),
+            "n_estimators": randint(low=50, high=100),
             "algorithm": ["SAMME", "SAMME.R"],
         },
         "GradientBoostingClassifier": {
             "learning_rate": uniform(0.05, 0.1),
             "n_estimators": randint(100, 150),
-            "max_depth": Integer(low=2, high=4),
-            "min_samples_split": Integer(low=2, high=4),
-            "min_samples_leaf": Integer(low=2, high=4),
+            "max_depth": randint(low=2, high=5),
+            "min_samples_split": randint(low=2, high=5),
+            "min_samples_leaf": randint(low=2, high=5),
         },
         "SVC": {
             "C": uniform(0.001, 10.0),
@@ -52,15 +52,15 @@ def get_default_classifier_search_spaces():
             "max_iter": [100],
         },
         "XGBClassifier": {
-            "max_depth": Integer(low=2, high=4),
+            "max_depth": randint(low=2, high=5),
             "eta": uniform(0.2, 0.5),
             "sampling_method": ["uniform"],
             "grow_policy": ["depthwise", "lossguide"],
         },
         "CatBoostClassifier": {
-            "depth": Integer(low=2, high=4),
+            "depth": randint(low=2, high=5),
             "learning_rate": uniform(0.05, 0.15),
-            "n_estimators": Integer(low=100, high=150),
+            "n_estimators": randint(low=100, high=150),
         },
         "LGBMClassifier": {
             "learning_rate": uniform(0.05, 0.15),
