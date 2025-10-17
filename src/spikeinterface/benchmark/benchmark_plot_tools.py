@@ -398,6 +398,7 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None, axs=None):
 
     return fig
 
+
 def _plot_performances_vs_metric(
     study,
     metric_name,
@@ -597,6 +598,7 @@ def plot_performances_vs_snr(
         axs=axs,
     )
 
+
 def plot_performances_vs_firing_rate(
     study,
     case_keys=None,
@@ -666,10 +668,6 @@ def plot_performances_vs_firing_rate(
         num_bin_average=num_bin_average,
         axs=axs,
     )
-
-
-
-
 
 
 def plot_performances_ordered(
