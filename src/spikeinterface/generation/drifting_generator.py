@@ -18,6 +18,7 @@ from spikeinterface.core.generate import (
     generate_sorting,
     generate_templates,
     _ensure_unit_params,
+    _ensure_seed,
 )
 from .drift_tools import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
 from .noise_tools import generate_noise
@@ -402,6 +403,9 @@ def generate_drifting_recording(
 
         This can be helpfull for motion benchmark.
     """
+
+    seed = _ensure_seed(seed)
+
     # probe
     if generate_probe_kwargs is None:
         generate_probe_kwargs = _toy_probes[probe_name]
