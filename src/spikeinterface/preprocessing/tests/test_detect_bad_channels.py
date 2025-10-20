@@ -169,9 +169,7 @@ def test_detect_bad_channels_ibl(num_channels):
 
     # Generate random channels to be dead / noisy
     rng = np.random.default_rng(seed=None)
-    is_bad = rng.choice(
-        np.arange(num_channels - 3), size=np.random.randint(5, int(num_channels * 0.25)), replace=False
-    )
+    is_bad = rng.choice(np.arange(num_channels - 3), size=np.random.randint(5, int(num_channels * 0.25)), replace=False)
     is_noisy, is_dead = np.array_split(is_bad, 2)
     not_noisy = np.delete(np.arange(num_channels), is_noisy)
 
