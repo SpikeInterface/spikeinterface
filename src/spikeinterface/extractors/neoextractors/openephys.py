@@ -106,10 +106,12 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
 
 class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading data saved by the Open Ephys GUI.
+    Class for reading data saved by the Open Ephys GUI in "binary" format.
 
-    This extractor works with the  Open Ephys "binary" format, which saves data using
-    one file per continuous stream (.dat files).
+    This extractor reads Open Ephys binary format data, which organizes recordings in a hierarchical
+    structure: Record Nodes (hardware devices) contain Experiments (experimental sessions or groupings)
+    which contain Recordings (individual recording sessions). Each recording contains continuous
+    signal streams (.dat files) and event streams.
 
     https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html
 
@@ -117,58 +119,150 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    folder_path : str
-        The folder path to the root folder (containing the record node folders)
+    folder_path : str or Path
+        Path to the Open Ephys data directory. Can point to:
+        - Root folder containing Record Node folders (recommended for multi-node recordings)
+        - Specific Record Node folder (e.g., "Record Node 102")
+        - Specific experiment folder (e.g., "experiment1")
+        - Specific recording folder (e.g., "recording1")
+        The reader will automatically detect the directory level and parse accordingly.
+    experiment_name : str or None, default: None
+        Name of the experiment to load (e.g., "experiment1", "experiment2").
+        If multiple experiments are available and this is None, the first experiment is loaded.
+        This parameter provides a more intuitive way to select experiments compared to block_index.
+        Note: Only one experiment can be loaded at a time in SpikeInterface.
+        Examples: experiment_name="experiment1", experiment_name="experiment3"
+    stream_id : str, default: None
+        If there are several streams, specify the stream id you want to load
+    stream_name : str, default: None
+        If there are several streams, specify the stream name you want to load
+    block_index : int or None, default: None
+        **DEPRECATED: Use experiment_name instead. Will be removed in version 0.105.0**
+        If there are several blocks (experiments), specify the block index you want to load.
+        block_index=0 corresponds to experiment1, block_index=1 to experiment2, etc.
     load_sync_channel : bool, default: False
-        If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded
+        **DEPRECATED: Use stream_name or stream_id to load sync streams. Will be removed in version 0.104.0**
+        If False (default) and a SYNC channel is present (e.g., Neuropixels), this is not loaded.
         If True, the SYNC channel is loaded and can be accessed in the analog signals.
     load_sync_timestamps : bool, default: False
         If True, the synchronized_timestamps are loaded and set as times to the recording.
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
         to be uniform and linearly increasing
-    experiment_names : str, list, or None, default: None
-        If multiple experiments are available, this argument allows users to select one
-        or more experiments. If None, all experiements are loaded as blocks.
-        E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
-    stream_id : str, default: None
-        If there are several streams, specify the stream id you want to load
-    stream_name : str, default: None
-        If there are several streams, specify the stream name you want to load
-    block_index : int, default: None
-        If there are several blocks (experiments), specify the block index you want to load
     all_annotations : bool, default: False
         Load exhaustively all annotation from neo
 
     Notes
     -----
-    If no stream is explicitly specified and there are exactly two streams (neural data and
-    synchronization data), the neural data stream will be automatically selected.
+    Open Ephys Binary Format Structure:
+        dirname/
+        ├── Record Node 102/              # Recording hardware node
+        │   ├── settings.xml
+        │   ├── experiment1/              # Experiment folder (acquisition start/stop)
+        │   │   ├── recording1/           # Recording session (record start/stop)
+        │   │   │   ├── structure.oebin   # JSON metadata file
+        │   │   │   ├── continuous/       # Signal streams
+        │   │   │   │   └── AP_band/
+        │   │   │   │       ├── continuous.dat
+        │   │   │   │       └── timestamps.npy
+        │   │   │   └── events/           # Event streams
+        │   │   └── recording2/
+        │   └── experiment2/
+        └── Record Node 103/              # Second hardware node (if present)
+
+    Neo Terminology Mapping:
+        - Neo Block <-> Open Ephys Experiment (device start/stop)
+        - Neo Segment <-> Open Ephys Recording (record start/stop)
+        - Block index starts at 0 (block_index=0 -> experiment1)
+
+
+
     """
 
     NeoRawIOClass = "OpenEphysBinaryRawIO"
 
+    @classmethod
+    def get_available_experiments(cls, folder_path):
+        """
+        Get list of available experiment names in an Open Ephys binary folder.
+
+        Parameters
+        ----------
+        folder_path : str or Path
+            Path to the Open Ephys data directory
+
+        Returns
+        -------
+        experiment_names : list of str
+            List of available experiment names (e.g., ["experiment1", "experiment2"])
+        """
+        from neo.rawio.openephysbinaryrawio import OpenEphysBinaryRawIO
+
+        _, possible_experiments = OpenEphysBinaryRawIO._parse_folder_structure(str(folder_path), experiment_names=None)
+        return possible_experiments
+
     def __init__(
         self,
         folder_path: str | Path,
-        load_sync_channel: bool = False,
-        load_sync_timestamps: bool = False,
-        experiment_names: str | list | None = None,
+        experiment_name: str | None = None,
         stream_id: str = None,
         stream_name: str = None,
         block_index: int = None,
+        load_sync_channel: bool = False,
+        load_sync_timestamps: bool = False,
         all_annotations: bool = False,
     ):
+        # Handle experiment_name and block_index parameters
+        if experiment_name is not None and block_index is not None:
+            raise ValueError(
+                "OpenEphysBinaryRecordingExtractor: Cannot specify both 'experiment_name' and 'block_index'. "
+                "Please use 'experiment_name' (recommended) or 'block_index' (deprecated)."
+            )
+
+        if block_index is not None:
+            warnings.warn(
+                "OpenEphysBinaryRecordingExtractor: 'block_index' is deprecated and will be removed in version 0.105.0. "
+                "Use 'experiment_name' instead (e.g., experiment_name='experiment2' instead of block_index=1).",
+                FutureWarning,
+                stacklevel=2,
+            )
+
+        # Convert experiment_name to experiment_names for Neo
+        # When using experiment_name, Neo will filter to only that experiment, making it block_index=0
+        experiment_names_for_neo = None
+        if experiment_name is not None:
+            # Validate that the experiment exists
+            available_experiments = self.get_available_experiments(folder_path)
+            if experiment_name not in available_experiments:
+                raise ValueError(
+                    f"OpenEphysBinaryRecordingExtractor: experiment_name '{experiment_name}' not found. "
+                    f"Available experiments: {available_experiments}"
+                )
+            experiment_names_for_neo = [experiment_name]
+            # When filtering to a single experiment, it becomes block 0
+            block_index = 0
+        elif block_index is None:
+            # If neither experiment_name nor block_index is provided, check for multiple experiments
+            # and provide a helpful error message
+            available_experiments = self.get_available_experiments(folder_path)
+            if len(available_experiments) > 1:
+                raise ValueError(
+                    f"OpenEphysBinaryRecordingExtractor: Multiple experiments found: {available_experiments}. "
+                    f"Please specify which experiment to load using the 'experiment_name' parameter. "
+                    f"Example: experiment_name='{available_experiments[0]}'"
+                )
+            # Single experiment: no filtering needed, let base class handle it
+            block_index = None
 
         if load_sync_channel:
             warning_message = (
-                "OpenEphysBinaryRecordingExtractor: `load_sync_channel` is deprecated and will"
+                "OpenEphysBinaryRecordingExtractor: `load_sync_channel` is deprecated and will "
                 "be removed in version 0.104, use the `stream_name` or `stream_id` to load the sync stream if needed"
             )
             warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
 
         stream_is_not_specified = stream_name is None and stream_id is None
         if stream_is_not_specified:
-            available_stream_names, _ = self.get_streams(folder_path, load_sync_channel, experiment_names)
+            available_stream_names, _ = self.get_streams(folder_path, load_sync_channel, experiment_names_for_neo)
 
             # Auto-select neural data stream when there are exactly two streams (neural + sync)
             # and no stream was explicitly specified
@@ -178,7 +272,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     neural_stream_name = next(stream for stream in available_stream_names if "SYNC" not in stream)
                     stream_name = neural_stream_name
 
-        neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel, experiment_names)
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel, experiment_names_for_neo)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -191,7 +285,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         stream_is_sync = "SYNC" in self.stream_name
         if not stream_is_sync:
             # get streams to find correct probe
-            stream_names, stream_ids = self.get_streams(folder_path, load_sync_channel, experiment_names)
+            stream_names, stream_ids = self.get_streams(folder_path, load_sync_channel, experiment_names_for_neo)
             if stream_name is None and stream_id is None:
                 stream_name = stream_names[0]
             elif stream_name is None:
@@ -271,9 +365,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs.update(
             dict(
                 folder_path=str(Path(folder_path).absolute()),
+                experiment_name=experiment_name,
                 load_sync_channel=load_sync_channel,
                 load_sync_timestamps=load_sync_timestamps,
-                experiment_names=experiment_names,
             )
         )
 
@@ -318,21 +412,26 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
 
 def read_openephys(folder_path, **kwargs):
     """
-    Read Open Ephys folder (in "binary" or "open ephys" legacy" format).
+    Read Open Ephys folder (in "binary" or "open ephys legacy" format).
 
     Parameters
     ----------
     folder_path : str or Path
         Path to openephys folder
+    experiment_name : str, default: None
+        Name of the experiment to load (e.g., "experiment1", "experiment2").
+        For open ephys binary format only
     stream_id : str, default: None
         If there are several streams, specify the stream id you want to load
     stream_name : str, default: None
         If there are several streams, specify the stream name you want to load
     block_index : int, default: None
+        **DEPRECATED: Use experiment_name instead**
         If there are several blocks (experiments), specify the block index you want to load
     all_annotations : bool, default: False
         Load exhaustively all annotation from neo
     load_sync_channel : bool, default: False
+        **DEPRECATED: Use stream_name or stream_id to load sync streams**
         If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
         If True, the SYNC channel is loaded and can be accessed in the analog signals.
         For open ephys binary format only
@@ -341,11 +440,6 @@ def read_openephys(folder_path, **kwargs):
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
         to be uniform and linearly increasing.
         For open ephys binary format only
-    experiment_names : str, list, or None, default: None
-        If multiple experiments are available, this argument allows users to select one
-        or more experiments. If None, all experiements are loaded as blocks.
-        E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
-        For open ephys binary format only
     ignore_timestamps_errors : bool, default: False
         Ignore the discontinuous timestamps errors in neo
         For open ephys legacy format only
@@ -353,7 +447,7 @@ def read_openephys(folder_path, **kwargs):
 
     Returns
     -------
-    recording : OpenEphysLegacyRecordingExtractor or OpenEphysBinaryExtractor
+    recording : OpenEphysLegacyRecordingExtractor or OpenEphysBinaryRecordingExtractor
     """
     # auto guess format
     files = [f for f in Path(folder_path).iterdir()]
