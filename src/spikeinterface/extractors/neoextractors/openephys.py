@@ -128,10 +128,10 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         The reader will automatically detect the directory level and parse accordingly.
     experiment_name : str or None, default: None
         Name of the experiment to load (e.g., "experiment1", "experiment2").
-        If multiple experiments are available and this is None, the first experiment is loaded.
-        This parameter provides a more intuitive way to select experiments compared to block_index.
+        If multiple experiments are available and neither experiment_name nor block_index is specified,
+        an error will be raised listing all available experiments.
+        Use the get_available_experiments() class method to discover available experiments.
         Note: Only one experiment can be loaded at a time in SpikeInterface.
-        Examples: experiment_name="experiment1", experiment_name="experiment3"
     stream_id : str, default: None
         If there are several streams, specify the stream id you want to load
     stream_name : str, default: None
@@ -158,27 +158,49 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     Notes
     -----
     Open Ephys Binary Format Structure:
-        dirname/
+        folder_path/
         ├── Record Node 102/              # Recording hardware node
         │   ├── settings.xml
-        │   ├── experiment1/              # Experiment folder (acquisition start/stop)
-        │   │   ├── recording1/           # Recording session (record start/stop)
+        │   ├── experiment1/              # Experiment folder
+        │   │   ├── recording1/           # Recording session (SpikeInterface segment)
         │   │   │   ├── structure.oebin   # JSON metadata file
         │   │   │   ├── continuous/       # Signal streams
-        │   │   │   │   └── AP_band/
+        │   │   │   │   └── Neuropix-PXI-100.ProbeA-AP/
         │   │   │   │       ├── continuous.dat
         │   │   │   │       └── timestamps.npy
         │   │   │   └── events/           # Event streams
-        │   │   └── recording2/
-        │   └── experiment2/
+        │   │   └── recording2/           # Additional recording (additional segment)
+        │   └── experiment2/              # Different experiment
         └── Record Node 103/              # Second hardware node (if present)
 
-    Neo Terminology Mapping:
-        - Neo Block <-> Open Ephys Experiment (device start/stop)
-        - Neo Segment <-> Open Ephys Recording (record start/stop)
-        - Block index starts at 0 (block_index=0 -> experiment1)
+    Open Ephys to SpikeInterface Mapping:
+        - **Experiment** (experiment1, experiment2, ...)
+          → One SpikeInterface Recording object (select with experiment_name parameter)
+        - **Recording** (recording1, recording2, ...) within an experiment
+          → Segments within the Recording object (access via get_num_segments())
+        - **Continuous stream** (AP_band, LF_band, ...)
+          → The signal data loaded into the Recording (select with stream_name/stream_id)
 
+    Common Use Cases:
+        1. Single experiment dataset:
+           Simply specify folder_path, experiment will be auto-selected
 
+        2. Multi-experiment dataset:
+           Use get_available_experiments() to discover, then select with experiment_name
+
+        3. Multi-stream recording (e.g., Neuropixels AP + LF):
+           Use stream_name or stream_id to select which stream to load
+
+        4. Multi-recording experiment:
+           All recordings within an experiment are loaded as segments automatically
+
+        5. Multi-node recording:
+           Stream names will be prefixed with node name (e.g., "Record Node 102#AP")
+
+    See Also
+    --------
+    get_available_experiments : Discover available experiments in a dataset
+    get_streams : Discover available streams in a dataset
 
     """
 
