@@ -148,6 +148,10 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         If True, the synchronized_timestamps are loaded and set as times to the recording.
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
         to be uniform and linearly increasing
+    experiment_names : str, list, or None, default: None
+        **DEPRECATED: Use experiment_name instead. Will be removed in version 0.105.0**
+        This parameter was designed for Neo's multi-block loading, but SpikeInterface only loads
+        one block at a time. Use experiment_name to select a single experiment.
     all_annotations : bool, default: False
         Load exhaustively all annotation from neo
 
@@ -209,8 +213,18 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         block_index: int = None,
         load_sync_channel: bool = False,
         load_sync_timestamps: bool = False,
+        experiment_names: str | list | None = None,
         all_annotations: bool = False,
     ):
+        # Handle experiment_names deprecation
+        if experiment_names is not None:
+            warnings.warn(
+                "OpenEphysBinaryRecordingExtractor: 'experiment_names' is deprecated and will be removed in version 0.105.0. "
+                "Use 'experiment_name' instead to select a single experiment (e.g., experiment_name='experiment2').",
+                FutureWarning,
+                stacklevel=2,
+            )
+
         # Handle experiment_name and block_index parameters
         if experiment_name is not None and block_index is not None:
             raise ValueError(
@@ -228,8 +242,11 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
         # Convert experiment_name to experiment_names for Neo
         # When using experiment_name, Neo will filter to only that experiment, making it block_index=0
-        experiment_names_for_neo = None
+        # experiment_name takes precedence over experiment_names
+        experiment_names_for_neo = experiment_names  # Use deprecated parameter if provided
         if experiment_name is not None:
+            # experiment_name overrides experiment_names
+            experiment_names_for_neo = [experiment_name]
             # Validate that the experiment exists
             available_experiments = self.get_available_experiments(folder_path)
             if experiment_name not in available_experiments:
@@ -240,9 +257,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             experiment_names_for_neo = [experiment_name]
             # When filtering to a single experiment, it becomes block 0
             block_index = 0
-        elif block_index is None:
-            # If neither experiment_name nor block_index is provided, check for multiple experiments
-            # and provide a helpful error message
+        elif block_index is None and experiment_names_for_neo is None:
+            # If neither experiment_name, experiment_names, nor block_index is provided,
+            # check for multiple experiments and provide a helpful error message
             available_experiments = self.get_available_experiments(folder_path)
             if len(available_experiments) > 1:
                 raise ValueError(
