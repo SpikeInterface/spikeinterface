@@ -5,7 +5,7 @@ from spikeinterface.preprocessing import unsigned_to_signed
 
 
 def test_unsigned_to_signed():
-    rng = np.random.RandomState(0)
+    rng = np.random.default_rng(0)
     traces = rng.rand(10000, 4) * 100 + 2**15
     traces_uint16 = traces.astype("uint16")
     traces = rng.rand(10000, 4) * 100 + 2**31

@@ -137,7 +137,7 @@ def make_one_displacement_vector(
 
         min_bump_interval, max_bump_interval = bump_interval_s
 
-        rg = np.random.RandomState(seed=seed)
+        rg = np.random.default_rng(seed=seed)
         diff = rg.uniform(min_bump_interval, max_bump_interval, size=int(duration / min_bump_interval))
         bumps_times = np.cumsum(diff) + t_start_drift
         bumps_times = bumps_times[bumps_times < t_end_drift]
@@ -153,7 +153,7 @@ def make_one_displacement_vector(
                 displacement_vector[ind0:ind1] = -0.5
 
     elif drift_mode == "random_walk":
-        rg = np.random.RandomState(seed=seed)
+        rg = np.random.default_rng(seed=seed)
         steps = rg.random_integers(low=0, high=1, size=num_samples)
         steps = steps.astype("float64")
         # 0 -> -1 and 1 -> 1

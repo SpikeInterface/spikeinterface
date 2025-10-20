@@ -207,7 +207,7 @@ def get_prototype_and_waveforms_from_recording(
         recording_slices=recording_slices,
     )
 
-    rng = np.random.RandomState(seed)
+    rng = np.random.default_rng(seed)
     indices = rng.permutation(np.arange(len(res[0])))
 
     few_peaks = res[0][indices[:n_peaks]]

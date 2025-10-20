@@ -31,7 +31,7 @@ def split_sorting_by_times(
     """
 
     sorting = sorting_analyzer.sorting
-    rng = np.random.RandomState(seed)
+    rng = np.random.default_rng(seed)
     fs = sorting_analyzer.sampling_frequency
 
     nb_splits = int(splitting_probability * len(sorting.unit_ids))
@@ -102,7 +102,7 @@ def split_sorting_by_amplitudes(
     if sorting_analyzer.get_extension("spike_amplitudes") is None:
         sorting_analyzer.compute("spike_amplitudes")
 
-    rng = np.random.RandomState(seed)
+    rng = np.random.default_rng(seed)
     fs = sorting_analyzer.sampling_frequency
     from spikeinterface.core.template_tools import get_template_extremum_channel
 

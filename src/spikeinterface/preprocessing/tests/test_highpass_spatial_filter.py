@@ -92,7 +92,7 @@ def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, 
     options = dict(lagc=lagc, ntr_pad=ntr_pad, ntr_tap=ntr_tap, butter_kwargs=butter_kwargs)
 
     durations = [2, 2]
-    rng = np.random.RandomState(seed=100)
+    rng = np.random.default_rng(seed=100)
     si_recording = generate_recording(num_channels=num_channels, durations=durations)
 
     _, si_highpass_spatial_filter = run_si_highpass_filter(si_recording, get_traces=False, **options)

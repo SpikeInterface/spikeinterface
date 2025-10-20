@@ -296,7 +296,7 @@ def generate_sorting_to_inject(
             injected_spike_train = injected_spike_train[~violations]
 
             if len(injected_spike_train) > n_injection:
-                injected_spike_train = np.sort(np.random.choice(injected_spike_train, n_injection, replace=False))
+                injected_spike_train = np.sort(rng.choice(injected_spike_train, n_injection, replace=False))
 
             injected_spike_trains[segment_index][unit_id] = injected_spike_train
 
@@ -2168,7 +2168,7 @@ def _generate_multimodal(rng, size, num_modes, lim0, lim1):
         sigma = mode_step / 5.0
         prob += np.exp(-((bins - center) ** 2) / (2 * sigma**2))
     prob /= np.sum(prob)
-    choices = np.random.choice(np.arange(bins.size), size, p=prob)
+    choices = rng.choice(np.arange(bins.size), size, p=prob)
     values = bins[choices] + rng.uniform(low=-bin_step / 2, high=bin_step / 2, size=size)
     return values
 

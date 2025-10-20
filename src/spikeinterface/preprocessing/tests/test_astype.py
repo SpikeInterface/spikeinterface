@@ -11,7 +11,7 @@ import numpy as np
 
 
 def test_astype():
-    rng = np.random.RandomState(0)
+    rng = np.random.default_rng(0)
     traces = (rng.randn(10000, 4) * 100).astype("float32")
     rec_float32 = NumpyRecording(traces, sampling_frequency=30000)
     traces_int16 = traces.astype("int16")
