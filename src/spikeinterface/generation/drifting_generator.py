@@ -154,7 +154,7 @@ def make_one_displacement_vector(
 
     elif drift_mode == "random_walk":
         rg = np.random.default_rng(seed=seed)
-        steps = rg.integers(low=0, high=1, size=num_samples)
+        steps = rg.integers(low=0, high=1, size=num_samples, endpoint=True)
         steps = steps.astype("float64")
         # 0 -> -1 and 1 -> 1
         steps = steps * 2 - 1
