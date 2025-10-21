@@ -1634,13 +1634,17 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)
         elif isinstance(input, dict):
             params_, job_kwargs = split_job_kwargs(kwargs)
-            assert len(params_) == 0, ("Too many arguments for SortingAnalyzer.compute_several_extensions(), "
-                                       f"they are: {list(params_.keys())}")
+            assert len(params_) == 0, (
+                "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
+                f"they are: {list(params_.keys())}"
+            )
             self.compute_several_extensions(extensions=input, save=save, verbose=verbose, **job_kwargs)
         elif isinstance(input, list):
             params_, job_kwargs = split_job_kwargs(kwargs)
-            assert len(params_) == 0, ("Too many arguments for SortingAnalyzer.compute_several_extensions(), "
-                                       f"they are: {list(params_.keys())}")
+            assert len(params_) == 0, (
+                "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
+                f"they are: {list(params_.keys())}"
+            )
             extensions = {k: {} for k in input}
             if extension_params is not None:
                 for ext_name, ext_params in extension_params.items():
