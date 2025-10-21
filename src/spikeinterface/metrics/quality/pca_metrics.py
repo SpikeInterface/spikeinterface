@@ -300,7 +300,7 @@ class NearestNeighborAdvancedMetrics(BaseMetric):
         "peak_sign": "neg",
         "min_spatial_overlap": 0.5,
     }
-    metric_columns = {"nn_isolation": float, "nn_unit_id": "object", "nn_noise_overlap": float}
+    metric_columns = {"nn_isolation": float, "nn_noise_overlap": float}
     depend_on = ["principal_components", "waveforms", "templates"]
     needs_tmp_data = True
     needs_job_kwargs = True

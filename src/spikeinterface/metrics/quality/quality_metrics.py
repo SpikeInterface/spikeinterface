@@ -67,12 +67,12 @@ class ComputeQualityMetrics(BaseMetricExtension):
         if metric_names is None:
             metric_names = [m.metric_name for m in self.metric_list]
             # if PC is available, PC metrics are automatically added to the list
-            if skip_pc_metrics:
-                pc_metric_names = [m.metric_name for m in pca_metrics_list]
-                metric_names = [m for m in metric_names if m not in pc_metric_names]
             if "nn_advanced" in metric_names:
                 # remove nn_advanced because too slow
                 metric_names.remove("nn_advanced")
+        if skip_pc_metrics:
+            pc_metric_names = [m.metric_name for m in pca_metrics_list]
+            metric_names = [m for m in metric_names if m not in pc_metric_names]
 
         return super()._set_params(
             metric_names=metric_names,
@@ -171,7 +171,7 @@ def get_quality_pca_metric_list():
     Return a list of the available quality PCA metrics.
     """
 
-    return [m.metric_name for m in pca_metrics]
+    return [m.metric_name for m in pca_metrics_list]
 
 
 def get_default_qm_params(metric_names=None):

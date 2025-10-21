@@ -12,24 +12,24 @@ from spikeinterface.core import (
     synthesize_random_firings,
 )
 
-from spikeinterface.metrics.utils import create_ground_truth_pc_distributions
+from spikeinterface.metrics.quality.utils import create_ground_truth_pc_distributions
 
-from spikeinterface.metrics.quality_metric_list import (
-    _misc_metric_name_to_func,
-)
+# from spikeinterface.metrics.quality_metric_list import (
+#     _misc_metric_name_to_func,
+# )
 
-from spikeinterface.metrics import (
+from spikeinterface.metrics.quality import (
     get_quality_metric_list,
-    mahalanobis_metrics,
-    lda_metrics,
-    nearest_neighbors_metrics,
-    silhouette_score,
-    simplified_silhouette_score,
+    get_quality_pca_metric_list,
+    compute_quality_metrics,
+)
+from spikeinterface.metrics.quality.misc_metrics import (
+    misc_metrics_list,
     compute_amplitude_cutoffs,
     compute_presence_ratios,
     compute_isi_violations,
-    compute_firing_rates,
-    compute_num_spikes,
+    # compute_firing_rates,
+    # compute_num_spikes,
     compute_snrs,
     compute_refrac_period_violations,
     compute_sliding_rp_violations,
@@ -39,11 +39,19 @@ from spikeinterface.metrics import (
     compute_firing_ranges,
     compute_amplitude_cv_metrics,
     compute_sd_ratio,
-    compute_quality_metrics,
+    _noise_cutoff,
+    _get_synchrony_counts,
 )
 
+from spikeinterface.metrics.quality.pca_metrics import (
+    pca_metrics_list,
+    mahalanobis_metrics,
+    lda_metrics,
+    nearest_neighbors_metrics,
+    silhouette_score,
+    simplified_silhouette_score,
+)
 
-from spikeinterface.metrics.quality._old.misc_metrics_old import _noise_cutoff, _get_synchrony_counts
 
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
@@ -220,17 +228,16 @@ def test_unit_structure_in_output(small_sorting_analyzer):
         "rp_violation": {"refractory_period_ms": 10.0, "censored_period_ms": 0.0},
     }
 
-    for metric_name in get_quality_metric_list():
-
+    for metric in misc_metrics_list:
+        metric_name = metric.metric_name
+        metric_fun = metric.metric_function
         try:
             qm_param = qm_params[metric_name]
         except:
             qm_param = {}
 
-        result_all = _misc_metric_name_to_func[metric_name](sorting_analyzer=small_sorting_analyzer, **qm_param)
-        result_sub = _misc_metric_name_to_func[metric_name](
-            sorting_analyzer=small_sorting_analyzer, unit_ids=["#4", "#9"], **qm_param
-        )
+        result_all = metric_fun(sorting_analyzer=small_sorting_analyzer, **qm_param)
+        result_sub = metric_fun(sorting_analyzer=small_sorting_analyzer, unit_ids=["#4", "#9"], **qm_param)
 
         if isinstance(result_all, dict):
             assert list(result_all.keys()) == ["#3", "#9", "#4"]
@@ -283,10 +290,10 @@ def test_unit_id_order_independence(small_sorting_analyzer):
     }
 
     quality_metrics_1 = compute_quality_metrics(
-        small_sorting_analyzer, metric_names=get_quality_metric_list(), metric_params=qm_params
+        small_sorting_analyzer, metric_names=get_quality_metric_list(), metric_params=qm_params, skip_pc_metrics=True
     )
     quality_metrics_2 = compute_quality_metrics(
-        small_sorting_analyzer_2, metric_names=get_quality_metric_list(), metric_params=qm_params
+        small_sorting_analyzer_2, metric_names=get_quality_metric_list(), metric_params=qm_params, skip_pc_metrics=True
     )
 
     for metric, metric_2_data in quality_metrics_2.items():
@@ -479,16 +486,16 @@ def test_simplified_silhouette_score_metrics():
     assert sim_sil_score1 < sim_sil_score2
 
 
-def test_calculate_firing_rate_num_spikes(sorting_analyzer_simple):
-    sorting_analyzer = sorting_analyzer_simple
-    firing_rates = compute_firing_rates(sorting_analyzer)
-    num_spikes = compute_num_spikes(sorting_analyzer)
+# def test_calculate_firing_rate_num_spikes(sorting_analyzer_simple):
+#     sorting_analyzer = sorting_analyzer_simple
+#     firing_rates = compute_firing_rates(sorting_analyzer)
+#     num_spikes = compute_num_spikes(sorting_analyzer)
 
-    # testing method accuracy with magic number is not a good pratcice, I remove this.
-    # firing_rates_gt = {0: 10.01, 1: 5.03, 2: 5.09}
-    # num_spikes_gt = {0: 1001, 1: 503, 2: 509}
-    # assert np.allclose(list(firing_rates_gt.values()), list(firing_rates.values()), rtol=0.05)
-    # np.testing.assert_array_equal(list(num_spikes_gt.values()), list(num_spikes.values()))
+# testing method accuracy with magic number is not a good pratcice, I remove this.
+# firing_rates_gt = {0: 10.01, 1: 5.03, 2: 5.09}
+# num_spikes_gt = {0: 1001, 1: 503, 2: 509}
+# assert np.allclose(list(firing_rates_gt.values()), list(firing_rates.values()), rtol=0.05)
+# np.testing.assert_array_equal(list(num_spikes_gt.values()), list(num_spikes.values()))
 
 
 def test_calculate_firing_range(sorting_analyzer_simple):
