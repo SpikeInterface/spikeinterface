@@ -1636,14 +1636,14 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, (
                 "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
-                f"they are: {list(params_.keys())}"
+                f"they are: {set(params_)}"
             )
             self.compute_several_extensions(extensions=input, save=save, verbose=verbose, **job_kwargs)
         elif isinstance(input, list):
             params_, job_kwargs = split_job_kwargs(kwargs)
             assert len(params_) == 0, (
                 "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
-                f"they are: {list(params_.keys())}"
+                f"they are: {set(params_)}"
             )
             extensions = {k: {} for k in input}
             if extension_params is not None:
