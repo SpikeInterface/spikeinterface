@@ -132,14 +132,15 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         an error will be raised listing all available experiments.
         Use the get_available_experiments() class method to discover available experiments.
         Note: Only one experiment can be loaded at a time in SpikeInterface.
+        Cannot be used together with block_index.
     stream_id : str, default: None
         If there are several streams, specify the stream id you want to load
     stream_name : str, default: None
         If there are several streams, specify the stream name you want to load
     block_index : int or None, default: None
-        **DEPRECATED: Use experiment_name instead. Will be removed in version 0.105.0**
-        If there are several blocks (experiments), specify the block index you want to load.
+        Alternative way to specify which experiment to load using a zero-based index.
         block_index=0 corresponds to experiment1, block_index=1 to experiment2, etc.
+        Cannot be used together with experiment_name.
     load_sync_channel : bool, default: False
         **DEPRECATED: Use stream_name or stream_id to load sync streams. Will be removed in version 0.104.0**
         If False (default) and a SYNC channel is present (e.g., Neuropixels), this is not loaded.
@@ -251,15 +252,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         if experiment_name is not None and block_index is not None:
             raise ValueError(
                 "OpenEphysBinaryRecordingExtractor: Cannot specify both 'experiment_name' and 'block_index'. "
-                "Please use 'experiment_name' (recommended) or 'block_index' (deprecated)."
-            )
-
-        if block_index is not None:
-            warnings.warn(
-                "OpenEphysBinaryRecordingExtractor: 'block_index' is deprecated and will be removed in version 0.105.0. "
-                "Use 'experiment_name' instead (e.g., experiment_name='experiment2' instead of block_index=1).",
-                FutureWarning,
-                stacklevel=2,
+                "Please use either 'experiment_name' or 'block_index', but not both."
             )
 
         # Convert experiment_name to experiment_names for Neo
@@ -434,18 +427,78 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
     Parameters
     ----------
     folder_path : str
+        Path to the Open Ephys data directory
+    experiment_name : str or None, default: None
+        Name of the experiment to load (e.g., "experiment1", "experiment2").
+        Cannot be used together with block_index.
+    block_index : int or None, default: None
+        Alternative way to specify which experiment to load using a zero-based index.
+        Cannot be used together with experiment_name.
 
     """
 
     NeoRawIOClass = "OpenEphysBinaryRawIO"
 
-    def __init__(self, folder_path, block_index=None):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path)
+    @classmethod
+    def get_available_experiments(cls, folder_path):
+        """
+        Get list of available experiment names in an Open Ephys binary folder.
+
+        Parameters
+        ----------
+        folder_path : str or Path
+            Path to the Open Ephys data directory
+
+        Returns
+        -------
+        experiment_names : list of str
+            List of available experiment names (e.g., ["experiment1", "experiment2"])
+        """
+        from neo.rawio.openephysbinaryrawio import OpenEphysBinaryRawIO
+
+        _, possible_experiments = OpenEphysBinaryRawIO._parse_folder_structure(str(folder_path), experiment_names=None)
+        return possible_experiments
+
+    def __init__(self, folder_path, experiment_name=None, block_index=None):
+        # Handle experiment_name and block_index parameters
+        if experiment_name is not None and block_index is not None:
+            raise ValueError(
+                "OpenEphysBinaryEventExtractor: Cannot specify both 'experiment_name' and 'block_index'. "
+                "Please use either 'experiment_name' or 'block_index', but not both."
+            )
+
+        # Convert experiment_name to experiment_names for Neo
+        experiment_names_for_neo = None
+        if experiment_name is not None:
+            # Validate that the experiment exists
+            available_experiments = self.get_available_experiments(folder_path)
+            if experiment_name not in available_experiments:
+                raise ValueError(
+                    f"OpenEphysBinaryEventExtractor: experiment_name '{experiment_name}' not found. "
+                    f"Available experiments: {available_experiments}"
+                )
+            experiment_names_for_neo = [experiment_name]
+            # When filtering to a single experiment, it becomes block 0
+            block_index = 0
+        elif block_index is None and experiment_names_for_neo is None:
+            # If neither experiment_name nor block_index is provided,
+            # check for multiple experiments and provide a helpful error message
+            available_experiments = self.get_available_experiments(folder_path)
+            if len(available_experiments) > 1:
+                raise ValueError(
+                    f"OpenEphysBinaryEventExtractor: Multiple experiments found: {available_experiments}. "
+                    f"Please specify which experiment to load using the 'experiment_name' parameter. "
+                    f"Example: experiment_name='{available_experiments[0]}'"
+                )
+            # Single experiment: no filtering needed
+            block_index = None
+
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, experiment_names_for_neo)
         NeoBaseEventExtractor.__init__(self, block_index=block_index, **neo_kwargs)
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(folder_path)}
+    def map_to_neo_kwargs(cls, folder_path, experiment_names=None):
+        neo_kwargs = {"dirname": str(folder_path), "experiment_names": experiment_names}
         return neo_kwargs
 
 
@@ -459,14 +512,15 @@ def read_openephys(folder_path, **kwargs):
         Path to openephys folder
     experiment_name : str, default: None
         Name of the experiment to load (e.g., "experiment1", "experiment2").
-        For open ephys binary format only
+        For open ephys binary format only. Cannot be used together with block_index.
     stream_id : str, default: None
         If there are several streams, specify the stream id you want to load
     stream_name : str, default: None
         If there are several streams, specify the stream name you want to load
     block_index : int, default: None
-        **DEPRECATED: Use experiment_name instead**
-        If there are several blocks (experiments), specify the block index you want to load
+        Alternative way to specify which experiment to load using a zero-based index.
+        If there are several blocks (experiments), specify the block index you want to load.
+        Cannot be used together with experiment_name.
     all_annotations : bool, default: False
         Load exhaustively all annotation from neo
     load_sync_channel : bool, default: False
@@ -499,7 +553,7 @@ def read_openephys(folder_path, **kwargs):
     return recording
 
 
-def read_openephys_event(folder_path, block_index=None):
+def read_openephys_event(folder_path, experiment_name=None, block_index=None):
     """
     Read Open Ephys events from "binary" format.
 
@@ -507,8 +561,13 @@ def read_openephys_event(folder_path, block_index=None):
     ----------
     folder_path : str or Path
         Path to openephys folder
+    experiment_name : str or None, default: None
+        Name of the experiment to load (e.g., "experiment1", "experiment2").
+        Cannot be used together with block_index.
     block_index : int, default: None
+        Alternative way to specify which experiment to load using a zero-based index.
         If there are several blocks (experiments), specify the block index you want to load.
+        Cannot be used together with experiment_name.
 
     Returns
     -------
@@ -520,5 +579,5 @@ def read_openephys_event(folder_path, block_index=None):
         raise Exception("Events can be read only from 'binary' format")
     else:
         # format = 'binary'
-        event = OpenEphysBinaryEventExtractor(folder_path, block_index=block_index)
+        event = OpenEphysBinaryEventExtractor(folder_path, experiment_name=experiment_name, block_index=block_index)
     return event
