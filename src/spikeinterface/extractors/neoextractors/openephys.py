@@ -161,7 +161,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     Open Ephys Binary Format Structure:
         folder_path/
         ├── Record Node 102/              # Recording hardware node
-        │   ├── settings.xml
+        │   ├── settings.xml              # Settings for the first experiment
+        │   ├── settings_2.xml            # Settings for experiment 2
         │   ├── experiment1/              # Experiment folder
         │   │   ├── recording1/           # Recording session (SpikeInterface segment)
         │   │   │   ├── structure.oebin   # JSON metadata file
