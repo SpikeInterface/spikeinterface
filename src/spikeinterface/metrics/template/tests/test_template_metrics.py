@@ -1,5 +1,4 @@
 import pytest
-import pandas as pd
 
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 from spikeinterface.metrics.template import (
