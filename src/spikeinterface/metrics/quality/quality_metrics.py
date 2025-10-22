@@ -59,6 +59,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
         metric_names: list[str] | None = None,
         metric_params: dict | None = None,
         delete_existing_metrics: bool = False,
+        metrics_to_compute: list[str] | None = None,
         # common extension kwargs
         peak_sign=None,
         seed=None,
@@ -78,6 +79,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
             metric_names=metric_names,
             metric_params=metric_params,
             delete_existing_metrics=delete_existing_metrics,
+            metrics_to_compute=metrics_to_compute,
             peak_sign=peak_sign,
             seed=seed,
             skip_pc_metrics=skip_pc_metrics,

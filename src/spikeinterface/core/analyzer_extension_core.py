@@ -908,7 +908,7 @@ class BaseMetricExtension(AnalyzerExtension):
         metric_names: list[str] | None = None,
         metric_params: dict | None = None,
         delete_existing_metrics: bool = False,
-        verbose: bool = False,
+        metrics_to_compute: list[str] | None = None,
         **other_params,
     ):
         """
@@ -987,7 +987,9 @@ class BaseMetricExtension(AnalyzerExtension):
                 default_metric_params[metric].update(params)
             metric_params = default_metric_params
 
-        metrics_to_compute = metric_names
+        # TODO: check behavior here!!!
+        if metrics_to_compute is None:
+            metrics_to_compute = metric_names
         extension = self.sorting_analyzer.get_extension(self.extension_name)
         if delete_existing_metrics is False and extension is not None:
             existing_metric_names = extension.params["metric_names"]
@@ -1001,7 +1003,6 @@ class BaseMetricExtension(AnalyzerExtension):
             metrics_to_compute=metrics_to_compute,
             delete_existing_metrics=delete_existing_metrics,
             metric_params=metric_params,
-            verbose=verbose,
             **other_params,
         )
         return params
@@ -1052,8 +1053,6 @@ class BaseMetricExtension(AnalyzerExtension):
         metrics = pd.DataFrame(index=unit_ids, columns=list(column_names_dtypes.keys()))
 
         for metric_name in metric_names:
-            if self.params["verbose"]:
-                print(f"Computing metric {metric_name}...")
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
             column_names = list(metric.metric_columns.keys())
             # try:

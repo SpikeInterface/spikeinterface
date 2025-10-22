@@ -100,6 +100,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         metric_names: list[str] | None = None,
         metric_params: dict | None = None,
         delete_existing_metrics: bool = False,
+        metrics_to_compute: list[str] | None = None,
         # common extension kwargs
         peak_sign="neg",
         upsampling_factor=10,
@@ -122,6 +123,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             metric_names=metric_names,
             metric_params=metric_params,
             delete_existing_metrics=delete_existing_metrics,
+            metrics_to_compute=metrics_to_compute,
             peak_sign=peak_sign,
             upsampling_factor=upsampling_factor,
             include_multi_channel_metrics=include_multi_channel_metrics,
