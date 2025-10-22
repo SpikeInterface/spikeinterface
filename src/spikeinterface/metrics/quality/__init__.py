@@ -6,5 +6,3 @@ from .quality_metrics import (
     ComputeQualityMetrics,
     compute_quality_metrics,
 )
-
-from ._old.quality_metrics_old import compute_quality_metrics as compute_quality_metrics_old, ComputeQualityMetricsOld

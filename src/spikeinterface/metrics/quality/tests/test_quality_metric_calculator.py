@@ -9,7 +9,7 @@ from spikeinterface.core import (
     aggregate_units,
 )
 
-from spikeinterface.metrics import compute_snrs
+from spikeinterface.metrics.quality.misc_metrics import compute_snrs
 
 
 from spikeinterface.metrics import (
