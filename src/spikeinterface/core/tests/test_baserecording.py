@@ -473,6 +473,7 @@ def test_time_slice_with_time_vector():
 
 if __name__ == "__main__":
     import tempfile
+
     tmp_path = Path(tempfile.mkdtemp())
 
     test_BaseRecording(tmp_path)

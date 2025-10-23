@@ -156,7 +156,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
     traces = traces.astype(dtype, order="c", copy=False)
-    
+
     file.seek(start_byte)
     file.write(traces.data)
     # flush is important!!
