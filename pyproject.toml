@@ -232,7 +232,7 @@ markers = [
     "extractors",
     "preprocessing",
     "postprocessing",
-    "qualitymetrics",
+    "mertrics",
     "sorters",
     "sorters_external",
     "sorters_internal",
