@@ -2790,5 +2790,5 @@ _builtin_extensions = {
     # from metrics
     "quality_metrics": "spikeinterface.metrics",
     "template_metrics": "spikeinterface.metrics",
-    "quality_metrics": "spikeinterface.metrics",
+    "spiketrain_metrics": "spikeinterface.metrics",
 }
