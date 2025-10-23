@@ -12,8 +12,6 @@ quality metrics that you have calculated.
 
 import spikeinterface.core as si
 
-from spikeinterface.metrics import compute_quality_metrics
-
 
 ##############################################################################
 # Let's generate a simulated dataset, and imagine that the ground-truth
@@ -41,7 +39,7 @@ print(analyzer)
 ##############################################################################
 # Then we compute some quality metrics:
 
-metrics = compute_quality_metrics(analyzer, metric_names=["snr", "isi_violation", "nearest_neighbor"])
+metrics = analyzer.compute("quality_metrics", metric_names=["snr", "isi_violation", "nearest_neighbor"])
 print(metrics)
 
 ##############################################################################

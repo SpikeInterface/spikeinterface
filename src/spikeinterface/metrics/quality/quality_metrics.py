@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 import numpy as np
 
 from spikeinterface.core.template_tools import get_template_extremum_channel
@@ -176,7 +177,7 @@ def get_quality_pca_metric_list():
     return [m.metric_name for m in pca_metrics_list]
 
 
-def get_default_qm_params(metric_names=None):
+def get_default_quality_metrics_params(metric_names=None):
     """
     Return default dictionary of quality metrics parameters.
 
@@ -192,3 +193,13 @@ def get_default_qm_params(metric_names=None):
         metric_names = list(set(metric_names) & set(default_params.keys()))
         metric_params = {m: default_params[m] for m in metric_names}
         return metric_params
+
+
+def get_default_qm_params(metric_names=None):
+    warnings.warn(
+        "`get_default_qm_params` is deprecated and will be removed in a version 0.105.0. "
+        "Please use `get_default_quality_metrics_params` instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return get_default_quality_metrics_params(metric_names=metric_names)

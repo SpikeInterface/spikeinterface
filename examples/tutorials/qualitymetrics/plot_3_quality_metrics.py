@@ -10,9 +10,8 @@ After spike sorting, you might want to validate the 'goodness' of the sorted uni
 import spikeinterface.core as si
 from spikeinterface.metrics import (
     compute_snrs,
-    compute_firing_rates,
+    compute_presence_ratios,
     compute_isi_violations,
-    compute_quality_metrics,
 )
 
 ##############################################################################
@@ -48,8 +47,8 @@ print(analyzer)
 # metrics in a compact and easy way. To compute a single metric, one can simply run one of the
 # quality metric functions as shown below. Each function has a variety of adjustable parameters that can be tuned.
 
-firing_rates = compute_firing_rates(analyzer)
-print(firing_rates)
+presence_ratios = compute_presence_ratios(analyzer)
+print(presence_ratios)
 isi_violation_ratio, isi_violations_count = compute_isi_violations(analyzer)
 print(isi_violation_ratio)
 snrs = compute_snrs(analyzer)
@@ -57,23 +56,26 @@ print(snrs)
 
 
 ##############################################################################
-# To compute more than one metric at once, we can use the :code:`compute_quality_metrics` function and indicate
-# which metrics we want to compute. This will return a pandas dataframe:
+# To compute more than one metric at once, we can use the :code:`SortingAnalyzer.compute("quality_metrics")`
+# function and indicate which metrics we want to compute. Then we can retrieve the results using the :code:`get_data()`
+# method as a ``pandas.DataFrame``.
 
-metrics = compute_quality_metrics(analyzer, metric_names=["firing_rate", "snr", "amplitude_cutoff"])
+metrics_ext = analyzer.compute("quality_metrics", metric_names=["presence_ratio", "snr", "amplitude_cutoff"])
+metrics = metrics_ext.get_data()
 print(metrics)
 
 ##############################################################################
-# Some metrics are based on the principal component scores, so the exwtension
+# Some metrics are based on the principal component scores, so the extension
 # must be computed before. For instance:
 
 analyzer.compute("principal_components", n_components=3, mode="by_channel_global", whiten=True)
 
-metrics = compute_quality_metrics(
-    analyzer,
+metrics_ext = analyzer.compute(
+    "quality_metrics",
     metric_names=[
         "isolation_distance",
         "d_prime",
     ],
 )
+metrics = metrics_ext.get_data()
 print(metrics)

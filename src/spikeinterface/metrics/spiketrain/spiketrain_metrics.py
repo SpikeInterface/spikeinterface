@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
-import warnings
-from copy import deepcopy
-
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
 
@@ -52,7 +48,11 @@ register_result_extension(ComputeSpikeTrainMetrics)
 compute_spiketrain_metrics = ComputeSpikeTrainMetrics.function_factory()
 
 
-def get_default_sm_params(metric_names=None):
+def get_spiketrain_metric_names():
+    return [m.metric_name for m in spiketrain_metrics]
+
+
+def get_default_spiketrain_metrics_params(metric_names=None):
     default_params = ComputeSpikeTrainMetrics.get_default_metric_params()
     if metric_names is None:
         return default_params

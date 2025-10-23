@@ -699,8 +699,7 @@ make a copy of the analyzer and all computed extensions.
 Quality metrics
 ---------------
 
-We have a single function ``compute_quality_metrics(SortingAnalyzer)``
-that returns a ``pandas.Dataframe`` with the desired metrics.
+The ``analyzer.compute("quality_metrics").get_data()`` returns a ``pandas.Dataframe`` with the desired metrics.
 
 Note that this function is also an extension and so can be saved. And so
 this is equivalent to do:

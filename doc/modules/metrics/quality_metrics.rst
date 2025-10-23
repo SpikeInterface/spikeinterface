@@ -2,7 +2,7 @@ Quality Metrics module
 ======================
 
 Quality metrics allows one to quantitatively assess the *goodness* of a spike sorting output.
-The :py:mod:`~spikeinterface.qualitymetrics` module includes functions to compute a large variety of available metrics.
+The :py:mod:`~spikeinterface.metrics.quality` module includes functions to compute a large variety of available metrics.
 All of the metrics currently implemented in spikeInterface are *per unit* (pairwise metrics do appear in the literature).
 
 Each metric aims to identify some quality of the unit.
@@ -69,7 +69,7 @@ You can compute the default metrics using the following code snippet:
 
 Some metrics are very slow to compute when the number of units it large. So by default, the following metrics are not computed:
 
-- The ``nn_noise_overlap`` from :doc:`qualitymetrics/nearest_neighbor`
+- The ``nn_advanced`` from :doc:`qualitymetrics/nearest_neighbor`
 
 Some metrics make use of :ref:`principal component analysis <postprocessing_principal_components>` (PCA) to reduce the dimensionality of computations.
 Various approaches to computing the principal components are possible, and choice should be carefully considered in relation to the recording equipment used.
@@ -94,7 +94,7 @@ To save the result in your analyzer, you can use the ``compute`` method:
         }
     )
 
-Note that if you request a specific metric using ``metric_names`` and you do not have the required extension computed, this will error.
+Note that if you request a specific metric using ``metric_names`` and you do not have the required extension computed, the metric will be skipped.
 
 For more information about quality metrics, check out this excellent
 `documentation <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html>`_

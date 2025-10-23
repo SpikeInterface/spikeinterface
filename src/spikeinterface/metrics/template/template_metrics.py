@@ -222,7 +222,7 @@ register_result_extension(ComputeTemplateMetrics)
 compute_template_metrics = ComputeTemplateMetrics.function_factory()
 
 
-def get_default_tm_params(metric_names=None):
+def get_default_template_metrics_params(metric_names=None):
     default_params = ComputeTemplateMetrics.get_default_metric_params()
     if metric_names is None:
         return default_params
@@ -230,3 +230,21 @@ def get_default_tm_params(metric_names=None):
         metric_names = list(set(metric_names) & set(default_params.keys()))
         metric_params = {m: default_params[m] for m in metric_names}
         return metric_params
+
+
+def get_default_tm_params(metric_names=None):
+    """
+    Return default dictionary of template metrics parameters.
+
+    Returns
+    -------
+    metric_params : dict
+        Dictionary with default parameters for template metrics.
+    """
+    warnings.warn(
+        "get_default_tm_params is deprecated and will be removed in a version 0.105.0. "
+        "Please use get_default_template_metrics_params instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return get_default_template_metrics_params(metric_names)

@@ -53,7 +53,7 @@ import spikeinterface.extractors as se
 import spikeinterface.preprocessing as spre
 import spikeinterface.sorters as ss
 import spikeinterface.postprocessing as spost
-import spikeinterface.metrics as sqm
+import spikeinterface.metrics as sm
 import spikeinterface.comparison as sc
 import spikeinterface.exporters as sexp
 import spikeinterface.curation as scur
@@ -329,7 +329,7 @@ analyzer_TDC.compute("spike_amplitudes")
 # Once we have computed all of the postprocessing information, we can compute quality
 # metrics (some quality metrics require certain extensions - e.g., drift metrics require `spike_locations`):
 
-qm_params = sqm.get_default_qm_params()
+qm_params = sm.get_default_qm_params()
 pprint(qm_params)
 
 # Since the recording is very short, let's change some parameters to accommodate the duration:
