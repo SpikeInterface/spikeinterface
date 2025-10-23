@@ -1,6 +1,8 @@
 Nearest Neighbor Metrics (:code:`nn_hit_rate`, :code:`nn_miss_rate`, :code:`nn_isolation`, :code:`nn_noise_overlap`)
 ====================================================================================================================
 
+# TODO: split into two files: nearest_neighbor.rst and advanced_nearest_neighbor.rst
+
 Calculation
 -----------
 
