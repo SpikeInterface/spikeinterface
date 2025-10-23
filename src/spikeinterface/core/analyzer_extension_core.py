@@ -955,19 +955,9 @@ class BaseMetricExtension(AnalyzerExtension):
                     # at least one of the dependencies must be present
                     dep_options = dep.split("|")
                     if not any([self.sorting_analyzer.has_extension(d) for d in dep_options]):
-                        # warn and remove the metric
-                        warnings.warn(
-                            f"Metric {metric_name} requires at least one of the extensions {dep_options}. "
-                            f"Since none of them are present, the metric will not be computed."
-                        )
                         metrics_to_remove.append(metric_name)
                 else:
                     if not self.sorting_analyzer.has_extension(dep):
-                        # warn and remove the metric
-                        warnings.warn(
-                            f"Metric {metric_name} requires the extension {dep}. "
-                            f"Since it is not present, the metric will not be computed."
-                        )
                         metrics_to_remove.append(metric_name)
             if metric.needs_recording and not self.sorting_analyzer.has_recording():
                 warnings.warn(
@@ -975,6 +965,12 @@ class BaseMetricExtension(AnalyzerExtension):
                     f"Since the SortingAnalyzer has no recording, the metric will not be computed."
                 )
                 metrics_to_remove.append(metric_name)
+
+        metrics_to_remove = list(set(metrics_to_remove))
+        if len(metrics_to_remove) > 0:
+            warnings.warn(
+                f"The following metrics will not be computed due to missing dependencies: {metrics_to_remove}"
+            )
 
         for metric_name in metrics_to_remove:
             metric_names.remove(metric_name)

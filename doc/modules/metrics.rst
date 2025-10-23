@@ -10,4 +10,4 @@ Currently, it contains the following submodules:
 - :ref:`spiketrain_metrics <modules/metrics/spiketrain_metrics>`: Computes metrics based on spike train statistics and correlogram shapes.
 
 
-#TODO More on BaseMetric and BaseMetricExtension
+# TODO More on BaseMetric and BaseMetricExtension

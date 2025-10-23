@@ -17,7 +17,8 @@ from spikeinterface.core.template_tools import get_template_extremum_channel, ge
 from .metrics import get_trough_and_peak_idx, single_channel_metrics, multi_channel_metrics
 
 
-MIN_CHANNELS_FOR_MULTI_CHANNEL_WARNING = 10
+MIN_SPARSE_CHANNELS_FOR_MULTI_CHANNEL_WARNING = 10
+MIN_CHANNELS_FOR_MULTI_CHANNEL_METRICS = 64
 
 
 def get_single_channel_template_metric_names():
@@ -107,6 +108,12 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         include_multi_channel_metrics=False,
         depth_direction="y",
     ):
+        # Auto-detect if multi-channel metrics should be included based on number of channels
+        num_channels = self.sorting_analyzer.get_num_channels()
+        if not include_multi_channel_metrics and num_channels >= MIN_CHANNELS_FOR_MULTI_CHANNEL_METRICS:
+            include_multi_channel_metrics = True
+
+        # Validate channel locations if multi-channel metrics are to be computed
         if include_multi_channel_metrics or (
             metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
         ):
@@ -185,9 +192,9 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                 else:
                     template_multi = template_all_chans
                     channel_location_multi = channel_locations
-                if template_multi.shape[1] < MIN_CHANNELS_FOR_MULTI_CHANNEL_WARNING:
+                if template_multi.shape[1] < MIN_SPARSE_CHANNELS_FOR_MULTI_CHANNEL_WARNING:
                     warnings.warn(
-                        f"With less than {MIN_CHANNELS_FOR_MULTI_CHANNEL_WARNING} channels, "
+                        f"With less than {MIN_SPARSE_CHANNELS_FOR_MULTI_CHANNEL_WARNING} channels, "
                         "multi-channel metrics might not be reliable."
                     )
 

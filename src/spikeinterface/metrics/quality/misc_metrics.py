@@ -902,9 +902,11 @@ def compute_noise_cutoffs(sorting_analyzer, unit_ids=None, high_quantile=0.25, l
     amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
     peak_sign = amplitude_extension.params["peak_sign"]
     if peak_sign == "both":
-        raise TypeError(
-            '`peak_sign` should either be "pos" or "neg". You can set `peak_sign` as an argument when you compute spike_amplitudes.'
+        warnings.warn(
+            "`peak_sign` should either be 'pos' or 'neg'. You can set `peak_sign` as an argument when you compute spike_amplitudes."
+            "Setting `peak_sign` to 'neg' by default for noise_cutoff computation."
         )
+        peak_sign = "neg" if peak_sign == "both" else peak_sign
 
     amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
 
@@ -928,6 +930,7 @@ class NoiseCutoff(BaseMetric):
     metric_function = compute_noise_cutoffs
     metric_params = {"high_quantile": 0.25, "low_quantile": 0.1, "n_bins": 100}
     metric_columns = {"noise_cutoff": float, "noise_ratio": float}
+    depend_on = ["spike_amplitudes"]
 
 
 def compute_drift_metrics(

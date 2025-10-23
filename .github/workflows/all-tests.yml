@@ -164,7 +164,7 @@ jobs:
           pip list
           ./.github/run_tests.sh postprocessing --no-virtual-env
 
-      - name: Test quality metrics
+      - name: Test metrics
         shell: bash
         if: env.RUN_METRICS_TESTS == 'true'
         run: |

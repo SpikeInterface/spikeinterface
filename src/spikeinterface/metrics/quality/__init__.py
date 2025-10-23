@@ -1,4 +1,3 @@
-# from ._old.quality_metric_list import *
 from .quality_metrics import (
     get_quality_metric_list,
     get_quality_pca_metric_list,
