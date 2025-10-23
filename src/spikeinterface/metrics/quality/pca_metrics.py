@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import warnings
 from collections import namedtuple
+from pathlib import Path
 import numpy as np
 
+# Parallel processing
+import platform
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
-from threadpoolctl import threadpool_limits
 
 
 from spikeinterface.core.analyzer_extension_core import BaseMetric
-from spikeinterface.core import get_random_data_chunks, compute_sparsity
-from spikeinterface.core.template_tools import get_template_extremum_channel
-
+from spikeinterface.core import get_random_data_chunks, compute_sparsity, load
 from spikeinterface.metrics.spiketrain.metrics import compute_num_spikes, compute_firing_rates
 
 
@@ -127,12 +127,6 @@ def _nearest_neighbor_metric_function(sorting_analyzer, unit_ids, tmp_data, job_
             nn_hit_rate_dict[unit_id] = nn_hit_rate
             nn_miss_rate_dict[unit_id] = nn_miss_rate
     else:
-        # Parallel processing
-        import multiprocessing as mp
-        from concurrent.futures import ProcessPoolExecutor
-        import warnings
-        import platform
-
         if mp_context is not None and platform.system() == "Windows":
             assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
         elif mp_context == "fork" and platform.system() == "Darwin":
@@ -169,7 +163,11 @@ class NearestNeighborMetrics(BaseMetric):
 
 
 def _nn_advanced_one_unit(args):
-    unit_id, sorting_analyzer, n_spikes_all_units, fr_all_units, metric_params, seed = args
+    unit_id, sorting_analyzer_or_folder, n_spikes_all_units, fr_all_units, metric_params, seed = args
+    if isinstance(sorting_analyzer_or_folder, (str, Path)):
+        sorting_analyzer = load(sorting_analyzer_or_folder)
+    else:
+        sorting_analyzer = sorting_analyzer_or_folder
 
     nn_isolation_params = {
         k: v
@@ -234,6 +232,13 @@ def _nn_advanced_metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwarg
     mp_context = job_kwargs.get("mp_context", None)
     seed = job_kwargs.get("seed", None)
 
+    if sorting_analyzer.format == "memory" and n_jobs > 1:
+        warnings.warn(
+            "Computing 'nn_advanced' metric in parallel with a SortingAnalyzer in memory is not supported. "
+            "Falling back to single-threaded computation."
+        )
+        n_jobs = 1
+
     nn_isolation_dict = {}
     nn_unit_id_dict = {}
     nn_noise_overlap_dict = {}
@@ -253,21 +258,16 @@ def _nn_advanced_metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwarg
             nn_isolation_dict[unit_id] = nn_isolation
             nn_noise_overlap_dict[unit_id] = nn_noise_overlap
     else:
-        # Parallel processing
-        import multiprocessing as mp
-        from concurrent.futures import ProcessPoolExecutor
-        import warnings
-        import platform
-
         if mp_context is not None and platform.system() == "Windows":
             assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
         elif mp_context == "fork" and platform.system() == "Darwin":
             warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
 
         # Prepare arguments
+        # If we got here, we are sure the sorting_analyzer is saved on disk
         args_list = []
         for unit_id in unit_ids:
-            args_list.append((unit_id, sorting_analyzer, n_spikes_all_units, fr_all_units, metric_params, seed))
+            args_list.append((unit_id, sorting_analyzer.folder, n_spikes_all_units, fr_all_units, metric_params, seed))
 
         with ProcessPoolExecutor(
             max_workers=n_jobs,
