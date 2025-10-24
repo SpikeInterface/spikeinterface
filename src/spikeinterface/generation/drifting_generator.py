@@ -18,6 +18,7 @@ from spikeinterface.core.generate import (
     generate_sorting,
     generate_templates,
     _ensure_unit_params,
+    _ensure_seed,
 )
 from .drift_tools import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
 from .noise_tools import generate_noise
@@ -136,7 +137,7 @@ def make_one_displacement_vector(
 
         min_bump_interval, max_bump_interval = bump_interval_s
 
-        rg = np.random.RandomState(seed=seed)
+        rg = np.random.default_rng(seed=seed)
         diff = rg.uniform(min_bump_interval, max_bump_interval, size=int(duration / min_bump_interval))
         bumps_times = np.cumsum(diff) + t_start_drift
         bumps_times = bumps_times[bumps_times < t_end_drift]
@@ -152,8 +153,8 @@ def make_one_displacement_vector(
                 displacement_vector[ind0:ind1] = -0.5
 
     elif drift_mode == "random_walk":
-        rg = np.random.RandomState(seed=seed)
-        steps = rg.random_integers(low=0, high=1, size=num_samples)
+        rg = np.random.default_rng(seed=seed)
+        steps = rg.integers(low=0, high=1, size=num_samples, endpoint=True)
         steps = steps.astype("float64")
         # 0 -> -1 and 1 -> 1
         steps = steps * 2 - 1
@@ -340,12 +341,14 @@ def generate_drifting_recording(
         ms_after=3.0,
         mode="ellipsoid",
         unit_params=dict(
-            alpha=(150.0, 500.0),
+            alpha=(100.0, 500.0),
             spatial_decay=(10, 45),
+            ellipse_shrink=(0.4, 1),
+            ellipse_angle=(0, np.pi * 2),
         ),
     ),
     generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),
-    generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
+    generate_noise_kwargs=dict(noise_levels=(6.0, 8.0), spatial_decay=25.0),
     extra_outputs=False,
     seed=None,
 ):
@@ -400,6 +403,9 @@ def generate_drifting_recording(
 
         This can be helpfull for motion benchmark.
     """
+
+    seed = _ensure_seed(seed)
+
     # probe
     if generate_probe_kwargs is None:
         generate_probe_kwargs = _toy_probes[probe_name]
