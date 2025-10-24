@@ -22,7 +22,7 @@ Example code
 
 .. code-block:: python
 
-	import spikeinterface.qualitymetrics as sqm
+	import spikeinterface.metrics.quality as sqm
 
 	# Combine sorting and recording into a sorting_analyzer
 	# It is also recommended to run sorting_analyzer.compute(input="spike_amplitudes")

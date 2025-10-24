@@ -57,13 +57,12 @@ methods:
  - :code:`acgs_3d` [Beau]_
  - :code:`unit_locations` or :code:`spike_locations` with :code:`monopolar_triangulation` based on work from [Boussard]_
  - :code:`unit_locations` or :code:`spike_locations` with :code:`grid_convolution` based on work from [Pachitariu]_
- - :code:`template_metrics` [Jia]_
 
 
-Qualitymetrics Module
----------------------
-If you use the :code:`qualitymetrics` module, i.e. you use the :code:`analyzer.compute()`
-or :code:`compute_quality_metrics()` methods, please include the citations for the :code:`metric_names` that were particularly
+Metrics Module
+--------------
+If you use the :code:`metrics.quality` module, i.e. you use the :code:`analyzer.compute("quality_metrics")`
+method, please include the citations for the :code:`metric_names` that were particularly
 important for your research:
 
 - :code:`amplitude_cutoff` [Hill]_
@@ -75,15 +74,15 @@ important for your research:
 - :code:`sd_ratio` [Pouzat]_
 - :code:`snr` [Lemon]_ [Jackson]_
 - :code:`synchrony` [Grün]_
-
-If you use the :code:`qualitymetrics.pca_metrics` module, i.e. you use the
-:code:`compute_pc_metrics()` method, please include the citations for the :code:`metric_names` that were particularly
-important for your research:
-
 - :code:`d_prime` [Hill]_
 - :code:`isolation_distance` or :code:`l_ratio` [Schmitzer-Torbert]_
 - :code:`nearest_neighbor` or :code:`nn_isolation` or :code:`nn_noise_overlap` [Chung]_ [Siegle]_
 - :code:`silhouette`  [Rousseeuw]_ [Hruschka]_
+
+If you use the :code:`metrics.template` module, i.e. you use the :code:`analyzer.compute("template_metrics")` method,
+please following citations:
+
+- [Jia]_
 
 
 Curation Module

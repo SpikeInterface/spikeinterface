@@ -9,7 +9,7 @@ Modules documentation
     preprocessing
     sorters
     postprocessing
-    qualitymetrics
+    metrics
     comparison
     exporters
     widgets

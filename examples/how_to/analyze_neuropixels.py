@@ -290,13 +290,10 @@ analyzer_saved
 
 # ## Quality metrics
 #
-# We have a single function `compute_quality_metrics(SortingAnalyzer)` that returns a `pandas.Dataframe` with the desired metrics.
-#
-# Note that this function is also an extension and so can be saved. And so this is equivalent to do :
-# `metrics = analyzer.compute("quality_metrics").get_data()`
+# The `analyzer.compute("quality_metrics").get_data()` returns a `pandas.Dataframe` with the desired metrics.
 #
 #
-# Please visit the [metrics documentation](https://spikeinterface.readthedocs.io/en/latest/modules/qualitymetrics.html) for more information and a list of all supported metrics.
+# Please visit the [metrics documentation](https://spikeinterface.readthedocs.io/en/latest/modules/metrics/qualitymetrics.html) for more information and a list of all supported metrics.
 #
 # Some metrics are based on PCA (like `'isolation_distance', 'l_ratio', 'd_prime'`) and require to estimate PCA for their computation. This can be achieved with:
 #
@@ -308,9 +305,8 @@ analyzer_saved
 metric_names=['firing_rate', 'presence_ratio', 'snr', 'isi_violation', 'amplitude_cutoff']
 
 
-# metrics = analyzer.compute("quality_metrics").get_data()
-# equivalent to
-metrics = si.compute_quality_metrics(analyzer, metric_names=metric_names)
+metrics_ext = analyzer.compute("quality_metrics")
+metrics = metrics_ext.get_data()
 
 metrics
 # -
