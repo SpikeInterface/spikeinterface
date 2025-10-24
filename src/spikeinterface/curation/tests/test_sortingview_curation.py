@@ -212,7 +212,8 @@ def test_label_inheritance_str():
     num_timepoints = int(sampling_frequency * duration)
     num_spikes = 1000
     times = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
-    labels = np.random.choice(["a", "b", "c", "d", "e", "f", "g"], size=num_spikes)
+    rng = np.random.default_rng(seed=None)
+    labels = rng.choice(["a", "b", "c", "d", "e", "f", "g"], size=num_spikes)
 
     sorting = se.NumpySorting.from_samples_and_labels(times, labels, sampling_frequency)
     # print(f"Sorting: {sorting.get_unit_ids()}")
