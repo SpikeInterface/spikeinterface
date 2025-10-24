@@ -114,7 +114,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             if params["apply_motion_correction"]:
                 rec_for_motion = recording_raw
                 if params["apply_preprocessing"]:
-                    rec_for_motion = bandpass_filter(rec_for_motion, freq_min=300.0, freq_max=6000.0, ftype="bessel", dtype="float32")
+                    rec_for_motion = bandpass_filter(
+                        rec_for_motion, freq_min=300.0, freq_max=6000.0, ftype="bessel", dtype="float32"
+                    )
                     if apply_cmr:
                         rec_for_motion = common_reference(rec_for_motion)
                     if verbose:
