@@ -25,16 +25,16 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "a
         Array of relative phase shifts for each channel.
     """
     # get inter-sample shifts based on the probe information and ADC sampling pattern
-    model_description = probe.annotations.get("description", None)
     num_channels_per_adc = probe.annotations.get("num_channels_per_adc", None)
     adc_sample_order = probe.contact_annotations.get("adc_sample_order", None)
-    num_readouts_channels = probe.annotations.get("num_readout_channels", None)
+    ap_sample_frequency_hz = probe.annotations.get("ap_sample_frequency_hz", None)
+    lf_sample_frequency_hz = probe.annotations.get("lf_sample_frequency_hz", None)
 
     if (
-        model_description is None
-        or num_channels_per_adc is None
+        num_channels_per_adc is None
         or adc_sample_order is None
-        or num_readouts_channels is None
+        or ap_sample_frequency_hz is None
+        or lf_sample_frequency_hz is None
     ):
         warning_message = (
             "Unable to find inter-sample shifts in the Neuropixels probe metadata. "
@@ -43,18 +43,11 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "a
         warnings.warn(warning_message, UserWarning, stacklevel=2)
         return None
 
-    # Currently, NP1.0 is the only technology with 12 channels per ADC. In this case,
-    # the AP stream has 13 cycles (last cycle is for LFP).
-    # As soon as `lf_sample_frequency_hz` is added to the probe library, we can use it to
-    # determine the number of cycles more robustly (if greater than 0, then it's NP1)
+    # The number of cycles is determined by the number of channels per ADC + the ratio
+    # between the lf and ap sample rate. For NP 2.0, the lf sample rate is 0 and so
+    # the number of cycles is equal to the number of channels per ADC.
     # see: https://github.com/billkarsh/ProbeTable/issues/3#issuecomment-3438263027
-    if num_readouts_channels == 12:
-        # for Neuropixels 1.0 technology, the number of cycles for the AP stream is +1 because
-        # the last cycle is used for the LFP stream
-        num_cycles_in_adc = num_channels_per_adc + 1 if "ap" in stream_name.lower() else num_channels_per_adc
-    else:
-        # for Neuropixels 2.0 (and newer), the number of cycles in ADC is equal to the number of channels per ADC
-        num_cycles_in_adc = num_channels_per_adc
+    num_cycles_in_adc = num_channels_per_adc + int(lf_sample_frequency_hz / ap_sample_frequency_hz)
 
     # The inter-sample shifts are given by the adc sample order divided by the number of cycles in ADC
     # This makes sure we also handle cases where only a subset of channels are recorded
