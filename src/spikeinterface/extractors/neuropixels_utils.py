@@ -24,16 +24,16 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "a
     sample_shifts : np.ndarray
         Array of relative phase shifts for each channel.
     """
-    # get inter-sample shifts based on the probe information and mux channels
+    # get inter-sample shifts based on the probe information and ADC sampling pattern
     model_description = probe.annotations.get("description", None)
     num_channels_per_adc = probe.annotations.get("num_channels_per_adc", None)
-    mux_channels = probe.contact_annotations.get("mux_channels", None)
+    adc_sample_order = probe.contact_annotations.get("adc_sample_order", None)
     num_readouts_channels = probe.annotations.get("num_readout_channels", None)
 
     if (
         model_description is None
         or num_channels_per_adc is None
-        or mux_channels is None
+        or adc_sample_order is None
         or num_readouts_channels is None
     ):
         warning_message = (
@@ -43,17 +43,23 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "a
         warnings.warn(warning_message, UserWarning, stacklevel=2)
         return None
 
-    if "2.0" in model_description:
-        # for Neuropixels 2.0 (and newer), the number of cycles in ADC is equal to the number of channels per ADC
-        num_cycles_in_adc = num_channels_per_adc
-    else:
+    # Currently, NP1.0 is the only technology with 12 channels per ADC. In this case,
+    # the AP stream has 13 cycles (last cycle is for LFP).
+    # As soon as `lf_sample_frequency_hz` is added to the probe library, we can use it to
+    # determine the number of cycles more robustly (if greater than 0, then it's NP1)
+    # see: https://github.com/billkarsh/ProbeTable/issues/3#issuecomment-3438263027
+    if num_readouts_channels == 12:
         # for Neuropixels 1.0 technology, the number of cycles for the AP stream is +1 because
         # the last cycle is used for the LFP stream
         num_cycles_in_adc = num_channels_per_adc + 1 if "ap" in stream_name.lower() else num_channels_per_adc
+    else:
+        # for Neuropixels 2.0 (and newer), the number of cycles in ADC is equal to the number of channels per ADC
+        num_cycles_in_adc = num_channels_per_adc
 
-    sample_shifts = np.zeros_like(mux_channels, dtype=float)
-    for mux_channel in mux_channels:
-        sample_shifts[mux_channels == mux_channel] = np.arange(num_channels_per_adc) / num_cycles_in_adc
+    # The inter-sample shifts are given by the adc sample order divided by the number of cycles in ADC
+    # This makes sure we also handle cases where only a subset of channels are recorded
+    # see: https://github.com/SpikeInterface/spikeinterface/issues/4144
+    sample_shifts = adc_sample_order / num_cycles_in_adc
 
     return sample_shifts
 
@@ -157,7 +163,7 @@ def get_neuropixels_channel_groups(num_channels=384, num_channels_per_adc=12):
     """
     warnings.warn(
         "`get_neuropixels_channel_groups` is deprecated and will be removed in 0.104.0. "
-        "Use the `mux_channels` contact annotation from the `Probe` instead.",
+        "Use the `adc_group` contact annotation from the `Probe` instead.",
         DeprecationWarning,
         stacklevel=2,
     )
