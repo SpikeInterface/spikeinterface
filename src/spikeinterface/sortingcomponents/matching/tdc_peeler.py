@@ -279,27 +279,36 @@ class TridesclousPeeler(BaseTemplateMatching):
             noise_levels=noise_levels,
         )
 
-        ##get prototype from best channel of each template
-        prototype = np.zeros(self.nbefore + self.nafter, dtype="float32")
-        for i in range(num_templates):
-            template = templates.templates_array[i, :, :]
-            chan_ind = np.argmax(np.abs(template[self.nbefore, :]))
-            if template[self.nbefore, chan_ind] != 0:
-                prototype += template[:, chan_ind] / np.abs(template[self.nbefore, chan_ind])
-        prototype /= np.abs(prototype[self.nbefore])
-
-        # import matplotlib.pyplot as plt
-        # fig,ax = plt.subplots()
-        # ax.plot(prototype)
-        # plt.show()
-
         self.use_fine_detector = use_fine_detector
         if self.use_fine_detector:
+            ##get prototype from best channel of each template
+            prototype = np.zeros(self.nbefore + self.nafter, dtype="float32")
+            for i in range(num_templates):
+                if self.peak_sign == "neg":
+                    chan_ind = np.argmin(template[self.nbefore, :])
+                    if template[self.nbefore, chan_ind] != 0:
+                        prototype += template[:, chan_ind] / np.abs(template[self.nbefore, chan_ind])
+                elif self.peak_sign == "pos":
+                    chan_ind = np.argmax(template[self.nbefore, :])
+                    if template[self.nbefore, chan_ind] != 0:
+                        prototype += template[:, chan_ind] / np.abs(template[self.nbefore, chan_ind])
+                elif self.peak_sign == "both":
+                    chan_ind = np.argmax(np.abs(template[self.nbefore, :]))
+                    if template[self.nbefore, chan_ind] > 0:
+                        prototype += template[:, chan_ind] / np.abs(template[self.nbefore, chan_ind])
+                    elif template[self.nbefore, chan_ind] < 0:
+                        prototype += -template[:, chan_ind] / np.abs(template[self.nbefore, chan_ind])
+            prototype /= np.abs(prototype[self.nbefore])
+            # import matplotlib.pyplot as plt
+            # fig,ax = plt.subplots()
+            # ax.plot(prototype)
+            # plt.show()
+
             self.fine_spike_detector = MatchedFilteringPeakDetector(
                 recording=recording,
                 prototype=prototype,
                 ms_before=templates.nbefore / sr * 1000.0,
-                peak_sign="neg",
+                peak_sign=self.peak_sign,
                 detect_threshold=detect_threshold,
                 exclude_sweep_ms=exclude_sweep_ms,
                 radius_um=detection_radius_um,
