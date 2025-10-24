@@ -43,11 +43,13 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "a
         warnings.warn(warning_message, UserWarning, stacklevel=2)
         return None
 
-    # The number of cycles is determined by the number of channels per ADC + the ratio
-    # between the lf and ap sample rate. For NP 2.0, the lf sample rate is 0 and so
-    # the number of cycles is equal to the number of channels per ADC.
+    # The number of cycles is determined by the number of channels per ADC times 1 + the ratio
+    # between the lf and ap sample rate.
+    # For NP 1.0, this gives 13 cycles: 12 * (1 + 2500 / 30000) = 13
+    # For NP 2.0, the lf sample rate is 0 and so the number of cycles is equal to the number of
+    # channels per ADC.
     # see: https://github.com/billkarsh/ProbeTable/issues/3#issuecomment-3438263027
-    num_cycles_in_adc = num_channels_per_adc + int(lf_sample_frequency_hz / ap_sample_frequency_hz)
+    num_cycles_in_adc = int(num_channels_per_adc * (1 + lf_sample_frequency_hz / ap_sample_frequency_hz))
 
     # The inter-sample shifts are given by the adc sample order divided by the number of cycles in ADC
     # This makes sure we also handle cases where only a subset of channels are recorded
