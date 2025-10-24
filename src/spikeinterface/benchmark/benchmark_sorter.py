@@ -88,7 +88,7 @@ class SorterStudy(BenchmarkStudy, MixinStudyUnitCount):
         from .benchmark_plot_tools import plot_performances_vs_snr
 
         return plot_performances_vs_snr(self, **kwargs)
-    
+
     def plot_performances_vs_firing_rate(self, **kwargs):
         from .benchmark_plot_tools import plot_performances_vs_firing_rate
 
