@@ -558,7 +558,7 @@ def plot_performances_vs_snr(
     performance_names : tuple, default: ("accuracy", "recall", "precision")
         Names of the performance metrics to plot. Default is ("accuracy", "recall", "precision").
     metric_dataset_reference : str | None, default: None
-        Reference dataset key to use for SNR. If None, the SNR of each dataset is used.
+        Reference dataset metric key to use. If None, the SNR of each dataset is used.
     levels_to_group_by : list | None, default: None
         Levels to group by when mapping case keys.
     orientation : "vertical" | "horizontal", default: "vertical"
@@ -629,7 +629,7 @@ def plot_performances_vs_firing_rate(
     performance_names : tuple, default: ("accuracy", "recall", "precision")
         Names of the performance metrics to plot. Default is ("accuracy", "recall", "precision").
     metric_dataset_reference : str | None, default: None
-        Reference dataset key to use for SNR. If None, the SNR of each dataset is used.
+        Reference dataset metric key to use. If None, the SNR of each dataset is used.
     levels_to_group_by : list | None, default: None
         Levels to group by when mapping case keys.
     orientation : "vertical" | "horizontal", default: "vertical"
