@@ -107,13 +107,18 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         num_chans = recording_raw.get_num_channels()
         sampling_frequency = recording_raw.get_sampling_frequency()
 
+        apply_cmr = num_chans >= 32
+
         # preprocessing
         if params["apply_preprocessing"]:
             if params["apply_motion_correction"]:
                 rec_for_motion = recording_raw
                 if params["apply_preprocessing"]:
-                    rec_for_motion = bandpass_filter(rec_for_motion, freq_min=300.0, freq_max=6000.0, dtype="float32")
-                    rec_for_motion = common_reference(rec_for_motion)
+                    rec_for_motion = bandpass_filter(
+                        rec_for_motion, freq_min=300.0, freq_max=6000.0, ftype="bessel", dtype="float32"
+                    )
+                    if apply_cmr:
+                        rec_for_motion = common_reference(rec_for_motion)
                     if verbose:
                         print("Start correct_motion()")
                     _, motion_info = correct_motion(
@@ -126,7 +131,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                         print("Done correct_motion()")
 
             recording = bandpass_filter(recording_raw, **params["filtering"], dtype="float32")
-            recording = common_reference(recording)
+            if apply_cmr:
+                recording = common_reference(recording)
 
             if params["apply_motion_correction"]:
                 interpolate_motion_kwargs = dict(

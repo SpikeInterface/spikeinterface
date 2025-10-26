@@ -46,7 +46,7 @@ def _find_duplicated_spikes_numpy(
 
 def _find_duplicated_spikes_random(spike_train: np.ndarray, censored_period: int, seed: int) -> np.ndarray:
     # random seed
-    rng = np.random.RandomState(seed=seed)
+    rng = np.random.default_rng(seed=seed)
 
     indices_of_duplicates = []
     while not np.all(np.diff(np.delete(spike_train, indices_of_duplicates)) > censored_period):
