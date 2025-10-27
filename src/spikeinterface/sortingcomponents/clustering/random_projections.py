@@ -72,7 +72,7 @@ class RandomProjectionClustering:
             debug_folder = Path(debug_folder).absolute()
             debug_folder.mkdir(exist_ok=True)
 
-        rng = np.random.RandomState(params["seed"])
+        rng = np.random.default_rng(params["seed"])
 
         node0 = PeakRetriever(recording, peaks)
         node1 = ExtractSparseWaveforms(

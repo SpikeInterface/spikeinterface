@@ -102,7 +102,7 @@ def get_some_colors(
         colors = [colorsys.hsv_to_rgb(x * 1.0 / N, 0.5, 0.5) + (1.0,) for x in range(N)]
 
     if shuffle:
-        rng = np.random.RandomState(seed=seed)
+        rng = np.random.default_rng(seed=seed)
         inds = np.arange(N)
         rng.shuffle(inds)
         colors = [colors[i] for i in inds]

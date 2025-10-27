@@ -95,6 +95,16 @@ class ClusteringBenchmark(Benchmark):
 
 
 class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
+    """
+    Benchmark study to compare clustering methods.
+
+    The ground truth sorting objects must be given and method outputs
+    will be compared to them.
+
+    The input of methods are the detected peaks. Because the clustering
+    can be performed on only a subset of the detected peaks, then selected peak
+    must be also given as index of all spikes.
+    """
 
     benchmark_class = ClusteringBenchmark
 
@@ -181,6 +191,11 @@ class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
         from .benchmark_plot_tools import plot_performances_vs_snr
 
         return plot_performances_vs_snr(self, **kwargs)
+
+    def plot_performances_vs_firing_rate(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_firing_rate
+
+        return plot_performances_vs_firing_rate(self, **kwargs)
 
     def plot_performances_comparison(self, *args, **kwargs):
         from .benchmark_plot_tools import plot_performances_comparison
