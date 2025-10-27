@@ -197,8 +197,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         #            "You want to run tridesclous2 with the isosplit6 (the C++) implementation, but this is not installed, please `pip install isosplit6`"
         #        )
 
+
+        # recording_w = whiten(recording, mode="global")
+
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
             recording,
+            # recording_w,
             peaks,
             method="iterative-isosplit",
             method_kwargs=clustering_kwargs,
@@ -251,17 +255,20 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             probe=recording_for_peeler.get_probe(),
             is_in_uV=False,
         )
+        
 
+        # sparsity is a mix between radius and 
         sparsity_threshold = params["templates"]["sparsity_threshold"]
-        sparsity = compute_sparsity(
-            templates_dense, method="snr", noise_levels=noise_levels, threshold=sparsity_threshold
-        )
+        radius_um = params["waveforms"]["radius_um"]
+        sparsity = compute_sparsity(templates_dense, method="radius", radius_um=radius_um)
+        sparsity_snr = compute_sparsity(templates_dense, method="snr", amplitude_mode="peak_to_peak",
+                                        noise_levels=noise_levels, threshold=sparsity_threshold)
+        sparsity.mask = sparsity.mask & sparsity_snr.mask
         templates = templates_dense.to_sparse(sparsity)
-        # templates = remove_empty_templates(templates)
 
         templates = clean_templates(
-            templates_dense,
-            sparsify_threshold=params["templates"]["sparsity_threshold"],
+            templates,
+            sparsify_threshold=None,
             noise_levels=noise_levels,
             min_snr=params["templates"]["min_snr"],
             max_jitter_ms=None,
