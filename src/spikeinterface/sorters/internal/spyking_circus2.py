@@ -38,7 +38,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
         "clustering": {"method": "iterative-isosplit", "method_kwargs": dict()},
-        "cleaning" : {"min_snr" : 5, "max_jitter_ms" : 0.1, "sparsify_threshold" : None},
+        "cleaning": {"min_snr": 5, "max_jitter_ms": 0.1, "sparsify_threshold": None},
         "matching": {"method": "circus-omp", "method_kwargs": dict(), "pipeline_kwargs": dict()},
         "apply_preprocessing": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
@@ -337,9 +337,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
                 sparsity = compute_sparsity(dense_templates, method="radius", radius_um=radius_um)
                 threshold = params["cleaning"].get("sparsify_threshold", None)
-                if threshold is not None:            
-                    sparsity_snr = compute_sparsity(dense_templates, method="snr", amplitude_mode="peak_to_peak",
-                                                noise_levels=noise_levels, threshold=threshold)
+                if threshold is not None:
+                    sparsity_snr = compute_sparsity(
+                        dense_templates,
+                        method="snr",
+                        amplitude_mode="peak_to_peak",
+                        noise_levels=noise_levels,
+                        threshold=threshold,
+                    )
                     sparsity.mask = sparsity.mask & sparsity_snr.mask
 
                 templates = dense_templates.to_sparse(sparsity)
@@ -366,10 +371,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             cleaning_kwargs = params.get("cleaning", {}).copy()
             cleaning_kwargs["noise_levels"] = noise_levels
             cleaning_kwargs["remove_empty"] = True
-            templates = clean_templates(
-                templates,
-                **cleaning_kwargs
-            )
+            templates = clean_templates(templates, **cleaning_kwargs)
 
             if verbose:
                 print("Kept %d clean clusters" % len(templates.unit_ids))
@@ -428,12 +430,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
                 if sorting.get_non_empty_unit_ids().size > 0:
                     final_analyzer = final_cleaning_circus(
-                        recording_w, 
-                        sorting, 
-                        templates, 
+                        recording_w,
+                        sorting,
+                        templates,
                         noise_levels=noise_levels,
-                        job_kwargs=job_kwargs, 
-                        **merging_params
+                        job_kwargs=job_kwargs,
+                        **merging_params,
                     )
                     final_analyzer.save_as(format="binary_folder", folder=sorter_output_folder / "final_analyzer")
 

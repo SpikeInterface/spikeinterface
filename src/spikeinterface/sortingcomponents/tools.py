@@ -436,7 +436,9 @@ def remove_empty_templates(templates):
     return templates.select_units(templates.unit_ids[not_empty])
 
 
-def create_sorting_analyzer_with_existing_templates(sorting, recording, templates, remove_empty=True, noise_levels=None):
+def create_sorting_analyzer_with_existing_templates(
+    sorting, recording, templates, remove_empty=True, noise_levels=None
+):
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
 
