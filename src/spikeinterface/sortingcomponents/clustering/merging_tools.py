@@ -530,6 +530,7 @@ def merge_peak_labels_from_templates(
     similarity_metric="l1",
     similarity_thresh=0.8,
     num_shifts=3,
+    use_lags=False
 ):
     """
     Low level function used in sorting components for merging templates based on similarity metrics.
@@ -554,6 +555,9 @@ def merge_peak_labels_from_templates(
     )
 
     pair_mask = similarity > similarity_thresh
+
+    if not use_lags:
+        lags = None
 
     clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = (
         _apply_pair_mask_on_labels_and_recompute_templates(
