@@ -551,7 +551,7 @@ def merge_peak_labels_from_templates(
         support="union",
         sparsity=template_sparse_mask,
         other_sparsity=template_sparse_mask,
-        return_lags=True
+        return_lags=True,
     )
 
     pair_mask = similarity > similarity_thresh
@@ -610,7 +610,7 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
                     clean_labels[peak_labels == label] = unit_ids[g0]
                     keep_template[l] = False
             weights /= weights.sum()
-            
+
             if lags is None:
                 merge_template_array[g0, :, :] = np.sum(
                     merge_template_array[merge_group, :, :] * weights[:, np.newaxis, np.newaxis], axis=0
