@@ -542,7 +542,7 @@ def merge_peak_labels_from_templates(
 
     from spikeinterface.postprocessing.template_similarity import compute_similarity_with_templates_array
 
-    similarity = compute_similarity_with_templates_array(
+    similarity, lags = compute_similarity_with_templates_array(
         templates_array,
         templates_array,
         method=similarity_metric,
@@ -550,12 +550,14 @@ def merge_peak_labels_from_templates(
         support="union",
         sparsity=template_sparse_mask,
         other_sparsity=template_sparse_mask,
+        return_lags=True
     )
+
     pair_mask = similarity > similarity_thresh
 
     clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = (
         _apply_pair_mask_on_labels_and_recompute_templates(
-            pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask
+            pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask, lags
         )
     )
 
@@ -563,7 +565,7 @@ def merge_peak_labels_from_templates(
 
 
 def _apply_pair_mask_on_labels_and_recompute_templates(
-    pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask
+    pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask, lags=None
 ):
     """
     Resolve pairs graph.
@@ -604,9 +606,30 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
                     clean_labels[peak_labels == label] = unit_ids[g0]
                     keep_template[l] = False
             weights /= weights.sum()
-            merge_template_array[g0, :, :] = np.sum(
-                merge_template_array[merge_group, :, :] * weights[:, np.newaxis, np.newaxis], axis=0
-            )
+            
+            if lags is None:
+                merge_template_array[g0, :, :] = np.sum(
+                    merge_template_array[merge_group, :, :] * weights[:, np.newaxis, np.newaxis], axis=0
+                )
+            else:
+                # with shifts
+                accumulated_template = np.zeros_like(merge_template_array[g0, :, :])
+                for i, l in enumerate(merge_group):
+                    shift = lags[g0, l]
+                    if shift > 0:
+                        # template is shifted to right
+                        temp = np.zeros_like(accumulated_template)
+                        temp[shift:, :] = merge_template_array[l, :-shift, :]
+                    elif shift < 0:
+                        # template is shifted to left
+                        temp = np.zeros_like(accumulated_template)
+                        temp[:shift, :] = merge_template_array[l, -shift:, :]
+                    else:
+                        temp = merge_template_array[l, :, :]
+
+                    accumulated_template += temp * weights[i]
+
+                merge_template_array[g0, :, :] = accumulated_template
             merge_sparsity_mask[g0, :] = np.all(template_sparse_mask[merge_group, :], axis=0)
 
     merge_template_array = merge_template_array[keep_template, :, :]
