@@ -173,7 +173,7 @@ class IterativeISOSPLITClustering:
         split_params["returns_split_count"] = True
 
         if params["seed"] is not None:
-            split_params["method_kwargs"]["clusterer"] = params["seed"]
+            split_params["method_kwargs"]["clusterer"]["seed"] = params["seed"]
 
         post_split_label, split_count = split_clusters(
             original_labels,

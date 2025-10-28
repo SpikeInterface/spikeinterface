@@ -47,13 +47,15 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         },
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "svd": {"n_components": 4},
+        "svd": {"n_components": 8},
         "clustering": {
             "recursive_depth": 5,
         },
         "templates": {
             "ms_before": 2.0,
             "ms_after": 3.0,
+            # "ms_before": 1.5,
+            # "ms_after": 2.5,
             "max_spikes_per_unit": 400,
             "sparsity_threshold": 1.5,
             "min_snr": 2.5,
@@ -130,7 +132,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                     if verbose:
                         print("Done correct_motion()")
 
-            recording = bandpass_filter(recording_raw, **params["filtering"], dtype="float32")
+            recording = bandpass_filter(recording_raw, **params["filtering"], margin_ms=20., dtype="float32")
             if apply_cmr:
                 recording = common_reference(recording)
 
