@@ -619,8 +619,8 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
             else:
                 # with shifts
                 accumulated_template = np.zeros_like(merge_template_array[g0, :, :])
-                #import matplotlib.pyplot as plt
-                #fig, ax = plt.subplots(1, 2)
+                # import matplotlib.pyplot as plt
+                # fig, ax = plt.subplots(1, 2)
                 for i, l in enumerate(merge_group):
                     shift = -lags[g0, l]
                     if shift > 0:
@@ -634,16 +634,16 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
                     else:
                         temp = merge_template_array[l, :, :]
 
-                    #if l == g0:
+                    # if l == g0:
                     #    ax[0].plot(temp, c='r')
                     #    ax[1].plot(temp, c='r')
-                    #else:
+                    # else:
                     #    ax[0].plot(temp, c='gray', alpha=0.5)
                     #    ax[1].plot(merge_template_array[l, :, :], c='gray', alpha=0.5)
-                    #print(shift, lags[l, g0])
+                    # print(shift, lags[l, g0])
 
                     accumulated_template += temp * weights[i]
-                #plt.show()
+                # plt.show()
 
                 merge_template_array[g0, :, :] = accumulated_template
             merge_sparsity_mask[g0, :] = np.all(template_sparse_mask[merge_group, :], axis=0)
