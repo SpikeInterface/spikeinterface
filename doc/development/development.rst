@@ -433,12 +433,13 @@ Where the start date is the date of the last release and the end date is the cur
 
 The date of the last release can be found on `PyPI <https://pypi.org/project/spikeinterface/>`_.
 
-
 As a specific example:
+
 .. code-block:: bash
 
     bash auto-release-notes.sh 2025-02-19 2025-03-24
 
+* Add the release to `doc/whatisnew.rst`, by adding it to the list of releases and providing a short description of the release.
 * Finish the release notes and merge
 * Locally tag the main branch with the newly merged release notes with the new version
 * Push the tag to the remote repository which will trigger the release action (.github/workflows/publish-to-pypi.yml)
