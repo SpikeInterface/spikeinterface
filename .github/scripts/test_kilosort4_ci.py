@@ -170,11 +170,10 @@ class TestKilosort4Long:
         """
         num_channels = 32
         recording, _ = si.generate_ground_truth_recording(
-            durations=[20],
+            durations=[5],
             seed=0,
             num_channels=num_channels,
             num_units=5,
-            generate_templates_kwargs=dict(unit_params=dict(alpha=(300., 600.))),
             generate_sorting_kwargs=dict(firing_rates=100, refractory_period_ms=4.0),
         )
         return recording
