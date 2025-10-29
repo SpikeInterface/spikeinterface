@@ -439,6 +439,7 @@ As a specific example:
 
     bash auto-release-notes.sh 2025-02-19 2025-03-24
 
+* Add the release to `doc/whatisnew.rst`, by adding it to the list of releases and providing a short description of the release.
 * Finish the release notes and merge
 * Locally tag the main branch with the newly merged release notes with the new version
 * Push the tag to the remote repository which will trigger the release action (.github/workflows/publish-to-pypi.yml)
