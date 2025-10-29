@@ -1,0 +1,93 @@
+.. _release0.103.1:
+
+SpikeInterface 0.103.1 release notes
+------------------------------------
+
+October 31st 2025
+
+Minor release with bug fixes
+
+
+core:
+
+* faster write_binary_recording() (#4171)
+* Add RMS method to `get_noise_levels` (#4130)
+
+extractors:
+
+* Update `get_neuropixels_sample_shifts_from_probe` to use `adc_sample_order` (#4184)
+* Add `experiment_name`  argument to  `OpenEphysBinaryRecordingExtractor` (#4177)
+* Updates for probeinterface 0.3.0 (#4092)
+
+sorters:
+
+* Add gpu requirements to rtsort (#4143)
+
+postprocessing:
+
+* Patch for memory usage in `template_similarity` (#4152)
+
+qualitymetrics:
+
+* Alter how quality metrics check extension dependencies (#4080)
+
+curation:
+
+* Future-proof hyperparameter search space for auto-curation (#4174)
+
+widgets:
+
+* Metric list in plot (#4137)
+* Fix `plot_traces` with `t_start` and no times (#4135)
+* Fix `plot_amplitudes` for sortingview (#4097)
+
+generators:
+
+* Fix bug in waveform generation + adapt parameters (#4167)
+
+sortingcomponents:
+
+* Reducing memory footprint for Overlaps during matching (#4157)
+* Big clean in components and reoraginze in folder (#4140)
+* Improve tdc-clustering with a merging step (#4122)
+* Implement isosplit6 into spikeinterface in pure numpy/numba (#4113)
+
+motion correction:
+
+* dredge: Do more things in place with the larger matrices (#4119)
+
+documentation:
+
+* Improve docs for curation module and model (#4138)
+* Fix typos and buggy code in modules docs (#4105)
+
+continuous integration:
+
+* Check install ci - use uv (#4123)
+
+packaging:
+
+* Update deprecated cuda import (#4111)
+
+testing:
+
+* Fix size comparison in sorting tools test case (#4112)
+
+deprecations:
+
+* Update deprecated cuda import (#4111)
+* Deprecated `spikeinterface.compraison.hybrid` module (#4093)
+* More return_scaled > return_in_uV (#4090)
+
+Contributors:
+
+* @alejoe91
+* @chrishalcrow
+* @cwindolf
+* @emmanuel-ferdman
+* @h-mayorquin
+* @lochhh
+* @nwatters01
+* @samuelgarcia
+* @yger
+* @zm711

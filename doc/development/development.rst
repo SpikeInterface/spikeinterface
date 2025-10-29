@@ -433,8 +433,8 @@ Where the start date is the date of the last release and the end date is the cur
 
 The date of the last release can be found on `PyPI <https://pypi.org/project/spikeinterface/>`_.
 
-
 As a specific example:
+
 .. code-block:: bash
 
     bash auto-release-notes.sh 2025-02-19 2025-03-24
