@@ -4,10 +4,8 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 
-from spikeinterface.core.template import Templates
+from spikeinterface.core import Templates, estimate_templates, fix_job_kwargs
 from spikeinterface.core.basesorting import minimum_spike_dtype
-from spikeinterface.core.waveform_tools import estimate_templates
-
 
 # TODO find a way to attach a a sparse_mask to a given features (waveforms, pca, tsvd ....)
 
@@ -208,7 +206,7 @@ def get_templates_from_peaks_and_recording(
     ms_before,
     ms_after,
     operator="average",
-    **job_kwargs,
+    job_kwargs=None,
 ):
     """
     Get templates from recording using the estimate_templates function.
@@ -237,6 +235,8 @@ def get_templates_from_peaks_and_recording(
     templates : Templates
         The estimated templates object.
     """
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     mask = peak_labels > -1
     valid_peaks = peaks[mask]

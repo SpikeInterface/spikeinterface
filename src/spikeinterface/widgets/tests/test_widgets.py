@@ -117,7 +117,7 @@ class TestWidgets(unittest.TestCase):
 
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-        cls.peaks = detect_peaks(cls.recording, method="locally_exclusive", **job_kwargs)
+        cls.peaks = detect_peaks(cls.recording, method="locally_exclusive", job_kwargs=job_kwargs)
 
     def test_plot_traces(self):
         possible_backends = list(sw.TracesWidget.get_possible_backends())
