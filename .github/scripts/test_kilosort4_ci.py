@@ -76,7 +76,7 @@ PARAMS_TO_TEST_DICT = {
     "x_centers": 5,
     "binning_depth": 1,
     "drift_smoothing": [250, 250, 250],
-    "artifact_threshold": 200,
+    "artifact_threshold": 500,
     "ccg_threshold": 1e12,
     "acg_threshold": 1e12,
     "cluster_downsampling": 2,
