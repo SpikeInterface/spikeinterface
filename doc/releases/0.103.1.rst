@@ -60,6 +60,7 @@ documentation:
 
 * Improve docs for curation module and model (#4138)
 * Fix typos and buggy code in modules docs (#4105)
+* Improve assertion error message of SortingAnalyzer job kwargs (#4178)
 
 continuous integration:
 
@@ -72,6 +73,7 @@ packaging:
 testing:
 
 * Fix size comparison in sorting tools test case (#4112)
+* Fix ks4 tests (#4187)
 
 deprecations:
 
@@ -91,3 +93,4 @@ Contributors:
 * @samuelgarcia
 * @yger
 * @zm711
+* @MGAMZ
