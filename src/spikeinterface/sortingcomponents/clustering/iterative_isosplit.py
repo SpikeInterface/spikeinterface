@@ -154,9 +154,6 @@ class IterativeISOSPLITClustering:
             vertical_bins[1:-1] = np.arange(num_windows + 1) * bin_um + min_ + border
             vertical_bins[0] = -np.inf
             vertical_bins[-1] = np.inf
-            print(min_, max_)
-            print(vertical_bins)
-            print(vertical_bins.size)
             # peak depth            
             peak_depths = channel_depth[peaks["channel_index"]]
             # label by bin
