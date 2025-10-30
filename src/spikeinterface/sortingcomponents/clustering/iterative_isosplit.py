@@ -3,7 +3,7 @@ import importlib
 import numpy as np
 
 from spikeinterface.core import get_channel_distances, Templates, ChannelSparsity
-from spikeinterface.sortingcomponents.clustering.splitting_tools import split_clusters
+from spikeinterface.sortingcomponents.clustering.itersplit_tools import split_clusters
 
 # from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
 from spikeinterface.sortingcomponents.clustering.merging_tools import (
@@ -42,7 +42,7 @@ class IterativeISOSPLITClustering:
             # "split_radius_um": 40.0,
             "split_radius_um": 60.0,
             "recursive": True,
-            "recursive_depth": 5,
+            "recursive_depth": 3,
             "method_kwargs": {
                 "clusterer": {
                     "method": "isosplit",
@@ -50,8 +50,8 @@ class IterativeISOSPLITClustering:
                     # "n_init": 50,
                     "min_cluster_size": 10,
                     "max_iterations_per_pass": 500,
-                    # "isocut_threshold": 2.0,
-                    "isocut_threshold": 2.2,
+                    "isocut_threshold": 2.0,
+                    # "isocut_threshold": 2.2,
                 },
                 "min_size_split": 25,
                 # "n_pca_features": 3,

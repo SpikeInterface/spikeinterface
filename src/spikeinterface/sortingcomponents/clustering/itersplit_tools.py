@@ -308,9 +308,9 @@ class LocalFeatureClustering:
 
             min_cluster_size = clustering_kwargs["min_cluster_size"]
 
-            # here the trick is that we do not except more than 4 to 5 clusters per iteration with a presplit of 10
+            # here the trick is that we do not except more than 4 to 5 clusters per iteration, so n_init=15 is a good choice
             num_samples = final_features.shape[0]
-            n_init = 50
+            n_init = 15
             if n_init > (num_samples // min_cluster_size):
                 # avoid warning in isosplit when sample_size is too small
                 factor = min_cluster_size * 2

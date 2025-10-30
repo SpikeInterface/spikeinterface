@@ -41,21 +41,19 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         },
         "filtering": {
             "freq_min": 150.0,
-            "freq_max": 5000.0,
+            "freq_max": 6000.0,
             "ftype": "bessel",
             "filter_order": 2,
         },
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "svd": {"n_components": 8},
+        "svd": {"n_components": 10},
         "clustering": {
-            "recursive_depth": 5,
+            "recursive_depth": 3,
         },
         "templates": {
             "ms_before": 2.0,
             "ms_after": 3.0,
-            # "ms_before": 1.5,
-            # "ms_after": 2.5,
             "max_spikes_per_unit": 400,
             "sparsity_threshold": 1.5,
             "min_snr": 2.5,
@@ -199,12 +197,11 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         #            "You want to run tridesclous2 with the isosplit6 (the C++) implementation, but this is not installed, please `pip install isosplit6`"
         #        )
 
-
+        # whitenning do not improve in tdc2
         # recording_w = whiten(recording, mode="global")
 
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
             recording,
-            # recording_w,
             peaks,
             method="iterative-isosplit",
             method_kwargs=clustering_kwargs,
@@ -212,9 +209,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             job_kwargs=job_kwargs,
         )
 
-        # peak_shifts = extra_out["peak_shifts"]
-        # new_peaks = peaks.copy()
-        # new_peaks["sample_index"] -= peak_shifts
         new_peaks = peaks
 
         mask = clustering_label >= 0
