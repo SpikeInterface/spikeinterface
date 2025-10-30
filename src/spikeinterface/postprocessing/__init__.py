@@ -39,3 +39,8 @@ from .amplitude_scalings import compute_amplitude_scalings, ComputeAmplitudeScal
 from .alignsorting import align_sorting, AlignSortingExtractor
 
 from .noise_level import compute_noise_levels, ComputeNoiseLevels
+
+from .template_metrics import (
+    ComputeTemplateMetrics,
+    compute_template_metrics,
+)

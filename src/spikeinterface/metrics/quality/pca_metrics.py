@@ -235,7 +235,7 @@ def _nn_advanced_metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwarg
     if sorting_analyzer.format == "memory" and n_jobs > 1:
         warnings.warn(
             "Computing 'nn_advanced' metric in parallel with a SortingAnalyzer in memory is not supported. "
-            "Falling back to single-threaded computation."
+            "Falling back to n_jobs=1."
         )
         n_jobs = 1
 
