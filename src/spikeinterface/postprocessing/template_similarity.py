@@ -393,7 +393,14 @@ def get_overlapping_mask_for_one_template(template_index, sparsity, other_sparsi
 
 
 def compute_similarity_with_templates_array(
-    templates_array, other_templates_array, method, support="union", num_shifts=0, sparsity=None, other_sparsity=None
+    templates_array,
+    other_templates_array,
+    method,
+    support="union",
+    num_shifts=0,
+    sparsity=None,
+    other_sparsity=None,
+    return_lags=False,
 ):
 
     if method == "cosine_similarity":
@@ -432,10 +439,14 @@ def compute_similarity_with_templates_array(
         templates_array, other_templates_array, num_shifts, method, sparsity_mask, other_sparsity_mask, support=support
     )
 
+    lags = np.argmin(distances, axis=0) - num_shifts
     distances = np.min(distances, axis=0)
     similarity = 1 - distances
 
-    return similarity
+    if return_lags:
+        return similarity, lags
+    else:
+        return similarity
 
 
 def compute_template_similarity_by_pair(
