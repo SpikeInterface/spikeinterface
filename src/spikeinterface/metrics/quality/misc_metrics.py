@@ -144,6 +144,7 @@ def compute_snrs(
     snrs : dict
         Computed signal to noise ratio for each unit.
     """
+    check_has_required_extensions("snr", sorting_analyzer)
 
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
@@ -534,7 +535,6 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=N
 class Synchrony(BaseMetric):
     metric_name = "synchrony"
     metric_function = compute_synchrony_metrics
-    metric_params = {}
     metric_columns = {"sync_spike_2": float, "sync_spike_4": float, "sync_spike_8": float}
 
 
@@ -649,6 +649,7 @@ def compute_amplitude_cv_metrics(
     -----
     Designed by Simon Musall and Alessio Buccino.
     """
+    check_has_required_extensions("amplitude_cv", sorting_analyzer)
     res = namedtuple("amplitude_cv", ["amplitude_cv_median", "amplitude_cv_range"])
     assert amplitude_extension in (
         "spike_amplitudes",
@@ -723,7 +724,6 @@ class AmplitudeCV(BaseMetric):
 def compute_amplitude_cutoffs(
     sorting_analyzer,
     unit_ids=None,
-    peak_sign="neg",
     num_histogram_bins=500,
     histogram_smoothing_value=3,
     amplitudes_bins_min_ratio=5,
@@ -737,8 +737,6 @@ def compute_amplitude_cutoffs(
         A SortingAnalyzer object.
     unit_ids : list or None
         List of unit ids to compute the amplitude cutoffs. If None, all units are used.
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        The sign of the peaks.
     num_histogram_bins : int, default: 100
         The number of bins to use to compute the amplitude histogram.
     histogram_smoothing_value : int, default: 3
@@ -757,9 +755,7 @@ def compute_amplitude_cutoffs(
     Notes
     -----
     This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift).
-    If available, amplitudes are extracted from the "spike_amplitude" extension (recommended).
-    If the "spike_amplitude" extension is not available, the amplitudes are extracted from the SortingAnalyzer,
-    which usually has waveforms for a small subset of spikes (500 by default).
+    If available, amplitudes are extracted from the "spike_amplitude" or "amplitude_scalings" extensions.
 
     References
     ----------
@@ -769,6 +765,7 @@ def compute_amplitude_cutoffs(
     https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
 
     """
+    check_has_required_extensions("amplitude_cutoff", sorting_analyzer)
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
 
@@ -780,10 +777,13 @@ def compute_amplitude_cutoffs(
         and sorting_analyzer.get_extension("spike_amplitudes").params["peak_sign"] == "pos"
     ):
         invert_amplitudes = True
-    elif sorting_analyzer.has_extension("waveforms") and peak_sign == "pos":
-        invert_amplitudes = True
+        extension = sorting_analyzer.get_extension("spike_amplitudes")
+    elif sorting_analyzer.has_extension("amplitude_scalings"):
+        all_templates = get_dense_templates_array(sorting_analyzer)
+        invert_amplitudes = False if np.abs(np.min(all_templates)) > np.max(all_templates) else True
+        extension = sorting_analyzer.get_extension("amplitude_scalings")
 
-    amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
+    amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True)
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
@@ -804,7 +804,6 @@ class AmplitudeCutoff(BaseMetric):
     metric_name = "amplitude_cutoff"
     metric_function = compute_amplitude_cutoffs
     metric_params = {
-        "peak_sign": "neg",
         "num_histogram_bins": 100,
         "histogram_smoothing_value": 3,
         "amplitudes_bins_min_ratio": 5,
@@ -813,7 +812,7 @@ class AmplitudeCutoff(BaseMetric):
     depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
-def compute_amplitude_medians(sorting_analyzer, unit_ids=None, peak_sign="neg"):
+def compute_amplitude_medians(sorting_analyzer, unit_ids=None):
     """
     Compute median of the amplitude distributions (in absolute value).
 
@@ -823,8 +822,6 @@ def compute_amplitude_medians(sorting_analyzer, unit_ids=None, peak_sign="neg"):
         A SortingAnalyzer object.
     unit_ids : list or None
         List of unit ids to compute the amplitude medians. If None, all units are used.
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        The sign of the peaks.
 
     Returns
     -------
@@ -837,12 +834,13 @@ def compute_amplitude_medians(sorting_analyzer, unit_ids=None, peak_sign="neg"):
     This code is ported from:
     https://github.com/int-brain-lab/ibllib/blob/master/brainbox/metrics/single_units.py
     """
-    sorting = sorting_analyzer.sorting
+    check_has_required_extensions("amplitude_median", sorting_analyzer)
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
 
     all_amplitude_medians = {}
-    amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
+    amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
+    amplitudes_by_units = amplitude_extension.get_data(outputs="by_unit", concatenated=True)
     for unit_id in unit_ids:
         all_amplitude_medians[unit_id] = np.median(amplitudes_by_units[unit_id])
 
@@ -852,7 +850,6 @@ def compute_amplitude_medians(sorting_analyzer, unit_ids=None, peak_sign="neg"):
 class AmplitudeMedian(BaseMetric):
     metric_name = "amplitude_median"
     metric_function = compute_amplitude_medians
-    metric_params = {"peak_sign": "neg"}
     metric_columns = {"amplitude_median": float}
     depend_on = ["spike_amplitudes"]
 
@@ -892,6 +889,7 @@ def compute_noise_cutoffs(sorting_analyzer, unit_ids=None, high_quantile=0.25, l
     Inspired by metric described in [IBL2024]_
 
     """
+    check_has_required_extensions("noise_cutoff", sorting_analyzer)
     res = namedtuple("cutoff_metrics", ["noise_cutoff", "noise_ratio"])
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
@@ -908,7 +906,7 @@ def compute_noise_cutoffs(sorting_analyzer, unit_ids=None, high_quantile=0.25, l
         )
         peak_sign = "neg" if peak_sign == "both" else peak_sign
 
-    amplitudes_by_units = _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign)
+    amplitudes_by_units = amplitude_extension.get_data(outputs="by_unit", concatenated=True)
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
@@ -995,6 +993,7 @@ def compute_drift_metrics(
     For multi-segment object, segments are concatenated before the computation. This means that if
     there are large displacements in between segments, the resulting metric values will be very high.
     """
+    check_has_required_extensions("drift", sorting_analyzer)
     res = namedtuple("drift_metrics", ["drift_ptp", "drift_std", "drift_mad"])
     sorting = sorting_analyzer.sorting
     if unit_ids is None:
@@ -1148,6 +1147,7 @@ def compute_sd_ratio(
 
     from spikeinterface.curation.curation_tools import find_duplicated_spikes
 
+    check_has_required_extensions("sd_ratio", sorting_analyzer)
     kwargs, job_kwargs = split_job_kwargs(kwargs)
     job_kwargs = fix_job_kwargs(job_kwargs)
 
@@ -1267,6 +1267,26 @@ misc_metrics_list = [
     Drift,
     SDRatio,
 ]
+
+
+def check_has_required_extensions(metric_name, sorting_analyzer):
+    metric = [m for m in misc_metrics_list if m.metric_name == metric_name][0]
+    dependencies = metric.depend_on
+    has_required_extensions = True
+    for dep in dependencies:
+        if "|" in dep:
+            # at least one of the extensions is required
+            ext_names = dep.split("|")
+            if not any([sorting_analyzer.has_extension(ext_name) for ext_name in ext_names]):
+                has_required_extensions = False
+        else:
+            if not sorting_analyzer.has_extension(dep):
+                has_required_extensions = False
+    if not has_required_extensions:
+        raise ValueError(
+            f"The metric '{metric_name}' requires the following extensions: {dependencies}. "
+            f"Please make sure your SortingAnalyzer has the required extensions."
+        )
 
 
 ### LOW-LEVEL FUNCTIONS ###

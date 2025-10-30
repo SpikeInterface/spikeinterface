@@ -9,7 +9,7 @@ from spikeinterface.core import (
     aggregate_units,
 )
 
-from spikeinterface.metrics.quality.misc_metrics import compute_snrs
+from spikeinterface.metrics.quality.misc_metrics import compute_snrs, compute_drift_metrics
 
 
 from spikeinterface.metrics import (
@@ -37,7 +37,7 @@ def test_warnings_errors_when_missing_deps():
 
     # user asks for drift metrics without spike_locations. Should error
     with pytest.raises(ValueError):
-        analyzer.compute("quality_metrics", metric_names=["drift"])
+        compute_drift_metrics(analyzer)
 
     # user doesn't specify which metrics to compute. Should return a warning
     # about which metrics have not been computed.
