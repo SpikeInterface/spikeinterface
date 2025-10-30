@@ -60,7 +60,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         If True, any template metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept, provided the `metric_params` are unchanged.
     metric_params : dict of dicts or None, default: None
         Dictionary with parameters for template metrics calculation.
-        Default parameters can be obtained with: `si.metrics.template_metrics.get_default_tm_params()`
+        Default parameters can be obtained with: `si.metrics.template_metrics.get_default_template_metrics_params()`
     peak_sign : {"neg", "pos"}, default: "neg"
         Whether to use the positive ("pos") or negative ("neg") peaks to estimate extremum channels.
     upsampling_factor : int, default: 10

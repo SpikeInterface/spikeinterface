@@ -329,7 +329,7 @@ analyzer_TDC.compute("spike_amplitudes")
 # Once we have computed all of the postprocessing information, we can compute quality
 # metrics (some quality metrics require certain extensions - e.g., drift metrics require `spike_locations`):
 
-qm_params = sm.get_default_qm_params()
+qm_params = sm.get_default_quality_metrics_params()
 pprint(qm_params)
 
 # Since the recording is very short, let's change some parameters to accommodate the duration:

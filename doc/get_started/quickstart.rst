@@ -627,7 +627,7 @@ compute quality metrics (some quality metrics require certain extensions
 
 .. code:: ipython3
 
-    qm_params = sqm.get_default_qm_params()
+    qm_params = sqm.get_default_quality_metrics_params()
     pprint(qm_params)
 
 
