@@ -119,16 +119,18 @@ class MetricsBaseWidget(BaseWidget):
             metrics_selected = metrics
         for i, m1 in enumerate(metrics_selected.columns):
             for j, m2 in enumerate(metrics_selected.columns):
+                if i > j:
+                    self.axes[i, j].axis("off")
+                    continue
                 if i == j:
                     self.axes[i, j].hist(metrics[m1], color="gray")
+                    self.axes[i, j].set_xlabel(m2, fontsize=10)
                 else:
                     p = self.axes[i, j].scatter(
-                        metrics_selected[m1], metrics_selected[m2], c=colors, alpha=alphas, s=5, marker="o"
+                        metrics_selected[m2], metrics_selected[m1], c=colors, alpha=alphas, s=5, marker="o"
                     )
                     self.patches.append(p)
 
-                if i == num_metrics - 1:
-                    self.axes[i, j].set_xlabel(m2, fontsize=10)
                 self.axes[i, j].set_xticklabels([])
                 self.axes[i, j].set_yticklabels([])
                 self.axes[i, j].spines["top"].set_visible(False)
