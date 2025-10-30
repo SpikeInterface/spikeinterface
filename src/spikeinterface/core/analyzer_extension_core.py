@@ -1051,21 +1051,21 @@ class BaseMetricExtension(AnalyzerExtension):
         for metric_name in metric_names:
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
             column_names = list(metric.metric_columns.keys())
-            # try:
-            metric_params = self.params["metric_params"].get(metric_name, {})
-            res = metric.compute(
-                sorting_analyzer,
-                unit_ids=unit_ids,
-                metric_params=metric_params,
-                tmp_data=tmp_data,
-                job_kwargs=job_kwargs,
-            )
-            # except Exception as e:
-            #     warnings.warn(f"Error computing metric {metric_name}: {e}")
-            #     if len(column_names) == 1:
-            #         res = {unit_id: np.nan for unit_id in unit_ids}
-            #     else:
-            #         res = namedtuple("MetricResult", column_names)(*([np.nan] * len(column_names)))
+            try:
+                metric_params = self.params["metric_params"].get(metric_name, {})
+                res = metric.compute(
+                    sorting_analyzer,
+                    unit_ids=unit_ids,
+                    metric_params=metric_params,
+                    tmp_data=tmp_data,
+                    job_kwargs=job_kwargs,
+                )
+            except Exception as e:
+                warnings.warn(f"Error computing metric {metric_name}: {e}")
+                if len(column_names) == 1:
+                    res = {unit_id: np.nan for unit_id in unit_ids}
+                else:
+                    res = namedtuple("MetricResult", column_names)(*([np.nan] * len(column_names)))
 
             # res is a namedtuple with several dictionary entries (one per column)
             if isinstance(res, dict):
@@ -1122,7 +1122,7 @@ class BaseMetricExtension(AnalyzerExtension):
         # convert to correct dtype
         return self.data["metrics"]
 
-    def _set_data(self, ext_data_name, data):
+    def set_data(self, ext_data_name, data):
         import pandas as pd
 
         if ext_data_name != "metrics":
