@@ -772,12 +772,10 @@ def compute_amplitude_cutoffs(
     all_fraction_missing = {}
 
     invert_amplitudes = False
-    if (
-        sorting_analyzer.has_extension("spike_amplitudes")
-        and sorting_analyzer.get_extension("spike_amplitudes").params["peak_sign"] == "pos"
-    ):
-        invert_amplitudes = True
+    if sorting_analyzer.has_extension("spike_amplitudes"):
         extension = sorting_analyzer.get_extension("spike_amplitudes")
+        if extension.params["peak_sign"] == "pos":
+            invert_amplitudes = True
     elif sorting_analyzer.has_extension("amplitude_scalings"):
         all_templates = get_dense_templates_array(sorting_analyzer)
         invert_amplitudes = False if np.abs(np.min(all_templates)) > np.max(all_templates) else True
