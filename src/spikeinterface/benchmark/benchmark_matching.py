@@ -57,6 +57,16 @@ class MatchingBenchmark(Benchmark):
 
 
 class MatchingStudy(BenchmarkStudy, MixinStudyUnitCount):
+    """
+    Benchmark study to compare template matchong methods.
+
+    The ground truth sorting objects must be given and method outputs
+    will be compared to them.
+
+    Templates must be also given. Note that the full template can be given but also
+    only a partial catalogue can be given to challenge the template matching
+    methods when catalogue is not entirely known.
+    """
 
     benchmark_class = MatchingBenchmark
 

@@ -21,7 +21,7 @@ If you use one of the following preprocessing methods, please cite the appropria
 
 Motion Correction
 -----------------
-If you use the :code:`correct_motion` method in the preprocessing module, please cite [Garcia]_
+If you use the :code:`correct_motion` method in the preprocessing module, please cite [Garcia2024]_
 as well as the references that correspond to the :code:`preset` you used:
 
 - :code:`nonrigid_accurate` [Windolf_a]_ [Varol]_
@@ -91,6 +91,13 @@ If you use the :code:`get_potential_auto_merge` method from the curation module,
 
 If you use :code:`auto_label_units` or :code:`train_model`, please cite [Jain]_
 
+Benchmark
+---------
+
+For addicts to benchmarking numerical methods in the context of spike sorting, if you use the benchmark
+module please cite [Garcia2022]_, [Garcia2024]_ or [Scopin2024]_.
+
+
 References
 ----------
 
@@ -108,7 +115,9 @@ References
 
 .. [Diggelmann] `Automatic spike sorting for high-density microelectrode arrays. 2018. <https://pubmed.ncbi.nlm.nih.gov/30207864/>`_
 
-.. [Garcia] `A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. 2024. <https://pubmed.ncbi.nlm.nih.gov/38238082/>`_
+.. [Garcia2024] `A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. 2024. <https://pubmed.ncbi.nlm.nih.gov/38238082/>`_
+
+.. [Garcia2022] `How Do Spike Collisions Affect Spike Sorting Performance? <https://doi.org/10.1523/ENEURO.0105-22.2022>`_
 
 .. [Grün] `Impact of higher-order correlations on coincidence distributions of massively parallel data. 2007. <https://www.researchgate.net/publication/225145104_Impact_of_Higher-Order_Correlations_on_Coincidence_Distributions_of_Massively_Parallel_Data>`_
 
@@ -160,10 +169,10 @@ References
 
 .. [Varol] `Decentralized Motion Inference and Registration of Neuropixel Data. 2021. <https://ieeexplore.ieee.org/document/9414145>`_
 
-.. [Watters] `MEDiCINe: Motion Correction for Neural Electrophysiology Recordings. 2025. <https://www.eneuro.org/content/12/3/ENEURO.0529-24.2025>`_
-
 .. [Windolf_a] `Robust Online Multiband Drift Estimation in Electrophysiology Data. 2022. <https://www.biorxiv.org/content/10.1101/2022.12.04.519043v2>`_
 
 .. [Windolf_b] `DREDge: robust motion correction for high-density extracellular recordings across species. 2023 <https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1>`_
 
 .. [Yger] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
+
+.. [Scopin2024] `Localization of neurons from extracellular footprints <https://doi.org/10.1016/j.jneumeth.2024.110297>`_

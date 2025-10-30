@@ -407,58 +407,63 @@ Deprecated
 spikeinterface.generation
 -------------------------
 
-.. currentmodule:: spikeinterface.generation
-
 Core
 ~~~~
 
+.. currentmodule:: spikeinterface.generation
 
-.. autofunction:: generate_recording
-.. autofunction:: generate_sorting
-.. autofunction:: generate_snippets
-.. autofunction:: generate_templates
-.. autofunction:: generate_recording_by_size
-.. autofunction:: generate_ground_truth_recording
-.. autofunction:: add_synchrony_to_sorting
-.. autofunction:: synthesize_random_firings
-.. autofunction:: inject_some_duplicate_units
-.. autofunction:: inject_some_split_units
-.. autofunction:: synthetize_spike_train_bad_isi
-.. autofunction:: inject_templates
-.. autofunction:: noise_generator_recording
-.. autoclass:: InjectTemplatesRecording
-.. autoclass:: NoiseGeneratorRecording
+    .. autofunction:: generate_recording
+    .. autofunction:: generate_sorting
+    .. autofunction:: generate_snippets
+    .. autofunction:: generate_templates
+    .. autofunction:: generate_recording_by_size
+    .. autofunction:: generate_ground_truth_recording
+    .. autofunction:: add_synchrony_to_sorting
+    .. autofunction:: synthesize_random_firings
+    .. autofunction:: inject_some_duplicate_units
+    .. autofunction:: inject_some_split_units
+    .. autofunction:: synthetize_spike_train_bad_isi
+    .. autofunction:: inject_templates
+    .. autofunction:: noise_generator_recording
+    .. autoclass:: InjectTemplatesRecording
+    .. autoclass:: NoiseGeneratorRecording
 
 Drift
 ~~~~~
 
-.. autofunction:: generate_drifting_recording
-.. autofunction:: generate_displacement_vector
-.. autofunction:: make_one_displacement_vector
-.. autofunction:: make_linear_displacement
-.. autofunction:: move_dense_templates
-.. autofunction:: interpolate_templates
-.. autoclass:: DriftingTemplates
-.. autoclass:: InjectDriftingTemplatesRecording
+.. currentmodule:: spikeinterface.generation
+
+    .. autofunction:: generate_drifting_recording
+    .. autofunction:: generate_displacement_vector
+    .. autofunction:: make_one_displacement_vector
+    .. autofunction:: make_linear_displacement
+    .. autofunction:: move_dense_templates
+    .. autofunction:: interpolate_templates
+    .. autoclass:: DriftingTemplates
+    .. autoclass:: InjectDriftingTemplatesRecording
 
 Hybrid
 ~~~~~~
 
-.. autofunction:: generate_hybrid_recording
-.. autofunction:: estimate_templates_from_recording
-.. autofunction:: select_templates
-.. autofunction:: scale_template_to_range
-.. autofunction:: relocate_templates
-.. autofunction:: fetch_template_object_from_database
-.. autofunction:: fetch_templates_database_info
-.. autofunction:: list_available_datasets_in_template_database
-.. autofunction:: query_templates_from_database
+.. currentmodule:: spikeinterface.generation
+
+    .. autofunction:: generate_hybrid_recording
+    .. autofunction:: estimate_templates_from_recording
+    .. autofunction:: select_templates
+    .. autofunction:: scale_template_to_range
+    .. autofunction:: relocate_templates
+    .. autofunction:: fetch_template_object_from_database
+    .. autofunction:: fetch_templates_database_info
+    .. autofunction:: list_available_datasets_in_template_database
+    .. autofunction:: query_templates_from_database
 
 
 Noise
 ~~~~~
 
-.. autofunction:: generate_noise
+.. currentmodule:: spikeinterface.generation
+
+    .. autofunction:: generate_noise
 
 
 spikeinterface.sortingcomponents
@@ -480,7 +485,7 @@ Clustering
 ~~~~~~~~~~
 .. automodule:: spikeinterface.sortingcomponents.clustering
 
-    .. autofunction:: find_cluster_from_peaks
+    .. autofunction:: find_clusters_from_peaks
 
 Template Matching
 ~~~~~~~~~~~~~~~~~
@@ -498,3 +503,46 @@ Motion Correction
     .. autofunction:: interpolate_motion_on_traces
     .. autofunction:: clean_motion_vector
     .. autoclass:: InterpolateMotionRecording
+
+spikeinterface.benchmark
+------------------------
+
+.. automodule:: spikeinterface.benchmark
+
+    .. autoclass:: SorterStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_peak_detection
+
+    .. autoclass:: PeakDetectionStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_peak_localization
+
+    .. autoclass:: PeakLocalizationStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_peak_localization
+
+    .. autoclass:: UnitLocalizationStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_motion_estimation
+
+    .. autoclass:: MotionEstimationStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_clustering
+
+    .. autoclass:: ClusteringStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_matching
+
+    .. autoclass:: MatchingStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_plot_tools
+
+    .. autofunction:: plot_run_times
+    .. autofunction:: plot_unit_counts
+    .. autofunction:: plot_agreement_matrix
+    .. autofunction:: plot_performances_vs_snr
+    .. autofunction:: plot_performances_ordered
+    .. autofunction:: plot_performances_swarm
+    .. autofunction:: plot_performances_comparison
+    .. autofunction:: plot_performances_vs_depth_and_snr
+    .. autofunction:: plot_performance_losses
