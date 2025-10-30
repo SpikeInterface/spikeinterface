@@ -553,7 +553,6 @@ def merge_peak_labels_from_templates(
         support="union",
         sparsity=template_sparse_mask,
         other_sparsity=template_sparse_mask,
-        return_lags=True,
     )
 
     pair_mask = similarity > similarity_thresh

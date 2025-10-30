@@ -94,7 +94,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 new_sorting_analyzer.sparsity.mask[keep, :], new_unit_ids, new_sorting_analyzer.channel_ids
             )
 
-        new_similarity = compute_similarity_with_templates_array(
+        new_similarity, _ = compute_similarity_with_templates_array(
             new_templates_array,
             all_templates_array,
             method=self.params["method"],
@@ -146,7 +146,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 new_sorting_analyzer.sparsity.mask[keep, :], new_unit_ids_f, new_sorting_analyzer.channel_ids
             )
 
-        new_similarity = compute_similarity_with_templates_array(
+        new_similarity, _ = compute_similarity_with_templates_array(
             new_templates_array,
             all_templates_array,
             method=self.params["method"],
@@ -188,7 +188,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             self.sorting_analyzer, return_in_uV=self.sorting_analyzer.return_in_uV
         )
         sparsity = self.sorting_analyzer.sparsity
-        similarity = compute_similarity_with_templates_array(
+        similarity, _ = compute_similarity_with_templates_array(
             templates_array,
             templates_array,
             method=self.params["method"],
@@ -400,7 +400,6 @@ def compute_similarity_with_templates_array(
     num_shifts=0,
     sparsity=None,
     other_sparsity=None,
-    return_lags=False,
 ):
 
     if method == "cosine_similarity":
@@ -443,10 +442,7 @@ def compute_similarity_with_templates_array(
     distances = np.min(distances, axis=0)
     similarity = 1 - distances
 
-    if return_lags:
-        return similarity, lags
-    else:
-        return similarity
+    return similarity, lags
 
 
 def compute_template_similarity_by_pair(
@@ -456,7 +452,7 @@ def compute_template_similarity_by_pair(
     templates_array_2 = get_dense_templates_array(sorting_analyzer_2, return_in_uV=True)
     sparsity_1 = sorting_analyzer_1.sparsity
     sparsity_2 = sorting_analyzer_2.sparsity
-    similarity = compute_similarity_with_templates_array(
+    similarity, _ = compute_similarity_with_templates_array(
         templates_array_1,
         templates_array_2,
         method=method,

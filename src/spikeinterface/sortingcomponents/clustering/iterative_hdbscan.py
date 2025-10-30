@@ -8,7 +8,7 @@ from spikeinterface.core import Templates
 from spikeinterface.core.recording_tools import get_channel_distances
 from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
 from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak_labels_from_templates
-from spikeinterface.sortingcomponents.clustering.splitting_tools import split_clusters
+from spikeinterface.sortingcomponents.clustering.itersplit_tools import split_clusters
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
 
