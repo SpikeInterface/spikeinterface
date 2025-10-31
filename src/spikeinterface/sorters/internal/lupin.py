@@ -59,8 +59,9 @@ class LupinSorter(ComponentsBasedSorter):
             "min_snr": 2.5,
             # "peak_shift_ms": 0.2,
         },
-        "matching": {"method": "tdc-peeler", "method_kwargs": {}, "gather_mode": "memory"},
+        "matching": {"method": "wobble", "method_kwargs": {}, "gather_mode": "memory"},
         "job_kwargs": {},
+        "seed": None,
         "save_array": True,
         "debug": False,
     }
@@ -84,11 +85,12 @@ class LupinSorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "2025.09"
+        return "2025.11"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
 
+        from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms_from_recording
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
@@ -101,6 +103,8 @@ class LupinSorter(ComponentsBasedSorter):
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
         job_kwargs["progress_bar"] = verbose
+
+        seed = params["seed"]
 
         recording_raw = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -150,7 +154,7 @@ class LupinSorter(ComponentsBasedSorter):
 
             recording = zscore(recording, dtype="float32")
             # whitening is really bad when dirft correction is applied and this changd nothing when no dirft
-            # recording = whiten(recording, dtype="float32", mode="local", radius_um=100.0)
+            recording = whiten(recording, dtype="float32", mode="local", radius_um=100.0)
 
             # used only if "folder" or "zarr"
             cache_folder = sorter_output_folder / "cache_preprocessing"
@@ -158,16 +162,32 @@ class LupinSorter(ComponentsBasedSorter):
                 recording, folder=cache_folder, **job_kwargs, **params["cache_preprocessing"]
             )
 
-            noise_levels = np.ones(num_chans, dtype="float32")
+            noise_levels = get_noise_levels(recording, return_in_uV=False)
         else:
             recording = recording_raw
             noise_levels = get_noise_levels(recording, return_in_uV=False)
 
         # detection
         detection_params = params["detection"].copy()
-        detection_params["noise_levels"] = noise_levels
+        # detection_params["noise_levels"] = noise_levels
+
+        ms_before = params["templates"]["ms_before"]
+        ms_after = params["templates"]["ms_after"]
+
+        prototype, few_waveforms, few_peaks = get_prototype_and_waveforms_from_recording(
+            recording,
+            n_peaks=10_000,
+            ms_before=ms_before,
+            ms_after=ms_after,
+            seed=seed,
+            noise_levels=noise_levels,
+            job_kwargs=job_kwargs,
+        )
+        detection_params_ = detection_params.copy()
+        detection_params_["prototype"] = prototype
+        detection_params_["ms_before"] = ms_before
         all_peaks = detect_peaks(
-            recording, method="locally_exclusive", method_kwargs=detection_params, job_kwargs=job_kwargs
+            recording, method="matched_filtering", method_kwargs=detection_params_, job_kwargs=job_kwargs
         )
 
         if verbose:
@@ -189,16 +209,6 @@ class LupinSorter(ComponentsBasedSorter):
         clustering_kwargs["split"].update(params["clustering"])
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
-
-        # if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
-        #    have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
-        #    if not have_sisosplit6:
-        #        raise ValueError(
-        #            "You want to run tridesclous2 with the isosplit6 (the C++) implementation, but this is not installed, please `pip install isosplit6`"
-        #        )
-
-        # whitenning do not improve in tdc2
-        # recording_w = whiten(recording, mode="global")
 
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
             recording,
@@ -252,7 +262,6 @@ class LupinSorter(ComponentsBasedSorter):
             is_in_uV=False,
         )
         
-
         # sparsity is a mix between radius and 
         sparsity_threshold = params["templates"]["sparsity_threshold"]
         radius_um = params["waveforms"]["radius_um"]
@@ -327,12 +336,6 @@ class LupinSorter(ComponentsBasedSorter):
             np.save(sorter_output_folder / "clustering_label.npy", clustering_label)
             np.save(sorter_output_folder / "spikes.npy", spikes)
             templates.to_zarr(sorter_output_folder / "templates.zarr")
-
-        # final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)
-        # final_spikes["sample_index"] = spikes["sample_index"]
-        # final_spikes["unit_index"] = spikes["cluster_index"]
-        # final_spikes["segment_index"] = spikes["segment_index"]
-        # sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
