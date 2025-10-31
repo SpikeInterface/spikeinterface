@@ -28,7 +28,7 @@ Example code
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as sqm
+    import spikeinterface.metrics.quality as sqm
 
     iso_distance, _ = sqm.isolation_distance(all_pcs=all_pcs, all_labels=all_labels, this_unit_id=0)
 
@@ -36,7 +36,7 @@ Example code
 References
 ----------
 
-.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.mahalanobis_metrics
+.. autofunction:: spikeinterface.metrics.quality.pca_metrics.mahalanobis_metrics
 
 
 Literature

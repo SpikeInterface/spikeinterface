@@ -60,7 +60,13 @@ print(snrs)
 # function and indicate which metrics we want to compute. Then we can retrieve the results using the :code:`get_data()`
 # method as a ``pandas.DataFrame``.
 
-metrics_ext = analyzer.compute("quality_metrics", metric_names=["presence_ratio", "snr", "amplitude_cutoff"])
+metrics_ext = analyzer.compute(
+    "quality_metrics",
+    metric_names=["presence_ratio", "snr", "amplitude_cutoff"],
+    metric_params={
+        "presence_ratio": {"bin_duration_s": 2.0},
+    }
+)
 metrics = metrics_ext.get_data()
 print(metrics)
 
@@ -73,7 +79,7 @@ analyzer.compute("principal_components", n_components=3, mode="by_channel_global
 metrics_ext = analyzer.compute(
     "quality_metrics",
     metric_names=[
-        "isolation_distance",
+        "mahalanobis_metrics",
         "d_prime",
     ],
 )

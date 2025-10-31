@@ -101,7 +101,7 @@ Example code
 Reference
 ---------
 
-.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_noise_cutoffs
+.. autofunction:: spikeinterface.metrics.quality.misc_metrics.compute_noise_cutoffs
 
 Examples with plots
 -------------------

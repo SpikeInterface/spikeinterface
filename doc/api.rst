@@ -226,7 +226,6 @@ spikeinterface.postprocessing
     .. autofunction:: compute_correlograms
     .. autofunction:: compute_acgs_3d
     .. autofunction:: compute_isi_histograms
-    .. autofunction:: get_template_metric_names
     .. autofunction:: align_sorting
 
 
@@ -410,7 +409,7 @@ spikeinterface.generation
 Core
 ~~~~
 
-.. currentmodule:: spikeinterface.generation
+.. automodule:: spikeinterface.generation
 
     .. autofunction:: generate_recording
     .. autofunction:: generate_sorting
@@ -431,7 +430,8 @@ Core
 Drift
 ~~~~~
 
-.. currentmodule:: spikeinterface.generation
+.. automodule:: spikeinterface.generation
+    :noindex:
 
     .. autofunction:: generate_drifting_recording
     .. autofunction:: generate_displacement_vector
@@ -445,7 +445,8 @@ Drift
 Hybrid
 ~~~~~~
 
-.. currentmodule:: spikeinterface.generation
+.. automodule:: spikeinterface.generation
+    :noindex:
 
     .. autofunction:: generate_hybrid_recording
     .. autofunction:: estimate_templates_from_recording
@@ -461,7 +462,7 @@ Hybrid
 Noise
 ~~~~~
 
-.. currentmodule:: spikeinterface.generation
+.. automodule:: spikeinterface.generation
 
     .. autofunction:: generate_noise
 
@@ -518,9 +519,6 @@ spikeinterface.benchmark
 .. automodule:: spikeinterface.benchmark.benchmark_peak_localization
 
     .. autoclass:: PeakLocalizationStudy
-
-.. automodule:: spikeinterface.benchmark.benchmark_peak_localization
-
     .. autoclass:: UnitLocalizationStudy
 
 .. automodule:: spikeinterface.benchmark.benchmark_motion_estimation

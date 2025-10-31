@@ -37,17 +37,17 @@ With SpikeInterface:
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as sqm
+    from spikeinterface.metrics.spiketrain import compute_firing_rates
 
     # Combine a sorting and recording into a sorting_analyzer
-    firing_rate = sqm.compute_firing_rates(sorting_analyzer)
+    firing_rate = compute_firing_rates(sorting_analyzer)
     # firing_rate is a dict containing the unit IDs as keys,
     # and their firing rates across segments as values (in Hz).
 
 References
 ----------
 
-.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_firing_rates
+.. autofunction:: spikeinterface.metrics.spiketrain.compute_firing_rates
 
 
 Links to original implementations

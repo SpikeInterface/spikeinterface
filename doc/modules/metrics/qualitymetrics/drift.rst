@@ -40,7 +40,7 @@ Example code
 
 .. code-block:: python
 
-	import spikeinterface.qualitymetrics as sqm
+	import spikeinterface.metrics.quality as sqm
 
 	# Combine sorting and recording into sorting_analyzer
 	# It is required to run sorting_analyzer.compute(input="spike_locations") first
@@ -53,7 +53,7 @@ Example code
 Reference
 ---------
 
-.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_drift_metrics
+.. autofunction:: spikeinterface.metrics.quality.misc_metrics.compute_drift_metrics
 
 Links to original implementations
 ---------------------------------

@@ -41,7 +41,7 @@ With SpikeInterface:
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as sqm
+    import spikeinterface.metrics.quality as sqm
 
     # Combining sorting and recording into a sorting_analzyer
     SNRs = sqm.compute_snrs(sorting_analzyer=sorting_analzyer)
@@ -56,7 +56,7 @@ Links to original implementations
 References
 ----------
 
-.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_snrs
+.. autofunction:: spikeinterface.metrics.quality.misc_metrics.compute_snrs
 
 Literature
 ----------

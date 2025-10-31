@@ -43,7 +43,7 @@ import spikeinterface
 # - `preprocessing` : preprocessing
 # - `sorters` : Python wrappers of spike sorters
 # - `postprocessing` : postprocessing
-# - `qualitymetrics` : quality metrics on units found by sorters
+# - `metrics` : quality, template, and spiketrain metrics on units found by sorters
 # - `curation` : automatic curation of spike sorting output
 # - `comparison` : comparison of spike sorting outputs
 # - `widgets` : visualization
@@ -61,7 +61,7 @@ import spikeinterface.widgets as sw
 
 # Alternatively, we can import all submodules at once with `import spikeinterface.full as si` which
 # internally imports core+extractors+preprocessing+sorters+postprocessing+
-# qualitymetrics+comparison+widgets+exporters. In this case all aliases in the following tutorial
+# metrics+comparison+widgets+exporters. In this case all aliases in the following tutorial
 # would be `si`.
 
 # This is useful for notebooks, but it is a heavier import because internally many more dependencies

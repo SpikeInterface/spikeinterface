@@ -39,7 +39,8 @@ print(analyzer)
 ##############################################################################
 # Then we compute some quality metrics:
 
-metrics = analyzer.compute("quality_metrics", metric_names=["snr", "isi_violation", "nearest_neighbor"])
+metrics_ext = analyzer.compute("quality_metrics", metric_names=["snr", "isi_violation", "nearest_neighbor"])
+metrics = metrics_ext.get_data()
 print(metrics)
 
 ##############################################################################
@@ -49,7 +50,7 @@ print(metrics)
 #
 # Then create a list of unit ids that we want to keep
 
-keep_mask = (metrics["snr"] > 7.5) & (metrics["isi_violations_ratio"] < 0.2) & (metrics["nn_hit_rate"] > 0.90)
+keep_mask = (metrics["snr"] > 7.5) & (metrics["isi_violations_ratio"] < 0.2) & (metrics["nn_hit_rate"] > 0.80)
 print(keep_mask)
 
 keep_unit_ids = keep_mask[keep_mask].index.values
@@ -63,7 +64,7 @@ curated_sorting = sorting.select_units(keep_unit_ids)
 print(curated_sorting)
 
 
-curated_sorting.save(folder="curated_sorting")
+curated_sorting.save(folder="curated_sorting", overwrite=True)
 
 ##############################################################################
 # We can also save the analyzer with only theses units

@@ -73,11 +73,11 @@ This metric gives an indication of the contamination present in the unit cluster
 References
 ----------
 
-.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.nearest_neighbors_metrics
+.. autofunction:: spikeinterface.metrics.quality.pca_metrics.nearest_neighbors_metrics
 
-.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.nearest_neighbors_isolation
+.. autofunction:: spikeinterface.metrics.quality.pca_metrics.nearest_neighbors_isolation
 
-.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.nearest_neighbors_noise_overlap
+.. autofunction:: spikeinterface.metrics.quality.pca_metrics.nearest_neighbors_noise_overlap
 
 
 Literature

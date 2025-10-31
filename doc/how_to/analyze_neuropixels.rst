@@ -726,13 +726,6 @@ PCA for their computation. This can be achieved with:
     metrics
 
 
-.. parsed-literal::
-
-    /home/samuel.garcia/Documents/SpikeInterface/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:846: UserWarning: Some units have too few spikes : amplitude_cutoff is set to NaN
-      warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
-
-
-
 
 .. raw:: html
 

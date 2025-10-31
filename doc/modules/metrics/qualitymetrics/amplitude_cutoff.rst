@@ -34,7 +34,7 @@ Example code
 Reference
 ---------
 
-.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_amplitude_cutoffs
+.. autofunction:: spikeinterface.metrics.quality.misc_metrics.compute_amplitude_cutoffs
 
 
 Links to original implementations

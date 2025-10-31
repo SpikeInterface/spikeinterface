@@ -48,7 +48,7 @@ register_result_extension(ComputeSpikeTrainMetrics)
 compute_spiketrain_metrics = ComputeSpikeTrainMetrics.function_factory()
 
 
-def get_spiketrain_metric_names():
+def get_spiketrain_metric_list():
     return [m.metric_name for m in spiketrain_metrics]
 
 

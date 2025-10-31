@@ -32,7 +32,7 @@ Example code
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as sqm
+    import spikeinterface.metrics.quality as sqm
 
     d_prime = sqm.lda_metrics(all_pcs=all_pcs, all_labels=all_labels, this_unit_id=0)
 
@@ -40,7 +40,7 @@ Example code
 Reference
 ---------
 
-.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.lda_metrics
+.. autofunction:: spikeinterface.metrics.quality.pca_metrics.lda_metrics
 
 
 Literature

@@ -32,7 +32,7 @@ Example code
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as sqm
+    import spikeinterface.metrics.quality as sqm
 
     # Combine a sorting and recording into a sorting_analyzer
 	# It is required to run sorting_analyzer.compute(input="spike_amplitudes") or
@@ -46,7 +46,7 @@ Example code
 References
 ----------
 
-.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_amplitude_cv_metrics
+.. autofunction:: spikeinterface.metrics.quality.misc_metrics.compute_amplitude_cv_metrics
 
 
 Literature

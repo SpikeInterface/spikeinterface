@@ -21,7 +21,7 @@ Example code
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as sqm
+    import spikeinterface.metrics.quality as sqm
 
     # Combine a sorting and recording into a sorting_analyzer
     firing_range = sqm.compute_firing_ranges(sorting_analyzer=sorting_analyzer)
@@ -31,7 +31,7 @@ Example code
 References
 ----------
 
-.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_firing_ranges
+.. autofunction:: spikeinterface.metrics.quality.misc_metrics.compute_firing_ranges
 
 
 Literature
