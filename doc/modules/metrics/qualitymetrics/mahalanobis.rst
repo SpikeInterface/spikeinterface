@@ -1,8 +1,32 @@
-L-ratio (:code:`l_ratio`)
-=========================
+Mahalanobis metrics (:code:`isolation_distance`, :code:`l_ratio`)
+=================================================================
+
+Mahalanobis metrics are quality metrics based on the Mahalanobis distance between spikes and cluster centres in the PCA space.
+
+They include:
+- Isolation distance (:code:`isolation_distance`)
+- L-ratio (:code:`l_ratio`)
 
 Calculation
 -----------
+
+Isolation distance
+~~~~~~~~~~~~~~~~~~
+
+- :math:`C` : cluster of interest.
+- :math:`N_s` : number of spikes within cluster :math:`C`.
+- :math:`N_n` : number of spikes outside of cluster :math:`C`.
+- :math:`N_{min}` : minimum of :math:`N_s` and :math:`N_n`.
+- :math:`\mu_C`, :math:`\Sigma_C` : mean vector and covariance matrix for spikes within :math:`C` (where each spike within :math:`C` is represented by a vector of principal components (PCs)).
+- :math:`D_{i,C}^2` : for every spike :math:`i` (represented by vector :math:`x_i`) outside of cluster :math:`C`, the Mahalanobis distance (as below) between :math:`\mu_c` and :math:`x_i` is calculated. These distances are ordered from smallest to largest. The :math:`N_{min}`'th entry in this list is the isolation distance.
+
+.. math::
+    D_{i,C}^2 = (x_i - \mu_C)^T \Sigma_C^{-1} (x_i - \mu_C)
+
+Geometrically, the isolation distance for cluster :math:`C` is the radius of the circle which contains :math:`N_{min}` spikes from cluster :math:`C` and :math:`N_{min}` spikes outside of the cluster :math:`C`.
+
+L-ratio
+~~~~~~~
 
 This example assumes use of a tetrode.
 
@@ -31,7 +55,10 @@ This yields L-ratio, which can be expressed as:
 Expectation and use
 -------------------
 
-Since this metric identifies unit separation, a high value indicates a highly contaminated unit (type I error)
+Isolation distance can be interpreted as a measure of distance from the cluster to the nearest other cluster.
+A well isolated unit should have a large isolation distance.
+
+L-ratio quantifies unit separation, so a high value indicates a highly contaminated unit (type I error)
 ([Schmitzer-Torbert]_ et al.). [Jackson]_ et al. suggests that this measure is also correlated with type II errors
 (although more strongly with type I errors).
 
@@ -43,9 +70,9 @@ Example code
 
 .. code-block:: python
 
-    import spikeinterface.metrics.quality as sqm
+    from spikeinterface.metrics.quality.pca_metrics import mahalanobis_metrics
 
-    _, l_ratio = sqm.isolation_distance(all_pcs=all_pcs, all_labels=all_labels, this_unit_id=0)
+    isolation_distance, l_ratio = mahalanobis_metrics(all_pcs=all_pcs, all_labels=all_labels, this_unit_id=0)
 
 
 References
@@ -57,5 +84,6 @@ References
 Literature
 ----------
 
-Introduced by [Schmitzer-Torbert]_ et al..
+Isolation distance introduced by [Harris]_.
+L-ratio introduced by [Schmitzer-Torbert]_ et al..
 Early discussion and comparison with isolation distance by [Jackson]_ et al..
