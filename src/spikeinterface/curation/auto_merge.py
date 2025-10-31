@@ -1521,6 +1521,31 @@ def estimate_cross_contamination(
 
 
 def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float, template_diff_thresh: float):
+    """
+    Computes the "merge decision metric" from the SLAy method, made from combining
+    a template similarity measure, a cross-correlation significance measure and a
+    sliding refractory period violation measure. A large M suggests that two
+    units should be merged.
+
+    Paramters
+    ---------
+    sorting_analyzer : SortingAnalyzer
+        The sorting analyzer object containing the spike sorting data
+    k1 : float
+        Coefficient determining the importance of the cross-correlation significance
+    k2 : float
+        Coefficient determining the importance of the sliding rp violation
+    template_diff_thresh : float
+        Threshold for how different template similarities can be to be considered for merging
+
+
+    References
+    ----------
+    Based on computation originally implemented in SLAy [Koukuntla]_.
+
+    Implementation is based on one of the original implementations written by Sai Koukuntla,
+    found at https://github.com/saikoukunt/SLAy.
+    """
 
     sigma_ij = sorting_analyzer.get_extension("template_similarity").get_data()
     rho_ij, eta_ij = compute_xcorr_and_rp(sorting_analyzer, template_diff_thresh)
@@ -1530,13 +1555,26 @@ def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float,
     return M_ij
 
 
-def compute_xcorr_and_rp(sorting_analyzer, template_diff_thresh):
+def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, template_diff_thresh: float):
+    """
+    Computes a cross-correlation significance measure and a sliding refractory period violation
+    measure for all units in the `sorting_analyzer`.
+
+    Paramters
+    ---------
+    sorting_analyzer : SortingAnalyzer
+        The sorting analyzer object containing the spike sorting data
+    template_diff_thresh : float
+        Threshold for how different template similarities can be to be considered for merging
+    """
 
     correlograms_extension = sorting_analyzer.get_extension("correlograms")
     template_similarity = sorting_analyzer.get_extension("template_similarity").get_data()
 
     ccgs, _ = correlograms_extension.get_data()
-    xcorr_bin_width = correlograms_extension.params["bin_ms"] / 1000
+
+    # convert to seconds for SLAy functions
+    bin_s = correlograms_extension.params["bin_ms"] / 1000
 
     rho_ij = np.zeros([len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids)])
     eta_ij = np.zeros([len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids)])
@@ -1550,10 +1588,8 @@ def compute_xcorr_and_rp(sorting_analyzer, template_diff_thresh):
 
             xgram = ccgs[unit_index_1, unit_index_2, :]
 
-            rho_ij[unit_index_1, unit_index_2] = _compute_xcorr_pair(
-                xgram, xcorr_bin_width=xcorr_bin_width, min_xcorr_rate=0
-            )
-            eta_ij[unit_index_1, unit_index_2] = _sliding_RP_viol_pair(xgram, bin_size=xcorr_bin_width)
+            rho_ij[unit_index_1, unit_index_2] = _compute_xcorr_pair(xgram, xcorr_bin_width=bin_s, min_xcorr_rate=0)
+            eta_ij[unit_index_1, unit_index_2] = _sliding_RP_viol_pair(xgram, bin_size=bin_s)
 
     return rho_ij, eta_ij
 
@@ -1572,16 +1608,21 @@ def _compute_xcorr_pair(
     distances from null by chance, so we first try to expand the window size. If
     that fails to yield enough spikes, we apply a penalty to the metric.
 
-    Args:
-        xgram (NDArray): The raw cross-correlogram for the cluster pair.
-        xcorr_bin_width (float): The width in seconds of the bin size of the
-            input ccgs.
-        max_window (float): The largest allowed window size during window
-            expansion.
-        min_xcorr_rate (float): The minimum ccg firing rate in Hz.
+    Ported from https://github.com/saikoukunt/SLAy.
 
-    Returns:
-        sig (float): The calculated cross-correlation significance metric.
+    Parameters
+    ----------
+    xgram : np.array
+        The raw cross-correlogram for the cluster pair.
+    xcorr_bin_width : float
+        The width in seconds of the bin size of the input ccgs.
+    min_xcorr_rate : float
+        The minimum ccg firing rate in Hz.
+
+    Returns
+    -------
+    sig : float
+        The calculated cross-correlation significance metric.
     """
 
     from scipy.signal import butter, find_peaks_cwt, sosfiltfilt
@@ -1653,17 +1694,27 @@ def _compute_xcorr_pair(
 
 def _sliding_RP_viol_pair(
     correlogram,
-    bin_size: float = 1,
+    bin_size: float,
     acceptThresh: float = 0.15,
 ) -> float:
     """
     Calculate the sliding refractory period violation confidence for a cluster.
-    Args:
-        correlogram (NDArray): The auto-correlogram of the cluster.
-        bin_size (float, optional): The size of each bin in ms. Defaults to 0.25.
-        acceptThresh (float, optional): The threshold for accepting refractory period violations. Defaults to 0.1.
-    Returns:
-        float: The refractory period violation confidence for the cluster.
+
+    Ported from https://github.com/saikoukunt/SLAy.
+
+    Parameters
+    ----------
+    correlogram : np.array
+        The auto-correlogram of the cluster.
+    bin_size : float
+        The width in ms of the bin size of the input ccgs.
+    acceptThresh : float, default: 0.15
+        The minimum ccg firing rate in Hz.
+
+    Returns
+    -------
+    sig : float
+        The refractory period violation confidence for the cluster.
     """
     from scipy.signal import butter, sosfiltfilt
     from scipy.stats import poisson
