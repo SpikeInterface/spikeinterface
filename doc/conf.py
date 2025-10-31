@@ -35,8 +35,8 @@ folders =  [
     '../examples/tutorials/core/analyzer_some_units',
     '../examples/tutorials/core/analyzer.zarr',
     '../examples/tutorials/curation/my_folder',
-    '../examples/tutorials/qualitymetrics/curated_sorting',
-    '../examples/tutorials/qualitymetrics/clean_analyzer.zarr',
+    '../examples/tutorials/metrics/curated_sorting',
+    '../examples/tutorials/metrics/clean_analyzer.zarr',
     '../examples/tutorials/widgets/waveforms_mearec',
 
 ]
@@ -129,7 +129,7 @@ sphinx_gallery_conf = {
                                        '../examples/tutorials/core',
                                        '../examples/tutorials/extractors',
                                        '../examples/tutorials/curation',
-                                       '../examples/tutorials/qualitymetrics',
+                                       '../examples/tutorials/metrics',
                                        '../examples/tutorials/comparison',
                                        '../examples/tutorials/widgets',
                                        '../examples/tutorials/forhowto',

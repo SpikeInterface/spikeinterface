@@ -1,9 +1,10 @@
-from .quality_metric_list import *
-from .quality_metric_calculator import (
-    compute_quality_metrics,
-    get_quality_metric_list,
-    ComputeQualityMetrics,
-    get_default_qm_params,
+import warnings
+
+warnings.warn(
+    "The module 'spikeinterface.qualitymetrics' is deprecated and will be removed in 0.105.0."
+    "Please use 'spikeinterface.metrics.quality' instead.",
+    DeprecationWarning,
+    stacklevel=2,
 )
-from .pca_metrics import get_quality_pca_metric_list
-from .misc_metrics import _get_synchrony_counts
+
+from spikeinterface.metrics.quality import *  # noqa: F403
