@@ -52,6 +52,10 @@ _compute_merge_presets = {
         "knn",
         "quality_score",
     ],
+    "slay": [
+        "template_similarity",
+        "slay_score",
+    ],
 }
 
 _required_extensions = {
@@ -60,6 +64,7 @@ _required_extensions = {
     "snr": ["templates", "noise_levels"],
     "template_similarity": ["templates", "template_similarity"],
     "knn": ["templates", "spike_locations", "spike_amplitudes"],
+    "slay_score": ["correlograms"],
 }
 
 
@@ -84,6 +89,7 @@ _default_step_params = {
         "censored_period_ms": 0.3,
     },
     "quality_score": {"firing_contamination_balance": 1.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+    "slay_score": {"k1": 0.25, "k2": 1, "slay_threshold": 0.5},
 }
 
 
@@ -355,6 +361,16 @@ def compute_merge_unit_groups(
                 params["censored_period_ms"],
             )
             outs["pairs_decreased_score"] = pairs_decreased_score
+
+        elif step == "slay_score":
+
+            M_ij = compute_slay_matrix(
+                sorting_analyzer,
+                params["k1"],
+                params["k2"],
+            )
+
+            pair_mask = M_ij > params["slay_threshold"]
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
@@ -1506,3 +1522,16 @@ def estimate_cross_contamination(
         )
 
     return estimation, p_value
+
+
+def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float):
+
+    from numpy import random
+
+    sigma_ij = random.rand(len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids))
+    rho_ij = random.rand(len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids))
+    eta_ij = random.rand(len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids))
+
+    M_ij = sigma_ij + k1 * rho_ij - k2 * eta_ij
+
+    return M_ij
