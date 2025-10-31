@@ -64,7 +64,7 @@ _required_extensions = {
     "snr": ["templates", "noise_levels"],
     "template_similarity": ["templates", "template_similarity"],
     "knn": ["templates", "spike_locations", "spike_amplitudes"],
-    "slay_score": ["correlograms"],
+    "slay_score": ["correlograms", "template_similarity"],
 }
 
 
@@ -1574,7 +1574,7 @@ def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, template_diff_thresh
     ccgs, _ = correlograms_extension.get_data()
 
     # convert to seconds for SLAy functions
-    bin_s = correlograms_extension.params["bin_ms"] / 1000
+    bin_size_ms = correlograms_extension.params["bin_ms"]
 
     rho_ij = np.zeros([len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids)])
     eta_ij = np.zeros([len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids)])
@@ -1588,15 +1588,17 @@ def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, template_diff_thresh
 
             xgram = ccgs[unit_index_1, unit_index_2, :]
 
-            rho_ij[unit_index_1, unit_index_2] = _compute_xcorr_pair(xgram, xcorr_bin_width=bin_s, min_xcorr_rate=0)
-            eta_ij[unit_index_1, unit_index_2] = _sliding_RP_viol_pair(xgram, bin_size=bin_s)
+            rho_ij[unit_index_1, unit_index_2] = _compute_xcorr_pair(
+                xgram, bin_size_s=bin_size_ms / 1000, min_xcorr_rate=0
+            )
+            eta_ij[unit_index_1, unit_index_2] = _sliding_RP_viol_pair(xgram, bin_size_ms=bin_size_ms)
 
     return rho_ij, eta_ij
 
 
 def _compute_xcorr_pair(
     xgram,
-    xcorr_bin_width: float,
+    bin_size_s: float,
     min_xcorr_rate: float,
 ) -> float:
     """
@@ -1614,7 +1616,7 @@ def _compute_xcorr_pair(
     ----------
     xgram : np.array
         The raw cross-correlogram for the cluster pair.
-    xcorr_bin_width : float
+    bin_size_s : float
         The width in seconds of the bin size of the input ccgs.
     min_xcorr_rate : float
         The minimum ccg firing rate in Hz.
@@ -1629,11 +1631,11 @@ def _compute_xcorr_pair(
     from scipy.stats import wasserstein_distance
 
     # calculate low-pass filtered second derivative of ccg
-    fs = 1 / xcorr_bin_width
+    fs = 1 / bin_size_s
     cutoff_freq = 100
     nyqist = fs / 2
     cutoff = cutoff_freq / nyqist
-    peak_width = 0.002 / xcorr_bin_width
+    peak_width = 0.002 / bin_size_s
 
     xgram_2d = np.diff(xgram, 2)
     sos = butter(4, cutoff, output="sos")
@@ -1658,11 +1660,11 @@ def _compute_xcorr_pair(
     ind = 0
     xgram_window = xgram[int(starts[0]) : int(ends[0] + 1)]
     xgram_sum = xgram_window.sum()
-    window_size = xgram_window.shape[0] * xcorr_bin_width
+    window_size = xgram_window.shape[0] * bin_size_s
     while (xgram_sum < (min_xcorr_rate * window_size * 10)) and (ind < starts.shape[0]):
         xgram_window = xgram[int(starts[ind]) : int(ends[ind] + 1)]
         xgram_sum = xgram_window.sum()
-        window_size = xgram_window.shape[0] * xcorr_bin_width
+        window_size = xgram_window.shape[0] * bin_size_s
         ind += 1
     # use the whole ccg if peak finding fails
     if ind == starts.shape[0]:
@@ -1694,7 +1696,7 @@ def _compute_xcorr_pair(
 
 def _sliding_RP_viol_pair(
     correlogram,
-    bin_size: float,
+    bin_size_ms: float,
     acceptThresh: float = 0.15,
 ) -> float:
     """
@@ -1706,7 +1708,7 @@ def _sliding_RP_viol_pair(
     ----------
     correlogram : np.array
         The auto-correlogram of the cluster.
-    bin_size : float
+    bin_size_ms : float
         The width in ms of the bin size of the input ccgs.
     acceptThresh : float, default: 0.15
         The minimum ccg firing rate in Hz.
@@ -1720,7 +1722,7 @@ def _sliding_RP_viol_pair(
     from scipy.stats import poisson
 
     # create various refractory periods sizes to test (between 0 and 20x bin size)
-    b = np.arange(0, 21 * bin_size, bin_size) / 1000
+    b = np.arange(0, 21 * bin_size_ms, bin_size_ms) / 1000
     bTestIdx = np.array([1, 2, 4, 6, 8, 12, 16, 20], dtype="int8")
     bTest = [b[i] for i in bTestIdx]
 
@@ -1735,14 +1737,14 @@ def _sliding_RP_viol_pair(
     # low-pass filter acg and use max as baseline event rate
     order = 4  # Hz
     cutoff_freq = 250  # Hz
-    fs = 1 / bin_size * 1000
+    fs = 1 / bin_size_ms * 1000
     nyqist = fs / 2
     cutoff = cutoff_freq / nyqist
     sos = butter(order, cutoff, btype="low", output="sos")
     smoothed_acg = sosfiltfilt(sos, correlogram)
 
     bin_rate_max = np.max(smoothed_acg)
-    max_conts_max = np.array(bTest) / bin_size * 1000 * (bin_rate_max * acceptThresh)
+    max_conts_max = np.array(bTest) / bin_size_ms * 1000 * (bin_rate_max * acceptThresh)
     # compute confidence of less than acceptThresh contamination at each refractory period
     confs = 1 - poisson.cdf(sum_res, max_conts_max)
     rp_viol = 1 - confs.max()
