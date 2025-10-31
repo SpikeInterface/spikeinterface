@@ -364,9 +364,9 @@ def compute_merge_unit_groups(
 
         elif step == "slay_score":
 
-            M_ij = compute_slay_matrix(sorting_analyzer, params["k1"], params["k2"], params["template_diff_thresh"])
+            M_ij = compute_slay_matrix(sorting_analyzer, params["k1"], params["k2"], pair_mask)
 
-            pair_mask = M_ij > params["slay_threshold"]
+            pair_mask = pair_mask & (M_ij > params["slay_threshold"])
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
@@ -1520,7 +1520,7 @@ def estimate_cross_contamination(
     return estimation, p_value
 
 
-def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float, template_diff_thresh: float):
+def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float, pair_mask=None):
     """
     Computes the "merge decision metric" from the SLAy method, made from combining
     a template similarity measure, a cross-correlation significance measure and a
@@ -1535,8 +1535,8 @@ def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float,
         Coefficient determining the importance of the cross-correlation significance
     k2 : float
         Coefficient determining the importance of the sliding rp violation
-    template_diff_thresh : float
-        Threshold for how different template similarities can be to be considered for merging
+    pair_mask : None | np.ndarray, default: None
+        A bool matrix describing which pairs are possible merges based on previous steps
 
 
     References
@@ -1547,15 +1547,20 @@ def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float,
     found at https://github.com/saikoukunt/SLAy.
     """
 
+    num_units = sorting_analyzer.get_num_units()
+
+    if pair_mask is None:
+        pair_mask = np.ones((num_units, num_units), dtype="bool")
+
     sigma_ij = sorting_analyzer.get_extension("template_similarity").get_data()
-    rho_ij, eta_ij = compute_xcorr_and_rp(sorting_analyzer, template_diff_thresh)
+    rho_ij, eta_ij = compute_xcorr_and_rp(sorting_analyzer, pair_mask)
 
     M_ij = sigma_ij + k1 * rho_ij - k2 * eta_ij
 
     return M_ij
 
 
-def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, template_diff_thresh: float):
+def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, pair_mask: np.ndarray):
     """
     Computes a cross-correlation significance measure and a sliding refractory period violation
     measure for all units in the `sorting_analyzer`.
@@ -1564,13 +1569,11 @@ def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, template_diff_thresh
     ---------
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object containing the spike sorting data
-    template_diff_thresh : float
-        Threshold for how different template similarities can be to be considered for merging
+    pair_mask : np.ndarray
+        A bool matrix describing which pairs are possible merges based on previous steps
     """
 
     correlograms_extension = sorting_analyzer.get_extension("correlograms")
-    template_similarity = sorting_analyzer.get_extension("template_similarity").get_data()
-
     ccgs, _ = correlograms_extension.get_data()
 
     # convert to seconds for SLAy functions
@@ -1582,8 +1585,8 @@ def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, template_diff_thresh
     for unit_index_1, _ in enumerate(sorting_analyzer.unit_ids):
         for unit_index_2, _ in enumerate(sorting_analyzer.unit_ids):
 
-            # Don't waste time computing the other metrics if we fail the template similarity check
-            if template_similarity[unit_index_1, unit_index_2] < 1 - template_diff_thresh:
+            # Don't waste time computing the other metrics if units not candidates merges
+            if not pair_mask[unit_index_1, unit_index_2]:
                 continue
 
             xgram = ccgs[unit_index_1, unit_index_2, :]
@@ -1697,7 +1700,7 @@ def _compute_xcorr_pair(
 def _sliding_RP_viol_pair(
     correlogram,
     bin_size_ms: float,
-    acceptThresh: float = 0.15,
+    accept_threshold: float = 0.15,
 ) -> float:
     """
     Calculate the sliding refractory period violation confidence for a cluster.
@@ -1710,7 +1713,7 @@ def _sliding_RP_viol_pair(
         The auto-correlogram of the cluster.
     bin_size_ms : float
         The width in ms of the bin size of the input ccgs.
-    acceptThresh : float, default: 0.15
+    accept_threshold : float, default: 0.15
         The minimum ccg firing rate in Hz.
 
     Returns
@@ -1722,9 +1725,11 @@ def _sliding_RP_viol_pair(
     from scipy.stats import poisson
 
     # create various refractory periods sizes to test (between 0 and 20x bin size)
-    b = np.arange(0, 21 * bin_size_ms, bin_size_ms) / 1000
-    bTestIdx = np.array([1, 2, 4, 6, 8, 12, 16, 20], dtype="int8")
-    bTest = [b[i] for i in bTestIdx]
+    all_refractory_periods = np.arange(0, 21 * bin_size_ms, bin_size_ms) / 1000
+    test_refractory_period_indices = np.array([1, 2, 4, 6, 8, 12, 16, 20], dtype="int8")
+    test_refractory_periods = [
+        all_refractory_periods[test_rp_index] for test_rp_index in test_refractory_period_indices
+    ]
 
     # calculate and avg halves of acg to ensure symmetry
     # keep only second half of acg, refractory period violations are compared from the center of acg
@@ -1732,7 +1737,7 @@ def _sliding_RP_viol_pair(
     correlogram = (correlogram[half_len:] + correlogram[:half_len][::-1]) / 2
 
     acg_cumsum = np.cumsum(correlogram)
-    sum_res = acg_cumsum[bTestIdx - 1]  # -1 bc 0th bin corresponds to 0-bin_size ms
+    sum_res = acg_cumsum[test_refractory_period_indices - 1]  # -1 bc 0th bin corresponds to 0-bin_size ms
 
     # low-pass filter acg and use max as baseline event rate
     order = 4  # Hz
@@ -1744,7 +1749,7 @@ def _sliding_RP_viol_pair(
     smoothed_acg = sosfiltfilt(sos, correlogram)
 
     bin_rate_max = np.max(smoothed_acg)
-    max_conts_max = np.array(bTest) / bin_size_ms * 1000 * (bin_rate_max * acceptThresh)
+    max_conts_max = np.array(test_refractory_periods) / bin_size_ms * 1000 * (bin_rate_max * accept_threshold)
     # compute confidence of less than acceptThresh contamination at each refractory period
     confs = 1 - poisson.cdf(sum_res, max_conts_max)
     rp_viol = 1 - confs.max()
