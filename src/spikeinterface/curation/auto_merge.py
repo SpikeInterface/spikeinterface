@@ -89,7 +89,7 @@ _default_step_params = {
         "censored_period_ms": 0.3,
     },
     "quality_score": {"firing_contamination_balance": 1.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    "slay_score": {"k1": 0.25, "k2": 1, "slay_threshold": 0.5},
+    "slay_score": {"k1": 0.25, "k2": 1, "slay_threshold": 0.5, "template_diff_thresh": 0.25},
 }
 
 
@@ -364,11 +364,7 @@ def compute_merge_unit_groups(
 
         elif step == "slay_score":
 
-            M_ij = compute_slay_matrix(
-                sorting_analyzer,
-                params["k1"],
-                params["k2"],
-            )
+            M_ij = compute_slay_matrix(sorting_analyzer, params["k1"], params["k2"], params["template_diff_thresh"])
 
             pair_mask = M_ij > params["slay_threshold"]
 
@@ -1524,14 +1520,180 @@ def estimate_cross_contamination(
     return estimation, p_value
 
 
-def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float):
+def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float, template_diff_thresh: float):
 
-    from numpy import random
-
-    sigma_ij = random.rand(len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids))
-    rho_ij = random.rand(len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids))
-    eta_ij = random.rand(len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids))
+    sigma_ij = sorting_analyzer.get_extension("template_similarity").get_data()
+    rho_ij, eta_ij = compute_xcorr_and_rp(sorting_analyzer, template_diff_thresh)
 
     M_ij = sigma_ij + k1 * rho_ij - k2 * eta_ij
 
     return M_ij
+
+
+def compute_xcorr_and_rp(sorting_analyzer, template_diff_thresh):
+
+    correlograms_extension = sorting_analyzer.get_extension("correlograms")
+    template_similarity = sorting_analyzer.get_extension("template_similarity").get_data()
+
+    ccgs, _ = correlograms_extension.get_data()
+    xcorr_bin_width = correlograms_extension.params["bin_ms"] / 1000
+
+    rho_ij = np.zeros([len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids)])
+    eta_ij = np.zeros([len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids)])
+
+    for unit_index_1, _ in enumerate(sorting_analyzer.unit_ids):
+        for unit_index_2, _ in enumerate(sorting_analyzer.unit_ids):
+
+            # Don't waste time computing the other metrics if we fail the template similarity check
+            if template_similarity[unit_index_1, unit_index_2] < 1 - template_diff_thresh:
+                continue
+
+            xgram = ccgs[unit_index_1, unit_index_2, :]
+
+            rho_ij[unit_index_1, unit_index_2] = _compute_xcorr_pair(
+                xgram, xcorr_bin_width=xcorr_bin_width, min_xcorr_rate=0
+            )
+            eta_ij[unit_index_1, unit_index_2] = _sliding_RP_viol_pair(xgram, bin_size=xcorr_bin_width)
+
+    return rho_ij, eta_ij
+
+
+def _compute_xcorr_pair(
+    xgram,
+    xcorr_bin_width: float,
+    min_xcorr_rate: float,
+) -> float:
+    """
+    Calculates a cross-correlation significance metric for a cluster pair.
+
+    Uses the wasserstein distance between an observed cross-correlogram and a null
+    distribution as an estimate of how significant the dependence between
+    two neurons is. Low spike count cross-correlograms have large wasserstein
+    distances from null by chance, so we first try to expand the window size. If
+    that fails to yield enough spikes, we apply a penalty to the metric.
+
+    Args:
+        xgram (NDArray): The raw cross-correlogram for the cluster pair.
+        xcorr_bin_width (float): The width in seconds of the bin size of the
+            input ccgs.
+        max_window (float): The largest allowed window size during window
+            expansion.
+        min_xcorr_rate (float): The minimum ccg firing rate in Hz.
+
+    Returns:
+        sig (float): The calculated cross-correlation significance metric.
+    """
+
+    from scipy.signal import butter, find_peaks_cwt, sosfiltfilt
+    from scipy.stats import wasserstein_distance
+
+    # calculate low-pass filtered second derivative of ccg
+    fs = 1 / xcorr_bin_width
+    cutoff_freq = 100
+    nyqist = fs / 2
+    cutoff = cutoff_freq / nyqist
+    peak_width = 0.002 / xcorr_bin_width
+
+    xgram_2d = np.diff(xgram, 2)
+    sos = butter(4, cutoff, output="sos")
+    xgram_2d = sosfiltfilt(sos, xgram_2d)
+
+    if xgram.sum() == 0:
+        return 0
+
+    # find negative peaks of second derivative of ccg, these are the edges of dips in ccg
+    peaks = find_peaks_cwt(-xgram_2d, peak_width, noise_perc=90) + 1
+    # if no peaks are found, return a very low significance
+    if peaks.shape[0] == 0:
+        return -4
+    peaks = np.abs(peaks - xgram.shape[0] / 2)
+    peaks = peaks[peaks > 0.5 * peak_width]
+    min_peaks = np.sort(peaks)
+
+    # start with peaks closest to 0 and move to the next set of peaks if the event count is too low
+    window_width = min_peaks * 1.5
+    starts = np.maximum(xgram.shape[0] / 2 - window_width, 0)
+    ends = np.minimum(xgram.shape[0] / 2 + window_width, xgram.shape[0] - 1)
+    ind = 0
+    xgram_window = xgram[int(starts[0]) : int(ends[0] + 1)]
+    xgram_sum = xgram_window.sum()
+    window_size = xgram_window.shape[0] * xcorr_bin_width
+    while (xgram_sum < (min_xcorr_rate * window_size * 10)) and (ind < starts.shape[0]):
+        xgram_window = xgram[int(starts[ind]) : int(ends[ind] + 1)]
+        xgram_sum = xgram_window.sum()
+        window_size = xgram_window.shape[0] * xcorr_bin_width
+        ind += 1
+    # use the whole ccg if peak finding fails
+    if ind == starts.shape[0]:
+        xgram_window = xgram
+
+    # TODO: was getting error messges when xgram_window was all zero. Why was this happening?
+    if np.abs(xgram_window).sum() == 0:
+        return 0
+
+    sig = (
+        wasserstein_distance(
+            np.arange(xgram_window.shape[0]) / xgram_window.shape[0],
+            np.arange(xgram_window.shape[0]) / xgram_window.shape[0],
+            xgram_window,
+            np.ones_like(xgram_window),
+        )
+        * 4
+    )
+
+    if xgram_window.sum() < (min_xcorr_rate * window_size):
+        sig *= (xgram_window.sum() / (min_xcorr_rate * window_size)) ** 2
+
+        # if sig < 0.04 and xgram_window.sum() < (min_xcorr_rate * window_size):
+    if xgram_window.sum() < (min_xcorr_rate / 4 * window_size):
+        sig = -4  # don't merge if the event count is way too low
+
+    return sig
+
+
+def _sliding_RP_viol_pair(
+    correlogram,
+    bin_size: float = 1,
+    acceptThresh: float = 0.15,
+) -> float:
+    """
+    Calculate the sliding refractory period violation confidence for a cluster.
+    Args:
+        correlogram (NDArray): The auto-correlogram of the cluster.
+        bin_size (float, optional): The size of each bin in ms. Defaults to 0.25.
+        acceptThresh (float, optional): The threshold for accepting refractory period violations. Defaults to 0.1.
+    Returns:
+        float: The refractory period violation confidence for the cluster.
+    """
+    from scipy.signal import butter, sosfiltfilt
+    from scipy.stats import poisson
+
+    # create various refractory periods sizes to test (between 0 and 20x bin size)
+    b = np.arange(0, 21 * bin_size, bin_size) / 1000
+    bTestIdx = np.array([1, 2, 4, 6, 8, 12, 16, 20], dtype="int8")
+    bTest = [b[i] for i in bTestIdx]
+
+    # calculate and avg halves of acg to ensure symmetry
+    # keep only second half of acg, refractory period violations are compared from the center of acg
+    half_len = int(correlogram.shape[0] / 2)
+    correlogram = (correlogram[half_len:] + correlogram[:half_len][::-1]) / 2
+
+    acg_cumsum = np.cumsum(correlogram)
+    sum_res = acg_cumsum[bTestIdx - 1]  # -1 bc 0th bin corresponds to 0-bin_size ms
+
+    # low-pass filter acg and use max as baseline event rate
+    order = 4  # Hz
+    cutoff_freq = 250  # Hz
+    fs = 1 / bin_size * 1000
+    nyqist = fs / 2
+    cutoff = cutoff_freq / nyqist
+    sos = butter(order, cutoff, btype="low", output="sos")
+    smoothed_acg = sosfiltfilt(sos, correlogram)
+
+    bin_rate_max = np.max(smoothed_acg)
+    max_conts_max = np.array(bTest) / bin_size * 1000 * (bin_rate_max * acceptThresh)
+    # compute confidence of less than acceptThresh contamination at each refractory period
+    confs = 1 - poisson.cdf(sum_res, max_conts_max)
+    rp_viol = 1 - confs.max()
+
+    return rp_viol
