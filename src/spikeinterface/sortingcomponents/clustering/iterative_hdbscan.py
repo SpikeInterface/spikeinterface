@@ -8,7 +8,7 @@ from spikeinterface.core import Templates
 from spikeinterface.core.recording_tools import get_channel_distances
 from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
 from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak_labels_from_templates
-from spikeinterface.sortingcomponents.clustering.splitting_tools import split_clusters
+from spikeinterface.sortingcomponents.clustering.itersplit_tools import split_clusters
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
 
@@ -31,21 +31,19 @@ class IterativeHDBSCANClustering:
         "peaks_svd": {"n_components": 5, "ms_before": 0.5, "ms_after": 1.5, "radius_um": 100.0},
         "seed": None,
         "split": {
-            "split_radius_um": 50.0,
+            "split_radius_um": 75.0,
             "recursive": True,
             "recursive_depth": 3,
             "method_kwargs": {
                 "clusterer": {
                     "method": "hdbscan",
                     "min_cluster_size": 20,
-                    "cluster_selection_epsilon": 0.5,
-                    "cluster_selection_method": "leaf",
                     "allow_single_cluster": True,
                 },
-                "n_pca_features": 0.9,
+                "n_pca_features": 3,
             },
         },
-        "merge_from_templates": dict(),
+        "merge_from_templates": dict(similarity_thresh=0.8, num_shifts=3, use_lags=True),
         "merge_from_features": None,
         "debug_folder": None,
         "verbose": True,
@@ -71,7 +69,7 @@ class IterativeHDBSCANClustering:
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
 
-        split_radius_um = params["split"].pop("split_radius_um", 50)
+        split_radius_um = params["split"].pop("split_radius_um", 75)
         peaks_svd = params["peaks_svd"]
         ms_before = peaks_svd["ms_before"]
         ms_after = peaks_svd["ms_after"]

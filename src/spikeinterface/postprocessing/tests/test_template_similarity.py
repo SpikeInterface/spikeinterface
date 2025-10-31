@@ -82,8 +82,9 @@ def test_compute_similarity_with_templates_array(params):
     templates_array = rng.random(size=(2, 20, 5))
     other_templates_array = rng.random(size=(4, 20, 5))
 
-    similarity = compute_similarity_with_templates_array(templates_array, other_templates_array, **params)
+    similarity, lags = compute_similarity_with_templates_array(templates_array, other_templates_array, **params)
     print(similarity.shape)
+    print(lags)
 
 
 pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
@@ -141,5 +142,5 @@ if __name__ == "__main__":
     test.cache_folder = Path("./cache_folder")
     test.test_extension(params=dict(method="l2"))
 
-    # params = dict(method="cosine", num_shifts=8)
-    # test_compute_similarity_with_templates_array(params)
+    params = dict(method="cosine", num_shifts=8)
+    test_compute_similarity_with_templates_array(params)

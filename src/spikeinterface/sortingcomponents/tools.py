@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import shutil
 
 try:
     import psutil
@@ -10,13 +11,12 @@ except:
     HAVE_PSUTIL = False
 
 from spikeinterface.core.sparsity import ChannelSparsity
-from spikeinterface.core.template import Templates
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.core.analyzer_extension_core import ComputeTemplates
+from spikeinterface.core.analyzer_extension_core import ComputeTemplates, ComputeNoiseLevels
 from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
 from spikeinterface.core.recording_tools import get_noise_levels
 
@@ -362,8 +362,22 @@ def _get_optimal_n_jobs(job_kwargs, ram_requested, memory_limit=0.25):
     return job_kwargs
 
 
+def _check_cache_memory(recording, memory_limit, total_memory):
+    if total_memory is None:
+        if HAVE_PSUTIL:
+            assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
+            memory_usage = memory_limit * psutil.virtual_memory().available
+            return recording.get_total_memory_size() < memory_usage
+        else:
+            return False
+    else:
+        return recording.get_total_memory_size() < total_memory
+
+
+
+
 def cache_preprocessing(
-    recording, mode="memory", memory_limit=0.5, total_memory=None, delete_cache=True, **extra_kwargs
+    recording, mode="memory", memory_limit=0.5, total_memory=None, delete_cache=True, job_kwargs=None, folder=None,
 ):
     """
     Cache the preprocessing of a recording object
@@ -381,50 +395,70 @@ def cache_preprocessing(
         The total memory to use for the job in bytes
     delete_cache: bool
         If True, delete the cache after the job
-    **extra_kwargs: dict
-        The extra kwargs for the job
 
     Returns
     -------
 
     recording: Recording
         The cached recording object
+    cache_info: dict
+        Dict containing info for cleaning cache
     """
 
-    save_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
+
+    cache_info = dict(
+        mode=mode
+    )
 
     if mode == "memory":
         if total_memory is None:
-            if HAVE_PSUTIL:
-                assert 0 < memory_limit < 1, "memory_limit should be in ]0, 1["
-                memory_usage = memory_limit * psutil.virtual_memory().available
-                if recording.get_total_memory_size() < memory_usage:
-                    recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
-                else:
-                    import warnings
-
-                    warnings.warn("Recording too large to be preloaded in RAM...")
-            else:
-                import warnings
-
-                warnings.warn("psutil is required to preload in memory given only a fraction of available memory")
-        else:
-            if recording.get_total_memory_size() < total_memory:
+            mem_ok = _check_cache_memory(recording, memory_limit, total_memory)
+            if mem_ok:
                 recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
             else:
                 import warnings
 
                 warnings.warn("Recording too large to be preloaded in RAM...")
+                cache_info["mode"] = "no-cache"
+
     elif mode == "folder":
-        recording = recording.save_to_folder(**extra_kwargs)
+        assert folder is not None, "cache_preprocessing(): folder must be given"
+        recording = recording.save_to_folder(folder=folder)
+        cache_info["folder"] = folder
     elif mode == "zarr":
-        recording = recording.save_to_zarr(**extra_kwargs)
+        assert folder is not None, "cache_preprocessing(): folder must be given"
+        recording = recording.save_to_zarr(folder=folder)
+        cache_info["folder"] = folder
     elif mode == "no-cache":
         recording = recording
+    elif  mode == "auto":
+        mem_ok = _check_cache_memory(recording, memory_limit, total_memory)
+        if mem_ok:
+            # first try memory first
+            recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
+            cache_info["mode"] = "memory"
+        elif folder is not None:
+            # then try folder
+            recording = recording.save_to_folder(folder=folder)
+            cache_info["mode"] = "folder"
+        else:
+            recording = recording
+            cache_info["mode"] = "no-cache"
     else:
         raise ValueError(f"cache_preprocessing() wrong mode={mode}")
 
-    return recording
+    return recording, cache_info
+
+def clean_cache_preprocessing(cache_info):
+    """
+    Delete folder eventually created by cache_preprocessing().
+    Important : the cached recording must be deleted first.
+    """
+    if cache_info is None or "mode" not in cache_info:
+        return
+    if cache_info["mode"] in ("folder", "zarr"):
+        shutil.rmtree(cache_info["folder"])
 
 
 def remove_empty_templates(templates):
@@ -437,7 +471,9 @@ def remove_empty_templates(templates):
     return templates.select_units(templates.unit_ids[not_empty])
 
 
-def create_sorting_analyzer_with_existing_templates(sorting, recording, templates, remove_empty=True):
+def create_sorting_analyzer_with_existing_templates(
+    sorting, recording, templates, remove_empty=True, noise_levels=None
+):
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
 
@@ -459,6 +495,14 @@ def create_sorting_analyzer_with_existing_templates(sorting, recording, template
     sa.extensions["templates"].data["std"] = np.zeros(templates_array.shape, dtype=np.float32)
     sa.extensions["templates"].run_info["run_completed"] = True
     sa.extensions["templates"].run_info["runtime_s"] = 0
+
+    if noise_levels is not None:
+        sa.extensions["noise_levels"] = ComputeNoiseLevels(sa)
+        sa.extensions["noise_levels"].params = {}
+        sa.extensions["noise_levels"].data["noise_levels"] = noise_levels
+        sa.extensions["noise_levels"].run_info["run_completed"] = True
+        sa.extensions["noise_levels"].run_info["runtime_s"] = 0
+
     return sa
 
 
