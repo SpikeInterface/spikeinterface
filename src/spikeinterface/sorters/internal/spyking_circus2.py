@@ -11,6 +11,7 @@ from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.preprocessing import common_reference, whiten, bandpass_filter, correct_motion
 from spikeinterface.sortingcomponents.tools import (
     cache_preprocessing,
+    clean_cache_preprocessing,
     get_shuffled_recording_slices,
     _set_optimal_chunk_size,
 )
@@ -182,7 +183,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         elif recording_w.check_serializability("pickle"):
             recording_w.dump(sorter_output_folder / "preprocessed_recording.pickle", relative_to=None)
 
-        recording_w = cache_preprocessing(recording_w, **job_kwargs, **params["cache_preprocessing"])
+        recording_w, cache_info = cache_preprocessing(recording_w, job_kwargs=job_kwargs, **params["cache_preprocessing"])
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_method = params["detection"].get("method", "matched_filtering")
@@ -444,16 +445,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 if verbose:
                     print(f"Kept {len(sorting.unit_ids)} units after final merging")
 
-        folder_to_delete = None
-        cache_mode = params["cache_preprocessing"].get("mode", "memory")
-        delete_cache = params["cache_preprocessing"].get("delete_cache", True)
-
-        if cache_mode in ["folder", "zarr"] and delete_cache:
-            folder_to_delete = recording_w._kwargs["folder_path"]
-
         del recording_w
-        if folder_to_delete is not None:
-            shutil.rmtree(folder_to_delete)
+        clean_cache_preprocessing(cache_info)
 
         sorting = sorting.save(folder=sorting_folder)
 

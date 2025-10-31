@@ -20,7 +20,7 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
-from spikeinterface.sortingcomponents.tools import cache_preprocessing
+from spikeinterface.sortingcomponents.tools import cache_preprocessing, clean_cache_preprocessing
 
 
 import numpy as np
@@ -154,14 +154,15 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
             # used only if "folder" or "zarr"
             cache_folder = sorter_output_folder / "cache_preprocessing"
-            recording = cache_preprocessing(
-                recording, folder=cache_folder, **job_kwargs, **params["cache_preprocessing"]
+            recording, cache_info = cache_preprocessing(
+                recording, folder=cache_folder, job_kwargs=job_kwargs, **params["cache_preprocessing"]
             )
 
             noise_levels = np.ones(num_chans, dtype="float32")
         else:
             recording = recording_raw
             noise_levels = get_noise_levels(recording, return_in_uV=False)
+            cache_info = None
 
         # detection
         detection_params = params["detection"].copy()
@@ -335,5 +336,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
+
+        del recording, recording_for_peeler
+        clean_cache_preprocessing(cache_info)
 
         return sorting
