@@ -29,8 +29,18 @@ def get_multi_channel_template_metric_names():
     return [m.metric_name for m in multi_channel_metrics]
 
 
-def get_template_metric_names():
+def get_template_metric_list():
     return get_single_channel_template_metric_names() + get_multi_channel_template_metric_names()
+
+
+def get_template_metric_names():
+    warnings.warn(
+        "get_template_metric_names is deprecated and will be removed in a version 0.105.0. "
+        "Please use get_template_metric_list instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return get_template_metric_list()
 
 
 class ComputeTemplateMetrics(BaseMetricExtension):

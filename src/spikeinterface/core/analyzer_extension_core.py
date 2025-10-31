@@ -903,6 +903,27 @@ class BaseMetricExtension(AnalyzerExtension):
         default_metric_params = {m.metric_name: m.metric_params for m in cls.metric_list}
         return default_metric_params
 
+    @classmethod
+    def get_metric_columns(cls, metric_names=None):
+        """Get the default metric columns.
+
+        Parameters
+        ----------
+        metric_names : list[str] | None
+            List of metric names to get columns for. If None, all metrics are considered.
+
+        Returns
+        -------
+        default_metric_columns : dict
+            Dictionary of default metric columns and their dtypes for each metric.
+        """
+        default_metric_columns = []
+        for m in cls.metric_list:
+            if metric_names is not None and m.metric_name not in metric_names:
+                continue
+            default_metric_columns.extend(m.metric_columns)
+        return default_metric_columns
+
     def _cast_metrics(self, metrics_df):
         metric_dtypes = {}
         for m in self.metric_list:

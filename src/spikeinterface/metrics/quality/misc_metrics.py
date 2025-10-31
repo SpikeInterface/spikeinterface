@@ -771,14 +771,13 @@ def compute_amplitude_cutoffs(
 
     all_fraction_missing = {}
 
-    invert_amplitudes = False
     if sorting_analyzer.has_extension("spike_amplitudes"):
         extension = sorting_analyzer.get_extension("spike_amplitudes")
-        if extension.params["peak_sign"] == "pos":
-            invert_amplitudes = True
+        all_amplitudes = extension.get_data()
+        invert_amplitudes = np.median(all_amplitudes) > 0
     elif sorting_analyzer.has_extension("amplitude_scalings"):
-        all_templates = get_dense_templates_array(sorting_analyzer)
-        invert_amplitudes = False if np.abs(np.min(all_templates)) > np.max(all_templates) else True
+        # amplitude scalings are positive, we need to invert them
+        invert_amplitudes = True
         extension = sorting_analyzer.get_extension("amplitude_scalings")
 
     amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True)
@@ -895,23 +894,20 @@ def compute_noise_cutoffs(sorting_analyzer, unit_ids=None, high_quantile=0.25, l
     noise_cutoff_dict = {}
     noise_ratio_dict = {}
 
-    amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
-    peak_sign = amplitude_extension.params["peak_sign"]
-    if peak_sign == "both":
-        warnings.warn(
-            "`peak_sign` should either be 'pos' or 'neg'. You can set `peak_sign` as an argument when you compute spike_amplitudes."
-            "Setting `peak_sign` to 'neg' by default for noise_cutoff computation."
-        )
-        peak_sign = "neg" if peak_sign == "both" else peak_sign
+    if sorting_analyzer.has_extension("spike_amplitudes"):
+        extension = sorting_analyzer.get_extension("spike_amplitudes")
+        all_amplitudes = extension.get_data()
+        invert_amplitudes = np.median(all_amplitudes) > 0
+    elif sorting_analyzer.has_extension("amplitude_scalings"):
+        # amplitude scalings are positive, we need to invert them
+        invert_amplitudes = True
+        extension = sorting_analyzer.get_extension("amplitude_scalings")
 
-    amplitudes_by_units = amplitude_extension.get_data(outputs="by_unit", concatenated=True)
+    amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True)
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
-
-        # We assume the noise (zero values) is on the lower tail of the amplitude distribution.
-        # But if peak_sign == 'neg', the noise will be on the higher tail, so we flip the distribution.
-        if peak_sign == "neg":
+        if invert_amplitudes:
             amplitudes = -amplitudes
 
         cutoff, ratio = _noise_cutoff(amplitudes, high_quantile=high_quantile, low_quantile=low_quantile, n_bins=n_bins)
@@ -926,7 +922,7 @@ class NoiseCutoff(BaseMetric):
     metric_function = compute_noise_cutoffs
     metric_params = {"high_quantile": 0.25, "low_quantile": 0.1, "n_bins": 100}
     metric_columns = {"noise_cutoff": float, "noise_ratio": float}
-    depend_on = ["spike_amplitudes"]
+    depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
 def compute_drift_metrics(
