@@ -3,7 +3,7 @@
 SpikeInterface 0.103.1 release notes
 ------------------------------------
 
-October 31st 2025
+November 3rd 2025
 
 Minor release with bug fixes
 
@@ -51,6 +51,7 @@ sortingcomponents:
 * Big clean in components and reoraginze in folder (#4140)
 * Improve tdc-clustering with a merging step (#4122)
 * Implement isosplit6 into spikeinterface in pure numpy/numba (#4113)
+* Improvement of TDC2, SC2 and ISOSPLIT (#4182)
 
 motion correction:
 
