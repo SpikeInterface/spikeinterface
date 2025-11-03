@@ -130,7 +130,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                     if verbose:
                         print("Done correct_motion()")
 
-            recording = bandpass_filter(recording_raw, **params["filtering"], margin_ms=20., dtype="float32")
+            recording = bandpass_filter(recording_raw, **params["filtering"], margin_ms=20.0, dtype="float32")
+
             if apply_cmr:
                 recording = common_reference(recording)
 
@@ -254,12 +255,17 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
         
 
-        # sparsity is a mix between radius and 
+        # sparsity is a mix between radius and
         sparsity_threshold = params["templates"]["sparsity_threshold"]
         radius_um = params["waveforms"]["radius_um"]
         sparsity = compute_sparsity(templates_dense, method="radius", radius_um=radius_um)
-        sparsity_snr = compute_sparsity(templates_dense, method="snr", amplitude_mode="peak_to_peak",
-                                        noise_levels=noise_levels, threshold=sparsity_threshold)
+        sparsity_snr = compute_sparsity(
+            templates_dense,
+            method="snr",
+            amplitude_mode="peak_to_peak",
+            noise_levels=noise_levels,
+            threshold=sparsity_threshold,
+        )
         sparsity.mask = sparsity.mask & sparsity_snr.mask
         templates = templates_dense.to_sparse(sparsity)
 

@@ -234,6 +234,11 @@ class LupinSorter(ComponentsBasedSorter):
             print(f"find_clusters_from_peaks(): {sorting_pre_peeler.unit_ids.size} cluster found")
 
         # Template
+        ## DEBUG
+        job_kwargs2 = job_kwargs.copy()
+        job_kwargs2['n_jobs'] = 5
+        ## DEBUG
+
         nbefore = int(ms_before * sampling_frequency / 1000.0)
         nafter = int(ms_after * sampling_frequency / 1000.0)
         templates_array = estimate_templates_with_accumulator(
@@ -243,7 +248,9 @@ class LupinSorter(ComponentsBasedSorter):
             nbefore,
             nafter,
             return_in_uV=False,
-            **job_kwargs,
+            ## DEBUG
+            **job_kwargs2,
+            ## DEBUG
         )
         templates_dense = Templates(
             templates_array=templates_array,

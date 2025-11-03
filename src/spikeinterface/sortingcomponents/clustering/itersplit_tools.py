@@ -283,14 +283,12 @@ class LocalFeatureClustering:
 
                     tsvd = TruncatedSVD(n_pca_features, random_state=seed)
                     final_features = tsvd.fit_transform(flatten_features)
-                
             else:
                 final_features = flatten_features
                 tsvd = None
         elif n_pca_features is None:
             final_features = flatten_features
             tsvd = None
-
 
         if clusterer_method == "hdbscan":
             from hdbscan import HDBSCAN
@@ -314,11 +312,10 @@ class LocalFeatureClustering:
             if n_init > (num_samples // min_cluster_size):
                 # avoid warning in isosplit when sample_size is too small
                 factor = min_cluster_size * 2
-                n_init = max(2, num_samples // factor)            
+                n_init = max(2, num_samples // factor)
 
             clustering_kwargs_ = clustering_kwargs.copy()
             clustering_kwargs_["n_init"] = n_init
-
 
             possible_labels = isosplit(final_features, **clustering_kwargs_)
 

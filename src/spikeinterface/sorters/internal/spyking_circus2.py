@@ -42,6 +42,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "cleaning": {"min_snr": 5, "max_jitter_ms": 0.1, "sparsify_threshold": None},
         "matching": {"method": "circus-omp", "method_kwargs": dict(), "pipeline_kwargs": dict()},
         "apply_preprocessing": True,
+        "apply_whitening": True,
         "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
         "chunk_preprocessing": {"memory_limit": None},
         "multi_units_only": False,
@@ -123,6 +124,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         debug = params["debug"]
         seed = params["seed"]
         apply_preprocessing = params["apply_preprocessing"]
+        apply_whitening = params["apply_whitening"]
         apply_motion_correction = params["apply_motion_correction"]
         exclude_sweep_ms = params["detection"].get("exclude_sweep_ms", max(ms_before, ms_after))
 
@@ -130,7 +132,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         filtering_params = params["filtering"].copy()
         if apply_preprocessing:
             if verbose:
-                print("Preprocessing the recording (bandpass filtering + CMR + whitening)")
+                if apply_whitening:
+                    print("Preprocessing the recording (bandpass filtering + CMR + whitening)")
+                else:
+                    print("Preprocessing the recording (bandpass filtering + CMR)")
             recording_f = bandpass_filter(recording, **filtering_params, dtype="float32")
             if num_channels >= 32:
                 recording_f = common_reference(recording_f)
@@ -139,6 +144,22 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 print("Skipping preprocessing (whitening only)")
             recording_f = recording
             recording_f.annotate(is_filtered=True)
+
+        if apply_whitening:
+            ## We need to whiten before the template matching step, to boost the results
+            # TODO add , regularize=True chen ready
+            whitening_kwargs = params["whitening"].copy()
+            whitening_kwargs["dtype"] = "float32"
+            whitening_kwargs["seed"] = params["seed"]
+            whitening_kwargs["regularize"] = whitening_kwargs.get("regularize", False)
+            if num_channels == 1:
+                whitening_kwargs["regularize"] = False
+            if whitening_kwargs["regularize"]:
+                whitening_kwargs["regularize_kwargs"] = {"method": "LedoitWolf"}
+                whitening_kwargs["apply_mean"] = True
+            recording_w = whiten(recording_f, **whitening_kwargs)
+        else:
+            recording_w = recording_f
 
         valid_geometry = check_probe_for_drift_correction(recording_f)
         if apply_motion_correction:
@@ -153,26 +174,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 motion_correction_kwargs = params["motion_correction"].copy()
                 motion_correction_kwargs.update({"folder": motion_folder})
                 noise_levels = get_noise_levels(
-                    recording_f, return_in_uV=False, random_slices_kwargs={"seed": seed}, **job_kwargs
+                    recording_w, return_in_uV=False, random_slices_kwargs={"seed": seed}, **job_kwargs
                 )
                 motion_correction_kwargs["detect_kwargs"] = {"noise_levels": noise_levels}
-                recording_f = correct_motion(recording_f, **motion_correction_kwargs, **job_kwargs)
+                recording_w = correct_motion(recording_w, **motion_correction_kwargs, **job_kwargs)
         else:
             motion_folder = None
-
-        ## We need to whiten before the template matching step, to boost the results
-        # TODO add , regularize=True chen ready
-        whitening_kwargs = params["whitening"].copy()
-        whitening_kwargs["dtype"] = "float32"
-        whitening_kwargs["seed"] = params["seed"]
-        whitening_kwargs["regularize"] = whitening_kwargs.get("regularize", False)
-        if num_channels == 1:
-            whitening_kwargs["regularize"] = False
-        if whitening_kwargs["regularize"]:
-            whitening_kwargs["regularize_kwargs"] = {"method": "LedoitWolf"}
-            whitening_kwargs["apply_mean"] = True
-
-        recording_w = whiten(recording_f, **whitening_kwargs)
 
         noise_levels = get_noise_levels(
             recording_w, return_in_uV=False, random_slices_kwargs={"seed": seed}, **job_kwargs

@@ -36,7 +36,6 @@ class IterativeISOSPLITClustering:
         "pre_label": {
             "mode": "channel",
             # "mode": "vertical_bin",
-            
         },
         "split": {
             # "split_radius_um": 40.0,
@@ -56,7 +55,6 @@ class IterativeISOSPLITClustering:
                 "min_size_split": 25,
                 # "n_pca_features": 3,
                 "n_pca_features": 10,
-
                 "projection_mode": "tsvd",
                 # "projection_mode": "pca",
             },
@@ -132,14 +130,13 @@ class IterativeISOSPLITClustering:
         split_params["method_kwargs"]["waveforms_sparse_mask"] = sparse_mask
         split_params["method_kwargs"]["feature_name"] = "peaks_svd"
 
-
         if params["pre_label"]["mode"] == "channel":
             original_labels = peaks["channel_index"]
         elif params["pre_label"]["mode"] == "vertical_bin":
             # 2 params
             direction = "y"
-            bin_um = 40.
-            
+            bin_um = 40.0
+
             channel_locations = recording.get_channel_locations()
             dim = "xyz".index(direction)
             channel_depth = channel_locations[:, dim]
@@ -150,11 +147,11 @@ class IterativeISOSPLITClustering:
             num_windows = int((max_ - min_) // bin_um)
             num_windows = max(num_windows, 1)
             border = ((max_ - min_) % bin_um) / 2
-            vertical_bins = np.zeros(num_windows+3)
+            vertical_bins = np.zeros(num_windows + 3)
             vertical_bins[1:-1] = np.arange(num_windows + 1) * bin_um + min_ + border
             vertical_bins[0] = -np.inf
             vertical_bins[-1] = np.inf
-            # peak depth            
+            # peak depth
             peak_depths = channel_depth[peaks["channel_index"]]
             # label by bin
             original_labels = np.digitize(peak_depths, vertical_bins)
@@ -182,8 +179,6 @@ class IterativeISOSPLITClustering:
             
             job_kwargs=job_kwargs,
             # job_kwargs=dict(n_jobs=1),
-
-
             **split_params,
             # method_kwargs=dict(
             #     clusterer=clusterer,
