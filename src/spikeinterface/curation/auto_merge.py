@@ -1550,7 +1550,7 @@ def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float,
     num_units = sorting_analyzer.get_num_units()
 
     if pair_mask is None:
-        pair_mask = np.ones((num_units, num_units), dtype="bool")
+        pair_mask = np.triu(np.arange(num_units), 1) > 0
 
     sigma_ij = sorting_analyzer.get_extension("template_similarity").get_data()
     rho_ij, eta_ij = compute_xcorr_and_rp(sorting_analyzer, pair_mask)
