@@ -389,12 +389,14 @@ class ProjectDistribution:
                     from sklearn.decomposition import PCA
 
                     tsvd = PCA(n_pca_features, whiten=True)
+
                 elif projection_mode == "tsvd":
                     from sklearn.decomposition import TruncatedSVD
 
                     tsvd = TruncatedSVD(n_pca_features, random_state=seed)
 
                 feat = tsvd.fit_transform(feat)
+
             else:
                 feat = feat
                 tsvd = None
@@ -530,6 +532,7 @@ def merge_peak_labels_from_templates(
     similarity_metric="l1",
     similarity_thresh=0.8,
     num_shifts=3,
+    use_lags=False,
 ):
     """
     Low level function used in sorting components for merging templates based on similarity metrics.
@@ -542,7 +545,7 @@ def merge_peak_labels_from_templates(
 
     from spikeinterface.postprocessing.template_similarity import compute_similarity_with_templates_array
 
-    similarity = compute_similarity_with_templates_array(
+    similarity, lags = compute_similarity_with_templates_array(
         templates_array,
         templates_array,
         method=similarity_metric,
@@ -551,11 +554,15 @@ def merge_peak_labels_from_templates(
         sparsity=template_sparse_mask,
         other_sparsity=template_sparse_mask,
     )
+
     pair_mask = similarity > similarity_thresh
+
+    if not use_lags:
+        lags = None
 
     clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = (
         _apply_pair_mask_on_labels_and_recompute_templates(
-            pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask
+            pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask, lags
         )
     )
 
@@ -563,7 +570,7 @@ def merge_peak_labels_from_templates(
 
 
 def _apply_pair_mask_on_labels_and_recompute_templates(
-    pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask
+    pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask, lags=None
 ):
     """
     Resolve pairs graph.
@@ -582,6 +589,7 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
     merge_template_array = templates_array.copy()
     merge_sparsity_mask = template_sparse_mask.copy()
     new_unit_ids = np.zeros(n_components, dtype=unit_ids.dtype)
+
     for c in range(n_components):
         merge_group = np.flatnonzero(group_labels == c)
         g0 = merge_group[0]
@@ -604,9 +612,30 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
                     clean_labels[peak_labels == label] = unit_ids[g0]
                     keep_template[l] = False
             weights /= weights.sum()
-            merge_template_array[g0, :, :] = np.sum(
-                merge_template_array[merge_group, :, :] * weights[:, np.newaxis, np.newaxis], axis=0
-            )
+
+            if lags is None:
+                merge_template_array[g0, :, :] = np.sum(
+                    merge_template_array[merge_group, :, :] * weights[:, np.newaxis, np.newaxis], axis=0
+                )
+            else:
+                # with shifts
+                accumulated_template = np.zeros_like(merge_template_array[g0, :, :])
+                for i, l in enumerate(merge_group):
+                    shift = -lags[g0, l]
+                    if shift > 0:
+                        # template is shifted to right
+                        temp = np.zeros_like(accumulated_template)
+                        temp[shift:, :] = merge_template_array[l, :-shift, :]
+                    elif shift < 0:
+                        # template is shifted to left
+                        temp = np.zeros_like(accumulated_template)
+                        temp[:shift, :] = merge_template_array[l, -shift:, :]
+                    else:
+                        temp = merge_template_array[l, :, :]
+
+                    accumulated_template += temp * weights[i]
+
+                merge_template_array[g0, :, :] = accumulated_template
             merge_sparsity_mask[g0, :] = np.all(template_sparse_mask[merge_group, :], axis=0)
 
     merge_template_array = merge_template_array[keep_template, :, :]

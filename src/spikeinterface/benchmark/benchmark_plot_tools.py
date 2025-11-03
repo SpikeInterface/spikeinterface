@@ -478,8 +478,9 @@ def _plot_performances_vs_metric(
                     .get_performance()[performance_name]
                     .to_numpy(dtype="float64")
                 )
-                all_xs.append(x)
-                all_ys.append(y)
+                mask = ~np.isnan(x) & ~np.isnan(y)
+                all_xs.append(x[mask])
+                all_ys.append(y[mask])
 
             if with_sigmoid_fit:
                 max_snr = max(np.max(x) for x in all_xs)
