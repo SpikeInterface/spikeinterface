@@ -229,9 +229,8 @@ def test_estimate_templates():
 
     # mask with differents sparsity
     sparsity_mask = np.ones((sorting.unit_ids.size, recording.channel_ids.size), dtype=bool)
-    sparsity_mask[:4, :recording.channel_ids.size//2 -1 ] = False
-    sparsity_mask[4:, recording.channel_ids.size//2:] = False
-
+    sparsity_mask[:4, : recording.channel_ids.size // 2 - 1] = False
+    sparsity_mask[4:, recording.channel_ids.size // 2 :] = False
 
     for operator in ("average", "median"):
         templates_array = estimate_templates(
@@ -245,8 +244,15 @@ def test_estimate_templates():
         assert np.any(templates_array != 0)
 
         sparse_templates_array = estimate_templates(
-            recording, spikes, sorting.unit_ids, nbefore, nafter, operator=operator,
-            return_in_uV=True, sparsity_mask=sparsity_mask, **job_kwargs
+            recording,
+            spikes,
+            sorting.unit_ids,
+            nbefore,
+            nafter,
+            operator=operator,
+            return_in_uV=True,
+            sparsity_mask=sparsity_mask,
+            **job_kwargs,
         )
         n_chan = np.max(np.sum(sparsity_mask, axis=1))
         assert n_chan == sparse_templates_array.shape[2]

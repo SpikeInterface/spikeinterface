@@ -794,7 +794,15 @@ def estimate_templates(
 
     if operator == "average":
         templates_array = estimate_templates_with_accumulator(
-            recording, spikes, unit_ids, nbefore, nafter, return_in_uV=return_in_uV, sparsity_mask=sparsity_mask, job_name=job_name, **job_kwargs
+            recording,
+            spikes,
+            unit_ids,
+            nbefore,
+            nafter,
+            return_in_uV=return_in_uV,
+            sparsity_mask=sparsity_mask,
+            job_name=job_name,
+            **job_kwargs,
         )
     elif operator == "median":
         all_waveforms, wf_array_info = extract_waveforms_to_single_buffer(
@@ -894,7 +902,7 @@ def estimate_templates_with_accumulator(
     else:
         num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
     num_units = len(unit_ids)
-    
+
     shape = (num_worker, num_units, nbefore + nafter, num_chans)
 
     dtype = np.dtype("float32")
@@ -1060,11 +1068,9 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
                 if waveform_squared_accumulator_per_worker is not None:
                     waveform_squared_accumulator_per_worker[worker_index, unit_index, :, :] += wf**2
 
-
             else:
                 mask = sparsity_mask[unit_index, :]
                 wf = wf[:, mask]
                 waveform_accumulator_per_worker[worker_index, unit_index, :, : wf.shape[1]] += wf
                 if waveform_squared_accumulator_per_worker is not None:
-                    waveform_squared_accumulator_per_worker[worker_index, unit_index, :, :wf.shape[1]] += wf**2
-
+                    waveform_squared_accumulator_per_worker[worker_index, unit_index, :, : wf.shape[1]] += wf**2
