@@ -442,6 +442,7 @@ def cache_preprocessing(
             # then try folder
             recording = recording.save_to_folder(folder=folder)
             cache_info["mode"] = "folder"
+            cache_info["folder"] = folder
         else:
             recording = recording
             cache_info["mode"] = "no-cache"

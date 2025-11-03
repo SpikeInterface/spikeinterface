@@ -143,6 +143,8 @@ class LupinSorter(ComponentsBasedSorter):
             if apply_cmr:
                 recording = common_reference(recording)
 
+            recording = whiten(recording, dtype="float32", mode="local", radius_um=radius_um)
+
             if params["apply_motion_correction"]:
                 interpolate_motion_kwargs = dict(
                     border_mode="force_extrapolate",
@@ -156,8 +158,6 @@ class LupinSorter(ComponentsBasedSorter):
                     motion_info["motion"],
                     **interpolate_motion_kwargs,
                 )
-
-            recording = whiten(recording, dtype="float32", mode="local", radius_um=radius_um)
 
             # used only if "folder" or "zarr"
             cache_folder = sorter_output_folder / "cache_preprocessing"
@@ -234,10 +234,6 @@ class LupinSorter(ComponentsBasedSorter):
             print(f"find_clusters_from_peaks(): {sorting_pre_peeler.unit_ids.size} cluster found")
 
         # Template
-        ## DEBUG
-        job_kwargs2 = job_kwargs.copy()
-        job_kwargs2['n_jobs'] = 5
-        ## DEBUG
 
         nbefore = int(ms_before * sampling_frequency / 1000.0)
         nafter = int(ms_after * sampling_frequency / 1000.0)
@@ -248,9 +244,7 @@ class LupinSorter(ComponentsBasedSorter):
             nbefore,
             nafter,
             return_in_uV=False,
-            ## DEBUG
-            **job_kwargs2,
-            ## DEBUG
+            **job_kwargs,
         )
         templates_dense = Templates(
             templates_array=templates_array,
