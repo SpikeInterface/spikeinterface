@@ -356,7 +356,6 @@ def isosplit(
         #     ax.plot(X[mask, :].T, color=colors[l], alpha=0.4)
         # plt.show()
 
-
         while True:  # iterations
             iteration_number += 1
             # print('  iterations', iteration_number)
@@ -636,7 +635,6 @@ if HAVE_NUMBA:
                     # protect against pure swaping between label1<>label2
                     # pure_swaping = modified_inds1.size == inds1.size and modified_inds2.size == inds2.size
                     pure_swaping = (modified_inds1.size / inds1.size + modified_inds2.size / inds2.size) >= 1.0
-
 
                     if modified_inds1.size > 0 and not pure_swaping:
                         something_was_redistributed = True
