@@ -178,7 +178,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 motion_correction_kwargs["detect_kwargs"] = {"noise_levels": noise_levels}
                 recording_w = correct_motion(recording_w, **motion_correction_kwargs, **job_kwargs)
         else:
-            motion_folder = None        
+            motion_folder = None
 
         noise_levels = get_noise_levels(
             recording_w, return_in_uV=False, random_slices_kwargs={"seed": seed}, **job_kwargs
