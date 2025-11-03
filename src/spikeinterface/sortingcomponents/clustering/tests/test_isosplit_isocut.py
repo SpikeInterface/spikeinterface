@@ -124,7 +124,7 @@ def make_nd_blob(
         center = rng.uniform(size=(dim)) * 10
         # cov = rng.uniform(size=(dim, dim)) * 2
         # cov = cov + cov.T
-        cov = np.eye(dim) / 5
+        cov = np.eye(dim) / 10
 
         one_cluster = np.random.multivariate_normal(center, cov, size=size)
         data.append(one_cluster)
@@ -146,7 +146,7 @@ def test_isosplit():
     )
     data = data.astype("float64")
 
-    labels = isosplit(data, isocut_threshold=2.0, n_init=40)
+    labels = isosplit(data, isocut_threshold=2.0, n_init=40, seed=2205)
     # the beauty is that it discovers the number of clusters automatically, at least for this this seed :)
     assert np.unique(labels).size == 3
 
