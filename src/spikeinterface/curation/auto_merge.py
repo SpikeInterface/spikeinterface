@@ -89,7 +89,7 @@ _default_step_params = {
         "censored_period_ms": 0.3,
     },
     "quality_score": {"firing_contamination_balance": 1.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    "slay_score": {"k1": 0.25, "k2": 1, "slay_threshold": 0.5, "template_diff_thresh": 0.25},
+    "slay_score": {"k1": 0.25, "k2": 1, "slay_threshold": 0.5},
 }
 
 
@@ -364,7 +364,9 @@ def compute_merge_unit_groups(
 
         elif step == "slay_score":
 
-            M_ij = compute_slay_matrix(sorting_analyzer, params["k1"], params["k2"], pair_mask)
+            M_ij = compute_slay_matrix(
+                sorting_analyzer, params["k1"], params["k2"], templates_diff=outs["templates_diff"], pair_mask=pair_mask
+            )
 
             pair_mask = pair_mask & (M_ij > params["slay_threshold"])
 
@@ -1520,7 +1522,13 @@ def estimate_cross_contamination(
     return estimation, p_value
 
 
-def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float, pair_mask=None):
+def compute_slay_matrix(
+    sorting_analyzer: SortingAnalyzer,
+    k1: float,
+    k2: float,
+    templates_diff: np.ndarray | None,
+    pair_mask: np.ndarray | None = None,
+):
     """
     Computes the "merge decision metric" from the SLAy method, made from combining
     a template similarity measure, a cross-correlation significance measure and a
@@ -1535,6 +1543,8 @@ def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float,
         Coefficient determining the importance of the cross-correlation significance
     k2 : float
         Coefficient determining the importance of the sliding rp violation
+    templates_diff : np.ndarray | None
+        Pre-computed template similarity difference matrix. If None, it will be retrieved from the sorting_analyzer.
     pair_mask : None | np.ndarray, default: None
         A bool matrix describing which pairs are possible merges based on previous steps
 
@@ -1552,7 +1562,10 @@ def compute_slay_matrix(sorting_analyzer: SortingAnalyzer, k1: float, k2: float,
     if pair_mask is None:
         pair_mask = np.triu(np.arange(num_units), 1) > 0
 
-    sigma_ij = sorting_analyzer.get_extension("template_similarity").get_data()
+    if templates_diff is not None:
+        sigma_ij = 1 - templates_diff
+    else:
+        sigma_ij = sorting_analyzer.get_extension("template_similarity").get_data()
     rho_ij, eta_ij = compute_xcorr_and_rp(sorting_analyzer, pair_mask)
 
     M_ij = sigma_ij + k1 * rho_ij - k2 * eta_ij
