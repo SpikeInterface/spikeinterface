@@ -48,7 +48,8 @@ class LupinSorter(ComponentsBasedSorter):
         "peak_sign": "neg",
         "detect_threshold": 5,
         "n_peaks_per_channel": 5000,
-        "n_svd_components": 3,
+        "n_svd_components_per_channel": 5,
+        "n_pca_features": 3,
         "clustering_recursive_depth": 3,
         "ms_before": 1.0,
         "ms_after": 2.5,
@@ -73,7 +74,8 @@ class LupinSorter(ComponentsBasedSorter):
         "peak_sign": "Sign of peaks neg/pos/both",
         "detect_threshold": "Treshold for peak detection",
         "n_peaks_per_channel": "Number of spike per channel for clustering",
-        "n_svd_components": "Number of SVD components for clustering",
+        "n_svd_components_per_channel": "Number of SVD components per channel for clustering",
+        "n_pca_features" : "Secondary PCA features reducation before local isosplit",
         "clustering_recursive_depth": "Clustering recussivity",
         "ms_before": "Milliseconds before the spike peak for template matching",
         "ms_after": "Milliseconds after the spike peak for template matching",
@@ -217,8 +219,12 @@ class LupinSorter(ComponentsBasedSorter):
         clustering_kwargs["peaks_svd"]["ms_before"] = params["clustering_ms_before"]
         clustering_kwargs["peaks_svd"]["ms_after"] = params["clustering_ms_after"]
         clustering_kwargs["peaks_svd"]["radius_um"] = params["features_radius_um"]
-        clustering_kwargs["peaks_svd"]["n_components"] = params["n_svd_components"]
+        clustering_kwargs["peaks_svd"]["n_components"] = params["n_svd_components_per_channel"]
         clustering_kwargs["split"]["recursive_depth"] = params["clustering_recursive_depth"]
+        clustering_kwargs["split"]["method_kwargs"]["n_pca_features"] = params["n_pca_features"]
+
+        
+
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
