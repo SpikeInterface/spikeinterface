@@ -19,6 +19,7 @@ from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates, ComputeNoiseLevels
 from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
 from spikeinterface.core.recording_tools import get_noise_levels
+from spikeinterface.core.sorting_tools import spike_vector_to_indices, get_numba_vector_to_list_of_spiketrain
 
 
 def make_multi_method_doc(methods, ident="    "):
@@ -535,6 +536,8 @@ def clean_templates(
 
     ## First we sparsify the templates (using peak-to-peak amplitude avoid sign issues)
     if sparsify_threshold is not None:
+        if templates.are_templates_sparse():
+            templates = templates.to_dense()
         sparsity = compute_sparsity(
             templates,
             method="snr",
@@ -542,8 +545,6 @@ def clean_templates(
             noise_levels=noise_levels,
             threshold=sparsify_threshold,
         )
-        if templates.are_templates_sparse():
-            templates = templates.to_dense()
         templates = templates.to_sparse(sparsity)
 
     ## We removed non empty templates
@@ -575,3 +576,31 @@ def clean_templates(
         templates = templates.select_units(to_select)
 
     return templates
+
+def compute_sparsity_from_peaks_and_label(peaks, unit_indices, unit_ids, recording, radius_um):
+    """
+    Compute the sparisty after clustering.
+    This uses the peak channel to compute the baricenter of cluster.
+    Then make a radius around it.
+    """
+    # handle only 2D channels
+    channel_locations = recording.get_channel_locations()[:, :2]
+    num_units = unit_ids.size
+    num_chans = recording.channel_ids.size
+
+    vector_to_list_of_spiketrain = get_numba_vector_to_list_of_spiketrain()
+    indices = np.arange(unit_indices.size, dtype=np.int64)
+    list_of_spike_indices = vector_to_list_of_spiketrain(indices, unit_indices, num_units)
+    unit_locations = np.zeros((num_units, 2), dtype=float)
+    sparsity_mask = np.zeros((num_units, num_chans), dtype=bool)
+    for unit_ind in range(num_units):
+        spike_inds = list_of_spike_indices[unit_ind]
+        unit_chans, count = np.unique(peaks[spike_inds]["channel_index"], return_counts=True)
+        weights = count / np.sum(count)
+        unit_loc = np.average(channel_locations[unit_chans, :], weights=weights, axis=0)
+        unit_locations[unit_ind, :] = unit_loc
+        (chan_inds,) = np.nonzero(np.linalg.norm(channel_locations - unit_loc[None, :], axis=1) <= radius_um)
+        sparsity_mask[unit_ind, chan_inds] = True
+
+    sparsity = ChannelSparsity(sparsity_mask, unit_ids, recording.channel_ids)
+    return sparsity, unit_locations

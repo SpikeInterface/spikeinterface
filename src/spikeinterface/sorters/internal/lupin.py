@@ -38,23 +38,26 @@ class LupinSorter(ComponentsBasedSorter):
         "motion_correction_preset" : "dredge_fast",
         "clustering_ms_before": 0.3,
         "clustering_ms_after": 1.3,
-        "radius_um": 120.,
+        "whitening_radius_um": 100.,
+        "detection_radius_um": 50.,
+        "features_radius_um": 75.,
+        "template_radius_um" : 100.,
         "freq_min": 150.0,
-        "freq_max": 6000.0,
+        "freq_max": 7000.0,
         "cache_preprocessing_mode" : "auto",
         "peak_sign": "neg",
         "detect_threshold": 5,
         "n_peaks_per_channel": 5000,
-        "n_svd_components": 10,
+        "n_svd_components": 3,
         "clustering_recursive_depth": 3,
-        "ms_before": 2.0,
-        "ms_after": 3.0,
+        "ms_before": 1.0,
+        "ms_after": 2.5,
         "sparsity_threshold": 1.5,
         "template_min_snr": 2.5,
         "gather_mode": "memory",
         "job_kwargs": {},
         "seed": None,
-        "save_array": False,
+        "save_array": True,
         "debug": False,
     }
 
@@ -100,14 +103,13 @@ class LupinSorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.preprocessing import correct_motion
         from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
-        from spikeinterface.sortingcomponents.tools import clean_templates
+        from spikeinterface.sortingcomponents.tools import clean_templates, compute_sparsity_from_peaks_and_label
 
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
         job_kwargs["progress_bar"] = verbose
 
         seed = params["seed"]
-        radius_um = params["radius_um"]
 
         recording_raw = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -143,7 +145,13 @@ class LupinSorter(ComponentsBasedSorter):
             if apply_cmr:
                 recording = common_reference(recording)
 
-            recording = whiten(recording, dtype="float32", mode="local", radius_um=radius_um)
+            recording = whiten(recording, dtype="float32", mode="local", radius_um=params["whitening_radius_um"],
+                            #    chunk_duration="2s", 
+                            #    apply_mean=True, 
+                            #    regularize=True,
+                            #    regularize_kwargs=dict(method="LedoitWolf"),
+                               )
+
 
             if params["apply_motion_correction"]:
                 interpolate_motion_kwargs = dict(
@@ -187,7 +195,7 @@ class LupinSorter(ComponentsBasedSorter):
             peak_sign=params["peak_sign"],
             detect_threshold=params["detect_threshold"],
             exclude_sweep_ms=1.5,
-            radius_um=radius_um/2., # half the svd radius is enough for detection
+            radius_um=params["detection_radius_um"],
             prototype=prototype,
             ms_before=ms_before,
         )
@@ -208,7 +216,7 @@ class LupinSorter(ComponentsBasedSorter):
         clustering_kwargs = deepcopy(clustering_methods["iterative-isosplit"]._default_params)
         clustering_kwargs["peaks_svd"]["ms_before"] = params["clustering_ms_before"]
         clustering_kwargs["peaks_svd"]["ms_after"] = params["clustering_ms_after"]
-        clustering_kwargs["peaks_svd"]["radius_um"] = params["radius_um"]
+        clustering_kwargs["peaks_svd"]["radius_um"] = params["features_radius_um"]
         clustering_kwargs["peaks_svd"]["n_components"] = params["n_svd_components"]
         clustering_kwargs["split"]["recursive_depth"] = params["clustering_recursive_depth"]
         if params["debug"]:
@@ -221,20 +229,28 @@ class LupinSorter(ComponentsBasedSorter):
             extra_outputs=True,
             job_kwargs=job_kwargs,
         )
-        new_peaks = peaks
+        
 
         mask = clustering_label >= 0
+        kept_peaks = peaks[mask]
+        kept_labels = clustering_label[mask]
+
         sorting_pre_peeler = NumpySorting.from_samples_and_labels(
-            new_peaks["sample_index"][mask],
-            clustering_label[mask],
+            kept_peaks["sample_index"],
+            kept_labels,
             sampling_frequency,
             unit_ids=unit_ids,
         )
         if verbose:
-            print(f"find_clusters_from_peaks(): {sorting_pre_peeler.unit_ids.size} cluster found")
+            print(f"find_clusters_from_peaks(): {unit_ids.size} cluster found")
 
-        # Template
 
+        # preestimate the sparsity unsing peaks channel
+        spike_vector = sorting_pre_peeler.to_spike_vector(concatenated=True)
+        sparsity, unit_locations = compute_sparsity_from_peaks_and_label(kept_peaks, spike_vector["unit_index"],
+                                              sorting_pre_peeler.unit_ids, recording, params["template_radius_um"])
+
+        # Template are sparse from radius using unit_location
         nbefore = int(ms_before * sampling_frequency / 1000.0)
         nafter = int(ms_after * sampling_frequency / 1000.0)
         templates_array = estimate_templates_with_accumulator(
@@ -244,30 +260,31 @@ class LupinSorter(ComponentsBasedSorter):
             nbefore,
             nafter,
             return_in_uV=False,
+            sparsity_mask=sparsity.mask,
             **job_kwargs,
         )
-        templates_dense = Templates(
+        templates = Templates(
             templates_array=templates_array,
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
             channel_ids=recording.channel_ids,
             unit_ids=sorting_pre_peeler.unit_ids,
-            sparsity_mask=None,
+            sparsity_mask=sparsity.mask,
             probe=recording.get_probe(),
             is_in_uV=False,
         )
         
-        sparsity_threshold = params["sparsity_threshold"]
-        radius_um = params["radius_um"]
-        sparsity = compute_sparsity(templates_dense, method="radius", radius_um=radius_um)
-        sparsity_snr = compute_sparsity(templates_dense, method="snr", amplitude_mode="peak_to_peak",
-                                        noise_levels=noise_levels, threshold=sparsity_threshold)
-        sparsity.mask = sparsity.mask & sparsity_snr.mask
-        templates = templates_dense.to_sparse(sparsity)
+        # sparsity_threshold = params["sparsity_threshold"]
+        # sparsity = compute_sparsity(templates_dense, method="radius", radius_um=params["features_radius_um"])
+        # sparsity_snr = compute_sparsity(templates_dense, method="snr", amplitude_mode="peak_to_peak",
+        #                                 noise_levels=noise_levels, threshold=sparsity_threshold)
+        # sparsity.mask = sparsity.mask & sparsity_snr.mask
+        # templates = templates_dense.to_sparse(sparsity)
 
+        # this spasify more
         templates = clean_templates(
             templates,
-            sparsify_threshold=None,
+            sparsify_threshold=params["sparsity_threshold"],
             noise_levels=noise_levels,
             min_snr=params["template_min_snr"],
             max_jitter_ms=None,
