@@ -216,7 +216,6 @@ class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):
         device=None,
         radius_um=50,
         return_tensor=False,
-        random_chunk_kwargs={},
         return_output=True,
     ):
         if not HAVE_TORCH:
@@ -288,14 +287,13 @@ class LocallyExclusiveOpenCLPeakDetector(LocallyExclusivePeakDetector):
         exclude_sweep_ms=0.1,
         radius_um=50,
         noise_levels=None,
-        random_chunk_kwargs={},
         opencl_context_kwargs={},
     ):
         if not HAVE_PYOPENCL:
             raise ModuleNotFoundError('"locally_exclusive_cl" needs pyopencl which is not installed')
 
         LocallyExclusivePeakDetector.__init__(
-            self, recording, peak_sign, detect_threshold, exclude_sweep_ms, radius_um, noise_levels, random_chunk_kwargs
+            self, recording, peak_sign, detect_threshold, exclude_sweep_ms, radius_um, noise_levels
         )
 
         self.executor = OpenCLDetectPeakExecutor(

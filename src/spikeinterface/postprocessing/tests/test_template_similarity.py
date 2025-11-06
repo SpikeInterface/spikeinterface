@@ -82,8 +82,9 @@ def test_compute_similarity_with_templates_array(params):
     templates_array = rng.random(size=(2, 20, 5))
     other_templates_array = rng.random(size=(4, 20, 5))
 
-    similarity = compute_similarity_with_templates_array(templates_array, other_templates_array, **params)
+    similarity, lags = compute_similarity_with_templates_array(templates_array, other_templates_array, **params)
     print(similarity.shape)
+    print(lags)
 
 
 pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
@@ -107,10 +108,23 @@ def test_equal_results_numba(params):
     rng = np.random.default_rng(seed=2205)
     templates_array = rng.random(size=(4, 20, 5), dtype=np.float32)
     other_templates_array = rng.random(size=(2, 20, 5), dtype=np.float32)
-    mask = np.ones((4, 2, 5), dtype=bool)
+    sparsity_mask = np.ones((4, 5), dtype=bool)
+    other_sparsity_mask = np.ones((2, 5), dtype=bool)
 
-    result_numpy = _compute_similarity_matrix_numba(templates_array, other_templates_array, mask=mask, **params)
-    result_numba = _compute_similarity_matrix_numpy(templates_array, other_templates_array, mask=mask, **params)
+    result_numpy = _compute_similarity_matrix_numba(
+        templates_array,
+        other_templates_array,
+        sparsity_mask=sparsity_mask,
+        other_sparsity_mask=other_sparsity_mask,
+        **params,
+    )
+    result_numba = _compute_similarity_matrix_numpy(
+        templates_array,
+        other_templates_array,
+        sparsity_mask=sparsity_mask,
+        other_sparsity_mask=other_sparsity_mask,
+        **params,
+    )
 
     assert np.allclose(result_numpy, result_numba, 1e-3)
 
@@ -128,5 +142,5 @@ if __name__ == "__main__":
     test.cache_folder = Path("./cache_folder")
     test.test_extension(params=dict(method="l2"))
 
-    # params = dict(method="cosine", num_shifts=8)
-    # test_compute_similarity_with_templates_array(params)
+    params = dict(method="cosine", num_shifts=8)
+    test_compute_similarity_with_templates_array(params)
