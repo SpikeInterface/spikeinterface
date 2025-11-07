@@ -331,8 +331,6 @@ class Kilosort4Sorter(BaseSorter):
         if len(possibly_batch_downsampling) > 0:
             batch_downsample_dict["batch_downsampling"] = possibly_batch_downsampling[0]
 
-        print(f"{batch_downsample_dict=}")
-
         # Set preprocessing and drift correction parameters
         if not params["skip_kilosort_preprocessing"]:
             ops = compute_preprocessing(ops=ops, device=device, tic0=tic0, file_object=file_object)
