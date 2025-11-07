@@ -3,13 +3,26 @@ from __future__ import annotations
 import pytest
 
 from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
+from spikeinterface.core.generate import inject_some_split_units
 
 job_kwargs = dict(n_jobs=-1)
 
+extensions = [
+    "random_spikes",
+    "waveforms",
+    "templates",
+    "unit_locations",
+    "spike_amplitudes",
+    "spike_locations",
+    "correlograms",
+    "template_similarity",
+]
 
-def make_sorting_analyzer(sparse=True, num_units=5):
+
+def make_sorting_analyzer(sparse=True, num_units=5, durations=[100.0]):
+    job_kwargs = dict(n_jobs=-1)
     recording, sorting = generate_ground_truth_recording(
-        durations=[300.0],
+        durations=durations,
         sampling_frequency=30000.0,
         num_channels=4,
         num_units=num_units,
@@ -23,21 +36,49 @@ def make_sorting_analyzer(sparse=True, num_units=5):
     recording = recording.rename_channels(new_channel_ids=channel_ids_as_integers)
     sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
 
-    sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, format="memory", sparse=sparse)
-    sorting_analyzer.compute("random_spikes")
-    sorting_analyzer.compute("waveforms", **job_kwargs)
-    sorting_analyzer.compute("templates")
-    sorting_analyzer.compute("noise_levels")
-    # sorting_analyzer.compute("principal_components")
-    # sorting_analyzer.compute("template_similarity")
-    # sorting_analyzer.compute("quality_metrics", metric_names=["snr"])
+    sorting_analyzer = create_sorting_analyzer(
+        sorting=sorting, recording=recording, format="memory", sparse=sparse, **job_kwargs
+    )
+    sorting_analyzer.compute(extensions, **job_kwargs)
 
     return sorting_analyzer
+
+
+def make_sorting_analyzer_with_splits(sorting_analyzer, num_unit_splitted=1, num_split=2):
+    job_kwargs = dict(n_jobs=-1)
+    sorting = sorting_analyzer.sorting
+
+    split_ids = sorting.unit_ids[:num_unit_splitted]
+    sorting_with_split, other_ids = inject_some_split_units(
+        sorting,
+        split_ids=split_ids,
+        num_split=num_split,
+        output_ids=True,
+        seed=42,
+    )
+
+    sorting_analyzer_with_splits = create_sorting_analyzer(
+        sorting=sorting_with_split, recording=sorting_analyzer.recording, format="memory", sparse=True
+    )
+    sorting_analyzer_with_splits.compute(extensions, **job_kwargs)
+
+    return sorting_analyzer_with_splits, num_unit_splitted, other_ids
 
 
 @pytest.fixture(scope="module")
 def sorting_analyzer_for_curation():
     return make_sorting_analyzer(sparse=True)
+
+
+@pytest.fixture(scope="module")
+def sorting_analyzer_multi_segment_for_curation():
+    return make_sorting_analyzer(sparse=True, durations=[50.0, 30.0])
+
+
+@pytest.fixture(scope="module")
+def sorting_analyzer_with_splits():
+    sorting_analyzer = make_sorting_analyzer(sparse=True, durations=[50.0])
+    return make_sorting_analyzer_with_splits(sorting_analyzer)
 
 
 if __name__ == "__main__":
