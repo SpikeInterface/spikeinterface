@@ -307,9 +307,31 @@ class Kilosort4Sorter(BaseSorter):
         if version.parse(ks_version) >= version.parse("4.0.34"):
             ops = ops[0]
 
-        n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact, _, _ = (
-            get_run_parameters(ops)
-        )
+        (
+            n_chan_bin,
+            fs,
+            NT,
+            nt,
+            twav_min,
+            chan_map,
+            dtype,
+            do_CAR,
+            invert,
+            _,
+            _,
+            tmin,
+            tmax,
+            artifact,
+            _,
+            _,
+            *possibly_batch_downsampling,
+        ) = get_run_parameters(ops)
+
+        batch_downsample_dict = {}
+        if len(possibly_batch_downsampling) > 0:
+            batch_downsample_dict["batch_downsampling"] = possibly_batch_downsampling[0]
+
+        print(f"{batch_downsample_dict=}")
 
         # Set preprocessing and drift correction parameters
         if not params["skip_kilosort_preprocessing"]:
@@ -334,6 +356,7 @@ class Kilosort4Sorter(BaseSorter):
                 tmax=tmax,
                 artifact_threshold=artifact,
                 file_object=file_object,
+                **batch_downsample_dict,
             )
             ops["preprocessing"] = dict(hp_filter=None, whiten_mat=None)
             ops["Wrot"] = torch.as_tensor(np.eye(recording.get_num_channels()))
