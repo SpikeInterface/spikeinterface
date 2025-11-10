@@ -177,7 +177,7 @@ class TestKilosort4Long:
         """
         num_channels = 32
         recording, _ = si.generate_ground_truth_recording(
-            durations=[5],
+            durations=[10],
             seed=0,
             num_channels=num_channels,
             num_units=5,
