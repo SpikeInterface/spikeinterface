@@ -352,7 +352,7 @@ def kilosort_output_to_analyzer(folder_path, compute_extras=False, unwhiten=True
         probe.set_contacts(channel_positions)
         probe.set_device_channel_indices(range(probe.get_contact_count()))
     else:
-        AssertionError("Cannot read probe layout from folder {phy_path}.")
+        AssertionError(f"Cannot read probe layout from folder {phy_path}.")
 
     # to make the initial analyzer, we'll use a fake recording and set it to None later
     recording, _ = generate_ground_truth_recording(
