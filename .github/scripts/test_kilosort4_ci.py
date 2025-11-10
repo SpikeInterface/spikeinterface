@@ -117,7 +117,7 @@ if parse(kilosort.__version__) >= parse("4.0.37"):
     PARAMETERS_NOT_AFFECTING_RESULTS.append("max_cluster_subset")
 
 if parse(kilosort.__version__) >= parse("4.1.2"):
-    PARAMS_TO_TEST_DICT.update({"batch_downsampling": 1})
+    PARAMS_TO_TEST_DICT.update({"batch_downsampling": 2})
     PARAMETERS_NOT_AFFECTING_RESULTS.append("batch_downsampling")
 
     PARAMS_TO_TEST_DICT.update({"cluster_init_seed": 2})
