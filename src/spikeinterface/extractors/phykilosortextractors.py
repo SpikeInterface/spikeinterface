@@ -345,6 +345,8 @@ def kilosort_output_to_analyzer(folder_path, compute_extras=False, unwhiten=True
 
     if (phy_path / "probe.prb").is_file():
         probegroup = read_prb(phy_path / "probe.prb")
+        if len(probegroup.probes) > 0:
+            raise ValueError("Found more than one probe. Multiple probes are not currently supported.")
         probe = probegroup.probes[0]
     elif (phy_path / "channel_positions.npy").is_file():
         probe = Probe(si_units="um")
@@ -386,54 +388,52 @@ def kilosort_output_to_analyzer(folder_path, compute_extras=False, unwhiten=True
     return sorting_analyzer
 
 
-def _make_amplitudes(sa, phy_path: Path):
+def _make_amplitudes(sorting_analyzer, kilosort_output_path):
+    """Constructs a `spike_amplitudes` extension from the amplitudes numpy array
+    in `kilosort_output_path`, and attaches the extension to the `sorting_analyzer`."""
 
-    amplitudes_extension = ComputeSpikeAmplitudes(sa)
+    amplitudes_extension = ComputeSpikeAmplitudes(sorting_analyzer)
 
-    amps_np = np.load(phy_path / "amplitudes.npy")
+    amps_np = np.load(kilosort_output_path / "amplitudes.npy")
 
-    amplitudes_extension.data = {}
-    amplitudes_extension.data["amplitudes"] = amps_np
-
-    params = {"peak_sign": "neg"}
-    amplitudes_extension.params = params
-
+    amplitudes_extension.data = {"amplitudes": amps_np}
+    amplitudes_extension.params = {"peak_sign": "neg"}
     amplitudes_extension.run_info = {"run_completed": True}
 
-    sa.extensions["spike_amplitudes"] = amplitudes_extension
+    sorting_analyzer.extensions["spike_amplitudes"] = amplitudes_extension
 
 
-def _make_locations(sa, phy_path):
+def _make_locations(sorting_analyzer, kilosort_output_path):
+    """Constructs a `spike_locations` extension from the amplitudes numpy array
+    in `kilosort_output_path`, and attaches the extension to the `sorting_analyzer`."""
 
-    locations_extension = ComputeSpikeLocations(sa)
+    locations_extension = ComputeSpikeLocations(sorting_analyzer)
 
-    locs_np = np.load(phy_path / "spike_positions.npy")
+    locs_np = np.load(kilosort_output_path / "spike_positions.npy")
 
     num_dims = len(locs_np[0])
     column_names = ["x", "y", "z"][:num_dims]
     dtype = [(name, locs_np.dtype) for name in column_names]
 
-    structured_array = np.array(np.zeros(len(locs_np)), dtype=dtype)
-    for a, column_name in enumerate(column_names):
-        structured_array[column_name] = locs_np[:, a]
+    structured_array = np.zeros(len(locs_np), dtype=dtype)
+    for coordinate_index, column_name in enumerate(column_names):
+        structured_array[column_name] = locs_np[:, coordinate_index]
 
-    locations_extension.data = {}
-    locations_extension.data["spike_locations"] = structured_array
-
-    params = {}
-    locations_extension.params = params
-
+    locations_extension.data = {"spike_locations": structured_array}
+    locations_extension.params = {}
     locations_extension.run_info = {"run_completed": True}
 
-    sa.extensions["spike_locations"] = locations_extension
+    sorting_analyzer.extensions["spike_locations"] = locations_extension
 
 
-def _make_sparsity_from_templates(sort, rec, phy_path):
+def _make_sparsity_from_templates(sorting, recording, kilosort_output_path):
+    """Constructs the `ChannelSparsity` of from kilosort output, by seeing if the
+    templates output is zero or not on all channels."""
 
-    templates = np.load(phy_path / "templates.npy")
+    templates = np.load(kilosort_output_path / "templates.npy")
 
-    unit_ids = sort.unit_ids
-    channel_ids = rec.channel_ids
+    unit_ids = sorting.unit_ids
+    channel_ids = recording.channel_ids
 
     # The raw templates have dense dimensions (num chan)x(num units)
     # but are zero on many channels, which implicitly defines the sparsity
@@ -441,27 +441,29 @@ def _make_sparsity_from_templates(sort, rec, phy_path):
     return ChannelSparsity(mask, unit_ids=unit_ids, channel_ids=channel_ids)
 
 
-def _make_templates(sa, phy_path, mask, sampling_frequency, unwhiten=True):
+def _make_templates(sorting_analyzer, kilosort_output_path, mask, sampling_frequency, unwhiten=True):
+    """Constructs a `templates` extension from the amplitudes numpy array
+    in `kilosort_output_path`, and attaches the extension to the `sorting_analyzer`."""
 
-    template_extension = ComputeTemplates(sa)
+    template_extension = ComputeTemplates(sorting_analyzer)
 
-    whitened_templates = np.load(phy_path / "templates.npy")
-    wh_inv = np.load(phy_path / "whitening_mat_inv.npy")
+    whitened_templates = np.load(kilosort_output_path / "templates.npy")
+    wh_inv = np.load(kilosort_output_path / "whitening_mat_inv.npy")
     new_templates = _compute_unwhitened_templates(whitened_templates, wh_inv, mask) if unwhiten else whitened_templates
 
     template_extension.data = {"average": new_templates}
 
-    ops_path = phy_path / "ops.npy"
+    ops_path = kilosort_output_path / "ops.npy"
     if ops_path.is_file():
         ops = np.load(ops_path, allow_pickle=True)
 
-        samples_before = ops.item(0).get("nt0min")
-        nt = ops.item(0).get("nt")
+        number_samples_before_template_peak = ops.item(0)["nt0min"]
+        total_template_samples = ops.item(0)["nt"]
 
-        samples_after = nt - samples_before
+        number_samples_after_template_peak = total_template_samples - number_samples_before_template_peak
 
-        ms_before = samples_before / (sampling_frequency // 1000)
-        ms_after = samples_after / (sampling_frequency // 1000)
+        ms_before = number_samples_before_template_peak / (sampling_frequency // 1000)
+        ms_after = number_samples_after_template_peak / (sampling_frequency // 1000)
 
     params = {
         "operators": ["average"],
@@ -473,19 +475,25 @@ def _make_templates(sa, phy_path, mask, sampling_frequency, unwhiten=True):
     template_extension.params = params
     template_extension.run_info = {"run_completed": True}
 
-    sa.extensions["templates"] = template_extension
+    sorting_analyzer.extensions["templates"] = template_extension
 
 
 def _compute_unwhitened_templates(whitened_templates, wh_inv, mask):
+    """Constructs unwhitened templates from whitened_templates, by
+    applying an inverse whitening matrix."""
 
     template_shape = np.shape(whitened_templates)
     new_templates = np.zeros(template_shape)
 
     sparsity_channel_ids = [np.arange(template_shape[-1])[unit_sparsity] for unit_sparsity in mask]
 
-    for a, unit_sparsity in enumerate(sparsity_channel_ids):
-        for b in unit_sparsity:
-            for c in unit_sparsity:
-                new_templates[a, :, b] += wh_inv[b, c] * whitened_templates[a, :, c]
+    for unit_index, channel_indices in enumerate(sparsity_channel_ids):
+        for channel_index_1 in channel_indices:
+            for channel_index_2 in channel_indices:
+                # templates have dimension unit_index x sample_index x channel_index
+                # to undo whitening, we need do matrix multiplication on the channel_index
+                new_templates[unit_index, :, channel_index_1] += (
+                    wh_inv[channel_index_1, channel_index_2] * whitened_templates[unit_index, :, channel_index_2]
+                )
 
     return new_templates
