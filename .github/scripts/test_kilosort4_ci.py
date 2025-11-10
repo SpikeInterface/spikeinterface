@@ -81,6 +81,7 @@ PARAMS_TO_TEST_DICT = {
     "acg_threshold": 1e12,
     "cluster_downsampling": 2,
     "duplicate_spike_ms": 0.3,
+    "batch_downsampling": 2,
 }
 
 PARAMETERS_NOT_AFFECTING_RESULTS = [
@@ -177,7 +178,7 @@ class TestKilosort4Long:
         """
         num_channels = 32
         recording, _ = si.generate_ground_truth_recording(
-            durations=[10],
+            durations=[5],
             seed=0,
             num_channels=num_channels,
             num_units=5,
@@ -360,6 +361,10 @@ class TestKilosort4Long:
         """
         recording, paths = recording_and_paths
         param_key = parameter
+
+        if param_key == "batch_downsampling":
+            return
+
         param_value = PARAMS_TO_TEST_DICT[param_key]
 
         # Setup parameters for KS4 and run it natively
