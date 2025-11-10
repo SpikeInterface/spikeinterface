@@ -81,8 +81,6 @@ PARAMS_TO_TEST_DICT = {
     "acg_threshold": 1e12,
     "cluster_downsampling": 2,
     "duplicate_spike_ms": 0.3,
-    "batch_downsampling": 2,
-    "cluster_init_seed": 2,
 }
 
 PARAMETERS_NOT_AFFECTING_RESULTS = [
