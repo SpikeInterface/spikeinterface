@@ -8,6 +8,7 @@ from spikeinterface.core.generate import inject_some_split_units
 job_kwargs = dict(n_jobs=-1)
 
 extensions = [
+    "noise_levels",
     "random_spikes",
     "waveforms",
     "templates",
