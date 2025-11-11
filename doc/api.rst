@@ -397,7 +397,7 @@ spikeinterface.generation
 Core
 ~~~~
 
-.. currentmodule:: spikeinterface.generation
+.. automodule:: spikeinterface.generation
 
     .. autofunction:: generate_recording
     .. autofunction:: generate_sorting
@@ -418,7 +418,8 @@ Core
 Drift
 ~~~~~
 
-.. currentmodule:: spikeinterface.generation
+.. automodule:: spikeinterface.generation
+    :no-index:
 
     .. autofunction:: generate_drifting_recording
     .. autofunction:: generate_displacement_vector
@@ -432,7 +433,8 @@ Drift
 Hybrid
 ~~~~~~
 
-.. currentmodule:: spikeinterface.generation
+.. automodule:: spikeinterface.generation
+    :no-index:
 
     .. autofunction:: generate_hybrid_recording
     .. autofunction:: estimate_templates_from_recording
@@ -448,7 +450,8 @@ Hybrid
 Noise
 ~~~~~
 
-.. currentmodule:: spikeinterface.generation
+.. automodule:: spikeinterface.generation
+    :no-index:
 
     .. autofunction:: generate_noise
 
