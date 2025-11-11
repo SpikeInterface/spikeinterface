@@ -1206,8 +1206,8 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None, num_sa
                 ns = num_samples[segment_index]
             bins = np.arange(0, ns, bin_size)
 
-        st1 = sorting.get_unit_spike_train(unit_id=unit1)
-        st2 = sorting.get_unit_spike_train(unit_id=unit2)
+        st1 = sorting.get_unit_spike_train(unit_id=unit1, segment_index=segment_index)
+        st2 = sorting.get_unit_spike_train(unit_id=unit2, segment_index=segment_index)
 
         h1, _ = np.histogram(st1, bins)
         h1 = h1.astype(float)
