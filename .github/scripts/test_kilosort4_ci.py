@@ -361,6 +361,8 @@ class TestKilosort4Long:
         recording, paths = recording_and_paths
         param_key = parameter
 
+        # Non-default batch_downsampling fails for short recordings, as there aren't
+        # enough batches. Since we test on a 5s recording, we skip it.
         if param_key == "batch_downsampling":
             return
 
