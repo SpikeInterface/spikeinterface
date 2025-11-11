@@ -20,7 +20,7 @@ extensions = [
 ]
 
 
-def make_sorting_analyzer(sparse=True, num_units=5, durations=[100.0]):
+def make_sorting_analyzer(sparse=True, num_units=5, durations=[300.0]):
     job_kwargs = dict(n_jobs=-1)
     recording, sorting = generate_ground_truth_recording(
         durations=durations,
