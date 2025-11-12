@@ -324,9 +324,8 @@ if HAVE_NUMBA:
                     local_mask = np.logical_or(
                             sparsity_mask[i, :], other_sparsity_mask
                     )  # shape (other_num_templates, num_channels)
-                    for local_i in range(len(not_connected_mask)):
-                        if not_connected_mask[local_i]:
-                            local_mask[local_i] = False
+                    for local_i in np.flatnonzero(not_connected_mask):
+                        local_mask[local_i] = False
                                 
                 elif support == "dense":
                     local_mask = np.ones((other_num_templates, num_channels), dtype=np.bool_)
