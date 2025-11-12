@@ -322,11 +322,11 @@ if HAVE_NUMBA:
                     connected_mask = np.logical_and(sparsity_mask[i, :], other_sparsity_mask)
                     not_connected_mask = np.sum(connected_mask, axis=1) == 0
                     local_mask = np.logical_or(
-                            sparsity_mask[i, :], other_sparsity_mask
+                        sparsity_mask[i, :], other_sparsity_mask
                     )  # shape (other_num_templates, num_channels)
                     for local_i in np.flatnonzero(not_connected_mask):
                         local_mask[local_i] = False
-                                
+
                 elif support == "dense":
                     local_mask = np.ones((other_num_templates, num_channels), dtype=np.bool_)
 
