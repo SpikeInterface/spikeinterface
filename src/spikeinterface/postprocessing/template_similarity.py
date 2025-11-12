@@ -320,7 +320,7 @@ if HAVE_NUMBA:
                     )  # shape (other_num_templates, num_channels)
                 elif support == "union":
                     connected_mask = np.logical_and(sparsity_mask[i, :], other_sparsity_mask)
-                    not_connected_mask = ~np.any(connected_mask, axis=1)
+                    not_connected_mask = np.logical_not(np.any(connected_mask, axis=1))
                     local_mask = np.logical_or(
                             sparsity_mask[i, :], other_sparsity_mask
                     )  # shape (other_num_templates, num_channels)
