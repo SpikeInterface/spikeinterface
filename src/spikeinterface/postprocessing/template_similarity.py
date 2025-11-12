@@ -394,7 +394,11 @@ def get_overlapping_mask_for_one_template(template_index, sparsity, other_sparsi
     if support == "intersection":
         mask = np.logical_and(sparsity[template_index, :], other_sparsity)  # shape (other_num_templates, num_channels)
     elif support == "union":
+        connected_mask = np.logical_and(sparsity[template_index, :], other_sparsity)
+        not_connected_mask = ~np.any(connected_mask, axis=1)
         mask = np.logical_or(sparsity[template_index, :], other_sparsity)  # shape (other_num_templates, num_channels)
+        for i in np.flatnonzero(not_connected_mask):
+            mask[i] = False
     elif support == "dense":
         mask = np.ones(other_sparsity.shape, dtype=bool)
     return mask
@@ -441,10 +445,15 @@ def compute_similarity_with_templates_array(
     else:
         other_sparsity_mask = np.ones((other_templates_array.shape[0], other_templates_array.shape[2]), dtype=bool)
 
+    #import time
+    #t_start = time.time()
+
     assert num_shifts < num_samples, "max_lag is too large"
     distances = _compute_similarity_matrix(
         templates_array, other_templates_array, num_shifts, method, sparsity_mask, other_sparsity_mask, support=support
     )
+
+    #print('Time to compute distances matrix:', time.time() - t_start)
 
     lags = np.argmin(distances, axis=0) - num_shifts
     distances = np.min(distances, axis=0)
