@@ -1,5 +1,6 @@
-Metrics
--------
+Metrics module
+==============
+
 
 The :py:mod:`~spikeinterface.metrics` module includes functions to compute various metrics related to spike sorting.
 

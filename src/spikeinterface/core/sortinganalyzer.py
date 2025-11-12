@@ -1996,7 +1996,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         if len(all_metrics_data) > 0:
             metrics_df = pd.concat(all_metrics_data, axis=1)
         else:
-            metrics_df = pd.DataFrame(index=analyzer.unit_ids)
+            metrics_df = pd.DataFrame(index=self.unit_ids)
         return metrics_df
 
 

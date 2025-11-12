@@ -154,13 +154,13 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             sampling_frequency_up = sampling_frequency
         tmp_data["sampling_frequency"] = sampling_frequency_up
 
-        include_multi_channel_metrics = self.params["include_multi_channel_metrics"] or any(
+        include_multi_channel_metrics = self.params.get("include_multi_channel_metrics") or any(
             m in get_multi_channel_template_metric_names() for m in self.params["metrics_to_compute"]
         )
 
         extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="index")
         all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
-        channel_locations = sorting_analyzer.recording.get_channel_locations()
+        channel_locations = sorting_analyzer.get_channel_locations()
 
         templates_single = []
         troughs = {}

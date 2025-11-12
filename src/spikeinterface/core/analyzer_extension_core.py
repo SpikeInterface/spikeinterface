@@ -847,7 +847,7 @@ class BaseMetric:
         tmp_data : dict
             Temporary data to pass to the metric function
         job_kwargs : dict
-            Job keyword arguments to control paralleization
+            Job keyword arguments to control parallelization
 
         Returns
         -------
@@ -1051,21 +1051,21 @@ class BaseMetricExtension(AnalyzerExtension):
         for metric_name in metric_names:
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
             column_names = list(metric.metric_columns.keys())
-            # try:
-            metric_params = self.params["metric_params"].get(metric_name, {})
-            res = metric.compute(
-                sorting_analyzer,
-                unit_ids=unit_ids,
-                metric_params=metric_params,
-                tmp_data=tmp_data,
-                job_kwargs=job_kwargs,
-            )
-            # except Exception as e:
-            #     warnings.warn(f"Error computing metric {metric_name}: {e}")
-            #     if len(column_names) == 1:
-            #         res = {unit_id: np.nan for unit_id in unit_ids}
-            #     else:
-            #         res = namedtuple("MetricResult", column_names)(*([np.nan] * len(column_names)))
+            try:
+                metric_params = self.params["metric_params"].get(metric_name, {})
+                res = metric.compute(
+                    sorting_analyzer,
+                    unit_ids=unit_ids,
+                    metric_params=metric_params,
+                    tmp_data=tmp_data,
+                    job_kwargs=job_kwargs,
+                )
+            except Exception as e:
+                warnings.warn(f"Error computing metric {metric_name}: {e}")
+                if len(column_names) == 1:
+                    res = {unit_id: np.nan for unit_id in unit_ids}
+                else:
+                    res = namedtuple("MetricResult", column_names)(*([np.nan] * len(column_names)))
 
             # res is a namedtuple with several dictionary entries (one per column)
             if isinstance(res, dict):
@@ -1190,7 +1190,8 @@ class BaseMetricExtension(AnalyzerExtension):
         """
         import pandas as pd
 
-        metric_names = self.params["metric_names"]
+        available_metric_names = [m.metric_name for m in self.metric_list]
+        metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
         old_metrics = self.data["metrics"]
 
         all_unit_ids = new_sorting_analyzer.unit_ids
@@ -1231,7 +1232,8 @@ class BaseMetricExtension(AnalyzerExtension):
         import pandas as pd
         from itertools import chain
 
-        metric_names = self.params["metric_names"]
+        available_metric_names = [m.metric_name for m in self.metric_list]
+        metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
         old_metrics = self.data["metrics"]
 
         all_unit_ids = new_sorting_analyzer.unit_ids
