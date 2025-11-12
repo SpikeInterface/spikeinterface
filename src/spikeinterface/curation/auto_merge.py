@@ -75,7 +75,7 @@ _default_step_params = {
         "sigma_smooth_ms": 0.6,
         "adaptative_window_thresh": 0.5,
     },
-    "template_similarity": {"template_diff_thresh": 0.25},
+    "template_similarity": {"similarity_method": "l1", "template_diff_thresh": 0.25},
     "presence_distance": {"presence_distance_thresh": 100},
     "knn": {"k_nn": 10},
     "cross_contamination": {
@@ -311,7 +311,13 @@ def compute_merge_unit_groups(
         # STEP : check if potential merge with CC also have template similarity
         elif step == "template_similarity":
             template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
-            templates_similarity = template_similarity_ext.get_data()
+            if template_similarity_ext.params["method"] == params["similarity_method"]:
+                templates_similarity = template_similarity_ext.get_data()
+            else:
+                template_similarity_ext = sorting_analyzer.compute(
+                    "template_similarity", method=params["similarity_method"], save=False
+                )
+                templates_similarity = template_similarity_ext.get_data()
             templates_diff = 1 - templates_similarity
             pair_mask = pair_mask & (templates_diff < params["template_diff_thresh"])
             outs["templates_diff"] = templates_diff
@@ -1058,17 +1064,29 @@ def compute_cross_contaminations(analyzer, pair_mask, cc_thresh, refractory_peri
     CC = np.zeros((n, n), dtype=np.float32)
     p_values = np.zeros((n, n), dtype=np.float32)
 
+    if sorting.get_num_segments() > 1:
+        # for multi-segment sortings, we need to concatenate segments,
+        from spikeinterface import concatenate_sortings, select_segment_sorting
+
+        sorting_list = []
+        total_samples_list = []
+        for segment_index in range(sorting.get_num_segments()):
+            sorting_list.append(select_segment_sorting(sorting, segment_index))
+            total_samples_list.append(analyzer.get_num_samples(segment_index))
+        # concatenate segments
+        sorting_concat = concatenate_sortings(sorting_list=sorting_list, total_samples_list=total_samples_list)
+    else:
+        sorting_concat = sorting
+
     for unit_ind1 in range(len(unit_ids)):
-
         unit_id1 = unit_ids[unit_ind1]
-        spike_train1 = np.array(sorting.get_unit_spike_train(unit_id1))
-
+        spike_train1 = np.array(sorting_concat.get_unit_spike_train(unit_id1))
         for unit_ind2 in range(unit_ind1 + 1, len(unit_ids)):
             if not pair_mask[unit_ind1, unit_ind2]:
                 continue
 
             unit_id2 = unit_ids[unit_ind2]
-            spike_train2 = np.array(sorting.get_unit_spike_train(unit_id2))
+            spike_train2 = np.array(sorting_concat.get_unit_spike_train(unit_id2))
             # Compuyting the cross-contamination difference
             if contaminations is not None:
                 C1 = contaminations[unit_ind1]
@@ -1195,8 +1213,8 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None, num_sa
                 ns = num_samples[segment_index]
             bins = np.arange(0, ns, bin_size)
 
-        st1 = sorting.get_unit_spike_train(unit_id=unit1)
-        st2 = sorting.get_unit_spike_train(unit_id=unit2)
+        st1 = sorting.get_unit_spike_train(unit_id=unit1, segment_index=segment_index)
+        st2 = sorting.get_unit_spike_train(unit_id=unit2, segment_index=segment_index)
 
         h1, _ = np.histogram(st1, bins)
         h1 = h1.astype(float)
