@@ -23,7 +23,7 @@ Example code
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as sqm
+    import spikeinterface.metrics.quality as sqm
 
     # Combine sorting and recording into a sorting_analyzer
 
@@ -40,7 +40,7 @@ Links to original implementations
 References
 ----------
 
-.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_presence_ratios
+.. autofunction:: spikeinterface.metrics.quality.misc_metrics.compute_presence_ratios
 
 Literature
 ----------

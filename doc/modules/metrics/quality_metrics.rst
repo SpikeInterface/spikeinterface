@@ -12,7 +12,7 @@ Completeness metrics (or 'false negative'/'type II' metrics) aim to identify whe
 Examples include: presence ratio, amplitude cutoff, NN-miss rate.
 Drift metrics aim to identify changes in waveforms which occur when spike sorters fail to successfully track neurons in the case of electrode drift.
 
-The quality metrics are saved as an extension of a :doc:`SortingAnalyzer <postprocessing>`. Some metrics can only be computed if certain extensions have been computed first. For example the drift metrics can only be computed the spike locations extension has been computed. By default, as many metrics as possible are computed. Which ones are computed depends on which other extensions have
+The quality metrics are saved as an extension of a :doc:`SortingAnalyzer <../postprocessing>`. Some metrics can only be computed if certain extensions have been computed first. For example the drift metrics can only be computed the spike locations extension has been computed. By default, as many metrics as possible are computed. Which ones are computed depends on which other extensions have
 been computed.
 
 In detail, the default metrics are (click on each metric to find out more about them!):

@@ -24,7 +24,7 @@ class ComputeSpikeTrainMetrics(BaseMetricExtension):
         If True, any template metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept, provided the `metric_params` are unchanged.
     metric_params : dict of dicts or None, default: None
         Dictionary with parameters for template metrics calculation.
-        Default parameters can be obtained with: `si.metrics.get_default_tm_params()`
+        Default parameters can be obtained with: `si.metrics.get_default_spiketrain_metrics_params()`
 
     Returns
     -------
@@ -48,7 +48,7 @@ register_result_extension(ComputeSpikeTrainMetrics)
 compute_spiketrain_metrics = ComputeSpikeTrainMetrics.function_factory()
 
 
-def get_spiketrain_metric_names():
+def get_spiketrain_metric_list():
     return [m.metric_name for m in spiketrain_metrics]
 
 

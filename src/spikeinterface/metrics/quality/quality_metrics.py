@@ -25,7 +25,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
         List of quality metrics to compute.
     metric_params : dict of dicts or None
         Dictionary with parameters for quality metrics calculation.
-        Default parameters can be obtained with: `si.qualitymetrics.get_default_qm_params()`
+        Default parameters can be obtained with: `si.qualitymetrics.get_default_quality_metrics_params()`
     skip_pc_metrics : bool, default: False
         If True, PC metrics computation is skipped.
     delete_existing_metrics : bool, default: False

@@ -20,7 +20,7 @@ Example code
 
 .. code-block:: python
 
-	import spikeinterface.qualitymetrics as sqm
+	import spikeinterface.metrics.quality as sqm
 
 	# It is also recommended to run sorting_analyzer.compute(input="spike_amplitudes")
 	# in order to use amplitude values from all spikes.
@@ -31,7 +31,7 @@ Example code
 Reference
 ---------
 
-.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_amplitude_medians
+.. autofunction:: spikeinterface.metrics.quality.misc_metrics.compute_amplitude_medians
 
 
 Links to original implementations

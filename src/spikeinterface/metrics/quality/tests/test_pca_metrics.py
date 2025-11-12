@@ -10,13 +10,20 @@ def test_compute_pc_metrics_multi_processing(small_sorting_analyzer, tmp_path):
 
     sorting_analyzer = small_sorting_analyzer
     metric_names = get_quality_pca_metric_list()
-    res1 = compute_quality_metrics(sorting_analyzer, metric_names=metric_names, n_jobs=1, progress_bar=True, seed=1205)
-    res1 = pd.DataFrame(res1)
+    metric_params = dict(nn_advanced=dict(seed=2308))
+    res1 = compute_quality_metrics(
+        sorting_analyzer, metric_names=metric_names, n_jobs=1, progress_bar=True, seed=1205, metric_params=metric_params
+    )
 
     # this should raise a warning, since nn_advanced can be parallelized only if not in memory
     with pytest.warns(UserWarning):
         res2 = compute_quality_metrics(
-            sorting_analyzer, metric_names=metric_names, n_jobs=2, progress_bar=True, seed=1205
+            sorting_analyzer,
+            metric_names=metric_names,
+            n_jobs=2,
+            progress_bar=True,
+            seed=1205,
+            metric_params=metric_params,
         )
 
     # now we cache the analyzer and there should be no warning
@@ -27,7 +34,6 @@ def test_compute_pc_metrics_multi_processing(small_sorting_analyzer, tmp_path):
         res2 = compute_quality_metrics(
             sorting_analyzer_saved, metric_names=metric_names, n_jobs=2, progress_bar=True, seed=1205
         )
-        res2 = pd.DataFrame(res2)
 
     for metric_name in res1.columns:
         values1 = res1[metric_name].values

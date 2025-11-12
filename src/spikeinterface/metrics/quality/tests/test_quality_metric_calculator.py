@@ -9,7 +9,7 @@ from spikeinterface.core import (
     aggregate_units,
 )
 
-from spikeinterface.metrics.quality.misc_metrics import compute_snrs
+from spikeinterface.metrics.quality.misc_metrics import compute_snrs, compute_drift_metrics
 
 
 from spikeinterface.metrics import (
@@ -37,7 +37,7 @@ def test_warnings_errors_when_missing_deps():
 
     # user asks for drift metrics without spike_locations. Should error
     with pytest.raises(ValueError):
-        analyzer.compute("quality_metrics", metric_names=["drift"])
+        compute_drift_metrics(analyzer)
 
     # user doesn't specify which metrics to compute. Should return a warning
     # about which metrics have not been computed.
@@ -90,7 +90,6 @@ def test_merging_quality_metrics(sorting_analyzer_simple):
 
     # sorting_analyzer_simple has ten units
     new_sorting_analyzer = sorting_analyzer.merge_units([[0, 1]])
-
     new_metrics = new_sorting_analyzer.get_extension("quality_metrics").get_data()
 
     # we should copy over the metrics after merge
@@ -136,6 +135,8 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
 
 
 def test_empty_units(sorting_analyzer_simple):
+    from pandas import isnull
+
     sorting_analyzer = sorting_analyzer_simple
 
     empty_spike_train = np.array([], dtype="int64")
@@ -161,15 +162,13 @@ def test_empty_units(sorting_analyzer_simple):
         seed=2205,
     )
 
-    # num_spikes are ints not nans so we confirm empty units are nans for everything except
-    # num_spikes which should be 0
-    nan_containing_columns = [column for column in metrics_empty.columns if column != "num_spikes"]
-    for empty_unit_ids in sorting_empty.get_empty_unit_ids():
-        from pandas import isnull
+    # test that metrics are either NaN or zero for empty units
+    empty_unit_ids = sorting_empty.get_empty_unit_ids()
 
-        assert np.all(isnull(metrics_empty.loc[empty_unit_ids, nan_containing_columns].values))
-        if "num_spikes" in metrics_empty.columns:
-            assert sum(metrics_empty.loc[empty_unit_ids, ["num_spikes"]]) == 0
+    for col in metrics_empty.columns:
+        all_nans = np.all(isnull(metrics_empty.loc[empty_unit_ids, col].values))
+        all_zeros = np.all(metrics_empty.loc[empty_unit_ids, col].values == 0)
+        assert all_nans or all_zeros
 
 
 if __name__ == "__main__":

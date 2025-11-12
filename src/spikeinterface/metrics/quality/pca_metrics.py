@@ -230,12 +230,12 @@ def _nn_advanced_metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwarg
     n_jobs = job_kwargs.get("n_jobs", 1)
     progress_bar = False
     mp_context = job_kwargs.get("mp_context", None)
-    seed = job_kwargs.get("seed", None)
+    seed = metric_params.get("seed", None)
 
     if sorting_analyzer.format == "memory" and n_jobs > 1:
         warnings.warn(
             "Computing 'nn_advanced' metric in parallel with a SortingAnalyzer in memory is not supported. "
-            "Falling back to single-threaded computation."
+            "Falling back to n_jobs=1."
         )
         n_jobs = 1
 
@@ -299,6 +299,7 @@ class NearestNeighborAdvancedMetrics(BaseMetric):
         "radius_um": 100,
         "peak_sign": "neg",
         "min_spatial_overlap": 0.5,
+        "seed": None,
     }
     metric_columns = {"nn_isolation": float, "nn_noise_overlap": float}
     depend_on = ["principal_components", "waveforms", "templates"]

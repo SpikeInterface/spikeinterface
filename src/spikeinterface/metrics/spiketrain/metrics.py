@@ -1,3 +1,4 @@
+import numpy as np
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 
 
@@ -66,7 +67,10 @@ def compute_firing_rates(sorting_analyzer, unit_ids=None):
     firing_rates = {}
     num_spikes = compute_num_spikes(sorting_analyzer)
     for unit_id in unit_ids:
-        firing_rates[unit_id] = num_spikes[unit_id] / total_duration
+        if num_spikes[unit_id] == 0:
+            firing_rates[unit_id] = np.nan
+        else:
+            firing_rates[unit_id] = num_spikes[unit_id] / total_duration
     return firing_rates
 
 

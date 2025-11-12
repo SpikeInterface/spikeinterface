@@ -26,7 +26,7 @@ Example code
 
 .. code-block:: python
 
-	import spikeinterface.qualitymetrics as sqm
+	import spikeinterface.metrics.quality as sqm
 
 	# In this case we need to combine our sorting and recording into a sorting_analyzer
 	sd_ratio = sqm.compute_sd_ratio(sorting_analyzer=sorting_analyzer censored_period_ms=4.0)
@@ -35,7 +35,7 @@ Example code
 References
 ----------
 
-.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_sd_ratio
+.. autofunction:: spikeinterface.metrics.quality.misc_metrics.compute_sd_ratio
 
 Literature
 ----------

@@ -27,7 +27,7 @@ Example code
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as sqm
+    import spikeinterface.metrics.quality as sqm
     # Combine a sorting and recording into a sorting_analyzer
     synchrony = sqm.compute_synchrony_metrics(sorting_analyzer=sorting_analyzer)
     # synchrony is a tuple of dicts with the synchrony metrics for each unit
@@ -41,7 +41,7 @@ The SpikeInterface implementation is a partial port of the low-level complexity 
 References
 ----------
 
-.. automodule:: spikeinterface.qualitymetrics.misc_metrics
+.. automodule:: spikeinterface.metrics.quality.misc_metrics
 
     .. autofunction:: compute_synchrony_metrics
 

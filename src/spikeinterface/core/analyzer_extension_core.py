@@ -903,6 +903,40 @@ class BaseMetricExtension(AnalyzerExtension):
         default_metric_params = {m.metric_name: m.metric_params for m in cls.metric_list}
         return default_metric_params
 
+    @classmethod
+    def get_metric_columns(cls, metric_names=None):
+        """Get the default metric columns.
+
+        Parameters
+        ----------
+        metric_names : list[str] | None
+            List of metric names to get columns for. If None, all metrics are considered.
+
+        Returns
+        -------
+        default_metric_columns : dict
+            Dictionary of default metric columns and their dtypes for each metric.
+        """
+        default_metric_columns = []
+        for m in cls.metric_list:
+            if metric_names is not None and m.metric_name not in metric_names:
+                continue
+            default_metric_columns.extend(m.metric_columns)
+        return default_metric_columns
+
+    def _cast_metrics(self, metrics_df):
+        metric_dtypes = {}
+        for m in self.metric_list:
+            metric_dtypes.update(m.metric_columns)
+
+        for col in metrics_df.columns:
+            if col in metric_dtypes:
+                try:
+                    metrics_df[col] = metrics_df[col].astype(metric_dtypes[col])
+                except Exception as e:
+                    print(f"Error casting column {col}: {e}")
+        return metrics_df
+
     def _set_params(
         self,
         metric_names: list[str] | None = None,
@@ -1075,8 +1109,7 @@ class BaseMetricExtension(AnalyzerExtension):
                 for i, col in enumerate(res._fields):
                     metrics.loc[unit_ids, col] = pd.Series(res[i])
 
-        for col, dtype in column_names_dtypes.items():
-            metrics[col] = metrics[col].astype(dtype)
+        metrics = self._cast_metrics(metrics)
 
         return metrics
 
@@ -1122,22 +1155,15 @@ class BaseMetricExtension(AnalyzerExtension):
         # convert to correct dtype
         return self.data["metrics"]
 
-    def _set_data(self, ext_data_name, data):
+    def set_data(self, ext_data_name, data):
         import pandas as pd
 
         if ext_data_name != "metrics":
             return
         if not isinstance(data, pd.DataFrame):
             return
-
-        metric_dtypes = {}
-        for m in self.metric_list:
-            metric_dtypes.update(m.metric_columns)
-
-        for col in data.columns:
-            if col in metric_dtypes:
-                data[col] = data[col].astype(metric_dtypes[col])
-        self.data[ext_data_name] = data
+        metrics = self._cast_metrics(data)
+        self.data[ext_data_name] = metrics
 
     def _select_extension_data(self, unit_ids: list[int | str]):
         """
@@ -1203,6 +1229,7 @@ class BaseMetricExtension(AnalyzerExtension):
         metrics.loc[new_unit_ids, :] = self._compute_metrics(
             sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids, metric_names=metric_names, **job_kwargs
         )
+        metrics = self._cast_metrics(metrics)
 
         new_data = dict(metrics=metrics)
         return new_data
@@ -1246,6 +1273,7 @@ class BaseMetricExtension(AnalyzerExtension):
         metrics.loc[new_unit_ids_f, :] = self._compute_metrics(
             sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids_f, metric_names=metric_names, **job_kwargs
         )
+        metrics = self._cast_metrics(metrics)
 
         new_data = dict(metrics=metrics)
         return new_data

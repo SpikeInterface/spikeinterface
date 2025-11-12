@@ -2278,9 +2278,6 @@ class AnalyzerExtension:
         # must be implemented in subclass
         raise NotImplementedError
 
-    def _set_data(self, ext_data_name, ext_data):
-        self.data[ext_data_name] = ext_data
-
     def _handle_backward_compatibility_on_load(self):
         # must be implemented in subclass only if need_backward_compatibility_on_load=True
         raise NotImplementedError
@@ -2771,8 +2768,8 @@ class AnalyzerExtension:
         assert len(self.data) > 0, "Extension has been run but no data found."
         return self._get_data(*args, **kwargs)
 
-    def set_data(self, ext_data_name, data):
-        self._set_data(ext_data_name, data)
+    def set_data(self, ext_data_name, ext_data):
+        self.data[ext_data_name] = ext_data
 
 
 # this is a hardcoded list to to improve error message and auto_import mechanism

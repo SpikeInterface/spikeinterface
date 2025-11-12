@@ -6,9 +6,15 @@ The :py:mod:`~spikeinterface.metrics` module includes functions to compute vario
 
 Currently, it contains the following submodules:
 
-- :ref:`template_metrics <modules/metrics/template_metrics>`: Computes commonly used waveform/template metrics.
-- :ref:`quality_metrics <modules/metrics/quality_metrics>`: Computes a variety of quality metrics to assess the goodness of spike sorting outputs.
-- :ref:`spiketrain_metrics <modules/metrics/spiketrain_metrics>`: Computes metrics based on spike train statistics and correlogram shapes.
+- **template metrics**: Computes commonly used waveform/template metrics.
+- **quality metrics**: Computes a variety of quality metrics to assess the goodness of spike sorting outputs.
+- **spiketrain metrics**: Computes metrics based on spike train statistics and correlogram shapes.
 
 
-# TODO More on BaseMetric and BaseMetricExtension
+.. toctree::
+    :caption: Metrics submodules
+    :maxdepth: 1
+
+    metrics/template_metrics
+    metrics/quality_metrics
+    metrics/spiketrain_metrics
