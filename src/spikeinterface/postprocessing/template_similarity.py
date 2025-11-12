@@ -320,12 +320,13 @@ if HAVE_NUMBA:
                     )  # shape (other_num_templates, num_channels)
                 elif support == "union":
                     connected_mask = np.logical_and(sparsity_mask[i, :], other_sparsity_mask)
-                    not_connected_mask = np.logical_not(np.any(connected_mask, axis=1))
+                    not_connected_mask = np.sum(connected_mask, axis=1) == 0
                     local_mask = np.logical_or(
                             sparsity_mask[i, :], other_sparsity_mask
                     )  # shape (other_num_templates, num_channels)
-                    for i in np.flatnonzero(not_connected_mask):
-                        local_mask[i] = False
+                    for local_i in range(len(not_connected_mask)):
+                        if not_connected_mask[local_i]:
+                            local_mask[local_i] = False
                                 
                 elif support == "dense":
                     local_mask = np.ones((other_num_templates, num_channels), dtype=np.bool_)
@@ -392,7 +393,7 @@ def get_overlapping_mask_for_one_template(template_index, sparsity, other_sparsi
         mask = np.logical_and(sparsity[template_index, :], other_sparsity)  # shape (other_num_templates, num_channels)
     elif support == "union":
         connected_mask = np.logical_and(sparsity[template_index, :], other_sparsity)
-        not_connected_mask = ~np.any(connected_mask, axis=1)
+        not_connected_mask = np.sum(connected_mask, axis=1) == 0
         mask = np.logical_or(sparsity[template_index, :], other_sparsity)  # shape (other_num_templates, num_channels)
         for i in np.flatnonzero(not_connected_mask):
             mask[i] = False
