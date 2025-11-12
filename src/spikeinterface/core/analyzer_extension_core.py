@@ -445,6 +445,7 @@ class ComputeTemplates(AnalyzerExtension):
                 self.nafter,
                 return_in_uV=return_in_uV,
                 return_std=return_std,
+                sparsity_mask=None if self.sparsity is None else self.sparsity.mask,
                 verbose=verbose,
                 **job_kwargs,
             )
