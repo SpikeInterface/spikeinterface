@@ -116,6 +116,13 @@ if parse(kilosort.__version__) >= parse("4.0.37"):
     PARAMS_TO_TEST_DICT.update({"max_cluster_subset": 20})
     PARAMETERS_NOT_AFFECTING_RESULTS.append("max_cluster_subset")
 
+if parse(kilosort.__version__) >= parse("4.1.2"):
+    PARAMS_TO_TEST_DICT.update({"batch_downsampling": 2})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("batch_downsampling")
+
+    PARAMS_TO_TEST_DICT.update({"cluster_init_seed": 2})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("cluster_init_seed")
+
 
 PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
 
@@ -328,6 +335,8 @@ class TestKilosort4Long:
             "scale",
             "file_object",
         ]
+        if parse(kilosort.__version__) >= parse("4.1.2"):
+            expected_arguments += ["batch_downsampling"]
 
         self._check_arguments(BinaryFiltered, expected_arguments)
 
@@ -351,6 +360,12 @@ class TestKilosort4Long:
         """
         recording, paths = recording_and_paths
         param_key = parameter
+
+        # Non-default batch_downsampling fails for short recordings, as there aren't
+        # enough batches. Since we test on a 5s recording, we skip it.
+        if param_key == "batch_downsampling":
+            return
+
         param_value = PARAMS_TO_TEST_DICT[param_key]
 
         # Setup parameters for KS4 and run it natively
