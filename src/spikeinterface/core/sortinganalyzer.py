@@ -22,6 +22,7 @@ import probeinterface
 import spikeinterface
 
 from spikeinterface.core import BaseRecording, BaseSorting, aggregate_channels, aggregate_units
+from spikeinterface.core.waveform_tools import has_exceeding_spikes
 
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
 from .core_tools import (
@@ -371,6 +372,15 @@ class SortingAnalyzer:
         # check that multiple probes are non-overlapping
         all_probes = recording.get_probegroup().probes
         check_probe_do_not_overlap(all_probes)
+
+        if has_exceeding_spikes(sorting=sorting, recording=recording):
+            warnings.warn(
+                "Your sorting has spikes with samples times greater than your recording length. These spikes have been removed."
+            )
+            # import here to avoid circular import
+            from spikeinterface.curation.remove_excess_spikes import RemoveExcessSpikesSorting
+
+            sorting = RemoveExcessSpikesSorting(sorting=sorting, recording=recording)
 
         if format == "memory":
             sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_in_uV, rec_attributes=None)
@@ -1062,6 +1072,10 @@ class SortingAnalyzer:
         if sorting_provenance is None:
             # if the original sorting object is not available anymore (kilosort folder deleted, ....), take the copy
             sorting_provenance = self.sorting
+        # add in-memory properties added to the analyzer
+        for key in self.sorting.get_property_keys():
+            if key not in sorting_provenance.get_property_keys():
+                sorting_provenance.set_property(key, self.sorting.get_property(key))
 
         if merge_unit_groups is None and split_units is None:
             # when only some unit_ids then the sorting must be sliced
@@ -1620,11 +1634,17 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)
         elif isinstance(input, dict):
             params_, job_kwargs = split_job_kwargs(kwargs)
-            assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
+            assert len(params_) == 0, (
+                "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
+                f"please remove the arguments {set(params_)} from the compute function."
+            )
             self.compute_several_extensions(extensions=input, save=save, verbose=verbose, **job_kwargs)
         elif isinstance(input, list):
             params_, job_kwargs = split_job_kwargs(kwargs)
-            assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
+            assert len(params_) == 0, (
+                "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
+                f"please remove the arguments {set(params_)} from the compute function."
+            )
             extensions = {k: {} for k in input}
             if extension_params is not None:
                 for ext_name, ext_params in extension_params.items():

@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.103.1"
+version = "0.103.2"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -25,8 +25,8 @@ dependencies = [
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.18,<3",
-    "neo>=0.14.1",
-    "probeinterface>=0.3.0",
+    "neo>=0.14.3",
+    "probeinterface>=0.3.1",
     "packaging",
     "pydantic",
     "numcodecs<0.16.0", # For supporting zarr < 3
@@ -194,12 +194,13 @@ test = [
 
 docs = [
     "Sphinx",
+    "ipython",
     "sphinx_rtd_theme>=1.2",
     "sphinx-gallery",
     "sphinx-design",
     "numpydoc",
-    "ipython",
     "sphinxcontrib-jquery",
+    "autodoc_pydantic",
 
     # for notebooks in the gallery
     "MEArec", # Use as an example

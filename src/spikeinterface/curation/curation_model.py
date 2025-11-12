@@ -104,6 +104,13 @@ class CurationModel(BaseModel):
 
     @classmethod
     def check_manual_labels(cls, values):
+        """
+        Checks and validates the manual labels in the curation model.
+
+          * Checks if the unit_ids in each manual label exist in the unit_ids list.
+          * Validates that each label in the manual labels exists in the label_definitions.
+
+        """
         unit_ids = list(values["unit_ids"])
         manual_labels = values.get("manual_labels")
         if manual_labels is None:
@@ -135,6 +142,15 @@ class CurationModel(BaseModel):
 
     @classmethod
     def check_merges(cls, values):
+        """
+        Checks and validates the merges in the curation model.
+
+          * Checks if the unit_ids in each merge group exist in the unit_ids list.
+          * Validates that each merge group has at least two unit IDs.
+          * Ensures that any new_unit_id provided does not already exist in the unit_ids list.
+          * Converts merges from dict format to list of Merge objects if necessary.
+
+        """
         unit_ids = list(values["unit_ids"])
         merges = values.get("merges")
         if merges is None:
@@ -184,15 +200,14 @@ class CurationModel(BaseModel):
     def check_splits(cls, values):
         """
         Checks and validates the splits in the curation model.
-        If `splits` is a dictionary with unit_id as key and split indices as values,
-        it converts it to a list of Split objects.
-        Each Split object is then validated:
-        - Checks if the unit_id exists in the unit_ids list.
-        - Validates the mode (indices or labels).
-        - If mode is indices, checks that indices are defined and not empty, and that there are no duplicate indices.
-        - If mode is labels, checks that labels are defined and not empty.
-        - Validates new unit IDs if provided, ensuring they are not already in the unit_ids list and match the
-          number of splits.
+
+          * Checks if the unit_id exists in the unit_ids list.
+          * Validates the mode (indices or labels).
+          * If mode is indices, checks that indices are defined and not empty, and that there are no duplicate indices.
+          * If mode is labels, checks that labels are defined and not empty.
+          * | Validates new unit IDs if provided, ensuring they are not already in the unit_ids list and match the
+            | number of splits.
+
         """
         unit_ids = list(values["unit_ids"])
         splits = values.get("splits")
@@ -279,6 +294,11 @@ class CurationModel(BaseModel):
 
     @classmethod
     def check_removed(cls, values):
+        """
+        Checks and validates the removed units in the curation model.
+        If `removed` is None, it initializes it as an empty list.
+        It then checks that each unit ID in `removed` exists in the `unit_ids` list.
+        """
         unit_ids = list(values["unit_ids"])
         removed = values.get("removed")
         if removed is None:
@@ -293,6 +313,11 @@ class CurationModel(BaseModel):
 
     @classmethod
     def convert_old_format(cls, values):
+        """
+        Converts old curation formats (v0 and v1) to the current format (v2).
+        v0 (sortingview) format is converted to v2 by extracting labels, merges, and unit IDs.
+        v1 format is updated to v2 by renaming fields and ensuring the structure matches the v2 format.
+        """
         format_version = values.get("format_version", "0")
         if format_version == "0":
             print("Conversion from format version v0 (sortingview) to v2")
@@ -353,19 +378,17 @@ class CurationModel(BaseModel):
         return values
 
     @model_validator(mode="after")
-    def validate_curation_dict(cls, values):
-        if values.format_version not in values.supported_versions:
+    def validate_curation_dict(self):
+        if self.format_version not in self.supported_versions:
             raise ValueError(
-                f"Format version {values.format_version} not supported. Only {values.supported_versions} are valid"
+                f"Format version {self.format_version} not supported. Only {self.supported_versions} are valid"
             )
 
-        labeled_unit_set = set([lbl.unit_id for lbl in values.manual_labels]) if values.manual_labels else set()
-        merged_units_set = (
-            set(chain.from_iterable(merge.unit_ids for merge in values.merges)) if values.merges else set()
-        )
-        split_units_set = set(split.unit_id for split in values.splits) if values.splits else set()
-        removed_set = set(values.removed) if values.removed else set()
-        unit_ids = values.unit_ids
+        labeled_unit_set = set([lbl.unit_id for lbl in self.manual_labels]) if self.manual_labels else set()
+        merged_units_set = set(chain.from_iterable(merge.unit_ids for merge in self.merges)) if self.merges else set()
+        split_units_set = set(split.unit_id for split in self.splits) if self.splits else set()
+        removed_set = set(self.removed) if self.removed else set()
+        unit_ids = self.unit_ids
 
         unit_set = set(unit_ids)
         if not labeled_unit_set.issubset(unit_set):
@@ -378,7 +401,7 @@ class CurationModel(BaseModel):
             raise ValueError("Curation format: some removed units are not in the unit list")
 
         # Check for units being merged multiple times
-        all_merging_groups = [set(merge.unit_ids) for merge in values.merges] if values.merges else []
+        all_merging_groups = [set(merge.unit_ids) for merge in self.merges] if self.merges else []
         for gp_1, gp_2 in combinations(all_merging_groups, 2):
             if len(gp_1.intersection(gp_2)) != 0:
                 raise ValueError("Curation format: some units belong to multiple merge groups")
@@ -391,19 +414,19 @@ class CurationModel(BaseModel):
         if len(merged_units_set.intersection(split_units_set)) != 0:
             raise ValueError("Curation format: some units were both merged and split")
 
-        for manual_label in values.manual_labels:
-            for label_key in values.label_definitions.keys():
+        for manual_label in self.manual_labels:
+            for label_key in self.label_definitions.keys():
                 if label_key in manual_label.labels:
                     unit_id = manual_label.unit_id
                     label_value = manual_label.labels[label_key]
                     if not isinstance(label_value, list):
                         raise ValueError(f"Curation format: manual_labels {unit_id} is invalid should be a list")
 
-                    is_exclusive = values.label_definitions[label_key].exclusive
+                    is_exclusive = self.label_definitions[label_key].exclusive
 
                     if is_exclusive and not len(label_value) <= 1:
                         raise ValueError(
                             f"Curation format: manual_labels {unit_id} {label_key} are exclusive labels. {label_value} is invalid"
                         )
 
-        return values
+        return self

@@ -127,9 +127,9 @@ class ComputeSpikeLocations(AnalyzerExtension):
             recording,
             retriever,
             method=self.params["method"],
+            method_kwargs=self.params["method_kwargs"],
             ms_before=self.params["ms_before"],
             ms_after=self.params["ms_after"],
-            **self.params["method_kwargs"],
         )
         return nodes
 

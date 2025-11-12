@@ -21,13 +21,14 @@ class MatchingBenchmark(Benchmark):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.method = params["method"]
-        self.templates = params["method_kwargs"]["templates"]
+        # self.templates = params["method_kwargs"]["templates"]
+        self.templates = params["templates"]
         self.method_kwargs = params["method_kwargs"]
         self.result = {}
 
     def run(self, **job_kwargs):
         spikes = find_spikes_from_templates(
-            self.recording, method=self.method, method_kwargs=self.method_kwargs, **job_kwargs
+            self.recording, self.templates, method=self.method, method_kwargs=self.method_kwargs, job_kwargs=job_kwargs
         )
         unit_ids = self.templates.unit_ids
         sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
@@ -56,6 +57,16 @@ class MatchingBenchmark(Benchmark):
 
 
 class MatchingStudy(BenchmarkStudy, MixinStudyUnitCount):
+    """
+    Benchmark study to compare template matchong methods.
+
+    The ground truth sorting objects must be given and method outputs
+    will be compared to them.
+
+    Templates must be also given. Note that the full template can be given but also
+    only a partial catalogue can be given to challenge the template matching
+    methods when catalogue is not entirely known.
+    """
 
     benchmark_class = MatchingBenchmark
 

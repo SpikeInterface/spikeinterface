@@ -61,7 +61,7 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest):
     worker_ctx["byte_offset"] = byte_offest
     worker_ctx["dtype"] = np.dtype(dtype)
 
-    file_dict = {segment_index: open(file_path, "r+") for segment_index, file_path in file_path_dict.items()}
+    file_dict = {segment_index: open(file_path, "rb+") for segment_index, file_path in file_path_dict.items()}
     worker_ctx["file_dict"] = file_dict
 
     return worker_ctx
@@ -151,34 +151,16 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     num_channels = recording.get_num_channels()
     dtype_size_bytes = np.dtype(dtype).itemsize
 
-    # Calculate byte offsets for the start and end frames relative to the entire recording
+    # Calculate byte offsets for the start frames relative to the entire recording
     start_byte = byte_offset + start_frame * num_channels * dtype_size_bytes
-    end_byte = byte_offset + end_frame * num_channels * dtype_size_bytes
 
-    # The mmap offset must be a multiple of mmap.ALLOCATIONGRANULARITY
-    memmap_offset, start_offset = divmod(start_byte, mmap.ALLOCATIONGRANULARITY)
-    memmap_offset *= mmap.ALLOCATIONGRANULARITY
-
-    # This maps in bytes the region of the memmap that corresponds to the chunk
-    length = (end_byte - start_byte) + start_offset
-    memmap_obj = mmap.mmap(file.fileno(), length=length, access=mmap.ACCESS_WRITE, offset=memmap_offset)
-
-    # To use numpy semantics we use the array interface of the memmap object
-    num_frames = end_frame - start_frame
-    shape = (num_frames, num_channels)
-    memmap_array = np.ndarray(shape=shape, dtype=dtype, buffer=memmap_obj, offset=start_offset)
-
-    # Extract the traces and store them in the memmap array
     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+    traces = traces.astype(dtype, order="c", copy=False)
 
-    if traces.dtype != dtype:
-        traces = traces.astype(dtype, copy=False)
-
-    memmap_array[...] = traces
-
-    memmap_obj.flush()
-
-    memmap_obj.close()
+    file.seek(start_byte)
+    file.write(traces.data)
+    # flush is important!!
+    file.flush()
 
 
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
@@ -692,6 +674,11 @@ def _noise_level_chunk(segment_index, start_frame, end_frame, worker_ctx):
         noise_levels = np.median(np.abs(one_chunk - med), axis=0) / 0.6744897501960817
     elif worker_ctx["method"] == "std":
         noise_levels = np.std(one_chunk, axis=0)
+    elif worker_ctx["method"] == "rms":
+        # sqrt(1/n * (x0^2 + ... + xn^2))
+        squared_voltages = np.square(one_chunk)
+        summed_squared_voltages = np.sum(squared_voltages, axis=0)
+        noise_levels = np.sqrt(summed_squared_voltages / one_chunk.shape[0])
 
     return noise_levels
 
@@ -708,7 +695,7 @@ def get_noise_levels(
     recording: "BaseRecording",
     return_scaled: bool | None = None,
     return_in_uV: bool = True,
-    method: Literal["mad", "std"] = "mad",
+    method: Literal["mad", "std", "rms"] = "mad",
     force_recompute: bool = False,
     random_slices_kwargs: dict = {},
     **kwargs,
@@ -733,7 +720,7 @@ def get_noise_levels(
         DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: True
         If True, returned noise levels are scaled to uV
-    method : "mad" | "std", default: "mad"
+    method : "mad" | "std" | "rms", default: "mad"
         The method to use to estimate noise levels
     force_recompute : bool
         If True, noise levels are recomputed even if they are already stored in the recording extractor
