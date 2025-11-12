@@ -223,6 +223,13 @@ def _compute_similarity_matrix_numpy(
     # We can use the fact that dist[i,j] at lag t is equal to dist[j,i] at time -t
     # So the matrix can be computed only for negative lags and be transposed
 
+    if method == "l1":
+        norms = np.sum(np.abs(templates_array), axis=(1))
+    elif method == "l2":
+        norms = np.sum(templates_array**2, axis=(1))
+    elif method == "cosine":
+        norms = np.sum(templates_array**2, axis=(1))
+
     if same_array:
         # optimisation when array are the same because of symetry in shift
         shift_loop = range(-num_shifts, 1)
@@ -244,20 +251,22 @@ def _compute_similarity_matrix_numpy(
                     continue
                 src = src_template[:, local_mask[j]].reshape(1, -1)
                 tgt = (tgt_templates[gcount][:, local_mask[j]]).reshape(1, -1)
+                
+                local_norms = norms[:, local_mask[j]]
 
                 if method == "l1":
-                    norm_i = np.sum(np.abs(src))
-                    norm_j = np.sum(np.abs(tgt))
+                    norm_i = local_norms[i].sum()
+                    norm_j = local_norms[j].sum()
                     distances[count, i, j] = np.sum(np.abs(src - tgt))
                     distances[count, i, j] /= norm_i + norm_j
                 elif method == "l2":
-                    norm_i = np.linalg.norm(src, ord=2)
-                    norm_j = np.linalg.norm(tgt, ord=2)
+                    norm_i = np.sqrt(local_norms[i].sum())
+                    norm_j = np.sqrt(local_norms[j].sum())
                     distances[count, i, j] = np.linalg.norm(src - tgt, ord=2)
                     distances[count, i, j] /= norm_i + norm_j
                 elif method == "cosine":
-                    norm_i = np.linalg.norm(src, ord=2)
-                    norm_j = np.linalg.norm(tgt, ord=2)
+                    norm_i = np.sqrt(local_norms[i].sum())
+                    norm_j = np.sqrt(local_norms[j].sum())
                     distances[count, i, j] = np.sum(src * tgt)
                     distances[count, i, j] /= norm_i * norm_j
                     distances[count, i, j] = 1 - distances[count, i, j]
@@ -294,14 +303,17 @@ if HAVE_NUMBA:
             # optimisation when array are the same because of symetry in shift
             shift_loop = list(range(-num_shifts, 1))
         else:
-            shift_loop = list(range(-num_shifts, num_shifts + 1))
+            shift_loop = list(range(-num_shifts, num_shifts + 1))        
 
         if method == "l1":
             metric = 0
+            norms = np.sum(np.abs(templates_array), axis=(1))
         elif method == "l2":
             metric = 1
+            norms = np.sum(templates_array**2, axis=(1))
         elif method == "cosine":
             metric = 2
+            norms = np.sum(templates_array**2, axis=(1))
 
         for count in range(len(shift_loop)):
             shift = shift_loop[count]
@@ -341,30 +353,26 @@ if HAVE_NUMBA:
                     norm_j = 0
                     distances[count, i, j] = 0
 
+                    local_norms = norms[:, local_mask[j]]
+
                     for k in range(len(src)):
                         if metric == 0:
-                            norm_i += abs(src[k])
-                            norm_j += abs(tgt[k])
                             distances[count, i, j] += abs(src[k] - tgt[k])
                         elif metric == 1:
-                            norm_i += src[k] ** 2
-                            norm_j += tgt[k] ** 2
                             distances[count, i, j] += (src[k] - tgt[k]) ** 2
                         elif metric == 2:
                             distances[count, i, j] += src[k] * tgt[k]
-                            norm_i += src[k] ** 2
-                            norm_j += tgt[k] ** 2
-
+                            
                     if metric == 0:
-                        distances[count, i, j] /= norm_i + norm_j
+                        distances[count, i, j] /= local_norms[i].sum() + local_norms[j].sum()
                     elif metric == 1:
-                        norm_i = sqrt(norm_i)
-                        norm_j = sqrt(norm_j)
+                        norm_i = sqrt(local_norms[i].sum())
+                        norm_j = sqrt(local_norms[j].sum())
                         distances[count, i, j] = sqrt(distances[count, i, j])
                         distances[count, i, j] /= norm_i + norm_j
                     elif metric == 2:
-                        norm_i = sqrt(norm_i)
-                        norm_j = sqrt(norm_j)
+                        norm_i = sqrt(local_norms[i].sum())
+                        norm_j = sqrt(local_norms[j].sum())
                         distances[count, i, j] /= norm_i * norm_j
                         distances[count, i, j] = 1 - distances[count, i, j]
 
