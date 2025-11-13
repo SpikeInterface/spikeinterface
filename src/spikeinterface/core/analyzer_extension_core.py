@@ -688,7 +688,7 @@ class ComputeTemplates(AnalyzerExtension):
             else:
                 self._compute_and_append_from_waveforms([(operator, percentile)])
                 self.params["operators"] += [(operator, percentile)]
-            templates_array = self.data[key]
+            templates_array = self.get_data(key)
 
             if save:
                 if not self.sorting_analyzer.is_read_only():
@@ -732,7 +732,7 @@ class ComputeTemplates(AnalyzerExtension):
             The returned template (num_samples, num_channels)
         """
 
-        templates = self.data[operator]
+        templates = self.get_data(operator)
         unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
 
         return np.array(templates[unit_index, :, :])

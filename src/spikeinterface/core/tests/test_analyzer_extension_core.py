@@ -173,9 +173,9 @@ def test_ComputeTemplates(format, sparse, create_cache_folder):
     for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
         unit_mask = sparsity_mask[unit_index, :]
         assert np.allclose(
-            fast_avg[unit_index][:, unit_mask], temp_ext.data["average"][unit_index][:, unit_mask], atol=0.01
+            fast_avg[unit_index][:, unit_mask], temp_ext.get_data("average")[unit_index][:, unit_mask], atol=0.01
         )
-        assert np.allclose(fast_std[unit_index][:, unit_mask], temp_ext.data["std"][unit_index][:, unit_mask], atol=0.5)
+        assert np.allclose(fast_std[unit_index][:, unit_mask], temp_ext.get_data("std")[unit_index][:, unit_mask], atol=0.5)
 
     templates = temp_ext.get_templates(outputs="Templates")
     assert isinstance(templates, Templates)
