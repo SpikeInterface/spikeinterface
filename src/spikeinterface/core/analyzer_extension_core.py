@@ -445,6 +445,7 @@ class ComputeTemplates(AnalyzerExtension):
                 self.nafter,
                 return_in_uV=return_in_uV,
                 return_std=return_std,
+                sparsity_mask=None if self.sparsity is None else self.sparsity.mask,
                 verbose=verbose,
                 **job_kwargs,
             )
@@ -622,6 +623,17 @@ class ComputeTemplates(AnalyzerExtension):
             raise ValueError(error_msg)
 
         templates_array = self.data[key]
+
+        if self.sparsity is not None:
+            # For consistency, we always return dense templates even if sparsity is used
+            dense_templates_array = np.zeros(
+                (templates_array.shape[0], templates_array.shape[1], self.sorting_analyzer.get_num_channels()),
+                dtype=templates_array.dtype,
+            )
+            for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
+                chan_inds = self.sparsity.unit_id_to_channel_indices[unit_id]
+                dense_templates_array[unit_index][:, chan_inds] = templates_array[unit_index, :, : chan_inds.size]
+            templates_array = dense_templates_array
 
         if outputs == "numpy":
             return templates_array

@@ -328,7 +328,7 @@ class MockWaveformExtractor:
         else:
             key = mode
 
-        templates = ext.data.get(key)
+        templates = ext.get_data(key)
         if templates is None:
             raise ValueError(f"{mode} is not computed")
 
