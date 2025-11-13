@@ -456,12 +456,12 @@ class ComputeTemplates(AnalyzerExtension):
                 templates, stds = output
                 if self.sparsity is not None:
                     dense_templates = np.zeros(
-                    (templates.shape[0], templates.shape[1], self.sorting_analyzer.get_num_channels()),
-                    dtype=templates.dtype,
+                        (templates.shape[0], templates.shape[1], self.sorting_analyzer.get_num_channels()),
+                        dtype=templates.dtype,
                     )
                     dense_stds = np.zeros(
-                    (stds.shape[0], stds.shape[1], self.sorting_analyzer.get_num_channels()),
-                    dtype=stds.dtype,
+                        (stds.shape[0], stds.shape[1], self.sorting_analyzer.get_num_channels()),
+                        dtype=stds.dtype,
                     )
                     for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
                         chan_inds = self.sparsity.unit_id_to_channel_indices[unit_id]
@@ -476,9 +476,9 @@ class ComputeTemplates(AnalyzerExtension):
             else:
                 if self.sparsity is not None:
                     dense_output = np.zeros(
-                    (output.shape[0], output.shape[1], self.sorting_analyzer.get_num_channels()),
-                    dtype=output.dtype,
-                )
+                        (output.shape[0], output.shape[1], self.sorting_analyzer.get_num_channels()),
+                        dtype=output.dtype,
+                    )
                     for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
                         chan_inds = self.sparsity.unit_id_to_channel_indices[unit_id]
                         dense_output[unit_index][:, chan_inds] = dense_output[unit_index, :, : chan_inds.size]
