@@ -437,6 +437,7 @@ class ComputeTemplates(AnalyzerExtension):
             return_in_uV = self.sorting_analyzer.return_in_uV
 
             return_std = "std" in self.params["operators"]
+            sparsity_mask = None if self.sparsity is None else self.sparsity.mask
             output = estimate_templates_with_accumulator(
                 recording,
                 some_spikes,
@@ -445,7 +446,7 @@ class ComputeTemplates(AnalyzerExtension):
                 self.nafter,
                 return_in_uV=return_in_uV,
                 return_std=return_std,
-                sparsity_mask=None if self.sparsity is None else self.sparsity.mask,
+                sparsity_mask=sparsity_mask,
                 verbose=verbose,
                 **job_kwargs,
             )
@@ -453,10 +454,37 @@ class ComputeTemplates(AnalyzerExtension):
             # Output of estimate_templates_with_accumulator is either (templates,) or (templates, stds)
             if return_std:
                 templates, stds = output
-                self.data["average"] = templates
-                self.data["std"] = stds
+                if self.sparsity is not None:
+                    dense_templates = np.zeros(
+                    (templates.shape[0], templates.shape[1], self.sorting_analyzer.get_num_channels()),
+                    dtype=templates.dtype,
+                    )
+                    dense_stds = np.zeros(
+                    (stds.shape[0], stds.shape[1], self.sorting_analyzer.get_num_channels()),
+                    dtype=stds.dtype,
+                    )
+                    for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
+                        chan_inds = self.sparsity.unit_id_to_channel_indices[unit_id]
+                        dense_templates[unit_index][:, chan_inds] = templates[unit_index, :, : chan_inds.size]
+                        dense_stds[unit_index][:, chan_inds] = stds[unit_index, :, : chan_inds.size]
+
+                    self.data["average"] = dense_templates
+                    self.data["std"] = dense_stds
+                else:
+                    self.data["average"] = templates
+                    self.data["std"] = stds
             else:
-                self.data["average"] = output
+                if self.sparsity is not None:
+                    dense_output = np.zeros(
+                    (output.shape[0], output.shape[1], self.sorting_analyzer.get_num_channels()),
+                    dtype=output.dtype,
+                )
+                    for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
+                        chan_inds = self.sparsity.unit_id_to_channel_indices[unit_id]
+                        dense_output[unit_index][:, chan_inds] = dense_output[unit_index, :, : chan_inds.size]
+                    self.data["average"] = dense_output
+                else:
+                    self.data["average"] = output
 
     def _compute_and_append_from_waveforms(self, operators):
         if not self.sorting_analyzer.has_extension("waveforms"):
@@ -624,17 +652,6 @@ class ComputeTemplates(AnalyzerExtension):
 
         templates_array = self.data[key]
 
-        if self.sparsity is not None:
-            # For consistency, we always return dense templates even if sparsity is used
-            dense_templates_array = np.zeros(
-                (templates_array.shape[0], templates_array.shape[1], self.sorting_analyzer.get_num_channels()),
-                dtype=templates_array.dtype,
-            )
-            for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
-                chan_inds = self.sparsity.unit_id_to_channel_indices[unit_id]
-                dense_templates_array[unit_index][:, chan_inds] = templates_array[unit_index, :, : chan_inds.size]
-            templates_array = dense_templates_array
-
         if outputs == "numpy":
             return templates_array
         elif outputs == "Templates":
@@ -688,7 +705,7 @@ class ComputeTemplates(AnalyzerExtension):
             else:
                 self._compute_and_append_from_waveforms([(operator, percentile)])
                 self.params["operators"] += [(operator, percentile)]
-            templates_array = self.get_data(key)
+            templates_array = self.data[key]
 
             if save:
                 if not self.sorting_analyzer.is_read_only():
@@ -732,7 +749,7 @@ class ComputeTemplates(AnalyzerExtension):
             The returned template (num_samples, num_channels)
         """
 
-        templates = self.get_data(operator)
+        templates = self.data[operator]
         unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
 
         return np.array(templates[unit_index, :, :])
