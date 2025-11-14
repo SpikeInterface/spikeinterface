@@ -169,7 +169,7 @@ class LupinSorter(ComponentsBasedSorter):
                     **interpolate_motion_kwargs,
                 )
 
-            # used only if "folder" or "zarr"
+            # Cache in mem or folder
             cache_folder = sorter_output_folder / "cache_preprocessing"
             recording, cache_info = cache_preprocessing(
                 recording, mode=params["cache_preprocessing_mode"], folder=cache_folder, job_kwargs=job_kwargs, 

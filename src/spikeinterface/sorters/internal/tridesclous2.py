@@ -33,7 +33,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": True,
         "apply_motion_correction": False,
         "motion_correction": {"preset": "dredge_fast"},
-        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
+        "cache_preprocessing_mode" : "auto",
         "waveforms": {
             "ms_before": 0.5,
             "ms_after": 1.5,
@@ -58,6 +58,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "sparsity_threshold": 1.5,
             "min_snr": 2.5,
             # "peak_shift_ms": 0.2,
+            "radius_um":100.,
         },
         "matching": {"method": "tdc-peeler", "method_kwargs": {}, "gather_mode": "memory"},
         "job_kwargs": {},
@@ -96,7 +97,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.preprocessing import correct_motion
         from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
-        from spikeinterface.sortingcomponents.tools import clean_templates
+        from spikeinterface.sortingcomponents.tools import clean_templates, compute_sparsity_from_peaks_and_label
 
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
@@ -153,10 +154,10 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             # whitening is really bad when dirft correction is applied and this changd nothing when no dirft
             # recording = whiten(recording, dtype="float32", mode="local", radius_um=100.0)
 
-            # used only if "folder" or "zarr"
+            # Cache in mem or folder
             cache_folder = sorter_output_folder / "cache_preprocessing"
             recording, cache_info = cache_preprocessing(
-                recording, folder=cache_folder, job_kwargs=job_kwargs, **params["cache_preprocessing"]
+                recording, mode=params["cache_preprocessing_mode"], folder=cache_folder, job_kwargs=job_kwargs, 
             )
 
             noise_levels = np.ones(num_chans, dtype="float32")
@@ -211,24 +212,26 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             job_kwargs=job_kwargs,
         )
 
-        new_peaks = peaks
-
         mask = clustering_label >= 0
+        kept_peaks = peaks[mask]
+        kept_labels = clustering_label[mask]
+
         sorting_pre_peeler = NumpySorting.from_samples_and_labels(
-            new_peaks["sample_index"][mask],
-            clustering_label[mask],
+            kept_peaks["sample_index"],
+            kept_labels,
             sampling_frequency,
             unit_ids=unit_ids,
         )
         if verbose:
-            print(f"find_clusters_from_peaks(): {sorting_pre_peeler.unit_ids.size} cluster found")
+            print(f"find_clusters_from_peaks(): {unit_ids.size} cluster found")
 
         recording_for_peeler = recording
 
-        # if "templates" in more_outs:
-        #     # No, bad idea because templates are too short
-        #     # clustering also give templates
-        #     templates = more_outs["templates"]
+        # preestimate the sparsity unsing peaks channel
+        spike_vector = sorting_pre_peeler.to_spike_vector(concatenated=True)
+        sparsity, unit_locations = compute_sparsity_from_peaks_and_label(kept_peaks, spike_vector["unit_index"],
+                                              sorting_pre_peeler.unit_ids, recording, params["templates"]["radius_um"])
+
 
         # we recompute the template even if the clustering give it already because we use different ms_before/ms_after
         nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.0)
@@ -241,37 +244,58 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             nbefore,
             nafter,
             return_in_uV=False,
+            sparsity_mask=sparsity.mask,
             **job_kwargs,
         )
-        templates_dense = Templates(
+        # templates_dense = Templates(
+        #     templates_array=templates_array,
+        #     sampling_frequency=sampling_frequency,
+        #     nbefore=nbefore,
+        #     channel_ids=recording_for_peeler.channel_ids,
+        #     unit_ids=sorting_pre_peeler.unit_ids,
+        #     sparsity_mask=None,
+        #     probe=recording_for_peeler.get_probe(),
+        #     is_in_uV=False,
+        # )
+        templates = Templates(
             templates_array=templates_array,
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
-            channel_ids=recording_for_peeler.channel_ids,
+            channel_ids=recording.channel_ids,
             unit_ids=sorting_pre_peeler.unit_ids,
-            sparsity_mask=None,
-            probe=recording_for_peeler.get_probe(),
+            sparsity_mask=sparsity.mask,
+            probe=recording.get_probe(),
             is_in_uV=False,
         )
-        
+
 
         # sparsity is a mix between radius and
-        sparsity_threshold = params["templates"]["sparsity_threshold"]
-        radius_um = params["waveforms"]["radius_um"]
-        sparsity = compute_sparsity(templates_dense, method="radius", radius_um=radius_um)
-        sparsity_snr = compute_sparsity(
-            templates_dense,
-            method="snr",
-            amplitude_mode="peak_to_peak",
-            noise_levels=noise_levels,
-            threshold=sparsity_threshold,
-        )
-        sparsity.mask = sparsity.mask & sparsity_snr.mask
-        templates = templates_dense.to_sparse(sparsity)
+        # sparsity_threshold = params["templates"]["sparsity_threshold"]
+        # radius_um = params["waveforms"]["radius_um"]
+        # sparsity = compute_sparsity(templates_dense, method="radius", radius_um=radius_um)
+        # sparsity_snr = compute_sparsity(
+        #     templates_dense,
+        #     method="snr",
+        #     amplitude_mode="peak_to_peak",
+        #     noise_levels=noise_levels,
+        #     threshold=sparsity_threshold,
+        # )
+        # sparsity.mask = sparsity.mask & sparsity_snr.mask
+        # templates = templates_dense.to_sparse(sparsity)
 
+        # templates = clean_templates(
+        #     templates,
+        #     sparsify_threshold=None,
+        #     noise_levels=noise_levels,
+        #     min_snr=params["templates"]["min_snr"],
+        #     max_jitter_ms=None,
+        #     remove_empty=True,
+        # )
+
+        # this spasify more
         templates = clean_templates(
             templates,
-            sparsify_threshold=None,
+            sparsify_threshold=params["templates"]["sparsity_threshold"],
             noise_levels=noise_levels,
             min_snr=params["templates"]["min_snr"],
             max_jitter_ms=None,
@@ -305,6 +329,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         ## DEBUG auto merge
         auto_merge = True
+        analyzer_final = None
         if auto_merge:
             from spikeinterface.sorters.internal.spyking_circus2 import final_cleaning_circus
 
@@ -334,6 +359,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             np.save(sorter_output_folder / "clustering_label.npy", clustering_label)
             np.save(sorter_output_folder / "spikes.npy", spikes)
             templates.to_zarr(sorter_output_folder / "templates.zarr")
+            if analyzer_final is not None:
+                analyzer_final.save_as(format="binary_folder", folder=sorter_output_folder / "analyzer")
+
 
         # final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)
         # final_spikes["sample_index"] = spikes["sample_index"]
